@@ -11,6 +11,11 @@
       server-rendered, so the real form in src/routes/contact.tsx is invisible to
       that scan. This file is the static declaration Netlify scans; the React form
       POSTs here as urlencoded data. Field names MUST stay in sync with contact.tsx.
+
+      Do NOT name a field `ip` — Netlify reserves it and silently overwrites the
+      submitted value with the client's IP address. Same applies to `name`,
+      `title`, `body`, `summary`, `user_agent` and `referrer`. The "IP / Brand"
+      field is therefore named `brand`.
     -->
     <form name="deployment-inquiry" data-netlify="true" netlify-honeypot="bot-field" hidden>
       <input type="hidden" name="form-name" value="deployment-inquiry" />
@@ -19,7 +24,7 @@
       <input name="email" type="email" />
       <input name="region" type="text" />
       <input name="duration" type="text" />
-      <input name="ip" type="text" />
+      <input name="brand" type="text" />
       <textarea name="msg"></textarea>
     </form>
   </body>

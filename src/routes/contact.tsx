@@ -138,7 +138,7 @@ function Contact() {
                     opts={["Less than a month", "1–3 months", "More than 3 months"]}
                   />
                 </div>
-                <Field label="IP / Brand" name="ip" />
+                <Field label="IP / Brand" name="brand" />
                 <TextArea label="Tell us about the activation" name="msg" />
 
                 {status === "error" && (
