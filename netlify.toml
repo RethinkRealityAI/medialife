@@ -1,0 +1,27 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Lovable's vite config defaults Nitro to the Cloudflare target.
+  # Pin it to Netlify explicitly so the build never depends on auto-detection.
+  NITRO_PRESET = "netlify"
+  NODE_VERSION = "22"
+  NPM_FLAGS = "--no-audit --no-fund"
+
+# Canonical host: apex. www 301s to the apex so we have one indexable URL.
+[[redirects]]
+  from = "https://www.medialife.ai/*"
+  to = "https://medialife.ai/:splat"
+  status = 301
+  force = true
+
+# Security headers. Applied to every document response.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"

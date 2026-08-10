@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Form definitions</title>
+    <meta name="robots" content="noindex, nofollow" />
+  </head>
+  <body>
+    <!--
+      Netlify detects forms by parsing STATIC HTML at deploy time. This site is
+      server-rendered, so the real form in src/routes/contact.tsx is invisible to
+      that scan. This file is the static declaration Netlify scans; the React form
+      POSTs here as urlencoded data. Field names MUST stay in sync with contact.tsx.
+    -->
+    <form name="deployment-inquiry" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="deployment-inquiry" />
+      <input name="bot-field" type="text" />
+      <input name="company" type="text" />
+      <input name="email" type="email" />
+      <input name="region" type="text" />
+      <input name="duration" type="text" />
+      <input name="ip" type="text" />
+      <textarea name="msg"></textarea>
+    </form>
+  </body>
+</html>

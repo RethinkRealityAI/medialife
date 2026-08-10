@@ -1,0 +1,153 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 10px;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-glow: var(--glow);
+  --color-surface: var(--surface);
+}
+
+:root {
+  --radius: 4px;
+  /* Logo-derived palette: deep black, magenta/pink primary, cyan/blue accent */
+  --background: oklch(0.08 0.005 280);
+  --foreground: oklch(0.97 0.005 280);
+  --surface: oklch(0.12 0.01 280);
+  --card: oklch(0.12 0.01 280);
+  --card-foreground: oklch(0.97 0.005 280);
+  --popover: oklch(0.10 0.01 280);
+  --popover-foreground: oklch(0.97 0.005 280);
+  --primary: oklch(0.72 0.16 240); /* cyan/blue from logo - primary */
+  --primary-foreground: oklch(0.10 0.005 280);
+  --secondary: oklch(0.18 0.015 280);
+  --secondary-foreground: oklch(0.97 0.005 280);
+  --muted: oklch(0.16 0.01 280);
+  --muted-foreground: oklch(0.65 0.02 280);
+  --accent: oklch(0.68 0.26 350); /* magenta/pink from logo - accent */
+  --accent-foreground: oklch(0.08 0.005 280);
+  --destructive: oklch(0.62 0.24 27);
+  --destructive-foreground: oklch(0.97 0 0);
+  --border: oklch(0.22 0.015 280);
+  --input: oklch(0.20 0.012 280);
+  --ring: oklch(0.72 0.16 240);
+  --glow: oklch(0.68 0.26 350 / 50%);
+
+  --grid-line: oklch(1 0 0 / 6%);
+  --grid-line-strong: oklch(1 0 0 / 12%);
+  --gradient-radial: radial-gradient(ellipse at top, oklch(0.30 0.18 240 / 30%), transparent 60%);
+  --gradient-ember: linear-gradient(135deg, oklch(0.72 0.16 240), oklch(0.68 0.26 350));
+  --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "ss01", "ss02";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: var(--font-sans);
+    letter-spacing: -0.025em;
+    font-weight: 500;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+  }
+}
+
+@layer utilities {
+  .mono {
+    font-family: var(--font-mono);
+    font-feature-settings: "zero", "ss01";
+  }
+  .text-balance { text-wrap: balance; }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .grid-bg-sm {
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .ember-text {
+    background: var(--gradient-ember);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .scan-line {
+    position: relative;
+    overflow: hidden;
+  }
+  .scan-line::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, oklch(0.78 0.16 200 / 8%) 50%, transparent 100%);
+    animation: scan 6s linear infinite;
+    pointer-events: none;
+  }
+
+  @keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .animate-marquee { animation: marquee 40s linear infinite; }
+  .animate-marquee-slow { animation: marquee 80s linear infinite; }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+}
