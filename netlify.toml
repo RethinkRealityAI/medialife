@@ -16,12 +16,21 @@
   status = 301
   force = true
 
-# Security headers. Applied to every document response.
+# Security headers for STATIC responses only. Netlify does not merge these onto
+# responses from the SSR function, so every HTML page gets them from
+# src/server.ts instead. Keep the two lists in sync.
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(self), microphone=(), geolocation=(), interest-cohort=()"
+    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+
+# The static form declaration is a build-time artifact for Netlify's form scanner
+# and a POST target — never an indexable page.
+[[headers]]
+  for = "/__forms.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
