@@ -260,61 +260,73 @@ function Home() {
           aria-hidden
         />
 
-        <div className="relative mx-auto w-full px-8 lg:px-16 py-14 lg:py-16 grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+        <div className="relative mx-auto w-full px-8 lg:px-16 py-10 lg:py-12 grid lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           {/* Product */}
           <div className="lg:col-span-5 order-2 lg:order-1">
-            <TiltCard className="group/tilt">
-              <div
-                className="relative mx-auto lg:mx-0 w-full max-w-[300px] lg:max-w-[330px] animate-drift"
-                style={{ transformStyle: "preserve-3d" }}
-              >
+            <TiltCard className="mx-auto w-full max-w-[440px]">
+              <div className="relative w-full animate-drift">
                 {/* Contact shadow — sells the float */}
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[-26px] h-8 w-[62%] rounded-[50%] blur-xl opacity-45"
-                  style={{ background: "oklch(0.68 0.26 350 / 55%)" }}
+                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[-30px] h-10 w-[60%] rounded-[50%] blur-2xl opacity-50"
+                  style={{ background: "oklch(0.68 0.26 350 / 60%)" }}
                 />
-                <img
-                  src="/merch/keychain-cutout.webp"
-                  alt="BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE drop"
-                  width={632}
-                  height={820}
-                  loading="lazy"
-                  className="relative w-full select-none will-change-transform transition-transform duration-200 ease-out"
+                <div
+                  className="relative will-change-transform transition-transform duration-200 ease-out"
                   style={{
                     transform:
-                      "rotateX(var(--tilt-x)) rotateY(calc(var(--tilt-y) + var(--scroll-lean))) translateY(var(--scroll-shift))",
-                    filter: "drop-shadow(0 24px 48px oklch(0.68 0.26 350 / 35%))",
+                      "perspective(900px) rotateX(var(--tilt-x)) rotateY(calc(var(--tilt-y) + var(--scroll-lean))) translateY(var(--scroll-shift))",
                   }}
-                />
+                >
+                  <img
+                    src="/merch/keychain-cutout.webp"
+                    alt="BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE drop"
+                    width={632}
+                    height={820}
+                    loading="lazy"
+                    className="w-full select-none"
+                    style={{ filter: "drop-shadow(0 28px 56px oklch(0.68 0.26 350 / 38%))" }}
+                  />
+                  {/* Glare follows the cursor and fades out when it leaves */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 transition-opacity duration-300"
+                    style={{
+                      opacity: "calc(var(--glare) * 0.5)",
+                      background:
+                        "radial-gradient(340px circle at var(--point-x) var(--point-y), oklch(1 0 0 / 26%), transparent 62%)",
+                      mixBlendMode: "screen",
+                    }}
+                  />
+                </div>
               </div>
             </TiltCard>
 
             {/* Supporting shots */}
-            <div className="mt-8 grid grid-cols-2 gap-3 max-w-[420px] mx-auto lg:mx-0">
-              <figure className="relative overflow-hidden border border-border bg-surface">
+            <div className="mt-7 grid grid-cols-2 gap-3 max-w-[440px] mx-auto">
+              <figure className="relative overflow-hidden border border-border bg-white">
                 <img
                   src="/merch/keychain-qr.webp"
-                  alt="The reverse of the ΣCLIPSE can charm, carrying a scan-to-activate QR code"
-                  width={760}
-                  height={380}
+                  alt="Front and reverse of the ΣCLIPSE can charm — the back carries a scan-to-activate QR code"
+                  width={900}
+                  height={633}
                   loading="lazy"
-                  className="w-full aspect-[2/1] object-cover"
+                  className="w-full aspect-[4/3] object-contain"
                 />
-                <figcaption className="absolute bottom-0 inset-x-0 bg-background/85 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
+                <figcaption className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
                   Scan to activate
                 </figcaption>
               </figure>
-              <figure className="relative overflow-hidden border border-border bg-surface">
+              <figure className="relative overflow-hidden border border-border bg-white">
                 <img
                   src="/merch/keychain-hand.webp"
                   alt="Both keychains held in one hand, showing their scale"
-                  width={760}
-                  height={380}
+                  width={900}
+                  height={982}
                   loading="lazy"
-                  className="w-full aspect-[2/1] object-cover"
+                  className="w-full aspect-[4/3] object-contain"
                 />
-                <figcaption className="absolute bottom-0 inset-x-0 bg-background/85 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
+                <figcaption className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
                   Double-sided acrylic
                 </figcaption>
               </figure>

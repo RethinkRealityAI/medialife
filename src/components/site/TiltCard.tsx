@@ -3,25 +3,34 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 /**
  * 3D tilt driven by pointer position, plus a scroll-linked lean.
  *
- * Notes for anyone changing this:
- * - Both inputs are written to CSS custom properties and composed in a single
- *   transform, so pointer and scroll never fight over the same property.
- * - Scroll work is rAF-throttled and gated on an IntersectionObserver, so
- *   nothing runs while the section is off screen.
- * - Pointer tilt is bound to a pointer-fine media query. On touch there is no
- *   hover, and applying it there would leave the card stuck mid-tilt after a tap.
- * - Everything is disabled under prefers-reduced-motion.
+ * The perspective is applied as a transform FUNCTION on the transformed element
+ * itself — `transform: perspective(900px) rotateX(...)` — not as a `perspective`
+ * property on this wrapper. The property only affects DIRECT children, and the
+ * element we tilt is a grandchild (wrapper > drift > img), so as a property it
+ * did nothing and the rotations rendered as a flat, invisible squash. The
+ * transform function is self-contained and survives the intervening drift
+ * animation and the image's own `filter`, both of which flatten 3D contexts.
+ *
+ * Other notes:
+ * - Pointer and scroll write separate CSS custom properties, composed once in
+ *   the consumer's transform, so the two inputs never overwrite each other.
+ * - Scroll work is rAF-throttled and gated on an IntersectionObserver.
+ * - Pointer tilt is bound to a fine pointer: on touch there is no hover, and
+ *   the card would stay stuck mid-tilt after a tap.
+ * - All of it is disabled under prefers-reduced-motion.
  */
 export function TiltCard({
   children,
   className,
-  maxTilt = 11,
-  scrollLean = 5,
+  maxTilt = 15,
+  scrollLean = 7,
+  scrollShift = 24,
 }: {
   children: ReactNode;
   className?: string;
   maxTilt?: number;
   scrollLean?: number;
+  scrollShift?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [enabled, setEnabled] = useState(false);
@@ -42,12 +51,16 @@ export function TiltCard({
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        if (!visible || !ref.current) return;
-        const r = ref.current.getBoundingClientRect();
-        // -1 when the card sits at the bottom of the viewport, +1 at the top.
-        const progress = 1 - (2 * (r.top + r.height / 2)) / window.innerHeight;
-        ref.current.style.setProperty("--scroll-lean", `${(progress * scrollLean).toFixed(2)}deg`);
-        ref.current.style.setProperty("--scroll-shift", `${(progress * -14).toFixed(1)}px`);
+        const node = ref.current;
+        if (!visible || !node) return;
+        const r = node.getBoundingClientRect();
+        // +1 when the card sits at the top of the viewport, -1 at the bottom.
+        const progress = Math.max(
+          -1,
+          Math.min(1, 1 - (2 * (r.top + r.height / 2)) / window.innerHeight),
+        );
+        node.style.setProperty("--scroll-lean", `${(progress * scrollLean).toFixed(2)}deg`);
+        node.style.setProperty("--scroll-shift", `${(progress * -scrollShift).toFixed(1)}px`);
       });
     };
 
@@ -60,30 +73,36 @@ export function TiltCard({
     );
     io.observe(el);
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
     onScroll();
 
     return () => {
       io.disconnect();
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [scrollLean]);
+  }, [scrollLean, scrollShift]);
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!enabled || !ref.current) return;
-    const r = ref.current.getBoundingClientRect();
+    const node = ref.current;
+    if (!enabled || !node) return;
+    const r = node.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
-    ref.current.style.setProperty("--tilt-y", `${(px * maxTilt * 2).toFixed(2)}deg`);
-    ref.current.style.setProperty("--tilt-x", `${(-py * maxTilt * 2).toFixed(2)}deg`);
-    ref.current.style.setProperty("--point-x", `${((px + 0.5) * 100).toFixed(1)}%`);
-    ref.current.style.setProperty("--point-y", `${((py + 0.5) * 100).toFixed(1)}%`);
+    node.style.setProperty("--tilt-y", `${(px * maxTilt * 2).toFixed(2)}deg`);
+    node.style.setProperty("--tilt-x", `${(-py * maxTilt * 2).toFixed(2)}deg`);
+    node.style.setProperty("--point-x", `${((px + 0.5) * 100).toFixed(1)}%`);
+    node.style.setProperty("--point-y", `${((py + 0.5) * 100).toFixed(1)}%`);
+    node.style.setProperty("--glare", "1");
   };
 
   const reset = () => {
-    if (!ref.current) return;
-    ref.current.style.setProperty("--tilt-x", "0deg");
-    ref.current.style.setProperty("--tilt-y", "0deg");
+    const node = ref.current;
+    if (!node) return;
+    node.style.setProperty("--tilt-x", "0deg");
+    node.style.setProperty("--tilt-y", "0deg");
+    node.style.setProperty("--glare", "0");
   };
 
   return (
@@ -100,7 +119,7 @@ export function TiltCard({
           "--scroll-shift": "0px",
           "--point-x": "50%",
           "--point-y": "50%",
-          perspective: "900px",
+          "--glare": "0",
         } as React.CSSProperties
       }
     >

@@ -190,35 +190,35 @@
   /* Gradient text link with a shine sweeping across it. The sweep is a light
      band inside an oversized background that slides — nothing moves in layout,
      so it costs one composited paint. */
+  /* Single-layer gradient carrying both the brand colours and the highlight
+     band, slid via background-position. Do NOT reintroduce a second background
+     layer with background-blend-mode here: Chromium stops honouring
+     background-clip: text and the element paints as a solid gradient BAR with
+     invisible glyphs. */
   .ember-shine {
-    background:
-      linear-gradient(
-          100deg,
-          transparent 20%,
-          oklch(1 0 0 / 85%) 42%,
-          oklch(1 0 0 / 85%) 50%,
-          transparent 72%
-        )
-        0 0 / 220% 100% no-repeat,
-      var(--gradient-ember);
-    background-blend-mode: overlay, normal;
+    background: linear-gradient(
+      100deg,
+      oklch(0.72 0.16 240) 0%,
+      oklch(0.7 0.2 300) 28%,
+      oklch(0.97 0.04 320) 44%,
+      oklch(0.7 0.22 330) 60%,
+      oklch(0.68 0.26 350) 100%
+    );
+    background-size: 260% 100%;
+    background-position: 100% 0;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: ember-shine 4.5s ease-in-out infinite;
+    animation: ember-shine 5s ease-in-out infinite;
   }
   @keyframes ember-shine {
     0%,
-    12% {
-      background-position:
-        -120% 0,
-        0 0;
+    10% {
+      background-position: 100% 0;
     }
-    55%,
+    60%,
     100% {
-      background-position:
-        220% 0,
-        0 0;
+      background-position: 0 0;
     }
   }
 
