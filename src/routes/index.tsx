@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SHOP_URL } from "@/components/site/Nav";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -245,6 +246,138 @@ function Home() {
               className="h-12 w-auto opacity-50 hover:opacity-100 transition grayscale hover:grayscale-0"
             />
           ))}
+        </div>
+      </section>
+
+      {/* MERCH DROP — EVADE */}
+      <section className="relative border-b border-border overflow-hidden">
+        <div className="absolute inset-0 grid-bg opacity-40" />
+        {/* Glow pool behind the product shot */}
+        <div
+          className="pointer-events-none absolute -left-40 top-1/2 -translate-y-1/2 h-[720px] w-[720px] rounded-full blur-3xl opacity-25"
+          style={{ background: "var(--gradient-ember)" }}
+          aria-hidden
+        />
+
+        <div className="relative mx-auto w-full px-8 lg:px-16 py-24 grid lg:grid-cols-12 gap-14 items-center">
+          {/* Product */}
+          <div className="lg:col-span-5 order-2 lg:order-1">
+            <div className="relative">
+              <img
+                src="/merch/keychain-glow.webp"
+                alt="BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE drop, glowing against black"
+                width={740}
+                height={1000}
+                loading="lazy"
+                className="w-full max-w-[420px] mx-auto lg:mx-0 select-none"
+              />
+            </div>
+
+            {/* Supporting shots */}
+            <div className="mt-6 grid grid-cols-2 gap-3 max-w-[420px] mx-auto lg:mx-0">
+              <figure className="relative overflow-hidden border border-border bg-surface">
+                <img
+                  src="/merch/keychain-front-back.webp"
+                  alt="Front and back of both charms — the reverse of the ΣCLIPSE can carries a scan-to-activate QR code"
+                  width={832}
+                  height={832}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                <figcaption className="absolute bottom-0 inset-x-0 bg-background/85 backdrop-blur mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground px-2 py-1.5">
+                  Reverse · Scan to activate
+                </figcaption>
+              </figure>
+              <figure className="relative overflow-hidden border border-border bg-surface">
+                <img
+                  src="/merch/keychain-in-hand.webp"
+                  alt="Both keychains held in one hand, showing their scale"
+                  width={832}
+                  height={832}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+                <figcaption className="absolute bottom-0 inset-x-0 bg-background/85 backdrop-blur mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground px-2 py-1.5">
+                  Double-sided acrylic
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          {/* Copy */}
+          <div className="lg:col-span-7 order-1 lg:order-2">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                / 04 — Activated merch
+              </div>
+              <span className="mono text-[10px] uppercase tracking-[0.2em] text-accent inline-flex items-center gap-2">
+                <span className="animate-pulse-glow" aria-hidden>
+                  ●
+                </span>
+                Drop live
+              </span>
+            </div>
+
+            <div className="mt-8 flex items-center gap-5">
+              <span className="mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground shrink-0">
+                MediaLife.AI ×
+              </span>
+              <img
+                src="/merch/evade-wordmark.png"
+                alt="EVADE"
+                width={640}
+                height={141}
+                loading="lazy"
+                className="h-9 md:h-12 w-auto"
+              />
+            </div>
+
+            <h2 className="mt-8 text-4xl md:text-6xl font-medium tracking-tight text-balance leading-[0.95]">
+              A keychain that <span className="ember-text">unlocks in-game</span>.
+            </h2>
+
+            <p className="mt-8 max-w-xl text-lg text-muted-foreground">
+              Our latest activated merch drop, in partnership with EVADE — one of the biggest games
+              on Roblox. Double-sided acrylic charms with a scan-to-activate code on the reverse.
+              Scan it and the physical piece redeems digital exclusives inside the game.
+            </p>
+
+            <ul className="mt-10 grid sm:grid-cols-3 gap-px bg-border border border-border max-w-xl">
+              {[
+                ["Roblox", "Exclusive in-game unlock"],
+                ["Scan", "QR on the reverse"],
+                ["Limited", "While stock lasts"],
+              ].map(([k, v]) => (
+                <li key={k} className="bg-background p-4">
+                  <div className="text-xl font-medium ember-text">{k}</div>
+                  <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mt-2">
+                    {v}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <a
+                href={SHOP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
+              >
+                Shop the drop
+                <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                  →
+                </span>
+                <span className="sr-only">(opens the MediaLife shop in a new tab)</span>
+              </a>
+              <Link
+                to="/contact"
+                className="mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors border-b border-border hover:border-primary pb-1"
+              >
+                Want this for your IP? →
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
