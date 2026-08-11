@@ -65,6 +65,12 @@
   --grid-line-strong: oklch(1 0 0 / 12%);
   --gradient-radial: radial-gradient(ellipse at top, oklch(0.3 0.18 240 / 30%), transparent 60%);
   --gradient-ember: linear-gradient(135deg, oklch(0.72 0.16 240), oklch(0.68 0.26 350));
+  /* Button fill only. Same hues and chroma as --gradient-ember, dropped in
+     lightness to the exact point where WHITE text still clears WCAG AA 4.5:1
+     (cyan 0.556, magenta 0.595 — measured, not eyeballed). The bright
+     --gradient-ember is still what glows around the button, so it reads as the
+     same colour while the label stays legible. */
+  --gradient-ember-btn: linear-gradient(135deg, oklch(0.556 0.16 240), oklch(0.595 0.26 350));
   --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
 }
 
@@ -146,8 +152,8 @@
   }
 
   .btn-ember {
-    background: var(--gradient-ember);
-    color: oklch(0.08 0.005 280);
+    background: var(--gradient-ember-btn);
+    color: #fff;
     box-shadow: 0 4px 24px -8px var(--glow);
   }
   .btn-ember:hover {
@@ -181,12 +187,70 @@
     outline-offset: 3px;
   }
 
+  /* Gradient text link with a shine sweeping across it. The sweep is a light
+     band inside an oversized background that slides — nothing moves in layout,
+     so it costs one composited paint. */
+  .ember-shine {
+    background:
+      linear-gradient(
+          100deg,
+          transparent 20%,
+          oklch(1 0 0 / 85%) 42%,
+          oklch(1 0 0 / 85%) 50%,
+          transparent 72%
+        )
+        0 0 / 220% 100% no-repeat,
+      var(--gradient-ember);
+    background-blend-mode: overlay, normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: ember-shine 4.5s ease-in-out infinite;
+  }
+  @keyframes ember-shine {
+    0%,
+    12% {
+      background-position:
+        -120% 0,
+        0 0;
+    }
+    55%,
+    100% {
+      background-position:
+        220% 0,
+        0 0;
+    }
+  }
+
+  /* Slow idle float for the floating product shot. */
+  @keyframes drift {
+    0%,
+    100% {
+      transform: translate3d(0, -6px, 0);
+    }
+    50% {
+      transform: translate3d(0, 6px, 0);
+    }
+  }
+  .animate-drift {
+    animation: drift 7s ease-in-out infinite;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .btn-pill,
     .btn-ember:hover,
     .btn-ember-outline:hover {
       transition: none;
       transform: none;
+    }
+    .ember-shine,
+    .animate-drift {
+      animation: none;
+    }
+    .ember-shine {
+      background: var(--gradient-ember);
+      -webkit-background-clip: text;
+      background-clip: text;
     }
   }
 
