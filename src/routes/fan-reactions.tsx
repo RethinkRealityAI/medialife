@@ -131,7 +131,7 @@ function FanReactions() {
           <div className="flex md:justify-end">
             <Link
               to="/contact"
-              className="inline-flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3.5 mono text-xs uppercase tracking-[0.2em] hover:bg-accent hover:text-accent-foreground transition"
+              className="btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
               Submit your capture →
             </Link>

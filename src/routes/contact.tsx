@@ -157,7 +157,7 @@ function Contact() {
                 <button
                   type="submit"
                   disabled={status === "submitting"}
-                  className="w-full bg-primary text-primary-foreground py-4 mono text-xs uppercase tracking-[0.25em] hover:bg-accent hover:text-accent-foreground transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="btn-pill btn-ember w-full justify-center py-4 mono text-xs uppercase tracking-[0.25em] font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:transform-none"
                 >
                   {status === "submitting" ? "Transmitting…" : "Initiate Deployment →"}
                 </button>

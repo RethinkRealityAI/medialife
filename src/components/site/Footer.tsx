@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { SHOP_URL } from "./Nav";
 
 export function Footer() {
   return (
@@ -28,6 +29,7 @@ export function Footer() {
                 ["Technology", "/technology"],
                 ["Insights", "/insights"],
                 ["Fan Reactions", "/fan-reactions"],
+                ["Merch", SHOP_URL],
               ]}
             />
             <FCol
@@ -70,13 +72,29 @@ function FCol({ title, items }: { title: string; items: [string, string][] }) {
         / {title}
       </div>
       <ul className="space-y-3">
-        {items.map(([label, to]) => (
-          <li key={label}>
-            <Link to={to} className="hover:text-primary transition-colors">
-              {label}
-            </Link>
-          </li>
-        ))}
+        {items.map(([label, to]) =>
+          to.startsWith("http") ? (
+            <li key={label}>
+              <a
+                href={to}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary transition-colors"
+              >
+                {label}{" "}
+                <span aria-hidden className="opacity-60 text-[10px]">
+                  ↗
+                </span>
+              </a>
+            </li>
+          ) : (
+            <li key={label}>
+              <Link to={to} className="hover:text-primary transition-colors">
+                {label}
+              </Link>
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );

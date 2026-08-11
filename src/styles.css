@@ -44,10 +44,10 @@
   --surface: oklch(0.12 0.01 280);
   --card: oklch(0.12 0.01 280);
   --card-foreground: oklch(0.97 0.005 280);
-  --popover: oklch(0.10 0.01 280);
+  --popover: oklch(0.1 0.01 280);
   --popover-foreground: oklch(0.97 0.005 280);
   --primary: oklch(0.72 0.16 240); /* cyan/blue from logo - primary */
-  --primary-foreground: oklch(0.10 0.005 280);
+  --primary-foreground: oklch(0.1 0.005 280);
   --secondary: oklch(0.18 0.015 280);
   --secondary-foreground: oklch(0.97 0.005 280);
   --muted: oklch(0.16 0.01 280);
@@ -57,13 +57,13 @@
   --destructive: oklch(0.62 0.24 27);
   --destructive-foreground: oklch(0.97 0 0);
   --border: oklch(0.22 0.015 280);
-  --input: oklch(0.20 0.012 280);
+  --input: oklch(0.2 0.012 280);
   --ring: oklch(0.72 0.16 240);
   --glow: oklch(0.68 0.26 350 / 50%);
 
   --grid-line: oklch(1 0 0 / 6%);
   --grid-line-strong: oklch(1 0 0 / 12%);
-  --gradient-radial: radial-gradient(ellipse at top, oklch(0.30 0.18 240 / 30%), transparent 60%);
+  --gradient-radial: radial-gradient(ellipse at top, oklch(0.3 0.18 240 / 30%), transparent 60%);
   --gradient-ember: linear-gradient(135deg, oklch(0.72 0.16 240), oklch(0.68 0.26 350));
   --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
 }
@@ -73,7 +73,8 @@
     border-color: var(--color-border);
   }
 
-  html, body {
+  html,
+  body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
@@ -81,7 +82,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4, h5 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
     font-family: var(--font-sans);
     letter-spacing: -0.025em;
     font-weight: 500;
@@ -98,7 +103,9 @@
     font-family: var(--font-mono);
     font-feature-settings: "zero", "ss01";
   }
-  .text-balance { text-wrap: balance; }
+  .text-balance {
+    text-wrap: balance;
+  }
 
   .grid-bg {
     background-image:
@@ -120,6 +127,69 @@
     color: transparent;
   }
 
+  /* ---- Pill buttons in the brand gradient ----
+     Text is near-black, not white, and that is deliberate. White on this
+     gradient measures 2.44:1 at the cyan end and 3.35:1 at the magenta end —
+     both fail WCAG AA (4.5:1) for the 11px uppercase labels these buttons
+     use. Near-black scores 8.62:1 and 6.27:1. Keeping the gradient vivid and
+     flipping the text dark is the combination that stays on-brand AND
+     legible. */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 9999px;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.3s ease,
+      opacity 0.2s ease;
+  }
+
+  .btn-ember {
+    background: var(--gradient-ember);
+    color: oklch(0.08 0.005 280);
+    box-shadow: 0 4px 24px -8px var(--glow);
+  }
+  .btn-ember:hover {
+    box-shadow:
+      0 0 26px -4px var(--glow),
+      0 6px 30px -6px var(--glow);
+    transform: translateY(-1px);
+  }
+  .btn-ember:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  /* Gradient border via two backgrounds: solid fill clipped to the padding
+     box, gradient clipped to the border box. Survives border-radius, which
+     border-image does not. */
+  .btn-ember-outline {
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background:
+      linear-gradient(var(--background), var(--background)) padding-box,
+      var(--gradient-ember) border-box;
+    color: var(--foreground);
+  }
+  .btn-ember-outline:hover {
+    box-shadow: 0 0 24px -6px var(--glow);
+    transform: translateY(-1px);
+  }
+  .btn-ember-outline:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .btn-pill,
+    .btn-ember:hover,
+    .btn-ember-outline:hover {
+      transition: none;
+      transform: none;
+    }
+  }
+
   .scan-line {
     position: relative;
     overflow: hidden;
@@ -128,26 +198,50 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 0%, oklch(0.78 0.16 200 / 8%) 50%, transparent 100%);
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      oklch(0.78 0.16 200 / 8%) 50%,
+      transparent 100%
+    );
     animation: scan 6s linear infinite;
     pointer-events: none;
   }
 
   @keyframes scan {
-    0% { transform: translateY(-100%); }
-    100% { transform: translateY(100%); }
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100%);
+    }
   }
 
   @keyframes marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
   }
-  .animate-marquee { animation: marquee 40s linear infinite; }
-  .animate-marquee-slow { animation: marquee 80s linear infinite; }
+  .animate-marquee {
+    animation: marquee 40s linear infinite;
+  }
+  .animate-marquee-slow {
+    animation: marquee 80s linear infinite;
+  }
 
   @keyframes pulse-glow {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
   }
-  .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+  .animate-pulse-glow {
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
 }

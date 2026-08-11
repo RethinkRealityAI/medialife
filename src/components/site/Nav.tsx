@@ -1,81 +1,19 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
-import { LANGUAGES, useLanguage, useTheme, type LangCode } from "@/lib/theme";
 
-const PHONE_DISPLAY = "+1 (415) 555-0123";
-const PHONE_HREF = "tel:+14155550123";
+export const SHOP_URL = "https://medialife-shop.myshopify.com/";
 
-function ThemeToggle() {
-  const { theme, toggle } = useTheme();
-  return (
-    <button
-      onClick={toggle}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
-      className="h-8 w-8 grid place-items-center border border-border hover:bg-secondary hover:text-primary transition-colors mono text-xs"
-    >
-      {theme === "dark" ? "☀" : "☾"}
-    </button>
-  );
-}
-
-function LanguageSelector() {
-  const { lang, setLang } = useLanguage();
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className="mono text-[10px] uppercase tracking-[0.18em] border border-border px-2.5 h-8 inline-flex items-center gap-1.5 hover:bg-secondary hover:text-primary transition-colors"
-      >
-        <span aria-hidden>🌐</span>
-        <span>{lang.toUpperCase()}</span>
-        <span className="text-[8px] opacity-60">▾</span>
-      </button>
-      {open && (
-        <ul
-          role="listbox"
-          className="absolute right-0 top-full mt-1 min-w-[180px] border border-border bg-popover text-popover-foreground shadow-xl z-50 max-h-80 overflow-auto"
-        >
-          {LANGUAGES.map((l) => (
-            <li key={l.code}>
-              <button
-                role="option"
-                aria-selected={lang === l.code}
-                onClick={() => {
-                  setLang(l.code as LangCode);
-                  setOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 text-xs hover:bg-secondary flex items-center justify-between ${lang === l.code ? "text-primary" : ""}`}
-              >
-                <span>{l.label}</span>
-                <span className="mono text-[9px] opacity-60 uppercase">{l.code}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-const links = [
+// Split around Merch because it leaves the site — TanStack's <Link> is for
+// in-app routes only, so the shop needs a plain <a>.
+const linksBeforeShop = [
   { to: "/insights", label: "Insights", num: "02" },
   { to: "/fan-reactions", label: "Fan Reactions", num: "03" },
-  { to: "/contact", label: "Contact", num: "04" },
 ] as const;
+
+const linksAfterShop = [{ to: "/contact", label: "Contact", num: "05" }] as const;
+
+const SHOP_NUM = "04";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -135,7 +73,37 @@ export function Nav() {
               <span className="ml-2 text-[10px] opacity-60">▾</span>
             </Link>
           </div>
-          {links.map((l) => (
+          {linksBeforeShop.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="group relative px-4 py-2 text-sm transition-colors hover:text-primary"
+              activeProps={{ className: "text-primary" }}
+              onMouseEnter={() => setMegaOpen(false)}
+            >
+              <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
+                /{l.num}
+              </span>
+              {l.label}
+            </Link>
+          ))}
+          <a
+            href={SHOP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group relative px-4 py-2 text-sm transition-colors hover:text-primary inline-flex items-center"
+            onMouseEnter={() => setMegaOpen(false)}
+          >
+            <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
+              /{SHOP_NUM}
+            </span>
+            Merch
+            <span aria-hidden className="ml-1.5 text-[10px] opacity-60">
+              ↗
+            </span>
+            <span className="sr-only">(opens the MediaLife shop in a new tab)</span>
+          </a>
+          {linksAfterShop.map((l) => (
             <Link
               key={l.to}
               to={l.to}
@@ -152,21 +120,12 @@ export function Nav() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2">
-          <a
-            href={PHONE_HREF}
-            className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1.5"
-            aria-label="Call us"
-          >
-            <span aria-hidden>📞</span>
-            <span>{PHONE_DISPLAY}</span>
-          </a>
-          <LanguageSelector />
-          <ThemeToggle />
           <Link
             to="/contact"
-            className="mono text-[11px] uppercase tracking-[0.18em] border border-border px-4 py-2 hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+            className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3"
           >
-            <span className="text-[7px]">Deploy AR →</span>
+            Deploy AR
+            <span aria-hidden>→</span>
           </Link>
         </div>
 
@@ -311,7 +270,7 @@ export function Nav() {
                 <span className="mono text-[9px]">/{s.num}</span>
               </Link>
             ))}
-            {links.map((l) => (
+            {linksBeforeShop.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
@@ -322,6 +281,43 @@ export function Nav() {
                 <span className="mono text-[10px] text-muted-foreground">/{l.num}</span>
               </Link>
             ))}
+            <a
+              href={SHOP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
+              onClick={() => setOpen(false)}
+            >
+              <span>
+                Merch{" "}
+                <span aria-hidden className="opacity-60 text-xs">
+                  ↗
+                </span>
+                <span className="sr-only">(opens the MediaLife shop in a new tab)</span>
+              </span>
+              <span className="mono text-[10px] text-muted-foreground">/{SHOP_NUM}</span>
+            </a>
+            {linksAfterShop.map((l) => (
+              <Link
+                key={l.to}
+                to={l.to}
+                className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
+                onClick={() => setOpen(false)}
+              >
+                <span>{l.label}</span>
+                <span className="mono text-[10px] text-muted-foreground">/{l.num}</span>
+              </Link>
+            ))}
+            <div className="p-6">
+              <Link
+                to="/contact"
+                className="btn-pill btn-ember w-full justify-center mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3.5"
+                onClick={() => setOpen(false)}
+              >
+                Deploy AR
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
           </div>
         </div>
       )}

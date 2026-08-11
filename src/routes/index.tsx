@@ -83,14 +83,14 @@ function Home() {
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
               to="/technology"
-              className="group inline-flex items-center gap-3 bg-primary text-primary-foreground px-6 py-3.5 mono text-xs uppercase tracking-[0.2em] hover:bg-accent hover:text-accent-foreground transition-colors"
+              className="group btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
               Explore the Stack
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
             <Link
               to="/fan-reactions"
-              className="inline-flex items-center gap-3 border border-border px-6 py-3.5 mono text-xs uppercase tracking-[0.2em] hover:border-primary hover:text-primary transition"
+              className="btn-pill btn-ember-outline px-7 py-4 mono text-xs uppercase tracking-[0.2em]"
             >
               See Fan Reactions
             </Link>
