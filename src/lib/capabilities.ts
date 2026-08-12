@@ -79,3 +79,32 @@ export const PERFORMANCE = [
   { v: "1.7/min", l: "attendees engaging at Anime NYC" },
   { v: "680+", l: "unique interactions per activated retail unit" },
 ];
+
+/**
+ * Netflix / Sakamoto Days retail proof.
+ *
+ * Figures are quoted from MEDIALIFE's own Live AR Media deck
+ * (medialife-live-ar-media--04pmr63.gamma.site). Do not round, extrapolate or
+ * add retailers — these are named locations with named counts.
+ */
+export const RETAIL_UNITS = [
+  { name: "Toy Tokyo", city: "New York", v: "683" },
+  { name: "Forbidden Planet", city: "New York", v: "490" },
+  { name: "Golden Age Collectibles", city: "Vancouver", v: "356" },
+];
+
+/**
+ * Award proof.
+ *
+ * MEDIALIFE.AI is listed on the official 2025 Pinnacle Awards winners page for
+ * Marketing & Communications, at Platinum. The award line below uses the
+ * wording from MEDIALIFE's own approved materials; the awards site itself
+ * labels the category "Experiential Marketing Campaign".
+ */
+export const AWARD = {
+  tier: "Platinum",
+  name: "Pinnacle Award",
+  category: "Experiential Marketing & Communications",
+  year: "2025",
+  href: "https://www.pinnacle-award.com/winners-marketing-communications-2025",
+};

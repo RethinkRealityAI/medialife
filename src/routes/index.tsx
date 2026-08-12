@@ -3,7 +3,7 @@ import { SHOP_URL } from "@/components/site/Nav";
 import { TiltCard } from "@/components/site/TiltCard";
 import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
-import { CAPABILITIES, TOUCHPOINTS, PERFORMANCE } from "@/lib/capabilities";
+import { CAPABILITIES, TOUCHPOINTS, PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
 import { liveCampaigns, comingSoonCampaigns } from "@/lib/campaigns";
 
 export const Route = createFileRoute("/")({
@@ -339,13 +339,15 @@ function Home() {
               </h3>
               <p className="mt-5 text-muted-foreground">
                 Activated magazines, stickers, posters, and life-sized retail displays distributed
-                across 150+ retailers and three major North American conventions.
+                across 150+ comic and manga retailers and three major North American conventions —
+                Anime Expo, San Diego Comic-Con and Anime NYC.
               </p>
+
               <div className="mt-8 grid sm:grid-cols-3 gap-px bg-border border border-border">
                 {[
-                  ["150+", "retail locations"],
+                  ["150+", "comic & manga retailers"],
                   ["3", "major conventions"],
-                  ["Platinum", "Pinnacle Award"],
+                  ["Platinum", "Pinnacle Award 2025"],
                 ].map(([v, l]) => (
                   <div key={l} className="bg-background p-4">
                     <CountUp value={v} className="block text-2xl font-medium ember-text" />
@@ -355,10 +357,51 @@ function Home() {
                   </div>
                 ))}
               </div>
+
+              {/* Named retail units — real locations, real counts */}
+              <div className="mt-8">
+                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Interactions per activated retail unit
+                </div>
+                <ul className="mt-4 space-y-px bg-border border border-border">
+                  {RETAIL_UNITS.map((r) => (
+                    <li
+                      key={r.name}
+                      className="bg-background px-4 py-3 flex items-baseline justify-between gap-4"
+                    >
+                      <span className="text-sm">
+                        {r.name}
+                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground ml-2">
+                          {r.city}
+                        </span>
+                      </span>
+                      <CountUp
+                        value={r.v}
+                        className="text-lg font-medium ember-text tabular-nums shrink-0"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <a
+                href="https://medialife-live-ar-media--04pmr63.gamma.site/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group/ip mt-8 mono text-[11px] uppercase tracking-[0.2em] inline-flex items-center gap-2 border-b border-transparent hover:border-primary pb-1 transition-colors"
+              >
+                <span className="ember-shine font-medium">See the full AR media case study</span>
+                <span
+                  aria-hidden
+                  className="text-primary transition-transform group-hover/ip:translate-x-1"
+                >
+                  ↗
+                </span>
+              </a>
             </div>
 
             <div className="lg:col-span-5 flex flex-col gap-10">
-              {/* Award */}
+              {/* Award — with the official winners list as proof */}
               <div className="border border-border bg-background p-8 relative overflow-hidden">
                 <div
                   className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full blur-3xl opacity-25"
@@ -367,14 +410,30 @@ function Home() {
                 />
                 <div className="relative">
                   <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Award
+                    Award · {AWARD.year}
                   </div>
                   <div className="mt-4 text-2xl md:text-3xl font-medium tracking-tight ember-text">
-                    Platinum Pinnacle Award
+                    {AWARD.tier} {AWARD.name}
                   </div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    Experiential Marketing &amp; Communications
+                  <div className="mt-2 text-sm text-muted-foreground">{AWARD.category}</div>
+
+                  <div className="mt-6">
+                    <PosterViewer
+                      src="/live/pinnacle-winners.webp"
+                      large="/live/pinnacle-winners-large.webp"
+                      alt="2025 Pinnacle Awards winners, Marketing & Communications — Activated by MEDIALIFE listed alongside EA, Hyundai, Toshiba and ZEISS"
+                      caption="Official 2025 winners list · MEDIALIFE highlighted"
+                    />
                   </div>
+
+                  <a
+                    href={AWARD.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-6 inline-flex mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1 hover:opacity-80 transition-opacity"
+                  >
+                    Verify on the Pinnacle Awards site ↗
+                  </a>
                 </div>
               </div>
 
