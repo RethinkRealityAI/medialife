@@ -87,7 +87,7 @@ const USAGE_DO = [
 const USAGE_DONT = [
   "Don't rotate, skew or recolor the icon outside the brand palette.",
   "Don't place the gradient mark on low-contrast backgrounds.",
-  "Don't reflow the wordmark — `MediaLife.AI` is one lockup.",
+  "Don't re-typeset the wordmark — always place the supplied MEDIALIFE™ artwork.",
 ];
 
 function BrandPage() {
@@ -119,9 +119,9 @@ function BrandPage() {
             num="01"
             kicker="Identity"
             title="Logo lockups"
-            copy="Three approved lockups. Pick by available space, never by preference."
+            copy="Four approved lockups. Pick by available space and by surface — never by preference."
           />
-          <div className="mt-10 grid md:grid-cols-3 gap-px bg-border border border-border">
+          <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border">
             <LockupCell
               label="Horizontal"
               subtitle="Default · all digital nav, signatures, partner decks"
@@ -133,6 +133,12 @@ function BrandPage() {
             </LockupCell>
             <LockupCell label="Icon" subtitle="Standalone mark · favicons, app icons, lens shells">
               <Logo variant="icon" />
+            </LockupCell>
+            <LockupCell
+              label="Endorsement"
+              subtitle="Partner surfaces only · posters, standees, activated merch"
+            >
+              <Logo variant="lockup" className="max-w-[200px]" />
             </LockupCell>
           </div>
         </div>

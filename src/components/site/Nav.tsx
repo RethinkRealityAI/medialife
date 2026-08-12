@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
+import { Wordmark } from "./Logo";
 
 export const SHOP_URL = "https://shop.medialife.ai/";
 
@@ -10,9 +11,12 @@ export const SHOP_URL = "https://shop.medialife.ai/";
  * Numbers follow the homepage reading order, so /02 in the nav is the second
  * section down the page. Fan Reactions and Production Capabilities are homepage
  * anchors; Live Now and Case Studies are real routes because both need linkable
- * URLs. Merch is external. Contact
- * stays a route because that is where the working Netlify form lives —
- * collapsing it into an anchor would lose the form.
+ * URLs. Merch is external.
+ *
+ * Contact is deliberately NOT a nav row: the "Start a project" pill is the
+ * single, higher-intent path to the same /contact route, and one primary CTA
+ * beats two competing entry points. /contact is still linked from the footer
+ * and from every section CTA, so the Netlify form is not orphaned.
  *
  * The Technology stack pages are still reachable through the Production
  * Capabilities mega-menu, so nothing was orphaned by the nav change.
@@ -28,7 +32,6 @@ const NAV: NavItem[] = [
   { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "03" },
   { kind: "route", to: "/case-studies", label: "Case Studies", num: "04" },
   { kind: "external", href: SHOP_URL, label: "Merch", num: "05" },
-  { kind: "route", to: "/contact", label: "Contact", num: "06" },
 ];
 
 const itemCls =
@@ -74,9 +77,7 @@ export function Nav() {
               style={{ background: "var(--gradient-ember)" }}
             />
           </div>
-          <span className="mono text-xs tracking-[0.2em] uppercase">
-            MediaLife<span className="text-primary">.</span>AI
-          </span>
+          <Wordmark className="h-[13px] w-auto" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={closeMega}>

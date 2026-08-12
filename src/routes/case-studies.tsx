@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
-import { CASE_STUDIES, type CaseStudy } from "@/lib/case-studies";
-import { comingSoonCampaigns } from "@/lib/campaigns";
+import { LoopClip } from "@/components/site/LoopClip";
+import { CASE_STUDIES, type CaseStudy, type Creator } from "@/lib/case-studies";
 
 export const Route = createFileRoute("/case-studies")({
   head: () => ({
@@ -27,10 +27,9 @@ export const Route = createFileRoute("/case-studies")({
 });
 
 const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
+const RULE = "mono text-[10px] uppercase tracking-[0.2em] text-primary";
 
 function CaseStudies() {
-  const soon = comingSoonCampaigns();
-
   return (
     <>
       {/* HERO */}
@@ -46,66 +45,28 @@ function CaseStudies() {
             Selected programmes across activated print, retail, live events and convention
             distribution — with the measurement that came back from the field.
           </p>
+
+          {/* Jump list — two studies today, but the page is built to grow. */}
+          <nav aria-label="Case studies" className="mt-10 flex flex-wrap gap-3">
+            {CASE_STUDIES.map((c, i) => (
+              <a
+                key={c.slug}
+                href={`#${c.slug}`}
+                className="group inline-flex items-baseline gap-3 border border-border bg-background/60 backdrop-blur px-5 py-3 hover:border-primary transition-colors"
+              >
+                <span className="mono text-[10px] tracking-[0.25em] text-muted-foreground group-hover:text-primary transition-colors">
+                  /{String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="text-sm">{c.client}</span>
+              </a>
+            ))}
+          </nav>
         </div>
       </section>
 
       {CASE_STUDIES.map((c, i) => (
         <CaseStudyBlock key={c.slug} c={c} index={i} />
       ))}
-
-      {/* Coming soon */}
-      {soon.length > 0 && (
-        <section className="border-b border-border">
-          <div className="w-full px-8 lg:px-16 py-20">
-            <div className={EYEBROW}>Coming soon</div>
-            <div className="mt-8 grid lg:grid-cols-12 gap-10 items-center border border-border bg-background/40 backdrop-blur p-8 lg:p-10">
-              <div className="lg:col-span-8">
-                {soon.map((s) => (
-                  <div key={s.slug}>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="mono text-[10px] uppercase tracking-[0.2em] text-primary border border-primary/50 px-2 py-1">
-                        {s.statusLabel}
-                      </span>
-                      <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                        {s.name} · {s.kicker}
-                      </span>
-                    </div>
-                    <h3 className="mt-5 text-2xl md:text-3xl font-medium tracking-tight text-balance">
-                      {s.headline}
-                    </h3>
-                    {s.body.map((p) => (
-                      <p key={p} className="mt-4 max-w-2xl text-muted-foreground">
-                        {p}
-                      </p>
-                    ))}
-                    {s.note && (
-                      <p className="mt-4 mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70 leading-relaxed max-w-2xl">
-                        {s.note}
-                      </p>
-                    )}
-                    <Link
-                      to="/contact"
-                      className="mt-7 inline-flex mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors border-b border-border hover:border-primary pb-1"
-                    >
-                      Get notified →
-                    </Link>
-                  </div>
-                ))}
-              </div>
-              <div className="lg:col-span-4">
-                <img
-                  src="/work/evade-logo.webp"
-                  alt="EVADE"
-                  width={560}
-                  height={560}
-                  loading="lazy"
-                  className="w-full max-w-[280px] mx-auto"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* CTA */}
       <section className="relative overflow-hidden">
@@ -137,7 +98,7 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
       className={`scroll-mt-20 border-b border-border ${index % 2 === 1 ? "bg-surface" : ""}`}
     >
       <div className="w-full px-8 lg:px-16 py-20">
-        {/* Header */}
+        {/* ── Header ─────────────────────────────────────────────── */}
         <div className="grid lg:grid-cols-12 gap-10 items-start">
           <div className="lg:col-span-7">
             <div className={EYEBROW}>
@@ -200,14 +161,35 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
           )}
         </div>
 
-        {/* Metrics */}
-        <div className="mt-16 grid md:grid-cols-2 gap-10">
+        {/* ── Challenge / Solution / Execution ───────────────────── */}
+        {c.approach && (
+          <div className="mt-16 grid md:grid-cols-3 gap-px bg-border border border-border">
+            {c.approach.map((a, i) => (
+              <div key={a.label} className="bg-background p-7 relative overflow-hidden group">
+                <span
+                  aria-hidden
+                  className="absolute -top-3 -right-1 text-7xl font-medium leading-none opacity-[0.06] select-none"
+                >
+                  {i + 1}
+                </span>
+                <div className={RULE}>{a.label}</div>
+                <p className="mt-4 text-sm text-foreground/85 leading-relaxed relative">{a.body}</p>
+                <div
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 h-px opacity-0 group-hover:opacity-100 transition-opacity"
+                  style={{ background: "var(--gradient-ember)" }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Metrics + retail ───────────────────────────────────── */}
+        <div className={`mt-16 grid gap-10 ${c.retail ? "md:grid-cols-2" : ""}`}>
           <div className="space-y-8">
             {c.metricGroups.map((grp) => (
               <div key={grp.label}>
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-primary">
-                  {grp.label}
-                </div>
+                <div className={RULE}>{grp.label}</div>
                 {/* A one-item band must not leave a dead cell beside it. */}
                 <div
                   className={`mt-4 grid gap-px bg-border border border-border ${
@@ -219,12 +201,22 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
                   }`}
                 >
                   {grp.items.map((m) => (
-                    <div key={m.l} className="bg-background p-5">
+                    <div
+                      key={m.l}
+                      className="group relative bg-background p-5 overflow-hidden transition-colors hover:bg-secondary/40"
+                    >
+                      <div
+                        aria-hidden
+                        className="absolute inset-x-0 top-0 h-px opacity-40 group-hover:opacity-100 transition-opacity"
+                        style={{ background: "var(--gradient-ember)" }}
+                      />
                       <CountUp
                         value={m.v}
-                        className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
+                        className="block text-3xl md:text-4xl font-medium tracking-tight ember-text"
                       />
-                      <div className="mt-2 text-xs text-muted-foreground">{m.l}</div>
+                      <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                        {m.l}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -234,9 +226,7 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
 
           {c.retail && (
             <div>
-              <div className="mono text-[10px] uppercase tracking-[0.2em] text-primary">
-                Retail unit engagement · sample data set
-              </div>
+              <div className={RULE}>Retail unit engagement · sample data set</div>
               <ul className="mt-4 space-y-px bg-border border border-border">
                 {c.retail.map((r, i) => (
                   <li key={r.name} className="bg-background px-5 py-4">
@@ -244,9 +234,11 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
                       {String(i + 1).padStart(2, "0")}
                     </div>
                     <div className="mt-2 flex items-baseline justify-between gap-4">
-                      <span className="text-sm">
+                      {/* City drops to its own line on narrow screens — inline
+                          it wraps mid-row and pushes the figure out of line. */}
+                      <span className="text-sm min-w-0">
                         {r.name}
-                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground ml-2">
+                        <span className="block sm:inline mono text-[10px] uppercase tracking-widest text-muted-foreground sm:ml-2">
                           {r.city}
                         </span>
                       </span>
@@ -267,29 +259,77 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
           )}
         </div>
 
-        {/* Gallery */}
-        {c.gallery.length > 0 && (
+        {/* ── Creators ───────────────────────────────────────────── */}
+        {c.creators && (
           <div className="mt-16">
-            <div className={EYEBROW}>In the field</div>
-            <div className="mt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {c.gallery.map((s) => (
-                <figure
-                  key={s.src}
-                  className="relative overflow-hidden border border-border bg-secondary group"
-                >
-                  <img
-                    src={s.src}
-                    alt={s.alt}
-                    loading="lazy"
-                    className="w-full aspect-[3/4] object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                </figure>
+            <div className={EYEBROW}>{c.creators.label}</div>
+            <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {c.creators.items.map((cr) => (
+                <CreatorCard key={cr.name} c={cr} />
               ))}
             </div>
           </div>
         )}
 
-        {/* Quotes */}
+        {/* ── Bento: motion + stills ─────────────────────────────── */}
+        {(c.motion?.length || c.gallery.length > 0) && (
+          <div className="mt-16">
+            <div className={EYEBROW}>In the field</div>
+            <div
+              className="mt-6 grid grid-cols-2 lg:grid-cols-6 gap-3"
+              style={{ gridAutoFlow: "dense" }}
+            >
+              {/* The two motion pieces anchor the grid: two columns wide, three
+                  rows tall, which lands at roughly the 1:2 portrait ratio the
+                  source clips were shot at — so they fill their slot instead of
+                  being cropped to death. */}
+              {c.motion?.map((m, i) => (
+                <LoopClip
+                  key={m.src}
+                  clip={m}
+                  fill
+                  className={
+                    i === 0
+                      ? "col-span-1 row-span-2 lg:col-span-2 lg:row-span-3 lg:col-start-1 lg:row-start-1"
+                      : "col-span-1 row-span-2 lg:col-span-2 lg:row-span-3 lg:col-start-5 lg:row-start-1"
+                  }
+                />
+              ))}
+
+              {c.gallery.map((s, i) => {
+                // The tail of the set goes wide, which squares off the bottom
+                // band instead of leaving three orphaned cells.
+                const wide = c.motion?.length ? i >= c.gallery.length - 3 : false;
+                return (
+                  <figure
+                    key={s.src}
+                    className={`relative overflow-hidden border border-border bg-secondary group ${
+                      wide ? "lg:col-span-2" : ""
+                    }`}
+                  >
+                    <img
+                      src={s.src}
+                      alt={s.alt}
+                      loading="lazy"
+                      className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${
+                        wide ? "aspect-[3/4] lg:aspect-[3/2]" : "aspect-[3/4]"
+                      }`}
+                    />
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{
+                        background: "linear-gradient(to top, oklch(0 0 0 / 0.55), transparent 55%)",
+                      }}
+                    />
+                  </figure>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Quotes ─────────────────────────────────────────────── */}
         {c.quotes.length > 0 && (
           <div className="mt-16">
             <div className={EYEBROW}>From the retailers</div>
@@ -297,7 +337,7 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
               {c.quotes.map((q) => (
                 <figure
                   key={q.who}
-                  className="border border-border bg-background p-6 flex flex-col justify-between"
+                  className="group relative border border-border bg-background p-6 flex flex-col justify-between overflow-hidden hover:border-primary/40 transition-colors"
                 >
                   <blockquote className="text-sm text-foreground/90 leading-relaxed">
                     “{q.text}”
@@ -305,6 +345,11 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
                   <figcaption className="mt-5 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                     {q.who}
                   </figcaption>
+                  <div
+                    aria-hidden
+                    className="absolute left-0 top-0 h-full w-px opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ background: "var(--gradient-ember)" }}
+                  />
                 </figure>
               ))}
             </div>
@@ -312,5 +357,31 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
         )}
       </div>
     </section>
+  );
+}
+
+function CreatorCard({ c }: { c: Creator }) {
+  return (
+    <article className="group border border-border bg-background overflow-hidden hover:border-primary/40 transition-colors">
+      <LoopClip clip={c.clip} className="border-0 border-b border-border" />
+      <div className="p-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="text-sm font-medium">{c.name}</h3>
+          <span className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground shrink-0">
+            {c.platform}
+          </span>
+        </div>
+        {c.handle && (
+          <div className="mt-1 mono text-[11px] text-muted-foreground break-all">{c.handle}</div>
+        )}
+        <div className="mt-4 flex items-baseline gap-2">
+          <CountUp value={c.stat} className="text-2xl font-medium tracking-tight ember-text" />
+          <span className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+            {c.statLabel}
+          </span>
+        </div>
+        {c.note && <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{c.note}</p>}
+      </div>
+    </article>
   );
 }

@@ -647,13 +647,43 @@ function Home() {
                 src/lib/campaigns.ts before editing this copy. */}
             {evade && (
               <div className="mt-10 border border-border bg-background/50 backdrop-blur p-6 max-w-xl">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-primary border border-primary/50 px-2 py-1">
-                    {evade.statusLabel}
+                <span className="mono text-[10px] uppercase tracking-[0.2em] text-primary border border-primary/50 px-2 py-1 inline-block">
+                  {evade.statusLabel}
+                </span>
+
+                {/* Co-brand lockup. Both marks are the partners' official
+                    artwork, set at matching cap height with the × as a neutral
+                    connector — the standard collaboration form, and it keeps
+                    neither brand subordinate to the other. The whole lockup is
+                    one accessible name so a screen reader reads it as
+                    "MEDIALIFE x EVADE", not as two orphaned images. */}
+                <div
+                  className="mt-5 flex items-center gap-4 sm:gap-5"
+                  role="img"
+                  aria-label={`MEDIALIFE x EVADE — ${evade.kicker}`}
+                >
+                  <img
+                    src="/brand/medialife-wordmark.webp"
+                    alt=""
+                    width={420}
+                    height={70}
+                    className="h-4 sm:h-5 w-auto"
+                  />
+                  <span aria-hidden className="text-lg text-muted-foreground/60 leading-none">
+                    ×
                   </span>
-                  <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {evade.name} · {evade.kicker}
-                  </span>
+                  <img
+                    src="/brand/evade-logo.webp"
+                    alt=""
+                    width={600}
+                    height={158}
+                    loading="lazy"
+                    className="h-7 sm:h-9 w-auto"
+                  />
+                </div>
+
+                <div className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {evade.kicker}
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">{evade.body[0]}</p>
                 {evade.note && (

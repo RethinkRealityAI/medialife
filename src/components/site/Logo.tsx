@@ -1,14 +1,25 @@
 type LogoProps = {
-  variant?: "horizontal" | "vertical" | "icon";
+  variant?: "horizontal" | "vertical" | "icon" | "lockup";
   monochrome?: "none" | "white" | "black";
   className?: string;
 };
 
 /**
- * MediaLife.AI Logo
- * - Icon: concentric ring + ember dot (brand mark)
- * - Horizontal: mark + wordmark side-by-side
- * - Vertical: mark above wordmark
+ * MEDIALIFE logo.
+ *
+ * The wordmark and the full "ACTIVATED BY MEDIALIFE™" lockup are the OFFICIAL
+ * supplied artwork (public/brand/*.webp) — do not re-typeset them. Both files
+ * are pure white on transparency, which is why the black variant is produced
+ * with `filter: invert(1)`: on a pure-white-on-alpha source that inverts to
+ * pure black with no colour drift, and it keeps one asset instead of two.
+ *
+ * The gradient orb is the brand mark and stays drawn as SVG so it can inherit
+ * the ember gradient and scale losslessly.
+ *
+ * "ACTIVATED BY MEDIALIFE™" is an endorsement lockup for partner surfaces —
+ * posters, standees, merch. On MEDIALIFE's own surfaces use the wordmark
+ * (horizontal / vertical); reach for `lockup` only when showing the
+ * endorsement mark itself, as the brand page does.
  */
 export function Logo({ variant = "horizontal", monochrome = "none", className }: LogoProps) {
   const gid = `lg-${variant}-${monochrome}`;
@@ -16,10 +27,7 @@ export function Logo({ variant = "horizontal", monochrome = "none", className }:
     monochrome === "white" ? "#fff" : monochrome === "black" ? "#000" : `url(#${gid}-ring)`;
   const dotFill =
     monochrome === "white" ? "#fff" : monochrome === "black" ? "#000" : `url(#${gid}-dot)`;
-  const wordColor =
-    monochrome === "white" ? "#fff" : monochrome === "black" ? "#000" : "currentColor";
-  const dotAccent =
-    monochrome === "white" ? "#fff" : monochrome === "black" ? "#000" : "var(--accent)";
+  const invert = monochrome === "black" ? { filter: "invert(1)" } : undefined;
 
   const Defs = (
     <defs>
@@ -45,9 +53,22 @@ export function Logo({ variant = "horizontal", monochrome = "none", className }:
 
   if (variant === "icon") {
     return (
-      <span className={className} aria-label="MediaLife.AI">
+      <span className={className} aria-label="MEDIALIFE">
         <Mark size={48} />
       </span>
+    );
+  }
+
+  if (variant === "lockup") {
+    return (
+      <img
+        src="/brand/medialife-lockup.webp"
+        alt="Activated by MEDIALIFE"
+        width={686}
+        height={183}
+        style={invert}
+        className={`h-auto w-full max-w-[280px] ${className ?? ""}`}
+      />
     );
   }
 
@@ -55,10 +76,7 @@ export function Logo({ variant = "horizontal", monochrome = "none", className }:
     return (
       <div className={`inline-flex flex-col items-center gap-3 ${className ?? ""}`}>
         <Mark size={56} />
-        <div className="mono text-xs tracking-[0.28em] uppercase" style={{ color: wordColor }}>
-          MediaLife
-          <span style={{ color: dotAccent }}>.</span>AI
-        </div>
+        <Wordmark className="h-4 w-auto" style={invert} />
       </div>
     );
   }
@@ -66,10 +84,31 @@ export function Logo({ variant = "horizontal", monochrome = "none", className }:
   return (
     <div className={`inline-flex items-center gap-2.5 ${className ?? ""}`}>
       <Mark size={28} />
-      <div className="mono text-xs tracking-[0.22em] uppercase" style={{ color: wordColor }}>
-        MediaLife
-        <span style={{ color: dotAccent }}>.</span>AI
-      </div>
+      <Wordmark className="h-3.5 w-auto" style={invert} />
     </div>
+  );
+}
+
+/**
+ * The official MEDIALIFE™ wordmark. Width/height are the intrinsic asset size
+ * so the browser reserves the right box before the image lands — a nav logo is
+ * the worst place to ship layout shift.
+ */
+export function Wordmark({
+  className,
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <img
+      src="/brand/medialife-wordmark.webp"
+      alt="MEDIALIFE"
+      width={420}
+      height={70}
+      style={style}
+      className={className}
+    />
   );
 }

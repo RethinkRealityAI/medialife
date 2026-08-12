@@ -80,7 +80,7 @@ export const CAMPAIGNS: Campaign[] = [
     status: "coming-soon",
     statusLabel: "Coming soon",
     name: "EVADE",
-    kicker: "Game-native merch · In development",
+    kicker: "Game-native merch · Activated collectible",
     headline: "EVADE / GAME-NATIVE MERCH",
     body: [
       "MEDIALIFE is developing a limited-edition activated acrylic keychain co-produced with Evade, one of the biggest games on Roblox, combining physical merchandise, an immersive QR-activated experience, and game-native commerce infrastructure.",
@@ -88,7 +88,7 @@ export const CAMPAIGNS: Campaign[] = [
     facts: [
       { k: "Format", v: "Activated collectible" },
       { k: "Access", v: "QR-activated experience" },
-      { k: "Status", v: "In development" },
+      { k: "Status", v: "Coming soon" },
     ],
     secondary: { label: "Get notified", href: "/contact" },
     image: {
