@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SHOP_URL } from "@/components/site/Nav";
 import { TiltCard } from "@/components/site/TiltCard";
+import { PosterViewer } from "@/components/site/PosterViewer";
+import { CountUp } from "@/components/site/CountUp";
 import { CAPABILITIES, TOUCHPOINTS, PERFORMANCE } from "@/lib/capabilities";
 import { liveCampaigns, comingSoonCampaigns } from "@/lib/campaigns";
 
@@ -275,7 +277,14 @@ function Home() {
               {/* Type-led campaign plate. Swap for key art by setting `image` in
                   src/lib/campaigns.ts once assets clear approval. */}
               <div className="lg:col-span-5">
-                {lead.image ? (
+                {lead.image?.large ? (
+                  <PosterViewer
+                    src={lead.image.src}
+                    large={lead.image.large}
+                    alt={lead.image.alt}
+                    caption={lead.image.caption}
+                  />
+                ) : lead.image ? (
                   <img
                     src={lead.image.src}
                     alt={lead.image.alt}
@@ -339,7 +348,7 @@ function Home() {
                   ["Platinum", "Pinnacle Award"],
                 ].map(([v, l]) => (
                   <div key={l} className="bg-background p-4">
-                    <div className="text-2xl font-medium ember-text">{v}</div>
+                    <CountUp value={v} className="block text-2xl font-medium ember-text" />
                     <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mt-2">
                       {l}
                     </div>
@@ -428,9 +437,10 @@ function Home() {
           <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border">
             {PERFORMANCE.map((s) => (
               <div key={s.l} className="bg-background p-6 hover:bg-secondary transition-colors">
-                <div className="text-2xl md:text-3xl font-medium tracking-tight ember-text">
-                  {s.v}
-                </div>
+                <CountUp
+                  value={s.v}
+                  className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
+                />
                 <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
               </div>
             ))}

@@ -15,8 +15,10 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * - Pointer and scroll write separate CSS custom properties, composed once in
  *   the consumer's transform, so the two inputs never overwrite each other.
  * - Scroll work is rAF-throttled and gated on an IntersectionObserver.
- * - Pointer tilt is bound to a fine pointer: on touch there is no hover, and
- *   the card would stay stuck mid-tilt after a tap.
+ * - Pointer tilt is gated on the pointerType of the actual event, so a tap
+ *   never leaves the card stuck mid-tilt, and a trackpad on a touchscreen
+ *   laptop still works (the `pointer: fine` media query does not cover that —
+ *   it describes only the PRIMARY pointer).
  * - All of it is disabled under prefers-reduced-motion.
  */
 export function TiltCard({
@@ -33,13 +35,14 @@ export function TiltCard({
   scrollShift?: number;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const [enabled, setEnabled] = useState(false);
+  const [reduced, setReduced] = useState(false);
+  // Whether a real mouse/pen has been seen on this element. See onPointerMove.
+  const finePointer = useRef(false);
 
   useEffect(() => {
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    setEnabled(!reduced && fine);
-    if (reduced) return;
+    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setReduced(isReduced);
+    if (isReduced) return;
 
     const el = ref.current;
     if (!el) return;
@@ -86,7 +89,19 @@ export function TiltCard({
 
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const node = ref.current;
-    if (!enabled || !node) return;
+    if (reduced || !node) return;
+
+    // Gate on the ACTUAL pointer that moved, not on a media query.
+    //
+    // This previously gated on `(hover: hover) and (pointer: fine)`. Those
+    // queries describe the device's PRIMARY pointer — on a Windows laptop with
+    // a touchscreen the primary pointer is touch, so both evaluate false and
+    // the tilt was dead even when the user was driving a trackpad. That is why
+    // it worked in Safari on a Mac and not in Chrome on a touch laptop: a
+    // device difference, not an engine difference. `any-pointer` would be
+    // closer, but reading pointerType off the event is exact.
+    if (e.pointerType === "touch") return;
+    finePointer.current = true;
     const r = node.getBoundingClientRect();
     const px = (e.clientX - r.left) / r.width - 0.5;
     const py = (e.clientY - r.top) / r.height - 0.5;
@@ -99,7 +114,7 @@ export function TiltCard({
 
   const reset = () => {
     const node = ref.current;
-    if (!node) return;
+    if (!node || !finePointer.current) return;
     node.style.setProperty("--tilt-x", "0deg");
     node.style.setProperty("--tilt-y", "0deg");
     node.style.setProperty("--glare", "0");

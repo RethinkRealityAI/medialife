@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PosterViewer } from "@/components/site/PosterViewer";
 import {
   liveCampaigns,
   comingSoonCampaigns,
@@ -193,7 +194,14 @@ function CampaignCard({ c, accent = false }: { c: Campaign; accent?: boolean }) 
       </div>
 
       <div className="lg:col-span-4">
-        {c.image ? (
+        {c.image?.large ? (
+          <PosterViewer
+            src={c.image.src}
+            large={c.image.large}
+            alt={c.image.alt}
+            caption={c.image.caption}
+          />
+        ) : c.image ? (
           <img
             src={c.image.src}
             alt={c.image.alt}

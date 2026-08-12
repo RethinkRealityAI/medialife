@@ -39,7 +39,7 @@ export type Campaign = {
    * the layout falls back to a typographic treatment when absent, so a
    * campaign can go up before artwork clears approval.
    */
-  image?: { src: string; alt: string };
+  image?: { src: string; alt: string; large?: string; caption?: string };
   /** Shown as a muted note under the card. Use for approval caveats. */
   note?: string;
 };
@@ -63,6 +63,12 @@ export const CAMPAIGNS: Campaign[] = [
     ],
     cta: { label: "Experience it", href: "https://netflix.medialife.ai/", external: true },
     secondary: { label: "Build a format with us", href: "/contact" },
+    image: {
+      src: "/live/one-piece-poster.webp",
+      large: "/live/one-piece-poster-large.webp",
+      alt: "THE ONE PIECE activated poster — Den of Geek animation special edition in partnership with Netflix, carrying a scan-to-begin QR code",
+      caption: "Activated poster · Scan to begin your journey",
+    },
   },
   {
     slug: "evade",
