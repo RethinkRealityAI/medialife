@@ -83,14 +83,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Turnkey AR media infrastructure transforming merchandise, live events and print into immersive fan experiences. 86% conversion. 90% interaction rates.",
+          "MEDIALIFE produces physical-to-digital immersive formats, ACTIVATED MERCHANDISE™, ACTIVATED APPAREL™, app-free AR, gaming integrations, and location-based entertainment for entertainment and gaming IP.",
       },
       { name: "author", content: "MediaLife.AI" },
       { property: "og:title", content: "MediaLife.AI — Augmented Reality, Deployed at Scale" },
       {
         property: "og:description",
         content:
-          "Turnkey AR media infrastructure transforming merchandise, live events and print into immersive fan experiences. 86% conversion. 90% interaction rates.",
+          "MEDIALIFE produces physical-to-digital immersive formats, ACTIVATED MERCHANDISE™, ACTIVATED APPAREL™, app-free AR, gaming integrations, and location-based entertainment for entertainment and gaming IP.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -98,21 +98,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "twitter:description",
         content:
-          "Turnkey AR media infrastructure transforming merchandise, live events and print into immersive fan experiences. 86% conversion. 90% interaction rates.",
+          "MEDIALIFE produces physical-to-digital immersive formats, ACTIVATED MERCHANDISE™, ACTIVATED APPAREL™, app-free AR, gaming integrations, and location-based entertainment for entertainment and gaming IP.",
       },
       {
         property: "og:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/6cOxLopKfqPpLijib5FC3fQOWJ03/social-images/social-1780248864719-Screenshot_2026-05-31_at_9.34.17_PM.webp",
+        content: "https://medialife.ai/og.png",
       },
       {
         name: "twitter:image",
-        content:
-          "https://storage.googleapis.com/gpt-engineer-file-uploads/6cOxLopKfqPpLijib5FC3fQOWJ03/social-images/social-1780248864719-Screenshot_2026-05-31_at_9.34.17_PM.webp",
+        content: "https://medialife.ai/og.png",
       },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      // SVG first: modern browsers prefer it and it stays crisp at any density.
+      // The .ico is the fallback for older browsers and Windows shortcuts.
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
+      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/site.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
