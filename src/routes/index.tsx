@@ -119,73 +119,23 @@ function Home() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-3">
-            <a
-              href="#capabilities"
+            <Link
+              to="/contact"
               className="group btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
-              Production Capabilities
+              Activate Your IP
               <span className="transition-transform group-hover:translate-x-1">→</span>
-            </a>
-            <a
-              href="#live-now"
-              className="btn-pill btn-ember-outline px-7 py-4 mono text-xs uppercase tracking-[0.2em]"
-            >
-              Live Now
-            </a>
+            </Link>
             <a
               href={SHOP_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors border-b border-transparent hover:border-primary pb-1 ml-1"
+              className="btn-pill btn-ember-outline px-7 py-4 mono text-xs uppercase tracking-[0.2em]"
             >
-              Shop Activated Merch ↗
+              Shop Activated Merch
+              <span aria-hidden>↗</span>
+              <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
             </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ─────────────── 01 · PRODUCTION CAPABILITIES ─────────────── */}
-      <section id="capabilities" className="scroll-mt-20 border-b border-border">
-        <div className="w-full px-8 lg:px-16 py-24">
-          <div className="grid md:grid-cols-12 gap-12">
-            <div className="md:col-span-4">
-              <div className={EYEBROW}>/ 01 — Production Capabilities</div>
-              <h2 className="mt-6 text-4xl md:text-5xl font-medium tracking-tight text-balance">
-                Format innovation, <span className="ember-text">produced end to end.</span>
-              </h2>
-              <p className="mt-6 text-muted-foreground">
-                We design and deploy immersive formats that connect physical products, media, and
-                places to digital experiences — from concept and production through distribution,
-                commerce, and measurement.
-              </p>
-
-              {/* Physical touchpoint strip */}
-              <ul className="mt-10 flex flex-wrap gap-2">
-                {TOUCHPOINTS.map((t) => (
-                  <li
-                    key={t}
-                    className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border px-3 py-2"
-                  >
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="md:col-span-8 grid sm:grid-cols-2 gap-px bg-border border border-border">
-              {CAPABILITIES.map((c) => (
-                <div key={c.num} className="bg-background p-8 hover:bg-secondary transition group">
-                  <div className="flex items-start justify-between">
-                    <div className={EYEBROW}>/{c.num}</div>
-                    <div className="h-6 w-6 border border-border rounded-full grid place-items-center text-xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition">
-                      {c.glyph}
-                    </div>
-                  </div>
-                  <h3 className="mt-8 text-xl font-medium">{c.name}</h3>
-                  <p className="mt-3 text-sm text-muted-foreground">{c.body}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -204,13 +154,7 @@ function Home() {
           />
 
           <div className="relative w-full px-8 lg:px-16 py-20">
-            <div className="flex flex-wrap items-baseline justify-between gap-4">
-              <div>
-                <div className={EYEBROW}>/ 02 — Live Now</div>
-                <h2 className="mt-4 text-4xl md:text-5xl font-medium tracking-tight text-balance">
-                  Immersive formats <span className="ember-text">currently in market.</span>
-                </h2>
-              </div>
+            <div className="flex justify-end">
               <Link
                 to="/live"
                 className="mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1"
@@ -219,7 +163,8 @@ function Home() {
               </Link>
             </div>
 
-            <div className="mt-12 grid lg:grid-cols-12 gap-10 items-center border border-border bg-background/40 backdrop-blur p-8 lg:p-12">
+            {/* items-start so the headline lines up with the top of the poster */}
+            <div className="mt-6 grid lg:grid-cols-12 gap-10 items-start border border-border bg-background/40 backdrop-blur p-8 lg:p-12">
               <div className="lg:col-span-7">
                 <div className="flex flex-wrap items-center gap-4">
                   <span className="mono text-[10px] uppercase tracking-[0.2em] text-accent inline-flex items-center gap-2">
@@ -233,8 +178,17 @@ function Home() {
                   </span>
                 </div>
 
+                {/* Split on the IP name so it can carry the brand gradient
+                    without hard-coding the headline. */}
                 <h3 className="mt-6 text-3xl md:text-4xl font-medium tracking-tight text-balance leading-[1.05]">
-                  {lead.headline}
+                  {lead.headline.startsWith(lead.name) ? (
+                    <>
+                      <span className="ember-text">{lead.name}</span>
+                      {lead.headline.slice(lead.name.length)}
+                    </>
+                  ) : (
+                    lead.headline
+                  )}
                 </h3>
 
                 {lead.body.map((p) => (
@@ -322,6 +276,52 @@ function Home() {
           </div>
         </section>
       )}
+
+      {/* ─────────────── 01 · PRODUCTION CAPABILITIES ─────────────── */}
+      <section id="capabilities" className="scroll-mt-20 border-b border-border">
+        <div className="w-full px-8 lg:px-16 py-24">
+          <div className="grid md:grid-cols-12 gap-12">
+            <div className="md:col-span-4">
+              <div className={EYEBROW}>/ 01 — Production Capabilities</div>
+              <h2 className="mt-6 text-4xl md:text-5xl font-medium tracking-tight text-balance">
+                Format innovation, <span className="ember-text">produced end to end.</span>
+              </h2>
+              <p className="mt-6 text-muted-foreground">
+                We design and deploy immersive formats that connect physical products, media, and
+                places to digital experiences — from concept and production through distribution,
+                commerce, and measurement.
+              </p>
+
+              {/* Physical touchpoint strip */}
+              <ul className="mt-10 flex flex-wrap gap-2">
+                {TOUCHPOINTS.map((t) => (
+                  <li
+                    key={t}
+                    className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border px-3 py-2"
+                  >
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="md:col-span-8 grid sm:grid-cols-2 gap-px bg-border border border-border">
+              {CAPABILITIES.map((c) => (
+                <div key={c.num} className="bg-background p-8 hover:bg-secondary transition group">
+                  <div className="flex items-start justify-between">
+                    <div className={EYEBROW}>/{c.num}</div>
+                    <div className="h-6 w-6 border border-border rounded-full grid place-items-center text-xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition">
+                      {c.glyph}
+                    </div>
+                  </div>
+                  <h3 className="mt-8 text-xl font-medium">{c.name}</h3>
+                  <p className="mt-3 text-sm text-muted-foreground">{c.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ──────────────── SELECTED PROOF + AWARD ──────────────── */}
       <section className="border-b border-border bg-surface">
@@ -623,8 +623,7 @@ function Home() {
 
             <p className="mt-6 max-w-xl text-base md:text-lg text-muted-foreground">
               Physical merchandise can become a media format. MEDIALIFE develops merchandise that
-              connects apparel, collectibles, and physical fandom objects to immersive digital
-              experiences.
+              connects apparel, collectibles, and physical fandom objects to immersive experiences.
             </p>
 
             <ul className="mt-8 flex flex-wrap gap-2 max-w-xl">
@@ -712,12 +711,11 @@ function Home() {
               Media formats should do the same.
             </p>
             <p>
-              MEDIALIFE connects physical distribution to digital experience, participation,
+              MEDIALIFE connects physical distribution to immersive experience, participation,
               commerce, and measurable engagement.
             </p>
             <p className="text-foreground">
-              Physical is a distribution channel. Digital is the experience layer. The format
-              connects both.
+              The physical world is the distribution channel. We deploy the immersive IP layer.
             </p>
           </div>
         </div>

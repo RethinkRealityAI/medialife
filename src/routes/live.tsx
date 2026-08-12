@@ -59,9 +59,9 @@ function LiveNow() {
               <span className="animate-pulse-glow" aria-hidden>
                 ●
               </span>
-              Live
+              Live now
             </span>
-            <span className={EYEBROW}>· {live.length} in market</span>
+            <span className={EYEBROW}>· In North America</span>
           </div>
           <div className="mt-8 space-y-8">
             {live.map((c) => (
@@ -75,10 +75,7 @@ function LiveNow() {
       {soon.length > 0 && (
         <section className="border-b border-border bg-surface">
           <div className="w-full px-8 lg:px-16 py-16">
-            <div className={EYEBROW}>In development</div>
-            <p className="mt-3 text-sm text-muted-foreground max-w-xl">
-              Programmes in production. Not live, and not available to the public yet.
-            </p>
+            <div className={EYEBROW}>Coming soon</div>
             <div className="mt-8 space-y-8">
               {soon.map((c) => (
                 <CampaignCard key={c.slug} c={c} />
@@ -107,7 +104,7 @@ function LiveNow() {
         <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
         <div className="relative w-full px-8 lg:px-16 py-20 text-center">
           <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            Put your IP <span className="ember-text">in market</span>.
+            <span className="ember-text">Activate your IP</span>.
           </h2>
           <div className="mt-8 flex justify-center">
             <Link

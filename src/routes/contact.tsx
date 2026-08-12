@@ -4,16 +4,16 @@ import { useId, useState } from "react";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — Deploy AR with MediaLife.AI" },
+      { title: "Contact — Activate Your IP | MEDIALIFE" },
       {
         name: "description",
         content:
-          "Start an AR deployment. Live events, merchandise, print, direct mail. Global rollouts in weeks.",
+          "Activate your IP with MEDIALIFE. Live events, merchandise, print and location-based entertainment. We'll scope an immersive deployment in 48 hours.",
       },
-      { property: "og:title", content: "Contact — MediaLife.AI" },
+      { property: "og:title", content: "Activate Your IP | MEDIALIFE" },
       {
         property: "og:description",
-        content: "Tell us about your IP. We'll scope an AR deployment.",
+        content: "We'll scope an immersive deployment in 48 hours.",
       },
     ],
     links: [{ rel: "canonical", href: "https://medialife.ai/contact" }],
@@ -63,11 +63,11 @@ function Contact() {
             / Contact
           </div>
           <h1 className="mt-6 text-5xl md:text-6xl font-medium tracking-tight text-balance leading-[0.95]">
-            Are you ready for <span className="ember-text">augmented reality?</span>
+            Are you ready for <span className="ember-text">immersive media?</span>
           </h1>
           <p className="mt-8 text-muted-foreground max-w-md">
-            Live Events · Merchandise · Print Media · Direct Mail. Tell us about your IP — we'll
-            scope a deployment in 48 hours.
+            Live Events · Merchandise · Print Media · Direct Mail. We'll scope a deployment in 48
+            hours.
           </p>
 
           <div className="mt-12 space-y-4 mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -85,7 +85,7 @@ function Contact() {
             </div>
             <div className="flex justify-between border-b border-border pb-3">
               <span>Region · LATAM</span>
-              <span className="text-primary">○ Q2 2026</span>
+              <span className="text-primary">○ Q2 2027</span>
             </div>
           </div>
         </div>

@@ -11,6 +11,11 @@
  *   archive     → SELECTED WORK on /live. Retire a campaign by moving it here
  *                 rather than deleting it.
  *
+ * Roblox may be named ONLY as a factual descriptor of Evade itself ("one of
+ * the biggest games on Roblox"). It must never appear in a sentence describing
+ * MEDIALIFE's own commerce, entitlements or infrastructure — that would imply a
+ * platform relationship the approved brief says is not cleared.
+ *
  * Claims discipline: every line here is either publicly verifiable or drawn
  * from approved MEDIALIFE materials. Do not add distribution quantities,
  * performance data, retailer counts, campaign dates, platform approvals or
@@ -62,7 +67,7 @@ export const CAMPAIGNS: Campaign[] = [
       { k: "Surface", v: "Promotional media" },
     ],
     cta: { label: "Experience it", href: "https://netflix.medialife.ai/", external: true },
-    secondary: { label: "Build a format with us", href: "/contact" },
+    secondary: { label: "Activate Your IP", href: "/contact" },
     image: {
       src: "/live/one-piece-poster.webp",
       large: "/live/one-piece-poster-large.webp",
@@ -78,14 +83,14 @@ export const CAMPAIGNS: Campaign[] = [
     kicker: "Game-native merch · In development",
     headline: "EVADE / GAME-NATIVE MERCH",
     body: [
-      "MEDIALIFE is developing a limited-edition activated acrylic keychain set with Evade, combining physical merchandise, an immersive QR-activated experience, and game-native commerce infrastructure.",
+      "MEDIALIFE is developing a limited-edition activated acrylic keychain co-produced with Evade, one of the biggest games on Roblox, combining physical merchandise, an immersive QR-activated experience, and game-native commerce infrastructure.",
     ],
     facts: [
       { k: "Format", v: "Activated collectible" },
       { k: "Access", v: "QR-activated experience" },
       { k: "Status", v: "In development" },
     ],
-    secondary: { label: "Register interest", href: "/contact" },
+    secondary: { label: "Get notified", href: "/contact" },
     image: {
       src: "/merch/keychain-cutout.webp",
       alt: "BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE programme",
