@@ -1,0 +1,93 @@
+/**
+ * Campaign registry for LIVE NOW.
+ *
+ * Add or retire campaigns by editing this file — the homepage section and the
+ * /live route both read from it, so rotating what is in market never requires
+ * touching layout code.
+ *
+ * `status` drives placement and is deliberately not free text:
+ *   live        → LIVE NOW section on the homepage, LIVE block on /live
+ *   coming-soon → IN DEVELOPMENT block on /live. Never labelled live.
+ *   archive     → SELECTED WORK on /live. Retire a campaign by moving it here
+ *                 rather than deleting it.
+ *
+ * Claims discipline: every line here is either publicly verifiable or drawn
+ * from approved MEDIALIFE materials. Do not add distribution quantities,
+ * performance data, retailer counts, campaign dates, platform approvals or
+ * partner-relationship language that has not been approved.
+ */
+
+export type CampaignStatus = "live" | "coming-soon" | "archive";
+
+export type Campaign = {
+  slug: string;
+  status: CampaignStatus;
+  /** Short status chip, e.g. "LIVE NOW" */
+  statusLabel: string;
+  /** IP or programme name */
+  name: string;
+  /** Format descriptor under the name */
+  kicker: string;
+  headline: string;
+  body: string[];
+  /** Small mono facts. Keep to approved claims only. */
+  facts: { k: string; v: string }[];
+  cta?: { label: string; href: string; external?: boolean };
+  secondary?: { label: string; href: string; external?: boolean };
+  /**
+   * Optional key art. Drop a file into public/live/ and reference it here —
+   * the layout falls back to a typographic treatment when absent, so a
+   * campaign can go up before artwork clears approval.
+   */
+  image?: { src: string; alt: string };
+  /** Shown as a muted note under the card. Use for approval caveats. */
+  note?: string;
+};
+
+export const CAMPAIGNS: Campaign[] = [
+  {
+    slug: "one-piece",
+    status: "live",
+    statusLabel: "Live now",
+    name: "ONE PIECE",
+    kicker: "Activated print · App-free immersive media",
+    headline: "ONE PIECE, activated in the physical world.",
+    body: [
+      "MEDIALIFE is currently deploying an app-free physical-to-digital experience around ONE PIECE, turning promotional media into an interactive entry point for fans.",
+      "Scan the activated physical media to launch the experience directly in the mobile browser — no app required.",
+    ],
+    facts: [
+      { k: "Format", v: "Activated print" },
+      { k: "Access", v: "Scan to begin — no app" },
+      { k: "Surface", v: "Promotional media" },
+    ],
+    cta: { label: "Experience it", href: "https://netflix.medialife.ai/", external: true },
+    secondary: { label: "Build a format with us", href: "/contact" },
+  },
+  {
+    slug: "evade",
+    status: "coming-soon",
+    statusLabel: "Coming soon",
+    name: "EVADE",
+    kicker: "Game-native merch · In development",
+    headline: "EVADE / GAME-NATIVE MERCH",
+    body: [
+      "MEDIALIFE is developing a limited-edition activated acrylic keychain set with Evade, combining physical merchandise, an immersive QR-activated experience, and game-native commerce infrastructure.",
+    ],
+    facts: [
+      { k: "Format", v: "Activated collectible" },
+      { k: "Access", v: "QR-activated experience" },
+      { k: "Status", v: "In development" },
+    ],
+    secondary: { label: "Register interest", href: "/contact" },
+    image: {
+      src: "/merch/keychain-cutout.webp",
+      alt: "BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE programme",
+    },
+    note: "Platform-specific commerce features and digital benefits are subject to applicable approvals.",
+  },
+];
+
+export const liveCampaigns = () => CAMPAIGNS.filter((c) => c.status === "live");
+export const comingSoonCampaigns = () => CAMPAIGNS.filter((c) => c.status === "coming-soon");
+export const archivedCampaigns = () => CAMPAIGNS.filter((c) => c.status === "archive");

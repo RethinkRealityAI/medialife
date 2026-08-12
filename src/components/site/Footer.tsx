@@ -9,16 +9,17 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
             <h2 className="text-4xl md:text-6xl font-medium tracking-tight text-balance">
-              Augmented reality, <span className="ember-text">deployed</span>.
+              Physical touchpoints, <span className="ember-text">activated</span>.
             </h2>
             <p className="mt-6 text-muted-foreground max-w-md">
-              Turnkey AR media infrastructure for global brands, live events, retail and print.
+              Immersive format production for entertainment and gaming IP — merchandise, retail,
+              print, live events and location-based entertainment.
             </p>
             <Link
               to="/contact"
               className="mt-8 inline-flex items-center gap-3 mono text-xs uppercase tracking-[0.2em] border border-primary text-primary px-5 py-3 hover:bg-primary hover:text-primary-foreground transition"
             >
-              Start a Deployment <span aria-hidden>→</span>
+              Start a project <span aria-hidden>→</span>
             </Link>
           </div>
 
@@ -26,8 +27,8 @@ export function Footer() {
             <FCol
               title="Platform"
               items={[
-                ["Technology", "/technology"],
-                ["Insights", "/insights"],
+                ["Production Capabilities", "/#capabilities"],
+                ["Live Now", "/live"],
                 ["Fan Reactions", "/fan-reactions"],
                 ["Merch", SHOP_URL],
               ]}
@@ -72,29 +73,37 @@ function FCol({ title, items }: { title: string; items: [string, string][] }) {
         / {title}
       </div>
       <ul className="space-y-3">
-        {items.map(([label, to]) =>
-          to.startsWith("http") ? (
+        {items.map(([label, to]) => {
+          // Three link kinds: off-site (new tab + marker), same-page anchor
+          // (plain <a>, no new tab), and in-app route (<Link>).
+          const external = to.startsWith("http");
+          const anchor = to.startsWith("/#");
+          return (
             <li key={label}>
-              <a
-                href={to}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-primary transition-colors"
-              >
-                {label}{" "}
-                <span aria-hidden className="opacity-60 text-[10px]">
-                  ↗
-                </span>
-              </a>
+              {external || anchor ? (
+                <a
+                  href={to}
+                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  className="hover:text-primary transition-colors"
+                >
+                  {label}
+                  {external && (
+                    <>
+                      {" "}
+                      <span aria-hidden className="opacity-60 text-[10px]">
+                        ↗
+                      </span>
+                    </>
+                  )}
+                </a>
+              ) : (
+                <Link to={to} className="hover:text-primary transition-colors">
+                  {label}
+                </Link>
+              )}
             </li>
-          ) : (
-            <li key={label}>
-              <Link to={to} className="hover:text-primary transition-colors">
-                {label}
-              </Link>
-            </li>
-          ),
-        )}
+          );
+        })}
       </ul>
     </div>
   );

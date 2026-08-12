@@ -2,18 +2,36 @@ import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
 
-export const SHOP_URL = "https://medialife-shop.myshopify.com/";
+export const SHOP_URL = "https://shop.medialife.ai/";
 
-// Split around Merch because it leaves the site — TanStack's <Link> is for
-// in-app routes only, so the shop needs a plain <a>.
-const linksBeforeShop = [
-  { to: "/insights", label: "Insights", num: "02" },
-  { to: "/fan-reactions", label: "Fan Reactions", num: "03" },
-] as const;
+/**
+ * Primary navigation — the five commercial destinations.
+ *
+ * Production Capabilities and Fan Reactions are homepage anchors. Live Now is a
+ * real route because campaigns need linkable URLs. Merch is external. Contact
+ * stays a route because that is where the working Netlify form lives —
+ * collapsing it into an anchor would lose the form.
+ *
+ * The Technology stack pages are still reachable through the Production
+ * Capabilities mega-menu, so nothing was orphaned by the nav change.
+ */
+type NavItem =
+  | { kind: "anchor"; hash: string; label: string; num: string }
+  | { kind: "route"; to: string; label: string; num: string }
+  | { kind: "external"; href: string; label: string; num: string };
 
-const linksAfterShop = [{ to: "/contact", label: "Contact", num: "05" }] as const;
+const NAV: NavItem[] = [
+  { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "01" },
+  { kind: "route", to: "/live", label: "Live Now", num: "02" },
+  { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "03" },
+  { kind: "external", href: SHOP_URL, label: "Merch", num: "04" },
+  { kind: "route", to: "/contact", label: "Contact", num: "05" },
+];
 
-const SHOP_NUM = "04";
+const itemCls =
+  "group relative px-3 py-2 text-sm transition-colors hover:text-primary inline-flex items-center whitespace-nowrap";
+const numCls =
+  "mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition shrink-0";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -40,8 +58,8 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-16">
-        <Link to="/" className="flex items-center gap-2 group">
+      <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-10 gap-4">
+        <Link to="/" className="flex items-center gap-2 group shrink-0">
           <div className="relative h-6 w-6">
             <div
               className="absolute inset-0 rounded-full opacity-70 blur-sm group-hover:opacity-100 transition"
@@ -58,90 +76,82 @@ export function Nav() {
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1" onMouseLeave={closeMega}>
-          <div className="relative" onMouseEnter={openMega}>
-            <Link
-              to="/technology"
-              className="group relative px-4 py-2 text-sm transition-colors hover:text-primary inline-flex items-center"
-              activeProps={{ className: "text-primary" }}
-              onClick={() => setMegaOpen(false)}
-            >
-              <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
-                /01
-              </span>
-              Technology
-              <span className="ml-2 text-[10px] opacity-60">▾</span>
-            </Link>
-          </div>
-          {linksBeforeShop.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className="group relative px-4 py-2 text-sm transition-colors hover:text-primary"
-              activeProps={{ className: "text-primary" }}
-              onMouseEnter={() => setMegaOpen(false)}
-            >
-              <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
-                /{l.num}
-              </span>
-              {l.label}
-            </Link>
-          ))}
-          <a
-            href={SHOP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative px-4 py-2 text-sm transition-colors hover:text-primary inline-flex items-center"
-            onMouseEnter={() => setMegaOpen(false)}
-          >
-            <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
-              /{SHOP_NUM}
-            </span>
-            Merch
-            <span aria-hidden className="ml-1.5 text-[10px] opacity-60">
-              ↗
-            </span>
-            <span className="sr-only">(opens the MediaLife shop in a new tab)</span>
-          </a>
-          {linksAfterShop.map((l) => (
-            <Link
-              key={l.to}
-              to={l.to}
-              className="group relative px-4 py-2 text-sm transition-colors hover:text-primary"
-              activeProps={{ className: "text-primary" }}
-              onMouseEnter={() => setMegaOpen(false)}
-            >
-              <span className="mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition">
-                /{l.num}
-              </span>
-              {l.label}
-            </Link>
-          ))}
+        <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={closeMega}>
+          {NAV.map((item) => {
+            if (item.kind === "anchor") {
+              const isCapabilities = item.hash === "capabilities";
+              return (
+                <div
+                  key={item.hash}
+                  className="relative"
+                  onMouseEnter={isCapabilities ? openMega : () => setMegaOpen(false)}
+                >
+                  <a href={`/#${item.hash}`} className={itemCls} onClick={() => setMegaOpen(false)}>
+                    <span className={numCls}>/{item.num}</span>
+                    {item.label}
+                    {isCapabilities && <span className="ml-2 text-[10px] opacity-60">▾</span>}
+                  </a>
+                </div>
+              );
+            }
+            if (item.kind === "external") {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={itemCls}
+                  onMouseEnter={() => setMegaOpen(false)}
+                >
+                  <span className={numCls}>/{item.num}</span>
+                  {item.label}
+                  <span aria-hidden className="ml-1.5 text-[10px] opacity-60">
+                    ↗
+                  </span>
+                  <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
+                </a>
+              );
+            }
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={itemCls}
+                activeProps={{ className: "text-primary" }}
+                onMouseEnter={() => setMegaOpen(false)}
+              >
+                <span className={numCls}>/{item.num}</span>
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
-        <div className="hidden md:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           <Link
             to="/contact"
-            className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3"
+            className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-6 py-3"
           >
-            Deploy AR
+            Start a project
             <span aria-hidden>→</span>
           </Link>
         </div>
 
         <button
           aria-label="Menu"
-          className="md:hidden mono text-xs uppercase tracking-widest"
+          aria-expanded={open}
+          className="lg:hidden mono text-xs uppercase tracking-widest"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Close" : "Menu"}
         </button>
       </div>
 
-      {/* MEGA MENU */}
+      {/* MEGA MENU — production capabilities / technology stack */}
       {megaOpen && (
         <div
-          className="hidden md:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
+          className="hidden lg:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
           onMouseEnter={openMega}
           onMouseLeave={closeMega}
         >
@@ -149,7 +159,7 @@ export function Nav() {
             <div className="flex items-end justify-between mb-6">
               <div>
                 <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                  / Technology Stack
+                  / Technology stack
                 </div>
                 <h3 className="mt-2 text-2xl font-medium">Six layers powering every deployment.</h3>
               </div>
@@ -163,7 +173,6 @@ export function Nav() {
             </div>
 
             <div className="grid grid-cols-12 gap-6">
-              {/* Stack list */}
               <div className="col-span-7 grid grid-cols-2 gap-px bg-border border border-border">
                 {TECH_STACKS.map((s, idx) => (
                   <Link
@@ -197,7 +206,6 @@ export function Nav() {
                 ))}
               </div>
 
-              {/* Feature preview pane */}
               <Link
                 to="/technology/$slug"
                 params={{ slug: featured.slug }}
@@ -225,16 +233,6 @@ export function Nav() {
                       {featured.name}
                     </h4>
                     <p className="mt-2 text-sm text-white/90 max-w-sm">{featured.hero}</p>
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {featured.partners.slice(0, 4).map((p) => (
-                        <span
-                          key={p}
-                          className="mono text-[9px] uppercase tracking-widest bg-background/80 backdrop-blur border border-border px-1.5 py-0.5"
-                        >
-                          {p}
-                        </span>
-                      ))}
-                    </div>
                     <div className="mt-4 mono text-[10px] uppercase tracking-[0.2em] text-white inline-flex items-center gap-2">
                       Open stack{" "}
                       <span className="transition-transform group-hover:translate-x-1">→</span>
@@ -247,17 +245,59 @@ export function Nav() {
         </div>
       )}
 
+      {/* MOBILE */}
       {open && (
-        <div className="md:hidden border-t border-border bg-background">
+        <div className="lg:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="flex flex-col">
-            <Link
-              to="/technology"
-              className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
-              onClick={() => setOpen(false)}
-            >
-              <span>Technology</span>
-              <span className="mono text-[10px] text-muted-foreground">/01</span>
-            </Link>
+            {NAV.map((item) => {
+              const row =
+                "flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary";
+              if (item.kind === "anchor") {
+                return (
+                  <a
+                    key={item.hash}
+                    href={`/#${item.hash}`}
+                    className={row}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span>{item.label}</span>
+                    <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                  </a>
+                );
+              }
+              if (item.kind === "external") {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={row}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span>
+                      {item.label}{" "}
+                      <span aria-hidden className="opacity-60 text-xs">
+                        ↗
+                      </span>
+                      <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
+                    </span>
+                    <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                  </a>
+                );
+              }
+              return (
+                <Link key={item.to} to={item.to} className={row} onClick={() => setOpen(false)}>
+                  <span>{item.label}</span>
+                  <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                </Link>
+              );
+            })}
+
+            {/* Technology stacks stay reachable on mobile */}
+            <div className="px-6 pt-5 pb-2 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              Technology stack
+            </div>
             {TECH_STACKS.map((s) => (
               <Link
                 key={s.slug}
@@ -270,51 +310,14 @@ export function Nav() {
                 <span className="mono text-[9px]">/{s.num}</span>
               </Link>
             ))}
-            {linksBeforeShop.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
-                onClick={() => setOpen(false)}
-              >
-                <span>{l.label}</span>
-                <span className="mono text-[10px] text-muted-foreground">/{l.num}</span>
-              </Link>
-            ))}
-            <a
-              href={SHOP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
-              onClick={() => setOpen(false)}
-            >
-              <span>
-                Merch{" "}
-                <span aria-hidden className="opacity-60 text-xs">
-                  ↗
-                </span>
-                <span className="sr-only">(opens the MediaLife shop in a new tab)</span>
-              </span>
-              <span className="mono text-[10px] text-muted-foreground">/{SHOP_NUM}</span>
-            </a>
-            {linksAfterShop.map((l) => (
-              <Link
-                key={l.to}
-                to={l.to}
-                className="flex items-center justify-between px-6 py-4 border-b border-border hover:bg-secondary"
-                onClick={() => setOpen(false)}
-              >
-                <span>{l.label}</span>
-                <span className="mono text-[10px] text-muted-foreground">/{l.num}</span>
-              </Link>
-            ))}
+
             <div className="p-6">
               <Link
                 to="/contact"
                 className="btn-pill btn-ember w-full justify-center mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3.5"
                 onClick={() => setOpen(false)}
               >
-                Deploy AR
+                Start a project
                 <span aria-hidden>→</span>
               </Link>
             </div>

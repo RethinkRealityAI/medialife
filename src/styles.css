@@ -79,6 +79,15 @@
     border-color: var(--color-border);
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
   html,
   body {
     background-color: var(--color-background);
@@ -134,12 +143,11 @@
   }
 
   /* ---- Pill buttons in the brand gradient ----
-     Text is near-black, not white, and that is deliberate. White on this
-     gradient measures 2.44:1 at the cyan end and 3.35:1 at the magenta end —
-     both fail WCAG AA (4.5:1) for the 11px uppercase labels these buttons
-     use. Near-black scores 8.62:1 and 6.27:1. Keeping the gradient vivid and
-     flipping the text dark is the combination that stays on-brand AND
-     legible. */
+     Labels are white. White on the FULL-brightness --gradient-ember measures
+     only 2.44:1 / 3.35:1, so button fills use --gradient-ember-btn instead —
+     same hues and chroma, lightness dropped to where white clears WCAG AA
+     (4.61:1 and 4.57:1 measured). The full-brightness gradient still supplies
+     the glow, so the button reads as the same colour. */
   .btn-pill {
     display: inline-flex;
     align-items: center;
@@ -187,9 +195,6 @@
     outline-offset: 3px;
   }
 
-  /* Gradient text link with a shine sweeping across it. The sweep is a light
-     band inside an oversized background that slides — nothing moves in layout,
-     so it costs one composited paint. */
   /* Single-layer gradient carrying both the brand colours and the highlight
      band, slid via background-position. Do NOT reintroduce a second background
      layer with background-blend-mode here: Chromium stops honouring

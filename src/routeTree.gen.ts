@@ -14,6 +14,7 @@ import { Route as BrandRouteImport } from './routes/brand'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FanReactionsRouteImport } from './routes/fan-reactions'
 import { Route as InsightsRouteImport } from './routes/insights'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 
@@ -42,6 +43,11 @@ const InsightsRoute = InsightsRouteImport.update({
   path: '/insights',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologyRoute = TechnologyRouteImport.update({
   id: '/technology',
   path: '/technology',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
+  '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
+  '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
+  '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/fan-reactions'
     | '/insights'
+    | '/live'
     | '/technology'
     | '/technology/$slug'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/fan-reactions'
     | '/insights'
+    | '/live'
     | '/technology'
     | '/technology/$slug'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/fan-reactions'
     | '/insights'
+    | '/live'
     | '/technology'
     | '/technology/$slug'
   fileRoutesById: FileRoutesById
@@ -117,6 +129,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   FanReactionsRoute: typeof FanReactionsRoute
   InsightsRoute: typeof InsightsRoute
+  LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
 }
 
@@ -157,6 +170,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InsightsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology': {
       id: '/technology'
       path: '/technology'
@@ -192,6 +212,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   FanReactionsRoute: FanReactionsRoute,
   InsightsRoute: InsightsRoute,
+  LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
 }
 export const routeTree = rootRouteImport
