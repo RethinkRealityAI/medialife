@@ -140,7 +140,7 @@ function Home() {
         </div>
       </section>
 
-      {/* ─────────────────────── 02 · LIVE NOW ─────────────────────── */}
+      {/* ─────────────────────── 01 · LIVE NOW ─────────────────────── */}
       {lead && (
         <section
           id="live-now"
@@ -277,12 +277,70 @@ function Home() {
         </section>
       )}
 
-      {/* ─────────────── 01 · PRODUCTION CAPABILITIES ─────────────── */}
+      {/* ─────────────────── 02 · FAN REACTIONS ─────────────────── */}
+      <section id="fan-reactions" className="scroll-mt-20 border-b border-border overflow-hidden">
+        <div className="px-8 lg:px-16 pt-16">
+          <div className={EYEBROW}>/ 02 — Fan Reactions</div>
+          <h2 className="mt-4 text-4xl md:text-5xl font-medium tracking-tight text-balance">
+            Fans don't just see it — <span className="ember-text">they experience it.</span>
+          </h2>
+        </div>
+
+        <div className="mt-10 mb-4 px-8 lg:px-16 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+          Captured in the wild · Fan uploads from Anime Expo, SDCC &amp; Anime NYC
+        </div>
+        <div
+          className="flex gap-4 animate-marquee"
+          style={{ width: "max-content", willChange: "transform" }}
+        >
+          {[...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS].map((src, i) => (
+            <div
+              key={i}
+              className="relative h-[280px] w-[160px] flex-shrink-0 overflow-hidden border border-border bg-secondary"
+            >
+              <img
+                src={src}
+                alt="Fan AR reaction"
+                loading="eager"
+                decoding="async"
+                fetchPriority={i < 6 ? ("high" as const) : ("auto" as const)}
+                width={160}
+                height={280}
+                className="h-full w-full object-cover"
+              />
+              <div className="absolute top-2 left-2 mono text-[9px] uppercase tracking-widest bg-background/80 backdrop-blur px-2 py-0.5">
+                / Rec {((i % 9) + 1).toString().padStart(2, "0")}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Performance band */}
+        <div className="w-full px-8 lg:px-16 py-16">
+          <div className={EYEBROW}>Selected live deployment performance</div>
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border">
+            {PERFORMANCE.map((s) => (
+              <div key={s.l} className="bg-background p-6 hover:bg-secondary transition-colors">
+                <CountUp
+                  value={s.v}
+                  className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
+                />
+                <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Ranges across selected deployments · not a single campaign
+          </p>
+        </div>
+      </section>
+
+      {/* ─────────────── 03 · PRODUCTION CAPABILITIES ─────────────── */}
       <section id="capabilities" className="scroll-mt-20 border-b border-border">
         <div className="w-full px-8 lg:px-16 py-24">
           <div className="grid md:grid-cols-12 gap-12">
             <div className="md:col-span-4">
-              <div className={EYEBROW}>/ 01 — Production Capabilities</div>
+              <div className={EYEBROW}>/ 03 — Production Capabilities</div>
               <h2 className="mt-6 text-4xl md:text-5xl font-medium tracking-tight text-balance">
                 Format innovation, <span className="ember-text">produced end to end.</span>
               </h2>
@@ -449,64 +507,6 @@ function Home() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* ─────────────────── 03 · FAN REACTIONS ─────────────────── */}
-      <section id="fan-reactions" className="scroll-mt-20 border-b border-border overflow-hidden">
-        <div className="px-8 lg:px-16 pt-16">
-          <div className={EYEBROW}>/ 03 — Fan Reactions</div>
-          <h2 className="mt-4 text-4xl md:text-5xl font-medium tracking-tight text-balance">
-            Fans don't just see it — <span className="ember-text">they experience it.</span>
-          </h2>
-        </div>
-
-        <div className="mt-10 mb-4 px-8 lg:px-16 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          Captured in the wild · Fan uploads from Anime Expo, SDCC &amp; Anime NYC
-        </div>
-        <div
-          className="flex gap-4 animate-marquee"
-          style={{ width: "max-content", willChange: "transform" }}
-        >
-          {[...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS].map((src, i) => (
-            <div
-              key={i}
-              className="relative h-[280px] w-[160px] flex-shrink-0 overflow-hidden border border-border bg-secondary"
-            >
-              <img
-                src={src}
-                alt="Fan AR reaction"
-                loading="eager"
-                decoding="async"
-                fetchPriority={i < 6 ? ("high" as const) : ("auto" as const)}
-                width={160}
-                height={280}
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute top-2 left-2 mono text-[9px] uppercase tracking-widest bg-background/80 backdrop-blur px-2 py-0.5">
-                / Rec {((i % 9) + 1).toString().padStart(2, "0")}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Performance band */}
-        <div className="w-full px-8 lg:px-16 py-16">
-          <div className={EYEBROW}>Selected live deployment performance</div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border">
-            {PERFORMANCE.map((s) => (
-              <div key={s.l} className="bg-background p-6 hover:bg-secondary transition-colors">
-                <CountUp
-                  value={s.v}
-                  className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
-                />
-                <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-            Ranges across selected deployments · not a single campaign
-          </p>
         </div>
       </section>
 
@@ -708,14 +708,13 @@ function Home() {
           <div className="space-y-8 text-lg text-muted-foreground">
             <p>
               Audiences move fluidly between physical places, products, games, and digital worlds.
-              Media formats should do the same.
             </p>
             <p>
-              MEDIALIFE connects physical distribution to immersive experience, participation,
-              commerce, and measurable engagement.
+              Media formats should do the same. MEDIALIFE connects physical distribution to digital
+              experience, participation, commerce, and measurable engagement.
             </p>
             <p className="text-foreground">
-              The physical world is the distribution channel. We deploy the immersive IP layer.
+              The physical world is the distribution channel. We deploy the immersive layer.
             </p>
           </div>
         </div>

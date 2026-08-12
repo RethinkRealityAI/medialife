@@ -7,8 +7,10 @@ export const SHOP_URL = "https://shop.medialife.ai/";
 /**
  * Primary navigation — the five commercial destinations.
  *
- * Production Capabilities and Fan Reactions are homepage anchors. Live Now is a
- * real route because campaigns need linkable URLs. Merch is external. Contact
+ * Numbers follow the homepage reading order, so /02 in the nav is the second
+ * section down the page. Fan Reactions and Production Capabilities are homepage
+ * anchors; Live Now and Case Studies are real routes because both need linkable
+ * URLs. Merch is external. Contact
  * stays a route because that is where the working Netlify form lives —
  * collapsing it into an anchor would lose the form.
  *
@@ -21,11 +23,12 @@ type NavItem =
   | { kind: "external"; href: string; label: string; num: string };
 
 const NAV: NavItem[] = [
-  { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "01" },
-  { kind: "route", to: "/live", label: "Live Now", num: "02" },
-  { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "03" },
-  { kind: "external", href: SHOP_URL, label: "Merch", num: "04" },
-  { kind: "route", to: "/contact", label: "Contact", num: "05" },
+  { kind: "route", to: "/live", label: "Live Now", num: "01" },
+  { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "02" },
+  { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "03" },
+  { kind: "route", to: "/case-studies", label: "Case Studies", num: "04" },
+  { kind: "external", href: SHOP_URL, label: "Merch", num: "05" },
+  { kind: "route", to: "/contact", label: "Contact", num: "06" },
 ];
 
 const itemCls =

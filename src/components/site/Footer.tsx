@@ -27,9 +27,10 @@ export function Footer() {
             <FCol
               title="Platform"
               items={[
-                ["Production Capabilities", "/#capabilities"],
                 ["Live Now", "/live"],
-                ["Fan Reactions", "/fan-reactions"],
+                ["Fan Reactions", "/#fan-reactions"],
+                ["Production Capabilities", "/#capabilities"],
+                ["Case Studies", "/case-studies"],
                 ["Merch", SHOP_URL],
               ]}
             />
