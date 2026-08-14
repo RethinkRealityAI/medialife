@@ -58,12 +58,12 @@ export const CAMPAIGNS: Campaign[] = [
     kicker: "Activated print · App-free immersive media",
     headline: "ONE PIECE, activated in the physical world.",
     body: [
-      "MEDIALIFE is currently deploying an app-free physical-to-digital experience around ONE PIECE, turning promotional media into an interactive entry point for fans.",
+      "MEDIALIFE is currently deploying an app-free immersive experience around ONE PIECE, turning promotional media into an interactive entry point for fans.",
       "Scan the activated physical media to launch the experience directly in the mobile browser — no app required.",
     ],
     facts: [
       { k: "Format", v: "Activated print" },
-      { k: "Access", v: "Scan to begin — no app" },
+      { k: "Access", v: "Scan QR to activate" },
       { k: "Surface", v: "Promotional media" },
     ],
     cta: { label: "Experience it", href: "https://netflix.medialife.ai/", external: true },

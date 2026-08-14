@@ -111,7 +111,7 @@ function LiveNow() {
               to="/contact"
               className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
-              Start a project
+              Activate your IP
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>

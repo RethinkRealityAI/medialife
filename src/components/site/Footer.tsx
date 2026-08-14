@@ -9,7 +9,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
             <h2 className="text-4xl md:text-6xl font-medium tracking-tight text-balance">
-              Physical touchpoints, <span className="ember-text">activated</span>.
+              Fandom touchpoints, <span className="ember-text">activated</span>.
             </h2>
             <p className="mt-6 text-muted-foreground max-w-md">
               Immersive format production for entertainment and gaming IP — merchandise, retail,
@@ -19,7 +19,7 @@ export function Footer() {
               to="/contact"
               className="mt-8 inline-flex items-center gap-3 mono text-xs uppercase tracking-[0.2em] border border-primary text-primary px-5 py-3 hover:bg-primary hover:text-primary-foreground transition"
             >
-              Start a project <span aria-hidden>→</span>
+              Activate your IP <span aria-hidden>→</span>
             </Link>
           </div>
 

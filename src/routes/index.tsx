@@ -19,7 +19,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "We turn physical touchpoints into immersive media. Format innovation, produced end to end.",
+          "We turn fandom touchpoints into immersive media. Format innovation, produced end to end.",
       },
     ],
     links: [
@@ -103,7 +103,7 @@ function Home() {
           </div>
 
           <h1 className="mt-8 text-[1.875rem] md:text-[2.95rem] lg:text-[3.75rem] font-medium tracking-tight text-balance leading-[0.95]">
-            We turn physical touchpoints
+            We turn fandom touchpoints
             <br />
             into <span className="ember-text">immersive media</span>.
           </h1>
@@ -740,8 +740,8 @@ function Home() {
               Audiences move fluidly between physical places, products, games, and digital worlds.
             </p>
             <p>
-              Media formats should do the same. MEDIALIFE connects physical distribution to digital
-              experience, participation, commerce, and measurable engagement.
+              Media formats should do the same. MEDIALIFE connects physical distribution to
+              immersive experience, participation, commerce, and measurable engagement.
             </p>
             <p className="text-foreground">
               The physical world is the distribution channel. We deploy the immersive layer.
@@ -767,7 +767,7 @@ function Home() {
               to="/contact"
               className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
-              Start a project
+              Activate your IP
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>

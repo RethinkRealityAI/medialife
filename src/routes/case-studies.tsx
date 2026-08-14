@@ -11,7 +11,7 @@ export const Route = createFileRoute("/case-studies")({
       {
         name: "description",
         content:
-          "How MEDIALIFE turns physical touchpoints into immersive media: the award-winning Netflix / Sakamoto Days activated retail and live-event programme, and activated apparel at anime conventions.",
+          "How MEDIALIFE turns fandom touchpoints into immersive media: the award-winning Netflix / Sakamoto Days activated retail and live-event programme, and activated apparel at anime conventions.",
       },
       { property: "og:title", content: "Case Studies | MEDIALIFE" },
       {
@@ -39,7 +39,7 @@ function CaseStudies() {
         <div className="relative w-full px-8 lg:px-16 pt-20 pb-16">
           <div className={EYEBROW}>/ Case studies</div>
           <h1 className="mt-6 text-5xl md:text-6xl font-medium tracking-tight text-balance leading-[0.95]">
-            Physical touchpoints, <span className="ember-text">turned into media</span>.
+            Fandom touchpoints, <span className="ember-text">activated</span>.
           </h1>
           <p className="mt-8 max-w-2xl text-lg text-muted-foreground">
             Selected programmes across activated print, retail, live events and convention
@@ -80,7 +80,7 @@ function CaseStudies() {
               to="/contact"
               className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
             >
-              Start a project
+              Activate your IP
               <span className="transition-transform group-hover:translate-x-1">→</span>
             </Link>
           </div>

@@ -13,7 +13,7 @@ export const SHOP_URL = "https://shop.medialife.ai/";
  * anchors; Live Now and Case Studies are real routes because both need linkable
  * URLs. Merch is external.
  *
- * Contact is deliberately NOT a nav row: the "Start a project" pill is the
+ * Contact is deliberately NOT a nav row: the "Activate your IP" pill is the
  * single, higher-intent path to the same /contact route, and one primary CTA
  * beats two competing entry points. /contact is still linked from the footer
  * and from every section CTA, so the Netlify form is not orphaned.
@@ -137,7 +137,7 @@ export function Nav() {
             to="/contact"
             className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-6 py-3"
           >
-            Start a project
+            Activate your IP
             <span aria-hidden>→</span>
           </Link>
         </div>
@@ -321,7 +321,7 @@ export function Nav() {
                 className="btn-pill btn-ember w-full justify-center mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3.5"
                 onClick={() => setOpen(false)}
               >
-                Start a project
+                Activate your IP
                 <span aria-hidden>→</span>
               </Link>
             </div>
