@@ -1,0 +1,14 @@
+{
+  "name": "medialife-cards",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MEDIALIFE virtual business cards — unlisted, QR-first contact pages for team members.",
+  "scripts": {
+    "build": "node scripts/build-cards.mjs",
+    "preview": "npx --yes serve -l 4173 ."
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
