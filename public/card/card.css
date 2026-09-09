@@ -1,0 +1,1092 @@
+/* MEDIALIFE virtual business card — mirrors medialife.ai design tokens */
+:root {
+  --primary: #19affe;
+  --accent: #ff37ae;
+  --background: #020202;
+  --card: #050509;
+  --border: #191a22;
+  --foreground: #f4f5f8;
+  --muted: #0c0d12;
+  --muted-foreground: #8c8e9c;
+  --grid-line: rgba(255, 255, 255, 0.06);
+  --gradient-ember: linear-gradient(135deg, var(--primary), var(--accent));
+  --gradient-ember-btn: linear-gradient(135deg, #007bbc, #e00093);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 4px;
+  --radius-lg: 18px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --sheen-x: 50%;
+  --sheen-y: 30%;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+  background: var(--background);
+}
+body {
+  /* Fixed to the viewport, never scrolled: the card sizes itself to fit inside
+     this box. 100dvh (not vh) so the phone's collapsing URL bar cannot push the
+     QR off screen. The min-height fallback keeps very small viewports usable
+     rather than crushing the layout into unreadability. */
+  margin: 0;
+  height: 100dvh;
+  /* Floor only for narrow portrait screens, where compressing below this stops
+     being legible. A landscape phone is short by nature and gets the two-column
+     layout instead — applying the floor there is what forces a scrollbar. */
+  min-height: 480px;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(env(safe-area-inset-top), 8px) max(env(safe-area-inset-right), 10px)
+    max(env(safe-area-inset-bottom), 8px) max(env(safe-area-inset-left), 10px);
+}
+
+/* The floor above is for narrow portrait phones only. A landscape phone is
+   short by nature and gets the two-column layout; applying a 480px floor there
+   is exactly what forces the page to scroll. */
+@media (min-width: 640px) {
+  body {
+    min-height: 0;
+  }
+}
+a {
+  color: inherit;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+svg {
+  display: block;
+}
+
+/* ---------- ambient background ---------- */
+#fx {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  mask-image: radial-gradient(ellipse at 50% 20%, #000 20%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 20%, #000 20%, transparent 75%);
+}
+.bg-glow {
+  position: fixed;
+  inset: -20%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      38% 30% at 30% 18%,
+      color-mix(in srgb, var(--primary) 26%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      34% 28% at 74% 64%,
+      color-mix(in srgb, var(--accent) 22%, transparent),
+      transparent 70%
+    );
+  filter: blur(40px);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 3%, 0) scale(1.08);
+  }
+}
+
+/* ---------- card ----------
+ * The card is a fixed-height flex column that fills the viewport and never
+ * scrolls. Only .hero flexes; everything else keeps its natural height, so the
+ * portrait absorbs whatever slack the screen has and the QR stays on screen at
+ * every size from a 320x568 SE up.
+ * ------------------------------------------------------------------------ */
+.card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 440px);
+  height: 100%;
+  margin: 0 auto;
+  padding: clamp(10px, 2.2dvh, 18px) clamp(14px, 4vw, 20px) clamp(12px, 2.4dvh, 22px);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)), var(--card);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset,
+    0 0 120px -40px color-mix(in srgb, var(--primary) 40%, transparent);
+  overflow: hidden;
+  transform: perspective(1200px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+  transform-style: preserve-3d;
+  transition: transform 0.12s linear;
+}
+.card::before {
+  /* gradient hairline border */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--primary) 70%, transparent),
+    transparent 35%,
+    transparent 65%,
+    color-mix(in srgb, var(--accent) 60%, transparent)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+}
+.sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  border-radius: inherit;
+  background: radial-gradient(
+    240px 240px at var(--sheen-x) var(--sheen-y),
+    rgba(255, 255, 255, 0.09),
+    transparent 60%
+  );
+  mix-blend-mode: screen;
+  transition: opacity 0.3s;
+}
+
+/* .body is the flex/grid seam between the one-column and two-column layouts. */
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.col-a {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.col-b {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+
+/* ---------- topbar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+.wordmark img {
+  height: clamp(13px, 2dvh, 18px);
+  width: auto;
+  display: block;
+  opacity: 0.95;
+}
+.topbar-actions {
+  display: flex;
+  gap: 6px;
+}
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s,
+    transform 0.15s;
+}
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon-btn:hover {
+  color: var(--foreground);
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border));
+  background: rgba(255, 255, 255, 0.03);
+}
+.icon-btn:active {
+  transform: scale(0.94);
+}
+.icon-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- hero / portrait ----------
+ * The only element allowed to grow. object-fit: contain means it shrinks
+ * rather than crops when the viewport is short. */
+.hero {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 72px;
+  margin: 4px 0 0;
+  overflow: hidden;
+}
+.orb {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: min(62%, 240px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+}
+.orb .ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--gradient-ember) border-box;
+  -webkit-mask:
+    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+.orb .ring-a {
+  opacity: 0.9;
+  animation: spin 14s linear infinite;
+}
+.orb .ring-b {
+  inset: -9%;
+  opacity: 0.28;
+  border-width: 1px;
+  animation: spin 26s linear infinite reverse;
+}
+.orb .core {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: var(--gradient-ember);
+  filter: blur(28px);
+  opacity: 0.55;
+  animation: breathe 5s ease-in-out infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.7;
+  }
+}
+.portrait {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  object-position: bottom;
+  filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
+}
+.hero-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  background: linear-gradient(transparent, var(--card));
+  pointer-events: none;
+}
+
+/* ---------- identity ---------- */
+.identity {
+  text-align: center;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.name {
+  margin: 0;
+  font-size: clamp(20px, 3.1dvh, 30px);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.role {
+  margin: clamp(3px, 0.7dvh, 8px) auto 0;
+  max-width: 300px;
+  font-weight: 500;
+  font-size: clamp(12px, 1.7dvh, 14.5px);
+  line-height: 1.25;
+  background: var(--gradient-ember);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.meta {
+  margin: clamp(3px, 0.7dvh, 10px) 0 0;
+  font-size: clamp(9px, 1.3dvh, 11px);
+}
+
+/* ---------- primary button ---------- */
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: clamp(8px, 1.6dvh, 18px);
+  height: clamp(44px, 6.2dvh, 54px);
+  border-radius: 999px;
+  background: var(--gradient-ember-btn);
+  color: #fff;
+  font-weight: 700;
+  font-size: clamp(14px, 1.9dvh, 16px);
+  letter-spacing: 0.01em;
+  box-shadow: 0 10px 30px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+  transition: transform 0.15s var(--ease);
+}
+.btn-primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: shimmer 4s 1.5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0% {
+    transform: translateX(-120%);
+  }
+  35%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.btn-primary svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+.btn-primary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* ---------- actions ----------
+ * Phone: six icon buttons on one row. The labels stay in the DOM (see the
+ * template) so the accessible name survives; only the pixels go away. */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(5px, 1.1vw, 9px);
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.6dvh, 16px);
+}
+.tile {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  transition:
+    transform 0.15s var(--ease),
+    border-color 0.2s,
+    background 0.2s,
+    color 0.2s;
+}
+.tile .ico {
+  display: grid;
+  place-items: center;
+  color: var(--foreground);
+}
+.tile .ico svg {
+  width: clamp(17px, 2.5dvh, 21px);
+  height: clamp(17px, 2.5dvh, 21px);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tile .ico svg [fill] {
+  stroke: none;
+}
+.tile .txt {
+  display: none;
+}
+.tile:hover,
+.tile:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--t, var(--primary)) 55%, var(--border));
+  color: var(--t, var(--primary));
+}
+.tile:focus-visible {
+  outline: 2px solid var(--t, var(--primary));
+  outline-offset: 2px;
+}
+.tile:active {
+  transform: scale(0.94);
+}
+.tile-wa {
+  --t: #25d366;
+}
+.tile-li {
+  --t: #4a9eff;
+}
+.tile-ig {
+  --t: var(--accent);
+}
+.tile-mail {
+  --t: var(--primary);
+}
+.tile-call {
+  --t: #7ec850;
+}
+.tile-web {
+  --t: #a78bfa;
+}
+
+/* ---------- QR ---------- */
+.qr {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.8dvh, 18px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.qr-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  border-radius: 14px;
+}
+.qr-frame {
+  position: relative;
+  display: block;
+  width: clamp(104px, 17dvh, 170px);
+  aspect-ratio: 1;
+  padding: 8px;
+  border-radius: 14px;
+  background: #f7f8fb;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 60px -20px color-mix(in srgb, var(--primary) 60%, transparent);
+  overflow: hidden;
+  transition:
+    transform 0.2s var(--ease),
+    box-shadow 0.2s;
+}
+.qr-btn:hover .qr-frame,
+.qr-btn:focus-visible .qr-frame {
+  transform: scale(1.03);
+  box-shadow: 0 0 70px -14px color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.qr-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.qr-frame img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 6px;
+}
+.scanline {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  mix-blend-mode: multiply;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), var(--accent), transparent);
+  box-shadow: 0 0 14px var(--primary);
+  animation: scan 2.8s ease-in-out infinite;
+  opacity: 0.9;
+}
+@keyframes scan {
+  0% {
+    top: 6%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.9;
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    top: 94%;
+    opacity: 0;
+  }
+}
+.corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--primary);
+  opacity: 0.9;
+}
+.corner.tl {
+  top: 4px;
+  left: 4px;
+  border-right: 0;
+  border-bottom: 0;
+  border-top-left-radius: 6px;
+}
+.corner.tr {
+  top: 4px;
+  right: 4px;
+  border-left: 0;
+  border-bottom: 0;
+  border-top-right-radius: 6px;
+  border-color: var(--accent);
+}
+.corner.bl {
+  bottom: 4px;
+  left: 4px;
+  border-right: 0;
+  border-top: 0;
+  border-bottom-left-radius: 6px;
+  border-color: var(--accent);
+}
+.corner.br {
+  bottom: 4px;
+  right: 4px;
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: 6px;
+}
+
+.qr-side {
+  text-align: center;
+}
+.qr-caption {
+  margin: clamp(5px, 1dvh, 10px) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.qr-caption .mono {
+  font-size: clamp(9px, 1.2dvh, 11px);
+}
+.qr-caption .hint {
+  font-size: clamp(10px, 1.3dvh, 12px);
+  color: var(--muted-foreground);
+  opacity: 0.8;
+  max-width: 300px;
+  margin: 0 auto;
+}
+.seg {
+  display: inline-flex;
+  margin-top: clamp(5px, 1dvh, 12px);
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+}
+.seg-btn {
+  border: 0;
+  background: transparent;
+  padding: clamp(4px, 0.8dvh, 7px) clamp(11px, 3vw, 16px);
+  border-radius: 999px;
+  font-size: clamp(11px, 1.5dvh, 12.5px);
+  font-weight: 500;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.seg-btn.is-active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--foreground);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent) inset;
+}
+.seg-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- footer ---------- */
+.foot {
+  flex: 0 0 auto;
+  margin-top: clamp(8px, 1.6dvh, 18px);
+  text-align: center;
+}
+.tagline {
+  margin: 0;
+  font-size: clamp(10px, 1.4dvh, 13px);
+  color: var(--muted-foreground);
+}
+.legal {
+  margin: 5px 0 0;
+  font-size: clamp(8px, 1.1dvh, 10px);
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+.legal a {
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 0.2s,
+    color 0.2s;
+}
+.legal a:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+/* On a genuinely short screen the tagline is the first thing that can go —
+ * everything above it is either identity or an action. */
+@media (max-height: 680px) {
+  .foot .tagline {
+    display: none;
+  }
+}
+@media (max-height: 600px) {
+  .foot {
+    display: none;
+  }
+  .qr-caption .hint {
+    display: none;
+  }
+}
+
+/* ---------- wide layout ----------
+ * Two columns as soon as there is width to justify it: portrait and identity
+ * on the left, everything actionable on the right. Height-capped rather than
+ * viewport-filling, so a 27" monitor gets a card, not a billboard.
+ * ------------------------------------------------------------------------ */
+/* ---------- wide layout ----------
+ * Two columns wherever there is width to justify it: portrait and identity on
+ * the left, everything actionable on the right. The comma is doing real work —
+ * it covers both a desktop window and a landscape phone, which have opposite
+ * height constraints but want the same shape.
+ * ------------------------------------------------------------------------ */
+@media (min-width: 800px) and (min-height: 480px), (min-width: 640px) and (max-height: 480px) {
+  .body {
+    flex-direction: row;
+    gap: clamp(20px, 3vw, 32px);
+    align-items: stretch;
+  }
+  .col-a {
+    flex: 1 1 40%;
+    min-width: 0;
+    justify-content: flex-end;
+  }
+  .col-b {
+    flex: 1 1 60%;
+    min-width: 0;
+    justify-content: center;
+  }
+  .role {
+    max-width: none;
+  }
+  .btn-primary {
+    margin-top: 0;
+  }
+
+  /* Wide screens can afford the labels — icon-only is a phone compromise. */
+  .actions {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .tile {
+    aspect-ratio: auto;
+    min-height: 0;
+    grid-template-columns: 34px 1fr;
+    grid-auto-flow: column;
+    place-items: center start;
+    gap: 11px;
+    padding: clamp(7px, 1.4dvh, 11px) 13px;
+  }
+  .tile .ico {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  .tile .ico svg {
+    width: 17px;
+    height: 17px;
+  }
+  .tile .txt {
+    display: block;
+    min-width: 0;
+  }
+  .tile .lbl {
+    display: block;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile .sub {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    margin-top: 2px;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tile:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: inherit;
+  }
+  .tile:hover .ico {
+    color: var(--t, var(--primary));
+    background: color-mix(in srgb, var(--t, var(--primary)) 14%, transparent);
+  }
+
+  /* QR beside its caption rather than above it — recovers vertical room. */
+  .qr {
+    flex-direction: row;
+    align-items: center;
+    gap: 18px;
+  }
+  .qr-side {
+    text-align: left;
+    min-width: 0;
+  }
+  .qr-caption {
+    margin: 0;
+  }
+  .qr-caption .hint {
+    margin: 0;
+    max-width: 34ch;
+  }
+}
+
+/* Desktop only: cap the height so a 27" monitor gets a card, not a billboard. */
+@media (min-width: 800px) and (min-height: 480px) {
+  .card {
+    width: min(100%, 980px);
+    height: min(100%, 620px);
+    padding: 22px 26px 24px;
+    border-radius: 24px;
+  }
+  .body {
+    margin-top: 6px;
+  }
+  .hero {
+    min-height: 120px;
+  }
+  .hero-fade {
+    height: 56px;
+  }
+  .name {
+    font-size: clamp(28px, 3.4vw, 40px);
+  }
+  .role {
+    font-size: 16px;
+  }
+  .meta {
+    font-size: 11px;
+  }
+  .btn-primary {
+    height: 54px;
+    font-size: 16px;
+  }
+  .actions {
+    margin-top: 14px;
+  }
+  .qr {
+    margin-top: 16px;
+  }
+  .foot {
+    display: block;
+    margin-top: 16px;
+    text-align: left;
+  }
+  .foot .tagline {
+    display: block;
+    font-size: 13px;
+  }
+}
+
+/* Landscape phones and short laptops: same two columns, but fill the height and
+   drop the footer — there is no room for a tagline at 390px tall. */
+@media (min-width: 640px) and (max-height: 480px) {
+  .card {
+    width: min(100%, 920px);
+    height: 100%;
+    padding: 10px 16px 12px;
+  }
+  .foot {
+    display: none;
+  }
+  /* Three across, not two: at 390px tall a third row of tiles is the
+     difference between fitting and pushing the button under the topbar. */
+  .actions {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .tile {
+    padding: 8px 10px;
+    gap: 9px;
+    grid-template-columns: 30px 1fr;
+  }
+  .tile .ico {
+    width: 30px;
+    height: 30px;
+  }
+  .tile .lbl {
+    font-size: 13px;
+  }
+  .tile .sub {
+    font-size: 9px;
+  }
+  .col-b {
+    justify-content: flex-start;
+    gap: 10px;
+  }
+  .actions,
+  .qr,
+  .btn-primary {
+    margin-top: 0;
+  }
+  .qr-frame {
+    width: clamp(88px, 28dvh, 124px);
+  }
+  .qr-caption .hint {
+    display: none;
+  }
+}
+
+@media (max-width: 340px) {
+  .actions {
+    gap: 4px;
+  }
+  .tile {
+    border-radius: 10px;
+  }
+}
+
+/* ---------- QR modal ---------- */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(60% 50% at 50% 40%, #ffffff, #f2f4f8 70%, #e6e9f0);
+  color: #0a0b10;
+  animation: fadein 0.25s var(--ease);
+}
+.qr-modal[hidden] {
+  display: none;
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+    transform: scale(1.03);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.qr-modal-inner {
+  text-align: center;
+  width: min(100%, 360px);
+}
+.qr-modal-inner img {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1;
+  border-radius: 22px;
+  background: #fff;
+  padding: 12px;
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.qr-modal-name {
+  margin: 20px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.qr-modal-url {
+  margin: 6px 0 0;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: #4b4f5e;
+  font-size: 12px;
+}
+.qr-modal-hint {
+  margin: 16px 0 0;
+  color: #6b6f7f;
+}
+.qr-close {
+  position: absolute;
+  top: max(env(safe-area-inset-top), 16px);
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  backdrop-filter: blur(8px);
+}
+.qr-close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(env(safe-area-inset-bottom), 20px);
+  transform: translate(-50%, 20px);
+  z-index: 60;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #0c0d12;
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 12px;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 30px -10px var(--primary);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s,
+    transform 0.3s var(--ease);
+}
+.toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+/* ---------- entrance ---------- */
+/* Delay comes from an inline --d on each element. nth-child stopped working
+   once the content was split into two columns, and positional selectors would
+   have to be re-derived every time the layout changes. */
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: reveal 0.7s var(--ease) forwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes reveal {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .card {
+    transform: none !important;
+  }
+  #fx {
+    display: none;
+  }
+}
