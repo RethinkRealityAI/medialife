@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /__forms.html
+# Virtual business cards are unlisted — reached by QR, not by search.
+Disallow: /c/
 
 Sitemap: https://medialife.ai/sitemap.xml

@@ -55,3 +55,28 @@
   for = "/__forms.html"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+
+# ── Virtual business cards (/c/<slug>/) ──────────────────────────────────────
+# Unlisted contact pages reached by QR, never linked from the site. These are
+# plain static files in public/c/, so unlike the SSR routes they DO receive
+# netlify.toml headers — the noindex below is the real one, alongside the
+# <meta name="robots"> in each card and the Disallow in robots.txt.
+[[headers]]
+  for = "/c/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300"
+
+# Shared card CSS/JS/brand assets change only when a card is rebuilt.
+[[headers]]
+  for = "/c/_shared/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Without an explicit type the .vcf downloads as octet-stream and iOS/Android
+# offer no "Add to Contacts" handler — the whole point of the card.
+[[headers]]
+  for = "/c/*/*.vcf"
+  [headers.values]
+    Content-Type = "text/vcard; charset=utf-8"
+    Content-Disposition = "attachment"
