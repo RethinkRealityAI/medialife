@@ -64,17 +64,35 @@ async function buildVcard(m, avatarPath) {
   return lines.map(foldLine).join('\r\n') + '\r\n';
 }
 
-/* ---------- Branded QR (rounded modules, ember gradient, logo well) ---------- */
-function buildQrSvg(url, { primary, accent }) {
-  const qr = QRCode.create(url, { errorCorrectionLevel: 'H' });
+/* ---------- Compact vCard for the QR payload ----------
+ * No photo and no folding: iOS Camera and Android (camera / Google Lens) both parse
+ * this inline and offer "Add contact" natively. Keep it short so the code stays sparse. */
+function buildQrVcard(m) {
+  return [
+    'BEGIN:VCARD', 'VERSION:3.0',
+    `N:${vcardEscape(m.lastName)};${vcardEscape(m.firstName)}`,
+    `FN:${vcardEscape(m.displayName)}`,
+    `ORG:${vcardEscape(m.org)}`,
+    `TITLE:${vcardEscape(m.title)}`,
+    `TEL;TYPE=CELL:${m.phone}`,
+    `EMAIL:${m.email}`,
+    `URL:${m.linkedin}`,
+    `NOTE:${vcardEscape(`WhatsApp +${m.whatsapp} / IG ${m.instagramHandle}`)}`,
+    'END:VCARD',
+  ].join('\n');
+}
+
+/* ---------- Branded QR (rounded modules, ember gradient, optional logo well) ---------- */
+function buildQrSvg(payload, { primary, accent }, { ecc = 'H', logo = true, label = 'QR code' } = {}) {
+  const qr = QRCode.create(payload, { errorCorrectionLevel: ecc });
   const n = qr.modules.size;
   const get = (r, c) => qr.modules.get(r, c) === 1;
   const isFinder = (r, c) => (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7);
 
   // Logo well: clear a centre block (H = 30% recoverable; we clear ~6%)
-  const well = Math.floor(n * 0.24);
+  const well = logo ? Math.floor(n * 0.24) : 0;
   const wellStart = Math.floor((n - well) / 2);
-  const inWell = (r, c) => r >= wellStart && r < wellStart + well && c >= wellStart && c < wellStart + well;
+  const inWell = (r, c) => logo && r >= wellStart && r < wellStart + well && c >= wellStart && c < wellStart + well;
 
   const q = 2; // quiet zone in modules
   const size = n + q * 2;
@@ -83,7 +101,9 @@ function buildQrSvg(url, { primary, accent }) {
     for (let c = 0; c < n; c++) {
       if (!get(r, c) || isFinder(r, c) || inWell(r, c)) continue;
       const x = c + q, y = r + q;
-      dots += `<rect x="${x + 0.06}" y="${y + 0.06}" width="0.88" height="0.88" rx="0.22"/>`;
+      // denser codes get squarer modules so cameras see clean edges
+      const inset = n > 45 ? 0.03 : 0.06, rx = n > 45 ? 0.16 : 0.22;
+      dots += `<rect x="${x + inset}" y="${y + inset}" width="${1 - inset * 2}" height="${1 - inset * 2}" rx="${rx}"/>`;
     }
   }
   const finder = (x, y) => `
@@ -93,7 +113,7 @@ function buildQrSvg(url, { primary, accent }) {
 
   const cx = size / 2;
   const logoR = well / 2 - 0.4;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size * 10}" height="${size * 10}" role="img" aria-label="QR code — scan to open this card">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size * 10}" height="${size * 10}" role="img" aria-label="${esc(label)}">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${primary}"/><stop offset="1" stop-color="${accent}"/>
@@ -109,10 +129,10 @@ function buildQrSvg(url, { primary, accent }) {
   <rect width="${size}" height="${size}" rx="1.5" fill="#f7f8fb"/>
   <g fill="url(#gd)">${dots}</g>
   ${finder(q, q)}${finder(size - q - 7, q)}${finder(q, size - q - 7)}
-  <circle cx="${cx}" cy="${cx}" r="${logoR}" fill="#f7f8fb"/>
+  ${logo ? `<circle cx="${cx}" cy="${cx}" r="${logoR}" fill="#f7f8fb"/>
   <circle cx="${cx}" cy="${cx}" r="${logoR * 0.72}" fill="none" stroke="url(#g)" stroke-width="${logoR * 0.16}"/>
   <circle cx="${cx}" cy="${cx}" r="${logoR * 0.40}" fill="url(#core)"/>
-  <circle cx="${cx - logoR * 0.14}" cy="${cx - logoR * 0.16}" r="${logoR * 0.11}" fill="#fff" opacity=".55"/>
+  <circle cx="${cx - logoR * 0.14}" cy="${cx - logoR * 0.16}" r="${logoR * 0.11}" fill="#fff" opacity=".55"/>` : ''}
 </svg>`;
 }
 
@@ -136,7 +156,11 @@ async function buildOne(file) {
 
   const vcfName = `${m.slug}.vcf`;
   await writeFile(path.join(out, vcfName), await buildVcard(m, path.join(src, m.avatar)));
-  await writeFile(path.join(out, 'qr.svg'), buildQrSvg(m.cardUrl, m));
+  // Contact QR: the vCard itself — scanning saves straight into Contacts on iOS and Android.
+  // ECC M keeps the module count low enough to scan from a phone screen; no logo well.
+  await writeFile(path.join(out, 'qr-contact.svg'), buildQrSvg(buildQrVcard(m), m, { ecc: 'M', logo: false, label: 'QR code — scan to save contact' }));
+  // Link QR: opens this card (for sharing the full experience).
+  await writeFile(path.join(out, 'qr-link.svg'), buildQrSvg(m.cardUrl, m, { ecc: 'H', logo: true, label: 'QR code — scan to open this card' }));
 
   const tpl = await readFile(TEMPLATE, 'utf8');
   const waText = encodeURIComponent(m.whatsappMessage || '');

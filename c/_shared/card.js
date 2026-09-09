@@ -55,8 +55,35 @@
     buzz();
     toast((await copy(cardUrl)) ? 'Link copied' : 'Could not copy — long-press the URL bar');
   });
-  $('#save').addEventListener('click', () => { buzz(18); toast('Opening contact card…'); });
+  $('#save').addEventListener('click', () => {
+    buzz(18);
+    // iOS opens the .vcf in a contact preview sheet; Android downloads it and offers Contacts on open
+    toast(isAndroid ? 'Downloaded — open it to add to Contacts' : 'Opening contact card…');
+  });
   document.querySelectorAll('.tile').forEach((t) => t.addEventListener('click', () => buzz()));
+
+  /* ---------- device-aware Save button ---------- */
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  const saveLabel = $('#save-label');
+  if (isIOS) saveLabel.textContent = 'Add to iPhone Contacts';
+  else if (isAndroid) saveLabel.textContent = 'Add to Android Contacts';
+
+  /* ---------- QR mode: contact (vCard) vs card link ---------- */
+  const QR = {
+    contact: { src: 'qr-contact.svg', alt: 'QR code — scan to save contact', caption: 'SCAN TO SAVE CONTACT', sub: 'Scan to save contact', hint: 'Point any phone camera at the code — tap "Add contact"' },
+    link: { src: 'qr-link.svg', alt: 'QR code — scan to open this card', caption: 'SCAN TO OPEN CARD', sub: cardUrl, hint: 'Point any phone camera at the code' },
+  };
+  const setQr = (mode) => {
+    const m = QR[mode] || QR.contact;
+    for (const img of [$('#qr-img'), $('#qr-modal-img')]) { img.src = m.src; img.alt = m.alt; }
+    $('#qr-caption').textContent = m.caption;
+    $('#qr-modal-sub').textContent = m.sub;
+    $('#qr-modal-hint').textContent = m.hint;
+    document.querySelectorAll('.seg-btn').forEach((b) => { const on = b.dataset.qr === mode; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
+  };
+  document.querySelectorAll('.seg-btn').forEach((b) => b.addEventListener('click', () => { buzz(); setQr(b.dataset.qr); }));
 
   /* ---------- QR modal (bright mode for scanning) ---------- */
   const modal = $('#qr-modal');

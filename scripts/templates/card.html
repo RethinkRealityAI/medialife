@@ -28,7 +28,7 @@
   <div class="bg-grid" aria-hidden="true"></div>
   <div class="bg-glow" aria-hidden="true"></div>
 
-  <main class="card" id="card" data-card-url="{{cardUrl}}" data-name="{{displayName}}">
+  <main class="card" id="card" data-card-url="{{cardUrl}}" data-name="{{displayName}}" data-first-name="{{firstName}}">
     <div class="sheen" aria-hidden="true"></div>
 
     <header class="topbar reveal">
@@ -56,7 +56,7 @@
 
     <a class="btn-primary reveal" id="save" href="{{vcf}}" download>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-      <span>Save to Contacts</span>
+      <span id="save-label">Save to Contacts</span>
     </a>
 
     <nav class="actions reveal" aria-label="Contact options">
@@ -95,12 +95,16 @@
     <section class="qr reveal">
       <button class="qr-btn" id="qr-open" type="button" aria-haspopup="dialog" aria-controls="qr-modal">
         <span class="qr-frame">
-          <img src="qr.svg" alt="QR code linking to this card" width="200" height="200" />
+          <img id="qr-img" src="qr-contact.svg" alt="QR code — scan to save contact" width="200" height="200" />
           <span class="scanline" aria-hidden="true"></span>
           <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
         </span>
       </button>
-      <p class="qr-caption"><span class="mono">SCAN TO CONNECT</span><span class="hint">tap to enlarge</span></p>
+      <p class="qr-caption"><span class="mono" id="qr-caption">SCAN TO SAVE CONTACT</span><span class="hint">Works with the built-in camera on iPhone &amp; Android · tap to enlarge</span></p>
+      <div class="seg" role="tablist" aria-label="QR code type">
+        <button class="seg-btn is-active" type="button" role="tab" aria-selected="true" data-qr="contact">Contact</button>
+        <button class="seg-btn" type="button" role="tab" aria-selected="false" data-qr="link">Card link</button>
+      </div>
     </section>
 
     <div class="row reveal">
@@ -125,10 +129,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     <div class="qr-modal-inner">
-      <img src="qr.svg" alt="QR code linking to this card" />
+      <img id="qr-modal-img" src="qr-contact.svg" alt="QR code — scan to save contact" />
       <p class="qr-modal-name">{{displayName}}</p>
-      <p class="mono qr-modal-url">{{cardUrl}}</p>
-      <p class="mono qr-modal-hint">Point any phone camera at the code</p>
+      <p class="mono qr-modal-url" id="qr-modal-sub">Scan to save contact</p>
+      <p class="mono qr-modal-hint" id="qr-modal-hint">Point any phone camera at the code</p>
     </div>
   </div>
 

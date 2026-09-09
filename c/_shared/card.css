@@ -171,7 +171,7 @@ svg { display: block; }
 /* ---------- QR ---------- */
 .qr { margin-top: 18px; text-align: center; }
 .qr-btn { background: none; border: 0; padding: 0; cursor: pointer; display: inline-block; border-radius: 14px; }
-.qr-frame { position: relative; display: block; width: 184px; height: 184px; padding: 10px; border-radius: 14px; background: #f7f8fb; border: 1px solid var(--border); box-shadow: 0 0 60px -20px color-mix(in srgb, var(--primary) 60%, transparent); overflow: hidden; transition: transform 0.2s var(--ease), box-shadow 0.2s; }
+.qr-frame { position: relative; display: block; width: 208px; height: 208px; padding: 10px; border-radius: 14px; background: #f7f8fb; border: 1px solid var(--border); box-shadow: 0 0 60px -20px color-mix(in srgb, var(--primary) 60%, transparent); overflow: hidden; transition: transform 0.2s var(--ease), box-shadow 0.2s; }
 .qr-btn:hover .qr-frame, .qr-btn:focus-visible .qr-frame { transform: scale(1.03); box-shadow: 0 0 70px -14px color-mix(in srgb, var(--accent) 65%, transparent); }
 .qr-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 .qr-frame img { width: 100%; height: 100%; display: block; border-radius: 6px; }
@@ -183,7 +183,11 @@ svg { display: block; }
 .corner.bl { bottom: 5px; left: 5px; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; border-color: var(--accent); }
 .corner.br { bottom: 5px; right: 5px; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
 .qr-caption { margin: 12px 0 0; display: flex; flex-direction: column; gap: 3px; }
-.qr-caption .hint { font-size: 12px; color: var(--muted-foreground); opacity: 0.8; }
+.qr-caption .hint { font-size: 12px; color: var(--muted-foreground); opacity: 0.8; max-width: 300px; margin: 0 auto; }
+.seg { display: inline-flex; margin-top: 12px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); }
+.seg-btn { border: 0; background: transparent; padding: 7px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 500; color: var(--muted-foreground); cursor: pointer; transition: background 0.2s, color 0.2s; }
+.seg-btn.is-active { background: rgba(255,255,255,0.08); color: var(--foreground); box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 40%, transparent) inset; }
+.seg-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
 .btn-ghost { display: flex; align-items: center; justify-content: center; gap: 8px; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-weight: 500; font-size: 13.5px; transition: border-color 0.2s, background 0.2s, transform 0.15s; }

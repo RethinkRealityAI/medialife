@@ -9,7 +9,9 @@ What a visitor gets in one tap:
 - **Save to Contacts** — a `.vcf` with name, title, company, mobile, email, LinkedIn, Instagram,
   WhatsApp and an embedded photo (opens straight into iOS / Android Contacts).
 - **WhatsApp** (pre-filled opener), **LinkedIn**, **Instagram** (@medialife.ai), **Email**, **Call**, **Website**.
-- **Branded QR** (tap to enlarge into a bright, high-contrast scan mode that keeps the screen awake).
+- **Contact QR** — the code encodes a vCard, so iPhone Camera and Android Camera / Google Lens offer
+  "Add contact" natively, no page visit needed. A second "Card link" mode encodes the page URL. Tap to
+  enlarge into a bright scan mode that keeps the screen awake.
 - **Share card** via the native share sheet, or copy the link.
 
 ## Adding a team member
@@ -24,10 +26,10 @@ npm install
 npm run build
 ```
 
-This writes `c/<slug>/` with `index.html`, `qr.svg`, `<slug>.vcf`, and the images. Commit the output —
+This writes `c/<slug>/` with `index.html`, `qr-contact.svg`, `qr-link.svg`, `<slug>.vcf`, and the images. Commit the output —
 the site is fully static and needs no build step on the host.
 
-`cardUrl` in the JSON must be the final public URL of the page; it is what the QR code encodes. If the
+`cardUrl` in the JSON must be the final public URL of the page; it is what the link QR encodes. If the
 host or path changes, update it and rebuild.
 
 ## Local preview
