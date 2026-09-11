@@ -14,7 +14,7 @@ export const Route = createFileRoute("/live")({
       {
         name: "description",
         content:
-          "Immersive formats MEDIALIFE currently has in market, plus programmes in development. Physical-to-digital activation across retail, print, conventions and location-based entertainment.",
+          "Immersive formats MEDIALIFE currently has in market, plus programs in development. Physical-to-digital activation across retail, print, conventions and location-based entertainment.",
       },
       { property: "og:title", content: "Live Now | MEDIALIFE" },
       { property: "og:description", content: "Immersive formats currently in market." },

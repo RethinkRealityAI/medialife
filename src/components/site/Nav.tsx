@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
-import { Wordmark } from "./Logo";
+import { Lockup } from "./Logo";
 
 export const SHOP_URL = "https://shop.medialife.ai/";
 
@@ -66,7 +66,7 @@ export function Nav() {
     <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-10 gap-4">
         <Link to="/" className="flex items-center gap-2 group shrink-0">
-          <div className="relative h-6 w-6">
+          <div className="relative h-6 w-6 shrink-0">
             <div
               className="absolute inset-0 rounded-full opacity-70 blur-sm group-hover:opacity-100 transition"
               style={{ background: "var(--gradient-ember)" }}
@@ -77,7 +77,10 @@ export function Nav() {
               style={{ background: "var(--gradient-ember)" }}
             />
           </div>
-          <Wordmark className="h-[13px] w-auto" />
+          {/* 28px, not smaller: the lockup is two lines, and the "ACTIVATED BY"
+              rule is only 27% of its height. Below this it stops being legible
+              and reads as a smudge above the wordmark. */}
+          <Lockup className="h-[28px] w-auto" />
         </Link>
 
         <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={closeMega}>

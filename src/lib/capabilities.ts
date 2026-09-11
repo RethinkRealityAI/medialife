@@ -42,7 +42,7 @@ export const CAPABILITIES: Capability[] = [
   {
     num: "05",
     name: "Gaming + platform integration",
-    body: "Physical and digital programmes built for game-native audiences, commerce, and platform-connected experiences with native development partners.",
+    body: "Physical and digital programs built for game-native audiences, commerce, and platform-connected experiences with native development partners.",
     glyph: "◇",
   },
   {

@@ -29,7 +29,7 @@ export type Campaign = {
   status: CampaignStatus;
   /** Short status chip, e.g. "LIVE NOW" */
   statusLabel: string;
-  /** IP or programme name */
+  /** IP or program name */
   name: string;
   /** Format descriptor under the name */
   kicker: string;
@@ -93,7 +93,7 @@ export const CAMPAIGNS: Campaign[] = [
     secondary: { label: "Get notified", href: "/contact" },
     image: {
       src: "/merch/keychain-cutout.webp",
-      alt: "BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE programme",
+      alt: "BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE program",
     },
     note: "Platform-specific commerce features and digital benefits are subject to applicable approvals.",
   },

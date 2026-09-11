@@ -11,13 +11,13 @@ export const Route = createFileRoute("/case-studies")({
       {
         name: "description",
         content:
-          "How MEDIALIFE turns fandom touchpoints into immersive media: the award-winning Netflix / Sakamoto Days activated retail and live-event programme, and activated apparel at anime conventions.",
+          "How MEDIALIFE turns fandom touchpoints into immersive media: the award-winning Netflix / Sakamoto Days activated retail and live-event program, and activated apparel at anime conventions.",
       },
       { property: "og:title", content: "Case Studies | MEDIALIFE" },
       {
         property: "og:description",
         content:
-          "Award-winning activated print, retail and live-event programmes for entertainment IP.",
+          "Award-winning activated print, retail and live-event programs for entertainment IP.",
       },
       { property: "og:image", content: "https://medialife.ai/work/sakamoto-header.webp" },
     ],
@@ -42,7 +42,7 @@ function CaseStudies() {
             Fandom touchpoints, <span className="ember-text">activated</span>.
           </h1>
           <p className="mt-8 max-w-2xl text-lg text-muted-foreground">
-            Selected programmes across activated print, retail, live events and convention
+            Selected programs across activated print, retail, live events and convention
             distribution — with the measurement that came back from the field.
           </p>
 

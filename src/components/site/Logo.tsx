@@ -112,3 +112,22 @@ export function Wordmark({
     />
   );
 }
+
+/**
+ * The official "ACTIVATED BY MEDIALIFE(TM)" endorsement lockup, as supplied.
+ * Width/height are the intrinsic asset size so the browser reserves the box
+ * before the image lands — a header logo is the worst place to ship layout
+ * shift.
+ */
+export function Lockup({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <img
+      src="/brand/medialife-lockup.webp"
+      alt="Activated by MEDIALIFE"
+      width={686}
+      height={183}
+      style={style}
+      className={className}
+    />
+  );
+}

@@ -84,7 +84,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     },
     intro: [
       "MEDIALIFE turned Mr. Sakamoto's climactic transformation into a live, app-free augmented reality experience.",
-      "We distributed AR-activated magazines, stickers, and posters across 150+ comic and manga retailers, then brought the programme out of the living room and directly into fans' lives at Anime Expo, San Diego Comic-Con and Anime NYC — turning the transformation into a live, participatory experience.",
+      "We distributed AR-activated magazines, stickers, and posters across 150+ comic and manga retailers, then brought the program out of the living room and directly into fans' lives at Anime Expo, San Diego Comic-Con and Anime NYC — turning the transformation into a live, participatory experience.",
     ],
     approach: [
       {

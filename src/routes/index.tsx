@@ -710,7 +710,7 @@ function Home() {
                 to="/contact"
                 className="group/ip mono text-[11px] uppercase tracking-[0.2em] inline-flex items-center gap-2 border-b border-transparent hover:border-primary pb-1 transition-colors"
               >
-                <span className="ember-shine font-medium">Build a merch programme</span>
+                <span className="ember-shine font-medium">Build a merch program</span>
                 <span
                   aria-hidden
                   className="text-primary transition-transform group-hover/ip:translate-x-1"

@@ -1,0 +1,10 @@
+# Git must not rewrite these line endings.
+#
+# RFC 6350 requires CRLF in a vCard. Committing one from Windows with
+# core.autocrlf=true strips the CR, and strict parsers - iOS Contacts among
+# them - can reject the result. Marking them binary keeps the bytes the
+# generator wrote, whatever platform commits them.
+*.vcf -text
+
+# Generated QR artwork: never diffed, never merged.
+qr-*.svg -text -diff
