@@ -108,16 +108,16 @@
         <section class="qr reveal" style="--d:.34s">
           <button class="qr-btn" id="qr-open" type="button" aria-haspopup="dialog" aria-controls="qr-modal">
             <span class="qr-frame">
-              <img id="qr-img" src="{{base}}qr-contact.svg" alt="QR code — scan to save contact" width="200" height="200" />
+              <img id="qr-img" src="{{base}}qr-link.svg" alt="QR code — scan to open this card" width="200" height="200" />
               <span class="scanline" aria-hidden="true"></span>
               <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
             </span>
           </button>
           <div class="qr-side">
-            <p class="qr-caption"><span class="mono" id="qr-caption">SCAN TO SAVE CONTACT</span><span class="hint">Point any phone camera at the code · tap to enlarge</span></p>
+            <p class="qr-caption"><span class="mono" id="qr-caption">SCAN TO OPEN CARD</span><span class="hint">Point any phone camera at the code · tap to enlarge</span></p>
             <div class="seg" role="tablist" aria-label="QR code type">
-              <button class="seg-btn is-active" type="button" role="tab" aria-selected="true" data-qr="contact">Contact</button>
-              <button class="seg-btn" type="button" role="tab" aria-selected="false" data-qr="link">Card link</button>
+              <button class="seg-btn is-active" type="button" role="tab" aria-selected="true" data-qr="link">Card link</button>
+              <button class="seg-btn" type="button" role="tab" aria-selected="false" data-qr="contact">Contact</button>
             </div>
           </div>
         </section>
@@ -135,9 +135,9 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
     </button>
     <div class="qr-modal-inner">
-      <img id="qr-modal-img" src="{{base}}qr-contact.svg" alt="QR code — scan to save contact" />
+      <img id="qr-modal-img" src="{{base}}qr-link.svg" alt="QR code — scan to open this card" />
       <p class="qr-modal-name">{{displayName}}</p>
-      <p class="mono qr-modal-url" id="qr-modal-sub">Scan to save contact</p>
+      <p class="mono qr-modal-url" id="qr-modal-sub">{{cardUrl}}</p>
       <p class="mono qr-modal-hint" id="qr-modal-hint">Point any phone camera at the code</p>
     </div>
   </div>

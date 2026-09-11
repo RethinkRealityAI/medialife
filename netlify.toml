@@ -88,4 +88,16 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/sofia"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/sofia/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300"
 # <<< end generated

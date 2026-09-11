@@ -120,7 +120,7 @@
     },
   };
   const setQr = (mode) => {
-    const m = QR[mode] || QR.contact;
+    const m = QR[mode] || QR.link;
     for (const img of [$("#qr-img"), $("#qr-modal-img")]) {
       img.src = m.src;
       img.alt = m.alt;

@@ -148,7 +148,17 @@ function buildQrSvg(
   const inWell = (r, c) =>
     logo && r >= wellStart && r < wellStart + well && c >= wellStart && c < wellStart + well;
 
-  const q = 2; // quiet zone in modules
+  // Quiet zone, in modules — proportional, not fixed.
+  //
+  // The two codes on a card have very different densities: the vCard payload
+  // runs ~65 modules, the card link ~33. A fixed 2-module quiet zone is 2.9% of
+  // the image on one and 5.4% on the other, so swapping modes visibly resized
+  // the code inside its frame and left the sparser one looking top-heavy and
+  // padded. Scaling the quiet zone with the module count keeps the printed
+  // margin the same fraction either way, so the two codes present identically.
+  // The floor of 2 preserves the previous minimum; the white tile the code sits
+  // on supplies additional quiet zone beyond whatever is baked in here.
+  const q = Math.max(2, Math.round(n * 0.055));
   const size = n + q * 2;
   let dots = "";
   for (let r = 0; r < n; r++) {
