@@ -16,6 +16,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
+import { garmentGeometry, GARMENTS, GARMENT_BOUNDS } from "./garment.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
@@ -161,24 +162,16 @@ const HOODIE_PTS = chaikin(
  */
 const SHAPES = {
   tee: {
-    sdf: polySdf(TEE_PTS),
-    bounds: [-1.26, -1.32, 1.26, 1.2],
-    puff: 0.135,
-    feather: 0.3,
-    res: 112,
-    tag: [0.34, -1.04],
+    garment: "tee",
+    bounds: GARMENT_BOUNDS.tee,
+    tag: [0.38, -0.86],
     print: 0.245,
-    wrinkle: 0.014,
   },
   hoodie: {
-    sdf: polySdf(HOODIE_PTS),
-    bounds: [-1.44, -1.38, 1.44, 1.62],
-    puff: 0.175,
-    feather: 0.34,
-    res: 112,
-    tag: [1.16, 0.62],
-    print: 0.225,
-    wrinkle: 0.017,
+    garment: "hoodie",
+    bounds: GARMENT_BOUNDS.hoodie,
+    tag: [1.06, 0.27],
+    print: 0.2,
   },
   keychain: {
     sdf: (x, y) => sdRoundRect(x, y + 0.18, 0.62, 0.7, 0.24),
@@ -482,35 +475,16 @@ function drawTrim(ctx, id, S, ink, bounds) {
   ctx.setLineDash([S * 0.012, S * 0.012]);
 
   if (id === "tee" || id === "hoodie") {
-    const neckY = id === "hoodie" ? 1.06 : 1.02;
-    const neckX = id === "hoodie" ? 0.55 : 0.27;
-    const hemY = id === "hoodie" ? -1.24 : -1.2;
-    const hemX = id === "hoodie" ? 0.66 : 0.58;
-
-    ctx.beginPath();
-    ctx.ellipse(S * 0.5, Y(neckY), X(neckX) - S * 0.5, half * 0.05, 0, 0, Math.PI);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.moveTo(X(-hemX * 0.94), Y(hemY + 0.05));
-    ctx.lineTo(X(hemX * 0.94), Y(hemY + 0.05));
-    ctx.stroke();
-
+    // no drawn collar or hem line: the garment mesh has real rib bands now, and
+    // a painted one on top of them reads as a printed stripe
     if (id === "hoodie") {
+      // kangaroo pocket
       ctx.beginPath();
-      ctx.moveTo(X(-0.42), Y(-0.34));
-      ctx.lineTo(X(-0.42), Y(-0.9));
-      ctx.lineTo(X(0.42), Y(-0.9));
-      ctx.lineTo(X(0.42), Y(-0.34));
+      ctx.moveTo(X(-0.4), Y(-0.28));
+      ctx.lineTo(X(-0.4), Y(-0.82));
+      ctx.lineTo(X(0.4), Y(-0.82));
+      ctx.lineTo(X(0.4), Y(-0.28));
       ctx.stroke();
-      // drawcord eyelets
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 0.22;
-      for (const ex of [-0.13, 0.13]) {
-        ctx.beginPath();
-        ctx.arc(X(ex), Y(0.92), S * 0.006, 0, Math.PI * 2);
-        ctx.stroke();
-      }
     }
   } else if (id === "mousepad" || id === "stickers") {
     const inset = id === "mousepad" ? 0.055 : 0.05;
@@ -557,6 +531,13 @@ function paintSurface(canvas, opts) {
     ctx.fillRect(0, 0, S, half);
     ctx.restore();
   }
+  // The bottom half is the garment's back, and it is also what you see through
+  // a sleeve or a neck opening. Shading it down reads correctly both ways.
+  ctx.save();
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, half, S, half);
+  ctx.restore();
 
   drawTrim(ctx, id, S, ink, bounds || [-1, -1, 1, 1]);
 
@@ -656,12 +637,12 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   scene.add(key);
 
   // edge-on rims: short range keeps them on the product, off the floor
-  const rimA = new THREE.PointLight(0x19affe, 14, 5.5, 2);
-  rimA.position.set(-2.05, 0.75, 0.35);
+  const rimA = new THREE.PointLight(0x19affe, 30, 10, 2);
+  rimA.position.set(-3.0, 1.0, 0.5);
   scene.add(rimA);
 
-  const rimB = new THREE.PointLight(0xff37ae, 12, 5.5, 2);
-  rimB.position.set(2.05, -0.35, 0.25);
+  const rimB = new THREE.PointLight(0xff37ae, 26, 10, 2);
+  rimB.position.set(3.0, -0.3, 0.35);
   scene.add(rimB);
 
   // low back light separates the silhouette from the background
@@ -746,9 +727,12 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     normalScale: new THREE.Vector2(0.09, 0.09),
     side: THREE.DoubleSide,
   });
+  const garmentMat = fabricMat.clone();
+  garmentMat.vertexColors = true;
+
   const MATERIALS = {
-    tee: fabricMat,
-    hoodie: fabricMat,
+    tee: garmentMat,
+    hoodie: garmentMat,
     plush: fabricMat,
     keychain: enamelMat,
     stickers: printMat,
@@ -762,6 +746,9 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   let mesh = null;
   let ringMesh = null;
   let currentShape = null;
+  const productParts = [];
+  const tagRay = new THREE.Raycaster();
+  const TAG_DIR = new THREE.Vector3(0, 0, -1);
   let homeDist = 5.0;
   const homePos = new THREE.Vector3(0, 0.16, 5.0);
 
@@ -978,24 +965,32 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     state.id = id;
     currentShape = shape;
 
-    if (mesh) {
-      product.remove(mesh);
-      mesh = null;
-    }
+    for (const part of productParts) product.remove(part);
+    productParts.length = 0;
+    mesh = null;
     if (ringMesh) {
       product.remove(ringMesh);
       ringMesh.geometry.dispose();
       ringMesh = null;
     }
 
-    let geo = geoCache.get(id);
-    if (!geo) {
-      geo = puffGeometry(shape);
-      geoCache.set(id, geo);
+    let built = geoCache.get(id);
+    if (!built) {
+      built = shape.garment
+        ? garmentGeometry(GARMENTS[shape.garment], shape.bounds)
+        : { body: puffGeometry(shape), sleeves: [] };
+      geoCache.set(id, built);
     }
 
-    mesh = new THREE.Mesh(geo, MATERIALS[id] || fabricMat);
+    const material = MATERIALS[id] || fabricMat;
+    mesh = new THREE.Mesh(built.body, material);
     product.add(mesh);
+    productParts.push(mesh);
+    for (const sleeveGeo of built.sleeves) {
+      const sleeveMesh = new THREE.Mesh(sleeveGeo, material);
+      product.add(sleeveMesh);
+      productParts.push(sleeveMesh);
+    }
 
     if (shape.ring) {
       ringMesh = new THREE.Mesh(
@@ -1004,16 +999,20 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       );
       ringMesh.position.y = shape.ring.y;
       product.add(ringMesh);
+      productParts.push(ringMesh);
     }
 
-    // place the activation tag on the front surface
+    // Place the activation tag on the front surface. Raycasting the built mesh
+    // works for both construction methods, and survives a profile change.
+    product.updateMatrixWorld(true);
     const [tx, ty] = shape.tag;
-    const dep = -shape.sdf(tx, ty);
-    const z = geo.userData.profile(Math.max(dep, 0));
-    tag.position.set(tx, ty, z + 0.01);
+    tagRay.set(new THREE.Vector3(tx, ty, 12), TAG_DIR);
+    const hit = tagRay.intersectObjects(productParts, false)[0];
+    tag.position.set(tx, ty, (hit ? hit.point.z : 0) + 0.01);
     tag.scale.setScalar(1);
 
-    const box = new THREE.Box3().setFromObject(mesh);
+    const box = new THREE.Box3();
+    for (const part of productParts) box.expandByObject(part);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     contact.scale.set(Math.max(size.x, 0.4) / 2.2, Math.max(size.x, 0.4) / 3.4, 1);
@@ -1087,7 +1086,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     ndc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
     ndc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
     ray.setFromCamera(ndc, camera);
-    const hit = mesh ? ray.intersectObject(mesh, false)[0] : null;
+    const hit = productParts.length ? ray.intersectObjects(productParts, false)[0] : null;
     return hit && hit.uv ? hit.uv : null;
   }
 
@@ -1558,7 +1557,10 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       stop();
       ro.disconnect();
       io.disconnect();
-      geoCache.forEach((g) => g.dispose());
+      geoCache.forEach((g) => {
+        g.body?.dispose();
+        g.sleeves?.forEach((x) => x.dispose());
+      });
       envRT.dispose();
       pmrem.dispose();
       composer.dispose();
