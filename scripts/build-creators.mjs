@@ -9,75 +9,103 @@
  *   node scripts/build-creators.mjs
  */
 
-import { writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
-  PROGRAM, PRODUCTS, COLORWAYS, ACTIVATIONS, PHASES,
-  RESPONSIBILITIES, MEASURES, PROOF, TEAM, FAQ, MODEL,
-} from '../public/creators/assets/js/program.js';
+  PROGRAM,
+  PRODUCTS,
+  COLORWAYS,
+  ACTIVATIONS,
+  PHASES,
+  RESPONSIBILITIES,
+  MEASURES,
+  PROOF,
+  TEAM,
+  FAQ,
+  MODEL,
+} from "../public/creators/assets/js/program.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = resolve(HERE, '../public/creators/index.html');
-const SITE = 'https://medialife.ai';
+const OUT = resolve(HERE, "../public/creators/index.html");
+const SITE = "https://medialife.ai";
 const PAGE_URL = `${SITE}/creators/`;
 
 /** Escape for HTML text nodes and double-quoted attributes. */
 const e = (s) =>
   String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
 /** Registered/trademark marks get a <sup> so they sit correctly at body size. */
-const marks = (s) => String(s).replace(/®/g, '<sup>®</sup>').replace(/™/g, '<sup>™</sup>');
+const marks = (s) => String(s).replace(/®/g, "<sup>®</sup>").replace(/™/g, "<sup>™</sup>");
 
-const pct = (n) => `${(n * 100).toFixed(n * 100 % 1 === 0 ? 0 : 1)}%`;
+const pct = (n) => `${(n * 100).toFixed((n * 100) % 1 === 0 ? 0 : 1)}%`;
 
 // ---------------------------------------------------------------------------
 // icons
 // ---------------------------------------------------------------------------
 const ICON = {
-  check: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  arrow: '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  check:
+    '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5 6.5 12 13 4.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  arrow:
+    '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   play: '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 3.5 12.5 8 5 12.5z" fill="currentColor"/></svg>',
-  share: '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.5 5.5a2 2 0 1 0-1.9-2.6L5.9 5A2 2 0 1 0 5.9 11l3.7 2.1a2 2 0 1 0 .5-1.3L6.4 9.7a2 2 0 0 0 0-3.4l3.7-2.1c.36.79 1.16 1.3 2 1.3z" fill="currentColor"/></svg>',
-  reset: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.5V5h-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  sound: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7.5 3 4.5 5.5H2.5v5h2L7.5 13z" fill="currentColor"/><path d="M10 6a2.6 2.6 0 0 1 0 4M12 4a5.3 5.3 0 0 1 0 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  share:
+    '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M11.5 5.5a2 2 0 1 0-1.9-2.6L5.9 5A2 2 0 1 0 5.9 11l3.7 2.1a2 2 0 1 0 .5-1.3L6.4 9.7a2 2 0 0 0 0-3.4l3.7-2.1c.36.79 1.16 1.3 2 1.3z" fill="currentColor"/></svg>',
+  reset:
+    '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.5V5h-2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  sound:
+    '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7.5 3 4.5 5.5H2.5v5h2L7.5 13z" fill="currentColor"/><path d="M10 6a2.6 2.6 0 0 1 0 4M12 4a5.3 5.3 0 0 1 0 8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   mute: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M7.5 3 4.5 5.5H2.5v5h2L7.5 13z" fill="currentColor"/><path d="m10.5 6.5 3 3m0-3-3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-  expand: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 2H2v4M10 14h4v-4M14 6V2h-4M2 10v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  download: '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m0 0 3-3M8 10 5 7M2.5 12.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  expand:
+    '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 2H2v4M10 14h4v-4M14 6V2h-4M2 10v4h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  download:
+    '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 2v8m0 0 3-3M8 10 5 7M2.5 12.5h11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   copy: '<svg class="ic" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5.5" y="5.5" width="8" height="8" rx="1.6" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 3.2A1.7 1.7 0 0 0 8.9 2H4a2 2 0 0 0-2 2v4.9c0 .75.48 1.38 1.2 1.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
-  close: '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+  close:
+    '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
   // loop icons
   game: '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><rect x="2.5" y="7.5" width="23" height="14" rx="5" stroke="currentColor" stroke-width="1.5"/><path d="M8 12v4M6 14h4M18.5 13.2h.01M21 15.6h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
-  shirt: '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M10.5 3.5 4 6.5l1.8 5 2.4-.9V24h11.6V10.6l2.4.9 1.8-5-6.5-3a3.6 3.6 0 0 1-7.1 0z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  shirt:
+    '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M10.5 3.5 4 6.5l1.8 5 2.4-.9V24h11.6V10.6l2.4.9 1.8-5-6.5-3a3.6 3.6 0 0 1-7.1 0z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
   scan: '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M4 9V6a2 2 0 0 1 2-2h3M24 9V6a2 2 0 0 0-2-2h-3M4 19v3a2 2 0 0 0 2 2h3M24 19v3a2 2 0 0 1-2 2h-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M14 10.5a3.5 3.5 0 0 1 0 7M17.5 8a6 6 0 0 1 0 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="10.5" cy="14" r="1.4" fill="currentColor"/></svg>',
-  portal: '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><ellipse cx="14" cy="14" rx="6" ry="10" stroke="currentColor" stroke-width="1.5"/><ellipse cx="14" cy="14" rx="11" ry="5.5" stroke="currentColor" stroke-width="1.5" opacity=".45"/><circle cx="14" cy="14" r="2.4" fill="currentColor"/></svg>',
+  portal:
+    '<svg class="loop-ico" viewBox="0 0 28 28" fill="none" aria-hidden="true"><ellipse cx="14" cy="14" rx="6" ry="10" stroke="currentColor" stroke-width="1.5"/><ellipse cx="14" cy="14" rx="11" ry="5.5" stroke="currentColor" stroke-width="1.5" opacity=".45"/><circle cx="14" cy="14" r="2.4" fill="currentColor"/></svg>',
   // value icons
-  vMoney: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v14M13 6.5a3 3 0 0 0-3-1.5c-1.7 0-3 .9-3 2.3 0 3.2 6 1.7 6 5 0 1.4-1.3 2.4-3 2.4a3.2 3.2 0 0 1-3.1-1.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-  vChart: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 17h14M6 14V9M10 14V4M14 14v-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+  vMoney:
+    '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 3v14M13 6.5a3 3 0 0 0-3-1.5c-1.7 0-3 .9-3 2.3 0 3.2 6 1.7 6 5 0 1.4-1.3 2.4-3 2.4a3.2 3.2 0 0 1-3.1-1.7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+  vChart:
+    '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 17h14M6 14V9M10 14V4M14 14v-6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
   vBox: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2.5 17 6v8l-7 3.5L3 14V6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 6l7 3.5L17 6M10 9.5v8" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
-  vBolt: '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M11 2 4 11h4.5L9 18l7-9h-4.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+  vBolt:
+    '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M11 2 4 11h4.5L9 18l7-9h-4.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>',
 };
 
 /** Line-art product glyphs for the picker, so the list reads without the canvas. */
 const GLYPH = {
   tee: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M12 5 5 8l2 5.5 2.6-1V27h12.8V12.5l2.6 1L27 8l-7-3a4 4 0 0 1-8 0z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
-  hoodie: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M12 5 5 8.5l2.4 6 2.2-.9V27h12.8V13.6l2.2.9 2.4-6L20 5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5a4.2 4.2 0 0 0 8 0M16 13.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
-  keychain: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="8" r="3.6" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="13.5" width="13" height="13" rx="3.4" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="20" r="2.2" stroke="currentColor" stroke-width="1.4"/></svg>',
-  plush: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="18" r="8" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><circle cx="23.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><path d="M13.5 17h.01M18.5 17h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
-  stickers: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 8.5A2.5 2.5 0 0 1 8.5 6h11A2.5 2.5 0 0 1 22 8.5v8L16 22H8.5A2.5 2.5 0 0 1 6 19.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M22 16.5h-4.5a1.5 1.5 0 0 0-1.5 1.5V22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 25.5h12A2.5 2.5 0 0 0 25.5 23V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></svg>',
-  mousepad: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.5" y="10" width="25" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/><rect x="18" y="13" width="5" height="6.5" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M20.5 14.5v1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  hoodie:
+    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M12 5 5 8.5l2.4 6 2.2-.9V27h12.8V13.6l2.2.9 2.4-6L20 5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5a4.2 4.2 0 0 0 8 0M16 13.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  keychain:
+    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="8" r="3.6" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="13.5" width="13" height="13" rx="3.4" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="20" r="2.2" stroke="currentColor" stroke-width="1.4"/></svg>',
+  plush:
+    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="18" r="8" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><circle cx="23.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><path d="M13.5 17h.01M18.5 17h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+  stickers:
+    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 8.5A2.5 2.5 0 0 1 8.5 6h11A2.5 2.5 0 0 1 22 8.5v8L16 22H8.5A2.5 2.5 0 0 1 6 19.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M22 16.5h-4.5a1.5 1.5 0 0 0-1.5 1.5V22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 25.5h12A2.5 2.5 0 0 0 25.5 23V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></svg>',
+  mousepad:
+    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.5" y="10" width="25" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/><rect x="18" y="13" width="5" height="6.5" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M20.5 14.5v1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
 };
 
 /** Abstract preset marks a creator can drop on a product with no upload. */
 const MARKS = {
   bolt: '<svg viewBox="0 0 24 24" fill="none"><path d="M13.5 2 5 13.5h5.2L9.5 22 19 10.5h-5.4z" fill="currentColor"/></svg>',
   ring: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
-  prism: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 21.5 19h-19z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 9.5 16 19H8z" fill="currentColor"/></svg>',
+  prism:
+    '<svg viewBox="0 0 24 24" fill="none"><path d="M12 2.5 21.5 19h-19z" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 9.5 16 19H8z" fill="currentColor"/></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7.5" height="7.5" rx="1.4" fill="currentColor"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.4" stroke="currentColor" stroke-width="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.4" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.4" fill="currentColor"/></svg>',
   star: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 1.5c0 5.8 4.7 10.5 10.5 10.5C16.7 12 12 16.7 12 22.5 12 16.7 7.3 12 1.5 12 7.3 12 12 7.3 12 1.5z" fill="currentColor"/></svg>',
 };
@@ -88,52 +116,73 @@ const MARKS = {
 
 const LOOP_STEPS = [
   {
-    ico: ICON.game, n: '01', h: 'Your experience',
-    p: 'You already built the thing people love. A recognisable look, characters, a community that keeps asking where they can buy the merch.',
+    ico: ICON.game,
+    n: "01",
+    h: "Your experience",
+    p: "You already built the thing people love. A recognisable look, characters, a community that keeps asking where they can buy the merch.",
   },
   {
-    ico: ICON.shirt, n: '02', h: 'We make it physical',
-    p: 'We design, produce and fund a small assortment — and embed an NFC chip and QR code in every unit. You approve, we operate.',
+    ico: ICON.shirt,
+    n: "02",
+    h: "We make it physical",
+    p: "We design, produce and fund a small assortment — and embed an NFC chip and QR code in every unit. You approve, we operate.",
   },
   {
-    ico: ICON.scan, n: '03', h: 'The fan taps it',
-    p: 'They hold a phone near the tag or point a camera at the code. An immersive experience opens in the browser in about a second. No app.',
+    ico: ICON.scan,
+    n: "03",
+    h: "The fan taps it",
+    p: "They hold a phone near the tag or point a camera at the code. An immersive experience opens in the browser in about a second. No app.",
   },
   {
-    ico: ICON.portal, n: '04', h: 'They land back in your game',
-    p: 'The experience ends on a reward you approve, redeemed in-experience. Every tap, every second and every click comes back to you as data.',
+    ico: ICON.portal,
+    n: "04",
+    h: "They land back in your game",
+    p: "The experience ends on a reward you approve, redeemed in-experience. Every tap, every second and every click comes back to you as data.",
   },
 ];
 
 const VALUES = [
   {
-    ico: ICON.vMoney, h: 'Zero cost to you',
-    p: 'MEDIALIFE funds product development, sampling, production, inventory, the immersive build and fulfilment. You approve the creative. We carry the inventory risk.',
+    ico: ICON.vMoney,
+    h: "Zero cost to you",
+    p: "MEDIALIFE funds product development, sampling, production, inventory, the immersive build and fulfilment. You approve the creative. We carry the inventory risk.",
     foot: `<span class="pill"><span class="dot"></span>$0 up front</span>`,
   },
   {
-    ico: ICON.vBox, h: 'Real product, really made',
-    p: 'Six modelled categories from a team that has put original IP into Hot Topic, Zumiez, Urban Outfitters and 1,750+ retail doors. Not print-on-demand.',
+    ico: ICON.vBox,
+    h: "Real product, really made",
+    p: "Six modelled categories from a team that has put original IP into Hot Topic, Zumiez, Urban Outfitters and 1,750+ retail doors. Not print-on-demand.",
     foot: `<span class="pill"><span class="dot"></span>6 categories</span>`,
   },
   {
-    ico: ICON.scan.replace('loop-ico', ''), h: 'Every unit is a channel',
-    p: 'A normal t-shirt stops working the moment it is sold. An activated one keeps sending your fans back to your experience, and tells you when it does.',
+    ico: ICON.scan.replace("loop-ico", ""),
+    h: "Every unit is a channel",
+    p: "A normal t-shirt stops working the moment it is sold. An activated one keeps sending your fans back to your experience, and tells you when it does.",
     foot: `<span class="pill"><span class="dot"></span>App-free</span>`,
   },
   {
-    ico: ICON.vChart, h: 'Evidence, not vibes',
-    p: 'Commercial and engagement data on the same report: units, sell-through, price-point performance, activations, dwell time and outbound traffic to your game.',
+    ico: ICON.vChart,
+    h: "Evidence, not vibes",
+    p: "Commercial and engagement data on the same report: units, sell-through, price-point performance, activations, dwell time and outbound traffic to your game.",
     foot: `<span class="pill"><span class="dot"></span>90-day review</span>`,
   },
 ];
 
 const COMPARE = [
-  ['Physical product is the endpoint', 'Physical product is a persistent channel back to your experience'],
-  ['Limited visibility after purchase', 'Post-purchase engagement is measurable, per unit'],
-  ['Retail drives product sales', 'Retail drives sales, IP discovery and platform return'],
-  ['Products compete on design and IP alone', 'The activation itself is a point of differentiation'],
-  ['No connection between owning it and playing', 'Approved rewards and content connect the product to your game'],
+  [
+    "Physical product is the endpoint",
+    "Physical product is a persistent channel back to your experience",
+  ],
+  ["Limited visibility after purchase", "Post-purchase engagement is measurable, per unit"],
+  ["Retail drives product sales", "Retail drives sales, IP discovery and platform return"],
+  [
+    "Products compete on design and IP alone",
+    "The activation itself is a point of differentiation",
+  ],
+  [
+    "No connection between owning it and playing",
+    "Approved rewards and content connect the product to your game",
+  ],
 ];
 
 function heroSection() {
@@ -144,7 +193,7 @@ function heroSection() {
         <span class="pill pill--live rv"><span class="dot"></span>Now onboarding · ${e(PROGRAM.pilot.properties)} properties</span>
         <h1 class="rv rv-d1">Turn your experience into <em class="grad">something they can hold.</em></h1>
         <p class="lede rv rv-d2">
-          MEDIALIFE${marks('™')} builds, funds and operates physical merch for Roblox-native IP — with an
+          MEDIALIFE${marks("™")} builds, funds and operates physical merch for Roblox-native IP — with an
           NFC chip and QR code in every unit that opens an app-free immersive experience and sends
           your fans straight back into your game. You approve the creative. We do the rest.
         </p>
@@ -166,7 +215,7 @@ function heroSection() {
         <img src="assets/img/hero-loop.webp" alt="" width="1920" height="1080"
              style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.9" fetchpriority="high" />
         <canvas id="heroCanvas" aria-hidden="true" style="position:absolute;inset:0"></canvas>
-        <div class="stage-label"><span class="mono">Activated Merchandise${marks('®')}</span></div>
+        <div class="stage-label"><span class="mono">Activated Merchandise${marks("®")}</span></div>
       </div>
     </div>
   </section>`;
@@ -181,14 +230,16 @@ function loopSection() {
         <h2>Four steps. You are only in two of them.</h2>
       </div>
       <div class="loop" id="loopTrack">
-        ${LOOP_STEPS.map((s, i) => `
+        ${LOOP_STEPS.map(
+          (s, i) => `
         <article class="loop-step rv rv-d${i}" data-step="${i}">
           <i class="bar"></i>
           ${s.ico}
           <span class="n">${s.n}</span>
           <h3>${e(s.h)}</h3>
           <p>${e(s.p)}</p>
-        </article>`).join('')}
+        </article>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
@@ -201,12 +252,13 @@ function valueSection() {
       <div class="sec-head rv">
         <span class="mono">02 / Why this is different</span>
         <h2>Most merch programs end at the cash register.</h2>
-        <p class="lede">Activated Merchandise${marks('®')} does not. The product is the start of the
+        <p class="lede">Activated Merchandise${marks("®")} does not. The product is the start of the
         relationship, not the end of it — and that is the part you can actually measure.</p>
       </div>
 
       <div class="grid grid--4">
-        ${VALUES.map((v, i) => `
+        ${VALUES.map(
+          (v, i) => `
         <article class="card card--hover rv rv-d${i}">
           <div class="val">
             <span class="ico">${v.ico}</span>
@@ -214,41 +266,54 @@ function valueSection() {
             <p>${e(v.p)}</p>
             <div class="foot">${v.foot}</div>
           </div>
-        </article>`).join('')}
+        </article>`,
+        ).join("")}
       </div>
 
       <div class="compare rv">
         <div class="compare-row compare-head">
           <div>Conventional licensed merch</div>
-          <div>Activated Merchandise${marks('®')}</div>
+          <div>Activated Merchandise${marks("®")}</div>
         </div>
-        ${COMPARE.map(([a, b]) => `
-        <div class="compare-row"><div>${e(a)}</div><div>${e(b)}</div></div>`).join('')}
+        ${COMPARE.map(
+          ([a, b]) => `
+        <div class="compare-row"><div>${e(a)}</div><div>${e(b)}</div></div>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
 }
 
 function studioSection() {
-  const swatches = COLORWAYS.map((c, i) => `
+  const swatches = COLORWAYS.map(
+    (c, i) => `
     <button type="button" class="sw" data-color="${e(c.id)}" data-name="${e(c.name)}"
-            style="background:${e(c.hex)}" aria-pressed="${i === 0 ? 'true' : 'false'}"
-            aria-label="Colourway: ${e(c.name)}"></button>`).join('');
+            style="background:${e(c.hex)}" aria-pressed="${i === 0 ? "true" : "false"}"
+            aria-label="Colourway: ${e(c.name)}"></button>`,
+  ).join("");
 
-  const products = PRODUCTS.map((p, i) => `
-    <button type="button" class="prod" data-product="${e(p.id)}" aria-pressed="${i < 2 ? 'true' : 'false'}">
+  const products = PRODUCTS.map(
+    (p, i) => `
+    <button type="button" class="prod" data-product="${e(p.id)}" aria-pressed="${i < 2 ? "true" : "false"}">
       ${GLYPH[p.id]}
       <span class="meta"><span class="nm">${e(p.name)}</span><span class="tg">${marks(e(p.tag))}</span></span>
       <span class="pr" data-price-for="${e(p.id)}">$${p.price}</span>
-      <span class="check" role="checkbox" tabindex="0" aria-checked="${i < 2 ? 'true' : 'false'}"
+      <span class="check" role="checkbox" tabindex="0" aria-checked="${i < 2 ? "true" : "false"}"
             aria-label="Include ${e(p.name)} in the drop">${ICON.check}</span>
-    </button>`).join('');
+    </button>`,
+  ).join("");
 
-  const acts = ACTIVATIONS.map((a) => `
-    <button type="button" data-activation="${e(a.id)}" aria-pressed="${a.id === 'both' ? 'true' : 'false'}">${e(a.name)}</button>`).join('');
+  const acts = ACTIVATIONS.map(
+    (a) => `
+    <button type="button" data-activation="${e(a.id)}" aria-pressed="${a.id === "both" ? "true" : "false"}">${e(a.name)}</button>`,
+  ).join("");
 
-  const presetMarks = Object.entries(MARKS).map(([k, svg], i) => `
-    <button type="button" class="mark" data-mark="${e(k)}" aria-pressed="${i === 0 ? 'true' : 'false'}" aria-label="Preset mark: ${e(k)}">${svg}</button>`).join('');
+  const presetMarks = Object.entries(MARKS)
+    .map(
+      ([k, svg], i) => `
+    <button type="button" class="mark" data-mark="${e(k)}" aria-pressed="${i === 0 ? "true" : "false"}" aria-label="Preset mark: ${e(k)}">${svg}</button>`,
+    )
+    .join("");
 
   return `
   <section class="band studio-band" id="studio">
@@ -275,7 +340,8 @@ function studioSection() {
         <div class="studio-body">
           <!-- ---------- viewport ---------- -->
           <div class="viewport" id="viewport">
-            <canvas id="studioCanvas" aria-label="Interactive 3D preview of your configured product. Full product details are listed in the panel beside this viewport." role="img" tabindex="0"></canvas>
+            <canvas id="studioCanvas" tabindex="0" aria-describedby="vpHint"
+                    aria-label="3D preview of your configured product. Arrow keys orbit it, plus and minus zoom, Home resets. Every option is also available in the panel beside this viewport."></canvas>
 
             <div class="viewport-badge">
               <span class="pill"><span class="dot"></span><span id="vpProduct">T-Shirt</span></span>
@@ -287,7 +353,7 @@ function studioSection() {
               <div class="act-prog"><i id="actProg"></i></div>
             </div>
 
-            <p class="viewport-hint" id="vpHint">Drag to orbit · scroll to zoom</p>
+            <p class="viewport-hint" id="vpHint">Drag to orbit · scroll to zoom · arrow keys when focused</p>
 
             <div class="viewport-msg" id="viewportMsg">
               <div>
@@ -423,8 +489,17 @@ function studioSection() {
                     <div class="ro-row"><span class="k">Gross merch value</span><span class="v" id="outGmv">—</span></div>
                     <div class="ro-row ro-row--hero"><span class="k">Your royalty</span><span class="v" id="outRoyalty">—</span></div>
                   </div>
+                  <div class="split" id="skuSplit" hidden>
+                    <span class="field-label" style="margin-bottom:9px">Where it comes from</span>
+                    <div class="split-bar" id="splitBar" role="img" aria-labelledby="splitTable"></div>
+                    <table class="split-table" id="splitTable">
+                      <caption class="sr-only">Modelled units and gross merchandise value by product</caption>
+                      <thead><tr><th scope="col">SKU</th><th scope="col">Units</th><th scope="col">Value</th></tr></thead>
+                      <tbody id="splitRows"></tbody>
+                    </table>
+                  </div>
                   <p class="note" id="capNote" hidden><b>Capped by pilot inventory.</b> We deliberately hold limited
-                  stock during validation — roughly ${MODEL.inventoryCapPerSku.toLocaleString('en-US')} units per SKU. Selling out fast
+                  stock during validation — roughly ${MODEL.inventoryCapPerSku.toLocaleString("en-US")} units per SKU. Selling out fast
                   is the signal that triggers a reorder at a lower unit cost.</p>
                   <p class="note">${e(MODEL.disclaimer)}</p>
                 </div>
@@ -475,7 +550,8 @@ function phasesSection() {
         we read the data together and decide what happens next — including the option to stop.</p>
       </div>
       <div class="phases">
-        ${PHASES.map((p, i) => `
+        ${PHASES.map(
+          (p, i) => `
         <article class="phase rv rv-d${i}" style="--d:${i * 0.12}s">
           <span class="n">${e(p.n)}</span><span class="day">${e(p.day)}</span>
           <h3>${e(p.title)}</h3>
@@ -484,7 +560,8 @@ function phasesSection() {
             <div><dt>MEDIALIFE</dt><dd>${e(p.us)}</dd></div>
             <div class="out"><dt>Outcome</dt><dd>${e(p.out)}</dd></div>
           </dl>
-        </article>`).join('')}
+        </article>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
@@ -499,12 +576,14 @@ function respSection() {
         <h2>Your side of this is deliberately small.</h2>
       </div>
       <div class="grid grid--3">
-        ${RESPONSIBILITIES.map((r, i) => `
+        ${RESPONSIBILITIES.map(
+          (r, i) => `
         <article class="card resp resp--${e(r.accent)} rv rv-d${i}">
           <div class="hd"><h3>${e(r.who)}</h3><span class="mono">${e(r.role)}</span></div>
-          <ul>${r.items.map((it) => `<li>${e(it)}</li>`).join('')}</ul>
+          <ul>${r.items.map((it) => `<li>${e(it)}</li>`).join("")}</ul>
           <p class="weight">${e(r.weight)}</p>
-        </article>`).join('')}
+        </article>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
@@ -518,19 +597,19 @@ function measuresSection() {
         <span class="mono">06 / What you get back</span>
         <h2>Both halves of the picture, on one report.</h2>
         <p class="lede">Merch programs normally report the left-hand column and stop. The right-hand
-        column is the reason Activated Merchandise${marks('®')} exists.</p>
+        column is the reason Activated Merchandise${marks("®")} exists.</p>
       </div>
 
       <div class="measures">
         <article class="card measure rv">
           <h3>Commercial</h3>
           <p class="sub" style="margin-top:8px">Did it sell, what sold, and where.</p>
-          <ol>${MEASURES.commercial.map((m) => `<li>${e(m)}</li>`).join('')}</ol>
+          <ol>${MEASURES.commercial.map((m) => `<li>${e(m)}</li>`).join("")}</ol>
         </article>
         <article class="card measure rv rv-d1">
           <h3>Engagement</h3>
           <p class="sub" style="margin-top:8px">What happened after the sale.</p>
-          <ol>${MEASURES.engagement.map((m) => `<li>${e(m)}</li>`).join('')}</ol>
+          <ol>${MEASURES.engagement.map((m) => `<li>${e(m)}</li>`).join("")}</ol>
         </article>
       </div>
 
@@ -563,12 +642,16 @@ function proofSection() {
       </div>
 
       <div class="stats rv">
-        ${PROOF.stats.map((s) => `
+        ${PROOF.stats
+          .map(
+            (s) => `
         <div class="stat">
           <b data-count="${e(s.value)}">${e(s.value)}</b>
           <span class="label">${e(s.label)}</span>
           <span class="foot">${e(s.foot)}</span>
-        </div>`).join('')}
+        </div>`,
+          )
+          .join("")}
       </div>
 
       <div class="grid grid--2 rv" style="margin-top:16px">
@@ -588,7 +671,9 @@ function proofSection() {
       </div>
 
       <div class="track" style="margin-top:44px">
-        ${PROOF.track.map((t, i) => `
+        ${PROOF.track
+          .map(
+            (t, i) => `
         <article class="track-item rv rv-d${Math.min(i, 4)}">
           <span class="yr">${e(t.year)}</span>
           <div>
@@ -596,7 +681,9 @@ function proofSection() {
             <span class="kind">${e(t.kind)}</span>
             <p>${e(t.body)}</p>
           </div>
-        </article>`).join('')}
+        </article>`,
+          )
+          .join("")}
       </div>
     </div>
   </section>`;
@@ -614,13 +701,15 @@ function teamSection() {
         China covering sourcing, manufacturing, fulfilment, live events and channel management.</p>
       </div>
       <div class="team">
-        ${TEAM.map((m, i) => `
+        ${TEAM.map(
+          (m, i) => `
         <article class="card member rv rv-d${Math.min(i, 4)}">
           <span class="nm">${e(m.name)}</span>
           <span class="cy">${e(m.city)}</span>
           <p class="rl">${e(m.role)}</p>
-          <ul>${m.tags.map((t) => `<li>${e(t)}</li>`).join('')}</ul>
-        </article>`).join('')}
+          <ul>${m.tags.map((t) => `<li>${e(t)}</li>`).join("")}</ul>
+        </article>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
@@ -635,24 +724,62 @@ function faqSection() {
         <h2>The things creators actually ask.</h2>
       </div>
       <div class="faq rv">
-        ${FAQ.map((f) => `
+        ${FAQ.map(
+          (f) => `
         <details>
           <summary>${e(f.q)}</summary>
           <div class="ans">${e(f.a)}</div>
-        </details>`).join('')}
+        </details>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
 }
 
-const GENRES = ['Simulator', 'Roleplay', 'Obby / Platformer', 'Tycoon', 'Horror', 'Fighting / PvP', 'Survival', 'Social / Hangout', 'RPG', 'Racing', 'Other'];
-const ROLES = ['Owner / Founder', 'Lead developer', 'Studio / Group', 'Manager or agent', 'Publisher', 'Other'];
-const WINDOWS = ['As soon as possible', 'Next quarter', 'Tied to an in-game event', 'Tied to a convention', 'Still deciding'];
-const MERCH_HISTORY = ['Never sold merch', 'Sold UGC only', 'Ran a print-on-demand store', 'Sold real merch before', 'Currently selling merch'];
+const GENRES = [
+  "Simulator",
+  "Roleplay",
+  "Obby / Platformer",
+  "Tycoon",
+  "Horror",
+  "Fighting / PvP",
+  "Survival",
+  "Social / Hangout",
+  "RPG",
+  "Racing",
+  "Other",
+];
+const ROLES = [
+  "Owner / Founder",
+  "Lead developer",
+  "Studio / Group",
+  "Manager or agent",
+  "Publisher",
+  "Other",
+];
+const WINDOWS = [
+  "As soon as possible",
+  "Next quarter",
+  "Tied to an in-game event",
+  "Tied to a convention",
+  "Still deciding",
+];
+const MERCH_HISTORY = [
+  "Never sold merch",
+  "Sold UGC only",
+  "Ran a print-on-demand store",
+  "Sold real merch before",
+  "Currently selling merch",
+];
 
 function applySection() {
-  const chips = (name, list) => list.map((v) => `
-    <button type="button" class="chip" data-chip="${e(name)}" data-value="${e(v)}" aria-pressed="false">${e(v)}</button>`).join('');
+  const chips = (name, list) =>
+    list
+      .map(
+        (v) => `
+    <button type="button" class="chip" data-chip="${e(name)}" data-value="${e(v)}" aria-pressed="false">${e(v)}</button>`,
+      )
+      .join("");
 
   return `
   <section class="band apply-band" id="apply">
@@ -668,8 +795,12 @@ function applySection() {
         <div class="apply-head">
           <span class="mono">Creator application · ${PROGRAM.short}</span>
           <div class="steps" id="steps">
-            ${['Your property', 'Your audience', 'Your drop', 'You'].map((l, i) => `
-            <div class="step-dot${i === 0 ? ' is-on' : ''}" data-step="${i}"><span class="bar"><i></i></span><span class="lb">${e(l)}</span></div>`).join('')}
+            ${["Your property", "Your audience", "Your drop", "You"]
+              .map(
+                (l, i) => `
+            <div class="step-dot${i === 0 ? " is-on" : ""}" data-step="${i}"><span class="bar"><i></i></span><span class="lb">${e(l)}</span></div>`,
+              )
+              .join("")}
           </div>
         </div>
 
@@ -699,11 +830,11 @@ function applySection() {
                 </div>
                 <div class="fld">
                   <label for="f-genre">Genre</label>
-                  <select id="f-genre" name="genre">${GENRES.map((g) => `<option>${e(g)}</option>`).join('')}</select>
+                  <select id="f-genre" name="genre">${GENRES.map((g) => `<option>${e(g)}</option>`).join("")}</select>
                 </div>
                 <div class="fld">
                   <label for="f-role">Your role</label>
-                  <select id="f-role" name="role">${ROLES.map((r) => `<option>${e(r)}</option>`).join('')}</select>
+                  <select id="f-role" name="role">${ROLES.map((r) => `<option>${e(r)}</option>`).join("")}</select>
                 </div>
               </div>
             </div>
@@ -725,7 +856,7 @@ function applySection() {
                 </div>
                 <div class="fld span2">
                   <label>Have you sold merch before?</label>
-                  <div class="chips">${chips('merch-history', MERCH_HISTORY)}</div>
+                  <div class="chips">${chips("merch-history", MERCH_HISTORY)}</div>
                   <input type="hidden" name="merch-history" id="f-merch" />
                 </div>
                 <div class="fld span2">
@@ -748,7 +879,7 @@ function applySection() {
                 </div>
                 <div class="fld span2">
                   <label>Ideal launch window</label>
-                  <div class="chips">${chips('launch-window', WINDOWS)}</div>
+                  <div class="chips">${chips("launch-window", WINDOWS)}</div>
                   <input type="hidden" name="launch-window" id="f-window" />
                 </div>
                 <div class="fld span2">
@@ -921,35 +1052,35 @@ function footer() {
 // document
 // ---------------------------------------------------------------------------
 
-const TITLE = 'Creator Program — MEDIALIFE × Roblox';
+const TITLE = "Creator Program — MEDIALIFE × Roblox";
 const DESC =
-  'MEDIALIFE builds, funds and operates physical merch for Roblox creators. NFC and QR in every ' +
-  'unit opens an app-free experience that sends fans back into your game. $0 up front, 90-day pilot.';
+  "MEDIALIFE builds, funds and operates physical merch for Roblox creators. NFC and QR in every " +
+  "unit opens an app-free experience that sends fans back into your game. $0 up front, 90-day pilot.";
 
 const jsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
+  "@context": "https://schema.org",
+  "@graph": [
     {
-      '@type': 'WebPage',
-      '@id': PAGE_URL,
+      "@type": "WebPage",
+      "@id": PAGE_URL,
       name: TITLE,
       description: DESC,
-      isPartOf: { '@type': 'WebSite', name: 'MEDIALIFE', url: SITE },
+      isPartOf: { "@type": "WebSite", name: "MEDIALIFE", url: SITE },
     },
     {
-      '@type': 'Organization',
-      name: 'MEDIALIFE',
+      "@type": "Organization",
+      name: "MEDIALIFE",
       url: SITE,
       description:
-        'MEDIALIFE builds Activated Merchandise, Activated Apparel and Activated Print — physical ' +
-        'products with app-free immersive experiences and measurable post-purchase engagement.',
+        "MEDIALIFE builds Activated Merchandise, Activated Apparel and Activated Print — physical " +
+        "products with app-free immersive experiences and measurable post-purchase engagement.",
     },
     {
-      '@type': 'FAQPage',
+      "@type": "FAQPage",
       mainEntity: FAQ.map((f) => ({
-        '@type': 'Question',
+        "@type": "Question",
         name: f.q,
-        acceptedAnswer: { '@type': 'Answer', text: f.a },
+        acceptedAnswer: { "@type": "Answer", text: f.a },
       })),
     },
   ],
@@ -1037,5 +1168,5 @@ ${passModal()}
 `;
 
 mkdirSync(dirname(OUT), { recursive: true });
-writeFileSync(OUT, html, 'utf8');
+writeFileSync(OUT, html, "utf8");
 console.log(`✓ public/creators/index.html  ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`);

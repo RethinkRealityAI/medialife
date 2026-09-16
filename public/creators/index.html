@@ -214,7 +214,8 @@
         <div class="studio-body">
           <!-- ---------- viewport ---------- -->
           <div class="viewport" id="viewport">
-            <canvas id="studioCanvas" aria-label="Interactive 3D preview of your configured product. Full product details are listed in the panel beside this viewport." role="img" tabindex="0"></canvas>
+            <canvas id="studioCanvas" tabindex="0" aria-describedby="vpHint"
+                    aria-label="3D preview of your configured product. Arrow keys orbit it, plus and minus zoom, Home resets. Every option is also available in the panel beside this viewport."></canvas>
 
             <div class="viewport-badge">
               <span class="pill"><span class="dot"></span><span id="vpProduct">T-Shirt</span></span>
@@ -226,7 +227,7 @@
               <div class="act-prog"><i id="actProg"></i></div>
             </div>
 
-            <p class="viewport-hint" id="vpHint">Drag to orbit · scroll to zoom</p>
+            <p class="viewport-hint" id="vpHint">Drag to orbit · scroll to zoom · arrow keys when focused</p>
 
             <div class="viewport-msg" id="viewportMsg">
               <div>
@@ -435,6 +436,15 @@
                     <div class="ro-row"><span class="k">Avg. order value</span><span class="v" id="outAov">—</span></div>
                     <div class="ro-row"><span class="k">Gross merch value</span><span class="v" id="outGmv">—</span></div>
                     <div class="ro-row ro-row--hero"><span class="k">Your royalty</span><span class="v" id="outRoyalty">—</span></div>
+                  </div>
+                  <div class="split" id="skuSplit" hidden>
+                    <span class="field-label" style="margin-bottom:9px">Where it comes from</span>
+                    <div class="split-bar" id="splitBar" role="img" aria-labelledby="splitTable"></div>
+                    <table class="split-table" id="splitTable">
+                      <caption class="sr-only">Modelled units and gross merchandise value by product</caption>
+                      <thead><tr><th scope="col">SKU</th><th scope="col">Units</th><th scope="col">Value</th></tr></thead>
+                      <tbody id="splitRows"></tbody>
+                    </table>
                   </div>
                   <p class="note" id="capNote" hidden><b>Capped by pilot inventory.</b> We deliberately hold limited
                   stock during validation — roughly 2,000 units per SKU. Selling out fast

@@ -12,14 +12,14 @@
  * painted on the front only.
  */
 
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const clamp01 = (v) => clamp(v, 0, 1);
@@ -80,13 +80,18 @@ function polySdf(pts) {
     let best = Infinity;
     let inside = false;
     for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = pts[i][0], yi = pts[i][1];
-      const xj = pts[j][0], yj = pts[j][1];
-      if ((yi > py) !== (yj > py) && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-      const ex = xj - xi, ey = yj - yi;
-      const wx = px - xi, wy = py - yi;
+      const xi = pts[i][0],
+        yi = pts[i][1];
+      const xj = pts[j][0],
+        yj = pts[j][1];
+      if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
+      const ex = xj - xi,
+        ey = yj - yi;
+      const wx = px - xi,
+        wy = py - yi;
       const t = clamp01((wx * ex + wy * ey) / (ex * ex + ey * ey || 1e-9));
-      const qx = xi + ex * t - px, qy = yi + ey * t - py;
+      const qx = xi + ex * t - px,
+        qy = yi + ey * t - py;
       const dd = qx * qx + qy * qy;
       if (dd < best) best = dd;
     }
@@ -106,17 +111,48 @@ const smin = (a, b, k) => {
 };
 
 // silhouettes -- authored as a right-hand half, mirrored, resampled, softened
-const TEE_PTS = chaikin(resample(mirrorRight([
-  [0.00, -1.20], [0.58, -1.22], [0.60, -0.40], [0.62, 0.26],
-  [0.68, 0.34], [1.05, 0.50], [1.17, 0.80], [0.93, 0.95],
-  [0.62, 1.02], [0.26, 1.10], [0.11, 1.03], [0.00, 0.96],
-]), 0.06), 2);
+const TEE_PTS = chaikin(
+  resample(
+    mirrorRight([
+      [0.0, -1.2],
+      [0.58, -1.22],
+      [0.6, -0.4],
+      [0.62, 0.26],
+      [0.68, 0.34],
+      [1.05, 0.5],
+      [1.17, 0.8],
+      [0.93, 0.95],
+      [0.62, 1.02],
+      [0.26, 1.1],
+      [0.11, 1.03],
+      [0.0, 0.96],
+    ]),
+    0.06,
+  ),
+  2,
+);
 
-const HOODIE_PTS = chaikin(resample(mirrorRight([
-  [0.00, -1.24], [0.66, -1.26], [0.68, -0.40], [0.72, 0.22],
-  [0.78, 0.30], [1.21, 0.44], [1.33, 0.78], [1.07, 0.94],
-  [0.75, 1.02], [0.57, 1.06], [0.53, 1.26], [0.34, 1.45], [0.00, 1.51],
-]), 0.06), 2);
+const HOODIE_PTS = chaikin(
+  resample(
+    mirrorRight([
+      [0.0, -1.24],
+      [0.66, -1.26],
+      [0.68, -0.4],
+      [0.72, 0.22],
+      [0.78, 0.3],
+      [1.21, 0.44],
+      [1.33, 0.78],
+      [1.07, 0.94],
+      [0.75, 1.02],
+      [0.57, 1.06],
+      [0.53, 1.26],
+      [0.34, 1.45],
+      [0.0, 1.51],
+    ]),
+    0.06,
+  ),
+  2,
+);
 
 /**
  * SDF, bounds and surface profile per product.
@@ -126,22 +162,34 @@ const HOODIE_PTS = chaikin(resample(mirrorRight([
 const SHAPES = {
   tee: {
     sdf: polySdf(TEE_PTS),
-    bounds: [-1.26, -1.32, 1.26, 1.20],
-    puff: 0.135, feather: 0.30, res: 112,
-    tag: [0.34, -1.04], print: 0.245, wrinkle: 0.014,
+    bounds: [-1.26, -1.32, 1.26, 1.2],
+    puff: 0.135,
+    feather: 0.3,
+    res: 112,
+    tag: [0.34, -1.04],
+    print: 0.245,
+    wrinkle: 0.014,
   },
   hoodie: {
     sdf: polySdf(HOODIE_PTS),
     bounds: [-1.44, -1.38, 1.44, 1.62],
-    puff: 0.175, feather: 0.34, res: 112,
-    tag: [1.16, 0.62], print: 0.225, wrinkle: 0.017,
+    puff: 0.175,
+    feather: 0.34,
+    res: 112,
+    tag: [1.16, 0.62],
+    print: 0.225,
+    wrinkle: 0.017,
   },
   keychain: {
-    sdf: (x, y) => sdRoundRect(x, y + 0.18, 0.62, 0.70, 0.24),
+    sdf: (x, y) => sdRoundRect(x, y + 0.18, 0.62, 0.7, 0.24),
     bounds: [-0.78, -1.04, 0.78, 0.66],
-    puff: 0.17, feather: 0.24, res: 92,
-    tag: [0.36, -0.64], print: 0.34, wrinkle: 0,
-    ring: { y: 0.60, r: 0.19, tube: 0.042 },
+    puff: 0.17,
+    feather: 0.24,
+    res: 92,
+    tag: [0.36, -0.64],
+    print: 0.34,
+    wrinkle: 0,
+    ring: { y: 0.6, r: 0.19, tube: 0.042 },
   },
   plush: {
     sdf: (x, y) => {
@@ -150,23 +198,35 @@ const SHAPES = {
       const ears = Math.min(sdCircle(x, y, -0.45, 0.99, 0.24), sdCircle(x, y, 0.45, 0.99, 0.24));
       const arms = Math.min(sdCircle(x, y, -0.72, -0.34, 0.26), sdCircle(x, y, 0.72, -0.34, 0.26));
       const feet = Math.min(sdCircle(x, y, -0.35, -0.96, 0.25), sdCircle(x, y, 0.35, -0.96, 0.25));
-      return smin(smin(smin(body, head, 0.30), smin(ears, arms, 0.14), 0.14), feet, 0.16);
+      return smin(smin(smin(body, head, 0.3), smin(ears, arms, 0.14), 0.14), feet, 0.16);
     },
-    bounds: [-1.10, -1.34, 1.10, 1.34],
-    puff: 0.50, feather: 0.56, res: 100,
-    tag: [0.50, -0.94], print: 0.22, wrinkle: 0,
+    bounds: [-1.1, -1.34, 1.1, 1.34],
+    puff: 0.5,
+    feather: 0.56,
+    res: 100,
+    tag: [0.5, -0.94],
+    print: 0.22,
+    wrinkle: 0,
   },
   stickers: {
-    sdf: (x, y) => sdRoundRect(x, y, 0.82, 1.08, 0.10),
-    bounds: [-0.94, -1.20, 0.94, 1.20],
-    puff: 0.026, feather: 0.042, res: 84,
-    tag: [0.56, -0.94], print: 0.40, wrinkle: 0,
+    sdf: (x, y) => sdRoundRect(x, y, 0.82, 1.08, 0.1),
+    bounds: [-0.94, -1.2, 0.94, 1.2],
+    puff: 0.026,
+    feather: 0.042,
+    res: 84,
+    tag: [0.56, -0.94],
+    print: 0.4,
+    wrinkle: 0,
   },
   mousepad: {
-    sdf: (x, y) => sdRoundRect(x, y, 1.30, 0.74, 0.09),
+    sdf: (x, y) => sdRoundRect(x, y, 1.3, 0.74, 0.09),
     bounds: [-1.42, -0.86, 1.42, 0.86],
-    puff: 0.038, feather: 0.052, res: 108,
-    tag: [1.00, -0.50], print: 0.26, wrinkle: 0,
+    puff: 0.038,
+    feather: 0.052,
+    res: 108,
+    tag: [1.0, -0.5],
+    print: 0.26,
+    wrinkle: 0,
   },
 };
 
@@ -199,7 +259,8 @@ function puffGeometry(shape) {
       const x = minX + (i / nx) * w;
       const y = minY + (j / ny) * h;
       const d = sdf(x, y);
-      px[k] = x; py[k] = y;
+      px[k] = x;
+      py[k] = y;
       depth[k] = -d;
       active[k] = d < 0 ? 1 : 0;
     }
@@ -221,7 +282,8 @@ function puffGeometry(shape) {
   }
   for (const k of promote) {
     if (active[k]) continue;
-    let x = px[k], y = py[k];
+    let x = px[k],
+      y = py[k];
     for (let s = 0; s < 2; s++) {
       const d = sdf(x, y);
       const gx = (sdf(x + H, y) - sdf(x - H, y)) / (2 * H);
@@ -230,7 +292,8 @@ function puffGeometry(shape) {
       x -= (d * gx) / len;
       y -= (d * gy) / len;
     }
-    px[k] = x; py[k] = y;
+    px[k] = x;
+    py[k] = y;
     depth[k] = 0;
     active[k] = 1;
   }
@@ -248,10 +311,15 @@ function puffGeometry(shape) {
 
   for (let k = 0; k < N; k++) {
     if (!active[k]) continue;
-    const x = px[k], y = py[k];
+    const x = px[k],
+      y = py[k];
     let z = profile(depth[k]);
     if (wrinkle && z > 0.004) {
-      z += wrinkle * Math.sin(x * 7.3 + y * 2.1) * Math.sin(y * 5.7 - x * 1.4) * clamp01(depth[k] / feather);
+      z +=
+        wrinkle *
+        Math.sin(x * 7.3 + y * 2.1) *
+        Math.sin(y * 5.7 - x * 1.4) *
+        clamp01(depth[k] / feather);
     }
     const tx = (x - minX) / w;
     const ty = (y - minY) / h;
@@ -281,8 +349,8 @@ function puffGeometry(shape) {
   }
 
   let geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
   geo.setIndex(index);
   geo = mergeVertices(geo, 1e-4);
   geo.computeVertexNormals();
@@ -298,9 +366,9 @@ function puffGeometry(shape) {
 /** Tiling fabric weave normal map, derived from an analytic height field. */
 function weaveNormalMap() {
   const S = 64;
-  const c = document.createElement('canvas');
+  const c = document.createElement("canvas");
   c.width = c.height = S;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext("2d");
   const img = ctx.createImageData(S, S);
   const hAt = (x, y) => {
     const f = (Math.PI * 2 * 8) / S;
@@ -310,7 +378,9 @@ function weaveNormalMap() {
     for (let x = 0; x < S; x++) {
       const gx = hAt(x + 1, y) - hAt(x - 1, y);
       const gy = hAt(x, y + 1) - hAt(x, y - 1);
-      const nx = -gx * 0.5, ny = -gy * 0.5, nz = 1;
+      const nx = -gx * 0.5,
+        ny = -gy * 0.5,
+        nz = 1;
       const len = Math.hypot(nx, ny, nz);
       const i = (y * S + x) * 4;
       img.data[i] = ((nx / len) * 0.5 + 0.5) * 255;
@@ -329,9 +399,9 @@ function weaveNormalMap() {
 /** Soft radial falloff used for the contact shadow and floor fade. */
 function radialTexture(inner, outer, stops) {
   const S = 256;
-  const c = document.createElement('canvas');
+  const c = document.createElement("canvas");
   c.width = c.height = S;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext("2d");
   const g = ctx.createRadialGradient(S / 2, S / 2, S * inner, S / 2, S / 2, S * outer);
   for (const [at, col] of stops) g.addColorStop(at, col);
   ctx.fillStyle = g;
@@ -344,13 +414,13 @@ function radialTexture(inner, outer, stops) {
 /** A soft round sprite for the particle stream. */
 function sparkTexture() {
   const S = 64;
-  const c = document.createElement('canvas');
+  const c = document.createElement("canvas");
   c.width = c.height = S;
-  const ctx = c.getContext('2d');
+  const ctx = c.getContext("2d");
   const g = ctx.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
-  g.addColorStop(0, 'rgba(255,255,255,1)');
-  g.addColorStop(0.35, 'rgba(255,255,255,0.55)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.35, "rgba(255,255,255,0.55)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, S, S);
   const tex = new THREE.CanvasTexture(c);
@@ -363,17 +433,23 @@ function drawCodeBlock(ctx, x, y, size, seed, fg) {
   const n = 9;
   const cell = size / n;
   let s = seed;
-  const rnd = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
   ctx.fillStyle = fg;
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) {
-      const finder =
-        (i < 3 && j < 3) || (i > n - 4 && j < 3) || (i < 3 && j > n - 4);
+      const finder = (i < 3 && j < 3) || (i > n - 4 && j < 3) || (i < 3 && j > n - 4);
       if (finder) {
-        const edge = i === 0 || j === 0 || i === n - 1 || j === n - 1 ||
-          (i < 3 && (i === 2 || j === 2)) || (j < 3 && (i === 2 || j === 2)) ||
-          (i > n - 4 && (i === n - 3 || j === 2)) || (j > n - 4 && (i === 2 || j === n - 3));
-        if (edge || (i % 2 === 1 && j % 2 === 1)) ctx.fillRect(x + i * cell, y + j * cell, cell, cell);
+        const edge =
+          i === 0 ||
+          j === 0 ||
+          i === n - 1 ||
+          j === n - 1 ||
+          (i < 3 && (i === 2 || j === 2)) ||
+          (j < 3 && (i === 2 || j === 2)) ||
+          (i > n - 4 && (i === n - 3 || j === 2)) ||
+          (j > n - 4 && (i === 2 || j === n - 3));
+        if (edge || (i % 2 === 1 && j % 2 === 1))
+          ctx.fillRect(x + i * cell, y + j * cell, cell, cell);
         continue;
       }
       if (rnd() > 0.5) ctx.fillRect(x + i * cell, y + j * cell, cell, cell);
@@ -396,8 +472,8 @@ function drawTrim(ctx, id, S, ink, bounds) {
   const [minX, minY, maxX, maxY] = bounds;
   const w = maxX - minX;
   const h = maxY - minY;
-  const X = (x) => ((x - minX) / w) * S;          // shape x -> canvas x
-  const Y = (y) => (1 - (y - minY) / h) * half;   // shape y -> canvas y
+  const X = (x) => ((x - minX) / w) * S; // shape x -> canvas x
+  const Y = (y) => (1 - (y - minY) / h) * half; // shape y -> canvas y
 
   ctx.save();
   ctx.globalAlpha = 0.17;
@@ -405,11 +481,11 @@ function drawTrim(ctx, id, S, ink, bounds) {
   ctx.lineWidth = Math.max(2, S * 0.0026);
   ctx.setLineDash([S * 0.012, S * 0.012]);
 
-  if (id === 'tee' || id === 'hoodie') {
-    const neckY = id === 'hoodie' ? 1.06 : 1.02;
-    const neckX = id === 'hoodie' ? 0.55 : 0.27;
-    const hemY = id === 'hoodie' ? -1.24 : -1.20;
-    const hemX = id === 'hoodie' ? 0.66 : 0.58;
+  if (id === "tee" || id === "hoodie") {
+    const neckY = id === "hoodie" ? 1.06 : 1.02;
+    const neckX = id === "hoodie" ? 0.55 : 0.27;
+    const hemY = id === "hoodie" ? -1.24 : -1.2;
+    const hemX = id === "hoodie" ? 0.66 : 0.58;
 
     ctx.beginPath();
     ctx.ellipse(S * 0.5, Y(neckY), X(neckX) - S * 0.5, half * 0.05, 0, 0, Math.PI);
@@ -420,11 +496,11 @@ function drawTrim(ctx, id, S, ink, bounds) {
     ctx.lineTo(X(hemX * 0.94), Y(hemY + 0.05));
     ctx.stroke();
 
-    if (id === 'hoodie') {
+    if (id === "hoodie") {
       ctx.beginPath();
       ctx.moveTo(X(-0.42), Y(-0.34));
-      ctx.lineTo(X(-0.42), Y(-0.90));
-      ctx.lineTo(X(0.42), Y(-0.90));
+      ctx.lineTo(X(-0.42), Y(-0.9));
+      ctx.lineTo(X(0.42), Y(-0.9));
       ctx.lineTo(X(0.42), Y(-0.34));
       ctx.stroke();
       // drawcord eyelets
@@ -436,12 +512,18 @@ function drawTrim(ctx, id, S, ink, bounds) {
         ctx.stroke();
       }
     }
-  } else if (id === 'mousepad' || id === 'stickers') {
-    const inset = id === 'mousepad' ? 0.055 : 0.05;
+  } else if (id === "mousepad" || id === "stickers") {
+    const inset = id === "mousepad" ? 0.055 : 0.05;
     ctx.beginPath();
-    ctx.roundRect(S * inset, half * inset * 1.2, S * (1 - inset * 2), half * (1 - inset * 2.4), S * 0.014);
+    ctx.roundRect(
+      S * inset,
+      half * inset * 1.2,
+      S * (1 - inset * 2),
+      half * (1 - inset * 2.4),
+      S * 0.014,
+    );
     ctx.stroke();
-  } else if (id === 'keychain') {
+  } else if (id === "keychain") {
     ctx.beginPath();
     ctx.roundRect(S * 0.12, half * 0.14, S * 0.76, half * 0.72, S * 0.04);
     ctx.stroke();
@@ -457,7 +539,7 @@ function paintSurface(canvas, opts) {
   const S = TEX_SIZE;
   const half = S / 2;
   canvas.width = canvas.height = S;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
   const { base, ink, id, decal, decalScale, decalY, hasQr, seed, printW, bounds } = opts;
 
   ctx.fillStyle = base;
@@ -465,9 +547,9 @@ function paintSurface(canvas, opts) {
 
   // gentle top-down light bake so the surface is not flat even before lighting
   const grad = ctx.createLinearGradient(0, 0, 0, half);
-  grad.addColorStop(0, 'rgba(255,255,255,0.03)');
-  grad.addColorStop(0.55, 'rgba(255,255,255,0)');
-  grad.addColorStop(1, 'rgba(0,0,0,0.14)');
+  grad.addColorStop(0, "rgba(255,255,255,0.03)");
+  grad.addColorStop(0.55, "rgba(255,255,255,0)");
+  grad.addColorStop(1, "rgba(0,0,0,0.14)");
   for (const yOff of [0, half]) {
     ctx.save();
     ctx.translate(0, yOff);
@@ -489,9 +571,9 @@ function paintSurface(canvas, opts) {
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = ink;
     ctx.font = `500 ${Math.round(S * 0.0105)}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.textAlign = 'center';
-    ctx.letterSpacing = '1.5px';
-    ctx.fillText('ACTIVATED', S * 0.5, y + size * 1.5);
+    ctx.textAlign = "center";
+    ctx.letterSpacing = "1.5px";
+    ctx.fillText("ACTIVATED", S * 0.5, y + size * 1.5);
     ctx.restore();
   }
 
@@ -506,7 +588,9 @@ function paintSurface(canvas, opts) {
     ctx.globalAlpha = 0.92;
     try {
       ctx.drawImage(decal, cx - dw / 2, cy - dh / 2, dw, dh);
-    } catch { /* a tainted or undecodable image simply does not print */ }
+    } catch {
+      /* a tainted or undecodable image simply does not print */
+    }
     ctx.restore();
   }
 
@@ -524,14 +608,14 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       canvas,
       antialias: true,
       alpha: false,
-      powerPreference: 'high-performance',
+      powerPreference: "high-performance",
     });
   } catch (err) {
     onFail?.(err);
     return null;
   }
   if (!renderer.getContext()) {
-    onFail?.(new Error('no webgl context'));
+    onFail?.(new Error("no webgl context"));
     return null;
   }
 
@@ -596,16 +680,16 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   scene.add(stage);
 
   const floorTex = radialTexture(0.0, 0.5, [
-    [0, 'rgba(56,63,86,1)'],
-    [0.07, 'rgba(34,39,54,1)'],
-    [0.16, 'rgba(17,19,28,1)'],
-    [0.32, 'rgba(6,7,12,1)'],
-    [1, 'rgba(2,2,4,1)'],
+    [0, "rgba(56,63,86,1)"],
+    [0.07, "rgba(34,39,54,1)"],
+    [0.16, "rgba(17,19,28,1)"],
+    [0.32, "rgba(6,7,12,1)"],
+    [1, "rgba(2,2,4,1)"],
   ]);
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(26, 96),
     // unlit on purpose: a lit floor catches the rim lights and blows out
-    new THREE.MeshBasicMaterial({ map: floorTex })
+    new THREE.MeshBasicMaterial({ map: floorTex }),
   );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.62;
@@ -613,13 +697,13 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
 
   // a warm-dark pool rather than pure black, so it reads on a near-black stage
   const shadowTex = radialTexture(0.0, 0.5, [
-    [0, 'rgba(6,8,14,0.95)'],
-    [0.34, 'rgba(5,6,11,0.55)'],
-    [1, 'rgba(2,2,4,0)'],
+    [0, "rgba(6,8,14,0.95)"],
+    [0.34, "rgba(5,6,11,0.55)"],
+    [1, "rgba(2,2,4,0)"],
   ]);
   const contact = new THREE.Mesh(
     new THREE.PlaneGeometry(3.4, 3.4),
-    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }),
   );
   contact.renderOrder = 1;
   contact.rotation.x = -Math.PI / 2;
@@ -628,30 +712,47 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
 
   // ---- product ----------------------------------------------------------
   const weave = weaveNormalMap();
-  const surfaceCanvas = document.createElement('canvas');
+  const surfaceCanvas = document.createElement("canvas");
   const surfaceTex = new THREE.CanvasTexture(surfaceCanvas);
   surfaceTex.colorSpace = THREE.SRGBColorSpace;
   surfaceTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
   const fabricMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex, roughness: 0.96, metalness: 0.0,
-    normalMap: weave, normalScale: new THREE.Vector2(0.3, 0.3),
-    sheen: 0.3, sheenRoughness: 0.9, sheenColor: new THREE.Color(0x3d4a5c),
+    map: surfaceTex,
+    roughness: 0.96,
+    metalness: 0.0,
+    normalMap: weave,
+    normalScale: new THREE.Vector2(0.3, 0.3),
+    sheen: 0.3,
+    sheenRoughness: 0.9,
+    sheenColor: new THREE.Color(0x3d4a5c),
     side: THREE.DoubleSide,
   });
   const enamelMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex, roughness: 0.26, metalness: 0.0,
-    clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide,
+    map: surfaceTex,
+    roughness: 0.26,
+    metalness: 0.0,
+    clearcoat: 1,
+    clearcoatRoughness: 0.08,
+    side: THREE.DoubleSide,
   });
   const printMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex, roughness: 0.58, metalness: 0.0,
-    clearcoat: 0.28, clearcoatRoughness: 0.4,
-    normalMap: weave, normalScale: new THREE.Vector2(0.09, 0.09),
+    map: surfaceTex,
+    roughness: 0.58,
+    metalness: 0.0,
+    clearcoat: 0.28,
+    clearcoatRoughness: 0.4,
+    normalMap: weave,
+    normalScale: new THREE.Vector2(0.09, 0.09),
     side: THREE.DoubleSide,
   });
   const MATERIALS = {
-    tee: fabricMat, hoodie: fabricMat, plush: fabricMat,
-    keychain: enamelMat, stickers: printMat, mousepad: printMat,
+    tee: fabricMat,
+    hoodie: fabricMat,
+    plush: fabricMat,
+    keychain: enamelMat,
+    stickers: printMat,
+    mousepad: printMat,
   };
 
   const product = new THREE.Group();
@@ -681,14 +782,19 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   const tag = new THREE.Group();
   const tagBody = new THREE.Mesh(
     new THREE.CylinderGeometry(0.055, 0.055, 0.012, 32),
-    new THREE.MeshPhysicalMaterial({ color: 0x0d0f16, roughness: 0.35, metalness: 0.6, clearcoat: 0.6 })
+    new THREE.MeshPhysicalMaterial({
+      color: 0x0d0f16,
+      roughness: 0.35,
+      metalness: 0.6,
+      clearcoat: 0.6,
+    }),
   );
   tagBody.rotation.x = Math.PI / 2;
   tag.add(tagBody);
 
   const tagGlow = new THREE.Mesh(
     new THREE.TorusGeometry(0.056, 0.008, 12, 40),
-    new THREE.MeshBasicMaterial({ color: 0x19affe, transparent: true, opacity: 0.8 })
+    new THREE.MeshBasicMaterial({ color: 0x19affe, transparent: true, opacity: 0.8 }),
   );
   tagGlow.position.z = 0.009;
   tag.add(tagGlow);
@@ -698,9 +804,13 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     const p = new THREE.Mesh(
       new THREE.RingGeometry(0.058, 0.068, 48),
       new THREE.MeshBasicMaterial({
-        color: 0x19affe, transparent: true, opacity: 0,
-        side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
-      })
+        color: 0x19affe,
+        transparent: true,
+        opacity: 0,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
     );
     p.position.z = 0.016;
     tag.add(p);
@@ -717,19 +827,25 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   const phone = new THREE.Group();
   const phoneBody = new THREE.Mesh(
     new THREE.BoxGeometry(0.78, 1.62, 0.055),
-    new THREE.MeshPhysicalMaterial({ color: 0x0a0b10, roughness: 0.25, metalness: 0.75, clearcoat: 0.8 })
+    new THREE.MeshPhysicalMaterial({
+      color: 0x0a0b10,
+      roughness: 0.25,
+      metalness: 0.75,
+      clearcoat: 0.8,
+    }),
   );
   phone.add(phoneBody);
 
-  const screenCanvas = document.createElement('canvas');
-  screenCanvas.width = 256; screenCanvas.height = 512;
+  const screenCanvas = document.createElement("canvas");
+  screenCanvas.width = 256;
+  screenCanvas.height = 512;
   const screenTex = new THREE.CanvasTexture(screenCanvas);
   screenTex.colorSpace = THREE.SRGBColorSpace;
   const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.70, 1.52),
-    new THREE.MeshBasicMaterial({ map: screenTex, transparent: true })
+    new THREE.PlaneGeometry(0.7, 1.52),
+    new THREE.MeshBasicMaterial({ map: screenTex, transparent: true }),
   );
-  screen.position.z = 0.030;
+  screen.position.z = 0.03;
   phone.add(screen);
   phone.position.set(1.05, -0.15, 1.5);
   phone.rotation.set(-0.12, -0.34, 0.06);
@@ -739,20 +855,28 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   const portal = new THREE.Group();
   const portalRing = new THREE.Mesh(
     new THREE.TorusGeometry(1.15, 0.035, 16, 96),
-    new THREE.MeshBasicMaterial({ color: 0x19affe, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })
+    new THREE.MeshBasicMaterial({
+      color: 0x19affe,
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
   );
   portal.add(portalRing);
   const portalGlow = new THREE.Mesh(
     new THREE.PlaneGeometry(2.5, 2.5),
     new THREE.MeshBasicMaterial({
       map: radialTexture(0, 0.5, [
-        [0, 'rgba(150,215,255,0.42)'],
-        [0.34, 'rgba(60,150,255,0.16)'],
-        [0.62, 'rgba(255,60,175,0.07)'],
-        [1, 'rgba(0,0,0,0)'],
+        [0, "rgba(150,215,255,0.42)"],
+        [0.34, "rgba(60,150,255,0.16)"],
+        [0.62, "rgba(255,60,175,0.07)"],
+        [1, "rgba(0,0,0,0)"],
       ]),
-      transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
-    })
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
   );
   portal.add(portalGlow);
   portal.position.set(0, 0.1, -1.7);
@@ -767,16 +891,23 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   for (let i = 0; i < P_COUNT; i++) {
     pSeed[i] = Math.random();
     pAngle[i] = Math.random() * Math.PI * 2;
-    pPos[i * 3] = 0; pPos[i * 3 + 1] = 0; pPos[i * 3 + 2] = 0;
+    pPos[i * 3] = 0;
+    pPos[i * 3 + 1] = 0;
+    pPos[i * 3 + 2] = 0;
   }
   const pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
   const particles = new THREE.Points(
     pGeo,
     new THREE.PointsMaterial({
-      size: 0.062, map: sparkTexture(), transparent: true, opacity: 0,
-      depthWrite: false, blending: THREE.AdditiveBlending, color: 0xcfeaff,
-    })
+      size: 0.062,
+      map: sparkTexture(),
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      color: 0xcfeaff,
+    }),
   );
   cine.add(particles);
 
@@ -789,9 +920,9 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
 
   // ---- state -----------------------------------------------------------
   const state = {
-    id: 'tee',
-    base: '#0b0b0f',
-    ink: '#f4f5f8',
+    id: "tee",
+    base: "#0b0b0f",
+    ink: "#f4f5f8",
     decal: null,
     decalScale: 1,
     decalY: 0,
@@ -802,7 +933,11 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   };
 
   function repaint() {
-    paintSurface(surfaceCanvas, { ...state, printW: currentShape?.print ?? 0.3, bounds: currentShape?.bounds });
+    paintSurface(surfaceCanvas, {
+      ...state,
+      printW: currentShape?.print ?? 0.3,
+      bounds: currentShape?.bounds,
+    });
     surfaceTex.needsUpdate = true;
   }
 
@@ -843,11 +978,21 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     state.id = id;
     currentShape = shape;
 
-    if (mesh) { product.remove(mesh); mesh = null; }
-    if (ringMesh) { product.remove(ringMesh); ringMesh.geometry.dispose(); ringMesh = null; }
+    if (mesh) {
+      product.remove(mesh);
+      mesh = null;
+    }
+    if (ringMesh) {
+      product.remove(ringMesh);
+      ringMesh.geometry.dispose();
+      ringMesh = null;
+    }
 
     let geo = geoCache.get(id);
-    if (!geo) { geo = puffGeometry(shape); geoCache.set(id, geo); }
+    if (!geo) {
+      geo = puffGeometry(shape);
+      geoCache.set(id, geo);
+    }
 
     mesh = new THREE.Mesh(geo, MATERIALS[id] || fabricMat);
     product.add(mesh);
@@ -855,7 +1000,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     if (shape.ring) {
       ringMesh = new THREE.Mesh(
         new THREE.TorusGeometry(shape.ring.r, shape.ring.tube, 14, 48),
-        new THREE.MeshStandardMaterial({ color: 0xc8ccd6, roughness: 0.22, metalness: 1 })
+        new THREE.MeshStandardMaterial({ color: 0xc8ccd6, roughness: 0.22, metalness: 1 }),
       );
       ringMesh.position.y = shape.ring.y;
       product.add(ringMesh);
@@ -865,7 +1010,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     const [tx, ty] = shape.tag;
     const dep = -shape.sdf(tx, ty);
     const z = geo.userData.profile(Math.max(dep, 0));
-    tag.position.set(tx, ty, z + 0.010);
+    tag.position.set(tx, ty, z + 0.01);
     tag.scale.setScalar(1);
 
     const box = new THREE.Box3().setFromObject(mesh);
@@ -880,17 +1025,21 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     const unit = Math.max(size.x, size.y) / 2.4;
     cineAnchor.unit = unit;
     cineAnchor.center.set(0, center.y, 0);
-    cineAnchor.midLook.set(size.x * 0.30, center.y, size.z * 0.4);
+    cineAnchor.midLook.set(size.x * 0.3, center.y, size.z * 0.4);
     cineAnchor.phone = {
-      x: size.x * 0.5 + 0.30 * unit,
-      y: center.y - 0.10 * unit,
+      x: size.x * 0.5 + 0.3 * unit,
+      y: center.y - 0.1 * unit,
       z: size.z * 0.5 + 0.85 * unit,
       rise: 1.5 * unit,
       scale: (size.y * 0.56) / 1.62, // phone body is 1.62 units tall
     };
-    const ringR = 1.15 * Math.max(0.5, (size.y * 0.70) / 1.15);
-    portal.position.set(0, Math.max(center.y, box.min.y + ringR * 0.92), -(size.z * 0.5 + 1.5 * unit));
-    cineAnchor.portalScale = Math.max(0.5, (size.y * 0.70) / 1.15); // ring radius is 1.15 at scale 1
+    const ringR = 1.15 * Math.max(0.5, (size.y * 0.7) / 1.15);
+    portal.position.set(
+      0,
+      Math.max(center.y, box.min.y + ringR * 0.92),
+      -(size.z * 0.5 + 1.5 * unit),
+    );
+    cineAnchor.portalScale = Math.max(0.5, (size.y * 0.7) / 1.15); // ring radius is 1.15 at scale 1
 
     repaint();
     frameProduct();
@@ -903,8 +1052,8 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   }
 
   function setActivation(kind) {
-    state.hasNfc = kind === 'nfc' || kind === 'both';
-    state.hasQr = kind === 'qr' || kind === 'both';
+    state.hasNfc = kind === "nfc" || kind === "both";
+    state.hasQr = kind === "qr" || kind === "both";
     tagBody.visible = state.hasNfc;
     tagGlow.visible = state.hasNfc;
     repaint();
@@ -915,9 +1064,18 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     tag.visible = on;
   }
 
-  function setDecal(img) { state.decal = img; repaint(); }
-  function setDecalScale(v) { state.decalScale = v; repaint(); }
-  function setDecalY(v) { state.decalY = v; repaint(); }
+  function setDecal(img) {
+    state.decal = img;
+    repaint();
+  }
+  function setDecalScale(v) {
+    state.decalScale = v;
+    repaint();
+  }
+  function setDecalY(v) {
+    state.decalY = v;
+    repaint();
+  }
 
   // ---- decal dragging ---------------------------------------------------
   const ray = new THREE.Raycaster();
@@ -945,7 +1103,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     return Math.abs(tx - cx) < rx && Math.abs(ty - cy) < ry;
   }
 
-  canvas.addEventListener('pointermove', (ev) => {
+  canvas.addEventListener("pointermove", (ev) => {
     if (dragging) {
       const uv = uvAt(ev);
       if (uv && uv.y >= 0.5) {
@@ -957,16 +1115,19 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       }
       return;
     }
-    if (!state.decal) { canvas.style.cursor = ''; return; }
-    canvas.style.cursor = overDecal(uvAt(ev)) ? 'grab' : '';
+    if (!state.decal) {
+      canvas.style.cursor = "";
+      return;
+    }
+    canvas.style.cursor = overDecal(uvAt(ev)) ? "grab" : "";
   });
 
-  canvas.addEventListener('pointerdown', (ev) => {
+  canvas.addEventListener("pointerdown", (ev) => {
     if (!state.decal) return;
     if (!overDecal(uvAt(ev))) return;
     dragging = true;
     controls.enabled = false;
-    canvas.style.cursor = 'grabbing';
+    canvas.style.cursor = "grabbing";
     canvas.setPointerCapture?.(ev.pointerId);
   });
 
@@ -974,36 +1135,106 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     if (!dragging) return;
     dragging = false;
     controls.enabled = true;
-    canvas.style.cursor = '';
+    canvas.style.cursor = "";
     canvas.releasePointerCapture?.(ev.pointerId);
   };
-  canvas.addEventListener('pointerup', endDrag);
-  canvas.addEventListener('pointercancel', endDrag);
+  canvas.addEventListener("pointerup", endDrag);
+  canvas.addEventListener("pointercancel", endDrag);
+
+  // ---- keyboard orbit ---------------------------------------------------
+  // The viewport is the centrepiece, so it cannot be pointer-only. Written
+  // against the public camera/target only -- OrbitControls' own rotate and
+  // dolly helpers are private in r180 and would break on an upgrade.
+  const _off = new THREE.Vector3();
+  const _sph = new THREE.Spherical();
+
+  function orbitBy(dTheta, dPhi) {
+    _off.copy(camera.position).sub(controls.target);
+    _sph.setFromVector3(_off);
+    _sph.theta += dTheta;
+    _sph.phi = clamp(_sph.phi + dPhi, controls.minPolarAngle + 0.02, controls.maxPolarAngle - 0.02);
+    camera.position.copy(controls.target).add(_off.setFromSpherical(_sph));
+  }
+
+  function dollyBy(factor) {
+    _off.copy(camera.position).sub(controls.target);
+    const len = clamp(_off.length() * factor, controls.minDistance, controls.maxDistance);
+    camera.position.copy(controls.target).add(_off.setLength(len));
+  }
+
+  canvas.addEventListener("keydown", (ev) => {
+    if (act.on) return;
+    const step = 0.16 * (ev.shiftKey ? 0.35 : 1);
+    let handled = true;
+    switch (ev.key) {
+      case "ArrowLeft":
+        orbitBy(step, 0);
+        break;
+      case "ArrowRight":
+        orbitBy(-step, 0);
+        break;
+      case "ArrowUp":
+        orbitBy(0, -step * 0.6);
+        break;
+      case "ArrowDown":
+        orbitBy(0, step * 0.6);
+        break;
+      case "+":
+      case "=":
+        dollyBy(0.88);
+        break;
+      case "-":
+      case "_":
+        dollyBy(1.14);
+        break;
+      case "Home":
+      case "0":
+        resetView();
+        break;
+      default:
+        handled = false;
+    }
+    if (!handled) return;
+    ev.preventDefault();
+    controls.autoRotate = false;
+    controls.update();
+  });
+
+  // pause the turntable while someone is inspecting, resume when they leave
+  canvas.addEventListener("focus", () => {
+    if (!act.on) controls.autoRotate = false;
+  });
+  canvas.addEventListener("blur", () => {
+    if (!act.on && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+      controls.autoRotate = true;
+  });
 
   // ---- activation cinematic --------------------------------------------
   const STEPS = [
-    { at: 0.00, to: 0.16, label: 'A chip and a code, in the product' },
-    { at: 0.16, to: 0.38, label: 'The fan taps it with their phone' },
-    { at: 0.38, to: 0.62, label: 'The experience opens — no app, no account' },
-    { at: 0.62, to: 0.84, label: 'They land back in your game, with a reward' },
-    { at: 0.84, to: 1.00, label: 'Every tap comes back to you as data' },
+    { at: 0.0, to: 0.16, label: "A chip and a code, in the product" },
+    { at: 0.16, to: 0.38, label: "The fan taps it with their phone" },
+    { at: 0.38, to: 0.62, label: "The experience opens — no app, no account" },
+    { at: 0.62, to: 0.84, label: "They land back in your game, with a reward" },
+    { at: 0.84, to: 1.0, label: "Every tap comes back to you as data" },
   ];
 
   let act = { on: false, t: 0, dur: 10.5, step: -1, start: 0, hold: null };
 
   function paintScreen(p) {
     const c = screenCanvas;
-    const ctx = c.getContext('2d');
-    const W = c.width, H = c.height;
+    const ctx = c.getContext("2d");
+    const W = c.width,
+      H = c.height;
     ctx.clearRect(0, 0, W, H);
     const g = ctx.createLinearGradient(0, 0, W, H);
-    g.addColorStop(0, '#071726');
-    g.addColorStop(1, '#1a0716');
+    g.addColorStop(0, "#071726");
+    g.addColorStop(1, "#1a0716");
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
     const t = clamp01(p);
-    const cx = W / 2, cy = H * 0.42;
+    const cx = W / 2,
+      cy = H * 0.42;
     for (let i = 0; i < 4; i++) {
       const r = (t * 1.5 + i * 0.25) % 1;
       ctx.beginPath();
@@ -1014,22 +1245,28 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     }
     const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.34);
     core.addColorStop(0, `rgba(255,255,255,${0.35 + 0.4 * t})`);
-    core.addColorStop(0.45, 'rgba(25,175,254,0.42)');
-    core.addColorStop(1, 'rgba(255,55,174,0)');
+    core.addColorStop(0.45, "rgba(25,175,254,0.42)");
+    core.addColorStop(1, "rgba(255,55,174,0)");
     ctx.fillStyle = core;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = 'rgba(244,245,248,0.85)';
+    ctx.fillStyle = "rgba(244,245,248,0.85)";
     ctx.fillRect(W * 0.16, H * 0.74, W * 0.68 * t, 4);
-    ctx.fillStyle = 'rgba(244,245,248,0.22)';
+    ctx.fillStyle = "rgba(244,245,248,0.22)";
     ctx.fillRect(W * 0.16, H * 0.74, W * 0.68, 4);
     screenTex.needsUpdate = true;
   }
 
   function startActivation() {
     act = {
-      on: true, t: 0, dur: 10.5, step: -1, start: performance.now(), hold: null,
-      camFrom: camera.position.clone(), tgtFrom: controls.target.clone(),
+      on: true,
+      t: 0,
+      dur: 10.5,
+      step: -1,
+      start: performance.now(),
+      hold: null,
+      camFrom: camera.position.clone(),
+      tgtFrom: controls.target.clone(),
     };
     cine.visible = true;
     controls.autoRotate = false;
@@ -1068,24 +1305,25 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     // wall-clock progress -- a per-frame lerp trails on a slow GPU.
     const tagWorld = tag.getWorldPosition(new THREE.Vector3());
     const c = cineAnchor.center;
-    const at = (x, y, z) => new THREE.Vector3(c.x + x * homeDist, c.y + y * homeDist, c.z + z * homeDist);
+    const at = (x, y, z) =>
+      new THREE.Vector3(c.x + x * homeDist, c.y + y * homeDist, c.z + z * homeDist);
 
     // a narrow viewport needs more distance to hold product and phone together
     const wide = 1.26 + Math.max(0, 1.15 - camera.aspect) * 0.55;
 
-    const A = at(0, 0, 1.0);              // hero
-    const B = at(0.24, -0.13, 0.54);      // macro on the tag
-    const C = at(0.26, -0.02, wide);      // product and phone together
+    const A = at(0, 0, 1.0); // hero
+    const B = at(0.24, -0.13, 0.54); // macro on the tag
+    const C = at(0.26, -0.02, wide); // product and phone together
     const D = at(-0.05, 0.05, wide + 0.2); // wide, portal behind
 
     let pos;
     let lookAt;
-    if (p < 0.30) {
-      const k = easeInOut(clamp01(p / 0.30));
+    if (p < 0.3) {
+      const k = easeInOut(clamp01(p / 0.3));
       pos = A.clone().lerp(B, k);
       lookAt = c.clone().lerp(tagWorld, k * 0.9);
     } else if (p < 0.58) {
-      const k = easeInOut(clamp01((p - 0.30) / 0.28));
+      const k = easeInOut(clamp01((p - 0.3) / 0.28));
       pos = B.clone().lerp(C, k);
       lookAt = tagWorld.clone().lerp(cineAnchor.midLook, k);
     } else {
@@ -1102,8 +1340,11 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     // tag pulses fire during step 2
     const pulsing = p > 0.14 && p < 0.52;
     pulses.forEach((ring, i) => {
-      if (!pulsing) { ring.material.opacity = 0; return; }
-      const cycle = ((act.t * 1.15 + i * 0.33) % 1);
+      if (!pulsing) {
+        ring.material.opacity = 0;
+        return;
+      }
+      const cycle = (act.t * 1.15 + i * 0.33) % 1;
       ring.scale.setScalar(1 + cycle * 4.4);
       ring.material.opacity = (1 - cycle) * 0.75;
     });
@@ -1116,7 +1357,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     if (phone.visible) {
       const k = easeOut(phoneIn);
       phone.position.set(ph.x, lerp(ph.y - ph.rise, ph.y, k), lerp(ph.z - ph.rise * 0.4, ph.z, k));
-      phone.rotation.set(lerp(-0.42, -0.10, k), -0.30, lerp(0.20, 0.04, k));
+      phone.rotation.set(lerp(-0.42, -0.1, k), -0.3, lerp(0.2, 0.04, k));
       phone.scale.setScalar(ph.scale * phoneOut);
       screen.material.opacity = phoneOut;
       paintScreen(clamp01((p - 0.32) / 0.28));
@@ -1142,7 +1383,9 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
         const spin = pAngle[i] + u * 4.6;
         const radius = lerp(1.35, 0.18, u) * (0.6 + s * 0.55) * u0;
         arr[i * 3] = Math.cos(spin) * radius * (1 - u * 0.35);
-        arr[i * 3 + 1] = lerp(c.y - 0.7 * u0 + s * 1.4 * u0, portal.position.y, u) + Math.sin(spin) * radius * 0.35;
+        arr[i * 3 + 1] =
+          lerp(c.y - 0.7 * u0 + s * 1.4 * u0, portal.position.y, u) +
+          Math.sin(spin) * radius * 0.35;
         arr[i * 3 + 2] = lerp(0.35 * u0, zEnd, u);
       }
       pGeo.attributes.position.needsUpdate = true;
@@ -1207,11 +1450,11 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
 
   const io = new IntersectionObserver(
     ([entry]) => (entry.isIntersecting && !document.hidden ? start() : stop()),
-    { rootMargin: '180px' }
+    { rootMargin: "180px" },
   );
   io.observe(viewport);
 
-  document.addEventListener('visibilitychange', () => {
+  document.addEventListener("visibilitychange", () => {
     if (document.hidden) stop();
     else if (viewport.getBoundingClientRect().top < innerHeight) start();
   });
@@ -1236,7 +1479,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     camera.updateProjectionMatrix();
     frameProduct();
     composer.render();
-    const url = renderer.domElement.toDataURL('image/png');
+    const url = renderer.domElement.toDataURL("image/png");
 
     renderer.setPixelRatio(prevRatio);
     renderer.setSize(prevSize.x, prevSize.y, false);
@@ -1251,19 +1494,28 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   function resetView() {
     controls.target.set(0, homePos.y, 0);
     camera.position.set(0, homePos.y + homeDist * 0.04, homeDist);
-    controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    controls.autoRotate = !matchMedia("(prefers-reduced-motion: reduce)").matches;
     controls.update();
   }
 
-  setProduct('tee');
+  setProduct("tee");
   resize();
   start();
   onReady?.();
 
   return {
-    setProduct, setColor, setActivation, setShowTag,
-    setDecal, setDecalScale, setDecalY,
-    startActivation, stopActivation, capture, resetView, resize,
+    setProduct,
+    setColor,
+    setActivation,
+    setShowTag,
+    setDecal,
+    setDecalScale,
+    setDecalY,
+    startActivation,
+    stopActivation,
+    capture,
+    resetView,
+    resize,
     /** Scene state, for debugging from the console. */
     debug: () => ({
       homeDist,
@@ -1271,7 +1523,9 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       target: controls.target.toArray(),
       dist: camera.position.distanceTo(controls.target),
       aspect: camera.aspect,
-      boxSize: mesh ? new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).toArray() : [0, 0, 0],
+      boxSize: mesh
+        ? new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).toArray()
+        : [0, 0, 0],
       phone: cineAnchor.phone,
       phoneVisible: phone.visible,
       phonePos: phone.position.toArray(),
@@ -1286,16 +1540,29 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     }),
     /** Freeze the cinematic at a fixed progress (0-1). Pass null to resume. */
     seek(p) {
-      if (p === null) { if (act.on) act.start = performance.now() - act.t * 1000; act.hold = null; return; }
+      if (p === null) {
+        if (act.on) act.start = performance.now() - act.t * 1000;
+        act.hold = null;
+        return;
+      }
       if (!act.on) startActivation();
       act.hold = clamp01(p);
     },
-    get isActivating() { return act.on; },
-    setAutoRotate(on) { controls.autoRotate = on; },
+    get isActivating() {
+      return act.on;
+    },
+    setAutoRotate(on) {
+      controls.autoRotate = on;
+    },
     dispose() {
-      stop(); ro.disconnect(); io.disconnect();
+      stop();
+      ro.disconnect();
+      io.disconnect();
       geoCache.forEach((g) => g.dispose());
-      envRT.dispose(); pmrem.dispose(); composer.dispose(); renderer.dispose();
+      envRT.dispose();
+      pmrem.dispose();
+      composer.dispose();
+      renderer.dispose();
     },
   };
 }
