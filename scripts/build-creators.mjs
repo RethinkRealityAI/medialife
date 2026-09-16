@@ -89,6 +89,7 @@ const GLYPH = {
   tee: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M12 5 5 8l2 5.5 2.6-1V27h12.8V12.5l2.6 1L27 8l-7-3a4 4 0 0 1-8 0z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>',
   hoodie:
     '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M12 5 5 8.5l2.4 6 2.2-.9V27h12.8V13.6l2.2.9 2.4-6L20 5" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 5a4.2 4.2 0 0 0 8 0M16 13.5v5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  cap: '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M7 19a9 9 0 0 1 18 0" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7 19h18l4.5 2.6a1 1 0 0 1-.5 1.9H7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M16 10v9" stroke="currentColor" stroke-width="1.3" opacity=".55"/></svg>',
   keychain:
     '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="8" r="3.6" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="13.5" width="13" height="13" rx="3.4" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="20" r="2.2" stroke="currentColor" stroke-width="1.4"/></svg>',
   plush:
@@ -348,7 +349,7 @@ function studioSection() {
         Everything you build here carries into your application.</p>
       </div>
 
-      <div class="studio rv">
+      <div class="studio glass glass-sheen rv">
         <div class="studio-bar">
           <span class="mono">Drop Studio</span>
           <span class="spacer"></span>
@@ -734,12 +735,13 @@ function applySection() {
     <div class="wrap">
       <div class="sec-head rv">
         <span class="mono">08 / Apply</span>
-        <h2>Four short steps. About three minutes.</h2>
-        <p class="lede">Applying costs nothing and commits you to nothing. We review every submission
-        against fit, not follower count, and reply either way.</p>
+        <h2>This is step one. It takes about three minutes.</h2>
+        <p class="lede">Tell us about your game and what you want to make. That is the whole ask —
+        applying costs nothing and commits you to nothing. We review every submission against fit,
+        not follower count, and reply either way.</p>
       </div>
 
-      <div class="apply rv">
+      <div class="apply glass glass-sheen rv">
         <div class="apply-head">
           <span class="mono">Creator application · ${PROGRAM.short}</span>
           <div class="steps" id="steps">
@@ -965,18 +967,18 @@ function footer() {
         <div>
           <h4>Program</h4>
           <ul>
-            <li><a href="#loop">How it works</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="#loop">What "activated" means</a></li>
             <li><a href="#studio">Drop Studio</a></li>
-            <li><a href="#pilot">The ${PROGRAM.pilot.reviewDays}-day pilot</a></li>
-            <li><a href="#data">What you get back</a></li>
+            <li><a href="#activate">Activate merch you already sell</a></li>
           </ul>
         </div>
         <div>
           <h4>More</h4>
           <ul>
             <li><a href="activate/">Fan experience preview</a></li>
+            <li><a href="#why">Why this is different</a></li>
             <li><a href="#proof">Track record</a></li>
-            <li><a href="#team">The team</a></li>
             <li><a href="#faq">Questions</a></li>
           </ul>
         </div>
@@ -1081,9 +1083,9 @@ const html = `<!doctype html>
       <b>MEDIALIFE<sup>™</sup></b><span class="x">×</span><span class="rb">ROBLOX</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
-      <a href="#loop">How it works</a>
+      <a href="#how">How it works</a>
       <a href="#studio">Drop Studio</a>
-      <a href="#pilot">The pilot</a>
+      <a href="#activate">Already selling?</a>
       <a href="#proof">Track record</a>
       <a href="#faq">FAQ</a>
     </nav>

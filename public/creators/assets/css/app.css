@@ -41,6 +41,13 @@
   box-sizing: border-box;
 }
 
+/* Several components below set an explicit `display`, which silently beats the
+   `hidden` attribute and leaves panels the script thought it had closed on
+   screen. This is the normalize rule for that, and it has to win. */
+[hidden] {
+  display: none !important;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--background);
@@ -565,9 +572,12 @@ main,
 }
 .hero .wrap {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
   gap: clamp(28px, 4vw, 64px);
   align-items: center;
+  /* Enough of the first screen to feel like an opening rather than a strip,
+     without pushing the first real section entirely below the fold. */
+  min-height: min(76vh, 720px);
 }
 @media (max-width: 960px) {
   .hero .wrap {
@@ -577,7 +587,10 @@ main,
 
 .hero h1 {
   margin: 20px 0 0;
-  max-width: 15ch;
+  max-width: 18ch;
+  /* Without this the headline breaks to a one-word last line. Balancing gives
+     the three lines even measures instead of an orphan. */
+  text-wrap: balance;
 }
 .hero h1 em {
   font-style: normal;
@@ -618,7 +631,7 @@ main,
 .hero-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 5 / 6;
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--border);
@@ -1075,6 +1088,20 @@ main,
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
 }
+/* Side by side, the row height is set here rather than left to whichever child
+   is taller. The panel is always the taller one, and letting it win turned the
+   stage into a tall narrow column -- which frames every product small, because
+   the camera then has to fit the product's width into a portrait frame. So the
+   row is fixed, the stage fills it, and the panel scrolls inside it. */
+@media (min-width: 1081px) {
+  .studio-body {
+    grid-template-rows: clamp(520px, 70vh, 760px);
+  }
+  .viewport {
+    aspect-ratio: auto;
+    height: 100%;
+  }
+}
 @media (max-width: 1080px) {
   .studio-body {
     grid-template-columns: minmax(0, 1fr);
@@ -1085,6 +1112,8 @@ main,
 .viewport {
   position: relative;
   width: 100%;
+  /* Stacked, the stage keeps its own shape. Side by side it is overridden to
+     fill the fixed row set on .studio-body. */
   aspect-ratio: 4 / 3.35;
   background: radial-gradient(60% 50% at 50% 38%, #0d0d16 0%, #050509 55%, #020204 100%);
   overflow: hidden;
@@ -2829,6 +2858,14 @@ main,
   .split-card {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+/* The art is a landscape photograph in a portrait-ish column. Without a ratio
+   it sets the row height and drags a screen of empty space along with it. */
+.split-card img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 460px;
+  object-fit: cover;
 }
 
 /* ---------- per-SKU projection breakdown ---------- */

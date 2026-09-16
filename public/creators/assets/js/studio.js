@@ -863,6 +863,10 @@ export function createStudio({
     controls.autoRotate = false;
     controls.enabled = false;
     if (!state.showTag) tag.visible = true;
+    // The safe-area outline is a design aid. During the activation the visitor
+    // is being shown the product, not editing it, and the outline draws through
+    // the phone prop because it ignores depth.
+    if (zoneGuide) zoneGuide.visible = false;
     return act.dur;
   }
 
@@ -874,6 +878,7 @@ export function createStudio({
     controls.enabled = true;
     controls.autoRotate = true;
     tag.visible = state.showTag;
+    if (zoneGuide) zoneGuide.visible = true;
     onActivationStep?.(-1, 0);
   }
 

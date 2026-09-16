@@ -18,6 +18,8 @@
 
 export const PROGRAM = {
   name: "Activated Merchandising Program",
+  /** The short form, for places a full programme name would crowd the line. */
+  short: "MEDIALIFE × Roblox",
   partner: "Roblox",
   pilot: { skusPerProperty: "2–3", reviewDays: 90, upfrontCost: 0 },
 
