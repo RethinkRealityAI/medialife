@@ -113,7 +113,7 @@ export const STEPS = [
  * fall back to the generated placeholder geometry.
  *
  * `attachWeight` is a relative mix weight used by the projection model to spread
- * units across an assortment — stickers convert far more often than a hoodie,
+ * units across an assortment — a keychain converts far more often than a hoodie,
  * but a hoodie carries far more value per unit.
  */
 export const PRODUCTS = [
@@ -181,19 +181,6 @@ export const PRODUCTS = [
     activation: "NFC in the base",
     blurb: "The character play. Turns an in-game mascot into something kept on a desk.",
     hero: true,
-  },
-  {
-    id: "stickers",
-    name: "Sticker Bundle",
-    tag: "Activated Print®",
-    model: "stickers.glb",
-    price: 15,
-    min: 12,
-    max: 22,
-    attachWeight: 1.6,
-    activation: "Printed code on the backing card",
-    blurb: "Entry price point and the cheapest way to get an activation into a lot of hands.",
-    hero: false,
   },
   {
     id: "deskmat",
@@ -272,7 +259,11 @@ export const PROOF = {
     { value: "35%", label: "Call-to-action conversion", foot: "Netflix activated print program" },
     { value: "3:22", label: "Average engagement time", foot: "Per activated unit" },
     { value: "5.46", label: "Repeat interactions", foot: "Per activated unit" },
-    { value: "+11%", label: "Engagement at week two", foot: "After distribution — it keeps working" },
+    {
+      value: "+11%",
+      label: "Engagement at week two",
+      foot: "After distribution — it keeps working",
+    },
   ],
   track: [
     {

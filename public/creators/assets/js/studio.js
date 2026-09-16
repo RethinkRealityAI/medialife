@@ -1,26 +1,40 @@
 /**
  * Drop Studio - the MEDIALIFE x Roblox product configurator.
  *
- * Everything is generated at runtime; there are no model or texture downloads.
- * Each product is described by a 2D signed distance field which is inflated
- * into a soft, closed shell ("puff mesh"). That keeps every product fully
- * parametric -- colourway, print, activation tag placement and the activation
- * cinematic all drive the same geometry.
+ * Each product is a real mesh: a GLB generated from a text prompt, then run
+ * through scripts/optimize-models.mjs (meshopt geometry, WebP textures,
+ * quantised) so a product lands in the low hundreds of KB. The loading, the
+ * colourway wash and the artwork projection all live in product.js; this file
+ * is the stage, the camera, the activation cinematic and the interaction.
  *
- * UV convention: a single square texture holds the front print in its TOP half
- * (v 0.5..1) and the back in its BOTTOM half (v 0..0.5), so a decal can be
- * painted on the front only.
+ * Two consequences of using real meshes are worth stating up front, because
+ * they explain shapes in the code that would otherwise look arbitrary:
+ *
+ *   - A colourway cannot be a `material.color`. The albedo is baked, so the
+ *     colourway is washed over it in the shader, preserving every fold.
+ *
+ *   - Artwork cannot be painted into UV space. The atlas is machine-packed
+ *     islands, so a rectangle drawn in UVs lands in pieces all over the
+ *     garment. Artwork is *projected* onto the mesh instead, inside named
+ *     print zones defined against the product's own bounding box.
  */
 
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
-import { garmentGeometry, GARMENTS, GARMENT_BOUNDS } from "./garment.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import {
+  loadProduct,
+  buildDecal,
+  buildZoneGuide,
+  resolveZone,
+  textureFromImage,
+  PRINT_ZONES,
+  HERO_VIEW,
+} from "./product.js";
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const clamp01 = (v) => clamp(v, 0, 1);
@@ -29,366 +43,8 @@ const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) 
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 
 // ---------------------------------------------------------------------------
-// signed distance fields (negative inside, positive outside)
+// procedural textures (the stage and the cinematic only -- products are meshes)
 // ---------------------------------------------------------------------------
-
-/** Chaikin corner cutting - softens a hand-authored silhouette. */
-function chaikin(pts, iterations = 2) {
-  let out = pts;
-  for (let it = 0; it < iterations; it++) {
-    const next = [];
-    for (let i = 0; i < out.length; i++) {
-      const p = out[i];
-      const q = out[(i + 1) % out.length];
-      next.push([p[0] * 0.75 + q[0] * 0.25, p[1] * 0.75 + q[1] * 0.25]);
-      next.push([p[0] * 0.25 + q[0] * 0.75, p[1] * 0.25 + q[1] * 0.75]);
-    }
-    out = next;
-  }
-  return out;
-}
-
-/** Mirror the right-hand half of a silhouette to guarantee symmetry. */
-function mirrorRight(half) {
-  const left = half.map(([x, y]) => [-x, y]).reverse();
-  return [...half, ...left];
-}
-
-/**
- * Split long edges before smoothing. Chaikin rounds a corner by an amount
- * proportional to its adjacent edge lengths, so resampling first is what keeps
- * an armpit notch or a sleeve corner from dissolving into a blob.
- */
-function resample(pts, maxLen = 0.075) {
-  const out = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const q = pts[(i + 1) % pts.length];
-    out.push(p);
-    const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
-    const n = Math.floor(d / maxLen);
-    for (let k = 1; k < n; k++) {
-      const t = k / n;
-      out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
-    }
-  }
-  return out;
-}
-
-function polySdf(pts) {
-  const n = pts.length;
-  return (px, py) => {
-    let best = Infinity;
-    let inside = false;
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = pts[i][0],
-        yi = pts[i][1];
-      const xj = pts[j][0],
-        yj = pts[j][1];
-      if (yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi) inside = !inside;
-      const ex = xj - xi,
-        ey = yj - yi;
-      const wx = px - xi,
-        wy = py - yi;
-      const t = clamp01((wx * ex + wy * ey) / (ex * ex + ey * ey || 1e-9));
-      const qx = xi + ex * t - px,
-        qy = yi + ey * t - py;
-      const dd = qx * qx + qy * qy;
-      if (dd < best) best = dd;
-    }
-    return inside ? -Math.sqrt(best) : Math.sqrt(best);
-  };
-}
-
-const sdRoundRect = (x, y, hw, hh, r) => {
-  const qx = Math.abs(x) - hw + r;
-  const qy = Math.abs(y) - hh + r;
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
-};
-const sdCircle = (x, y, cx, cy, r) => Math.hypot(x - cx, y - cy) - r;
-const smin = (a, b, k) => {
-  const h = Math.max(k - Math.abs(a - b), 0) / k;
-  return Math.min(a, b) - h * h * k * 0.25;
-};
-
-// silhouettes -- authored as a right-hand half, mirrored, resampled, softened
-const TEE_PTS = chaikin(
-  resample(
-    mirrorRight([
-      [0.0, -1.2],
-      [0.58, -1.22],
-      [0.6, -0.4],
-      [0.62, 0.26],
-      [0.68, 0.34],
-      [1.05, 0.5],
-      [1.17, 0.8],
-      [0.93, 0.95],
-      [0.62, 1.02],
-      [0.26, 1.1],
-      [0.11, 1.03],
-      [0.0, 0.96],
-    ]),
-    0.06,
-  ),
-  2,
-);
-
-const HOODIE_PTS = chaikin(
-  resample(
-    mirrorRight([
-      [0.0, -1.24],
-      [0.66, -1.26],
-      [0.68, -0.4],
-      [0.72, 0.22],
-      [0.78, 0.3],
-      [1.21, 0.44],
-      [1.33, 0.78],
-      [1.07, 0.94],
-      [0.75, 1.02],
-      [0.57, 1.06],
-      [0.53, 1.26],
-      [0.34, 1.45],
-      [0.0, 1.51],
-    ]),
-    0.06,
-  ),
-  2,
-);
-
-/**
- * SDF, bounds and surface profile per product.
- * `print` is the mark's width as a fraction of the texture, so a logo reads at
- * a sensible size on a deskmat and on a keychain without manual fiddling.
- */
-const SHAPES = {
-  tee: {
-    garment: "tee",
-    bounds: GARMENT_BOUNDS.tee,
-    tag: [0.38, -0.86],
-    print: 0.245,
-  },
-  hoodie: {
-    garment: "hoodie",
-    bounds: GARMENT_BOUNDS.hoodie,
-    tag: [1.06, 0.27],
-    print: 0.2,
-  },
-  keychain: {
-    sdf: (x, y) => sdRoundRect(x, y + 0.18, 0.62, 0.7, 0.24),
-    bounds: [-0.78, -1.04, 0.78, 0.66],
-    puff: 0.17,
-    feather: 0.24,
-    res: 92,
-    tag: [0.36, -0.64],
-    print: 0.34,
-    wrinkle: 0,
-    ring: { y: 0.6, r: 0.19, tube: 0.042 },
-  },
-  plush: {
-    sdf: (x, y) => {
-      const body = sdCircle(x, y, 0, -0.34, 0.72);
-      const head = sdCircle(x, y, 0, 0.56, 0.55);
-      const ears = Math.min(sdCircle(x, y, -0.45, 0.99, 0.24), sdCircle(x, y, 0.45, 0.99, 0.24));
-      const arms = Math.min(sdCircle(x, y, -0.72, -0.34, 0.26), sdCircle(x, y, 0.72, -0.34, 0.26));
-      const feet = Math.min(sdCircle(x, y, -0.35, -0.96, 0.25), sdCircle(x, y, 0.35, -0.96, 0.25));
-      return smin(smin(smin(body, head, 0.3), smin(ears, arms, 0.14), 0.14), feet, 0.16);
-    },
-    bounds: [-1.1, -1.34, 1.1, 1.34],
-    puff: 0.5,
-    feather: 0.56,
-    res: 100,
-    tag: [0.5, -0.94],
-    print: 0.22,
-    wrinkle: 0,
-  },
-  stickers: {
-    sdf: (x, y) => sdRoundRect(x, y, 0.82, 1.08, 0.1),
-    bounds: [-0.94, -1.2, 0.94, 1.2],
-    puff: 0.026,
-    feather: 0.042,
-    res: 84,
-    tag: [0.56, -0.94],
-    print: 0.4,
-    wrinkle: 0,
-  },
-  mousepad: {
-    sdf: (x, y) => sdRoundRect(x, y, 1.3, 0.74, 0.09),
-    bounds: [-1.42, -0.86, 1.42, 0.86],
-    puff: 0.038,
-    feather: 0.052,
-    res: 108,
-    tag: [1.0, -0.5],
-    print: 0.26,
-    wrinkle: 0,
-  },
-};
-
-/**
- * Inflate a 2D SDF into a closed, welded shell.
- *
- * Grid vertices that sit just outside the boundary are projected onto it via
- * two gradient steps, which keeps the silhouette crisp rather than stair-
- * stepped at grid resolution. Front and back share boundary vertices (z == 0
- * there), so mergeVertices welds them into one watertight surface.
- */
-function puffGeometry(shape) {
-  const { sdf, bounds, puff, feather, res, wrinkle = 0 } = shape;
-  const [minX, minY, maxX, maxY] = bounds;
-  const w = maxX - minX;
-  const h = maxY - minY;
-  const nx = res;
-  const ny = Math.max(8, Math.round((res * h) / w));
-  const H = 1e-3;
-
-  const N = (nx + 1) * (ny + 1);
-  const px = new Float32Array(N);
-  const py = new Float32Array(N);
-  const depth = new Float32Array(N); // positive inside
-  const active = new Uint8Array(N);
-
-  for (let j = 0; j <= ny; j++) {
-    for (let i = 0; i <= nx; i++) {
-      const k = j * (nx + 1) + i;
-      const x = minX + (i / nx) * w;
-      const y = minY + (j / ny) * h;
-      const d = sdf(x, y);
-      px[k] = x;
-      py[k] = y;
-      depth[k] = -d;
-      active[k] = d < 0 ? 1 : 0;
-    }
-  }
-
-  // promote near-boundary vertices by projecting them onto the surface
-  const promote = [];
-  for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
-      const a = j * (nx + 1) + i;
-      const b = a + 1;
-      const c = a + nx + 1;
-      const d2 = c + 1;
-      const cell = [a, b, c, d2];
-      const on = cell.reduce((s, k) => s + active[k], 0);
-      if (on === 0 || on === 4) continue;
-      for (const k of cell) if (!active[k]) promote.push(k);
-    }
-  }
-  for (const k of promote) {
-    if (active[k]) continue;
-    let x = px[k],
-      y = py[k];
-    for (let s = 0; s < 2; s++) {
-      const d = sdf(x, y);
-      const gx = (sdf(x + H, y) - sdf(x - H, y)) / (2 * H);
-      const gy = (sdf(x, y + H) - sdf(x, y - H)) / (2 * H);
-      const len = Math.hypot(gx, gy) || 1e-6;
-      x -= (d * gx) / len;
-      y -= (d * gy) / len;
-    }
-    px[k] = x;
-    py[k] = y;
-    depth[k] = 0;
-    active[k] = 1;
-  }
-
-  // vertex buffers: front shell then back shell
-  const frontIdx = new Int32Array(N).fill(-1);
-  const backIdx = new Int32Array(N).fill(-1);
-  const pos = [];
-  const uv = [];
-
-  const profile = (dep) => {
-    const t = clamp01(dep / feather);
-    return puff * Math.sqrt(1 - (1 - t) * (1 - t));
-  };
-
-  for (let k = 0; k < N; k++) {
-    if (!active[k]) continue;
-    const x = px[k],
-      y = py[k];
-    let z = profile(depth[k]);
-    if (wrinkle && z > 0.004) {
-      z +=
-        wrinkle *
-        Math.sin(x * 7.3 + y * 2.1) *
-        Math.sin(y * 5.7 - x * 1.4) *
-        clamp01(depth[k] / feather);
-    }
-    const tx = (x - minX) / w;
-    const ty = (y - minY) / h;
-
-    frontIdx[k] = pos.length / 3;
-    pos.push(x, y, z);
-    uv.push(tx, 0.5 + 0.5 * ty);
-
-    backIdx[k] = pos.length / 3;
-    pos.push(x, y, -z);
-    uv.push(1 - tx, 0.5 * ty);
-  }
-
-  const index = [];
-  for (let j = 0; j < ny; j++) {
-    for (let i = 0; i < nx; i++) {
-      const a = j * (nx + 1) + i;
-      const b = a + 1;
-      const c = a + nx + 1;
-      const d2 = c + 1;
-      if (!(active[a] && active[b] && active[c] && active[d2])) continue;
-      index.push(frontIdx[a], frontIdx[b], frontIdx[d2]);
-      index.push(frontIdx[a], frontIdx[d2], frontIdx[c]);
-      index.push(backIdx[a], backIdx[d2], backIdx[b]);
-      index.push(backIdx[a], backIdx[c], backIdx[d2]);
-    }
-  }
-
-  let geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-  geo.setIndex(index);
-  geo = mergeVertices(geo, 1e-4);
-  geo.computeVertexNormals();
-  geo.computeBoundingSphere();
-  geo.userData.profile = profile;
-  return geo;
-}
-
-// ---------------------------------------------------------------------------
-// procedural textures
-// ---------------------------------------------------------------------------
-
-/** Tiling fabric weave normal map, derived from an analytic height field. */
-function weaveNormalMap() {
-  const S = 64;
-  const c = document.createElement("canvas");
-  c.width = c.height = S;
-  const ctx = c.getContext("2d");
-  const img = ctx.createImageData(S, S);
-  const hAt = (x, y) => {
-    const f = (Math.PI * 2 * 8) / S;
-    return Math.sin(x * f) * 0.5 + Math.sin(y * f) * 0.5 + Math.sin((x + y) * f * 0.5) * 0.18;
-  };
-  for (let y = 0; y < S; y++) {
-    for (let x = 0; x < S; x++) {
-      const gx = hAt(x + 1, y) - hAt(x - 1, y);
-      const gy = hAt(x, y + 1) - hAt(x, y - 1);
-      const nx = -gx * 0.5,
-        ny = -gy * 0.5,
-        nz = 1;
-      const len = Math.hypot(nx, ny, nz);
-      const i = (y * S + x) * 4;
-      img.data[i] = ((nx / len) * 0.5 + 0.5) * 255;
-      img.data[i + 1] = ((ny / len) * 0.5 + 0.5) * 255;
-      img.data[i + 2] = ((nz / len) * 0.5 + 0.5) * 255;
-      img.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(26, 26);
-  return tex;
-}
-
 /** Soft radial falloff used for the contact shadow and floor fade. */
 function radialTexture(inner, outer, stops) {
   const S = 256;
@@ -422,167 +78,21 @@ function sparkTexture() {
 }
 
 /** Deterministic pseudo-QR block art for printed activation codes. */
-function drawCodeBlock(ctx, x, y, size, seed, fg) {
-  const n = 9;
-  const cell = size / n;
-  let s = seed;
-  const rnd = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
-  ctx.fillStyle = fg;
-  for (let j = 0; j < n; j++) {
-    for (let i = 0; i < n; i++) {
-      const finder = (i < 3 && j < 3) || (i > n - 4 && j < 3) || (i < 3 && j > n - 4);
-      if (finder) {
-        const edge =
-          i === 0 ||
-          j === 0 ||
-          i === n - 1 ||
-          j === n - 1 ||
-          (i < 3 && (i === 2 || j === 2)) ||
-          (j < 3 && (i === 2 || j === 2)) ||
-          (i > n - 4 && (i === n - 3 || j === 2)) ||
-          (j > n - 4 && (i === 2 || j === n - 3));
-        if (edge || (i % 2 === 1 && j % 2 === 1))
-          ctx.fillRect(x + i * cell, y + j * cell, cell, cell);
-        continue;
-      }
-      if (rnd() > 0.5) ctx.fillRect(x + i * cell, y + j * cell, cell, cell);
-    }
-  }
-}
-
-// ---------------------------------------------------------------------------
-// product surface painting
-// ---------------------------------------------------------------------------
-
-const TEX_SIZE = 1024;
-
-/**
- * Trim and construction detail, in front-half canvas space.
- * Positions come from the shape's own bounds so a seam lands on the seam.
- */
-function drawTrim(ctx, id, S, ink, bounds) {
-  const half = S / 2; // the front print occupies canvas y 0..half
-  const [minX, minY, maxX, maxY] = bounds;
-  const w = maxX - minX;
-  const h = maxY - minY;
-  const X = (x) => ((x - minX) / w) * S; // shape x -> canvas x
-  const Y = (y) => (1 - (y - minY) / h) * half; // shape y -> canvas y
-
-  ctx.save();
-  ctx.globalAlpha = 0.17;
-  ctx.strokeStyle = ink;
-  ctx.lineWidth = Math.max(2, S * 0.0026);
-  ctx.setLineDash([S * 0.012, S * 0.012]);
-
-  if (id === "tee" || id === "hoodie") {
-    // no drawn collar or hem line: the garment mesh has real rib bands now, and
-    // a painted one on top of them reads as a printed stripe
-    if (id === "hoodie") {
-      // kangaroo pocket
-      ctx.beginPath();
-      ctx.moveTo(X(-0.4), Y(-0.28));
-      ctx.lineTo(X(-0.4), Y(-0.82));
-      ctx.lineTo(X(0.4), Y(-0.82));
-      ctx.lineTo(X(0.4), Y(-0.28));
-      ctx.stroke();
-    }
-  } else if (id === "mousepad" || id === "stickers") {
-    const inset = id === "mousepad" ? 0.055 : 0.05;
-    ctx.beginPath();
-    ctx.roundRect(
-      S * inset,
-      half * inset * 1.2,
-      S * (1 - inset * 2),
-      half * (1 - inset * 2.4),
-      S * 0.014,
-    );
-    ctx.stroke();
-  } else if (id === "keychain") {
-    ctx.beginPath();
-    ctx.roundRect(S * 0.12, half * 0.14, S * 0.76, half * 0.72, S * 0.04);
-    ctx.stroke();
-  }
-  ctx.restore();
-}
-
-/**
- * Repaint the product surface.
- * @returns {HTMLCanvasElement}
- */
-function paintSurface(canvas, opts) {
-  const S = TEX_SIZE;
-  const half = S / 2;
-  canvas.width = canvas.height = S;
-  const ctx = canvas.getContext("2d");
-  const { base, ink, id, decal, decalScale, decalY, hasQr, seed, printW, bounds } = opts;
-
-  ctx.fillStyle = base;
-  ctx.fillRect(0, 0, S, S);
-
-  // gentle top-down light bake so the surface is not flat even before lighting
-  const grad = ctx.createLinearGradient(0, 0, 0, half);
-  grad.addColorStop(0, "rgba(255,255,255,0.03)");
-  grad.addColorStop(0.55, "rgba(255,255,255,0)");
-  grad.addColorStop(1, "rgba(0,0,0,0.14)");
-  for (const yOff of [0, half]) {
-    ctx.save();
-    ctx.translate(0, yOff);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, S, half);
-    ctx.restore();
-  }
-  // The bottom half is the garment's back, and it is also what you see through
-  // a sleeve or a neck opening. Shading it down reads correctly both ways.
-  ctx.save();
-  ctx.globalAlpha = 0.16;
-  ctx.fillStyle = "#000";
-  ctx.fillRect(0, half, S, half);
-  ctx.restore();
-
-  drawTrim(ctx, id, S, ink, bounds || [-1, -1, 1, 1]);
-
-  // printed activation code on the front hem -- a garment label, not a billboard
-  if (hasQr) {
-    const size = S * 0.042;
-    const x = S * 0.5 - size / 2;
-    const y = half * 0.855;
-    ctx.save();
-    ctx.globalAlpha = 0.42;
-    drawCodeBlock(ctx, x, y, size, seed, ink);
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = ink;
-    ctx.font = `500 ${Math.round(S * 0.0105)}px "JetBrains Mono", ui-monospace, monospace`;
-    ctx.textAlign = "center";
-    ctx.letterSpacing = "1.5px";
-    ctx.fillText("ACTIVATED", S * 0.5, y + size * 1.5);
-    ctx.restore();
-  }
-
-  // the creator's mark, front only
-  if (decal && decal.complete && decal.naturalWidth) {
-    const dw = S * (printW || 0.3) * decalScale;
-    const ratio = decal.naturalHeight / decal.naturalWidth || 1;
-    const dh = dw * ratio;
-    const cx = S * 0.5;
-    const cy = half * (0.46 - decalY * 0.28);
-    ctx.save();
-    ctx.globalAlpha = 0.92;
-    try {
-      ctx.drawImage(decal, cx - dw / 2, cy - dh / 2, dw, dh);
-    } catch {
-      /* a tainted or undecodable image simply does not print */
-    }
-    ctx.restore();
-  }
-
-  return canvas;
-}
 
 // ---------------------------------------------------------------------------
 // the studio
 // ---------------------------------------------------------------------------
 
-export function createStudio({ canvas, viewport, onReady, onFail, onActivationStep, onDecalDrag }) {
+export function createStudio({
+  canvas,
+  viewport,
+  onReady,
+  onFail,
+  onActivationStep,
+  onDecalDrag,
+  onProductReady,
+  onModelFail,
+}) {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({
@@ -602,7 +112,10 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
 
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.96;
+  // A baked albedo already carries its own shading, so the stage only has to
+  // light the form. Held under 1 to keep a pale colourway from clipping to
+  // paper-white and losing every fold.
+  renderer.toneMappingExposure = 0.78;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
@@ -628,33 +141,38 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   const pmrem = new THREE.PMREMGenerator(renderer);
   const envRT = pmrem.fromScene(new RoomEnvironment(), 0.035);
   scene.environment = envRT.texture;
-  // kept low so a black colourway still reads black rather than mid-grey
-  scene.environmentIntensity = 0.24;
+  // A baked albedo washed toward a colourway carries its own shading, so the
+  // environment's job here is to light the form rather than to model it. Kept
+  // moderate: too low and a black colourway collapses into the rim lights,
+  // too high and it lifts to mid-grey.
+  scene.environmentIntensity = 0.44;
 
   // key / rim / fill
-  const key = new THREE.DirectionalLight(0xdfe9ff, 1.5);
+  const key = new THREE.DirectionalLight(0xdfe9ff, 1.55);
   key.position.set(2.4, 3.0, 3.4);
   scene.add(key);
 
-  // edge-on rims: short range keeps them on the product, off the floor
-  const rimA = new THREE.PointLight(0x19affe, 30, 10, 2);
+  // Edge-on rims: short range keeps them on the product, off the floor. They
+  // are brand colour on the silhouette, not a light source -- pushed too hard
+  // they tint the whole garment and the colourway stops reading.
+  const rimA = new THREE.PointLight(0x19affe, 13, 5.4, 2);
   rimA.position.set(-3.0, 1.0, 0.5);
   scene.add(rimA);
 
-  const rimB = new THREE.PointLight(0xff37ae, 26, 10, 2);
+  const rimB = new THREE.PointLight(0xff37ae, 10, 5.4, 2);
   rimB.position.set(3.0, -0.3, 0.35);
   scene.add(rimB);
 
   // low back light separates the silhouette from the background
-  const back = new THREE.DirectionalLight(0xbcd2ff, 0.75);
+  const back = new THREE.DirectionalLight(0xbcd2ff, 0.55);
   back.position.set(-0.6, 1.6, -3.0);
   scene.add(back);
 
-  const fill = new THREE.DirectionalLight(0xffffff, 0.3);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.34);
   fill.position.set(-1.6, -1.6, 2.4);
   scene.add(fill);
 
-  scene.add(new THREE.AmbientLight(0x1b2230, 0.95));
+  scene.add(new THREE.AmbientLight(0x1b2230, 0.7));
 
   // ---- stage: floor disc + contact shadow -------------------------------
   const stage = new THREE.Group();
@@ -692,63 +210,23 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   stage.add(contact);
 
   // ---- product ----------------------------------------------------------
-  const weave = weaveNormalMap();
-  const surfaceCanvas = document.createElement("canvas");
-  const surfaceTex = new THREE.CanvasTexture(surfaceCanvas);
-  surfaceTex.colorSpace = THREE.SRGBColorSpace;
-  surfaceTex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
-
-  const fabricMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex,
-    roughness: 0.96,
-    metalness: 0.0,
-    normalMap: weave,
-    normalScale: new THREE.Vector2(0.3, 0.3),
-    sheen: 0.3,
-    sheenRoughness: 0.9,
-    sheenColor: new THREE.Color(0x3d4a5c),
-    side: THREE.DoubleSide,
-  });
-  const enamelMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex,
-    roughness: 0.26,
-    metalness: 0.0,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    side: THREE.DoubleSide,
-  });
-  const printMat = new THREE.MeshPhysicalMaterial({
-    map: surfaceTex,
-    roughness: 0.58,
-    metalness: 0.0,
-    clearcoat: 0.28,
-    clearcoatRoughness: 0.4,
-    normalMap: weave,
-    normalScale: new THREE.Vector2(0.09, 0.09),
-    side: THREE.DoubleSide,
-  });
-  const garmentMat = fabricMat.clone();
-  garmentMat.vertexColors = true;
-
-  const MATERIALS = {
-    tee: garmentMat,
-    hoodie: garmentMat,
-    plush: fabricMat,
-    keychain: enamelMat,
-    stickers: printMat,
-    mousepad: printMat,
-  };
-
+  // The product group holds whatever GLB is currently loaded, plus the
+  // projected artwork and the activation tag. Nothing in here is authored by
+  // this file any more -- it is all swapped wholesale on a product change.
   const product = new THREE.Group();
   stage.add(product);
 
-  const geoCache = new Map();
-  let mesh = null;
-  let ringMesh = null;
-  let currentShape = null;
-  const productParts = [];
+  /** The loaded model: `{ root, meshes, tints, box }` from product.js. */
+  let current = null;
+  /** Discards the result of a load the visitor has already clicked past. */
+  let loadToken = 0;
+  /** Projected artwork groups, one per print, and the safe-area outline. */
+  const decals = [];
+  let zoneGuide = null;
   const tagRay = new THREE.Raycaster();
-  const TAG_DIR = new THREE.Vector3(0, 0, -1);
+  // Scratch vectors shared by the framing and keyboard-orbit helpers.
+  const _off = new THREE.Vector3();
+  const _sph = new THREE.Spherical();
   let homeDist = 5.0;
   const homePos = new THREE.Vector3(0, 0.16, 5.0);
 
@@ -901,7 +379,10 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   // ---- post ------------------------------------------------------------
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.26, 0.6, 0.92);
+  // Threshold high and strength low on purpose: bloom is for the activation
+  // tag and the portal, not for the product. A pale colourway sits just under
+  // it, so a white t-shirt reads as fabric rather than as a light source.
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.17, 0.62, 0.985);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -909,23 +390,89 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   const state = {
     id: "tee",
     base: "#0b0b0f",
-    ink: "#f4f5f8",
-    decal: null,
-    decalScale: 1,
-    decalY: 0,
+    /**
+     * Artwork the creator has placed, in draw order. Each entry is
+     * `{ zone, image, scale, x, y, rot }` where `scale` is a fraction of the
+     * zone and `x`/`y` are nudges within it, -1..1. Prints belong to the
+     * product being viewed; app.js keeps the per-product sets.
+     */
+    prints: [],
+    guideZone: null,
     hasQr: true,
     hasNfc: true,
     showTag: true,
-    seed: 20260916,
   };
 
-  function repaint() {
-    paintSurface(surfaceCanvas, {
-      ...state,
-      printW: currentShape?.print ?? 0.3,
-      bounds: currentShape?.bounds,
-    });
-    surfaceTex.needsUpdate = true;
+  /** Zones available on the product currently loaded. */
+  const zones = () => PRINT_ZONES[state.id] || [];
+  const zoneById = (id) => zones().find((z) => z.id === id) || zones()[0] || null;
+
+  /**
+   * Where the activation tag sits on each product, as fractions of its own
+   * bounding box. The tag is a real object, not paint, so it needs a seat on
+   * the surface -- found by raycasting inward from in front of this point.
+   */
+  const TAG_SPOT = {
+    tee: [0.5, 0.2],
+    hoodie: [0.29, 0.3],
+    cap: [0.5, 0.18],
+    plush: [0.5, 0.1],
+    keychain: [0.5, 0.28],
+    deskmat: [0.86, 0.2],
+  };
+
+  /* ---- artwork ---------------------------------------------------------
+     Artwork is projected, so it has to be rebuilt whenever anything about it
+     or the product changes. Rebuilding is cheap (a few hundred triangles per
+     print) and it is the only way to keep a decal glued to the surface. */
+
+  function clearDecals() {
+    for (const d of decals) {
+      product.remove(d);
+      d.userData.material?.dispose();
+      d.children.forEach((c) => c.geometry.dispose());
+    }
+    decals.length = 0;
+  }
+
+  function rebuildPrints() {
+    clearDecals();
+    if (!current) return;
+    for (const print of state.prints) {
+      const zone = zoneById(print.zone);
+      if (!zone || !print.image?.complete || !print.image.naturalWidth) continue;
+      // The texture is cached on the print so dragging a slider does not
+      // re-upload the same bitmap to the GPU on every frame.
+      if (print.tex?.image !== print.image) {
+        print.tex?.dispose();
+        print.tex = textureFromImage(print.image);
+      }
+      const group = buildDecal(current.meshes, zone, current.box, {
+        texture: print.tex,
+        scale: print.scale ?? 1,
+        offsetX: print.x ?? 0,
+        offsetY: print.y ?? 0,
+        rotation: print.rot ?? 0,
+      });
+      if (group) {
+        product.add(group);
+        decals.push(group);
+      }
+    }
+  }
+
+  function rebuildGuide() {
+    if (zoneGuide) {
+      product.remove(zoneGuide);
+      zoneGuide.geometry.dispose();
+      zoneGuide.material.dispose();
+      zoneGuide = null;
+    }
+    if (!current || !state.guideZone) return;
+    const zone = zoneById(state.guideZone);
+    if (!zone) return;
+    zoneGuide = buildZoneGuide(zone, current.box);
+    product.add(zoneGuide);
   }
 
   /**
@@ -933,8 +480,8 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
    * both well framed without per-product magic numbers.
    */
   function frameProduct() {
-    if (!mesh) return;
-    const box = new THREE.Box3().setFromObject(product);
+    if (!current) return;
+    const box = new THREE.Box3().setFromObject(current.root);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
 
@@ -959,68 +506,37 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     controls.update();
   }
 
-  function setProduct(id) {
-    const shape = SHAPES[id];
-    if (!shape) return;
-    state.id = id;
-    currentShape = shape;
+  /** Swing the camera to a product's hero angle, keeping the framed distance. */
+  function heroView() {
+    const v = HERO_VIEW[state.id] || { az: 0, el: 4 };
+    const el = THREE.MathUtils.degToRad(v.el);
+    const az = THREE.MathUtils.degToRad(v.az);
+    _sph.set(homeDist, Math.PI / 2 - el, az);
+    camera.position.copy(controls.target).add(_off.setFromSpherical(_sph));
+    controls.update();
+  }
 
-    for (const part of productParts) product.remove(part);
-    productParts.length = 0;
-    mesh = null;
-    if (ringMesh) {
-      product.remove(ringMesh);
-      ringMesh.geometry.dispose();
-      ringMesh = null;
-    }
-
-    let built = geoCache.get(id);
-    if (!built) {
-      built = shape.garment
-        ? garmentGeometry(GARMENTS[shape.garment], shape.bounds)
-        : { body: puffGeometry(shape), sleeves: [] };
-      geoCache.set(id, built);
-    }
-
-    const material = MATERIALS[id] || fabricMat;
-    mesh = new THREE.Mesh(built.body, material);
-    product.add(mesh);
-    productParts.push(mesh);
-    for (const sleeveGeo of built.sleeves) {
-      const sleeveMesh = new THREE.Mesh(sleeveGeo, material);
-      product.add(sleeveMesh);
-      productParts.push(sleeveMesh);
-    }
-
-    if (shape.ring) {
-      ringMesh = new THREE.Mesh(
-        new THREE.TorusGeometry(shape.ring.r, shape.ring.tube, 14, 48),
-        new THREE.MeshStandardMaterial({ color: 0xc8ccd6, roughness: 0.22, metalness: 1 }),
-      );
-      ringMesh.position.y = shape.ring.y;
-      product.add(ringMesh);
-      productParts.push(ringMesh);
-    }
-
-    // Place the activation tag on the front surface. Raycasting the built mesh
-    // works for both construction methods, and survives a profile change.
-    product.updateMatrixWorld(true);
-    const [tx, ty] = shape.tag;
-    tagRay.set(new THREE.Vector3(tx, ty, 12), TAG_DIR);
-    const hit = tagRay.intersectObjects(productParts, false)[0];
-    tag.position.set(tx, ty, (hit ? hit.point.z : 0) + 0.01);
-    tag.scale.setScalar(1);
-
-    const box = new THREE.Box3();
-    for (const part of productParts) box.expandByObject(part);
+  /** Reseat the stage, the tag and the cinematic props around a new product. */
+  function stageProduct() {
+    const box = current.box;
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
+
+    const [tu, tv] = TAG_SPOT[state.id] || [0.5, 0.2];
+    const tx = box.min.x + size.x * tu;
+    const ty = box.min.y + size.y * tv;
+    tagRay.set(new THREE.Vector3(tx, ty, box.max.z + size.z), new THREE.Vector3(0, 0, -1));
+    const hit = tagRay.intersectObjects(current.meshes, false)[0];
+    tag.position.set(tx, ty, (hit ? hit.point.z : box.max.z) + 0.012);
+    // The tag is modelled at roughly a real 25mm chip against a 2.2-unit
+    // product, so it scales with the product rather than staying absolute.
+    tag.scale.setScalar(clamp(Math.max(size.x, size.y) / 3.2, 0.45, 1.1));
+
     contact.scale.set(Math.max(size.x, 0.4) / 2.2, Math.max(size.x, 0.4) / 3.4, 1);
     contact.position.y = box.min.y - 0.015;
     floor.position.y = box.min.y - 0.025;
     floor.scale.setScalar(Math.max(0.42, Math.max(size.x, size.y) / 5.6));
 
-    // stage the cinematic around the product's real footprint
     const unit = Math.max(size.x, size.y) / 2.4;
     cineAnchor.unit = unit;
     cineAnchor.center.set(0, center.y, 0);
@@ -1039,15 +555,63 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       -(size.z * 0.5 + 1.5 * unit),
     );
     cineAnchor.portalScale = Math.max(0.5, (size.y * 0.7) / 1.15); // ring radius is 1.15 at scale 1
-
-    repaint();
-    frameProduct();
   }
 
-  function setColor(hex, ink) {
+  /**
+   * Swap in a product. Loading a GLB is asynchronous and a visitor can click
+   * through the whole catalogue faster than one downloads, so every load
+   * carries a token and a stale result is dropped rather than rendered.
+   */
+  async function setProduct(id, url) {
+    if (!url) return;
+    state.id = id;
+    const token = ++loadToken;
+
+    let loaded;
+    try {
+      loaded = await loadProduct(url, { id });
+    } catch (err) {
+      // A missing model must not take the whole studio down with it -- that is
+      // what `onFail` means. The visitor keeps the product they had, and every
+      // other control still works, so this is reported separately.
+      console.warn(`[studio] ${id}: ${err.message}`);
+      onModelFail?.(id, err);
+      return;
+    }
+    if (token !== loadToken) return;
+
+    clearDecals();
+    if (zoneGuide) {
+      product.remove(zoneGuide);
+      zoneGuide = null;
+    }
+    if (current) product.remove(current.root);
+    current = loaded;
+    product.add(current.root);
+
+    applyTint();
+    stageProduct();
+    rebuildPrints();
+    rebuildGuide();
+    frameProduct();
+    heroView();
+    onProductReady?.(id, zones());
+  }
+
+  function applyTint() {
+    if (!current) return;
+    const c = new THREE.Color(state.base);
+    for (const t of current.tints) {
+      t.color.value.copy(c);
+      // Full wash: these albedos are near-greyscale by design, so anything
+      // less leaves a cast of the generated colour under the colourway.
+      t.mix.value = 1;
+    }
+  }
+
+  function setColor(hex) {
     state.base = hex;
-    state.ink = ink;
-    repaint();
+    applyTint();
   }
 
   function setActivation(kind) {
@@ -1055,7 +619,6 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     state.hasQr = kind === "qr" || kind === "both";
     tagBody.visible = state.hasNfc;
     tagGlow.visible = state.hasNfc;
-    repaint();
   }
 
   function setShowTag(on) {
@@ -1063,76 +626,108 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     tag.visible = on;
   }
 
-  function setDecal(img) {
-    state.decal = img;
-    repaint();
-  }
-  function setDecalScale(v) {
-    state.decalScale = v;
-    repaint();
-  }
-  function setDecalY(v) {
-    state.decalY = v;
-    repaint();
+  /** Replace the whole set of prints on the current product. */
+  function setPrints(list) {
+    // Carry cached textures across so re-rendering the same artwork after a
+    // slider move does not churn GPU uploads.
+    const keep = new Map(state.prints.map((p) => [p.image, p.tex]));
+    state.prints = (list || []).map((p) => ({ ...p, tex: keep.get(p.image) || null }));
+    for (const [img, tex] of keep) {
+      if (tex && !state.prints.some((p) => p.image === img)) tex.dispose();
+    }
+    rebuildPrints();
   }
 
-  // ---- decal dragging ---------------------------------------------------
+  /** Show the dashed safe-area outline for a zone, or `null` to hide it. */
+  function setGuide(zoneId) {
+    state.guideZone = zoneId;
+    rebuildGuide();
+  }
+
+  // ---- print dragging ---------------------------------------------------
+  // Dragging works in the zone's own plane rather than in UV space: the
+  // pointer's hit point on the mesh is projected onto the zone's across/up
+  // axes, which gives the same -1..1 offsets the sliders produce. That keeps
+  // the drag honest on a curved surface, where UVs would skew it.
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  let dragging = false;
+  const dragAxes = { across: new THREE.Vector3(), up: new THREE.Vector3() };
+  let dragIndex = -1;
 
-  function uvAt(ev) {
+  function hitAt(ev) {
+    if (!current) return null;
     const r = canvas.getBoundingClientRect();
     ndc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
     ndc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
     ray.setFromCamera(ndc, camera);
-    const hit = productParts.length ? ray.intersectObjects(productParts, false)[0] : null;
-    return hit && hit.uv ? hit.uv : null;
+    return ray.intersectObjects(current.meshes, false)[0] || null;
   }
 
-  /** True when the pointer is over the printed mark on the front face. */
-  function overDecal(uv) {
-    if (!uv || uv.y < 0.5 || !state.decal) return false;
-    const tx = uv.x;
-    const ty = (uv.y - 0.5) * 2;
-    const cx = 0.5;
-    const cy = 0.54 + state.decalY * 0.28;
-    const rx = 0.22 * state.decalScale;
-    const ry = 0.22 * state.decalScale;
-    return Math.abs(tx - cx) < rx && Math.abs(ty - cy) < ry;
+  /** Index of the print whose projected geometry is under the pointer. */
+  function printAt(ev) {
+    if (!current || !decals.length) return -1;
+    const r = canvas.getBoundingClientRect();
+    ndc.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+    ndc.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+    ray.setFromCamera(ndc, camera);
+    // Topmost first: later prints are drawn over earlier ones, so they win.
+    for (let i = decals.length - 1; i >= 0; i--) {
+      if (ray.intersectObject(decals[i], true).length) return i;
+    }
+    return -1;
+  }
+
+  /** Convert a point on the mesh into offsets within the dragged print's zone. */
+  function offsetsFrom(point, print) {
+    const zone = zoneById(print.zone);
+    if (!zone) return null;
+    const r = resolveZone(zone, current.box);
+    const d = point.clone().sub(r.position);
+    const scale = clamp(print.scale ?? 1, 0.1, 1);
+    const maxOff = Math.max(1e-4, 0.5 - scale / 2);
+    return {
+      x: clamp(d.dot(dragAxes.across) / (r.size.x * 2) / maxOff, -1, 1),
+      y: clamp(d.dot(dragAxes.up) / (r.size.y * 2) / maxOff, -1, 1),
+    };
   }
 
   canvas.addEventListener("pointermove", (ev) => {
-    if (dragging) {
-      const uv = uvAt(ev);
-      if (uv && uv.y >= 0.5) {
-        const ty = (uv.y - 0.5) * 2;
-        const v = clamp((ty - 0.54) / 0.28, -1, 1);
-        state.decalY = v;
-        repaint();
-        onDecalDrag?.(v);
-      }
+    if (dragIndex >= 0) {
+      const hit = hitAt(ev);
+      if (!hit) return;
+      const print = state.prints[dragIndex];
+      const off = offsetsFrom(hit.point, print);
+      if (!off) return;
+      print.x = off.x;
+      print.y = off.y;
+      rebuildPrints();
+      onDecalDrag?.(dragIndex, off.x, off.y);
       return;
     }
-    if (!state.decal) {
-      canvas.style.cursor = "";
-      return;
-    }
-    canvas.style.cursor = overDecal(uvAt(ev)) ? "grab" : "";
+    canvas.style.cursor = printAt(ev) >= 0 ? "grab" : "";
   });
 
   canvas.addEventListener("pointerdown", (ev) => {
-    if (!state.decal) return;
-    if (!overDecal(uvAt(ev))) return;
-    dragging = true;
+    const i = printAt(ev);
+    if (i < 0) return;
+    const zone = zoneById(state.prints[i].zone);
+    if (!zone) return;
+    // Cache the zone's axes for the duration of the drag; they cannot change
+    // while a single print is being moved.
+    const r = resolveZone(zone, current.box);
+    const m = new THREE.Matrix4().makeRotationFromEuler(r.orientation);
+    dragAxes.across.setFromMatrixColumn(m, 0);
+    dragAxes.up.setFromMatrixColumn(m, 1);
+
+    dragIndex = i;
     controls.enabled = false;
     canvas.style.cursor = "grabbing";
     canvas.setPointerCapture?.(ev.pointerId);
   });
 
   const endDrag = (ev) => {
-    if (!dragging) return;
-    dragging = false;
+    if (dragIndex < 0) return;
+    dragIndex = -1;
     controls.enabled = true;
     canvas.style.cursor = "";
     canvas.releasePointerCapture?.(ev.pointerId);
@@ -1144,9 +739,6 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
   // The viewport is the centrepiece, so it cannot be pointer-only. Written
   // against the public camera/target only -- OrbitControls' own rotate and
   // dolly helpers are private in r180 and would break on an upgrade.
-  const _off = new THREE.Vector3();
-  const _sph = new THREE.Spherical();
-
   function orbitBy(dTheta, dPhi) {
     _off.copy(camera.position).sub(controls.target);
     _sph.setFromVector3(_off);
@@ -1407,7 +999,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     bloom.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    if (mesh && !act.on) frameProduct();
+    if (current && !act.on) frameProduct();
   }
 
   function frame() {
@@ -1423,8 +1015,10 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       // idle breathing on the tag so it reads as live
       const b = 0.5 + 0.5 * Math.sin(idleTime * 2.1);
       tagGlow.material.opacity = 0.45 + b * 0.5;
-      pulses[0].scale.setScalar(1 + ((idleTime * 0.5) % 1) * 3.2);
-      pulses[0].material.opacity = (1 - ((idleTime * 0.5) % 1)) * 0.28;
+      // A slow, small breath: enough to say "there is a chip here", not enough
+      // to compete with the artwork the creator came to look at.
+      pulses[0].scale.setScalar(1 + ((idleTime * 0.4) % 1) * 1.5);
+      pulses[0].material.opacity = (1 - ((idleTime * 0.4) % 1)) * 0.2;
       pulses[1].material.opacity = 0;
       pulses[2].material.opacity = 0;
     }
@@ -1497,7 +1091,6 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     controls.update();
   }
 
-  setProduct("tee");
   resize();
   start();
   onReady?.();
@@ -1507,9 +1100,10 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
     setColor,
     setActivation,
     setShowTag,
-    setDecal,
-    setDecalScale,
-    setDecalY,
+    setPrints,
+    setGuide,
+    /** The print zones available on the product currently loaded. */
+    zones,
     startActivation,
     stopActivation,
     capture,
@@ -1522,9 +1116,7 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       target: controls.target.toArray(),
       dist: camera.position.distanceTo(controls.target),
       aspect: camera.aspect,
-      boxSize: mesh
-        ? new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3()).toArray()
-        : [0, 0, 0],
+      boxSize: current ? current.box.getSize(new THREE.Vector3()).toArray() : [0, 0, 0],
       phone: cineAnchor.phone,
       phoneVisible: phone.visible,
       phonePos: phone.position.toArray(),
@@ -1535,7 +1127,9 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       particleOpacity: particles.material.opacity,
       productId: state.id,
       baseColor: state.base,
-      hasDecal: !!(state.decal && state.decal.complete && state.decal.naturalWidth),
+      prints: state.prints.map((x) => ({ zone: x.zone, scale: x.scale, x: x.x, y: x.y })),
+      decalParts: decals.reduce((n, d) => n + d.children.length, 0),
+      loaded: !!current,
     }),
     /** Freeze the cinematic at a fixed progress (0-1). Pass null to resume. */
     seek(p) {
@@ -1557,10 +1151,8 @@ export function createStudio({ canvas, viewport, onReady, onFail, onActivationSt
       stop();
       ro.disconnect();
       io.disconnect();
-      geoCache.forEach((g) => {
-        g.body?.dispose();
-        g.sleeves?.forEach((x) => x.dispose());
-      });
+      clearDecals();
+      for (const print of state.prints) print.tex?.dispose();
       envRT.dispose();
       pmrem.dispose();
       composer.dispose();

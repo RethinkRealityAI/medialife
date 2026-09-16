@@ -19,6 +19,7 @@ import {
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
@@ -288,15 +289,44 @@ const cfg = {
   color: COLORWAYS[0].id,
   activation: "both",
   prices: Object.fromEntries(PRODUCTS.map((p) => [p.id, p.price])),
-  mark: "bolt",
+  /**
+   * Artwork, keyed `productId:zoneId` -- one placement per print zone, which is
+   * how a printer quotes a job and how a creator thinks about it ("chest, back
+   * and left sleeve"). The zone chips double as the list of prints, so there is
+   * no separate add-a-print step to learn.
+   *
+   * `src` is a preset mark id or "upload"; `ink` recolours a preset; `scale` is
+   * a fraction of the safe area; `x`/`y` nudge inside it, -1..1; `rot` is
+   * radians.
+   */
+  art: { "tee:chest": { src: "bolt", ink: "auto", scale: 0.72, x: 0, y: 0, rot: 0 } },
+  /** Which zone is being edited, per product. */
+  zone: {},
   markName: "",
-  scale: 1,
-  markY: 0,
-  ink: "auto",
   showTag: true,
+  showGuide: true,
   visits: MODEL.defaults.monthlyVisits,
   attach: MODEL.defaults.attachRate,
 };
+
+/** Default placement for a zone that has not been touched yet. */
+const newArt = (src = "bolt") => ({ src, ink: "auto", scale: 0.72, x: 0, y: 0, rot: 0 });
+
+const artKey = (product, zone) => `${product}:${zone}`;
+
+/** Every placement on a product, in zone order. */
+const artOn = (product) =>
+  Object.entries(cfg.art)
+    .filter(([k]) => k.startsWith(`${product}:`))
+    .map(([k, v]) => ({ zone: k.slice(product.length + 1), ...v }));
+
+const modelUrl = (id) => (byId[id]?.model ? `assets/models/${byId[id].model}` : null);
+
+/** The print zones the current product offers, as the studio reports them. */
+let viewZones = [];
+
+/** The zone currently being edited on the product on screen. */
+const activeZone = () => cfg.zone[cfg.view] || viewZones[0]?.id || null;
 
 const CFG_KEY = "ml-roblox-drop-v1";
 const APP_KEY = "ml-roblox-application-v1";
@@ -309,10 +339,8 @@ function encodeCfg() {
     c: cfg.color,
     a: cfg.activation,
     p: cfg.prices,
-    m: cfg.mark,
-    k: cfg.scale,
-    y: cfg.markY,
-    i: cfg.ink,
+    r: cfg.art,
+    z: cfg.zone,
     v: cfg.visits,
     t: cfg.attach,
   };
@@ -339,10 +367,29 @@ function decodeCfg(str) {
         if (p && Number.isFinite(+v)) cfg.prices[id] = Math.min(Math.max(+v, p.min), p.max);
       }
     }
-    if (typeof o.m === "string") cfg.mark = o.m;
-    if (Number.isFinite(+o.k)) cfg.scale = Math.min(Math.max(+o.k, 0.4), 1.7);
-    if (Number.isFinite(+o.y)) cfg.markY = Math.min(Math.max(+o.y, -1), 1);
-    if (typeof o.i === "string") cfg.ink = o.i;
+    if (o.r && typeof o.r === "object") {
+      cfg.art = {};
+      for (const [key, a] of Object.entries(o.r)) {
+        if (!a || typeof a !== "object") continue;
+        const [product] = key.split(":");
+        if (!byId[product]) continue;
+        cfg.art[key] = {
+          // An uploaded image cannot travel in a link, so a shared build that
+          // used one falls back to a preset rather than showing a blank print.
+          src: typeof a.src === "string" && a.src !== "upload" ? a.src : "bolt",
+          ink: typeof a.ink === "string" ? a.ink : "auto",
+          scale: clamp(+a.scale || 0.72, 0.15, 1),
+          x: clamp(+a.x || 0, -1, 1),
+          y: clamp(+a.y || 0, -1, 1),
+          rot: clamp(+a.rot || 0, -Math.PI, Math.PI),
+        };
+      }
+    }
+    if (o.z && typeof o.z === "object") {
+      for (const [product, zone] of Object.entries(o.z)) {
+        if (byId[product] && typeof zone === "string") cfg.zone[product] = zone;
+      }
+    }
     if (Number.isFinite(+o.v))
       cfg.visits = Math.min(Math.max(+o.v, MODEL.visitsRange.min), MODEL.visitsRange.max);
     if (Number.isFinite(+o.t))
@@ -399,15 +446,25 @@ const sliderFromVisits = (n) => {
 // ---------------------------------------------------------------------------
 const INK_HEX = { light: "#f4f5f8", dark: "#101014", ember: "#ff37ae" };
 
-function inkColor() {
-  if (cfg.ink !== "auto") return INK_HEX[cfg.ink] || "#f4f5f8";
+/** The colour a preset mark prints in, resolving "auto" against the colourway. */
+function inkColor(ink) {
+  if (ink && ink !== "auto") return INK_HEX[ink] || "#f4f5f8";
   const c = COLORWAYS.find((x) => x.id === cfg.color) || COLORWAYS[0];
   return c.ink;
 }
 
-/** Serialize a preset button's inline SVG into a recoloured <img>. */
+/**
+ * Serialize a preset button's inline SVG into a recoloured <img>.
+ *
+ * Results are cached by mark and colour: a placement rebuild happens on every
+ * slider tick, and decoding the same SVG each time would stall the drag.
+ */
+const markCache = new Map();
 function markImage(id, color) {
-  return new Promise((resolve) => {
+  const key = `${id}:${color}`;
+  if (markCache.has(key)) return markCache.get(key);
+
+  const job = new Promise((resolve) => {
     const btn = $(`.mark[data-mark="${id}"]`);
     if (!btn) return resolve(null);
     const svg = btn.querySelector("svg");
@@ -422,22 +479,42 @@ function markImage(id, color) {
     img.onerror = () => resolve(null);
     img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(src)}`;
   });
+  markCache.set(key, job);
+  return job;
 }
 
 // ---------------------------------------------------------------------------
 // studio
 // ---------------------------------------------------------------------------
 let studio = null;
-let uploadedMark = null; // an <img> the visitor supplied, wins over presets
+let uploadedMark = null; // an <img> the visitor supplied
 
-async function applyMark() {
+/**
+ * Resolve every placement on the current product into images the studio can
+ * project, then hand it the whole set. Runs on any artwork change; the studio
+ * caches textures by image, so repeated calls during a slider drag are cheap.
+ */
+async function applyArt() {
   if (!studio) return;
-  if (uploadedMark) {
-    studio.setDecal(uploadedMark);
-    return;
-  }
-  const img = await markImage(cfg.mark, inkColor());
-  studio.setDecal(img);
+  const placements = artOn(cfg.view);
+  const resolved = await Promise.all(
+    placements.map(async (a) => {
+      const image = a.src === "upload" ? uploadedMark : await markImage(a.src, inkColor(a.ink));
+      return image ? { zone: a.zone, image, scale: a.scale, x: a.x, y: a.y, rot: a.rot } : null;
+    }),
+  );
+  studio.setPrints(resolved.filter(Boolean));
+}
+
+function pushStudio() {
+  if (!studio) return;
+  studio.setProduct(cfg.view, modelUrl(cfg.view));
+  const c = COLORWAYS.find((x) => x.id === cfg.color) || COLORWAYS[0];
+  studio.setColor(c.hex);
+  studio.setActivation(cfg.activation);
+  studio.setShowTag(cfg.showTag);
+  studio.setGuide(cfg.showGuide ? activeZone() : null);
+  applyArt();
 }
 
 function syncProductUI() {
@@ -538,18 +615,6 @@ function renderDropSummary(r) {
       : "");
 }
 
-function pushStudio() {
-  if (!studio) return;
-  studio.setProduct(cfg.view);
-  const c = COLORWAYS.find((x) => x.id === cfg.color) || COLORWAYS[0];
-  studio.setColor(c.hex, inkColor());
-  studio.setActivation(cfg.activation);
-  studio.setShowTag(cfg.showTag);
-  studio.setDecalScale(cfg.scale);
-  studio.setDecalY(cfg.markY);
-  applyMark();
-}
-
 const pressGroup = (els, isOn) =>
   els.forEach((el) => el.setAttribute("aria-pressed", isOn(el) ? "true" : "false"));
 
@@ -635,8 +700,9 @@ function initStudioUI() {
       pressGroup(sws, (el) => el.dataset.color === cfg.color);
       Sound.toggle();
       const c = COLORWAYS.find((x) => x.id === cfg.color);
-      studio?.setColor(c.hex, inkColor());
-      applyMark();
+      studio?.setColor(c.hex);
+      // "Auto" ink tracks the colourway, so a preset mark has to be re-rendered.
+      applyArt();
       renderDropSummary();
       saveCfg();
     }),
@@ -670,16 +736,52 @@ function initStudioUI() {
     }),
   );
 
+  // --- artwork: which safe area is being edited -------------------------
+  // The zone chips are also the list of prints on this product: a chip with a
+  // filled dot has artwork in it. That way "add another print" is just
+  // "pick another zone", and there is no second concept to learn.
+  const zoneRow = $("#zoneRow");
+
+  function currentArt() {
+    const z = activeZone();
+    return z ? cfg.art[artKey(cfg.view, z)] || null : null;
+  }
+
+  /** Create or update the placement in the active zone. */
+  function editArt(patch) {
+    const z = activeZone();
+    if (!z) return;
+    const key = artKey(cfg.view, z);
+    cfg.art[key] = { ...(cfg.art[key] || newArt()), ...patch };
+    applyArt();
+    syncArtUI();
+  }
+
+  function removeArt() {
+    const z = activeZone();
+    if (!z) return;
+    delete cfg.art[artKey(cfg.view, z)];
+    applyArt();
+    syncArtUI();
+    saveCfg();
+  }
+
+  zoneRow.addEventListener("click", (ev) => {
+    const chip = ev.target.closest("[data-zone]");
+    if (!chip) return;
+    cfg.zone[cfg.view] = chip.dataset.zone;
+    Sound.tap();
+    studio?.setGuide(cfg.showGuide ? activeZone() : null);
+    syncArtUI();
+    saveCfg();
+  });
+
   // --- preset marks
   const marks = $$(".mark");
   marks.forEach((m) =>
     m.addEventListener("click", () => {
-      cfg.mark = m.dataset.mark;
-      uploadedMark = null;
-      $("#decalPreview").hidden = true;
-      pressGroup(marks, (el) => el.dataset.mark === cfg.mark);
       Sound.tap();
-      applyMark();
+      editArt({ src: m.dataset.mark });
       saveCfg();
     }),
   );
@@ -688,31 +790,68 @@ function initStudioUI() {
   const inks = $$("#inkSeg button");
   inks.forEach((b) =>
     b.addEventListener("click", () => {
-      cfg.ink = b.dataset.ink;
-      pressGroup(inks, (el) => el.dataset.ink === cfg.ink);
       Sound.toggle();
-      applyMark();
+      editArt({ ink: b.dataset.ink });
       saveCfg();
     }),
   );
 
-  // --- scale + position
-  const scale = $("#scaleRange");
-  scale.addEventListener("input", () => {
-    cfg.scale = +scale.value / 100;
-    $("#scaleLabel").textContent = `${scale.value}%`;
-    studio?.setDecalScale(cfg.scale);
-  });
-  scale.addEventListener("change", saveCfg);
+  // --- size, rotation and nudge within the safe area
+  // Every one of these is a fraction of the zone, never an absolute size, so a
+  // print that fits on the chest also fits on a keychain charm.
+  const bindArtRange = (sel, key, format, transform = (v) => v) => {
+    const input = $(sel);
+    if (!input) return input;
+    input.addEventListener("input", () => {
+      const v = transform(+input.value);
+      const label = $(`${sel}Label`) || $(`${sel.replace("Range", "Label")}`);
+      if (label) label.textContent = format(+input.value);
+      const z = activeZone();
+      if (!z) return;
+      const k = artKey(cfg.view, z);
+      cfg.art[k] = { ...(cfg.art[k] || newArt()), [key]: v };
+      applyArt();
+    });
+    input.addEventListener("change", saveCfg);
+    return input;
+  };
 
-  const pos = $("#posRange");
-  const posLabel = (v) => (v > 25 ? "High" : v < -25 ? "Low" : "Centre");
-  pos.addEventListener("input", () => {
-    cfg.markY = +pos.value / 100;
-    $("#posLabel").textContent = posLabel(+pos.value);
-    studio?.setDecalY(cfg.markY);
-  });
-  pos.addEventListener("change", saveCfg);
+  bindArtRange(
+    "#scaleRange",
+    "scale",
+    (v) => `${v}%`,
+    (v) => v / 100,
+  );
+  bindArtRange(
+    "#rotRange",
+    "rot",
+    (v) => `${v}°`,
+    (v) => (v * Math.PI) / 180,
+  );
+  bindArtRange(
+    "#acrossRange",
+    "x",
+    (v) => nudgeLabel(v, "Left", "Right"),
+    (v) => v / 100,
+  );
+  bindArtRange(
+    "#upRange",
+    "y",
+    (v) => nudgeLabel(v, "Down", "Up"),
+    (v) => v / 100,
+  );
+
+  // --- safe-area outline
+  const guides = $$("#guideSeg button");
+  guides.forEach((b) =>
+    b.addEventListener("click", () => {
+      cfg.showGuide = b.dataset.guide === "on";
+      pressGroup(guides, (el) => (el.dataset.guide === "on") === cfg.showGuide);
+      Sound.toggle();
+      studio?.setGuide(cfg.showGuide ? activeZone() : null);
+      saveCfg();
+    }),
+  );
 
   // --- upload
   const file = $("#fileInput");
@@ -739,10 +878,23 @@ function initStudioUI() {
 
   $("#btnClearDecal").addEventListener("click", () => {
     uploadedMark = null;
-    $("#decalPreview").hidden = true;
     cfg.markName = "";
-    applyMark();
-    toast("Mark removed.");
+    $("#decalPreview").hidden = true;
+    // Any placement still pointing at the upload falls back to a preset rather
+    // than silently vanishing from the product.
+    for (const [key, a] of Object.entries(cfg.art)) {
+      if (a.src === "upload") cfg.art[key] = { ...a, src: "bolt" };
+    }
+    applyArt();
+    syncArtUI();
+    saveCfg();
+    toast("Your artwork was removed.");
+  });
+
+  $("#btnRemoveArt").addEventListener("click", () => {
+    removeArt();
+    Sound.tap();
+    toast("Print removed from this area.");
   });
 
   // --- numbers
@@ -779,11 +931,11 @@ function initStudioUI() {
     cfg.color = COLORWAYS[0].id;
     cfg.activation = "both";
     cfg.prices = Object.fromEntries(PRODUCTS.map((p) => [p.id, p.price]));
-    cfg.mark = "bolt";
-    cfg.scale = 1;
-    cfg.markY = 0;
-    cfg.ink = "auto";
+    cfg.art = { "tee:chest": newArt() };
+    cfg.zone = {};
+    cfg.markName = "";
     cfg.showTag = true;
+    cfg.showGuide = true;
     cfg.visits = MODEL.defaults.monthlyVisits;
     cfg.attach = MODEL.defaults.attachRate;
     uploadedMark = null;
@@ -832,9 +984,18 @@ function readMark(f) {
       $("#decalImg").src = img.src;
       $("#decalName").textContent = f.name;
       $("#decalPreview").hidden = false;
-      studio?.setDecal(img);
+      // The upload lands in whichever safe area is open, which is what the
+      // visitor was looking at when they dropped the file.
+      const z = activeZone();
+      if (z) {
+        const key = artKey(cfg.view, z);
+        cfg.art[key] = { ...(cfg.art[key] || newArt()), src: "upload" };
+      }
+      applyArt();
+      syncArtUI();
+      saveCfg();
       Sound.drop();
-      toast("Mark added. Drag it on the product to reposition.");
+      toast("Artwork placed. Drag it on the product to reposition.");
     };
     img.onerror = () => toast("That image could not be read.");
     // an SVG with no intrinsic size will not draw without explicit dimensions
@@ -846,21 +1007,80 @@ function readMark(f) {
   reader.readAsDataURL(f);
 }
 
+/** Where a nudge slider has been pushed, described rather than numbered. */
+function nudgeLabel(v, low, high) {
+  if (v > 25) return high;
+  if (v < -25) return low;
+  return "Centre";
+}
+
+/**
+ * Redraw the artwork panel for the product and safe area currently open.
+ *
+ * The zone chips carry a filled dot when that area already has a print, so
+ * they double as the list of what is on this product.
+ */
+function syncArtUI() {
+  const row = $("#zoneRow");
+  if (!row) return;
+
+  const active = activeZone();
+  row.innerHTML = viewZones
+    .map((z) => {
+      const has = !!cfg.art[artKey(cfg.view, z.id)];
+      return `<button type="button" class="zone-chip tap${has ? " has-art" : ""}"
+        data-zone="${z.id}" aria-pressed="${z.id === active ? "true" : "false"}">
+        <span class="zone-dot"></span>${z.label}</button>`;
+    })
+    .join("");
+
+  const a = active ? cfg.art[artKey(cfg.view, active)] : null;
+  const panel = $("#artControls");
+  const empty = $("#artEmpty");
+  if (panel) panel.hidden = !a;
+  if (empty) empty.hidden = !!a;
+
+  const label = viewZones.find((z) => z.id === active)?.label || "";
+  const target = $("#artZoneName");
+  if (target) target.textContent = label;
+
+  const placed = viewZones.filter((z) => cfg.art[artKey(cfg.view, z.id)]).length;
+  const count = $("#printCount");
+  if (count) {
+    count.textContent = placed === 0 ? "None yet" : placed === 1 ? "1 print" : `${placed} prints`;
+  }
+
+  pressGroup($$(".mark"), (el) => !!a && el.dataset.mark === a.src);
+  pressGroup($$("#inkSeg button"), (el) => !!a && el.dataset.ink === a.ink);
+
+  if (!a) return;
+  const set = (sel, value, text) => {
+    const input = $(sel);
+    if (input) input.value = value;
+    const out = $(sel.replace("Range", "Label"));
+    if (out) out.textContent = text;
+  };
+  const scalePct = Math.round((a.scale ?? 0.72) * 100);
+  const rotDeg = Math.round(((a.rot ?? 0) * 180) / Math.PI);
+  const xPct = Math.round((a.x ?? 0) * 100);
+  const yPct = Math.round((a.y ?? 0) * 100);
+  set("#scaleRange", scalePct, `${scalePct}%`);
+  set("#rotRange", rotDeg, `${rotDeg}°`);
+  set("#acrossRange", xPct, nudgeLabel(xPct, "Left", "Right"));
+  set("#upRange", yPct, nudgeLabel(yPct, "Down", "Up"));
+}
+
 /** Push cfg into every control (used on load, restore and reset). */
 function hydrateControls() {
   pressGroup($$(".sw"), (el) => el.dataset.color === cfg.color);
   pressGroup($$("#actSeg button"), (el) => el.dataset.activation === cfg.activation);
   pressGroup($$("#tagSeg button"), (el) => (el.dataset.tag === "on") === cfg.showTag);
-  pressGroup($$(".mark"), (el) => el.dataset.mark === cfg.mark);
-  pressGroup($$("#inkSeg button"), (el) => el.dataset.ink === cfg.ink);
+  pressGroup($$("#guideSeg button"), (el) => (el.dataset.guide === "on") === cfg.showGuide);
 
   $("#actBlurb").textContent = ACTIVATIONS.find((a) => a.id === cfg.activation)?.blurb || "";
   $("#tagState").textContent = cfg.showTag ? "On" : "Off";
   $("#vpTagPill").hidden = !cfg.showTag;
-  $("#scaleRange").value = Math.round(cfg.scale * 100);
-  $("#scaleLabel").textContent = `${Math.round(cfg.scale * 100)}%`;
-  $("#posRange").value = Math.round(cfg.markY * 100);
-  $("#posLabel").textContent = cfg.markY > 0.25 ? "High" : cfg.markY < -0.25 ? "Low" : "Centre";
+  syncArtUI();
   $("#visitsRange").value = sliderFromVisits(cfg.visits);
   $("#attachRange").value = Math.round(cfg.attach * 10000);
 
@@ -1344,7 +1564,15 @@ function initApply() {
       skus: a.map((p) => ({ id: p.id, name: p.name, price: p.price })),
       colourway: cfg.color,
       activation: cfg.activation,
-      mark: cfg.markName || cfg.mark,
+      artwork: cfg.markName || "presets",
+      prints: PRODUCTS.flatMap((p) =>
+        artOn(p.id).map((a) => ({
+          product: p.id,
+          zone: a.zone,
+          art: a.src === "upload" ? cfg.markName || "uploaded artwork" : a.src,
+          sizePctOfSafeArea: Math.round((a.scale ?? 0.72) * 100),
+        })),
+      ),
       modelled: {
         visits: cfg.visits,
         attachRate: cfg.attach,
@@ -1469,10 +1697,21 @@ function boot() {
         onReady: () => msg.classList.add("is-gone"),
         onFail: failStudio,
         onActivationStep,
-        onDecalDrag: (v) => {
-          cfg.markY = v;
-          $("#posRange").value = Math.round(v * 100);
-          $("#posLabel").textContent = v > 0.25 ? "High" : v < -0.25 ? "Low" : "Centre";
+        onProductReady: (id, zones) => {
+          viewZones = zones;
+          syncArtUI();
+        },
+        onModelFail: (id) => {
+          toast(`The 3D model for the ${byId[id]?.name || id} could not load.`);
+        },
+        onDecalDrag: (index, x, y) => {
+          const a = artOn(cfg.view)[index];
+          if (!a) return;
+          const key = artKey(cfg.view, a.zone);
+          if (!cfg.art[key]) return;
+          cfg.art[key].x = x;
+          cfg.art[key].y = y;
+          syncArtUI();
         },
       });
       if (!instance) {

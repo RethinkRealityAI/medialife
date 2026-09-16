@@ -3,16 +3,30 @@
  *
  * Two passes, in this order:
  *
- * 1. **Repair.** Generated models arrive with projection artefacts baked into
- *    the base colour atlas — black smears where the source photo's silhouette
- *    edge bled across island borders. On the model those land along the hem,
- *    cuffs and neckline. The albedo is supposed to be blank fabric, so any
- *    texel far darker than plausible fabric shading is an artefact: lifting the
- *    black point removes them and leaves the real shading alone.
+ * 1. **Flatten the base colour.** A generated model's albedo is not the blank
+ *    fabric the prompt asked for. Meshy bakes hallucinated detail into it --
+ *    ghost lettering across the chest, seam smears along the hem, a colour cast
+ *    from whatever the generator imagined the material to be -- however firmly
+ *    the prompt says "completely blank, no print, no text, no logos".
+ *
+ *    None of that can ship on a product a creator is about to put their own
+ *    artwork on. So the atlas is reduced to the one thing it is genuinely good
+ *    for, which is the low-frequency shading of the folds: greyscale to drop the
+ *    colour cast, a blur to erase the fine hallucinated detail while leaving the
+ *    broad shading intact, then a remap into a narrow band near white so the
+ *    colourway wash in product.js lands on clean fabric.
+ *
+ *    Metallic-roughness maps carry the same garbage, and a stray metal texel in
+ *    a dark studio renders as a mirror of nothing. Nothing in this catalogue is
+ *    metal, so that channel is dropped outright.
  *
  * 2. **Optimise.** glTF-Transform, same recipe as the AiroHub asset pipeline:
- *    meshopt-compressed geometry and WebP textures. A raw Meshy GLB is 3–9 MB;
+ *    meshopt-compressed geometry and WebP textures. A raw Meshy GLB is 2-4 MB;
  *    this lands them in the low hundreds of KB.
+ *
+ * Models authored elsewhere (the AiroHub hoodie and cap) already have clean
+ * albedo plus real normal maps and are committed as-is -- they are not in
+ * assets-src/ and this script never sees them.
  *
  *   node scripts/optimize-models.mjs [--force] [--only tee,plush]
  */
@@ -22,6 +36,8 @@ import { promisify } from "node:util";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NodeIO } from "@gltf-transform/core";
+import { ALL_EXTENSIONS } from "@gltf-transform/extensions";
+import { MeshoptDecoder } from "meshoptimizer";
 import sharp from "sharp";
 
 const run = promisify(execFile);
@@ -33,51 +49,50 @@ const onlyArg = process.argv.indexOf("--only");
 const only = onlyArg > -1 ? process.argv[onlyArg + 1].split(",") : null;
 
 /**
- * Lift the black point of a base colour map.
+ * Reduce a base colour atlas to shading alone.
  *
- * `floor` is where pure black lands, 0–255. Legitimate fabric shading in these
- * atlases sits around 140–245, and the artefacts sit under 50, so a floor
- * around 110 erases them while barely touching real shading. The slope keeps
- * the white point where it was.
+ * `sigma` is the blur radius in texels at 1024: large enough to erase baked
+ * lettering and seam smears, small enough to leave the fold shading readable.
+ * The remap puts pure black at `floor` and keeps the white point, so no texel
+ * ever goes dark enough to read as dirt on a pale colourway.
  */
-async function repairBaseColor(buffer, { floor = 110 } = {}) {
-  const slope = (255 - floor) / 255;
+async function flattenBaseColor(buffer, { sigma = 7, floor = 150 } = {}) {
   return sharp(buffer)
-    .linear(slope, floor)
-    // A light median pass knocks out the single-texel speckle the smears leave
-    // behind without softening the atlas into mush.
-    .median(3)
+    .greyscale()
+    .blur(sigma)
+    .linear((255 - floor) / 255, floor)
+    .png()
     .toBuffer();
 }
 
-const io = new NodeIO();
+const io = new NodeIO()
+  .registerExtensions(ALL_EXTENSIONS)
+  .registerDependencies({ "meshopt.decoder": MeshoptDecoder });
 
-/** Rewrite every base colour texture in a GLB through the repair pass. */
-async function repairModel(srcPath, tmpPath) {
+/** Rewrite every base colour texture in a GLB through the flatten pass. */
+async function flattenModel(srcPath, tmpPath) {
   const doc = await io.read(srcPath);
-  const repaired = new Set();
+  const done = new Set();
   let count = 0;
 
   for (const material of doc.getRoot().listMaterials()) {
     const tex = material.getBaseColorTexture();
-    if (!tex || repaired.has(tex)) continue;
-    repaired.add(tex);
-    const image = tex.getImage();
-    if (!image) continue;
-    try {
-      const out = await repairBaseColor(Buffer.from(image));
-      tex.setImage(new Uint8Array(out));
-      tex.setMimeType("image/png");
-      count++;
-    } catch (err) {
-      console.warn(`  ! could not repair a texture: ${err.message}`);
+    if (tex && !done.has(tex)) {
+      done.add(tex);
+      const image = tex.getImage();
+      if (image) {
+        try {
+          const out = await flattenBaseColor(Buffer.from(image));
+          tex.setImage(new Uint8Array(out)).setMimeType("image/png");
+          count++;
+        } catch (err) {
+          console.warn(`  ! could not flatten a texture: ${err.message}`);
+        }
+      }
     }
-    // Metallic-roughness maps carry the same garbage, and a metal texel in a
-    // dark studio renders as a mirror of nothing. None of this catalogue is
-    // metal, so the channel is dropped outright.
     material.setMetallicRoughnessTexture(null);
     material.setMetallicFactor(0);
-    material.setRoughnessFactor(0.82);
+    material.setRoughnessFactor(0.88);
   }
 
   await io.write(tmpPath, doc);
@@ -100,7 +115,7 @@ for (const file of entries) {
 
   const src = path.join(RAW_DIR, file);
   const dest = path.join(OUT_DIR, file);
-  const tmp = path.join(RAW_DIR, `.${id}.repaired.glb`);
+  const tmp = path.join(RAW_DIR, `.${id}.flat.glb`);
 
   if (!force) {
     try {
@@ -117,7 +132,7 @@ for (const file of entries) {
 
   const before = (await fs.stat(src)).size;
   try {
-    const fixed = await repairModel(src, tmp);
+    const flattened = await flattenModel(src, tmp);
     await run(
       "npx",
       [
@@ -125,23 +140,31 @@ for (const file of entries) {
         "optimize",
         tmp,
         dest,
-        "--compress", "meshopt",
-        "--texture-compress", "webp",
-        "--texture-size", "1024",
-        "--simplify", "true",
-        "--simplify-ratio", "0.7",
+        "--compress",
+        "meshopt",
+        "--texture-compress",
+        "webp",
+        "--texture-size",
+        "1024",
+        "--simplify",
+        "true",
+        "--simplify-ratio",
+        "0.75",
         // Locked borders stop simplification tearing holes in open shells such
         // as a hem, a cuff or a neckline.
-        "--simplify-lock-border", "true",
-        "--join", "true",
-        "--flatten", "true",
+        "--simplify-lock-border",
+        "true",
+        "--join",
+        "true",
+        "--flatten",
+        "true",
       ],
       { maxBuffer: 64 * 1024 * 1024 },
     );
     const after = (await fs.stat(dest)).size;
     const pct = (100 * (1 - after / before)).toFixed(0);
     console.log(
-      `✓ ${id}: ${(before / 1048576).toFixed(2)} MB → ${(after / 1024).toFixed(0)} KB (-${pct}%), ${fixed} texture(s) repaired`,
+      `✓ ${id}: ${(before / 1048576).toFixed(2)} MB → ${(after / 1024).toFixed(0)} KB (-${pct}%), ${flattened} texture(s) flattened`,
     );
     results.push({ id, bytes: after });
   } catch (err) {

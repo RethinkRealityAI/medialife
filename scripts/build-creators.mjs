@@ -93,9 +93,7 @@ const GLYPH = {
     '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="8" r="3.6" stroke="currentColor" stroke-width="1.4"/><rect x="9.5" y="13.5" width="13" height="13" rx="3.4" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="20" r="2.2" stroke="currentColor" stroke-width="1.4"/></svg>',
   plush:
     '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><circle cx="16" cy="18" r="8" stroke="currentColor" stroke-width="1.4"/><circle cx="8.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><circle cx="23.5" cy="9.5" r="3.6" stroke="currentColor" stroke-width="1.4"/><path d="M13.5 17h.01M18.5 17h.01" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
-  stickers:
-    '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M6 8.5A2.5 2.5 0 0 1 8.5 6h11A2.5 2.5 0 0 1 22 8.5v8L16 22H8.5A2.5 2.5 0 0 1 6 19.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M22 16.5h-4.5a1.5 1.5 0 0 0-1.5 1.5V22" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M11 25.5h12A2.5 2.5 0 0 0 25.5 23V12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" opacity=".5"/></svg>',
-  mousepad:
+  deskmat:
     '<svg class="glyph" viewBox="0 0 32 32" fill="none" aria-hidden="true"><rect x="3.5" y="10" width="25" height="12" rx="3" stroke="currentColor" stroke-width="1.4"/><rect x="18" y="13" width="5" height="6.5" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M20.5 14.5v1.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
 };
 
@@ -202,13 +200,15 @@ function stepsSection() {
         <h2>Two things from you. We do the rest.</h2>
       </div>
       <ol class="steps-flow">
-        ${STEPS.map((st, i) => `
+        ${STEPS.map(
+          (st, i) => `
         <li class="step-card glass glass-sheen card--hover rv rv-d${i}">
           <span class="step-n">${e(st.n)}</span>
           <span class="step-owner${st.owner === "You" ? " is-you" : ""}">${e(st.owner)}</span>
           <h3>${e(st.title)}</h3>
           <p>${e(st.body)}</p>
-        </li>`).join("")}
+        </li>`,
+        ).join("")}
       </ol>
       <p class="tiny rv" style="margin-top:20px;max-width:64ch">No artwork yet? Our design team builds it
       with you from your characters, your logo and your in-game look. Plenty of creators arrive with
@@ -228,14 +228,16 @@ function loopSection() {
         door back into your game, and it tells you every time someone walks through it.</p>
       </div>
       <div class="loop" id="loopTrack">
-        ${LOOP.map((st, i) => `
+        ${LOOP.map(
+          (st, i) => `
         <article class="loop-step rv rv-d${i}" data-step="${i}">
           <i class="bar"></i>
           ${[ICON.shirt, ICON.scan, ICON.game, ICON.portal][i]}
           <span class="n">${e(st.n)}</span>
           <h3>${e(st.title)}</h3>
           <p>${e(st.body)}</p>
-        </article>`).join("")}
+        </article>`,
+        ).join("")}
       </div>
     </div>
   </section>`;
@@ -383,7 +385,7 @@ function studioSection() {
                 <div class="spin" id="vpSpin"></div>
                 <p class="mono" id="vpMsgText">Loading studio</p>
                 <div id="studioFallback">
-                  <img src="assets/img/merch-flatlay.webp" alt="The six Activated Merchandise product categories laid out on a dark surface: t-shirt, hoodie, keychain, plush, stickers and deskmat." width="1920" height="1080" />
+                  <img src="assets/img/merch-flatlay.webp" alt="The Activated Merchandise product categories laid out on a dark surface: t-shirt, hoodie, snapback, keychain, vinyl figure and deskmat." width="1920" height="1080" />
                   <p class="sub" style="max-width:36ch;margin-inline:auto">Your browser could not start the 3D studio. Every option is still available in the panel — and your selections still carry into the application.</p>
                 </div>
               </div>
@@ -394,7 +396,7 @@ function studioSection() {
           <div class="panel">
             <div class="panel-tabs" role="tablist" aria-label="Drop studio controls">
               <button role="tab" id="tab-build" aria-controls="tp-build" aria-selected="true">Build</button>
-              <button role="tab" id="tab-brand" aria-controls="tp-brand" aria-selected="false">Brand</button>
+              <button role="tab" id="tab-brand" aria-controls="tp-brand" aria-selected="false">Artwork</button>
               <button role="tab" id="tab-numbers" aria-controls="tp-numbers" aria-selected="false">Numbers</button>
             </div>
 
@@ -438,22 +440,32 @@ function studioSection() {
                 </div>
               </div>
 
-              <!-- BRAND -->
+              <!-- ARTWORK -->
               <div class="tabpanel" role="tabpanel" id="tp-brand" aria-labelledby="tab-brand" hidden>
                 <div class="field">
-                  <span class="field-label">Your mark</span>
+                  <span class="field-label">Print area <span class="v" id="printCount">1 print</span></span>
+                  <div class="zone-row" id="zoneRow" role="group" aria-label="Choose which print area to work on"></div>
+                  <p class="tiny" style="margin-top:10px">Each area is a real safe area — the space a
+                  printer can actually reproduce on that product. Put artwork in as many as you like.</p>
+                </div>
+
+                <p class="tiny" id="artEmpty" hidden style="color:var(--muted-foreground)">
+                  Nothing printed in this area yet. Upload your artwork or pick a preset below to add it.</p>
+
+                <div class="field">
+                  <span class="field-label">Your artwork</span>
                   <div class="dropzone" id="dropzone">
-                    <button type="button" class="btn btn--sm" id="btnUpload">Upload your icon</button>
+                    <button type="button" class="btn btn--sm tap" id="btnUpload">Upload your artwork</button>
                     <p>PNG or SVG, transparent background.<br />Drag and drop works too.</p>
                     <input type="file" id="fileInput" accept="image/png,image/svg+xml,image/jpeg,image/webp" hidden />
                   </div>
                   <p class="tiny" style="margin-top:10px"><b style="color:var(--muted-foreground)">Nothing is uploaded.</b>
                   Your image is read in the browser and never leaves this device.</p>
                   <div class="decal-preview" id="decalPreview" hidden>
-                    <img id="decalImg" alt="Preview of the mark you added" />
+                    <img id="decalImg" alt="Preview of the artwork you added" />
                     <div style="flex:1;min-width:0">
                       <div class="tiny" id="decalName" style="color:var(--muted-foreground);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
-                      <button type="button" class="btn btn--sm btn--ghost" id="btnClearDecal" style="margin-top:7px">Remove</button>
+                      <button type="button" class="btn btn--sm btn--ghost tap" id="btnClearDecal" style="margin-top:7px">Remove</button>
                     </div>
                   </div>
                 </div>
@@ -463,24 +475,54 @@ function studioSection() {
                   <div class="mark-grid">${presetMarks}</div>
                 </div>
 
-                <div class="field">
-                  <span class="field-label">Mark scale <span class="v" id="scaleLabel">100%</span></span>
-                  <input type="range" class="range" id="scaleRange" min="40" max="170" step="1" value="100" aria-label="Scale of the mark on the product" />
-                </div>
+                <div id="artControls">
+                  <div class="field">
+                    <span class="field-label">Placement in <b id="artZoneName" style="color:var(--foreground);font-weight:500">the front chest</b></span>
+                    <div class="art-grid">
+                      <label class="art-ctl">
+                        <span>Size <i class="v" id="scaleLabel">72%</i></span>
+                        <input type="range" class="range" id="scaleRange" min="15" max="100" step="1" value="72"
+                               aria-label="Artwork size, as a percentage of the safe area" />
+                      </label>
+                      <label class="art-ctl">
+                        <span>Rotate <i class="v" id="rotLabel">0°</i></span>
+                        <input type="range" class="range" id="rotRange" min="-180" max="180" step="1" value="0"
+                               aria-label="Artwork rotation in degrees" />
+                      </label>
+                      <label class="art-ctl">
+                        <span>Across <i class="v" id="acrossLabel">Centre</i></span>
+                        <input type="range" class="range" id="acrossRange" min="-100" max="100" step="1" value="0"
+                               aria-label="Move the artwork left or right inside the safe area" />
+                      </label>
+                      <label class="art-ctl">
+                        <span>Up <i class="v" id="upLabel">Centre</i></span>
+                        <input type="range" class="range" id="upRange" min="-100" max="100" step="1" value="0"
+                               aria-label="Move the artwork up or down inside the safe area" />
+                      </label>
+                    </div>
+                    <p class="tiny" style="margin-top:12px">Artwork is clamped to the safe area, so it
+                    cannot run off the edge. You can also drag it directly on the product.</p>
+                  </div>
 
-                <div class="field">
-                  <span class="field-label">Mark height <span class="v" id="posLabel">Centre</span></span>
-                  <input type="range" class="range" id="posRange" min="-100" max="100" step="1" value="0" aria-label="Vertical position of the mark on the product" />
-                  <p class="tiny" style="margin-top:10px">You can also drag the mark directly on the product.</p>
-                </div>
+                  <div class="field">
+                    <span class="field-label">Artwork colour</span>
+                    <div class="seg seg-glass" id="inkSeg">
+                      <button type="button" data-ink="auto" aria-pressed="true">Auto</button>
+                      <button type="button" data-ink="light" aria-pressed="false">Light</button>
+                      <button type="button" data-ink="dark" aria-pressed="false">Dark</button>
+                      <button type="button" data-ink="ember" aria-pressed="false">Ember</button>
+                    </div>
+                    <p class="tiny" style="margin-top:10px">Applies to preset marks. Uploaded artwork
+                    prints exactly as you supplied it.</p>
+                  </div>
 
-                <div class="field">
-                  <span class="field-label">Mark colour</span>
-                  <div class="seg" id="inkSeg">
-                    <button type="button" data-ink="auto" aria-pressed="true">Auto</button>
-                    <button type="button" data-ink="light" aria-pressed="false">Light</button>
-                    <button type="button" data-ink="dark" aria-pressed="false">Dark</button>
-                    <button type="button" data-ink="ember" aria-pressed="false">Ember</button>
+                  <div class="field">
+                    <span class="field-label">Safe area outline</span>
+                    <div class="seg seg-glass" id="guideSeg">
+                      <button type="button" data-guide="on" aria-pressed="true">Show</button>
+                      <button type="button" data-guide="off" aria-pressed="false">Hide</button>
+                    </div>
+                    <button type="button" class="btn btn--sm btn--ghost tap" id="btnRemoveArt" style="margin-top:14px">Remove this print</button>
                   </div>
                 </div>
               </div>

@@ -120,12 +120,47 @@ export const PRINT_ZONES = {
     { id: "back", label: "Back", face: "back", u: 0.5, v: 0.46, w: 0.4, h: 0.26 },
   ],
   cap: [
-    { id: "front", label: "Front panel", face: "front", u: 0.5, v: 0.6, w: 0.34, h: 0.26 },
-    { id: "side", label: "Side panel", face: "right", u: 0.5, v: 0.6, w: 0.2, h: 0.16 },
+    // The brim occupies the lower third of the bounding box, so the front panel
+    // has to sit well above box centre or the artwork lands on the peak.
+    { id: "front", label: "Front panel", face: "front", u: 0.5, v: 0.78, w: 0.3, h: 0.22 },
+    { id: "side", label: "Side panel", face: "right", u: 0.45, v: 0.78, w: 0.18, h: 0.14 },
   ],
-  keychain: [{ id: "face", label: "Charm face", face: "front", u: 0.5, v: 0.45, w: 0.6, h: 0.6 }],
-  stickers: [{ id: "sheet", label: "Sheet", face: "front", u: 0.5, v: 0.5, w: 0.78, h: 0.78 }],
-  deskmat: [{ id: "surface", label: "Surface", face: "top", u: 0.5, v: 0.5, w: 0.7, h: 0.6 }],
+  // The charm hangs below its split ring, so the printable face is the lower
+  // two thirds of the bounding box, not its middle.
+  keychain: [{ id: "face", label: "Charm face", face: "front", u: 0.5, v: 0.36, w: 0.62, h: 0.42 }],
+  deskmat: [{ id: "surface", label: "Surface", face: "front", u: 0.5, v: 0.5, w: 0.7, h: 0.62 }],
+};
+
+/**
+ * Where the camera should sit when a product is first shown, as an orbit around
+ * it: `az` is degrees from straight-on, `el` is degrees above the horizon.
+ *
+ * A generated model has no canonical "hero angle", and a fixed front-on camera
+ * is wrong for half a catalogue: a deskmat lying flat is an edge-on sliver from
+ * the front, and a cap with a flat brim shows nothing but the brim. So each
+ * product names the angle that reads as its own product shot.
+ */
+export const HERO_VIEW = {
+  tee: { az: 0, el: 4 },
+  hoodie: { az: 0, el: 4 },
+  cap: { az: 16, el: 9 },
+  plush: { az: 12, el: 6 },
+  keychain: { az: 10, el: 6 },
+  deskmat: { az: 10, el: 14 },
+};
+
+/**
+ * Yaw correction, in radians, applied on load.
+ *
+ * A generated model has no agreed forward axis -- the cap came back facing -X
+ * while everything else faces +Z. Rather than redefine every print zone against
+ * each model's own idea of front, each model is turned once at load so the
+ * whole catalogue shares one frame and a zone means the same thing everywhere.
+ */
+const MODEL_YAW = {
+  // Nothing needs correcting today; the generated catalogue all faces +Z. Kept
+  // because the next generated model is unlikely to, and the alternative is
+  // redefining that product's print zones against its own frame.
 };
 
 const FACE_DIR = {
@@ -167,6 +202,10 @@ export function resolveZone(zone, box) {
   // supplied orientation, so aim a helper object at the face and borrow its
   // rotation rather than composing Euler angles by hand.
   const helper = new THREE.Object3D();
+  // Looking straight up is degenerate against the default up vector, and the
+  // resulting rotation is arbitrary -- which is why a top-face zone came out
+  // as a skewed parallelogram floating over the product.
+  if (zone.face === "top") helper.up.set(0, 0, -1);
   helper.position.copy(pos);
   helper.lookAt(pos.clone().add(dir));
   helper.updateMatrixWorld();
@@ -198,7 +237,7 @@ const cache = new Map();
  *
  * @returns {Promise<{root:THREE.Object3D, meshes:THREE.Mesh[], tints:Array, box:THREE.Box3}>}
  */
-export async function loadProduct(url, { targetSize = 2.2 } = {}) {
+export async function loadProduct(url, { targetSize = 2.2, id = null } = {}) {
   if (!cache.has(url)) {
     cache.set(
       url,
@@ -211,6 +250,9 @@ export async function loadProduct(url, { targetSize = 2.2 } = {}) {
   }
   const gltf = await cache.get(url);
   const root = gltf.scene.clone(true);
+
+  const yaw = MODEL_YAW[id];
+  if (yaw) root.rotation.y = yaw;
 
   // Normalise scale and centre on the origin so every product frames the same
   // way and the zone maths below is comparable across the catalogue.
@@ -238,7 +280,10 @@ export async function loadProduct(url, { targetSize = 2.2 } = {}) {
     // those regions render as hard black patches across the hem and sleeves.
     // None of this catalogue is metal, so the channel is forced off.
     o.material.metalness = 0;
-    o.material.roughness = Math.max(o.material.roughness ?? 1, 0.55);
+    // Cotton, vinyl and paper are all matte. Anything glossier picks up the
+    // studio environment as a broad specular sheen, which greys out a dark
+    // colourway and blows a pale one to paper-white.
+    o.material.roughness = Math.max(o.material.roughness ?? 1, 0.85);
     meshes.push(o);
     const t = makeTintable(o.material);
     if (t) tints.push(t);
@@ -294,7 +339,9 @@ export function buildDecal(meshes, zone, box, opts) {
     // alphaTest discards the fully transparent texels, so depthWrite can stay on
     // and overlapping projected layers stop blending into a ghost.
     alphaTest: 0.06,
-    roughness: 0.72,
+    // Matched to the garment underneath: a print that is smoother than the
+    // fabric catches the key light on its own and reads as a sticker.
+    roughness: 0.86,
     metalness: 0,
     // A decal shares a surface with the mesh it sits on, so it needs a depth
     // bias or it z-fights across the whole print.
@@ -346,7 +393,11 @@ export function buildZoneGuide(zone, box, color = 0x19affe) {
     }),
   );
   line.computeLineDistances();
-  line.position.copy(r.position).addScaledVector(r.dir, Math.max(w, h) * 0.06);
+  // Lift the outline just clear of the surface. Scaled by the product's own
+  // thinnest dimension, so it hugs a deskmat as closely as it hugs a hoodie.
+  const size = box.getSize(new THREE.Vector3());
+  const lift = Math.max(0.006, Math.min(size.x, size.y, size.z) * 0.06);
+  line.position.copy(r.position).addScaledVector(r.dir, lift);
   line.rotation.copy(r.orientation);
   line.renderOrder = 6;
   return line;
