@@ -282,7 +282,7 @@ function valueSection() {
       <div class="grid grid--4">
         ${VALUES.map(
           (v, i) => `
-        <article class="card card--hover rv rv-d${i}">
+        <article class="card glass glass-sheen card--hover rv rv-d${i}">
           <div class="val">
             <span class="ico">${v.ico}</span>
             <h3>${e(v.h)}</h3>
@@ -633,7 +633,7 @@ function proofSection() {
         <img src="assets/img/retail-endcap.webp" alt="A matte black modular retail endcap in a darkened store aisle, framed by a cyan-to-magenta light strip with an illuminated screen panel and merchandise on pegs."
              width="1920" height="1080" loading="lazy" decoding="async"
              style="border-radius:var(--radius-lg);border:1px solid var(--border);height:100%;object-fit:cover" />
-        <article class="card">
+        <article class="card glass glass-sheen">
           <span class="mono">Running in parallel</span>
           <h3 style="margin-top:14px">Activated Retail</h3>
           <p class="sub" style="margin-top:12px">Alongside the merchandising pilot, MEDIALIFE is developing
@@ -672,7 +672,7 @@ function faqSection() {
         <span class="mono">07 / Questions</span>
         <h2>The things creators actually ask.</h2>
       </div>
-      <div class="faq rv">
+      <div class="faq glass glass-sheen rv">
         ${FAQ.map(
           (f) => `
         <details>
