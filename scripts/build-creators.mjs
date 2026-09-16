@@ -353,7 +353,10 @@ function studioSection() {
               <div class="act-prog"><i id="actProg"></i></div>
             </div>
 
-            <p class="viewport-hint" id="vpHint">Drag to orbit · scroll to zoom · arrow keys when focused</p>
+            <p class="viewport-hint" id="vpHint">
+              <span class="hint-fine">Drag to orbit · scroll to zoom · arrow keys when focused</span>
+              <span class="hint-coarse">Drag to rotate · pinch to zoom</span>
+            </p>
 
             <div class="viewport-msg" id="viewportMsg">
               <div>

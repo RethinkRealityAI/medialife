@@ -967,6 +967,20 @@ main,
   opacity: 0;
 }
 
+/* Touch devices have no scroll wheel and no arrow keys — do not tell them to
+   use either. */
+.viewport-hint .hint-coarse {
+  display: none;
+}
+@media (pointer: coarse) {
+  .viewport-hint .hint-fine {
+    display: none;
+  }
+  .viewport-hint .hint-coarse {
+    display: inline;
+  }
+}
+
 .viewport-badge {
   position: absolute;
   left: 14px;
