@@ -18,11 +18,10 @@ import {
   PRODUCTS,
   COLORWAYS,
   ACTIVATIONS,
-  PHASES,
-  RESPONSIBILITIES,
-  MEASURES,
+  PATHS,
+  STEPS,
+  LOOP,
   PROOF,
-  TEAM,
   FAQ,
   MODEL,
 } from "../public/creators/assets/js/program.js";
@@ -114,33 +113,6 @@ const MARKS = {
 // sections
 // ---------------------------------------------------------------------------
 
-const LOOP_STEPS = [
-  {
-    ico: ICON.game,
-    n: "01",
-    h: "Your experience",
-    p: "You already built the thing people love. A recognisable look, characters, a community that keeps asking where they can buy the merch.",
-  },
-  {
-    ico: ICON.shirt,
-    n: "02",
-    h: "We make it physical",
-    p: "We design, produce and fund a small assortment — and embed an NFC chip and QR code in every unit. You approve, we operate.",
-  },
-  {
-    ico: ICON.scan,
-    n: "03",
-    h: "The fan taps it",
-    p: "They hold a phone near the tag or point a camera at the code. An immersive experience opens in the browser in about a second. No app.",
-  },
-  {
-    ico: ICON.portal,
-    n: "04",
-    h: "They land back in your game",
-    p: "The experience ends on a reward you approve, redeemed in-experience. Every tap, every second and every click comes back to you as data.",
-  },
-];
-
 const VALUES = [
   {
     ico: ICON.vMoney,
@@ -190,25 +162,24 @@ function heroSection() {
   <section class="hero">
     <div class="wrap">
       <div>
-        <span class="pill pill--live rv"><span class="dot"></span>Now onboarding · ${e(PROGRAM.pilot.properties)} properties</span>
-        <h1 class="rv rv-d1">Turn your experience into <em class="grad">something they can hold.</em></h1>
+        <span class="pill pill--live rv"><span class="dot"></span>Now onboarding Roblox creators</span>
+        <h1 class="rv rv-d1">Launch your own <em class="grad">activated merch line.</em></h1>
         <p class="lede rv rv-d2">
-          MEDIALIFE${marks("™")} builds, funds and operates physical merch for Roblox-native IP — with an
-          NFC chip and QR code in every unit that opens an app-free immersive experience and sends
-          your fans straight back into your game. You approve the creative. We do the rest.
+          You have the characters, the look and the community. We design the products with you,
+          pay for them, make them and ship them — and every piece carries a chip that opens an
+          experience and sends the buyer back into your game with a reward.
         </p>
         <div class="hero-cta rv rv-d3">
-          <a class="btn btn--primary btn--lg" href="#studio">Build your drop ${ICON.arrow}</a>
-          <a class="btn btn--lg btn--ghost" href="#loop">How it works</a>
+          <a class="btn btn--primary btn--lg tap" href="#studio">Design your line ${ICON.arrow}</a>
+          <a class="btn btn--lg btn--ghost tap" href="#activate">I already sell merch</a>
         </div>
         <div class="hero-facts rv rv-d4">
           <div class="hero-fact"><b>$0</b><span>Cost to you</span></div>
-          <div class="hero-fact"><b>${e(PROGRAM.pilot.skusPerProperty)}</b><span>SKUs to start</span></div>
-          <div class="hero-fact"><b>${PROGRAM.pilot.reviewDays}</b><span>Day pilot</span></div>
-          <div class="hero-fact"><b>${pct(PROGRAM.economics.royaltyOnPlatform)}<sup>*</sup></b><span>Creator royalty</span></div>
+          <div class="hero-fact"><b>2</b><span>Things we need</span></div>
+          <div class="hero-fact"><b>${pct(PROGRAM.economics.royaltyOnPlatform)}<sup>*</sup></b><span>Your royalty</span></div>
         </div>
-        <p class="tiny rv rv-d4" style="margin-top:14px;max-width:52ch">* Indicative on-platform creator royalty for modelling.
-        Final royalty, term and territory are set in your program agreement.</p>
+        <p class="tiny rv rv-d4" style="margin-top:14px;max-width:52ch">* Indicative on-platform royalty for
+        modelling. Final royalty, term and territory are set in your program agreement.</p>
       </div>
 
       <div class="hero-stage rv rv-d2">
@@ -221,25 +192,74 @@ function heroSection() {
   </section>`;
 }
 
+/** The whole program. Two of the three steps belong to the creator. */
+function stepsSection() {
+  return `
+  <section class="band band--tight" id="how">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <span class="mono">01 / How it works</span>
+        <h2>Two things from you. We do the rest.</h2>
+      </div>
+      <ol class="steps-flow">
+        ${STEPS.map((st, i) => `
+        <li class="step-card glass glass-sheen card--hover rv rv-d${i}">
+          <span class="step-n">${e(st.n)}</span>
+          <span class="step-owner${st.owner === "You" ? " is-you" : ""}">${e(st.owner)}</span>
+          <h3>${e(st.title)}</h3>
+          <p>${e(st.body)}</p>
+        </li>`).join("")}
+      </ol>
+      <p class="tiny rv" style="margin-top:20px;max-width:64ch">No artwork yet? Our design team builds it
+      with you from your characters, your logo and your in-game look. Plenty of creators arrive with
+      nothing but the game.</p>
+    </div>
+  </section>`;
+}
+
 function loopSection() {
   return `
   <section class="band band--tight" id="loop">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">01 / The loop</span>
-        <h2>Four steps. You are only in two of them.</h2>
+        <span class="mono">02 / What "activated" means</span>
+        <h2>The product keeps working after they buy it.</h2>
+        <p class="lede">A normal piece of merch stops the moment it is sold. An activated one is a
+        door back into your game, and it tells you every time someone walks through it.</p>
       </div>
       <div class="loop" id="loopTrack">
-        ${LOOP_STEPS.map(
-          (s, i) => `
+        ${LOOP.map((st, i) => `
         <article class="loop-step rv rv-d${i}" data-step="${i}">
           <i class="bar"></i>
-          ${s.ico}
-          <span class="n">${s.n}</span>
-          <h3>${e(s.h)}</h3>
-          <p>${e(s.p)}</p>
-        </article>`,
-        ).join("")}
+          ${[ICON.shirt, ICON.scan, ICON.game, ICON.portal][i]}
+          <span class="n">${e(st.n)}</span>
+          <h3>${e(st.title)}</h3>
+          <p>${e(st.body)}</p>
+        </article>`).join("")}
+      </div>
+    </div>
+  </section>`;
+}
+
+/** The second door: creators who already sell merch. */
+function activateSection() {
+  const path = PATHS.find((p) => p.id === "activate");
+  return `
+  <section class="band" id="activate">
+    <div class="wrap">
+      <div class="card glass glass-sheen split-card rv">
+        <div>
+          <span class="mono">05 / ${e(path.kicker)}</span>
+          <h2 style="margin-top:14px">${e(path.title)}</h2>
+          <p class="lede" style="margin-top:16px">${e(path.body)}</p>
+          <ul class="tick-list" style="margin-top:20px">
+            ${path.points.map((pt) => `<li>${e(pt)}</li>`).join("")}
+          </ul>
+          <a class="btn btn--primary tap" href="#apply" style="margin-top:24px">${e(path.cta)} ${ICON.arrow}</a>
+        </div>
+        <img src="assets/img/scan-activate.webp" alt="A hand holds a phone above the sleeve of a black hoodie, where a small activation tag glows."
+             width="1800" height="1200" loading="lazy" decoding="async"
+             style="border-radius:var(--radius-md);border:1px solid var(--border)" />
       </div>
     </div>
   </section>`;
@@ -250,7 +270,7 @@ function valueSection() {
   <section class="band" id="why">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">02 / Why this is different</span>
+        <span class="mono">03 / Why this is different</span>
         <h2>Most merch programs end at the cash register.</h2>
         <p class="lede">Activated Merchandise${marks("®")} does not. The product is the start of the
         relationship, not the end of it — and that is the part you can actually measure.</p>
@@ -319,7 +339,7 @@ function studioSection() {
   <section class="band studio-band" id="studio">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">03 / The drop studio</span>
+        <span class="mono">04 / The drop studio</span>
         <h2>Build the drop you would actually want.</h2>
         <p class="lede">Pick your SKUs, set the colourway, drop your mark on it and press
         <b style="color:var(--foreground);font-weight:500">Activate</b> to watch the whole loop run.
@@ -541,103 +561,12 @@ function studioSection() {
   </section>`;
 }
 
-function phasesSection() {
-  return `
-  <section class="band" id="pilot">
-    <div class="wrap">
-      <div class="sec-head rv">
-        <span class="mono">04 / The ${PROGRAM.pilot.reviewDays}-day pilot</span>
-        <h2>A small, honest test — with a real decision at the end.</h2>
-        <p class="lede">${e(PROGRAM.pilot.properties)} properties. ${e(PROGRAM.pilot.skusPerProperty)} SKUs each.
-        ${e(PROGRAM.pilot.initialProducts)} products in market. Limited inventory on purpose. At day ${PROGRAM.pilot.reviewDays}
-        we read the data together and decide what happens next — including the option to stop.</p>
-      </div>
-      <div class="phases">
-        ${PHASES.map(
-          (p, i) => `
-        <article class="phase rv rv-d${i}" style="--d:${i * 0.12}s">
-          <span class="n">${e(p.n)}</span><span class="day">${e(p.day)}</span>
-          <h3>${e(p.title)}</h3>
-          <dl>
-            <div><dt>You</dt><dd>${e(p.you)}</dd></div>
-            <div><dt>MEDIALIFE</dt><dd>${e(p.us)}</dd></div>
-            <div class="out"><dt>Outcome</dt><dd>${e(p.out)}</dd></div>
-          </dl>
-        </article>`,
-        ).join("")}
-      </div>
-    </div>
-  </section>`;
-}
-
-function respSection() {
-  return `
-  <section class="band band--tight">
-    <div class="wrap">
-      <div class="sec-head rv">
-        <span class="mono">05 / Who does what</span>
-        <h2>Your side of this is deliberately small.</h2>
-      </div>
-      <div class="grid grid--3">
-        ${RESPONSIBILITIES.map(
-          (r, i) => `
-        <article class="card resp resp--${e(r.accent)} rv rv-d${i}">
-          <div class="hd"><h3>${e(r.who)}</h3><span class="mono">${e(r.role)}</span></div>
-          <ul>${r.items.map((it) => `<li>${e(it)}</li>`).join("")}</ul>
-          <p class="weight">${e(r.weight)}</p>
-        </article>`,
-        ).join("")}
-      </div>
-    </div>
-  </section>`;
-}
-
-function measuresSection() {
-  return `
-  <section class="band" id="data">
-    <div class="wrap">
-      <div class="sec-head rv">
-        <span class="mono">06 / What you get back</span>
-        <h2>Both halves of the picture, on one report.</h2>
-        <p class="lede">Merch programs normally report the left-hand column and stop. The right-hand
-        column is the reason Activated Merchandise${marks("®")} exists.</p>
-      </div>
-
-      <div class="measures">
-        <article class="card measure rv">
-          <h3>Commercial</h3>
-          <p class="sub" style="margin-top:8px">Did it sell, what sold, and where.</p>
-          <ol>${MEASURES.commercial.map((m) => `<li>${e(m)}</li>`).join("")}</ol>
-        </article>
-        <article class="card measure rv rv-d1">
-          <h3>Engagement</h3>
-          <p class="sub" style="margin-top:8px">What happened after the sale.</p>
-          <ol>${MEASURES.engagement.map((m) => `<li>${e(m)}</li>`).join("")}</ol>
-        </article>
-      </div>
-
-      <div class="card rv rv-d2 split-card">
-        <div>
-          <h3>See it the way your fans will.</h3>
-          <p class="sub" style="margin-top:12px;max-width:46ch">A live preview of the app-free experience
-          that opens when someone taps an activated product — through to the reward that sends them back
-          into your game, and the analytics that single scan generates.</p>
-          <a class="btn btn--primary" href="activate/" style="margin-top:20px">Preview the fan experience ${ICON.arrow}</a>
-        </div>
-        <img src="assets/img/scan-activate.webp" alt="A hand holds a phone above the sleeve of a black hoodie, where a small NFC tag glows cyan. The phone screen lights up as the experience opens."
-             width="1800" height="1200" loading="lazy" decoding="async"
-             style="border-radius:var(--radius-md);border:1px solid var(--border)" />
-      </div>
-    </div>
-  </section>`;
-}
-
 function proofSection() {
   return `
   <section class="band" id="proof">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">07 / Track record</span>
+        <span class="mono">06 / Track record</span>
         <h2>We have already run this loop at retail scale.</h2>
         <p class="lede">These are measured results from a shipped MEDIALIFE activated print program
         with Netflix, across 150+ North American retail locations and the largest fan conventions
@@ -692,38 +621,12 @@ function proofSection() {
   </section>`;
 }
 
-function teamSection() {
-  return `
-  <section class="band band--tight" id="team">
-    <div class="wrap">
-      <div class="sec-head rv">
-        <span class="mono">08 / Who you work with</span>
-        <h2>Operators, not an agency.</h2>
-        <p class="lede">Commercial, merchandising, creative and technical leadership, with dedicated
-        Roblox platform integration and an extended operating team across Canada, the U.S., Japan and
-        China covering sourcing, manufacturing, fulfilment, live events and channel management.</p>
-      </div>
-      <div class="team">
-        ${TEAM.map(
-          (m, i) => `
-        <article class="card member rv rv-d${Math.min(i, 4)}">
-          <span class="nm">${e(m.name)}</span>
-          <span class="cy">${e(m.city)}</span>
-          <p class="rl">${e(m.role)}</p>
-          <ul>${m.tags.map((t) => `<li>${e(t)}</li>`).join("")}</ul>
-        </article>`,
-        ).join("")}
-      </div>
-    </div>
-  </section>`;
-}
-
 function faqSection() {
   return `
   <section class="band" id="faq">
     <div class="wrap" style="max-width:900px">
       <div class="sec-head rv">
-        <span class="mono">09 / Questions</span>
+        <span class="mono">07 / Questions</span>
         <h2>The things creators actually ask.</h2>
       </div>
       <div class="faq rv">
@@ -788,7 +691,7 @@ function applySection() {
   <section class="band apply-band" id="apply">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">10 / Apply</span>
+        <span class="mono">08 / Apply</span>
         <h2>Four short steps. About three minutes.</h2>
         <p class="lede">Applying costs nothing and commits you to nothing. We review every submission
         against fit, not follower count, and reply either way.</p>
@@ -1148,14 +1051,12 @@ const html = `<!doctype html>
 
 <main id="main">
 ${heroSection()}
+${stepsSection()}
 ${loopSection()}
 ${valueSection()}
 ${studioSection()}
-${phasesSection()}
-${respSection()}
-${measuresSection()}
+${activateSection()}
 ${proofSection()}
-${teamSection()}
 ${faqSection()}
 ${applySection()}
 </main>

@@ -33,3 +33,12 @@ dist-ssr
 
 # Netlify
 .netlify/
+
+# Local-only harness for eyeballing product GLBs and decal placement. It is
+# served from public/ so it shares the creators importmap, but it is scratch
+# tooling and must never ship.
+public/_glbtest/
+
+# Raw multi-MB generated GLBs. scripts/optimize-models.mjs turns these into the
+# web-ready models under public/creators/assets/models/, which are committed.
+assets-src/
