@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "build:cards": "node scripts/build-cards.mjs"
+    "build:cards": "node scripts/build-cards.mjs",
+    "build:creators": "node scripts/build-creators.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

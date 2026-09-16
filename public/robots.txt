@@ -9,4 +9,8 @@ Disallow: /dapo
 Disallow: /sofia
 # <<< end generated
 
+# The creator program page carries commercial terms — reached by invitation,
+# not by search.
+Disallow: /creators
+
 Sitemap: https://medialife.ai/sitemap.xml

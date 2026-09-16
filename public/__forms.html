@@ -27,5 +27,36 @@
       <input name="brand" type="text" />
       <textarea name="msg"></textarea>
     </form>
+    <!--
+      Roblox creator program application (public/creators/index.html). That page
+      is static so Netlify would scan it directly, but the declaration is kept
+      here with the others so every form this site accepts is visible in one
+      place. Field names MUST stay in sync with scripts/build-creators.mjs.
+
+      Note the reserved-name rule above: the contact field is `contact-name`,
+      not `name`, and the free-text field is `notes`, not `body`.
+    -->
+    <form name="roblox-creator-application" data-netlify="true" netlify-honeypot="company-website" hidden>
+      <input type="hidden" name="form-name" value="roblox-creator-application" />
+      <input name="company-website" type="text" />
+      <input name="experience-name" type="text" />
+      <input name="experience-url" type="url" />
+      <input name="genre" type="text" />
+      <input name="role" type="text" />
+      <input name="monthly-visits" type="text" />
+      <input name="peak-ccu" type="text" />
+      <input name="merch-history" type="text" />
+      <input name="community-links" type="text" />
+      <input name="launch-window" type="text" />
+      <textarea name="notes"></textarea>
+      <input name="contact-name" type="text" />
+      <input name="email" type="email" />
+      <input name="roblox-username" type="text" />
+      <input name="discord" type="text" />
+      <input name="rights-confirmed" type="text" />
+      <input name="contact-consent" type="text" />
+      <input name="program-updates" type="text" />
+      <textarea name="drop-config"></textarea>
+    </form>
   </body>
 </html>

@@ -31,6 +31,17 @@ Nitro's `netlify` preset emits:
 config defaults Nitro to the **Cloudflare** target and the deploy silently produces
 a Worker bundle Netlify can't run.
 
+Two static pages are generated ahead of the Vite build and committed:
+
+```bash
+npm run build:cards      # → public/<slug>/  (virtual business cards)
+npm run build:creators   # → public/creators/ (Roblox creator program)
+```
+
+Both write into `public/`, so they ship with the normal `npm run build`. Re-run the
+relevant one after editing its source data — the output is committed, not built on
+Netlify.
+
 ## Deploy
 
 Netlify builds from the `main` branch. Config lives in `netlify.toml`:
@@ -57,6 +68,9 @@ Spam protection: a `bot-field` honeypot, declared via `netlify-honeypot`.
 ## Routes
 
 `/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact`
+
+Unlisted static pages, served straight from `public/` rather than the SSR router:
+`/<slug>` (business cards) and `/creators` (Roblox creator program).
 
 Tech stack slugs live in `src/lib/tech-stacks.ts`. **Adding one means adding its URL
 to `public/sitemap.xml`** — the sitemap is static and does not generate itself.
@@ -136,3 +150,69 @@ single row; from 800px wide (or any screen at least 640px wide and under 480px
 tall — a landscape phone) the card becomes two columns and the buttons regain
 their labels. The labels are always in the DOM, so an icon-only button is never
 an unlabelled control for a screen reader.
+
+---
+
+## Roblox creator program (`/creators`)
+
+Creator-facing onboarding for the MEDIALIFE × Roblox Activated Merchandising Program:
+what the program is, what a creator gets, what they have to do, and an application.
+Unlisted — `noindex` via `netlify.toml` and disallowed in `robots.txt`, like the cards.
+
+Static, like the business cards, and for the same reason: it is a self-contained page
+with its own WebGL runtime, and keeping it out of the SSR bundle means it cannot slow
+down or break the marketing site.
+
+```
+public/creators/index.html            generated — do not edit by hand
+public/creators/assets/js/program.js  SINGLE SOURCE OF TRUTH (facts, catalogue, economics)
+public/creators/assets/js/app.js      page behaviour, projection model, Drop Pass, application
+public/creators/assets/js/studio.js   the 3D configurator
+public/creators/assets/css/app.css    design system (same tokens as public/card/card.css)
+public/creators/assets/img/           generated brand imagery (webp + jpg fallback)
+public/creators/activate/             the fan-side "what happens when they scan" preview
+public/creators/vendor/               three.js r180 and qrcode, vendored — no runtime CDN
+scripts/build-creators.mjs            renders index.html from program.js
+```
+
+### Changing the copy or the numbers
+
+Edit `public/creators/assets/js/program.js`, then `npm run build:creators`.
+
+Every fact — pilot shape, product catalogue, prices, royalty rates, phases,
+responsibilities, track record, FAQ — renders from that file into static HTML at build
+time, so the page reads completely with JavaScript disabled. The interactive layer
+enhances it; it never supplies it.
+
+### What is deliberately not on this page
+
+MEDIALIFE contribution margins and platform-side fee splits from the commercialization
+deck. The page carries creator-facing economics only — royalty rates, price bands, lead
+times — and labels them indicative, because they are. The earnings projection is an
+illustrative model driven by inputs the creator controls, capped by pilot inventory, and
+disclaimed in place.
+
+### The Drop Studio
+
+A merch configurator with no downloaded models or textures. Each product is a 2D signed
+distance field inflated into a soft closed shell, so colourway, print placement,
+activation-tag position and the activation cinematic are all parametric. Surfaces are
+painted to a canvas texture with the front print in the top half of the UV space, which
+is how a logo lands on the front only.
+
+Uploaded logos are read with `FileReader` and never leave the browser.
+
+The **Drop Pass** captures the live render, composites a branded sheet, and encodes the
+whole build into the URL hash — so a configuration is shareable, scannable and
+re-openable. `window.__mlStudio` exposes the scene for debugging on a live page.
+
+### Application form
+
+Declared in `public/__forms.html` alongside the contact form and POSTed there as
+urlencoded data, same as `src/routes/contact.tsx`. **The reserved-name rule applies** —
+the contact field is `contact-name`, not `name`, and the free-text field is `notes`, not
+`body`. Keep the declaration in sync with `scripts/build-creators.mjs`.
+
+If the POST fails the visitor is told plainly and handed a JSON download plus a
+`mailto:` fallback; the draft stays in `localStorage`. An application is never silently
+lost.
