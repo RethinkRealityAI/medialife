@@ -323,7 +323,7 @@ export const ACTIVATIONS: Record<string, Activation> = {
       blurb:
         "Opens in the browser from the camera app. No store, no download, no account — which is the whole reason the flow survives contact with a real buyer.",
       image: "cola-run",
-      alt: "The Cola Run title card: Bobo the cat flying through floating ECLIPSE cola cans, over an ACTIVATED BY MEDIALIFE lockup.",
+      alt: "The Cola Run splash screen: Bobo the cat flying through glowing ECLIPSE cola cans under the EVADE COLA RUN title, over an ACTIVATED BY MEDIALIFE lockup.",
       beats: [
         "Buyer points a phone camera at the code on the can",
         "Cola Run opens in the browser in about a second",
@@ -338,7 +338,7 @@ export const ACTIVATIONS: Record<string, Activation> = {
       blurb:
         "A reward a player wears in front of other players is the one that does the work — it advertises the drop every time they load in.",
       image: "bobo-reward",
-      alt: "Bobo the cat — a cream-coloured cat in a blue BOBO cap and hoodie — flying through floating ECLIPSE cans inside the Cola Run experience.",
+      alt: "Bobo the cat — a cream-coloured cat in a blue BOBO cap and hoodie — sitting inside the glowing blue orbit ring the cosmetic unlocks with.",
     },
     products: [
       {

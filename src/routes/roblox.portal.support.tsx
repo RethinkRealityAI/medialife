@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink, Mail, MessageSquare, Phone } from "lucide-react";
 
-import { KeyValues, PageHeader, Panel, Pill, Section } from "@/components/portal/kit";
+import { PageHeader, Panel, Pill, Section } from "@/components/portal/kit";
 import { ACTIVE } from "@/lib/roblox-portal";
 
 export const Route = createFileRoute("/roblox/portal/support")({
@@ -95,46 +95,24 @@ function Support() {
         </div>
       </Section>
 
-      <div className="grid border-t border-border lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <Section title="Common questions" className="lg:border-r lg:border-border">
-          <div className="divide-y divide-border">
-            {FAQ.map((f) => (
-              <details key={f.q} className="group py-4">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium">
-                  {f.q}
-                  <span
-                    aria-hidden
-                    className="mono shrink-0 text-muted-foreground transition-transform group-open:rotate-45"
-                  >
-                    +
-                  </span>
-                </summary>
-                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                  {f.a}
-                </p>
-              </details>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Your account">
-          <Panel className="p-4">
-            <KeyValues
-              rows={[
-                ["Property", ACTIVE.property],
-                ["Studio", ACTIVE.studio],
-                ["Specialist", "Assigned at onboarding"],
-                ["First response", "1 working day"],
-                ["Program", "AMP · Pilot"],
-              ]}
-            />
-          </Panel>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            Specialist names are withheld in demo mode. In the live portal this shows the person on
-            your account with a direct thread.
-          </p>
-        </Section>
-      </div>
+      <Section title="Common questions" className="border-t border-border">
+        <div className="divide-y divide-border">
+          {FAQ.map((f) => (
+            <details key={f.q} className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium">
+                {f.q}
+                <span
+                  aria-hidden
+                  className="mono shrink-0 text-muted-foreground transition-transform group-open:rotate-45"
+                >
+                  +
+                </span>
+              </summary>
+              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </Section>
     </>
   );
 }

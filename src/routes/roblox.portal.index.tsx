@@ -29,7 +29,7 @@ export const Route = createFileRoute("/roblox/portal/")({
 const ONBOARDING = [
   { day: "Day 0", label: "Submit", body: "Four steps, about four minutes." },
   { day: "Day 1–2", label: "Qualify", body: "A named specialist inside 48 hours." },
-  { day: "Day 3–5", label: "Scope", body: "Products, activation, reward." },
+  { day: "Day 3–5", label: "Scope", body: "Products, how it opens, reward." },
   { day: "Day 6–10", label: "Sign", body: "Agreement, then both tracks open." },
 ];
 

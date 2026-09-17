@@ -409,8 +409,9 @@ export const ONBOARDING = [
     title: "Scoping call",
     who: "Together",
     body:
-      "Which products, what the activation does, and which in-game reward it ends on. You bring " +
-      "the instincts about your world and characters; we bring the assortment and the timeline.",
+      "Three decisions: which products, how a buyer opens them — a printed code or an NFC chip — " +
+      "and which in-game reward the experience ends on. You bring the instincts about your world " +
+      "and characters; we bring the assortment, the economics and the timeline.",
   },
   {
     day: "Day 6–10",
@@ -432,13 +433,13 @@ export const TRACKS = [
     id: "merch",
     name: "Merchandise",
     sub: "Production & sourcing",
-    steps: ["Design", "Sampling", "IP approval", "Production", "Fulfilment"],
+    steps: ["Design", "Code placement", "Sampling", "IP approval", "Production", "Fulfilment"],
   },
   {
     id: "experience",
     name: "Experience",
     sub: "Immersive production",
-    steps: ["Concept", "Asset intake", "Build", "Reward code", "Device QA"],
+    steps: ["Concept", "Asset intake", "Build", "Reward integration", "Device QA"],
   },
 ];
 

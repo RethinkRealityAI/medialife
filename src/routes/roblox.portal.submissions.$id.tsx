@@ -224,17 +224,17 @@ function SubmissionDetail() {
 
           {/* WHAT OPENS, AND WHAT THEY KEEP */}
           <Section className="border-b border-border">
-            <div className="grid gap-3 lg:grid-cols-2">
+            <div className="grid items-start gap-3 lg:grid-cols-2">
               <Panel className="overflow-hidden">
                 {/* The art is a full-height column rather than a thumbnail with
                     dead space under it — these two cards are the payoff of the
                     whole page, so the imagery carries its own weight. */}
-                <div className="flex flex-col sm:flex-row sm:items-stretch">
-                  <div className="shrink-0 sm:w-48">
+                <div className="flex flex-col sm:flex-row sm:items-start">
+                  <div className="shrink-0 self-start sm:w-48">
                     <Shot
                       name={activation.experience.image}
                       alt={activation.experience.alt}
-                      className="aspect-[4/5] size-full border-b border-border object-cover object-top sm:aspect-auto sm:border-r sm:border-b-0"
+                      className="w-full border-b border-border object-cover sm:border-r sm:border-b-0"
                     />
                   </div>
                   <div className="min-w-0 p-5">
@@ -251,12 +251,12 @@ function SubmissionDetail() {
               </Panel>
 
               <Panel className="overflow-hidden" glow>
-                <div className="flex flex-col sm:flex-row sm:items-stretch">
-                  <div className="shrink-0 sm:w-48">
+                <div className="flex flex-col sm:flex-row sm:items-start">
+                  <div className="shrink-0 self-start sm:w-48">
                     <Shot
                       name={activation.reward.image}
                       alt={activation.reward.alt}
-                      className="aspect-[4/5] size-full border-b border-border object-cover object-top sm:aspect-auto sm:border-r sm:border-b-0"
+                      className="w-full border-b border-border object-cover sm:border-r sm:border-b-0"
                     />
                   </div>
                   <div className="min-w-0 p-5">

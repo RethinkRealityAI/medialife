@@ -1,15 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
 
-import { KeyValues, PageHeader, Panel, Pill, Section, StageBar } from "@/components/portal/kit";
-import {
-  ACTIVE,
-  PROGRAM,
-  RESPONSIBILITIES,
-  REVIEW,
-  shortDate,
-  stageIndex,
-} from "@/lib/roblox-portal";
+import { PageHeader, Panel, Pill, Section, StageBar } from "@/components/portal/kit";
+import { ACTIVE, PROGRAM, REVIEW, shortDate, stageIndex } from "@/lib/roblox-portal";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/roblox/portal/status")({
   component: Status,
@@ -27,11 +21,12 @@ const TRACKS = [
     sub: "Production & sourcing",
     accent: "var(--color-primary)",
     steps: [
-      { label: "Design", state: "done" },
-      { label: "Sampling", state: "done" },
-      { label: "IP approval", state: "doing" },
-      { label: "Production", state: "todo" },
-      { label: "Fulfilment", state: "todo" },
+      { label: "Design", owner: "MEDIALIFE", state: "done", when: "Jun 2026" },
+      { label: "Code placement", owner: "MEDIALIFE", state: "done", when: "Jun 2026" },
+      { label: "Sampling", owner: "MEDIALIFE", state: "done", when: "Jul 2026" },
+      { label: "IP approval", owner: "Hexagon Development", state: "doing", when: "This week" },
+      { label: "Production", owner: "MEDIALIFE", state: "todo", when: "On approval" },
+      { label: "Fulfilment", owner: "MEDIALIFE", state: "todo", when: "6–13 weeks after" },
     ],
   },
   {
@@ -40,11 +35,11 @@ const TRACKS = [
     sub: "Immersive production",
     accent: "var(--color-accent)",
     steps: [
-      { label: "Concept", state: "done" },
-      { label: "Asset intake", state: "done" },
-      { label: "Build", state: "done" },
-      { label: "Reward code", state: "doing" },
-      { label: "Device QA", state: "todo" },
+      { label: "Concept", owner: "Together", state: "done", when: "Jun 2026" },
+      { label: "Asset intake", owner: "Hexagon Development", state: "done", when: "Jun 2026" },
+      { label: "Build", owner: "MEDIALIFE", state: "done", when: "Jul 2026" },
+      { label: "Reward integration", owner: "MEDIALIFE", state: "doing", when: "This week" },
+      { label: "Device QA", owner: "MEDIALIFE", state: "todo", when: "Before launch" },
     ],
   },
 ] as const;
@@ -59,7 +54,7 @@ function Status() {
       <PageHeader
         eyebrow="Program / Project status"
         title={`Where ${ACTIVE.property} sits today.`}
-        lede="The four program stages, the two production tracks running inside the current one, and who owes what at each step."
+        lede="The four program stages, and the two production tracks running inside the current one — who owns each step and when it lands."
         actions={<Pill tone="active">Day {REVIEW.dayOf} of the validation window</Pill>}
       />
 
@@ -80,7 +75,9 @@ function Status() {
         hint="Both were staffed the day the agreement was signed. Neither ships without the other."
         className="border-t border-border"
       >
-        <div className="grid gap-3 lg:grid-cols-2">
+        {/* items-start: the tracks have different step counts, and stretching the
+            shorter one leaves a hole under its last step. */}
+        <div className="grid items-start gap-3 lg:grid-cols-2">
           {TRACKS.map((t) => (
             <Panel key={t.id} className="overflow-hidden">
               <div
@@ -96,27 +93,37 @@ function Status() {
                 {t.steps.map((s) => {
                   const Icon = STEP_ICON[s.state];
                   return (
-                    <li key={s.label} className="flex items-center gap-3 px-4 py-3">
+                    <li key={s.label} className="flex items-start gap-3 px-4 py-3">
                       <Icon
                         className={
                           s.state === "done"
-                            ? "size-4 shrink-0 text-emerald-400"
+                            ? "mt-0.5 size-4 shrink-0 text-emerald-400"
                             : s.state === "doing"
-                              ? "size-4 shrink-0 animate-spin text-primary [animation-duration:3s]"
-                              : "size-4 shrink-0 text-muted-foreground/50"
+                              ? "mt-0.5 size-4 shrink-0 animate-spin text-primary [animation-duration:3s]"
+                              : "mt-0.5 size-4 shrink-0 text-muted-foreground/50"
                         }
                         aria-hidden
                       />
+                      <div className="min-w-0 flex-1">
+                        <div
+                          className={
+                            s.state === "todo" ? "text-sm text-muted-foreground" : "text-sm"
+                          }
+                        >
+                          {s.label}
+                        </div>
+                        <div className="mono mt-0.5 text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+                          {s.owner}
+                        </div>
+                      </div>
                       <span
-                        className={s.state === "todo" ? "text-sm text-muted-foreground" : "text-sm"}
+                        className={cn(
+                          "mono shrink-0 text-[10px] tracking-[0.1em] uppercase",
+                          s.state === "doing" ? "text-primary" : "text-muted-foreground",
+                        )}
                       >
-                        {s.label}
+                        {s.when}
                       </span>
-                      {s.state === "doing" ? (
-                        <span className="mono ml-auto text-[10px] tracking-[0.12em] text-primary uppercase">
-                          In progress
-                        </span>
-                      ) : null}
                     </li>
                   );
                 })}
@@ -125,43 +132,6 @@ function Status() {
           ))}
         </div>
       </Section>
-
-      <div className="grid border-t border-border lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-        <Section title="This property" className="lg:border-r lg:border-border">
-          <Panel className="p-4">
-            <KeyValues
-              rows={[
-                ["Property", ACTIVE.property],
-                ["Studio", ACTIVE.studio],
-                ["Genre", ACTIVE.genre],
-                ["Submitted", shortDate(ACTIVE.submitted)],
-                ["Live since", ACTIVE.liveSince ? shortDate(ACTIVE.liveSince) : "—"],
-                ["Review closes", shortDate(REVIEW.windowEnd)],
-              ]}
-            />
-          </Panel>
-        </Section>
-
-        <Section
-          title="Who owes what"
-          hint="Explicit at every step, so a creator knows what they owe and Roblox knows where a property sits."
-        >
-          <div className="grid gap-3 sm:grid-cols-3">
-            {RESPONSIBILITIES.map((r) => (
-              <Panel key={r.party} className="p-4">
-                <Pill tone={r.tone}>{r.party}</Pill>
-                <ul className="mt-3 space-y-2">
-                  {r.items.map((i) => (
-                    <li key={i} className="text-xs leading-relaxed text-muted-foreground">
-                      {i}
-                    </li>
-                  ))}
-                </ul>
-              </Panel>
-            ))}
-          </div>
-        </Section>
-      </div>
     </>
   );
 }
