@@ -16,12 +16,43 @@
  */
 
 /* ---------------------------------------------------------------------------
+   Formatting helpers
+   --------------------------------------------------------------------------- */
+
+export const pct = (n: number, digits = 0) => `${(n * 100).toFixed(digits)}%`;
+
+export const money = (n: number, digits = 0) =>
+  n.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+
+export function compact(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
+  return String(n);
+}
+
+export const shortDate = (iso: string) =>
+  new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
+/* ---------------------------------------------------------------------------
    Program shape
    --------------------------------------------------------------------------- */
 
 export const PROGRAM = {
   name: "Activated Merchandising Program",
+  /** The acronym, for places that are already inside the program's own context. */
   short: "AMP",
+  /** What a creator who has never seen the acronym should read. Used in chrome. */
+  shortLabel: "Activated Merch",
   partner: "Roblox",
   reviewDays: 90,
   /** What a property moves through, in order. From the proposal's onboarding workflow. */
@@ -112,7 +143,7 @@ export const RESPONSIBILITIES = [
   {
     party: "Roblox",
     tone: "muted" as const,
-    items: ["AMP onboarding / authorization", "Appropriate commerce and platform support"],
+    items: ["Program onboarding / authorization", "Appropriate commerce and platform support"],
   },
 ];
 
@@ -237,7 +268,7 @@ export const PRODUCTS: Product[] = [
     sourcing: "China",
     leadWeeks: "6–13",
     marginOnPlatform: 0.51,
-    unitsCommitted: 2000,
+    unitsCommitted: 2400,
     note: "Proven at RDC 2026 as the activated proof of concept. Highest attach rate in the assortment.",
   },
   {
@@ -263,7 +294,7 @@ export const PRODUCTS: Product[] = [
     sourcing: "China",
     leadWeeks: "6–13",
     marginOnPlatform: 0.44,
-    unitsCommitted: 750,
+    unitsCommitted: 0,
     note: "First samples in hand; fit and hand-feel approval pending with the IP holder.",
   },
   {
@@ -320,34 +351,132 @@ export type Measure = {
   hint: string;
 };
 
+/** Weekly series for the performance charts. Week 1 is the pilot's first live week. */
+/**
+ * The weekly series, and the origin of every total on the performance screen.
+ *
+ * `activations` is FIRST activations — units activated for the first time that
+ * week — so the column sums to unique activations rather than double-counting a
+ * unit that gets tapped again. Nine weeks, because the review is on day 62 of 90.
+ */
+export const WEEKLY = [
+  { week: "W1", units: 178, activations: 108, outbound: 42 },
+  { week: "W2", units: 228, activations: 146, outbound: 58 },
+  { week: "W3", units: 268, activations: 178, outbound: 76 },
+  { week: "W4", units: 312, activations: 212, outbound: 94 },
+  { week: "W5", units: 305, activations: 215, outbound: 102 },
+  { week: "W6", units: 348, activations: 242, outbound: 124 },
+  { week: "W7", units: 392, activations: 268, outbound: 146 },
+  { week: "W8", units: 442, activations: 304, outbound: 184 },
+  { week: "W9", units: 491, activations: 343, outbound: 226 },
+];
+
+/** Units by SKU, for the price-point read the proposal calls for. */
+/**
+ * Only the two live SKUs. The hoodie is still in sampling and the rest are in
+ * design or proposed, so none of them can have sold a unit — putting them here
+ * is the kind of detail a reviewer checks first.
+ *
+ * `units` sums to the WEEKLY units column, and `committed` mirrors each
+ * product's `unitsCommitted`, so sell-through is the same number wherever it
+ * is read.
+ */
+export const BY_SKU = [
+  { sku: "Keychain", units: 2064, price: 18, committed: 2400, margin: 0.51 },
+  { sku: "T-Shirt", units: 900, price: 32, committed: 2000, margin: 0.38 },
+];
+
+/** Where demand is coming from. */
+/* ---------------------------------------------------------------------------
+   The pilot's totals
+
+   Every figure a reader can check with mental arithmetic is computed here from
+   WEEKLY and BY_SKU rather than typed a second time somewhere else. This portal
+   is shown to Roblox; a stated sell-through that does not equal units over
+   inventory is the detail that costs the room its trust in the rest of it.
+
+   The two anchors that cannot be derived — how many orders those units arrived
+   in, and how many storefront views produced them — are declared, and basket
+   size and conversion fall out of them.
+   --------------------------------------------------------------------------- */
+
+/** Orders the units arrived in. Basket size and conversion derive from it. */
+const ORDERS = 1578;
+/** Storefront views over the same window as the units, not a rolling 30 days. */
+const STOREFRONT_VIEWS = 78_900;
+/** Average activations per activated unit — a unit that keeps working. */
+const REPEAT_PER_UNIT = 5.46;
+
+const unitsSold = WEEKLY.reduce((n, w) => n + w.units, 0);
+const uniqueActivations = WEEKLY.reduce((n, w) => n + w.activations, 0);
+const outboundSessions = WEEKLY.reduce((n, w) => n + w.outbound, 0);
+const unitsCommitted = BY_SKU.reduce((n, s) => n + s.committed, 0);
+const gmv = BY_SKU.reduce((n, s) => n + s.units * s.price, 0);
+const contribution = BY_SKU.reduce((n, s) => n + s.units * s.price * s.margin, 0);
+
+export const PILOT = {
+  unitsSold,
+  unitsCommitted,
+  uniqueActivations,
+  outboundSessions,
+  gmv,
+  orders: ORDERS,
+  views: STOREFRONT_VIEWS,
+  repeatPerUnit: REPEAT_PER_UNIT,
+  sellThrough: unitsSold / unitsCommitted,
+  activationRate: uniqueActivations / unitsSold,
+  /** Share of activated units that have routed at least one session back. */
+  outboundRate: outboundSessions / uniqueActivations,
+  blendedMargin: contribution / gmv,
+  averageOrderValue: gmv / ORDERS,
+  conversion: ORDERS / STOREFRONT_VIEWS,
+  /** Weeks of the validation window with a complete read. */
+  weeks: WEEKLY.length,
+};
+
+/** Units by region. Sums to the unit total; share is derived, never typed. */
+const REGION_UNITS = [
+  { region: "United States", units: 1630 },
+  { region: "United Kingdom", units: 415 },
+  { region: "Canada", units: 326 },
+  { region: "Australia", units: 237 },
+  { region: "Germany", units: 178 },
+  { region: "Rest of world", units: 178 },
+];
+
+export const BY_REGION = REGION_UNITS.map((r) => ({
+  ...r,
+  share: r.units / PILOT.unitsSold,
+}));
+
 export const COMMERCIAL_MEASURES: Measure[] = [
   {
     id: "views",
     label: "Product views",
-    value: "184,220",
+    value: PILOT.views.toLocaleString("en-US"),
     delta: 0.22,
-    hint: "Views across the on-platform storefront in the last 30 days.",
+    hint: "Views across the on-platform storefront since the pilot opened.",
   },
   {
     id: "conversion",
     label: "View-to-order conversion",
-    value: "2.4%",
+    value: pct(PILOT.conversion, 1),
     delta: 0.003,
-    hint: "Orders divided by product views.",
+    hint: `${PILOT.orders.toLocaleString("en-US")} orders divided by product views.`,
   },
   {
     id: "units",
     label: "Units sold",
-    value: "4,418",
+    value: PILOT.unitsSold.toLocaleString("en-US"),
     delta: 0.31,
-    hint: "Across all live SKUs since the pilot opened.",
+    hint: "Across both live SKUs since the pilot opened.",
   },
   {
     id: "sellthrough",
     label: "Sell-through",
-    value: "68%",
+    value: pct(PILOT.sellThrough),
     delta: 0.12,
-    hint: "Against the limited inventory committed for the validation window.",
+    hint: `Against the ${PILOT.unitsCommitted.toLocaleString("en-US")} units committed for the validation window.`,
   },
   {
     id: "reorder",
@@ -359,9 +488,9 @@ export const COMMERCIAL_MEASURES: Measure[] = [
   {
     id: "aov",
     label: "Average order value",
-    value: "$41.80",
+    value: money(PILOT.averageOrderValue, 2),
     delta: 0.06,
-    hint: "Basket size across the live assortment.",
+    hint: `${(PILOT.unitsSold / PILOT.orders).toFixed(2)} units per order across the live assortment.`,
   },
 ];
 
@@ -369,21 +498,21 @@ export const ENGAGEMENT_MEASURES: Measure[] = [
   {
     id: "activations",
     label: "Unique activations",
-    value: "3,004",
+    value: PILOT.uniqueActivations.toLocaleString("en-US"),
     delta: 0.27,
     hint: "Distinct units tapped or scanned at least once.",
   },
   {
     id: "activation-rate",
     label: "Activation rate",
-    value: "68%",
+    value: pct(PILOT.activationRate),
     delta: 0.09,
     hint: "Share of units sold that have been activated at least once.",
   },
   {
     id: "repeat",
     label: "Repeat interactions",
-    value: "5.46",
+    value: PILOT.repeatPerUnit.toFixed(2),
     delta: 0.14,
     hint: "Average activations per activated unit. A unit that keeps working.",
   },
@@ -396,49 +525,18 @@ export const ENGAGEMENT_MEASURES: Measure[] = [
   },
   {
     id: "cta",
-    label: "Call-to-action rate",
-    value: "35%",
+    label: "Send-back rate",
+    value: pct(PILOT.outboundRate),
     delta: 0.05,
-    hint: "Share of experiences that ended on the reward or link being taken.",
+    hint: "Share of activated units that have routed at least one session back into the experience.",
   },
   {
     id: "outbound",
     label: "Outbound to Roblox",
-    value: "1,052",
+    value: PILOT.outboundSessions.toLocaleString("en-US"),
     delta: 0.24,
     hint: "Sessions routed from a physical product back into the experience.",
   },
-];
-
-/** Weekly series for the performance charts. Week 1 is the pilot's first live week. */
-export const WEEKLY = [
-  { week: "W1", units: 214, activations: 121, outbound: 38 },
-  { week: "W2", units: 268, activations: 168, outbound: 52 },
-  { week: "W3", units: 331, activations: 221, outbound: 74 },
-  { week: "W4", units: 402, activations: 284, outbound: 96 },
-  { week: "W5", units: 388, activations: 301, outbound: 108 },
-  { week: "W6", units: 451, activations: 356, outbound: 129 },
-  { week: "W7", units: 523, activations: 402, outbound: 151 },
-  { week: "W8", units: 566, activations: 447, outbound: 168 },
-  { week: "W9", units: 612, activations: 489, outbound: 186 },
-  { week: "W10", units: 643, activations: 515, outbound: 200 },
-];
-
-/** Units by SKU, for the price-point read the proposal calls for. */
-export const BY_SKU = [
-  { sku: "Keychain", units: 2140, price: 18 },
-  { sku: "T-Shirt", units: 1583, price: 32 },
-  { sku: "Hoodie", units: 695, price: 68 },
-];
-
-/** Where demand is coming from. */
-export const BY_REGION = [
-  { region: "United States", units: 2438, share: 0.55 },
-  { region: "United Kingdom", units: 619, share: 0.14 },
-  { region: "Canada", units: 486, share: 0.11 },
-  { region: "Australia", units: 353, share: 0.08 },
-  { region: "Germany", units: 265, share: 0.06 },
-  { region: "Rest of world", units: 257, share: 0.06 },
 ];
 
 /* ---------------------------------------------------------------------------
@@ -460,20 +558,24 @@ export const REVIEW = {
   windowEnd: "2026-11-12",
   dayOf: 62,
   totalDays: 90,
+  /**
+   * Each gate reads a figure from PILOT rather than restating it, so a gate can
+   * never claim a number the performance screen disagrees with.
+   */
   gates: [
     {
       id: "sellthrough",
       measure: "Sell-through",
       target: "≥ 60%",
-      actual: "68%",
+      actual: pct(PILOT.sellThrough),
       state: "clear",
-      note: "Clears the gate with four weeks still to run. Keychain is carrying it.",
+      note: "Clears the gate with four weeks still to run. The keychain is carrying it.",
     },
     {
       id: "activation",
       measure: "Activation rate",
       target: "≥ 50%",
-      actual: "68%",
+      actual: pct(PILOT.activationRate),
       state: "clear",
       note: "Well clear. Supports the case that the activation is the differentiator, not a novelty.",
     },
@@ -481,7 +583,7 @@ export const REVIEW = {
       id: "outbound",
       measure: "Outbound to Roblox",
       target: "≥ 1,000 sessions",
-      actual: "1,052",
+      actual: PILOT.outboundSessions.toLocaleString("en-US"),
       state: "clear",
       note: "Just cleared this week. The number Roblox cares about most.",
     },
@@ -489,7 +591,7 @@ export const REVIEW = {
       id: "margin",
       measure: "Blended contribution margin",
       target: "≥ 35%",
-      actual: "41%",
+      actual: pct(PILOT.blendedMargin),
       state: "clear",
       note: "Ahead of model, helped by the keychain's mix share.",
     },
@@ -497,17 +599,17 @@ export const REVIEW = {
       id: "repeat",
       measure: "Repeat interactions per unit",
       target: "≥ 3.0",
-      actual: "5.46",
+      actual: PILOT.repeatPerUnit.toFixed(2),
       state: "clear",
       note: "The strongest signal in the pilot.",
     },
     {
-      id: "hoodie",
-      measure: "Hoodie sell-through",
-      target: "≥ 50%",
-      actual: "34%",
+      id: "price-point",
+      measure: "Sell-through at the $32 price point",
+      target: "≥ 60%",
+      actual: pct(BY_SKU[1].units / BY_SKU[1].committed),
       state: "watch",
-      note: "The $68 price point is the slowest mover. Worth a read before the assortment widens.",
+      note: "The t-shirt is the slower half of the assortment. This is the read that matters before the $68 hoodie is committed to production.",
     },
   ] satisfies Gate[],
   decisions: [
@@ -527,7 +629,7 @@ export const REVIEW = {
       id: "retail",
       title: "Move to retail consideration",
       recommendation: "Recommended with conditions",
-      body: "The commercial case holds at wholesale economics for the keychain and t-shirt. The hoodie should clear its own gate before it is quoted into a retail assortment.",
+      body: "The commercial case holds at wholesale economics for the keychain, which carries the margin. The $32 price point should clear its gate before the assortment is quoted into a retail buy — retail orders in one go, so a slow mover is inventory rather than a lesson.",
     },
     {
       id: "next",
@@ -664,34 +766,11 @@ export const ACTIVITY: Array<{
   {
     id: "a5",
     kind: "data",
-    when: "2 weeks ago",
+    when: "Last week",
     title: "Week 8 program report published",
     body: "Commercial and engagement measures for weeks 1–8 are available in the performance dashboard.",
   },
 ];
-
-/* ---------------------------------------------------------------------------
-   Formatting helpers
-   --------------------------------------------------------------------------- */
-
-export const pct = (n: number, digits = 0) => `${(n * 100).toFixed(digits)}%`;
-
-export const money = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-
-export function compact(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`;
-  return String(n);
-}
-
-export const shortDate = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 
 /** Index of a stage in the pipeline, for progress maths. */
 export const stageIndex = (id: StageId) => PROGRAM.stages.findIndex((s) => s.id === id);

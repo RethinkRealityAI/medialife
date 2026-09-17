@@ -17,7 +17,18 @@ import { Route as FanReactionsRouteImport } from './routes/fan-reactions'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
+import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
+import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
+import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
+import { Route as RobloxPortalPerformanceRouteImport } from './routes/roblox.portal.performance'
+import { Route as RobloxPortalProductsRouteImport } from './routes/roblox.portal.products'
+import { Route as RobloxPortalResourcesRouteImport } from './routes/roblox.portal.resources'
+import { Route as RobloxPortalReviewRouteImport } from './routes/roblox.portal.review'
+import { Route as RobloxPortalStatusRouteImport } from './routes/roblox.portal.status'
+import { Route as RobloxPortalSubmissionsRouteImport } from './routes/roblox.portal.submissions'
+import { Route as RobloxPortalSupportRouteImport } from './routes/roblox.portal.support'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -59,10 +70,65 @@ const TechnologyRoute = TechnologyRouteImport.update({
   path: '/technology',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RobloxPortalRoute = RobloxPortalRouteImport.update({
+  id: '/roblox/portal',
+  path: '/roblox/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologySlugRoute = TechnologySlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => TechnologyRoute,
+} as any)
+const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalApplyRoute = RobloxPortalApplyRouteImport.update({
+  id: '/apply',
+  path: '/apply',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalGuidelinesRoute = RobloxPortalGuidelinesRouteImport.update({
+  id: '/guidelines',
+  path: '/guidelines',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalPerformanceRoute = RobloxPortalPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalProductsRoute = RobloxPortalProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalResourcesRoute = RobloxPortalResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalReviewRoute = RobloxPortalReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalStatusRoute = RobloxPortalStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalSubmissionsRoute = RobloxPortalSubmissionsRouteImport.update({
+  id: '/submissions',
+  path: '/submissions',
+  getParentRoute: () => RobloxPortalRoute,
+} as any)
+const RobloxPortalSupportRoute = RobloxPortalSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => RobloxPortalRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -74,7 +140,18 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
+  '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
+  '/roblox/portal/apply': typeof RobloxPortalApplyRoute
+  '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
+  '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
+  '/roblox/portal/products': typeof RobloxPortalProductsRoute
+  '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
+  '/roblox/portal/review': typeof RobloxPortalReviewRoute
+  '/roblox/portal/status': typeof RobloxPortalStatusRoute
+  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
+  '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/roblox/portal/': typeof RobloxPortalIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +163,16 @@ export interface FileRoutesByTo {
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
+  '/roblox/portal/apply': typeof RobloxPortalApplyRoute
+  '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
+  '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
+  '/roblox/portal/products': typeof RobloxPortalProductsRoute
+  '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
+  '/roblox/portal/review': typeof RobloxPortalReviewRoute
+  '/roblox/portal/status': typeof RobloxPortalStatusRoute
+  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
+  '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/roblox/portal': typeof RobloxPortalIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,7 +184,18 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
+  '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
+  '/roblox/portal/apply': typeof RobloxPortalApplyRoute
+  '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
+  '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
+  '/roblox/portal/products': typeof RobloxPortalProductsRoute
+  '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
+  '/roblox/portal/review': typeof RobloxPortalReviewRoute
+  '/roblox/portal/status': typeof RobloxPortalStatusRoute
+  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
+  '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/roblox/portal/': typeof RobloxPortalIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -110,7 +208,18 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/technology'
+    | '/roblox/portal'
     | '/technology/$slug'
+    | '/roblox/portal/apply'
+    | '/roblox/portal/guidelines'
+    | '/roblox/portal/performance'
+    | '/roblox/portal/products'
+    | '/roblox/portal/resources'
+    | '/roblox/portal/review'
+    | '/roblox/portal/status'
+    | '/roblox/portal/submissions'
+    | '/roblox/portal/support'
+    | '/roblox/portal/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +231,16 @@ export interface FileRouteTypes {
     | '/live'
     | '/technology'
     | '/technology/$slug'
+    | '/roblox/portal/apply'
+    | '/roblox/portal/guidelines'
+    | '/roblox/portal/performance'
+    | '/roblox/portal/products'
+    | '/roblox/portal/resources'
+    | '/roblox/portal/review'
+    | '/roblox/portal/status'
+    | '/roblox/portal/submissions'
+    | '/roblox/portal/support'
+    | '/roblox/portal'
   id:
     | '__root__'
     | '/'
@@ -132,7 +251,18 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/technology'
+    | '/roblox/portal'
     | '/technology/$slug'
+    | '/roblox/portal/apply'
+    | '/roblox/portal/guidelines'
+    | '/roblox/portal/performance'
+    | '/roblox/portal/products'
+    | '/roblox/portal/resources'
+    | '/roblox/portal/review'
+    | '/roblox/portal/status'
+    | '/roblox/portal/submissions'
+    | '/roblox/portal/support'
+    | '/roblox/portal/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -144,6 +274,7 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
+  RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -204,12 +335,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnologyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/roblox/portal': {
+      id: '/roblox/portal'
+      path: '/roblox/portal'
+      fullPath: '/roblox/portal'
+      preLoaderRoute: typeof RobloxPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology/$slug': {
       id: '/technology/$slug'
       path: '/$slug'
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
       parentRoute: typeof TechnologyRoute
+    }
+    '/roblox/portal/': {
+      id: '/roblox/portal/'
+      path: '/'
+      fullPath: '/roblox/portal/'
+      preLoaderRoute: typeof RobloxPortalIndexRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/apply': {
+      id: '/roblox/portal/apply'
+      path: '/apply'
+      fullPath: '/roblox/portal/apply'
+      preLoaderRoute: typeof RobloxPortalApplyRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/guidelines': {
+      id: '/roblox/portal/guidelines'
+      path: '/guidelines'
+      fullPath: '/roblox/portal/guidelines'
+      preLoaderRoute: typeof RobloxPortalGuidelinesRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/performance': {
+      id: '/roblox/portal/performance'
+      path: '/performance'
+      fullPath: '/roblox/portal/performance'
+      preLoaderRoute: typeof RobloxPortalPerformanceRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/products': {
+      id: '/roblox/portal/products'
+      path: '/products'
+      fullPath: '/roblox/portal/products'
+      preLoaderRoute: typeof RobloxPortalProductsRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/resources': {
+      id: '/roblox/portal/resources'
+      path: '/resources'
+      fullPath: '/roblox/portal/resources'
+      preLoaderRoute: typeof RobloxPortalResourcesRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/review': {
+      id: '/roblox/portal/review'
+      path: '/review'
+      fullPath: '/roblox/portal/review'
+      preLoaderRoute: typeof RobloxPortalReviewRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/status': {
+      id: '/roblox/portal/status'
+      path: '/status'
+      fullPath: '/roblox/portal/status'
+      preLoaderRoute: typeof RobloxPortalStatusRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/submissions': {
+      id: '/roblox/portal/submissions'
+      path: '/submissions'
+      fullPath: '/roblox/portal/submissions'
+      preLoaderRoute: typeof RobloxPortalSubmissionsRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/support': {
+      id: '/roblox/portal/support'
+      path: '/support'
+      fullPath: '/roblox/portal/support'
+      preLoaderRoute: typeof RobloxPortalSupportRouteImport
+      parentRoute: typeof RobloxPortalRoute
     }
   }
 }
@@ -226,6 +434,36 @@ const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
   TechnologyRouteChildren,
 )
 
+interface RobloxPortalRouteChildren {
+  RobloxPortalApplyRoute: typeof RobloxPortalApplyRoute
+  RobloxPortalGuidelinesRoute: typeof RobloxPortalGuidelinesRoute
+  RobloxPortalPerformanceRoute: typeof RobloxPortalPerformanceRoute
+  RobloxPortalProductsRoute: typeof RobloxPortalProductsRoute
+  RobloxPortalResourcesRoute: typeof RobloxPortalResourcesRoute
+  RobloxPortalReviewRoute: typeof RobloxPortalReviewRoute
+  RobloxPortalStatusRoute: typeof RobloxPortalStatusRoute
+  RobloxPortalSubmissionsRoute: typeof RobloxPortalSubmissionsRoute
+  RobloxPortalSupportRoute: typeof RobloxPortalSupportRoute
+  RobloxPortalIndexRoute: typeof RobloxPortalIndexRoute
+}
+
+const RobloxPortalRouteChildren: RobloxPortalRouteChildren = {
+  RobloxPortalApplyRoute: RobloxPortalApplyRoute,
+  RobloxPortalGuidelinesRoute: RobloxPortalGuidelinesRoute,
+  RobloxPortalPerformanceRoute: RobloxPortalPerformanceRoute,
+  RobloxPortalProductsRoute: RobloxPortalProductsRoute,
+  RobloxPortalResourcesRoute: RobloxPortalResourcesRoute,
+  RobloxPortalReviewRoute: RobloxPortalReviewRoute,
+  RobloxPortalStatusRoute: RobloxPortalStatusRoute,
+  RobloxPortalSubmissionsRoute: RobloxPortalSubmissionsRoute,
+  RobloxPortalSupportRoute: RobloxPortalSupportRoute,
+  RobloxPortalIndexRoute: RobloxPortalIndexRoute,
+}
+
+const RobloxPortalRouteWithChildren = RobloxPortalRoute._addFileChildren(
+  RobloxPortalRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BrandRoute: BrandRoute,
@@ -235,6 +473,7 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
+  RobloxPortalRoute: RobloxPortalRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

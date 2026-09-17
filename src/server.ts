@@ -30,10 +30,24 @@ const SECURITY_HEADERS: Record<string, string> = {
   "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
 };
 
-function withSecurityHeaders(response: Response): Response {
+// Everything under /roblox is unlisted: the creator program page carries
+// commercial terms and the portal is a demo populated with mock pilot data.
+// netlify.toml covers the static half of that path; this covers the SSR half.
+// The portal routes also carry a robots meta tag, but a header is the half that
+// works for a crawler that never renders. Keep this in sync with netlify.toml.
+const UNLISTED_PREFIXES = ["/roblox"] as const;
+
+function isUnlisted(pathname: string): boolean {
+  return UNLISTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function withSecurityHeaders(response: Response, pathname?: string): Response {
   const headers = new Headers(response.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(key)) headers.set(key, value);
+  }
+  if (pathname && isUnlisted(pathname)) {
+    headers.set("x-robots-tag", "noindex, nofollow, noarchive");
   }
   return new Response(response.body, {
     status: response.status,
@@ -63,10 +77,19 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // A malformed URL must not cost us the security headers, so fall back to a
+    // path that matches nothing rather than letting the parse throw.
+    let pathname = "";
+    try {
+      pathname = new URL(request.url).pathname;
+    } catch {
+      pathname = "";
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
+      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response), pathname);
     } catch (error) {
       console.error(error);
       return withSecurityHeaders(
@@ -74,6 +97,7 @@ export default {
           status: 500,
           headers: { "content-type": "text/html; charset=utf-8" },
         }),
+        pathname,
       );
     }
   },
