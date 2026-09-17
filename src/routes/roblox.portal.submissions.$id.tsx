@@ -21,12 +21,15 @@ import {
   StageSteps,
   type Tone,
 } from "@/components/portal/kit";
+import { RequirementsList } from "@/components/portal/requirements";
 import {
   ACTIVATIONS,
   LAUNCH_METHODS,
   PROGRAM,
+  REQUIREMENTS,
   SUBMISSIONS,
   compact,
+  requirementSummary,
   shortDate,
 } from "@/lib/roblox-portal";
 
@@ -34,7 +37,11 @@ export const Route = createFileRoute("/roblox/portal/submissions/$id")({
   loader: ({ params }) => {
     const submission = SUBMISSIONS.find((s) => s.id === params.id);
     if (!submission) throw notFound();
-    return { submission, activation: ACTIVATIONS[params.id] ?? null };
+    return {
+      submission,
+      activation: ACTIVATIONS[params.id] ?? null,
+      requirements: REQUIREMENTS[params.id] ?? [],
+    };
   },
   component: SubmissionDetail,
   notFoundComponent: () => (
@@ -75,7 +82,8 @@ function Shot({ name, alt, className }: { name: string; alt: string; className?:
 }
 
 function SubmissionDetail() {
-  const { submission: s, activation } = Route.useLoaderData();
+  const { submission: s, activation, requirements } = Route.useLoaderData();
+  const need = requirements.length ? requirementSummary(requirements) : null;
   const stage = PROGRAM.stages.find((x) => x.id === s.stage);
   const launch = activation ? LAUNCH_METHODS[activation.launch] : null;
   const LaunchIcon = activation?.launch === "nfc" ? Nfc : QrCode;
@@ -88,6 +96,9 @@ function SubmissionDetail() {
         lede={s.note}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {need?.outstanding ? (
+              <Pill tone="watch">{need.outstanding} items needed from you</Pill>
+            ) : null}
             <Pill tone={s.status as Tone}>{STATUS_LABEL[s.status]}</Pill>
             <Link
               to="/roblox/portal/submissions"
@@ -134,6 +145,16 @@ function SubmissionDetail() {
           </Panel>
         </div>
       </Section>
+
+      {requirements.length ? (
+        <Section
+          title="What we still need"
+          hint="Everything the program collects to finish the work, and where each piece is. Items whose stage has not opened are listed but not counted against you."
+          className="border-b border-border"
+        >
+          <RequirementsList groups={requirements} />
+        </Section>
+      ) : null}
 
       {activation && launch ? (
         <>

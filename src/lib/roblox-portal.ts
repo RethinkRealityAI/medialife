@@ -926,3 +926,396 @@ export const daysSince = (iso: string) =>
 
 /** Index of a stage in the pipeline, for progress maths. */
 export const stageIndex = (id: StageId) => PROGRAM.stages.findIndex((s) => s.id === id);
+
+/* ---------------------------------------------------------------------------
+   What a project still needs
+
+   Onboarding is not a form and then silence. Every property has a standing list
+   of things the program needs to finish the work, and the useful question at any
+   moment is not "what stage are we in" but "what is outstanding, and whose is
+   it". This is that list: what has arrived, what is being checked, what is still
+   owed, and what has not been asked for yet because its stage has not opened.
+   --------------------------------------------------------------------------- */
+
+export type RequirementState =
+  /** In hand and accepted. */
+  | "received"
+  /** In hand, being checked — nothing owed until it comes back. */
+  | "in-review"
+  /** Owed now. This is the list a creator should act on. */
+  | "outstanding"
+  /** Not asked for yet; its stage has not opened. */
+  | "not-yet";
+
+export const REQUIREMENT_STATES: Record<
+  RequirementState,
+  { label: string; tone: string; order: number }
+> = {
+  outstanding: { label: "Needed", tone: "watch", order: 0 },
+  "in-review": { label: "In review", tone: "primary", order: 1 },
+  received: { label: "Received", tone: "clear", order: 2 },
+  "not-yet": { label: "Not yet", tone: "muted", order: 3 },
+};
+
+export type Requirement = {
+  id: string;
+  label: string;
+  detail: string;
+  /** Who the program is waiting on. */
+  owner: "Creator" | "MEDIALIFE" | "Roblox";
+  state: RequirementState;
+  /** What actually arrived, once it has. */
+  artifact?: { name: string; meta: string };
+  receivedOn?: string;
+  neededBy?: string;
+};
+
+export type RequirementGroup = {
+  id: string;
+  name: string;
+  blurb: string;
+  items: Requirement[];
+};
+
+export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
+  "amp-001": [
+    {
+      id: "rights",
+      name: "Property & rights",
+      blurb: "Settled before anything is designed. Nothing is produced against an unclear licence.",
+      items: [
+        {
+          id: "experience",
+          label: "Experience name and Roblox link",
+          detail: "The live experience the program attaches to.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "EVADE — roblox.com/games", meta: "Link · verified" },
+          receivedOn: "2026-06-02",
+        },
+        {
+          id: "ownership",
+          label: "Proof of IP ownership",
+          detail: "Who owns the characters, the name and the marks being put on product.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "EVADE_IP_ownership.pdf", meta: "PDF · 1.2 MB" },
+          receivedOn: "2026-06-09",
+        },
+        {
+          id: "agreement",
+          label: "Signed program agreement",
+          detail: "Scope, term, territories and royalty. Countersigned by both parties.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "EVADE_program_agreement_signed.pdf", meta: "PDF · 840 KB" },
+          receivedOn: "2026-06-12",
+        },
+        {
+          id: "scope",
+          label: "Territory and channel scope",
+          detail: "Where product may be sold, and through which channels.",
+          owner: "MEDIALIFE",
+          state: "received",
+          artifact: { name: "Global · on-platform, pilot", meta: "Set at scoping" },
+          receivedOn: "2026-06-12",
+        },
+      ],
+    },
+    {
+      id: "creative",
+      name: "Creative assets",
+      blurb:
+        "What the assortment is built from. Most creators arrive without print-ready files — that changes the timeline, not whether a property qualifies.",
+      items: [
+        {
+          id: "logo",
+          label: "Logo files",
+          detail: "Vector, with clear-space and minimum-size rules if they exist.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "evade-logo.svg + .ai", meta: "2 files · 480 KB" },
+          receivedOn: "2026-06-15",
+        },
+        {
+          id: "characters",
+          label: "Character reference sheet",
+          detail: "Turnarounds and expressions for anything going onto product.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "EVADE_character_refs.zip", meta: "14 files · 62 MB" },
+          receivedOn: "2026-06-18",
+        },
+        {
+          id: "brand",
+          label: "Brand colours and typography",
+          detail: "So printed product matches what a player sees in the experience.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "EVADE_brand_sheet.pdf", meta: "PDF · 3.1 MB" },
+          receivedOn: "2026-06-18",
+        },
+        {
+          id: "artwork-1",
+          label: "Print-ready artwork — wave one",
+          detail: "Keychain and t-shirt. Built by our design team from the references above.",
+          owner: "MEDIALIFE",
+          state: "received",
+          artifact: { name: "EVADE_wave1_print_pack.zip", meta: "6 files · 210 MB" },
+          receivedOn: "2026-07-03",
+        },
+        {
+          id: "hoodie-signoff",
+          label: "Hoodie fit and hand-feel sign-off",
+          detail:
+            "First-article samples are with the IP holder. Production is not committed until this comes back.",
+          owner: "Creator",
+          state: "in-review",
+          artifact: { name: "EVADE_hoodie_sample_photos.zip", meta: "9 files · 44 MB" },
+          receivedOn: "2026-10-14",
+        },
+        {
+          id: "artwork-2",
+          label: "Print-ready artwork — wave two",
+          detail:
+            "Vinyl figure and deskmat. Needs the character sculpt approved before the wrap can be finalised.",
+          owner: "Creator",
+          state: "outstanding",
+          neededBy: "2026-10-24",
+        },
+      ],
+    },
+    {
+      id: "experience",
+      name: "The activation",
+      blurb: "The half of the product that keeps working after the sale.",
+      items: [
+        {
+          id: "concept",
+          label: "Experience concept approval",
+          detail: "What opens when a buyer scans, signed off before the build started.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Cola Run — concept deck", meta: "Approved at scoping" },
+          receivedOn: "2026-06-20",
+        },
+        {
+          id: "reward",
+          label: "Reward definition",
+          detail: "What a player keeps, and how it is granted in the experience.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Orbiting Cat Bobo — cosmetic", meta: "Spec agreed" },
+          receivedOn: "2026-06-27",
+        },
+        {
+          id: "placeid",
+          label: "Place ID for the return link",
+          detail: "Where the experience sends a player back to, and the deep link that does it.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Place ID + deep link", meta: "Tested on iOS and Android" },
+          receivedOn: "2026-07-10",
+        },
+        {
+          id: "grant",
+          label: "Reward grant hookup",
+          detail:
+            "The in-experience script that awards the cosmetic. Being integrated against your build now.",
+          owner: "MEDIALIFE",
+          state: "in-review",
+          artifact: { name: "reward-grant v0.4", meta: "In integration" },
+          receivedOn: "2026-10-12",
+        },
+        {
+          id: "qa",
+          label: "Device QA sign-off",
+          detail: "Opens once reward integration lands. Runs across the handset matrix.",
+          owner: "MEDIALIFE",
+          state: "not-yet",
+        },
+      ],
+    },
+    {
+      id: "commerce",
+      name: "Commerce & compliance",
+      blurb: "What has to be true before money moves.",
+      items: [
+        {
+          id: "payout",
+          label: "Payout and tax details",
+          detail: "Where the royalty goes, and under which entity.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Payout profile", meta: "Verified" },
+          receivedOn: "2026-07-01",
+        },
+        {
+          id: "moderation",
+          label: "Age-rating confirmation",
+          detail:
+            "The experience's rating, which decides which product categories are appropriate.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Roblox experience rating", meta: "Confirmed" },
+          receivedOn: "2026-07-01",
+        },
+        {
+          id: "wave2-forecast",
+          label: "Wave-two inventory commitment",
+          detail:
+            "How many units of the second-wave SKUs to commit. Decided at the program review from the pilot's sell-through.",
+          owner: "MEDIALIFE",
+          state: "not-yet",
+        },
+      ],
+    },
+  ],
+
+  "amp-004": [
+    {
+      id: "rights",
+      name: "Property & rights",
+      blurb: "This property is held at review until these arrive. Nothing else starts first.",
+      items: [
+        {
+          id: "experience",
+          label: "Experience name and Roblox link",
+          detail: "The live experience the program attaches to.",
+          owner: "Creator",
+          state: "received",
+          artifact: { name: "Skybound Co. — roblox.com/games", meta: "Link · verified" },
+          receivedOn: "2026-09-11",
+        },
+        {
+          id: "ownership",
+          label: "Proof of IP ownership",
+          detail:
+            "Sample row. The experience lists three collaborators, so we need written confirmation of who holds the marks.",
+          owner: "Creator",
+          state: "outstanding",
+          neededBy: "2026-10-20",
+        },
+        {
+          id: "agreement",
+          label: "Signed program agreement",
+          detail: "Issued once ownership is clear.",
+          owner: "MEDIALIFE",
+          state: "not-yet",
+        },
+      ],
+    },
+    {
+      id: "creative",
+      name: "Creative assets",
+      blurb: "Enough to see what an assortment could look like.",
+      items: [
+        {
+          id: "assets",
+          label: "Creative asset pack",
+          detail:
+            "Sample row. Logo, character references and in-game key art. Nothing needs to be print-ready.",
+          owner: "Creator",
+          state: "outstanding",
+          neededBy: "2026-10-20",
+        },
+        {
+          id: "artwork",
+          label: "Print-ready artwork",
+          detail: "Built by our design team after the scoping call.",
+          owner: "MEDIALIFE",
+          state: "not-yet",
+        },
+      ],
+    },
+  ],
+};
+
+/** Flat counts by state, for the summary a creator reads first. */
+export function requirementSummary(groups: RequirementGroup[]) {
+  const all = groups.flatMap((g) => g.items);
+  const by = (s: RequirementState) => all.filter((i) => i.state === s).length;
+  return {
+    total: all.length,
+    received: by("received"),
+    inReview: by("in-review"),
+    outstanding: by("outstanding"),
+    notYet: by("not-yet"),
+    /** Not-yet items are excluded: a creator cannot act on a stage that has not opened. */
+    settled: by("received"),
+    askable: all.length - by("not-yet"),
+  };
+}
+
+/* ---------------------------------------------------------------------------
+   The thread
+
+   One place per property where the creator, their specialist and the program
+   itself talk, with the files attached to the message that needed them rather
+   than lost in an inbox.
+   --------------------------------------------------------------------------- */
+
+export type CommentAuthor = "creator" | "medialife" | "system";
+
+export type Comment = {
+  id: string;
+  author: CommentAuthor;
+  name: string;
+  role: string;
+  when: string;
+  body: string;
+  attachments?: Array<{ name: string; meta: string }>;
+  /** Ties the message to the requirement it is about. */
+  about?: string;
+};
+
+export const THREAD: Record<string, Comment[]> = {
+  "amp-001": [
+    {
+      id: "c1",
+      author: "system",
+      name: "Program",
+      role: "System",
+      when: "Jul 3",
+      body: "Wave-one print pack accepted. Keychain and t-shirt released to production.",
+      about: "Print-ready artwork — wave one",
+    },
+    {
+      id: "c2",
+      author: "medialife",
+      name: "Your specialist",
+      role: "MEDIALIFE",
+      when: "Oct 12",
+      body: "Reward grant is integrated against your build on a staging place. Cat Bobo orbits on unlock and persists across sessions. I will send a test link once device QA opens.",
+      about: "Reward grant hookup",
+    },
+    {
+      id: "c3",
+      author: "medialife",
+      name: "Your specialist",
+      role: "MEDIALIFE",
+      when: "Oct 14",
+      body: "Hoodie first articles arrived and are photographed from every angle. Two things worth your eye: the cuff chip sits slightly proud on sample 2, and the hem label is a shade warmer than the brand sheet. Neither blocks production if you are happy with them.",
+      attachments: [{ name: "EVADE_hoodie_sample_photos.zip", meta: "9 files · 44 MB" }],
+      about: "Hoodie fit and hand-feel sign-off",
+    },
+    {
+      id: "c4",
+      author: "creator",
+      name: "Hexagon Development",
+      role: "You",
+      when: "Oct 15",
+      body: "Cuff is fine. The hem label needs to match the sheet — it reads orange next to the keychain. Can we correct before the run?",
+      about: "Hoodie fit and hand-feel sign-off",
+    },
+    {
+      id: "c5",
+      author: "medialife",
+      name: "Your specialist",
+      role: "MEDIALIFE",
+      when: "Oct 15",
+      body: "Yes. A label colour correction at this stage costs nothing and adds about four days. I will re-issue for sign-off once the corrected article is in hand.",
+      about: "Hoodie fit and hand-feel sign-off",
+    },
+  ],
+};

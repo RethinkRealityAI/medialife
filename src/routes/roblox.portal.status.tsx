@@ -2,7 +2,18 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
 
 import { PageHeader, Panel, Pill, Section, StageBar } from "@/components/portal/kit";
-import { ACTIVE, PROGRAM, REVIEW, shortDate, stageIndex } from "@/lib/roblox-portal";
+import { RequirementsList } from "@/components/portal/requirements";
+import { Thread } from "@/components/portal/thread";
+import {
+  ACTIVE,
+  PROGRAM,
+  REQUIREMENTS,
+  REVIEW,
+  THREAD,
+  requirementSummary,
+  shortDate,
+  stageIndex,
+} from "@/lib/roblox-portal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/roblox/portal/status")({
@@ -48,14 +59,24 @@ const STEP_ICON = { done: CheckCircle2, doing: Loader2, todo: CircleDashed } as 
 
 function Status() {
   const at = stageIndex(ACTIVE.stage);
+  const groups = REQUIREMENTS[ACTIVE.id] ?? [];
+  const need = requirementSummary(groups);
+  const thread = THREAD[ACTIVE.id] ?? [];
 
   return (
     <>
       <PageHeader
         eyebrow="Program / Project status"
         title={`Where ${ACTIVE.property} sits today.`}
-        lede="The four program stages, and the two production tracks running inside the current one — who owns each step and when it lands."
-        actions={<Pill tone="active">Day {REVIEW.dayOf} of the validation window</Pill>}
+        lede="What is being built, what the program is still waiting on, and the thread where it gets settled."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {need.outstanding ? (
+              <Pill tone="watch">{need.outstanding} items needed from you</Pill>
+            ) : null}
+            <Pill tone="active">Day {REVIEW.dayOf} of the validation window</Pill>
+          </div>
+        }
       />
 
       <Section
@@ -130,6 +151,24 @@ function Status() {
               </ol>
             </Panel>
           ))}
+        </div>
+      </Section>
+
+      <Section
+        title="What we still need"
+        hint="Everything the program collects to finish the work, and where each piece is. Items whose stage has not opened are listed but not counted against you."
+        className="border-t border-border"
+      >
+        <RequirementsList groups={groups} />
+      </Section>
+
+      <Section
+        title="Thread"
+        hint="One place per property. Files attach to the message that needed them, so an approval and the thing it approved never come apart."
+        className="border-t border-border"
+      >
+        <div className="max-w-4xl">
+          <Thread comments={thread} />
         </div>
       </Section>
     </>
