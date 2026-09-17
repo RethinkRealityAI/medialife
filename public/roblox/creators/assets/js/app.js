@@ -1537,6 +1537,8 @@ function initApply() {
       ["Colourway", COLORWAYS.find((c) => c.id === cfg.color)?.name],
       ["Activation", ACTIVATIONS.find((x) => x.id === cfg.activation)?.name],
       ["Launch window", fd.get("launch-window")],
+      ["Artwork", fd.get("asset-readiness")],
+      ["Sells via", fd.get("commerce-setup")],
       [
         "Modelled royalty",
         r.royalty ? `${money(r.royalty)} over ${PROGRAM.pilot.reviewDays} days (illustrative)` : "",

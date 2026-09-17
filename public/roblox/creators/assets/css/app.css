@@ -840,6 +840,292 @@ main,
 }
 
 /* =========================================================================
+   AFTER YOU APPLY
+   The ten-day path, the two build tracks, and the horizon beyond launch.
+   ========================================================================= */
+.tenday {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 1000px) {
+  .tenday {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .tenday {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.tenday-step {
+  position: relative;
+  border-radius: var(--radius-lg);
+  padding: clamp(20px, 2.2vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+/* The connector between days, in the gutter. Decorative. */
+.tenday-step::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  right: -20px;
+  top: 50%;
+  width: 26px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 65%, transparent),
+    transparent
+  );
+  pointer-events: none;
+}
+.tenday li:last-child .tenday-step::after,
+.tenday-step:last-child::after {
+  display: none;
+}
+@media (max-width: 1000px) {
+  .tenday-step::after {
+    display: none;
+  }
+}
+
+.tenday-day {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  background: var(--gradient-ember);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.tenday-who {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.tenday-who.is-you {
+  border-color: color-mix(in srgb, var(--primary) 42%, transparent);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: #7fd4ff;
+}
+.tenday-step h3 {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.tenday-step p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ---------- the two build tracks ---------- */
+.tracks {
+  margin-top: clamp(40px, 5vw, 64px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: clamp(22px, 3vw, 34px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent);
+}
+.tracks-head h3 {
+  margin: 0;
+  font-size: clamp(19px, 2vw, 24px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.tracks-head .sub {
+  margin: 10px 0 0;
+  max-width: 68ch;
+  color: var(--muted-foreground);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.tracks-grid {
+  margin-top: 26px;
+  display: grid;
+  gap: 14px;
+}
+.build-track {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 190px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+@media (max-width: 760px) {
+  .build-track {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+.build-track--merch {
+  border-left: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
+}
+.build-track--experience {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.build-track-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.build-track-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+.build-track-sub {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+/* The steps read as a chain. Arrows are generated so the markup stays a list. */
+.build-track-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.build-track-steps li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.025);
+  color: #b9bbc7;
+  font-size: 12.5px;
+  line-height: 1;
+}
+.build-track-steps li + li::before {
+  content: "→";
+  display: inline-block;
+  margin: 0 10px 0 -4px;
+  color: var(--dim);
+}
+
+.tracks-launch {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+/* ---------- horizon: where a property goes after launch ---------- */
+.horizon {
+  margin-top: clamp(36px, 4vw, 52px);
+}
+.horizon-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 16px;
+}
+.horizon-row {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+}
+@media (max-width: 900px) {
+  .horizon-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .horizon-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.horizon-row li {
+  position: relative;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--border);
+  border-right-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent);
+}
+.horizon-row li:first-child {
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+.horizon-row li:last-child {
+  border-right-width: 1px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+@media (max-width: 900px) {
+  .horizon-row li {
+    border-right-width: 1px;
+    border-radius: 0 !important;
+    margin-top: -1px;
+    margin-left: -1px;
+  }
+}
+/* The last stage is the payoff, so it carries the accent. */
+.horizon-row li:last-child {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 10%, transparent),
+    transparent 70%
+  );
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.horizon-n {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--primary);
+}
+.horizon-row b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.horizon-weeks {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.horizon-body {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* =========================================================================
    THE LOOP
    ========================================================================= */
 .loop {

@@ -42,7 +42,7 @@ import sharp from "sharp";
 
 const run = promisify(execFile);
 const RAW_DIR = path.resolve("assets-src/models");
-const OUT_DIR = path.resolve("public/creators/assets/models");
+const OUT_DIR = path.resolve("public/roblox/creators/assets/models");
 
 const force = process.argv.includes("--force");
 const onlyArg = process.argv.indexOf("--only");

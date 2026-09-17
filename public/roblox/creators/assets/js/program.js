@@ -379,6 +379,93 @@ export function project(assortment, monthlyVisits, attachRate) {
   };
 }
 
+/**
+ * What happens between hitting submit and the build starting.
+ *
+ * The three steps above are the creator's whole job. This is the answer to the
+ * question the three steps raise — "then what?" — and it is the part that makes
+ * "we handle the rest" concrete rather than a promise. Ten days, and it is clear
+ * at every one of them who owes what.
+ */
+export const ONBOARDING = [
+  {
+    day: "Day 0",
+    title: "You submit",
+    who: "You",
+    body:
+      "One form, about two minutes: your experience, your audience, who owns the IP, what you " +
+      "already sell, and where your artwork is.",
+  },
+  {
+    day: "Day 1–2",
+    title: "We qualify it",
+    who: "MEDIALIFE",
+    body:
+      "A named specialist picks up your account within 48 hours and screens audience scale, IP " +
+      "clarity, asset readiness and which product categories fit.",
+  },
+  {
+    day: "Day 3–5",
+    title: "Scoping call",
+    who: "Together",
+    body:
+      "Which products, what the activation does, and which in-game reward it ends on. You bring " +
+      "the instincts about your world and characters; we bring the assortment and the timeline.",
+  },
+  {
+    day: "Day 6–10",
+    title: "Scope and sign-off",
+    who: "You + MEDIALIFE",
+    body:
+      "We issue the proposal — assortment, experience concept, economics, timeline. You approve " +
+      "the creative and the licensing. Both production tracks are staffed the day it is signed.",
+  },
+];
+
+/**
+ * After kickoff the work runs on two tracks at once. Neither ships without the
+ * other: a product with no activation is just merch, and an activation with no
+ * reward path is a dead end.
+ */
+export const TRACKS = [
+  {
+    id: "merch",
+    name: "Merchandise",
+    sub: "Production & sourcing",
+    steps: ["Design", "Sampling", "IP approval", "Production", "Fulfilment"],
+  },
+  {
+    id: "experience",
+    name: "Experience",
+    sub: "Immersive production",
+    steps: ["Concept", "Asset intake", "Build", "Reward code", "Device QA"],
+  },
+];
+
+/** What a creator gets if the pilot works. The stages after launch, in weeks. */
+export const HORIZON = [
+  { n: "01", name: "IP onboarding", weeks: "Weeks 0–2", body: "Apply, screen, licence." },
+  {
+    n: "02",
+    name: "Product development",
+    weeks: "Weeks 2–6",
+    body: "Up to four SKUs per property.",
+  },
+  {
+    n: "03",
+    name: "Commerce validation",
+    weeks: "Weeks 6–16",
+    body: "Launch, measure, find the winners.",
+  },
+  {
+    n: "04",
+    name: "Performance review",
+    weeks: "Weeks 16–20",
+    body: "Hero products and retail readiness.",
+  },
+  { n: "05", name: "Retail scale", weeks: "Week 20+", body: "Expanded distribution." },
+];
+
 /** Compact currency for dense readouts: $1.2K, $340K, $1.4M. */
 export function money(n, { compact = false } = {}) {
   if (!compact) return "$" + Math.round(n).toLocaleString("en-US");

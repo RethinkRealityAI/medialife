@@ -16,6 +16,18 @@
   status = 301
   force = true
 
+# The creator program page used to live at /creators, before everything Roblox
+# was gathered under one path. The old link was shared, so it still resolves.
+[[redirects]]
+  from = "/creators"
+  to = "/roblox/creators/"
+  status = 301
+
+[[redirects]]
+  from = "/creators/*"
+  to = "/roblox/creators/:splat"
+  status = 301
+
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
 # src/server.ts instead. Keep the two lists in sync.
@@ -56,18 +68,18 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
-# ── Roblox creator program ───────────────────────────────────────────────────
-# Static page under public/, so like the cards it is served straight from the
-# CDN and DOES receive these headers (SSR routes get theirs from src/server.ts).
-# Unlisted: it carries commercial terms and is reached by invitation.
+# ── Roblox ───────────────────────────────────────────────────────────────────
+# Everything for the Roblox program lives under one top-level path, so the
+# creator program page and the partner portal share one set of rules and a
+# future non-Roblox client portal can have its own. All of it is unlisted: the
+# program page carries commercial terms, and the portal is a demo populated
+# with mock pilot data.
+#
+# /roblox/creators is a static page under public/, so like the cards it is
+# served straight from the CDN and DOES receive these headers. /roblox/portal
+# is an SSR route and gets its own from src/server.ts — keep the two in sync.
 [[headers]]
-  for = "/creators"
-  [headers.values]
-    X-Robots-Tag = "noindex, nofollow, noarchive"
-    Cache-Control = "public, max-age=300"
-
-[[headers]]
-  for = "/creators/*"
+  for = "/roblox/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=300"
@@ -75,12 +87,12 @@
 # Vendored three.js and the generated imagery only change when the page is
 # rebuilt, so they can be cached hard.
 [[headers]]
-  for = "/creators/vendor/*"
+  for = "/roblox/creators/vendor/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/creators/assets/img/*"
+  for = "/roblox/creators/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 

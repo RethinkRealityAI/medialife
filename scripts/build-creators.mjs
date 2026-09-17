@@ -20,16 +20,19 @@ import {
   ACTIVATIONS,
   PATHS,
   STEPS,
+  ONBOARDING,
+  TRACKS,
+  HORIZON,
   LOOP,
   PROOF,
   FAQ,
   MODEL,
-} from "../public/creators/assets/js/program.js";
+} from "../public/roblox/creators/assets/js/program.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = resolve(HERE, "../public/creators/index.html");
+const OUT = resolve(HERE, "../public/roblox/creators/index.html");
 const SITE = "https://medialife.ai";
-const PAGE_URL = `${SITE}/creators/`;
+const PAGE_URL = `${SITE}/roblox/creators/`;
 
 /** Escape for HTML text nodes and double-quoted attributes. */
 const e = (s) =>
@@ -218,12 +221,84 @@ function stepsSection() {
   </section>`;
 }
 
+/**
+ * What happens after the form is submitted.
+ *
+ * The three steps say what the creator does. This says what we do, on what
+ * clock, which is the part that turns "we handle the rest" from a promise into
+ * something checkable.
+ */
+function onboardingSection() {
+  return `
+  <section class="band band--tight" id="after">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <span class="mono">02 / After you apply</span>
+        <h2>Ten days from hello to a build.</h2>
+        <p class="lede">Every property runs the same path, and at each step it is clear who owes
+        what. If a property does not qualify you get a written reason and a route back — not silence.</p>
+      </div>
+
+      <ol class="tenday">
+        ${ONBOARDING.map(
+          (o, i) => `
+        <li class="tenday-step glass glass-sheen rv rv-d${i}">
+          <span class="tenday-day mono">${e(o.day)}</span>
+          <span class="tenday-who${o.who === "You" ? " is-you" : ""}">${e(o.who)}</span>
+          <h3>${e(o.title)}</h3>
+          <p>${e(o.body)}</p>
+        </li>`,
+        ).join("")}
+      </ol>
+
+      <div class="tracks rv">
+        <div class="tracks-head">
+          <h3>Then two tracks run at once.</h3>
+          <p class="sub">The product never ships without its activation, and the activation never
+          ships without a reward path back into your game. Both tracks are staffed on day ten and
+          land on the same launch date.</p>
+        </div>
+        <div class="tracks-grid">
+          ${TRACKS.map(
+            (t) => `
+          <div class="build-track build-track--${e(t.id)}">
+            <div class="build-track-label">
+              <span class="build-track-name">${e(t.name)}</span>
+              <span class="mono build-track-sub">${e(t.sub)}</span>
+            </div>
+            <ol class="build-track-steps">
+              ${t.steps.map((s) => `<li>${e(s)}</li>`).join("")}
+            </ol>
+          </div>`,
+          ).join("")}
+        </div>
+        <div class="tracks-launch mono"><span class="dot"></span>Launch</div>
+      </div>
+
+      <div class="horizon rv">
+        <span class="mono horizon-label">And where it goes if it works</span>
+        <ol class="horizon-row">
+          ${HORIZON.map(
+            (h) => `
+          <li>
+            <span class="mono horizon-n">${e(h.n)}</span>
+            <b>${e(h.name)}</b>
+            <span class="mono horizon-weeks">${e(h.weeks)}</span>
+            <span class="horizon-body">${e(h.body)}</span>
+          </li>`,
+          ).join("")}
+        </ol>
+      </div>
+    </div>
+  </section>`;
+}
+
 function loopSection() {
   return `
   <section class="band band--tight" id="loop">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">02 / What "activated" means</span>
+        <span class="mono">03 / What "activated" means</span>
         <h2>The product keeps working after they buy it.</h2>
         <p class="lede">A normal piece of merch stops the moment it is sold. An activated one is a
         door back into your game, and it tells you every time someone walks through it.</p>
@@ -252,7 +327,7 @@ function activateSection() {
     <div class="wrap">
       <div class="card glass glass-sheen split-card rv">
         <div>
-          <span class="mono">05 / ${e(path.kicker)}</span>
+          <span class="mono">06 / ${e(path.kicker)}</span>
           <h2 style="margin-top:14px">${e(path.title)}</h2>
           <p class="lede" style="margin-top:16px">${e(path.body)}</p>
           <ul class="tick-list" style="margin-top:20px">
@@ -273,7 +348,7 @@ function valueSection() {
   <section class="band" id="why">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">03 / Why this is different</span>
+        <span class="mono">04 / Why this is different</span>
         <h2>Most merch programs end at the cash register.</h2>
         <p class="lede">Activated Merchandise${marks("®")} does not. The product is the start of the
         relationship, not the end of it — and that is the part you can actually measure.</p>
@@ -342,7 +417,7 @@ function studioSection() {
   <section class="band studio-band" id="studio">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">04 / The drop studio</span>
+        <span class="mono">05 / The drop studio</span>
         <h2>Build the drop you would actually want.</h2>
         <p class="lede">Pick your SKUs, set the colourway, drop your mark on it and press
         <b style="color:var(--foreground);font-weight:500">Activate</b> to watch the whole loop run.
@@ -609,7 +684,7 @@ function proofSection() {
   <section class="band" id="proof">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">06 / Track record</span>
+        <span class="mono">07 / Track record</span>
         <h2>We have already run this loop at retail scale.</h2>
         <p class="lede">These are measured results from a shipped MEDIALIFE activated print program
         with Netflix, across 150+ North American retail locations and the largest fan conventions
@@ -669,7 +744,7 @@ function faqSection() {
   <section class="band" id="faq">
     <div class="wrap" style="max-width:900px">
       <div class="sec-head rv">
-        <span class="mono">07 / Questions</span>
+        <span class="mono">08 / Questions</span>
         <h2>The things creators actually ask.</h2>
       </div>
       <div class="faq glass glass-sheen rv">
@@ -706,6 +781,20 @@ const ROLES = [
   "Publisher",
   "Other",
 ];
+const ASSET_READINESS = [
+  "Print-ready files",
+  "Logo and key art only",
+  "In-game assets only",
+  "Nothing yet",
+];
+
+const COMMERCE_SETUP = [
+  "Roblox only",
+  "Roblox + my own store",
+  "Third-party merch platform",
+  "Not selling anything yet",
+];
+
 const WINDOWS = [
   "As soon as possible",
   "Next quarter",
@@ -734,7 +823,7 @@ function applySection() {
   <section class="band apply-band" id="apply">
     <div class="wrap">
       <div class="sec-head rv">
-        <span class="mono">08 / Apply</span>
+        <span class="mono">09 / Apply</span>
         <h2>This is step one. It takes about three minutes.</h2>
         <p class="lede">Tell us about your game and what you want to make. That is the whole ask —
         applying costs nothing and commits you to nothing. We review every submission against fit,
@@ -831,6 +920,24 @@ function applySection() {
                   <label>Ideal launch window</label>
                   <div class="chips">${chips("launch-window", WINDOWS)}</div>
                   <input type="hidden" name="launch-window" id="f-window" />
+                </div>
+                <div class="fld span2">
+                  <label>Artwork readiness</label>
+                  <div class="chips">${chips("asset-readiness", ASSET_READINESS)}</div>
+                  <input type="hidden" name="asset-readiness" id="f-assets" />
+                  <span class="hint">Whichever you pick is fine. Most creators arrive with less than
+                  they think they need, and our design team builds the rest with you.</span>
+                </div>
+                <div class="fld span2">
+                  <label for="f-artlinks">Key art and character references</label>
+                  <input type="url" id="f-artlinks" name="art-links" placeholder="Drive, Dropbox, Figma or a public folder…" />
+                  <span class="hint">A link to your logo, key art, character renders — anything that
+                  shows us the look. Optional now, needed before the scoping call.</span>
+                </div>
+                <div class="fld span2">
+                  <label>How do you sell today?</label>
+                  <div class="chips">${chips("commerce-setup", COMMERCE_SETUP)}</div>
+                  <input type="hidden" name="commerce-setup" id="f-commerce" />
                 </div>
                 <div class="fld span2">
                   <label for="f-notes">Anything we should know about your IP?</label>
@@ -1096,6 +1203,7 @@ const html = `<!doctype html>
 <main id="main">
 ${heroSection()}
 ${stepsSection()}
+${onboardingSection()}
 ${loopSection()}
 ${valueSection()}
 ${studioSection()}
@@ -1117,4 +1225,6 @@ ${passModal()}
 
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, html, "utf8");
-console.log(`✓ public/creators/index.html  ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`);
+console.log(
+  `✓ public/roblox/creators/index.html  ${(Buffer.byteLength(html) / 1024).toFixed(1)} KB`,
+);
