@@ -1,6 +1,5 @@
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Boxes,
@@ -326,19 +325,6 @@ function SubmissionDetail() {
                 </Panel>
               ))}
             </div>
-
-            {activation.caveats.length ? (
-              <Panel className="mt-3 border-amber-400/30 bg-amber-400/[0.04] p-4">
-                <div className="flex gap-3">
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-400" aria-hidden />
-                  <ul className="space-y-1 text-sm leading-relaxed text-muted-foreground">
-                    {activation.caveats.map((c) => (
-                      <li key={c}>{c}</li>
-                    ))}
-                  </ul>
-                </div>
-              </Panel>
-            ) : null}
           </Section>
         </>
       ) : (

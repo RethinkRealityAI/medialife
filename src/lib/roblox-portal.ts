@@ -308,8 +308,6 @@ export type Activation = {
     alt: string;
   };
   products: ActivatedProduct[];
-  /** Said plainly wherever the activation is shown. */
-  caveats: string[];
 };
 
 export const ACTIVATIONS: Record<string, Activation> = {
@@ -362,10 +360,6 @@ export const ACTIVATIONS: Record<string, Activation> = {
         image: "acrylic",
         alt: "The keychain set lit against black, showing the clear acrylic edge glow and the swivel clasp.",
       },
-    ],
-    caveats: [
-      "Built as a demonstration for RDC 2026. Not commercially sold.",
-      "The design changes to remove Roblox IP unless approval is granted.",
     ],
   },
 };
