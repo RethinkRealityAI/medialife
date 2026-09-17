@@ -55,26 +55,34 @@ export const PROGRAM = {
   shortLabel: "Activated Merch",
   partner: "Roblox",
   reviewDays: 90,
-  /** What a property moves through, in order. From the proposal's onboarding workflow. */
+  /**
+   * What a property moves through, in order. From the proposal's onboarding
+   * workflow. `short` is what the stepper shows on a phone, where the full name
+   * is twice the width of its column and gets silently cut in half.
+   */
   stages: [
     {
       id: "review",
       name: "Review",
+      short: "Review",
       blurb: "IP, ownership, game and audience information is submitted and assessed for fit.",
     },
     {
       id: "product",
       name: "Product development",
+      short: "Product",
       blurb: "Assortment design, sampling, sourcing and the immersive experience build.",
     },
     {
       id: "commerce",
       name: "Commerce validation",
+      short: "Commerce",
       blurb: "A limited assortment goes live for a defined test period against defined measures.",
     },
     {
       id: "retail",
       name: "Retail consideration",
+      short: "Retail",
       blurb: "Properties that clear the measures are assessed for wholesale and retail channels.",
     },
   ],
@@ -232,6 +240,135 @@ export const SUBMISSIONS: Submission[] = [
     note: "Sample row. Waiting on proof of IP ownership and a creative asset pack.",
   },
 ];
+
+/* ---------------------------------------------------------------------------
+   Activations
+
+   An activated product is three decisions, and a submission is not reviewable
+   until all three are made: how a buyer opens it, what opens, and what they
+   walk away with. The RDC 2026 proof of concept with EVADE is the worked
+   example — a real acrylic keychain set with a code on the can that opens the
+   Cola Run mini-game in the browser and unlocks a cosmetic.
+   --------------------------------------------------------------------------- */
+
+/** How a buyer gets from the physical object into the experience. */
+export type LaunchMethod = "qr" | "nfc" | "both";
+
+export const LAUNCH_METHODS: Record<LaunchMethod, { label: string; short: string; blurb: string }> =
+  {
+    qr: {
+      label: "Printed QR code",
+      short: "QR",
+      blurb:
+        "Printed directly on the product. Works on every phone camera with no hardware cost, which is what makes it right for a proof of concept.",
+    },
+    nfc: {
+      label: "Embedded NFC",
+      short: "NFC",
+      blurb:
+        "A chip in the product itself. Nothing visible on the artwork, and a tap rather than a scan — but it adds unit cost and needs a compatible phone.",
+    },
+    both: {
+      label: "NFC + printed code",
+      short: "NFC + QR",
+      blurb:
+        "The chip carries the interaction and the printed code is the fallback, so no buyer is locked out by their handset.",
+    },
+  };
+
+export type ActivatedProduct = {
+  id: string;
+  name: string;
+  detail: string;
+  /** Basename under /roblox/portal/img/evade, served as .webp with a .jpg fallback. */
+  image: string;
+  alt: string;
+};
+
+export type Activation = {
+  launch: LaunchMethod;
+  /** Where the code physically sits on the product. */
+  codePlacement: string;
+  experience: {
+    name: string;
+    kind: string;
+    url: string | null;
+    blurb: string;
+    image: string;
+    alt: string;
+    /** What a buyer does, in the order they do it. */
+    beats: string[];
+  };
+  reward: {
+    name: string;
+    unlock: string;
+    kind: string;
+    blurb: string;
+    image: string;
+    alt: string;
+  };
+  products: ActivatedProduct[];
+  /** Said plainly wherever the activation is shown. */
+  caveats: string[];
+};
+
+export const ACTIVATIONS: Record<string, Activation> = {
+  "amp-001": {
+    launch: "qr",
+    codePlacement: "Printed on the back of the ECLIPSE can charm",
+    experience: {
+      name: "Cola Run",
+      kind: "Immersive mini-game",
+      url: "https://evade.medialife.ai",
+      blurb:
+        "Opens in the browser from the camera app. No store, no download, no account — which is the whole reason the flow survives contact with a real buyer.",
+      image: "cola-run",
+      alt: "The Cola Run title card: Bobo the cat flying through floating ECLIPSE cola cans, over an ACTIVATED BY MEDIALIFE lockup.",
+      beats: [
+        "Buyer points a phone camera at the code on the can",
+        "Cola Run opens in the browser in about a second",
+        "They play the run and collect cans",
+        "The cosmetic unlocks and follows them back into the experience",
+      ],
+    },
+    reward: {
+      name: "Orbiting Cat Bobo",
+      unlock: "Cat Bobo orbits the user's head in a cute and bouncy way",
+      kind: "Cosmetic",
+      blurb:
+        "A reward a player wears in front of other players is the one that does the work — it advertises the drop every time they load in.",
+      image: "bobo-reward",
+      alt: "Bobo the cat — a cream-coloured cat in a blue BOBO cap and hoodie — flying through floating ECLIPSE cans inside the Cola Run experience.",
+    },
+    products: [
+      {
+        id: "keychain-set",
+        name: "Activated keychain set",
+        detail: "Two charms: the EVADE character and the ECLIPSE can",
+        image: "keychain-set",
+        alt: "A hand holding the two-charm acrylic keychain set: an EVADE character charm and an ECLIPSE cola can charm.",
+      },
+      {
+        id: "front-back",
+        name: "Front and back",
+        detail: "The code sits on the reverse of the can charm",
+        image: "front-back",
+        alt: "Both charms photographed front and back, with the scannable code printed on the back of the can charm.",
+      },
+      {
+        id: "acrylic",
+        name: "Acrylic finish",
+        detail: "Double-sided print, clear acrylic, swivel clasp",
+        image: "acrylic",
+        alt: "The keychain set lit against black, showing the clear acrylic edge glow and the swivel clasp.",
+      },
+    ],
+    caveats: [
+      "Built as a demonstration for RDC 2026. Not commercially sold.",
+      "The design changes to remove Roblox IP unless approval is granted.",
+    ],
+  },
+};
 
 /** The property the portal opens on. */
 export const ACTIVE = SUBMISSIONS[0];
@@ -771,6 +908,21 @@ export const ACTIVITY: Array<{
     body: "Commercial and engagement measures for weeks 1–8 are available in the performance dashboard.",
   },
 ];
+
+/**
+ * The date this demo is written as of — day `REVIEW.dayOf` of the validation
+ * window, not the wall clock. Everything relative is measured from here so the
+ * portal reads the same in six months as it does today.
+ */
+export const TODAY = (() => {
+  const d = new Date(`${REVIEW.windowStart}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + REVIEW.dayOf);
+  return d;
+})();
+
+/** Whole days between an ISO date and the portal's fixed today. */
+export const daysSince = (iso: string) =>
+  Math.round((TODAY.getTime() - new Date(`${iso}T12:00:00Z`).getTime()) / 86_400_000);
 
 /** Index of a stage in the pipeline, for progress maths. */
 export const stageIndex = (id: StageId) => PROGRAM.stages.findIndex((s) => s.id === id);

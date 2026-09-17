@@ -6,10 +6,10 @@
  * sit behind the same sidebar.
  */
 import type { ReactNode } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Check, Minus } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { PROGRAM, type StageId, stageIndex } from "@/lib/roblox-portal";
+import { PROGRAM, type StageId, daysSince, shortDate, stageIndex } from "@/lib/roblox-portal";
 
 /* ---------------------------------------------------------------------------
    Page furniture
@@ -206,6 +206,14 @@ export function Stat({
  * `compact` drops the per-stage copy for use inside a table row; the full form
  * is what the status screen shows.
  */
+/**
+ * The same four stages as StageSteps, but as cards carrying each stage's copy —
+ * for the screens that have to explain the pipeline rather than just locate a
+ * property in it.
+ *
+ * The fill is a solid colour, not a gradient. A gradient reads as decoration and
+ * gives the eye nothing to measure 40% against 60% with.
+ */
 export function StageBar({
   stage,
   progress,
@@ -240,16 +248,16 @@ export function StageBar({
               role="presentation"
             >
               <div
-                className="h-full rounded-full transition-[width] duration-500"
-                style={{
-                  width: done ? "100%" : here ? `${Math.max(6, progress)}%` : "0%",
-                  background: done || here ? "var(--gradient-ember)" : "transparent",
-                }}
+                className={cn(
+                  "h-full rounded-full transition-[width] duration-500",
+                  done || here ? "bg-primary" : "bg-transparent",
+                )}
+                style={{ width: done ? "100%" : here ? `${Math.max(6, progress)}%` : "0%" }}
               />
             </div>
             <div
               className={cn(
-                "mono mt-2 text-[10px] tracking-[0.12em] uppercase",
+                "mono mt-2 flex items-center gap-1.5 text-[10px] tracking-[0.12em] uppercase",
                 here
                   ? "text-foreground"
                   : done
@@ -257,7 +265,10 @@ export function StageBar({
                     : "text-muted-foreground/60",
               )}
             >
-              {compact ? s.name.split(" ")[0] : `0${i + 1} · ${s.name}`}
+              {done ? (
+                <Check className="size-3 shrink-0 text-primary" strokeWidth={3} aria-hidden />
+              ) : null}
+              {compact ? s.short : `0${i + 1} · ${s.name}`}
             </div>
             {!compact ? (
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{s.blurb}</p>
@@ -266,6 +277,128 @@ export function StageBar({
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * The program as a stepper: a node per stage, a solid connector between them,
+ * and a determinate fill on the connector leaving the stage a property is in.
+ *
+ * This replaces a row of gradient-filled bars. A gradient reads as decoration —
+ * the eye cannot tell 40% from 60% of a gradient, and four of them side by side
+ * say nothing about order. A checked node, a solid line and one partial segment
+ * say which steps are done, which one is running and how far through it is.
+ */
+export function StageSteps({
+  stage,
+  progress,
+  className,
+}: {
+  stage: StageId;
+  progress: number;
+  className?: string;
+}) {
+  const at = stageIndex(stage);
+  const last = PROGRAM.stages.length - 1;
+
+  return (
+    <ol className={cn("flex items-start", className)}>
+      {PROGRAM.stages.map((s, i) => {
+        const done = i < at;
+        const here = i === at;
+        // The connector leaving this node: full once the stage is cleared,
+        // partial while the property is working through it, empty ahead.
+        const fill = done ? 100 : here ? Math.max(4, Math.min(100, progress)) : 0;
+
+        return (
+          <li key={s.id} className={cn("min-w-0", i === last ? "shrink-0" : "flex-1")}>
+            <div className="flex items-center">
+              <span
+                className={cn(
+                  "grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors",
+                  done
+                    ? "border-primary bg-primary text-background"
+                    : here
+                      ? "border-primary bg-primary/15"
+                      : "border-border bg-transparent",
+                )}
+              >
+                {done ? (
+                  <Check className="size-3" strokeWidth={3} aria-hidden />
+                ) : (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      here ? "bg-primary" : "bg-muted-foreground/40",
+                    )}
+                  />
+                )}
+              </span>
+
+              {i < last ? (
+                <span className="mx-1.5 h-0.5 min-w-0 flex-1 rounded-full bg-border">
+                  <span
+                    className="block h-full rounded-full bg-primary transition-[width] duration-500"
+                    style={{ width: `${fill}%` }}
+                  />
+                </span>
+              ) : null}
+            </div>
+
+            <div
+              className={cn(
+                "mono mt-2 truncate pr-2 text-[10px] tracking-[0.1em] uppercase",
+                here
+                  ? "text-foreground"
+                  : done
+                    ? "text-muted-foreground"
+                    : "text-muted-foreground/55",
+              )}
+            >
+              <span className="sm:hidden">{s.short}</span>
+              <span className="hidden sm:inline">{s.name}</span>
+            </div>
+            {here ? (
+              <div className="mono text-[10px] tracking-[0.1em] text-primary tabular-nums">
+                {Math.round(progress)}%
+              </div>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * The submission date, given the weight it earns. When a property came in sets
+ * every expectation around it, so it gets a block rather than a clause in a
+ * line of metadata.
+ */
+export function DateBlock({ iso, label = "Submitted" }: { iso: string; label?: string }) {
+  const d = new Date(`${iso}T12:00:00Z`);
+  const days = daysSince(iso);
+  return (
+    <div className="flex shrink-0 items-center gap-3">
+      <div className="grid size-12 shrink-0 place-content-center rounded-lg border border-border bg-white/[0.03] text-center leading-none">
+        <span className="mono text-[9px] tracking-[0.12em] text-primary uppercase">
+          {d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}
+        </span>
+        <span className="mt-1 text-base font-medium tabular-nums">
+          {d.toLocaleDateString("en-US", { day: "numeric", timeZone: "UTC" })}
+        </span>
+      </div>
+      <div className="min-w-0">
+        <div className="mono text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+          {label}
+        </div>
+        <div className="text-sm tabular-nums">{shortDate(iso)}</div>
+        <div className="mono text-[10px] tracking-[0.1em] text-muted-foreground tabular-nums">
+          {days} days ago
+        </div>
+      </div>
+    </div>
   );
 }
 

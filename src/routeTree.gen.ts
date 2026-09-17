@@ -27,8 +27,9 @@ import { Route as RobloxPortalProductsRouteImport } from './routes/roblox.portal
 import { Route as RobloxPortalResourcesRouteImport } from './routes/roblox.portal.resources'
 import { Route as RobloxPortalReviewRouteImport } from './routes/roblox.portal.review'
 import { Route as RobloxPortalStatusRouteImport } from './routes/roblox.portal.status'
-import { Route as RobloxPortalSubmissionsRouteImport } from './routes/roblox.portal.submissions'
 import { Route as RobloxPortalSupportRouteImport } from './routes/roblox.portal.support'
+import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
+import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -120,16 +121,23 @@ const RobloxPortalStatusRoute = RobloxPortalStatusRouteImport.update({
   path: '/status',
   getParentRoute: () => RobloxPortalRoute,
 } as any)
-const RobloxPortalSubmissionsRoute = RobloxPortalSubmissionsRouteImport.update({
-  id: '/submissions',
-  path: '/submissions',
-  getParentRoute: () => RobloxPortalRoute,
-} as any)
 const RobloxPortalSupportRoute = RobloxPortalSupportRouteImport.update({
   id: '/support',
   path: '/support',
   getParentRoute: () => RobloxPortalRoute,
 } as any)
+const RobloxPortalSubmissionsIndexRoute =
+  RobloxPortalSubmissionsIndexRouteImport.update({
+    id: '/submissions/',
+    path: '/submissions/',
+    getParentRoute: () => RobloxPortalRoute,
+  } as any)
+const RobloxPortalSubmissionsIdRoute =
+  RobloxPortalSubmissionsIdRouteImport.update({
+    id: '/submissions/$id',
+    path: '/submissions/$id',
+    getParentRoute: () => RobloxPortalRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -149,9 +157,10 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
-  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
+  '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -170,9 +179,10 @@ export interface FileRoutesByTo {
   '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
-  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
+  '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -193,9 +203,10 @@ export interface FileRoutesById {
   '/roblox/portal/resources': typeof RobloxPortalResourcesRoute
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
-  '/roblox/portal/submissions': typeof RobloxPortalSubmissionsRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
+  '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -217,9 +228,10 @@ export interface FileRouteTypes {
     | '/roblox/portal/resources'
     | '/roblox/portal/review'
     | '/roblox/portal/status'
-    | '/roblox/portal/submissions'
     | '/roblox/portal/support'
     | '/roblox/portal/'
+    | '/roblox/portal/submissions/$id'
+    | '/roblox/portal/submissions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -238,9 +250,10 @@ export interface FileRouteTypes {
     | '/roblox/portal/resources'
     | '/roblox/portal/review'
     | '/roblox/portal/status'
-    | '/roblox/portal/submissions'
     | '/roblox/portal/support'
     | '/roblox/portal'
+    | '/roblox/portal/submissions/$id'
+    | '/roblox/portal/submissions'
   id:
     | '__root__'
     | '/'
@@ -260,9 +273,10 @@ export interface FileRouteTypes {
     | '/roblox/portal/resources'
     | '/roblox/portal/review'
     | '/roblox/portal/status'
-    | '/roblox/portal/submissions'
     | '/roblox/portal/support'
     | '/roblox/portal/'
+    | '/roblox/portal/submissions/$id'
+    | '/roblox/portal/submissions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -405,18 +419,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobloxPortalStatusRouteImport
       parentRoute: typeof RobloxPortalRoute
     }
-    '/roblox/portal/submissions': {
-      id: '/roblox/portal/submissions'
-      path: '/submissions'
-      fullPath: '/roblox/portal/submissions'
-      preLoaderRoute: typeof RobloxPortalSubmissionsRouteImport
-      parentRoute: typeof RobloxPortalRoute
-    }
     '/roblox/portal/support': {
       id: '/roblox/portal/support'
       path: '/support'
       fullPath: '/roblox/portal/support'
       preLoaderRoute: typeof RobloxPortalSupportRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/submissions/': {
+      id: '/roblox/portal/submissions/'
+      path: '/submissions'
+      fullPath: '/roblox/portal/submissions/'
+      preLoaderRoute: typeof RobloxPortalSubmissionsIndexRouteImport
+      parentRoute: typeof RobloxPortalRoute
+    }
+    '/roblox/portal/submissions/$id': {
+      id: '/roblox/portal/submissions/$id'
+      path: '/submissions/$id'
+      fullPath: '/roblox/portal/submissions/$id'
+      preLoaderRoute: typeof RobloxPortalSubmissionsIdRouteImport
       parentRoute: typeof RobloxPortalRoute
     }
   }
@@ -442,9 +463,10 @@ interface RobloxPortalRouteChildren {
   RobloxPortalResourcesRoute: typeof RobloxPortalResourcesRoute
   RobloxPortalReviewRoute: typeof RobloxPortalReviewRoute
   RobloxPortalStatusRoute: typeof RobloxPortalStatusRoute
-  RobloxPortalSubmissionsRoute: typeof RobloxPortalSubmissionsRoute
   RobloxPortalSupportRoute: typeof RobloxPortalSupportRoute
   RobloxPortalIndexRoute: typeof RobloxPortalIndexRoute
+  RobloxPortalSubmissionsIdRoute: typeof RobloxPortalSubmissionsIdRoute
+  RobloxPortalSubmissionsIndexRoute: typeof RobloxPortalSubmissionsIndexRoute
 }
 
 const RobloxPortalRouteChildren: RobloxPortalRouteChildren = {
@@ -455,9 +477,10 @@ const RobloxPortalRouteChildren: RobloxPortalRouteChildren = {
   RobloxPortalResourcesRoute: RobloxPortalResourcesRoute,
   RobloxPortalReviewRoute: RobloxPortalReviewRoute,
   RobloxPortalStatusRoute: RobloxPortalStatusRoute,
-  RobloxPortalSubmissionsRoute: RobloxPortalSubmissionsRoute,
   RobloxPortalSupportRoute: RobloxPortalSupportRoute,
   RobloxPortalIndexRoute: RobloxPortalIndexRoute,
+  RobloxPortalSubmissionsIdRoute: RobloxPortalSubmissionsIdRoute,
+  RobloxPortalSubmissionsIndexRoute: RobloxPortalSubmissionsIndexRoute,
 }
 
 const RobloxPortalRouteWithChildren = RobloxPortalRoute._addFileChildren(

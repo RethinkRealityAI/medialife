@@ -18,6 +18,8 @@ type Field = {
   required?: boolean;
   type?: string;
   placeholder?: string;
+  /** One line under the label, for a field whose reason is not obvious. */
+  hint?: string;
   /** Renders as a chip group rather than an input. */
   options?: readonly string[];
   textarea?: boolean;
@@ -75,8 +77,47 @@ const STEPS: Step[] = [
           "Other",
         ],
       },
-      { name: "visits", label: "Monthly visits", placeholder: "Approximate is fine" },
-      { name: "ccu", label: "Peak concurrent players", placeholder: "Approximate is fine" },
+      {
+        name: "othergames",
+        label: "Other games you would want this for",
+        textarea: true,
+        placeholder: "Names or links, one per line. Leave blank if it is just this one.",
+      },
+    ],
+  },
+  {
+    id: "audience",
+    label: "Audience",
+    title: "Who plays it?",
+    hint: "Scale tells us how much inventory to commit. Who they are decides the assortment — a 9-to-12 audience and an 18-plus audience do not buy the same product, and they are not in the same countries.",
+    fields: [
+      { name: "visits", label: "Total visits", placeholder: "Lifetime. Approximate is fine." },
+      { name: "dau", label: "Daily active users", placeholder: "Approximate is fine" },
+      { name: "ccu", label: "Average concurrent players", placeholder: "Approximate is fine" },
+      { name: "ccupeak", label: "Peak concurrent players", placeholder: "Your best day" },
+      {
+        name: "agerange",
+        label: "Age range",
+        hint: "Sets which product categories are appropriate, and which are not.",
+        options: ["Under 9", "9–12", "13–16", "17–20", "21+", "Mixed / not sure"],
+      },
+      {
+        name: "regions",
+        label: "Top regions",
+        hint: "Drives where we manufacture and which retail conversations are worth having.",
+        placeholder: "U.S., U.K., Brazil…",
+      },
+      {
+        name: "gender",
+        label: "Gender split, if you know it",
+        options: ["Mostly male", "Mostly female", "Roughly even", "Not sure"],
+      },
+      {
+        name: "brandwork",
+        label: "Have you done brand work before?",
+        hint: "No is a perfectly good answer. It only changes how much we walk you through.",
+        options: ["No", "Yes", "In talks with someone now"],
+      },
     ],
   },
   {
@@ -196,7 +237,7 @@ function Apply() {
       <PageHeader
         eyebrow="Program / Apply"
         title="One intake form. Every channel."
-        lede="However a creator found the program, this is the way in — which is what makes review consistent and reporting possible. Three steps, about three minutes."
+        lede="However a creator found the program, this is the way in — which is what makes review consistent and reporting possible. Four steps, about four minutes, and nothing here is a test."
         actions={
           <a
             href="/roblox/creators/"
@@ -257,10 +298,17 @@ function Apply() {
                 const wide = f.textarea || f.options || f.type === "url";
                 return (
                   <div key={f.name} className={cn("min-w-0", wide && "sm:col-span-2")}>
-                    <Label htmlFor={id} className="mb-2 block text-xs">
+                    <Label htmlFor={id} className="mb-1 block text-xs">
                       {f.label}
                       {f.required ? <span className="ml-1 text-accent">*</span> : null}
                     </Label>
+                    {f.hint ? (
+                      <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">
+                        {f.hint}
+                      </p>
+                    ) : (
+                      <div className="mb-2" />
+                    )}
 
                     {f.options ? (
                       <div className="flex flex-wrap gap-2" role="group" aria-labelledby={id}>

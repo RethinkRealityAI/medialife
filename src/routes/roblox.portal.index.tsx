@@ -27,7 +27,7 @@ export const Route = createFileRoute("/roblox/portal/")({
 
 /** The four steps between applying and a build starting, from the onboarding flow. */
 const ONBOARDING = [
-  { day: "Day 0", label: "Submit", body: "Three steps, about three minutes." },
+  { day: "Day 0", label: "Submit", body: "Four steps, about four minutes." },
   { day: "Day 1–2", label: "Qualify", body: "A named specialist inside 48 hours." },
   { day: "Day 3–5", label: "Scope", body: "Products, activation, reward." },
   { day: "Day 6–10", label: "Sign", body: "Agreement, then both tracks open." },

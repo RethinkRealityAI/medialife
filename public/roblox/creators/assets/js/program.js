@@ -393,7 +393,7 @@ export const ONBOARDING = [
     title: "You submit",
     who: "You",
     body:
-      "One form, about three minutes: your experience, your audience, who owns the IP, what you " +
+      "One form, about four minutes: your experience, your audience, who owns the IP, what you " +
       "already sell, and where your artwork is.",
   },
   {
