@@ -9,4 +9,9 @@ Disallow: /dapo
 Disallow: /sofia
 # <<< end generated
 
+# Everything under /roblox is reached by invitation, not by search: the
+# creator program page carries commercial terms, and the portal is a demo
+# populated with mock pilot data.
+Disallow: /roblox/
+
 Sitemap: https://medialife.ai/sitemap.xml

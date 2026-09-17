@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -152,6 +153,20 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  // The partner portal is an application, not a page on the marketing site: it
+  // brings its own sidebar chrome and must not sit inside the site nav and
+  // footer. Everything else on the site does.
+  const isPortal = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/roblox/portal"),
+  });
+
+  if (isPortal) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

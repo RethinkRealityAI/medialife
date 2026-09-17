@@ -1,0 +1,613 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#020202" />
+    <meta
+      name="description"
+      content="Preview of a MEDIALIFE Activated Merchandise® fan experience — tap a tag, an app-free immersive moment opens in the browser, and every scan lands in the creator's analytics."
+    />
+    <title>Fan Experience Preview — MEDIALIFE × SIGNAL RUN</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23020202'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='14'%20fill='none'%20stroke='%2319affe'%20stroke-width='4'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='7'%20fill='%23ff37ae'/%3E%3C/svg%3E"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "../vendor/three/build/three.module.js",
+          "three/addons/": "../vendor/three/jsm/"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <svg width="0" height="0" aria-hidden="true" focusable="false" style="position: absolute">
+      <defs>
+        <linearGradient id="ember" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#19affe" />
+          <stop offset="100%" stop-color="#ff37ae" />
+        </linearGradient>
+        <linearGradient id="emberV" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#19affe" />
+          <stop offset="100%" stop-color="#ff37ae" />
+        </linearGradient>
+      </defs>
+    </svg>
+
+    <div class="shell">
+      <p class="corner corner--tl mono">MEDIALIFE // ACTIVATED MERCHANDISE® — FAN-SIDE PREVIEW</p>
+      <p class="corner corner--br mono">
+        SIGNAL RUN IS A FICTIONAL PLACEHOLDER PROPERTY<br /><a href="../"
+          >← Back to the creator program</a
+        >
+      </p>
+
+      <div class="phone">
+        <header class="hud">
+          <div class="hud__row">
+            <div class="brand">
+              <svg viewBox="0 0 64 64" role="img" aria-label="MEDIALIFE">
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="20"
+                  fill="none"
+                  stroke="url(#ember)"
+                  stroke-width="2"
+                  opacity=".3"
+                />
+                <circle cx="32" cy="32" r="14" fill="none" stroke="url(#ember)" stroke-width="4" />
+                <circle cx="32" cy="32" r="7" fill="url(#ember)" />
+              </svg>
+              <b>MEDIALIFE</b>
+              <span class="mono">× SIGNAL RUN</span>
+            </div>
+            <button class="replay" id="replayBtn" type="button">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+              </svg>
+              Replay
+            </button>
+          </div>
+          <nav class="rail" id="rail" aria-label="Experience stages"></nav>
+        </header>
+
+        <main class="stage" id="stage" aria-live="polite" aria-label="Fan experience">
+          <!-- ─────────────────────────────── 1. TAP TO ACTIVATE ─────────────── -->
+          <section class="panel panel--tap" id="panel-tap" data-stage="tap" aria-labelledby="tap-h">
+            <p class="mono">ACTIVATED MERCHANDISE® · TAG 8F-2C</p>
+
+            <button class="scanner" id="tapTarget" type="button">
+              <span class="scanner__rings" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="scanner__sweep" aria-hidden="true"></span>
+              <span class="scanner__disc" aria-hidden="true"></span>
+              <svg
+                class="scanner__glyph"
+                viewBox="0 0 48 48"
+                fill="none"
+                stroke="url(#ember)"
+                stroke-width="3"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M14 14a14 14 0 0 1 0 20" />
+                <path d="M21 18a8 8 0 0 1 0 12" opacity=".8" />
+                <path d="M28 22a3 3 0 0 1 0 4" opacity=".6" />
+              </svg>
+              <span class="sr-only">Activate the tag and start the fan experience</span>
+            </button>
+
+            <div class="nearfield" aria-hidden="true">
+              <svg viewBox="0 0 148 80" fill="none">
+                <rect x="8" y="16" width="34" height="48" rx="6" fill="#050509" stroke="#191a22" />
+                <path
+                  d="M14 26h22M14 33h16"
+                  stroke="#191a22"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <circle
+                  cx="25"
+                  cy="52"
+                  r="7"
+                  fill="none"
+                  stroke="url(#ember)"
+                  stroke-width="1.5"
+                  opacity=".75"
+                />
+                <path
+                  class="nf-wave"
+                  d="M50 30a16 16 0 0 1 0 20"
+                  stroke="#19affe"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                />
+                <path
+                  class="nf-wave"
+                  d="M58 26a24 24 0 0 1 0 28"
+                  stroke="#7b8cff"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                />
+                <path
+                  class="nf-wave"
+                  d="M66 22a32 32 0 0 1 0 36"
+                  stroke="#ff37ae"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                />
+                <g class="nf-phone">
+                  <rect
+                    x="86"
+                    y="8"
+                    width="52"
+                    height="64"
+                    rx="9"
+                    fill="#0c0d12"
+                    stroke="#2a2c38"
+                  />
+                  <rect x="90" y="12" width="44" height="56" rx="6" fill="#020202" />
+                  <rect x="103" y="15" width="18" height="3" rx="1.5" fill="#2a2c38" />
+                  <circle
+                    cx="112"
+                    cy="42"
+                    r="9"
+                    fill="none"
+                    stroke="url(#ember)"
+                    stroke-width="2"
+                  />
+                  <circle cx="112" cy="42" r="3" fill="url(#ember)" />
+                </g>
+              </svg>
+            </div>
+
+            <h1 class="title" id="tap-h">Tap to activate</h1>
+            <p class="lede">
+              Hold your phone near the woven tag in your <strong>SIGNAL RUN</strong> hoodie — or tap
+              the ring to preview it now.
+            </p>
+            <p class="mono" style="margin-top: 14px">NO APP · NO ACCOUNT · OPENS IN YOUR BROWSER</p>
+          </section>
+
+          <!-- ─────────────────────────────── 2. ACTIVATING ──────────────────── -->
+          <section
+            class="panel panel--activating"
+            id="panel-activating"
+            data-stage="activating"
+            aria-labelledby="act-h"
+          >
+            <h2 class="sr-only" id="act-h">Activating</h2>
+            <div class="burst" aria-hidden="true">
+              <span class="burst__ring"></span><span class="burst__ring burst__ring--2"></span
+              ><span class="burst__ring burst__ring--3"></span>
+              <span class="burst__sweep"></span>
+              <i></i><i></i><i></i><i></i>
+              <span class="burst__core"></span>
+            </div>
+            <p class="mono" id="actStep">NFC HANDSHAKE</p>
+            <div class="meter"><div class="meter__fill" id="actFill"></div></div>
+            <div class="readout">
+              <span class="mono pct" id="actPct">00%</span>
+              <span class="mono" id="actSub">TAG 8F-2C</span>
+            </div>
+            <p class="reassure mono">NO APP REQUIRED · <b>OPENING IN BROWSER</b></p>
+          </section>
+
+          <!-- ─────────────────────────────── 3. THE EXPERIENCE ──────────────── -->
+          <section
+            class="panel panel--experience"
+            id="panel-experience"
+            data-stage="experience"
+            aria-labelledby="exp-h"
+          >
+            <div class="scene" id="scene">
+              <canvas id="gl"></canvas>
+              <svg class="emblem" id="emblem" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+                <g class="em-spin">
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="92"
+                    stroke="#19affe"
+                    stroke-opacity=".28"
+                    stroke-width="1"
+                    stroke-dasharray="3 9"
+                  />
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="78"
+                    stroke="#ff37ae"
+                    stroke-opacity=".22"
+                    stroke-width="1"
+                  />
+                  <path
+                    d="M100 8v14M192 100h-14M100 192v-14M8 100h14"
+                    stroke="#19affe"
+                    stroke-opacity=".6"
+                    stroke-width="2"
+                  />
+                </g>
+                <g class="em-spin-rev">
+                  <circle
+                    cx="100"
+                    cy="100"
+                    r="62"
+                    stroke="url(#ember)"
+                    stroke-width="1.5"
+                    stroke-opacity=".7"
+                    stroke-dasharray="52 18"
+                  />
+                  <circle cx="100" cy="38" r="3" fill="#19affe" />
+                  <circle cx="100" cy="162" r="3" fill="#ff37ae" />
+                </g>
+                <g class="em-core">
+                  <path
+                    d="M100 42 154 73v62L100 166 46 135V73z"
+                    stroke="url(#ember)"
+                    stroke-width="2"
+                    fill="rgba(25,175,254,.05)"
+                  />
+                  <path
+                    d="M100 42v124M46 73l108 62M154 73L46 135"
+                    stroke="#19affe"
+                    stroke-opacity=".28"
+                    stroke-width="1"
+                  />
+                  <path
+                    d="M100 72 128 88v32l-28 16-28-16V88z"
+                    fill="url(#emberV)"
+                    fill-opacity=".8"
+                    stroke="url(#ember)"
+                    stroke-width="1.5"
+                  />
+                  <circle cx="100" cy="104" r="9" fill="#f4f5f8" fill-opacity=".9" />
+                </g>
+              </svg>
+              <div class="scene__vignette" aria-hidden="true"></div>
+              <div class="hotspots" id="hotspots">
+                <button
+                  class="hotspot"
+                  type="button"
+                  data-hotspot="0"
+                  style="--hx: 31%; --hy: 41%"
+                  aria-expanded="false"
+                  aria-controls="lore"
+                >
+                  <span class="sr-only">Reveal lore: The Beacon</span>
+                </button>
+                <button
+                  class="hotspot"
+                  type="button"
+                  data-hotspot="1"
+                  style="--hx: 69%; --hy: 53%"
+                  aria-expanded="false"
+                  aria-controls="lore"
+                >
+                  <span class="sr-only">Reveal lore: Class Vector</span>
+                </button>
+                <button
+                  class="hotspot"
+                  type="button"
+                  data-hotspot="2"
+                  style="--hx: 50%; --hy: 64%"
+                  aria-expanded="false"
+                  aria-controls="lore"
+                >
+                  <span class="sr-only">Reveal lore: The Relay Network</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="scene__layer">
+              <header class="scene__head">
+                <p class="mono">SIGNAL RUN · TRANSMISSION 01</p>
+                <h1 class="title" id="exp-h">THE BEACON</h1>
+                <p class="lede">Three signals are still live inside the artifact. Tap them.</p>
+              </header>
+              <div class="scene__foot">
+                <button class="ghost" id="tiltBtn" type="button" hidden>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <rect x="7" y="2" width="10" height="20" rx="2" />
+                    <path d="M12 18h.01" />
+                  </svg>
+                  Enable tilt
+                </button>
+                <button class="ghost" type="button" data-go="reward">
+                  Claim your reward
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.4"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <aside class="lore" id="lore" aria-labelledby="loreTitle">
+              <div class="lore__top">
+                <p class="mono" id="loreKicker">FRAGMENT 01</p>
+                <button class="lore__close" id="loreClose" type="button">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="12"
+                    height="12"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="3"
+                    stroke-linecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                  <span class="sr-only">Close</span>
+                </button>
+              </div>
+              <h2 id="loreTitle">The Beacon</h2>
+              <p id="loreBody">—</p>
+              <div class="lore__stats" id="loreStats"></div>
+            </aside>
+          </section>
+
+          <!-- ─────────────────────────────── 4. YOUR REWARD ─────────────────── -->
+          <section
+            class="panel panel--reward"
+            id="panel-reward"
+            data-stage="reward"
+            aria-labelledby="rew-h"
+          >
+            <p class="mono">REWARD UNLOCKED · UGC DROP</p>
+            <h1 class="sr-only" id="rew-h">Your reward</h1>
+
+            <div class="flip" id="flip">
+              <button class="flip__inner" id="flipBtn" type="button">
+                <span class="flip__face flip__face--back">
+                  <svg width="54" height="54" viewBox="0 0 64 64" aria-hidden="true">
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="20"
+                      fill="none"
+                      stroke="url(#ember)"
+                      stroke-width="2"
+                      opacity=".35"
+                    />
+                    <circle
+                      cx="32"
+                      cy="32"
+                      r="13"
+                      fill="none"
+                      stroke="url(#ember)"
+                      stroke-width="3.5"
+                    />
+                  </svg>
+                  <span class="mono">SEALED · TAP TO REVEAL</span>
+                </span>
+                <span class="flip__face flip__face--front">
+                  <svg class="flip__art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+                    <path
+                      d="M18 54c14-16 70-16 84 0l-6 20c-3 10-14 14-22 8l-14-10-14 10c-8 6-19 2-22-8z"
+                      fill="rgba(25,175,254,.12)"
+                      stroke="url(#ember)"
+                      stroke-width="2.5"
+                    />
+                    <path
+                      d="M26 56c12-10 56-10 68 0"
+                      stroke="#ff37ae"
+                      stroke-width="2"
+                      opacity=".8"
+                    />
+                    <path d="M46 70h28" stroke="#19affe" stroke-width="2" opacity=".6" />
+                    <circle cx="60" cy="40" r="4" fill="url(#ember)" />
+                  </svg>
+                  <span class="flip__name">VECTOR RELAY VISOR</span>
+                  <span class="chip">Rare · 1 of 2,500</span>
+                </span>
+                <span class="sr-only">Reveal your reward</span>
+              </button>
+            </div>
+
+            <div class="codebox">
+              <p class="mono">Redeem code</p>
+              <div class="codebox__row">
+                <code id="rewardCode">SR-••••-••••</code>
+                <button class="copy" id="copyBtn" type="button">Copy</button>
+              </div>
+              <p class="mono" id="copyNote" role="status" style="margin-top: 8px">
+                ONE-TIME USE · EXPIRES IN 30 DAYS
+              </p>
+            </div>
+
+            <button class="ghost" type="button" data-go="cta">
+              Continue
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </section>
+
+          <!-- ─────────────────────────────── 5. BACK TO THE GAME ────────────── -->
+          <section class="panel panel--cta" id="panel-cta" data-stage="cta" aria-labelledby="cta-h">
+            <p class="mono">STEP 04 · RETURN PATH</p>
+            <h1 class="title" id="cta-h">Take it back<br />in-experience.</h1>
+            <p class="lede">
+              Your visor is waiting at the Relay Terminal. Claiming here drops you straight into the
+              SIGNAL RUN Roblox experience with the code already filled in.
+            </p>
+            <p class="codechip">
+              <span class="mono">CODE</span> <code id="ctaCode">SR-••••-••••</code>
+            </p>
+
+            <a class="btn btn--primary" id="claimBtn" href="#">
+              Claim in-experience
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </a>
+
+            <p class="note" id="claimNote" role="status" hidden>
+              <b>Preview only —</b> nothing launched. In the live build this button deep-links into
+              the creator's Roblox experience and pre-fills the redeem code.
+            </p>
+
+            <button class="ghost" type="button" data-go="data" style="margin-top: 20px">
+              See what the creator sees
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </section>
+
+          <!-- ─────────────────────────────── 6. WHAT THE CREATOR SEES ───────── -->
+          <section
+            class="panel panel--data"
+            id="panel-data"
+            data-stage="data"
+            aria-labelledby="data-h"
+          >
+            <p class="mono kicker">MEDIALIFE CREATOR CONSOLE · PREVIEW</p>
+            <h1 class="title" id="data-h">Every scan is a measurable event.</h1>
+            <p class="lede">
+              The session you just played generated the readout below. Physical merch, finally
+              instrumented like a digital channel.
+            </p>
+
+            <section class="sect">
+              <div class="sect__head">
+                <p class="mono">This session</p>
+                <span class="tag tag--live">Live · measured</span>
+              </div>
+              <dl class="stats">
+                <div class="stat stat--live">
+                  <dt>Time on experience</dt>
+                  <dd id="mTime">00:00</dd>
+                </div>
+                <div class="stat stat--live">
+                  <dt>Hotspots opened</dt>
+                  <dd id="mHot">0 <small>/ 3</small></dd>
+                </div>
+                <div class="stat" id="mCtaWrap">
+                  <dt>CTA tapped</dt>
+                  <dd id="mCta">NO</dd>
+                </div>
+                <div class="stat stat--live">
+                  <dt>Reward issued</dt>
+                  <dd id="mIssued">NO</dd>
+                </div>
+                <div class="stat stat--wide stat--live">
+                  <dt>Activation timestamp</dt>
+                  <dd id="mStamp">—</dd>
+                </div>
+                <div class="stat stat--wide">
+                  <dt>Redeem code</dt>
+                  <dd id="mCode">—</dd>
+                </div>
+              </dl>
+            </section>
+
+            <section class="sect">
+              <div class="sect__head">
+                <p class="mono">Event stream</p>
+                <span class="tag tag--live">Live · measured</span>
+              </div>
+              <ul class="log" id="eventLog"></ul>
+            </section>
+
+            <section class="sect">
+              <div class="sect__head">
+                <p class="mono">Program to date</p>
+                <span class="tag tag--illus">Illustrative sample data</span>
+              </div>
+              <dl class="stats">
+                <div class="stat">
+                  <dt>Unique activations</dt>
+                  <dd>12,480</dd>
+                </div>
+                <div class="stat">
+                  <dt>Repeat interactions</dt>
+                  <dd>3.2<small>×</small></dd>
+                </div>
+                <div class="stat">
+                  <dt>Outbound clicks</dt>
+                  <dd>8,871 <small>· 71%</small></dd>
+                </div>
+                <div class="stat">
+                  <dt>Median dwell</dt>
+                  <dd>01:12</dd>
+                </div>
+              </dl>
+            </section>
+
+            <p class="pullquote">This is the data that lands in your 90-day program review.</p>
+
+            <a class="backlink" href="../">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.4"
+                stroke-linecap="round"
+                aria-hidden="true"
+              >
+                <path d="M19 12H5M11 6l-6 6 6 6" />
+              </svg>
+              Back to the creator program
+            </a>
+            <p class="mono" style="margin-top: 18px; padding-bottom: 6px">
+              SIGNAL RUN IS A FICTIONAL PLACEHOLDER PROPERTY CREATED FOR THIS DEMO.
+            </p>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script src="demo.js" defer></script>
+  </body>
+</html>
