@@ -56,8 +56,8 @@ function Status() {
   return (
     <>
       <PageHeader
-        eyebrow="Program / Project status"
-        title={`Where ${ACTIVE.property} sits today.`}
+        eyebrow="Program"
+        title="Project status"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {need.outstanding ? (
@@ -74,7 +74,7 @@ function Status() {
         <StageBar stage={ACTIVE.stage} progress={ACTIVE.stageProgress} />
       </Section>
 
-      <Section title="Two tracks, one launch date" className="border-t border-border">
+      <Section title="Production tracks" className="border-t border-border">
         {/* items-start: the tracks have different step counts, and stretching the
             shorter one leaves a hole under its last step. */}
         <div className="grid items-start gap-3 lg:grid-cols-2">
@@ -133,7 +133,7 @@ function Status() {
         </div>
       </Section>
 
-      <Section title="What we still need" className="border-t border-border">
+      <Section title="Requirements" className="border-t border-border">
         <RequirementsList groups={groups} />
       </Section>
 

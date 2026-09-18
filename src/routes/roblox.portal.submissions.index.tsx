@@ -27,8 +27,8 @@ function Submissions() {
   return (
     <>
       <PageHeader
-        eyebrow="Program / My submissions"
-        title="Every property you have put forward."
+        eyebrow="Program"
+        title="My submissions"
         actions={
           <Link
             to="/roblox/portal/apply"

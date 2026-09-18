@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
 
 import { PageHeader, Panel, Pill, Section, type Tone } from "@/components/portal/kit";
-import { ACTIVE, ECONOMICS, PRODUCTS, money, pct } from "@/lib/roblox-portal";
+import { ECONOMICS, PRODUCTS, money, pct } from "@/lib/roblox-portal";
 
 export const Route = createFileRoute("/roblox/portal/products")({
   component: Products,
@@ -28,8 +28,8 @@ function Products() {
   return (
     <>
       <PageHeader
-        eyebrow="The pilot / Products"
-        title={`The ${ACTIVE.property} assortment.`}
+        eyebrow="The pilot"
+        title="Products"
         actions={
           <a
             href="/roblox/creators/#studio"

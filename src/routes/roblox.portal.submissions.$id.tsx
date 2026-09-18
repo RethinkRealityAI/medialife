@@ -46,7 +46,7 @@ export const Route = createFileRoute("/roblox/portal/submissions/$id")({
   component: SubmissionDetail,
   notFoundComponent: () => (
     <>
-      <PageHeader eyebrow="Program / My submissions" title="No such property." />
+      <PageHeader eyebrow="Program / My submissions" title="Not found" />
       <Section>
         <Link
           to="/roblox/portal/submissions"
@@ -159,7 +159,7 @@ function SubmissionDetail() {
       </Section>
 
       {requirements.length ? (
-        <Section title="What we still need" className="border-b border-border">
+        <Section title="Requirements" className="border-b border-border">
           <RequirementsList groups={requirements} />
         </Section>
       ) : null}
@@ -167,7 +167,7 @@ function SubmissionDetail() {
       {activation && launch ? (
         <>
           {/* HOW IT OPENS */}
-          <Section title="The activation" className="border-b border-border">
+          <Section title="Activation" className="border-b border-border">
             <div className="grid gap-3 lg:grid-cols-3">
               <Panel className="p-5">
                 <span className="grid size-9 place-items-center rounded-md border border-primary/40 bg-primary/10 text-primary">
@@ -355,7 +355,7 @@ function SubmissionDetail() {
           </Section>
         </>
       ) : (
-        <Section title="The activation">
+        <Section title="Activation">
           <Panel className="max-w-2xl p-5">
             <span className="grid size-9 place-items-center rounded-md border border-border bg-white/[0.03] text-muted-foreground">
               <Boxes className="size-4.5" aria-hidden />

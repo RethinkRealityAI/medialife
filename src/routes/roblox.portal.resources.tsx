@@ -11,7 +11,7 @@ export const Route = createFileRoute("/roblox/portal/resources")({
 function Resources() {
   return (
     <>
-      <PageHeader eyebrow="Reference / Resources" title="Everything you need to hand." />
+      <PageHeader eyebrow="Reference" title="Resources" />
 
       <Section>
         <div className="grid gap-3 md:grid-cols-2">

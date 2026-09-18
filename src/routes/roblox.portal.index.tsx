@@ -1,15 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, CheckCircle2, CircleDot, Clock, Factory } from "lucide-react";
+import { ArrowRight, BadgeCheck, CheckCircle2, CircleDot, Factory } from "lucide-react";
 
-import {
-  KeyValues,
-  PageHeader,
-  Panel,
-  Pill,
-  Section,
-  Stat,
-  StageBar,
-} from "@/components/portal/kit";
+import { Pill, Section, StageBar, Stat } from "@/components/portal/kit";
 import {
   ACTIVE,
   ACTIVITY,
@@ -74,15 +66,35 @@ function PortalHome() {
 
         <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-20">
           <div className="max-w-xl">
-            <Pill tone="live">Licensing secured · pilot live</Pill>
-            <h1 className="mt-5 text-4xl font-medium tracking-tight text-balance md:text-5xl">
-              Bring {ACTIVE.property} to the <span className="ember-text">physical world</span>.
+            <div className="mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
+              {PROGRAM.name}
+            </div>
+            <h1 className="mt-3 text-4xl font-medium tracking-tight text-balance md:text-5xl">
+              {ACTIVE.property}
             </h1>
-            <p className="mt-5 text-muted-foreground md:text-lg">
-              Your property is live in commerce validation. Four products, an activation in every
-              unit, and a measured path back into the experience — with{" "}
-              {REVIEW.totalDays - REVIEW.dayOf} days left before the program review.
-            </p>
+            {/* Status as data, not a sentence about the status. */}
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <Pill tone="live">Licensing secured</Pill>
+              <Pill tone="primary">{PROGRAM.stages.find((x) => x.id === ACTIVE.stage)?.name}</Pill>
+              <Pill tone="muted">
+                Day {REVIEW.dayOf} of {REVIEW.totalDays}
+              </Pill>
+            </div>
+            <dl className="mono mt-5 flex flex-wrap gap-x-6 gap-y-2 text-[11px] tracking-[0.1em] uppercase">
+              {(
+                [
+                  ["Studio", ACTIVE.studio],
+                  ["Monthly visits", compact(ACTIVE.monthlyVisits)],
+                  ["SKUs", String(ACTIVE.skus)],
+                  ["Live since", ACTIVE.liveSince ? shortDate(ACTIVE.liveSince) : "—"],
+                ] as Array<[string, string]>
+              ).map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-muted-foreground">{k}</dt>
+                  <dd className="mt-0.5 text-foreground">{v}</dd>
+                </div>
+              ))}
+            </dl>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link
                 to="/roblox/portal/performance"
@@ -104,7 +116,7 @@ function PortalHome() {
 
       {/* WHERE THE PROPERTY SITS */}
       <Section
-        title={`${ACTIVE.property} is in ${PROGRAM.stages.find((s) => s.id === ACTIVE.stage)?.name.toLowerCase()}`}
+        title="Program stage"
         actions={
           <Link
             to="/roblox/portal/status"
@@ -119,7 +131,7 @@ function PortalHome() {
 
       {/* THE TWO FAMILIES OF MEASURES */}
       <Section
-        title="How the pilot is performing"
+        title="Key measures"
         actions={
           <Link
             to="/roblox/portal/performance"
@@ -171,49 +183,25 @@ function PortalHome() {
           </ol>
         </Section>
 
-        {/* AT A GLANCE + THE PATH IN */}
-        <div>
-          <Section title="At a glance">
-            <Panel className="p-4" glow>
-              <KeyValues
-                rows={[
-                  ["Property", ACTIVE.property],
-                  ["Studio", ACTIVE.studio],
-                  ["Monthly visits", compact(ACTIVE.monthlyVisits)],
-                  ["SKUs in program", String(ACTIVE.skus)],
-                  ["Live since", ACTIVE.liveSince ? shortDate(ACTIVE.liveSince) : "—"],
-                  [
-                    "Review window",
-                    <span key="w" className="inline-flex items-center gap-2">
-                      <Clock className="size-3.5 text-muted-foreground" aria-hidden />
-                      Day {REVIEW.dayOf} of {REVIEW.totalDays}
-                    </span>,
-                  ],
-                ]}
-              />
-            </Panel>
-          </Section>
-
-          <Section title="Adding another property?">
-            <ol className="space-y-2">
-              {ONBOARDING.map((o) => (
-                <li key={o.day} className="flex items-baseline gap-3 text-sm">
-                  <span className="mono w-16 shrink-0 text-[10px] tracking-[0.1em] text-primary uppercase">
-                    {o.day}
-                  </span>
-                  <span className="font-medium">{o.label}</span>
-                  <span className="min-w-0 text-muted-foreground">{o.body}</span>
-                </li>
-              ))}
-            </ol>
-            <Link
-              to="/roblox/portal/apply"
-              className="mono mt-5 inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-primary uppercase hover:underline"
-            >
-              Start an application <ArrowRight className="size-3" aria-hidden />
-            </Link>
-          </Section>
-        </div>
+        <Section title="Add a property">
+          <ol className="space-y-2">
+            {ONBOARDING.map((o) => (
+              <li key={o.day} className="flex items-baseline gap-3 text-sm">
+                <span className="mono w-16 shrink-0 text-[10px] tracking-[0.1em] text-primary uppercase">
+                  {o.day}
+                </span>
+                <span className="font-medium">{o.label}</span>
+                <span className="min-w-0 text-muted-foreground">{o.body}</span>
+              </li>
+            ))}
+          </ol>
+          <Link
+            to="/roblox/portal/apply"
+            className="mono mt-5 inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-primary uppercase hover:underline"
+          >
+            Start an application <ArrowRight className="size-3" aria-hidden />
+          </Link>
+        </Section>
       </div>
     </>
   );

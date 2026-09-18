@@ -204,7 +204,7 @@ function Apply() {
   if (done) {
     return (
       <>
-        <PageHeader eyebrow="Program / Apply" title="Application received." />
+        <PageHeader eyebrow="Program" title="Application received" />
         <Section>
           <Panel className="max-w-2xl p-6" glow>
             <Pill tone="clear">
@@ -235,8 +235,8 @@ function Apply() {
   return (
     <>
       <PageHeader
-        eyebrow="Program / Apply"
-        title="One intake form. Every channel."
+        eyebrow="Program"
+        title="Apply"
         actions={
           <a
             href="/roblox/creators/"
