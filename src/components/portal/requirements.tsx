@@ -176,12 +176,7 @@ export function RequirementsList({ groups }: { groups: RequirementGroup[] }) {
         return (
           <Panel key={g.id} className="overflow-hidden">
             <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 border-b border-border px-4 py-3.5">
-              <div className="min-w-0">
-                <h3 className="text-sm font-medium">{g.name}</h3>
-                <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-                  {g.blurb}
-                </p>
-              </div>
+              <h3 className="min-w-0 text-sm font-medium">{g.name}</h3>
               <span className="mono shrink-0 text-[10px] tracking-[0.12em] text-muted-foreground uppercase tabular-nums">
                 {done} / {askable}
               </span>

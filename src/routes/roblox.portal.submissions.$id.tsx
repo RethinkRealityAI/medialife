@@ -108,11 +108,12 @@ function SubmissionDetail() {
       <PageHeader
         eyebrow="Program / My submissions"
         title={s.property}
-        lede={s.note}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {need?.outstanding ? (
-              <Pill tone="watch">{need.outstanding} items needed from you</Pill>
+              <Pill tone="watch">
+                {need.outstanding} {need.outstanding === 1 ? "item" : "items"} needed from you
+              </Pill>
             ) : null}
             <Pill tone={s.status as Tone}>{STATUS_LABEL[s.status]}</Pill>
             <Link
@@ -126,11 +127,7 @@ function SubmissionDetail() {
       />
 
       {/* WHERE IT SITS */}
-      <Section
-        title={`In ${stage?.name.toLowerCase()}`}
-        hint={stage?.blurb}
-        className="border-b border-border"
-      >
+      <Section title={`In ${stage?.name.toLowerCase()}`} className="border-b border-border">
         <StageSteps stage={s.stage} progress={s.stageProgress} className="max-w-3xl" />
       </Section>
 
@@ -162,11 +159,7 @@ function SubmissionDetail() {
       </Section>
 
       {requirements.length ? (
-        <Section
-          title="What we still need"
-          hint="Everything the program collects to finish the work, and where each piece is. Items whose stage has not opened are listed but not counted against you."
-          className="border-b border-border"
-        >
+        <Section title="What we still need" className="border-b border-border">
           <RequirementsList groups={requirements} />
         </Section>
       ) : null}
@@ -174,11 +167,7 @@ function SubmissionDetail() {
       {activation && launch ? (
         <>
           {/* HOW IT OPENS */}
-          <Section
-            title="The activation"
-            hint="Three decisions make a product activated: how a buyer opens it, what opens, and what they keep. A submission is not reviewable until all three are settled."
-            className="border-b border-border"
-          >
+          <Section title="The activation" className="border-b border-border">
             <div className="grid gap-3 lg:grid-cols-3">
               <Panel className="p-5">
                 <span className="grid size-9 place-items-center rounded-md border border-primary/40 bg-primary/10 text-primary">
@@ -315,7 +304,6 @@ function SubmissionDetail() {
           {/* THE PRODUCTS */}
           <Section
             title="Activated products"
-            hint="The physical half. Every unit carries the same code and opens the same experience."
             className="border-b border-border"
             actions={
               <Link

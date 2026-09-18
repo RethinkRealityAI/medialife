@@ -18,12 +18,10 @@ import { PROGRAM, type StageId, daysSince, shortDate, stageIndex } from "@/lib/r
 export function PageHeader({
   eyebrow,
   title,
-  lede,
   actions,
 }: {
   eyebrow: string;
   title: ReactNode;
-  lede?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
@@ -35,7 +33,6 @@ export function PageHeader({
         <h1 className="mt-3 text-3xl font-medium tracking-tight text-balance md:text-4xl">
           {title}
         </h1>
-        {lede ? <p className="mt-4 text-muted-foreground md:text-lg">{lede}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
@@ -44,13 +41,11 @@ export function PageHeader({
 
 export function Section({
   title,
-  hint,
   actions,
   children,
   className,
 }: {
   title?: ReactNode;
-  hint?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -59,10 +54,7 @@ export function Section({
     <section className={cn("px-4 py-8 sm:px-6 lg:px-8", className)}>
       {title ? (
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-          <div className="min-w-0">
-            <h2 className="text-lg font-medium tracking-tight">{title}</h2>
-            {hint ? <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{hint}</p> : null}
-          </div>
+          <h2 className="min-w-0 text-lg font-medium tracking-tight">{title}</h2>
           {actions}
         </div>
       ) : null}

@@ -979,7 +979,6 @@ export type Requirement = {
 export type RequirementGroup = {
   id: string;
   name: string;
-  blurb: string;
   items: Requirement[];
 };
 
@@ -988,7 +987,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "rights",
       name: "Property & rights",
-      blurb: "Settled before anything is designed. Nothing is produced against an unclear licence.",
       items: [
         {
           id: "experience",
@@ -1031,8 +1029,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "creative",
       name: "Creative assets",
-      blurb:
-        "What the assortment is built from. Most creators arrive without print-ready files — that changes the timeline, not whether a property qualifies.",
       items: [
         {
           id: "logo",
@@ -1094,7 +1090,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "experience",
       name: "The activation",
-      blurb: "The half of the product that keeps working after the sale.",
       items: [
         {
           id: "concept",
@@ -1145,7 +1140,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "commerce",
       name: "Commerce & compliance",
-      blurb: "What has to be true before money moves.",
       items: [
         {
           id: "payout",
@@ -1182,7 +1176,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "rights",
       name: "Property & rights",
-      blurb: "This property is held at review until these arrive. Nothing else starts first.",
       items: [
         {
           id: "experience",
@@ -1214,7 +1207,6 @@ export const REQUIREMENTS: Record<string, RequirementGroup[]> = {
     {
       id: "creative",
       name: "Creative assets",
-      blurb: "Enough to see what an assortment could look like.",
       items: [
         {
           id: "assets",

@@ -10,11 +10,7 @@ export const Route = createFileRoute("/roblox/portal/guidelines")({
 function Guidelines() {
   return (
     <>
-      <PageHeader
-        eyebrow="Reference / Guidelines"
-        title="The rules, in the open."
-        lede="Eligibility, what we need from you, and what we will not do. Published and kept current, so a creator can read them before applying rather than discovering them afterwards."
-      />
+      <PageHeader eyebrow="Reference / Guidelines" title="The rules, in the open." />
 
       <Section>
         <div className="grid gap-3 lg:grid-cols-2">

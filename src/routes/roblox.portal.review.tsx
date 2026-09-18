@@ -23,7 +23,6 @@ function ProgramReview() {
       <PageHeader
         eyebrow={`The pilot / ${PROGRAM.reviewDays}-day program review`}
         title="The conversation this data is for."
-        lede={`At the end of the test period Roblox, the IP holder and MEDIALIFE read the same numbers together and decide what happens next: reorders, a wider assortment, or retail. This is that review, as it stands on day ${REVIEW.dayOf}.`}
         actions={
           <Pill tone={cleared === REVIEW.gates.length ? "clear" : "primary"}>
             {cleared} of {REVIEW.gates.length} gates clear
@@ -70,10 +69,7 @@ function ProgramReview() {
       </Section>
 
       {/* GATES */}
-      <Section
-        title="Measures against their gates"
-        hint="Each gate was set before the window opened, so clearing one is a result rather than a rationalisation."
-      >
+      <Section title="Measures against their gates">
         <Panel className="overflow-hidden">
           {/* The Panel clips for its rounded corners, so the table needs its own
               scroller or the last column is unreachable on a phone. */}
@@ -128,11 +124,7 @@ function ProgramReview() {
       </Section>
 
       {/* DECISIONS */}
-      <Section
-        title="What the review decides"
-        hint="The point of the window is not the data. It is these four calls."
-        className="border-t border-border"
-      >
+      <Section title="What the review decides" className="border-t border-border">
         <div className="grid gap-3 md:grid-cols-2">
           {REVIEW.decisions.map((d, i) => (
             <Panel key={d.id} className="p-5">
