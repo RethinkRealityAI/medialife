@@ -18,7 +18,7 @@ import sharp from "sharp";
 const [, , inPath, outPath, ...rest] = process.argv;
 if (!inPath || !outPath) {
   console.error(
-    "usage: node scripts/cutout.mjs <in> <out.png> [--tolerance N] [--feather N] [--trim]",
+    "usage: node scripts/cutout.mjs <in> <out.png> [--tolerance N] [--holes N] [--hole-min-area F] [--feather N] [--trim]",
   );
   process.exit(1);
 }
@@ -38,6 +38,14 @@ const arg = (name, fallback) => {
 const TOL = arg("tolerance", 55);
 const FEATHER = arg("feather", 1.5);
 const TRIM = rest.includes("--trim");
+// Background enclosed by the product — the gap inside a clasp ring — is not
+// reachable from the frame edge, so the fill leaves it opaque and it shows as a
+// pale blob on a dark surface. Colour alone cannot find it: that gap sits in
+// shadow, which puts it FARTHER from the seamless than a bright part of the
+// product, so any threshold that catches it eats the artwork first. Name the
+// hole instead. Coordinates are fractions of width/height (0.5,0.13) or exact
+// pixels (383,133), and the option repeats.
+const SEED_ARGS = rest.map((v, i) => (v === "--seed" ? rest[i + 1] : null)).filter(Boolean);
 
 const { data, info } = await sharp(inPath)
   .ensureAlpha()
@@ -73,6 +81,20 @@ for (let x = 0; x < W; x++) {
 }
 for (let y = 0; y < H; y++) {
   stack.push([0, y], [W - 1, y]);
+}
+for (const a of SEED_ARGS) {
+  const [sx, sy] = String(a).split(",").map(Number);
+  const x = sx <= 1 ? Math.round(sx * W) : Math.round(sx);
+  const y = sy <= 1 ? Math.round(sy * H) : Math.round(sy);
+  if (x < 0 || y < 0 || x >= W || y >= H) {
+    console.error(`  seed ${a} is outside the frame — ignored`);
+    continue;
+  }
+  if (!near(at(x, y))) {
+    console.error(`  seed ${a} is not within --tolerance of the background — ignored`);
+    continue;
+  }
+  stack.push([x, y]);
 }
 while (stack.length) {
   const [x, y] = stack.pop();

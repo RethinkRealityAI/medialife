@@ -31,6 +31,7 @@ import {
   requirementSummary,
   shortDate,
 } from "@/lib/roblox-portal";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/roblox/portal/submissions/$id")({
   loader: ({ params }) => {
@@ -66,12 +67,27 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 /** Served as WebP with a JPEG fallback, like every other image in the portal. */
-function Shot({ name, alt, className }: { name: string; alt: string; className?: string }) {
+/**
+ * WebP with a fallback for browsers that lack it. The fallback is a PNG for a
+ * cut-out asset and a JPEG for a photograph — JPEG has no alpha, so serving one
+ * for a cut-out would put a box of background back around the product.
+ */
+function Shot({
+  name,
+  alt,
+  className,
+  transparent = false,
+}: {
+  name: string;
+  alt: string;
+  className?: string;
+  transparent?: boolean;
+}) {
   return (
     <picture>
       <source srcSet={`/roblox/portal/img/evade/${name}.webp`} type="image/webp" />
       <img
-        src={`/roblox/portal/img/evade/${name}.jpg`}
+        src={`/roblox/portal/img/evade/${name}.${transparent ? "png" : "jpg"}`}
         alt={alt}
         loading="lazy"
         className={className}
@@ -85,7 +101,7 @@ function SubmissionDetail() {
   const need = requirements.length ? requirementSummary(requirements) : null;
   const stage = PROGRAM.stages.find((x) => x.id === s.stage);
   const launch = activation ? LAUNCH_METHODS[activation.launch] : null;
-  const LaunchIcon = activation?.launch === "nfc" ? Nfc : QrCode;
+  const LaunchIcon = activation?.launch === "qr" ? QrCode : Nfc;
 
   return (
     <>
@@ -311,19 +327,42 @@ function SubmissionDetail() {
             }
           >
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {activation.products.map((p) => (
-                <Panel key={p.id} className="overflow-hidden">
-                  <Shot
-                    name={p.image}
-                    alt={p.alt}
-                    className="aspect-square w-full border-b border-border object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-sm font-medium">{p.name}</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{p.detail}</p>
-                  </div>
-                </Panel>
-              ))}
+              {activation.products.map((p) => {
+                const method = p.launch ? LAUNCH_METHODS[p.launch] : null;
+                const Icon = p.launch === "nfc" ? Nfc : QrCode;
+                return (
+                  <Panel key={p.id} className="flex flex-col overflow-hidden">
+                    <Shot
+                      name={p.image}
+                      alt={p.alt}
+                      transparent={p.transparent}
+                      className={cn(
+                        "aspect-square w-full border-b border-border",
+                        p.transparent ? "object-contain p-4" : "object-cover",
+                      )}
+                    />
+                    <div className="flex flex-1 flex-col p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-medium">{p.name}</h3>
+                        {method ? (
+                          <Pill tone="primary" dot={false}>
+                            <Icon className="size-3" aria-hidden />
+                            {method.short}
+                          </Pill>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 flex-1 text-xs leading-relaxed text-muted-foreground">
+                        {p.detail}
+                      </p>
+                      {p.placement ? (
+                        <p className="mono mt-3 border-t border-border pt-3 text-[10px] tracking-[0.1em] text-muted-foreground uppercase">
+                          {p.placement}
+                        </p>
+                      ) : null}
+                    </div>
+                  </Panel>
+                );
+              })}
             </div>
           </Section>
         </>
