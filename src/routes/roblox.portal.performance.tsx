@@ -70,8 +70,8 @@ function Performance() {
   return (
     <>
       <PageHeader
-        eyebrow="The pilot / Performance"
-        title="Does it sell, and does the activation work?"
+        eyebrow="The pilot"
+        title="Performance"
         actions={
           <Pill tone="active">
             Day {REVIEW.dayOf} of {REVIEW.totalDays}

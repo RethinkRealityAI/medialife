@@ -21,8 +21,8 @@ function ProgramReview() {
   return (
     <>
       <PageHeader
-        eyebrow={`The pilot / ${PROGRAM.reviewDays}-day program review`}
-        title="The conversation this data is for."
+        eyebrow="The pilot"
+        title={`${PROGRAM.reviewDays}-day program review`}
         actions={
           <Pill tone={cleared === REVIEW.gates.length ? "clear" : "primary"}>
             {cleared} of {REVIEW.gates.length} gates clear
@@ -61,15 +61,14 @@ function ProgramReview() {
               }}
             />
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            {left} days left. Gates are read continuously, not just at the end — a measure that
-            clears early is a signal to start modelling the reorder.
+          <p className="mono mt-3 text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+            {left} days left
           </p>
         </Panel>
       </Section>
 
       {/* GATES */}
-      <Section title="Measures against their gates">
+      <Section title="Measures and gates">
         <Panel className="overflow-hidden">
           {/* The Panel clips for its rounded corners, so the table needs its own
               scroller or the last column is unreachable on a phone. */}
@@ -124,7 +123,7 @@ function ProgramReview() {
       </Section>
 
       {/* DECISIONS */}
-      <Section title="What the review decides" className="border-t border-border">
+      <Section title="Decisions" className="border-t border-border">
         <div className="grid gap-3 md:grid-cols-2">
           {REVIEW.decisions.map((d, i) => (
             <Panel key={d.id} className="p-5">

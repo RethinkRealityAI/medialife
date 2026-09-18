@@ -66,8 +66,8 @@ function Support() {
   return (
     <>
       <PageHeader
-        eyebrow="Reference / Support"
-        title="A named person, not a queue."
+        eyebrow="Reference"
+        title="Support"
         actions={<Pill tone="active">{ACTIVE.property} · Active</Pill>}
       />
 
