@@ -280,14 +280,21 @@ export type ActivatedProduct = {
   id: string;
   name: string;
   detail: string;
-  /** Basename under /roblox/portal/img/evade, served as .webp with a .jpg fallback. */
+  /** Basename under /roblox/portal/img/evade. */
   image: string;
+  /** Cut out against transparency, so the fallback has to be a PNG not a JPEG. */
+  transparent?: boolean;
   alt: string;
+  /** How this product opens. Products in one drop need not agree. */
+  launch?: LaunchMethod;
+  /** Where the code or the chip physically sits. */
+  placement?: string;
 };
 
 export type Activation = {
+  /** The method the drop leads with. Individual products may differ. */
   launch: LaunchMethod;
-  /** Where the code physically sits on the product. */
+  /** Where the code physically sits on the product that leads. */
   codePlacement: string;
   experience: {
     name: string;
@@ -312,8 +319,8 @@ export type Activation = {
 
 export const ACTIVATIONS: Record<string, Activation> = {
   "amp-001": {
-    launch: "qr",
-    codePlacement: "Printed on the back of the ECLIPSE can charm",
+    launch: "both",
+    codePlacement: "A printed code on the keychain, an NFC patch in the t-shirt sleeve",
     experience: {
       name: "Cola Run",
       kind: "Immersive mini-game",
@@ -323,7 +330,7 @@ export const ACTIVATIONS: Record<string, Activation> = {
       image: "cola-run",
       alt: "The Cola Run splash screen: Bobo the cat flying through glowing ECLIPSE cola cans under the EVADE COLA RUN title, over an ACTIVATED BY MEDIALIFE lockup.",
       beats: [
-        "Buyer points a phone camera at the code on the can",
+        "Buyer taps the sleeve patch, or points a camera at the code on the can",
         "Cola Run opens in the browser in about a second",
         "They play the run and collect cans",
         "The cosmetic unlocks and follows them back into the experience",
@@ -342,23 +349,28 @@ export const ACTIVATIONS: Record<string, Activation> = {
       {
         id: "keychain-set",
         name: "Activated keychain set",
-        detail: "Two charms: the EVADE character and the ECLIPSE can",
+        detail: "Two acrylic charms — Bobo and the ECLIPSE can — on a swivel clasp",
         image: "keychain-set",
-        alt: "A hand holding the two-charm acrylic keychain set: an EVADE character charm and an ECLIPSE cola can charm.",
+        transparent: true,
+        launch: "qr",
+        placement: "Printed code on the back of the can charm",
+        alt: "The two-charm acrylic keychain set: Bobo in a blue BOBO cap with one arm raised, beside an ECLIPSE cola can charm, hanging from a steel swivel clasp.",
       },
       {
-        id: "front-back",
-        name: "Front and back",
-        detail: "The code sits on the reverse of the can charm",
-        image: "front-back",
-        alt: "Both charms photographed front and back, with the scannable code printed on the back of the can charm.",
+        id: "tshirt",
+        name: "Activated t-shirt",
+        detail: "Bobo and the can on the front, chip in the sleeve patch",
+        image: "tshirt",
+        launch: "nfc",
+        placement: "NFC patch on the right sleeve",
+        alt: "A black t-shirt printed with Bobo and the ECLIPSE can under a hand-lettered BOBO wordmark, with a red TAP HERE NFC patch on the right sleeve.",
       },
       {
-        id: "acrylic",
-        name: "Acrylic finish",
-        detail: "Double-sided print, clear acrylic, swivel clasp",
-        image: "acrylic",
-        alt: "The keychain set lit against black, showing the clear acrylic edge glow and the swivel clasp.",
+        id: "details",
+        name: "Hardware",
+        detail: "Steel swivel clasp and split rings, on a polished acrylic edge",
+        image: "details",
+        alt: "A close-up of the keychain's steel swivel clasp and split rings against the polished edge of the acrylic charm.",
       },
     ],
   },
