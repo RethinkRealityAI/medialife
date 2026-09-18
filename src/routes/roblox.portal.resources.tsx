@@ -11,11 +11,7 @@ export const Route = createFileRoute("/roblox/portal/resources")({
 function Resources() {
   return (
     <>
-      <PageHeader
-        eyebrow="Reference / Resources"
-        title="Everything you need to hand."
-        lede="Specifications, the fan-side preview, and the model behind the numbers. Anything a creator asks for twice ends up on this page."
-      />
+      <PageHeader eyebrow="Reference / Resources" title="Everything you need to hand." />
 
       <Section>
         <div className="grid gap-3 md:grid-cols-2">
@@ -47,11 +43,7 @@ function Resources() {
         </div>
       </Section>
 
-      <Section
-        title="Program economics"
-        hint="The working assumptions behind every figure in the portal, for both channels."
-        className="border-t border-border"
-      >
+      <Section title="Program economics" className="border-t border-border">
         <Panel className="overflow-hidden">
           {/* The Panel clips for its rounded corners, so the table needs its own
               scroller or the last column is unreachable on a phone. */}

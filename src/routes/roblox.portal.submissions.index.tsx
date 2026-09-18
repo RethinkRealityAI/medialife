@@ -29,7 +29,6 @@ function Submissions() {
       <PageHeader
         eyebrow="Program / My submissions"
         title="Every property you have put forward."
-        lede="One row per property, with where it sits in the program and what it is waiting on. Open one for its products, its activation and what a buyer unlocks. Properties that do not qualify get a written reason here, not silence."
         actions={
           <Link
             to="/roblox/portal/apply"

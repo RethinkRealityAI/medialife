@@ -68,7 +68,6 @@ function Support() {
       <PageHeader
         eyebrow="Reference / Support"
         title="A named person, not a queue."
-        lede="Every property has a specialist on the account. Here is how to reach them, and the answers to the things creators ask first."
         actions={<Pill tone="active">{ACTIVE.property} · Active</Pill>}
       />
 

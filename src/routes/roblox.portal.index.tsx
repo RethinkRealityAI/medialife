@@ -105,7 +105,6 @@ function PortalHome() {
       {/* WHERE THE PROPERTY SITS */}
       <Section
         title={`${ACTIVE.property} is in ${PROGRAM.stages.find((s) => s.id === ACTIVE.stage)?.name.toLowerCase()}`}
-        hint="Every property runs the same four stages. A property only moves on when the measures say it should."
         actions={
           <Link
             to="/roblox/portal/status"
@@ -121,7 +120,6 @@ function PortalHome() {
       {/* THE TWO FAMILIES OF MEASURES */}
       <Section
         title="How the pilot is performing"
-        hint="Commercial measures say whether it sells. Engagement measures say whether the activation is doing its job. The program review reads both."
         actions={
           <Link
             to="/roblox/portal/performance"
@@ -196,10 +194,7 @@ function PortalHome() {
             </Panel>
           </Section>
 
-          <Section
-            title="Adding another property?"
-            hint="The same path, every time. Ten days from submitting to a build."
-          >
+          <Section title="Adding another property?">
             <ol className="space-y-2">
               {ONBOARDING.map((o) => (
                 <li key={o.day} className="flex items-baseline gap-3 text-sm">

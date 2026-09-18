@@ -4,16 +4,7 @@ import { CheckCircle2, CircleDashed, Loader2 } from "lucide-react";
 import { PageHeader, Panel, Pill, Section, StageBar } from "@/components/portal/kit";
 import { RequirementsList } from "@/components/portal/requirements";
 import { Thread } from "@/components/portal/thread";
-import {
-  ACTIVE,
-  PROGRAM,
-  REQUIREMENTS,
-  REVIEW,
-  THREAD,
-  requirementSummary,
-  shortDate,
-  stageIndex,
-} from "@/lib/roblox-portal";
+import { ACTIVE, REQUIREMENTS, REVIEW, THREAD, requirementSummary } from "@/lib/roblox-portal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/roblox/portal/status")({
@@ -58,7 +49,6 @@ const TRACKS = [
 const STEP_ICON = { done: CheckCircle2, doing: Loader2, todo: CircleDashed } as const;
 
 function Status() {
-  const at = stageIndex(ACTIVE.stage);
   const groups = REQUIREMENTS[ACTIVE.id] ?? [];
   const need = requirementSummary(groups);
   const thread = THREAD[ACTIVE.id] ?? [];
@@ -68,34 +58,23 @@ function Status() {
       <PageHeader
         eyebrow="Program / Project status"
         title={`Where ${ACTIVE.property} sits today.`}
-        lede="What is being built, what the program is still waiting on, and the thread where it gets settled."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {need.outstanding ? (
-              <Pill tone="watch">{need.outstanding} items needed from you</Pill>
+              <Pill tone="watch">
+                {need.outstanding} {need.outstanding === 1 ? "item" : "items"} needed from you
+              </Pill>
             ) : null}
             <Pill tone="active">Day {REVIEW.dayOf} of the validation window</Pill>
           </div>
         }
       />
 
-      <Section
-        title="Program stages"
-        hint="A property only moves on when its measures say it should."
-      >
+      <Section title="Program stages">
         <StageBar stage={ACTIVE.stage} progress={ACTIVE.stageProgress} />
-        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {ACTIVE.property} cleared review and product development and is {ACTIVE.stageProgress}%
-          through {PROGRAM.stages[at]?.name.toLowerCase()}. Retail consideration opens at the{" "}
-          {PROGRAM.reviewDays}-day review on {shortDate(REVIEW.windowEnd)}.
-        </p>
       </Section>
 
-      <Section
-        title="Two tracks, one launch date"
-        hint="Both were staffed the day the agreement was signed. Neither ships without the other."
-        className="border-t border-border"
-      >
+      <Section title="Two tracks, one launch date" className="border-t border-border">
         {/* items-start: the tracks have different step counts, and stretching the
             shorter one leaves a hole under its last step. */}
         <div className="grid items-start gap-3 lg:grid-cols-2">
@@ -154,19 +133,11 @@ function Status() {
         </div>
       </Section>
 
-      <Section
-        title="What we still need"
-        hint="Everything the program collects to finish the work, and where each piece is. Items whose stage has not opened are listed but not counted against you."
-        className="border-t border-border"
-      >
+      <Section title="What we still need" className="border-t border-border">
         <RequirementsList groups={groups} />
       </Section>
 
-      <Section
-        title="Thread"
-        hint="One place per property. Files attach to the message that needed them, so an approval and the thing it approved never come apart."
-        className="border-t border-border"
-      >
+      <Section title="Thread" className="border-t border-border">
         <div className="max-w-4xl">
           <Thread comments={thread} />
         </div>

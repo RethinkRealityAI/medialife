@@ -30,7 +30,6 @@ function Products() {
       <PageHeader
         eyebrow="The pilot / Products"
         title={`The ${ACTIVE.property} assortment.`}
-        lede={`Six categories are modelled for the program. This property starts deliberately small — a limited assortment against a defined test period — and widens only where the data supports it.`}
         actions={
           <a
             href="/roblox/creators/#studio"

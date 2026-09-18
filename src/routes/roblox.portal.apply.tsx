@@ -237,7 +237,6 @@ function Apply() {
       <PageHeader
         eyebrow="Program / Apply"
         title="One intake form. Every channel."
-        lede="However a creator found the program, this is the way in — which is what makes review consistent and reporting possible. Four steps, about four minutes, and nothing here is a test."
         actions={
           <a
             href="/roblox/creators/"

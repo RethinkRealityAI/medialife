@@ -72,7 +72,6 @@ function Performance() {
       <PageHeader
         eyebrow="The pilot / Performance"
         title="Does it sell, and does the activation work?"
-        lede="Two families of measures. Commercial says whether the product moves; engagement says whether the chip in it keeps doing its job after the sale. The program review reads both together."
         actions={
           <Pill tone="active">
             Day {REVIEW.dayOf} of {REVIEW.totalDays}
@@ -95,10 +94,7 @@ function Performance() {
       </Section>
 
       {/* THE TREND */}
-      <Section
-        title="Week by week"
-        hint="Units, first activations and outbound sessions since the pilot opened. Activations tracking units is the signal that the activation is not a novelty."
-      >
+      <Section title="Week by week">
         <Panel className="p-4 sm:p-5">
           <ChartContainer config={weeklyConfig} className="h-[320px] w-full">
             <LineChart data={WEEKLY} margin={{ top: 12, right: 16, bottom: 4, left: 0 }}>
@@ -182,9 +178,6 @@ function Performance() {
         <div className="grid gap-3 lg:grid-cols-2">
           <Panel className="min-w-0 p-4 sm:p-5">
             <h3 className="text-sm font-medium">Units by SKU</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              The price-point read. The cheapest unit is carrying the pilot.
-            </p>
             <ChartContainer config={skuConfig} className="mt-4 h-[220px] w-full">
               <BarChart data={BY_SKU} margin={{ top: 20, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid
@@ -220,9 +213,6 @@ function Performance() {
 
           <Panel className="min-w-0 p-4 sm:p-5">
             <h3 className="text-sm font-medium">Demand by region</h3>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Where the units went. Informs which retail conversations are worth having.
-            </p>
             <ChartContainer config={regionConfig} className="mt-4 h-[220px] w-full">
               <BarChart
                 data={BY_REGION}
@@ -263,11 +253,7 @@ function Performance() {
       </Section>
 
       {/* THE FULL MEASURE SETS */}
-      <Section
-        title="Commercial measures"
-        hint="Whether the product moves, and at what price."
-        className="border-t border-border"
-      >
+      <Section title="Commercial measures" className="border-t border-border">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {COMMERCIAL_MEASURES.map((m) => (
             <Stat
@@ -282,11 +268,7 @@ function Performance() {
         </div>
       </Section>
 
-      <Section
-        title="Engagement measures"
-        hint="Whether the activation keeps working after the sale — and whether it sends anyone back."
-        className="border-t border-border"
-      >
+      <Section title="Engagement measures" className="border-t border-border">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {ENGAGEMENT_MEASURES.map((m) => (
             <Stat key={m.id} label={m.label} value={m.value} delta={m.delta} hint={m.hint} />
