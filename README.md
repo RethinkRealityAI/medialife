@@ -70,7 +70,8 @@ Spam protection: a `bot-field` honeypot, declared via `netlify-honeypot`.
 `/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact`
 
 Unlisted static pages, served straight from `public/` rather than the SSR router:
-`/<slug>` (business cards) and `/creators` (Roblox creator program).
+`/<slug>` (business cards), `/creators` (Roblox creator program), and the activated-retail
+3D demos at `/roblox/activated-retail/` and `/monkey-quest/activated-retail/`.
 
 Tech stack slugs live in `src/lib/tech-stacks.ts`. **Adding one means adding its URL
 to `public/sitemap.xml`** — the sitemap is static and does not generate itself.
@@ -216,3 +217,31 @@ the contact field is `contact-name`, not `name`, and the free-text field is `not
 If the POST fails the visitor is told plainly and handed a JSON download plus a
 `mailto:` fallback; the draft stays in `localStorage`. An application is never silently
 lost.
+
+---
+
+## Activated-retail demos (`/roblox/activated-retail/`, `/monkey-quest/activated-retail/`)
+
+Interactive 3D Walmart endcaps used in pitches: orbit the fixture, pull merch off the shelf,
+add it to a mock cart, run the activation flow, switch the featured property or campaign.
+Short links: `/roblox-activated-retail` and `/monkey-quest-activated-retail` (301s in
+`netlify.toml`). Unlisted — `noindex` headers and disallowed in `robots.txt`.
+
+```
+public/roblox/activated-retail/        MEDIALIFE × Roblox (Roblox, Skyrift, EVADE properties)
+public/monkey-quest/activated-retail/  Toei Animation × Hypergalactic concept (game + film campaigns)
+  index.html          the whole app (CSS + JS inlined), generated — do not edit by hand
+  assets/hd/          display graphics, WebP, full + _m (mobile) sizes
+  assets/             splash render, charms, reward art, QR codes
+  models/*.glb.txt    merch models, base64 GLB (meshopt-compressed)
+  display.glb.txt     the endcap itself, base64 GLB
+public/vendor/three@0.170.0/   three.js r170 + the addons these pages import (no runtime CDN)
+```
+
+Both pages are exported from the RobloxDisplay project (`web/src` and the Monkey Quest
+fork): edit there, rebuild, and replace the folder. Everything they fetch is relative to the
+page, so each folder is self-contained apart from the vendored three.js.
+
+The EVADE activation embeds the live Cola Run game (evade.medialife.ai) in the phone mock and
+falls back to a scannable QR if the frame is blocked. The Monkey Quest QR codes open the real
+Roblox game page.

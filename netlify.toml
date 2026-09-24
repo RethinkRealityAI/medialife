@@ -96,6 +96,59 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# ── Activated-retail demos ───────────────────────────────────────────────────
+# Interactive 3D endcaps used in pitches: /roblox/activated-retail (MEDIALIFE ×
+# Roblox, falls under the /roblox rules above) and /monkey-quest/activated-retail
+# (a concept for Toei Animation × Hypergalactic). Static pages under public/,
+# unlisted like the rest of the client work. The short links are what gets shared.
+[[redirects]]
+  from = "/roblox-activated-retail"
+  to = "/roblox/activated-retail/"
+  status = 301
+
+[[redirects]]
+  from = "/monkey-quest-activated-retail"
+  to = "/monkey-quest/activated-retail/"
+  status = 301
+
+[[redirects]]
+  from = "/monkey-quest"
+  to = "/monkey-quest/activated-retail/"
+  status = 302
+
+[[headers]]
+  for = "/monkey-quest/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300"
+
+# Graphics, models and the display mesh change only when a demo is re-exported.
+[[headers]]
+  for = "/roblox/activated-retail/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/roblox/activated-retail/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/monkey-quest/activated-retail/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/monkey-quest/activated-retail/models/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# three.js is vendored under a versioned path, so it can be cached forever.
+[[headers]]
+  for = "/vendor/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
 # ── Virtual business cards ───────────────────────────────────────────────────
 # Cards are static files at the site root (medialife.ai/dapo), so unlike the SSR
 # routes they DO receive netlify.toml headers. The per-card noindex rules below
