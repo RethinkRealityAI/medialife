@@ -7,13 +7,15 @@
     "sub": "WALMART ENDCAP · AR-01 · 3.84 × 0.68 × 2.47 m",
     "splashTitle": "Activated Retail",
     "splashSub": "The endcap where every product opens the game.",
-    "retailer": "Walmart"
+    "retailer": "Walmart",
+    "headerText": "YOUR BRAND",
+    "tagline": "TAP. PLAY. UNLOCK."
   },
   "access": {},
   "themes": [
     {
       "id": "main",
-      "name": "Neon Obby",
+      "name": "Your Brand",
       "led": "#ff3fb4",
       "led2": "#28e7ff",
       "graphics": {
@@ -23,8 +25,8 @@
           "mobile": "/activated-retail/engine/assets/sample-keyart_m.webp"
         }
       },
-      "site": "ROBLOX.COM",
-      "game": "Neon Obby"
+      "site": "YOURBRAND.COM",
+      "game": "Your Game"
     }
   ],
   "defaultTheme": "main",
@@ -38,7 +40,10 @@
         "sku": "CAP-01",
         "price": 30,
         "description": "Six-panel cap with a woven NFC label under the brim. One tap opens the experience: no app, no login wall.",
-        "unlock": { "title": "Matching avatar cap", "sub": "UGC accessory · one claim per cap" },
+        "unlock": {
+          "title": "Matching avatar cap",
+          "sub": "Digital accessory · one claim per cap"
+        },
         "trigger": "Woven NFC label",
         "channel": "Retail",
         "canActivate": true
@@ -114,7 +119,7 @@
         "price": 32,
         "sizes": ["S", "M", "L", "XL", "XXL"],
         "description": "Heavyweight tee with an NFC care label. Wear it, tap it, and the same tee lands on your avatar.",
-        "unlock": { "title": "Matching avatar tee", "sub": "UGC shirt" },
+        "unlock": { "title": "Matching avatar tee", "sub": "Digital shirt" },
         "trigger": "NFC care label",
         "channel": "Retail",
         "canActivate": false
@@ -130,7 +135,7 @@
         "price": 60,
         "sizes": ["S", "M", "L", "XL", "XXL"],
         "description": "Midweight pullover with an NFC label at the hem. Owning it unlocks the matching hoodie for your avatar.",
-        "unlock": { "title": "Matching avatar hoodie", "sub": "UGC layered clothing" },
+        "unlock": { "title": "Matching avatar hoodie", "sub": "Digital outerwear" },
         "trigger": "NFC hem label",
         "channel": "Retail",
         "canActivate": false
