@@ -242,6 +242,14 @@ Both pages are exported from the RobloxDisplay project (`web/src` and the Monkey
 fork): edit there, rebuild, and replace the folder. Everything they fetch is relative to the
 page, so each folder is self-contained apart from the vendored three.js.
 
+> **Patched in place — port before the next export.** The commit "Make the activated-retail
+> demos responsive…" edited both `index.html` files directly (the exporter wasn't available):
+> the stuck product sheet / frozen hotspots fix, face-on product presentation with rotate +
+> zoom, the compact sheet, tour-first start, theme-coloured markers, the cart icon and the
+> frame-budget / shadow / thumbnail performance changes. Apply the same diff to RobloxDisplay
+> (`git show` that commit) or a re-export will undo it. Keep the two pages in step: every
+> interaction change goes into both.
+
 The EVADE activation embeds the live Cola Run game (evade.medialife.ai) in the phone mock and
 falls back to a scannable QR if the frame is blocked. The Monkey Quest QR codes open the real
 Roblox game page.

@@ -65,6 +65,8 @@
   --lg-hover: rgba(255,255,255,.075);
   --lg-tag: linear-gradient(180deg, rgba(44,38,70,.92), rgba(18,15,32,.92));
   --r-xl: 28px;
+  --hs-rgb: 164,136,255;     /* product markers: the featured property's primary colour */
+  --hs2-rgb: 60,239,177;     /* activation markers (QR, character): its secondary colour */
 }
 html,body{height:100%;}
 body{margin:0;background:var(--ink);color:var(--text);font:15px/1.5 var(--body);overflow:hidden;-webkit-font-smoothing:antialiased;}
@@ -74,7 +76,7 @@ button{font:inherit;color:inherit;}
 #stage{position:fixed;inset:0;}
 #stage canvas{display:block;width:100%;height:100%;touch-action:none;}
 #vignette{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .6s var(--ease);
-  background:radial-gradient(ellipse at 38% 50%, transparent 30%, rgba(6,5,12,.72) 100%);}
+  background:radial-gradient(circle at var(--vx,38%) var(--vy,50%), rgba(6,5,12,0) 0, rgba(6,5,12,0) var(--vr,180px), rgba(6,5,12,.8) calc(var(--vr,180px) * 2.8));}
 body.focus #vignette{opacity:1;}
 body.focus .hint,body.build .hint{opacity:0!important;}
 
@@ -145,10 +147,10 @@ body.focus .hint,body.build .hint{opacity:0!important;}
 /* ---------- hotspots ---------- */
 #hotspots{position:fixed;inset:0;pointer-events:none;z-index:3;}
 .hs{position:absolute;left:0;top:0;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;border:0;background:none;padding:0;width:34px;height:34px;display:grid;place-items:center;transition:opacity .35s;}
-.hs .core{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(146,112,255,.9),0 0 18px 4px rgba(146,112,255,.8);}
-.hs .ring{position:absolute;inset:3px;border-radius:50%;border:2px solid rgba(190,170,255,.9);animation:ping 2.2s var(--ease) infinite;}
-.hs.qr .core{box-shadow:0 0 0 3px rgba(60,239,177,.9),0 0 18px 4px rgba(60,239,177,.7);}
-.hs.qr .ring{border-color:rgba(60,239,177,.9);}
+.hs{--c:var(--hs-rgb);}
+.hs.qr{--c:var(--hs2-rgb);}
+.hs .core{width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(var(--c),.95),0 0 18px 4px rgba(var(--c),.8);transition:box-shadow .6s var(--ease);}
+.hs .ring{position:absolute;inset:3px;border-radius:50%;border:2px solid rgba(var(--c),.9);animation:ping 2.2s var(--ease) infinite;transition:border-color .6s var(--ease);}
 /* tags: many at once over the scene, so a near-opaque glassy fill and no backdrop blur */
 .hs .tag{position:absolute;left:28px;top:50%;transform:translateY(-50%) translateX(-4px);white-space:nowrap;
   background:var(--lg-tag);border:1px solid;border-color:rgba(255,255,255,.26) rgba(255,255,255,.12) rgba(255,255,255,.08) rgba(255,255,255,.18);
@@ -304,7 +306,13 @@ body.build .plabel{opacity:1;}
 .tour-foot{display:flex;align-items:center;justify-content:space-between;margin-top:16px;gap:10px;}
 .pips{display:flex;gap:6px;}
 .pips i{width:18px;height:5px;border-radius:3px;background:rgba(255,255,255,.18);}
-.pips i.on{background:linear-gradient(180deg,#b29bff,#9270ff);box-shadow:0 0 8px rgba(146,112,255,.5);}
+.pips i.on{background:rgb(var(--hs-rgb));box-shadow:0 0 8px rgba(var(--hs-rgb),.55);transition:background .4s,box-shadow .4s;}
+.tour-skip{position:absolute;top:14px;right:14px;border:0;border-radius:999px;padding:8px 13px;font:600 12.5px/1 var(--body);color:#dcd8ea;cursor:pointer;
+  background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);transition:background .2s,color .2s;-webkit-tap-highlight-color:transparent;}
+.tour-skip:hover{background:rgba(255,255,255,.15);color:#fff;}
+#tour .eyebrow{padding-right:96px;min-height:12px;}
+.tour-keys{font:500 10.5px/1 var(--mono);color:var(--faint);letter-spacing:.06em;}
+@media (max-width:760px),(pointer:coarse){ .tour-keys{display:none;} }
 .tour-foot .btn{padding:10px 18px;font-size:13.5px;}
 
 /* ---------- misc overlays ---------- */
@@ -532,23 +540,25 @@ body.focus .dock-wrap{opacity:0;transform:translateY(16px);pointer-events:none;}
 body.focus .dock-wrap .dock{pointer-events:none;}
 .dock-wrap{transition:opacity .35s var(--ease),transform .45s var(--ease);}
 
-#sheet{--pad:24px;--gap:18px;--art:140px;
-  top:calc(88px + env(safe-area-inset-top,0px));right:18px;bottom:auto;width:min(440px,calc(100vw - 36px));
+#sheet{--pad:22px;--gap:16px;--art:116px;
+  top:calc(88px + env(safe-area-inset-top,0px));right:18px;bottom:auto;width:min(392px,calc(100vw - 36px));
   max-height:calc(100dvh - 88px - 18px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   border-radius:var(--r-xl);display:flex;flex-direction:column;transform:translateX(calc(100% + 40px));transition:transform .6s var(--ease);overflow:hidden;box-sizing:border-box;}
 #sheet.open{transform:none;}
 .sheet-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:var(--pad) var(--pad) 0;flex:0 0 auto;}
 .sheet-title{min-width:0;}
 #sheet .eyebrow{font-size:11.5px;letter-spacing:.11em;line-height:1.3;}
-#sheet h2{font:700 26px/1.1 var(--display);margin:8px 0 0;text-wrap:balance;letter-spacing:-.015em;}
+#sheet h2{font:700 24px/1.12 var(--display);margin:8px 0 0;text-wrap:balance;letter-spacing:-.015em;padding-right:4px;}
 .sheet-price{display:flex;align-items:center;gap:10px 12px;margin-top:12px;flex-wrap:wrap;}
-.sheet-price b{font:700 24px/1 var(--display);letter-spacing:-.02em;}
+.sheet-price b{font:700 22px/1 var(--display);letter-spacing:-.02em;}
 .stock{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#d8f7ea;padding:6px 11px;border-radius:999px;background:rgba(60,239,177,.12);border:1px solid rgba(60,239,177,.3);white-space:nowrap;}
 .stock i{width:7px;height:7px;border-radius:50%;background:var(--signal);box-shadow:0 0 8px var(--signal);}
 .sku{font:500 11.5px/1.4 var(--mono);color:var(--faint);margin-top:10px;}
 .sheet-body{padding:var(--gap) var(--pad) var(--pad);overflow-y:auto;display:flex;flex-direction:column;gap:var(--gap);overscroll-behavior:contain;
   flex:1 1 auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
-.sheet-body p{margin:0;color:#dcd7ee;font-size:15.5px;line-height:1.55;max-width:60ch;}
+.sheet-body p{margin:0;color:#dcd7ee;font-size:15px;line-height:1.5;max-width:60ch;}
+.desc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+.more-btn{border:0;background:none;padding:2px 0;color:#c8b8ff;font:600 13px/1.2 var(--body);cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(200,184,255,.45);}
 
 /* what the product unlocks: big enough to actually see */
 .unlock{position:relative;display:grid;grid-template-columns:var(--art) 1fr;gap:16px;align-items:center;padding:12px;border-radius:22px;flex:0 0 auto;
@@ -561,8 +571,8 @@ body.focus .dock-wrap .dock{pointer-events:none;}
 @keyframes unlockFloat{50%{transform:translateY(-4px) rotate(-2deg);}}
 .unlock-copy{min-width:0;}
 .unlock-copy small{display:block;font:500 11px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:#9ff3d2;margin-bottom:6px;}
-.unlock-copy b{display:block;font:700 19px/1.2 var(--display);letter-spacing:-.01em;text-wrap:balance;}
-.unlock-copy span{display:block;font-size:14px;line-height:1.45;color:#cfc9e4;margin-top:6px;}
+.unlock-copy b{display:block;font:700 17.5px/1.2 var(--display);letter-spacing:-.01em;text-wrap:balance;}
+.unlock-copy span{display:block;font-size:13.5px;line-height:1.4;color:#cfc9e4;margin-top:5px;}
 
 /* size picker: label and chips on one row */
 .opts{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
@@ -573,12 +583,13 @@ body.focus .dock-wrap .dock{pointer-events:none;}
 .sizes button:active{transform:scale(.95);}
 .sizes button[aria-checked="true"]{background:var(--lg-pill-on);color:#fff;border-color:rgba(255,255,255,.35);box-shadow:var(--lg-pill-shadow),0 0 0 2px rgba(179,156,255,.55);}
 
-.spec{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;margin:0;font-size:14.5px;padding:12px 16px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
-.spec dt{font:500 11px/1.9 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--faint);}
+.spec{display:flex;flex-direction:column;gap:7px;margin:0;font-size:14px;padding:11px 15px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);}
+.spec > div{display:grid;grid-template-columns:78px 1fr;gap:12px;align-items:baseline;}
+.spec dt{font:500 10.5px/1.9 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--faint);}
 .spec dd{margin:0;color:var(--text);line-height:1.5;}
 
 .sheet-foot{flex:0 0 auto;padding:14px var(--pad) calc(16px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.08);display:flex;gap:10px;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.05));}
-.sheet-foot .btn{flex:1;min-height:52px;font-size:15.5px;min-width:0;}
+.sheet-foot .btn{flex:1;min-height:50px;font-size:15.5px;min-width:0;}
 #sheet.can-act .sheet-foot .btn.buy{flex:1.25;}
 .btn.buy{color:#120a2c;
   background:linear-gradient(180deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.1) 48%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#c8b8ff 0%,#9c80ff 100%);
@@ -589,19 +600,28 @@ body.focus .dock-wrap .dock{pointer-events:none;}
 .btn.buy.added{background:linear-gradient(180deg,rgba(255,255,255,.4) 0%,rgba(255,255,255,.06) 48%,rgba(255,255,255,0) 52%),linear-gradient(180deg,#5ff4c1 0%,#2fe3a5 100%);color:#04150e;}
 .drag-hint{font:500 10.5px/1 var(--mono);color:var(--faint);letter-spacing:.06em;text-transform:uppercase;}
 
+/* a one-line coach mark under the held product */
+.spin-hint{position:fixed;left:0;top:0;z-index:4;transform:translate(-50%,0);pointer-events:none;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;font:600 12.5px/1 var(--body);color:#ece9f7;padding:8px 14px;border-radius:999px;
+  background:rgba(14,12,27,.62);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 6px 18px rgba(4,3,12,.3);
+  opacity:0;transition:opacity .45s var(--ease);}
+.spin-hint svg{width:16px;height:16px;flex:0 0 auto;}
+.spin-hint.on{opacity:1;}
+body:not(.focus) .spin-hint{opacity:0;}
+
 /* ---- side-card tiers by window height (desktop, tablets, laptops) ---- */
 @media (min-width:761px) and (max-height:900px){
-  #sheet{--pad:22px;--gap:14px;--art:116px;}
-  #sheet h2{font-size:24px;}
+  #sheet{--pad:20px;--gap:13px;--art:100px;}
+  #sheet h2{font-size:22px;}
   .sheet-price{margin-top:10px;} .sheet-price b{font-size:22px;}
   .sku{margin-top:8px;}
-  .sheet-body p{font-size:15px;line-height:1.5;}
-  .unlock-copy b{font-size:17.5px;}
-  .unlock-copy span{font-size:13.5px;margin-top:4px;}
-  .sheet-foot .btn{min-height:48px;}
+  .sheet-body p{font-size:14.5px;line-height:1.48;}
+  .unlock-copy b{font-size:16.5px;}
+  .unlock-copy span{font-size:13px;margin-top:4px;}
+  .sheet-foot .btn{min-height:46px;}
 }
 @media (min-width:761px) and (max-height:780px){
-  #sheet{--pad:20px;--gap:12px;--art:96px;top:calc(80px + env(safe-area-inset-top,0px));max-height:calc(100dvh - 80px - 14px);}
+  #sheet{--pad:18px;--gap:11px;--art:84px;top:calc(76px + env(safe-area-inset-top,0px));max-height:calc(100dvh - 76px - 14px);}
   #sheet h2{font-size:22px;margin-top:6px;}
   .sheet-price b{font-size:20px;}
   .stock{padding:4px 10px;font-size:12.5px;}
@@ -625,36 +645,63 @@ body.focus .dock-wrap .dock{pointer-events:none;}
   #sheet h2{font-size:19px;}
   .sku{display:none;}
   .sheet-body p{font-size:14px;}
+  .sheet-body p.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;}
+  #sheet{--art:52px;--gap:8px;}
+  .unlock{padding:7px;gap:10px;border-radius:14px;}
+  .unlock-copy span{display:none;}
+  .spec{display:none;}
+  .sizes button{height:32px;min-width:38px;font-size:13px;}
+  .sheet-foot{padding-top:10px;padding-bottom:10px;}
   .sheet-foot .btn{min-height:42px;font-size:14px;padding:10px 12px;}
 }
 
 /* ---- phones: bottom sheet ---- */
 @media (max-width:760px){
-  #sheet{--pad:18px;--gap:14px;--art:92px;top:auto;left:10px;right:10px;width:auto;
-    bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:min(60dvh,560px);transform:translateY(calc(100% + 40px));border-radius:26px;}
+  #sheet{--pad:16px;--gap:10px;--art:58px;top:auto;left:8px;right:8px;width:auto;
+    bottom:calc(8px + env(safe-area-inset-bottom,0px));max-height:min(58dvh,540px);transform:translateY(calc(100% + 40px));border-radius:24px;}
   #sheet.open{transform:none;}
-  #sheet h2{font-size:21px;margin-top:6px;}
-  .sheet-price{margin-top:8px;} .sheet-price b{font-size:20px;}
-  .stock{padding:4px 10px;font-size:12.5px;}
-  .sku{margin-top:8px;font-size:11px;}
-  .sheet-head{padding-top:16px;}
-  .sheet-body{padding-top:12px;padding-bottom:14px;}
-  .sheet-body p{font-size:14.5px;line-height:1.5;}
-  .unlock{gap:12px;padding:10px;border-radius:18px;}
-  .unlock-copy small{font-size:10.5px;margin-bottom:4px;}
-  .unlock-copy b{font-size:16px;}
-  .unlock-copy span{font-size:13px;margin-top:4px;}
-  .spec{font-size:14px;padding:10px 14px;}
-  .sizes button{height:40px;min-width:44px;}
-  .sheet-foot{padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px));}
-  .sheet-foot .btn{min-height:48px;font-size:15px;padding:12px 14px;}
+  #sheet .eyebrow{font-size:10px;letter-spacing:.1em;}
+  #sheet h2{font-size:18.5px;margin-top:5px;}
+  .sheet-head{padding-top:14px;}
+  .sheet-head .icon-btn{width:34px;height:34px;}
+  .sheet-price{margin-top:6px;gap:8px;} .sheet-price b{font-size:18px;}
+  .stock{padding:3px 9px;font-size:12px;gap:6px;}
+  .sku{display:none;}
+  .sheet-body{padding-top:9px;padding-bottom:11px;}
+  .sheet-body p{font-size:14px;line-height:1.45;}
+  .sheet-body p.clamp{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden;}
+  .unlock{gap:11px;padding:7px 10px 7px 7px;border-radius:16px;}
+  .unlock-art{border-radius:11px;}
+  .unlock-copy small{font-size:9.5px;margin-bottom:2px;}
+  .unlock-copy b{font-size:14.5px;}
+  .unlock-copy span{font-size:12.5px;margin-top:1px;line-height:1.35;}
+  .opts{gap:10px;}
+  .sizes button{height:34px;min-width:40px;padding:0 10px;font-size:13px;}
+  .spec{flex-direction:row;gap:12px;font-size:12.5px;padding:8px 12px;border-radius:14px;}
+  .spec > div{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:1px;}
+  .spec dt{font-size:9.5px;line-height:1.5;}
+  .spec dd{line-height:1.35;}
+  .sheet-foot{padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));}
+  .sheet-foot .btn{min-height:46px;font-size:15px;padding:11px 14px;}
+}
+@media (max-width:760px) and (max-height:700px){
+  #sheet{--art:50px;max-height:min(62dvh,540px);}
+  .sheet-body p.clamp{-webkit-line-clamp:2;line-clamp:2;}
+  .unlock-copy span{display:none;}
+  .spec{display:none;}
 }
 @media (max-width:480px){ .sku-hint{display:none;} }
 @media (max-width:370px){
-  #sheet{--art:80px;}
+  #sheet{--art:50px;}
+}
+@media (max-width:330px){
   #sheet.can-act .sheet-foot{flex-direction:column;}
 }
 @media (prefers-reduced-motion:reduce){ .unlock-art img{animation:none;} }
+@media (max-width:760px){
+  #sheet,#dash,#tour{backdrop-filter:none;-webkit-backdrop-filter:none;
+    background:linear-gradient(165deg,rgba(255,255,255,.11) 0%,rgba(255,255,255,.04) 34%,rgba(255,255,255,.012) 70%,rgba(255,255,255,.03) 100%),rgba(15,13,29,.93);}
+}
 /* a closing sheet must never swallow taps meant for the scene/hotspots behind it */
 #sheet:not(.open){pointer-events:none;}
 #sheet:not(.open) *{pointer-events:none;}
@@ -767,6 +814,7 @@ body.focus .dock-wrap .dock{pointer-events:none;}
   .cart-head{padding:18px 18px 10px;}
   .cart-scroll{padding:4px 18px 14px;}
   .cart-sum{padding:12px 18px 16px;}
+  #cart{backdrop-filter:none;-webkit-backdrop-filter:none;background:linear-gradient(165deg,rgba(255,255,255,.11),rgba(255,255,255,.03) 40%),rgba(15,13,29,.95);}
 }
 @media (prefers-reduced-motion:reduce){ .twin{animation:none;opacity:1;} .done-check path{animation:none;stroke-dashoffset:0;} }
 
@@ -905,6 +953,7 @@ body.focus .dock-wrap .dock{pointer-events:none;}
 
 <div class="walk-help">Drag to look · <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> or tap the floor to walk · <kbd>Esc</kbd> to exit</div>
 
+<div class="spin-hint" id="spinHint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg><span id="spinHintTxt">Drag to rotate</span></div>
 <div class="hint" id="hint">Tap a <b>glowing marker</b> to shop the Monkey Quest shelf · drag to orbit</div>
 
 <nav class="dock-wrap" aria-label="Modes">
@@ -939,7 +988,7 @@ body.focus .dock-wrap .dock{pointer-events:none;}
     <button class="icon-btn" id="sClose" aria-label="Put it back on the shelf"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
   <div class="sheet-body">
-    <p id="sDesc"></p>
+    <div class="desc"><p id="sDesc"></p><button class="more-btn" id="sMore" type="button" hidden>Read more</button></div>
     <div class="unlock">
       <div class="unlock-art"><img id="sUnlockImg" alt=""></div>
       <div class="unlock-copy"><small>What it unlocks</small><b id="sUnlock"></b><span id="sUnlockSub"></span></div>
@@ -951,13 +1000,13 @@ body.focus .dock-wrap .dock{pointer-events:none;}
     <dl class="spec" id="sSpec"></dl>
   </div>
   <div class="sheet-foot">
-    <button class="btn buy" id="sAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><span id="sAddTxt">Add to cart</span></button>
+    <button class="btn buy" id="sAdd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17.5" cy="19.5" r="1.5"/><path d="M2.5 3.5h2.4l2.4 11.3a1.6 1.6 0 0 0 1.6 1.3h8.5a1.6 1.6 0 0 0 1.6-1.2l1.6-6.9H6"/></svg><span id="sAddTxt">Add to cart</span></button>
     <button class="btn go" id="sActivate" hidden>Tap to activate</button>
   </div>
 </aside>
 
 <!-- cart -->
-<button id="cartBtn" class="cart-btn" type="button" aria-label="Cart, empty" aria-controls="cart" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><b class="cart-count" id="cartCount">0</b></button>
+<button id="cartBtn" class="cart-btn" type="button" aria-label="Cart, empty" aria-controls="cart" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17.5" cy="19.5" r="1.5"/><path d="M2.5 3.5h2.4l2.4 11.3a1.6 1.6 0 0 0 1.6 1.3h8.5a1.6 1.6 0 0 0 1.6-1.2l1.6-6.9H6"/></svg><b class="cart-count" id="cartCount">0</b></button>
 <aside id="cart" class="panel" role="dialog" aria-modal="false" aria-labelledby="cartTitle">
   <div class="cart-head">
     <div><div class="eyebrow">Demo store · nothing is charged</div><h3 id="cartTitle">Your cart</h3></div>
@@ -970,7 +1019,7 @@ body.focus .dock-wrap .dock{pointer-events:none;}
         <button role="radio" aria-checked="false" data-f="ship"><b>Ship to home</b><span>Free · 2-day</span></button>
       </div>
       <ul class="cart-items" id="cartItems"></ul>
-      <div class="cart-empty" id="cartEmpty"><div class="ce-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg></div><b>Your cart is empty</b><span>Tap any product on the shelf to shop it in 3D.</span></div>
+      <div class="cart-empty" id="cartEmpty"><div class="ce-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9.5" cy="19.5" r="1.5"/><circle cx="17.5" cy="19.5" r="1.5"/><path d="M2.5 3.5h2.4l2.4 11.3a1.6 1.6 0 0 0 1.6 1.3h8.5a1.6 1.6 0 0 0 1.6-1.2l1.6-6.9H6"/></svg></div><b>Your cart is empty</b><span>Tap any product on the shelf to shop it in 3D.</span></div>
       <div class="upsell" id="upsell"></div>
     </div>
     <div class="cart-sum" id="cartSum">
@@ -1045,12 +1094,13 @@ body.focus .dock-wrap .dock{pointer-events:none;}
 </aside>
 
 <!-- tour -->
-<section id="tour" class="panel" aria-live="polite">
+<section id="tour" class="panel" aria-live="polite" aria-label="Guided walkthrough">
+  <button class="tour-skip" id="tSkip" type="button">Skip tour</button>
   <div class="eyebrow" id="tStep">Stop 1 of 6</div>
   <h3 id="tTitle"></h3>
   <p id="tBody"></p>
   <div class="tour-foot">
-    <div class="pips" id="tPips"></div>
+    <div style="display:flex;align-items:center;gap:12px"><div class="pips" id="tPips"></div><span class="tour-keys">← → keys</span></div>
     <div style="display:flex;gap:8px">
       <button class="btn ghost" id="tPrev">Back</button>
       <button class="btn go" id="tNext">Next</button>
@@ -1367,6 +1417,7 @@ controls.addEventListener('start',()=>{ cancelCamTween(); idle=0; controls.autoR
 renderer.domElement.addEventListener('pointerdown',(e)=>{ if(e.isPrimary && controls._pointers.length) resetPointers(); },{capture:true});
 addEventListener('blur', ()=>{ resetPointers(); endDrag(); walk.drag=null; });
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ resetPointers(); endDrag(); walk.drag=null; } });
+let lastInput=0; ['pointerdown','pointermove','wheel','keydown','touchmove'].forEach(ev=>addEventListener(ev,()=>{ lastInput=performance.now(); },{passive:true,capture:true}));
 
 // Post
 const MAX_ANISO = renderer.capabilities.getMaxAnisotropy();
@@ -1743,6 +1794,9 @@ function setTheme(id){
   refs.bayBack.material.emissive = new THREE.Color(th.bay); refs.bayBack.material.color = new THREE.Color(th.bay).multiplyScalar(0.5); refs.bayBack.material.emissiveIntensity=GLOW.bay;
   ['spillL','spillR','spillC'].forEach(k=>lights[k].material.color.setHex(th.spill)); lights.spillT.material.color.setHex(th.led2);
   rings.forEach(r=>r.material.color.set(th.led)); disc.material.color.set(th.led);
+  const rgbOf=(c,lift)=>{ const h=new THREE.Color(c).lerp(new THREE.Color(0xffffff),lift).getHex(); return [(h>>16)&255,(h>>8)&255,h&255].join(','); };
+  document.documentElement.style.setProperty('--hs-rgb', rgbOf(th.hs ?? th.led, 0.14));
+  document.documentElement.style.setProperty('--hs2-rgb', rgbOf(th.hs2 ?? th.led2, 0.08));
   document.documentElement.style.setProperty('--accent', '#'+c1.clone().lerp(new THREE.Color(0xffffff),0.18).getHexString());
   // merch set
   if(THEMES[id].mq){
@@ -1909,7 +1963,10 @@ function addHotspot(id, label, getPos, cls='', onClick){
   // Touch-safe activation: the markers ride the camera, so they can slide a few pixels between
   // finger-down and finger-up (damping, auto-rotate, a camera flight). A plain 'click' is then
   // lost because down and up land on different elements. Arm on pointerdown, fire on pointerup.
-  b.addEventListener('pointerdown',(e)=>{ if(!e.isPrimary || e.button>0) return; e.stopPropagation(); hsPress={ b, onClick, x:e.clientX, y:e.clientY, t:performance.now() }; killMomentum(); controls.autoRotate=false; idle=0; });
+  b.addEventListener('pointerdown',(e)=>{ if(!e.isPrimary || e.button>0) return; e.stopPropagation(); hsPress={ b, onClick, x:e.clientX, y:e.clientY, t:performance.now() }; killMomentum(); controls.autoRotate=false; idle=0;
+    // markers cover much of the shelf on a phone: a drag that starts on one still orbits the scene
+    if(controls.enabled){ if(controls._pointers.length) resetPointers(); try{ controls._onPointerDown(e); }catch(_){} }
+  });
   b.addEventListener('click',(e)=>{ e.stopPropagation(); if(performance.now()-hsFiredAt<700) return; onClick(); }); // keyboard + fallback
   hsLayer.appendChild(b); hotspots.push({id,el:b,getPos,vis:true}); return b;
 }
@@ -1960,7 +2017,15 @@ function updateHotspots(){
     h.el.classList.toggle('hidden', !!h.hidden || behind || h.occluded || x<-40||x>W+40||y<-40||y>H+40);
   }
 }
-function pulseHotspot(id){ const h=hotspots.find(h=>h.id===id); if(!h) return; h.el.animate([{transform:h.el.style.transform+' scale(1)'},{transform:h.el.style.transform+' scale(1.8)'},{transform:h.el.style.transform+' scale(1)'}],{duration:900,iterations:3}); }
+// scale the marker's dot, never the marker itself (its transform is rewritten every frame to follow the camera)
+function pulseHotspot(id,times=3){ const h=hotspots.find(h=>h.id===id); if(!h) return; h.el.querySelector('.core')?.animate([{transform:'scale(1)'},{transform:'scale(1.8)'},{transform:'scale(1)'}],{duration:900,iterations:times}); }
+// after the tour: name every product on the shelf for a moment, so people know where to tap
+function revealMarkers(){
+  if(focus||mode!=='explore') return;
+  $('#hint').style.opacity=''; document.body.classList.add('labels');
+  hotspots.forEach((h,i)=>{ if(!h.hidden) setTimeout(()=>pulseHotspot(h.id,2), i*90); });
+  clearTimeout(revealMarkers.t); revealMarkers.t=setTimeout(()=>document.body.classList.remove('labels'), 4200);
+}
 
 /* =========================================================
    Tiny tween system
@@ -1970,7 +2035,22 @@ const ease = t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
 const easeOut = t=>1-Math.pow(1-t,3);
 function tween(dur, fn, {e=ease, done}={}){ const tw={t0:performance.now(), dur:reduceMotion?1:dur, fn, e, done}; tweens.push(tw); return tw; }
 function runTweens(now){
-  for(let i=tweens.length-1;i>=0;i--){ const tw=tweens[i]; const k=Math.min(1,(now-tw.t0)/tw.dur); tw.fn(tw.e(k),k); if(k>=1){ tweens.splice(i,1); tw.done&&tw.done(); } }
+  // iterate a snapshot: a tween's done() may start or cancel others. A tween that throws is dropped,
+  // so a single bad frame can never wedge the loop.
+  for(const tw of tweens.slice()){
+    if(!tweens.includes(tw)) continue;
+    const k=Math.min(1,(now-tw.t0)/tw.dur); let fin=k>=1;
+    try{ tw.fn(tw.e(k),k); }catch(err){ fin=true; reportErr(err); }
+    if(fin){ const i=tweens.indexOf(tw); if(i>=0) tweens.splice(i,1); if(tw.done){ try{ tw.done(); }catch(err){ reportErr(err); } } }
+  }
+}
+function reportErr(err){ reportErr.n=(reportErr.n||0)+1; if(reportErr.n<=8) console.error('frame error', err); }
+// one flight per object: starting a new move cancels the old one, so two tweens never fight over it
+const flights=new Map();
+function flight(obj, dur, fn, done){
+  const prev=flights.get(obj); if(prev){ const i=tweens.indexOf(prev); if(i>=0) tweens.splice(i,1); }
+  const tw=tween(dur, fn, { done:()=>{ if(flights.get(obj)===tw) flights.delete(obj); done&&done(); } });
+  flights.set(obj,tw); return tw;
 }
 let camTween=null;
 function cancelCamTween(){ if(camTween){ const i=tweens.indexOf(camTween); if(i>=0) tweens.splice(i,1); camTween=null; } }
@@ -2003,6 +2083,10 @@ function productDest(){
   // In front of the merch bay at eye level, nudged left on wide screens so the sheet doesn't cover it
   return new THREE.Vector3(innerWidth>760? -0.05:0, 1.24, 1.35);
 }
+// the direction the camera looks at a held product from (frameFocus) and the axes it spins/tilts on
+const VIEW_DIR=new THREE.Vector3(0.22,0.1,1).normalize();
+const VIEW_RIGHT=new THREE.Vector3().crossVectors(VIEW_DIR.clone().negate(),new THREE.Vector3(0,1,0)).normalize();
+const Y_AXIS=new THREE.Vector3(0,1,0);
 // Frame the held product inside the part of the screen the product sheet leaves free:
 // left of the side card on desktop/tablet, above the bottom sheet on phones. Sized to fit that space.
 function sheetFreeRect(){
@@ -2010,72 +2094,125 @@ function sheetFreeRect(){
   const bottomSheet = W<=760;
   if(bottomSheet){
     const top = H - (parseFloat(cs.bottom)||0) - sh.offsetHeight;
-    return { x0:12, x1:W-12, y0:64, y1:Math.max(140, top-10) };
+    return { x0:12, x1:W-12, y0:58, y1:Math.max(170, top-8), phone:true };
   }
   const left = W - (parseFloat(cs.right)||0) - sh.offsetWidth;
-  const y0 = H<=560 ? 12 : 76;
-  return { x0:16, x1:Math.max(200,left-16), y0, y1:H-18 };
+  const y0 = H<=560 ? 12 : 72;
+  return { x0:16, x1:Math.max(220,left-12), y0, y1:H-18, phone:false };
 }
 function frameFocus(dur=700){
   if(!focus) return;
   const W=innerWidth, H=innerHeight, r=sheetFreeRect(); const tanV=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
-  const fw=r.x1-r.x0, fh=r.y1-r.y0, cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2;
-  const targetPx=Math.max(120, Math.min(fw*0.58, fh*0.64, 500));
-  // distance at which the product (plus room for its spin) spans targetPx
-  const D=THREE.MathUtils.clamp(focus.want*1.25*H/(2*tanV*targetPx), 0.55, 3.2);
+  const fw=r.x1-r.x0, fh=r.y1-r.y0, cx=(r.x0+r.x1)/2, cy=(r.y0+r.y1)/2 - (r.phone?10:0);
+  // phones: fill the space above the sheet; desktop: a confident hero size without crowding the card
+  const targetPx = r.phone ? Math.max(150, Math.min(fw*0.8, fh*0.76)) : Math.max(170, Math.min(fw*0.66, fh*0.74, 700));
+  // distance at which the product (plus a little room for its rotation) spans targetPx
+  const D=THREE.MathUtils.clamp(focus.want*(focus.flat?1.08:1.18)*H/(2*tanV*targetPx), 0.4, 3.2);
   const wpp=2*D*tanV/H;
-  const dir=new THREE.Vector3(0.22,0.1,1).normalize();
-  const fwd=dir.clone().negate(), right=new THREE.Vector3().crossVectors(fwd,new THREE.Vector3(0,1,0)).normalize(), up=new THREE.Vector3().crossVectors(right,fwd);
-  const tgt=focus.dest.clone().addScaledVector(right,(W/2-cx)*wpp).addScaledVector(up,(cy-H/2)*wpp);
-  const pos=tgt.clone().addScaledVector(dir,D);
+  const fwd=VIEW_DIR.clone().negate(), up=new THREE.Vector3().crossVectors(VIEW_RIGHT,fwd);
+  const tgt=focus.dest.clone().addScaledVector(VIEW_RIGHT,(W/2-cx)*wpp).addScaledVector(up,(cy-H/2)*wpp);
+  const pos=tgt.clone().addScaledVector(VIEW_DIR,D);
   flyTo(pos.toArray(), tgt.toArray(), dur);
+  // spotlight the product: the vignette opens around it, the coach mark sits just under it
+  const vg=$('#vignette').style; vg.setProperty('--vx',cx+'px'); vg.setProperty('--vy',cy+'px'); vg.setProperty('--vr',Math.round(targetPx*0.5)+'px');
+  const sh=$('#spinHint'); sh.style.left=cx+'px'; sh.style.top=Math.min(r.y1-36, cy+targetPx*0.44)+'px';
 }
 addEventListener('resize',()=>{ clearTimeout(frameFocus.t); frameFocus.t=setTimeout(()=>{ if(focus) frameFocus(450); },120); });
+
+// where a product lives on the shelf, captured the first time it is picked up (it is on the shelf then),
+// so a product grabbed again mid-flight still knows its way home
+// (kept in a WeakMap, not userData: three.js JSON-copies userData whenever an object is cloned)
+const shelfSlots=new WeakMap();
+function shelfSlot(obj){
+  if(shelfSlots.has(obj)) return shelfSlots.get(obj);
+  obj.updateWorldMatrix(true,true);
+  const inv=obj.matrixWorld.clone().invert(), lb=new THREE.Box3(), mb=new THREE.Box3(), m=new THREE.Matrix4();
+  obj.traverse(o=>{ if(o.isMesh && o.geometry){ if(!o.geometry.boundingBox) o.geometry.computeBoundingBox(); mb.copy(o.geometry.boundingBox).applyMatrix4(m.multiplyMatrices(inv,o.matrixWorld)); lb.union(mb); } });
+  const world=new THREE.Box3().setFromObject(obj), size=world.getSize(new THREE.Vector3());
+  const slot={ parent:obj.parent, pos:obj.position.clone(), quat:obj.quaternion.clone(), scale:obj.scale.clone(),
+    center:lb.isEmpty()? new THREE.Vector3() : lb.getCenter(new THREE.Vector3()), size,
+    // folded apparel and flat prints lie on the shelf: present them standing up, face-on
+    flat: size.y < 0.5*Math.max(size.x,size.z) };
+  shelfSlots.set(obj,slot); return slot;
+}
+function slotWorld(s){
+  const tmp=new THREE.Object3D(); s.parent.add(tmp); tmp.position.copy(s.pos); tmp.quaternion.copy(s.quat); tmp.scale.copy(s.scale); tmp.updateWorldMatrix(true,false);
+  const p=new THREE.Vector3(), q=new THREE.Quaternion(), sc=new THREE.Vector3(); tmp.matrixWorld.decompose(p,q,sc); s.parent.remove(tmp); return { p, q, s:sc };
+}
+// the held product's default pose: flat items stand up and face the screen; others get a 3/4 turn
+function presentQuat(shelfQ, flat){
+  if(flat) return new THREE.Quaternion().setFromUnitVectors(Y_AXIS, VIEW_DIR).multiply(shelfQ);
+  return new THREE.Quaternion().setFromEuler(new THREE.Euler(0.1,-0.35,0)).multiply(shelfQ);
+}
+// pivot the held product around its visual centre, not its model origin
+const _hq=new THREE.Quaternion(), _hq2=new THREE.Quaternion(), _hc=new THREE.Vector3();
+function heldPose(f, spin, tilt, zoom, out){
+  _hq.setFromAxisAngle(Y_AXIS,spin); _hq2.setFromAxisAngle(VIEW_RIGHT,tilt);
+  out.q.copy(_hq2).multiply(_hq).multiply(f.baseQ);
+  out.s.copy(f.baseScale).multiplyScalar(zoom);
+  _hc.copy(f.center).multiply(out.s).applyQuaternion(out.q);
+  out.p.copy(f.dest).sub(_hc);
+  return out;
+}
+function setCastShadow(obj,on){ obj.traverse(o=>{ if(o.isMesh){ if(o.userData.cast0===undefined) o.userData.cast0=o.castShadow; o.castShadow = on ? o.userData.cast0 : false; } }); }
+let spinHintShown=0;
 function focusProduct(id){
-  if(focus||!display) { if(focus && focus.id!==id){ unfocus(()=>focusProduct(id)); } return; }
+  if(!display) return;
+  if(focus){ if(focus.id===id) return; unfocus(null,{keepView:true}); }
   exitModes();
   const p=P(id), obj=heroObj(id); if(!obj) return;
   bump('session'); live.perSku[id]++; bump('acts');
-  const orig={ parent:obj.parent, pos:obj.position.clone(), quat:obj.quaternion.clone(), scale:obj.scale.clone() };
+  const slot=shelfSlot(obj), home=slotWorld(slot);
   scene.attach(obj);
   const sp=obj.position.clone(), sq=obj.quaternion.clone(), ss=obj.scale.clone();
-  // bbox size -> normalise display size
-  const size=new THREE.Box3().setFromObject(obj).getSize(new THREE.Vector3()); const maxd=Math.max(size.x,size.y,size.z);
+  // normalise the display size from the shelf size (never from a mid-flight scale)
+  const maxd=Math.max(slot.size.x,slot.size.y,slot.size.z);
   const want = Math.min(0.32, Math.max(0.25, maxd*p.zoom)); const mul = want/maxd;
   const dest=productDest();
-  const faceQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0.12,-0.35,0)).multiply(sq);
-  focus={ id, obj, orig, spin:0, arrived:false, dragging:false, mul, baseQ:faceQ, bob:0 };
+  const f={ id, obj, spin:0, tilt:0, zoom:1, zoomT:1, arrived:false, dragging:false, lastDrag:0, t:0, bob:0,
+    want, dest, flat:slot.flat, center:slot.center, baseQ:presentQuat(home.q, slot.flat), baseScale:home.s.clone().multiplyScalar(mul) };
+  focus=f;
   document.body.classList.add('focus'); syncControls();
-  const mid = sp.clone().lerp(dest,0.5).add(new THREE.Vector3(0,0.28,0.2));
-  tween(1250,(k)=>{
+  const end=heldPose(f,0,0,1,{ p:new THREE.Vector3(), q:new THREE.Quaternion(), s:new THREE.Vector3() });
+  const mid = sp.clone().lerp(end.p,0.5).add(new THREE.Vector3(0,0.28,0.2));
+  setCastShadow(obj,false);
+  flight(obj,1150,(k)=>{
     // quadratic bezier path: lift off shelf, arc toward viewer
-    const a=sp.clone().lerp(mid,k), b=mid.clone().lerp(dest,k); obj.position.copy(a.lerp(b,k));
-    obj.quaternion.slerpQuaternions(sq,faceQ,k); obj.scale.copy(ss).multiplyScalar(1+(mul-1)*k);
-  },{ e:ease, done:()=>{ focus.arrived=true; } });
+    const a=sp.clone().lerp(mid,k), b=mid.clone().lerp(end.p,k); obj.position.copy(a.lerp(b,k));
+    obj.quaternion.slerpQuaternions(sq,end.q,k); obj.scale.lerpVectors(ss,end.s,k);
+  },()=>{ if(focus===f){ f.arrived=true; showSpinHint(); } });
   fx.position.copy(dest).add(new THREE.Vector3(0,-want*0.62,0)); fx.visible=true; fx.userData.t0=performance.now(); fx.scale.setScalar(want/0.34);
-  focus.want=want; focus.dest=dest;
-  fillSheet(id); frameFocus(1300); setTimeout(()=>$('#sheet').classList.add('open'), 450);
+  fillSheet(id); frameFocus(1200);
+  // open the sheet only if this is still the product being held (a quick close must win)
+  setTimeout(()=>{ if(focus===f) $('#sheet').classList.add('open'); }, 380);
   $('#hint').style.opacity=0;
 }
-function unfocus(after){
-  if(!focus) return after&&after();
-  const f=focus; focus=null; const obj=f.obj; endDrag();
-  $('#sheet').classList.remove('open'); document.body.classList.remove('focus'); syncControls();
-  // target world transform of the original slot
-  const tmp=new THREE.Object3D(); f.orig.parent.add(tmp); tmp.position.copy(f.orig.pos); tmp.quaternion.copy(f.orig.quat); tmp.scale.copy(f.orig.scale); tmp.updateWorldMatrix(true,false);
-  const tp=new THREE.Vector3(), tq=new THREE.Quaternion(), ts=new THREE.Vector3(); tmp.matrixWorld.decompose(tp,tq,ts); f.orig.parent.remove(tmp);
+function unfocus(after, {keepView=false}={}){
+  // always leave the UI consistent, even if nothing is held
+  $('#sheet').classList.remove('open'); document.body.classList.remove('focus'); endDrag(); hideSpinHint();
+  if(!focus){ syncControls(); return after&&after(); }
+  const f=focus; focus=null; const obj=f.obj; syncControls();
+  const slot=shelfSlot(obj), home=slotWorld(slot);
   const sp=obj.position.clone(), sq=obj.quaternion.clone(), ss=obj.scale.clone();
-  const mid=sp.clone().lerp(tp,0.5).add(new THREE.Vector3(0,0.22,0.15));
-  tween(1000,(k)=>{ const a=sp.clone().lerp(mid,k), b=mid.clone().lerp(tp,k); obj.position.copy(a.lerp(b,k)); obj.quaternion.slerpQuaternions(sq,tq,k); obj.scale.lerpVectors(ss,ts,k); },
-    { done:()=>{ f.orig.parent.attach(obj); obj.position.copy(f.orig.pos); obj.quaternion.copy(f.orig.quat); obj.scale.copy(f.orig.scale); fx.visible=false; after&&after(); } });
-  if(!after) flyTo([-2.1,1.7,4.9],[0.3,1.05,0.1],1300);
+  const mid=sp.clone().lerp(home.p,0.5).add(new THREE.Vector3(0,0.22,0.15));
+  flight(obj,900,(k)=>{ const a=sp.clone().lerp(mid,k), b=mid.clone().lerp(home.p,k); obj.position.copy(a.lerp(b,k)); obj.quaternion.slerpQuaternions(sq,home.q,k); obj.scale.lerpVectors(ss,home.s,k); },
+    ()=>{ slot.parent.attach(obj); obj.position.copy(slot.pos); obj.quaternion.copy(slot.quat); obj.scale.copy(slot.scale); setCastShadow(obj,true); renderer.shadowMap.needsUpdate=true; if(!focus) fx.visible=false; after&&after(); });
+  if(!after && !keepView) flyTo([-2.1,1.7,4.9],[0.3,1.05,0.1],1200);
 }
+function showSpinHint(){
+  if(spinHintShown>=2) return; spinHintShown++;
+  $('#spinHintTxt').textContent = isTouch ? 'Drag to rotate · pinch to zoom' : 'Drag to rotate · scroll to zoom';
+  const el=$('#spinHint'); el.classList.add('on'); clearTimeout(showSpinHint.t); showSpinHint.t=setTimeout(hideSpinHint, 3800);
+}
+function hideSpinHint(){ $('#spinHint').classList.remove('on'); }
 function fillSheet(id){
   const p=P(id);
-  $('#sCat').textContent=p.cat; $('#sName').textContent=p.label; $('#sSku').innerHTML='SKU '+p.sku+'<span class="sku-hint"> · drag the product to spin it</span>';
-  $('#sDesc').textContent=p.desc; $('#sUnlock').textContent=p.unlock; $('#sUnlockSub').textContent=p.unlockSub;
+  $('#sCat').textContent=p.cat; $('#sName').textContent=p.label; $('#sSku').textContent='SKU '+p.sku;
+  const d=$('#sDesc'); d.textContent=p.desc; d.classList.add('clamp'); $('#sMore').hidden=true;
+  requestAnimationFrame(()=>{ $('#sMore').hidden = d.scrollHeight <= d.clientHeight+2; });
+  $('#sUnlock').textContent=p.unlock; $('#sUnlockSub').textContent=p.unlockSub;
   const img=$('#sUnlockImg'); img.src = p.img || snapshot(id); img.alt=p.unlock;
-  $('#sSpec').innerHTML = [['Trigger',p.trigger],['Sold via',p.channel]].map(([a,b])=>`<dt>${a}</dt><dd>${b}</dd>`).join('');
+  $('#sSpec').innerHTML = [['Trigger',p.trigger],['Sold via',p.channel]].map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
   cartSheet(id);
 }
 // offscreen snapshot of the product's 3D twin, rendered with the main renderer into a small target
@@ -2102,15 +2239,33 @@ function snapshot(id){
   for(let y=0;y<SNAP;y++){ img.data.set(snapBuf.subarray((SNAP-1-y)*row,(SNAP-y)*row), y*row); }
   snapCtx.putImageData(img,0,0); snapCache[key]=snapCanvas.toDataURL('image/webp',0.9); return snapCache[key];
 }
-function warmSnapshots(){ const ids=Object.keys(PRODUCTS); let i=0; const step=()=>{ if(i>=ids.length) return; try{ snapshot(ids[i++]); }catch(e){} (window.requestIdleCallback||setTimeout)(step,{timeout:300}); }; step(); }
+function warmSnapshots(){ const ids=Object.keys(PRODUCTS); let i=0; const step=()=>{ if(i>=ids.length) return; if(tweens.length||focus){ setTimeout(step,500); return; } try{ snapshot(ids[i++]); }catch(e){} (window.requestIdleCallback||setTimeout)(step,{timeout:1200}); }; step(); }
 
-// drag-to-spin while a product is focused
-let dragX=null;
-let dragId=null;
-renderer.domElement.addEventListener('pointerdown',(e)=>{ if(focus&&focus.arrived&&e.isPrimary){ dragX=e.clientX; dragId=e.pointerId; focus.dragging=true; try{ renderer.domElement.setPointerCapture(e.pointerId); }catch(_){} } });
-renderer.domElement.addEventListener('pointermove',(e)=>{ if(focus&&dragX!==null&&e.pointerId===dragId){ const dx=e.clientX-dragX; dragX=e.clientX; focus.spin+=dx*0.012; } });
-function endDrag(){ if(dragId!==null){ try{ renderer.domElement.releasePointerCapture(dragId); }catch(_){} } dragX=null; dragId=null; if(focus) focus.dragging=false; }
+// hold a product: drag to rotate (and tilt a little), pinch or scroll to zoom
+const held={ ptrs:new Map(), pinch0:0, zoom0:1 };
+const pinchDist=()=>{ const [a,b]=[...held.ptrs.values()]; return Math.hypot(a[0]-b[0],a[1]-b[1]); };
+renderer.domElement.addEventListener('pointerdown',(e)=>{
+  if(!focus||!focus.arrived) return;
+  held.ptrs.set(e.pointerId,[e.clientX,e.clientY]); try{ renderer.domElement.setPointerCapture(e.pointerId); }catch(_){}
+  focus.dragging=true; focus.lastDrag=performance.now(); hideSpinHint(); spinHintShown=2;
+  if(held.ptrs.size===2){ held.pinch0=pinchDist(); held.zoom0=focus.zoomT; }
+});
+renderer.domElement.addEventListener('pointermove',(e)=>{
+  if(!focus||!held.ptrs.has(e.pointerId)) return;
+  const prev=held.ptrs.get(e.pointerId); held.ptrs.set(e.pointerId,[e.clientX,e.clientY]); focus.lastDrag=performance.now();
+  if(held.ptrs.size>=2){ if(held.pinch0>0) focus.zoomT=THREE.MathUtils.clamp(held.zoom0*pinchDist()/held.pinch0,0.8,1.9); return; }
+  focus.spin+=(e.clientX-prev[0])*0.011;
+  focus.tilt=THREE.MathUtils.clamp(focus.tilt+(e.clientY-prev[1])*0.006,-0.55,0.55);
+});
+function endDrag(e){
+  if(!e || e.type==='blur'){ for(const id of held.ptrs.keys()){ try{ renderer.domElement.releasePointerCapture(id); }catch(_){} } held.ptrs.clear(); }
+  else { if(!held.ptrs.has(e.pointerId)) return; held.ptrs.delete(e.pointerId); try{ renderer.domElement.releasePointerCapture(e.pointerId); }catch(_){} }
+  held.pinch0=0;
+  if(focus && !held.ptrs.size) focus.dragging=false;
+}
 ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>renderer.domElement.addEventListener(ev,endDrag));
+renderer.domElement.addEventListener('wheel',(e)=>{ if(!focus||!focus.arrived) return; e.preventDefault(); focus.zoomT=THREE.MathUtils.clamp(focus.zoomT*Math.exp(-e.deltaY*0.0015),0.8,1.9); focus.lastDrag=performance.now(); hideSpinHint(); },{passive:false});
+$('#sMore').addEventListener('click',()=>{ $('#sDesc').classList.remove('clamp'); $('#sMore').hidden=true; if(focus) frameFocus(450); });
 
 function isShown(o){ while(o){ if(!o.visible) return false; o=o.parent; } return true; }
 // click directly on merch in the scene
@@ -2138,16 +2293,16 @@ function exitModes(){
   if(mode==='build') setExplode(false);
   mode='explore'; setModeButtons(); document.body.classList.remove('build','walk'); syncControls();
 }
-document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
-  const m=b.dataset.mode; bump('session');
-  if(focus) unfocus();
+function setMode(m, {first=false}={}){
+  if(focus) unfocus(null,{keepView:true});
   if(m===mode && m!=='explore'){ exitModes(); homeView(); return; }
   exitModes(); mode=m; setModeButtons(); syncControls();
-  if(m==='tour') startTour();
+  if(m==='tour') startTour(first);
   if(m==='walk') startWalk();
   if(m==='build'){ document.body.classList.add('build'); setExplode(true); flyTo([0.9,2.35,8.3],[0.7,1.4,0.3]); }
   if(m==='explore') homeView();
-}));
+}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); setMode(b.dataset.mode); }));
 function homeView(){ flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1]); }
 
 // ---- explode
@@ -2182,19 +2337,26 @@ function updatePartLabels(){
 
 // ---- tour
 let tourI=0;
-function startTour(){ tourI=0; $('#tour').classList.add('open'); showTour(); $('#hint').style.opacity=0; }
-function showTour(){
+function startTour(first=false){ tourI=0; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
+function showTour(dur=1800){
   const s=TOUR[tourI]; $('#tStep').textContent=`Stop ${tourI+1} of ${TOUR.length}`; $('#tTitle').textContent=s.t; $('#tBody').textContent=s.b;
   $('#tPips').innerHTML=TOUR.map((_,i)=>`<i class="${i<=tourI?'on':''}"></i>`).join('');
   $('#tPrev').disabled = tourI===0; $('#tPrev').style.opacity = tourI===0?0.4:1;
   $('#tNext').textContent = tourI===TOUR.length-1 ? 'Finish' : 'Next';
   if(tourI<TOUR.length-1 && explodeT>0) setExplode(false);
   if(tourI!==4) openDash(false);
-  flyTo(s.pos,s.tgt,1800); s.enter&&s.enter();
+  flyTo(s.pos,s.tgt,dur); s.enter&&s.enter();
 }
 function endTour(showCta=true){ $('#tour').classList.remove('open'); if(explodeT>0) setExplode(false); openDash(false); if(showCta) openPilot(); }
-$('#tNext').addEventListener('click',()=>{ bump('session'); if(tourI<TOUR.length-1){ tourI++; showTour(); } else { exitModes(); homeView(); openPilot(); } });
+let revealAfterModal=false;
+$('#tNext').addEventListener('click',()=>{ bump('session'); if(tourI<TOUR.length-1){ tourI++; showTour(); } else { exitModes(); homeView(); revealAfterModal=true; openPilot(); } });
 $('#tPrev').addEventListener('click',()=>{ if(tourI>0){ tourI--; showTour(); } });
+$('#tSkip').addEventListener('click',()=>{ bump('session'); exitModes(); homeView(); setTimeout(revealMarkers,700); });
+addEventListener('keydown',(e)=>{
+  if(mode!=='tour' || overlayOpen() || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName||'')) return;
+  if(e.key==='ArrowRight'){ e.preventDefault(); $('#tNext').click(); }
+  else if(e.key==='ArrowLeft'){ e.preventDefault(); $('#tPrev').click(); }
+});
 
 // ---- walk (shopper view)
 const walk={ yaw:0, pitch:0, keys:{}, target:null, drag:null };
@@ -2361,7 +2523,7 @@ function chime(){ [659,880,1175].forEach((f,i)=>tone(f,0.5,'sine',0.05,i*0.09));
    AR + pilot modal
    ========================================================= */
 function openModal(eyebrow,title,html){ $('#mEyebrow').textContent=eyebrow; $('#mTitle').textContent=title; $('#mBody').innerHTML=html; $('#modal').classList.add('open'); syncControls(); }
-function closeModal(){ $('#modal').classList.remove('open'); syncControls(); }
+function closeModal(){ $('#modal').classList.remove('open'); syncControls(); if(revealAfterModal){ revealAfterModal=false; setTimeout(revealMarkers,350); } }
 $('#mClose').addEventListener('click',closeModal);
 $('#modal').addEventListener('click',(e)=>{ if(e.target.id==='modal') closeModal(); });
 function openPilot(){
@@ -2370,8 +2532,9 @@ function openPilot(){
     <div class="flow"><span>Now · game-led drop</span><i>→</i><span>Trailer · film collector box</span><i>→</i><span>Opening weekend · endcap takeover</span></div>
     <div class="capacity"><div><b>7</b><small>activated SKUs on this fixture</small></div><div><b>2</b><small>campaign skins, one set of hardware</small></div><div><b>1</b><small>tap from shelf to Roblox</small></div><div><b>2027</b><small>theatrical release</small></div></div>
     <p style="font-size:13px">Every purchase becomes a player in Hypergalactic: Monkey Quest and a first-look viewer for the film, so the audience Toei needs in theaters is built at the shelf, months ahead.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" id="mTry">Try the Mini-Might activation</button><a class="btn ghost" href="${ROBLOX_URL}" target="_blank" rel="noopener">Open the game on Roblox ↗</a></div>`);
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" id="mTry">Try the Mini-Might activation</button><a class="btn ghost" href="${ROBLOX_URL}" target="_blank" rel="noopener">Open the game on Roblox ↗</a><button class="btn ghost" id="mDone">Keep exploring</button></div>`);
   $('#mTry').onclick=()=>{ closeModal(); openPhone('plush'); };
+  $('#mDone').onclick=closeModal;
 }
 document.querySelector('[data-action="ar"]').addEventListener('click', async ()=>{
   bump('session');
@@ -2426,11 +2589,22 @@ function adapt(dtMs){
   next=Math.round(next*100)/100;
   if(next!==dpr){ dpr=next; renderer.setPixelRatio(dpr); composer.setPixelRatio(dpr); resize(); }
 }
-let lastNow=performance.now(), loopErr=false, shadowTick=0;
+let lastNow=performance.now(), shadowTick=0;
+// Frame budget: full rate while anything moves or the user is touching the scene; 30 fps when the
+// scene is only breathing; 10 fps behind full-screen overlays. Cooler phones stay responsive.
+function frameCap(now){
+  if(document.querySelector('#phoneWrap.open, #modal.open, #ipcWrap.open')) return 10;
+  if(tweens.length || focus || mode==='walk' || now-lastInput<1600 || explodeTw) return 0;
+  return 30;
+}
 function loop(){
-  window.__frames=(window.__frames||0)+1;
-  const nowT=performance.now(); adapt(nowT-lastNow); lastNow=nowT;
-  try { frameBody(); } catch(err){ if(!loopErr){ loopErr=true; console.error('frame error', err); } }
+  const nowT=performance.now(), cap=frameCap(nowT);
+  if(cap && nowT-lastNow < 1000/cap-3) return;
+  if(cap){ perf.acc=0; perf.n=0; perf.t0=nowT; } else adapt(nowT-lastNow);
+  lastNow=nowT; window.__frames=(window.__frames||0)+1;
+  try { frameBody(); } catch(err){ reportErr(err); }
+  try { updateHotspots(); updatePartLabels(); } catch(err){ reportErr(err); }
+  try { composer.render(); } catch(err){ reportErr(err); }
 }
 function frameBody(){
   if(window.__FT){ const n=performance.now(); window.__ftl=(n-(window.__ftp||n)); window.__ftp=n; }
@@ -2447,14 +2621,21 @@ function frameBody(){
     const breathe=0.9+0.1*Math.sin(t*1.6);
     refs.ledPurple.forEach(m=>m.emissiveIntensity=(m.userData.base??=m.emissiveIntensity)*breathe);
     refs.tiles.forEach((o,i)=>{ o.material.emissiveIntensity=GLOW.emit*(0.88+0.1*Math.sin(t*1.1+i*0.9)); });
-    const fr=Math.floor(t*12); if(fr!==loop.lastFrame){ loop.lastFrame=fr; const ph=(t%18)/6, f=ph-Math.floor(ph); if(Math.floor(ph)!==0 || f<0.08 || f>0.92 || !loop.drew0){ drawScreen(t); loop.drew0 = Math.floor(ph)===0 && f>=0.08; } }
+    const fr=Math.floor(t*8); if(fr!==loop.lastFrame){ loop.lastFrame=fr; const ph=(t%18)/6, f=ph-Math.floor(ph); if(Math.floor(ph)!==0 || f<0.08 || f>0.92 || !loop.drew0){ drawScreen(t); loop.drew0 = Math.floor(ph)===0 && f>=0.08; } }
     if(isMQ() && evade.built){ for(const m of evade.mixers) m.update(dt); updateCat(dt); }
   }
-  if(focus){
-    const o=focus.obj;
-    if(focus.arrived){ if(!focus.dragging) focus.spin+=dt*0.55; focus.bob+=dt;
-      const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),focus.spin); o.quaternion.copy(q.multiply(focus.baseQ));
-      o.position.y=productDest().y+Math.sin(focus.bob*1.6)*0.012; }
+  if(focus && focus.arrived){
+    const f=focus, o=f.obj; f.t+=dt; f.bob+=dt;
+    const resting = !f.dragging && now-f.lastDrag>2200;
+    if(resting){
+      // flat items sway around their front so the print stays readable; others turn slowly on the spot
+      if(f.flat){ f.spin=Math.atan2(Math.sin(f.spin),Math.cos(f.spin)); const aim=Math.sin(f.t*0.6)*0.42; f.spin+=(aim-f.spin)*Math.min(1,dt*1.6); }
+      else f.spin+=dt*0.42;
+      f.tilt+=(0-f.tilt)*Math.min(1,dt*2);
+    }
+    f.zoom+=(f.zoomT-f.zoom)*Math.min(1,dt*10);
+    heldPose(f,f.spin,f.tilt,f.zoom,heldPose.out||(heldPose.out={ p:new THREE.Vector3(), q:new THREE.Quaternion(), s:new THREE.Vector3() }));
+    o.quaternion.copy(heldPose.out.q); o.scale.copy(heldPose.out.s); o.position.copy(heldPose.out.p); o.position.y+=Math.sin(f.bob*1.6)*0.01;
   }
   if(fx.visible){
     const k=(now-(fx.userData.t0||now))/1000;
@@ -2464,9 +2645,8 @@ function frameBody(){
     for(let i=0;i<sparkN;i++){ const s=sparkSeed[i]; const a=s*Math.PI*2+k*(0.4+s); const rad=0.15+s*0.3; const h=((k*0.18+s)%1)*0.75; pos[i*3]=Math.cos(a)*rad; pos[i*3+1]=h; pos[i*3+2]=Math.sin(a)*rad; }
     sparkGeo.attributes.position.needsUpdate=true; sparkMat.opacity=0.8;
   }
-  if(tweens.length || focus || explodeTw || (currentTheme==='evade' && evade.cat?.root.visible && (shadowTick=(shadowTick+1)%3)===0)) renderer.shadowMap.needsUpdate = true;
-  updateHotspots(); updatePartLabels();
-  composer.render();
+  shadowTick=(shadowTick+1)%3;
+  if(((flights.size || explodeTw) && shadowTick!==1) || (evade.cat?.root.visible && shadowTick===0)) renderer.shadowMap.needsUpdate = true;
 }
 
 /* =========================================================
@@ -2510,7 +2690,8 @@ loadDisplay().then(async ()=>{
   progress('model',1); progress('gfx',1);
   // intro sweep starts the moment they enter
   camera.position.set(-7.5,3.6,10.5); controls.target.set(0.2,1.2,0);
-  splashReady(()=>{ started=true; document.body.classList.remove('intro'); flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1],3000); });
+  // first visit starts in the guided walkthrough, so people see what the display does before they explore
+  splashReady(()=>{ started=true; document.body.classList.remove('intro'); if(window.__NOTOUR) flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1],3000); else setMode('tour',{first:true}); });
   window.__ready=true;
   // after the intro: textures for the other properties, product snapshots, then the EVADE set in the background
   setTimeout(()=>{ preloadThemeTextures(); warmSnapshots(); }, 3600);
@@ -2552,7 +2733,8 @@ function cartSheet(id){
 }
 function setAddLabel(id, added){
   const b=$('#sAdd'); b.classList.toggle('added',!!added);
-  $('#sAddTxt').textContent = added ? 'Added to cart' : 'Add to cart · $'+priceOf(id);
+  const two=$('#sheet').classList.contains('can-act');
+  $('#sAddTxt').textContent = added ? (two?'Added':'Added to cart') : (two?'Add':'Add to cart')+' · $'+priceOf(id);
 }
 $('#sSizes').addEventListener('click',(e)=>{
   const b=e.target.closest('[data-size]'); if(!b||!cart.sheetId) return;
