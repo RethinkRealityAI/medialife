@@ -2922,7 +2922,7 @@ let lastNow=performance.now(), shadowTick=0;
 // Frame budget: full rate while anything moves or the user is touching the scene; 30 fps when the
 // scene is only breathing; 10 fps behind full-screen overlays. Cooler phones stay responsive.
 function frameCap(now){
-  if(document.querySelector('#phoneWrap.open, #modal.open, #ipcWrap.open, #arLead.is-open')) return 10;
+  if(document.querySelector('#phoneWrap.open, #modal.open, #ipcWrap.open, #arLead.is-open, .arq-wrap')) return 10;
   if(tweens.length || focus || mode==='walk' || now-lastInput<1600 || explodeTw) return 0;
   return 30;
 }

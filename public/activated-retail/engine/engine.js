@@ -401,7 +401,7 @@ function killMomentum() {
 function overlayOpen() {
   return (
     document.querySelector("#phoneWrap.open, #modal.open, #cart.open") !== null ||
-    !!document.querySelector(".arl-wrap, #arHandoff:not([hidden])")
+    !!document.querySelector(".arq-wrap, #arHandoff:not([hidden])")
   );
 }
 function syncControls() {

@@ -76,21 +76,21 @@
 
   // ---- desktop handoff modal (self-contained styles) ----
   var CSS = '' +
-    '.arl-wrap{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;' +
+    '.arq-wrap{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;' +
     'background:rgba(6,5,14,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font:15px/1.45 Figtree,system-ui,-apple-system,"Segoe UI",sans-serif;color:#f5f3fb;opacity:0;transition:opacity .25s}' +
-    '.arl-wrap.on{opacity:1}' +
-    '.arl-card{position:relative;width:min(400px,100%);box-sizing:border-box;padding:24px;border-radius:24px;text-align:center;' +
+    '.arq-wrap.on{opacity:1}' +
+    '.arq-card{position:relative;width:min(400px,100%);box-sizing:border-box;padding:24px;border-radius:24px;text-align:center;' +
     'background:linear-gradient(165deg,rgba(255,255,255,.1),rgba(255,255,255,.03) 45%),#14112a;border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.5)}' +
-    '.arl-card h3{margin:4px 0 6px;font:700 20px/1.2 Unbounded,"Arial Black",system-ui,sans-serif;letter-spacing:-.01em}' +
-    '.arl-card p{margin:0 0 16px;color:#c9c4dc;font-size:14px}' +
-    '.arl-eyebrow{font:500 10.5px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#b39cff}' +
-    '.arl-qr{width:200px;height:200px;margin:0 auto 14px;padding:12px;border-radius:18px;background:#fff;box-sizing:content-box}' +
-    '.arl-qr svg{display:block;width:100%;height:100%}' +
-    '.arl-steps{text-align:left;margin:0 auto;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cfc9e4;max-width:300px}' +
-    '.arl-steps li{display:flex;gap:8px;padding-left:14px;position:relative}.arl-steps li:before{content:"";position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:#b39cff}.arl-steps b{color:#fff}' +
-    '.arl-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:16px;line-height:1}' +
-    '.arl-x:hover{background:rgba(255,255,255,.16)}' +
-    '.arl-link{display:inline-block;margin-top:14px;font-size:12.5px;color:#9fdcff;word-break:break-all}';
+    '.arq-card h3{margin:4px 0 6px;font:700 20px/1.2 Unbounded,"Arial Black",system-ui,sans-serif;letter-spacing:-.01em}' +
+    '.arq-card p{margin:0 0 16px;color:#c9c4dc;font-size:14px}' +
+    '.arq-eyebrow{font:500 10.5px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:#b39cff}' +
+    '.arq-qr{width:200px;height:200px;margin:0 auto 14px;padding:12px;border-radius:18px;background:#fff;box-sizing:content-box}' +
+    '.arq-qr svg{display:block;width:100%;height:100%}' +
+    '.arq-steps{text-align:left;margin:0 auto;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cfc9e4;max-width:300px}' +
+    '.arq-steps li{display:flex;gap:8px;padding-left:14px;position:relative}.arq-steps li:before{content:"";position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:#b39cff}.arq-steps b{color:#fff}' +
+    '.arq-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:16px;line-height:1}' +
+    '.arq-x:hover{background:rgba(255,255,255,.16)}' +
+    '.arq-link{display:inline-block;margin-top:14px;font-size:12.5px;color:#9fdcff;word-break:break-all}';
 
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -104,27 +104,27 @@
   function onKey(e) { if (e.key === 'Escape') { e.stopPropagation(); closeModal(); } }
 
   function showHandoff(url, title) {
-    if (!document.getElementById('arl-css')) { var st = document.createElement('style'); st.id = 'arl-css'; st.textContent = CSS; document.head.appendChild(st); }
+    if (!document.getElementById('arq-css')) { var st = document.createElement('style'); st.id = 'arq-css'; st.textContent = CSS; document.head.appendChild(st); }
     closeModal();
     var w = document.createElement('div');
-    w.className = 'arl-wrap'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'View in your space');
+    w.className = 'arq-wrap'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', 'View in your space');
     var qr = '';
     try { if (window.QRCode && QRCode.toString) QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, function (err, svg) { if (!err) qr = svg; }); } catch (e) {}
-    w.innerHTML = '<div class="arl-card"><button class="arl-x" type="button" aria-label="Close">✕</button>' +
-      '<div class="arl-eyebrow">View in your space</div>' +
+    w.innerHTML = '<div class="arq-card"><button class="arq-x" type="button" aria-label="Close">✕</button>' +
+      '<div class="arq-eyebrow">View in your space</div>' +
       '<h3>' + (title ? esc(title) : 'Place it in your room') + '</h3>' +
       '<p>AR runs on your phone. Scan this code with its camera, then tap <b>View in AR</b>.</p>' +
-      (qr ? '<div class="arl-qr">' + qr + '</div>' : '') +
-      '<ul class="arl-steps"><li><span><b>iPhone / iPad</b>: opens in AR Quick Look</span></li>' +
+      (qr ? '<div class="arq-qr">' + qr + '</div>' : '') +
+      '<ul class="arq-steps"><li><span><b>iPhone / iPad</b>: opens in AR Quick Look</span></li>' +
       '<li><span><b>Android</b>: opens in Google Scene Viewer</span></li>' +
       '<li><span>Shown at true size. Walk around it, or pinch to resize.</span></li></ul>' +
-      '<a class="arl-link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a></div>';
-    w.addEventListener('click', function (e) { if (e.target === w || (e.target.closest && e.target.closest('.arl-x'))) closeModal(); });
+      '<a class="arq-link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a></div>';
+    w.addEventListener('click', function (e) { if (e.target === w || (e.target.closest && e.target.closest('.arq-x'))) closeModal(); });
     document.body.appendChild(w);
     void w.offsetWidth; w.classList.add('on');
     document.addEventListener('keydown', onKey, true);
     modal = w;
-    try { w.querySelector('.arl-x').focus({ preventScroll: true }); } catch (e) {}
+    try { w.querySelector('.arq-x').focus({ preventScroll: true }); } catch (e) {}
   }
 
   window.ARLaunch = {
