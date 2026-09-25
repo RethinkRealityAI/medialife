@@ -238,14 +238,16 @@ public/monkey-quest/activated-retail/  Toei Animation × Hypergalactic concept (
   index.html          the whole app (CSS + JS inlined), generated — do not edit by hand
   assets/hd/          display graphics, WebP, full + _m (mobile) sizes
   assets/             splash render, charms, reward art, QR codes
-  models/*.glb.txt    merch models, base64 GLB (meshopt-compressed)
-  display.glb.txt     the endcap itself, base64 GLB
+  models/*.glb        merch models, binary GLB (meshopt-compressed)
+  display.glb         the endcap itself, binary GLB (preloaded from <head>, streamed for the progress bar)
 public/vendor/three@0.170.0/   three.js r170 + the addons these pages import (no runtime CDN)
+public/vendor/ar-kit/          shared page modules: track.js (analytics + ?c= client links),
+                               present.js (presentation mode), lead.js ("Book a call"), ar-launch.js
 ```
 
 Both pages are exported from the RobloxDisplay project (`web/src` and the Monkey Quest
 fork): edit there, rebuild, and replace the folder. Everything they fetch is relative to the
-page, so each folder is self-contained apart from the vendored three.js.
+page, so each folder is self-contained apart from the vendored three.js and `/vendor/ar-kit/`.
 
 > **Patched in place — port before the next export.** The commit "Make the activated-retail
 > demos responsive…" edited both `index.html` files directly (the exporter wasn't available):
@@ -253,7 +255,9 @@ page, so each folder is self-contained apart from the vendored three.js.
 > zoom, the compact sheet, tour-first start, theme-coloured markers, the cart icon and the
 > frame-budget / shadow / thumbnail performance changes. Apply the same diff to RobloxDisplay
 > (`git show` that commit) or a re-export will undo it. Keep the two pages in step: every
-> interaction change goes into both.
+> interaction change goes into both. The same applies to the later in-place work: binary GLB
+> loading (the `.glb.txt` copies are gone), the ar-kit script tags, personal links and analytics
+> in the password gate, presentation mode (`?present=1`, P) and "Book a call".
 
 The EVADE activation embeds the live Cola Run game (evade.medialife.ai) in the phone mock and
 falls back to a scannable QR if the frame is blocked. The Monkey Quest QR codes open the real

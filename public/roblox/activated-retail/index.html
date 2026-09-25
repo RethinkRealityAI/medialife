@@ -24,6 +24,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
 <link rel="modulepreload" href="/vendor/three@0.170.0/three.module.min.js">
+<link rel="preload" as="fetch" href="display.glb" crossorigin>
+<!-- ar-kit (/vendor/ar-kit): track.js runs first and in sync, so the password gate can resolve personal
+     links (?c=) and log its own events; the others are deferred page modules. -->
+<script src="/vendor/ar-kit/track.js"></script>
+<script>try{ ARTrack.init({ demo:'roblox' }); }catch(e){}</script>
+<script defer src="/vendor/ar-kit/qrcode.min.js"></script>
+<script defer src="/vendor/ar-kit/ar-launch.js"></script>
+<script defer src="/vendor/ar-kit/present.js"></script>
+<script defer src="/vendor/ar-kit/lead.js"></script>
 <style>
 :root{
   color-scheme: dark;
@@ -1030,12 +1039,80 @@ body:not(.focus) .spin-hint{opacity:0;}
 .gate-msg{min-height:1.3em;margin:10px 0 0;font-size:13px;color:#ff9fb0;}
 #gate.bad .gate-card{animation:gateShake .4s;}
 @keyframes gateShake{20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
+
+/* ---------- personal links: "Prepared for <name>" on the gate, the splash and under the lockup ---------- */
+.gate-for{margin:-4px 0 12px;font-size:13.5px;color:#b6b1cc;}
+.gate-for b{color:#fff;font-weight:600;}
+/* resolving a ?c= link: the card fades in after a beat, so a link that opens the demo never flashes it */
+#gate.gate-wait .gate-card{animation:gateIn .35s var(--ease) .6s both;}
+#gate.gate-wait.out .gate-card{animation:none;opacity:0;}
+@keyframes gateIn{from{opacity:0;transform:translateY(8px);}}
+.brand .for b{color:#fff;font-weight:500;}
+.brand .for:not([hidden])+.brand-spec::before{content:"·";margin:0 .7em;}
+@media (max-width:980px){ .brand.has-for .sub{display:block;} .brand.has-for .sub .brand-spec{display:none;} }
+.ld-for{margin:clamp(8px,1.6vh,16px) 0 0;font:500 11.5px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#bdb6da;}
+.ld-for b{color:#fff;font-weight:500;}
+/* the name line takes ~30px: the hero render gives it back so the splash still fits (desktop sizes by height) */
+@media (min-width:761px){ #loader:has(.ld-for:not([hidden])) :is(.ld-shot,.ld-reflect){width:min(100%,calc((100dvh - 470px) * 1.89));} }
+@media (min-width:761px) and (max-height:620px){ #loader:has(.ld-for:not([hidden])) .ld-shot{width:min(100%,calc((100dvh - 330px) * 1.89));} }
+
+/* ---------- "Book a call" (vendor/ar-kit/lead.js): top bar; icon-only beside the cart on phones ---------- */
+.cta-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:48px;padding:0 18px 0 15px;border-radius:999px;box-sizing:border-box;cursor:pointer;white-space:nowrap;
+  font:600 13.5px/1 var(--body);letter-spacing:.005em;color:#fff;border:1px solid rgba(255,255,255,.1);
+  background:var(--lg-bg);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 40%,transparent),color-mix(in srgb,var(--accent) 14%,transparent)),var(--lg-tint);
+  backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);box-shadow:var(--lg-shadow);
+  transition:background .25s var(--ease),transform .18s var(--ease);-webkit-tap-highlight-color:transparent;}
+.cta-btn::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;pointer-events:none;background:var(--lg-rim);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
+.cta-btn svg{width:18px;height:18px;flex:0 0 auto;}
+.cta-btn:hover{background:var(--lg-bg);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 56%,transparent),color-mix(in srgb,var(--accent) 22%,transparent)),var(--lg-tint);}
+.cta-btn:active{transform:scale(.96);}
+.cta-btn:focus-visible{outline-offset:2px;}
+@media (max-width:1100px) and (min-width:761px){
+  .cta-btn{width:48px;padding:0;}
+  .cta-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+  /* tablets: the sun / moon carry Day / Night (as on phones), which pays for the call button's room */
+  .seg button[data-light]{padding:0 11px;}
+  .seg button[data-light] span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+  .seg .lt-ico{margin-right:0;width:16px;height:16px;}
+}
+@media (max-width:760px){
+  .brand{max-width:calc(100% - 112px);}
+  .cta-btn{position:fixed;top:calc(14px + env(safe-area-inset-top,0px));right:64px;width:44px;height:44px;padding:0;}
+  .cta-btn span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;}
+}
+/* narrow phones: a slightly tighter lockup keeps the name whole beside the call and cart buttons */
+.brand .lockup{overflow:hidden;text-overflow:ellipsis;}
+@media (max-width:380px){ .brand{padding:0 12px;} .brand .lockup{font-size:10.5px;letter-spacing:.045em;} }
+@media (max-width:340px){ .brand .lockup{font-size:9.5px;} }
+/* tour-end dialog: the call is the primary action; exploring and presenting are quieter links */
+.m-actions{display:flex;gap:10px;flex-wrap:wrap;}
+.m-actions a.btn{text-decoration:none;}
+.m-more{display:flex;align-items:center;gap:4px 20px;flex-wrap:wrap;margin-top:16px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08);}
+.m-link{border:0;background:none;padding:6px 0;font:600 13px/1.2 var(--body);color:#cfc9e4;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  text-decoration:underline;text-decoration-color:rgba(207,201,228,.35);text-underline-offset:4px;-webkit-tap-highlight-color:transparent;}
+.m-link:hover{color:#fff;text-decoration-color:rgba(255,255,255,.7);}
+.m-link kbd{font:500 10.5px/1 var(--mono);padding:3px 5px;border-radius:5px;border:1px solid rgba(255,255,255,.22);color:var(--muted);}
+@media (pointer:coarse){ .m-link kbd{display:none;} }
+.link-btn{border:0;background:none;padding:2px 0;font:600 13px/1.2 var(--body);cursor:pointer;color:#c8b8ff;color:color-mix(in srgb,var(--accent) 45%,#fff);
+  text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.3);}
+.link-btn:hover{color:#fff;}
+.done-cta{margin:2px 0 0;font-size:13px;color:var(--muted);}
+.dash-cta{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 12px 12px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.04);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 22%,transparent),rgba(255,255,255,.03));}
+.dash-cta p{margin:0;font-size:13px;line-height:1.35;color:#dcd7ee;}
+.dash-cta .btn{padding:10px 16px;font-size:13px;flex:0 0 auto;}
+
+/* ---------- presentation mode (vendor/ar-kit/present.js): the page's own chrome steps aside ---------- */
+body.ar-presenting :is(.topbar,.cta-btn,.dock-wrap,#hotspots,.hint,#tour,#dash,#sheet,.cart-btn,#cart,#toast,.walk-help,.spin-hint,#vignette){
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity .45s var(--ease),visibility 0s linear .45s!important;}
 </style>
 </head>
 <body>
 <div id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
   <form class="gate-card" id="gateForm" autocomplete="off">
     <span class="ld-chip">MEDIALIFE<sup>®</sup> · PRIVATE PREVIEW</span>
+    <p class="gate-for" id="gateFor" hidden>Prepared for <b></b></p>
     <h1 id="gateTitle">Enter the password</h1>
     <p>This preview is shared privately.</p>
     <div class="gate-field"><input id="gatePw" type="password" aria-label="Password" placeholder="Password" autocomplete="current-password" enterkeyhint="go"><button class="btn go" type="submit">Enter</button></div>
@@ -1048,21 +1125,40 @@ body:not(.focus) .spin-hint{opacity:0;}
    Each demo has its own simple password (Roblox: "robloxamp", Monkey Quest: "toeimq"); case and spaces are ignored.
    To change it, hash the new password in lowercase without spaces:
    node -e "let h=0x811c9dc5;for(const c of 'newpassword'){h^=c.charCodeAt(0);h=Math.imul(h,0x01000193)>>>0}console.log(h.toString(16))"
-   and paste the result into GATE_HASH. A device that has unlocked this page once stays unlocked. */
+   and paste the result into GATE_HASH. A device that has unlocked this page once stays unlocked.
+   Personal links: ?c=CODE is resolved by ARTrack.link (vendor/ar-kit/track.js, 3 s at most). A link made for
+   this demo with "skip the password" set opens it for that visit only (never remembered on the device). Any
+   link, or ?to=Name, adds "Prepared for <name>". The URL is never rewritten, so every parameter survives. */
 (function(){
-  var GATE_HASH='3c8fd957', KEY='ml-preview-unlocked-'+GATE_HASH;
+  var GATE_HASH='3c8fd957', KEY='ml-preview-unlocked-'+GATE_HASH, DEMO='roblox';
   var el=document.getElementById('gate'), waiting=[];
   function fnv(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h.toString(16); }
   function remembered(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
+  function track(n,p){ try{ if(window.ARTrack) window.ARTrack.event(n,p); }catch(e){} }
   window.__gate={ open:false, then:function(cb){ if(this.open) cb(); else waiting.push(cb); } };
   function unlock(){ window.__gate.open=true; el.classList.add('out'); setTimeout(function(){ el.remove(); },500); waiting.splice(0).forEach(function(cb){ try{ cb(); }catch(e){} }); }
   if(remembered()){ el.remove(); window.__gate.open=true; return; }
-  var pw=document.getElementById('gatePw'), msg=document.getElementById('gateMsg');
-  setTimeout(function(){ try{ pw.focus({preventScroll:true}); }catch(e){} },80);
+  var pw=document.getElementById('gatePw'), msg=document.getElementById('gateMsg'), forEl=document.getElementById('gateFor');
+  var q=null; try{ q=new URLSearchParams(location.search); }catch(e){}
+  var code=q&&q.get('c'), to=q?(q.get('to')||'').trim().slice(0,80):'', shown=false;
+  function greet(name){ if(name && forEl){ forEl.querySelector('b').textContent=name; forEl.hidden=false; } }
+  // the password card is the way in: count it once and put the cursor in the field
+  function show(){ if(shown || window.__gate.open) return; shown=true; el.classList.remove('gate-wait'); track('gate_view', code?{ link:true }:undefined);
+    setTimeout(function(){ try{ pw.focus({preventScroll:true}); }catch(e){} },80); }
+  greet(to);
+  if(code && window.ARTrack && window.ARTrack.link){
+    el.classList.add('gate-wait');
+    window.ARTrack.link.then(function(l){
+      if(window.__gate.open) return;
+      if(l && l.name) greet(l.name);
+      if(l && l.unlock===true && l.demo===DEMO){ track('gate_unlock',{ via:'link' }); unlock(); } else show();
+    }, show);
+    setTimeout(show, 3500);
+  } else show();
   document.getElementById('gateForm').addEventListener('submit',function(e){
-    e.preventDefault();
-    if(fnv(pw.value.toLowerCase().replace(/\s+/g,''))===GATE_HASH){ try{ localStorage.setItem(KEY,'1'); }catch(err){} unlock(); }
-    else { msg.textContent='That password isn\'t right. Try again.'; el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); pw.select(); }
+    e.preventDefault(); show();
+    if(fnv(pw.value.toLowerCase().replace(/\s+/g,''))===GATE_HASH){ try{ localStorage.setItem(KEY,'1'); }catch(err){} track('gate_unlock',{ via:'password' }); unlock(); }
+    else { track('gate_fail'); msg.textContent='That password isn\'t right. Try again.'; el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); pw.select(); }
   });
 })();
 </script>
@@ -1073,7 +1169,7 @@ body:not(.focus) .spin-hint{opacity:0;}
 <header class="topbar">
   <div class="brand">
     <div class="lockup">MEDIALIFE<span>®</span> × ROBLOX</div>
-    <div class="sub">WALMART ENDCAP · AR-01 · 3.84 × 0.68 × 2.47 m</div>
+    <div class="sub"><span class="for" id="brandFor" hidden>Prepared for <b></b></span><span class="brand-spec">WALMART ENDCAP · AR-01 · 3.84 × 0.68 × 2.47 m</span></div>
   </div>
   <div class="controls-right">
     <div class="seg" role="group" aria-label="Featured property">
@@ -1086,6 +1182,7 @@ body:not(.focus) .spin-hint{opacity:0;}
       <button data-light="store" aria-pressed="true" aria-label="Day lighting"><svg class="lt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Day</span></button>
       <button data-light="night" aria-pressed="false" aria-label="Night lighting"><svg class="lt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg><span>Night</span></button>
     </div>
+    <button class="cta-btn" type="button" data-action="book" aria-haspopup="dialog" title="Book a call with MEDIALIFE"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M9.3 15.2l2 2 3.6-3.7"/></svg><span>Book a call</span></button>
   </div>
 </header>
 
@@ -1188,6 +1285,7 @@ body:not(.focus) .spin-hint{opacity:0;}
       <div class="twins-title">Your digital twins are already in Roblox</div>
       <div class="twins" id="twins"></div>
       <p class="done-note">Every item carries an NFC tag. The unlock is tied to the product, so the physical purchase and the in-game reward stay linked.</p>
+      <p class="done-cta">Planning something like this? <button type="button" class="link-btn" id="doneCall" aria-haspopup="dialog">Book a call</button></p>
     </div>
     <div class="cart-sum">
       <button class="btn go wide" id="doneTry">Open the first unlock</button>
@@ -1229,6 +1327,7 @@ body:not(.focus) .spin-hint{opacity:0;}
     </div>
   </div>
   <p class="note">Benchmarks: MEDIALIFE × Netflix activated retail programs (2025–26, 150+ locations). The live feed above is simulated for this preview and reacts to what you do in the scene.</p>
+  <div class="dash-cta"><p>Plan a pilot with this reporting built in.</p><button class="btn ghost" type="button" id="dCall" aria-haspopup="dialog">Book a call</button></div>
 </aside>
 
 <!-- tour -->
@@ -1238,7 +1337,7 @@ body:not(.focus) .spin-hint{opacity:0;}
   <h3 id="tTitle"></h3>
   <p id="tBody"></p>
   <div class="tour-foot">
-    <div style="display:flex;align-items:center;gap:12px"><div class="pips" id="tPips"></div><span class="tour-keys">← → keys</span></div>
+    <div style="display:flex;align-items:center;gap:12px"><div class="pips" id="tPips"></div><span class="tour-keys">← → keys · P presents</span></div>
     <div style="display:flex;gap:8px">
       <button class="btn ghost" id="tPrev">Back</button>
       <button class="btn go" id="tNext">Next</button>
@@ -1351,6 +1450,7 @@ body:not(.focus) .spin-hint{opacity:0;}
       <div class="ld-eyebrow"><span class="ld-chip">MEDIALIFE<sup>®</sup> × ROBLOX</span></div>
       <h1 class="ld-title">Activated Retail</h1>
       <p class="ld-sub">The Walmart endcap where every product opens the game.</p>
+      <p class="ld-for" id="ldFor" hidden>Prepared for <b></b></p>
     </div>
     <figure class="ld-hero" aria-label="The AR-01 activated retail display">
       <div class="ld-halo"></div>
@@ -1493,11 +1593,18 @@ const PARTS = {
 /* =========================================================
    Renderer / scene
    ========================================================= */
+// A personal link (?c=) is still resolving behind the password gate: let it settle before the GPU set-up
+// below takes the main thread, or a slow phone can hold the link's reply past its 3 s cut-off.
+if(window.__gate && !window.__gate.open && /[?&]c=/.test(location.search)) await Promise.race([window.ARTrack?.link, new Promise(r=>setTimeout(r,3200))]).catch(()=>{});
 const $ = (s)=>document.querySelector(s);
 const stage = $('#stage');
 const isTouch = matchMedia('(pointer:coarse)').matches;
 const small = Math.min(innerWidth, innerHeight) < 700 || !!window.__LOWQ;
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// First-party analytics (vendor/ar-kit/track.js, started in <head>). Guarded everywhere: a missing or
+// blocked tracker must never break the page. Props stay small, with no personal data.
+const DEMO='roblox';
+const track=(n,p)=>{ try{ window.ARTrack?.event(n,p); }catch(e){} };
 
 const renderer = new THREE.WebGLRenderer({ antialias:false, powerPreference:'high-performance' });
 // pixel budget: never ask the GPU for more than ~2.2 MP per frame (1.2 MP on phones)
@@ -1750,23 +1857,25 @@ const texLoader = new THREE.TextureLoader();
 const refs = { nodes:{}, screens:{}, tiles:[], leds:[], hero:{}, merch:{}, parts:{} };
 let display;
 
-// Models ship as base64 text (*.glb.txt) so they can be served alongside the page.
-async function loadGLBText(url, onProgress){
+// Models ship as binary glTF (*.glb). The display streams, so the loading screen shows real progress:
+// exact with a Content-Length, else an estimate that stops short of full (compressed or chunked replies).
+async function fetchGLB(url, onProgress, hint=2.6e6){
   const res = await fetch(url); if(!res.ok) throw new Error(url+' not found ('+res.status+')');
-  let buf;
-  if(onProgress && res.body){
-    const total = +res.headers.get('content-length') || 3400000; const reader=res.body.getReader(); const chunks=[]; let got=0;
-    for(;;){ const {done,value}=await reader.read(); if(done) break; chunks.push(value); got+=value.length; onProgress(got,total); }
-    buf = await new Blob(chunks).arrayBuffer();
-  } else buf = await res.arrayBuffer();
-  const bin=Uint8Array.from(atob(new TextDecoder().decode(buf).trim()), c=>c.charCodeAt(0));
+  if(!onProgress || !res.body) return res.arrayBuffer();
+  const len = +res.headers.get('content-length') || 0, exact = len>0 && !res.headers.get('content-encoding');
+  const reader=res.body.getReader(), chunks=[]; let got=0;
+  for(;;){ const {done,value}=await reader.read(); if(done) break; chunks.push(value); got+=value.length; onProgress(exact ? Math.min(1,got/len) : Math.min(0.95,got/hint)); }
+  const bin=new Uint8Array(got); let at=0; for(const c of chunks){ bin.set(c,at); at+=c.length; }
+  return bin.buffer;
+}
+async function parseGLB(buf){
   // The artifact sandbox blocks fetch() of blob: URLs, which GLTFLoader's ImageBitmapLoader relies on.
   // Hiding createImageBitmap during parse makes GLTFLoader decode embedded textures through <img> instead.
   const cib = window.createImageBitmap; window.createImageBitmap = undefined;
-  try { return await gltfLoader.parseAsync(bin.buffer, ''); } finally { window.createImageBitmap = cib; }
+  try { return await gltfLoader.parseAsync(buf, ''); } finally { window.createImageBitmap = cib; }
 }
 async function loadDisplay(){
-  const gltf = await loadGLBText('display.glb.txt', (got,total)=>progress('model', got/total));
+  const gltf = await parseGLB(await fetchGLB('display.glb', (f)=>progress('model', f)));
   display = gltf.scene; scene.add(display);
   display.traverse(o=>{
     refs.nodes[o.name]=o;
@@ -1963,9 +2072,9 @@ function setTheme(id){
    EVADE merch + Cat Bobo (loaded in the background, swapped in per theme)
    ========================================================= */
 const evade = { models:{}, loading:null, built:false, variants:[], mixers:[], cat:null, charmTex:{} };
-const EV_MODELS = { ev_cap:'models/ev_cap.glb.txt', ev_catplush:'models/ev_catplush.glb.txt', ev_boboplush:'models/ev_boboplush.glb.txt',
-  ev_tee:'models/ev_tee.glb.txt', ev_hoodie:'models/ev_hoodie.glb.txt', ev_mat:'models/ev_mat.glb.txt',
-  cola:'models/cola.glb.txt', catbobo:'models/catbobo.glb.txt', catrun:'models/catrun.glb.txt' };
+const EV_MODELS = { ev_cap:'models/ev_cap.glb', ev_catplush:'models/ev_catplush.glb', ev_boboplush:'models/ev_boboplush.glb',
+  ev_tee:'models/ev_tee.glb', ev_hoodie:'models/ev_hoodie.glb', ev_mat:'models/ev_mat.glb',
+  cola:'models/cola.glb', catbobo:'models/catbobo.glb', catrun:'models/catrun.glb' };
 // generated product models face +X; Zappar assets face +Z
 const EV_YAW = { ev_cap:-Math.PI/2, ev_catplush:-Math.PI/2, ev_boboplush:-Math.PI/2, ev_tee:-Math.PI/2, ev_hoodie:-Math.PI/2, ev_mat:-Math.PI/2, cola:0 };
 const EV_MAP = { cap:['ev_cap'], plush:['ev_catplush','ev_boboplush'], tee:['ev_tee'], hoodie:['ev_hoodie'], mousepad:['ev_mat'], figure:['cola'], keychain:['charm_bobo','charm_can'] };
@@ -1974,8 +2083,10 @@ const nextIdle = ()=>new Promise(r=>(window.requestIdleCallback||setTimeout)(()=
 function loadEvadeAssets(){
   if(evade.loading) return evade.loading;
   evade.loading = (async()=>{
-    for(const [k,url] of Object.entries(EV_MODELS)){
-      try{ evade.models[k] = await loadGLBText(url); }catch(e){ console.warn('EVADE asset', k, e.message); }
+    // fetch every model at once, then parse them one at a time between frames
+    const bufs=Object.fromEntries(Object.entries(EV_MODELS).map(([k,url])=>[k, fetchGLB(url).catch(e=>e)]));
+    for(const k of Object.keys(EV_MODELS)){
+      try{ const b=await bufs[k]; if(b instanceof Error) throw b; evade.models[k] = await parseGLB(b); }catch(e){ console.warn('EVADE asset', k, e.message); }
       await nextIdle();
     }
     for(const k of ['bobo','can']){ evade.charmTex[k] = await new Promise(res=>{ const t=texLoader.load('assets/ev_'+k+'charm.webp',()=>res(t),undefined,()=>res(null)); t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=MAX_ANISO; }); }
@@ -2102,6 +2213,7 @@ function catTap(){
 const hsLayer=$('#hotspots');
 const hotspots=[];
 function addHotspot(id, label, getPos, cls='', onClick){
+  const act=onClick; onClick=()=>{ track('hotspot',{ id }); act(); };
   const b=document.createElement('button'); b.className='hs '+cls; b.setAttribute('aria-label',label);
   b.innerHTML='<span class="ring"></span><span class="core"></span><span class="tag">'+label+'</span>';
   // Touch-safe activation: the markers ride the camera, so they can slide a few pixels between
@@ -2316,6 +2428,7 @@ function focusProduct(id){
   exitModes();
   const p=P(id), obj=heroObj(id); if(!obj) return;
   bump('session'); live.perSku[id]++; bump('acts');
+  track('product_open',{ id, theme:currentTheme, label:p.label });
   const slot=shelfSlot(obj), home=slotWorld(slot);
   scene.attach(obj);
   const sp=obj.position.clone(), sq=obj.quaternion.clone(), ss=obj.scale.clone();
@@ -2430,7 +2543,7 @@ renderer.domElement.addEventListener('pointerup',(e)=>{
   if(Math.hypot(e.clientX-x0,e.clientY-y0)>6 || performance.now()-t0>500) return;
   const m=new THREE.Vector2(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1); clickRay.setFromCamera(m,camera);
   if(mode==='walk'){ walkClick(clickRay); return; }
-  if(focus || overlayOpen()){ return; }
+  if(focus || overlayOpen() || document.body.classList.contains('ar-presenting')){ return; }
   if(evade.cat?.root.visible && clickRay.intersectObjects(evade.cat.pick,false)[0]){ catTap(); return; }
   const hit=clickRay.intersectObjects(refs.pickables.filter(m=>isShown(m)),false)[0]; if(!hit) return;
   let o=hit.object; while(o){ const id=Object.keys(PRODUCTS).find(k=>PRODUCTS[k].group===o.name); if(id){ focusProduct(id); return; } if(o.name==='GFX_TowerR'){ openPhone(currentTheme==='evade'?'keychain':'cap'); return; } o=o.parent; }
@@ -2456,7 +2569,7 @@ function setMode(m, {first=false}={}){
   if(m==='build'){ document.body.classList.add('build'); setExplode(true); flyTo([0.9,2.35,8.3],[0.7,1.4,0.3]); }
   if(m==='explore') homeView();
 }
-document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); setMode(b.dataset.mode); }));
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('mode',{ id:b.dataset.mode }); setMode(b.dataset.mode); }));
 function homeView(){ flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1]); }
 
 // ---- explode
@@ -2490,10 +2603,11 @@ function updatePartLabels(){
 }
 
 // ---- tour
-let tourI=0;
-function startTour(first=false){ tourI=0; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
+let tourI=0, tourEnd=null; // why the tour closed: 'finish' | 'skip' | 'present' (anything else is a skip too)
+function startTour(first=false){ tourI=0; tourEnd=null; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
 function showTour(dur=1800){
-  const s=TOUR[tourI]; $('#tStep').textContent=`Stop ${tourI+1} of ${TOUR.length}`; $('#tTitle').textContent=s.t; $('#tBody').textContent=s.b;
+  const s=TOUR[tourI]; track('tour_step',{ i:tourI, step:tourI+1, title:s.t });
+  $('#tStep').textContent=`Stop ${tourI+1} of ${TOUR.length}`; $('#tTitle').textContent=s.t; $('#tBody').textContent=s.b;
   $('#tPips').innerHTML=TOUR.map((_,i)=>`<i class="${i<=tourI?'on':''}"></i>`).join('');
   $('#tPrev').disabled = tourI===0; $('#tPrev').style.opacity = tourI===0?0.4:1;
   $('#tNext').textContent = tourI===TOUR.length-1 ? 'Finish' : 'Next';
@@ -2501,11 +2615,14 @@ function showTour(dur=1800){
   if(tourI!==4) openDash(false);
   flyTo(s.pos,s.tgt,dur); s.enter&&s.enter();
 }
-function endTour(showCta=true){ $('#tour').classList.remove('open'); if(explodeT>0) setExplode(false); openDash(false); if(showCta) openPilot(); }
+function endTour(showCta=true){
+  const why=tourEnd; tourEnd=null;
+  if(why!=='finish' && why!=='present') track('tour_skip',{ i:tourI, step:tourI+1, via:why==='skip'?'button':'other' });
+  $('#tour').classList.remove('open'); if(explodeT>0) setExplode(false); openDash(false); if(showCta) openPilot(); }
 let revealAfterModal=false;
-$('#tNext').addEventListener('click',()=>{ bump('session'); if(tourI<TOUR.length-1){ tourI++; showTour(); } else { exitModes(); homeView(); revealAfterModal=true; openPilot(); } });
+$('#tNext').addEventListener('click',()=>{ bump('session'); if(tourI<TOUR.length-1){ tourI++; showTour(); } else { tourEnd='finish'; track('tour_finish'); exitModes(); homeView(); revealAfterModal=true; openPilot(); } });
 $('#tPrev').addEventListener('click',()=>{ if(tourI>0){ tourI--; showTour(); } });
-$('#tSkip').addEventListener('click',()=>{ bump('session'); exitModes(); homeView(); setTimeout(revealMarkers,700); });
+$('#tSkip').addEventListener('click',()=>{ bump('session'); tourEnd='skip'; exitModes(); homeView(); setTimeout(revealMarkers,700); });
 addEventListener('keydown',(e)=>{
   if(mode!=='tour' || overlayOpen() || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName||'')) return;
   if(e.key==='ArrowRight'){ e.preventDefault(); $('#tNext').click(); }
@@ -2567,7 +2684,7 @@ setInterval(()=>{ // ambient simulated feed
   const r=Math.random(); if(r<0.55){ live.acts++; const ks=Object.keys(live.perSku); live.perSku[ks[Math.random()*ks.length|0]]++; live.hourly[live.hourly.length-1]++; if(Math.random()<0.7) live.returns++; }
   if($('#dash').classList.contains('open')) renderDash();
 }, 2600);
-document.querySelector('[data-action="dash"]').addEventListener('click',()=>{ bump('session'); openDash(!$('#dash').classList.contains('open')); });
+document.querySelector('[data-action="dash"]').addEventListener('click',()=>{ bump('session'); const on=!$('#dash').classList.contains('open'); openDash(on); if(on) track('dash_open'); });
 $('#dClose').addEventListener('click',()=>openDash(false));
 
 /* =========================================================
@@ -2583,6 +2700,7 @@ function phoneShow(i){
 function openPhone(id){
   if(overlayOpen() && $('#phoneWrap').classList.contains('open')) closePhone();
   phoneProduct=id||'cap'; const p=P(phoneProduct); const th=THEMES[currentTheme];
+  track('activation_open',{ id:phoneProduct, theme:currentTheme });
   bump('session'); bump('acts'); live.perSku[phoneProduct]++;
   $('#modal').classList.remove('open');
   $('#phoneWrap').classList.add('open'); syncControls(); phoneShow(0);
@@ -2619,7 +2737,13 @@ $('#pClose').addEventListener('click',closePhone);
 document.querySelector('.tapscreen').addEventListener('click',()=>{ if(phoneStep===0){ clearTimeout(openPhone.t); phoneShow(1); } });
 $('#phoneWrap').addEventListener('click',(e)=>{ if(e.target.id==='phoneWrap') closePhone(); });
 $('#p1go').addEventListener('click',()=>{ if(THEMES[currentTheme].live) startLive(); else { phoneShow(2); startGame(); } });
-$('#p3go').addEventListener('click',()=>{ phoneShow(4); bump('returns'); chime(); });
+$('#p3go').addEventListener('click',()=>{ phoneShow(4); bump('returns'); chime(); track('reward_redeem',{ id:phoneProduct, theme:currentTheme }); });
+// the live experiences (EVADE's Cola Run, Monkey Quest on Roblox) open in a new tab from several places
+document.addEventListener('click',(e)=>{
+  const a=e.target.closest?.('a[href]'); if(!a) return;
+  let u; try{ u=new URL(a.href, location.href); }catch(err){ return; }
+  if(/^https?:$/.test(u.protocol) && u.origin!==location.origin) track('activation_launch',{ url:(u.hostname+u.pathname).slice(0,120) });
+},true);
 $('#p4go').addEventListener('click',()=>{ closePhone(); openDash(true); toast('+1 activation and +1 return to '+THEMES[currentTheme].game+' logged'); });
 document.querySelector('[data-action="activate"]').addEventListener('click',()=>openPhone(focus?focus.id:'keychain'));
 $('#sActivate').addEventListener('click',()=>openPhone(focus?focus.id:'cap'));
@@ -2646,6 +2770,7 @@ $('#liveQrBtn').addEventListener('click',liveFallback);
 // 12-second "catch the cubes" drop
 const bgImg=new Image(); bgImg.src='assets/game_bg.webp';
 function startGame(){
+  track('game_start',{ theme:currentTheme });
   const c=$('#game'), r=c.getBoundingClientRect(); const dpr=Math.min(2,devicePixelRatio); c.width=r.width*dpr; c.height=r.height*dpr; const g=c.getContext('2d'); g.scale(dpr,dpr);
   const W=r.width, H=r.height; const cubes=[]; let score=0, t0=performance.now(), last=t0, running=true, spawn=0; const burst=[];
   const col=[ '#'+new THREE.Color(THEMES[currentTheme].led).getHexString(), '#3cefb1', '#ffffff', '#'+new THREE.Color(THEMES[currentTheme].led2).getHexString() ];
@@ -2661,7 +2786,7 @@ function startGame(){
     for(let i=burst.length-1;i>=0;i--){ const b=burst[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; b.l-=dt*2; if(b.l<=0){ burst.splice(i,1); continue; } g.globalAlpha=b.l; g.fillStyle=b.c; g.fillRect(b.x-2,b.y-2,4,4); g.globalAlpha=1; }
     $('#gScore').textContent=score+(score===1?' CUBE':' CUBES'); $('#gTime').textContent=left.toFixed(1)+'s';
     if(el<1.4){ g.fillStyle='rgba(255,255,255,'+(1-el/1.4)+')'; g.font='700 22px Unbounded, sans-serif'; g.textAlign='center'; g.fillText('TAP THE CUBES',W/2,H/2); }
-    if(left<=0){ running=false; c.removeEventListener('pointerdown',tap); setTimeout(()=>{ phoneShow(3); chime(); },350); return; }
+    if(left<=0){ running=false; c.removeEventListener('pointerdown',tap); track('game_end',{ score }); setTimeout(()=>{ phoneShow(3); chime(); },350); return; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -2690,9 +2815,12 @@ function openPilot(){
     <div class="flow"><span>Review</span><i>→</i><span>Product development</span><i>→</i><span>Commerce validation</span><i>→</i><span>Walmart retail assessment</span></div>
     <div class="capacity"><div><b>3–5</b><small>properties</small></div><div><b>2–3</b><small>SKUs per property</small></div><div><b>6–10</b><small>initial products</small></div><div><b>120</b><small>days of validation</small></div></div>
     <p style="font-size:13px">Commercial and engagement measures are reviewed together at 90 days to decide reorders, assortment expansion and retail readiness.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn go" id="mTry">Try an activation</button><button class="btn ghost" id="mDone">Keep exploring</button></div>`);
+    <div class="m-actions"><button class="btn go" id="mCall" aria-haspopup="dialog">Book a call</button><button class="btn ghost" id="mTry">Try an activation</button></div>
+    <div class="m-more"><button type="button" class="m-link" id="mDone">Keep exploring</button><button type="button" class="m-link" id="mPresent" aria-keyshortcuts="P">Presentation mode<kbd>P</kbd></button></div>`);
+  $('#mCall').onclick=()=>openLead('tour_end');
   $('#mTry').onclick=()=>{ closeModal(); openPhone('keychain'); };
   $('#mDone').onclick=closeModal;
+  $('#mPresent').onclick=()=>presentStart('tour_end');
 }
 document.querySelector('[data-action="ar"]').addEventListener('click', async ()=>{
   bump('session');
@@ -2725,8 +2853,31 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on
 /* =========================================================
    UI wiring
    ========================================================= */
-document.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); setTheme(b.dataset.theme); }));
-document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); setLight(b.dataset.light); }));
+document.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('theme',{ id:b.dataset.theme, label:THEMES[b.dataset.theme]?.name }); setTheme(b.dataset.theme); }));
+document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('light',{ mode:b.dataset.light }); setLight(b.dataset.light); }));
+
+/* =========================================================
+   "Book a call" (vendor/ar-kit/lead.js): top bar, tour end, a demo order, the dashboard
+   ========================================================= */
+function openLead(source){
+  try{ if(window.ARLead) window.ARLead.open({ source, demo:DEMO });
+    else location.href='mailto:hello@medialife.ai?subject='+encodeURIComponent('Activated retail: book a call'); }catch(e){}
+}
+document.querySelector('[data-action="book"]')?.addEventListener('click',()=>{ bump('session'); openLead('topbar'); });
+$('#dCall')?.addEventListener('click',()=>openLead('dashboard'));
+$('#doneCall')?.addEventListener('click',()=>openLead('order'));
+
+/* =========================================================
+   Personal links: "Prepared for <name>" on the splash, under the lockup and on presentation captions
+   ========================================================= */
+let clientName=null;
+function showClient(name){
+  name=String(name||'').trim().slice(0,80); if(!name || name===clientName) return; clientName=name;
+  for(const id of ['ldFor','brandFor']){ const el=document.getElementById(id); if(el){ el.querySelector('b').textContent=name; el.hidden=false; } }
+  $('.brand')?.classList.add('has-for');
+}
+showClient(new URLSearchParams(location.search).get('to'));
+try{ window.ARTrack?.link?.then(l=>{ if(l?.name) showClient(l.name); }, ()=>{}); }catch(e){}
 
 /* =========================================================
    Loop
@@ -2751,7 +2902,7 @@ let lastNow=performance.now(), shadowTick=0;
 // Frame budget: full rate while anything moves or the user is touching the scene; 30 fps when the
 // scene is only breathing; 10 fps behind full-screen overlays. Cooler phones stay responsive.
 function frameCap(now){
-  if(document.querySelector('#phoneWrap.open, #modal.open, #ipcWrap.open')) return 10;
+  if(document.querySelector('#phoneWrap.open, #modal.open, #ipcWrap.open, #arLead.is-open')) return 10;
   if(tweens.length || focus || mode==='walk' || now-lastInput<1600 || explodeTw) return 0;
   return 30;
 }
@@ -2775,7 +2926,7 @@ function frameBody(){
     const tg=controls.target; tg.x=THREE.MathUtils.clamp(tg.x,-4,5); tg.y=THREE.MathUtils.clamp(tg.y,0.3,2.4); tg.z=THREE.MathUtils.clamp(tg.z,-1.5,3);
     if(camera.position.y>4.1) camera.position.y=4.1;
   } else updateWalk(dt);
-  idle+=dt; if(started && mode==='explore' && !focus && idle>28 && !reduceMotion) controls.autoRotate=true;
+  idle+=dt; if(started && mode==='explore' && !focus && idle>28 && !reduceMotion && !window.ARPresent?.active) controls.autoRotate=true;
   if(display){
     // LED breathing + video wall shimmer
     const breathe=0.9+0.1*Math.sin(t*1.6);
@@ -2813,11 +2964,11 @@ function frameBody(){
    Splash: when everything is on the GPU, light the drawing and let them in
    ========================================================= */
 function splashReady(onEnter){
-  const L=$('#loader'); if(!L) return onEnter();
+  const L=$('#loader'); if(!L) return onEnter('auto');
   L.classList.add('ready'); const btn=$('#ldEnter'); let done=false;
-  const go=()=>{ if(done) return; done=true; L.classList.add('gone'); onEnter(); setTimeout(()=>L.remove(),1300); };
-  btn.addEventListener('click',()=>{ ac(); go(); }); if(window.__gate?.open!==false) btn.focus({preventScroll:true});
-  if(!window.__HOLDSPLASH) (window.__gate||{then:(cb)=>cb()}).then(()=>setTimeout(go, window.__FASTENTER ? 50 : 6500));
+  const go=(via)=>{ if(done) return; done=true; L.classList.add('gone'); onEnter(via); setTimeout(()=>L.remove(),1300); };
+  btn.addEventListener('click',()=>{ ac(); go('click'); }); if(window.__gate?.open!==false) btn.focus({preventScroll:true});
+  if(!window.__HOLDSPLASH) (window.__gate||{then:(cb)=>cb()}).then(()=>setTimeout(()=>go('auto'), window.__FASTENTER ? 50 : 6500));
 }
 
 /* =========================================================
@@ -2837,6 +2988,65 @@ function preloadThemeTextures(){
 }
 
 /* =========================================================
+   Presentation mode (vendor/ar-kit/present.js): the guided tour as a looping show for a meeting-room
+   screen, captions as a lower third. ?present=1 starts it once they are in; so do P and the tour's end.
+   ========================================================= */
+const PRESENT_ON_ENTER = new URLSearchParams(location.search).get('present')==='1';
+const present={ theme0:null }, _drift=new THREE.Vector3();
+// long enough to read the caption aloud: ~4 words a second, 9–16 s a step
+const presentDwell=(i)=>{ const s=TOUR[i]; const words=(s.t+' '+s.b).split(/\s+/).length; return Math.round(Math.min(16000, Math.max(9000, 2400+words*240))); };
+function presentCaption(i){
+  const s=TOUR[i], lock=($('.brand .lockup')?.textContent||'').trim();
+  return { title:s.t, body:s.b, eyebrow: clientName ? lock+' · Prepared for '+clientName : lock };
+}
+function presentGo(i){
+  const s=TOUR[i]; if(!s || !display) return;
+  // something else took the screen (a product, a dialog): hand the page back rather than fight it
+  if(focus || overlayOpen() || window.ARLead?.isOpen){ window.ARPresent?.stop('page'); return; }
+  if(i===0 && present.theme0 && currentTheme!==present.theme0 && THEMES[present.theme0]) setTheme(present.theme0);
+  if(i<TOUR.length-1 && explodeT>0) setExplode(false);
+  flyTo(s.pos, s.tgt, 2600, ()=>presentDrift(i));
+  try{ s.enter&&s.enter(); }catch(err){ reportErr(err); }
+  openDash(false); // the tour's dashboard stop is chrome here: the caption carries it
+}
+// while a step holds, a slow push-in and a few degrees of orbit keep the picture alive
+function presentDrift(i){
+  if(reduceMotion || !window.ARPresent?.active || window.ARPresent.paused) return;
+  const tgt=controls.target.clone(), off=camera.position.clone().sub(tgt), a=(i%2?1:-1)*0.09;
+  cancelCamTween();
+  camTween=tween(presentDwell(i), (k)=>{ camera.position.copy(tgt).add(_drift.copy(off).applyAxisAngle(Y_AXIS,a*k).multiplyScalar(1-0.05*k)); controls.target.copy(tgt); },
+    { e:(k)=>k, done:()=>{ camTween=null; } });
+}
+function presentStart(source){
+  const AP=window.ARPresent; if(!AP || !display || !started) return false;
+  if(AP.active) return true;
+  // leave whatever is open without the tour-end dialog or the marker reveal
+  revealAfterModal=false; clearTimeout(revealMarkers.t); document.body.classList.remove('labels');
+  try{ window.__ipc?.close(); }catch(e){}
+  try{ window.ARLead?.close(); }catch(e){}
+  if($('#phoneWrap').classList.contains('open')) closePhone();
+  if($('#modal').classList.contains('open')) closeModal();
+  if($('#cart').classList.contains('open')) closeCart();
+  if(focus) unfocus(null,{keepView:true});
+  if(mode==='tour') tourEnd='present';
+  if(mode!=='explore') exitModes();
+  openDash(false); hideSpinHint();
+  present.theme0=currentTheme; idle=0;
+  return AP.start({ steps:TOUR.length, go:presentGo, dwell:presentDwell, caption:presentCaption, source,
+    onPause:(paused)=>{ if(paused) cancelCamTween(); },
+    onStop:()=>{
+      cancelCamTween(); if(explodeT>0) setExplode(false); openDash(false); idle=0;
+      if(!focus && !overlayOpen() && mode==='explore'){ homeView(); setTimeout(revealMarkers,1600); }
+    } });
+}
+addEventListener('keydown',(e)=>{
+  if((e.key!=='p' && e.key!=='P') || e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+  const t=e.target; if(t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
+  if(window.ARPresent?.active){ e.preventDefault(); window.ARPresent.stop('key'); return; }
+  if(presentStart('key')) e.preventDefault();
+});
+
+/* =========================================================
    Boot
    ========================================================= */
 setLight('store');
@@ -2850,7 +3060,9 @@ loadDisplay().then(async ()=>{
   // intro sweep starts the moment they enter
   camera.position.set(-7.5,3.6,10.5); controls.target.set(0.2,1.2,0);
   // first visit starts in the guided walkthrough, so people see what the display does before they explore
-  splashReady(()=>{ started=true; document.body.classList.remove('intro'); if(window.__NOTOUR) flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1],3000); else setMode('tour',{first:true}); });
+  splashReady((via)=>{ started=true; document.body.classList.remove('intro'); track('enter',{ via });
+    if(PRESENT_ON_ENTER && presentStart('url')) return;
+    if(window.__NOTOUR) flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1],3000); else setMode('tour',{first:true}); });
   window.__ready=true;
   // after the intro: textures for the other properties, product snapshots, then the EVADE set in the background
   setTimeout(()=>{ preloadThemeTextures(); warmSnapshots(); }, 3600);
@@ -2860,7 +3072,7 @@ document.body.classList.add('intro');
 if(!window.__NORENDER) renderer.setAnimationLoop(loop); else { setInterval(()=>{ runTweens(performance.now()); },50); }
 
 // debug / automation hooks
-window.__app={ renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, get gpuLost(){ return gpuLost; }, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
+window.__app={ presentStart, openLead, get clientName(){ return clientName; }, renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, get gpuLost(){ return gpuLost; }, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
 
 /* =========================================================
    Shop the shelf: a mock cart + checkout that shows the display
@@ -2913,7 +3125,7 @@ function addToCart(id, {fly=true}={}){
   let it=cart.items.find(x=>x.key===key);
   if(it) it.qty++;
   else { it={ key, id, theme:currentTheme, name:p.label, size, price:priceOf(id), qty:1, img:snapshot(id)||p.img||'', unlock:p.unlock, sku:p.sku }; cart.items.push(it); }
-  bump('session');
+  bump('session'); track('add_to_cart',{ id, size, price:it.price, theme:currentTheme });
   if(fly) flyToCart(it.img); else renderCart();
   chimeSoft();
   return it;
@@ -2995,6 +3207,7 @@ function openCart(){
   if($('#phoneWrap').classList.contains('open')) closePhone();
   if(cart.view!=='done') cartView('list');
   renderCart(); $('#cart').classList.add('open'); $('#cartBtn').setAttribute('aria-expanded','true'); syncControls();
+  track('cart_open',{ items:cartCount() });
   setTimeout(()=>$('#cartClose').focus({preventScroll:true}),60);
 }
 function closeCart(){
@@ -3007,7 +3220,7 @@ addEventListener('keydown',(e)=>{ if(e.key==='Escape' && $('#cart').classList.co
 
 $('#cartCheckout').addEventListener('click',()=>{
   if(!cart.items.length) return;
-  const t=cartTotals();
+  const t=cartTotals(); track('checkout',{ items:cartCount(), total:Math.round(t.tot*100)/100 });
   $('#payLines').innerHTML = cart.items.map(i=>`<li><span>${i.qty} × ${i.name}${i.size?' ('+i.size+')':''}</span><span>${money(i.qty*i.price)}</span></li>`).join('')
     + `<li class="muted"><span>${cart.fulfil==='pickup'?'Pickup today · this Walmart':'Shipping · 2-day'}</span><span>Free</span></li><li class="muted"><span>Est. tax</span><span>${money(t.tax)}</span></li>`;
   $('#pTot').textContent=money(t.tot); $('#payTxt').textContent='Pay '+money(t.tot);
@@ -3021,6 +3234,7 @@ $('#payNow').addEventListener('click',()=>{
 });
 function completeOrder(){
   const items=cart.items.slice(); const n=cartCount(); cart.orders++;
+  track('order',{ total:Math.round(cartTotals().tot*100)/100, items:n });
   const no='ML-'+(48200+Math.floor(Math.random()*700));
   $('#doneSub').textContent = `Order ${no} · ${cart.fulfil==='pickup' ? 'ready for pickup at this Walmart in about an hour' : 'arrives in 2 days'}`;
   $('#twins').innerHTML = items.map((i,k)=>`<div class="twin" style="--d:${k*110+350}ms"><div class="tw-img">${i.img?`<img src="${i.img}" alt="">`:''}<span class="tw-badge">Unlocked</span></div><b>${i.unlock}</b><span>${i.name}${i.qty>1?' ×'+i.qty:''}</span></div>`).join('');
@@ -3583,6 +3797,7 @@ function ipcApply(draft){
     towerL:names.towerL, towerR:names.towerR, screen:names.screen, totem:names.totem, wall:names.wall,
     site:'ROBLOX.COM/GAMES', game:ipcShortGame(name), fictional:false, custom:true, sample:!!draft.sample, _names:names };
   ipcState.current={ name, pal, sample:!!draft.sample };
+  track('custom_ip',{ sample:draft.sample||null });
   ipcPill(name, pal.led);
   if(typeof mode!=='undefined' && mode!=='explore' && typeof exitModes==='function'){ try{ exitModes(); }catch(e){} }
   const msg = `${name}${draft.sample?' (sample art)':''} is live on the fixture · same hardware, new property`;
@@ -3618,7 +3833,7 @@ function ipcPill(name, led){
   if(!ipcAddBtn) return;
   if(!ipcPillBtn){
     ipcPillBtn=document.createElement('button'); ipcPillBtn.type='button'; ipcPillBtn.dataset.theme='custom'; ipcPillBtn.className='ipc-pill';
-    ipcPillBtn.addEventListener('click',()=>{ try{ if(typeof bump==='function') bump('session'); }catch(e){} ipcSelectCustom(); });
+    ipcPillBtn.addEventListener('click',()=>{ try{ if(typeof bump==='function') bump('session'); }catch(e){} track('theme',{ id:'custom', label:'Your IP' }); ipcSelectCustom(); });
     ipcAddBtn.before(ipcPillBtn);
   }
   ipcPillBtn.innerHTML=`<span class="dot" style="background:${ipcHex(led)}"></span><span class="ipc-pill-name"></span>`;
