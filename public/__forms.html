@@ -66,5 +66,29 @@
       <input name="program-updates" type="text" />
       <textarea name="drop-config"></textarea>
     </form>
+    <!--
+      "Book a call" on the activated-retail demos (public/vendor/ar-kit/lead.js,
+      used by /roblox/activated-retail, /monkey-quest/activated-retail and the
+      /x/ endcaps). The dialog is built in JS, so this is the only copy Netlify
+      sees. Field names MUST stay in sync with lead.js.
+
+      Reserved-name rule as above: the contact field is `contact-name` and the
+      free-text field is `notes`. Hidden context: `demo` (which demo), `link` and
+      `client` (the personal link's code and name, if any), `page` (the URL) and
+      `source` (where the dialog was opened: tour_end, topbar, order, dashboard…).
+    -->
+    <form name="activated-retail-lead" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="activated-retail-lead" />
+      <input name="bot-field" type="text" />
+      <input name="contact-name" type="text" />
+      <input name="email" type="email" />
+      <input name="company" type="text" />
+      <textarea name="notes"></textarea>
+      <input name="demo" type="text" />
+      <input name="link" type="text" />
+      <input name="client" type="text" />
+      <input name="page" type="text" />
+      <input name="source" type="text" />
+    </form>
   </body>
 </html>
