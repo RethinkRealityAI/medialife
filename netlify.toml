@@ -131,6 +131,7 @@
 [[headers]]
   for = "/roblox/activated-retail/models/*"
   [headers.values]
+    Content-Type = "model/gltf-binary"
     Cache-Control = "public, max-age=86400"
 
 [[headers]]
@@ -141,16 +142,19 @@
 [[headers]]
   for = "/monkey-quest/activated-retail/models/*"
   [headers.values]
+    Content-Type = "model/gltf-binary"
     Cache-Control = "public, max-age=86400"
 
 [[headers]]
   for = "/roblox/activated-retail/display.glb"
   [headers.values]
+    Content-Type = "model/gltf-binary"
     Cache-Control = "public, max-age=86400"
 
 [[headers]]
   for = "/monkey-quest/activated-retail/display.glb"
   [headers.values]
+    Content-Type = "model/gltf-binary"
     Cache-Control = "public, max-age=86400"
 
 # Native AR files, one pair per theme, exported from the live scene (public/vendor/ar-kit/ar-export.js).
