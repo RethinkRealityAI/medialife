@@ -25,6 +25,7 @@ import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
+import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
@@ -118,6 +119,11 @@ const TechnologySlugRoute = TechnologySlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => TechnologyRoute,
 } as any)
+const ApiArLinkRoute = ApiArLinkRouteImport.update({
+  id: '/api/ar/link',
+  path: '/api/ar/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiArTrackRoute = ApiArTrackRouteImport.update({
   id: '/api/ar/track',
   path: '/api/ar/track',
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/admin/login': typeof AdminLoginRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/admin': typeof AdminIndexRoute
+  '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -257,6 +265,7 @@ export interface FileRoutesById {
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -289,6 +298,7 @@ export interface FileRouteTypes {
     | '/roblox/portal'
     | '/technology/$slug'
     | '/admin/'
+    | '/api/ar/link'
     | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -317,6 +327,7 @@ export interface FileRouteTypes {
     | '/admin/login'
     | '/technology/$slug'
     | '/admin'
+    | '/api/ar/link'
     | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -347,6 +358,7 @@ export interface FileRouteTypes {
     | '/roblox/portal'
     | '/technology/$slug'
     | '/admin/'
+    | '/api/ar/link'
     | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -373,6 +385,7 @@ export interface RootRouteChildren {
   TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
+  ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
 }
 
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
       parentRoute: typeof TechnologyRoute
+    }
+    '/api/ar/link': {
+      id: '/api/ar/link'
+      path: '/api/ar/link'
+      fullPath: '/api/ar/link'
+      preLoaderRoute: typeof ApiArLinkRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ar/track': {
       id: '/api/ar/track'
@@ -649,6 +669,7 @@ const rootRouteChildren: RootRouteChildren = {
   TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
+  ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
 }
 export const routeTree = rootRouteImport

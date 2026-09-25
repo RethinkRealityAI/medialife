@@ -1,8 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 
-// Placeholder: replaced by the Client links page.
+import { LinksPage } from "@/components/admin/links/links-page";
+
+// /admin/links: personal demo links per client. ?demo=<id> preselects the demo
+// (the endcap builder links here as /admin/links?demo=x:<slug>).
+
 export const Route = createFileRoute("/admin/links")({
-  component: () => (
-    <div className="p-6 text-sm text-muted-foreground">Client links: coming soon.</div>
-  ),
+  validateSearch: z.object({
+    demo: z
+      .string()
+      .regex(/^[a-z0-9:_-]{1,64}$/)
+      .optional()
+      .catch(undefined),
+  }),
+  head: () => ({ meta: [{ title: "Client links · Activated Retail | MEDIALIFE" }] }),
+  component: LinksRoute,
 });
+
+function LinksRoute() {
+  const { demo } = Route.useSearch();
+  return <LinksPage initialDemo={demo} />;
+}
