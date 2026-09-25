@@ -460,7 +460,8 @@ body.walk .walk-help{opacity:1;}
   .controls-right .seg:first-child{flex:1 1 auto;min-width:0;}
   .controls-right .seg:first-child button[data-theme]{flex:1 1 auto;min-width:0;padding:0 6px;overflow:hidden;text-overflow:ellipsis;}
   .light-long{display:none;}
-  body.focus .topbar{opacity:0;pointer-events:none;}
+  body.focus .topbar{opacity:0;}
+  body.focus .topbar,body.focus .topbar > *{pointer-events:none;}
   .topbar{transition:opacity .4s;}
   .phone-copy{display:none;}
   .dock{padding:5px;}
@@ -707,7 +708,8 @@ body:not(.focus) .spin-hint{opacity:0;}
 }
 /* phones in landscape / very short windows: tall narrow card, top bar out of the way */
 @media (min-width:761px) and (max-height:560px){
-  body.focus .topbar{opacity:0;pointer-events:none;}
+  body.focus .topbar,body.focus .topbar > *{pointer-events:none;}
+  body.focus .topbar{opacity:0;}
   .topbar{transition:opacity .4s;}
   #sheet{--pad:16px;--gap:10px;--art:80px;top:calc(10px + env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));width:min(400px,48vw);max-height:calc(100dvh - 20px);border-radius:22px;}
   #sheet .sheet-head{padding-right:64px;}
@@ -772,9 +774,15 @@ body:not(.focus) .spin-hint{opacity:0;}
   #sheet,#dash,#tour{backdrop-filter:none;-webkit-backdrop-filter:none;
     background:linear-gradient(165deg,rgba(255,255,255,.11) 0%,rgba(255,255,255,.04) 34%,rgba(255,255,255,.012) 70%,rgba(255,255,255,.03) 100%),rgba(15,13,29,.93);}
 }
-/* a closing sheet must never swallow taps meant for the scene/hotspots behind it */
-#sheet:not(.open){pointer-events:none;}
-#sheet:not(.open) *{pointer-events:none;}
+/* A closed or fading overlay must never swallow taps meant for the scene/hotspots behind it.
+   Children that declare pointer-events:auto (the phone's active screen, the loader's Enter button,
+   the top-bar controls) would otherwise stay live while invisible, so every overlay is covered here. */
+#sheet:not(.open),#sheet:not(.open) *,
+#phoneWrap:not(.open),#phoneWrap:not(.open) *,
+#modal:not(.open),#modal:not(.open) *,
+#cart:not(.open),#cart:not(.open) *,
+#tour:not(.open),#tour:not(.open) *,
+#loader.gone,#loader.gone *{pointer-events:none!important;}
 
 [hidden]{display:none!important;}
 /* ---------- cart (mock checkout) ---------- */
@@ -1983,7 +1991,7 @@ function catTap(){
   c.state='excited'; c.t=3.2; c.faceTo=Math.atan2(camera.position.x-c.root.position.x, camera.position.z-c.root.position.z);
   catPlay('Excited',0.2); blip(); bump('session');
   toast('Cat Bobo, hero of Cola Run. Opening the live game…');
-  setTimeout(()=>openPhone('keychain'), 1100);
+  setTimeout(()=>{ if(!focus && !overlayOpen()) openPhone('keychain'); }, 1100);
 }
 
 /* =========================================================
