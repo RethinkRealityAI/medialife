@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "slug": "blank-template",
+  "name": "Blank (template)",
+  "brand": {
+    "lockup": "MEDIALIFE® × YOUR BRAND",
+    "sub": "WALMART ENDCAP · AR-01 · 3.84 × 0.68 × 2.47 m",
+    "splashTitle": "Activated Retail",
+    "splashSub": "The endcap where every product opens the game.",
+    "retailer": "Walmart"
+  },
+  "access": {},
+  "themes": [
+    {
+      "id": "main",
+      "name": "Neon Obby",
+      "led": "#ff3fb4",
+      "led2": "#28e7ff",
+      "graphics": {
+        "mode": "keyart",
+        "keyArt": {
+          "src": "/activated-retail/engine/assets/sample-keyart.webp",
+          "mobile": "/activated-retail/engine/assets/sample-keyart_m.webp"
+        }
+      },
+      "site": "ROBLOX.COM",
+      "game": "Neon Obby"
+    }
+  ],
+  "defaultTheme": "main",
+  "zones": {
+    "cap": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Cap",
+        "category": "Activated Apparel®",
+        "sku": "CAP-01",
+        "price": 30,
+        "description": "Six-panel cap with a woven NFC label under the brim. One tap opens the experience: no app, no login wall.",
+        "unlock": { "title": "Matching avatar cap", "sub": "UGC accessory · one claim per cap" },
+        "trigger": "Woven NFC label",
+        "channel": "Retail",
+        "canActivate": true
+      }
+    },
+    "plush": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Collector Plush",
+        "category": "Activated Merchandise®",
+        "sku": "PLU-01",
+        "price": 30,
+        "description": "A plush of the property's hero character with an NFC chip in the tush tag. The physical friend unlocks its digital twin.",
+        "unlock": { "title": "Companion pet", "sub": "Follows your avatar in-game" },
+        "trigger": "NFC chip in the tush tag",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    },
+    "keychain": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Keychain",
+        "category": "Activated Merchandise®",
+        "sku": "KEY-01",
+        "price": 18,
+        "description": "Acrylic charm with an embedded NFC chip. The lowest-price way into the game, carried every day.",
+        "unlock": { "title": "Mini-game + in-game item", "sub": "One claim per keychain" },
+        "trigger": "Embedded NFC chip",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    },
+    "mousepad": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Desk Mat",
+        "category": "Activated Print®",
+        "sku": "MAT-01",
+        "price": 25,
+        "description": "XL desk mat printed with the key art. The QR is part of the artwork, so the print itself is the trigger.",
+        "unlock": { "title": "Profile badge", "sub": "Shown on your profile" },
+        "trigger": "QR in the print",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    },
+    "figure": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Boxed Collectible",
+        "category": "Activated Merchandise®",
+        "sku": "FIG-01",
+        "price": 24,
+        "description": "Window-box collectible with a QR inside the box. Scanning it reveals which skin came in this box.",
+        "unlock": { "title": "Skin reveal", "sub": "Matched to the figure in the box" },
+        "trigger": "QR inside the box",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    },
+    "tee": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Tee",
+        "category": "Activated Apparel®",
+        "sku": "TEE-01",
+        "price": 32,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Heavyweight tee with an NFC care label. Wear it, tap it, and the same tee lands on your avatar.",
+        "unlock": { "title": "Matching avatar tee", "sub": "UGC shirt" },
+        "trigger": "NFC care label",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    },
+    "hoodie": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Hoodie",
+        "category": "Activated Apparel®",
+        "sku": "HOD-01",
+        "price": 60,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Midweight pullover with an NFC label at the hem. Owning it unlocks the matching hoodie for your avatar.",
+        "unlock": { "title": "Matching avatar hoodie", "sub": "UGC layered clothing" },
+        "trigger": "NFC hem label",
+        "channel": "Retail",
+        "canActivate": false
+      }
+    }
+  },
+  "activation": {
+    "type": "game",
+    "buttonLabel": "Play the drop",
+    "rewardPrefix": "AR01"
+  },
+  "tour": [
+    {
+      "title": "Stop them in the aisle",
+      "body": "A 3.84 m endcap built from modular lightbox towers, a channel-letter header and a 12-tile video wall. Every surface either sells or activates.",
+      "view": "aisle"
+    },
+    {
+      "title": "Every product unlocks the game",
+      "body": "Each product carries an NFC tag or a QR. Tap one on the shelf and it comes off the shelf in 3D.",
+      "view": "shelf"
+    },
+    {
+      "title": "Tap, play, unlock",
+      "body": "A tap opens the experience in the browser. No app: a short drop, a reveal, then a reward in the game.",
+      "view": "qr"
+    },
+    {
+      "title": "Measured",
+      "body": "Activations, repeat visits and returns to the game, reported by store and product.",
+      "view": "dashboard",
+      "dashboard": true
+    }
+  ],
+  "cta": { "label": "Book a call", "mode": "lead" },
+  "ar": {}
+}
