@@ -299,6 +299,8 @@ function parseRange(header: string | null, size: number) {
 
 const PUBLIC_HEADERS = {
   "cache-control": "public, max-age=31536000, immutable",
+  // one shared copy across Netlify's edges: the function streams each file once
+  "netlify-cdn-cache-control": "public, max-age=31536000, immutable, durable",
   "access-control-allow-origin": "*",
   "access-control-expose-headers": "content-length, content-range, accept-ranges, etag",
   "accept-ranges": "bytes",
