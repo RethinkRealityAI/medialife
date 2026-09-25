@@ -4683,6 +4683,12 @@ function launchAR(source) {
     title: PROJECT.brand.splashTitle || PROJECT.name,
     handoffUrl: arHandoffUrl(),
     onEvent: (n, p) => track(n, { ...(p || {}), source }),
+    // Quick Look's banner button: closes AR and opens the contact form here. Only for the
+    // in-page form: opening a link from it isn't a user gesture, so a popup would be blocked.
+    action:
+      PROJECT.cta.mode !== "url" && window.ARLead
+        ? { label: PROJECT.cta.label || "Book a call", onTap: () => openCta("ar") }
+        : null,
   });
   return true;
 }
