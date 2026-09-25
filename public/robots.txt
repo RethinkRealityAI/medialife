@@ -17,4 +17,12 @@ Disallow: /roblox/
 # Client concepts shared in pitches.
 Disallow: /monkey-quest/
 
+# Activated-retail tools: internal admin, published endcaps, the AR hand-off page,
+# the endcap renderer and its APIs. All reached by link, never by search.
+Disallow: /admin
+Disallow: /x/
+Disallow: /ar/
+Disallow: /activated-retail/
+Disallow: /api/
+
 Sitemap: https://medialife.ai/sitemap.xml

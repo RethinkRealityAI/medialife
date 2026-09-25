@@ -92,6 +92,8 @@
     '.arl-x:hover{background:rgba(255,255,255,.16)}' +
     '.arl-link{display:inline-block;margin-top:14px;font-size:12.5px;color:#9fdcff;word-break:break-all}';
 
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
   var modal = null;
   function closeModal() {
     if (!modal) return;
@@ -110,13 +112,13 @@
     try { if (window.QRCode && QRCode.toString) QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, function (err, svg) { if (!err) qr = svg; }); } catch (e) {}
     w.innerHTML = '<div class="arl-card"><button class="arl-x" type="button" aria-label="Close">✕</button>' +
       '<div class="arl-eyebrow">View in your space</div>' +
-      '<h3>' + (title ? String(title).replace(/[<>&]/g, '') : 'Place it in your room') + '</h3>' +
+      '<h3>' + (title ? esc(title) : 'Place it in your room') + '</h3>' +
       '<p>AR runs on your phone. Scan this code with its camera, then tap <b>View in AR</b>.</p>' +
       (qr ? '<div class="arl-qr">' + qr + '</div>' : '') +
       '<ul class="arl-steps"><li><span><b>iPhone / iPad</b>: opens in AR Quick Look</span></li>' +
       '<li><span><b>Android</b>: opens in Google Scene Viewer</span></li>' +
       '<li><span>Shown at true size. Walk around it, or pinch to resize.</span></li></ul>' +
-      '<a class="arl-link" href="' + url.replace(/"/g, '%22') + '" target="_blank" rel="noopener">' + url.replace(/[<>&]/g, '') + '</a></div>';
+      '<a class="arl-link" href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(url) + '</a></div>';
     w.addEventListener('click', function (e) { if (e.target === w || (e.target.closest && e.target.closest('.arl-x'))) closeModal(); });
     document.body.appendChild(w);
     void w.offsetWidth; w.classList.add('on');
