@@ -898,10 +898,8 @@ async function loadGLB(url, onProgress, estimate) {
   }
 }
 // the fixture download starts at once, before the project arrives (the <link rel=preload> in the page feeds it)
-const fixtureBuffer =
-  MODE === "none"
-    ? null
-    : fetchBuffer(FIXTURE_URL, (v) => progress("model", v * 0.96)).catch((e) => e);
+// (in every mode: the preload has already started it, and an unused preload is a console warning)
+const fixtureBuffer = fetchBuffer(FIXTURE_URL, (v) => progress("model", v * 0.96)).catch((e) => e);
 
 async function loadDisplay() {
   const buf = await fixtureBuffer;
