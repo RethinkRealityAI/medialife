@@ -1103,6 +1103,31 @@ body:not(.focus) .spin-hint{opacity:0;}
 .dash-cta p{margin:0;font-size:13px;line-height:1.35;color:#dcd7ee;}
 .dash-cta .btn{padding:10px 16px;font-size:13px;flex:0 0 auto;}
 
+/* ---------- theme reveal (tour + presentation): spotlight the switcher, a tap on the new pill, then the re-skin ---------- */
+.rv-spot{position:fixed;z-index:6;left:0;top:0;width:0;height:0;border-radius:999px;pointer-events:none;opacity:0;
+  box-shadow:0 0 0 2px rgba(var(--hs-rgb),.95),0 0 30px 6px rgba(var(--hs-rgb),.5),0 0 0 200vmax rgba(6,5,14,.62);
+  transition:opacity .35s var(--ease);}
+.rv-spot.on{opacity:1;}
+.rv-spot::after{content:"";position:absolute;inset:0;border-radius:inherit;border:2px solid rgba(var(--hs-rgb),.9);opacity:0;}
+.rv-spot.on::after{animation:rvRing 1.25s var(--ease) .15s infinite;}
+@keyframes rvRing{0%{transform:scale(1);opacity:.9;}100%{transform:scale(var(--rx,1.06),var(--ry,1.5));opacity:0;}}
+.rv-callout{position:fixed;z-index:7;left:0;top:0;box-sizing:border-box;max-width:calc(100vw - 32px);padding:10px 15px 10px 12px;border-radius:14px;
+  display:flex;align-items:center;gap:9px;font:600 13.5px/1.3 var(--body);color:#fff;pointer-events:none;
+  background:linear-gradient(165deg,rgba(255,255,255,.14),rgba(255,255,255,.04)),rgba(14,12,27,.95);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 14px 34px rgba(0,0,0,.45);
+  opacity:0;transform:translateY(-6px);transition:opacity .3s var(--ease),transform .4s var(--ease);}
+.rv-callout.on{opacity:1;transform:none;}
+.rv-callout::before{content:"";position:absolute;top:-6px;left:var(--ax,50%);width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);
+  border-radius:3px 0 0 0;background:#25213a;box-shadow:inset 1px 1px 0 rgba(255,255,255,.18);}
+.rv-callout svg{width:17px;height:17px;flex:0 0 auto;color:rgb(var(--hs-rgb));}
+.rv-tap{position:fixed;z-index:7;left:0;top:0;width:40px;height:40px;margin:-20px 0 0 -20px;pointer-events:none;opacity:0;}
+.rv-tap b{position:absolute;inset:10px;border-radius:50%;background:rgba(255,255,255,.95);box-shadow:0 0 0 2px rgba(10,8,24,.22),0 0 18px rgba(255,255,255,.8);}
+.rv-tap i{position:absolute;inset:0;border-radius:50%;border:2px solid #fff;opacity:0;}
+body.rv-on #tour{z-index:7;}
+body.rv-on .cart-btn{z-index:5;}
+body.rv-run #hotspots{opacity:0;transition:opacity .3s;}
+body.rv-run #hotspots *{pointer-events:none!important;}
+
 /* ---------- presentation mode (vendor/ar-kit/present.js): the page's own chrome steps aside ---------- */
 body.ar-presenting :is(.topbar,.cta-btn,.dock-wrap,#hotspots,.hint,#tour,#dash,#sheet,.cart-btn,#cart,#toast,.walk-help,.spin-hint,#vignette){
   opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity .45s var(--ease),visibility 0s linear .45s!important;}
@@ -1569,11 +1594,11 @@ const TOUR = [
   { t:'Stop them in the aisle', b:'A 3.84 m Walmart endcap built from modular lightbox towers, a channel-letter header and a 12-tile video wall. It reads from the end of the aisle, and every surface either sells or activates.',
     pos:[-3.9,1.75,6.2], tgt:[0.4,1.15,0] },
   { t:'Tell the property\'s story', b:'The same fixture re-skins for any Roblox-native IP. Here it\'s EVADE, the first pilot property: its key art, its characters and its merch, with Cat Bobo on patrol.',
-    pos:[0.0,1.62,2.7], tgt:[0,1.5,0], enter:()=>setTheme('evade') },
+    pos:[0.0,1.62,2.7], tgt:[0,1.5,0], theme:'evade' },
   { t:'Merchandise that extends the IP', b:'The pilot EVADE keychain and tee, plus Cat Bobo and Bobo plush, the BOBO cap, a hoodie, a desk mat and Eclipse Cola collectibles. Tap any product and it comes off the shelf.',
-    pos:[0.25,1.18,2.05], tgt:[0,0.62,0], enter:()=>setTheme('evade') },
+    pos:[0.25,1.18,2.05], tgt:[0,0.62,0], theme:'evade' },
   { t:'Tap, play, unlock', b:'The QR on the right tower is real: scan it with your phone and Cola Run opens at evade.medialife.ai. No app. A mini-game, a reveal, then a UGC reward redeemed inside EVADE.',
-    pos:[2.55,1.5,2.1], tgt:[1.45,1.3,0.35], enter:()=>{ setTheme('evade'); pulseHotspot('qr'); } },
+    pos:[2.55,1.5,2.1], tgt:[1.45,1.3,0.35], theme:'evade', enter:()=>pulseHotspot('qr') },
   { t:'Back to Roblox, and measured', b:'Unique activations, repeat interactions, engagement time and outbound traffic to Roblox, reported by location, property and creative treatment. This is the data behind the 90-day program review.',
     pos:[-1.1,1.65,3.8], tgt:[0.2,1.2,0], enter:()=>openDash(true) },
   { t:'Built modular', b:'Six modules bolt together on site: two lightbox towers, the header, the video wall, the merch bay and the plinth, plus a freestanding digital totem. When the featured property changes, you swap graphics, not fixtures.',
@@ -2033,7 +2058,7 @@ function setTheme(id){
   const prev=currentTheme; currentTheme=id; const th=THEMES[id];
   document.querySelectorAll('[data-theme]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.theme===id));
   const token = setTheme.token = (setTheme.token||0)+1;
-  loadThemeTextures(id).then(()=>{
+  const ready = loadThemeTextures(id).then(()=>{
     if(token!==setTheme.token) return;
     const T=(slot)=>{ const t=texCache[th[slot]+'|'+slot]; return t && !t.userData.failed ? t : null; };
     const put=(mat,t)=>{ if(!t) return; mat.map=t; mat.emissiveMap=t; mat.needsUpdate=true; };
@@ -2066,6 +2091,7 @@ function setTheme(id){
   else if(id==='evade' && started) toast('EVADE · pilot property · the QR on the right tower is live');
   else if(started && prev!==id && id==='roblox') toast('Roblox platform treatment');
   renderer.shadowMap.needsUpdate = true;
+  return ready;
 }
 
 /* =========================================================
@@ -2602,10 +2628,209 @@ function updatePartLabels(){
   }
 }
 
+/* =========================================================
+   Theme reveal. When the tour (or presentation mode, which reuses its steps) moves on to a step
+   with another featured property / campaign, show where that switch lives and make the re-skin
+   a moment instead of a cut:
+   1. the switcher is spotlit with a callout and a tap lands on the new pill (tour only: the
+      presentation hides the page's chrome), while the camera closes in on the header,
+   2. the lightboxes power down, the new graphics land (sequenced on their textures, 1.5 s at most),
+      then a light sweep strikes the panels back on left to right as the LED channels wash to the
+      new colours and the bloom pulses,
+   3. the camera eases out until the whole re-skinned endcap is in view.
+   Any input, Next / Back or leaving the mode finishes it at once with the new theme in place. A
+   manual switch (or going back a step) plays step 2 only. Reduced motion: no sweep or tap, cuts.
+   ========================================================= */
+const REVEAL_COPY='Switch the featured property here';
+const rv={ token:0, active:false, target:null, timers:[], tws:[], anims:[], leds:null, bloom0:null, ui:null, plane:null, items:null };
+// window.__RVSLOW (tests only) plays the whole sequence in slow motion, so it can be filmed frame by frame
+const RVT=(ms)=>ms*(window.__RVSLOW||1);
+function rvLater(ms,fn){ const tk=rv.token; rv.timers.push(setTimeout(()=>{ if(tk===rv.token) fn(); },RVT(ms))); }
+function rvTween(dur,fn,opts){ const tw=tween(RVT(dur),fn,opts); rv.tws.push(tw); return tw; }
+function rvBegin(id){ finishReveal(); rv.token++; rv.active=true; rv.target=id; document.body.classList.add('rv-run'); return rv.token; }
+function rvEnd(tk){ if(tk!==undefined && tk!==rv.token) return; rv.active=false; document.body.classList.remove('rv-run'); }
+// which theme a tour step shows: its own, else the last one set before it, else the one the tour began on
+function stepTheme(i, base){ for(let j=i;j>=0;j--) if(TOUR[j]?.theme) return TOUR[j].theme; return base; }
+
+// every lit graphic, with its position along the fixture (the sweep strikes them left to right)
+function rvPress(id){ document.querySelectorAll('[data-theme]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.theme===id)); }
+function rvItems(){
+  if(rv.items) return rv.items;
+  const map=new Map(), b=new THREE.Box3(), c=new THREE.Vector3();
+  const add=(o)=>{ const m=o.material; if(!m?.emissive || map.has(m) || o===refs.bayBack) return; b.setFromObject(o); map.set(m, b.getCenter(c).x); };
+  display.traverse(o=>{ if(o.isMesh && /^(GFX_|SCREEN_)/.test(o.name)) add(o); });
+  if(refs.header?.plane) add(refs.header.plane);
+  return rv.items=[...map].map(([mat,x])=>({ mat, x }));
+}
+// LED channels, bay backlight and floor spill: what setTheme recolours in one go
+function rvLedState(){
+  const out=[], push=(obj,key)=>{ if(obj?.[key]) out.push({ obj, key, v:obj[key].clone() }); };
+  for(const m of new Set([...(refs.ledPurple||[]),...(refs.ledBlue||[])])){ push(m,'color'); push(m,'emissive'); }
+  push(refs.bayBack?.material,'color'); push(refs.bayBack?.material,'emissive');
+  for(const k of ['spillL','spillR','spillC','spillT']) push(lights[k]?.material,'color');
+  return out;
+}
+// a soft vertical band of light that travels across the front of the fixture
+function rvPlane(){
+  if(rv.plane) return rv.plane;
+  const tex=canvasTex(128,256,(g,w,h)=>{
+    const gx=g.createLinearGradient(0,0,w,0); gx.addColorStop(0,'rgba(255,255,255,0)'); gx.addColorStop(.5,'rgba(255,255,255,1)'); gx.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=gx; g.fillRect(0,0,w,h); g.globalCompositeOperation='destination-in';
+    const gy=g.createLinearGradient(0,0,0,h); gy.addColorStop(0,'rgba(0,0,0,0)'); gy.addColorStop(.18,'#000'); gy.addColorStop(.82,'#000'); gy.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=gy; g.fillRect(0,0,w,h);
+  },{srgb:false});
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.55,3.1), new THREE.MeshBasicMaterial({ map:tex, transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false, fog:false, toneMapped:false }));
+  m.position.set(0,1.3,0.62); m.rotation.z=-0.2; m.renderOrder=3; m.frustumCulled=false; m.visible=false; scene.add(m);
+  return rv.plane=m;
+}
+// put the fixture back to its resting state (the new theme's colours, full glow, normal bloom)
+function rvRestore(){
+  try{ applyGlow(); refs.screens?.center?.material?.emissive?.setRGB(1,1,1); }catch(e){}
+  if(rv.leds){ for(const s of rv.leds.to) s.obj[s.key].copy(s.v); rv.leds=null; }
+  if(rv.bloom0!=null){ bloom.strength=rv.bloom0; rv.bloom0=null; }
+  if(rv.plane){ rv.plane.visible=false; rv.plane.material.opacity=0; }
+}
+// the re-skin: power down, swap, sweep back on
+function rvSwap(id, onSweep, onDone){
+  if(reduceMotion || !display || focus){ setTheme(id); onSweep&&onSweep(); rvRestore(); onDone&&onDone(); return; }
+  const tk=rv.token, items=rvItems(), from=rvLedState(), plane=rvPlane();
+  rvPress(id); // the switcher answers at once; the fixture follows
+  rv.bloom0=bloom.strength; plane.visible=true; plane.material.opacity=0; // on the GPU before it is needed
+  rvTween(220,(k)=>{ const v=1-0.92*k; for(const it of items) it.mat.emissive.setScalar(v); });
+  rvLater(230,()=>{
+    const ready=setTheme(id);
+    rv.leds={ from, to:rvLedState() };
+    for(const s of from) s.obj[s.key].copy(s.v); // the old colours hold until the sweep washes them over
+    let go=false; const sweep=()=>{ if(go || tk!==rv.token) return; go=true; rvSweep(items, onSweep, onDone); };
+    Promise.resolve(ready).then(()=>requestAnimationFrame(sweep), sweep); rvLater(1500, sweep);
+  });
+}
+function rvSweep(items, onSweep, onDone){
+  const SWEEP=1000, STRIKE=420, x0=-2.5, x1=3.9, L=rv.leds, plane=rv.plane, b0=rv.bloom0??bloom.strength;
+  plane.material.color.set(THEMES[rv.target]?.led ?? 0xffffff).lerp(new THREE.Color(0xffffff),0.45);
+  onSweep&&onSweep();
+  rvTween(SWEEP+STRIKE,(_,k)=>{
+    const t=k*(SWEEP+STRIKE);
+    for(const it of items){
+      const s=(t-(it.x-x0)/(x1-x0)*SWEEP)/STRIKE; let v;
+      if(s<0) v=0.08; else if(s<0.12) v=0.9; else if(s<0.2) v=0.2; else if(s<0.3) v=1.22; else if(s<1) v=1+0.22*(1-easeOut((s-0.3)/0.7)); else v=1;
+      it.mat.emissive.setScalar(v);
+    }
+    const p=Math.min(1,t/SWEEP); plane.position.x=x0+(x1-x0)*p; plane.material.opacity=0.42*Math.sin(Math.PI*p);
+    if(L){ const lk=easeOut(Math.min(1,t/(SWEEP*0.9))); for(let i=0;i<L.from.length;i++) L.from[i].obj[L.from[i].key].copy(L.from[i].v).lerp(L.to[i].v,lk); }
+    bloom.strength=b0+0.14*Math.sin(Math.PI*k);
+  },{ e:(k)=>k, done:()=>{ rvRestore(); onDone&&onDone(); } });
+}
+
+// the screen area the fixture should sit in: under the top bar, above the tour card / caption / dock
+function rvFree(){
+  const H=innerHeight, shown=(el)=>{ if(!el) return false; const cs=getComputedStyle(el); return cs.display!=='none' && cs.visibility!=='hidden' && +cs.opacity>0.1; };
+  let y0=12, y1=H-12;
+  const tb=$('.topbar'); if(shown(tb)) y0=Math.max(y0, tb.getBoundingClientRect().bottom+8);
+  const tour=$('#tour.open'), cap=document.querySelector('.arp:not([hidden]) .arp-cap:not([hidden])'), dock=$('.dock-wrap');
+  if(tour) y1=tour.getBoundingClientRect().top-8; else if(cap) y1=cap.getBoundingClientRect().top-8; else if(shown(dock)) y1=dock.getBoundingClientRect().top-8;
+  return y1-y0 < H*0.3 ? { y0:0, y1:H } : { y0, y1 };
+}
+// a camera pose that fits a w × h box centred on (cx,cy,cz) into that area, looking along dir
+function rvPose(cx,cy,cz,w,h,dir){
+  const H=innerHeight, asp=innerWidth/H, tanV=Math.tan(THREE.MathUtils.degToRad(camera.fov/2)), f=rvFree(), fh=(f.y1-f.y0)/H;
+  const d=THREE.MathUtils.clamp(Math.max(w/2/(tanV*asp*0.92), h/2/(tanV*fh*0.9)), 1.4, 8.4);
+  const wpp=2*d*tanV/H, tgt=new THREE.Vector3(cx, Math.max(0.35, cy-(H/2-(f.y0+f.y1)/2)*wpp), cz);
+  const dv=dir.clone(); dv.y=Math.max(dv.y,0.06*dv.length()); dv.normalize();
+  return [tgt.clone().addScaledVector(dv,d).toArray(), tgt.toArray()];
+}
+
+// ---- the switcher: spotlight, callout, tap
+function rvSwitcher(id){
+  if(document.body.classList.contains('ar-presenting')) return null;
+  const btn=document.querySelector(`.seg [data-theme="${id}"]`), seg=btn?.closest('.seg'), tb=$('.topbar');
+  if(!seg || !tb) return null;
+  const cs=getComputedStyle(tb), r=seg.getBoundingClientRect();
+  if(cs.visibility==='hidden' || +cs.opacity<0.5 || r.width<20 || r.bottom<0 || r.top>innerHeight) return null;
+  return { seg, btn };
+}
+function rvEls(){
+  if(rv.ui) return rv.ui;
+  const mk=(cls,html)=>{ const d=document.createElement('div'); d.className=cls; d.setAttribute('aria-hidden','true'); d.innerHTML=html||''; document.body.appendChild(d); return d; };
+  const ui={ spot:mk('rv-spot'), callout:mk('rv-callout','<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3.5-3.5M17 17H6l3.5 3.5"/></svg><span></span>'), tap:mk('rv-tap','<i></i><b></b>') };
+  ui.callout.removeAttribute('aria-hidden'); ui.callout.setAttribute('role','status');
+  return rv.ui=ui;
+}
+function rvShowUi(sw){
+  const u=rvEls(), r=sw.seg.getBoundingClientRect(), b=sw.btn.getBoundingClientRect(), pad=4, W=innerWidth;
+  Object.assign(u.spot.style,{ left:(r.left-pad)+'px', top:(r.top-pad)+'px', width:(r.width+pad*2)+'px', height:(r.height+pad*2)+'px' });
+  u.spot.style.setProperty('--rx',((r.width+30)/(r.width+pad*2)).toFixed(3)); u.spot.style.setProperty('--ry',((r.height+30)/(r.height+pad*2)).toFixed(3));
+  u.callout.querySelector('span').textContent=REVEAL_COPY;
+  document.body.classList.add('rv-on');
+  const cw=u.callout.offsetWidth, bx=b.left+b.width/2, left=Math.round(Math.max(16, Math.min(W-16-cw, bx-cw/2)));
+  Object.assign(u.callout.style,{ left:left+'px', top:Math.round(r.bottom+pad+12)+'px' });
+  u.callout.style.setProperty('--ax', Math.round(Math.max(18, Math.min(cw-18, bx-left)))+'px');
+  Object.assign(u.tap.style,{ left:bx+'px', top:(b.top+b.height/2)+'px' });
+  void u.spot.offsetWidth; u.spot.classList.add('on');
+  rvLater(160,()=>u.callout.classList.add('on'));
+}
+function rvTap(){
+  if(reduceMotion || !rv.ui) return;
+  const t=rv.ui.tap;
+  rv.anims.push(t.animate([{opacity:0,transform:'translate(36px,42px) scale(1.15)'},{opacity:1,transform:'translate(0,0) scale(1)',offset:.62},{opacity:1,transform:'scale(.76)',offset:.82},{opacity:1,transform:'scale(1)'}],{ duration:RVT(680), easing:'cubic-bezier(.2,.8,.2,1)', fill:'forwards' }));
+  rv.anims.push(t.querySelector('i').animate([{opacity:.95,transform:'scale(.5)'},{opacity:0,transform:'scale(2.5)'}],{ duration:RVT(640), delay:RVT(540), easing:'ease-out', fill:'forwards' }));
+}
+function rvHideUi(){
+  const u=rv.ui; if(!u) return;
+  u.spot.classList.remove('on'); u.callout.classList.remove('on');
+  if(!reduceMotion) rv.anims.push(u.tap.animate([{opacity:1},{opacity:0}],{ duration:RVT(260), fill:'forwards' }));
+  rvLater(380,()=>document.body.classList.remove('rv-on'));
+}
+
+// the full sequence, for a step that moves forward onto another theme
+function themeReveal(id, s, { spotlight=true, onArrive=null }={}){
+  const tk=rvBegin(id);
+  loadThemeTextures(id); // warm the new graphics while the switcher is shown
+  const sw=spotlight ? rvSwitcher(id) : null;
+  // in close on the fixture's front (portrait screens: the hero screen and header, cropped), so the pull-back reads
+  const asp=innerWidth/innerHeight, ahead=new THREE.Vector3(0,0.14,1);
+  if(!reduceMotion){ const close = asp<0.7 ? rvPose(0,1.65,0.1,1.7,1.5,ahead) : asp<1.2 ? rvPose(0,1.6,0.1,2.6,1.8,ahead) : rvPose(0,1.5,0.1,4.1,2.05,ahead); flyTo(close[0],close[1],RVT(1200)); }
+  const out=()=>{
+    const asp=innerWidth/innerHeight, dir=new THREE.Vector3(...s.pos).sub(new THREE.Vector3(...s.tgt));
+    const fin = asp<1.2 ? rvPose(0,1.25,0.1,3.9,2.6,dir) : rvPose(0.8,1.25,0.2,5.8,2.7,dir);
+    flyTo(fin[0],fin[1],reduceMotion?1:RVT(1700),()=>{ if(tk!==rv.token) return; rvEnd(); onArrive&&onArrive(); });
+  };
+  const swap=()=>rvSwap(id, ()=>rvLater(reduceMotion?0:200,out));
+  if(!sw){ rvLater(reduceMotion?0:900, swap); return; }
+  rvShowUi(sw);
+  rvLater(600, rvTap);
+  rvLater(1150, ()=>rvPress(id));
+  rvLater(1400, ()=>{ rvHideUi(); swap(); });
+}
+// a switch without the story (manual, or stepping back): the re-skin alone
+function reskin(id){
+  if(!THEMES[id]) return;
+  if(id===currentTheme || focus || !display || reduceMotion){ finishReveal(); setTheme(id); return; }
+  const tk=rvBegin(id);
+  rvSwap(id, null, ()=>rvEnd(tk));
+}
+// finish now: the new theme in place, nothing left dimmed or spotlit, no tween still running
+function finishReveal(){
+  if(!rv.active) return;
+  rv.token++; rvEnd();
+  rv.timers.forEach(clearTimeout); rv.timers=[];
+  for(const tw of rv.tws){ const i=tweens.indexOf(tw); if(i>=0) tweens.splice(i,1); } rv.tws=[];
+  rv.anims.forEach(a=>{ try{ a.cancel(); }catch(e){} }); rv.anims=[];
+  if(rv.ui){ rv.ui.spot.classList.remove('on'); rv.ui.callout.classList.remove('on'); }
+  document.body.classList.remove('rv-on');
+  if(rv.target && currentTheme!==rv.target) setTheme(rv.target);
+  rvRestore();
+}
+['pointerdown','wheel','keydown'].forEach(ev=>addEventListener(ev,(e)=>{ if(rv.active && !(ev==='keydown' && /^(Shift|Control|Alt|Meta)$/.test(e.key))) finishReveal(); },{ capture:true, passive:true }));
+addEventListener('resize',()=>{ if(rv.active) finishReveal(); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden && rv.active) finishReveal(); });
+
 // ---- tour
-let tourI=0, tourEnd=null; // why the tour closed: 'finish' | 'skip' | 'present' (anything else is a skip too)
-function startTour(first=false){ tourI=0; tourEnd=null; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
+let tourI=0, tourEnd=null, tourShown=-1, tourBase=null; // why the tour closed: 'finish' | 'skip' | 'present' (anything else is a skip too)
+function startTour(first=false){ tourI=0; tourEnd=null; tourShown=-1; tourBase=currentTheme; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
 function showTour(dur=1800){
+  finishReveal();
+  const prevI=tourShown; tourShown=tourI;
   const s=TOUR[tourI]; track('tour_step',{ i:tourI, step:tourI+1, title:s.t });
   $('#tStep').textContent=`Stop ${tourI+1} of ${TOUR.length}`; $('#tTitle').textContent=s.t; $('#tBody').textContent=s.b;
   $('#tPips').innerHTML=TOUR.map((_,i)=>`<i class="${i<=tourI?'on':''}"></i>`).join('');
@@ -2613,9 +2838,16 @@ function showTour(dur=1800){
   $('#tNext').textContent = tourI===TOUR.length-1 ? 'Finish' : 'Next';
   if(tourI<TOUR.length-1 && explodeT>0) setExplode(false);
   if(tourI!==4) openDash(false);
+  // a new featured property / campaign: tell the story on the way forward, just re-skin on the way back
+  const want=stepTheme(tourI, tourBase);
+  if(want && want!==currentTheme && THEMES[want]){
+    if(prevI>=0 && tourI===prevI+1){ themeReveal(want, s, { spotlight:true }); s.enter&&s.enter(); return; }
+    reskin(want);
+  }
   flyTo(s.pos,s.tgt,dur); s.enter&&s.enter();
 }
 function endTour(showCta=true){
+  finishReveal();
   const why=tourEnd; tourEnd=null;
   if(why!=='finish' && why!=='present') track('tour_skip',{ i:tourI, step:tourI+1, via:why==='skip'?'button':'other' });
   $('#tour').classList.remove('open'); if(explodeT>0) setExplode(false); openDash(false); if(showCta) openPilot(); }
@@ -2873,7 +3105,7 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('on
 /* =========================================================
    UI wiring
    ========================================================= */
-document.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('theme',{ id:b.dataset.theme, label:THEMES[b.dataset.theme]?.name }); setTheme(b.dataset.theme); }));
+document.querySelectorAll('[data-theme]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('theme',{ id:b.dataset.theme, label:THEMES[b.dataset.theme]?.name }); reskin(b.dataset.theme); }));
 document.querySelectorAll('[data-light]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('light',{ mode:b.dataset.light }); setLight(b.dataset.light); }));
 
 /* =========================================================
@@ -3012,7 +3244,7 @@ function preloadThemeTextures(){
    screen, captions as a lower third. ?present=1 starts it once they are in; so do P and the tour's end.
    ========================================================= */
 const PRESENT_ON_ENTER = new URLSearchParams(location.search).get('present')==='1';
-const present={ theme0:null }, _drift=new THREE.Vector3();
+const present={ theme0:null, last:-1 }, _drift=new THREE.Vector3();
 // long enough to read the caption aloud: ~4 words a second, 9–16 s a step
 const presentDwell=(i)=>{ const s=TOUR[i]; const words=(s.t+' '+s.b).split(/\s+/).length; return Math.round(Math.min(16000, Math.max(9000, 2400+words*240))); };
 function presentCaption(i){
@@ -3022,9 +3254,15 @@ function presentCaption(i){
 function presentGo(i){
   const s=TOUR[i]; if(!s || !display) return;
   // something else took the screen (a product, a dialog): hand the page back rather than fight it
+  finishReveal();
   if(focus || overlayOpen() || window.ARLead?.isOpen){ window.ARPresent?.stop('page'); return; }
-  if(i===0 && present.theme0 && currentTheme!==present.theme0 && THEMES[present.theme0]) setTheme(present.theme0);
+  const prev=present.last; present.last=i;
   if(i<TOUR.length-1 && explodeT>0) setExplode(false);
+  const want=stepTheme(i, present.theme0);
+  if(want && want!==currentTheme && THEMES[want]){
+    if(i===prev+1){ themeReveal(want, s, { spotlight:false, onArrive:()=>presentDrift(i) }); try{ s.enter&&s.enter(); }catch(err){ reportErr(err); } openDash(false); return; }
+    reskin(want);
+  }
   flyTo(s.pos, s.tgt, 2600, ()=>presentDrift(i));
   try{ s.enter&&s.enter(); }catch(err){ reportErr(err); }
   openDash(false); // the tour's dashboard stop is chrome here: the caption carries it
@@ -3051,11 +3289,11 @@ function presentStart(source){
   if(mode==='tour') tourEnd='present';
   if(mode!=='explore') exitModes();
   openDash(false); hideSpinHint();
-  present.theme0=currentTheme; idle=0;
+  present.theme0=currentTheme; present.last=-1; idle=0;
   return AP.start({ steps:TOUR.length, go:presentGo, dwell:presentDwell, caption:presentCaption, source,
-    onPause:(paused)=>{ if(paused) cancelCamTween(); },
+    onPause:(paused)=>{ if(paused){ finishReveal(); cancelCamTween(); } },
     onStop:()=>{
-      cancelCamTween(); if(explodeT>0) setExplode(false); openDash(false); idle=0;
+      finishReveal(); cancelCamTween(); if(explodeT>0) setExplode(false); openDash(false); idle=0;
       if(!focus && !overlayOpen() && mode==='explore'){ homeView(); setTimeout(revealMarkers,1600); }
     } });
 }
@@ -3092,7 +3330,7 @@ document.body.classList.add('intro');
 if(!window.__NORENDER) renderer.setAnimationLoop(loop); else { setInterval(()=>{ runTweens(performance.now()); },50); }
 
 // debug / automation hooks
-window.__app={ presentStart, openLead, get clientName(){ return clientName; }, renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, get gpuLost(){ return gpuLost; }, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
+window.__app={ get reveal(){ return { active:rv.active, target:rv.target }; }, finishReveal, reskin, get tourI(){ return tourI; }, presentStart, openLead, get clientName(){ return clientName; }, renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, get gpuLost(){ return gpuLost; }, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
 
 /* =========================================================
    Shop the shelf: a mock cart + checkout that shows the display
