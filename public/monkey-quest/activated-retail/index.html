@@ -1045,13 +1045,15 @@ body:not(.focus) .spin-hint{opacity:0;}
 <script>
 /* Password gate: a courtesy lock for an unlisted client preview, NOT security (the page and its files stay
    public). The password is checked against a small FNV-1a hash so it isn't readable in the source.
-   To change it: node -e "let h=0x811c9dc5;for(const c of 'NEW-PASSWORD'){h^=c.charCodeAt(0);h=Math.imul(h,0x01000193)>>>0}console.log(h.toString(16))"
-   and paste the result into GATE_HASH (in both demo pages). A device that has unlocked once stays unlocked. */
+   Each demo has its own simple password (Roblox: "roblox", Monkey Quest: "monkeyquest"); case and spaces are ignored.
+   To change it, hash the new password in lowercase without spaces:
+   node -e "let h=0x811c9dc5;for(const c of 'newpassword'){h^=c.charCodeAt(0);h=Math.imul(h,0x01000193)>>>0}console.log(h.toString(16))"
+   and paste the result into GATE_HASH. A device that has unlocked this page once stays unlocked. */
 (function(){
-  var GATE_HASH='839ae377', KEY='ml-preview-unlocked';
+  var GATE_HASH='1550089a', KEY='ml-preview-unlocked-'+GATE_HASH;
   var el=document.getElementById('gate'), waiting=[];
   function fnv(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h.toString(16); }
-  function remembered(){ try{ return localStorage.getItem(KEY)===GATE_HASH; }catch(e){ return false; } }
+  function remembered(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
   window.__gate={ open:false, then:function(cb){ if(this.open) cb(); else waiting.push(cb); } };
   function unlock(){ window.__gate.open=true; el.classList.add('out'); setTimeout(function(){ el.remove(); },500); waiting.splice(0).forEach(function(cb){ try{ cb(); }catch(e){} }); }
   if(remembered()){ el.remove(); window.__gate.open=true; return; }
@@ -1059,7 +1061,7 @@ body:not(.focus) .spin-hint{opacity:0;}
   setTimeout(function(){ try{ pw.focus({preventScroll:true}); }catch(e){} },80);
   document.getElementById('gateForm').addEventListener('submit',function(e){
     e.preventDefault();
-    if(fnv(pw.value.trim())===GATE_HASH){ try{ localStorage.setItem(KEY,GATE_HASH); }catch(err){} unlock(); }
+    if(fnv(pw.value.toLowerCase().replace(/\s+/g,''))===GATE_HASH){ try{ localStorage.setItem(KEY,'1'); }catch(err){} unlock(); }
     else { msg.textContent='That password isn\'t right. Try again.'; el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); pw.select(); }
   });
 })();
