@@ -3,7 +3,7 @@ import { Eye, EyeOff, Info, Lock, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cleanSlugInput, fieldId, isValidSlug } from "@/lib/ar/projects";
+import { FIXTURE_DEFAULTS, cleanSlugInput, fieldId, isValidSlug } from "@/lib/ar/projects";
 
 import { ImagePicker } from "../asset-pickers";
 import { useEditor, useField } from "../editor-context";
@@ -145,7 +145,10 @@ export function OverviewSection({
         />
         <SlugField onRename={onRename} />
       </Group>
-      <Group title="Brand" description="The lockup in the top-left corner of the endcap.">
+      <Group
+        title="Brand"
+        description="The lockup in the top-left corner, and the lettering on the fixture."
+      >
         <TextField
           path={["brand", "lockup"]}
           label="Lockup"
@@ -157,6 +160,24 @@ export function OverviewSection({
           label="Line under the lockup"
           placeholder="Walmart endcap · AR-01"
           maxLength={80}
+        />
+        <TextField
+          path={["brand", "headerText"]}
+          label="Header letters"
+          optional
+          showCount
+          maxLength={24}
+          placeholder={FIXTURE_DEFAULTS.headerText}
+          hint={`Lit letters across the top of the fixture, for themes without header art. Leave empty to keep the fixture's own letters, which read ${FIXTURE_DEFAULTS.headerText}.`}
+        />
+        <TextField
+          path={["brand", "tagline"]}
+          label="Plinth line"
+          optional
+          showCount
+          maxLength={40}
+          placeholder={FIXTURE_DEFAULTS.tagline}
+          hint={`The lit line along the base of the fixture. Leave empty to keep the fixture's own: ${FIXTURE_DEFAULTS.tagline}`}
         />
         <TextField
           path={["brand", "retailer"]}

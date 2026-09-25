@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ZONES, ZONE_IDS, type ZoneId } from "@/lib/ar/project";
-import { defaultZone } from "@/lib/ar/projects";
+import { defaultZone, isRobloxBrand } from "@/lib/ar/projects";
 
 import { ImagePicker, ModelPicker } from "../asset-pickers";
 import { useEditor, useField } from "../editor-context";
@@ -28,6 +28,8 @@ import {
   ChipsField,
   ColorField,
   Group,
+  Hint,
+  HintAction,
   PriceField,
   Segmented,
   SliderField,
@@ -105,7 +107,9 @@ const SOURCES = [
 ] as const;
 
 function ZoneEditor({ id }: { id: ZoneId }) {
-  const { draft, update } = useEditor();
+  const { draft, update, engine } = useEditor();
+  const canTint = engine.capabilities.tint.includes(id);
+  const canPrint = engine.capabilities.print.includes(id);
   const [confirm, setConfirm] = useState(false);
   const z = draft.zones[id];
   const base = ["zones", id] as const;
@@ -147,21 +151,55 @@ function ZoneEditor({ id }: { id: ZoneId }) {
             {source.value === "default" ? (
               <>
                 <p className="-mt-1 text-xs leading-relaxed text-muted-foreground">
-                  The fixture's own sample product for this spot. Recolour it and add your artwork.
+                  The fixture's own sample product for this spot.{" "}
+                  {canTint && canPrint
+                    ? "Recolour it and print your artwork on it."
+                    : canTint
+                      ? "You can recolour it."
+                      : canPrint
+                        ? "You can print your artwork on it."
+                        : "It can't be recoloured or printed on."}
                 </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <ColorField
-                    path={[...base, "model", "tint"]}
-                    label="Colour"
-                    optional
-                    fallback="#2a2a33"
+                {!isRobloxBrand(draft) ? (
+                  <Hint
+                    actions={
+                      <>
+                        <HintAction onClick={() => source.set("asset")}>Use a 3D model</HintAction>
+                        <HintAction onClick={() => source.set("image")}>Use a cut-out</HintAction>
+                      </>
+                    }
+                  >
+                    Sample merch carries Roblox branding. Use your own 3D model or a cut-out
+                    {canPrint
+                      ? ", or print your artwork on it below."
+                      : canTint
+                        ? ", or at least recolour it below."
+                        : "."}
+                  </Hint>
+                ) : null}
+                {canTint ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <ColorField
+                      path={[...base, "model", "tint"]}
+                      label="Colour"
+                      optional
+                      fallback="#2a2a33"
+                    />
+                  </div>
+                ) : null}
+                {canPrint ? (
+                  <ImagePicker
+                    path={[...base, "model", "print"]}
+                    label="Printed artwork"
+                    hint={
+                      id === "mousepad"
+                        ? "The artwork on the rolled desk mats. Wide landscape works best."
+                        : id === "figure"
+                          ? "The front of the collectible box, portrait 3 : 4 (about 1528 × 2048)."
+                          : "Printed on the front of the product."
+                    }
                   />
-                </div>
-                <ImagePicker
-                  path={[...base, "model", "print"]}
-                  label="Printed artwork"
-                  hint="On the product's face: tee and hoodie chest, cap front, desk mat."
-                />
+                ) : null}
               </>
             ) : source.value === "asset" ? (
               <ModelPicker path={[...base, "model", "asset"]} label="3D model (.glb)" />

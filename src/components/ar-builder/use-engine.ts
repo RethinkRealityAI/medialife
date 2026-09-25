@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { publicProject, type Project } from "@/lib/ar/project";
+import { SAMPLE_MERCH_CAPS, type SampleMerchCaps } from "@/lib/ar/projects";
 
 // The builder side of the engine protocol (v1): the preview iframe runs
 // /activated-retail/engine/?preview=1 (public/activated-retail/engine/index.html)
@@ -35,6 +36,7 @@ export function useEngine(opts: {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [status, setStatus] = useState<EngineStatus>("loading");
   const [applyError, setApplyError] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<SampleMerchCaps>(SAMPLE_MERCH_CAPS);
   const statusRef = useRef<EngineStatus>("loading");
   const project = useRef<Project | null>(null);
   const sendTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,9 +87,22 @@ export function useEngine(opts: {
             setStat("ready");
           flushProject();
           break;
-        case "ar:loaded":
+        case "ar:loaded": {
           setStat("loaded");
+          // the engine says which sample products it can tint / print (same origin)
+          try {
+            const caps = (
+              iframeRef.current?.contentWindow as
+                (Window & { __engine?: { capabilities?: Partial<SampleMerchCaps> } }) | null
+            )?.__engine?.capabilities;
+            if (Array.isArray(caps?.tint) && Array.isArray(caps?.print)) {
+              setCapabilities({ tint: [...caps.tint], print: [...caps.print] });
+            }
+          } catch {
+            /* keep the defaults */
+          }
           break;
+        }
         case "ar:applied":
           setApplyError(m.ok ? null : String(m.message ?? "The preview couldn't apply a change."));
           if (statusRef.current === "ready" && m.ok) setStat("loaded");
@@ -169,6 +184,7 @@ export function useEngine(opts: {
     iframeRef,
     status,
     applyError,
+    capabilities,
     setProject,
     goto: useCallback(
       (o: { view?: string; theme?: string; zone?: string | null }) =>

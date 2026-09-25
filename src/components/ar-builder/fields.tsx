@@ -1,5 +1,5 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
-import { RotateCcw, X } from "lucide-react";
+import { useEffect, useId, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { Lightbulb, RotateCcw, X } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -78,6 +78,7 @@ export function TextField({
   transform,
   type = "text",
   className,
+  showCount,
 }: {
   path: Path;
   label: string;
@@ -91,6 +92,8 @@ export function TextField({
   transform?: (v: string) => string;
   type?: "text" | "url";
   className?: string;
+  /** show the character count all the time, not just near the limit */
+  showCount?: boolean;
 }) {
   const f = useField<string | undefined>(path);
   const value = f.value ?? "";
@@ -99,7 +102,7 @@ export function TextField({
     f.set(optional && v === "" ? undefined : v);
   };
   const count =
-    maxLength && value.length > maxLength * 0.8 ? (
+    maxLength && (showCount || value.length > maxLength * 0.8) ? (
       <span
         className={cn(
           "mono text-[10px] tabular-nums",
@@ -552,6 +555,38 @@ export function ChipsField({ path, label }: { path: Path; label: string }) {
         </div>
       ) : null}
     </FieldShell>
+  );
+}
+
+/**
+ * A non-blocking suggestion: something will look off in the endcap, but nothing
+ * stops a publish. Actions are small buttons that fix or jump to the cause.
+ */
+export function Hint({ children, actions }: { children: ReactNode; actions?: ReactNode }) {
+  return (
+    <div
+      role="note"
+      className="rounded-lg border border-amber-400/30 bg-amber-400/[0.06] p-3 text-xs leading-relaxed"
+    >
+      <div className="flex gap-2.5">
+        <Lightbulb className="mt-0.5 size-3.5 shrink-0 text-amber-300" aria-hidden />
+        <div className="min-w-0 text-foreground/90">{children}</div>
+      </div>
+      {actions ? <div className="mt-2.5 flex flex-wrap gap-1.5 pl-6">{actions}</div> : null}
+    </div>
+  );
+}
+
+export function HintAction({ className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return (
+    <button
+      type="button"
+      className={cn(
+        "inline-flex h-7 items-center rounded-md border border-border bg-background/70 px-2.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 

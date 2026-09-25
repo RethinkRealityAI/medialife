@@ -290,6 +290,8 @@ const FIELD_LABELS: Record<string, string> = {
   splashTitle: "Splash title",
   splashSub: "Splash subtitle",
   retailer: "Retailer",
+  headerText: "Header letters",
+  tagline: "Plinth line",
   password: "Password",
   led: "LED colour",
   led2: "Second LED colour",
@@ -504,5 +506,25 @@ export interface ProjectSummary {
   hasUnpublishedChanges: boolean;
   status: ProjectStatus;
 }
+
+/** The fixture's own lettering, shown when the project leaves it empty. */
+export const FIXTURE_DEFAULTS = { headerText: "ROBLOX", tagline: "REAL WORLDS. MORE PLAY." };
+
+/** The sample merch and fixture letters are Roblox-branded; fine when the pitch is Roblox. */
+export const isRobloxBrand = (p: Pick<Project, "brand">) => /roblox/i.test(p.brand.lockup);
+
+/**
+ * Which sample-merch zones the engine can recolour (tint) or print artwork on.
+ * Mirrors the engine's TINTABLE / PRINTABLE; the editor prefers the live list from
+ * window.__engine.capabilities in the preview when it has one.
+ */
+export interface SampleMerchCaps {
+  tint: string[];
+  print: string[];
+}
+export const SAMPLE_MERCH_CAPS: SampleMerchCaps = {
+  tint: ["cap", "tee", "hoodie", "figure"],
+  print: ["figure", "mousepad"],
+};
 
 export { VIEWS, ZONES, ZONE_IDS };

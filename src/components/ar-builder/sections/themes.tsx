@@ -13,23 +13,21 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { newTheme } from "@/lib/ar/projects";
+import { FIXTURE_DEFAULTS, assetUrl, isRobloxBrand, newTheme } from "@/lib/ar/projects";
 import { cn } from "@/lib/utils";
 
 import { ImagePicker } from "../asset-pickers";
 import { useEditor, useField } from "../editor-context";
-import { ColorField, Group, Segmented, SelectField, TextField } from "../fields";
+import { ColorField, Group, Hint, HintAction, Segmented, SelectField, TextField } from "../fields";
 import { EndcapSchematic, type PanelId } from "../schematic";
+
+/** What one key art covers: every panel but the header. */
+const KEYART_PANELS: PanelId[] = ["towerL", "towerR", "wall", "screen", "totem"];
 
 // Themes: the property / campaign switch. Each theme has LED colours and either
 // one key-art image (composed onto every panel) or an image per panel.
 
-const PANEL_FIELDS: { key: PanelId; label: string; hint: string }[] = [
-  {
-    key: "header",
-    label: "Header",
-    hint: "Lightbox above the wall. Empty shows 3D channel letters.",
-  },
+const PANEL_FIELDS: { key: Exclude<PanelId, "header">; label: string; hint: string }[] = [
   { key: "towerL", label: "Left tower", hint: "Tall portrait, about 1 : 4." },
   { key: "towerR", label: "Right tower", hint: "Tall portrait; the QR code sits on top." },
   { key: "wall", label: "Video wall", hint: "Wide, about 3 : 1, behind the hero screen." },
@@ -181,7 +179,7 @@ function ThemeEditor({
   onMove: (delta: number) => void;
   onRemove: () => void;
 }) {
-  const { draft } = useEditor();
+  const { draft, jumpTo, openLibrary, setAt } = useEditor();
   const t = draft.themes[i];
   const mode = useField<"keyart" | "panels">(["themes", i, "graphics", "mode"]);
   const [hover, setHover] = useState<PanelId | null>(null);
@@ -279,7 +277,9 @@ function ThemeEditor({
           ]}
         />
         <div className="rounded-lg border border-border bg-background/40 p-3">
-          <EndcapSchematic highlight={hover ? [hover] : mode.value === "keyart" ? "all" : null} />
+          <EndcapSchematic
+            highlight={hover ? [hover] : mode.value === "keyart" ? KEYART_PANELS : null}
+          />
         </div>
         <ImagePicker
           path={[...base, "graphics", "keyArt"]}
@@ -290,6 +290,44 @@ function ThemeEditor({
               : "Used for any panel below that has no image."
           }
         />
+        {/* header art is used in both modes; key art never covers the header */}
+        <ImagePicker
+          compact
+          path={[...base, "graphics", "header"]}
+          label="Header"
+          hint="Lightbox art across the top, about 7 : 1. Without it the header shows lit letters."
+          onFocusSlot={(on) => setHover(on ? "header" : null)}
+        />
+        {!t.graphics.header && !draft.brand.headerText && !isRobloxBrand(draft) ? (
+          <Hint
+            actions={
+              <>
+                <HintAction onClick={() => jumpTo(["brand", "headerText"])}>
+                  Add header letters
+                </HintAction>
+                <HintAction
+                  onClick={() =>
+                    openLibrary({
+                      accept: "image",
+                      title: "Choose an image: header",
+                      onPick: (a) =>
+                        setAt(
+                          [...base, "graphics", "header"],
+                          a.mobile
+                            ? { src: assetUrl(a.id), mobile: assetUrl(a.mobile) }
+                            : assetUrl(a.id),
+                        ),
+                    })
+                  }
+                >
+                  Choose header art
+                </HintAction>
+              </>
+            }
+          >
+            The header will read {FIXTURE_DEFAULTS.headerText}. Add header art or header letters.
+          </Hint>
+        ) : null}
         {mode.value === "panels"
           ? PANEL_FIELDS.map((p) => (
               <ImagePicker

@@ -282,6 +282,7 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
     themeIndex,
     setThemeIndex,
     openLibrary,
+    jumpTo,
     engine,
   };
 

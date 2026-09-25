@@ -33,6 +33,8 @@ export interface EditorContextValue {
   themeIndex: number;
   setThemeIndex: (i: number) => void;
   openLibrary: (req: LibraryRequest) => void;
+  /** open the section holding `path` and focus its field */
+  jumpTo: (path: Path) => void;
   engine: Engine;
 }
 
