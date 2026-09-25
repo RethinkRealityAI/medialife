@@ -65,13 +65,18 @@ export async function mountViewer(container, glbUrl) {
   scene.add(shadow);
 
   const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
-  const dist = Math.max(size.x, size.y) * 1.25 + size.z;
-  camera.position.set(center.x - dist * 0.35, center.y + size.y * 0.15, center.z + dist);
+  const target = center.clone().setY(box.min.y + size.y * 0.45);
+  const dir = new THREE.Vector3(-0.3, 0.12, 1).normalize();
+  // distance at which the model fills most of the frame for the current aspect
+  const fitDistance = () => {
+    const v = THREE.MathUtils.degToRad(camera.fov);
+    const h = 2 * Math.atan(Math.tan(v / 2) * camera.aspect);
+    return Math.max((size.x * 0.5) / Math.tan(h / 2) / 0.9, (size.y * 0.5) / Math.tan(v / 2) / 0.8) + size.z * 0.5;
+  };
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.copy(center).setY(box.min.y + size.y * 0.45);
+  controls.target.copy(target);
   controls.enableDamping = true;
   controls.minDistance = Math.max(size.x, size.y) * 0.35;
-  controls.maxDistance = dist * 2.2;
   controls.maxPolarAngle = Math.PI * 0.49;
   controls.enablePan = false;
   controls.autoRotate = !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -86,11 +91,15 @@ export async function mountViewer(container, glbUrl) {
   container.appendChild(hint);
   controls.addEventListener('start', () => hint.remove(), { once: true });
 
+  let framed = false;
   const resize = () => {
     const w = container.clientWidth, h = container.clientHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / Math.max(1, h);
     camera.updateProjectionMatrix();
+    const d = fitDistance();
+    controls.maxDistance = d * 2.2;
+    if (!framed) { framed = true; camera.position.copy(target).addScaledVector(dir, d); }
   };
   resize();
   const ro = new ResizeObserver(resize);
