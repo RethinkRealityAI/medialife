@@ -239,8 +239,8 @@ export interface ProjectDoc {
 
 /** Remove admin-only fields before a project is served publicly. */
 export function publicProject(p: Project): Project {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { password, ...access } = p.access;
+  const access = { ...p.access };
+  delete access.password;
   return { ...p, access };
 }
 
