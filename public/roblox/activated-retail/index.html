@@ -785,6 +785,12 @@ body:not(.focus) .spin-hint{opacity:0;}
 #loader.gone,#loader.gone *{pointer-events:none!important;}
 
 [hidden]{display:none!important;}
+.gpu-banner{position:fixed;left:50%;top:calc(50% - 40px);z-index:40;transform:translate(-50%,12px);opacity:0;pointer-events:none;width:min(400px,calc(100vw - 24px));
+  display:flex;align-items:center;gap:12px;padding:10px 10px 10px 18px;border-radius:22px;box-sizing:border-box;
+  font-size:13.5px;color:#fff;background:rgba(14,12,27,.94);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16),0 12px 36px rgba(0,0,0,.45);transition:opacity .3s,transform .3s var(--ease);}
+.gpu-banner.on{opacity:1;transform:translate(-50%,0);pointer-events:auto;}
+.gpu-banner .btn{padding:9px 16px;font-size:13.5px;white-space:nowrap;}
+.gpu-banner span{flex:1;line-height:1.35;}
 /* ---------- cart (mock checkout) ---------- */
 .cart-btn{position:fixed;z-index:7;top:calc(14px + env(safe-area-inset-top,0px));right:18px;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#fff;
   background:var(--lg-bg);border:1px solid;border-color:var(--lg-edges);box-shadow:var(--lg-shadow);backdrop-filter:var(--lg-blur);-webkit-backdrop-filter:var(--lg-blur);
@@ -1456,8 +1462,26 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.shadowMap.autoUpdate = false; // the scene is mostly static: re-render shadows only when something moves
 renderer.xr.enabled = true;
 stage.appendChild(renderer.domElement);
-renderer.domElement.addEventListener('webglcontextlost',(e)=>{ e.preventDefault(); toast('Graphics reset: restoring the scene…'); dpr=Math.max(0.75,dpr-0.25); });
-renderer.domElement.addEventListener('webglcontextrestored',()=>{ renderer.setPixelRatio(dpr); resize(); renderer.shadowMap.needsUpdate=true; toast('Scene restored'); });
+// Phones drop the WebGL context of a page that sits behind another heavy tab (a game, the camera).
+// Pause while it is gone, rebuild what three.js can't (the environment map, the live screen) when it
+// comes back, and if it doesn't come back, say so and offer a reload instead of a dead screen.
+let gpuLost=false, gpuLosses=0;
+function gpuBanner(on){
+  let el=document.getElementById('gpuBanner');
+  if(on && !el){ el=document.createElement('div'); el.id='gpuBanner'; el.className='gpu-banner'; el.setAttribute('role','alert');
+    el.innerHTML='<span>The 3D display paused to save memory.</span><button type="button" class="btn go">Reload display</button>';
+    el.querySelector('button').onclick=()=>location.reload(); document.body.appendChild(el); }
+  if(el) el.classList.toggle('on',!!on);
+}
+function gpuCheck(){ if(gpuLost || gpuLosses>=3) gpuBanner(true); }
+renderer.domElement.addEventListener('webglcontextlost',(e)=>{ e.preventDefault(); gpuLost=true; gpuLosses++; dpr=Math.max(0.75,dpr-0.25); clearTimeout(gpuCheck.t); gpuCheck.t=setTimeout(gpuCheck,3500); });
+renderer.domElement.addEventListener('webglcontextrestored',()=>{
+  gpuLost=false; clearTimeout(gpuCheck.t); gpuBanner(gpuLosses>=3);
+  try{ renderer.setPixelRatio(dpr); composer.setPixelRatio(dpr); resize(); }catch(err){}
+  try{ const pm=new THREE.PMREMGenerator(renderer); const old=scene.environment; scene.environment=pm.fromScene(new RoomEnvironment(),0.04).texture; pm.dispose(); old?.dispose?.(); }catch(err){}
+  try{ if(screenTex) screenTex.needsUpdate=true; loop.drew0=false; }catch(err){}
+  renderer.shadowMap.needsUpdate=true;
+});
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.03, 80);
@@ -1504,7 +1528,19 @@ controls.addEventListener('start',()=>{ cancelCamTween(); idle=0; controls.autoR
 // the controls still think one is down means the previous pointerup was lost.
 renderer.domElement.addEventListener('pointerdown',(e)=>{ if(e.isPrimary && controls._pointers.length) resetPointers(); },{capture:true});
 addEventListener('blur', ()=>{ resetPointers(); endDrag(); walk.drag=null; });
-document.addEventListener('visibilitychange', ()=>{ if(document.hidden){ resetPointers(); endDrag(); walk.drag=null; } });
+// Back from another tab or app: a touch that started here may have ended there, so reset every
+// pointer owner, re-sync the controls with what's open, and pick the clock up where we are now.
+function wake(){
+  try{ resetPointers(); endDrag(); walk.drag=null; hsPress=null; syncControls(); }catch(err){}
+  try{ lastNow=performance.now(); clock.getDelta(); renderer.shadowMap.needsUpdate=true; }catch(err){}
+  try{ if(renderer.getContext().isContextLost() && !gpuLost){ gpuLost=true; clearTimeout(gpuCheck.t); gpuCheck.t=setTimeout(gpuCheck,3500); } }catch(err){}
+  try{ if(actx && actx.state==='suspended') actx.resume().catch(()=>{}); }catch(err){}
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden){ resetPointers(); endDrag(); walk.drag=null; try{ actx?.suspend?.().catch(()=>{}); }catch(err){} }
+  else wake();
+});
+addEventListener('pageshow', wake); addEventListener('focus', wake);
 let lastInput=0; ['pointerdown','pointermove','wheel','keydown','touchmove'].forEach(ev=>addEventListener(ev,()=>{ lastInput=performance.now(); },{passive:true,capture:true}));
 
 // Post
@@ -2518,9 +2554,8 @@ $('#sClose').addEventListener('click',()=>unfocus());
 // If the browser blocks the new tab, the phone shows a scannable QR instead.
 let liveTimer=null;
 function startLive(){
-  const th=THEMES[currentTheme]; let w=null;
-  try{ w=window.open(th.url,'_blank'); if(w) w.opener=null; }catch(e){}
-  if(!w){ phoneShow(5); liveFallback(); return; }
+  const th=THEMES[currentTheme];
+  const a=document.createElement('a'); a.href=th.url; a.target='_blank'; a.rel='noopener noreferrer'; document.body.appendChild(a); a.click(); a.remove();
   const name=(th.play||th.game).replace(/^(Launch |Play )/,'').replace(/\s*↗$/,'');
   const n=$('#p3note'); n.href=th.url; n.textContent=name+' is open in a new tab ↗'; n.hidden=false;
   phoneShow(3); chime();
@@ -2645,6 +2680,7 @@ function frameCap(now){
   return 30;
 }
 function loop(){
+  if(gpuLost) return;
   const nowT=performance.now(), cap=frameCap(nowT);
   if(cap && nowT-lastNow < 1000/cap-3) return;
   if(cap){ perf.acc=0; perf.n=0; perf.t0=nowT; } else adapt(nowT-lastNow);
@@ -2747,7 +2783,7 @@ document.body.classList.add('intro');
 if(!window.__NORENDER) renderer.setAnimationLoop(loop); else { setInterval(()=>{ runTweens(performance.now()); },50); }
 
 // debug / automation hooks
-window.__app={ renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
+window.__app={ renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, get gpuLost(){ return gpuLost; }, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
 
 /* =========================================================
    Shop the shelf: a mock cart + checkout that shows the display
