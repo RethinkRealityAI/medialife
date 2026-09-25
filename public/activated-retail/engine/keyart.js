@@ -4,8 +4,9 @@
  * lifted out so the engine can compose every fixture graphic from one key-art image:
  * palette + smart crop + one canvas per graphic slot (towers, totem, hero screen, video
  * wall). Pure 2D-canvas code: no three.js.
- * Changes from the demo: ipcTowerR can draw a real QR code in its NFC tile (meta.qr), and
- * the small export surface at the end.
+ * Changes from the demo: ipcTowerR can draw a real QR code in its NFC tile (meta.qr), the
+ * platform lines name the theme's site (meta.site) instead of Roblox, and the small export
+ * surface at the end.
  */
 const IPC_FD = 'Unbounded, "Arial Black", system-ui, sans-serif';
 const IPC_FB = "Figtree, system-ui, sans-serif";
@@ -493,7 +494,7 @@ function ipcTowerL(meta, W, H) {
   g.fillText("Tap any product to unlock in-game items", m, H * 0.905 + W * 0.085);
   ipcLabel(
     g,
-    "ON ROBLOX  ·  NO APP NEEDED",
+    meta.site ? `ON ${meta.site.toUpperCase()}  ·  NO APP NEEDED` : "NO APP NEEDED",
     m,
     H * 0.905 + W * 0.15,
     W * 0.03,
@@ -693,16 +694,17 @@ function ipcScreen(meta, W, H) {
     H * 0.8 + H * 0.075,
   );
   // corner chip
+  const chip = (meta.site || "Live experience").toUpperCase();
   g.font = `500 ${W * 0.012}px ${IPC_FM}`;
   ipcSpacing(g, W * 0.012 * 0.14);
-  const tw = g.measureText("ROBLOX EXPERIENCE").width;
+  const tw = g.measureText(chip).width;
   ipcSpacing(g, 0);
   g.strokeStyle = "rgba(255,255,255,.5)";
   g.lineWidth = Math.max(1, W * 0.0012);
   g.beginPath();
   g.roundRect(m, H * 0.07, tw + W * 0.03, H * 0.055, H * 0.03);
   g.stroke();
-  ipcLabel(g, "ROBLOX EXPERIENCE", m + W * 0.015, H * 0.07 + H * 0.037, W * 0.012, "#fff");
+  ipcLabel(g, chip, m + W * 0.015, H * 0.07 + H * 0.037, W * 0.012, "#fff");
   return c;
 }
 // Wall: 12 tiles read the band v 0.122–0.878 across the full width (≈2.33:1)

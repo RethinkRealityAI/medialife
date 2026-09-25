@@ -181,6 +181,8 @@ function normalizeProject(raw) {
     splashTitle: str(b.splashTitle, "Activated Retail") || "Activated Retail",
     splashSub: str(b.splashSub),
     retailer: str(b.retailer, "Walmart") || "Walmart",
+    headerText: str(b.headerText).trim().slice(0, 24),
+    tagline: str(b.tagline).trim().slice(0, 40),
   };
   p.name = str(p.name, p.brand.splashTitle);
   p.client = str(p.client);
@@ -1040,7 +1042,8 @@ function rebuildPickables() {
 const zoneOfGroup = (name) => ZONE_IDS.find((id) => FIX[id].group === name) || null;
 
 /* =========================================================
-   Header lightbox: a theme's header art replaces the channel letters (from the Monkey Quest demo)
+   Header: the fixture's channel letters read "ROBLOX". A theme's header art (a lightbox, from the
+   Monkey Quest demo) replaces them; otherwise brand.headerText does, as lit 3D channel letters.
    ========================================================= */
 function buildHeaderPanel() {
   const letters = [];
@@ -1055,6 +1058,23 @@ function buildHeaderPanel() {
   head.traverse((o) => {
     if (o.isMesh && !letters.includes(o)) hb.expandByObject(o);
   });
+  // where the fixture's letters sit, in the header's own frame: the brand's letters take their place
+  head.updateWorldMatrix(true, false);
+  const lo = head.worldToLocal(lb.min.clone()),
+    hi = head.worldToLocal(lb.max.clone()),
+    hlo = head.worldToLocal(hb.min.clone()),
+    hhi = head.worldToLocal(hb.max.clone());
+  const fit = {
+    cx: (hlo.x + hhi.x) / 2,
+    cy: (lo.y + hi.y) / 2,
+    front: hi.z,
+    depth: hi.z - lo.z,
+    capH: (hi.y - lo.y) * 0.62,
+    maxW: (hhi.x - hlo.x) * 0.84,
+    maxH: Math.min((hi.y - lo.y) * 1.08, (hhi.y - hlo.y) * 0.8),
+  };
+  const matOf = (re) =>
+    letters.find((o) => re.test(o.material.name))?.material || letters[0].material;
   const faceW = (hb.max.x - hb.min.x) * 0.93,
     faceH = (lb.max.y - lb.min.y) * 1.22;
   const aspect = 2048 / 500;
@@ -1078,28 +1098,175 @@ function buildHeaderPanel() {
   plane.position.set((hb.min.x + hb.max.x) / 2, c.y, lb.min.z + 0.004);
   scene.add(plane);
   head.attach(plane);
-  refs.header = { plane, letters };
+  refs.header = {
+    head,
+    plane,
+    letters,
+    fit,
+    face: matOf(/Letter_Face/),
+    ret: matOf(/Letter_Return/),
+    brand: null, // { text, mesh } once built
+    token: 0,
+  };
   refs.graphics.push(mat);
 }
-function setHeaderArt(tex) {
+/**
+ * Header art wins; else the brand's letters (brand.headerText); else the fixture's own letters.
+ * Resolves once what shows is in place (the brand's letters load their outlines the first time).
+ */
+function setHeader(tex) {
   const H = refs.header;
-  if (!H) return;
-  const on = !!tex;
+  if (!H) return null;
+  const on = !!tex,
+    text = on ? "" : (PROJECT.brand.headerText || "").trim();
   H.plane.visible = on;
-  H.letters.forEach((o) => (o.visible = !on));
   if (on && H.plane.material.map !== tex) {
     H.plane.material.map = tex;
     H.plane.material.emissiveMap = tex;
     H.plane.material.needsUpdate = true;
   }
+  // (while the brand's letters load, the header stays dark rather than showing the wrong name)
+  H.letters.forEach((o) => (o.visible = !on && !text));
+  const token = ++H.token;
+  let done = null;
+  if (H.brand) H.brand.mesh.visible = !!text && H.brand.text === text;
+  if (text && H.brand?.text !== text)
+    done = headerFont()
+      .then((font) => {
+        if (token === H.token) buildBrandLetters(font, text);
+      })
+      .catch((e) => postError("Header letters: " + e.message));
   renderer.shadowMap.needsUpdate = true;
+  return done;
 }
-// a campaign with its own header art also gets a plain backlit bay (no platform pattern) and its own plinth line
+
+// Unbounded ExtraBold outlines (OFL; assets/unbounded-OFL.txt), fetched only when a project sets headerText
+const HEADER_FONT_URL = "/activated-retail/engine/assets/unbounded-800.json";
+let headerFontP = null;
+function headerFont() {
+  if (!headerFontP)
+    headerFontP = fetch(HEADER_FONT_URL)
+      .then((r) => {
+        if (!r.ok) throw new Error("lettering font HTTP " + r.status);
+        return r.json();
+      })
+      .catch((e) => {
+        headerFontP = null;
+        throw e;
+      });
+  return headerFontP;
+}
+/** One line of text as THREE.Shapes in font units (y up, baseline at 0), plus its ink bounds. */
+function textShapes(font, text) {
+  const shapes = [],
+    track = font.upm * 0.03,
+    box = new THREE.Box2();
+  let x = 0;
+  for (const ch of text) {
+    const gl = font.g[ch] || font.g[ch.toUpperCase()] || font.g[" "];
+    const [adv, d] = gl;
+    if (d) {
+      const sp = new THREE.ShapePath(),
+        tok = d.match(/[MLQCZ]|-?\d+(?:\.\d+)?/g) || [];
+      let i = 0,
+        cmd = "";
+      const n = () => +tok[i++];
+      while (i < tok.length) {
+        if (/[MLQCZ]/.test(tok[i])) cmd = tok[i++];
+        if (cmd === "M") sp.moveTo(x + n(), n());
+        else if (cmd === "L") sp.lineTo(x + n(), n());
+        else if (cmd === "Q") sp.quadraticCurveTo(x + n(), n(), x + n(), n());
+        else if (cmd === "C") sp.bezierCurveTo(x + n(), n(), x + n(), n(), x + n(), n());
+        else if (cmd !== "Z") break;
+      }
+      // TrueType outlines: clockwise contours are solid, counter-clockwise ones are holes
+      for (const s of sp.toShapes()) {
+        shapes.push(s);
+        for (const p of s.getPoints()) box.expandByPoint(p);
+      }
+    }
+    x += adv + track;
+  }
+  return { shapes, box };
+}
+/** ExtrudeGeometry makes two draw groups per glyph shape; one per material draws (and exports) cheaper. */
+function groupByMaterial(geo) {
+  const out = new THREE.BufferGeometry(),
+    order = [0, 1].map((mi) => geo.groups.filter((g) => (g.materialIndex || 0) === mi));
+  for (const [name, attr] of Object.entries(geo.attributes)) {
+    const k = attr.itemSize,
+      arr = new attr.array.constructor(attr.array.length);
+    let o = 0;
+    for (const gs of order)
+      for (const g of gs) {
+        arr.set(attr.array.subarray(g.start * k, (g.start + g.count) * k), o);
+        o += g.count * k;
+      }
+    out.setAttribute(name, new THREE.BufferAttribute(arr, k));
+  }
+  let start = 0;
+  order.forEach((gs, mi) => {
+    const count = gs.reduce((a, g) => a + g.count, 0);
+    out.addGroup(start, count, mi);
+    start += count;
+  });
+  geo.dispose();
+  return out;
+}
+/** Lit channel letters spelling the brand, in the fixture letters' place, depth and materials. */
+function buildBrandLetters(font, text) {
+  const H = refs.header,
+    f = H.fit;
+  if (H.brand) {
+    H.brand.mesh.removeFromParent();
+    H.brand.mesh.geometry.dispose();
+    H.brand = null;
+  }
+  const { shapes, box } = textShapes(font, text);
+  if (!shapes.length) return;
+  // one line, auto-fitted: the fixture's letter height for short names, smaller for long ones,
+  // with accents and descenders kept on the header face
+  const cap = font.cap,
+    half = Math.max(box.max.y - cap / 2, cap / 2 - box.min.y),
+    s = Math.min(f.capH / cap, f.maxW / (box.max.x - box.min.x), f.maxH / 2 / half);
+  const geo = groupByMaterial(
+    new THREE.ExtrudeGeometry(shapes, {
+      depth: f.depth / s,
+      bevelEnabled: false,
+      curveSegments: 6,
+    }),
+  );
+  const mesh = new THREE.Mesh(geo, [H.face, H.ret]);
+  mesh.name = "Header_BrandLetters";
+  mesh.scale.setScalar(s);
+  mesh.position.set(
+    f.cx - ((box.min.x + box.max.x) / 2) * s,
+    f.cy - (cap / 2) * s,
+    f.front - f.depth,
+  );
+  mesh.castShadow = false;
+  mesh.receiveShadow = true;
+  H.head.add(mesh);
+  H.brand = { text, mesh };
+  renderer.shadowMap.needsUpdate = true;
+  lastChange = performance.now();
+}
+// a campaign with its own header art also gets a plain backlit bay (no platform pattern) and its own
+// plinth line; brand.tagline replaces the fixture's line ("REAL WORLDS. MORE PLAY.") on any theme
+function plinthLine(th, custom) {
+  const tag = (PROJECT.brand.tagline || "").trim();
+  if (tag) return [[tag.toUpperCase(), "#fff"]];
+  if (custom)
+    return [
+      [(th.game || th.name).toUpperCase() + ".", "#fff"],
+      ["  TAP TO UNLOCK.", lightHex(th.led)],
+    ];
+  return null;
+}
 const plinthCache = new Map();
-function plinthTexture(th) {
-  const game = (th.game || th.name).toUpperCase(),
-    accent = lightHex(th.led),
-    key = game + "|" + accent;
+/** The plinth's lit line from [text, colour] runs, set like the fixture's print. */
+function plinthTexture(runs) {
+  const key = JSON.stringify(runs);
   if (plinthCache.has(key)) return plinthCache.get(key);
   for (const t of plinthCache.values()) retireTexture(t);
   plinthCache.clear();
@@ -1110,24 +1277,25 @@ function plinthTexture(th) {
   const draw = () => {
     g.fillStyle = "#000";
     g.fillRect(0, 0, W, H);
-    // tall, condensed caps like the fixture's own plinth print: the display face squeezed to 72% width
-    const a = game + ".",
-      b = "  TAP TO UNLOCK.",
-      squeeze = 0.72;
+    // tall, condensed caps like the fixture's own plinth print: the display face squeezed to 72% width,
+    // auto-fitted to the recess
+    const squeeze = 0.72;
     g.font = `700 100px ${KA.FONT_DISPLAY}`;
-    const wa = g.measureText(a).width,
-      wb = g.measureText(b).width;
-    const size = Math.min(H * 0.2, (W * 0.74 * 100) / ((wa + wb) * squeeze));
+    const ws = runs.map(([t]) => g.measureText(t).width),
+      w100 = ws.reduce((a, b) => a + b, 0) || 1;
+    const size = Math.min(H * 0.2, (W * 0.74 * 100) / (w100 * squeeze));
     g.font = `700 ${size}px ${KA.FONT_DISPLAY}`;
     g.textBaseline = "middle";
-    const total = (((wa + wb) * size) / 100) * squeeze;
+    const total = ((w100 * size) / 100) * squeeze;
     g.save();
     g.translate((W - total) / 2, H / 2);
     g.scale(squeeze, 1);
-    g.fillStyle = "#fff";
-    g.fillText(a, 0, 0);
-    g.fillStyle = accent;
-    g.fillText(b, (wa * size) / 100, 0);
+    let x = 0;
+    runs.forEach(([t, col], i) => {
+      g.fillStyle = col;
+      g.fillText(t, x, 0);
+      x += (ws[i] * size) / 100;
+    });
     g.restore();
   };
   draw();
@@ -1163,10 +1331,11 @@ function applyFixtureLook(th, custom) {
   }
   const pm = refs.plinth;
   if (pm) {
-    const t = custom ? plinthTexture(th) : pm.userData.map0;
+    const runs = plinthLine(th, custom),
+      t = runs ? plinthTexture(runs) : pm.userData.map0;
     if (pm.map !== t) {
       pm.map = t;
-      if (pm.userData.emap0 || custom) pm.emissiveMap = custom ? t : pm.userData.emap0;
+      if (pm.userData.emap0 || runs) pm.emissiveMap = runs ? t : pm.userData.emap0;
       pm.needsUpdate = true;
     }
   }
@@ -1606,6 +1775,7 @@ function keyArtKey(th) {
     th.led2,
     th.bay,
     th.game,
+    th.site,
     PROJECT.activation.qrUrl || "",
   ].join("~");
 }
@@ -1687,6 +1857,7 @@ function buildKeyArt(th) {
           text: lightHex("#" + th.led.toString(16).padStart(6, "0")),
         };
         const meta = KA.meta(src, th.game, pal);
+        meta.site = th.site || "";
         if (qrUrl) meta.qr = (g, x, y, S) => drawQR(g, qrUrl, x, y, S, 1);
         await new Promise((r) => setTimeout(r, 0));
         const cv = KA.composeSlots(meta, SLOTS, small);
@@ -1877,10 +2048,11 @@ function setTheme(id, { silent = false } = {}) {
     hdScreenTex = T.screen;
     screenBase = hdScreenTex?.image || null;
     loop.drew0 = false;
-    setHeaderArt(T.header);
+    const header = setHeader(T.header);
     applyFixtureLook(th, !!T.header);
     if (prev && prev !== id) releaseThemeTextures(prev, id);
     renderer.shadowMap.needsUpdate = true;
+    return header; // the theme is ready once the brand's letters are up
   });
   const c1 = new THREE.Color(th.led),
     c2 = new THREE.Color(th.led2);
@@ -5480,6 +5652,7 @@ async function boot(raw) {
   for (const id of ZONE_IDS) live.perSku[id] = SKU_SEED[id];
   resolvePreparedFor();
   applyCopy();
+  if (PROJECT.brand.headerText) headerFont().catch(() => {}); // alongside the fixture download
   const gfxReady = loadThemeTextures(currentTheme, (v) => progress("gfx", v));
   await loadDisplay();
   setupHotspots();
