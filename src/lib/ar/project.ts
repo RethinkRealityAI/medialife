@@ -276,4 +276,11 @@ export interface AssetMeta {
   /** optional thumbnail asset id (for models) */
   thumb?: string;
   tags?: string[];
+  /** bytes per stored chunk (every chunk but the last); lets the server serve byte ranges */
+  chunkSize?: number;
+  /** asset id of a phone-sized version (images wider than 1600 px) */
+  mobile?: string;
+  /** pixel size (images) */
+  width?: number;
+  height?: number;
 }
