@@ -222,7 +222,7 @@ body.build .plabel{opacity:1;}
 .steps li.on::before{background:linear-gradient(180deg,#b29bff,#9270ff);border-color:rgba(255,255,255,.3);color:#0c0718;box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 14px rgba(146,112,255,.5);}
 .steps li.done{color:var(--muted);}
 .steps li.done::before{content:"✓";background:rgba(60,239,177,.18);border-color:var(--signal);color:var(--signal);}
-.phone{position:relative;height:min(620px,calc(100vh - 56px));aspect-ratio:300/620;width:auto;max-width:86vw;border-radius:46px;background:#050409;padding:11px;box-shadow:0 0 0 2px #2b2838,0 0 0 9px #0d0c14,0 40px 80px rgba(0,0,0,.6),0 0 90px rgba(146,112,255,.25);flex:0 0 auto;}
+.phone{position:relative;height:min(620px,calc(100dvh - 56px));aspect-ratio:300/620;width:auto;max-width:86vw;border-radius:46px;background:#050409;padding:11px;box-shadow:0 0 0 2px #2b2838,0 0 0 9px #0d0c14,0 40px 80px rgba(0,0,0,.6),0 0 90px rgba(146,112,255,.25);flex:0 0 auto;}
 .screen{position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#0d0a1d;}
 .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:92px;height:26px;border-radius:20px;background:#000;z-index:5;}
 .pscreen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;transform:translateY(12px);transition:opacity .45s,transform .45s var(--ease);pointer-events:none;}
@@ -253,6 +253,76 @@ body.build .plabel{opacity:1;}
 .inv div.new{background:rgba(146,112,255,.18) center/80% no-repeat;border-color:var(--accent);box-shadow:0 0 18px rgba(146,112,255,.45);}
 .loopline{font-size:12px;color:#b3aecb;text-align:center;margin:0 0 14px;}
 .phone-close{position:absolute;top:calc(18px + env(safe-area-inset-top,0px));right:18px;z-index:10;width:44px;height:44px;}
+
+/* screen 0: a simulated tap. The phone reads the product's tag on its own: nothing for the viewer to do */
+.tapscreen{background:radial-gradient(120% 70% at 50% 38%,rgba(var(--hs-rgb),.22),transparent 60%),#0b0918;}
+.tapfx{position:relative;width:188px;height:188px;margin:auto auto 20px;display:grid;place-items:center;}
+.tf-glow{position:absolute;inset:14px;border-radius:50%;background:radial-gradient(closest-side,rgba(var(--hs-rgb),.5),transparent);filter:blur(10px);transition:background .5s;}
+.tf-wave{position:absolute;inset:26px;border-radius:50%;border:2px solid rgba(var(--hs-rgb),.9);opacity:0;}
+.tf-ring{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);}
+.tf-ring circle{fill:none;stroke-width:3;}
+.tf-track{stroke:rgba(255,255,255,.1);}
+.tf-prog{stroke:rgb(var(--hs-rgb));stroke-linecap:round;stroke-dasharray:340;stroke-dashoffset:340;filter:drop-shadow(0 0 6px rgba(var(--hs-rgb),.8));transition:stroke .4s;}
+.tf-item{position:relative;width:112px;height:112px;object-fit:contain;border-radius:18px;filter:drop-shadow(0 12px 22px rgba(0,0,0,.55));opacity:0;}
+.tf-ok{position:absolute;right:26px;bottom:26px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--signal);box-shadow:0 0 0 4px #0b0918,0 0 22px rgba(60,239,177,.7);transform:scale(0);}
+.tf-ok svg{width:22px;height:22px;fill:none;stroke:#04150e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+.tapscreen .ps-title{transition:color .3s;}
+.tf-steps{list-style:none;margin:6px auto auto;padding:0;display:flex;flex-direction:column;gap:9px;font-size:13px;color:#cfc9e4;}
+.tf-steps li{display:flex;align-items:center;gap:9px;opacity:0;transform:translateY(6px);}
+.tf-steps li::before{content:"";width:16px;height:16px;border-radius:50%;flex:0 0 auto;border:1.5px solid rgba(255,255,255,.25);}
+.tapscreen.run .tf-item{animation:tfTap .75s var(--ease) .05s both;}
+.tapscreen.run .tf-wave{animation:tfWave 1.25s ease-out .45s 2 both;}
+.tapscreen.run .tf-wave:nth-of-type(2){animation-delay:.85s;}
+.tapscreen.run .tf-wave:nth-of-type(3){animation-delay:1.25s;animation-iteration-count:1;}
+.tapscreen.run .tf-prog{animation:tfProg 1.25s cubic-bezier(.4,0,.2,1) .4s both;}
+.tapscreen.run .tf-steps li{animation:tfStep .4s var(--ease) both;}
+.tapscreen.run .tf-steps li:nth-child(1){animation-delay:.55s;}
+.tapscreen.run .tf-steps li:nth-child(2){animation-delay:1.05s;}
+.tapscreen.run .tf-steps li:nth-child(3){animation-delay:1.55s;}
+.tapscreen.run .tf-steps li::before{animation:tfTick .3s var(--ease) both;}
+.tapscreen.run .tf-steps li:nth-child(1)::before{animation-delay:.8s;}
+.tapscreen.run .tf-steps li:nth-child(2)::before{animation-delay:1.3s;}
+.tapscreen.run .tf-steps li:nth-child(3)::before{animation-delay:1.8s;}
+.tapscreen.ok .tf-ok{animation:tfOk .5s cubic-bezier(.3,1.6,.5,1) both;}
+.tapscreen.ok .tf-glow{background:radial-gradient(closest-side,rgba(60,239,177,.45),transparent);}
+.tapscreen.ok .tf-prog{stroke:var(--signal);}
+.tapscreen.ok .ps-title{color:#a9f5d6;}
+@keyframes tfTap{0%{opacity:0;transform:translateY(-70px) scale(.7) rotate(-8deg);}55%{opacity:1;transform:translateY(4px) scale(1.06) rotate(2deg);}72%{transform:translateY(0) scale(.95);}100%{opacity:1;transform:none;}}
+@keyframes tfWave{0%{opacity:.9;transform:scale(.55);}100%{opacity:0;transform:scale(1.45);}}
+@keyframes tfProg{to{stroke-dashoffset:0;}}
+@keyframes tfStep{to{opacity:1;transform:none;}}
+@keyframes tfTick{to{background:var(--signal) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%2304150e' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat;border-color:var(--signal);}}
+@keyframes tfOk{from{transform:scale(0);}to{transform:scale(1);}}
+@media (prefers-reduced-motion:reduce){ .tapscreen .tf-item,.tapscreen .tf-steps li{opacity:1;transform:none;} }
+
+/* screen 1: the experience's splash, shown whole (16:9 art in a frame over a blurred full-bleed backdrop) */
+.pscreen.splash{background:#07060f;overflow:hidden;}
+.sp-bg{position:absolute;inset:-40px;background:center/cover no-repeat;filter:blur(28px) saturate(1.35) brightness(.62);transform:scale(1.1);}
+.pscreen.splash::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(7,6,15,.45) 0%,rgba(7,6,15,0) 22%,rgba(7,6,15,.2) 48%,rgba(7,6,15,.88) 70%,rgba(7,6,15,.97) 100%);}
+.pscreen.splash .ps-pad{position:relative;z-index:1;padding:50px 16px 20px;}
+.pscreen.splash .ps-bar{margin-bottom:0;color:#d9d4ee;}
+.sp-art{margin:auto 0;border-radius:18px;overflow:hidden;aspect-ratio:16/9;background:#000;
+  box-shadow:0 22px 44px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.16),0 0 60px rgba(var(--hs-rgb),.35);}
+.sp-art img{width:100%;height:100%;object-fit:cover;display:block;}
+.pscreen.splash.on .sp-art{animation:spIn .7s var(--ease) .08s both;}
+.pscreen.splash.on .sp-art img{animation:spKen 9s ease-out .2s both;}
+@keyframes spIn{from{opacity:0;transform:translateY(14px) scale(.96);}}
+@keyframes spKen{from{transform:scale(1.08);}to{transform:scale(1);}}
+.sp-verified{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:7px 10px 7px 7px;border-radius:16px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);}
+.sp-verified img{width:38px;height:38px;border-radius:10px;object-fit:contain;background:rgba(255,255,255,.08);flex:0 0 auto;}
+.sp-verified span{min-width:0;}
+.sp-verified b{display:block;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sp-verified small{display:block;font:500 9.5px/1.4 var(--mono);color:#9ff3d2;letter-spacing:.08em;text-transform:uppercase;}
+.sp-verified i{margin-left:auto;flex:0 0 auto;width:22px;height:22px;border-radius:50%;background:var(--signal);display:grid;place-items:center;}
+.sp-verified i svg{width:13px;height:13px;fill:none;stroke:#04150e;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;}
+.sp-title{font:700 19px/1.15 var(--display);margin:0 0 6px;text-wrap:balance;}
+.sp-sub{font-size:12.5px;color:#c8c3dd;margin:0 0 14px;line-height:1.45;}
+.pscreen.splash .pbtn{display:flex;align-items:center;justify-content:center;gap:8px;}
+.p3note{display:inline-flex;align-self:center;align-items:center;gap:6px;margin:-8px 0 12px;font-size:12px;color:#7fe8ee;text-decoration:none;
+  padding:6px 11px;border-radius:999px;background:rgba(47,224,232,.1);border:1px solid rgba(47,224,232,.3);}
+.p3note[hidden]{display:none;}
 
 /* live experience inside the phone */
 .pscreen.live{background:#0b1418;}
@@ -1118,7 +1188,7 @@ body:not(.focus) .spin-hint{opacity:0;}
       <h3 id="pHead">From the shelf back into the game</h3>
       <p id="pLead">No app to install. A tap or a scan opens the experience in the browser, and the reward lands in the creator's Roblox experience.</p>
       <ol class="steps" id="pSteps">
-        <li>Tap the NFC tag or scan the QR</li>
+        <li>The phone reads the product's tag</li>
         <li>Open the property's experience</li>
         <li>Play the 12-second drop</li>
         <li>Unlock the UGC reward</li>
@@ -1133,18 +1203,28 @@ body:not(.focus) .spin-hint{opacity:0;}
     <div class="phone">
       <div class="screen">
         <div class="notch"></div>
-        <section class="pscreen" data-s="0"><div class="ps-pad">
+        <section class="pscreen tapscreen" data-s="0"><div class="ps-pad">
           <div class="ps-bar">ACTIVATED MERCHANDISE®</div>
-          <div class="nfc"><i></i><i></i><i></i><div class="tagdot">NFC</div></div>
-          <p class="ps-title">Hold your phone near the tag</p>
-          <p class="ps-sub" id="p0sub">Reading tag · verifying product…</p>
-          <div style="margin-top:auto"></div>
+          <div class="tapfx" aria-hidden="true">
+            <div class="tf-glow"></div><i class="tf-wave"></i><i class="tf-wave"></i><i class="tf-wave"></i>
+            <svg class="tf-ring" viewBox="0 0 120 120"><circle class="tf-track" cx="60" cy="60" r="54"/><circle class="tf-prog" cx="60" cy="60" r="54"/></svg>
+            <img class="tf-item" id="p0img" alt="">
+            <div class="tf-ok"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          </div>
+          <p class="ps-title" id="p0title">Reading your product</p>
+          <ul class="tf-steps"><li>Tag detected</li><li>Authentic product verified</li><li id="p0last">Unlocking your drop</li></ul>
         </div></section>
-        <section class="pscreen" data-s="1"><div class="ps-pad">
-          <div class="ps-bar" id="p1bar">SKYRIFT.PLAY</div>
-          <div class="ps-hero" id="p1hero"><div class="cap"><b id="p1title">You own a piece of the game</b><span id="p1sub">Your cap is verified. Play the drop to claim what's inside.</span></div></div>
-          <button class="pbtn" id="p1go">Play the drop</button>
-        </div></section>
+        <section class="pscreen splash" data-s="1">
+          <div class="sp-bg" id="p1bg"></div>
+          <div class="ps-pad">
+            <div class="ps-bar" id="p1bar">SKYRIFT.PLAY</div>
+            <div class="sp-art"><img id="p1art" alt=""></div>
+            <div class="sp-verified"><img id="p1thumb" alt=""><span><b id="p1prod">Activated Cap</b><small>Verified · activated</small></span><i><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i></div>
+            <p class="sp-title" id="p1title">You own a piece of the game</p>
+            <p class="sp-sub" id="p1sub">Your cap is verified. Play the drop to claim what's inside.</p>
+            <button class="pbtn" id="p1go">Play the drop</button>
+          </div>
+        </section>
         <section class="pscreen" data-s="2">
           <canvas id="game"></canvas>
           <div class="hud"><span id="gScore">0 CUBES</span><span id="gTime">12.0s</span></div>
@@ -1166,6 +1246,7 @@ body:not(.focus) .spin-hint{opacity:0;}
           <img class="reward-img" id="p3img" alt="Unlocked in-game item">
           <p class="ps-title" id="p3title">Holo Cap</p>
           <p class="ps-sub" id="p3sub">Limited UGC accessory · 1 per product</p>
+          <a class="p3note" id="p3note" href="#" target="_blank" rel="noopener" hidden></a>
           <div class="code" id="p3code">AR01-7Q4X-R2</div>
           <button class="pbtn alt" id="p3go">Redeem in Roblox</button>
         </div></section>
@@ -1248,7 +1329,7 @@ const THEMES = {
   skyrift:  { name:'Skyrift Racers', led:0x16d4ff, led2:0xff2fb4, bay:0x3fb6ff, spill:0x1fb9ff, towerL:'sky_towerL', towerR:'sky_towerR', screen:'sky_screen', totem:'rbx_totem', wall:'rbx_wall',
               site:'SKYRIFT.PLAY', game:'Skyrift Racers', fictional:true },
   evade:    { name:'EVADE', led:0x2fe0e8, led2:0xf5b82e, bay:0x27b4c6, spill:0x22c6d6, towerL:'ev_towerL', towerR:'ev_towerR', screen:'ev_screen', totem:'ev_totem', wall:'ev_wall',
-              site:'EVADE.MEDIALIFE.AI', game:'EVADE', fictional:false, live:true, url:'https://evade.medialife.ai', hero:'assets/ev_intro.webp', play:'Play Cola Run' },
+              site:'EVADE.MEDIALIFE.AI', game:'EVADE', fictional:false, live:true, url:'https://evade.medialife.ai', hero:'assets/ev_intro.webp', play:'Launch Cola Run ↗' },
 };
 
 const PRODUCTS = {
@@ -1935,7 +2016,7 @@ function relabelHotspots(){
   for(const h of hotspots){
     let label=null;
     if(PRODUCTS[h.id]) label=P(h.id).label;
-    if(h.id==='qr') label = currentTheme==='evade' ? 'Scan: play Cola Run' : currentTheme==='custom' ? 'Tap to unlock' : 'Scan to unlock';
+    if(h.id==='qr') label = currentTheme==='evade' ? 'Activate: play Cola Run' : 'Try the activation';
     if(h.id==='cat') h.hidden = currentTheme!=='evade';
     if(label){ h.el.setAttribute('aria-label',label); h.el.querySelector('.tag').textContent=label; }
   }
@@ -1946,7 +2027,7 @@ function setupHotspots(){
     const g=refs.merch[id]; if(!g) continue;
     addHotspot(id, p.label, ()=>{ if(!g.userData.anchor||explodeT>0) { g.userData.anchor=worldCenter(g); } return g.userData.anchor; }, 'merch', ()=>focusProduct(id));
   }
-  addHotspot('qr','Scan to unlock',()=>new THREE.Vector3(1.54,1.47,0.43).add(refs.parts.PART_TowerR ? refs.parts.PART_TowerR.position.clone().sub(refs.parts.PART_TowerR.userData.home) : new THREE.Vector3()),'qr',()=>openPhone(currentTheme==='evade'?'keychain':'cap'));
+  addHotspot('qr','Try the activation',()=>new THREE.Vector3(1.54,1.47,0.43).add(refs.parts.PART_TowerR ? refs.parts.PART_TowerR.position.clone().sub(refs.parts.PART_TowerR.userData.home) : new THREE.Vector3()),'qr',()=>openPhone(currentTheme==='evade'?'keychain':'cap'));
   const catPos=new THREE.Vector3();
   addHotspot('cat','Cat Bobo · play Cola Run',()=> evade.cat ? catPos.copy(evade.cat.root.position).setY(0.58) : catPos.set(0,-50,0),'qr',()=>catTap());
   relabelHotspots();
@@ -2385,27 +2466,37 @@ function openPhone(id){
   bump('session'); bump('acts'); live.perSku[phoneProduct]++;
   $('#modal').classList.remove('open');
   $('#phoneWrap').classList.add('open'); syncControls(); phoneShow(0);
-  $('#p0sub').textContent='Reading tag · verifying '+p.label.toLowerCase()+'…';
+  // screen 0: the simulated tap plays by itself, then hands over to the experience
+  const short=p.label.replace(/^(EVADE |Activated |Monkey Quest |Mini-Might )/,'').toLowerCase();
+  const s0=document.querySelector('.tapscreen'); s0.classList.remove('run','ok'); void s0.offsetWidth; s0.classList.add('run');
+  $('#p0img').src = p.img || snapshot(phoneProduct) || ''; $('#p0title').textContent='Reading your '+short;
+  $('#p0last').textContent = th.live ? 'Opening '+(th.play||'the experience').replace(/^(Launch |Play )/,'').replace(/\s*↗$/,'') : 'Unlocking your drop';
+  (openPhone.tt||[]).forEach(clearTimeout);
+  openPhone.tt=[ setTimeout(()=>{ try{ navigator.vibrate?.(14); }catch(e){} blip(); }, 420),
+    setTimeout(()=>{ if(phoneStep!==0) return; s0.classList.add('ok'); $('#p0title').textContent='Verified'; try{ navigator.vibrate?.([10,50,18]); }catch(e){} tone(988,0.16,'sine',0.035); tone(1319,0.24,'sine',0.03,0.07); }, 1750) ];
+  $('#p3note').hidden=true;
   $('#p1bar').textContent=th.site; $('#p1title').textContent='You own a piece of '+th.game;
-  $('#p1sub').textContent = th.live ? 'Your '+p.label.replace(/^(EVADE |Activated )/,'').toLowerCase()+' is verified. Play Cola Run to claim what\'s inside.' : 'Your '+p.label.replace('Activated ','').toLowerCase()+' is verified. Play the drop to claim what\'s inside.';
+  $('#p1sub').textContent = th.live ? 'Your '+p.label.replace(/^(EVADE |Activated )/,'').toLowerCase()+' is verified. Cola Run opens in a new tab, and your reward is waiting here when you\'re back.' : 'Your '+p.label.replace('Activated ','').toLowerCase()+' is verified. Play the drop to claim what\'s inside.';
   $('#p1go').textContent = th.play || 'Play the drop';
   // the featured property's hero-screen art (HD file, or the composed canvas for a custom IP)
   const scr = texCache[th.screen+'|screen']?.image;
   const heroSrc = th.hero || (scr ? (scr.currentSrc || scr.src || (scr.toDataURL ? scr.toDataURL('image/jpeg',0.84) : '')) : '') || 'assets/game_bg.webp';
-  $('#p1hero').style.backgroundImage=`url(${heroSrc})`;
+  $('#p1bg').style.backgroundImage=`url(${heroSrc})`; $('#p1art').src=heroSrc; $('#p1art').alt=th.game+' key art';
+  $('#p1thumb').src = p.img || snapshot(phoneProduct) || ''; $('#p1prod').textContent=p.label;
   const img = p.img || snapshot(phoneProduct);
   $('#p3img').src = img; $('#p3title').textContent=p.unlock; $('#p3sub').textContent=p.unlockSub; $('#p3code').textContent=REWARD_CODE();
   $('#p4new').style.backgroundImage=`url(${img})`; $('#p4sub').textContent=p.unlock+' added in '+th.game+'.';
   $('#pHead').textContent = th.live ? 'Try the real EVADE activation' : 'From the shelf back into the game';
-  $('#pLead').textContent = th.live ? 'This is the live pilot experience. Scan the code with your phone to play Cola Run for real, or play it inside the phone here.' : 'No app to install. A tap or a scan opens the experience in the browser, and the reward lands in the creator\'s Roblox experience.';
-  clearTimeout(openPhone.t); openPhone.t=setTimeout(()=>{ if(phoneStep===0) phoneShow(1); }, 2300);
+  $('#pLead').textContent = th.live ? 'This is the live pilot experience. Cola Run opens in a new tab, and the reward waits here when you come back.' : 'No app to install. A tap or a scan opens the experience in the browser, and the reward lands in the creator\'s Roblox experience.';
+  clearTimeout(openPhone.t); openPhone.t=setTimeout(()=>{ if(phoneStep===0) phoneShow(1); }, 2500);
 }
 function closePhone(){
-  $('#phoneWrap').classList.remove('open'); clearTimeout(openPhone.t);
+  $('#phoneWrap').classList.remove('open'); clearTimeout(openPhone.t); (openPhone.tt||[]).forEach(clearTimeout);
   if(game){ game.stop(); game=null; } stopLive();
   syncControls();
 }
 $('#pClose').addEventListener('click',closePhone);
+document.querySelector('.tapscreen').addEventListener('click',()=>{ if(phoneStep===0){ clearTimeout(openPhone.t); phoneShow(1); } });
 $('#phoneWrap').addEventListener('click',(e)=>{ if(e.target.id==='phoneWrap') closePhone(); });
 $('#p1go').addEventListener('click',()=>{ if(THEMES[currentTheme].live) startLive(); else { phoneShow(2); startGame(); } });
 $('#p3go').addEventListener('click',()=>{ phoneShow(4); bump('returns'); chime(); });
@@ -2414,18 +2505,17 @@ document.querySelector('[data-action="activate"]').addEventListener('click',()=>
 $('#sActivate').addEventListener('click',()=>openPhone(focus?focus.id:'cap'));
 $('#sClose').addEventListener('click',()=>unfocus());
 
-// ---- live experience (EVADE): the real Cola Run page inside the phone.
-// Where the host blocks third-party frames (like this preview), fall back to a scannable QR.
+// ---- live experience (EVADE): the real game opens in its own tab (it can't run inside a frame),
+// and the phone moves straight on to the reward, which is waiting when they come back.
+// If the browser blocks the new tab, the phone shows a scannable QR instead.
 let liveTimer=null;
 function startLive(){
-  const th=THEMES[currentTheme]; phoneShow(5);
-  const host=$('#liveFrame'); host.innerHTML=''; $('#liveFallback').hidden=true; host.hidden=false;
-  const f=document.createElement('iframe'); f.src=th.url; f.title='Cola Run: the live EVADE activation';
-  f.allow='camera; microphone; gyroscope; accelerometer; magnetometer; xr-spatial-tracking; fullscreen; autoplay';
-  f.setAttribute('allowfullscreen',''); f.loading='eager'; let loaded=false;
-  f.addEventListener('load',()=>{ loaded=true; });
-  host.appendChild(f);
-  clearTimeout(liveTimer); liveTimer=setTimeout(()=>{ if(!loaded) liveFallback(); }, 9000);
+  const th=THEMES[currentTheme]; let w=null;
+  try{ w=window.open(th.url,'_blank'); if(w) w.opener=null; }catch(e){}
+  if(!w){ phoneShow(5); liveFallback(); return; }
+  const name=(th.play||th.game).replace(/^(Launch |Play )/,'').replace(/\s*↗$/,'');
+  const n=$('#p3note'); n.href=th.url; n.textContent=name+' is open in a new tab ↗'; n.hidden=false;
+  phoneShow(3); chime();
 }
 function liveFallback(){ const host=$('#liveFrame'); host.innerHTML=''; host.hidden=true; $('#liveFallback').hidden=false; }
 function stopLive(){ clearTimeout(liveTimer); const host=$('#liveFrame'); if(host) host.innerHTML=''; }
@@ -2440,12 +2530,12 @@ function startGame(){
   const c=$('#game'), r=c.getBoundingClientRect(); const dpr=Math.min(2,devicePixelRatio); c.width=r.width*dpr; c.height=r.height*dpr; const g=c.getContext('2d'); g.scale(dpr,dpr);
   const W=r.width, H=r.height; const cubes=[]; let score=0, t0=performance.now(), last=t0, running=true, spawn=0; const burst=[];
   const col=[ '#'+new THREE.Color(THEMES[currentTheme].led).getHexString(), '#3cefb1', '#ffffff', '#'+new THREE.Color(THEMES[currentTheme].led2).getHexString() ];
-  const tap=(e)=>{ const b=c.getBoundingClientRect(); const x=e.clientX-b.left, y=e.clientY-b.top; for(let i=cubes.length-1;i>=0;i--){ const q=cubes[i]; if(Math.abs(x-q.x)<q.s*0.9&&Math.abs(y-q.y)<q.s*0.9){ cubes.splice(i,1); score++; for(let j=0;j<10;j++) burst.push({x:q.x,y:q.y,vx:(Math.random()-.5)*260,vy:(Math.random()-.5)*260,l:1,c:q.c}); blip(); break; } } };
+  const tap=(e)=>{ const b=c.getBoundingClientRect(); const x=e.clientX-b.left, y=e.clientY-b.top; for(let i=cubes.length-1;i>=0;i--){ const q=cubes[i]; if(Math.abs(x-q.x)<q.s*1.15&&Math.abs(y-q.y)<q.s*1.15){ cubes.splice(i,1); score++; for(let j=0;j<10;j++) burst.push({x:q.x,y:q.y,vx:(Math.random()-.5)*260,vy:(Math.random()-.5)*260,l:1,c:q.c}); blip(); break; } } };
   c.addEventListener('pointerdown',tap);
   function frame(now){
     if(!running) return; const dt=Math.min(0.05,(now-last)/1000); last=now; const el=(now-t0)/1000, left=Math.max(0,12-el);
     spawn-=dt; if(spawn<=0){ spawn=0.42-Math.min(0.2,el*0.015); cubes.push({x:30+Math.random()*(W-60),y:-20,s:22+Math.random()*14,v:90+Math.random()*80+el*6,r:Math.random()*6,c:col[Math.random()*col.length|0]}); }
-    if(bgImg.complete) g.drawImage(bgImg,0,0,W,H); else { g.fillStyle='#0d0a1d'; g.fillRect(0,0,W,H); }
+    if(bgImg.complete && bgImg.naturalWidth){ const k=Math.max(W/bgImg.naturalWidth,H/bgImg.naturalHeight), iw=bgImg.naturalWidth*k, ih=bgImg.naturalHeight*k; g.drawImage(bgImg,(W-iw)/2,(H-ih)/2,iw,ih); } else { g.fillStyle='#0d0a1d'; g.fillRect(0,0,W,H); }
     g.fillStyle='rgba(8,6,20,.25)'; g.fillRect(0,0,W,H);
     for(let i=cubes.length-1;i>=0;i--){ const q=cubes[i]; q.y+=q.v*dt; q.r+=dt*2; if(q.y>H+30){ cubes.splice(i,1); continue; }
       g.save(); g.translate(q.x,q.y); g.rotate(q.r); g.shadowColor=q.c; g.shadowBlur=18; g.fillStyle=q.c; g.fillRect(-q.s/2,-q.s/2,q.s,q.s); g.fillStyle='rgba(11,10,18,.85)'; g.fillRect(-q.s/5,-q.s/5,q.s/2.5,q.s/2.5); g.restore(); }
@@ -2649,7 +2739,7 @@ document.body.classList.add('intro');
 if(!window.__NORENDER) renderer.setAnimationLoop(loop); else { setInterval(()=>{ runTweens(performance.now()); },50); }
 
 // debug / automation hooks
-window.__app={ renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
+window.__app={ renderer, scene, composer, bloom, store, lights, get display(){return display;}, drawScreen, applyGlow, loop, focusProduct, unfocus, setTheme, setLight, openPhone, closePhone, phoneShow, startLive, startGame, setExplode, openDash, startTour, flyTo, camera, controls, refs, THREE, exitModes, evade, catTap, resetPointers, get mode(){return mode;}, set mode(v){mode=v;}, get focus(){return focus;} };
 
 /* =========================================================
    Shop the shelf: a mock cart + checkout that shows the display
