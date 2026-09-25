@@ -2000,7 +2000,10 @@ const zoneLook = (id) => {
   );
 };
 
-async function acquireAsset(url, user) {
+// Every build of a zone holds its own handle on the model, so rebuilding a zone with the same
+// model (a new yaw or scale) never frees the copy the new variants use.
+async function acquireAsset(url) {
+  const user = Symbol(url);
   let e = assetCache.get(url);
   if (!e) {
     e = {
@@ -2021,21 +2024,24 @@ async function acquireAsset(url, user) {
     });
   }
   e.users.add(user);
+  let gltf;
   try {
-    return await e.promise;
+    gltf = await e.promise;
   } catch (err) {
     e.users.delete(user);
     throw err;
   }
-}
-function releaseAsset(url, user) {
-  const e = assetCache.get(url);
-  if (!e) return;
-  e.users.delete(user);
-  if (!e.users.size) {
-    assetCache.delete(url);
-    e.promise.then((g) => disposeTree(g.scene)).catch(() => {});
-  }
+  let released = false;
+  const release = () => {
+    if (released) return;
+    released = true;
+    e.users.delete(user);
+    if (!e.users.size) {
+      if (assetCache.get(url) === e) assetCache.delete(url);
+      disposeTree(gltf.scene);
+    }
+  };
+  return { gltf, release };
 }
 function cloneAsset(gltf, m, id) {
   const inner = SkeletonUtils.clone(gltf.scene);
@@ -2369,10 +2375,9 @@ async function buildZone(id) {
     extra = 1,
     dispose = () => {};
   if (m.source === "asset") {
-    const url = m.asset,
-      gltf = await acquireAsset(url, id);
+    const { gltf, release } = await acquireAsset(m.asset);
     make = () => cloneAsset(gltf, m, id);
-    dispose = () => releaseAsset(url, id);
+    dispose = release;
   } else if (m.source === "image") {
     const img = await loadImage(imgUrl(m.image));
     const cut = cutoutCanvas(img, id === "keychain");
@@ -4462,7 +4467,26 @@ document.querySelectorAll("[data-cta]").forEach((b) =>
    AR: native viewers with the files made at publish time (ar-kit/ar-launch.js)
    ========================================================= */
 const arFiles = () => !!(PROJECT?.ar?.glb || PROJECT?.ar?.usdz);
+// what the desktop QR opens on the phone: the shared AR hand-off page for a published endcap,
+// else this page with ?ar=1 (it opens straight to a "View in your space" button)
 function arHandoffUrl() {
+  if (MODE === "published") {
+    const th = PROJECT.themes.find((t) => t.id === PROJECT.defaultTheme) || PROJECT.themes[0];
+    const poster =
+      th.graphics.screen?.src || th.graphics.keyArt?.src || PROJECT.activation.splash?.src;
+    const code = (qs.get("c") || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, "")
+      .slice(0, 40);
+    const q = new URLSearchParams();
+    if (PROJECT.ar.glb) q.set("glb", PROJECT.ar.glb);
+    if (PROJECT.ar.usdz) q.set("usdz", PROJECT.ar.usdz);
+    if (poster) q.set("p", poster);
+    q.set("t", PROJECT.brand.splashTitle || PROJECT.brand.lockup || PROJECT.name);
+    q.set("d", demoId());
+    if (code) q.set("c", code);
+    return location.origin + "/ar/?" + q.toString();
+  }
   const u = new URL(location.href);
   u.searchParams.set("ar", "1");
   u.hash = "";
@@ -4699,9 +4723,24 @@ let lastNow = performance.now(),
   shadowTick = 0;
 // Frame budget: full rate while anything moves or the user is touching the scene; 30 fps when the
 // scene is only breathing; 10 fps behind full-screen overlays. Cooler phones stay responsive.
+// In the builder's preview the page shares the builder's main thread, so an idle scene drops to a
+// few frames a second (2 fps after 15 s) and only runs at full rate while something moves.
+let lastChange = 0;
 function frameCap(now) {
+  const moving =
+    tweens.length ||
+    mode === "walk" ||
+    now - lastInput < 1600 ||
+    explodeTw ||
+    now - lastChange < 1200;
+  if (IN_PREVIEW) {
+    if (moving || focus?.dragging) return 0;
+    if (document.querySelector("#phoneWrap.open, #modal.open")) return 4;
+    if (focus) return 15;
+    return now - Math.max(lastInput, lastChange) > 15000 ? 2 : 6;
+  }
   if (document.querySelector("#phoneWrap.open, #modal.open")) return 10;
-  if (tweens.length || focus || mode === "walk" || now - lastInput < 1600 || explodeTw) return 0;
+  if (moving || focus) return 0;
   return 30;
 }
 function loop() {
@@ -5300,15 +5339,19 @@ function P(id) {
     zoom: FIX[id].zoom,
   };
 }
-let preparedFor = "";
+// "Prepared for": the client link's name wins, then ?to=, then the project's client
+let linkClient = "";
+const preparedFor = () =>
+  linkClient || (qs.get("to") || "").trim().slice(0, 80) || PROJECT.client || "";
 function applyPreparedFor() {
+  const who = preparedFor();
   const s = $("#bSub");
-  s.textContent = preparedFor ? "Prepared for " + preparedFor : PROJECT.brand.sub;
+  s.textContent = who ? "Prepared for " + who : PROJECT.brand.sub;
   s.hidden = !s.textContent;
   const f = $("#ldFor");
   if (f) {
-    f.textContent = preparedFor ? "Prepared for " + preparedFor : "";
-    f.hidden = !preparedFor;
+    f.textContent = who ? "Prepared for " + who : "";
+    f.hidden = !who;
   }
 }
 // the loader leaves the DOM once they're in: copy for it is set only while it's there
@@ -5317,15 +5360,14 @@ const setText = (sel, v) => {
   if (el) el.textContent = v;
   return el;
 };
-// "Prepared for": the client link's name wins, then ?to=, then the project's client
+// a client link (?c=, published endcaps) resolves in the background
 function resolvePreparedFor() {
-  preparedFor = (qs.get("to") || "").trim().slice(0, 80) || PROJECT.client || "";
   applyPreparedFor();
   if (MODE === "published")
     window.ARTrack?.link
       ?.then?.((l) => {
         if (l?.name) {
-          preparedFor = String(l.name).slice(0, 80);
+          linkClient = String(l.name).slice(0, 80);
           applyPreparedFor();
         }
       })
@@ -5368,7 +5410,8 @@ function setLoaderArt() {
 function applyCopy() {
   const p = PROJECT,
     b = p.brand;
-  if (MODE !== "published") document.title = `${p.name} · Activated Retail`;
+  // same rule as the /x/<slug> route's <title>: the brand lockup, never the internal project name
+  if (MODE !== "published") document.title = `${b.lockup || p.name} · Activated Retail`;
   $("#bLockup").innerHTML = lockupHTML(b.lockup || "MEDIALIFE®");
   const chip = $("#ldChip");
   if (chip) chip.innerHTML = lockupHTML(b.lockup || "MEDIALIFE®");
@@ -5384,6 +5427,8 @@ function applyCopy() {
   });
   document.querySelector('[data-mode="tour"]').hidden = !p.tour.length;
   document.querySelector('[data-action="activate"]').hidden = p.activation.type === "none";
+  // a published endcap without AR files has nothing to open; previews and templates explain when they come
+  document.querySelector('[data-action="ar"]').hidden = MODE === "published" && !arFiles();
   $("#tPresent").hidden = !window.ARPresent?.start || IN_PREVIEW;
   buildThemeButtons();
   setLoaderArt();
@@ -5494,6 +5539,9 @@ async function apply(raw) {
   if ($("#dash").classList.contains("open")) renderDash();
   renderCart();
   gcTextures();
+  // show the change at full frame rate for a moment (the preview idles at a few frames a second)
+  lastChange = performance.now();
+  renderer.shadowMap.needsUpdate = true;
 }
 // every project change goes through one queue: a newer one replaces any still waiting
 let applying = null,
@@ -5544,6 +5592,7 @@ function unavailable(title, body) {
 /* ---------- builder commands ---------- */
 async function gotoCmd(o = {}) {
   await sceneReady;
+  lastChange = performance.now();
   if (o.theme && THEMES[o.theme] && o.theme !== currentTheme) setTheme(o.theme, { silent: true });
   if (typeof o.zone === "string" && FIX[o.zone]) {
     if (!PROJECT.zones[o.zone].enabled) return;
@@ -5612,6 +5661,8 @@ async function exportAR(themeId) {
   }
   m.emissiveIntensity = GLOW.screen;
   m.color.setScalar(GLOW.diffuse);
+  // the exporter keeps textures, not shaders: recoloured fabric goes out as recoloured pixels
+  const unbake = bakeTints();
   try {
     let mod;
     try {
@@ -5624,6 +5675,7 @@ async function exportAR(themeId) {
       onProgress: (msg) => console.info("[ar-export]", msg),
     });
   } finally {
+    unbake();
     m.map = saved.map;
     m.emissiveMap = saved.em;
     m.emissiveIntensity = saved.ei;
@@ -5631,6 +5683,65 @@ async function exportAR(themeId) {
     exporting = false;
     loop.drew0 = false;
   }
+}
+// The fabric tint (TINT_GLSL) applied to a copy of each tinted texture on the CPU; returns an undo.
+function bakeTints() {
+  const undo = [];
+  const lin = (v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const srgb = (v) => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+  const smooth = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+  for (const [id, u] of Object.entries(refs.tint || {})) {
+    const mat = refs.hero[id]?.material;
+    if (!u.uTintOn.value || !mat?.map?.image) continue;
+    try {
+      const img = mat.map.image,
+        W = img.width,
+        H = img.height;
+      const c = KA.makeCanvas(W, H),
+        g = c.getContext("2d", { willReadFrequently: true });
+      g.drawImage(img, 0, 0);
+      const px = g.getImageData(0, 0, W, H),
+        d = px.data;
+      const tr = u.uTint.value.r,
+        tg = u.uTint.value.g,
+        tb = u.uTint.value.b,
+        ref = Math.max(u.uRef.value, 1e-4);
+      for (let i = 0; i < d.length; i += 4) {
+        const r = lin(d[i] / 255),
+          gg = lin(d[i + 1] / 255),
+          b = lin(d[i + 2] / 255);
+        const k = (0.2126 * r + 0.7152 * gg + 0.0722 * b) / ref;
+        const f = 1 - smooth(0.9, 1.7, Math.abs(Math.log2(Math.max(k, 1e-4))));
+        if (f <= 0) continue;
+        const s = Math.min(1.7, Math.max(0.25, Math.pow(k, 0.85)));
+        d[i] = Math.round(255 * srgb(Math.min(1, r + (tr * s - r) * f)));
+        d[i + 1] = Math.round(255 * srgb(Math.min(1, gg + (tg * s - gg) * f)));
+        d[i + 2] = Math.round(255 * srgb(Math.min(1, b + (tb * s - b) * f)));
+      }
+      g.putImageData(px, 0, 0);
+      // a new texture (a clone would share the original's image source)
+      const old = mat.map,
+        t = new THREE.Texture(c);
+      for (const k of ["flipY", "colorSpace", "wrapS", "wrapT", "channel", "anisotropy"])
+        t[k] = old[k];
+      t.repeat.copy(old.repeat);
+      t.offset.copy(old.offset);
+      t.needsUpdate = true;
+      mat.map = t;
+      u.uTintOn.value = 0;
+      undo.push(() => {
+        mat.map = old;
+        u.uTintOn.value = 1;
+        t.dispose();
+      });
+    } catch (e) {
+      console.warn("[engine] tint bake", id, e);
+    }
+  }
+  return () => undo.forEach((f) => f());
 }
 
 /* =========================================================
@@ -5756,6 +5867,8 @@ else if (MODE === "template") {
     else if (d.type === "ar:thumb")
       thumb(d.width)
         .then((dataUrl) => post({ type: "ar:thumb:done", id: d.id, dataUrl }))
-        .catch((err) => postError("Thumbnail: " + err.message));
+        .catch((err) =>
+          post({ type: "ar:thumb:error", id: d.id, message: err?.message || String(err) }),
+        );
   });
 } else unavailable();

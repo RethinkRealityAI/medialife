@@ -2075,7 +2075,8 @@
           display: inline;
         }
       }
-      @media (max-width: 920px) and (min-width: 761px) {
+      /* icon-only below 1060 px (the builder's preview frame is ~950 px wide): the dock must never clip */
+      @media (max-width: 1060px) and (min-width: 761px) {
         .dock button:not(.primary) span {
           display: none;
         }
