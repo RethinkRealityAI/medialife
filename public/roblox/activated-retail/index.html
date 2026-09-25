@@ -1010,9 +1010,62 @@ body:not(.focus) .spin-hint{opacity:0;}
   .ipc-actions .ipc-btn{flex:1;justify-content:center;}
 }
 
+
+/* ---------- password gate (a courtesy lock for unlisted client previews, not security) ---------- */
+#gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;
+  background:radial-gradient(ellipse at 50% 40%,rgba(40,28,90,.55),rgba(7,6,18,.96) 70%),#070612;transition:opacity .45s var(--ease);}
+#gate.out{opacity:0;pointer-events:none;}
+#gate.out *{pointer-events:none!important;}
+.gate-card{width:min(380px,100%);box-sizing:border-box;padding:26px 24px 22px;border-radius:24px;text-align:center;color:var(--text);
+  background:linear-gradient(165deg,rgba(255,255,255,.1),rgba(255,255,255,.03) 45%),rgba(16,13,32,.92);
+  border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 24px 60px rgba(0,0,0,.5);}
+.gate-card .ld-chip{margin-bottom:14px;}
+.gate-card h1{font:700 21px/1.2 var(--display);margin:0 0 6px;}
+.gate-card p{margin:0 0 18px;color:var(--muted);font-size:14px;}
+.gate-field{display:flex;gap:8px;}
+.gate-field input{flex:1;min-width:0;box-sizing:border-box;font:600 16px/1.2 var(--body);color:#fff;padding:13px 14px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);outline:none;transition:border-color .2s,box-shadow .2s;}
+.gate-field input:focus{border-color:#a58bff;box-shadow:0 0 0 3px rgba(165,139,255,.3);}
+.gate-field .btn{padding:0 18px;min-height:48px;}
+.gate-msg{min-height:1.3em;margin:10px 0 0;font-size:13px;color:#ff9fb0;}
+#gate.bad .gate-card{animation:gateShake .4s;}
+@keyframes gateShake{20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
 </style>
 </head>
 <body>
+<div id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <form class="gate-card" id="gateForm" autocomplete="off">
+    <span class="ld-chip">MEDIALIFE<sup>®</sup> · PRIVATE PREVIEW</span>
+    <h1 id="gateTitle">Enter the password</h1>
+    <p>This preview is shared privately.</p>
+    <div class="gate-field"><input id="gatePw" type="password" aria-label="Password" placeholder="Password" autocomplete="current-password" enterkeyhint="go"><button class="btn go" type="submit">Enter</button></div>
+    <p class="gate-msg" id="gateMsg" role="alert"></p>
+  </form>
+</div>
+<script>
+/* Password gate: a courtesy lock for an unlisted client preview, NOT security (the page and its files stay
+   public). The password is checked against a small FNV-1a hash so it isn't readable in the source.
+   Each demo has its own simple password (Roblox: "robloxamp", Monkey Quest: "toeimq"); case and spaces are ignored.
+   To change it, hash the new password in lowercase without spaces:
+   node -e "let h=0x811c9dc5;for(const c of 'newpassword'){h^=c.charCodeAt(0);h=Math.imul(h,0x01000193)>>>0}console.log(h.toString(16))"
+   and paste the result into GATE_HASH. A device that has unlocked this page once stays unlocked. */
+(function(){
+  var GATE_HASH='3c8fd957', KEY='ml-preview-unlocked-'+GATE_HASH;
+  var el=document.getElementById('gate'), waiting=[];
+  function fnv(s){ var h=0x811c9dc5; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; } return h.toString(16); }
+  function remembered(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
+  window.__gate={ open:false, then:function(cb){ if(this.open) cb(); else waiting.push(cb); } };
+  function unlock(){ window.__gate.open=true; el.classList.add('out'); setTimeout(function(){ el.remove(); },500); waiting.splice(0).forEach(function(cb){ try{ cb(); }catch(e){} }); }
+  if(remembered()){ el.remove(); window.__gate.open=true; return; }
+  var pw=document.getElementById('gatePw'), msg=document.getElementById('gateMsg');
+  setTimeout(function(){ try{ pw.focus({preventScroll:true}); }catch(e){} },80);
+  document.getElementById('gateForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(fnv(pw.value.toLowerCase().replace(/\s+/g,''))===GATE_HASH){ try{ localStorage.setItem(KEY,'1'); }catch(err){} unlock(); }
+    else { msg.textContent='That password isn\'t right. Try again.'; el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); pw.select(); }
+  });
+})();
+</script>
 <div id="stage" aria-label="Interactive 3D view of the activated retail display"></div>
 <div id="vignette"></div>
 <div id="hotspots"></div>
@@ -2763,8 +2816,8 @@ function splashReady(onEnter){
   const L=$('#loader'); if(!L) return onEnter();
   L.classList.add('ready'); const btn=$('#ldEnter'); let done=false;
   const go=()=>{ if(done) return; done=true; L.classList.add('gone'); onEnter(); setTimeout(()=>L.remove(),1300); };
-  btn.addEventListener('click',()=>{ ac(); go(); }); btn.focus({preventScroll:true});
-  if(!window.__HOLDSPLASH) setTimeout(go, window.__FASTENTER ? 50 : 6500);
+  btn.addEventListener('click',()=>{ ac(); go(); }); if(window.__gate?.open!==false) btn.focus({preventScroll:true});
+  if(!window.__HOLDSPLASH) (window.__gate||{then:(cb)=>cb()}).then(()=>setTimeout(go, window.__FASTENTER ? 50 : 6500));
 }
 
 /* =========================================================
