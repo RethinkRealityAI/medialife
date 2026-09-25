@@ -936,6 +936,7 @@ async function loadDisplay() {
   }
   refs.ledPurple = refs.leds.filter((m) => /Purple|Return/.test(m.name));
   refs.ledBlue = refs.leds.filter((m) => /Blue/.test(m.name));
+  prepLedWipe([...refs.ledPurple, ...refs.ledBlue]);
   // screens
   refs.screens.center = refs.nodes["SCREEN_Center"];
   refs.screens.totem = refs.nodes["SCREEN_Totem"];
@@ -2016,7 +2017,16 @@ const siteLabel = (th) =>
   })();
 
 let themeReady = Promise.resolve();
-function setTheme(id, { silent = false } = {}) {
+function setBay(th) {
+  refs.bayBack.material.emissive = new THREE.Color(th.bay);
+  refs.bayBack.material.color = new THREE.Color(th.bay).multiplyScalar(0.5);
+  refs.bayBack.material.emissiveIntensity = GLOW.bay;
+}
+/**
+ * Switch the featured theme. With `stage` (the tour's reveal), the new graphics are handed over in
+ * parts (towerL, center, towerR, totem) for the reveal to put up as its light sweep passes each.
+ */
+function setTheme(id, { silent = false, stage = null } = {}) {
   if (!display || !THEMES[id]) return themeReady;
   // (the shelf belongs to the project, not the theme, so a held product can stay in hand)
   const prev = currentTheme;
@@ -2041,17 +2051,32 @@ function setTheme(id, { silent = false } = {}) {
       mat.needsUpdate = true;
     };
     uploadThemeTextures(id);
-    put(refs.towerL.material, T.towerL);
-    put(refs.towerR.material, T.towerR);
-    put(refs.screens.totem.material, T.totem);
-    refs.tiles.forEach((o) => put(o.material, T.wall));
-    hdScreenTex = T.screen;
-    screenBase = hdScreenTex?.image || null;
-    loop.drew0 = false;
-    const header = setHeader(T.header);
-    applyFixtureLook(th, !!T.header);
-    if (prev && prev !== id) releaseThemeTextures(prev, id);
-    renderer.shadowMap.needsUpdate = true;
+    let header = null;
+    const parts = {
+      towerL: () => put(refs.towerL.material, T.towerL),
+      center: () => {
+        refs.tiles.forEach((o) => put(o.material, T.wall));
+        hdScreenTex = T.screen;
+        screenBase = hdScreenTex?.image || null;
+        loop.drew0 = false;
+        header = setHeader(T.header);
+        applyFixtureLook(th, !!T.header);
+        if (stage) setBay(th);
+      },
+      towerR: () => put(refs.towerR.material, T.towerR),
+      totem: () => put(refs.screens.totem.material, T.totem),
+    };
+    const finish = () => {
+      if (prev && prev !== id) releaseThemeTextures(prev, id);
+      renderer.shadowMap.needsUpdate = true;
+    };
+    if (stage && !stage.flush) {
+      stage.parts = parts;
+      stage.finish = finish;
+      return null;
+    }
+    Object.values(parts).forEach((f) => f());
+    finish();
     return header; // the theme is ready once the brand's letters are up
   });
   const c1 = new THREE.Color(th.led),
@@ -2064,9 +2089,7 @@ function setTheme(id, { silent = false } = {}) {
     m.color.copy(c2);
     m.emissive.copy(c2);
   });
-  refs.bayBack.material.emissive = new THREE.Color(th.bay);
-  refs.bayBack.material.color = new THREE.Color(th.bay).multiplyScalar(0.5);
-  refs.bayBack.material.emissiveIntensity = GLOW.bay;
+  if (!stage) setBay(th);
   ["spillL", "spillR", "spillC"].forEach((k) => lights[k].material.color.setHex(th.spill));
   lights.spillT.material.color.setHex(th.led2);
   rings.forEach((r) => r.material.color.set(th.led));
@@ -3088,7 +3111,7 @@ function cancelCamTween() {
     camTween = null;
   }
 }
-function flyTo(pos, tgt, dur = 1600, done) {
+function flyTo(pos, tgt, dur = 1600, done, e = ease) {
   const p0 = camera.position.clone(),
     t0 = controls.target.clone(),
     p1 = new THREE.Vector3(...pos),
@@ -3105,6 +3128,7 @@ function flyTo(pos, tgt, dur = 1600, done) {
       controls.target.lerpVectors(t0, t1, k);
     },
     {
+      e,
       done: () => {
         camTween = null;
         done && done();
@@ -3888,15 +3912,339 @@ function showTour(dur = 1800) {
 }
 /** Fly to a tour step (also used by presentation mode and the builder's ar:goto). */
 function gotoStep(s, dur = 1800) {
-  if (s.theme && THEMES[s.theme] && s.theme !== currentTheme) setTheme(s.theme, { silent: true });
+  cancelReveal(false);
   if (s.view !== "build" && explodeT > 0) setExplode(false);
   openDash(!!s.dashboard);
   const v = VIEWS[s.view] || VIEWS.aisle;
+  const arrive = () => {
+    if (s.view === "build") setExplode(true);
+    if (s.view === "qr") pulseHotspot("qr");
+  };
+  // a step that changes the featured property shows where that happens, then reveals it
+  if (s.theme && THEMES[s.theme] && s.theme !== currentTheme) {
+    if (themeReveal(s.theme, v, arrive)) return;
+    setTheme(s.theme, { silent: true });
+  }
   flyTo(v.pos, v.tgt, dur);
-  if (s.view === "build") setExplode(true);
-  if (s.view === "qr") pulseHotspot("qr");
+  arrive();
+}
+
+/* =========================================================
+   Tour theme switch (~3.3 s): the property switcher in a spotlight with the old theme still up,
+   an animated tap on the next property, then a light sweep across the fixture that puts up the
+   new graphics as it passes, the LED strips wiping to the new colours behind it and a brief bloom
+   pulse, while the camera eases out from the header to the step's view. Reduced motion: the
+   spotlight, then a crossfade. Next/Back, a drag on the scene or stopping the tour cancel it.
+   ========================================================= */
+// close on the header and the video wall: near enough to fill the frame, far enough that the whole
+// header width stays in it on a portrait phone
+function revealClose() {
+  const hf = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect),
+    d = THREE.MathUtils.clamp(1.3 / Math.tan(hf), 2.6, 6.5);
+  return { pos: [0, 1.95 + (d - 2.6) * 0.06, d], tgt: [0, 1.74 - (d - 2.6) * 0.05, 0] };
+}
+const REVEAL_T = { tap: 620, go: 1250, maxWait: 2800, sweep: 1150, out: 2100 };
+const LEDWIPE = {
+  uWipe: { value: -99 },
+  uWipeOn: { value: 0 },
+  uEdge: { value: new THREE.Color() },
+};
+const ledOld = new Map(); // LED material → its colours before the switch (uniforms)
+/** LED materials learn to show their old colours right of a moving x, with a bright wipe front. */
+function prepLedWipe(mats) {
+  for (const m of new Set(mats)) {
+    const own = { uOldC: { value: new THREE.Color() }, uOldE: { value: new THREE.Color() } };
+    ledOld.set(m, { u: own, e: new THREE.Color() });
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, LEDWIPE, own);
+      sh.vertexShader =
+        "varying float vWX;\n" +
+        sh.vertexShader.replace(
+          "#include <project_vertex>",
+          "#include <project_vertex>\n  vWX = (modelMatrix * vec4(transformed, 1.0)).x;",
+        );
+      sh.fragmentShader =
+        "varying float vWX;\nuniform float uWipe;\nuniform float uWipeOn;\nuniform vec3 uEdge;\nuniform vec3 uOldC;\nuniform vec3 uOldE;\n" +
+        sh.fragmentShader.replace(
+          "#include <emissivemap_fragment>",
+          `#include <emissivemap_fragment>
+  if (uWipeOn > 0.5) {
+    float wOld = smoothstep(uWipe - 0.04, uWipe + 0.04, vWX);
+    diffuseColor.rgb = mix(diffuseColor.rgb, uOldC, wOld);
+    totalEmissiveRadiance = mix(totalEmissiveRadiance, uOldE, wOld);
+    totalEmissiveRadiance += uEdge * (1.0 - smoothstep(0.0, 0.32, abs(vWX - uWipe)));
+  }`,
+        );
+    };
+    m.customProgramCacheKey = () => "ml-led-wipe";
+    m.needsUpdate = true;
+  }
+}
+// the sweep: a soft vertical sheet of light drawn over the fixture (additive, never occluded)
+let sweepBand = null;
+function getSweepBand() {
+  if (sweepBand) return sweepBand;
+  const c = KA.makeCanvas(128, 256),
+    g = c.getContext("2d");
+  const gx = g.createLinearGradient(0, 0, 128, 0);
+  // a soft glow with a bright core line
+  gx.addColorStop(0, "rgba(255,255,255,0)");
+  gx.addColorStop(0.3, "rgba(255,255,255,.22)");
+  gx.addColorStop(0.46, "rgba(255,255,255,.6)");
+  gx.addColorStop(0.49, "rgba(255,255,255,1)");
+  gx.addColorStop(0.51, "rgba(255,255,255,1)");
+  gx.addColorStop(0.54, "rgba(255,255,255,.6)");
+  gx.addColorStop(0.7, "rgba(255,255,255,.22)");
+  gx.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = gx;
+  g.fillRect(0, 0, 128, 256);
+  g.globalCompositeOperation = "destination-in";
+  const gy = g.createLinearGradient(0, 0, 0, 256);
+  gy.addColorStop(0, "rgba(0,0,0,0)");
+  gy.addColorStop(0.12, "rgba(0,0,0,1)");
+  gy.addColorStop(0.9, "rgba(0,0,0,1)");
+  gy.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = gy;
+  g.fillRect(0, 0, 128, 256);
+  const tex = imageTexture(c);
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    depthTest: false,
+    toneMapped: false,
+  });
+  sweepBand = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+  sweepBand.name = "FX_ThemeSweep";
+  sweepBand.scale.set(0.7, 2.75, 1);
+  sweepBand.position.set(0, 1.3, 0.5);
+  sweepBand.renderOrder = 20;
+  sweepBand.frustumCulled = false;
+  sweepBand.visible = false;
+  scene.add(sweepBand);
+  return sweepBand;
+}
+function spotOn(r) {
+  const seg = $("#themeSeg"),
+    btn = seg && [...seg.querySelectorAll("[data-theme]")].find((b) => b.dataset.theme === r.id);
+  if (!btn) return false;
+  let el = $("#spot");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "spot";
+    el.setAttribute("aria-hidden", "true");
+    el.style.setProperty("--slow", String(Math.max(1, +window.__REVEAL_SLOW || 1)));
+    el.innerHTML = `<div class="spot-ring"></div><div class="spot-call">Switch the featured property here</div><div class="spot-tap"></div>`;
+    document.body.appendChild(el);
+  }
+  document.body.classList.add("ar-spot");
+  const box = seg.getBoundingClientRect();
+  if (box.width < 4 || box.height < 4) {
+    document.body.classList.remove("ar-spot");
+    return false;
+  }
+  const c = new THREE.Color(THEMES[r.id].led).lerp(new THREE.Color(0xffffff), 0.12);
+  el.style.setProperty("--spot-rgb", [c.r, c.g, c.b].map((v) => Math.round(v * 255)).join(" "));
+  const pad = 5,
+    ring = el.querySelector(".spot-ring");
+  Object.assign(ring.style, {
+    left: box.left - pad + "px",
+    top: box.top - pad + "px",
+    width: box.width + pad * 2 + "px",
+    height: box.height + pad * 2 + "px",
+  });
+  const call = el.querySelector(".spot-call");
+  call.style.visibility = "hidden";
+  call.style.left = "0px";
+  const cw = call.offsetWidth,
+    ch = call.offsetHeight,
+    tb = btn.getBoundingClientRect(),
+    cx = tb.left + tb.width / 2, // the callout points at the property the tour switches to
+    left = Math.max(16, Math.min(innerWidth - 16 - cw, cx - cw / 2)),
+    below = box.bottom + 14 + ch < innerHeight - 90;
+  call.style.left = left + "px";
+  call.style.top = (below ? box.bottom + 14 : box.top - 14 - ch) + "px";
+  call.style.setProperty("--arrow-x", Math.max(14, Math.min(cw - 14, cx - left)) + "px");
+  call.classList.toggle("up", !below);
+  call.style.visibility = "";
+  const b = btn.getBoundingClientRect(),
+    tap = el.querySelector(".spot-tap");
+  tap.classList.remove("go");
+  tap.style.left = b.left + b.width / 2 + "px";
+  tap.style.top = b.top + b.height / 2 + "px";
+  r.btn = btn;
+  void el.offsetWidth;
+  el.classList.add("on");
+  return true;
+}
+function spotOff() {
+  $("#spot")?.classList.remove("on");
+  document.body.classList.remove("ar-spot");
+  document.querySelectorAll(".spot-press").forEach((b) => b.classList.remove("spot-press"));
+}
+let reveal = null;
+/** Starts the reveal of theme `id` for a step with view `v`; false when there is no switcher to show. */
+function themeReveal(id, v, arrive) {
+  if (!display || !refs.header || Object.keys(THEMES).length < 2) return false;
+  const seg = $("#themeSeg");
+  if (!seg || seg.hidden) return false;
+  const r = { id, v, arrive, t0: performance.now(), timers: [], switched: false, stage: null };
+  // (tests film it frame by frame on slow machines: window.__REVEAL_SLOW stretches it)
+  r.slow = Math.max(1, +window.__REVEAL_SLOW || 1);
+  if (!spotOn(r)) return false;
+  reveal = r;
+  lastChange = performance.now();
+  // the new graphics decode and upload while the spotlight is up
+  const texReady = loadThemeTextures(id)
+    .then(() => reveal === r && uploadThemeTextures(id))
+    .catch(() => {});
+  const at = (ms, fn) => r.timers.push(setTimeout(() => reveal === r && fn(), ms));
+  r.onUser = () => cancelReveal(true);
+  renderer.domElement.addEventListener("pointerdown", r.onUser, { passive: true });
+  renderer.domElement.addEventListener("wheel", r.onUser, { passive: true });
+  if (!reduceMotion) {
+    const c = revealClose();
+    flyTo(c.pos, c.tgt, 1100 * r.slow);
+    at(REVEAL_T.tap * r.slow, () => $("#spot .spot-tap")?.classList.add("go"));
+    at((REVEAL_T.tap + 460) * r.slow, () => r.btn?.classList.add("spot-press"));
+  }
+  at(REVEAL_T.go * r.slow, async () => {
+    const left = REVEAL_T.maxWait * r.slow - (performance.now() - r.t0);
+    await Promise.race([texReady, wait(Math.max(0, left))]);
+    if (reveal !== r) return;
+    if (reduceMotion) crossfadeTo(r);
+    else sweepTo(r);
+  });
+  return true;
+}
+function sweepTo(r) {
+  const th = THEMES[r.id];
+  for (const [m, o] of ledOld) {
+    o.u.uOldC.value.copy(m.color);
+    o.e.copy(m.emissive);
+  }
+  spotOff();
+  r.switched = true;
+  r.stage = { flush: false };
+  r.done = {};
+  setTheme(r.id, { silent: true, stage: r.stage });
+  const wx = (o, d) => (o ? o.getWorldPosition(new THREE.Vector3()).x : d);
+  r.xs = {
+    towerL: wx(refs.towerL, -1.54),
+    center: -0.7,
+    towerR: wx(refs.towerR, 1.54),
+    totem: wx(refs.screens.totem, 3),
+  };
+  const band = getSweepBand();
+  band.material.color.set(th.led).lerp(new THREE.Color(0xffffff), 0.5).multiplyScalar(1.4);
+  band.visible = true;
+  LEDWIPE.uEdge.value.set(th.led).lerp(new THREE.Color(0xffffff), 0.35).multiplyScalar(1.6);
+  LEDWIPE.uWipeOn.value = 1;
+  r.bloom0 = bloom.strength;
+  const X0 = -2.8,
+    X1 = 3.9;
+  r.tw = tween(
+    REVEAL_T.sweep * r.slow,
+    (k) => {
+      const x = X0 + (X1 - X0) * k;
+      LEDWIPE.uWipe.value = x;
+      band.position.x = x;
+      band.material.opacity = 0.85 * Math.min(1, Math.sin(Math.PI * k) * 2.2);
+      bloom.strength = r.bloom0 + 0.22 * Math.sin(Math.PI * Math.min(1, k * 1.4));
+      for (const [m, o] of ledOld) o.u.uOldE.value.copy(o.e).multiplyScalar(m.emissiveIntensity);
+      applyStaged(r, x);
+    },
+    { e: (t) => 0.5 - 0.5 * Math.cos(Math.PI * t), done: () => endReveal(r) },
+  );
+  flyTo(r.v.pos, r.v.tgt, REVEAL_T.out * r.slow, null, (t) => 0.5 - 0.5 * Math.cos(Math.PI * t));
+  r.arrive();
+  lastChange = performance.now();
+}
+function applyStaged(r, x) {
+  const parts = r.stage?.parts;
+  if (!parts) return;
+  for (const k of Object.keys(parts))
+    if (!r.done[k] && x >= r.xs[k]) {
+      r.done[k] = true;
+      parts[k]();
+    }
+}
+/** The sweep is over (or cut short): everything of the new theme up, effects off. */
+function endReveal(r) {
+  if (r.stage) {
+    if (r.stage.parts) {
+      applyStaged(r, Infinity);
+      r.stage.finish();
+    } else r.stage.flush = true; // graphics still loading: setTheme puts them all up when they land
+  }
+  if (r.tw) {
+    const i = tweens.indexOf(r.tw);
+    if (i >= 0) tweens.splice(i, 1);
+  }
+  LEDWIPE.uWipeOn.value = 0;
+  if (sweepBand) sweepBand.visible = false;
+  if (r.bloom0 != null) bloom.strength = r.bloom0;
+  renderer.domElement.removeEventListener("pointerdown", r.onUser);
+  renderer.domElement.removeEventListener("wheel", r.onUser);
+  if (reveal === r) reveal = null;
+  lastChange = performance.now();
+}
+/** Reduced motion: the last frame of the old theme fades out over the new one. */
+function crossfadeTo(r) {
+  let shot = null;
+  try {
+    composer.render();
+    const src = renderer.domElement,
+      box = src.getBoundingClientRect();
+    shot = document.createElement("canvas");
+    shot.width = Math.max(1, Math.round(src.width / 2));
+    shot.height = Math.max(1, Math.round(src.height / 2));
+    shot.getContext("2d").drawImage(src, 0, 0, shot.width, shot.height);
+    shot.className = "theme-xfade";
+    Object.assign(shot.style, {
+      left: box.left + "px",
+      top: box.top + "px",
+      width: box.width + "px",
+      height: box.height + "px",
+    });
+    src.after(shot);
+  } catch (e) {
+    shot = null;
+  }
+  spotOff();
+  r.switched = true;
+  r.shot = shot;
+  setTheme(r.id, { silent: true });
+  flyTo(r.v.pos, r.v.tgt, 1);
+  r.arrive();
+  const fade = () => {
+    if (!shot) return;
+    shot.style.opacity = "0";
+    setTimeout(() => shot.remove(), 900);
+  };
+  Promise.race([themeReady, wait(1500)]).then(() =>
+    requestAnimationFrame(() => setTimeout(fade, 60)),
+  );
+  endReveal(r);
+}
+/** Stop a reveal. `apply`: put the new theme up even if the switch hadn't happened yet. */
+function cancelReveal(apply = true) {
+  const r = reveal;
+  if (!r) return;
+  reveal = null;
+  r.timers.forEach(clearTimeout);
+  spotOff();
+  $("#spot .spot-tap")?.classList.remove("go");
+  if (r.switched) endReveal(r);
+  else {
+    endReveal(r);
+    if (apply) setTheme(r.id, { silent: true });
+  }
 }
 function endTour(showCta = true) {
+  cancelReveal(false);
   $("#tour").classList.remove("open");
   if (explodeT > 0) setExplode(false);
   openDash(false);
@@ -4821,6 +5169,7 @@ function startPresenting(source) {
       caption: (i) => ({ title: steps[i]?.title || "", body: steps[i]?.body || "" }),
       source: demoId() + (source ? ":" + source : ""),
       onStop: () => {
+        cancelReveal(false);
         openDash(false);
         if (explodeT > 0) setExplode(false);
         homeView();
@@ -4851,6 +5200,7 @@ function toast(msg) {
 $("#themeSeg").addEventListener("click", (e) => {
   const b = e.target.closest("[data-theme]");
   if (!b || b.dataset.theme === currentTheme) return;
+  cancelReveal(false);
   bump("session");
   track("theme", { id: b.dataset.theme });
   setTheme(b.dataset.theme);
@@ -5701,6 +6051,7 @@ function onEnter() {
 }
 async function apply(raw) {
   const next = normalizeProject(raw);
+  cancelReveal(false);
   PROJECT = next;
   if (!SLUG || IN_PREVIEW) SLUG = next.slug || SLUG;
   buildThemes();
@@ -5779,6 +6130,7 @@ function unavailable(title, body) {
 async function gotoCmd(o = {}) {
   await sceneReady;
   lastChange = performance.now();
+  if (o.theme || o.view || o.zone !== undefined) cancelReveal(true);
   if (o.theme && THEMES[o.theme] && o.theme !== currentTheme) setTheme(o.theme, { silent: true });
   if (typeof o.zone === "string" && FIX[o.zone]) {
     if (!PROJECT.zones[o.zone].enabled) return;
