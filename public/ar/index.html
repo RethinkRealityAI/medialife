@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="theme-color" content="#0b0a12">
+<title>View in your space · MEDIALIFE</title>
+<!--
+  "View in your space": the page the desktop AR QR code opens on a phone (public/vendor/ar-kit/ar-launch.js).
+  Launching AR needs a tap on the phone itself, so this page is one big button, plus a 3D view for phones
+  that can't do AR and for desktops.
+
+  /ar/?m=/roblox/activated-retail/ar/evade&t=AR-01%20endcap%20·%20EVADE&d=roblox
+    m  model path without extension: m.glb (Android Scene Viewer, 3D view), m.usdz (iOS Quick Look), m.jpg (poster)
+    glb / usdz / p   explicit same-site files instead of m (e.g. /api/ar/asset/<id> from the builder)
+    t  title   d  demo id for analytics   c  client link code (passed through to analytics)
+  Only same-site paths are accepted, so this can't be used to show someone else's files under our name.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"/vendor/three@0.170.0/three.module.min.js","three/addons/":"/vendor/three@0.170.0/jsm/"}}</script>
+<script src="/vendor/ar-kit/track.js"></script>
+<script src="/vendor/ar-kit/qrcode.min.js" defer></script>
+<script src="/vendor/ar-kit/ar-launch.js" defer></script>
+<style>
+:root{
+  color-scheme:dark;
+  --ink:#0b0a12; --text:#f5f3fb; --muted:#b6b1cc; --faint:#9994b3; --line:rgba(255,255,255,.12);
+  --accent:#9270ff; --accent-2:#5b8cff; --signal:#3cefb1;
+  --display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--ink);color:var(--text);font:15px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+body{min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+  background:radial-gradient(120% 60% at 50% 0%,rgba(146,112,255,.22),transparent 60%),radial-gradient(90% 50% at 50% 100%,rgba(91,140,255,.12),transparent 70%),var(--ink);
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.top{width:100%;max-width:560px;display:flex;align-items:center;justify-content:space-between;padding:4px 2px 14px}
+.brand{height:18px;width:auto;opacity:.92}
+.tag{font:500 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+main{width:100%;max-width:560px;display:flex;flex-direction:column;gap:18px}
+.stage{position:relative;aspect-ratio:4/3;border-radius:22px;overflow:hidden;border:1px solid var(--line);
+  background:linear-gradient(180deg,#1b1733,#0f0d1d)}
+.stage img,.stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.stage canvas{touch-action:none;cursor:grab}
+.stage .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--faint);font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.stage .load{position:absolute;left:16px;right:16px;bottom:14px;height:4px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}
+.stage .load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .25s}
+.stage .hint{position:absolute;left:0;right:0;bottom:12px;text-align:center;font:500 11px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.7);pointer-events:none}
+.eyebrow{font:500 10.5px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:#b39cff}
+h1{margin:6px 0 0;font:700 clamp(22px,6vw,30px)/1.15 var(--display);letter-spacing:-.01em;text-wrap:balance}
+.lede{margin:8px 0 0;color:var(--muted)}
+.actions{display:flex;flex-direction:column;gap:10px}
+.btn{appearance:none;border:0;border-radius:16px;min-height:52px;padding:14px 18px;font:700 15.5px/1.2 var(--body);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;text-decoration:none;transition:transform .15s,background .2s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.btn.primary{background:var(--accent);color:#0c0718}
+.btn.primary:hover{background:#a488ff}
+.btn.ghost{background:rgba(255,255,255,.07);color:var(--text);border:1px solid var(--line)}
+.btn.ghost:hover{background:rgba(255,255,255,.12)}
+.btn[hidden]{display:none}
+.btn svg{width:20px;height:20px;flex:none}
+.note{margin:0;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--muted);font-size:13.5px}
+.note b{color:var(--text)}
+.note.warn{border-color:rgba(255,196,80,.35);background:rgba(255,196,80,.08)}
+.qr{display:flex;gap:16px;align-items:center;padding:14px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.04)}
+.qr .code{flex:none;width:132px;height:132px;padding:8px;border-radius:12px;background:#fff}
+.qr .code svg{display:block;width:100%;height:100%}
+.qr p{margin:0;color:var(--muted);font-size:13.5px}
+.qr b{display:block;color:var(--text);font-size:15px;margin-bottom:4px}
+.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0;padding:0;list-style:none}
+.facts li{padding:10px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:12px;color:var(--faint);line-height:1.3}
+.facts b{display:block;font:700 15px/1.2 var(--display);color:var(--text);margin-bottom:3px}
+.err{text-align:center;padding:40px 8px;color:var(--muted)}
+footer{margin-top:auto;padding-top:22px;font-size:12px;color:var(--faint);text-align:center}
+footer a{color:var(--muted)}
+@media (min-width:720px){ body{justify-content:center} main{gap:20px} }
+@media (prefers-reduced-motion:reduce){ .btn,.stage .load i{transition:none} }
+</style>
+</head>
+<body>
+<div class="top">
+  <img class="brand" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="108" height="18">
+  <span class="tag">Activated retail</span>
+</div>
+<main id="main">
+  <div class="stage" id="stage" aria-label="Preview of the display"><div class="ph">Preview</div></div>
+  <div>
+    <div class="eyebrow">View in your space</div>
+    <h1 id="title">Place the display in your room</h1>
+    <p class="lede" id="lede">Drop the full-size endcap into the space around you. Walk around it and see how it reads from the aisle.</p>
+  </div>
+  <div class="actions">
+    <button class="btn primary" id="go" type="button" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>
+      View in AR
+    </button>
+    <button class="btn ghost" id="view3d" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>
+      Explore in 3D
+    </button>
+  </div>
+  <p class="note" id="note" hidden></p>
+  <div class="qr" id="qr" hidden><div class="code" id="qrcode" aria-hidden="true"></div><p><b>Open this on your phone</b>AR runs on iPhone, iPad and Android. Scan the code with the camera, then tap <b>View in AR</b>.</p></div>
+  <ul class="facts" aria-label="About the display">
+    <li><b>True size</b>Shown at 1:1 scale</li>
+    <li><b>No app</b>Opens in the phone's own AR viewer</li>
+    <li><b>Walk it</b>Step around every side</li>
+  </ul>
+</main>
+<footer>© MEDIALIFE · <a href="https://medialife.ai" rel="noopener">medialife.ai</a></footer>
+
+<script>
+(function () {
+  'use strict';
+  var q = new URLSearchParams(location.search);
+  var FILE = /^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+\.(?:glb|usdz|jpg|jpeg|png|webp)$/i;
+  var ASSET = /^\/api\/ar\/asset\/[A-Za-z0-9_-]{4,80}$/;
+  var BASE = /^\/(?:[a-z0-9_-]+\/)*[a-z0-9_-]+$/i;
+  function ok(p) { return typeof p === 'string' && (FILE.test(p) || ASSET.test(p)) && p.indexOf('..') < 0; }
+  var m = q.get('m');
+  var files = { glb: null, usdz: null, poster: null };
+  if (m && BASE.test(m) && m.indexOf('..') < 0) { files.glb = m + '.glb'; files.usdz = m + '.usdz'; files.poster = m + '.jpg'; }
+  ['glb', 'usdz'].forEach(function (k) { if (ok(q.get(k))) files[k] = q.get(k); });
+  if (ok(q.get('p'))) files.poster = q.get('p');
+  var title = (q.get('t') || '').trim().slice(0, 90);
+  var demo = (q.get('d') || 'ar').toLowerCase().replace(/[^a-z0-9:_-]/g, '').slice(0, 64) || 'ar';
+  window.__ar = { files: files, title: title, demo: demo };
+
+  if (title) { document.getElementById('title').textContent = title; document.title = title + ' · View in your space'; }
+  if (!files.glb && !files.usdz) {
+    document.getElementById('main').innerHTML = '<div class="err"><h1>This link is incomplete</h1><p class="lede">Ask whoever sent it for a new one, or open the demo on your phone and tap the AR button.</p></div>';
+    return;
+  }
+  try { window.ARTrack && ARTrack.init({ demo: demo }); } catch (e) {}
+  function track(n, p) { try { window.ARTrack && ARTrack.event(n, p || {}); } catch (e) {} }
+
+  var stage = document.getElementById('stage');
+  if (files.poster) {
+    var img = new Image();
+    img.alt = title ? 'Preview: ' + title : 'Preview of the display';
+    img.decoding = 'async';
+    img.onload = function () { stage.innerHTML = ''; stage.appendChild(img); };
+    img.src = files.poster;
+  }
+
+  var note = document.getElementById('note');
+  function say(html, warn) { note.innerHTML = html; note.hidden = false; note.classList.toggle('warn', !!warn); }
+
+  function ready() {
+    var L = window.ARLaunch;
+    var platform = L ? L.platform() : 'desktop';
+    var go = document.getElementById('go');
+    var native = L && L.nativeAvailable() && ((platform === 'ios' && files.usdz) || (platform === 'android' && files.glb));
+    if (native) {
+      go.hidden = false;
+      say(platform === 'ios'
+        ? 'Opens in <b>AR Quick Look</b>. Point your phone at the floor and move it slowly until the display appears.'
+        : 'Opens in <b>Google Scene Viewer</b>. Point your phone at the floor and move it slowly until the display appears.');
+      go.addEventListener('click', function () {
+        L.open({ usdz: files.usdz, glb: files.glb, title: title || 'Activated retail endcap', handoffUrl: location.href, onEvent: function (n, p) { p = p || {}; p.src = 'handoff'; track(n, p); } });
+      });
+    } else {
+      document.getElementById('view3d').classList.replace('ghost', 'primary');
+      if (platform === 'desktop') {
+        var box = document.getElementById('qrcode');
+        try {
+          if (window.QRCode) QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, function (err, svg) { if (!err) box.innerHTML = svg; });
+        } catch (e) {}
+        if (box.innerHTML) document.getElementById('qr').hidden = false;
+      } else {
+        say('This browser can’t open AR. On an iPhone use Safari; on Android make sure <b>Google Play Services for AR</b> is installed. You can still explore it in 3D.', true);
+      }
+    }
+    if (location.hash === '#ar-unavailable') {
+      history.replaceState(null, '', location.pathname + location.search);
+      say('AR didn’t open on this phone. It needs <b>Google Play Services for AR</b> (free on Google Play). In the meantime, explore it in 3D.', true);
+      track('ar_unavailable', { platform: platform });
+    }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
+
+  document.getElementById('view3d').addEventListener('click', function () {
+    this.disabled = true;
+    track('ar_3d_view', {});
+    import('/vendor/ar-kit/ar-view.js').then(function (mod) {
+      return mod.mountViewer(stage, files.glb);
+    }).catch(function () {
+      say('The 3D view couldn’t load. Check your connection and try again.', true);
+      document.getElementById('view3d').disabled = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>

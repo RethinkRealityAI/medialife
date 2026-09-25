@@ -2694,13 +2694,33 @@ function openPilot(){
   $('#mTry').onclick=()=>{ closeModal(); openPhone('keychain'); };
   $('#mDone').onclick=closeModal;
 }
+// AR: the phone's own viewer (iOS AR Quick Look / Android Scene Viewer) with this theme's files in
+// ar/ (exported from this scene by /vendor/ar-kit/ar-export.js). Desktops get a QR code that opens
+// /ar/ on a phone. The old WebXR path is only a fallback for when the AR kit didn't load.
+const AR_DEMO='roblox', AR_DIR='/roblox/activated-retail/ar/';
+function arLaunch(){
+  const id=currentTheme, base=AR_DIR+id, title='AR-01 endcap · '+THEMES[id].name;
+  const hand=new URL('/ar/', location.origin);
+  hand.searchParams.set('m', base); hand.searchParams.set('t', title); hand.searchParams.set('d', AR_DEMO);
+  const code=new URLSearchParams(location.search).get('c'); if(code) hand.searchParams.set('c', code);
+  ARLaunch.open({ usdz:base+'.usdz', glb:base+'.glb', title, handoffUrl:hand.href,
+    onEvent:(n,p)=>{ try{ window.ARTrack?.event(n, {...p, theme:id}); }catch(e){} },
+    // Quick Look's banner button: closes AR and opens the contact form here
+    action: window.ARLead ? { label:'Book a call', subtitle:'Talk to MEDIALIFE about a pilot', onTap:()=>window.ARLead.open({source:'ar', demo:AR_DEMO}) } : null });
+}
+function arUnavailable(){
+  if(location.hash!=='#ar-unavailable') return;
+  history.replaceState(null,'',location.pathname+location.search);
+  toast('AR needs Google Play Services for AR on this phone');
+}
+addEventListener('hashchange', arUnavailable); setTimeout(arUnavailable, 0);
 document.querySelector('[data-action="ar"]').addEventListener('click', async ()=>{
   bump('session');
+  if(window.ARLaunch){ arLaunch(); return; }
   let ok=false; try{ ok = !!(navigator.xr && await navigator.xr.isSessionSupported('immersive-ar')); }catch(e){}
   if(ok){ startAR(); return; }
   openModal('View in AR','Place this display in your own space',
-   `<p>On a phone, the hosted version of this page drops the display into your room at true scale (3.84 m wide), so you can walk around it on the shop floor before anything is built.</p>
-    <p style="font-size:13px">Android Chrome opens it with WebXR when the page is hosted on your own domain. iPhone needs a USDZ export of the same model for AR Quick Look (next step). This preview window doesn't have camera access, so AR is disabled here.</p>
+   `<p>Open this page on an iPhone, iPad or Android phone and tap the AR button: the display appears in your room at true size, so you can walk around it before anything is built.</p>
     <button class="btn ghost" id="mOk">Got it</button>`);
   $('#mOk').onclick=closeModal;
 });

@@ -143,11 +143,56 @@
   [headers.values]
     Cache-Control = "public, max-age=86400"
 
+[[headers]]
+  for = "/roblox/activated-retail/display.glb"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/monkey-quest/activated-retail/display.glb"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# Native AR files, one pair per theme, exported from the live scene (public/vendor/ar-kit/ar-export.js).
+# iOS AR Quick Look refuses a .usdz that isn't served as model/vnd.usdz+zip, and with nosniff on
+# every response the type has to be right, so both types are set explicitly.
+[[headers]]
+  for = "/*/activated-retail/ar/*.usdz"
+  [headers.values]
+    Content-Type = "model/vnd.usdz+zip"
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/*/activated-retail/ar/*.glb"
+  [headers.values]
+    Content-Type = "model/gltf-binary"
+    Cache-Control = "public, max-age=86400"
+    Access-Control-Allow-Origin = "*"
+
+[[headers]]
+  for = "/*/activated-retail/ar/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# /ar/ is the "View in your space" page the desktop AR QR code opens on a phone. Unlisted.
+[[headers]]
+  for = "/ar/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300"
+
 # three.js is vendored under a versioned path, so it can be cached forever.
 [[headers]]
-  for = "/vendor/*"
+  for = "/vendor/three@0.170.0/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# The activated-retail kit (analytics, AR launch/export, presentation, lead form) is NOT
+# versioned by path, so browsers must revalidate it or fixes would take a year to arrive.
+[[headers]]
+  for = "/vendor/ar-kit/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300, must-revalidate"
 
 # ── Virtual business cards ───────────────────────────────────────────────────
 # Cards are static files at the site root (medialife.ai/dapo), so unlike the SSR

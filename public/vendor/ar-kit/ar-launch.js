@@ -6,11 +6,13 @@
  *     usdz: 'ar/display-evade.usdz',   // iOS / iPadOS: AR Quick Look
  *     glb:  'ar/display-evade.glb',    // Android: Google Scene Viewer (needs a public https URL)
  *     title: 'AR-01 endcap · EVADE',
- *     handoffUrl: location.origin + location.pathname + '?ar=evade',  // what the desktop QR opens
+ *     handoffUrl: '/ar/?m=…',          // what the desktop QR opens (see public/ar/index.html)
  *     onEvent: (name, props) => ARTrack.event(name, props),
+ *     action: { label: 'Book a call', onTap: () => ARLead.open({ source: 'ar' }) },  // optional
  *   });
  *
  * - iOS: an <a rel="ar"> click opens Quick Look (Safari, Chrome and every other iOS browser).
+ *   `action` adds Quick Look's banner button (iOS 13.3+); tapping it closes AR and calls onTap.
  * - Android: an intent:// URL opens Scene Viewer in AR (ar_preferred falls back to its 3D
  *   viewer on phones without ARCore). The browser fallback returns here with #ar-unavailable.
  * - Anything else (desktop, unsupported browser): a modal with a QR code that opens this page
@@ -35,11 +37,25 @@
     try { var a = document.createElement('a'); return !!(a.relList && a.relList.supports && a.relList.supports('ar')); } catch (e) { return false; }
   }
 
-  function openQuickLook(usdz) {
-    // Quick Look needs an anchor with rel="ar" whose first child is an image
+  var qlAnchor = null;
+  function openQuickLook(usdz, title, action) {
+    // Quick Look needs an anchor with rel="ar" whose first child is an image. It stays in the
+    // page while AR is open: the banner button reports its tap as a message event on it.
+    if (qlAnchor) qlAnchor.remove();
     var a = document.createElement('a');
     a.rel = 'ar';
-    a.href = abs(usdz) + (usdz.indexOf('#') < 0 ? '#allowsContentScaling=1' : '');
+    var hash = 'allowsContentScaling=1';
+    if (action && action.label) {
+      hash += '&callToAction=' + encodeURIComponent(action.label) +
+        (title ? '&checkoutTitle=' + encodeURIComponent(title) : '') +
+        (action.subtitle ? '&checkoutSubtitle=' + encodeURIComponent(action.subtitle) : '');
+      a.addEventListener('message', function (e) {
+        if (e.data === '_apple_ar_quicklook_button_tapped' && typeof action.onTap === 'function') {
+          try { action.onTap(); } catch (err) {}
+        }
+      }, false);
+    }
+    a.href = abs(usdz) + (usdz.indexOf('#') < 0 ? '#' + hash : '');
     var img = document.createElement('img');
     img.alt = ''; img.width = 1; img.height = 1;
     img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
@@ -47,7 +63,7 @@
     a.style.cssText = 'position:fixed;left:-9999px;top:0;';
     document.body.appendChild(a);
     a.click();
-    setTimeout(function () { a.remove(); }, 1500);
+    qlAnchor = a;
   }
 
   function openSceneViewer(glb, title, fallback) {
@@ -71,7 +87,7 @@
     '.arl-qr{width:200px;height:200px;margin:0 auto 14px;padding:12px;border-radius:18px;background:#fff;box-sizing:content-box}' +
     '.arl-qr svg{display:block;width:100%;height:100%}' +
     '.arl-steps{text-align:left;margin:0 auto;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px;color:#cfc9e4;max-width:300px}' +
-    '.arl-steps li{display:flex;gap:8px}.arl-steps b{color:#fff}' +
+    '.arl-steps li{display:flex;gap:8px;padding-left:14px;position:relative}.arl-steps li:before{content:"";position:absolute;left:0;top:.6em;width:5px;height:5px;border-radius:50%;background:#b39cff}.arl-steps b{color:#fff}' +
     '.arl-x{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font-size:16px;line-height:1}' +
     '.arl-x:hover{background:rgba(255,255,255,.16)}' +
     '.arl-link{display:inline-block;margin-top:14px;font-size:12.5px;color:#9fdcff;word-break:break-all}';
@@ -97,9 +113,9 @@
       '<h3>' + (title ? String(title).replace(/[<>&]/g, '') : 'Place it in your room') + '</h3>' +
       '<p>AR runs on your phone. Scan this code with its camera, then tap <b>View in AR</b>.</p>' +
       (qr ? '<div class="arl-qr">' + qr + '</div>' : '') +
-      '<ul class="arl-steps"><li>📱 <span><b>iPhone / iPad</b>: opens in AR Quick Look</span></li>' +
-      '<li>🤖 <span><b>Android</b>: opens in Google Scene Viewer</span></li>' +
-      '<li>📐 <span>Shown at true size: walk around it, pinch to resize</span></li></ul>' +
+      '<ul class="arl-steps"><li><span><b>iPhone / iPad</b>: opens in AR Quick Look</span></li>' +
+      '<li><span><b>Android</b>: opens in Google Scene Viewer</span></li>' +
+      '<li><span>Shown at true size. Walk around it, or pinch to resize.</span></li></ul>' +
       '<a class="arl-link" href="' + url.replace(/"/g, '%22') + '" target="_blank" rel="noopener">' + url.replace(/[<>&]/g, '') + '</a></div>';
     w.addEventListener('click', function (e) { if (e.target === w || (e.target.closest && e.target.closest('.arl-x'))) closeModal(); });
     document.body.appendChild(w);
@@ -117,7 +133,7 @@
       var ev = typeof o.onEvent === 'function' ? o.onEvent : function () {};
       var p = platform();
       var handoff = o.handoffUrl || location.href;
-      if (p === 'ios' && o.usdz && quickLookSupported()) { ev('ar_open', { platform: 'ios' }); openQuickLook(o.usdz); return 'ios'; }
+      if (p === 'ios' && o.usdz && quickLookSupported()) { ev('ar_open', { platform: 'ios' }); openQuickLook(o.usdz, o.title, o.action); return 'ios'; }
       if (p === 'android' && o.glb) {
         ev('ar_open', { platform: 'android' });
         var back = location.href.split('#')[0] + '#ar-unavailable';
