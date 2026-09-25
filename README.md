@@ -226,6 +226,10 @@ Interactive 3D Walmart endcaps used in pitches: orbit the fixture, pull merch of
 add it to a mock cart, run the activation flow, switch the featured property or campaign.
 Short links: `/roblox-activated-retail` and `/monkey-quest-activated-retail` (301s in
 `netlify.toml`). Unlisted — `noindex` headers and disallowed in `robots.txt`.
+Both pages open behind a simple password modal (a courtesy lock for client previews, not
+security: the files stay public). The password is stored as an FNV-1a hash in `GATE_HASH`
+near the top of each `index.html` (the comment there has the one-line command to make a new
+one); a device that has unlocked once is remembered in `localStorage`.
 
 ```
 public/roblox/activated-retail/        MEDIALIFE × Roblox (Roblox, Skyrift, EVADE properties)
