@@ -1103,7 +1103,7 @@ function plinthTexture(th) {
     accent = lightHex(th.led),
     key = game + "|" + accent;
   if (plinthCache.has(key)) return plinthCache.get(key);
-  for (const t of plinthCache.values()) t.dispose();
+  for (const t of plinthCache.values()) retireTexture(t);
   plinthCache.clear();
   const W = 2048,
     H = 877,
@@ -1723,8 +1723,7 @@ function trimKeyArt() {
 function dropTex(key) {
   const t = texCache.get(key);
   if (!t) return;
-  t.dispose();
-  t.image = null;
+  retireTexture(t);
   texCache.delete(key);
 }
 function loadThemeTextures(id, onEach) {
@@ -1955,6 +1954,20 @@ const TEX_KEYS = [
   "iridescenceMap",
   "anisotropyMap",
 ];
+// Free a texture for good. three.js's shared shadow depth material can keep the last map it drew in a
+// uniform and upload it again after dispose(); pointing the texture at a 1×1 placeholder first makes
+// that a no-op instead of re-uploading a freed image (or a closed ImageBitmap, which WebGL rejects).
+const RETIRED = KA.makeCanvas(1, 1);
+function retireTexture(t) {
+  if (!t) return;
+  const img = t.image;
+  t.dispose();
+  if (img === RETIRED) return;
+  t.image = RETIRED;
+  try {
+    img?.close?.();
+  } catch (e) {}
+}
 function disposeTree(root) {
   const geos = new Set(),
     mats = new Set();
@@ -1965,15 +1978,7 @@ function disposeTree(root) {
   });
   geos.forEach((g) => g.dispose());
   mats.forEach((m) => {
-    for (const k of TEX_KEYS) {
-      const t = m[k];
-      if (t) {
-        t.dispose();
-        try {
-          t.image?.close?.();
-        } catch (e) {}
-      }
-    }
+    for (const k of TEX_KEYS) retireTexture(m[k]);
     m.dispose();
   });
 }
@@ -2387,7 +2392,7 @@ async function buildZone(id) {
       r.obj.rotation.y = THREE.MathUtils.degToRad(m.yaw || 0);
       return r;
     };
-    dispose = () => tex.dispose();
+    dispose = () => retireTexture(tex);
   } else {
     const img = await loadImage(imgUrl(m.print));
     const tex = imageTexture(canvasFrom(img), { wrap: true });
@@ -2397,7 +2402,7 @@ async function buildZone(id) {
       return r;
     };
     extra = 0.55;
-    dispose = () => tex.dispose();
+    dispose = () => retireTexture(tex);
   }
   const variants = [],
     mixers = [],
@@ -2620,14 +2625,14 @@ function setBoxPrint(url) {
   const token = ++boxPrint.token;
   const done = (tex) => {
     if (token !== boxPrint.token) {
-      tex?.dispose();
+      retireTexture(tex);
       return;
     }
     const old = boxPrint.tex;
     bf.map = tex || bf.userData.map0;
     bf.needsUpdate = true;
     boxPrint.tex = tex;
-    old?.dispose();
+    retireTexture(old);
     snapCacheClear("figure");
     renderer.shadowMap.needsUpdate = true;
   };
@@ -3395,15 +3400,19 @@ function snapshot(id) {
     prevA = renderer.getClearAlpha(),
     prevEnv = snapScene.environment;
   snapScene.environment = scene.environment;
-  renderer.setRenderTarget(snapRT);
-  renderer.setClearColor(0x000000, 0);
-  renderer.clear();
-  renderer.render(snapScene, snapCam);
-  renderer.readRenderTargetPixels(snapRT, 0, 0, SNAP, SNAP, snapBuf);
-  renderer.setRenderTarget(prevT);
-  renderer.setClearColor(prevC, prevA);
-  snapScene.environment = prevEnv;
-  snapScene.remove(c);
+  try {
+    renderer.setRenderTarget(snapRT);
+    renderer.setClearColor(0x000000, 0);
+    renderer.clear();
+    renderer.render(snapScene, snapCam);
+    renderer.readRenderTargetPixels(snapRT, 0, 0, SNAP, SNAP, snapBuf);
+  } finally {
+    // never leave the clone behind: it shares materials with the shelf and would outlive them
+    renderer.setRenderTarget(prevT);
+    renderer.setClearColor(prevC, prevA);
+    snapScene.environment = prevEnv;
+    snapScene.remove(c);
+  }
   const img = snapCtx.createImageData(SNAP, SNAP);
   const row = SNAP * 4;
   for (let y = 0; y < SNAP; y++) {
@@ -5735,7 +5744,7 @@ function bakeTints() {
       undo.push(() => {
         mat.map = old;
         u.uTintOn.value = 1;
-        t.dispose();
+        retireTexture(t);
       });
     } catch (e) {
       console.warn("[engine] tint bake", id, e);
