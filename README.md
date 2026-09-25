@@ -227,8 +227,8 @@ add it to a mock cart, run the activation flow, switch the featured property or 
 Short links: `/roblox-activated-retail` and `/monkey-quest-activated-retail` (301s in
 `netlify.toml`). Unlisted — `noindex` headers and disallowed in `robots.txt`.
 Both pages open behind a simple password modal (a courtesy lock for client previews, not
-security: the files stay public). Each page has its own simple password (Roblox: `roblox`, Monkey Quest:
-`monkeyquest`; case and spaces ignored), stored as an FNV-1a hash in `GATE_HASH`
+security: the files stay public). Each page has its own simple password (Roblox: `robloxamp`, Monkey Quest:
+`toeimq`; case and spaces ignored), stored as an FNV-1a hash in `GATE_HASH`
 near the top of each `index.html` (the comment there has the one-line command to make a new
 one); a device that has unlocked once is remembered in `localStorage`.
 
