@@ -134,9 +134,19 @@ export const zoneSchema = z.object({
   /** false: leave the zone empty (no products, no hotspot) */
   enabled: z.boolean().default(true),
   model: z.object({
-    /** "default": the fixture's own sample merch; "asset": an uploaded .glb */
-    source: z.enum(["default", "asset"]),
+    /**
+     * "default": the fixture's own sample merch;
+     * "asset":   an uploaded .glb (asset below);
+     * "image":   a flat acrylic cut-out made from a transparent PNG/WebP (image below),
+     *            for keychains, charms and standees when there's no 3D model.
+     */
+    source: z.enum(["default", "asset", "image"]),
     asset: assetRef.optional(),
+    image: imageRef.optional(),
+    /** default models only: recolour the main fabric / body */
+    tint: hexColor.optional(),
+    /** default models only: artwork printed on the product face (tee/hoodie chest, desk mat, cap front) */
+    print: imageRef.optional(),
     /** extra turn in degrees around the vertical axis, applied after auto-fit */
     yaw: z.number().min(-180).max(180).default(0),
     /** multiplier on the auto-fitted size */
