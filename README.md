@@ -265,7 +265,8 @@ page, so each folder is self-contained apart from the vendored three.js and `/ve
 > interaction change goes into both. The same applies to the later in-place work: binary GLB
 > loading (the `.glb.txt` copies are gone), the ar-kit script tags, personal links and analytics
 > in the password gate, presentation mode (`?present=1`, P), "Book a call" and the AR button
-> (`arLaunch()`, native AR via ar-kit instead of the WebXR-only path).
+> (`arLaunch()`, native AR via ar-kit instead of the WebXR-only path), and the tour's theme
+> reveal (tour steps carry a `theme`; `themeReveal()` / `reskin()` in each page).
 
 The EVADE activation embeds the live Cola Run game (evade.medialife.ai) in the phone mock and
 falls back to a scannable QR if the frame is blocked. The Monkey Quest QR codes open the real
