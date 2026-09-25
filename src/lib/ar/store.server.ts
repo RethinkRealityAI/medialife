@@ -51,7 +51,14 @@ export interface ArStore {
   /** Keys under a prefix ("" for all). */
   list(prefix?: string): Promise<string[]>;
   del(key: string): Promise<void>;
+  /**
+   * Read-modify-write that doesn't lose concurrent writes (two analytics flushes can land
+   * together): retries when the record changed underneath. `fn` returns the new value.
+   */
+  update<T>(key: string, fn: (current: T | null) => T): Promise<T>;
 }
+
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type BlobsModule = typeof import("@netlify/blobs");
 let blobsMod: Promise<BlobsModule | null> | null = null;
@@ -89,8 +96,24 @@ function netlifyStore(mod: BlobsModule, name: string): ArStore | null {
     async del(key) {
       await store.delete(key);
     },
+    async update<T>(key: string, fn: (current: T | null) => T) {
+      for (let attempt = 0; ; attempt++) {
+        const cur = await store.getWithMetadata(key, { type: "json" });
+        const next = fn((cur?.data as T) ?? null);
+        const res = !cur
+          ? await store.setJSON(key, next, { onlyIfNew: true })
+          : cur.etag
+            ? await store.setJSON(key, next, { onlyIfMatch: cur.etag })
+            : await store.setJSON(key, next);
+        if (res.modified || attempt >= 5) return next;
+        await pause(15 + Math.random() * 60);
+      }
+    },
   };
 }
+
+// local dev is one process: serialising updates per key is enough
+const fileLocks = new Map<string, Promise<unknown>>();
 
 function fileStore(name: string): ArStore {
   const root = path.join(process.cwd(), ".data", "ar", name);
@@ -147,6 +170,19 @@ function fileStore(name: string): ArStore {
     },
     async del(key) {
       await fs.rm(file(key), { force: true });
+    },
+    update<T>(key: string, fn: (current: T | null) => T) {
+      const lockKey = `${name}/${key}`;
+      const run = (fileLocks.get(lockKey) ?? Promise.resolve()).then(async () => {
+        const next = fn(await this.getJSON<T>(key));
+        await this.setJSON(key, next);
+        return next;
+      });
+      fileLocks.set(
+        lockKey,
+        run.catch(() => undefined),
+      );
+      return run;
     },
   };
 }
