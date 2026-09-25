@@ -29,6 +29,7 @@ export function PreviewPane({
   onView,
   warnings,
   onClearWarnings,
+  compact = false,
 }: {
   engine: Engine;
   draft: Project;
@@ -38,8 +39,11 @@ export function PreviewPane({
   onView: (v: ViewId) => void;
   warnings: string[];
   onClearWarnings: () => void;
+  /** narrow pane: selects share the row, no phone frame (the pane is phone-sized already) */
+  compact?: boolean;
 }) {
-  const [device, setDevice] = useState<"desktop" | "phone">("desktop");
+  const [deviceChoice, setDevice] = useState<"desktop" | "phone">("desktop");
+  const device = compact ? "desktop" : deviceChoice;
   const stage = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -60,9 +64,15 @@ export function PreviewPane({
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-[oklch(0.1_0.008_280)]">
-      <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
+      <div className="flex min-h-12 shrink-0 items-center gap-2 border-b border-border px-2 py-1.5 sm:px-3">
         <Select value={theme || undefined} onValueChange={onTheme}>
-          <SelectTrigger aria-label="Preview theme" className="h-8 w-36 bg-background/60 text-xs">
+          <SelectTrigger
+            aria-label="Preview theme"
+            className={cn(
+              "h-8 bg-background/60 text-xs pointer-coarse:h-11",
+              compact ? "min-w-0 flex-1 basis-0" : "w-36",
+            )}
+          >
             <SelectValue placeholder="Theme" />
           </SelectTrigger>
           <SelectContent>
@@ -81,7 +91,13 @@ export function PreviewPane({
           </SelectContent>
         </Select>
         <Select value={view || undefined} onValueChange={(v) => onView(v as ViewId)}>
-          <SelectTrigger aria-label="Camera view" className="h-8 w-48 bg-background/60 text-xs">
+          <SelectTrigger
+            aria-label="Camera view"
+            className={cn(
+              "h-8 bg-background/60 text-xs pointer-coarse:h-11",
+              compact ? "min-w-0 flex-[1.4] basis-0" : "w-48",
+            )}
+          >
             <SelectValue placeholder="Camera view" />
           </SelectTrigger>
           <SelectContent>
@@ -93,21 +109,24 @@ export function PreviewPane({
           </SelectContent>
         </Select>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           {warnings.length ? (
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-amber-400/40 bg-amber-400/10 px-2.5 text-xs text-amber-300 hover:bg-amber-400/15 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                  aria-label={`${warnings.length} preview ${warnings.length === 1 ? "warning" : "warnings"}`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-amber-400/40 bg-amber-400/10 px-2.5 text-xs text-amber-300 hover:bg-amber-400/15 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none pointer-coarse:h-11"
                 >
                   <AlertTriangle className="size-3.5" aria-hidden />
-                  {warnings.length === 1
-                    ? "1 preview warning"
-                    : `${warnings.length} preview warnings`}
+                  {compact
+                    ? warnings.length
+                    : warnings.length === 1
+                      ? "1 preview warning"
+                      : `${warnings.length} preview warnings`}
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-0">
+              <PopoverContent align="end" className="w-[min(20rem,calc(100vw-1.5rem))] p-0">
                 <div className="flex items-center justify-between border-b border-border px-3 py-2">
                   <p className="text-xs font-medium">From the preview</p>
                   <button
@@ -128,7 +147,7 @@ export function PreviewPane({
               </PopoverContent>
             </Popover>
           ) : null}
-          <div className="w-[88px]">
+          <div className={cn("w-[88px] pointer-coarse:w-[108px]", compact && "hidden")}>
             <Segmented
               label="Preview size"
               hideLabel
@@ -143,7 +162,7 @@ export function PreviewPane({
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
+            className="size-8 pointer-coarse:size-11"
             onClick={engine.reload}
             aria-label="Reload the preview"
           >

@@ -83,13 +83,17 @@ function ProjectsPage() {
         title="Endcaps"
         actions={
           <>
-            <Button variant="outline" onClick={() => setLibrary(true)}>
+            <Button
+              variant="outline"
+              className="pointer-coarse:h-11"
+              onClick={() => setLibrary(true)}
+            >
               <Images aria-hidden /> Asset library
             </Button>
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="btn-pill btn-ember px-5 py-2 text-sm font-medium"
+              className="btn-pill btn-ember px-5 py-2 text-sm font-medium pointer-coarse:min-h-11"
             >
               <Plus className="size-4" aria-hidden /> New endcap
             </button>
@@ -129,7 +133,7 @@ function ProjectsPage() {
               <button
                 type="button"
                 onClick={() => setCreating(true)}
-                className="btn-pill btn-ember px-5 py-2 text-sm font-medium"
+                className="btn-pill btn-ember px-5 py-2 text-sm font-medium pointer-coarse:min-h-11"
               >
                 <Plus className="size-4" aria-hidden /> New endcap
               </button>
@@ -164,7 +168,7 @@ function ProjectsPage() {
               undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="pointer-coarse:[&_:is(button,a)]:h-11">
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -264,13 +268,16 @@ function ProjectCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative z-10 -mr-1 size-8 shrink-0"
+                className="relative z-10 -mr-1 size-8 shrink-0 pointer-coarse:size-11"
                 aria-label={`Actions for ${p.name}`}
               >
                 <MoreHorizontal aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuContent
+              align="end"
+              className="w-52 pointer-coarse:[&_[role=menuitem]]:py-3"
+            >
               <DropdownMenuItem asChild>
                 <Link to="/admin/builder/$slug" params={{ slug: p.slug }}>
                   <PencilLine aria-hidden /> Open

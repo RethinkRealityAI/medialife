@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RotateCcw } from "lucide-react";
+import { Eye, RotateCcw } from "lucide-react";
 
 import {
   AlertDialog,
@@ -107,7 +107,7 @@ const SOURCES = [
 ] as const;
 
 function ZoneEditor({ id }: { id: ZoneId }) {
-  const { draft, update, engine } = useEditor();
+  const { draft, update, engine, layout, showPreview } = useEditor();
   const canTint = engine.capabilities.tint.includes(id);
   const canPrint = engine.capabilities.print.includes(id);
   const [confirm, setConfirm] = useState(false);
@@ -121,14 +121,26 @@ function ZoneEditor({ id }: { id: ZoneId }) {
         title={ZONES[id].label}
         description={ZONES[id].hint}
         actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-xs text-muted-foreground"
-            onClick={() => setConfirm(true)}
-          >
-            <RotateCcw className="size-3.5" aria-hidden /> Reset
-          </Button>
+          <>
+            {layout === "tabs" ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs pointer-coarse:h-11"
+                onClick={showPreview}
+              >
+                <Eye className="size-3.5" aria-hidden /> Show in preview
+              </Button>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground pointer-coarse:h-11"
+              onClick={() => setConfirm(true)}
+            >
+              <RotateCcw className="size-3.5" aria-hidden /> Reset
+            </Button>
+          </>
         }
       >
         <SwitchField
@@ -324,7 +336,7 @@ function ZoneEditor({ id }: { id: ZoneId }) {
               stay in the library.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="pointer-coarse:[&_:is(button,a)]:h-11">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>

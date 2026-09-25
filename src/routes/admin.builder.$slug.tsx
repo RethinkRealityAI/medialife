@@ -8,10 +8,11 @@ import {
   useNavigate,
   useRouter,
 } from "@tanstack/react-router";
-import { ArrowLeft, Eye, Monitor } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { assetsQueryKey, draftPreviewHref, projectsQueryKey } from "@/components/ar-builder/api";
+import { PaneTabs, SplitDivider } from "@/components/ar-builder/layout";
 import { AssetLibrary } from "@/components/ar-builder/asset-library";
 import {
   EditorContext,
@@ -26,6 +27,11 @@ import { PublishDialog } from "@/components/ar-builder/publish-dialog";
 import { SettingsPanel } from "@/components/ar-builder/settings-panel";
 import { useAutosave } from "@/components/ar-builder/use-autosave";
 import { useEngine } from "@/components/ar-builder/use-engine";
+import {
+  useEditorLayout,
+  useStoredState,
+  type LayoutInfo,
+} from "@/components/ar-builder/use-layout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,9 +62,12 @@ import {
   type SectionId,
 } from "@/lib/ar/projects";
 import { getProjectFn, renameProjectFn, unpublishProjectFn } from "@/lib/ar/projects.functions";
+import { cn } from "@/lib/utils";
 
-// The endcap editor: settings on the left, the live engine preview on the
-// right. Edits autosave; Publish makes the AR files and puts the draft live.
+// The endcap editor: settings and the live engine preview, arranged for the
+// screen (side by side, stacked with a divider, or one at a time on phones; see
+// components/ar-builder/use-layout.ts). Edits autosave; Publish makes the AR
+// files and puts the draft live.
 
 export const Route = createFileRoute("/admin/builder/$slug")({
   loader: async ({ params }) => {
@@ -76,30 +85,30 @@ export const Route = createFileRoute("/admin/builder/$slug")({
   component: EditorPage,
 });
 
-function useMinWidth(px: number): boolean | null {
-  const [ok, setOk] = useState<boolean | null>(null);
-  useEffect(() => {
-    const mq = window.matchMedia(`(min-width: ${px}px)`);
-    const on = () => setOk(mq.matches);
-    on();
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, [px]);
-  return ok;
-}
-
 function EditorPage() {
   const data = Route.useLoaderData();
-  const wide = useMinWidth(1024);
-  if (wide === null) return <EditorSkeleton />;
-  if (!wide) return <SmallScreen slug={data.doc.slug} name={data.doc.draft.name} />;
+  const layout = useEditorLayout();
+  if (!layout) return <EditorSkeleton />;
   // remount when the stored doc is reloaded (e.g. "Load theirs" after a conflict)
   return (
-    <Editor key={`${data.doc.slug}:${data.doc.updatedAt}`} doc={data.doc} summary={data.summary} />
+    <Editor
+      key={`${data.doc.slug}:${data.doc.updatedAt}`}
+      doc={data.doc}
+      summary={data.summary}
+      ui={layout}
+    />
   );
 }
 
-function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: ProjectSummary }) {
+function Editor({
+  doc,
+  summary: initialSummary,
+  ui,
+}: {
+  doc: ProjectDoc;
+  summary: ProjectSummary;
+  ui: LayoutInfo;
+}) {
   const slug = doc.slug;
   const qc = useQueryClient();
   const router = useRouter();
@@ -108,6 +117,13 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
   const [summary, setSummary] = useState(initialSummary);
   const [published, setPublished] = useState<Project | null>(doc.published);
   const [section, setSection] = useState<SectionId>("overview");
+  // compact layouts (see use-layout.ts)
+  const [pane, setPane] = useState<"settings" | "preview">("settings");
+  const [panelOpen, setPanelOpen] = useStoredState("ar-builder-panel-open", true);
+  const [split, setSplit] = useStoredState("ar-builder-split", 0.42);
+  const [dragging, setDragging] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  const layout = ui.layout;
   const [zone, setZone] = useState<ZoneId>("cap");
   const [themeIndex, setThemeIndex] = useState(() =>
     Math.max(
@@ -199,24 +215,29 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
 
   const openLibrary = useCallback((req: LibraryRequest) => setLibrary({ open: true, req }), []);
 
-  const jumpTo = useCallback((path: Path) => {
-    setSection(sectionForPath(path));
-    if (path[0] === "zones" && typeof path[1] === "string") setZone(path[1] as ZoneId);
-    if (path[0] === "themes" && typeof path[1] === "number") setThemeIndex(path[1]);
-    // after the section renders: the closest field on the path
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        for (let n = path.length; n > 0; n--) {
-          const el = document.getElementById(fieldId(path.slice(0, n)));
-          if (el) {
-            el.scrollIntoView({ block: "center", behavior: "smooth" });
-            el.focus({ preventScroll: true });
-            return;
+  const jumpTo = useCallback(
+    (path: Path) => {
+      setPane("settings");
+      setPanelOpen(true);
+      setSection(sectionForPath(path));
+      if (path[0] === "zones" && typeof path[1] === "string") setZone(path[1] as ZoneId);
+      if (path[0] === "themes" && typeof path[1] === "number") setThemeIndex(path[1]);
+      // after the section renders: the closest field on the path
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          for (let n = path.length; n > 0; n--) {
+            const el = document.getElementById(fieldId(path.slice(0, n)));
+            if (el) {
+              el.scrollIntoView({ block: "center", behavior: "smooth" });
+              el.focus({ preventScroll: true });
+              return;
+            }
           }
-        }
-      }),
-    );
-  }, []);
+        }),
+      );
+    },
+    [setPanelOpen],
+  );
 
   async function rename(to: string): Promise<string | null> {
     if (!(await autosave.flush())) return "Save your changes first (see the save status above).";
@@ -284,11 +305,18 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
     openLibrary,
     jumpTo,
     engine,
+    layout,
+    // phones: flip to the preview pane (the other layouts always show it)
+    showPreview: () => setPane("preview"),
   };
+
+  const tabs = layout === "tabs";
+  const stack = layout === "stack";
+  const side = layout === "side";
 
   return (
     <EditorContext.Provider value={ctx}>
-      <div className="flex h-[calc(100svh-3.5rem)] min-h-[560px] flex-col">
+      <div data-layout={layout} className="flex h-[calc(100dvh-3.5rem)] min-h-[420px] flex-col">
         <EditorHeader
           slug={slug}
           name={draft.name}
@@ -301,13 +329,64 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
           onPreview={() => void openPreview()}
           onPublish={() => setPublishing(true)}
           onUnpublish={() => setUnpublishing(true)}
+          compact={ui.compactHeader}
+          tiny={ui.tinyHeader}
+          panel={side ? { open: panelOpen, toggle: () => setPanelOpen(!panelOpen) } : null}
         />
-        <div className="flex min-h-0 flex-1">
-          <div className="w-[440px] shrink-0">
-            <SettingsPanel issues={issueList} published={published} onRename={rename} />
+        {tabs ? <PaneTabs value={pane} onChange={setPane} issues={issueList.length} /> : null}
+        {/*
+          One DOM order for every layout (settings, divider, preview) so the preview
+          iframe never moves or remounts when the layout changes; CSS does the rest.
+        */}
+        <div
+          ref={body}
+          className={cn("relative flex min-h-0 flex-1", side ? "flex-row" : "flex-col-reverse")}
+        >
+          <div
+            id="pane-settings"
+            role={tabs ? "tabpanel" : undefined}
+            aria-labelledby={tabs ? "pane-tab-settings" : undefined}
+            className={cn(
+              "min-h-0 min-w-0",
+              side && (panelOpen ? "shrink-0" : "hidden"),
+              stack && "flex-1",
+              tabs && "absolute inset-0",
+              tabs && pane !== "settings" && "invisible",
+            )}
+            style={side ? { width: ui.panelWidth } : undefined}
+          >
+            <SettingsPanel
+              issues={issueList}
+              published={published}
+              onRename={rename}
+              nav={ui.rail ? "rail" : "bar"}
+            />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className={cn(!stack && "hidden")}>
+            <SplitDivider
+              fraction={split}
+              onChange={setSplit}
+              containerRef={body}
+              onDragging={setDragging}
+            />
+          </div>
+          <div
+            id="pane-preview"
+            role={tabs ? "tabpanel" : undefined}
+            aria-labelledby={tabs ? "pane-tab-preview" : undefined}
+            className={cn(
+              "min-h-0 min-w-0",
+              side && "flex-1",
+              stack && "shrink-0",
+              tabs && "absolute inset-0",
+              // kept mounted and sized while hidden: the WebGL scene survives the switch
+              tabs && pane !== "preview" && "invisible",
+              dragging && "pointer-events-none",
+            )}
+            style={stack ? { height: `${Math.round(split * 100)}%` } : undefined}
+          >
             <PreviewPane
+              compact={ui.width < 700 || (side && ui.width - ui.panelWidth < 760)}
               engine={engine}
               draft={draft}
               theme={previewTheme}
@@ -359,7 +438,7 @@ function Editor({ doc, summary: initialSummary }: { doc: ProjectDoc; summary: Pr
               Your draft stays here and you can publish again at any time.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="pointer-coarse:[&_:is(button,a)]:h-11">
             <AlertDialogCancel>Keep it live</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -394,33 +473,6 @@ function EditorSkeleton() {
           <Skeleton className="h-24 w-full" />
         </div>
         <div className="flex-1 bg-[oklch(0.1_0.008_280)]" />
-      </div>
-    </div>
-  );
-}
-
-function SmallScreen({ slug, name }: { slug: string; name: string }) {
-  return (
-    <div className="mx-auto flex max-w-md flex-col items-center px-6 py-16 text-center">
-      <span className="grid size-12 place-items-center rounded-full border border-border bg-white/[0.03] text-muted-foreground">
-        <Monitor className="size-5" aria-hidden />
-      </span>
-      <h1 className="mt-5 text-lg font-medium">Open “{name}” on a larger screen</h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        The editor needs a laptop or desktop, at least 1024 pixels wide. You can still look at the
-        draft here.
-      </p>
-      <div className="mt-6 flex flex-wrap justify-center gap-2">
-        <Button asChild variant="outline">
-          <Link to="/admin/builder">
-            <ArrowLeft aria-hidden /> All endcaps
-          </Link>
-        </Button>
-        <Button asChild>
-          <a href={draftPreviewHref(slug)} target="_blank" rel="noreferrer">
-            <Eye aria-hidden /> Open the preview
-          </a>
-        </Button>
       </div>
     </div>
   );

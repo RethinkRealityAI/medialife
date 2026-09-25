@@ -5,6 +5,7 @@ import type { Project, ZoneId } from "@/lib/ar/project";
 import { fieldId, type Path, type SectionId } from "@/lib/ar/projects";
 
 import type { Engine } from "./use-engine";
+import type { EditorLayout } from "./use-layout";
 
 // Shared state for the editor's panels. Fields address the draft by path
 // (["zones","cap","product","price"]); the same path is the key for validation
@@ -36,6 +37,9 @@ export interface EditorContextValue {
   /** open the section holding `path` and focus its field */
   jumpTo: (path: Path) => void;
   engine: Engine;
+  layout: EditorLayout;
+  /** bring the live preview into view (phones: switches to the Preview pane) */
+  showPreview: () => void;
 }
 
 export const EditorContext = createContext<EditorContextValue | null>(null);

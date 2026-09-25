@@ -89,12 +89,17 @@ function SlugField({ onRename }: { onRename: (to: string) => Promise<string | nu
               className={`${inputClass} mono pl-9 text-xs`}
             />
           </div>
-          <Button size="sm" className="h-9" onClick={save} disabled={busy || !valid}>
+          <Button
+            size="sm"
+            className="h-9 pointer-coarse:h-11"
+            onClick={save}
+            disabled={busy || !valid}
+          >
             {busy ? "Saving…" : "Save"}
           </Button>
         </div>
       ) : (
-        <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background/30 pr-1 pl-3">
+        <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-background/30 pr-1 pl-3 pointer-coarse:h-11">
           {locked ? <Lock className="size-3.5 shrink-0 text-muted-foreground" aria-hidden /> : null}
           <span id={id} className="mono min-w-0 flex-1 truncate text-xs text-muted-foreground">
             medialife.ai/x/<span className="text-foreground">{slug}</span>
@@ -103,7 +108,7 @@ function SlugField({ onRename }: { onRename: (to: string) => Promise<string | nu
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs pointer-coarse:h-10"
               onClick={() => {
                 setValue(slug);
                 setEditing(true);
@@ -345,7 +350,7 @@ export function AccessSection() {
             type="button"
             onClick={() => setShow((s) => !s)}
             aria-label={show ? "Hide password" : "Show password"}
-            className="absolute top-1/2 right-1 grid size-7 -translate-y-1/2 place-items-center rounded text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+            className="absolute top-1/2 right-1 grid size-7 -translate-y-1/2 pointer-coarse:size-10 place-items-center rounded text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
           >
             {show ? (
               <EyeOff className="size-4" aria-hidden />

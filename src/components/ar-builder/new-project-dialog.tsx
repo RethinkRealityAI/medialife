@@ -141,7 +141,7 @@ export function NewProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !busy && onOpenChange(o)}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-lg overflow-y-auto">
         <form onSubmit={create} className="space-y-5">
           <DialogHeader>
             <DialogTitle>New endcap</DialogTitle>
@@ -268,7 +268,7 @@ export function NewProjectDialog({
             </p>
           ) : null}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 pointer-coarse:[&_:is(button,a)]:h-11">
             <Button
               type="button"
               variant="ghost"

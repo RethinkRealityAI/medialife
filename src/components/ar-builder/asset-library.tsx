@@ -182,7 +182,7 @@ export function AssetLibrary({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="flex h-[min(780px,92vh)] w-[min(1100px,96vw)] max-w-none flex-col gap-0 overflow-hidden p-0 sm:rounded-xl"
+          className="flex h-[min(780px,92dvh)] w-[min(1100px,96vw)] max-w-none flex-col gap-0 overflow-hidden p-0 max-sm:h-dvh max-sm:w-screen max-sm:border-0 sm:rounded-xl"
           onDragEnter={(e) => onDrag(e, "enter")}
           onDragLeave={(e) => onDrag(e, "leave")}
           onDragOver={(e) => onDrag(e, "over")}
@@ -377,7 +377,7 @@ export function AssetLibrary({
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="pointer-coarse:[&_:is(button,a)]:h-11">
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -537,12 +537,12 @@ function Tile({
             type="button"
             aria-label={`Actions for ${a.name}`}
             data-asset-actions={a.id}
-            className="absolute top-2 right-2 grid size-7 place-items-center rounded-md border border-border bg-background/80 text-muted-foreground opacity-0 backdrop-blur transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:opacity-100"
+            className="absolute top-2 right-2 grid size-7 place-items-center rounded-md border border-border bg-background/80 text-muted-foreground opacity-0 pointer-coarse:size-11 pointer-coarse:opacity-100 backdrop-blur transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none data-[state=open]:opacity-100"
           >
             <MoreHorizontal className="size-4" aria-hidden />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="pointer-coarse:[&_[role=menuitem]]:py-3">
           <DropdownMenuItem
             onSelect={async () => {
               if (await copyText(`${window.location.origin}${url}`)) toast.success("Link copied");

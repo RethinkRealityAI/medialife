@@ -88,7 +88,7 @@ export function ThemesSection() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8"
+            className="h-8 pointer-coarse:h-11"
             onClick={add}
             disabled={themes.length >= 4}
           >
@@ -104,7 +104,7 @@ export function ThemesSection() {
               aria-pressed={n === i}
               onClick={() => choose(n)}
               className={cn(
-                "inline-flex h-8 max-w-full items-center gap-2 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
+                "inline-flex h-8 max-w-full items-center pointer-coarse:h-11 pointer-coarse:px-4 gap-2 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
                 n === i
                   ? "border-primary/60 bg-primary/10 text-foreground"
                   : "border-border text-muted-foreground hover:text-foreground",
@@ -153,7 +153,7 @@ export function ThemesSection() {
               Its colours and graphics choices go with it. Uploaded images stay in the library.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="pointer-coarse:[&_:is(button,a)]:h-11">
             <AlertDialogCancel>Keep it</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -197,7 +197,7 @@ function ThemeEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-8 pointer-coarse:size-11"
               onClick={() => onMove(-1)}
               disabled={i === 0}
               aria-label="Move theme left"
@@ -207,7 +207,7 @@ function ThemeEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-8 pointer-coarse:size-11"
               onClick={() => onMove(1)}
               disabled={i === count - 1}
               aria-label="Move theme right"
@@ -217,7 +217,7 @@ function ThemeEditor({
             <Button
               variant="ghost"
               size="icon"
-              className="size-8 text-muted-foreground hover:text-destructive"
+              className="size-8 text-muted-foreground hover:text-destructive pointer-coarse:size-11"
               onClick={onRemove}
               disabled={count <= 1}
               aria-label="Remove theme"

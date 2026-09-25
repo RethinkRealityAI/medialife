@@ -80,7 +80,7 @@ function PickerRow({
         id={id}
         type="button"
         onClick={onChoose}
-        className="inline-flex h-7 items-center gap-1 rounded px-2 text-xs text-muted-foreground hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+        className="inline-flex h-7 items-center gap-1 rounded px-2 pointer-coarse:h-11 text-xs text-muted-foreground hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
       >
         <Replace className="size-3.5" aria-hidden />
         Replace
@@ -90,7 +90,7 @@ function PickerRow({
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${name}`}
-          className="grid size-7 place-items-center rounded text-muted-foreground hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+          className="grid size-7 place-items-center rounded text-muted-foreground pointer-coarse:size-11 hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
         >
           <X className="size-3.5" aria-hidden />
         </button>

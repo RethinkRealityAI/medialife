@@ -64,7 +64,7 @@ const described = (id: string, error: string | null, hint?: ReactNode) =>
   error ? `${id}-err` : hint ? `${id}-hint` : undefined;
 
 export const inputClass =
-  "bg-background/60 aria-[invalid=true]:border-destructive/70 aria-[invalid=true]:focus-visible:ring-destructive";
+  "bg-background/60 aria-[invalid=true]:border-destructive/70 aria-[invalid=true]:focus-visible:ring-destructive pointer-coarse:h-11";
 
 export function TextField({
   path,
@@ -134,7 +134,7 @@ export function TextField({
           {...common}
           rows={rows}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(inputClass, "min-h-0 resize-y text-sm")}
+          className={cn(inputClass, "min-h-0 resize-y text-sm pointer-coarse:h-auto")}
         />
       ) : (
         <Input
@@ -245,7 +245,7 @@ export function ColorField({
       <div className="flex items-center gap-2">
         <label
           className={cn(
-            "relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-input focus-within:ring-1 focus-within:ring-ring",
+            "relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-md pointer-coarse:size-11 border border-input focus-within:ring-1 focus-within:ring-ring",
             !f.value && "opacity-60",
           )}
           style={{ background: swatch }}
@@ -340,7 +340,7 @@ export function SliderField({
             onClick={() => f.set(reset)}
             disabled={v === reset}
             aria-label={`Reset ${label.toLowerCase()}`}
-            className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-30"
+            className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none pointer-coarse:-m-2.5 pointer-coarse:p-3 disabled:opacity-30"
           >
             <RotateCcw className="size-3" aria-hidden />
           </button>
@@ -355,7 +355,7 @@ export function SliderField({
         value={[v]}
         onValueChange={([n]) => f.set(n)}
         aria-label={label}
-        className="py-1.5"
+        className="py-1.5 pointer-coarse:py-4"
       />
     </FieldShell>
   );
@@ -456,7 +456,7 @@ export function Segmented<V extends string>({
               data-value={o.value}
               onClick={() => onChange(o.value)}
               className={cn(
-                "inline-flex min-w-0 flex-auto items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5",
+                "inline-flex min-w-0 flex-auto items-center justify-center gap-1.5 rounded-md px-2 py-1.5 pointer-coarse:min-h-11 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5",
                 on
                   ? "bg-secondary text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
@@ -516,7 +516,7 @@ export function ChipsField({ path, label }: { path: Path; label: string }) {
               type="button"
               onClick={() => remove(i)}
               aria-label={`Remove size ${s}`}
-              className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+              className="rounded p-0.5 text-muted-foreground hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none pointer-coarse:-my-2 pointer-coarse:p-2"
             >
               <X className="size-3" aria-hidden />
             </button>
@@ -582,7 +582,7 @@ export function HintAction({ className, ...props }: ButtonHTMLAttributes<HTMLBut
     <button
       type="button"
       className={cn(
-        "inline-flex h-7 items-center rounded-md border border-border bg-background/70 px-2.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
+        "inline-flex h-7 items-center rounded-md border border-border bg-background/70 px-2.5 pointer-coarse:h-11 pointer-coarse:px-3.5 text-xs font-medium text-foreground transition-colors hover:border-primary/50 hover:text-primary focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
         className,
       )}
       {...props}

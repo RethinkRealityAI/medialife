@@ -217,7 +217,10 @@ export function PublishDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => (!busy || !o ? onOpenChange(o) : undefined)}>
       <DialogContent
-        className={cn("max-w-md gap-5", busy && "[&>button:last-child]:hidden")}
+        className={cn(
+          "max-h-[calc(100dvh-1rem)] max-w-md gap-5 overflow-y-auto",
+          busy && "[&>button:last-child]:hidden",
+        )}
         onEscapeKeyDown={(e) => busy && e.preventDefault()}
         onPointerDownOutside={(e) => busy && e.preventDefault()}
         onInteractOutside={(e) => busy && e.preventDefault()}
@@ -343,7 +346,7 @@ export function PublishDialog({
           </div>
         ) : null}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2 sm:gap-0 pointer-coarse:[&_:is(button,a)]:h-11">
           {phase.kind === "ar-failed" ? (
             <>
               <Button variant="ghost" onClick={() => start("check")}>

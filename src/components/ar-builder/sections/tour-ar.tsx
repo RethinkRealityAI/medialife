@@ -32,7 +32,7 @@ import { Note } from "./basics";
 const VIEW_OPTIONS = (Object.keys(VIEWS) as ViewId[]).map((v) => ({ value: v, label: VIEWS[v] }));
 
 export function TourSection() {
-  const { draft, update, engine } = useEditor();
+  const { draft, update, engine, showPreview } = useEditor();
   const steps = draft.tour;
   const themeOptions = draft.themes.map((t) => ({ value: t.id, label: t.name || t.id }));
 
@@ -56,8 +56,11 @@ export function TourSection() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8"
-              onClick={() => engine.tour(true)}
+              className="h-8 pointer-coarse:h-11"
+              onClick={() => {
+                engine.tour(true);
+                showPreview();
+              }}
               disabled={!steps.length}
             >
               <Play aria-hidden /> Play
@@ -65,7 +68,7 @@ export function TourSection() {
             <Button
               variant="ghost"
               size="icon"
-              className="size-8"
+              className="size-8 pointer-coarse:size-11"
               onClick={() => engine.tour(false)}
               aria-label="Stop the tour"
             >
@@ -98,18 +101,19 @@ export function TourSection() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7"
+                    className="size-7 pointer-coarse:size-11"
                     aria-label={`Show step ${i + 1} in the preview`}
-                    onClick={() =>
-                      engine.goto({ view: s.view, ...(s.theme ? { theme: s.theme } : {}) })
-                    }
+                    onClick={() => {
+                      engine.goto({ view: s.view, ...(s.theme ? { theme: s.theme } : {}) });
+                      showPreview();
+                    }}
                   >
                     <Eye aria-hidden />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7"
+                    className="size-7 pointer-coarse:size-11"
                     aria-label={`Move step ${i + 1} up`}
                     disabled={i === 0}
                     onClick={() => move(i, i - 1)}
@@ -119,7 +123,7 @@ export function TourSection() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7"
+                    className="size-7 pointer-coarse:size-11"
                     aria-label={`Move step ${i + 1} down`}
                     disabled={i === steps.length - 1}
                     onClick={() => move(i, i + 1)}
@@ -129,7 +133,7 @@ export function TourSection() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="size-7 text-muted-foreground hover:text-destructive"
+                    className="size-7 text-muted-foreground hover:text-destructive pointer-coarse:size-11"
                     aria-label={`Remove step ${i + 1}`}
                     onClick={() =>
                       update((d) => {
@@ -212,7 +216,7 @@ function ArFiles({ ar, label }: { ar: Project["ar"] | undefined; label: string }
                 <a
                   href={f.ref}
                   download
-                  className="grid size-7 place-items-center rounded text-muted-foreground hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                  className="grid size-7 place-items-center rounded text-muted-foreground pointer-coarse:size-11 hover:bg-white/[0.05] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                   aria-label={`Download ${f.name}`}
                 >
                   <Download className="size-3.5" aria-hidden />
