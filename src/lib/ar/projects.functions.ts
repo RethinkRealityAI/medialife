@@ -3,6 +3,7 @@ import { getCookie, getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
 import { ADMIN_COOKIE, verifyToken } from "./auth.server";
+import { purgeEndcapCache } from "./cdn.server";
 import { slugSchema } from "./project";
 import {
   createProject,
@@ -100,9 +101,14 @@ export const publishProjectFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const r = await publishProject(await adminNs(), data.slug, { ar: data.ar, thumb: data.thumb });
+    if (r.ok) await purgeEndcapCache(data.slug);
     return r.ok ? { ok: true as const, doc: r.doc, summary: r.summary } : r;
   });
 
 export const unpublishProjectFn = createServerFn({ method: "POST" })
   .validator(slugOnly)
-  .handler(async ({ data }) => unpublishProject(await adminNs(), data.slug));
+  .handler(async ({ data }) => {
+    const r = await unpublishProject(await adminNs(), data.slug);
+    await purgeEndcapCache(data.slug);
+    return r;
+  });
