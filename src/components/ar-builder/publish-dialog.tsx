@@ -79,6 +79,7 @@ export function PublishDialog({
   const run = useRef(0);
   const draftRef = useRef(draft);
   draftRef.current = draft;
+  const arAbort = useRef<AbortController | null>(null);
 
   function initial(): Record<StepId, StepState> {
     return { check: "todo", save: "todo", ar: "todo", thumb: "todo", publish: "todo" };
@@ -122,9 +123,13 @@ export function PublishDialog({
       mark("save", "done");
 
       mark("ar", "doing");
+      arAbort.current = new AbortController();
       try {
-        const files = await buildAndUploadAR(engine, draftRef.current, (label, f) =>
-          setDetail(f === undefined ? label : `${label} · ${Math.round(f * 100)}%`),
+        const files = await buildAndUploadAR(
+          engine,
+          draftRef.current,
+          (label, f) => setDetail(f === undefined ? label : `${label} · ${Math.round(f * 100)}%`),
+          arAbort.current.signal,
         );
         if (!alive()) return;
         ar = { mode: "new", ...files };
@@ -203,6 +208,11 @@ export function PublishDialog({
 
   const busy = phase.kind === "running";
   const hadAR = !!(published?.ar?.glb || draft.ar?.glb);
+  /** Stop waiting for the AR files and publish with the previous ones (or none). */
+  const skipAR = () => {
+    arAbort.current?.abort();
+    void start("after-ar", hadAR ? "keep" : "none");
+  };
 
   return (
     <Dialog open={open} onOpenChange={(o) => (!busy || !o ? onOpenChange(o) : undefined)}>
@@ -362,9 +372,16 @@ export function PublishDialog({
               Close
             </Button>
           ) : (
-            <Button disabled>
-              <Loader2 className="animate-spin" aria-hidden /> Publishing…
-            </Button>
+            <>
+              {steps.ar === "doing" ? (
+                <Button variant="ghost" onClick={skipAR}>
+                  {hadAR ? "Keep the previous AR files" : "Skip AR for now"}
+                </Button>
+              ) : null}
+              <Button disabled>
+                <Loader2 className="animate-spin" aria-hidden /> Publishing…
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>

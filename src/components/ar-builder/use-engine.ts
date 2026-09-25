@@ -180,7 +180,8 @@ export function useEngine(opts: {
       async (theme: string) => {
         const r = await request<{ glb: ArrayBuffer; usdz: ArrayBuffer }>(
           { type: "ar:export", theme },
-          180000,
+          // generous: slow laptops take a while, and Publish offers "Skip AR" meanwhile
+          300000,
         );
         if (!(r.glb instanceof ArrayBuffer) || !(r.usdz instanceof ArrayBuffer)) {
           throw new Error("The preview sent back empty AR files");
