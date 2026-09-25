@@ -1896,7 +1896,7 @@ function setTheme(id){
   // merch set
   if(id==='evade'){
     if(evade.built) showEvadeMerch(true);
-    else { toast('Stocking the EVADE shelf…'); loadEvadeAssets().then(()=>{ if(currentTheme==='evade' && !focus) showEvadeMerch(true); }).catch(e=>{ console.warn(e); toast('EVADE merch could not load'); }); }
+    else { toast('Stocking the EVADE shelf…'); loadEvadeAssets().then(()=>showMerchWhenFree(()=>currentTheme==='evade')).catch(e=>{ console.warn(e); toast('EVADE merch could not load'); }); }
   } else if(evade.built) showEvadeMerch(false);
   relabelHotspots();
   $('#realQr').hidden = !th.live;
@@ -1950,6 +1950,14 @@ function cloneModel(key){
   if(src.animations?.length){ const mx=new THREE.AnimationMixer(inner); const a=mx.clipAction(src.animations[0]); a.play(); a.time=Math.random()*src.animations[0].duration; evade.mixers.push(mx); }
   return wrap;
 }
+function shelfBoxInGroup(item){
+  item.updateWorldMatrix(true,true);
+  const inv=item.matrixWorld.clone().invert(), lb=new THREE.Box3(), mb=new THREE.Box3(), m=new THREE.Matrix4();
+  item.traverse(o=>{ if(o.isMesh && o.geometry){ if(!o.geometry.boundingBox) o.geometry.computeBoundingBox(); mb.copy(o.geometry.boundingBox).applyMatrix4(m.multiplyMatrices(inv,o.matrixWorld)); lb.union(mb); } });
+  const s=shelfSlots.get(item);
+  const home=s ? new THREE.Matrix4().compose(s.pos,s.quat,s.scale) : new THREE.Matrix4().compose(item.position,item.quaternion,item.scale);
+  return lb.applyMatrix4(home);
+}
 function buildEvadeMerch(){
   if(evade.built) return;
   const _b=new THREE.Box3(), _inv=new THREE.Matrix4();
@@ -1957,9 +1965,9 @@ function buildEvadeMerch(){
     const group=refs.merch[id]; if(!group) continue;
     refs.merchItems[id].forEach((item,i)=>{
       const v=cloneModel(keys[i%keys.length]); if(!v) return;
-      group.updateWorldMatrix(true,true);
-      _inv.copy(group.matrixWorld).invert();
-      const ib=new THREE.Box3().setFromObject(item).applyMatrix4(_inv); const isz=ib.getSize(new THREE.Vector3());
+      // the item's box in its shelf group, from its shelf pose: it may be held or flying home right now,
+      // and a variant measured from that pose would be built big and floating in front of the shelf
+      const ib=shelfBoxInGroup(item); const isz=ib.getSize(new THREE.Vector3());
       v.updateWorldMatrix(true,true); const vb=new THREE.Box3().setFromObject(v); const vsz=vb.getSize(new THREE.Vector3());
       let sc = isz.y/vsz.y; const foot=Math.max(isz.x,isz.z)*1.25, vfoot=Math.max(vsz.x,vsz.z)*sc; if(vfoot>foot) sc*=foot/vfoot;
       if(id==='plush') sc*=1.05; if(id==='figure') sc*=0.8;
@@ -1976,6 +1984,11 @@ function buildEvadeMerch(){
   }
   buildCat();
   evade.built=true;
+}
+// swap the shelf over once no product is held or in flight (swapping mid-hold would hide the held item)
+function showMerchWhenFree(stillWanted){
+  const go=()=>{ if(!stillWanted()) return; if(focus || flights.size){ setTimeout(go,400); return; } showEvadeMerch(true); };
+  go();
 }
 function showEvadeMerch(on){
   for(const [item,v] of evade.variants){ item.visible=!on; v.visible=on; }
@@ -2231,6 +2244,16 @@ function heldPose(f, spin, tilt, zoom, out){
   _hc.copy(f.center).multiply(out.s).applyQuaternion(out.q);
   out.p.copy(f.dest).sub(_hc);
   return out;
+}
+function sweepStrays(){
+  for(const id of Object.keys(refs.hero||{})){
+    const h=refs.hero[id]; if(!h) continue;
+    for(const o of [h, h.userData.variant]){
+      if(!o || focus?.obj===o || flights.has(o)) continue;
+      const s=shelfSlots.get(o); if(!s || o.parent===s.parent) continue;
+      s.parent.attach(o); o.position.copy(s.pos); o.quaternion.copy(s.quat); o.scale.copy(s.scale); setCastShadow(o,true); renderer.shadowMap.needsUpdate=true;
+    }
+  }
 }
 function setCastShadow(obj,on){ obj.traverse(o=>{ if(o.isMesh){ if(o.userData.cast0===undefined) o.userData.cast0=o.castShadow; o.castShadow = on ? o.userData.cast0 : false; } }); }
 let spinHintShown=0;
@@ -2687,6 +2710,7 @@ function loop(){
   lastNow=nowT; window.__frames=(window.__frames||0)+1;
   try { frameBody(); } catch(err){ reportErr(err); }
   try { updateHotspots(); updatePartLabels(); } catch(err){ reportErr(err); }
+  if(nowT-(loop.swept||0)>1000){ loop.swept=nowT; try{ sweepStrays(); }catch(err){ reportErr(err); } }
   try { composer.render(); } catch(err){ reportErr(err); }
 }
 function frameBody(){
