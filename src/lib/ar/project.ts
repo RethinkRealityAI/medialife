@@ -182,6 +182,13 @@ export const projectSchema = z.object({
     splashSub: z.string().max(120).default(""),
     /** retailer named in copy ("In stock at this Walmart") */
     retailer: z.string().max(30).default("Walmart"),
+    /**
+     * Lit channel letters on the header when a theme has no header art, e.g. "MONKEY QUEST".
+     * Empty keeps the fixture's own letters (which read "ROBLOX").
+     */
+    headerText: z.string().max(24).optional(),
+    /** The lit line on the plinth. Empty keeps the fixture's own ("REAL WORLDS. MORE PLAY.") */
+    tagline: z.string().max(40).optional(),
   }),
   access: z.object({
     /** plain password, admin-only: stripped from the public JSON (only passwordHash ships) */
