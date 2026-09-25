@@ -453,7 +453,7 @@ export function Segmented<V extends string>({
               data-value={o.value}
               onClick={() => onChange(o.value)}
               className={cn(
-                "inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5",
+                "inline-flex min-w-0 flex-auto items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5",
                 on
                   ? "bg-secondary text-foreground shadow-sm"
                   : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",

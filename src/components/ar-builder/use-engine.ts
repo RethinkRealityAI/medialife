@@ -102,15 +102,17 @@ export function useEngine(opts: {
         case "ar:error":
           handlers.current.onError?.(String(m.message ?? "Unknown problem"));
           break;
+        // ar:thumb:error isn't in protocol v1 (a failed thumbnail is an ar:error
+        // there), but an answer with the id beats waiting for the timeout
         case "ar:export:done":
         case "ar:export:error":
-        case "ar:thumb:done": {
+        case "ar:thumb:done":
+        case "ar:thumb:error": {
           const p = pending.current.get(String(m.id));
           if (!p) break;
           pending.current.delete(String(m.id));
           clearTimeout(p.timer);
-          if (m.type === "ar:export:error")
-            p.reject(new Error(String(m.message ?? "Export failed")));
+          if (m.type.endsWith(":error")) p.reject(new Error(String(m.message ?? "Failed")));
           else p.resolve(m);
           break;
         }
