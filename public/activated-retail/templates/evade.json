@@ -1,0 +1,240 @@
+{
+  "version": 1,
+  "slug": "evade-template",
+  "name": "EVADE (template)",
+  "brand": {
+    "lockup": "MEDIALIFE® × EVADE",
+    "sub": "WALMART ENDCAP · AR-01 · PILOT PROPERTY",
+    "splashTitle": "EVADE",
+    "splashSub": "The pilot endcap: every product opens Cola Run, live at evade.medialife.ai.",
+    "retailer": "Walmart"
+  },
+  "access": {},
+  "themes": [
+    {
+      "id": "evade",
+      "name": "EVADE",
+      "led": "#2fe0e8",
+      "led2": "#f5b82e",
+      "bay": "#27b4c6",
+      "spill": "#22c6d6",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/roblox/activated-retail/assets/hd/ev_towerL.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/ev_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/roblox/activated-retail/assets/hd/ev_towerR.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/ev_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/roblox/activated-retail/assets/hd/ev_totem.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/ev_totem_m.webp"
+        },
+        "wall": {
+          "src": "/roblox/activated-retail/assets/hd/ev_wall.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/ev_wall_m.webp"
+        },
+        "screen": {
+          "src": "/roblox/activated-retail/assets/hd/ev_screen.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/ev_screen_m.webp"
+        }
+      },
+      "site": "EVADE.MEDIALIFE.AI",
+      "game": "EVADE"
+    }
+  ],
+  "defaultTheme": "evade",
+  "zones": {
+    "cap": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/ev_cap.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "BOBO Cap",
+        "category": "Activated Apparel® · concept",
+        "sku": "EVD-CAP-BLU",
+        "price": 32,
+        "description": "Bobo's signature look as a real cap, with a woven NFC label under the brim.",
+        "unlock": { "title": "Bobo's visor", "sub": "UGC accessory for your avatar" },
+        "trigger": "Woven NFC label",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "plush": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/ev_catplush.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Cat Bobo Plush",
+        "category": "Activated Merchandise® · concept",
+        "sku": "EVD-PLU-CAT",
+        "price": 30,
+        "description": "Cat Bobo, the hero of Cola Run, as a 28 cm plush with an NFC chip in the tush tag.",
+        "unlock": { "title": "Cat Bobo companion", "sub": "Follows your avatar in EVADE" },
+        "trigger": "NFC chip in the tush tag",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": true
+      }
+    },
+    "keychain": {
+      "enabled": true,
+      "model": {
+        "source": "image",
+        "image": "/roblox/activated-retail/assets/ev_bobocharm.webp",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "EVADE Activated Keychain",
+        "category": "Activated Merchandise® · pilot SKU",
+        "sku": "EVD-KEY-01",
+        "price": 18,
+        "description": "The launch-ready pilot product: acrylic Bobo and Eclipse Cola charms with an NFC tag and a QR on the back. One tap opens Cola Run, the exclusive mini-game, and unlocks an in-game UGC item (subject to final approval).",
+        "unlock": {
+          "title": "Cola Run + UGC item",
+          "sub": "Live now at evade.medialife.ai",
+          "image": "/roblox/activated-retail/assets/ev_keyglow.webp"
+        },
+        "trigger": "NFC tag + QR on the charm back",
+        "channel": "Roblox Commerce in EVADE",
+        "canActivate": true
+      }
+    },
+    "mousepad": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/ev_mat.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "EVADE Desk Mat",
+        "category": "Activated Print® · concept",
+        "sku": "EVD-MAT-XL",
+        "price": 25,
+        "description": "XL desk mat printed with the Cola Run key art. The QR is part of the artwork.",
+        "unlock": { "title": "Profile badge", "sub": "Shown on your Roblox profile" },
+        "trigger": "QR in the print",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "figure": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/cola.glb",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Eclipse Cola Collectible",
+        "category": "Activated Merchandise® · concept",
+        "sku": "EVD-COL-01",
+        "price": 15,
+        "description": "Eclipse Cola cans straight from Cola Run, as spinning collectibles. Each can carries a QR under the tab.",
+        "unlock": { "title": "Eclipse Cola power-up", "sub": "Boost in Cola Run" },
+        "trigger": "QR under the tab",
+        "channel": "Walmart",
+        "canActivate": false
+      }
+    },
+    "tee": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/ev_tee.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "EVADE Activated Tee",
+        "category": "Activated Apparel® · pilot SKU",
+        "sku": "EVD-TEE-BLK",
+        "price": 32,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "The pilot's second SKU: heavyweight black tee with the EVADE mark and Bobo, plus an NFC care label. A tap opens the same Cola Run drop.",
+        "unlock": { "title": "In-game UGC item", "sub": "Subject to final approval" },
+        "trigger": "NFC care label",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "hoodie": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/roblox/activated-retail/models/ev_hoodie.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Cat Bobo Hoodie",
+        "category": "Activated Apparel® · concept",
+        "sku": "EVD-HOD-NVY",
+        "price": 65,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "The navy hoodie Cat Bobo wears, with cat ears on the hood and the EVADE mark. Owning it unlocks the matching avatar hoodie.",
+        "unlock": { "title": "Matching avatar hoodie", "sub": "UGC layered clothing" },
+        "trigger": "NFC hem label",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    }
+  },
+  "activation": {
+    "type": "link",
+    "url": "https://evade.medialife.ai",
+    "buttonLabel": "Launch Cola Run ↗",
+    "splash": "/roblox/activated-retail/assets/ev_intro.webp",
+    "rewardPrefix": "EVD",
+    "qrUrl": "https://evade.medialife.ai"
+  },
+  "tour": [
+    {
+      "title": "Stop them in the aisle",
+      "body": "A 3.84 m Walmart endcap built from modular lightbox towers, a channel-letter header and a 12-tile video wall. It reads from the end of the aisle, and every surface either sells or activates.",
+      "view": "aisle"
+    },
+    {
+      "title": "Tell the property's story",
+      "body": "The same fixture re-skins for any Roblox-native IP. Here it's EVADE, the first pilot property: its key art, its characters and its merch.",
+      "view": "hero"
+    },
+    {
+      "title": "Merchandise that extends the IP",
+      "body": "The pilot EVADE keychain and tee, plus the Cat Bobo plush, the BOBO cap, a hoodie, a desk mat and Eclipse Cola collectibles. Tap any product and it comes off the shelf.",
+      "view": "shelf"
+    },
+    {
+      "title": "Tap, play, unlock",
+      "body": "The QR on the right tower is real: scan it with your phone and Cola Run opens at evade.medialife.ai. No app. A mini-game, a reveal, then a UGC reward redeemed inside EVADE.",
+      "view": "qr"
+    },
+    {
+      "title": "Back to Roblox, and measured",
+      "body": "Unique activations, repeat interactions, engagement time and outbound traffic to Roblox, reported by location, property and creative treatment. This is the data behind the 90-day program review.",
+      "view": "dashboard",
+      "dashboard": true
+    },
+    {
+      "title": "Built modular",
+      "body": "Six modules bolt together on site: two lightbox towers, the header, the video wall, the merch bay and the plinth, plus a freestanding digital totem. When the featured property changes, you swap graphics, not fixtures.",
+      "view": "build"
+    }
+  ],
+  "cta": { "label": "Book a call", "mode": "lead" },
+  "ar": {}
+}
