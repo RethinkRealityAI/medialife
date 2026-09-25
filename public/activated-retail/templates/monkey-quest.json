@@ -1,0 +1,292 @@
+{
+  "version": 1,
+  "slug": "monkey-quest-template",
+  "name": "Monkey Quest (template)",
+  "brand": {
+    "lockup": "MEDIALIFE® × MONKEY QUEST",
+    "sub": "WALMART ENDCAP · CONCEPT FOR TOEI ANIMATION × HYPERGALACTIC",
+    "splashTitle": "Monkey Quest",
+    "splashSub": "Play it on Roblox now. See it in theaters in 2027. One Walmart endcap sells both.",
+    "retailer": "Walmart"
+  },
+  "access": {},
+  "themes": [
+    {
+      "id": "game",
+      "name": "Game",
+      "led": "#ff2a36",
+      "led2": "#ffc21f",
+      "bay": "#8a1a22",
+      "spill": "#ff3b40",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqg_towerL.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqg_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqg_towerR.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqg_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqg_totem.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqg_totem_m.webp"
+        },
+        "wall": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqg_wall.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqg_wall_m.webp"
+        },
+        "screen": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqg_screen.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqg_screen_m.webp"
+        },
+        "header": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mq_header_game.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mq_header_game_m.webp"
+        }
+      },
+      "site": "ROBLOX · MONKEY QUEST",
+      "game": "Monkey Quest"
+    },
+    {
+      "id": "film",
+      "name": "Film",
+      "led": "#ffae34",
+      "led2": "#ff4b22",
+      "bay": "#8a3a12",
+      "spill": "#ff9b3a",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqf_towerL.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqf_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqf_towerR.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqf_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqf_totem.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqf_totem_m.webp"
+        },
+        "wall": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqf_wall.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqf_wall_m.webp"
+        },
+        "screen": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mqf_screen.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mqf_screen_m.webp"
+        },
+        "header": {
+          "src": "/monkey-quest/activated-retail/assets/hd/mq_header_film.webp",
+          "mobile": "/monkey-quest/activated-retail/assets/hd/mq_header_film_m.webp"
+        }
+      },
+      "site": "MONKEY QUEST · 2027",
+      "game": "Monkey Quest"
+    }
+  ],
+  "defaultTheme": "game",
+  "zones": {
+    "cap": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/monkey-quest/activated-retail/models/mq_cap.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Monkey Quest Cap",
+        "category": "Activated Apparel® · concept",
+        "sku": "MQ-CAP-BLK",
+        "price": 32,
+        "description": "Black six-panel cap with the Monkey Quest mark embroidered on the front and a red under-brim. A woven NFC label sits under the brim.",
+        "unlock": { "title": "Matching avatar cap", "sub": "UGC accessory in Monkey Quest" },
+        "trigger": "Woven NFC label",
+        "channel": "Walmart · Roblox Commerce",
+        "canActivate": false
+      }
+    },
+    "plush": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/monkey-quest/activated-retail/models/mini_plush.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Mini-Might Plush",
+        "category": "Activated Merchandise® · hero SKU · concept",
+        "sku": "MQ-PLU-MINI",
+        "price": 30,
+        "description": "The Mini-Might, Okon's tiny clone and the collectible pet of the Roblox game, as a 30 cm plush with an NFC chip in the tush tag. One tap and its digital twin joins you in Hypergalactic: Monkey Quest, and the film's first-look clip unlocks.",
+        "unlock": {
+          "title": "Mini-Might pet + film first look",
+          "sub": "Pet in Monkey Quest on Roblox · clip from the 2027 film",
+          "image": "/monkey-quest/activated-retail/assets/mq_reward_mini.webp"
+        },
+        "trigger": "NFC chip in the tush tag",
+        "channel": "Walmart · Roblox Commerce",
+        "canActivate": true
+      }
+    },
+    "keychain": {
+      "enabled": true,
+      "model": {
+        "source": "image",
+        "image": "/monkey-quest/activated-retail/assets/mq_charm_mini.webp",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Mini-Might Keychain",
+        "category": "Activated Merchandise® · impulse SKU · concept",
+        "sku": "MQ-KEY-01",
+        "price": 18,
+        "description": "An acrylic Mini-Might charm with an NFC tag and a QR on the back. The lowest-price way into the game, clipped to a backpack every day.",
+        "unlock": { "title": "Mini-Might sled skin", "sub": "For the sled runs in Monkey Quest" },
+        "trigger": "NFC tag + QR on the charm back",
+        "channel": "Walmart · Roblox Commerce",
+        "canActivate": false
+      }
+    },
+    "mousepad": {
+      "enabled": true,
+      "model": {
+        "source": "default",
+        "print": "/monkey-quest/activated-retail/assets/mq_mat.webp",
+        "tint": "#e3262f",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sled Run Desk Mat",
+        "category": "Activated Print® · concept",
+        "sku": "MQ-MAT-XL",
+        "price": 25,
+        "description": "XL desk mat printed with the sled-run key art, rolled in a branded sleeve. The QR is part of the artwork, so the print itself is the trigger.",
+        "unlock": {
+          "title": "Profile badge + wallpaper pack",
+          "sub": "Shown on your Roblox profile"
+        },
+        "trigger": "QR in the print",
+        "channel": "Walmart",
+        "canActivate": false
+      }
+    },
+    "figure": {
+      "enabled": true,
+      "model": {
+        "source": "default",
+        "print": "/monkey-quest/activated-retail/assets/mq_box_front.webp",
+        "tint": "#5a0c10",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Movie Collector Box",
+        "category": "Activated Merchandise® · film tie-in · concept",
+        "sku": "MQ-BOX-2027",
+        "price": 35,
+        "description": "A window-box collectible built for the 2027 theatrical release. The QR inside the lid unlocks a behind-the-scenes clip and a ticket-on-sale alert, and grants a film-exclusive item in the game.",
+        "unlock": {
+          "title": "Film first look + in-game item",
+          "sub": "Behind-the-scenes clip · ticket alert"
+        },
+        "trigger": "QR inside the lid",
+        "channel": "Walmart",
+        "canActivate": true
+      }
+    },
+    "tee": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/monkey-quest/activated-retail/models/mq_tee.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Monkey Quest Tee",
+        "category": "Activated Apparel® · concept",
+        "sku": "MQ-TEE-BLK",
+        "price": 32,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Heavyweight black tee with the Hypergalactic Monkey Quest mark and an NFC care label. Wear it, tap it, and the same tee lands on your avatar.",
+        "unlock": { "title": "Matching avatar tee", "sub": "UGC shirt in Monkey Quest" },
+        "trigger": "NFC care label",
+        "channel": "Walmart · Roblox Commerce",
+        "canActivate": false
+      }
+    },
+    "hoodie": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/monkey-quest/activated-retail/models/mq_hoodie.glb",
+        "yaw": -90,
+        "scale": 1
+      },
+      "product": {
+        "label": "Monkey Quest Hoodie",
+        "category": "Activated Apparel® · concept",
+        "sku": "MQ-HOD-RED",
+        "price": 60,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Okon-red pullover hoodie with the Monkey Quest mark. Owning it unlocks the matching layered hoodie for your avatar, ready for opening weekend.",
+        "unlock": { "title": "Matching avatar hoodie", "sub": "UGC layered clothing" },
+        "trigger": "NFC hem label",
+        "channel": "Walmart · Roblox Commerce",
+        "canActivate": false
+      }
+    }
+  },
+  "activation": {
+    "type": "game",
+    "buttonLabel": "Play the drop",
+    "splash": "/monkey-quest/activated-retail/assets/mq_phone_hero.webp",
+    "rewardPrefix": "MQ",
+    "qrUrl": "https://www.roblox.com/games/77343145631801/Hypergalactic-Monkey-Quest"
+  },
+  "tour": [
+    {
+      "title": "Stop them in the aisle",
+      "body": "A 3.84 m Walmart endcap for Monkey Quest: two lightbox towers, a lit header, a 12-tile video wall and a hero screen. One fixture carries the Roblox game today and the Toei Animation film in 2027.",
+      "view": "aisle",
+      "theme": "game"
+    },
+    {
+      "title": "The game is live now",
+      "body": "Hypergalactic: Monkey Quest, built by Twin Atlas for Toei Animation, is the hub of the Monkey Quest universe on Roblox. Players sled, battle Xenons and collect Mini-Might pets. The display sells that world at shelf height.",
+      "view": "hero",
+      "theme": "game"
+    },
+    {
+      "title": "The Mini-Might is the hero SKU",
+      "body": "Okon's tiny clones are the most collectible thing in the game, so they lead the shelf: a plush, a keychain, apparel and a desk mat. Every product carries NFC, and every tap puts its digital twin in the game.",
+      "view": "shelf",
+      "theme": "game"
+    },
+    {
+      "title": "Tap, play, unlock",
+      "body": "The QR on the right tower is real: scan it and Hypergalactic: Monkey Quest opens on Roblox. The activation flow turns a Walmart purchase into an in-game Mini-Might and a first look at the film.",
+      "view": "qr"
+    },
+    {
+      "title": "Flip to the film campaign",
+      "body": "The same hardware re-skins for Toei Animation's 2027 theatrical release: film key art on the towers and hero screen, a movie collector box on the shelf, and the game promoted on the totem. Players become the opening-weekend audience.",
+      "view": "dashboard",
+      "theme": "film"
+    },
+    {
+      "title": "Measured, and built modular",
+      "body": "Activations, returns to the game, film first-look views and sell-through are reported by store and SKU. Six modules bolt together on site, so each campaign phase swaps graphics, not fixtures.",
+      "view": "build",
+      "dashboard": true
+    }
+  ],
+  "cta": { "label": "Book a call", "mode": "lead" },
+  "ar": {}
+}

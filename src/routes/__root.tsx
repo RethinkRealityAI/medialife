@@ -153,11 +153,13 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  // The partner portal is an application, not a page on the marketing site: it
-  // brings its own sidebar chrome and must not sit inside the site nav and
-  // footer. Everything else on the site does.
+  // The partner portal and the internal /admin tools are applications, not pages
+  // on the marketing site: they bring their own sidebar chrome and must not sit
+  // inside the site nav and footer. Everything else on the site does.
   const isPortal = useRouterState({
-    select: (state) => state.location.pathname.startsWith("/roblox/portal"),
+    select: (state) =>
+      state.location.pathname.startsWith("/roblox/portal") ||
+      state.location.pathname.startsWith("/admin"),
   });
 
   if (isPortal) {

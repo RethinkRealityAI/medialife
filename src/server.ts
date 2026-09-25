@@ -32,10 +32,12 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 // Everything under /roblox is unlisted: the creator program page carries
 // commercial terms and the portal is a demo populated with mock pilot data.
+// /admin (internal activated-retail tools), /api and /x (endcaps published from
+// the builder) are never meant for search engines either.
 // netlify.toml covers the static half of that path; this covers the SSR half.
 // The portal routes also carry a robots meta tag, but a header is the half that
 // works for a crawler that never renders. Keep this in sync with netlify.toml.
-const UNLISTED_PREFIXES = ["/roblox"] as const;
+const UNLISTED_PREFIXES = ["/roblox", "/admin", "/api", "/x"] as const;
 
 function isUnlisted(pathname: string): boolean {
   return UNLISTED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

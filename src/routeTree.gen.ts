@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CaseStudiesRouteImport } from './routes/case-studies'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -17,8 +18,18 @@ import { Route as FanReactionsRouteImport } from './routes/fan-reactions'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as TechnologyRouteImport } from './routes/technology'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
+import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
+import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
+import { Route as XSlugRouteImport } from './routes/x.$slug'
+import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
+import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
+import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
+import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
 import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
@@ -28,12 +39,24 @@ import { Route as RobloxPortalResourcesRouteImport } from './routes/roblox.porta
 import { Route as RobloxPortalReviewRouteImport } from './routes/roblox.portal.review'
 import { Route as RobloxPortalStatusRouteImport } from './routes/roblox.portal.status'
 import { Route as RobloxPortalSupportRouteImport } from './routes/roblox.portal.support'
+import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.assets'
+import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
+import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
+import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
+import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
+import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
+import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrandRoute = BrandRouteImport.update({
@@ -71,6 +94,31 @@ const TechnologyRoute = TechnologyRouteImport.update({
   path: '/technology',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBuilderRoute = AdminBuilderRouteImport.update({
+  id: '/builder',
+  path: '/builder',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLinksRoute = AdminLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin_/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalRoute = RobloxPortalRouteImport.update({
   id: '/roblox/portal',
   path: '/roblox/portal',
@@ -80,6 +128,31 @@ const TechnologySlugRoute = TechnologySlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => TechnologyRoute,
+} as any)
+const XSlugRoute = XSlugRouteImport.update({
+  id: '/x/$slug',
+  path: '/x/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminBuilderIndexRoute = AdminBuilderIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminBuilderRoute,
+} as any)
+const AdminBuilderSlugRoute = AdminBuilderSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AdminBuilderRoute,
+} as any)
+const ApiArLinkRoute = ApiArLinkRouteImport.update({
+  id: '/api/ar/link',
+  path: '/api/ar/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArTrackRoute = ApiArTrackRouteImport.update({
+  id: '/api/ar/track',
+  path: '/api/ar/track',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
   id: '/',
@@ -126,6 +199,21 @@ const RobloxPortalSupportRoute = RobloxPortalSupportRouteImport.update({
   path: '/support',
   getParentRoute: () => RobloxPortalRoute,
 } as any)
+const ApiArAdminAssetsRoute = ApiArAdminAssetsRouteImport.update({
+  id: '/api/ar/admin/assets',
+  path: '/api/ar/admin/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArAssetIdRoute = ApiArAssetIdRouteImport.update({
+  id: '/api/ar/asset/$id',
+  path: '/api/ar/asset/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
+  id: '/api/ar/project/$slug',
+  path: '/api/ar/project/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalSubmissionsIndexRoute =
   RobloxPortalSubmissionsIndexRouteImport.update({
     id: '/submissions/',
@@ -138,9 +226,32 @@ const RobloxPortalSubmissionsIdRoute =
     path: '/submissions/$id',
     getParentRoute: () => RobloxPortalRoute,
   } as any)
+const ApiArAdminAssetsIdRoute = ApiArAdminAssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiArAdminAssetsRoute,
+} as any)
+const ApiArAdminProjectSlugRoute = ApiArAdminProjectSlugRouteImport.update({
+  id: '/api/ar/admin/project/$slug',
+  path: '/api/ar/admin/project/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiArAdminAssetsIdCompleteRoute =
+  ApiArAdminAssetsIdCompleteRouteImport.update({
+    id: '/complete',
+    path: '/complete',
+    getParentRoute: () => ApiArAdminAssetsIdRoute,
+  } as any)
+const ApiArAdminAssetsIdChunksNRoute =
+  ApiArAdminAssetsIdChunksNRouteImport.update({
+    id: '/chunks/$n',
+    path: '/chunks/$n',
+    getParentRoute: () => ApiArAdminAssetsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/brand': typeof BrandRoute
   '/case-studies': typeof CaseStudiesRoute
   '/contact': typeof ContactRoute
@@ -148,8 +259,17 @@ export interface FileRoutesByFullPath {
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/links': typeof AdminLinksRoute
+  '/admin/login': typeof AdminLoginRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
+  '/x/$slug': typeof XSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/api/ar/link': typeof ApiArLinkRoute
+  '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -158,9 +278,17 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/admin/builder/': typeof AdminBuilderIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
+  '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
+  '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
+  '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
+  '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -171,7 +299,15 @@ export interface FileRoutesByTo {
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/links': typeof AdminLinksRoute
+  '/admin/login': typeof AdminLoginRoute
   '/technology/$slug': typeof TechnologySlugRoute
+  '/x/$slug': typeof XSlugRoute
+  '/admin': typeof AdminIndexRoute
+  '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/api/ar/link': typeof ApiArLinkRoute
+  '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -180,13 +316,22 @@ export interface FileRoutesByTo {
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/admin/builder': typeof AdminBuilderIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
+  '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
+  '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
+  '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
+  '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/brand': typeof BrandRoute
   '/case-studies': typeof CaseStudiesRoute
   '/contact': typeof ContactRoute
@@ -194,8 +339,17 @@ export interface FileRoutesById {
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
+  '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/links': typeof AdminLinksRoute
+  '/admin_/login': typeof AdminLoginRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
+  '/x/$slug': typeof XSlugRoute
+  '/admin/': typeof AdminIndexRoute
+  '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/api/ar/link': typeof ApiArLinkRoute
+  '/api/ar/track': typeof ApiArTrackRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -204,14 +358,23 @@ export interface FileRoutesById {
   '/roblox/portal/review': typeof RobloxPortalReviewRoute
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
+  '/admin/builder/': typeof AdminBuilderIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
+  '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
+  '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
+  '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
+  '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/brand'
     | '/case-studies'
     | '/contact'
@@ -219,8 +382,17 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/technology'
+    | '/admin/analytics'
+    | '/admin/builder'
+    | '/admin/links'
+    | '/admin/login'
     | '/roblox/portal'
     | '/technology/$slug'
+    | '/x/$slug'
+    | '/admin/'
+    | '/admin/builder/$slug'
+    | '/api/ar/link'
+    | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -229,9 +401,17 @@ export interface FileRouteTypes {
     | '/roblox/portal/review'
     | '/roblox/portal/status'
     | '/roblox/portal/support'
+    | '/admin/builder/'
     | '/roblox/portal/'
+    | '/api/ar/admin/assets'
+    | '/api/ar/asset/$id'
+    | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
+    | '/api/ar/admin/assets/$id'
+    | '/api/ar/admin/project/$slug'
+    | '/api/ar/admin/assets/$id/complete'
+    | '/api/ar/admin/assets/$id/chunks/$n'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -242,7 +422,15 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/technology'
+    | '/admin/analytics'
+    | '/admin/links'
+    | '/admin/login'
     | '/technology/$slug'
+    | '/x/$slug'
+    | '/admin'
+    | '/admin/builder/$slug'
+    | '/api/ar/link'
+    | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -251,12 +439,21 @@ export interface FileRouteTypes {
     | '/roblox/portal/review'
     | '/roblox/portal/status'
     | '/roblox/portal/support'
+    | '/admin/builder'
     | '/roblox/portal'
+    | '/api/ar/admin/assets'
+    | '/api/ar/asset/$id'
+    | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions'
+    | '/api/ar/admin/assets/$id'
+    | '/api/ar/admin/project/$slug'
+    | '/api/ar/admin/assets/$id/complete'
+    | '/api/ar/admin/assets/$id/chunks/$n'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/brand'
     | '/case-studies'
     | '/contact'
@@ -264,8 +461,17 @@ export interface FileRouteTypes {
     | '/insights'
     | '/live'
     | '/technology'
+    | '/admin/analytics'
+    | '/admin/builder'
+    | '/admin/links'
+    | '/admin_/login'
     | '/roblox/portal'
     | '/technology/$slug'
+    | '/x/$slug'
+    | '/admin/'
+    | '/admin/builder/$slug'
+    | '/api/ar/link'
+    | '/api/ar/track'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -274,13 +480,22 @@ export interface FileRouteTypes {
     | '/roblox/portal/review'
     | '/roblox/portal/status'
     | '/roblox/portal/support'
+    | '/admin/builder/'
     | '/roblox/portal/'
+    | '/api/ar/admin/assets'
+    | '/api/ar/asset/$id'
+    | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
+    | '/api/ar/admin/assets/$id'
+    | '/api/ar/admin/project/$slug'
+    | '/api/ar/admin/assets/$id/complete'
+    | '/api/ar/admin/assets/$id/chunks/$n'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   BrandRoute: typeof BrandRoute
   CaseStudiesRoute: typeof CaseStudiesRoute
   ContactRoute: typeof ContactRoute
@@ -288,7 +503,15 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
+  AdminLoginRoute: typeof AdminLoginRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
+  XSlugRoute: typeof XSlugRoute
+  ApiArLinkRoute: typeof ApiArLinkRoute
+  ApiArTrackRoute: typeof ApiArTrackRoute
+  ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
+  ApiArAssetIdRoute: typeof ApiArAssetIdRoute
+  ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
+  ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -298,6 +521,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/brand': {
@@ -349,6 +579,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TechnologyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/analytics': {
+      id: '/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/builder': {
+      id: '/admin/builder'
+      path: '/builder'
+      fullPath: '/admin/builder'
+      preLoaderRoute: typeof AdminBuilderRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/links': {
+      id: '/admin/links'
+      path: '/links'
+      fullPath: '/admin/links'
+      preLoaderRoute: typeof AdminLinksRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin_/login': {
+      id: '/admin_/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal': {
       id: '/roblox/portal'
       path: '/roblox/portal'
@@ -362,6 +627,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
       parentRoute: typeof TechnologyRoute
+    }
+    '/x/$slug': {
+      id: '/x/$slug'
+      path: '/x/$slug'
+      fullPath: '/x/$slug'
+      preLoaderRoute: typeof XSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/builder/': {
+      id: '/admin/builder/'
+      path: '/'
+      fullPath: '/admin/builder/'
+      preLoaderRoute: typeof AdminBuilderIndexRouteImport
+      parentRoute: typeof AdminBuilderRoute
+    }
+    '/admin/builder/$slug': {
+      id: '/admin/builder/$slug'
+      path: '/$slug'
+      fullPath: '/admin/builder/$slug'
+      preLoaderRoute: typeof AdminBuilderSlugRouteImport
+      parentRoute: typeof AdminBuilderRoute
+    }
+    '/api/ar/link': {
+      id: '/api/ar/link'
+      path: '/api/ar/link'
+      fullPath: '/api/ar/link'
+      preLoaderRoute: typeof ApiArLinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ar/track': {
+      id: '/api/ar/track'
+      path: '/api/ar/track'
+      fullPath: '/api/ar/track'
+      preLoaderRoute: typeof ApiArTrackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/roblox/portal/': {
       id: '/roblox/portal/'
@@ -426,6 +726,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobloxPortalSupportRouteImport
       parentRoute: typeof RobloxPortalRoute
     }
+    '/api/ar/admin/assets': {
+      id: '/api/ar/admin/assets'
+      path: '/api/ar/admin/assets'
+      fullPath: '/api/ar/admin/assets'
+      preLoaderRoute: typeof ApiArAdminAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ar/asset/$id': {
+      id: '/api/ar/asset/$id'
+      path: '/api/ar/asset/$id'
+      fullPath: '/api/ar/asset/$id'
+      preLoaderRoute: typeof ApiArAssetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ar/project/$slug': {
+      id: '/api/ar/project/$slug'
+      path: '/api/ar/project/$slug'
+      fullPath: '/api/ar/project/$slug'
+      preLoaderRoute: typeof ApiArProjectSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal/submissions/': {
       id: '/roblox/portal/submissions/'
       path: '/submissions'
@@ -440,8 +761,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobloxPortalSubmissionsIdRouteImport
       parentRoute: typeof RobloxPortalRoute
     }
+    '/api/ar/admin/assets/$id': {
+      id: '/api/ar/admin/assets/$id'
+      path: '/$id'
+      fullPath: '/api/ar/admin/assets/$id'
+      preLoaderRoute: typeof ApiArAdminAssetsIdRouteImport
+      parentRoute: typeof ApiArAdminAssetsRoute
+    }
+    '/api/ar/admin/project/$slug': {
+      id: '/api/ar/admin/project/$slug'
+      path: '/api/ar/admin/project/$slug'
+      fullPath: '/api/ar/admin/project/$slug'
+      preLoaderRoute: typeof ApiArAdminProjectSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ar/admin/assets/$id/complete': {
+      id: '/api/ar/admin/assets/$id/complete'
+      path: '/complete'
+      fullPath: '/api/ar/admin/assets/$id/complete'
+      preLoaderRoute: typeof ApiArAdminAssetsIdCompleteRouteImport
+      parentRoute: typeof ApiArAdminAssetsIdRoute
+    }
+    '/api/ar/admin/assets/$id/chunks/$n': {
+      id: '/api/ar/admin/assets/$id/chunks/$n'
+      path: '/chunks/$n'
+      fullPath: '/api/ar/admin/assets/$id/chunks/$n'
+      preLoaderRoute: typeof ApiArAdminAssetsIdChunksNRouteImport
+      parentRoute: typeof ApiArAdminAssetsIdRoute
+    }
   }
 }
+
+interface AdminBuilderRouteChildren {
+  AdminBuilderSlugRoute: typeof AdminBuilderSlugRoute
+  AdminBuilderIndexRoute: typeof AdminBuilderIndexRoute
+}
+
+const AdminBuilderRouteChildren: AdminBuilderRouteChildren = {
+  AdminBuilderSlugRoute: AdminBuilderSlugRoute,
+  AdminBuilderIndexRoute: AdminBuilderIndexRoute,
+}
+
+const AdminBuilderRouteWithChildren = AdminBuilderRoute._addFileChildren(
+  AdminBuilderRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
+  AdminLinksRoute: typeof AdminLinksRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminBuilderRoute: AdminBuilderRouteWithChildren,
+  AdminLinksRoute: AdminLinksRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface TechnologyRouteChildren {
   TechnologySlugRoute: typeof TechnologySlugRoute
@@ -487,8 +866,33 @@ const RobloxPortalRouteWithChildren = RobloxPortalRoute._addFileChildren(
   RobloxPortalRouteChildren,
 )
 
+interface ApiArAdminAssetsIdRouteChildren {
+  ApiArAdminAssetsIdCompleteRoute: typeof ApiArAdminAssetsIdCompleteRoute
+  ApiArAdminAssetsIdChunksNRoute: typeof ApiArAdminAssetsIdChunksNRoute
+}
+
+const ApiArAdminAssetsIdRouteChildren: ApiArAdminAssetsIdRouteChildren = {
+  ApiArAdminAssetsIdCompleteRoute: ApiArAdminAssetsIdCompleteRoute,
+  ApiArAdminAssetsIdChunksNRoute: ApiArAdminAssetsIdChunksNRoute,
+}
+
+const ApiArAdminAssetsIdRouteWithChildren =
+  ApiArAdminAssetsIdRoute._addFileChildren(ApiArAdminAssetsIdRouteChildren)
+
+interface ApiArAdminAssetsRouteChildren {
+  ApiArAdminAssetsIdRoute: typeof ApiArAdminAssetsIdRouteWithChildren
+}
+
+const ApiArAdminAssetsRouteChildren: ApiArAdminAssetsRouteChildren = {
+  ApiArAdminAssetsIdRoute: ApiArAdminAssetsIdRouteWithChildren,
+}
+
+const ApiArAdminAssetsRouteWithChildren =
+  ApiArAdminAssetsRoute._addFileChildren(ApiArAdminAssetsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   BrandRoute: BrandRoute,
   CaseStudiesRoute: CaseStudiesRoute,
   ContactRoute: ContactRoute,
@@ -496,7 +900,15 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
+  AdminLoginRoute: AdminLoginRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
+  XSlugRoute: XSlugRoute,
+  ApiArLinkRoute: ApiArLinkRoute,
+  ApiArTrackRoute: ApiArTrackRoute,
+  ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
+  ApiArAssetIdRoute: ApiArAssetIdRoute,
+  ApiArProjectSlugRoute: ApiArProjectSlugRoute,
+  ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
