@@ -1,0 +1,239 @@
+{
+  "version": 1,
+  "slug": "roblox-template",
+  "name": "Roblox (template)",
+  "brand": {
+    "lockup": "MEDIALIFE® × ROBLOX",
+    "sub": "WALMART ENDCAP · AR-01 · 3.84 × 0.68 × 2.47 m",
+    "splashTitle": "Activated Retail",
+    "splashSub": "The Walmart endcap where every product opens the game.",
+    "retailer": "Walmart"
+  },
+  "access": {},
+  "themes": [
+    {
+      "id": "roblox",
+      "name": "Roblox",
+      "led": "#8a5cff",
+      "led2": "#4f7dff",
+      "bay": "#9a7bff",
+      "spill": "#7a4dff",
+      "markers": { "activation": "#3cefb1" },
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_towerL.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_towerR.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_totem.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_totem_m.webp"
+        },
+        "wall": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_wall.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_wall_m.webp"
+        },
+        "screen": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_screen.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_screen_m.webp"
+        }
+      },
+      "site": "ROBLOX.COM",
+      "game": "Roblox"
+    },
+    {
+      "id": "skyrift",
+      "name": "Skyrift",
+      "led": "#16d4ff",
+      "led2": "#ff2fb4",
+      "bay": "#3fb6ff",
+      "spill": "#1fb9ff",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/roblox/activated-retail/assets/hd/sky_towerL.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/sky_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/roblox/activated-retail/assets/hd/sky_towerR.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/sky_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_totem.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_totem_m.webp"
+        },
+        "wall": {
+          "src": "/roblox/activated-retail/assets/hd/rbx_wall.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/rbx_wall_m.webp"
+        },
+        "screen": {
+          "src": "/roblox/activated-retail/assets/hd/sky_screen.webp",
+          "mobile": "/roblox/activated-retail/assets/hd/sky_screen_m.webp"
+        }
+      },
+      "site": "SKYRIFT.PLAY",
+      "game": "Skyrift Racers"
+    }
+  ],
+  "defaultTheme": "roblox",
+  "zones": {
+    "cap": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Cap",
+        "category": "Activated Apparel®",
+        "sku": "AR01-CAP-BLK",
+        "price": 32,
+        "description": "Structured six-panel cap with an embroidered mark and a woven NFC label under the brim. One tap opens the drop: no app, no login wall.",
+        "unlock": {
+          "title": "Holo Cap",
+          "sub": "Matching UGC accessory · one claim per cap",
+          "image": "/roblox/activated-retail/assets/ugc_cap.webp"
+        },
+        "trigger": "Woven NFC label + QR hang tag",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "plush": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Collector Plush",
+        "category": "Activated Merchandise®",
+        "sku": "AR01-PLU-01",
+        "price": 30,
+        "description": "A 28 cm plush of the property's hero avatar with an NFC chip sewn into the tush tag. The physical friend unlocks its digital twin.",
+        "unlock": { "title": "Companion pet", "sub": "Follows your avatar in-game" },
+        "trigger": "NFC chip in the tush tag",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "keychain": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Keychain",
+        "category": "Activated Merchandise® · pilot format",
+        "sku": "AR01-KEY-01",
+        "price": 18,
+        "description": "Chunky vinyl charm with an embedded NFC chip, the same format as the EVADE pilot keychain: an exclusive mini-game plus an in-game UGC item (subject to final approval).",
+        "unlock": { "title": "Mini-game + UGC item", "sub": "The launch-ready pilot mechanic" },
+        "trigger": "Embedded NFC chip",
+        "channel": "Roblox Commerce in-experience",
+        "canActivate": false
+      }
+    },
+    "mousepad": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Desk Mat",
+        "category": "Activated Print®",
+        "sku": "AR01-MAT-XL",
+        "price": 25,
+        "description": "XL desk mat printed with property key art. The QR is hidden inside the artwork, so the print itself is the trigger.",
+        "unlock": { "title": "Profile badge", "sub": "Shown on your Roblox profile" },
+        "trigger": "QR embedded in the print",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "figure": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Boxed Collectible",
+        "category": "Activated Merchandise® · concept",
+        "sku": "AR01-FIG-S1",
+        "price": 24,
+        "description": "Window-box collectible figure with a QR printed inside the box. Scanning reveals which avatar skin came in this box.",
+        "unlock": { "title": "Figure skin reveal", "sub": "Series-1 skin matched to the figure" },
+        "trigger": "QR inside the window box",
+        "channel": "Walmart",
+        "canActivate": false
+      }
+    },
+    "tee": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Tee",
+        "category": "Activated Apparel®",
+        "sku": "AR01-TEE-WHT",
+        "price": 32,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Heavyweight tee with a printed QR on the inner hem and an NFC care label. The pilot's second SKU format.",
+        "unlock": { "title": "Exclusive emote", "sub": "Unlocked for your avatar" },
+        "trigger": "NFC care label + inner-hem QR",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    },
+    "hoodie": {
+      "enabled": true,
+      "model": { "source": "default", "yaw": 0, "scale": 1 },
+      "product": {
+        "label": "Activated Hoodie",
+        "category": "Activated Apparel®",
+        "sku": "AR01-HOD-BLK",
+        "price": 65,
+        "sizes": ["S", "M", "L", "XL", "XXL"],
+        "description": "Midweight pullover with a neon cuff stripe and an NFC label at the hem. Owning the physical hoodie unlocks the same drop for your avatar.",
+        "unlock": { "title": "Avatar hoodie", "sub": "Matching UGC layered clothing" },
+        "trigger": "NFC hem label",
+        "channel": "Roblox Commerce → Walmart",
+        "canActivate": false
+      }
+    }
+  },
+  "activation": {
+    "type": "game",
+    "buttonLabel": "Play the drop",
+    "rewardPrefix": "AR01"
+  },
+  "tour": [
+    {
+      "title": "Stop them in the aisle",
+      "body": "A 3.84 m Walmart endcap built from modular lightbox towers, a channel-letter header and a 12-tile video wall. It reads from the end of the aisle, and every surface either sells or activates.",
+      "view": "aisle",
+      "theme": "roblox"
+    },
+    {
+      "title": "Tell the property's story",
+      "body": "The same fixture re-skins for any Roblox-native IP. Here it's Skyrift Racers, a sample property: its key art on the towers and the hero screen, its colours in the LED channels. Same hardware.",
+      "view": "hero",
+      "theme": "skyrift"
+    },
+    {
+      "title": "Merchandise that extends the IP",
+      "body": "A cap, collector plush, keychains, a desk mat, boxed collectibles, a tee and a hoodie, each with an NFC tag or a QR. Tap any product and it comes off the shelf.",
+      "view": "shelf",
+      "theme": "roblox"
+    },
+    {
+      "title": "Tap, play, unlock",
+      "body": "A tap on any product opens the experience in the browser. No app: a 12-second drop, a reveal, then a UGC reward redeemed inside the creator's Roblox experience.",
+      "view": "qr"
+    },
+    {
+      "title": "Back to Roblox, and measured",
+      "body": "Unique activations, repeat interactions, engagement time and outbound traffic to Roblox, reported by location, property and creative treatment. This is the data behind the 90-day program review.",
+      "view": "dashboard",
+      "dashboard": true
+    },
+    {
+      "title": "Built modular",
+      "body": "Six modules bolt together on site: two lightbox towers, the header, the video wall, the merch bay and the plinth, plus a freestanding digital totem. When the featured property changes, you swap graphics, not fixtures.",
+      "view": "build"
+    }
+  ],
+  "cta": { "label": "Book a call", "mode": "lead" },
+  "ar": {}
+}
