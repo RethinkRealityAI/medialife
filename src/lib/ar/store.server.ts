@@ -16,7 +16,7 @@ import process from "node:process";
 //   dev     — localhost
 
 export type ArNamespace = "prod" | "preview" | "dev";
-export type ArKind = "sessions" | "links" | "projects" | "assets" | "chunks";
+export type ArKind = "sessions" | "links" | "projects" | "assets" | "chunks" | "content";
 
 export function arNamespace(host: string | null | undefined): ArNamespace {
   const h = (host ?? "").toLowerCase().split(":")[0];

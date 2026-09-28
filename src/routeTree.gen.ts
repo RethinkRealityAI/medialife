@@ -21,6 +21,7 @@ import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
+import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
@@ -41,6 +42,7 @@ import { Route as RobloxPortalStatusRouteImport } from './routes/roblox.portal.s
 import { Route as RobloxPortalSupportRouteImport } from './routes/roblox.portal.support'
 import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.assets'
 import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
+import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-content.$demo'
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
@@ -107,6 +109,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 const AdminBuilderRoute = AdminBuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDemosRoute = AdminDemosRouteImport.update({
+  id: '/demos',
+  path: '/demos',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminLinksRoute = AdminLinksRouteImport.update({
@@ -209,6 +216,11 @@ const ApiArAssetIdRoute = ApiArAssetIdRouteImport.update({
   path: '/api/ar/asset/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiArDemoContentDemoRoute = ApiArDemoContentDemoRouteImport.update({
+  id: '/api/ar/demo-content/$demo',
+  path: '/api/ar/demo-content/$demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
   id: '/api/ar/project/$slug',
   path: '/api/ar/project/$slug',
@@ -261,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
@@ -282,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
@@ -300,6 +314,7 @@ export interface FileRoutesByTo {
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
   '/technology/$slug': typeof TechnologySlugRoute
@@ -320,6 +335,7 @@ export interface FileRoutesByTo {
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
@@ -341,6 +357,7 @@ export interface FileRoutesById {
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin_/login': typeof AdminLoginRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
@@ -362,6 +379,7 @@ export interface FileRoutesById {
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
+  '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
@@ -384,6 +402,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
+    | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
     | '/roblox/portal'
@@ -405,6 +424,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
+    | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
@@ -423,6 +443,7 @@ export interface FileRouteTypes {
     | '/live'
     | '/technology'
     | '/admin/analytics'
+    | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
     | '/technology/$slug'
@@ -443,6 +464,7 @@ export interface FileRouteTypes {
     | '/roblox/portal'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
+    | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions'
@@ -463,6 +485,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
+    | '/admin/demos'
     | '/admin/links'
     | '/admin_/login'
     | '/roblox/portal'
@@ -484,6 +507,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
+    | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
@@ -510,6 +534,7 @@ export interface RootRouteChildren {
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
+  ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
 }
@@ -598,6 +623,13 @@ declare module '@tanstack/react-router' {
       path: '/builder'
       fullPath: '/admin/builder'
       preLoaderRoute: typeof AdminBuilderRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/demos': {
+      id: '/admin/demos'
+      path: '/demos'
+      fullPath: '/admin/demos'
+      preLoaderRoute: typeof AdminDemosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/links': {
@@ -740,6 +772,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAssetIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ar/demo-content/$demo': {
+      id: '/api/ar/demo-content/$demo'
+      path: '/api/ar/demo-content/$demo'
+      fullPath: '/api/ar/demo-content/$demo'
+      preLoaderRoute: typeof ApiArDemoContentDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ar/project/$slug': {
       id: '/api/ar/project/$slug'
       path: '/api/ar/project/$slug'
@@ -809,6 +848,7 @@ const AdminBuilderRouteWithChildren = AdminBuilderRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
+  AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -816,6 +856,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBuilderRoute: AdminBuilderRouteWithChildren,
+  AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -907,6 +948,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArTrackRoute: ApiArTrackRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
+  ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
 }

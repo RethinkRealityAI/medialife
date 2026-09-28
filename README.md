@@ -348,6 +348,28 @@ zones, write the product and hotspot copy, the activation and the tour, then pub
   Print: figure box front (3:4, ≥ 900×1200) and desk mat (2:1, e.g. 2048×1024).
 - Share a published endcap with a personal link from `/admin/links` (demo "x:<slug>").
 
+### Live demos (`/admin/demos`)
+
+Change the guided tour of the two live demos (`/roblox/activated-retail/`,
+`/monkey-quest/activated-retail/`) without a code change: for each stop, its title, its text,
+whether it highlights View in AR, and whether it is shown at all.
+
+1. Pick the demo, edit the stops. Edits save as a draft automatically. A field left empty (or
+   "Reset") uses the page's own copy.
+2. **Preview** opens the real demo with `?draft=1`: it shows your draft (with a "Draft preview"
+   badge) only because you are signed in; everyone else still gets the published copy.
+3. **Publish** puts the draft live for clients within seconds (the CDN cache is purged).
+   **⋯ → Unpublish changes** puts back the tour written into the page; the draft stays.
+
+How it works: the pages keep their tour inline, and each stop has a stable `id`. At load they
+fetch `GET /api/ar/demo-content/<demo>` (only what differs from the page) and apply it from the
+next tour card. Nothing waits for it, and any failure leaves the page's own copy. The camera,
+theme and dashboard of each stop stay as built. Overrides are stored in the `content` Blobs
+store (`src/lib/ar/demo-content*.ts`); product copy can join the same document later.
+
+If you edit a tour in the page itself, update `src/lib/ar/demo-tours.ts` to match (it is the
+copy the admin shows as the default) and run `npm run check:demo-tours`.
+
 ### Native AR
 
 The AR button opens the current theme in the phone's own AR viewer. **iPhone/iPad:** AR
