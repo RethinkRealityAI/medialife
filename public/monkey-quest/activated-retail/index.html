@@ -1604,19 +1604,19 @@ const EVADE_PRODUCTS = {
 const P = (id)=> (isMQ() && EVADE_PRODUCTS[id]) ? { ...PRODUCTS[id], ...EVADE_PRODUCTS[id] } : PRODUCTS[id];
 
 const TOUR = [
-  { t:'Stop them in the aisle', b:'A 3.84 m Walmart endcap for Monkey Quest: two lightbox towers, a lit header, a 12-tile video wall and a hero screen. One fixture carries the Roblox game today and the Toei Animation film in 2027.',
+  { id:'aisle', t:'Stop them in the aisle', b:'A 3.84 m Walmart endcap for Monkey Quest: two lightbox towers, a lit header, a 12-tile video wall and a hero screen. One fixture carries the Roblox game today and the Toei Animation film in 2027.',
     pos:[-3.9,1.75,6.2], tgt:[0.4,1.15,0], theme:'game' },
-  { t:'The game is live now', b:'Hypergalactic: Monkey Quest, built by Twin Atlas for Toei Animation, is the hub of the Monkey Quest universe on Roblox. Players sled, battle Xenons and collect Mini-Might pets. The display sells that world at shelf height.',
+  { id:'live', t:'The game is live now', b:'Hypergalactic: Monkey Quest, built by Twin Atlas for Toei Animation, is the hub of the Monkey Quest universe on Roblox. Players sled, battle Xenons and collect Mini-Might pets. The display sells that world at shelf height.',
     pos:[0.0,1.62,2.7], tgt:[0,1.5,0], theme:'game' },
-  { t:'The Mini-Might is the hero SKU', b:'Okon\'s tiny clones are the most collectible thing in the game, so they lead the shelf: a plush, a keychain, apparel and a desk mat. Every product carries NFC, and every tap puts its digital twin in the game.',
+  { id:'hero-sku', t:'The Mini-Might is the hero SKU', b:'Okon\'s tiny clones are the most collectible thing in the game, so they lead the shelf: a plush, a keychain, apparel and a desk mat. Every product carries NFC, and every tap puts its digital twin in the game.',
     pos:[0.25,1.18,2.05], tgt:[0,0.62,0], theme:'game' },
-  { t:'Tap, play, unlock', b:'The QR on the right tower is real: scan it and Hypergalactic: Monkey Quest opens on Roblox. The activation flow turns a Walmart purchase into an in-game Mini-Might and a first look at the film.',
+  { id:'qr', t:'Tap, play, unlock', b:'The QR on the right tower is real: scan it and Hypergalactic: Monkey Quest opens on Roblox. The activation flow turns a Walmart purchase into an in-game Mini-Might and a first look at the film.',
     pos:[2.55,1.5,2.1], tgt:[1.45,1.3,0.35], enter:()=>{ pulseHotspot('qr'); } },
-  { t:'See it in your space', b:'Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.',
+  { id:'ar', t:'See it in your space', b:'Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.',
     pos:[-2.7,1.75,5.3], tgt:[0.35,1.12,0.1], ar:true },
-  { t:'Flip to the film campaign', b:'The same hardware re-skins for Toei Animation\'s 2027 theatrical release: film key art on the towers and hero screen, a movie collector box on the shelf, and the game promoted on the totem. Players become the opening-weekend audience.',
+  { id:'film', t:'Flip to the film campaign', b:'The same hardware re-skins for Toei Animation\'s 2027 theatrical release: film key art on the towers and hero screen, a movie collector box on the shelf, and the game promoted on the totem. Players become the opening-weekend audience.',
     pos:[-1.1,1.65,3.8], tgt:[0.2,1.2,0], theme:'film' },
-  { t:'Measured, and built modular', b:'Activations, returns to the game, film first-look views and sell-through are reported by store and SKU. Six modules bolt together on site, so each campaign phase swaps graphics, not fixtures.',
+  { id:'measured', t:'Measured, and built modular', b:'Activations, returns to the game, film first-look views and sell-through are reported by store and SKU. Six modules bolt together on site, so each campaign phase swaps graphics, not fixtures.',
     pos:[0.9,2.35,8.3], tgt:[0.7,1.4,0.3], dash:true, enter:()=>{ openDash(true); setExplode(true); } },
 ];
 
@@ -1645,6 +1645,64 @@ const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // blocked tracker must never break the page. Props stay small, with no personal data.
 const DEMO='monkey-quest';
 const track=(n,p)=>{ try{ window.ARTrack?.event(n,p); }catch(e){} };
+
+// ---- tour copy the team edits in /admin/demos -------------------------------
+// The TOUR above is the default and the fallback. Published overrides from
+// /api/ar/demo-content/<demo> change a stop's title, text or AR highlight, or hide
+// it, matched by id. Nothing waits for them, and any failure keeps the defaults. The answer is only stashed here; the tour applies
+// it at its next card (or when a presentation starts), so a tour already on screen
+// never jumps. ?draft=1 (with the admin cookie) previews the unpublished draft.
+const TOUR_DEFAULT=TOUR.slice();
+TOUR_DEFAULT.forEach(s=>{ s._d={ t:s.t, b:s.b, ar:!!s.ar }; });
+function applyTourContent(o){
+  const ov=(o && typeof o.tour==='object' && o.tour) || {};
+  const idAt=(i)=> (i>=0 && TOUR[i]) ? TOUR[i].id : null;
+  const cur=idAt(tourI), prev=idAt(tourShown);
+  const list=[];
+  for(const s of TOUR_DEFAULT){
+    const x=(ov[s.id] && typeof ov[s.id]==='object') ? ov[s.id] : {};
+    s.t=(typeof x.t==='string' && x.t.trim()) ? x.t : s._d.t;
+    s.b=(typeof x.b==='string' && x.b.trim()) ? x.b : s._d.b;
+    s.ar=(typeof x.ar==='boolean') ? x.ar : s._d.ar;
+    if(x.hidden!==true) list.push(s);
+  }
+  if(!list.length) return; // never an empty tour
+  TOUR.length=0; TOUR.push(...list);
+  // keep the visitor on the same stop (or the next one still shown)
+  const remap=(id)=>{ if(!id) return -1; let i=TOUR.findIndex(s=>s.id===id); if(i>=0) return i;
+    const d=TOUR_DEFAULT.findIndex(s=>s.id===id); i=TOUR.findIndex(s=>TOUR_DEFAULT.indexOf(s)>d); return i<0 ? TOUR.length-1 : i; };
+  if(cur) tourI=remap(cur); else tourI=Math.min(tourI, TOUR.length-1);
+  tourShown=prev ? remap(prev) : -1;
+}
+let tourContent=null; // overrides that arrived and wait for the next tour card
+function takeTourContent(){ if(!tourContent) return; const o=tourContent; tourContent=null; try{ applyTourContent(o); }catch(e){} }
+(function loadTourContent(){
+  try{
+    const draft=new URLSearchParams(location.search).get('draft')==='1';
+    const ctl=typeof AbortController==='function' ? new AbortController() : null;
+    const url='/api/ar/demo-content/'+DEMO+(draft?'?draft=1':'');
+    // Nothing waits for this, so a slow answer costs nothing: it is used from the next
+    // tour card. A request still hanging 10 s after the page started is dropped (the
+    // 0 ms timer queued now only runs once this script has finished starting the page,
+    // so a phone busy building the scene isn't mistaken for a slow network).
+    let answered=false, timer=0;
+    setTimeout(()=>{ timer=setTimeout(()=>{ if(!answered){ try{ ctl&&ctl.abort(); }catch(e){} } }, 10000); }, 0);
+    fetch(url, { credentials:'same-origin', cache:draft?'no-store':'default', signal:ctl?ctl.signal:undefined })
+      .then(r=>{ answered=true; return r.ok ? r.json() : null; })
+      .then(o=>{
+        clearTimeout(timer);
+        if(!o || typeof o!=='object') return;
+        tourContent=o;
+        if(draft && o.draft===true){
+          const b=document.createElement('div');
+          b.textContent='Draft preview'; b.setAttribute('role','status');
+          b.style.cssText='position:fixed;z-index:60;left:50%;top:max(10px,env(safe-area-inset-top));transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#ffcf5a;color:#1a1400;font:700 11px/1.2 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+          document.body.appendChild(b);
+        }
+      })
+      .catch(()=>{ clearTimeout(timer); });
+  }catch(e){}
+})();
 
 const renderer = new THREE.WebGLRenderer({ antialias:false, powerPreference:'high-performance' });
 // pixel budget: never ask the GPU for more than ~2.2 MP per frame (1.2 MP on phones)
@@ -2890,6 +2948,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.hidden && rv.acti
 let tourI=0, tourEnd=null, tourShown=-1, tourBase=null; // why the tour closed: 'finish' | 'skip' | 'present' (anything else is a skip too)
 function startTour(first=false){ tourI=0; tourEnd=null; tourShown=-1; tourBase=currentTheme; $('#tour').classList.add('open'); showTour(first?2600:1800); $('#hint').style.opacity=0; }
 function showTour(dur=1800){
+  takeTourContent();
   finishReveal();
   const prevI=tourShown; tourShown=tourI;
   const s=TOUR[tourI]; track('tour_step',{ i:tourI, step:tourI+1, title:s.t });
@@ -3362,6 +3421,7 @@ function presentStart(source){
   if(mode!=='explore') exitModes();
   openDash(false); hideSpinHint();
   present.theme0=currentTheme; present.last=-1; idle=0;
+  takeTourContent();
   return AP.start({ steps:TOUR.length, go:presentGo, dwell:presentDwell, caption:presentCaption, source,
     onPause:(paused)=>{ if(paused){ finishReveal(); cancelCamTween(); } },
     onStop:()=>{
