@@ -1825,6 +1825,20 @@
           background 0.4s,
           box-shadow 0.4s;
       }
+      /* AR: the button's icon, and its stop in the tour */
+      .dock button svg.ar-ico { width: 21px; height: 21px; }
+      .dock button.hl { color: #fff; background: rgba(var(--hs-rgb), 0.22);
+        box-shadow: 0 0 0 2px rgba(var(--hs-rgb), 0.95), 0 0 26px rgba(var(--hs-rgb), 0.55); }
+      .dock button.hl::after { content: ""; position: absolute; inset: -2px; border-radius: inherit;
+        border: 2px solid rgba(var(--hs-rgb), 0.9); pointer-events: none; animation: arPing 1.4s var(--ease) infinite; }
+      @keyframes arPing { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(1.14, 1.55); opacity: 0; } }
+      .tour-act { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; white-space: nowrap;
+        padding: 10px 18px; font-size: 13.5px;
+        box-shadow: inset 0 0 0 1.5px rgba(var(--hs-rgb), 0.85), 0 0 18px rgba(var(--hs-rgb), 0.25); }
+      .tour-act[hidden] { display: none; }
+      .tour-act svg { width: 19px; height: 19px; flex: 0 0 auto; }
+      @media (max-width: 760px) { .tour-act { width: 100%; justify-content: center; } }
+      @media (prefers-reduced-motion: reduce) { .dock button.hl::after { animation: none; } }
       .tour-skip {
         position: absolute;
         top: 14px;
@@ -4997,16 +5011,7 @@
           ><span>Dashboard</span>
         </button>
         <button data-action="ar" title="Place the display in your space">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-          >
-            <path d="M12 2l9 5v10l-9 5-9-5V7z" />
-            <path d="M3 7l9 5 9-5M12 12v10" /></svg
-          ><span>View in AR</span>
+          <svg class="ar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5h13v13h-13z"/><path d="M2.5 8.5l5-5h13l-5 5M15.5 21.5l5-5v-13"/><text x="9" y="18.3" text-anchor="middle" font-size="7.4" font-weight="800" fill="currentColor" stroke="none" font-family="Figtree, system-ui, sans-serif">AR</text></svg><span>View in AR</span>
         </button>
         <button data-action="activate" class="primary" title="Try the activation flow">
           <svg
@@ -5323,6 +5328,7 @@
       <div class="eyebrow" id="tStep">Stop 1 of 6</div>
       <h3 id="tTitle"></h3>
       <p id="tBody"></p>
+      <button class="btn ghost tour-act" id="tAct" type="button" hidden><svg class="ar-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8.5h13v13h-13z"/><path d="M2.5 8.5l5-5h13l-5 5M15.5 21.5l5-5v-13"/><text x="9" y="18.3" text-anchor="middle" font-size="7.4" font-weight="800" fill="currentColor" stroke="none" font-family="Figtree, system-ui, sans-serif">AR</text></svg>View in AR</button>
       <div class="tour-foot">
         <div style="display: flex; align-items: center; gap: 12px">
           <div class="pips" id="tPips"></div>

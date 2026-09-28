@@ -163,6 +163,7 @@ export function TourSection() {
                     />
                   </div>
                   <SwitchField path={["tour", i, "dashboard"]} label="Open the dashboard panel" />
+                  <SwitchField path={["tour", i, "ar"]} label="Highlight View in AR" />
                 </div>
               </li>
             ))}

@@ -164,6 +164,12 @@
       "view": "qr"
     },
     {
+      "title": "See it in your space",
+      "body": "Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.",
+      "view": "aisle",
+      "ar": true
+    },
+    {
       "title": "Measured",
       "body": "Activations, repeat visits and returns to the game, reported by store and product.",
       "view": "dashboard",

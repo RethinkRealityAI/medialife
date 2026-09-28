@@ -206,8 +206,8 @@
       "theme": "roblox"
     },
     {
-      "title": "Tell the property's story",
-      "body": "The same fixture re-skins for any Roblox-native IP. Here it's Skyrift Racers, a sample property: its key art on the towers and the hero screen, its colours in the LED channels. Same hardware.",
+      "title": "Featured IP",
+      "body": "Top Roblox experiences featured here with merchandise collections periodically refreshed. The same fixture re-skins for any Roblox-native IP.",
       "view": "hero",
       "theme": "skyrift"
     },
@@ -221,6 +221,12 @@
       "title": "Tap, play, unlock",
       "body": "A tap on any product opens the experience in the browser. No app: a 12-second drop, a reveal, then a UGC reward redeemed inside the creator's Roblox experience.",
       "view": "qr"
+    },
+    {
+      "title": "See it in your space",
+      "body": "Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.",
+      "view": "aisle",
+      "ar": true
     },
     {
       "title": "Back to Roblox, and measured",
