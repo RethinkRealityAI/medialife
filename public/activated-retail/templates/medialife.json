@@ -3,8 +3,8 @@
   "slug": "medialife-template",
   "name": "MEDIALIFE (template)",
   "brand": {
-    "lockup": "MEDIALIFE® ACTIVATED RETAIL",
-    "sub": "PROGRAM SHOWCASE · AR-01 FIXTURE · 3.84 × 0.68 × 2.47 m",
+    "lockup": "MEDIALIFE®",
+    "sub": "ACTIVATED RETAIL PROGRAM · AR-01",
     "splashTitle": "Activated Retail",
     "splashSub": "Get your merch activated, and we'll build this.",
     "retailer": "store",
@@ -18,7 +18,7 @@
       "name": "MEDIALIFE",
       "led": "#3aa8ff",
       "led2": "#ff3d9a",
-      "bay": "#2a5dff",
+      "bay": "#2446c9",
       "spill": "#3aa8ff",
       "markers": { "product": "#6fc3ff", "activation": "#ff5fae" },
       "graphics": {
@@ -253,7 +253,7 @@
       "model": {
         "source": "asset",
         "asset": "/medialife/activated-retail/models/ml_tee.glb",
-        "yaw": 0,
+        "yaw": 180,
         "scale": 1
       },
       "product": {
@@ -279,7 +279,7 @@
       "model": {
         "source": "asset",
         "asset": "/medialife/activated-retail/models/ml_hoodie.glb",
-        "yaw": 0,
+        "yaw": 180,
         "scale": 1
       },
       "product": {
@@ -351,5 +351,8 @@
     }
   ],
   "cta": { "label": "Book a call", "mode": "lead" },
-  "ar": {}
+  "ar": {
+    "glb": "/medialife/activated-retail/ar/medialife.glb",
+    "usdz": "/medialife/activated-retail/ar/medialife.usdz"
+  }
 }

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { isAdminRequest } from "@/lib/ar/auth.server";
-import { publicProject, type Project } from "@/lib/ar/project";
+import { projectSchema, publicProject, type Project } from "@/lib/ar/project";
+import { BUILTIN_SHOWCASES, templateUrl } from "@/lib/ar/projects";
 import { readProject } from "@/lib/ar/projects.server";
 import { namespaceFromRequest } from "@/lib/ar/store.server";
 
@@ -29,6 +30,22 @@ async function engineHtml(request: Request): Promise<string | null> {
     if (!/<head[\s>]/i.test(html)) return null;
     engineCache = { origin, at: Date.now(), html };
     return html;
+  } catch {
+    return null;
+  }
+}
+
+/** A built-in showcase's template, as the project /x/<slug> serves until one is published. */
+async function builtinProject(request: Request, slug: string): Promise<Project | null> {
+  const tpl = BUILTIN_SHOWCASES[slug];
+  if (!tpl) return null;
+  try {
+    const res = await fetch(new URL(templateUrl(tpl), request.url), {
+      headers: { accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const parsed = projectSchema.safeParse({ ...(await res.json()), slug });
+    return parsed.success ? parsed.data : null;
   } catch {
     return null;
   }
@@ -118,8 +135,10 @@ export const Route = createFileRoute("/x/$slug")({
         const wantsDraft = url.searchParams.get("draft") === "1";
         const draft = wantsDraft && !!doc && (await isAdminRequest(request));
 
-        const source = draft ? doc!.draft : doc?.published;
-        if (!doc || !source) {
+        const builtin =
+          !doc?.published && !draft ? await builtinProject(request, params.slug) : null;
+        const source = draft ? doc!.draft : (doc?.published ?? builtin);
+        if (!source) {
           return page(
             404,
             "This endcap isn't available",
@@ -137,7 +156,8 @@ export const Route = createFileRoute("/x/$slug")({
         const project = publicProject(source);
         // an admin previewing a draft doesn't need the password screen
         if (draft) project.access = {};
-        const out = inject(html, headFor(project, doc.slug, url.origin, doc.thumb));
+        const slug = doc?.slug ?? params.slug;
+        const out = inject(html, headFor(project, slug, url.origin, doc?.thumb ?? null));
         return new Response(out, {
           // any ?draft=1 response stays out of the CDN: the cache key can't see the cookie
           headers: wantsDraft
@@ -153,7 +173,7 @@ export const Route = createFileRoute("/x/$slug")({
                 // one cached copy per endcap, whatever ?c= / ?to= a client link adds
                 "netlify-vary": "query=draft",
                 // lets a future publish purge exactly this page
-                "netlify-cache-tag": `x-${doc.slug}`,
+                "netlify-cache-tag": `x-${slug}`,
               },
         });
       },

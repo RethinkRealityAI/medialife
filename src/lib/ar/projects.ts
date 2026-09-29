@@ -54,6 +54,14 @@ export const TEMPLATES = [
   { id: "blank", label: "Blank", description: "One theme, sample merch and a short tour." },
 ] as const;
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
+
+/**
+ * Built-in showcases: /x/<slug> serves the template until an admin creates and publishes a builder
+ * project with the same slug, which then takes over (same URL, same analytics).
+ * "activated-retail-program" is the 3D showcase embedded on the /activated-retail page.
+ */
+export const PROGRAM_SLUG = "activated-retail-program";
+export const BUILTIN_SHOWCASES: Record<string, TemplateId> = { [PROGRAM_SLUG]: "medialife" };
 export const templateUrl = (id: string) => `/activated-retail/templates/${id}.json`;
 
 /** "EVADE × Walmart Q4" → "evade-walmart-q4" (fits slugSchema, or "" when nothing is left). */

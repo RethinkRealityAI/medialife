@@ -6614,6 +6614,10 @@ window.__app = {
   closeCart,
   addToCart,
   startPresenting,
+  setVenue,
+  get venue() {
+    return venue;
+  },
 };
 
 if (MODE === "published") queueApply(window.__AR_PROJECT);

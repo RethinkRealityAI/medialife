@@ -341,12 +341,12 @@ async function buildPopup({ THREE, canvasTex, rand, brand, fonts }) {
     fog: false,
   });
   const neon = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.81), neonMat);
-  group.add(place(neon, 5.25, 2.45, Z0 + 0.03, 0));
+  group.add(place(neon, X0 + 0.04, 2.55, 1.2, Math.PI / 2));
   const neonBack = new THREE.Mesh(
     new THREE.PlaneGeometry(2.8, 1.0),
     new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35, fog: false }),
   );
-  group.add(place(neonBack, 5.25, 2.45, Z0 + 0.02, 0));
+  group.add(place(neonBack, X0 + 0.03, 2.55, 1.2, Math.PI / 2));
 
   // garment rails with hanging hoodies and tees
   const railSteel = std(THREE, { color: 0x18181b, roughness: 0.35, metalness: 0.75 });
