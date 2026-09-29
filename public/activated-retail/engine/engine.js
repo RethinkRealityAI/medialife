@@ -44,6 +44,8 @@ const VIEWS = {
   dashboard: { pos: [-1.1, 1.65, 3.8], tgt: [0.2, 1.2, 0], label: "Measured" },
   build: { pos: [0.9, 2.35, 8.3], tgt: [0.7, 1.4, 0.3], label: "Built modular" },
 };
+// where the fixture stands (project.venues): the store aisle is built here, the others in venues.js
+const VENUE_IDS = ["retail", "popup", "convention"];
 const PARTS = {
   PART_TowerL: {
     off: [-0.95, 0, 0.05],
@@ -101,7 +103,18 @@ const MODE = window.__AR_PROJECT
       ? "template"
       : "none";
 const IN_PREVIEW = MODE === "preview";
+// ?embed=1: framed by a medialife.ai page (the Activated Retail Program page). No splash wait and
+// no auto tour; the scroll wheel scrolls the page until the display is engaged; the page drives
+// the camera, themes and venues through a small same-origin message API (see the end of this file).
+const EMBED = !IN_PREVIEW && qs.get("embed") === "1" && window.parent !== window;
 document.body.classList.add("mode-" + MODE);
+if (EMBED) document.body.classList.add("embed");
+function toParent(msg) {
+  if (!EMBED) return;
+  try {
+    window.parent.postMessage(msg, location.origin);
+  } catch (e) {}
+}
 let SLUG = String(window.__AR_SLUG || window.__AR_PROJECT?.slug || "");
 const demoId = () => "x:" + (SLUG || PROJECT?.slug || "unknown");
 // first-party analytics: published endcaps only (preview and templates never count as visits)
@@ -221,6 +234,7 @@ function normalizeProject(raw) {
         channel: str(pr.channel),
         hotspot: str(pr.hotspot),
         canActivate: !!pr.canActivate,
+        url: httpUrl(pr.url),
       },
     };
   }
@@ -253,6 +267,10 @@ function normalizeProject(raw) {
     url: httpUrl(c.url),
   };
   p.ar = { glb: sitePath(p.ar?.glb), usdz: sitePath(p.ar?.usdz) };
+  p.venues = (Array.isArray(p.venues) ? p.venues : []).filter(
+    (v, i, a) => VENUE_IDS.includes(v) && a.indexOf(v) === i,
+  );
+  if (!p.venues.length) p.venues = ["retail"];
   return p;
 }
 
@@ -533,7 +551,14 @@ function rand(seed) {
   };
 }
 
+// venue id → { group, floor: {map, roughness, metalness}, bounds, walk, blockers: Box3[], light(night) }
+const venueState = {};
+let venue = "retail";
 function buildStore() {
+  // the store aisle: everything that belongs to this venue only (venues.js builds the others)
+  const retail = new THREE.Group();
+  retail.name = "VENUE_retail";
+  store.add(retail);
   // Floor: polished vinyl tile over a soft planar reflection
   const floorTex = canvasTex(
     1024,
@@ -577,6 +602,14 @@ function buildStore() {
   store.add(floor);
   lights.floor = floor;
   lights.floorMat = floorMat;
+  venueState.retail = {
+    group: retail,
+    floor: { map: floorTex, roughness: 0.3, metalness: 0 },
+    bounds: null,
+    walk: null,
+    blockers: [],
+    light: null,
+  };
 
   // Contact shadows (baked radial gradients)
   const shadowTex = canvasTex(
@@ -613,7 +646,7 @@ function buildStore() {
   );
   ceil.rotation.x = Math.PI / 2;
   ceil.position.y = 4.4;
-  store.add(ceil);
+  retail.add(ceil);
   const panelMat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
     emissive: 0xfff8f0,
@@ -632,17 +665,17 @@ function buildStore() {
       panels.setMatrixAt(k++, m4);
     }
   panels.count = k;
-  store.add(panels);
+  retail.add(panels);
 
   // Walls
   const wallMat = new THREE.MeshStandardMaterial({ color: 0xe4e2e7, roughness: 0.85 });
   const back = new THREE.Mesh(new THREE.PlaneGeometry(40, 4.4), wallMat);
   back.position.set(0, 2.2, -10);
-  store.add(back);
+  retail.add(back);
   const left = new THREE.Mesh(new THREE.PlaneGeometry(40, 4.4), wallMat);
   left.position.set(-16, 2.2, 0);
   left.rotation.y = Math.PI / 2;
-  store.add(left);
+  retail.add(left);
 
   // Gondola shelving rows with generic product facings
   const facingTex = canvasTex(1024, 512, (g, w, h) => {
@@ -702,7 +735,7 @@ function buildStore() {
       f.rotation.y = s > 0 ? 0 : Math.PI;
       grp.add(f);
     }
-    store.add(grp);
+    retail.add(grp);
   };
   gondola(9.6, -10.2, -1.0, Math.PI / 2);
   gondola(9.6, -7.4, -1.0, Math.PI / 2);
@@ -731,7 +764,7 @@ function buildStore() {
     );
     m.position.set(x, 3.35, z);
     m.rotation.y = ry;
-    store.add(m);
+    retail.add(m);
   };
   blade("TOYS & GAMES", -8.8, 4.2, 0);
   blade("GAMING", 8.8, 4.2, 0);
@@ -794,28 +827,172 @@ function buildStore() {
 buildStore();
 
 let lightMode = "store";
+// day ("store") and night lighting per venue; the store aisle's values are the original demo's
+const LIGHTS = {
+  retail: {
+    day: { bg: 0xd4d2d8, fog: [0xcfcdd4, 14, 42], hemi: 0.62, key: 1.25, env: 0.38, panel: 1.2 },
+    night: { bg: 0x06050b, fog: [0x06050b, 6, 20], hemi: 0.08, key: 0.12, env: 0.16, panel: 0.06 },
+    floor: [0xffffff, 0x39373f],
+    sky: [0xffffff, 0x9d9aa8],
+    sun: 0xfff5ea,
+  },
+  popup: {
+    day: { bg: 0x1d1b19, fog: [0x2b2825, 12, 32], hemi: 0.5, key: 0.95, env: 0.32, panel: 0 },
+    night: { bg: 0x070606, fog: [0x070606, 7, 21], hemi: 0.08, key: 0.1, env: 0.15, panel: 0 },
+    floor: [0xffffff, 0x5e5954],
+    sky: [0xfff1e0, 0x6b625a],
+    sun: 0xffe6c8,
+  },
+  convention: {
+    day: { bg: 0x3c3f47, fog: [0x4c4f57, 16, 50], hemi: 0.6, key: 1.1, env: 0.36, panel: 0 },
+    night: { bg: 0x05060a, fog: [0x05060a, 8, 26], hemi: 0.07, key: 0.1, env: 0.15, panel: 0 },
+    floor: [0xffffff, 0x3c3c42],
+    sky: [0xf2f5ff, 0x7d8088],
+    sun: 0xf4f6ff,
+  },
+};
 function setLight(mode) {
   lightMode = mode;
   document
     .querySelectorAll("[data-light]")
     .forEach((b) => b.setAttribute("aria-pressed", b.dataset.light === mode));
   const night = mode === "night";
-  scene.background = new THREE.Color(night ? 0x06050b : 0xd4d2d8);
-  scene.fog = new THREE.Fog(night ? 0x06050b : 0xcfcdd4, night ? 6 : 14, night ? 20 : 42);
-  lights.hemi.intensity = night ? 0.08 : 0.62;
-  lights.key.intensity = night ? 0.12 : 1.25;
-  scene.environmentIntensity = night ? 0.16 : 0.38;
-  lights.panelMat.emissiveIntensity = night ? 0.06 : 1.2;
-  lights.floorMat.color.setHex(night ? 0x39373f : 0xffffff);
+  const V = LIGHTS[venue] || LIGHTS.retail,
+    L = night ? V.night : V.day;
+  scene.background = new THREE.Color(L.bg);
+  scene.fog = new THREE.Fog(L.fog[0], L.fog[1], L.fog[2]);
+  lights.hemi.intensity = L.hemi;
+  lights.hemi.color.setHex(V.sky[0]);
+  lights.hemi.groundColor.setHex(V.sky[1]);
+  lights.key.intensity = L.key;
+  lights.key.color.setHex(V.sun);
+  scene.environmentIntensity = L.env;
+  lights.panelMat.emissiveIntensity = L.panel;
+  lights.floorMat.color.setHex(V.floor[night ? 1 : 0]);
   ["spillL", "spillR", "spillC", "spillT"].forEach(
     (k) => (lights[k].material.opacity = night ? 0.26 : 0.05),
   );
+  venueState[venue]?.light?.(night);
   applyGlow();
   renderer.shadowMap.needsUpdate = true;
   bloom.strength = night ? 0.32 : 0.1;
   bloom.threshold = night ? 0.92 : 1.0;
   bloom.radius = night ? 0.32 : 0.25;
   renderer.toneMappingExposure = 1.0;
+}
+
+/* ---------- venues: the store aisle (above), a pop-up shop, a convention floor (venues.js) ---------- */
+const VENUE_LABEL = { retail: "Store", popup: "Pop-up", convention: "Convention" };
+const VENUE_TOAST = {
+  retail: "In store · the same fixture on the shop floor",
+  popup: "Pop-up · the same fixture in a pop-up shop",
+  convention: "Convention · the same fixture as a booth",
+};
+// where the shopper is, in the shop copy ("In stock at this …"): the retailer, or the venue
+const placeWord = () =>
+  venue === "popup" ? "pop-up" : venue === "convention" ? "booth" : PROJECT.brand.retailer;
+let venuesModule = null;
+function ensureVenue(id) {
+  if (venueState[id]) return Promise.resolve(venueState[id]);
+  ensureVenue.p ??= {};
+  return (ensureVenue.p[id] ??= (async () => {
+    venuesModule ??= import("/activated-retail/engine/venues.js");
+    const V = await venuesModule;
+    const brandName =
+      PROJECT.brand.headerText ||
+      (PROJECT.brand.lockup || "").split("×")[0].replace(/[®™]/g, "").trim() ||
+      "MEDIALIFE";
+    const built = await V.build(id, {
+      THREE,
+      canvasTex,
+      rand,
+      brand: brandName,
+      fonts: () => KA.fonts(),
+    });
+    built.group.visible = false;
+    built.blockers = (built.blockers || []).map(
+      ([x0, z0, x1, z1]) =>
+        new THREE.Box3(new THREE.Vector3(x0, 0, z0), new THREE.Vector3(x1, 3, z1)),
+    );
+    store.add(built.group);
+    venueState[id] = built;
+    return built;
+  })().catch((e) => {
+    delete ensureVenue.p[id];
+    throw e;
+  }));
+}
+/** Put the fixture in another venue. Resolves when the new surroundings are showing. */
+async function setVenue(id, { silent = false } = {}) {
+  if (!VENUE_IDS.includes(id) || !PROJECT?.venues.includes(id)) return false;
+  if (id === venue && venueState[id]?.group.visible !== false) return true;
+  const token = (setVenue.token = (setVenue.token || 0) + 1);
+  let V;
+  try {
+    V = await ensureVenue(id);
+  } catch (e) {
+    postError("Venue could not be built: " + (e?.message || e));
+    return false;
+  }
+  if (token !== setVenue.token) return false;
+  for (const [k, st] of Object.entries(venueState)) st.group.visible = k === id;
+  venue = id;
+  const fm = lights.floorMat;
+  fm.map = V.floor.map;
+  fm.roughness = V.floor.roughness;
+  fm.metalness = V.floor.metalness;
+  fm.needsUpdate = true;
+  setLight(lightMode);
+  document
+    .querySelectorAll("[data-venue]")
+    .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.venue === id)));
+  const cyc = $("#venueCycle");
+  if (cyc) {
+    cyc.innerHTML = VENUE_ICON[id] + `<span>${VENUE_LABEL[id]}</span>`;
+    cyc.setAttribute("aria-label", `Venue: ${VENUE_LABEL[id]}. Tap for the next venue`);
+  }
+  applyPlaceCopy();
+  lastChange = performance.now();
+  renderer.shadowMap.needsUpdate = true;
+  if (!silent && started) toast(VENUE_TOAST[id]);
+  toParent({ type: "ar:venue", venue: id });
+  return true;
+}
+const VENUE_ICON = {
+  retail:
+    '<svg class="lt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l1.6-5h14.8L21 9M3 9h18M4.5 9v11h15V9M9.5 20v-5.5h5V20"/></svg>',
+  popup:
+    '<svg class="lt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5L2.5 20h19L12 3.5zM12 3.5V20M8.6 20l3.4-6 3.4 6"/></svg>',
+  convention:
+    '<svg class="lt-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="8" width="12" height="13" rx="2"/><path d="M9 3.5l3 4.5 3-4.5M9.5 13h5M9.5 16.5h3.5"/></svg>',
+};
+function buildVenueButtons() {
+  const seg = $("#venueSeg");
+  if (!seg) return;
+  seg.querySelectorAll("[data-venue]").forEach((b) => b.remove());
+  for (const id of PROJECT.venues) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.venue = id;
+    b.title = VENUE_LABEL[id];
+    b.setAttribute("aria-pressed", String(id === venue));
+    b.innerHTML = VENUE_ICON[id] + `<span>${VENUE_LABEL[id]}</span>`;
+    seg.appendChild(b);
+  }
+  seg.hidden = PROJECT.venues.length < 2;
+  const wrap = $("#venueCycleWrap"),
+    cyc = $("#venueCycle");
+  if (wrap) wrap.hidden = PROJECT.venues.length < 2;
+  if (cyc) {
+    cyc.innerHTML = VENUE_ICON[venue] + `<span>${VENUE_LABEL[venue]}</span>`;
+    cyc.setAttribute("aria-label", `Venue: ${VENUE_LABEL[venue]}. Tap for the next venue`);
+  }
+}
+function applyPlaceCopy() {
+  if (!PROJECT) return;
+  const place = placeWord();
+  $("#sStock").textContent = `In stock at this ${place}`;
+  $("#fPickup").textContent = `This ${place} · ready in 1 hr`;
 }
 
 /* =========================================================
@@ -839,6 +1016,7 @@ function progress(part, v) {
   );
   if (pct <= shownPct) return;
   shownPct = pct;
+  toParent({ type: "ar:progress", pct });
   $("#loader")?.style.setProperty("--lp", (pct / 100).toFixed(3));
   const n = $("#ldPct");
   if (n) n.textContent = pct;
@@ -3377,6 +3555,7 @@ function focusProduct(id, { user = false } = {}) {
   const p = P(id),
     obj = heroObj(id);
   if (!obj) return;
+  toParent({ type: "ar:focus", zone: id });
   bump("session");
   live.perSku[id] = (live.perSku[id] || 0) + 1;
   bump("acts");
@@ -3457,6 +3636,7 @@ function focusProduct(id, { user = false } = {}) {
   $("#hint").style.opacity = 0;
 }
 function unfocus(after, { keepView = false } = {}) {
+  if (focus) toParent({ type: "ar:focus", zone: null });
   // always leave the UI consistent, even if nothing is held
   $("#sheet").classList.remove("open");
   document.body.classList.remove("focus");
@@ -3540,10 +3720,18 @@ function fillSheet(id) {
     ["Trigger", p.trigger],
     ["Sold via", p.channel],
   ].filter(([, b]) => b);
-  $("#sSpec").innerHTML = spec
-    .map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`)
-    .join("");
-  $("#sSpec").hidden = !spec.length;
+  // a real product: where to buy it (opens in a new tab)
+  let shop = "";
+  if (p.url) {
+    let host = p.url;
+    try {
+      host = new URL(p.url).hostname.replace(/^www\./, "");
+    } catch (e) {}
+    shop = `<div><dt>Shop it</dt><dd><a href="${esc(p.url)}" target="_blank" rel="noopener" data-shop="${id}">${esc(host)} <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a></dd></div>`;
+  }
+  $("#sSpec").innerHTML =
+    spec.map(([a, b]) => `<div><dt>${a}</dt><dd>${esc(b)}</dd></div>`).join("") + shop;
+  $("#sSpec").hidden = !spec.length && !shop;
   cartSheet(id);
 }
 // offscreen snapshot of the product's 3D twin, rendered with the main renderer into a small target
@@ -3773,6 +3961,7 @@ function setModeButtons() {
     .forEach((b) => b.setAttribute("aria-pressed", b.dataset.mode === mode));
 }
 function exitModes() {
+  if (mode !== "explore") toParent({ type: "ar:mode", mode: "explore" });
   if (mode === "tour") endTour(false);
   if (mode === "walk") endWalk();
   if (mode === "build") setExplode(false);
@@ -3793,6 +3982,7 @@ function setMode(m, { first = false } = {}) {
   mode = m;
   setModeButtons();
   syncControls();
+  toParent({ type: "ar:mode", mode: m });
   if (m === "tour") startTour(first);
   if (m === "walk") startWalk();
   if (m === "build") {
@@ -4248,7 +4438,8 @@ function cancelReveal(apply = true) {
 // the AR stop: light up the dock's AR button and offer it in the tour card (only when it's shown)
 function tourAr(on) {
   const b = document.querySelector('[data-action="ar"]');
-  const show = !!on && !!b && b.offsetParent !== null && !document.body.classList.contains("ar-presenting");
+  const show =
+    !!on && !!b && b.offsetParent !== null && !document.body.classList.contains("ar-presenting");
   b?.classList.toggle("hl", show);
   $("#tAct").hidden = !show;
 }
@@ -4419,10 +4610,13 @@ function updateWalk(dt) {
     else mv.copy(d).multiplyScalar(Math.min(1, dt * 2.2));
   }
   const next = camera.position.clone().add(mv);
-  next.x = THREE.MathUtils.clamp(next.x, -12, 12);
-  next.z = THREE.MathUtils.clamp(next.z, -3.4, 12);
+  const W = venueState[venue]?.walk;
+  next.x = THREE.MathUtils.clamp(next.x, W ? W.x[0] : -12, W ? W.x[1] : 12);
+  next.z = THREE.MathUtils.clamp(next.z, W ? W.z[0] : -3.4, W ? W.z[1] : 12);
   const pt = next.clone().setY(1);
-  if (!blockers.some((b) => b.containsPoint(pt))) camera.position.copy(next);
+  const more = venueState[venue]?.blockers || [];
+  if (!blockers.some((b) => b.containsPoint(pt)) && !more.some((b) => b.containsPoint(pt)))
+    camera.position.copy(next);
   else walk.target = null;
   camera.position.y = 1.58 + (mv.lengthSq() > 0 ? Math.sin(performance.now() * 0.012) * 0.012 : 0);
 }
@@ -5033,13 +5227,24 @@ function arHandoffUrl() {
   u.hash = "";
   return u.href;
 }
+// embedded: open AR from the framing page when it loads ar-launch.js, so the phone viewers launch
+// from the top window and the desktop QR sheet covers the whole page, not just the frame
+function arLauncher() {
+  if (EMBED) {
+    try {
+      if (window.parent.ARLaunch?.open) return window.parent.ARLaunch;
+    } catch (e) {}
+  }
+  return window.ARLaunch;
+}
 function launchAR(source) {
   if (!arFiles()) return false;
-  if (!window.ARLaunch?.open) {
+  const launcher = arLauncher();
+  if (!launcher?.open) {
     toast("AR is not available right now");
     return true;
   }
-  window.ARLaunch.open({
+  launcher.open({
     usdz: PROJECT.ar.usdz || undefined,
     glb: PROJECT.ar.glb || undefined,
     title: PROJECT.brand.splashTitle || PROJECT.name,
@@ -5211,6 +5416,10 @@ function toast(msg) {
 /* =========================================================
    UI wiring
    ========================================================= */
+$("#sSpec").addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-shop]");
+  if (a) track("shop_link", { zone: a.dataset.shop });
+});
 $("#themeSeg").addEventListener("click", (e) => {
   const b = e.target.closest("[data-theme]");
   if (!b || b.dataset.theme === currentTheme) return;
@@ -5219,6 +5428,7 @@ $("#themeSeg").addEventListener("click", (e) => {
   track("theme", { id: b.dataset.theme });
   setTheme(b.dataset.theme);
   post({ type: "ar:state", theme: b.dataset.theme });
+  toParent({ type: "ar:theme", theme: b.dataset.theme });
 });
 document.querySelectorAll("[data-light]").forEach((b) =>
   b.addEventListener("click", () => {
@@ -5227,6 +5437,20 @@ document.querySelectorAll("[data-light]").forEach((b) =>
     setLight(b.dataset.light);
   }),
 );
+function pickVenue(id) {
+  if (!id || id === venue) return;
+  bump("session");
+  track("venue", { id });
+  setVenue(id);
+}
+$("#venueSeg")?.addEventListener("click", (e) => {
+  pickVenue(e.target.closest("[data-venue]")?.dataset.venue);
+});
+// phones: one button that steps through the venues (the top bar has no room for three)
+$("#venueCycle")?.addEventListener("click", () => {
+  const list = PROJECT?.venues || [];
+  if (list.length > 1) pickVenue(list[(list.indexOf(venue) + 1) % list.length]);
+});
 
 /* =========================================================
    Loop
@@ -5346,7 +5570,12 @@ function frameBody() {
     tg.x = THREE.MathUtils.clamp(tg.x, -4, 5);
     tg.y = THREE.MathUtils.clamp(tg.y, 0.3, 2.4);
     tg.z = THREE.MathUtils.clamp(tg.z, -1.5, 3);
-    if (camera.position.y > 4.1) camera.position.y = 4.1;
+    const vb = venueState[venue]?.bounds;
+    if (camera.position.y > (vb?.y ?? 4.1)) camera.position.y = vb?.y ?? 4.1;
+    if (vb) {
+      camera.position.x = THREE.MathUtils.clamp(camera.position.x, vb.x[0], vb.x[1]);
+      camera.position.z = THREE.MathUtils.clamp(camera.position.z, vb.z[0], vb.z[1]);
+    }
   } else updateWalk(dt);
   idle += dt;
   if (
@@ -5459,9 +5688,13 @@ function splashReady(onEnter) {
     onEnter();
     setTimeout(() => L.remove(), 1300);
   };
-  // the builder preview never waits on a splash
+  // the builder preview never waits on a splash; an embedding page shows its own poster meanwhile
   if (IN_PREVIEW) {
     go();
+    return;
+  }
+  if (EMBED) {
+    (window.__gate || { then: (cb) => cb() }).then(go);
     return;
   }
   btn.addEventListener("click", () => {
@@ -5800,8 +6033,7 @@ addEventListener(
 
 $("#cartCheckout").addEventListener("click", () => {
   if (!cart.items.length) return;
-  const t = cartTotals(),
-    retailer = PROJECT.brand.retailer;
+  const t = cartTotals();
   $("#payLines").innerHTML =
     cart.items
       .map(
@@ -5809,7 +6041,7 @@ $("#cartCheckout").addEventListener("click", () => {
           `<li><span>${i.qty} × ${esc(i.name)}${i.size ? " (" + esc(i.size) + ")" : ""}</span><span>${money(i.qty * i.price)}</span></li>`,
       )
       .join("") +
-    `<li class="muted"><span>${cart.fulfil === "pickup" ? "Pickup today · this " + esc(retailer) : "Shipping · 2-day"}</span><span>Free</span></li><li class="muted"><span>Est. tax</span><span>${money(t.tax)}</span></li>`;
+    `<li class="muted"><span>${cart.fulfil === "pickup" ? "Pickup today · this " + esc(placeWord()) : "Shipping · 2-day"}</span><span>Free</span></li><li class="muted"><span>Est. tax</span><span>${money(t.tax)}</span></li>`;
   $("#pTot").textContent = money(t.tot);
   $("#payTxt").textContent = "Pay " + money(t.tot);
   cartView("pay");
@@ -5834,7 +6066,7 @@ function completeOrder() {
   const t = cartTotals();
   const no = "ML-" + (48200 + Math.floor(Math.random() * 700));
   $("#doneSub").textContent =
-    `Order ${no} · ${cart.fulfil === "pickup" ? "ready for pickup at this " + PROJECT.brand.retailer + " in about an hour" : "arrives in 2 days"}`;
+    `Order ${no} · ${cart.fulfil === "pickup" ? "ready for pickup at this " + placeWord() + " in about an hour" : "arrives in 2 days"}`;
   $("#twins").innerHTML = items
     .map(
       (i, k) =>
@@ -5884,6 +6116,7 @@ function P(id) {
     img: imgUrl(pr.unlock.image),
     trigger: pr.trigger,
     channel: pr.channel,
+    url: pr.url,
     price: pr.price,
     zoom: FIX[id].zoom,
   };
@@ -5969,8 +6202,8 @@ function applyCopy() {
   if (sub) sub.hidden = !b.splashSub;
   applyPreparedFor();
   setText("#ldFootRetail", `Designed for ${b.retailer} endcaps`);
-  $("#sStock").textContent = `In stock at this ${b.retailer}`;
-  $("#fPickup").textContent = `This ${b.retailer} · ready in 1 hr`;
+  applyPlaceCopy();
+  buildVenueButtons();
   document.querySelectorAll("[data-cta]").forEach((el) => {
     el.textContent = p.cta.label;
   });
@@ -6034,6 +6267,7 @@ async function boot(raw) {
   await themeReady;
   uploadThemeTextures(currentTheme);
   await zonesBusy;
+  if (PROJECT.venues[0] !== venue) await setVenue(PROJECT.venues[0], { silent: true });
   await wait(60);
   await warmUp();
   progress("model", 1);
@@ -6046,6 +6280,7 @@ async function boot(raw) {
   window.__ready = true;
   sceneReadyResolve();
   post({ type: "ar:loaded" });
+  toParent({ type: "ar:loaded" });
   arHandoff();
   // after the intro: textures for the other themes, product snapshots
   setTimeout(() => {
@@ -6056,10 +6291,13 @@ async function boot(raw) {
 function onEnter() {
   started = true;
   document.body.classList.remove("intro");
+  toParent(embedState("ar:ready"));
   track("enter", { theme: currentTheme });
   if (qs.get("present") === "1" && startPresenting("link")) return;
   // first visit starts in the guided walkthrough, so people see what the display does before they explore
-  const tour = !IN_PREVIEW && !window.__NOTOUR && qs.get("notour") !== "1" && PROJECT.tour.length;
+  // (an embedding page offers the tour itself)
+  const tour =
+    !IN_PREVIEW && !EMBED && !window.__NOTOUR && qs.get("notour") !== "1" && PROJECT.tour.length;
   if (tour) setMode("tour", { first: true });
   else flyTo([-2.7, 1.75, 5.3], [0.35, 1.12, 0.1], 3000);
 }
@@ -6072,6 +6310,7 @@ async function apply(raw) {
   for (const id of ZONE_IDS) if (live.perSku[id] == null) live.perSku[id] = SKU_SEED[id];
   const want = THEMES[currentTheme] ? currentTheme : PROJECT.defaultTheme;
   applyCopy();
+  if (!PROJECT.venues.includes(venue)) await setVenue(PROJECT.venues[0], { silent: true });
   if (focus && !PROJECT.zones[focus.id]?.enabled) unfocus();
   await setTheme(want, { silent: true });
   relabelHotspots();
@@ -6146,6 +6385,7 @@ async function gotoCmd(o = {}) {
   lastChange = performance.now();
   if (o.theme || o.view || o.zone !== undefined) cancelReveal(true);
   if (o.theme && THEMES[o.theme] && o.theme !== currentTheme) setTheme(o.theme, { silent: true });
+  if (o.venue && o.venue !== venue) await setVenue(o.venue, { silent: !!o.silent });
   if (typeof o.zone === "string" && FIX[o.zone]) {
     if (!PROJECT.zones[o.zone].enabled) return;
     exitModes();
@@ -6424,3 +6664,158 @@ else if (MODE === "template") {
         );
   });
 } else unavailable();
+
+/* =========================================================
+   Embedded on a medialife.ai page (?embed=1): same-origin messages only, from the framing page.
+   page → display: ar:goto {view|zone|theme|venue|mode}, ar:tour {play}, ar:activate,
+     ar:dash {on}, ar:light {mode}, ar:engage {on, sticky}, ar:ip {file: Blob, name}, ar:reset
+   display → page: ar:progress {pct}, ar:loaded, ar:ready {…state}, ar:theme, ar:venue,
+     ar:focus {zone}, ar:mode {mode}, ar:ip {ok, name | message}, ar:error
+   ========================================================= */
+function embedState(type) {
+  return {
+    type,
+    theme: currentTheme,
+    venue,
+    mode,
+    themes: PROJECT.themes.map((t) => ({ id: t.id, name: t.name, led: t.led })),
+    venues: PROJECT.venues,
+    tour: PROJECT.tour.length,
+    ar: arFiles()
+      ? {
+          glb: PROJECT.ar.glb || null,
+          usdz: PROJECT.ar.usdz || null,
+          title: PROJECT.brand.splashTitle || PROJECT.name,
+          handoff: arHandoffUrl(),
+        }
+      : null,
+  };
+}
+// the scroll wheel belongs to the page until someone clicks or drags the display
+// (pinch-zoom on a trackpad and Ctrl/⌘ + wheel always zoom); a full-screen page makes it sticky
+let engaged = !EMBED,
+  stickyEngaged = false,
+  wheelHints = 0,
+  wheelHintAt = 0;
+function setEngaged(on) {
+  engaged = !!on || stickyEngaged;
+  document.body.classList.toggle("engaged", engaged);
+}
+if (EMBED) {
+  stage.addEventListener(
+    "wheel",
+    (e) => {
+      const ok = engaged || e.ctrlKey || e.metaKey;
+      controls.enableZoom = ok;
+      if (!ok && wheelHints < 3 && performance.now() - wheelHintAt > 20000) {
+        wheelHints++;
+        wheelHintAt = performance.now();
+        toast("Click the display, then scroll to zoom");
+      }
+    },
+    { capture: true, passive: true },
+  );
+  stage.addEventListener("pointerdown", () => setEngaged(true), { capture: true });
+  document.documentElement.addEventListener("pointerleave", (e) => {
+    if (e.pointerType === "mouse") setEngaged(false);
+  });
+}
+
+// "Your IP": the whole fixture re-skinned from one key-art image, on this device only
+const IP_THEME = "yourip";
+let ipUrl = null;
+async function applyCustomIP(file, name) {
+  await sceneReady;
+  if (!(file instanceof Blob) || !/^image\//.test(file.type || ""))
+    throw new Error("Choose a PNG, JPG or WebP image.");
+  if (file.size > 30e6) throw new Error("That image is over 30 MB. Try a smaller one.");
+  const url = URL.createObjectURL(file);
+  let img;
+  try {
+    img = await loadImage(url);
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw new Error("That image couldn't be read. Try a PNG, JPG or WebP.");
+  }
+  const pal = KA.palette(KA.toWorking(img));
+  const label =
+    String(name || "")
+      .trim()
+      .slice(0, 28) || "Your IP";
+  const theme = {
+    id: IP_THEME,
+    name: label,
+    led: KA.hex(pal.led),
+    led2: KA.hex(pal.led2),
+    bay: null,
+    spill: null,
+    markers: { product: null, activation: null },
+    graphics: { mode: "keyart", keyArt: { src: url } },
+    site: "",
+    game: label,
+  };
+  PROJECT.themes = PROJECT.themes.filter((t) => t.id !== IP_THEME).concat(theme);
+  buildThemes();
+  buildThemeButtons();
+  cancelReveal(true);
+  if (focus) unfocus(null, { keepView: true });
+  if (mode !== "explore") exitModes();
+  await setTheme(IP_THEME, { silent: true });
+  const prev = ipUrl;
+  ipUrl = url;
+  if (prev) setTimeout(() => URL.revokeObjectURL(prev), 1500);
+  flyTo([0.2, 1.55, 6.1], [0.35, 1.3, 0], 1600);
+  toast(label + " · your art on the same fixture");
+  track("custom_ip", {});
+  return label;
+}
+
+if (EMBED)
+  addEventListener("message", (e) => {
+    if (e.origin !== location.origin || e.source !== window.parent) return;
+    const d = e.data;
+    if (!d || typeof d !== "object" || typeof d.type !== "string") return;
+    const fail = (err) => postError(err?.message || String(err));
+    switch (d.type) {
+      case "ar:goto":
+        sceneReady
+          .then(async () => {
+            if (d.mode === "build" || d.mode === "walk") {
+              if (d.theme || d.venue) await gotoCmd({ theme: d.theme, venue: d.venue });
+              if (mode !== d.mode) setMode(d.mode);
+            } else await gotoCmd(d);
+          })
+          .catch(fail);
+        break;
+      case "ar:tour":
+        tourCmd(!!d.play).catch(fail);
+        break;
+      case "ar:activate":
+        sceneReady.then(() => document.querySelector('[data-action="activate"]').click());
+        break;
+      case "ar:dash":
+        sceneReady.then(() => openDash(!!d.on));
+        break;
+      case "ar:light":
+        if (d.mode === "night" || d.mode === "store") setLight(d.mode);
+        break;
+      case "ar:engage":
+        stickyEngaged = !!d.sticky;
+        setEngaged(!!d.on);
+        break;
+      case "ar:reset":
+        sceneReady.then(() => {
+          if (focus) unfocus(null, { keepView: true });
+          exitModes();
+          homeView();
+        });
+        break;
+      case "ar:ip":
+        applyCustomIP(d.file, d.name)
+          .then((label) => toParent({ type: "ar:ip", ok: true, name: label }))
+          .catch((err) =>
+            toParent({ type: "ar:ip", ok: false, message: err?.message || String(err) }),
+          );
+        break;
+    }
+  });

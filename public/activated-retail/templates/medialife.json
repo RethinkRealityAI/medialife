@@ -1,0 +1,355 @@
+{
+  "version": 1,
+  "slug": "medialife-template",
+  "name": "MEDIALIFE (template)",
+  "brand": {
+    "lockup": "MEDIALIFE® ACTIVATED RETAIL",
+    "sub": "PROGRAM SHOWCASE · AR-01 FIXTURE · 3.84 × 0.68 × 2.47 m",
+    "splashTitle": "Activated Retail",
+    "splashSub": "Get your merch activated, and we'll build this.",
+    "retailer": "store",
+    "headerText": "MEDIALIFE",
+    "tagline": "TAP. PLAY. UNLOCK."
+  },
+  "access": {},
+  "themes": [
+    {
+      "id": "medialife",
+      "name": "MEDIALIFE",
+      "led": "#3aa8ff",
+      "led2": "#ff3d9a",
+      "bay": "#2a5dff",
+      "spill": "#3aa8ff",
+      "markers": { "product": "#6fc3ff", "activation": "#ff5fae" },
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/medialife/activated-retail/assets/hd/ml_towerL.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/ml_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/medialife/activated-retail/assets/hd/ml_towerR.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/ml_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/medialife/activated-retail/assets/hd/ml_totem.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/ml_totem_m.webp"
+        },
+        "wall": {
+          "src": "/medialife/activated-retail/assets/hd/ml_wall.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/ml_wall_m.webp"
+        },
+        "screen": {
+          "src": "/medialife/activated-retail/assets/hd/ml_screen.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/ml_screen_m.webp"
+        }
+      },
+      "site": "MEDIALIFE.AI",
+      "game": "MEDIALIFE"
+    },
+    {
+      "id": "sukeban",
+      "name": "Sukeban",
+      "led": "#ff2a36",
+      "led2": "#ff5fa2",
+      "bay": "#8a1a22",
+      "spill": "#ff3b40",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/medialife/activated-retail/assets/hd/sk_towerL.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/medialife/activated-retail/assets/hd/sk_towerR.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/medialife/activated-retail/assets/hd/sk_totem.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_totem_m.webp"
+        },
+        "wall": {
+          "src": "/medialife/activated-retail/assets/hd/sk_wall.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_wall_m.webp"
+        },
+        "screen": {
+          "src": "/medialife/activated-retail/assets/hd/sk_screen.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_screen_m.webp"
+        },
+        "header": {
+          "src": "/medialife/activated-retail/assets/hd/sk_header.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/sk_header_m.webp"
+        }
+      },
+      "site": "SHOP.MEDIALIFE.AI",
+      "game": "Sukeban"
+    },
+    {
+      "id": "trainwreck",
+      "name": "Trainwreck",
+      "led": "#ff8a3d",
+      "led2": "#35c7c9",
+      "bay": "#b8562a",
+      "spill": "#ff8a3d",
+      "graphics": {
+        "mode": "panels",
+        "towerL": {
+          "src": "/medialife/activated-retail/assets/hd/tw_towerL.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_towerL_m.webp"
+        },
+        "towerR": {
+          "src": "/medialife/activated-retail/assets/hd/tw_towerR.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_towerR_m.webp"
+        },
+        "totem": {
+          "src": "/medialife/activated-retail/assets/hd/tw_totem.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_totem_m.webp"
+        },
+        "wall": {
+          "src": "/medialife/activated-retail/assets/hd/tw_wall.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_wall_m.webp"
+        },
+        "screen": {
+          "src": "/medialife/activated-retail/assets/hd/tw_screen.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_screen_m.webp"
+        },
+        "header": {
+          "src": "/medialife/activated-retail/assets/hd/tw_header.webp",
+          "mobile": "/medialife/activated-retail/assets/hd/tw_header_m.webp"
+        }
+      },
+      "site": "SHOP.MEDIALIFE.AI",
+      "game": "Trainwreck"
+    }
+  ],
+  "defaultTheme": "medialife",
+  "venues": ["retail", "popup", "convention"],
+  "zones": {
+    "cap": {
+      "enabled": true,
+      "model": {
+        "source": "image",
+        "image": "/medialife/activated-retail/assets/ml_sticker_card.webp",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sukeban Holo Sticker",
+        "category": "Activated Print™ · sticker",
+        "sku": "ML-STK-SKB",
+        "price": 10,
+        "description": "Our Sukeban holographic die-cut sticker, shown here as an activated sticker: an NFC tag behind the art starts its animation with one tap of a phone. No app.",
+        "unlock": {
+          "title": "Animated Sukeban",
+          "sub": "Plays on the phone that tapped it",
+          "image": "/medialife/activated-retail/assets/ml_reward_sticker.webp"
+        },
+        "trigger": "NFC tag behind the art",
+        "channel": "Stores · pop-ups · conventions",
+        "canActivate": false
+      }
+    },
+    "plush": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/medialife/activated-retail/models/ml_figure.glb",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sukeban Vinyl Figure",
+        "category": "Activated Collectible · format",
+        "sku": "ML-FIG-SKB",
+        "price": 45,
+        "description": "A 20 cm designer vinyl figure with an NFC chip in the base. One tap unlocks the figure's AR moment and a numbered digital twin. A collectible format we produce for IP holders.",
+        "unlock": {
+          "title": "AR figure + digital twin",
+          "sub": "Numbered · one claim per figure",
+          "image": "/medialife/activated-retail/assets/ml_reward_figure.webp"
+        },
+        "trigger": "NFC chip in the base",
+        "channel": "Collector drops · conventions",
+        "canActivate": true
+      }
+    },
+    "keychain": {
+      "enabled": true,
+      "model": {
+        "source": "image",
+        "image": "/medialife/activated-retail/assets/ml_keychain.webp",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sukeban Keychain",
+        "category": "Activated Merchandise™",
+        "sku": "ML-KEY-SKB",
+        "price": 14.99,
+        "description": "A 2.5 × 3 in keychain with the Sukeban art. Scan the QR code on it to launch the Sukeban digital experience.",
+        "unlock": {
+          "title": "The Sukeban experience",
+          "sub": "Opens in the phone's browser",
+          "image": "/medialife/activated-retail/assets/ml_reward_keychain.webp"
+        },
+        "trigger": "QR code on the keychain",
+        "channel": "shop.medialife.ai",
+        "canActivate": false,
+        "url": "https://shop.medialife.ai/products/sukeban-keychain"
+      }
+    },
+    "mousepad": {
+      "enabled": true,
+      "model": {
+        "source": "default",
+        "print": "/medialife/activated-retail/assets/ml_mat.webp",
+        "tint": "#13161f",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Trainwreck Desk Mat",
+        "category": "Activated Print™ · format",
+        "sku": "ML-MAT-TW",
+        "price": 25,
+        "description": "An XL desk mat printed with the Trainwreck art. The QR sits inside the artwork, so the print itself is the trigger.",
+        "unlock": {
+          "title": "Trainwreck AR scene",
+          "sub": "Watch the train pull away",
+          "image": "/medialife/activated-retail/assets/ml_reward_mat.webp"
+        },
+        "trigger": "QR in the print",
+        "channel": "Stores · pop-ups",
+        "canActivate": false
+      }
+    },
+    "figure": {
+      "enabled": true,
+      "model": {
+        "source": "default",
+        "print": "/medialife/activated-retail/assets/ml_box_front.webp",
+        "tint": "#140607",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sukeban Collector Box",
+        "category": "Activated Collectible · boxed format",
+        "sku": "ML-BOX-SKB",
+        "price": 60,
+        "description": "The vinyl figure in a window box with a QR inside the lid: opening it starts an AR reveal and a claimable digital twin.",
+        "unlock": {
+          "title": "AR unboxing reveal",
+          "sub": "Plus the figure's digital twin",
+          "image": "/medialife/activated-retail/assets/ml_reward_figure.webp"
+        },
+        "trigger": "QR inside the lid",
+        "channel": "Collector drops · conventions",
+        "canActivate": false
+      }
+    },
+    "tee": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/medialife/activated-retail/models/ml_tee.glb",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Trainwreck AR Tee",
+        "category": "Activated Apparel™",
+        "sku": "ML-TEE-TW",
+        "price": 75,
+        "sizes": ["S", "M", "L", "XL", "2XL", "3XL"],
+        "description": "Last train home. Full-color Trainwreck art on a heavyweight black tee. AR activated: scan the print and the scene comes alive.",
+        "unlock": {
+          "title": "Trainwreck in AR",
+          "sub": "The characters step out of the print",
+          "image": "/medialife/activated-retail/assets/ml_reward_tee.webp"
+        },
+        "trigger": "Scan the print",
+        "channel": "shop.medialife.ai",
+        "canActivate": false,
+        "url": "https://shop.medialife.ai/products/unisex-classic-tee"
+      }
+    },
+    "hoodie": {
+      "enabled": true,
+      "model": {
+        "source": "asset",
+        "asset": "/medialife/activated-retail/models/ml_hoodie.glb",
+        "yaw": 0,
+        "scale": 1
+      },
+      "product": {
+        "label": "Sukeban AR Hoodie",
+        "category": "Activated Apparel™",
+        "sku": "ML-HOD-SKB",
+        "price": 90,
+        "sizes": ["S", "M", "L", "XL", "2XL", "3XL"],
+        "description": "Sukeban on the back of a heavyweight organic-cotton hoodie. Scan it with your phone and she comes alive in augmented reality.",
+        "unlock": {
+          "title": "Sukeban in AR",
+          "sub": "She steps out of the print",
+          "image": "/medialife/activated-retail/assets/ml_reward_hoodie.webp"
+        },
+        "trigger": "Scan the back print",
+        "channel": "shop.medialife.ai",
+        "canActivate": true,
+        "url": "https://shop.medialife.ai/products/black-hoodie-sukeban"
+      }
+    }
+  },
+  "activation": {
+    "type": "game",
+    "buttonLabel": "Play the drop",
+    "splash": "/medialife/activated-retail/assets/ml_phone_hero.webp",
+    "rewardPrefix": "ML",
+    "qrUrl": "https://medialife.ai/activated-retail"
+  },
+  "tour": [
+    {
+      "title": "One fixture. Any floor.",
+      "body": "A 3.84 m activated-retail fixture: two lightbox towers, a lit header, a 12-tile video wall and a hero screen. It stands in a store aisle, a pop-up shop or a convention booth.",
+      "view": "aisle",
+      "theme": "medialife"
+    },
+    {
+      "title": "Your IP on every surface",
+      "body": "Towers, header, video wall and totem carry your key art. Switch the property at the top: the same hardware re-skins in seconds for each drop.",
+      "view": "hero",
+      "theme": "sukeban"
+    },
+    {
+      "title": "Every product opens an experience",
+      "body": "Apparel, stickers, keychains and collectibles, each with an NFC tag or QR code built in. Tap any glowing marker to pick one up.",
+      "view": "shelf"
+    },
+    {
+      "title": "Tap, play, unlock",
+      "body": "The QR on the right tower is live: scan it and this program opens on your phone. On the shelf, one tap starts a game, an AR moment or a reward.",
+      "view": "qr"
+    },
+    {
+      "title": "See it in your space",
+      "body": "Place the full-size fixture in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.",
+      "view": "aisle",
+      "ar": true
+    },
+    {
+      "title": "Measured, live",
+      "body": "Scans, plays, returns and sales by product and hour, from the first day on the floor.",
+      "view": "dashboard",
+      "theme": "trainwreck",
+      "dashboard": true
+    },
+    {
+      "title": "Built modular",
+      "body": "Six modules bolt together on site, so each drop swaps graphics and merch, not fixtures.",
+      "view": "build"
+    }
+  ],
+  "cta": { "label": "Book a call", "mode": "lead" },
+  "ar": {}
+}

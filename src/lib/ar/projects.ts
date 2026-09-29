@@ -35,6 +35,12 @@ export function referencedAssetIds(value: unknown): string[] {
 /** Starting points offered in "New endcap"; JSON lives at /activated-retail/templates/<id>.json. */
 export const TEMPLATES = [
   {
+    id: "medialife",
+    label: "MEDIALIFE",
+    description:
+      "The program showcase: MEDIALIFE, Sukeban and Trainwreck themes, store, pop-up and convention venues.",
+  },
+  {
     id: "roblox",
     label: "Roblox",
     description: "MEDIALIFE × Roblox, with Roblox, Skyrift and EVADE themes.",
