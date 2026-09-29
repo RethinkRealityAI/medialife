@@ -164,6 +164,8 @@ export const tourStepSchema = z.object({
   theme: slugSchema.optional(),
   /** open the analytics dashboard panel on this step */
   dashboard: z.boolean().optional(),
+  /** light up the View in AR button on this step and offer it in the tour card */
+  ar: z.boolean().optional(),
 });
 
 export const projectSchema = z.object({

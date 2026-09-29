@@ -275,6 +275,12 @@
       "view": "qr"
     },
     {
+      "title": "See it in your space",
+      "body": "Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.",
+      "view": "aisle",
+      "ar": true
+    },
+    {
       "title": "Flip to the film campaign",
       "body": "The same hardware re-skins for Toei Animation's 2027 theatrical release: film key art on the towers and hero screen, a movie collector box on the shelf, and the game promoted on the totem. Players become the opening-weekend audience.",
       "view": "dashboard",

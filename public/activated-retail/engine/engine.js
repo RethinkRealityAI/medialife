@@ -244,6 +244,7 @@ function normalizeProject(raw) {
       view: s.view,
       theme: typeof s.theme === "string" ? s.theme : null,
       dashboard: !!s.dashboard,
+      ar: !!s.ar,
     }));
   const c = p.cta || {};
   p.cta = {
@@ -3898,6 +3899,7 @@ function renderTourCard() {
   $("#tStep").textContent = `Stop ${tourI + 1} of ${steps.length}`;
   $("#tTitle").textContent = s.title;
   $("#tBody").textContent = s.body;
+  tourAr(s.ar);
   $("#tPips").innerHTML = steps.map((_, i) => `<i class="${i <= tourI ? "on" : ""}"></i>`).join("");
   $("#tPrev").disabled = tourI === 0;
   $("#tPrev").style.opacity = tourI === 0 ? 0.4 : 1;
@@ -4243,8 +4245,20 @@ function cancelReveal(apply = true) {
     if (apply) setTheme(r.id, { silent: true });
   }
 }
+// the AR stop: light up the dock's AR button and offer it in the tour card (only when it's shown)
+function tourAr(on) {
+  const b = document.querySelector('[data-action="ar"]');
+  const show = !!on && !!b && b.offsetParent !== null && !document.body.classList.contains("ar-presenting");
+  b?.classList.toggle("hl", show);
+  $("#tAct").hidden = !show;
+}
+$("#tAct").addEventListener("click", () => {
+  track("tour_ar", { theme: currentTheme });
+  document.querySelector('[data-action="ar"]')?.click();
+});
 function endTour(showCta = true) {
   cancelReveal(false);
+  tourAr(false);
   $("#tour").classList.remove("open");
   if (explodeT > 0) setExplode(false);
   openDash(false);

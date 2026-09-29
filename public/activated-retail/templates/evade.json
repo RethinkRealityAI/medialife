@@ -209,8 +209,8 @@
       "view": "aisle"
     },
     {
-      "title": "Tell the property's story",
-      "body": "The same fixture re-skins for any Roblox-native IP. Here it's EVADE, the first pilot property: its key art, its characters and its merch.",
+      "title": "Featured IP",
+      "body": "Top Roblox experiences featured here with merchandise collections periodically refreshed. The same fixture re-skins for any Roblox-native IP.",
       "view": "hero"
     },
     {
@@ -222,6 +222,12 @@
       "title": "Tap, play, unlock",
       "body": "The QR on the right tower is real: scan it with your phone and Cola Run opens at evade.medialife.ai. No app. A mini-game, a reveal, then a UGC reward redeemed inside EVADE.",
       "view": "qr"
+    },
+    {
+      "title": "See it in your space",
+      "body": "Place the full-size endcap in your own room and walk around it. It opens in AR Quick Look on iPhone and Google Scene Viewer on Android, with no app to install. On a computer you get a QR code for your phone.",
+      "view": "aisle",
+      "ar": true
     },
     {
       "title": "Back to Roblox, and measured",

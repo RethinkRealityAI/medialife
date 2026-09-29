@@ -6,7 +6,7 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
-import { BarChart3, Boxes, Link2, LogOut } from "lucide-react";
+import { BarChart3, Boxes, Link2, LogOut, Presentation } from "lucide-react";
 
 import {
   Sidebar,
@@ -50,6 +50,7 @@ const NAV = [
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/links", label: "Client links", icon: Link2 },
   { to: "/admin/builder", label: "Endcap builder", icon: Boxes },
+  { to: "/admin/demos", label: "Live demos", icon: Presentation },
 ] as const;
 
 function AdminLayout() {

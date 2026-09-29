@@ -67,7 +67,9 @@
   }
 
   function openSceneViewer(glb, title, fallback) {
-    var params = 'file=' + encodeURIComponent(abs(glb)) + '&mode=ar_preferred' + (title ? '&title=' + encodeURIComponent(title) : '');
+    // disable_occlusion: Scene Viewer's "object blending" hides the endcap behind real furniture and
+    // people, which flickers on a 3.8 m display; start with it off (viewers can still turn it on)
+    var params = 'file=' + encodeURIComponent(abs(glb)) + '&mode=ar_preferred&disable_occlusion=true' + (title ? '&title=' + encodeURIComponent(title) : '');
     var url = 'intent://arvr.google.com/scene-viewer/1.0?' + params +
       '#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;' +
       'S.browser_fallback_url=' + encodeURIComponent(fallback) + ';end;';
