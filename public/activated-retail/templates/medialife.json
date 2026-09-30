@@ -3,12 +3,12 @@
   "slug": "medialife-template",
   "name": "MEDIALIFE (template)",
   "brand": {
-    "lockup": "MEDIALIFE®",
+    "lockup": "MEDIALIFE™",
     "sub": "ACTIVATED RETAIL PROGRAM · AR-01",
     "splashTitle": "Activated Retail",
     "splashSub": "Get your merch activated, and we'll build this.",
     "retailer": "store",
-    "headerText": "MEDIALIFE",
+    "headerText": "MEDIALIFE™",
     "tagline": "TAP. PLAY. UNLOCK."
   },
   "access": {},
@@ -20,7 +20,10 @@
       "led2": "#ff3d9a",
       "bay": "#2446c9",
       "spill": "#3aa8ff",
-      "markers": { "product": "#6fc3ff", "activation": "#ff5fae" },
+      "markers": {
+        "product": "#6fc3ff",
+        "activation": "#ff5fae"
+      },
       "graphics": {
         "mode": "panels",
         "towerL": {
@@ -75,10 +78,6 @@
         "screen": {
           "src": "/medialife/activated-retail/assets/hd/sk_screen.webp",
           "mobile": "/medialife/activated-retail/assets/hd/sk_screen_m.webp"
-        },
-        "header": {
-          "src": "/medialife/activated-retail/assets/hd/sk_header.webp",
-          "mobile": "/medialife/activated-retail/assets/hd/sk_header_m.webp"
         }
       },
       "site": "SHOP.MEDIALIFE.AI",
@@ -112,10 +111,6 @@
         "screen": {
           "src": "/medialife/activated-retail/assets/hd/tw_screen.webp",
           "mobile": "/medialife/activated-retail/assets/hd/tw_screen_m.webp"
-        },
-        "header": {
-          "src": "/medialife/activated-retail/assets/hd/tw_header.webp",
-          "mobile": "/medialife/activated-retail/assets/hd/tw_header_m.webp"
         }
       },
       "site": "SHOP.MEDIALIFE.AI",
@@ -317,7 +312,7 @@
     },
     {
       "title": "Your IP on every surface",
-      "body": "Towers, header, video wall and totem carry your key art. Switch the property at the top: the same hardware re-skins in seconds for each drop.",
+      "body": "Towers, video wall, hero screen and totem carry the key art. Switch the property at the top: the same hardware re-skins in seconds for each drop.",
       "view": "hero",
       "theme": "sukeban"
     },
@@ -350,7 +345,10 @@
       "view": "build"
     }
   ],
-  "cta": { "label": "Book a call", "mode": "lead" },
+  "cta": {
+    "label": "Book a call",
+    "mode": "lead"
+  },
   "ar": {
     "glb": "/medialife/activated-retail/ar/medialife.glb",
     "usdz": "/medialife/activated-retail/ar/medialife.usdz"
