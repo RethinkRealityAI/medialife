@@ -2262,6 +2262,55 @@
           height: 16px;
         }
       }
+      /* Venue (store / pop-up / convention): icon + label; phones get one button that steps through */
+      .venue-cycle {
+        display: none;
+      }
+      .venue-seg button span,
+      .venue-cycle button span {
+        vertical-align: middle;
+      }
+      @media (max-width: 1280px) and (min-width: 761px) {
+        .venue-seg button span {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
+        .venue-seg .lt-ico {
+          margin-right: 0;
+        }
+        .venue-seg button {
+          padding: 0 11px;
+        }
+      }
+      @media (max-width: 760px) {
+        .venue-seg {
+          display: none;
+        }
+        .venue-cycle:not([hidden]) {
+          display: flex;
+          flex: 0 0 auto;
+        }
+        .venue-cycle button {
+          padding: 0 11px;
+        }
+        .venue-cycle button span {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          overflow: hidden;
+          clip: rect(0 0 0 0);
+          white-space: nowrap;
+        }
+        .venue-cycle .lt-ico {
+          margin-right: 0;
+          width: 16px;
+          height: 16px;
+        }
+      }
       @media (max-width: 360px) {
         .controls-right .seg:first-child .dot {
           display: none;
@@ -3100,6 +3149,15 @@
         color: var(--text);
         line-height: 1.5;
       }
+      .spec dd a {
+        color: var(--accent, #b39cff);
+        font-weight: 600;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .spec dd a:hover {
+        color: #fff;
+      }
 
       .sheet-foot {
         flex: 0 0 auto;
@@ -3568,6 +3626,30 @@
 
       [hidden] {
         display: none !important;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      /* embedded in a medialife.ai page: the page has its own presenting and full-screen controls */
+      body.embed #tPresent {
+        display: none !important;
+      }
+      /* the framing page names the brand; give the controls the room */
+      body.embed .topbar .brand {
+        display: none;
+      }
+      body.embed .topbar {
+        justify-content: flex-end;
+      }
+      @media (max-width: 760px) {
+        body.embed .topbar .brand {
+          display: flex;
+        }
       }
       .gpu-banner {
         position: fixed;
@@ -4889,6 +4971,12 @@
       <div class="controls-right">
         <div class="seg" role="group" aria-label="Featured property" id="themeSeg" hidden>
           <span class="seg-label">Property</span>
+        </div>
+        <div class="seg venue-seg" role="group" aria-label="Venue" id="venueSeg" hidden>
+          <span class="seg-label">Venue</span>
+        </div>
+        <div class="seg venue-cycle" id="venueCycleWrap" hidden>
+          <button type="button" id="venueCycle" aria-pressed="true"></button>
         </div>
         <div class="seg" role="group" aria-label="Lighting">
           <button data-light="store" aria-pressed="true" aria-label="Day lighting">

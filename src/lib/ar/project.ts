@@ -68,6 +68,15 @@ export const VIEWS = {
 } as const;
 export type ViewId = keyof typeof VIEWS;
 
+/** Where the fixture can stand (the engine builds each setting around it). */
+export const VENUES = {
+  retail: "Store aisle",
+  popup: "Pop-up shop",
+  convention: "Convention booth",
+} as const;
+export type VenueId = keyof typeof VENUES;
+export const VENUE_IDS = Object.keys(VENUES) as VenueId[];
+
 export const themeSchema = z.object({
   id: slugSchema,
   /** shown on the property switch, e.g. "EVADE", "Film campaign" */
@@ -127,6 +136,8 @@ export const productSchema = z.object({
   hotspot: z.string().max(40).optional(),
   /** show "Tap to activate" on this product */
   canActivate: z.boolean().default(false),
+  /** a real product: where to buy it (shown as a "Shop it" link in the product sheet) */
+  url: z.string().url().optional(),
 });
 export type Product = z.infer<typeof productSchema>;
 
@@ -226,6 +237,15 @@ export const projectSchema = z.object({
     /** draw a real, scannable QR for this URL on the right tower + hero screen */
     qrUrl: z.string().url().optional(),
   }),
+  /**
+   * Venues offered by the Venue switch; the first is where it opens. Absent = the store aisle only.
+   */
+  venues: z
+    .array(z.enum(VENUE_IDS as [VenueId, ...VenueId[]]))
+    .min(1)
+    .max(3)
+    .refine((v) => new Set(v).size === v.length, "each venue once")
+    .optional(),
   tour: z.array(tourStepSchema).max(10),
   cta: z.object({
     label: z.string().max(40).default("Book a call"),

@@ -3,6 +3,8 @@ import { Eye, EyeOff, Info, Lock, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { VENUES, VENUE_IDS, type VenueId } from "@/lib/ar/project";
 import { FIXTURE_DEFAULTS, cleanSlugInput, fieldId, isValidSlug } from "@/lib/ar/projects";
 
 import { ImagePicker } from "../asset-pickers";
@@ -192,6 +194,7 @@ export function OverviewSection({
           hint={'Used in copy such as "In stock at this Walmart".'}
         />
       </Group>
+      <VenuesGroup />
       <Group title="Loading screen" description="What visitors see while the endcap loads.">
         <TextField
           path={["brand", "splashTitle"]}
@@ -207,6 +210,36 @@ export function OverviewSection({
         />
       </Group>
     </>
+  );
+}
+
+/** Where the fixture can stand: the first venue ticked is where it opens. */
+function VenuesGroup() {
+  const f = useField<VenueId[] | undefined>(["venues"]);
+  const list = f.value?.length ? f.value : (["retail"] as VenueId[]);
+  const toggle = (id: VenueId, on: boolean) => {
+    const next = VENUE_IDS.filter((v) => (v === id ? on : list.includes(v)));
+    f.set(next.length ? next : ["retail"]);
+  };
+  return (
+    <Group
+      title="Venues"
+      description="Where visitors can see the fixture. With more than one, a Venue switch appears at the top."
+    >
+      {VENUE_IDS.map((id) => (
+        <div key={id} className="flex items-center justify-between gap-4">
+          <label htmlFor={`venue-${id}`} className="text-sm font-medium">
+            {VENUES[id]}
+          </label>
+          <Switch
+            id={`venue-${id}`}
+            checked={list.includes(id)}
+            disabled={list.length === 1 && list[0] === id}
+            onCheckedChange={(v) => toggle(id, v)}
+          />
+        </div>
+      ))}
+    </Group>
   );
 }
 

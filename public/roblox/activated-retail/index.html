@@ -2562,7 +2562,7 @@ function unfocus(after, {keepView=false}={}){
   const mid=sp.clone().lerp(home.p,0.5).add(new THREE.Vector3(0,0.22,0.15));
   flight(obj,900,(k)=>{ const a=sp.clone().lerp(mid,k), b=mid.clone().lerp(home.p,k); obj.position.copy(a.lerp(b,k)); obj.quaternion.slerpQuaternions(sq,home.q,k); obj.scale.lerpVectors(ss,home.s,k); },
     ()=>{ slot.parent.attach(obj); obj.position.copy(slot.pos); obj.quaternion.copy(slot.quat); obj.scale.copy(slot.scale); setCastShadow(obj,true); renderer.shadowMap.needsUpdate=true; if(!focus) fx.visible=false; after&&after(); });
-  if(!after && !keepView) flyTo([-2.1,1.7,4.9],[0.3,1.05,0.1],1200);
+  if(!after && !keepView) flyTo(...wideShot([-2.1,1.7,4.9],[0.3,1.05,0.1]),1200);
 }
 function showSpinHint(){
   if(spinHintShown>=2) return; spinHintShown++;
@@ -2668,7 +2668,17 @@ function setMode(m, {first=false}={}){
   if(m==='explore') homeView();
 }
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{ bump('session'); track('mode',{ id:b.dataset.mode }); setMode(b.dataset.mode); }));
-function homeView(){ flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1]); }
+function homeView(){ flyTo(...wideShot([-2.7,1.75,5.3],[0.35,1.12,0.1])); }
+// A wide shot on a portrait phone: the narrow frame can't hold the three-quarter view, so the camera
+// comes round nearer the front and backs off until the fixture's full width (both towers) fits.
+function wideShot(pos,tgt){
+  if(camera.aspect>=0.9) return [pos,tgt];
+  const hf=Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect), d=2/Math.tan(hf);
+  const t=new THREE.Vector3(-0.05,1.2,0), p=t.clone().addScaledVector(new THREE.Vector3(-0.32,0.075,1).normalize(),d);
+  controls.maxDistance=Math.max(9,d+1);
+  return [p.toArray(),t.toArray()];
+}
+const stepPose=(s)=> s.id==='aisle' ? wideShot(s.pos,s.tgt) : [s.pos,s.tgt];
 
 // ---- explode
 let explodeT=0, explodeTw=null;
@@ -2918,7 +2928,7 @@ function showTour(dur=1800){
     if(prevI>=0 && tourI===prevI+1){ themeReveal(want, s, { spotlight:true }); s.enter&&s.enter(); return; }
     reskin(want);
   }
-  flyTo(s.pos,s.tgt,dur); s.enter&&s.enter();
+  flyTo(...stepPose(s),dur); s.enter&&s.enter();
 }
 // the AR stop: light up the dock's AR button and offer it right in the tour card
 function tourAr(on){
@@ -3343,7 +3353,7 @@ function presentGo(i){
     if(i===prev+1){ themeReveal(want, s, { spotlight:false, onArrive:()=>presentDrift(i) }); try{ s.enter&&s.enter(); }catch(err){ reportErr(err); } openDash(false); return; }
     reskin(want);
   }
-  flyTo(s.pos, s.tgt, 2600, ()=>presentDrift(i));
+  flyTo(...stepPose(s), 2600, ()=>presentDrift(i));
   try{ s.enter&&s.enter(); }catch(err){ reportErr(err); }
   openDash(false); // the tour's dashboard stop is chrome here: the caption carries it
 }
@@ -3401,7 +3411,7 @@ loadDisplay().then(async ()=>{
   // first visit starts in the guided walkthrough, so people see what the display does before they explore
   splashReady((via)=>{ started=true; document.body.classList.remove('intro'); track('enter',{ via });
     if(PRESENT_ON_ENTER && presentStart('url')) return;
-    if(window.__NOTOUR) flyTo([-2.7,1.75,5.3],[0.35,1.12,0.1],3000); else setMode('tour',{first:true}); });
+    if(window.__NOTOUR) flyTo(...wideShot([-2.7,1.75,5.3],[0.35,1.12,0.1]),3000); else setMode('tour',{first:true}); });
   window.__ready=true;
   // after the intro: textures for the other properties, product snapshots, then the EVADE set in the background
   setTimeout(()=>{ preloadThemeTextures(); warmSnapshots(); }, 3600);

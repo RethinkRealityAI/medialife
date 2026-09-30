@@ -318,6 +318,14 @@ function ZoneEditor({ id }: { id: ZoneId }) {
               placeholder="Roblox Commerce → Walmart"
               maxLength={80}
             />
+            <TextField
+              path={[...base, "product", "url"]}
+              label="Shop link"
+              type="url"
+              optional
+              placeholder="https://shop.example.com/product"
+              hint="A real product: shown as a Shop it link in the product sheet."
+            />
             <SwitchField
               path={[...base, "product", "canActivate"]}
               label="Tap to activate"
