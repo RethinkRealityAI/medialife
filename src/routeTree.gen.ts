@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ActivatedRetailRouteImport } from './routes/activated-retail'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CaseStudiesRouteImport } from './routes/case-studies'
@@ -54,6 +55,11 @@ import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.a
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ActivatedRetailRoute = ActivatedRetailRouteImport.update({
+  id: '/activated-retail',
+  path: '/activated-retail',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -263,6 +269,7 @@ const ApiArAdminAssetsIdChunksNRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/activated-retail': typeof ActivatedRetailRoute
   '/admin': typeof AdminRouteWithChildren
   '/brand': typeof BrandRoute
   '/case-studies': typeof CaseStudiesRoute
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/activated-retail': typeof ActivatedRetailRoute
   '/brand': typeof BrandRoute
   '/case-studies': typeof CaseStudiesRoute
   '/contact': typeof ContactRoute
@@ -347,6 +355,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/activated-retail': typeof ActivatedRetailRoute
   '/admin': typeof AdminRouteWithChildren
   '/brand': typeof BrandRoute
   '/case-studies': typeof CaseStudiesRoute
@@ -392,6 +401,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/activated-retail'
     | '/admin'
     | '/brand'
     | '/case-studies'
@@ -435,6 +445,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/activated-retail'
     | '/brand'
     | '/case-studies'
     | '/contact'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/activated-retail'
     | '/admin'
     | '/brand'
     | '/case-studies'
@@ -519,6 +531,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ActivatedRetailRoute: typeof ActivatedRetailRoute
   AdminRoute: typeof AdminRouteWithChildren
   BrandRoute: typeof BrandRoute
   CaseStudiesRoute: typeof CaseStudiesRoute
@@ -546,6 +559,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activated-retail': {
+      id: '/activated-retail'
+      path: '/activated-retail'
+      fullPath: '/activated-retail'
+      preLoaderRoute: typeof ActivatedRetailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -933,6 +953,7 @@ const ApiArAdminAssetsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ActivatedRetailRoute: ActivatedRetailRoute,
   AdminRoute: AdminRouteWithChildren,
   BrandRoute: BrandRoute,
   CaseStudiesRoute: CaseStudiesRoute,

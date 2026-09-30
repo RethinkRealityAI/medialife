@@ -6,7 +6,7 @@ import { Lockup } from "./Logo";
 export const SHOP_URL = "https://shop.medialife.ai/";
 
 /**
- * Primary navigation — the five commercial destinations.
+ * Primary navigation — the six commercial destinations.
  *
  * Numbers follow the homepage reading order, so /02 in the nav is the second
  * section down the page. Fan Reactions and Production Capabilities are homepage
@@ -30,8 +30,9 @@ const NAV: NavItem[] = [
   { kind: "route", to: "/live", label: "Live Now", num: "01" },
   { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "02" },
   { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "03" },
-  { kind: "route", to: "/case-studies", label: "Case Studies", num: "04" },
-  { kind: "external", href: SHOP_URL, label: "Merch", num: "05" },
+  { kind: "route", to: "/activated-retail", label: "Retail Program", num: "04" },
+  { kind: "route", to: "/case-studies", label: "Case Studies", num: "05" },
+  { kind: "external", href: SHOP_URL, label: "Merch", num: "06" },
 ];
 
 const itemCls =

@@ -30,6 +30,7 @@ export function Footer() {
                 ["Live Now", "/live"],
                 ["Fan Reactions", "/#fan-reactions"],
                 ["Production Capabilities", "/#capabilities"],
+                ["Activated Retail Program", "/activated-retail"],
                 ["Case Studies", "/case-studies"],
                 ["Merch", SHOP_URL],
               ]}
@@ -47,7 +48,7 @@ export function Footer() {
               items={[
                 ["Brand Guidelines", "/brand"],
                 ["Live Events", "/technology"],
-                ["Retail", "/technology"],
+                ["Retail", "/activated-retail"],
               ]}
             />
           </div>

@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { Segmented } from "@/components/ar-builder/fields";
+import { ProgramShowcaseCard } from "@/components/ar-demos/program-showcase-card";
 import { useDemoAutosave, type DemoSaveStatus } from "@/components/ar-demos/use-demo-autosave";
 import { Pill } from "@/components/portal/kit";
 import {
@@ -85,6 +86,7 @@ function DemosPage() {
   // a fresh editor per demo and per reload of the stored doc
   return (
     <>
+      <ProgramShowcaseCard />
       <DemoEditor key={`${demo}:${doc.updatedAt}`} demo={demo} doc={doc} />
       <Toaster theme="dark" position="bottom-right" closeButton />
     </>

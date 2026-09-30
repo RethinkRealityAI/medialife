@@ -381,6 +381,44 @@ function Home() {
         </div>
       </section>
 
+      {/* ──────────── ACTIVATED RETAIL PROGRAM (teaser → /activated-retail) ──────────── */}
+      <section className="border-b border-border relative overflow-hidden">
+        <div className="absolute inset-0 grid-bg opacity-30" />
+        <div className="relative w-full px-8 lg:px-16 py-16 grid gap-10 lg:grid-cols-12 lg:items-center">
+          <div className="lg:col-span-5">
+            <div className={EYEBROW}>/ Activated Retail Program</div>
+            <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
+              Get your merch activated, and we'll build{" "}
+              <span className="ember-text">the fixture.</span>
+            </h2>
+            <p className="mt-5 text-muted-foreground">
+              A branded display where every product opens a digital experience. For stores, pop-ups
+              and convention floors. Explore it in 3D, or put your own IP on it.
+            </p>
+            <Link
+              to="/activated-retail"
+              className="group mt-8 inline-flex btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
+            >
+              Explore the program
+              <span className="transition-transform group-hover:translate-x-1" aria-hidden>
+                →
+              </span>
+            </Link>
+          </div>
+          <Link
+            to="/activated-retail"
+            className="lg:col-span-7 group block border border-border overflow-hidden"
+          >
+            <img
+              src="/medialife/activated-retail/page/showcase-poster.webp"
+              alt="The MEDIALIFE activated-retail fixture: lit towers, a video wall, a stocked merch bay and a digital totem"
+              loading="lazy"
+              className="w-full transition-transform duration-700 group-hover:scale-[1.03]"
+            />
+          </Link>
+        </div>
+      </section>
+
       {/* ──────────────── SELECTED PROOF + AWARD ──────────────── */}
       <section className="border-b border-border bg-surface">
         <div className="w-full px-8 lg:px-16 py-20">

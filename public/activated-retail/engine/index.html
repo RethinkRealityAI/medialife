@@ -3639,6 +3639,18 @@
       body.embed #tPresent {
         display: none !important;
       }
+      /* the framing page names the brand; give the controls the room */
+      body.embed .topbar .brand {
+        display: none;
+      }
+      body.embed .topbar {
+        justify-content: flex-end;
+      }
+      @media (max-width: 760px) {
+        body.embed .topbar .brand {
+          display: flex;
+        }
+      }
       .gpu-banner {
         position: fixed;
         left: 50%;
