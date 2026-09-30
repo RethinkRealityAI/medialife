@@ -3680,7 +3680,7 @@ function unfocus(after, { keepView = false } = {}) {
       after && after();
     },
   );
-  if (!after && !keepView) flyTo([-2.1, 1.7, 4.9], [0.3, 1.05, 0.1], 1200);
+  if (!after && !keepView) flyTo(...wideShot([-2.1, 1.7, 4.9], [0.3, 1.05, 0.1]), 1200);
 }
 function showSpinHint() {
   if (spinHintShown >= 2) return;
@@ -4000,7 +4000,18 @@ document.querySelectorAll("[data-mode]").forEach((b) =>
   }),
 );
 function homeView() {
-  flyTo([-2.7, 1.75, 5.3], [0.35, 1.12, 0.1]);
+  flyTo(...wideShot([-2.7, 1.75, 5.3], [0.35, 1.12, 0.1]));
+}
+// A wide shot on a portrait phone: the narrow frame can't hold the three-quarter view, so the camera
+// comes round nearer the front and backs off until the fixture's full width (both towers) fits.
+function wideShot(pos, tgt) {
+  if (camera.aspect >= 0.9) return [pos, tgt];
+  const hf = Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect),
+    d = 2 / Math.tan(hf),
+    t = new THREE.Vector3(-0.05, 1.2, 0),
+    p = t.clone().addScaledVector(new THREE.Vector3(-0.32, 0.075, 1).normalize(), d);
+  controls.maxDistance = Math.max(9, d + 1);
+  return [p.toArray(), t.toArray()];
 }
 
 // ---- explode
@@ -4107,7 +4118,11 @@ function gotoStep(s, dur = 1800) {
   cancelReveal(false);
   if (s.view !== "build" && explodeT > 0) setExplode(false);
   openDash(!!s.dashboard);
-  const v = VIEWS[s.view] || VIEWS.aisle;
+  let v = VIEWS[s.view] || VIEWS.aisle;
+  if (v === VIEWS.aisle) {
+    const [pos, tgt] = wideShot(v.pos, v.tgt);
+    v = { ...v, pos, tgt };
+  }
   const arrive = () => {
     if (s.view === "build") setExplode(true);
     if (s.view === "qr") pulseHotspot("qr");
@@ -6299,7 +6314,7 @@ function onEnter() {
   const tour =
     !IN_PREVIEW && !EMBED && !window.__NOTOUR && qs.get("notour") !== "1" && PROJECT.tour.length;
   if (tour) setMode("tour", { first: true });
-  else flyTo([-2.7, 1.75, 5.3], [0.35, 1.12, 0.1], 3000);
+  else flyTo(...wideShot([-2.7, 1.75, 5.3], [0.35, 1.12, 0.1]), 3000);
 }
 async function apply(raw) {
   const next = normalizeProject(raw);
@@ -6768,7 +6783,7 @@ async function applyCustomIP(file, name) {
   const prev = ipUrl;
   ipUrl = url;
   if (prev) setTimeout(() => URL.revokeObjectURL(prev), 1500);
-  flyTo([0.2, 1.55, 6.1], [0.35, 1.3, 0], 1600);
+  flyTo(...wideShot([0.2, 1.55, 6.1], [0.35, 1.3, 0]), 1600);
   toast(label + " · your art on the same fixture");
   track("custom_ip", {});
   return label;
