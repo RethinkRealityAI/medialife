@@ -3,7 +3,15 @@ import { z } from "zod";
 import { isAdminRequest } from "@/lib/ar/auth.server";
 
 import { HUB_COOKIE, resolveSession } from "./auth.server";
-import { getCreator, getFile, logActivity } from "./data.server";
+import {
+  getCreator,
+  getFile,
+  listExperiences,
+  listProducts,
+  logActivity,
+  saveExperience,
+  saveProduct,
+} from "./data.server";
 import { HUB, type FileKind, type HubFile } from "./model";
 import { KEYS, hubFileStore, hubStore, newId, type HubNamespace } from "./store.server";
 
@@ -237,6 +245,14 @@ export async function completeUpload(ns: HubNamespace, c: Caller, creatorId: str
       title: `You uploaded ${done.name}`,
       body: "",
     });
+  } else if (done.kind === "collateral") {
+    // Launch assets from the team: tell the creator they're ready to use.
+    await logActivity(ns, creatorId, {
+      kind: "file",
+      productId: done.productId,
+      title: `New launch asset: ${done.name}`,
+      body: "It's in your launch kit, ready to download.",
+    });
   }
   return json({ file: done });
 }
@@ -252,6 +268,27 @@ export async function deleteFile(ns: HubNamespace, c: Caller, creatorId: string,
   if (!file) return new Response(null, { status: 204 });
   if (c.kind === "creator" && file.uploadedBy !== "creator")
     return json({ error: "You can only delete files you uploaded." }, 403);
+  // A sent proof is part of the approval record: it stays.
+  const products = await listProducts(ns, creatorId);
+  if (products.some((p) => p.proofs.some((pr) => pr.fileId === id))) {
+    return json(
+      { error: "This file is a proof that was sent for approval, so it stays in the history." },
+      409,
+    );
+  }
+  // Nothing else may point at a file that's gone.
+  for (const p of products) {
+    if (p.imageFileId === id || p.artworkIds.includes(id)) {
+      await saveProduct(ns, {
+        ...p,
+        imageFileId: p.imageFileId === id ? null : p.imageFileId,
+        artworkIds: p.artworkIds.filter((a) => a !== id),
+      });
+    }
+  }
+  for (const e of await listExperiences(ns, creatorId)) {
+    if (e.imageFileId === id) await saveExperience(ns, { ...e, imageFileId: null });
+  }
   await deleteFileBytes(ns, file);
   await (await hubStore(ns)).del(KEYS.file(creatorId, id));
   return new Response(null, { status: 204, headers: noStore });

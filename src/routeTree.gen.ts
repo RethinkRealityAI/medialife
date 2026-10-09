@@ -39,6 +39,8 @@ import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
 import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
+import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
+import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
@@ -220,6 +222,16 @@ const AdminBuilderSlugRoute = AdminBuilderSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => AdminBuilderRoute,
+} as any)
+const AdminCreatorsIndexRoute = AdminCreatorsIndexRouteImport.update({
+  id: '/creators/',
+  path: '/creators/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
+  id: '/creators/$creatorId',
+  path: '/creators/$creatorId',
+  getParentRoute: () => AdminRoute,
 } as any)
 const ApiArLinkRoute = ApiArLinkRouteImport.update({
   id: '/api/ar/link',
@@ -410,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -423,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/creators/': typeof AdminCreatorsIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -469,6 +483,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -482,6 +497,7 @@ export interface FileRoutesByTo {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
+  '/admin/creators': typeof AdminCreatorsIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -532,6 +548,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -545,6 +562,7 @@ export interface FileRoutesById {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/creators/': typeof AdminCreatorsIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -596,6 +614,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -609,6 +628,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder/'
+    | '/admin/creators/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -655,6 +675,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/creator-hub'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -668,6 +689,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder'
+    | '/admin/creators'
     | '/roblox/portal'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -717,6 +739,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -730,6 +753,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder/'
+    | '/admin/creators/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -999,6 +1023,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBuilderSlugRouteImport
       parentRoute: typeof AdminBuilderRoute
     }
+    '/admin/creators/': {
+      id: '/admin/creators/'
+      path: '/creators'
+      fullPath: '/admin/creators/'
+      preLoaderRoute: typeof AdminCreatorsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/creators/$creatorId': {
+      id: '/admin/creators/$creatorId'
+      path: '/creators/$creatorId'
+      fullPath: '/admin/creators/$creatorId'
+      preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/ar/link': {
       id: '/api/ar/link'
       path: '/api/ar/link'
@@ -1232,6 +1270,8 @@ interface AdminRouteChildren {
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
+  AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1240,6 +1280,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
+  AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
