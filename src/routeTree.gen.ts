@@ -67,6 +67,7 @@ import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-c
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
+import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
 import { Route as ApiHubWebhooksShopifyRouteImport } from './routes/api.hub.webhooks.shopify'
 import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
 import { Route as CreatorHubAppProductsProductIdRouteImport } from './routes/creator-hub._app.products.$productId'
@@ -76,6 +77,7 @@ import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.as
 import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
 import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
 import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
+import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
 import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
 import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
@@ -373,6 +375,11 @@ const ApiHubDevSeedRoute = ApiHubDevSeedRouteImport.update({
   path: '/api/hub/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubOverlayTokenRoute = ApiHubOverlayTokenRouteImport.update({
+  id: '/api/hub/overlay/$token',
+  path: '/api/hub/overlay/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHubWebhooksShopifyRoute = ApiHubWebhooksShopifyRouteImport.update({
   id: '/api/hub/webhooks/shopify',
   path: '/api/hub/webhooks/shopify',
@@ -424,6 +431,11 @@ const ApiHubFilesCreatorIdFileIdRoute =
     path: '/$creatorId/$fileId',
     getParentRoute: () => ApiHubFilesRoute,
   } as any)
+const ApiHubOverlayTokenImageRoute = ApiHubOverlayTokenImageRouteImport.update({
+  id: '/image',
+  path: '/image',
+  getParentRoute: () => ApiHubOverlayTokenRoute,
+} as any)
 const ApiArAdminAssetsIdCompleteRoute =
   ApiArAdminAssetsIdCompleteRouteImport.update({
     id: '/complete',
@@ -508,6 +520,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -517,6 +530,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -577,6 +591,7 @@ export interface FileRoutesByTo {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -586,6 +601,7 @@ export interface FileRoutesByTo {
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -651,6 +667,7 @@ export interface FileRoutesById {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -660,6 +677,7 @@ export interface FileRoutesById {
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -726,6 +744,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/products/$productId'
     | '/roblox/portal/submissions/$id'
@@ -735,6 +754,7 @@ export interface FileRouteTypes {
     | '/api/ar/admin/project/$slug'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -795,6 +815,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/products/$productId'
     | '/roblox/portal/submissions/$id'
@@ -804,6 +825,7 @@ export interface FileRouteTypes {
     | '/api/ar/admin/project/$slug'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -868,6 +890,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/_app/products/$productId'
     | '/roblox/portal/submissions/$id'
@@ -877,6 +900,7 @@ export interface FileRouteTypes {
     | '/api/ar/admin/project/$slug'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -917,6 +941,7 @@ export interface RootRouteChildren {
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
   ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
   ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
+  ApiHubOverlayTokenRoute: typeof ApiHubOverlayTokenRouteWithChildren
   ApiHubWebhooksShopifyRoute: typeof ApiHubWebhooksShopifyRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
 }
@@ -1329,6 +1354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/overlay/$token': {
+      id: '/api/hub/overlay/$token'
+      path: '/api/hub/overlay/$token'
+      fullPath: '/api/hub/overlay/$token'
+      preLoaderRoute: typeof ApiHubOverlayTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hub/webhooks/shopify': {
       id: '/api/hub/webhooks/shopify'
       path: '/api/hub/webhooks/shopify'
@@ -1391,6 +1423,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/hub/files/$creatorId/$fileId'
       preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdRouteImport
       parentRoute: typeof ApiHubFilesRoute
+    }
+    '/api/hub/overlay/$token/image': {
+      id: '/api/hub/overlay/$token/image'
+      path: '/image'
+      fullPath: '/api/hub/overlay/$token/image'
+      preLoaderRoute: typeof ApiHubOverlayTokenImageRouteImport
+      parentRoute: typeof ApiHubOverlayTokenRoute
     }
     '/api/ar/admin/assets/$id/complete': {
       id: '/api/ar/admin/assets/$id/complete'
@@ -1594,6 +1633,17 @@ const ApiHubAuthDiscordRouteChildren: ApiHubAuthDiscordRouteChildren = {
 const ApiHubAuthDiscordRouteWithChildren =
   ApiHubAuthDiscordRoute._addFileChildren(ApiHubAuthDiscordRouteChildren)
 
+interface ApiHubOverlayTokenRouteChildren {
+  ApiHubOverlayTokenImageRoute: typeof ApiHubOverlayTokenImageRoute
+}
+
+const ApiHubOverlayTokenRouteChildren: ApiHubOverlayTokenRouteChildren = {
+  ApiHubOverlayTokenImageRoute: ApiHubOverlayTokenImageRoute,
+}
+
+const ApiHubOverlayTokenRouteWithChildren =
+  ApiHubOverlayTokenRoute._addFileChildren(ApiHubOverlayTokenRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivatedRetailRoute: ActivatedRetailRoute,
@@ -1628,6 +1678,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
   ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
   ApiHubDevSeedRoute: ApiHubDevSeedRoute,
+  ApiHubOverlayTokenRoute: ApiHubOverlayTokenRouteWithChildren,
   ApiHubWebhooksShopifyRoute: ApiHubWebhooksShopifyRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
 }

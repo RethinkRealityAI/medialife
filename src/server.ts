@@ -37,10 +37,11 @@ const SECURITY_HEADERS: Record<string, string> = {
 // netlify.toml covers the static half of that path; this covers the SSR half.
 // The portal routes also carry a robots meta tag, but a header is the half that
 // works for a crawler that never renders. Keep this in sync with netlify.toml.
-// /go/<code> are activation links printed on merch. The Creator Hub's landing
+// /go/<code> are activation links printed on merch; /overlay/<token> are
+// creators' secret stream overlays. The Creator Hub's landing
 // page (/creator-hub) is public; everything under it (sign-in, onboarding, the
 // dashboard) is an application and stays out of search.
-const UNLISTED_PREFIXES = ["/roblox", "/admin", "/api", "/x", "/go"] as const;
+const UNLISTED_PREFIXES = ["/roblox", "/admin", "/api", "/x", "/go", "/overlay"] as const;
 
 function isUnlisted(pathname: string): boolean {
   if (pathname.startsWith("/creator-hub/") && pathname !== "/creator-hub/") return true;

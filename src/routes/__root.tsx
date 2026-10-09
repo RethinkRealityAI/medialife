@@ -163,6 +163,7 @@ function RootComponent() {
       return (
         p.startsWith("/roblox/portal") ||
         p.startsWith("/admin") ||
+        p.startsWith("/overlay/") ||
         (p.startsWith("/creator-hub/") && p !== "/creator-hub/")
       );
     },

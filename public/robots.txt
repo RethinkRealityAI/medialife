@@ -30,5 +30,6 @@ Disallow: /api/
 # activation links printed on merch.
 Disallow: /creator-hub/
 Disallow: /go/
+Disallow: /overlay/
 
 Sitemap: https://medialife.ai/sitemap.xml
