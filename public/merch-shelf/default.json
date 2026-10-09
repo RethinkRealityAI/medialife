@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "creator": {
+    "name": "YOUR NAME",
+    "handle": "@yourchannel",
+    "logo": null
+  },
+  "theme": {
+    "neon": "#ff37ae",
+    "accent": "#19affe",
+    "shelf": "walnut",
+    "backdrop": "midnight"
+  },
+  "products": [
+    {
+      "id": "tee",
+      "type": "tee",
+      "enabled": true,
+      "name": "Signature Tee",
+      "price": 3900,
+      "color": "#111216",
+      "print": null,
+      "blurb": "Heavyweight cotton, your art front and centre.",
+      "activation": {
+        "kind": "ar",
+        "title": "Your character steps out",
+        "description": "Fans scan the print and your character jumps out of the shirt in AR.",
+        "reward": "A secret clip only buyers can watch"
+      }
+    },
+    {
+      "id": "hoodie",
+      "type": "hoodie",
+      "enabled": true,
+      "name": "Drop Hoodie",
+      "price": 6500,
+      "color": "#2a2d3a",
+      "print": null,
+      "blurb": "Brushed fleece with an NFC tag in the sleeve.",
+      "activation": {
+        "kind": "video",
+        "title": "Behind-the-scenes video",
+        "description": "Tap the sleeve to unlock a video message from you.",
+        "reward": "Early access to your next drop"
+      }
+    },
+    {
+      "id": "cap",
+      "type": "cap",
+      "enabled": true,
+      "name": "Logo Cap",
+      "price": 3200,
+      "color": "#0d0f14",
+      "print": null,
+      "blurb": "Embroidered front, scannable under the brim.",
+      "activation": {
+        "kind": "model",
+        "title": "A 3D collectible",
+        "description": "Your logo spins up as a 3D model fans can place on their desk.",
+        "reward": "A digital collectible"
+      }
+    },
+    {
+      "id": "plush",
+      "type": "plush",
+      "enabled": true,
+      "name": "Mascot Plush",
+      "price": 3500,
+      "color": "#f2efe9",
+      "print": null,
+      "blurb": "Soft, huggable, and it talks back when scanned.",
+      "activation": {
+        "kind": "game",
+        "title": "A 60-second mini-game",
+        "description": "Scan the tag and play a quick game starring your mascot.",
+        "reward": "A shout-out for top scores"
+      }
+    },
+    {
+      "id": "keychain",
+      "type": "keychain",
+      "enabled": true,
+      "name": "Activated Keychain",
+      "price": 1800,
+      "color": "#ffffff",
+      "print": null,
+      "blurb": "Acrylic charm with a QR on the back.",
+      "activation": {
+        "kind": "unlock",
+        "title": "Unlock a reward",
+        "description": "Every scan unlocks a reward fans can't get anywhere else.",
+        "reward": "A discount code for the next drop"
+      }
+    },
+    {
+      "id": "sticker",
+      "type": "sticker",
+      "enabled": true,
+      "name": "Holo Sticker Pack",
+      "price": 900,
+      "color": "#ffffff",
+      "print": null,
+      "blurb": "Holographic die-cuts. Tap or scan to open them.",
+      "activation": {
+        "kind": "ar",
+        "title": "The sticker comes alive",
+        "description": "Point a phone at it and the art animates off the page.",
+        "reward": "A bonus wallpaper"
+      }
+    },
+    {
+      "id": "deskmat",
+      "type": "deskmat",
+      "enabled": true,
+      "name": "Desk Mat",
+      "price": 3000,
+      "color": "#15161c",
+      "print": null,
+      "blurb": "XL mat with the QR built into the art.",
+      "activation": {
+        "kind": "video",
+        "title": "Your setup tour",
+        "description": "Scan the corner to open a setup tour video.",
+        "reward": "Your settings and keybinds"
+      }
+    }
+  ],
+  "pitch": {
+    "preparedFor": "",
+    "presentedBy": "",
+    "inviteCode": "",
+    "audience": 250000,
+    "showEstimator": true
+  }
+}
