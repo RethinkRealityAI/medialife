@@ -60,6 +60,8 @@ function VisitsCell({ s, days }: { s: Stats[string] | undefined; days: number })
 }
 
 function PasswordLine({ link, demo }: { link: ArLink; demo: DemoOption | undefined }) {
+  if (link.demo === "merch-shelf" || link.demo.startsWith("shelf:"))
+    return <span className="text-xs text-muted-foreground">No password</span>;
   if (link.unlock)
     return <span className="text-xs text-muted-foreground">Opens without a password</span>;
   if (!demo?.password)
@@ -190,7 +192,12 @@ export function LinkList({
 
   const demoById = useMemo(() => new Map(demos.map((d) => [d.id, d])), [demos]);
   const demoName = (id: string) =>
-    demoById.get(id)?.short ?? (id.startsWith("x:") ? `${id.slice(2)} (endcap)` : id);
+    demoById.get(id)?.short ??
+    (id.startsWith("x:")
+      ? `${id.slice(2)} (endcap)`
+      : id.startsWith("shelf:")
+        ? `${id.slice(6)} (shelf)`
+        : id);
   const active = links.filter((l) => !l.archived);
   const archived = links.filter((l) => l.archived);
   const q = query.trim().toLowerCase();

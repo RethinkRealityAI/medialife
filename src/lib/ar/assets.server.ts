@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { shelfAssetUsage } from "@/lib/shelf/shelves.server";
+
 import {
   ASSET_ID_RE,
   CHUNK_SIZE,
@@ -204,14 +206,19 @@ export async function readAsset(ns: ArNamespace, id: string): Promise<AssetMeta 
   return (await arStore("assets", ns)).getJSON<AssetMeta>(metaKey(id));
 }
 
-/** asset id → projects that reference it (draft, published version or list thumbnail). */
+/**
+ * asset id → projects that reference it (draft, published version or list thumbnail),
+ * and merch shelves (logo, prints, snapshot; slug "shelf:<slug>").
+ */
 export async function assetUsage(
   ns: ArNamespace,
 ): Promise<Map<string, { slug: string; name: string }[]>> {
   const projects = await arStore("projects", ns);
   const keys = (await projects.list("")).filter((k) => /^[a-z0-9-]+\.json$/.test(k));
-  const docs = await Promise.all(keys.map((k) => projects.getJSON<ProjectDoc>(k)));
-  const usage = new Map<string, { slug: string; name: string }[]>();
+  const [docs, usage] = await Promise.all([
+    Promise.all(keys.map((k) => projects.getJSON<ProjectDoc>(k))),
+    shelfAssetUsage(ns),
+  ]);
   for (const doc of docs) {
     if (!doc) continue;
     const ids = referencedAssetIds([doc.draft, doc.published, doc.thumb]);

@@ -6,7 +6,7 @@ import {
   useRouter,
   useRouterState,
 } from "@tanstack/react-router";
-import { BarChart3, Boxes, Link2, LogOut, Presentation } from "lucide-react";
+import { BarChart3, Boxes, Link2, LogOut, Presentation, Store, Users } from "lucide-react";
 
 import {
   Sidebar,
@@ -47,9 +47,11 @@ export const Route = createFileRoute("/admin")({
 });
 
 const NAV = [
+  { to: "/admin/creators", label: "Creators", icon: Users },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/admin/links", label: "Client links", icon: Link2 },
   { to: "/admin/builder", label: "Endcap builder", icon: Boxes },
+  { to: "/admin/shelves", label: "Merch shelves", icon: Store },
   { to: "/admin/demos", label: "Live demos", icon: Presentation },
 ] as const;
 

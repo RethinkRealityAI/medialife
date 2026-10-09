@@ -40,6 +40,10 @@ export const AR_EVENTS = {
   lead_submit: "Sent a contact request",
   custom_ip: "Tried 'Your IP'",
   dash_open: "Opened the dashboard panel",
+  // Creator Merch Shelf (/shelf)
+  shelf_customize: "Customised the shelf (name, logo or colours)",
+  estimator_use: "Used the earnings estimator",
+  apply_open: "Opened the Creator Hub application",
 } as const;
 export type ArEventName = keyof typeof AR_EVENTS | (string & {});
 
@@ -58,7 +62,10 @@ export const trackPayloadSchema = z.object({
   sid: z.string().regex(/^[0-9a-z]{6,12}-[0-9a-z]{4,16}$/),
   /** anonymous visitor id kept in localStorage */
   vid: z.string().regex(/^[0-9a-z-]{6,40}$/),
-  /** which demo: "roblox", "monkey-quest", or "x:<project slug>" for builder endcaps */
+  /**
+   * which demo: "roblox", "monkey-quest", "x:<project slug>" for builder endcaps,
+   * "shelf:<slug>" for a published Creator Merch Shelf, "merch-shelf" for /shelf quick links
+   */
   demo: z.string().regex(/^[a-z0-9:_-]{1,64}$/),
   /** client link code from ?c=, if any */
   link: z
@@ -145,7 +152,7 @@ export const linkSchema = z.object({
   code: z.string().regex(/^[a-z0-9_-]{2,40}$/),
   /** who the link is for, shown as "Prepared for <name>" */
   name: z.string().min(1).max(80),
-  /** which demo it opens: "roblox" | "monkey-quest" | "x:<slug>" */
+  /** which demo it opens: "roblox" | "monkey-quest" | "x:<slug>" | "merch-shelf" | "shelf:<slug>" */
   demo: z.string().regex(/^[a-z0-9:_-]{1,64}$/),
   /** skip the password screen for this link */
   unlock: z.boolean().default(false),
@@ -159,8 +166,10 @@ export type ArLink = z.infer<typeof linkSchema>;
 export const DEMO_PATHS: Record<string, string> = {
   roblox: "/roblox/activated-retail/",
   "monkey-quest": "/monkey-quest/activated-retail/",
+  "merch-shelf": "/shelf",
 };
 export function demoPath(demo: string): string {
   if (demo.startsWith("x:")) return `/x/${demo.slice(2)}`;
+  if (demo.startsWith("shelf:")) return `/shelf/${demo.slice(6)}`;
   return DEMO_PATHS[demo] ?? "/";
 }

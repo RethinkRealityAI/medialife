@@ -67,7 +67,7 @@ Spam protection: a `bot-field` honeypot, declared via `netlify-honeypot`.
 
 ## Routes
 
-`/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact`
+`/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact` · `/activated-retail` · `/creator-hub` (see [Creator Hub](#creator-hub-creator-hub))
 
 Unlisted static pages, served straight from `public/` rather than the SSR router:
 `/<slug>` (business cards), `/creators` (Roblox creator program), and the activated-retail
@@ -75,7 +75,8 @@ Unlisted static pages, served straight from `public/` rather than the SSR router
 hand-off page `/ar/` and the endcap renderer `/activated-retail/engine/`.
 
 Unlisted SSR routes for the activated-retail tools (see [Activated-retail tools](#activated-retail-tools-admin)):
-`/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`.
+`/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`, plus
+`/shelf` and `/shelf/$slug` (see [Creator Merch Shelf](#creator-merch-shelf-shelf)).
 
 Tech stack slugs live in `src/lib/tech-stacks.ts`. **Adding one means adding its URL
 to `public/sitemap.xml`** — the sitemap is static and does not generate itself.
@@ -395,3 +396,225 @@ touching the scene pauses it and it resumes after 20 s. "Book a call" opens a sh
 (`public/vendor/ar-kit/lead.js`) that posts to the Netlify form **`activated-retail-lead`**
 (declared in `public/__forms.html`). **Turn on email notifications for that form** under
 Project configuration → Notifications, or leads only show in Netlify → Forms.
+
+---
+
+## Creator Merch Shelf (`/shelf`)
+
+A 3D merch shop made for one creator: a lit product shelf with their name in neon, their logo
+printed on every product (a small chest mark on apparel, a big back panel), click-to-inspect,
+a cart, and the activation flow, meaning what a fan sees when they scan the merch (AR, a 3D
+model, a video, a mini-game or a reward). The products mirror the activated lineup on
+shop.medialife.ai. It's a pitch tool: the team and agency partners like Snowday Media send a
+creator a link to _their_ shelf in an outreach email, and the "Make this real" button leads to
+the Creator Hub application.
+
+### Three ways to configure a shelf
+
+Every shelf is a `ShelfConfig` (`src/lib/shelf/config.ts`, the contract for both sides).
+
+1. **Published:** `/shelf/<slug>`, made in `/admin/shelves`. The SSR route injects the config
+   into the page as `window.__SHELF` (and the slug as `window.__SHELF_SLUG`).
+2. **Quick link:** `/shelf?name=PixelPine&neon=8fd8ff&invite=snowday`. No admin needed; anything
+   not given comes from the default shelf (`public/merch-shelf/default.json`).
+3. **In the page:** a visitor drops in their own logo, renames the sign, picks colours. It stays
+   in their browser and is never uploaded.
+
+Quick-link parameters (`QUICK_LINK_PARAMS` in `src/lib/shelf/shelves.ts`): `name` (the sign,
+≤ 28 characters), `handle`, `neon` and `accent` (hex without `#`), `shelf` (walnut, black,
+white, maple), `backdrop` (midnight, sunset, arcade, snow), `logo` (a site path or https URL),
+`for` ("Prepared for …"), `by` ("Presented by …", text only), `invite` (a Creator Hub invite
+code), `audience` (the estimator's starting audience) and `products` (types to show, in order,
+e.g. `tee,hoodie,cap`). The Quick link panel on `/admin/shelves` builds one for you.
+
+### Making and publishing a shelf (`/admin/shelves`)
+
+**New shelf** asks for the creator's name (on the sign), a label for the team and the link, and
+starts from the default shelf or a copy of another. The editor has Creator (sign, handle, logo
+from the asset library), Theme (presets including Snowday's icy blue, neon and accent colours,
+shelf finish, backdrop), Products (on/off, order, name, type, price, colour, front and back
+prints, blurb and what happens when a fan scans it) and Pitch ("Prepared for", "Presented by",
+the invite code, the earnings estimator, and the link and label). The invite code is checked
+against the Creator Hub invites: an unknown code is only a warning. "Presented by" is text only,
+e.g. "Snowday Media × MEDIALIFE"; never put a partner's logo on a shelf.
+
+The right half is the real page (`/merch-shelf/index.html?preview=1`) in a same-origin iframe,
+updated on every change over `postMessage` (`ShelfPreviewMessage` in `config.ts`). Drafts
+autosave; a draft with a problem (an empty sign, say) isn't saved until it's fixed, and the
+preview keeps the last valid version. **Open draft** shows `/shelf/<slug>?draft=1`, which only
+signed-in admins see; it is never cached.
+
+**Publish** asks the preview for a 1200×630 snapshot of the hero view, uploads it to the asset
+library and publishes. That image is the `og:image`: the link preview in email, Discord, Slack
+and iMessage, with the title "<name>'s activated merch · MEDIALIFE". If the preview can't send
+one, the shelf still publishes and previews use the site card. Publishing purges the CDN cache
+for `/shelf/<slug>` (cache tag `shelf-<slug>`), so changes are live at once. The link can change
+until the first publish. **Unpublish** makes the link show "This shelf isn't available" (as
+does any unknown slug); the draft stays.
+
+### Personal links and analytics
+
+A published shelf is a demo called `shelf:<slug>`, and quick links are the built-in demo
+`merch-shelf`. Both are listed under "Merch shelves" when you make a personal link in
+`/admin/links` (or from the shelf's **Create personal link**) and in the Analytics demo filter.
+A personal link is `/shelf/<slug>?c=<code>`; for a quick link, add `&c=<code>` to its URL. The
+page reports to the same first-party analytics as the endcaps (`ARTrack.init({ demo })`), with
+three shelf events on top of the usual product, cart and activation ones: `shelf_customize`,
+`estimator_use` and `apply_open`.
+
+### Files
+
+- `public/merch-shelf/`: the page (static, plain JS, three.js). `default.json` mirrors
+  `DEFAULT_SHELF`; `npm run check:shelf` checks they agree (`-- --write` regenerates it).
+- `src/lib/shelf/config.ts` (contract), `shelves.ts` (slugs, quick links, presets),
+  `shelves.server.ts` (storage: the `ar-shelves-<namespace>` Blobs store, one record per slug
+  with the draft, the published copy and the snapshot), `shelves.functions.ts` (admin server
+  functions), `page.server.ts` (serving the page with the config and preview tags injected).
+- `src/routes/shelf.index.ts` (`/shelf`), `shelf.$slug.ts` (`/shelf/<slug>`),
+  `admin.shelves*.tsx` and `src/components/admin/shelves/` (the admin).
+- Slugs: 2–40 lowercase letters, numbers and dashes, unique; words like `admin`, `new` or
+  `preview` are reserved. `/shelf` and `/merch-shelf` are unlisted (robots.txt,
+  `x-robots-tag`, `src/server.ts` and `netlify.toml`).
+
+---
+
+## Creator Hub (`/creator-hub`)
+
+The creator side of the Activated Merchandise Program. Creators (YouTube, Twitch, TikTok,
+X, Kick…) apply, and MEDIALIFE designs, produces, fulfils and sells activated merch with
+them. The hub shows every product's progress through the pipeline, the immersive
+experience it unlocks, its triggers (QR, NFC, activation link) and launch collateral, and
+the orders and earnings it brings in. Built for general creators; the Roblox portal under
+`/roblox/portal` stays as it is.
+
+| URL | What it is |
+| --- | --- |
+| `/creator-hub` | Public landing page (in the sitemap). `?invite=<code>` carries an agency invite through to sign-up |
+| `/creator-hub/join`, `/sign-in`, `/forgot-password`, `/reset-password`, `/verify-email`, `/terms` | Accounts |
+| `/creator-hub/onboarding` | The application (intake): profile, channels, Discord and contacts, products, review |
+| `/creator-hub/dashboard`, `/products`, `/products/:id`, `/artwork`, `/experiences`, `/launch-kit`, `/earnings`, `/account` | The creator dashboard |
+| `/admin/creators`, `/admin/creators/:id` | The team side: applications, terms, products and stages, proofs, experiences, files, orders, payouts, invite links |
+| `/creator-hub/live`, `/overlay/<token>` | Live Drop: the stream overlay and its setup page (below) |
+| `/go/<code>` | The activation link a product's QR encodes and its NFC tag opens. Counts the scan, then redirects to the experience |
+
+Everything under `/creator-hub/` except the landing page, and `/go/`, is `noindex`
+(`src/server.ts`, `public/robots.txt`).
+
+### How it fits together
+
+```
+src/lib/hub/model.ts            types, catalogue (SKUS), pipeline (STAGES), earnings maths — client-safe
+src/lib/hub/store.server.ts     Netlify Blobs stores hub-<ns> (records) and hub-files-<ns> (file chunks)
+src/lib/hub/auth.server.ts      scrypt passwords, sessions, one-time tokens, rate limits
+src/lib/hub/discord.server.ts   "Continue with Discord" (sign in / sign up / connect)
+src/lib/hub/mail.server.ts      transactional email (Resend)
+src/lib/hub/data.server.ts      repositories: creators, products, experiences, files, orders, activity…
+src/lib/hub/files.server.ts     private chunked uploads (artwork, proofs, collateral)
+src/lib/hub/commerce.server.ts  Shopify webhooks and generic order ingest → per-creator orders
+src/lib/hub/*.functions.ts      server functions the pages call (auth, creator, admin)
+src/lib/hub/sample.server.ts    a complete sample creator for previews and localhost
+```
+
+Storage follows the activated-retail tools: Netlify Blobs, no database, namespaced by host
+(`prod` / `preview` / `dev`, with `dev` on local files under `.data/ar/`), so testing on a
+deploy preview never touches a real creator.
+
+**Accounts.** Email + password (scrypt N=2¹⁶), optional Discord sign-in, email
+verification and password reset by one-time links (hashed at rest; reset links last an
+hour and end every other session). Sessions are server-side records behind a signed,
+HttpOnly cookie. Sign-in and email sending are rate-limited. Emailed links use a pinned
+origin, never the request's Host header.
+
+**The pipeline.** Every product moves through Brief → Artwork → Design approval → Sample →
+Production → Shipping → Live (`STAGES`). The team moves it in the admin; a creator approving
+a proof moves it from Design approval to Sample. Each product carries "waiting on" (creator
+or MEDIALIFE) and a next step, which is what the creator's dashboard leads with.
+
+**Money.** A creator earns `revenueShare` (set per creator, overridable per product) of
+**net merchandise revenue**: unit price × quantity, less discounts and refunds, never tax or
+shipping. Each order line keeps the share in force when it was sold. Earnings are "pending"
+for `HUB.holdDays` (30) days — the returns window — then "available" until a payout is
+recorded. All amounts are stored in cents. `npm run test:hub` checks this maths and the
+Shopify normalisation.
+
+**Orders in.** An order line is matched to a product by Shopify product id or by SKU (both
+set on the product in the admin; a product id or SKU can belong to only one product). One
+order with several creators' products is split per creator. Orders are keyed by source and
+external id, so a re-delivered or updated webhook overwrites rather than double-counts.
+Lines that match nothing are listed under **Unmatched orders** in `/admin/creators`. No buyer
+names, emails or addresses are stored — only the country.
+
+**Triggers.** Each product gets a short code at creation. Print the QR (or program the NFC
+tag) with `https://medialife.ai/go/<code>`, never the experience URL itself: the experience
+can then be rebuilt or swapped without reprinting, and every scan is counted. Link-preview
+bots aren't counted.
+
+**Files** are private (the creator and the team only), uploaded in 4 MB chunks up to 50 MB,
+checked by magic bytes, and served with `nosniff` and a sandbox CSP.
+
+### Configuration (Netlify env vars)
+
+| Variable | Needed for |
+| --- | --- |
+| `HUB_SESSION_SECRET` | Signing creator sessions (≥16 chars; falls back to `AR_SESSION_SECRET`). **Production refuses sign-in without one.** |
+| `RESEND_API_KEY`, `HUB_EMAIL_FROM` | Verification, password-reset and notification emails. Verify the sender domain in Resend. Without it, previews and localhost show the link on screen instead; production tells the creator to contact support |
+| `HUB_TEAM_EMAIL` | Where new applications and proof decisions are announced |
+| `SHOPIFY_WEBHOOK_SECRET` | The Shopify order webhook (below) |
+| `HUB_INGEST_KEY` | `POST /api/hub/orders` for other channels (≥24 chars) |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | "Continue with Discord". Register `<origin>/api/hub/auth/discord/callback` as a redirect URL for each environment |
+| `AR_ADMIN_PASSWORD` | The existing shared password for `/admin`, which now includes Creators |
+
+### Shopify
+
+In Shopify admin → Settings → Notifications → Webhooks, create **Order payment**
+(`orders/paid`), **Order update** (`orders/updated`) and **Order cancellation**
+(`orders/cancelled`) webhooks, format JSON, URL `https://medialife.ai/api/hub/webhooks/shopify`,
+and put the signing secret shown there in `SHOPIFY_WEBHOOK_SECRET`. Then, for each creator
+product in `/admin/creators`, add its Shopify product id (the number in the product's admin
+URL) or its variant SKUs. Refunds arrive through `orders/updated`.
+
+### Other channels
+
+```http
+POST /api/hub/orders
+Authorization: Bearer <HUB_INGEST_KEY>
+Content-Type: application/json
+
+{ "channel": "TikTok Shop", "externalId": "5761234", "number": "TT-5761234",
+  "createdAt": "2026-10-09T15:04:00Z", "currency": "USD", "country": "US",
+  "lines": [{ "sku": "PIXELPINE-TEE-M", "qty": 1, "unitPrice": 3900, "discount": 0 }] }
+```
+
+Prices are in cents. Send the same `channel` + `externalId` again to update an order
+(refunds: `refunded`, `refundedQty` per line; `status`). Channels with no integration at all
+can be entered by hand in the creator's **Orders & payouts** tab.
+
+### Agency partners and invite links
+
+`/admin/creators` → Invite links. A link (`/creator-hub/join?invite=<code>`) tags every creator
+who signs up through it with the agency and the rep who sent it, so the team can filter by
+agency and the agency's sales team can onboard their roster without forms or email chains.
+
+### Live Drop (stream overlay)
+
+`/creator-hub/live` (Go live) sets up a browser source creators add to OBS, Streamlabs or TikTok
+LIVE Studio: a sales goal that fills as orders land, an alert for every order ("Someone in 🇨🇦
+Canada just grabbed 2× Hidden Grove Tee"), the QR viewers scan, and a celebration when the goal
+is hit. The page previews the overlay over a stand-in stream, sends test alerts, restarts the
+goal and regenerates the link.
+
+- The overlay is `/overlay/<token>`; OBS has no cookies, so the secret token is the credential.
+  Regenerating it kills the old URL. Its feed (`/api/hub/overlay/<token>`, polled every 5 s)
+  carries product names, quantities, buyer **country** and totals — never names or order numbers,
+  and revenue only if the creator turns it on. A switched-off overlay renders nothing; an expired
+  link says so.
+- Built for OBS's embedded Chromium: transparent page, hex/rgba colours (no oklch), one canvas
+  particle engine, no growth over hours. `?bg=1` previews it over a sample scene; `?scale=0.5–2`.
+- Code: `src/lib/hub/overlay.*`, `src/routes/overlay.$token.tsx`, `src/components/hub/overlay/`.
+
+### Trying it
+
+On a deploy preview or localhost, `/admin/creators` → **Load sample creator** creates a
+complete creator (products at several stages, a proof awaiting approval, a live experience,
+collateral, two months of orders, scans and a payout) and shows its sign-in. Production
+refuses it.

@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "creator": {
+    "name": "YOUR NAME",
+    "handle": "@yourchannel",
+    "logo": null
+  },
+  "theme": {
+    "neon": "#ff37ae",
+    "accent": "#19affe",
+    "shelf": "walnut",
+    "backdrop": "midnight"
+  },
+  "products": [
+    {
+      "id": "tee",
+      "type": "tee",
+      "enabled": true,
+      "name": "Activated Heavyweight Tee",
+      "price": 7500,
+      "color": "#1c1c1f",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Boxy heavyweight cotton, vintage washed. Your mark on the chest, your art across the back.",
+      "activation": {
+        "kind": "ar",
+        "title": "Your art comes alive",
+        "description": "Fans scan the back print and it comes alive in augmented reality.",
+        "reward": "A secret clip only buyers can watch"
+      }
+    },
+    {
+      "id": "hoodie",
+      "type": "hoodie",
+      "enabled": true,
+      "name": "Activated Hoodie",
+      "price": 9000,
+      "color": "#19191b",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Heavyweight washed-black hoodie with a full back print.",
+      "activation": {
+        "kind": "video",
+        "title": "Behind-the-scenes video",
+        "description": "Scan the back print to unlock a video message from you.",
+        "reward": "Early access to your next drop"
+      }
+    },
+    {
+      "id": "longsleeve",
+      "type": "longsleeve",
+      "enabled": true,
+      "name": "Activated Long-Sleeve",
+      "price": 7500,
+      "color": "#1d2433",
+      "print": null,
+      "backPrint": null,
+      "blurb": "12oz heavyweight long-sleeve in washed navy, sleeve and back prints.",
+      "activation": {
+        "kind": "model",
+        "title": "A 3D collectible",
+        "description": "Your character spins up as a 3D model fans can place on their desk.",
+        "reward": "A digital collectible"
+      }
+    },
+    {
+      "id": "cap",
+      "type": "cap",
+      "enabled": true,
+      "name": "Embroidered Cap",
+      "price": 5000,
+      "color": "#141416",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Embroidered cotton cap, one size, adjustable.",
+      "activation": {
+        "kind": "unlock",
+        "title": "Unlock a reward",
+        "description": "Scan under the brim to unlock a reward fans can't get anywhere else.",
+        "reward": "A discount code for the next drop"
+      }
+    },
+    {
+      "id": "keychain",
+      "type": "keychain",
+      "enabled": true,
+      "name": "Acrylic Charm Set",
+      "price": 1499,
+      "color": "#ffffff",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
+      "activation": {
+        "kind": "game",
+        "title": "A quick mini-game",
+        "description": "Scan the charm and play a quick game starring your character.",
+        "reward": "A shout-out for top scores"
+      }
+    },
+    {
+      "id": "sticker",
+      "type": "sticker",
+      "enabled": true,
+      "name": "AR Sticker 3-Pack",
+      "price": 1500,
+      "color": "#ffffff",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Holographic weatherproof vinyl. Tap a phone to a sticker and it animates.",
+      "activation": {
+        "kind": "ar",
+        "title": "The sticker comes alive",
+        "description": "Tap your phone to the sticker and its animation launches. No app.",
+        "reward": "A bonus wallpaper"
+      }
+    },
+    {
+      "id": "plush",
+      "type": "plush",
+      "enabled": false,
+      "name": "Mascot Plush",
+      "price": 3500,
+      "color": "#f2efe9",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Soft, huggable, and it talks back when scanned.",
+      "activation": {
+        "kind": "game",
+        "title": "A mini-game",
+        "description": "Scan the tag and play a quick game starring your mascot.",
+        "reward": "A shout-out for top scores"
+      }
+    },
+    {
+      "id": "deskmat",
+      "type": "deskmat",
+      "enabled": false,
+      "name": "Desk Mat",
+      "price": 3000,
+      "color": "#15161c",
+      "print": null,
+      "backPrint": null,
+      "blurb": "XL mat with the QR built into the art.",
+      "activation": {
+        "kind": "video",
+        "title": "Your setup tour",
+        "description": "Scan the corner to open a setup tour video.",
+        "reward": "Your settings and keybinds"
+      }
+    }
+  ],
+  "pitch": {
+    "preparedFor": "",
+    "presentedBy": "",
+    "inviteCode": "",
+    "audience": 250000,
+    "showEstimator": true
+  }
+}

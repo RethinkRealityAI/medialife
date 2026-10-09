@@ -24,14 +24,41 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
+import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
+import { Route as CreatorHubAppRouteImport } from './routes/creator-hub._app'
+import { Route as CreatorHubForgotPasswordRouteImport } from './routes/creator-hub.forgot-password'
+import { Route as CreatorHubJoinRouteImport } from './routes/creator-hub.join'
+import { Route as CreatorHubOnboardingRouteImport } from './routes/creator-hub.onboarding'
+import { Route as CreatorHubResetPasswordRouteImport } from './routes/creator-hub.reset-password'
+import { Route as CreatorHubSignInRouteImport } from './routes/creator-hub.sign-in'
+import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
+import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
+import { Route as GoCodeRouteImport } from './routes/go.$code'
+import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
+import { Route as ShelfIndexRouteImport } from './routes/shelf.index'
+import { Route as ShelfSlugRouteImport } from './routes/shelf.$slug'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
 import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
+import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
+import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
+import { Route as AdminShelvesIndexRouteImport } from './routes/admin.shelves.index'
+import { Route as AdminShelvesSlugRouteImport } from './routes/admin.shelves.$slug'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
+import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
+import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
+import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
+import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
+import { Route as CreatorHubAppDashboardRouteImport } from './routes/creator-hub._app.dashboard'
+import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub._app.earnings'
+import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
+import { Route as CreatorHubAppLaunchKitRouteImport } from './routes/creator-hub._app.launch-kit'
+import { Route as CreatorHubAppLiveRouteImport } from './routes/creator-hub._app.live'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
 import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
@@ -45,12 +72,23 @@ import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.asse
 import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
 import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-content.$demo'
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
+import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
+import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
+import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
+import { Route as ApiHubWebhooksShopifyRouteImport } from './routes/api.hub.webhooks.shopify'
+import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
+import { Route as CreatorHubAppProductsProductIdRouteImport } from './routes/creator-hub._app.products.$productId'
 import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
 import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
 import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
+import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
+import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
+import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
 import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
+import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
+import { Route as ApiHubFilesCreatorIdFileIdChunksNRouteImport } from './routes/api.hub.files.$creatorId.$fileId.chunks.$n'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -127,14 +165,85 @@ const AdminLinksRoute = AdminLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminShelvesRoute = AdminShelvesRouteImport.update({
+  id: '/shelves',
+  path: '/shelves',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin_/login',
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
+  id: '/creator-hub/',
+  path: '/creator-hub/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubAppRoute = CreatorHubAppRouteImport.update({
+  id: '/creator-hub/_app',
+  path: '/creator-hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubForgotPasswordRoute =
+  CreatorHubForgotPasswordRouteImport.update({
+    id: '/creator-hub/forgot-password',
+    path: '/creator-hub/forgot-password',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CreatorHubJoinRoute = CreatorHubJoinRouteImport.update({
+  id: '/creator-hub/join',
+  path: '/creator-hub/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubOnboardingRoute = CreatorHubOnboardingRouteImport.update({
+  id: '/creator-hub/onboarding',
+  path: '/creator-hub/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubResetPasswordRoute = CreatorHubResetPasswordRouteImport.update({
+  id: '/creator-hub/reset-password',
+  path: '/creator-hub/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubSignInRoute = CreatorHubSignInRouteImport.update({
+  id: '/creator-hub/sign-in',
+  path: '/creator-hub/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubTermsRoute = CreatorHubTermsRouteImport.update({
+  id: '/creator-hub/terms',
+  path: '/creator-hub/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubVerifyEmailRoute = CreatorHubVerifyEmailRouteImport.update({
+  id: '/creator-hub/verify-email',
+  path: '/creator-hub/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoCodeRoute = GoCodeRouteImport.update({
+  id: '/go/$code',
+  path: '/go/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OverlayTokenRoute = OverlayTokenRouteImport.update({
+  id: '/overlay/$token',
+  path: '/overlay/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalRoute = RobloxPortalRouteImport.update({
   id: '/roblox/portal',
   path: '/roblox/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShelfIndexRoute = ShelfIndexRouteImport.update({
+  id: '/shelf/',
+  path: '/shelf/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShelfSlugRoute = ShelfSlugRouteImport.update({
+  id: '/shelf/$slug',
+  path: '/shelf/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TechnologySlugRoute = TechnologySlugRouteImport.update({
@@ -157,6 +266,26 @@ const AdminBuilderSlugRoute = AdminBuilderSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => AdminBuilderRoute,
 } as any)
+const AdminCreatorsIndexRoute = AdminCreatorsIndexRouteImport.update({
+  id: '/creators/',
+  path: '/creators/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
+  id: '/creators/$creatorId',
+  path: '/creators/$creatorId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShelvesIndexRoute = AdminShelvesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminShelvesRoute,
+} as any)
+const AdminShelvesSlugRoute = AdminShelvesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AdminShelvesRoute,
+} as any)
 const ApiArLinkRoute = ApiArLinkRouteImport.update({
   id: '/api/ar/link',
   path: '/api/ar/link',
@@ -166,6 +295,52 @@ const ApiArTrackRoute = ApiArTrackRouteImport.update({
   id: '/api/ar/track',
   path: '/api/ar/track',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
+  id: '/api/hub/files',
+  path: '/api/hub/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubOrdersRoute = ApiHubOrdersRouteImport.update({
+  id: '/api/hub/orders',
+  path: '/api/hub/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubAppAccountRoute = CreatorHubAppAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppArtworkRoute = CreatorHubAppArtworkRouteImport.update({
+  id: '/artwork',
+  path: '/artwork',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppDashboardRoute = CreatorHubAppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppEarningsRoute = CreatorHubAppEarningsRouteImport.update({
+  id: '/earnings',
+  path: '/earnings',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppExperiencesRoute =
+  CreatorHubAppExperiencesRouteImport.update({
+    id: '/experiences',
+    path: '/experiences',
+    getParentRoute: () => CreatorHubAppRoute,
+  } as any)
+const CreatorHubAppLaunchKitRoute = CreatorHubAppLaunchKitRouteImport.update({
+  id: '/launch-kit',
+  path: '/launch-kit',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppLiveRoute = CreatorHubAppLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => CreatorHubAppRoute,
 } as any)
 const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
   id: '/',
@@ -232,6 +407,38 @@ const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
   path: '/api/ar/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
+  id: '/api/hub/auth/discord',
+  path: '/api/hub/auth/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubDevSeedRoute = ApiHubDevSeedRouteImport.update({
+  id: '/api/hub/dev/seed',
+  path: '/api/hub/dev/seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubOverlayTokenRoute = ApiHubOverlayTokenRouteImport.update({
+  id: '/api/hub/overlay/$token',
+  path: '/api/hub/overlay/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubWebhooksShopifyRoute = ApiHubWebhooksShopifyRouteImport.update({
+  id: '/api/hub/webhooks/shopify',
+  path: '/api/hub/webhooks/shopify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubAppProductsIndexRoute =
+  CreatorHubAppProductsIndexRouteImport.update({
+    id: '/products/',
+    path: '/products/',
+    getParentRoute: () => CreatorHubAppRoute,
+  } as any)
+const CreatorHubAppProductsProductIdRoute =
+  CreatorHubAppProductsProductIdRouteImport.update({
+    id: '/products/$productId',
+    path: '/products/$productId',
+    getParentRoute: () => CreatorHubAppRoute,
+  } as any)
 const RobloxPortalSubmissionsIndexRoute =
   RobloxPortalSubmissionsIndexRouteImport.update({
     id: '/submissions/',
@@ -254,17 +461,46 @@ const ApiArAdminProjectSlugRoute = ApiArAdminProjectSlugRouteImport.update({
   path: '/api/ar/admin/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubAuthDiscordCallbackRoute =
+  ApiHubAuthDiscordCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => ApiHubAuthDiscordRoute,
+  } as any)
+const ApiHubFilesCreatorIdFileIdRoute =
+  ApiHubFilesCreatorIdFileIdRouteImport.update({
+    id: '/$creatorId/$fileId',
+    path: '/$creatorId/$fileId',
+    getParentRoute: () => ApiHubFilesRoute,
+  } as any)
+const ApiHubOverlayTokenImageRoute = ApiHubOverlayTokenImageRouteImport.update({
+  id: '/image',
+  path: '/image',
+  getParentRoute: () => ApiHubOverlayTokenRoute,
+} as any)
 const ApiArAdminAssetsIdCompleteRoute =
   ApiArAdminAssetsIdCompleteRouteImport.update({
     id: '/complete',
     path: '/complete',
     getParentRoute: () => ApiArAdminAssetsIdRoute,
   } as any)
+const ApiHubFilesCreatorIdFileIdCompleteRoute =
+  ApiHubFilesCreatorIdFileIdCompleteRouteImport.update({
+    id: '/complete',
+    path: '/complete',
+    getParentRoute: () => ApiHubFilesCreatorIdFileIdRoute,
+  } as any)
 const ApiArAdminAssetsIdChunksNRoute =
   ApiArAdminAssetsIdChunksNRouteImport.update({
     id: '/chunks/$n',
     path: '/chunks/$n',
     getParentRoute: () => ApiArAdminAssetsIdRoute,
+  } as any)
+const ApiHubFilesCreatorIdFileIdChunksNRoute =
+  ApiHubFilesCreatorIdFileIdChunksNRouteImport.update({
+    id: '/chunks/$n',
+    path: '/chunks/$n',
+    getParentRoute: () => ApiHubFilesCreatorIdFileIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -282,14 +518,39 @@ export interface FileRoutesByFullPath {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/creator-hub': typeof CreatorHubAppRouteWithChildren
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/creator-hub/': typeof CreatorHubIndexRoute
+  '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/creator-hub/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
+  '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
+  '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
+  '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -299,17 +560,30 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/creator-hub/products/': typeof CreatorHubAppProductsIndexRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -325,12 +599,35 @@ export interface FileRoutesByTo {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
+  '/creator-hub': typeof CreatorHubIndexRoute
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/shelf': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/creator-hub/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
+  '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
+  '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
+  '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -340,17 +637,30 @@ export interface FileRoutesByTo {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
+  '/admin/creators': typeof AdminCreatorsIndexRoute
+  '/admin/shelves': typeof AdminShelvesIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/creator-hub/products': typeof CreatorHubAppProductsIndexRoute
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -368,14 +678,39 @@ export interface FileRoutesById {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
+  '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/creator-hub/': typeof CreatorHubIndexRoute
+  '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/_app/dashboard': typeof CreatorHubAppDashboardRoute
+  '/creator-hub/_app/earnings': typeof CreatorHubAppEarningsRoute
+  '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
+  '/creator-hub/_app/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/_app/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -385,17 +720,30 @@ export interface FileRoutesById {
   '/roblox/portal/status': typeof RobloxPortalStatusRoute
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
+  '/creator-hub/_app/products/': typeof CreatorHubAppProductsIndexRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+  '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -414,14 +762,39 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/shelves'
     | '/admin/login'
+    | '/creator-hub'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
+    | '/go/$code'
+    | '/overlay/$token'
     | '/roblox/portal'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
+    | '/creator-hub/'
+    | '/shelf/'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
+    | '/creator-hub/account'
+    | '/creator-hub/artwork'
+    | '/creator-hub/dashboard'
+    | '/creator-hub/earnings'
+    | '/creator-hub/experiences'
+    | '/creator-hub/launch-kit'
+    | '/creator-hub/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -431,17 +804,30 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder/'
+    | '/admin/creators/'
+    | '/admin/shelves/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
+    | '/api/hub/webhooks/shopify'
+    | '/creator-hub/products/$productId'
     | '/roblox/portal/submissions/$id'
+    | '/creator-hub/products/'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -457,12 +843,35 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
+    | '/creator-hub'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
+    | '/go/$code'
+    | '/overlay/$token'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin'
+    | '/shelf'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
+    | '/creator-hub/account'
+    | '/creator-hub/artwork'
+    | '/creator-hub/dashboard'
+    | '/creator-hub/earnings'
+    | '/creator-hub/experiences'
+    | '/creator-hub/launch-kit'
+    | '/creator-hub/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -472,17 +881,30 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder'
+    | '/admin/creators'
+    | '/admin/shelves'
     | '/roblox/portal'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
+    | '/api/hub/webhooks/shopify'
+    | '/creator-hub/products/$productId'
     | '/roblox/portal/submissions/$id'
+    | '/creator-hub/products'
     | '/roblox/portal/submissions'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   id:
     | '__root__'
     | '/'
@@ -499,14 +921,39 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/shelves'
     | '/admin_/login'
+    | '/creator-hub/_app'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
+    | '/go/$code'
+    | '/overlay/$token'
     | '/roblox/portal'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
+    | '/creator-hub/'
+    | '/shelf/'
     | '/admin/builder/$slug'
+    | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
+    | '/creator-hub/_app/account'
+    | '/creator-hub/_app/artwork'
+    | '/creator-hub/_app/dashboard'
+    | '/creator-hub/_app/earnings'
+    | '/creator-hub/_app/experiences'
+    | '/creator-hub/_app/launch-kit'
+    | '/creator-hub/_app/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -516,17 +963,30 @@ export interface FileRouteTypes {
     | '/roblox/portal/status'
     | '/roblox/portal/support'
     | '/admin/builder/'
+    | '/admin/creators/'
+    | '/admin/shelves/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/overlay/$token'
+    | '/api/hub/webhooks/shopify'
+    | '/creator-hub/_app/products/$productId'
     | '/roblox/portal/submissions/$id'
+    | '/creator-hub/_app/products/'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
+    | '/api/hub/overlay/$token/image'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -541,14 +1001,33 @@ export interface RootRouteChildren {
   LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  CreatorHubAppRoute: typeof CreatorHubAppRouteWithChildren
+  CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
+  CreatorHubJoinRoute: typeof CreatorHubJoinRoute
+  CreatorHubOnboardingRoute: typeof CreatorHubOnboardingRoute
+  CreatorHubResetPasswordRoute: typeof CreatorHubResetPasswordRoute
+  CreatorHubSignInRoute: typeof CreatorHubSignInRoute
+  CreatorHubTermsRoute: typeof CreatorHubTermsRoute
+  CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
+  GoCodeRoute: typeof GoCodeRoute
+  OverlayTokenRoute: typeof OverlayTokenRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
+  ShelfSlugRoute: typeof ShelfSlugRoute
   XSlugRoute: typeof XSlugRoute
+  CreatorHubIndexRoute: typeof CreatorHubIndexRoute
+  ShelfIndexRoute: typeof ShelfIndexRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
+  ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
+  ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
+  ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
+  ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
+  ApiHubOverlayTokenRoute: typeof ApiHubOverlayTokenRouteWithChildren
+  ApiHubWebhooksShopifyRoute: typeof ApiHubWebhooksShopifyRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
 }
 
@@ -659,6 +1138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLinksRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/shelves': {
+      id: '/admin/shelves'
+      path: '/shelves'
+      fullPath: '/admin/shelves'
+      preLoaderRoute: typeof AdminShelvesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin_/login': {
       id: '/admin_/login'
       path: '/admin/login'
@@ -666,11 +1152,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creator-hub/': {
+      id: '/creator-hub/'
+      path: '/creator-hub'
+      fullPath: '/creator-hub/'
+      preLoaderRoute: typeof CreatorHubIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/_app': {
+      id: '/creator-hub/_app'
+      path: '/creator-hub'
+      fullPath: '/creator-hub'
+      preLoaderRoute: typeof CreatorHubAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/forgot-password': {
+      id: '/creator-hub/forgot-password'
+      path: '/creator-hub/forgot-password'
+      fullPath: '/creator-hub/forgot-password'
+      preLoaderRoute: typeof CreatorHubForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/join': {
+      id: '/creator-hub/join'
+      path: '/creator-hub/join'
+      fullPath: '/creator-hub/join'
+      preLoaderRoute: typeof CreatorHubJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/onboarding': {
+      id: '/creator-hub/onboarding'
+      path: '/creator-hub/onboarding'
+      fullPath: '/creator-hub/onboarding'
+      preLoaderRoute: typeof CreatorHubOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/reset-password': {
+      id: '/creator-hub/reset-password'
+      path: '/creator-hub/reset-password'
+      fullPath: '/creator-hub/reset-password'
+      preLoaderRoute: typeof CreatorHubResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/sign-in': {
+      id: '/creator-hub/sign-in'
+      path: '/creator-hub/sign-in'
+      fullPath: '/creator-hub/sign-in'
+      preLoaderRoute: typeof CreatorHubSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/terms': {
+      id: '/creator-hub/terms'
+      path: '/creator-hub/terms'
+      fullPath: '/creator-hub/terms'
+      preLoaderRoute: typeof CreatorHubTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/verify-email': {
+      id: '/creator-hub/verify-email'
+      path: '/creator-hub/verify-email'
+      fullPath: '/creator-hub/verify-email'
+      preLoaderRoute: typeof CreatorHubVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/go/$code': {
+      id: '/go/$code'
+      path: '/go/$code'
+      fullPath: '/go/$code'
+      preLoaderRoute: typeof GoCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/overlay/$token': {
+      id: '/overlay/$token'
+      path: '/overlay/$token'
+      fullPath: '/overlay/$token'
+      preLoaderRoute: typeof OverlayTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal': {
       id: '/roblox/portal'
       path: '/roblox/portal'
       fullPath: '/roblox/portal'
       preLoaderRoute: typeof RobloxPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shelf/': {
+      id: '/shelf/'
+      path: '/shelf'
+      fullPath: '/shelf/'
+      preLoaderRoute: typeof ShelfIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shelf/$slug': {
+      id: '/shelf/$slug'
+      path: '/shelf/$slug'
+      fullPath: '/shelf/$slug'
+      preLoaderRoute: typeof ShelfSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/technology/$slug': {
@@ -701,6 +1278,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBuilderSlugRouteImport
       parentRoute: typeof AdminBuilderRoute
     }
+    '/admin/creators/': {
+      id: '/admin/creators/'
+      path: '/creators'
+      fullPath: '/admin/creators/'
+      preLoaderRoute: typeof AdminCreatorsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/creators/$creatorId': {
+      id: '/admin/creators/$creatorId'
+      path: '/creators/$creatorId'
+      fullPath: '/admin/creators/$creatorId'
+      preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shelves/': {
+      id: '/admin/shelves/'
+      path: '/'
+      fullPath: '/admin/shelves/'
+      preLoaderRoute: typeof AdminShelvesIndexRouteImport
+      parentRoute: typeof AdminShelvesRoute
+    }
+    '/admin/shelves/$slug': {
+      id: '/admin/shelves/$slug'
+      path: '/$slug'
+      fullPath: '/admin/shelves/$slug'
+      preLoaderRoute: typeof AdminShelvesSlugRouteImport
+      parentRoute: typeof AdminShelvesRoute
+    }
     '/api/ar/link': {
       id: '/api/ar/link'
       path: '/api/ar/link'
@@ -714,6 +1319,69 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/ar/track'
       preLoaderRoute: typeof ApiArTrackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/files': {
+      id: '/api/hub/files'
+      path: '/api/hub/files'
+      fullPath: '/api/hub/files'
+      preLoaderRoute: typeof ApiHubFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/orders': {
+      id: '/api/hub/orders'
+      path: '/api/hub/orders'
+      fullPath: '/api/hub/orders'
+      preLoaderRoute: typeof ApiHubOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/_app/account': {
+      id: '/creator-hub/_app/account'
+      path: '/account'
+      fullPath: '/creator-hub/account'
+      preLoaderRoute: typeof CreatorHubAppAccountRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/artwork': {
+      id: '/creator-hub/_app/artwork'
+      path: '/artwork'
+      fullPath: '/creator-hub/artwork'
+      preLoaderRoute: typeof CreatorHubAppArtworkRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/dashboard': {
+      id: '/creator-hub/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/creator-hub/dashboard'
+      preLoaderRoute: typeof CreatorHubAppDashboardRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/earnings': {
+      id: '/creator-hub/_app/earnings'
+      path: '/earnings'
+      fullPath: '/creator-hub/earnings'
+      preLoaderRoute: typeof CreatorHubAppEarningsRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/experiences': {
+      id: '/creator-hub/_app/experiences'
+      path: '/experiences'
+      fullPath: '/creator-hub/experiences'
+      preLoaderRoute: typeof CreatorHubAppExperiencesRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/launch-kit': {
+      id: '/creator-hub/_app/launch-kit'
+      path: '/launch-kit'
+      fullPath: '/creator-hub/launch-kit'
+      preLoaderRoute: typeof CreatorHubAppLaunchKitRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/live': {
+      id: '/creator-hub/_app/live'
+      path: '/live'
+      fullPath: '/creator-hub/live'
+      preLoaderRoute: typeof CreatorHubAppLiveRouteImport
+      parentRoute: typeof CreatorHubAppRoute
     }
     '/roblox/portal/': {
       id: '/roblox/portal/'
@@ -806,6 +1474,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/auth/discord': {
+      id: '/api/hub/auth/discord'
+      path: '/api/hub/auth/discord'
+      fullPath: '/api/hub/auth/discord'
+      preLoaderRoute: typeof ApiHubAuthDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/dev/seed': {
+      id: '/api/hub/dev/seed'
+      path: '/api/hub/dev/seed'
+      fullPath: '/api/hub/dev/seed'
+      preLoaderRoute: typeof ApiHubDevSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/overlay/$token': {
+      id: '/api/hub/overlay/$token'
+      path: '/api/hub/overlay/$token'
+      fullPath: '/api/hub/overlay/$token'
+      preLoaderRoute: typeof ApiHubOverlayTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/webhooks/shopify': {
+      id: '/api/hub/webhooks/shopify'
+      path: '/api/hub/webhooks/shopify'
+      fullPath: '/api/hub/webhooks/shopify'
+      preLoaderRoute: typeof ApiHubWebhooksShopifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/_app/products/': {
+      id: '/creator-hub/_app/products/'
+      path: '/products'
+      fullPath: '/creator-hub/products/'
+      preLoaderRoute: typeof CreatorHubAppProductsIndexRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/products/$productId': {
+      id: '/creator-hub/_app/products/$productId'
+      path: '/products/$productId'
+      fullPath: '/creator-hub/products/$productId'
+      preLoaderRoute: typeof CreatorHubAppProductsProductIdRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
     '/roblox/portal/submissions/': {
       id: '/roblox/portal/submissions/'
       path: '/submissions'
@@ -834,6 +1544,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAdminProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/auth/discord/callback': {
+      id: '/api/hub/auth/discord/callback'
+      path: '/callback'
+      fullPath: '/api/hub/auth/discord/callback'
+      preLoaderRoute: typeof ApiHubAuthDiscordCallbackRouteImport
+      parentRoute: typeof ApiHubAuthDiscordRoute
+    }
+    '/api/hub/files/$creatorId/$fileId': {
+      id: '/api/hub/files/$creatorId/$fileId'
+      path: '/$creatorId/$fileId'
+      fullPath: '/api/hub/files/$creatorId/$fileId'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdRouteImport
+      parentRoute: typeof ApiHubFilesRoute
+    }
+    '/api/hub/overlay/$token/image': {
+      id: '/api/hub/overlay/$token/image'
+      path: '/image'
+      fullPath: '/api/hub/overlay/$token/image'
+      preLoaderRoute: typeof ApiHubOverlayTokenImageRouteImport
+      parentRoute: typeof ApiHubOverlayTokenRoute
+    }
     '/api/ar/admin/assets/$id/complete': {
       id: '/api/ar/admin/assets/$id/complete'
       path: '/complete'
@@ -841,12 +1572,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAdminAssetsIdCompleteRouteImport
       parentRoute: typeof ApiArAdminAssetsIdRoute
     }
+    '/api/hub/files/$creatorId/$fileId/complete': {
+      id: '/api/hub/files/$creatorId/$fileId/complete'
+      path: '/complete'
+      fullPath: '/api/hub/files/$creatorId/$fileId/complete'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRouteImport
+      parentRoute: typeof ApiHubFilesCreatorIdFileIdRoute
+    }
     '/api/ar/admin/assets/$id/chunks/$n': {
       id: '/api/ar/admin/assets/$id/chunks/$n'
       path: '/chunks/$n'
       fullPath: '/api/ar/admin/assets/$id/chunks/$n'
       preLoaderRoute: typeof ApiArAdminAssetsIdChunksNRouteImport
       parentRoute: typeof ApiArAdminAssetsIdRoute
+    }
+    '/api/hub/files/$creatorId/$fileId/chunks/$n': {
+      id: '/api/hub/files/$creatorId/$fileId/chunks/$n'
+      path: '/chunks/$n'
+      fullPath: '/api/hub/files/$creatorId/$fileId/chunks/$n'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdChunksNRouteImport
+      parentRoute: typeof ApiHubFilesCreatorIdFileIdRoute
     }
   }
 }
@@ -865,12 +1610,29 @@ const AdminBuilderRouteWithChildren = AdminBuilderRoute._addFileChildren(
   AdminBuilderRouteChildren,
 )
 
+interface AdminShelvesRouteChildren {
+  AdminShelvesSlugRoute: typeof AdminShelvesSlugRoute
+  AdminShelvesIndexRoute: typeof AdminShelvesIndexRoute
+}
+
+const AdminShelvesRouteChildren: AdminShelvesRouteChildren = {
+  AdminShelvesSlugRoute: AdminShelvesSlugRoute,
+  AdminShelvesIndexRoute: AdminShelvesIndexRoute,
+}
+
+const AdminShelvesRouteWithChildren = AdminShelvesRoute._addFileChildren(
+  AdminShelvesRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
+  AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
+  AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -878,7 +1640,10 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBuilderRoute: AdminBuilderRouteWithChildren,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
+  AdminShelvesRoute: AdminShelvesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
+  AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
+  AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -893,6 +1658,34 @@ const TechnologyRouteChildren: TechnologyRouteChildren = {
 
 const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
   TechnologyRouteChildren,
+)
+
+interface CreatorHubAppRouteChildren {
+  CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
+  CreatorHubAppArtworkRoute: typeof CreatorHubAppArtworkRoute
+  CreatorHubAppDashboardRoute: typeof CreatorHubAppDashboardRoute
+  CreatorHubAppEarningsRoute: typeof CreatorHubAppEarningsRoute
+  CreatorHubAppExperiencesRoute: typeof CreatorHubAppExperiencesRoute
+  CreatorHubAppLaunchKitRoute: typeof CreatorHubAppLaunchKitRoute
+  CreatorHubAppLiveRoute: typeof CreatorHubAppLiveRoute
+  CreatorHubAppProductsProductIdRoute: typeof CreatorHubAppProductsProductIdRoute
+  CreatorHubAppProductsIndexRoute: typeof CreatorHubAppProductsIndexRoute
+}
+
+const CreatorHubAppRouteChildren: CreatorHubAppRouteChildren = {
+  CreatorHubAppAccountRoute: CreatorHubAppAccountRoute,
+  CreatorHubAppArtworkRoute: CreatorHubAppArtworkRoute,
+  CreatorHubAppDashboardRoute: CreatorHubAppDashboardRoute,
+  CreatorHubAppEarningsRoute: CreatorHubAppEarningsRoute,
+  CreatorHubAppExperiencesRoute: CreatorHubAppExperiencesRoute,
+  CreatorHubAppLaunchKitRoute: CreatorHubAppLaunchKitRoute,
+  CreatorHubAppLiveRoute: CreatorHubAppLiveRoute,
+  CreatorHubAppProductsProductIdRoute: CreatorHubAppProductsProductIdRoute,
+  CreatorHubAppProductsIndexRoute: CreatorHubAppProductsIndexRoute,
+}
+
+const CreatorHubAppRouteWithChildren = CreatorHubAppRoute._addFileChildren(
+  CreatorHubAppRouteChildren,
 )
 
 interface RobloxPortalRouteChildren {
@@ -927,6 +1720,36 @@ const RobloxPortalRouteWithChildren = RobloxPortalRoute._addFileChildren(
   RobloxPortalRouteChildren,
 )
 
+interface ApiHubFilesCreatorIdFileIdRouteChildren {
+  ApiHubFilesCreatorIdFileIdCompleteRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRoute
+  ApiHubFilesCreatorIdFileIdChunksNRoute: typeof ApiHubFilesCreatorIdFileIdChunksNRoute
+}
+
+const ApiHubFilesCreatorIdFileIdRouteChildren: ApiHubFilesCreatorIdFileIdRouteChildren =
+  {
+    ApiHubFilesCreatorIdFileIdCompleteRoute:
+      ApiHubFilesCreatorIdFileIdCompleteRoute,
+    ApiHubFilesCreatorIdFileIdChunksNRoute:
+      ApiHubFilesCreatorIdFileIdChunksNRoute,
+  }
+
+const ApiHubFilesCreatorIdFileIdRouteWithChildren =
+  ApiHubFilesCreatorIdFileIdRoute._addFileChildren(
+    ApiHubFilesCreatorIdFileIdRouteChildren,
+  )
+
+interface ApiHubFilesRouteChildren {
+  ApiHubFilesCreatorIdFileIdRoute: typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+}
+
+const ApiHubFilesRouteChildren: ApiHubFilesRouteChildren = {
+  ApiHubFilesCreatorIdFileIdRoute: ApiHubFilesCreatorIdFileIdRouteWithChildren,
+}
+
+const ApiHubFilesRouteWithChildren = ApiHubFilesRoute._addFileChildren(
+  ApiHubFilesRouteChildren,
+)
+
 interface ApiArAdminAssetsIdRouteChildren {
   ApiArAdminAssetsIdCompleteRoute: typeof ApiArAdminAssetsIdCompleteRoute
   ApiArAdminAssetsIdChunksNRoute: typeof ApiArAdminAssetsIdChunksNRoute
@@ -951,6 +1774,28 @@ const ApiArAdminAssetsRouteChildren: ApiArAdminAssetsRouteChildren = {
 const ApiArAdminAssetsRouteWithChildren =
   ApiArAdminAssetsRoute._addFileChildren(ApiArAdminAssetsRouteChildren)
 
+interface ApiHubAuthDiscordRouteChildren {
+  ApiHubAuthDiscordCallbackRoute: typeof ApiHubAuthDiscordCallbackRoute
+}
+
+const ApiHubAuthDiscordRouteChildren: ApiHubAuthDiscordRouteChildren = {
+  ApiHubAuthDiscordCallbackRoute: ApiHubAuthDiscordCallbackRoute,
+}
+
+const ApiHubAuthDiscordRouteWithChildren =
+  ApiHubAuthDiscordRoute._addFileChildren(ApiHubAuthDiscordRouteChildren)
+
+interface ApiHubOverlayTokenRouteChildren {
+  ApiHubOverlayTokenImageRoute: typeof ApiHubOverlayTokenImageRoute
+}
+
+const ApiHubOverlayTokenRouteChildren: ApiHubOverlayTokenRouteChildren = {
+  ApiHubOverlayTokenImageRoute: ApiHubOverlayTokenImageRoute,
+}
+
+const ApiHubOverlayTokenRouteWithChildren =
+  ApiHubOverlayTokenRoute._addFileChildren(ApiHubOverlayTokenRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivatedRetailRoute: ActivatedRetailRoute,
@@ -963,14 +1808,33 @@ const rootRouteChildren: RootRouteChildren = {
   LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  CreatorHubAppRoute: CreatorHubAppRouteWithChildren,
+  CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
+  CreatorHubJoinRoute: CreatorHubJoinRoute,
+  CreatorHubOnboardingRoute: CreatorHubOnboardingRoute,
+  CreatorHubResetPasswordRoute: CreatorHubResetPasswordRoute,
+  CreatorHubSignInRoute: CreatorHubSignInRoute,
+  CreatorHubTermsRoute: CreatorHubTermsRoute,
+  CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
+  GoCodeRoute: GoCodeRoute,
+  OverlayTokenRoute: OverlayTokenRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
+  ShelfSlugRoute: ShelfSlugRoute,
   XSlugRoute: XSlugRoute,
+  CreatorHubIndexRoute: CreatorHubIndexRoute,
+  ShelfIndexRoute: ShelfIndexRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
+  ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
+  ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
+  ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
+  ApiHubDevSeedRoute: ApiHubDevSeedRoute,
+  ApiHubOverlayTokenRoute: ApiHubOverlayTokenRouteWithChildren,
+  ApiHubWebhooksShopifyRoute: ApiHubWebhooksShopifyRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
 }
 export const routeTree = rootRouteImport
