@@ -316,3 +316,48 @@ export function TimeAgo({ ts, className }: { ts: number; className?: string }) {
     </time>
   );
 }
+
+/** A bento card: a small title row with one action, and a body that fills the height. */
+export function Card({
+  title,
+  icon: Icon,
+  action,
+  children,
+  className,
+  bodyClassName,
+  labelledBy,
+}: {
+  title: ReactNode;
+  icon?: LucideIcon;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+  bodyClassName?: string;
+  labelledBy?: string;
+}) {
+  return (
+    <section
+      aria-labelledby={labelledBy}
+      className={cn(
+        "flex min-w-0 flex-col rounded-xl border border-border bg-gradient-to-b from-white/[0.035] to-white/[0.01] p-4 sm:p-5",
+        className,
+      )}
+    >
+      <div className="flex min-h-8 items-center justify-between gap-3">
+        <h2
+          id={labelledBy}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
+        >
+          {Icon ? <Icon className="size-4" aria-hidden /> : null}
+          {title}
+        </h2>
+        {action}
+      </div>
+      <div className={cn("mt-3 flex min-h-0 flex-1 flex-col", bodyClassName)}>{children}</div>
+    </section>
+  );
+}
+
+/** Small "View …" link for a card's corner. */
+export const cardActionClass =
+  "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5";

@@ -4,10 +4,11 @@
  * Desktop: a left sidebar (the shadcn sidebar, like the Roblox portal) and a
  * slim top bar. Phones: no sidebar at all — a bottom tab bar with the four
  * places a creator goes most, and "More" for the rest. The top bar on both
- * carries the page title, the "Needs you" count and the account menu.
+ * carries the page title, the manager chip, the "Needs you" button (it opens
+ * the Needs-you drawer) and the account menu.
  */
-import { useState, type ReactNode } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { useState, type MouseEvent, type ReactNode } from "react";
+import { Link, useRouter, useRouterState } from "@tanstack/react-router";
 import {
   Bell,
   BriefcaseBusiness,
@@ -17,8 +18,11 @@ import {
   ImageUp,
   LifeBuoy,
   LogOut,
+  Mail,
   Menu,
+  MessageCircle,
   Package,
+  Radio,
   Sparkles,
   UserRound,
   type LucideIcon,
@@ -33,6 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Sheet,
   SheetContent,
@@ -59,7 +64,9 @@ import { signOut } from "@/lib/hub/auth.functions";
 import { CREATOR_STATUS, HUB, type CreatorStatus } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
+import { NeedsYouProvider, useNeedsYou } from "./needs-you";
 import { Monogram } from "./ui";
+import type { ActionItem } from "./workspace";
 
 type NavTo =
   | "/creator-hub/dashboard"
@@ -67,10 +74,11 @@ type NavTo =
   | "/creator-hub/artwork"
   | "/creator-hub/experiences"
   | "/creator-hub/launch-kit"
+  | "/creator-hub/live"
   | "/creator-hub/earnings"
   | "/creator-hub/account";
 
-type NavItem = { to: NavTo; label: string; icon: LucideIcon };
+type NavItem = { to: NavTo; label: string; icon: LucideIcon; badge?: string };
 
 const NAV: NavItem[] = [
   { to: "/creator-hub/dashboard", label: "Home", icon: House },
@@ -78,6 +86,7 @@ const NAV: NavItem[] = [
   { to: "/creator-hub/artwork", label: "Artwork", icon: ImageUp },
   { to: "/creator-hub/experiences", label: "Experiences", icon: Sparkles },
   { to: "/creator-hub/launch-kit", label: "Launch kit", icon: BriefcaseBusiness },
+  { to: "/creator-hub/live", label: "Go live", icon: Radio, badge: "New" },
   { to: "/creator-hub/earnings", label: "Earnings", icon: Coins },
   { to: "/creator-hub/account", label: "Account", icon: UserRound },
 ];
@@ -88,12 +97,53 @@ const TABS: NavTo[] = [
   "/creator-hub/launch-kit",
   "/creator-hub/earnings",
 ];
-const MORE: NavTo[] = ["/creator-hub/artwork", "/creator-hub/experiences", "/creator-hub/account"];
+const MORE: NavTo[] = [
+  "/creator-hub/live",
+  "/creator-hub/artwork",
+  "/creator-hub/experiences",
+  "/creator-hub/account",
+];
 const byTo = (to: NavTo) => NAV.find((n) => n.to === to)!;
 
 function useCurrent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return NAV.find((n) => pathname === n.to || pathname.startsWith(`${n.to}/`)) ?? null;
+}
+
+/**
+ * A link to any hub path. Uses the router when it knows the path (client-side
+ * navigation) and is a plain link otherwise — /creator-hub/live is built by
+ * another page owner, so it isn't in this file's route types.
+ */
+export function HubLink({
+  to,
+  className,
+  children,
+  onNavigate,
+  ...rest
+}: {
+  to: string;
+  className?: string;
+  children: ReactNode;
+  onNavigate?: () => void;
+  "aria-current"?: "page" | undefined;
+}) {
+  const router = useRouter();
+  return (
+    <a
+      href={to}
+      className={className}
+      {...rest}
+      onClick={(e: MouseEvent<HTMLAnchorElement>) => {
+        onNavigate?.();
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+        e.preventDefault();
+        void router.navigate({ href: to });
+      }}
+    >
+      {children}
+    </a>
+  );
 }
 
 async function doSignOut() {
@@ -115,18 +165,43 @@ export type ShellCreator = {
   avatar: string | null;
 };
 
+export type ShellManager = { name: string; email: string; discord: string } | null;
+
 export function HubAppShell({
   creator,
+  manager,
+  needs,
+  children,
+}: {
+  creator: ShellCreator;
+  manager: ShellManager;
+  needs: ActionItem[];
+  children: ReactNode;
+}) {
+  return (
+    <NeedsYouProvider items={needs}>
+      <Shell creator={creator} manager={manager} needsCount={needs.length}>
+        {children}
+      </Shell>
+    </NeedsYouProvider>
+  );
+}
+
+function Shell({
+  creator,
+  manager,
   needsCount,
   children,
 }: {
   creator: ShellCreator;
+  manager: ShellManager;
   needsCount: number;
   children: ReactNode;
 }) {
   const current = useCurrent();
   const [moreOpen, setMoreOpen] = useState(false);
   const name = creator.displayName || creator.email;
+  const loading = useRouterState({ select: (s) => s.status === "pending" });
 
   return (
     <SidebarProvider>
@@ -136,6 +211,15 @@ export function HubAppShell({
       >
         Skip to content
       </a>
+
+      {/* Route progress: a thin bar while a page's data loads. */}
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-primary transition-[opacity,transform] duration-500",
+          loading ? "scale-x-75 opacity-100" : "scale-x-100 opacity-0",
+        )}
+      />
 
       <Sidebar collapsible="icon" className="border-r border-border" aria-label="Creator Hub">
         <SidebarHeader className="border-b border-border">
@@ -154,15 +238,22 @@ export function HubAppShell({
                         tooltip={item.label}
                         className="h-9"
                       >
-                        <Link to={item.to}>
+                        <HubLink
+                          to={item.to}
+                          aria-current={current?.to === item.to ? "page" : undefined}
+                        >
                           <item.icon aria-hidden />
                           <span>{item.label}</span>
-                        </Link>
+                        </HubLink>
                       </SidebarMenuButton>
                       {item.to === "/creator-hub/dashboard" && needsCount > 0 ? (
                         <SidebarMenuBadge className="rounded-full bg-amber-400/15 text-amber-300">
                           {needsCount}
                           <span className="sr-only"> things need you</span>
+                        </SidebarMenuBadge>
+                      ) : item.badge ? (
+                        <SidebarMenuBadge className="rounded-full bg-accent/15 text-[10px] text-[oklch(0.82_0.14_350)]">
+                          {item.badge}
                         </SidebarMenuBadge>
                       ) : null}
                     </SidebarMenuItem>
@@ -210,6 +301,7 @@ export function HubAppShell({
               {current?.label ?? "Creator Hub"}
             </span>
           </div>
+          <ManagerChip manager={manager} approved={creator.status === "approved"} />
           <NeedsYouButton count={needsCount} />
           <AccountMenu name={name} email={creator.email} avatar={creator.avatar} />
         </header>
@@ -231,7 +323,7 @@ export function HubAppShell({
             const active = current?.to === to;
             return (
               <li key={to}>
-                <Link
+                <HubLink
                   to={to}
                   aria-current={active ? "page" : undefined}
                   className={cn(
@@ -242,7 +334,7 @@ export function HubAppShell({
                   <span className="relative">
                     <item.icon className="size-5" aria-hidden />
                     {to === "/creator-hub/dashboard" && needsCount > 0 ? (
-                      <span className="absolute -top-1.5 -right-2.5 grid grid-cols-1 h-4 min-w-4 place-items-center rounded-full bg-amber-400 px-1 text-[10px] leading-none font-semibold text-background">
+                      <span className="absolute -top-1.5 -right-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-amber-400 px-1 text-[10px] leading-none font-semibold text-background">
                         {needsCount}
                         <span className="sr-only"> things need you</span>
                       </span>
@@ -255,7 +347,7 @@ export function HubAppShell({
                       className="absolute top-0 h-0.5 w-8 rounded-full bg-primary"
                     />
                   ) : null}
-                </Link>
+                </HubLink>
               </li>
             );
           })}
@@ -304,9 +396,9 @@ export function HubAppShell({
               const item = byTo(to);
               return (
                 <li key={to}>
-                  <Link
+                  <HubLink
                     to={to}
-                    onClick={() => setMoreOpen(false)}
+                    onNavigate={() => setMoreOpen(false)}
                     className={cn(
                       "flex h-12 items-center gap-3 rounded-lg px-3 text-sm font-medium hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                       current?.to === to && "bg-white/5 text-primary",
@@ -314,7 +406,12 @@ export function HubAppShell({
                   >
                     <item.icon className="size-5 text-muted-foreground" aria-hidden />
                     {item.label}
-                  </Link>
+                    {item.badge ? (
+                      <span className="ml-auto rounded-full bg-accent/15 px-2 py-0.5 text-[10px] text-[oklch(0.82_0.14_350)]">
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </HubLink>
                 </li>
               );
             })}
@@ -348,7 +445,7 @@ function LogoMark() {
   return (
     <span
       aria-hidden
-      className="grid grid-cols-1 size-8 shrink-0 place-items-center rounded-md"
+      className="grid size-8 shrink-0 place-items-center rounded-md"
       style={{ background: "var(--gradient-ember)" }}
     >
       <span className="size-3 rounded-full bg-background/85" />
@@ -415,11 +512,89 @@ function StatusDot({ status }: { status: CreatorStatus }) {
   );
 }
 
-function NeedsYouButton({ count }: { count: number }) {
+/** "Your manager": a chip that opens their card. */
+function ManagerChip({ manager, approved }: { manager: ShellManager; approved: boolean }) {
+  const label = manager?.name || "Your manager";
   return (
-    <Link
-      to="/creator-hub/dashboard"
-      hash="needs-you"
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="flex h-9 items-center gap-2 rounded-full border border-border py-0.5 pr-0.5 pl-0.5 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:pr-3"
+          aria-label={manager ? `Your manager: ${label}` : "Your manager"}
+        >
+          {manager ? (
+            <Monogram name={label} className="size-7 text-[10px]" />
+          ) : (
+            <span className="grid size-7 place-items-center rounded-full border border-dashed border-border">
+              <LifeBuoy className="size-3.5" aria-hidden />
+            </span>
+          )}
+          <span className="hidden lg:inline">Your manager</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-4">
+        {manager ? (
+          <>
+            <div className="flex items-center gap-3">
+              <Monogram name={label} className="size-10 text-sm" />
+              <div className="min-w-0">
+                <div className="truncate font-medium">{label}</div>
+                <div className="text-xs text-muted-foreground">Your manager at MEDIALIFE</div>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              Questions about a product, a date or a payout? Message them on a product, or reach out
+              directly.
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-2">
+              {manager.email ? (
+                <a
+                  href={`mailto:${manager.email}`}
+                  className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="truncate">{manager.email}</span>
+                </a>
+              ) : null}
+              {manager.discord ? (
+                <div className="flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm">
+                  <MessageCircle className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="sr-only">Discord:</span>
+                  <span className="truncate">{manager.discord}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">Discord</span>
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="font-medium">Your manager</div>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {approved
+                ? "We're assigning your manager now. They'll introduce themselves by email."
+                : "Your manager will be assigned when you're approved."}
+            </p>
+            <a
+              href={`mailto:${HUB.supportEmail}`}
+              className="mt-3 flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm hover:border-primary/50"
+            >
+              <Mail className="size-4 text-muted-foreground" aria-hidden /> {HUB.supportEmail}
+            </a>
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function NeedsYouButton({ count }: { count: number }) {
+  const { open } = useNeedsYou();
+  return (
+    <button
+      type="button"
+      onClick={open}
+      aria-haspopup="dialog"
       className={cn(
         "inline-flex h-9 items-center gap-2 rounded-full border px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         count > 0
@@ -435,13 +610,13 @@ function NeedsYouButton({ count }: { count: number }) {
       <Bell className="size-4" aria-hidden />
       {count > 0 ? (
         <>
-          <span className="tabular-nums font-semibold">{count}</span>
+          <span className="font-semibold tabular-nums">{count}</span>
           <span className="hidden sm:inline">need{count === 1 ? "s" : ""} you</span>
         </>
       ) : (
         <span className="hidden sm:inline">All clear</span>
       )}
-    </Link>
+    </button>
   );
 }
 

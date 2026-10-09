@@ -1,7 +1,10 @@
 /**
- * Daily scans as small bars. One series, so no legend; every bar has a hover
- * label and the whole thing has a text summary for screen readers.
+ * Daily scans as bars (recharts). One series, so no legend; the hover tooltip
+ * gives each day, and a text summary is there for screen readers.
  */
+import { Bar, BarChart, XAxis } from "recharts";
+
+import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 
 const label = (iso: string) =>
@@ -30,31 +33,46 @@ export function ScanBars({
   className?: string;
 }) {
   const data = lastDays(byDay, days);
-  const max = Math.max(1, ...data.map((d) => d.n));
   const total = data.reduce((s, d) => s + d.n, 0);
 
   return (
     <figure className={cn("m-0", className)}>
-      <div className="flex h-20 items-end gap-1" aria-hidden>
-        {data.map((d) => (
-          <div key={d.date} className="group relative flex h-full min-w-0 flex-1 items-end">
-            <div
-              className={cn(
-                "w-full rounded-t-[3px]",
-                d.n ? "bg-primary/80 group-hover:bg-primary" : "h-0.5 bg-white/10",
-              )}
-              style={d.n ? { height: `${Math.max(6, (d.n / max) * 100)}%` } : undefined}
-            />
-            <span className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 rounded-md border border-border bg-popover px-2 py-1 text-xs whitespace-nowrap shadow-lg group-hover:block">
-              {label(d.date)}: <span className="font-medium tabular-nums">{d.n}</span>
-            </span>
-          </div>
-        ))}
-      </div>
-      <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground" aria-hidden>
-        <span>{label(data[0].date)}</span>
-        <span>Today</span>
-      </div>
+      <ChartContainer
+        config={{ n: { label: "Scans", color: "var(--color-primary)" } }}
+        className="aspect-auto h-28 w-full"
+        aria-hidden
+      >
+        <BarChart data={data} margin={{ top: 4, right: 0, bottom: 0, left: 0 }} barCategoryGap={3}>
+          <XAxis
+            dataKey="date"
+            tickFormatter={label}
+            tickLine={false}
+            axisLine={false}
+            interval="preserveStartEnd"
+            minTickGap={40}
+            tick={{ fontSize: 11 }}
+          />
+          <ChartTooltip
+            cursor={{ fill: "oklch(1 0 0 / 5%)" }}
+            content={({ active, payload }) => {
+              const p =
+                active && payload?.[0] ? (payload[0].payload as { date: string; n: number }) : null;
+              return p ? (
+                <div className="rounded-lg border border-border bg-popover/95 px-3 py-1.5 text-xs shadow-xl">
+                  {label(p.date)}: <span className="font-medium tabular-nums">{p.n} scans</span>
+                </div>
+              ) : null;
+            }}
+          />
+          <Bar
+            dataKey="n"
+            fill="var(--color-n)"
+            radius={[4, 4, 0, 0]}
+            minPointSize={2}
+            isAnimationActive={false}
+          />
+        </BarChart>
+      </ChartContainer>
       <figcaption className="sr-only">
         {total} scans in the last {days} days.{" "}
         {data

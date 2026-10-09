@@ -96,7 +96,7 @@ export function StageTimeline({
                 ? "MEDIALIFE"
                 : s.owner;
         return (
-          <li key={s.id} className="relative flex gap-4 pb-6 last:pb-0">
+          <li key={s.id} className="relative flex gap-4 pb-4 last:pb-0">
             {!last ? (
               <span
                 aria-hidden
@@ -171,5 +171,66 @@ export function StageTimeline({
         );
       })}
     </ol>
+  );
+}
+
+/**
+ * Colour per stage: an ordinal blue ramp, dark to light as a product moves
+ * through the pipeline, and green once it's on sale. Ordered data gets an
+ * ordered ramp; the legend always names the stage, so colour is never alone.
+ */
+export const STAGE_COLORS: Record<StageId, string> = {
+  brief: "#184f95",
+  artwork: "#1c5cab",
+  approval: "#256abf",
+  sampling: "#2a78d6",
+  production: "#3987e5",
+  shipping: "#6da7ec",
+  live: "#34d399",
+};
+
+/** How many products sit in each stage, as one stacked bar with a legend. */
+export function StageDistribution({
+  stages,
+  className,
+}: {
+  stages: StageId[];
+  className?: string;
+}) {
+  const counts = STAGES.map((s) => ({ ...s, n: stages.filter((x) => x === s.id).length }));
+  const total = stages.length || 1;
+  return (
+    <figure className={cn("m-0", className)}>
+      <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full" aria-hidden>
+        {counts
+          .filter((c) => c.n)
+          .map((c) => (
+            <div
+              key={c.id}
+              title={`${c.name}: ${c.n}`}
+              className="h-full first:rounded-l-full last:rounded-r-full motion-safe:transition-[flex-grow] motion-safe:duration-700"
+              style={{ flexGrow: c.n / total, flexBasis: 0, background: STAGE_COLORS[c.id] }}
+            />
+          ))}
+      </div>
+      <figcaption>
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+          {counts.map((c) => (
+            <li
+              key={c.id}
+              className={cn("flex items-center gap-1.5", !c.n && "text-muted-foreground/60")}
+            >
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-[3px]"
+                style={{ background: c.n ? STAGE_COLORS[c.id] : "var(--color-border)" }}
+              />
+              <span>{c.name}</span>
+              <span className="font-medium tabular-nums">{c.n}</span>
+            </li>
+          ))}
+        </ul>
+      </figcaption>
+    </figure>
   );
 }

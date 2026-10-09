@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
 import {
   BadgeCheck,
   ChevronDown,
@@ -7,6 +7,11 @@ import {
   MailWarning,
   MessageCircle,
   ShieldCheck,
+  Truck,
+  Tv,
+  UserRound,
+  Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -18,6 +23,7 @@ import {
   type ChannelDraft,
 } from "@/components/hub/app/channel-editor";
 import { Page, PageHeader, Panel, Pill } from "@/components/hub/app/ui";
+import { ACCOUNT_SECTIONS, type AccountSection } from "@/components/hub/app/workspace";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
@@ -29,6 +35,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/creator-hub/_app/account")({
   validateSearch: z.object({
+    section: z.enum(ACCOUNT_SECTIONS).optional().catch(undefined),
     discord: z.string().max(40).optional().catch(undefined),
     error: z.string().max(40).optional().catch(undefined),
   }),
@@ -40,13 +47,13 @@ export const Route = createFileRoute("/creator-hub/_app/account")({
   component: Account,
 });
 
-const SECTIONS = [
-  { id: "profile", label: "Profile" },
-  { id: "channels", label: "Channels" },
-  { id: "contact", label: "Contact" },
-  { id: "shipping", label: "Shipping" },
-  { id: "payout", label: "Payout" },
-  { id: "security", label: "Security" },
+const SECTIONS: Array<{ id: AccountSection; label: string; icon: LucideIcon; hint: string }> = [
+  { id: "profile", label: "Profile", icon: UserRound, hint: "Name, country, what you make" },
+  { id: "channels", label: "Channels", icon: Tv, hint: "Where you publish" },
+  { id: "contact", label: "Contact", icon: MessageCircle, hint: "Discord, email, phone" },
+  { id: "shipping", label: "Shipping", icon: Truck, hint: "Where samples go" },
+  { id: "payout", label: "Payouts", icon: Wallet, hint: "How you get paid" },
+  { id: "security", label: "Security", icon: ShieldCheck, hint: "Email, password, sign-in" },
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -189,13 +196,22 @@ function Account() {
     if (!key) return;
     const r = DISCORD_RESULT[key];
     if (r) (r.ok ? toast.success : toast.error)(r.text);
-    void navigate({ search: {}, replace: true, resetScroll: false });
+    void navigate({ search: { section: "security" }, replace: true, resetScroll: false });
   }, [search.discord, search.error, navigate]);
 
   const status = CREATOR_STATUS[creator.status];
 
+  const section: AccountSection = search.section ?? "profile";
+  const current = SECTIONS.find((x) => x.id === section)!;
+  const go = (id: AccountSection) =>
+    navigate({
+      search: { section: id === "profile" ? undefined : id },
+      replace: true,
+      resetScroll: false,
+    });
+
   return (
-    <Page>
+    <Page className="lg:pt-8">
       <PageHeader
         title="Account"
         description="Your profile, how we reach you, where we send samples and how you get paid."
@@ -207,47 +223,86 @@ function Account() {
         }
       />
 
-      <div className="mt-8 grid grid-cols-1 gap-8 @5xl/inset:grid-cols-[11rem_minmax(0,1fr)]">
-        <nav
-          aria-label="Account sections"
-          className="@5xl/inset:sticky @5xl/inset:top-24 @5xl/inset:self-start"
-        >
-          <ul className="-mx-3 flex flex-wrap gap-x-1 @5xl/inset:mx-0 @5xl/inset:flex-col">
-            {SECTIONS.map((s) => (
-              <li key={s.id} className="shrink-0">
-                <a
-                  href={`#${s.id}`}
-                  className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  {s.label}
-                </a>
-              </li>
+      <div className="mt-6 grid grid-cols-1 gap-6 @4xl/inset:grid-cols-[13rem_minmax(0,1fr)]">
+        {/* Phones: a select. Desktop: a section list. */}
+        <div className="@4xl/inset:hidden">
+          <label htmlFor="account-section" className="sr-only">
+            Section
+          </label>
+          <select
+            id="account-section"
+            value={section}
+            onChange={(e) => go(e.target.value as AccountSection)}
+            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {SECTIONS.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.label} — {x.hint}
+              </option>
             ))}
+          </select>
+        </div>
+        <nav aria-label="Account sections" className="hidden @4xl/inset:block">
+          <ul className="sticky top-20 space-y-0.5">
+            {SECTIONS.map((x) => {
+              const on = x.id === section;
+              return (
+                <li key={x.id}>
+                  <Link
+                    to="/creator-hub/account"
+                    search={{ section: x.id === "profile" ? undefined : x.id }}
+                    replace
+                    resetScroll={false}
+                    aria-current={on ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                      on
+                        ? "bg-white/[0.06] text-foreground"
+                        : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground",
+                    )}
+                  >
+                    <x.icon className={cn("size-4", on && "text-primary")} aria-hidden />
+                    <span className="min-w-0">
+                      <span className="block font-medium">{x.label}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{x.hint}</span>
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
-        <div className="min-w-0 space-y-6">
-          <ProfileCard creator={creator} />
-          <ChannelsCard creator={creator} />
-          <ContactCard creator={creator} account={account} />
-          <ShippingCard creator={creator} />
-          <PayoutCard creator={creator} />
-          <SecurityCard account={account} />
-          <Panel className="flex flex-wrap items-center justify-between gap-3 p-5">
-            <div className="text-sm">
-              <div className="font-medium">Sign out</div>
-              <p className="text-muted-foreground">Signs you out on this device.</p>
+        <div
+          key={section}
+          className="min-w-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
+        >
+          <h2 className="sr-only">{current.label}</h2>
+          {section === "profile" ? <ProfileCard creator={creator} /> : null}
+          {section === "channels" ? <ChannelsCard creator={creator} /> : null}
+          {section === "contact" ? <ContactCard creator={creator} account={account} /> : null}
+          {section === "shipping" ? <ShippingCard creator={creator} /> : null}
+          {section === "payout" ? <PayoutCard creator={creator} /> : null}
+          {section === "security" ? (
+            <div className="space-y-4">
+              <SecurityCard account={account} />
+              <Panel className="flex flex-wrap items-center justify-between gap-3 p-5">
+                <div className="text-sm">
+                  <div className="font-medium">Sign out</div>
+                  <p className="text-muted-foreground">Signs you out on this device.</p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await signOut();
+                    window.location.assign("/creator-hub/sign-in");
+                  }}
+                >
+                  <LogOut aria-hidden /> Sign out
+                </Button>
+              </Panel>
             </div>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                await signOut();
-                window.location.assign("/creator-hub/sign-in");
-              }}
-            >
-              <LogOut aria-hidden /> Sign out
-            </Button>
-          </Panel>
+          ) : null}
         </div>
       </div>
     </Page>

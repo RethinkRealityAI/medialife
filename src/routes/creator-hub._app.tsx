@@ -44,7 +44,8 @@ function HubAppLayout() {
 
   return (
     <HubAppShell
-      needsCount={items.length}
+      needs={items}
+      manager={ws.manager}
       creator={{
         displayName: ws.creator.profile.displayName,
         status: ws.creator.status,

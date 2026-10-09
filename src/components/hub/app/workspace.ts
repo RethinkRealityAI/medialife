@@ -7,7 +7,7 @@ import { getRouteApi } from "@tanstack/react-router";
 
 import type { getHubSession } from "@/lib/hub/auth.functions";
 import type { getWorkspace } from "@/lib/hub/creator.functions";
-import { SKUS, fileUrl, stageIndex, type Product } from "@/lib/hub/model";
+import { SKUS, fileUrl, stageIndex, type Product, type StageId } from "@/lib/hub/model";
 
 export type Workspace = Awaited<ReturnType<typeof getWorkspace>>;
 export type WsProduct = Workspace["products"][number];
@@ -28,6 +28,13 @@ export function productImage(p: Pick<Product, "creatorId" | "imageFileId" | "sku
 
 export const latestProof = (p: Pick<Product, "proofs">) => p.proofs[p.proofs.length - 1] ?? null;
 
+/** The image of a product's latest proof, when it's an image file in the workspace. */
+export function proofImage(ws: Pick<Workspace, "files">, p: Pick<Product, "proofs">) {
+  const proof = latestProof(p);
+  const f = proof ? ws.files.find((x) => x.id === proof.fileId) : null;
+  return f && /^image\//.test(f.mime) ? fileUrl(f) : null;
+}
+
 /** Waiting on you first, then everything in production (furthest along first), then live. */
 export function pipelineOrder(a: WsProduct, b: WsProduct) {
   const rank = (p: WsProduct) =>
@@ -43,10 +50,48 @@ export function pipelineOrder(a: WsProduct, b: WsProduct) {
    Needs you
    --------------------------------------------------------------------------- */
 
+/** The tabs on a product's page, carried in ?tab=. */
+export const PRODUCT_TABS = [
+  "overview",
+  "design",
+  "experience",
+  "kit",
+  "sales",
+  "messages",
+] as const;
+export type ProductTab = (typeof PRODUCT_TABS)[number];
+
+/** The sections of the account page, carried in ?section=. */
+export const ACCOUNT_SECTIONS = [
+  "profile",
+  "channels",
+  "contact",
+  "shipping",
+  "payout",
+  "security",
+] as const;
+export type AccountSection = (typeof ACCOUNT_SECTIONS)[number];
+
+/** Pipeline phases, for the product board and filters. */
+export const PHASES = [
+  { id: "design", label: "In design", stages: ["brief", "artwork", "approval"] },
+  { id: "making", label: "Being made", stages: ["sampling", "production", "shipping"] },
+  { id: "live", label: "On sale", stages: ["live"] },
+] as const satisfies ReadonlyArray<{ id: string; label: string; stages: readonly StageId[] }>;
+export type PhaseId = (typeof PHASES)[number]["id"];
+export const phaseOf = (stage: StageId): PhaseId =>
+  PHASES.find((ph) => (ph.stages as readonly StageId[]).includes(stage))!.id;
+
 export type ActionLink =
-  | { to: "/creator-hub/products/$productId"; productId: string; hash?: string }
-  | { to: "/creator-hub/experiences" | "/creator-hub/artwork"; hash?: string }
-  | { to: "/creator-hub/account"; hash?: string };
+  | {
+      to: "/creator-hub/products/$productId";
+      productId: string;
+      tab?: ProductTab;
+      review?: boolean;
+    }
+  | { to: "/creator-hub/experiences"; preview?: string }
+  | { to: "/creator-hub/artwork" }
+  | { to: "/creator-hub/account"; section?: AccountSection };
 
 export type ActionItem = {
   id: string;
@@ -57,6 +102,8 @@ export type ActionItem = {
   /** Absent for actions that run in place (resend the verification email). */
   link?: ActionLink;
   image?: string;
+  /** The product this item is about, if any. */
+  productId?: string;
 };
 
 /** Everything waiting on the creator, most important first. */
@@ -73,8 +120,14 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
         title: `Approve the design for ${p.name}`,
         body: `Version ${proof.version} is ready. Nothing is made until you approve it.`,
         cta: "Review design",
-        link: { to: "/creator-hub/products/$productId", productId: p.id, hash: "approval" },
-        image: productImage(p),
+        link: {
+          to: "/creator-hub/products/$productId",
+          productId: p.id,
+          tab: "design",
+          review: true,
+        },
+        image: proofImage(ws, p) ?? productImage(p),
+        productId: p.id,
       });
     } else if (p.waitingOn === "creator" && p.stage !== "live") {
       items.push({
@@ -88,6 +141,7 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
             ? { to: "/creator-hub/artwork" }
             : { to: "/creator-hub/products/$productId", productId: p.id },
         image: productImage(p),
+        productId: p.id,
       });
     }
   }
@@ -100,7 +154,7 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
         title: `Try “${e.name}” before launch`,
         body: "Your experience is ready for review. Open it on your phone and tell us what you think.",
         cta: "Review experience",
-        link: { to: "/creator-hub/experiences", hash: `exp-${e.id}` },
+        link: { to: "/creator-hub/experiences", preview: e.id },
       });
     }
   }
@@ -122,7 +176,7 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
       title: "Add your payout details",
       body: "Tell us where to send your earnings. It takes a minute: a PayPal or Wise email.",
       cta: "Add payout details",
-      link: { to: "/creator-hub/account", hash: "payout" },
+      link: { to: "/creator-hub/account", section: "payout" },
     });
   }
 
@@ -133,7 +187,7 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
       title: "Add a shipping address for samples",
       body: "We send you a physical sample of every product before it goes on sale.",
       cta: "Add address",
-      link: { to: "/creator-hub/account", hash: "shipping" },
+      link: { to: "/creator-hub/account", section: "shipping" },
     });
   }
 
