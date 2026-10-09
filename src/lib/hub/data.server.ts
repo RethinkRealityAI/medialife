@@ -277,6 +277,24 @@ export async function logActivity(
   return entry;
 }
 
+/** Marks a product's open to-dos of one kind as dealt with (e.g. a proof once it's decided). */
+export async function resolveActivity(
+  ns: HubNamespace,
+  creatorId: string,
+  productId: string,
+  kind: ActivityKind,
+) {
+  await (
+    await hubStore(ns)
+  ).update<Activity[]>(KEYS.activity(creatorId), (cur) =>
+    (cur ?? []).map((a) =>
+      a.actionable && a.productId === productId && a.kind === kind
+        ? { ...a, actionable: false }
+        : a,
+    ),
+  );
+}
+
 export async function listActivity(ns: HubNamespace, creatorId: string) {
   return (await (await hubStore(ns)).getJSON<Activity[]>(KEYS.activity(creatorId))) ?? [];
 }

@@ -288,7 +288,7 @@ export async function seedSampleCreator(ns: HubNamespace) {
             : "Printed QR on the back",
       },
       commerce: {
-        shopUrl: "https://shop.medialife.ai/",
+        shopUrl: p.stage === "live" ? "https://shop.medialife.ai/" : "",
         shopifyProductIds: [],
         skus: [`SAMPLE-${p.sku.toUpperCase()}-${products.length + 1}`],
       },

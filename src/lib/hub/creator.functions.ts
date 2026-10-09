@@ -14,6 +14,7 @@ import {
   listOrders,
   logActivity,
   postToThread,
+  resolveActivity,
   saveCreator,
   saveProduct,
 } from "./data.server";
@@ -324,6 +325,7 @@ export const decideProof = createServerFn({ method: "POST" })
           ? `Approved design v${latest.version}.${data.feedback ? `\n\n${data.feedback}` : ""}`
           : `Requested changes to v${latest.version}:\n\n${data.feedback}`,
     });
+    await resolveActivity(ns, creator.id, product.id, "proof");
     await logActivity(ns, creator.id, {
       kind: "decision",
       productId: product.id,
