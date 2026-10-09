@@ -334,7 +334,7 @@ export type CreatorInterests = {
   timing: "asap" | "1-3-months" | "3-6-months" | "exploring";
   hasExistingMerch: boolean;
   existingMerchUrl: string;
-  /** What the experience could unlock, in their words: a video, a game, a discount, a shout-out… */
+  /** What scanning should open, in their words: an AR moment, a 3D model, a video, a game, a reward… */
   experienceIdeas: string;
   notes: string;
 };
@@ -495,12 +495,13 @@ export type Product = {
   updatedAt: number;
 };
 
-export type ExperienceKind = "ar" | "game" | "video" | "unlock" | "web";
+export type ExperienceKind = "ar" | "model" | "video" | "game" | "unlock" | "web";
 
 export const EXPERIENCE_KINDS: Record<ExperienceKind, string> = {
   ar: "AR experience",
+  model: "3D model",
+  video: "Video / video overlay",
   game: "Mini-game",
-  video: "Exclusive video",
   unlock: "Reward / unlock",
   web: "Web experience",
 };

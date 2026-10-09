@@ -43,7 +43,7 @@ function Experiences() {
     <Page className="lg:pt-8">
       <PageHeader
         title="Experiences"
-        description="What fans see when they scan your merch: AR, a mini-game, an exclusive video or a reward."
+        description="What fans see when they scan your merch: an AR moment, a 3D model, a video, a game or a reward."
       />
 
       <ol

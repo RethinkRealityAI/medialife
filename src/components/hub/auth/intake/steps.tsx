@@ -954,7 +954,7 @@ export function StepProducts({ form, set, errors }: StepProps) {
         value={form.experienceIdeas}
         onChange={(v) => set({ experienceIdeas: v })}
         max={LIMITS.experienceIdeas}
-        placeholder="e.g. Scan the tee to play a 60-second parkour run as my character — top scores get a shout-out on stream."
+        placeholder="e.g. Scan the tee and my character pops out in 3D, or unlock a behind-the-scenes video — the first 500 scans get a shout-out on stream."
       />
 
       <CountedTextarea

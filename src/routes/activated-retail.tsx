@@ -92,7 +92,7 @@ function Hero() {
           <div className="lg:col-span-4">
             <p className="text-muted-foreground text-lg">
               A branded retail fixture where every product opens a digital experience. Fans tap,
-              play and unlock. You see every scan.
+              scan and unlock. You see every scan.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
@@ -167,12 +167,12 @@ const STEPS = [
     b: "Your IP on lit towers, a header, a video wall and a hero screen. Modular, so it travels.",
   },
   {
-    t: "Fans tap, play, unlock",
-    b: "One tap opens a game, an AR moment or a reward in the browser. Nothing to download.",
+    t: "Fans tap, scan, unlock",
+    b: "One tap opens an AR moment, a 3D model, a video, a game or a reward in the browser. Nothing to download.",
   },
   {
     t: "You see every scan",
-    b: "A live dashboard reports scans, plays and sales by product, place and hour.",
+    b: "A live dashboard reports scans, engagement and sales by product, place and hour.",
   },
 ];
 function HowItWorks() {
@@ -336,7 +336,7 @@ function Merch() {
           <div className="max-w-2xl">
             <div className={EYEBROW}>/ 03 — The activated merch</div>
             <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-              Real drops on the shelf. <span className="ember-text">Every one plays back.</span>
+              Real drops on the shelf. <span className="ember-text">Every one comes alive.</span>
             </h2>
             <p className="mt-5 text-muted-foreground">
               Three are in our shop today. The rest are formats we produce for your IP.

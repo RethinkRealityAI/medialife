@@ -176,7 +176,7 @@ const VALUE_POINTS = [
   },
   {
     title: "Fans scan, it comes alive",
-    body: "AR, a mini-game or an exclusive video opens in the phone browser. No app.",
+    body: "An AR moment, a 3D model, a video or a game opens in the phone browser. No app.",
   },
   {
     title: "Every stage, order and payout",
@@ -206,7 +206,7 @@ export function ShowcasePanel() {
           {HUB.program}
         </div>
         <p className="mt-5 text-3xl leading-[1.05] font-medium tracking-tight text-balance xl:text-4xl">
-          Merch your fans can <span className="ember-text">play.</span>
+          Merch your fans can <span className="ember-text">experience.</span>
         </p>
 
         <div className="relative mt-8 grid grid-cols-3 gap-3">

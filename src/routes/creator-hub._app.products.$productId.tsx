@@ -819,8 +819,8 @@ function ExperienceTab({ detail: d }: { detail: Detail }) {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            The experience is chosen in the brief: an AR moment, a mini-game, an exclusive video or
-            a reward. It'll be linked here once it's agreed.
+            The experience is chosen in the brief: an AR moment, a 3D model, a video, a game or a
+            reward. It'll be linked here once it's agreed.
           </p>
         )}
       </Card>

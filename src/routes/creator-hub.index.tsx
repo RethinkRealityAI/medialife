@@ -120,11 +120,12 @@ function Hero({ join, invited }: { join: string; invited: boolean }) {
               </span>
             </div>
             <h1 className="mt-7 text-[2.6rem] sm:text-6xl lg:text-[4.4rem] font-medium tracking-tight leading-[0.98] text-balance">
-              Merch your fans can <span className="ember-text">play.</span>
+              Merch your fans can <span className="ember-text">experience.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              T-shirts, keychains and stickers that open a game, an AR moment or a reward when fans
-              scan them. We design, make and ship it with you. You watch it all in the hub.
+              T-shirts, keychains and stickers that come alive when fans scan them: an AR moment, a
+              3D model, a video, a game or a reward. We design, make and ship it with you. You watch
+              it all in the hub.
             </p>
             <div className="mt-8">
               <Ctas join={join} />
@@ -355,7 +356,7 @@ function FauxQr({ className = "" }: { className?: string }) {
 
 /* ─────────────────────────── WHY IT'S DIFFERENT ─────────────────────────── */
 const DIFFERENT = [
-  { t: "Every product plays", b: "Each one unlocks an experience, so fans come back to it." },
+  { t: "Every product comes alive", b: "Each one unlocks an experience, so fans come back to it." },
   { t: "No inventory to buy", b: "We handle production, fulfilment and customer service." },
   { t: "Nothing hidden", b: "Every stage, every order and your cut, live in the hub." },
   { t: "Ready to promote", b: "QR codes, links, NFC, posters and social assets for launch." },
@@ -495,7 +496,7 @@ const FEATURES: { t: string; b: string; icon: LucideIcon }[] = [
   },
   {
     t: "Experiences",
-    b: "Preview the game, AR moment or reward your merch unlocks before fans ever see it.",
+    b: "Preview the AR moment, 3D model, video or game your merch unlocks before fans ever see it.",
     icon: Sparkles,
   },
   {
@@ -742,7 +743,7 @@ function FinalCta({ join }: { join: string }) {
       />
       <div className={`relative ${WRAP} py-24 text-center`}>
         <h2 className="mx-auto max-w-4xl text-4xl md:text-6xl font-medium tracking-tight text-balance">
-          Make merch your fans can <span className="ember-text">play.</span>
+          Make merch your fans can <span className="ember-text">experience.</span>
         </h2>
         <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
           Apply in five minutes. We review every application and reply by email.

@@ -496,7 +496,7 @@ export const adminSaveExperience = createServerFn({ method: "POST" })
       creatorId: id,
       id: id.optional(),
       name: str(120).min(1),
-      kind: z.enum(["ar", "game", "video", "unlock", "web"]),
+      kind: z.enum(["ar", "model", "video", "game", "unlock", "web"]),
       status: z.enum(["concept", "in-build", "review", "live"]),
       description: str(2000),
       reward: str(300),

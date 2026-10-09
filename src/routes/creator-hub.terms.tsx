@@ -27,7 +27,10 @@ const SECTIONS: Array<{ id: string; title: string; body: ReactNode }> = [
       <ul>
         <li>Designs the products with you, from your artwork or your references.</li>
         <li>Produces them, and programs every QR code and NFC tag.</li>
-        <li>Builds and hosts the experience fans unlock: AR, a mini-game, an exclusive video.</li>
+        <li>
+          Builds and hosts the experience fans unlock: an AR moment, a 3D model, a video, a game or
+          a reward.
+        </li>
         <li>Sells, packs and ships orders, and handles customer service and returns.</li>
         <li>Shows you every stage, order and payout in the Creator Hub.</li>
       </ul>
