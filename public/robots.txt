@@ -32,4 +32,9 @@ Disallow: /creator-hub/
 Disallow: /go/
 Disallow: /overlay/
 
+# Creator Merch Shelves: a 3D merch shop made for one creator, sent in outreach.
+# /shelf (quick links and published shelves) and the static page behind it.
+Disallow: /shelf
+Disallow: /merch-shelf/
+
 Sitemap: https://medialife.ai/sitemap.xml

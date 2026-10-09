@@ -75,7 +75,8 @@ Unlisted static pages, served straight from `public/` rather than the SSR router
 hand-off page `/ar/` and the endcap renderer `/activated-retail/engine/`.
 
 Unlisted SSR routes for the activated-retail tools (see [Activated-retail tools](#activated-retail-tools-admin)):
-`/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`.
+`/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`, plus
+`/shelf` and `/shelf/$slug` (see [Creator Merch Shelf](#creator-merch-shelf-shelf)).
 
 Tech stack slugs live in `src/lib/tech-stacks.ts`. **Adding one means adding its URL
 to `public/sitemap.xml`** — the sitemap is static and does not generate itself.
@@ -395,6 +396,85 @@ touching the scene pauses it and it resumes after 20 s. "Book a call" opens a sh
 (`public/vendor/ar-kit/lead.js`) that posts to the Netlify form **`activated-retail-lead`**
 (declared in `public/__forms.html`). **Turn on email notifications for that form** under
 Project configuration → Notifications, or leads only show in Netlify → Forms.
+
+---
+
+## Creator Merch Shelf (`/shelf`)
+
+A 3D merch shop made for one creator: a lit product shelf with their name in neon, their logo
+printed on every product (a small chest mark on apparel, a big back panel), click-to-inspect,
+a cart, and the activation flow, meaning what a fan sees when they scan the merch (AR, a 3D
+model, a video, a mini-game or a reward). The products mirror the activated lineup on
+shop.medialife.ai. It's a pitch tool: the team and agency partners like Snowday Media send a
+creator a link to _their_ shelf in an outreach email, and the "Make this real" button leads to
+the Creator Hub application.
+
+### Three ways to configure a shelf
+
+Every shelf is a `ShelfConfig` (`src/lib/shelf/config.ts`, the contract for both sides).
+
+1. **Published:** `/shelf/<slug>`, made in `/admin/shelves`. The SSR route injects the config
+   into the page as `window.__SHELF` (and the slug as `window.__SHELF_SLUG`).
+2. **Quick link:** `/shelf?name=PixelPine&neon=8fd8ff&invite=snowday`. No admin needed; anything
+   not given comes from the default shelf (`public/merch-shelf/default.json`).
+3. **In the page:** a visitor drops in their own logo, renames the sign, picks colours. It stays
+   in their browser and is never uploaded.
+
+Quick-link parameters (`QUICK_LINK_PARAMS` in `src/lib/shelf/shelves.ts`): `name` (the sign,
+≤ 28 characters), `handle`, `neon` and `accent` (hex without `#`), `shelf` (walnut, black,
+white, maple), `backdrop` (midnight, sunset, arcade, snow), `logo` (a site path or https URL),
+`for` ("Prepared for …"), `by` ("Presented by …", text only), `invite` (a Creator Hub invite
+code), `audience` (the estimator's starting audience) and `products` (types to show, in order,
+e.g. `tee,hoodie,cap`). The Quick link panel on `/admin/shelves` builds one for you.
+
+### Making and publishing a shelf (`/admin/shelves`)
+
+**New shelf** asks for the creator's name (on the sign), a label for the team and the link, and
+starts from the default shelf or a copy of another. The editor has Creator (sign, handle, logo
+from the asset library), Theme (presets including Snowday's icy blue, neon and accent colours,
+shelf finish, backdrop), Products (on/off, order, name, type, price, colour, front and back
+prints, blurb and what happens when a fan scans it) and Pitch ("Prepared for", "Presented by",
+the invite code, the earnings estimator, and the link and label). The invite code is checked
+against the Creator Hub invites: an unknown code is only a warning. "Presented by" is text only,
+e.g. "Snowday Media × MEDIALIFE"; never put a partner's logo on a shelf.
+
+The right half is the real page (`/merch-shelf/index.html?preview=1`) in a same-origin iframe,
+updated on every change over `postMessage` (`ShelfPreviewMessage` in `config.ts`). Drafts
+autosave; a draft with a problem (an empty sign, say) isn't saved until it's fixed, and the
+preview keeps the last valid version. **Open draft** shows `/shelf/<slug>?draft=1`, which only
+signed-in admins see; it is never cached.
+
+**Publish** asks the preview for a 1200×630 snapshot of the hero view, uploads it to the asset
+library and publishes. That image is the `og:image`: the link preview in email, Discord, Slack
+and iMessage, with the title "<name>'s activated merch · MEDIALIFE". If the preview can't send
+one, the shelf still publishes and previews use the site card. Publishing purges the CDN cache
+for `/shelf/<slug>` (cache tag `shelf-<slug>`), so changes are live at once. The link can change
+until the first publish. **Unpublish** makes the link show "This shelf isn't available" (as
+does any unknown slug); the draft stays.
+
+### Personal links and analytics
+
+A published shelf is a demo called `shelf:<slug>`, and quick links are the built-in demo
+`merch-shelf`. Both are listed under "Merch shelves" when you make a personal link in
+`/admin/links` (or from the shelf's **Create personal link**) and in the Analytics demo filter.
+A personal link is `/shelf/<slug>?c=<code>`; for a quick link, add `&c=<code>` to its URL. The
+page reports to the same first-party analytics as the endcaps (`ARTrack.init({ demo })`), with
+three shelf events on top of the usual product, cart and activation ones: `shelf_customize`,
+`estimator_use` and `apply_open`.
+
+### Files
+
+- `public/merch-shelf/`: the page (static, plain JS, three.js). `default.json` mirrors
+  `DEFAULT_SHELF`; `npm run check:shelf` checks they agree (`-- --write` regenerates it).
+- `src/lib/shelf/config.ts` (contract), `shelves.ts` (slugs, quick links, presets),
+  `shelves.server.ts` (storage: the `ar-shelves-<namespace>` Blobs store, one record per slug
+  with the draft, the published copy and the snapshot), `shelves.functions.ts` (admin server
+  functions), `page.server.ts` (serving the page with the config and preview tags injected).
+- `src/routes/shelf.index.ts` (`/shelf`), `shelf.$slug.ts` (`/shelf/<slug>`),
+  `admin.shelves*.tsx` and `src/components/admin/shelves/` (the admin).
+- Slugs: 2–40 lowercase letters, numbers and dashes, unique; words like `admin`, `new` or
+  `preview` are reserved. `/shelf` and `/merch-shelf` are unlisted (robots.txt,
+  `x-robots-tag`, `src/server.ts` and `netlify.toml`).
 
 ---
 

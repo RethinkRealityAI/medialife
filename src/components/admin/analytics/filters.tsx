@@ -21,6 +21,12 @@ const RANGES: Array<{ id: RangeId; label: string }> = [
   { id: "90d", label: "90 days" },
 ];
 
+const DEMO_GROUPS = [
+  { kind: "demo", label: null },
+  { kind: "endcap", label: "Builder endcaps" },
+  { kind: "shelf", label: "Merch shelves" },
+] as const;
+
 export interface Filters {
   range: RangeId;
   demo: string;
@@ -74,11 +80,25 @@ export function FilterBar({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All demos</SelectItem>
-            {demos.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.label}
-              </SelectItem>
-            ))}
+            {DEMO_GROUPS.map((g) => {
+              const items = demos.filter((d) => (d.kind ?? "demo") === g.kind);
+              if (!items.length) return null;
+              const list = items.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.label}
+                </SelectItem>
+              ));
+              // the sent demos stay ungrouped at the top, like before
+              return g.label ? (
+                <SelectGroup key={g.kind}>
+                  <SelectSeparator />
+                  <SelectLabel className="text-xs text-muted-foreground">{g.label}</SelectLabel>
+                  {list}
+                </SelectGroup>
+              ) : (
+                list
+              );
+            })}
             {!demoKnown ? <SelectItem value={value.demo}>{value.demo}</SelectItem> : null}
           </SelectContent>
         </Select>

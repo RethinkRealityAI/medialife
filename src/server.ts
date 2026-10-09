@@ -40,8 +40,19 @@ const SECURITY_HEADERS: Record<string, string> = {
 // /go/<code> are activation links printed on merch; /overlay/<token> are
 // creators' secret stream overlays. The Creator Hub's landing
 // page (/creator-hub) is public; everything under it (sign-in, onboarding, the
-// dashboard) is an application and stays out of search.
-const UNLISTED_PREFIXES = ["/roblox", "/admin", "/api", "/x", "/go", "/overlay"] as const;
+// dashboard) is an application and stays out of search. /shelf (Creator Merch
+// Shelves, pitched to one creator at a time) and /merch-shelf (the static page
+// behind them) are reached by outreach link only.
+const UNLISTED_PREFIXES = [
+  "/roblox",
+  "/admin",
+  "/api",
+  "/x",
+  "/go",
+  "/overlay",
+  "/shelf",
+  "/merch-shelf",
+] as const;
 
 function isUnlisted(pathname: string): boolean {
   if (pathname.startsWith("/creator-hub/") && pathname !== "/creator-hub/") return true;

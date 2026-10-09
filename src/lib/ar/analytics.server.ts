@@ -1,5 +1,8 @@
 import { getCookie } from "@tanstack/react-start/server";
 
+import { SHELF_QUICK_DEMO, shelfDemoId } from "@/lib/shelf/shelves";
+import { readAllShelves } from "@/lib/shelf/shelves.server";
+
 import { ADMIN_COOKIE, verifyToken } from "./auth.server";
 import {
   linkSchema,
@@ -55,7 +58,18 @@ export interface DemoOption {
   short: string;
   /** the demo's shared password, for pasting next to a link (built-in demos only) */
   password: string | null;
+  /** a builder endcap ("x:<slug>") */
   builder: boolean;
+  /** for grouping pickers: the sent demos, builder endcaps, Creator Merch Shelves */
+  kind: DemoKind;
+}
+
+export type DemoKind = "demo" | "endcap" | "shelf";
+
+export function demoKindOf(id: string): DemoKind {
+  if (id.startsWith("x:")) return "endcap";
+  if (id === SHELF_QUICK_DEMO || id.startsWith("shelf:")) return "shelf";
+  return "demo";
 }
 
 export const BUILTIN_DEMOS: DemoOption[] = [
@@ -65,6 +79,7 @@ export const BUILTIN_DEMOS: DemoOption[] = [
     short: "Roblox",
     password: "robloxamp",
     builder: false,
+    kind: "demo",
   },
   {
     id: "monkey-quest",
@@ -72,6 +87,16 @@ export const BUILTIN_DEMOS: DemoOption[] = [
     short: "Monkey Quest",
     password: "toeimq",
     builder: false,
+    kind: "demo",
+  },
+  {
+    // /shelf with quick-link parameters (no stored shelf)
+    id: SHELF_QUICK_DEMO,
+    label: "Creator Merch Shelf (quick link, /shelf)",
+    short: "Merch shelf (quick link)",
+    password: null,
+    builder: false,
+    kind: "shelf",
   },
 ];
 
@@ -91,21 +116,46 @@ export async function listBuilderDemos(ns: ArNamespace): Promise<DemoOption[]> {
       short: name,
       password: null,
       builder: true,
+      kind: "endcap",
     });
   });
   return out.sort((a, b) => a.label.localeCompare(b.label));
 }
 
+/** Published Creator Merch Shelves ("shelf:<slug>"). The shelves store may be empty. */
+export async function listShelfDemos(ns: ArNamespace): Promise<DemoOption[]> {
+  const docs = await readAllShelves(ns);
+  return docs
+    .filter((d) => !!d.published)
+    .map((d): DemoOption => {
+      const creator = (d.published?.creator.name || d.name || d.slug).trim();
+      return {
+        id: shelfDemoId(d.slug),
+        label: `${creator} (merch shelf)`,
+        short: `${creator} shelf`,
+        password: null,
+        builder: false,
+        kind: "shelf",
+      };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export async function listDemoOptions(ns: ArNamespace): Promise<DemoOption[]> {
-  return [...BUILTIN_DEMOS, ...(await listBuilderDemos(ns).catch(() => []))];
+  const [endcaps, shelves] = await Promise.all([
+    listBuilderDemos(ns).catch(() => []),
+    listShelfDemos(ns).catch(() => []),
+  ]);
+  return [...BUILTIN_DEMOS, ...endcaps, ...shelves];
 }
 
 /** A readable name for a demo id, even one that is no longer listed. */
 function fallbackDemo(id: string): DemoOption {
   const builtin = BUILTIN_DEMOS.find((d) => d.id === id);
   if (builtin) return builtin;
-  const name = id.startsWith("x:") ? id.slice(2) : id;
-  return { id, label: name, short: name, password: null, builder: id.startsWith("x:") };
+  const kind = demoKindOf(id);
+  const name = kind === "endcap" ? id.slice(2) : kind === "shelf" ? `${id.slice(6)} shelf` : id;
+  return { id, label: name, short: name, password: null, builder: kind === "endcap", kind };
 }
 
 // ---------------------------------------------------------------------------
@@ -549,7 +599,7 @@ export interface Dashboard {
   countries: CountRow[];
   sessions: SessionRow[];
   filters: {
-    demos: Array<{ id: string; label: string }>;
+    demos: Array<{ id: string; label: string; kind: DemoKind }>;
     clients: Array<{ id: string; label: string; kind: ClientRow["kind"]; hint: string | null }>;
   };
 }
@@ -821,10 +871,10 @@ export async function buildDashboard(ns: ArNamespace, q: DashboardQuery): Promis
   // ---- filter options come from the unfiltered range, so they don't shrink ----
   const seenDemos = new Set(all.map(({ s }) => s.demo));
   const demoFilter = [
-    ...demoOptions.map((d) => ({ id: d.id, label: d.short })),
+    ...demoOptions.map((d) => ({ id: d.id, label: d.short, kind: d.kind })),
     ...[...seenDemos]
       .filter((id) => !demoById.has(id))
-      .map((id) => ({ id, label: fallbackDemo(id).short })),
+      .map((id) => ({ id, label: fallbackDemo(id).short, kind: demoKindOf(id) })),
   ];
   const clientFilter: Dashboard["filters"]["clients"] = [];
   const seenClient = new Map<string, StoredSession>();

@@ -24,6 +24,7 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
 import { Route as CreatorHubAppRouteImport } from './routes/creator-hub._app'
@@ -37,12 +38,16 @@ import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.
 import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
+import { Route as ShelfIndexRouteImport } from './routes/shelf.index'
+import { Route as ShelfSlugRouteImport } from './routes/shelf.$slug'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
 import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
 import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
+import { Route as AdminShelvesIndexRouteImport } from './routes/admin.shelves.index'
+import { Route as AdminShelvesSlugRouteImport } from './routes/admin.shelves.$slug'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
@@ -160,6 +165,11 @@ const AdminLinksRoute = AdminLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminShelvesRoute = AdminShelvesRouteImport.update({
+  id: '/shelves',
+  path: '/shelves',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin_/login',
   path: '/admin/login',
@@ -226,6 +236,16 @@ const RobloxPortalRoute = RobloxPortalRouteImport.update({
   path: '/roblox/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShelfIndexRoute = ShelfIndexRouteImport.update({
+  id: '/shelf/',
+  path: '/shelf/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShelfSlugRoute = ShelfSlugRouteImport.update({
+  id: '/shelf/$slug',
+  path: '/shelf/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologySlugRoute = TechnologySlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -255,6 +275,16 @@ const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
   id: '/creators/$creatorId',
   path: '/creators/$creatorId',
   getParentRoute: () => AdminRoute,
+} as any)
+const AdminShelvesIndexRoute = AdminShelvesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminShelvesRoute,
+} as any)
+const AdminShelvesSlugRoute = AdminShelvesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AdminShelvesRoute,
 } as any)
 const ApiArLinkRoute = ApiArLinkRouteImport.update({
   id: '/api/ar/link',
@@ -488,6 +518,7 @@ export interface FileRoutesByFullPath {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
@@ -500,12 +531,15 @@ export interface FileRoutesByFullPath {
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
+  '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -527,6 +561,7 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -574,11 +609,14 @@ export interface FileRoutesByTo {
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/shelf': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -600,6 +638,7 @@ export interface FileRoutesByTo {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
   '/admin/creators': typeof AdminCreatorsIndexRoute
+  '/admin/shelves': typeof AdminShelvesIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -639,6 +678,7 @@ export interface FileRoutesById {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
@@ -651,12 +691,15 @@ export interface FileRoutesById {
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
+  '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
+  '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
@@ -678,6 +721,7 @@ export interface FileRoutesById {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -718,6 +762,7 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/shelves'
     | '/admin/login'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
@@ -730,12 +775,15 @@ export interface FileRouteTypes {
     | '/go/$code'
     | '/overlay/$token'
     | '/roblox/portal'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
     | '/creator-hub/'
+    | '/shelf/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -757,6 +805,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/shelves/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -804,11 +853,14 @@ export interface FileRouteTypes {
     | '/creator-hub/verify-email'
     | '/go/$code'
     | '/overlay/$token'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin'
+    | '/shelf'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -830,6 +882,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder'
     | '/admin/creators'
+    | '/admin/shelves'
     | '/roblox/portal'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -868,6 +921,7 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/shelves'
     | '/admin_/login'
     | '/creator-hub/_app'
     | '/creator-hub/forgot-password'
@@ -880,12 +934,15 @@ export interface FileRouteTypes {
     | '/go/$code'
     | '/overlay/$token'
     | '/roblox/portal'
+    | '/shelf/$slug'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
     | '/creator-hub/'
+    | '/shelf/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
@@ -907,6 +964,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/shelves/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -954,8 +1012,10 @@ export interface RootRouteChildren {
   GoCodeRoute: typeof GoCodeRoute
   OverlayTokenRoute: typeof OverlayTokenRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
+  ShelfSlugRoute: typeof ShelfSlugRoute
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
+  ShelfIndexRoute: typeof ShelfIndexRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
@@ -1078,6 +1138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLinksRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/shelves': {
+      id: '/admin/shelves'
+      path: '/shelves'
+      fullPath: '/admin/shelves'
+      preLoaderRoute: typeof AdminShelvesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin_/login': {
       id: '/admin_/login'
       path: '/admin/login'
@@ -1169,6 +1236,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RobloxPortalRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/shelf/': {
+      id: '/shelf/'
+      path: '/shelf'
+      fullPath: '/shelf/'
+      preLoaderRoute: typeof ShelfIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shelf/$slug': {
+      id: '/shelf/$slug'
+      path: '/shelf/$slug'
+      fullPath: '/shelf/$slug'
+      preLoaderRoute: typeof ShelfSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology/$slug': {
       id: '/technology/$slug'
       path: '/$slug'
@@ -1210,6 +1291,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/creators/$creatorId'
       preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/admin/shelves/': {
+      id: '/admin/shelves/'
+      path: '/'
+      fullPath: '/admin/shelves/'
+      preLoaderRoute: typeof AdminShelvesIndexRouteImport
+      parentRoute: typeof AdminShelvesRoute
+    }
+    '/admin/shelves/$slug': {
+      id: '/admin/shelves/$slug'
+      path: '/$slug'
+      fullPath: '/admin/shelves/$slug'
+      preLoaderRoute: typeof AdminShelvesSlugRouteImport
+      parentRoute: typeof AdminShelvesRoute
     }
     '/api/ar/link': {
       id: '/api/ar/link'
@@ -1515,11 +1610,26 @@ const AdminBuilderRouteWithChildren = AdminBuilderRoute._addFileChildren(
   AdminBuilderRouteChildren,
 )
 
+interface AdminShelvesRouteChildren {
+  AdminShelvesSlugRoute: typeof AdminShelvesSlugRoute
+  AdminShelvesIndexRoute: typeof AdminShelvesIndexRoute
+}
+
+const AdminShelvesRouteChildren: AdminShelvesRouteChildren = {
+  AdminShelvesSlugRoute: AdminShelvesSlugRoute,
+  AdminShelvesIndexRoute: AdminShelvesIndexRoute,
+}
+
+const AdminShelvesRouteWithChildren = AdminShelvesRoute._addFileChildren(
+  AdminShelvesRouteChildren,
+)
+
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
+  AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
@@ -1530,6 +1640,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBuilderRoute: AdminBuilderRouteWithChildren,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
+  AdminShelvesRoute: AdminShelvesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
@@ -1708,8 +1819,10 @@ const rootRouteChildren: RootRouteChildren = {
   GoCodeRoute: GoCodeRoute,
   OverlayTokenRoute: OverlayTokenRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
+  ShelfSlugRoute: ShelfSlugRoute,
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
+  ShelfIndexRoute: ShelfIndexRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,

@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
+import { readShelf } from "@/lib/shelf/shelves.server";
+
 import {
   assertAdmin,
   BUILTIN_DEMOS,
@@ -50,11 +52,15 @@ export const createLink = createServerFn({ method: "POST" })
     await assertAdmin();
     const n = ns();
     if (!BUILTIN_DEMOS.some((d) => d.id === data.demo)) {
-      const slug = data.demo.startsWith("x:") ? data.demo.slice(2) : "";
-      const project = /^[a-z0-9-]+$/.test(slug)
-        ? await (await arStore("projects", n)).getJSON(`${slug}.json`)
-        : null;
-      if (!project) return { ok: false as const, error: "demo" as const };
+      // a builder endcap ("x:<slug>") or a Creator Merch Shelf ("shelf:<slug>") that exists
+      const endcap = data.demo.startsWith("x:") ? data.demo.slice(2) : "";
+      const shelf = data.demo.startsWith("shelf:") ? data.demo.slice(6) : "";
+      const target = /^[a-z0-9-]+$/.test(endcap)
+        ? await (await arStore("projects", n)).getJSON(`${endcap}.json`)
+        : shelf
+          ? await readShelf(n, shelf)
+          : null;
+      if (!target) return { ok: false as const, error: "demo" as const };
     }
     const store = await arStore("links", n);
     if (await store.getJSON(`${data.code}.json`))
