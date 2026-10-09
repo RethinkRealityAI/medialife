@@ -414,6 +414,7 @@ the orders and earnings it brings in. Built for general creators; the Roblox por
 | `/creator-hub/onboarding` | The application (intake): profile, channels, Discord and contacts, products, review |
 | `/creator-hub/dashboard`, `/products`, `/products/:id`, `/artwork`, `/experiences`, `/launch-kit`, `/earnings`, `/account` | The creator dashboard |
 | `/admin/creators`, `/admin/creators/:id` | The team side: applications, terms, products and stages, proofs, experiences, files, orders, payouts, invite links |
+| `/creator-hub/live`, `/overlay/<token>` | Live Drop: the stream overlay and its setup page (below) |
 | `/go/<code>` | The activation link a product's QR encodes and its NFC tag opens. Counts the scan, then redirects to the experience |
 
 Everything under `/creator-hub/` except the landing page, and `/go/`, is `noindex`
@@ -513,6 +514,23 @@ can be entered by hand in the creator's **Orders & payouts** tab.
 `/admin/creators` → Invite links. A link (`/creator-hub/join?invite=<code>`) tags every creator
 who signs up through it with the agency and the rep who sent it, so the team can filter by
 agency and the agency's sales team can onboard their roster without forms or email chains.
+
+### Live Drop (stream overlay)
+
+`/creator-hub/live` (Go live) sets up a browser source creators add to OBS, Streamlabs or TikTok
+LIVE Studio: a sales goal that fills as orders land, an alert for every order ("Someone in 🇨🇦
+Canada just grabbed 2× Hidden Grove Tee"), the QR viewers scan, and a celebration when the goal
+is hit. The page previews the overlay over a stand-in stream, sends test alerts, restarts the
+goal and regenerates the link.
+
+- The overlay is `/overlay/<token>`; OBS has no cookies, so the secret token is the credential.
+  Regenerating it kills the old URL. Its feed (`/api/hub/overlay/<token>`, polled every 5 s)
+  carries product names, quantities, buyer **country** and totals — never names or order numbers,
+  and revenue only if the creator turns it on. A switched-off overlay renders nothing; an expired
+  link says so.
+- Built for OBS's embedded Chromium: transparent page, hex/rgba colours (no oklch), one canvas
+  particle engine, no growth over hours. `?bg=1` previews it over a sample scene; `?scale=0.5–2`.
+- Code: `src/lib/hub/overlay.*`, `src/routes/overlay.$token.tsx`, `src/components/hub/overlay/`.
 
 ### Trying it
 

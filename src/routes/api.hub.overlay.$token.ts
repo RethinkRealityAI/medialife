@@ -15,7 +15,6 @@ export const Route = createFileRoute("/api/hub/overlay/$token")({
         const ns = hubNs(request);
         const feed = await overlayFeed(ns, params.token, publicOrigin(request, ns));
         const headers = { "cache-control": "no-store", "x-robots-tag": "noindex" };
-        if (!feed) return Response.json({ error: "not found" }, { status: 404, headers });
         return Response.json(feed, { headers });
       },
     },

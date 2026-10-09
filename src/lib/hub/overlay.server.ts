@@ -110,6 +110,7 @@ const COUNTRY_NAMES = (() => {
 })();
 
 export type OverlayFeed = {
+  status: "live";
   creator: string;
   settings: Omit<OverlaySettings, "enabled">;
   product: { name: string; sku: string; image: string | null } | null;
@@ -135,21 +136,27 @@ const flagOf = (cc: string | null) =>
     ? String.fromCodePoint(...[...cc].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65))
     : null;
 
-/** What the overlay shows. null for an unknown, rotated or disabled token. */
+/**
+ * What the overlay shows: the feed, "off" (the creator switched it off or isn't
+ * approved yet — the overlay renders nothing) or "gone" (an unknown or rotated
+ * link — the overlay says so). Both are 200s, so OBS's console stays clean.
+ */
 export async function overlayFeed(
   ns: HubNamespace,
   token: string,
   origin: string,
-): Promise<OverlayFeed | null> {
+): Promise<OverlayFeed | { status: "off" } | { status: "gone" }> {
   const hit = await creatorForToken(ns, token);
-  if (!hit || !hit.rec.enabled) return null;
+  if (!hit) return { status: "gone" };
+  if (!hit.rec.enabled) return { status: "off" };
   const { creatorId, rec } = hit;
   const [creator, products, orders] = await Promise.all([
     getCreator(ns, creatorId),
     listProducts(ns, creatorId),
     listOrders(ns, creatorId),
   ]);
-  if (!creator || creator.status !== "approved") return null;
+  if (!creator) return { status: "gone" };
+  if (creator.status !== "approved") return { status: "off" };
 
   const focus: Product | null = rec.productId
     ? (products.find((p) => p.id === rec.productId) ?? null)
@@ -195,6 +202,7 @@ export async function overlayFeed(
   const imageProduct = focus ?? live[0] ?? null;
   const { enabled: _e, token: _t, createdAt: _c, ...settings } = rec;
   return {
+    status: "live",
     creator: creator.profile.displayName,
     settings,
     product: imageProduct

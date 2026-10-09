@@ -35,6 +35,7 @@ import { Route as CreatorHubSignInRouteImport } from './routes/creator-hub.sign-
 import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
 import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
 import { Route as GoCodeRouteImport } from './routes/go.$code'
+import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
@@ -52,6 +53,7 @@ import { Route as CreatorHubAppDashboardRouteImport } from './routes/creator-hub
 import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub._app.earnings'
 import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
 import { Route as CreatorHubAppLaunchKitRouteImport } from './routes/creator-hub._app.launch-kit'
+import { Route as CreatorHubAppLiveRouteImport } from './routes/creator-hub._app.live'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
 import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
@@ -214,6 +216,11 @@ const GoCodeRoute = GoCodeRouteImport.update({
   path: '/go/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OverlayTokenRoute = OverlayTokenRouteImport.update({
+  id: '/overlay/$token',
+  path: '/overlay/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalRoute = RobloxPortalRouteImport.update({
   id: '/roblox/portal',
   path: '/roblox/portal',
@@ -298,6 +305,11 @@ const CreatorHubAppExperiencesRoute =
 const CreatorHubAppLaunchKitRoute = CreatorHubAppLaunchKitRouteImport.update({
   id: '/launch-kit',
   path: '/launch-kit',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const CreatorHubAppLiveRoute = CreatorHubAppLiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => CreatorHubAppRoute,
 } as any)
 const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
@@ -486,6 +498,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
@@ -503,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -559,6 +573,7 @@ export interface FileRoutesByTo {
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
@@ -574,6 +589,7 @@ export interface FileRoutesByTo {
   '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -633,6 +649,7 @@ export interface FileRoutesById {
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
+  '/overlay/$token': typeof OverlayTokenRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
@@ -650,6 +667,7 @@ export interface FileRoutesById {
   '/creator-hub/_app/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/_app/launch-kit': typeof CreatorHubAppLaunchKitRoute
+  '/creator-hub/_app/live': typeof CreatorHubAppLiveRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -710,6 +728,7 @@ export interface FileRouteTypes {
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
     | '/go/$code'
+    | '/overlay/$token'
     | '/roblox/portal'
     | '/technology/$slug'
     | '/x/$slug'
@@ -727,6 +746,7 @@ export interface FileRouteTypes {
     | '/creator-hub/earnings'
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
+    | '/creator-hub/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -783,6 +803,7 @@ export interface FileRouteTypes {
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
     | '/go/$code'
+    | '/overlay/$token'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin'
@@ -798,6 +819,7 @@ export interface FileRouteTypes {
     | '/creator-hub/earnings'
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
+    | '/creator-hub/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -856,6 +878,7 @@ export interface FileRouteTypes {
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
     | '/go/$code'
+    | '/overlay/$token'
     | '/roblox/portal'
     | '/technology/$slug'
     | '/x/$slug'
@@ -873,6 +896,7 @@ export interface FileRouteTypes {
     | '/creator-hub/_app/earnings'
     | '/creator-hub/_app/experiences'
     | '/creator-hub/_app/launch-kit'
+    | '/creator-hub/_app/live'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -928,6 +952,7 @@ export interface RootRouteChildren {
   CreatorHubTermsRoute: typeof CreatorHubTermsRoute
   CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
   GoCodeRoute: typeof GoCodeRoute
+  OverlayTokenRoute: typeof OverlayTokenRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
@@ -1130,6 +1155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/overlay/$token': {
+      id: '/overlay/$token'
+      path: '/overlay/$token'
+      fullPath: '/overlay/$token'
+      preLoaderRoute: typeof OverlayTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal': {
       id: '/roblox/portal'
       path: '/roblox/portal'
@@ -1247,6 +1279,13 @@ declare module '@tanstack/react-router' {
       path: '/launch-kit'
       fullPath: '/creator-hub/launch-kit'
       preLoaderRoute: typeof CreatorHubAppLaunchKitRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
+    '/creator-hub/_app/live': {
+      id: '/creator-hub/_app/live'
+      path: '/live'
+      fullPath: '/creator-hub/live'
+      preLoaderRoute: typeof CreatorHubAppLiveRouteImport
       parentRoute: typeof CreatorHubAppRoute
     }
     '/roblox/portal/': {
@@ -1517,6 +1556,7 @@ interface CreatorHubAppRouteChildren {
   CreatorHubAppEarningsRoute: typeof CreatorHubAppEarningsRoute
   CreatorHubAppExperiencesRoute: typeof CreatorHubAppExperiencesRoute
   CreatorHubAppLaunchKitRoute: typeof CreatorHubAppLaunchKitRoute
+  CreatorHubAppLiveRoute: typeof CreatorHubAppLiveRoute
   CreatorHubAppProductsProductIdRoute: typeof CreatorHubAppProductsProductIdRoute
   CreatorHubAppProductsIndexRoute: typeof CreatorHubAppProductsIndexRoute
 }
@@ -1528,6 +1568,7 @@ const CreatorHubAppRouteChildren: CreatorHubAppRouteChildren = {
   CreatorHubAppEarningsRoute: CreatorHubAppEarningsRoute,
   CreatorHubAppExperiencesRoute: CreatorHubAppExperiencesRoute,
   CreatorHubAppLaunchKitRoute: CreatorHubAppLaunchKitRoute,
+  CreatorHubAppLiveRoute: CreatorHubAppLiveRoute,
   CreatorHubAppProductsProductIdRoute: CreatorHubAppProductsProductIdRoute,
   CreatorHubAppProductsIndexRoute: CreatorHubAppProductsIndexRoute,
 }
@@ -1665,6 +1706,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorHubTermsRoute: CreatorHubTermsRoute,
   CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
   GoCodeRoute: GoCodeRoute,
+  OverlayTokenRoute: OverlayTokenRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
