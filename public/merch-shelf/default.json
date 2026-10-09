@@ -92,7 +92,7 @@
       "blurb": "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
       "activation": {
         "kind": "game",
-        "title": "A 60-second mini-game",
+        "title": "A quick mini-game",
         "description": "Scan the charm and play a quick game starring your character.",
         "reward": "A shout-out for top scores"
       }

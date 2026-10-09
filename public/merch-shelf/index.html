@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Your activated merch · MEDIALIFE</title>
+    <meta
+      name="description"
+      content="Your merch, activated: a 3D preview shelf with your name in lights and your art on every piece. Every product opens an experience when a fan scans it."
+    />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#05060c" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MEDIALIFE" />
+    <meta property="og:title" content="Your activated merch · MEDIALIFE" />
+    <meta
+      property="og:description"
+      content="A 3D preview of your merch shelf. Every product is activated: fans scan it and something happens."
+    />
+    <meta property="og:image" content="https://medialife.ai/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <!--SHELF_CONFIG-->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Tilt+Neon&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/merch-shelf/app.css" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
+    <link rel="preload" as="fetch" href="/merch-shelf/default.json" crossorigin="anonymous" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/",
+          "qrcode": "/roblox/creators/vendor/qrcode/qrcode.esm.js"
+        }
+      }
+    </script>
+    <script src="/vendor/ar-kit/track.js"></script>
+    <script type="module" src="/merch-shelf/main.js"></script>
+  </head>
+  <body class="is-loading">
+    <a class="skip-link" href="#productList">Skip to the products</a>
+
+    <div class="app" id="app">
+      <div class="stage" id="stage"><canvas id="scene" aria-hidden="true"></canvas></div>
+
+      <header class="bar" id="bar">
+        <a class="brand" href="/" aria-label="MEDIALIFE home">
+          <img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="120" height="20" />
+        </a>
+        <p class="prepared" id="prepared" hidden></p>
+        <nav class="actions" aria-label="Shelf tools">
+          <button type="button" class="tool" id="btnTour" title="Replay the tour">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M10 8.5v7l5.5-3.5z" fill="currentColor" stroke="none" /></svg
+            ><span>Tour</span>
+          </button>
+          <button type="button" class="tool" id="btnEarn" hidden>
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M4 19h16M7 16V11M12 16V6M17 16v-7" /></svg
+            ><span>Earnings</span>
+          </button>
+          <button type="button" class="tool tool-accent" id="btnCustom">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z" />
+              <path d="M18.5 15l.8 1.9 1.9.8-1.9.8-.8 1.9-.8-1.9-1.9-.8 1.9-.8z" /></svg
+            ><span>Make it yours</span>
+          </button>
+          <button type="button" class="tool tool-cart" id="btnCart" aria-label="Cart, empty">
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z" />
+              <path d="M9 8V7a3 3 0 0 1 6 0v1" /></svg
+            ><span class="count" id="cartCount" aria-hidden="true">0</span>
+          </button>
+        </nav>
+      </header>
+
+      <ul
+        class="product-list"
+        id="productList"
+        aria-label="Products on the shelf. Use the arrow keys to move, Enter to open."
+      ></ul>
+      <div class="tooltip" id="tooltip" aria-hidden="true"></div>
+
+      <div class="dock" id="dock">
+        <p class="hint" id="hint">
+          <span class="pulse" aria-hidden="true"></span><span>Tap any product to inspect it</span>
+        </p>
+        <a class="btn btn-primary" id="ctaDock" href="/creator-hub/join"
+          >Make this real<svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M5 12h14M13 6l6 6-6 6" /></svg
+        ></a>
+      </div>
+
+      <aside class="sheet" id="sheet" role="dialog" aria-labelledby="sheetTitle" hidden></aside>
+      <aside
+        class="drawer"
+        id="cart"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cartTitle"
+        hidden
+      ></aside>
+      <aside
+        class="panel"
+        id="custom"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="customTitle"
+        hidden
+      ></aside>
+      <div class="modal" id="modal" role="dialog" aria-modal="true" hidden></div>
+      <div
+        class="activation"
+        id="activation"
+        role="dialog"
+        aria-modal="true"
+        aria-label="What fans experience"
+        hidden
+      ></div>
+      <div
+        class="tour"
+        id="tour"
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby="tourTitle"
+        hidden
+      ></div>
+      <div class="spot" id="spot" hidden></div>
+      <div class="preview-badge" id="previewBadge" hidden>Preview</div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <div
+        class="loader"
+        id="loader"
+        role="progressbar"
+        aria-label="Loading the shelf"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div class="loader-inner">
+          <img src="/brand/medialife-wordmark.webp" alt="" width="120" height="20" />
+          <p class="loader-for" id="loaderFor"></p>
+          <p class="loader-name" id="loaderName">Your shelf</p>
+          <div class="loader-bar"><i id="loaderBar"></i></div>
+          <p class="loader-meta">
+            <span id="loaderText">Lighting the shelf</span><span id="loaderPct">0%</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <main class="fallback" id="fallback" hidden>
+      <header class="fb-head">
+        <img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="120" height="20" />
+        <p class="fb-for" id="fbFor"></p>
+      </header>
+      <h1 class="fb-neon" id="fbName">YOUR NAME</h1>
+      <p class="fb-handle" id="fbHandle"></p>
+      <p class="fb-lede">
+        This preview normally shows your merch on a 3D shelf. Your browser can't run 3D here, so
+        here's the lineup — every piece activated: fans scan the tag and an experience opens on
+        their phone. No app.
+      </p>
+      <ul class="fb-grid" id="fbGrid"></ul>
+      <section class="fb-how">
+        <h2>How activated merch works</h2>
+        <ol>
+          <li>
+            <b>We make it.</b> Your art on heavyweight, vintage-washed pieces, each with a QR and
+            NFC tag built in.
+          </li>
+          <li>
+            <b>Fans scan it.</b> A phone camera or a tap opens an experience in the browser: AR, a
+            video, a mini-game, a reward.
+          </li>
+          <li>
+            <b>You see everything.</b> Every order, your cut and every scan, live in the Creator
+            Hub.
+          </li>
+        </ol>
+      </section>
+      <a class="btn btn-primary fb-cta" id="fbCta" href="/creator-hub/join"
+        >Make this real — apply to the Creator Hub</a
+      >
+    </main>
+    <noscript
+      ><style>
+        .app {
+          display: none;
+        }
+      </style>
+      <p style="padding: 24px; color: #fff; font-family: sans-serif">
+        This preview needs JavaScript.
+        <a href="/creator-hub/join" style="color: #19affe">Apply to the MEDIALIFE Creator Hub</a>.
+      </p></noscript
+    >
+  </body>
+</html>

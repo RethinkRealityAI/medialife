@@ -213,7 +213,7 @@ export const DEFAULT_SHELF: ShelfConfig = {
       blurb: "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
       activation: act(
         "game",
-        "A 60-second mini-game",
+        "A quick mini-game",
         "Scan the charm and play a quick game starring your character.",
         "A shout-out for top scores",
       ),
