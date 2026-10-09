@@ -285,6 +285,10 @@ export const resetPassword = createServerFn({ method: "POST" })
   .validator(z.object({ token: z.string().max(100), password: z.string().max(200) }))
   .handler(async ({ data }) => {
     const ns = hubNs();
+    // Check the rules that don't need the account first, so a password that's
+    // too short doesn't use up the single-use link.
+    const early = passwordProblem(data.password);
+    if (early) return { ok: false as const, error: early };
     const user = await consumeToken(ns, "reset", data.token);
     if (!user)
       return {
@@ -293,7 +297,7 @@ export const resetPassword = createServerFn({ method: "POST" })
       };
     const problem = passwordProblem(data.password, user.email);
     if (problem) {
-      // put the token back is not possible (it's consumed): ask for a new link with the rule up front
+      // the link is spent by now: say so, with the rule up front
       return { ok: false as const, error: `${problem} Request a new link and try again.` };
     }
     // Reaching the inbox proves the address, so a reset also verifies it.

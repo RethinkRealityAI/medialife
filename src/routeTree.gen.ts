@@ -26,6 +26,13 @@ import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
+import { Route as CreatorHubForgotPasswordRouteImport } from './routes/creator-hub.forgot-password'
+import { Route as CreatorHubJoinRouteImport } from './routes/creator-hub.join'
+import { Route as CreatorHubOnboardingRouteImport } from './routes/creator-hub.onboarding'
+import { Route as CreatorHubResetPasswordRouteImport } from './routes/creator-hub.reset-password'
+import { Route as CreatorHubSignInRouteImport } from './routes/creator-hub.sign-in'
+import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
+import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
 import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
@@ -146,6 +153,42 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
   id: '/creator-hub/',
   path: '/creator-hub/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubForgotPasswordRoute =
+  CreatorHubForgotPasswordRouteImport.update({
+    id: '/creator-hub/forgot-password',
+    path: '/creator-hub/forgot-password',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CreatorHubJoinRoute = CreatorHubJoinRouteImport.update({
+  id: '/creator-hub/join',
+  path: '/creator-hub/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubOnboardingRoute = CreatorHubOnboardingRouteImport.update({
+  id: '/creator-hub/onboarding',
+  path: '/creator-hub/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubResetPasswordRoute = CreatorHubResetPasswordRouteImport.update({
+  id: '/creator-hub/reset-password',
+  path: '/creator-hub/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubSignInRoute = CreatorHubSignInRouteImport.update({
+  id: '/creator-hub/sign-in',
+  path: '/creator-hub/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubTermsRoute = CreatorHubTermsRouteImport.update({
+  id: '/creator-hub/terms',
+  path: '/creator-hub/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatorHubVerifyEmailRoute = CreatorHubVerifyEmailRouteImport.update({
+  id: '/creator-hub/verify-email',
+  path: '/creator-hub/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GoCodeRoute = GoCodeRouteImport.update({
@@ -353,6 +396,13 @@ export interface FileRoutesByFullPath {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
@@ -406,6 +456,13 @@ export interface FileRoutesByTo {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
@@ -461,6 +518,13 @@ export interface FileRoutesById {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin_/login': typeof AdminLoginRoute
+  '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
+  '/creator-hub/join': typeof CreatorHubJoinRoute
+  '/creator-hub/onboarding': typeof CreatorHubOnboardingRoute
+  '/creator-hub/reset-password': typeof CreatorHubResetPasswordRoute
+  '/creator-hub/sign-in': typeof CreatorHubSignInRoute
+  '/creator-hub/terms': typeof CreatorHubTermsRoute
+  '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
@@ -518,6 +582,13 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
     | '/go/$code'
     | '/roblox/portal'
     | '/technology/$slug'
@@ -571,6 +642,13 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
     | '/go/$code'
     | '/technology/$slug'
     | '/x/$slug'
@@ -625,6 +703,13 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin_/login'
+    | '/creator-hub/forgot-password'
+    | '/creator-hub/join'
+    | '/creator-hub/onboarding'
+    | '/creator-hub/reset-password'
+    | '/creator-hub/sign-in'
+    | '/creator-hub/terms'
+    | '/creator-hub/verify-email'
     | '/go/$code'
     | '/roblox/portal'
     | '/technology/$slug'
@@ -677,6 +762,13 @@ export interface RootRouteChildren {
   LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
+  CreatorHubJoinRoute: typeof CreatorHubJoinRoute
+  CreatorHubOnboardingRoute: typeof CreatorHubOnboardingRoute
+  CreatorHubResetPasswordRoute: typeof CreatorHubResetPasswordRoute
+  CreatorHubSignInRoute: typeof CreatorHubSignInRoute
+  CreatorHubTermsRoute: typeof CreatorHubTermsRoute
+  CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
   GoCodeRoute: typeof GoCodeRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   XSlugRoute: typeof XSlugRoute
@@ -814,6 +906,55 @@ declare module '@tanstack/react-router' {
       path: '/creator-hub'
       fullPath: '/creator-hub/'
       preLoaderRoute: typeof CreatorHubIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/forgot-password': {
+      id: '/creator-hub/forgot-password'
+      path: '/creator-hub/forgot-password'
+      fullPath: '/creator-hub/forgot-password'
+      preLoaderRoute: typeof CreatorHubForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/join': {
+      id: '/creator-hub/join'
+      path: '/creator-hub/join'
+      fullPath: '/creator-hub/join'
+      preLoaderRoute: typeof CreatorHubJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/onboarding': {
+      id: '/creator-hub/onboarding'
+      path: '/creator-hub/onboarding'
+      fullPath: '/creator-hub/onboarding'
+      preLoaderRoute: typeof CreatorHubOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/reset-password': {
+      id: '/creator-hub/reset-password'
+      path: '/creator-hub/reset-password'
+      fullPath: '/creator-hub/reset-password'
+      preLoaderRoute: typeof CreatorHubResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/sign-in': {
+      id: '/creator-hub/sign-in'
+      path: '/creator-hub/sign-in'
+      fullPath: '/creator-hub/sign-in'
+      preLoaderRoute: typeof CreatorHubSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/terms': {
+      id: '/creator-hub/terms'
+      path: '/creator-hub/terms'
+      fullPath: '/creator-hub/terms'
+      preLoaderRoute: typeof CreatorHubTermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/creator-hub/verify-email': {
+      id: '/creator-hub/verify-email'
+      path: '/creator-hub/verify-email'
+      fullPath: '/creator-hub/verify-email'
+      preLoaderRoute: typeof CreatorHubVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/go/$code': {
@@ -1224,6 +1365,13 @@ const rootRouteChildren: RootRouteChildren = {
   LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
+  CreatorHubJoinRoute: CreatorHubJoinRoute,
+  CreatorHubOnboardingRoute: CreatorHubOnboardingRoute,
+  CreatorHubResetPasswordRoute: CreatorHubResetPasswordRoute,
+  CreatorHubSignInRoute: CreatorHubSignInRoute,
+  CreatorHubTermsRoute: CreatorHubTermsRoute,
+  CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
   GoCodeRoute: GoCodeRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   XSlugRoute: XSlugRoute,
