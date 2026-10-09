@@ -67,7 +67,7 @@ Spam protection: a `bot-field` honeypot, declared via `netlify-honeypot`.
 
 ## Routes
 
-`/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact`
+`/` · `/technology` · `/technology/$slug` · `/insights` · `/brand` · `/fan-reactions` · `/contact` · `/activated-retail` · `/creator-hub` (see [Creator Hub](#creator-hub-creator-hub))
 
 Unlisted static pages, served straight from `public/` rather than the SSR router:
 `/<slug>` (business cards), `/creators` (Roblox creator program), and the activated-retail
@@ -395,3 +395,128 @@ touching the scene pauses it and it resumes after 20 s. "Book a call" opens a sh
 (`public/vendor/ar-kit/lead.js`) that posts to the Netlify form **`activated-retail-lead`**
 (declared in `public/__forms.html`). **Turn on email notifications for that form** under
 Project configuration → Notifications, or leads only show in Netlify → Forms.
+
+---
+
+## Creator Hub (`/creator-hub`)
+
+The creator side of the Activated Merchandise Program. Creators (YouTube, Twitch, TikTok,
+X, Kick…) apply, and MEDIALIFE designs, produces, fulfils and sells activated merch with
+them. The hub shows every product's progress through the pipeline, the immersive
+experience it unlocks, its triggers (QR, NFC, activation link) and launch collateral, and
+the orders and earnings it brings in. Built for general creators; the Roblox portal under
+`/roblox/portal` stays as it is.
+
+| URL | What it is |
+| --- | --- |
+| `/creator-hub` | Public landing page (in the sitemap). `?invite=<code>` carries an agency invite through to sign-up |
+| `/creator-hub/join`, `/sign-in`, `/forgot-password`, `/reset-password`, `/verify-email`, `/terms` | Accounts |
+| `/creator-hub/onboarding` | The application (intake): profile, channels, Discord and contacts, products, review |
+| `/creator-hub/dashboard`, `/products`, `/products/:id`, `/artwork`, `/experiences`, `/launch-kit`, `/earnings`, `/account` | The creator dashboard |
+| `/admin/creators`, `/admin/creators/:id` | The team side: applications, terms, products and stages, proofs, experiences, files, orders, payouts, invite links |
+| `/go/<code>` | The activation link a product's QR encodes and its NFC tag opens. Counts the scan, then redirects to the experience |
+
+Everything under `/creator-hub/` except the landing page, and `/go/`, is `noindex`
+(`src/server.ts`, `public/robots.txt`).
+
+### How it fits together
+
+```
+src/lib/hub/model.ts            types, catalogue (SKUS), pipeline (STAGES), earnings maths — client-safe
+src/lib/hub/store.server.ts     Netlify Blobs stores hub-<ns> (records) and hub-files-<ns> (file chunks)
+src/lib/hub/auth.server.ts      scrypt passwords, sessions, one-time tokens, rate limits
+src/lib/hub/discord.server.ts   "Continue with Discord" (sign in / sign up / connect)
+src/lib/hub/mail.server.ts      transactional email (Resend)
+src/lib/hub/data.server.ts      repositories: creators, products, experiences, files, orders, activity…
+src/lib/hub/files.server.ts     private chunked uploads (artwork, proofs, collateral)
+src/lib/hub/commerce.server.ts  Shopify webhooks and generic order ingest → per-creator orders
+src/lib/hub/*.functions.ts      server functions the pages call (auth, creator, admin)
+src/lib/hub/sample.server.ts    a complete sample creator for previews and localhost
+```
+
+Storage follows the activated-retail tools: Netlify Blobs, no database, namespaced by host
+(`prod` / `preview` / `dev`, with `dev` on local files under `.data/ar/`), so testing on a
+deploy preview never touches a real creator.
+
+**Accounts.** Email + password (scrypt N=2¹⁶), optional Discord sign-in, email
+verification and password reset by one-time links (hashed at rest; reset links last an
+hour and end every other session). Sessions are server-side records behind a signed,
+HttpOnly cookie. Sign-in and email sending are rate-limited. Emailed links use a pinned
+origin, never the request's Host header.
+
+**The pipeline.** Every product moves through Brief → Artwork → Design approval → Sample →
+Production → Shipping → Live (`STAGES`). The team moves it in the admin; a creator approving
+a proof moves it from Design approval to Sample. Each product carries "waiting on" (creator
+or MEDIALIFE) and a next step, which is what the creator's dashboard leads with.
+
+**Money.** A creator earns `revenueShare` (set per creator, overridable per product) of
+**net merchandise revenue**: unit price × quantity, less discounts and refunds, never tax or
+shipping. Each order line keeps the share in force when it was sold. Earnings are "pending"
+for `HUB.holdDays` (30) days — the returns window — then "available" until a payout is
+recorded. All amounts are stored in cents. `npm run test:hub` checks this maths and the
+Shopify normalisation.
+
+**Orders in.** An order line is matched to a product by Shopify product id or by SKU (both
+set on the product in the admin; a product id or SKU can belong to only one product). One
+order with several creators' products is split per creator. Orders are keyed by source and
+external id, so a re-delivered or updated webhook overwrites rather than double-counts.
+Lines that match nothing are listed under **Unmatched orders** in `/admin/creators`. No buyer
+names, emails or addresses are stored — only the country.
+
+**Triggers.** Each product gets a short code at creation. Print the QR (or program the NFC
+tag) with `https://medialife.ai/go/<code>`, never the experience URL itself: the experience
+can then be rebuilt or swapped without reprinting, and every scan is counted. Link-preview
+bots aren't counted.
+
+**Files** are private (the creator and the team only), uploaded in 4 MB chunks up to 50 MB,
+checked by magic bytes, and served with `nosniff` and a sandbox CSP.
+
+### Configuration (Netlify env vars)
+
+| Variable | Needed for |
+| --- | --- |
+| `HUB_SESSION_SECRET` | Signing creator sessions (≥16 chars; falls back to `AR_SESSION_SECRET`). **Production refuses sign-in without one.** |
+| `RESEND_API_KEY`, `HUB_EMAIL_FROM` | Verification, password-reset and notification emails. Verify the sender domain in Resend. Without it, previews and localhost show the link on screen instead; production tells the creator to contact support |
+| `HUB_TEAM_EMAIL` | Where new applications and proof decisions are announced |
+| `SHOPIFY_WEBHOOK_SECRET` | The Shopify order webhook (below) |
+| `HUB_INGEST_KEY` | `POST /api/hub/orders` for other channels (≥24 chars) |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | "Continue with Discord". Register `<origin>/api/hub/auth/discord/callback` as a redirect URL for each environment |
+| `AR_ADMIN_PASSWORD` | The existing shared password for `/admin`, which now includes Creators |
+
+### Shopify
+
+In Shopify admin → Settings → Notifications → Webhooks, create **Order payment**
+(`orders/paid`), **Order update** (`orders/updated`) and **Order cancellation**
+(`orders/cancelled`) webhooks, format JSON, URL `https://medialife.ai/api/hub/webhooks/shopify`,
+and put the signing secret shown there in `SHOPIFY_WEBHOOK_SECRET`. Then, for each creator
+product in `/admin/creators`, add its Shopify product id (the number in the product's admin
+URL) or its variant SKUs. Refunds arrive through `orders/updated`.
+
+### Other channels
+
+```http
+POST /api/hub/orders
+Authorization: Bearer <HUB_INGEST_KEY>
+Content-Type: application/json
+
+{ "channel": "TikTok Shop", "externalId": "5761234", "number": "TT-5761234",
+  "createdAt": "2026-10-09T15:04:00Z", "currency": "USD", "country": "US",
+  "lines": [{ "sku": "PIXELPINE-TEE-M", "qty": 1, "unitPrice": 3900, "discount": 0 }] }
+```
+
+Prices are in cents. Send the same `channel` + `externalId` again to update an order
+(refunds: `refunded`, `refundedQty` per line; `status`). Channels with no integration at all
+can be entered by hand in the creator's **Orders & payouts** tab.
+
+### Agency partners and invite links
+
+`/admin/creators` → Invite links. A link (`/creator-hub/join?invite=<code>`) tags every creator
+who signs up through it with the agency and the rep who sent it, so the team can filter by
+agency and the agency's sales team can onboard their roster without forms or email chains.
+
+### Trying it
+
+On a deploy preview or localhost, `/admin/creators` → **Load sample creator** creates a
+complete creator (products at several stages, a proof awaiting approval, a live experience,
+collateral, two months of orders, scans and a payout) and shows its sign-in. Production
+refuses it.

@@ -6,7 +6,7 @@ import { Lockup } from "./Logo";
 export const SHOP_URL = "https://shop.medialife.ai/";
 
 /**
- * Primary navigation — the six commercial destinations.
+ * Primary navigation — the seven commercial destinations.
  *
  * Numbers follow the homepage reading order, so /02 in the nav is the second
  * section down the page. Fan Reactions and Production Capabilities are homepage
@@ -20,25 +20,49 @@ export const SHOP_URL = "https://shop.medialife.ai/";
  *
  * The Technology stack pages are still reachable through the Production
  * Capabilities mega-menu, so nothing was orphaned by the nav change.
+ *
+ * Width: seven items plus the CTA need ~1480px with numbers and full labels.
+ * The inline nav starts at xl (1280px; below that it is the menu), and between
+ * xl and 2xl the /0X numbers hide and long labels use `short`, so it never
+ * overflows.
  */
-type NavItem =
-  | { kind: "anchor"; hash: string; label: string; num: string }
-  | { kind: "route"; to: string; label: string; num: string }
-  | { kind: "external"; href: string; label: string; num: string };
+type NavItem = { label: string; num: string; short?: string } & (
+  | { kind: "anchor"; hash: string }
+  | { kind: "route"; to: string }
+  | { kind: "external"; href: string }
+);
 
 const NAV: NavItem[] = [
   { kind: "route", to: "/live", label: "Live Now", num: "01" },
   { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "02" },
-  { kind: "anchor", hash: "capabilities", label: "Production Capabilities", num: "03" },
+  {
+    kind: "anchor",
+    hash: "capabilities",
+    label: "Production Capabilities",
+    short: "Capabilities",
+    num: "03",
+  },
   { kind: "route", to: "/activated-retail", label: "Retail Program", num: "04" },
-  { kind: "route", to: "/case-studies", label: "Case Studies", num: "05" },
-  { kind: "external", href: SHOP_URL, label: "Merch", num: "06" },
+  { kind: "route", to: "/creator-hub", label: "Creator Hub", num: "05" },
+  { kind: "route", to: "/case-studies", label: "Case Studies", num: "06" },
+  { kind: "external", href: SHOP_URL, label: "Merch", num: "07" },
 ];
 
 const itemCls =
   "group relative px-3 py-2 text-sm transition-colors hover:text-primary inline-flex items-center whitespace-nowrap";
 const numCls =
-  "mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition shrink-0";
+  "hidden 2xl:inline mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition shrink-0";
+
+/** Desktop label: the short form until there is room for the full one. */
+function DeskLabel({ item }: { item: NavItem }) {
+  if (!item.short) return <>{item.label}</>;
+  return (
+    <>
+      <span className="2xl:hidden">{item.short}</span>
+      <span className="hidden 2xl:inline">{item.label}</span>
+    </>
+  );
+}
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -84,7 +108,7 @@ export function Nav() {
           <Lockup className="h-[28px] w-auto" />
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={closeMega}>
+        <nav className="hidden xl:flex items-center gap-0.5" onMouseLeave={closeMega}>
           {NAV.map((item) => {
             if (item.kind === "anchor") {
               const isCapabilities = item.hash === "capabilities";
@@ -96,7 +120,7 @@ export function Nav() {
                 >
                   <a href={`/#${item.hash}`} className={itemCls} onClick={() => setMegaOpen(false)}>
                     <span className={numCls}>/{item.num}</span>
-                    {item.label}
+                    <DeskLabel item={item} />
                     {isCapabilities && <span className="ml-2 text-[10px] opacity-60">▾</span>}
                   </a>
                 </div>
@@ -113,7 +137,7 @@ export function Nav() {
                   onMouseEnter={() => setMegaOpen(false)}
                 >
                   <span className={numCls}>/{item.num}</span>
-                  {item.label}
+                  <DeskLabel item={item} />
                   <span aria-hidden className="ml-1.5 text-[10px] opacity-60">
                     ↗
                   </span>
@@ -130,13 +154,13 @@ export function Nav() {
                 onMouseEnter={() => setMegaOpen(false)}
               >
                 <span className={numCls}>/{item.num}</span>
-                {item.label}
+                <DeskLabel item={item} />
               </Link>
             );
           })}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-2 shrink-0">
+        <div className="hidden xl:flex items-center gap-2 shrink-0">
           <Link
             to="/contact"
             className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-6 py-3"
@@ -149,7 +173,7 @@ export function Nav() {
         <button
           aria-label="Menu"
           aria-expanded={open}
-          className="lg:hidden mono text-xs uppercase tracking-widest"
+          className="xl:hidden mono text-xs uppercase tracking-widest"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Close" : "Menu"}
@@ -159,7 +183,7 @@ export function Nav() {
       {/* MEGA MENU — production capabilities / technology stack */}
       {megaOpen && (
         <div
-          className="hidden lg:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
+          className="hidden xl:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
           onMouseEnter={openMega}
           onMouseLeave={closeMega}
         >
@@ -255,7 +279,7 @@ export function Nav() {
 
       {/* MOBILE */}
       {open && (
-        <div className="lg:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div className="xl:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="flex flex-col">
             {NAV.map((item) => {
               const row =

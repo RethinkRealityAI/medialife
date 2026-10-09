@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "build:cards": "node scripts/build-cards.mjs",
     "build:creators": "node scripts/build-creators.mjs",
-    "check:demo-tours": "node scripts/check-demo-tours.mjs"
+    "check:demo-tours": "node scripts/check-demo-tours.mjs",
+    "test:hub": "node scripts/test-hub.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

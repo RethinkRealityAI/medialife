@@ -25,6 +25,8 @@ import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
+import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
+import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
@@ -32,6 +34,8 @@ import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.in
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
+import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
+import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
 import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
@@ -45,12 +49,19 @@ import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.asse
 import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
 import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-content.$demo'
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
+import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
+import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
+import { Route as ApiHubWebhooksShopifyRouteImport } from './routes/api.hub.webhooks.shopify'
 import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
 import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
 import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
+import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
+import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
 import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
+import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
+import { Route as ApiHubFilesCreatorIdFileIdChunksNRouteImport } from './routes/api.hub.files.$creatorId.$fileId.chunks.$n'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -132,6 +143,16 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
   path: '/admin/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
+  id: '/creator-hub/',
+  path: '/creator-hub/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoCodeRoute = GoCodeRouteImport.update({
+  id: '/go/$code',
+  path: '/go/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalRoute = RobloxPortalRouteImport.update({
   id: '/roblox/portal',
   path: '/roblox/portal',
@@ -165,6 +186,16 @@ const ApiArLinkRoute = ApiArLinkRouteImport.update({
 const ApiArTrackRoute = ApiArTrackRouteImport.update({
   id: '/api/ar/track',
   path: '/api/ar/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
+  id: '/api/hub/files',
+  path: '/api/hub/files',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubOrdersRoute = ApiHubOrdersRouteImport.update({
+  id: '/api/hub/orders',
+  path: '/api/hub/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
@@ -232,6 +263,21 @@ const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
   path: '/api/ar/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
+  id: '/api/hub/auth/discord',
+  path: '/api/hub/auth/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubDevSeedRoute = ApiHubDevSeedRouteImport.update({
+  id: '/api/hub/dev/seed',
+  path: '/api/hub/dev/seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHubWebhooksShopifyRoute = ApiHubWebhooksShopifyRouteImport.update({
+  id: '/api/hub/webhooks/shopify',
+  path: '/api/hub/webhooks/shopify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalSubmissionsIndexRoute =
   RobloxPortalSubmissionsIndexRouteImport.update({
     id: '/submissions/',
@@ -254,17 +300,41 @@ const ApiArAdminProjectSlugRoute = ApiArAdminProjectSlugRouteImport.update({
   path: '/api/ar/admin/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubAuthDiscordCallbackRoute =
+  ApiHubAuthDiscordCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => ApiHubAuthDiscordRoute,
+  } as any)
+const ApiHubFilesCreatorIdFileIdRoute =
+  ApiHubFilesCreatorIdFileIdRouteImport.update({
+    id: '/$creatorId/$fileId',
+    path: '/$creatorId/$fileId',
+    getParentRoute: () => ApiHubFilesRoute,
+  } as any)
 const ApiArAdminAssetsIdCompleteRoute =
   ApiArAdminAssetsIdCompleteRouteImport.update({
     id: '/complete',
     path: '/complete',
     getParentRoute: () => ApiArAdminAssetsIdRoute,
   } as any)
+const ApiHubFilesCreatorIdFileIdCompleteRoute =
+  ApiHubFilesCreatorIdFileIdCompleteRouteImport.update({
+    id: '/complete',
+    path: '/complete',
+    getParentRoute: () => ApiHubFilesCreatorIdFileIdRoute,
+  } as any)
 const ApiArAdminAssetsIdChunksNRoute =
   ApiArAdminAssetsIdChunksNRouteImport.update({
     id: '/chunks/$n',
     path: '/chunks/$n',
     getParentRoute: () => ApiArAdminAssetsIdRoute,
+  } as any)
+const ApiHubFilesCreatorIdFileIdChunksNRoute =
+  ApiHubFilesCreatorIdFileIdChunksNRouteImport.update({
+    id: '/chunks/$n',
+    path: '/chunks/$n',
+    getParentRoute: () => ApiHubFilesCreatorIdFileIdRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -283,13 +353,17 @@ export interface FileRoutesByFullPath {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
+  '/go/$code': typeof GoCodeRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/creator-hub/': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -304,12 +378,19 @@ export interface FileRoutesByFullPath {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -325,12 +406,16 @@ export interface FileRoutesByTo {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/login': typeof AdminLoginRoute
+  '/go/$code': typeof GoCodeRoute
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/creator-hub': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -345,12 +430,19 @@ export interface FileRoutesByTo {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -369,13 +461,17 @@ export interface FileRoutesById {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin_/login': typeof AdminLoginRoute
+  '/go/$code': typeof GoCodeRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/technology/$slug': typeof TechnologySlugRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/creator-hub/': typeof CreatorHubIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/hub/files': typeof ApiHubFilesRouteWithChildren
+  '/api/hub/orders': typeof ApiHubOrdersRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -390,12 +486,19 @@ export interface FileRoutesById {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
+  '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
+  '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
+  '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
+  '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
+  '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -415,13 +518,17 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
+    | '/go/$code'
     | '/roblox/portal'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
+    | '/creator-hub/'
     | '/admin/builder/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -436,12 +543,19 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/webhooks/shopify'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -457,12 +571,16 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/login'
+    | '/go/$code'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin'
+    | '/creator-hub'
     | '/admin/builder/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -477,12 +595,19 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/webhooks/shopify'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   id:
     | '__root__'
     | '/'
@@ -500,13 +625,17 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin_/login'
+    | '/go/$code'
     | '/roblox/portal'
     | '/technology/$slug'
     | '/x/$slug'
     | '/admin/'
+    | '/creator-hub/'
     | '/admin/builder/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/hub/files'
+    | '/api/hub/orders'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -521,12 +650,19 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/hub/auth/discord'
+    | '/api/hub/dev/seed'
+    | '/api/hub/webhooks/shopify'
     | '/roblox/portal/submissions/$id'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/hub/auth/discord/callback'
+    | '/api/hub/files/$creatorId/$fileId'
     | '/api/ar/admin/assets/$id/complete'
+    | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/ar/admin/assets/$id/chunks/$n'
+    | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -541,14 +677,21 @@ export interface RootRouteChildren {
   LiveRoute: typeof LiveRoute
   TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  GoCodeRoute: typeof GoCodeRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   XSlugRoute: typeof XSlugRoute
+  CreatorHubIndexRoute: typeof CreatorHubIndexRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
+  ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
+  ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
+  ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
+  ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
+  ApiHubWebhooksShopifyRoute: typeof ApiHubWebhooksShopifyRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
 }
 
@@ -666,6 +809,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/creator-hub/': {
+      id: '/creator-hub/'
+      path: '/creator-hub'
+      fullPath: '/creator-hub/'
+      preLoaderRoute: typeof CreatorHubIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/go/$code': {
+      id: '/go/$code'
+      path: '/go/$code'
+      fullPath: '/go/$code'
+      preLoaderRoute: typeof GoCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal': {
       id: '/roblox/portal'
       path: '/roblox/portal'
@@ -713,6 +870,20 @@ declare module '@tanstack/react-router' {
       path: '/api/ar/track'
       fullPath: '/api/ar/track'
       preLoaderRoute: typeof ApiArTrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/files': {
+      id: '/api/hub/files'
+      path: '/api/hub/files'
+      fullPath: '/api/hub/files'
+      preLoaderRoute: typeof ApiHubFilesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/orders': {
+      id: '/api/hub/orders'
+      path: '/api/hub/orders'
+      fullPath: '/api/hub/orders'
+      preLoaderRoute: typeof ApiHubOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roblox/portal/': {
@@ -806,6 +977,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/auth/discord': {
+      id: '/api/hub/auth/discord'
+      path: '/api/hub/auth/discord'
+      fullPath: '/api/hub/auth/discord'
+      preLoaderRoute: typeof ApiHubAuthDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/dev/seed': {
+      id: '/api/hub/dev/seed'
+      path: '/api/hub/dev/seed'
+      fullPath: '/api/hub/dev/seed'
+      preLoaderRoute: typeof ApiHubDevSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/hub/webhooks/shopify': {
+      id: '/api/hub/webhooks/shopify'
+      path: '/api/hub/webhooks/shopify'
+      fullPath: '/api/hub/webhooks/shopify'
+      preLoaderRoute: typeof ApiHubWebhooksShopifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal/submissions/': {
       id: '/roblox/portal/submissions/'
       path: '/submissions'
@@ -834,6 +1026,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAdminProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/auth/discord/callback': {
+      id: '/api/hub/auth/discord/callback'
+      path: '/callback'
+      fullPath: '/api/hub/auth/discord/callback'
+      preLoaderRoute: typeof ApiHubAuthDiscordCallbackRouteImport
+      parentRoute: typeof ApiHubAuthDiscordRoute
+    }
+    '/api/hub/files/$creatorId/$fileId': {
+      id: '/api/hub/files/$creatorId/$fileId'
+      path: '/$creatorId/$fileId'
+      fullPath: '/api/hub/files/$creatorId/$fileId'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdRouteImport
+      parentRoute: typeof ApiHubFilesRoute
+    }
     '/api/ar/admin/assets/$id/complete': {
       id: '/api/ar/admin/assets/$id/complete'
       path: '/complete'
@@ -841,12 +1047,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAdminAssetsIdCompleteRouteImport
       parentRoute: typeof ApiArAdminAssetsIdRoute
     }
+    '/api/hub/files/$creatorId/$fileId/complete': {
+      id: '/api/hub/files/$creatorId/$fileId/complete'
+      path: '/complete'
+      fullPath: '/api/hub/files/$creatorId/$fileId/complete'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRouteImport
+      parentRoute: typeof ApiHubFilesCreatorIdFileIdRoute
+    }
     '/api/ar/admin/assets/$id/chunks/$n': {
       id: '/api/ar/admin/assets/$id/chunks/$n'
       path: '/chunks/$n'
       fullPath: '/api/ar/admin/assets/$id/chunks/$n'
       preLoaderRoute: typeof ApiArAdminAssetsIdChunksNRouteImport
       parentRoute: typeof ApiArAdminAssetsIdRoute
+    }
+    '/api/hub/files/$creatorId/$fileId/chunks/$n': {
+      id: '/api/hub/files/$creatorId/$fileId/chunks/$n'
+      path: '/chunks/$n'
+      fullPath: '/api/hub/files/$creatorId/$fileId/chunks/$n'
+      preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdChunksNRouteImport
+      parentRoute: typeof ApiHubFilesCreatorIdFileIdRoute
     }
   }
 }
@@ -927,6 +1147,36 @@ const RobloxPortalRouteWithChildren = RobloxPortalRoute._addFileChildren(
   RobloxPortalRouteChildren,
 )
 
+interface ApiHubFilesCreatorIdFileIdRouteChildren {
+  ApiHubFilesCreatorIdFileIdCompleteRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRoute
+  ApiHubFilesCreatorIdFileIdChunksNRoute: typeof ApiHubFilesCreatorIdFileIdChunksNRoute
+}
+
+const ApiHubFilesCreatorIdFileIdRouteChildren: ApiHubFilesCreatorIdFileIdRouteChildren =
+  {
+    ApiHubFilesCreatorIdFileIdCompleteRoute:
+      ApiHubFilesCreatorIdFileIdCompleteRoute,
+    ApiHubFilesCreatorIdFileIdChunksNRoute:
+      ApiHubFilesCreatorIdFileIdChunksNRoute,
+  }
+
+const ApiHubFilesCreatorIdFileIdRouteWithChildren =
+  ApiHubFilesCreatorIdFileIdRoute._addFileChildren(
+    ApiHubFilesCreatorIdFileIdRouteChildren,
+  )
+
+interface ApiHubFilesRouteChildren {
+  ApiHubFilesCreatorIdFileIdRoute: typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
+}
+
+const ApiHubFilesRouteChildren: ApiHubFilesRouteChildren = {
+  ApiHubFilesCreatorIdFileIdRoute: ApiHubFilesCreatorIdFileIdRouteWithChildren,
+}
+
+const ApiHubFilesRouteWithChildren = ApiHubFilesRoute._addFileChildren(
+  ApiHubFilesRouteChildren,
+)
+
 interface ApiArAdminAssetsIdRouteChildren {
   ApiArAdminAssetsIdCompleteRoute: typeof ApiArAdminAssetsIdCompleteRoute
   ApiArAdminAssetsIdChunksNRoute: typeof ApiArAdminAssetsIdChunksNRoute
@@ -951,6 +1201,17 @@ const ApiArAdminAssetsRouteChildren: ApiArAdminAssetsRouteChildren = {
 const ApiArAdminAssetsRouteWithChildren =
   ApiArAdminAssetsRoute._addFileChildren(ApiArAdminAssetsRouteChildren)
 
+interface ApiHubAuthDiscordRouteChildren {
+  ApiHubAuthDiscordCallbackRoute: typeof ApiHubAuthDiscordCallbackRoute
+}
+
+const ApiHubAuthDiscordRouteChildren: ApiHubAuthDiscordRouteChildren = {
+  ApiHubAuthDiscordCallbackRoute: ApiHubAuthDiscordCallbackRoute,
+}
+
+const ApiHubAuthDiscordRouteWithChildren =
+  ApiHubAuthDiscordRoute._addFileChildren(ApiHubAuthDiscordRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivatedRetailRoute: ActivatedRetailRoute,
@@ -963,14 +1224,21 @@ const rootRouteChildren: RootRouteChildren = {
   LiveRoute: LiveRoute,
   TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  GoCodeRoute: GoCodeRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   XSlugRoute: XSlugRoute,
+  CreatorHubIndexRoute: CreatorHubIndexRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
+  ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
+  ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
+  ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
+  ApiHubDevSeedRoute: ApiHubDevSeedRoute,
+  ApiHubWebhooksShopifyRoute: ApiHubWebhooksShopifyRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
 }
 export const routeTree = rootRouteImport

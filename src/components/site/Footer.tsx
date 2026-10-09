@@ -31,6 +31,7 @@ export function Footer() {
                 ["Fan Reactions", "/#fan-reactions"],
                 ["Production Capabilities", "/#capabilities"],
                 ["Activated Retail Program", "/activated-retail"],
+                ["Creator Hub", "/creator-hub"],
                 ["Case Studies", "/case-studies"],
                 ["Merch", SHOP_URL],
               ]}

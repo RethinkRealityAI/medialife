@@ -25,4 +25,10 @@ Disallow: /ar/
 Disallow: /activated-retail/
 Disallow: /api/
 
+# Creator Hub: the landing page (/creator-hub) is public; sign-in, onboarding
+# and the creator dashboard under it are an application. /go/<code> are the
+# activation links printed on merch.
+Disallow: /creator-hub/
+Disallow: /go/
+
 Sitemap: https://medialife.ai/sitemap.xml

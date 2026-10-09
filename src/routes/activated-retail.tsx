@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { SHOP_URL } from "@/components/site/Nav";
 import { CountUp } from "@/components/site/CountUp";
@@ -10,6 +10,7 @@ import {
   type Goto,
 } from "@/components/program/showcase";
 import { AWARD, PERFORMANCE, RETAIL_UNITS } from "@/lib/capabilities";
+import { HUB } from "@/lib/hub/model";
 
 const TITLE = "Activated Retail Program | MEDIALIFE";
 const DESC =
@@ -60,6 +61,7 @@ function ProgramPage() {
       <HowItWorks />
       <Anatomy />
       <Merch />
+      <ForCreators />
       <Venues />
       <YourIP />
       <Benefits />
@@ -392,6 +394,43 @@ function Merch() {
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────── FOR CREATORS ─────────────────────────── */
+function ForCreators() {
+  return (
+    <section id="creators" className={`${SECTION} bg-surface`}>
+      <div className={`${WRAP} py-12 grid gap-6 lg:grid-cols-12 lg:items-center`}>
+        <div className="lg:col-span-8">
+          <div className={EYEBROW}>/ For creators</div>
+          <h2 className="mt-3 text-2xl md:text-3xl font-medium tracking-tight text-balance">
+            Are you a creator? <span className="ember-text">There's a hub for that.</span>
+          </h2>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            We design, produce and fulfil activated merch with you. The {HUB.name} shows every
+            stage, every order and your earnings, live.
+          </p>
+        </div>
+        <div className="lg:col-span-4 flex flex-wrap gap-3 lg:justify-end">
+          <Link
+            to="/creator-hub"
+            className="group btn-pill btn-ember px-6 py-3.5 mono text-xs uppercase tracking-[0.18em] font-medium"
+          >
+            Explore the {HUB.name}
+            <span className="transition-transform group-hover:translate-x-1" aria-hidden>
+              →
+            </span>
+          </Link>
+          <a
+            href={`${HUB.base}/join`}
+            className="btn-pill btn-ember-outline px-6 py-3.5 mono text-xs uppercase tracking-[0.18em]"
+          >
+            Apply
+          </a>
+        </div>
       </div>
     </section>
   );
@@ -764,7 +803,7 @@ function Process() {
 }
 
 /* ─────────────────────────── 09 · FAQ ─────────────────────────── */
-const FAQ = [
+const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Do fans need an app?",
     a: "No. A tap (NFC) or a scan (QR) opens the experience in the phone's browser, on iPhone and Android.",
@@ -784,6 +823,18 @@ const FAQ = [
   {
     q: "Do we need merch already?",
     a: "No. We design and produce activated merch with you, or activate products you already sell.",
+  },
+  {
+    q: "I'm a creator, not a studio. Can I do this?",
+    a: (
+      <>
+        Yes. Creators join through the{" "}
+        <Link to="/creator-hub" className="text-primary underline underline-offset-4">
+          {HUB.name}
+        </Link>
+        : we design, produce and ship activated merch with you, and you track it all live.
+      </>
+    ),
   },
   {
     q: "What does it cost?",
