@@ -903,9 +903,42 @@ export function createScene({
     return cv.toDataURL("image/jpeg", 0.88);
   }
 
+  /**
+   * Render another scene through this renderer into a 2D canvas (the
+   * experience walkthrough's 3D step), so it shares this context's models,
+   * textures and environment instead of opening a second WebGL context. The
+   * shelf must be paused while it's used: it draws in the corner of the
+   * shelf's own canvas, then copies out.
+   */
+  function renderView(scn, cam, target) {
+    const pr = renderer.getPixelRatio();
+    const cw = renderer.domElement.width;
+    const ch = renderer.domElement.height;
+    const k = Math.min(cw / target.width, ch / target.height, 1);
+    const vw = Math.max(16, Math.floor(target.width * k));
+    const vh = Math.max(16, Math.floor(target.height * k));
+    cam.aspect = target.width / target.height;
+    cam.updateProjectionMatrix();
+    renderer.setRenderTarget(null);
+    renderer.setScissorTest(true);
+    renderer.setViewport(0, 0, vw / pr, vh / pr);
+    renderer.setScissor(0, 0, vw / pr, vh / pr);
+    renderer.render(scn, cam);
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, width, height);
+    const ctx = target.getContext("2d");
+    ctx.clearRect(0, 0, target.width, target.height);
+    ctx.drawImage(renderer.domElement, 0, ch - vh, vw, vh, 0, 0, target.width, target.height);
+    dirty = true;
+  }
+
   return {
     THREE,
     renderer,
+    renderView,
+    get environment() {
+      return envRT.texture;
+    },
     scene,
     camera,
     controls,

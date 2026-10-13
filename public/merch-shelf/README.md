@@ -66,6 +66,7 @@ No loader/tour, a "Preview" badge, no analytics.
 | `art.js`                                                                                         | canvas helpers: wordmark, die-cut, wood/fluted textures, QR drawing                                                                                                |
 | `ui.js`                                                                                          | layer stack (Esc, focus trap/return), icons, toast, fly-to-cart, analytics wrapper                                                                                 |
 | `sheet.js`, `cart.js`, `activation.js`, `tour.js`, `customise.js`, `estimator.js`, `snapshot.js` | the panels                                                                                                                                                         |
+| `tap3d.js`                                                                                       | step 1 of the experience walkthrough in real 3D: the product's own model and a modelled phone tapping its NFC tag, drawn through the shelf's renderer              |
 | `models/`                                                                                        | the lineup's boxy tee / hoodie / long-sleeve GLBs                                                                                                                  |
 
 Reused, not copied: `/roblox/creators/vendor/three` (r180 + addons),
@@ -97,6 +98,21 @@ and the imports in `products.js`.
 - **Back prints** (`prints.js`): real artwork (a back-print file dropped into _Make it yours_, then the product's
   `backPrint`, then the creator's logo) is printed whole, fitted inside the print's safe area (`SAFE_INSET`), with
   no frame and no sample type. Only the generated wordmark gets the sample panel, so the shelf never looks empty.
+
+## The experience walkthrough (`activation.js`)
+
+"Experience it" opens a centred, three-step story of what a fan does with the merch:
+
+1. **Tap**, in real 3D (`tap3d.js`): the product's own model (borrowed from the shelf, prints and all) and a
+   modelled phone that glides in and taps the NFC tag under the chest print (`tagPoint()` on the product
+   handle); rings ripple out and the phone shows the "open" sheet. It draws through the shelf's renderer
+   (`scene.renderView`), so nothing loads twice and no second WebGL context opens.
+2. **It opens**: the phone's browser opens straight into the creator's splash.
+3. **Unlock**: the demo for the product's `activation.kind` runs, then the reward, with a code.
+
+It runs on its own clock, which starts only once the overlay has faded in and stops while paused or hidden.
+Each step is a segment that fills like a story; click one to jump to it, or use ←/→ and Space. Opened from
+the QR on a phone (`#activate=<id>`), step 1 is skipped and the experience fills the screen.
 
 ## Adding a product type
 

@@ -1,36 +1,60 @@
 /**
- * "See what fans experience": an in-page cinematic. A phone slides in, its
- * camera scans the tag on the product, then the experience plays inside the
- * phone according to activation.kind:
- *   ar     the creator's mark pops out of the product, in 3D, over the phone
- *   model  a 3D collectible coin spins up
- *   video  a looping "video drop" with captions and player UI (canvas, no file)
- *   game   a 10-second tap game: catch the falling logos
- *   unlock a reward card flips over
- * …ending on "Reward unlocked: {reward}". Opened from #activate=<id> on a phone,
- * the phone frame drops away and the experience fills the screen.
+ * "See what fans experience": a paced, three-step walkthrough of what happens
+ * when a fan meets the merch.
+ *
+ *   1  Tap      real 3D: the product's own model and a modelled phone that
+ *               taps the NFC tag under the chest print (tap3d.js)
+ *   2  Opens    the phone: the browser opens straight into the creator's
+ *               immersive experience, no app
+ *   3  Unlock   the experience runs (activation.kind picks the demo: an AR
+ *               pop-out, a collectible, a video, a catch-the-drops game, a
+ *               reward card), then a reward only buyers get, with a code
+ *
+ * Everything runs on the walkthrough's own clock, which only starts once the
+ * overlay is on screen and can be paused, stepped and scrubbed: each step is
+ * a segment that fills like a story, and a click on one jumps to it.
+ * Opened from #activate=<id> on a phone, step 1 is skipped and the experience
+ * fills the screen.
  */
 import { $, esc, ICON, openLayer, closeLayer, isOpen, reducedMotion, track } from "./ui.js";
-import { drawQR, makeCanvas, FONT_SANS } from "./art.js";
+import { drawQR, FONT_SANS } from "./art.js";
+import { createTap3D, TAP } from "./tap3d.js";
+
+/** Length of each step, ms. Step 3 depends on the demo, and holds on the reward. */
+const OPEN_MS = 5200;
+const KIND_MS = { ar: 6200, model: 7200, video: 8600, game: 13200, unlock: 4800 };
+const TAG_WHERE = {
+  tee: "under the chest print",
+  hoodie: "under the chest print",
+  longsleeve: "under the chest print",
+  cap: "under the brim",
+  keychain: "inside the charm",
+  sticker: "inside the sticker",
+  plush: "in the tag",
+  deskmat: "in the corner",
+};
 
 export function createActivation(app) {
   const el = $("activation");
   let run = null;
+  let tap = null;
 
   function stop() {
     if (!run) return;
-    run.timers.forEach(clearTimeout);
+    cancelAnimationFrame(run.raf);
     run.rafs.forEach((r) => cancelAnimationFrame(r.id));
     run.cleanup.forEach((f) => f());
     run = null;
+    tap?.release();
   }
 
+  /** Do fn `ms` into the walkthrough's clock (which stops while paused). */
   const later = (ms, fn) => {
     const r = run;
-    const t = setTimeout(() => r === run && fn(), reducedMotion() ? Math.min(ms, 600) : ms);
-    run?.timers.push(t);
+    if (!r) return;
+    r.queue.push({ at: r.clock + ms, fn });
   };
-  /** A rAF loop that stops with the run. fn(dt, t) returns false to end. */
+  /** A frame loop on the walkthrough's clock. fn(dt, t) returns false to end. */
   const loop = (fn) => {
     const r = run;
     const h = { id: 0 };
@@ -40,24 +64,19 @@ export function createActivation(app) {
       if (r !== run) return;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      t += dt;
-      if (fn(dt, t) === false) return;
+      if (r.ready && !r.paused) {
+        t += dt;
+        if (fn(dt, t) === false) return;
+      }
       h.id = requestAnimationFrame(step);
     };
     h.id = requestAnimationFrame(step);
     run.rafs.push(h);
   };
 
-  function setStep(i) {
-    el.querySelectorAll(".act-steps li").forEach((li, k) => {
-      li.classList.toggle("on", k === i);
-      li.classList.toggle("done", k < i);
-    });
-  }
   function show(id) {
     el.querySelectorAll(".scr").forEach((s) => s.classList.toggle("on", s.id === id));
   }
-
   /* ---- confetti --------------------------------------------------------------- */
   function confetti(burst = 140) {
     if (reducedMotion()) return;
@@ -106,8 +125,8 @@ export function createActivation(app) {
 
   function playAR(h) {
     const scr = $("scrCam");
-    scr.classList.add("ar-live");
-    scr.querySelector(".cam-hint").textContent = "";
+    show("scrCam");
+    scr.classList.add("found", "ar-live");
     scr.querySelector(".cam-chip").innerHTML =
       `${ICON.ar}<span>${esc(h.product.activation.title)}</span>`;
     const pop = el.querySelector(".pop");
@@ -336,6 +355,7 @@ export function createActivation(app) {
     };
     const onDown = (e) => {
       if (!playing) return;
+      run.userPlays = true;
       const b = c.getBoundingClientRect();
       hit(((e.clientX - b.left) / b.width) * c.width, ((e.clientY - b.top) / b.height) * c.height);
     };
@@ -404,9 +424,22 @@ export function createActivation(app) {
         }
       });
     };
-    exp.querySelector('[data-act="play"]').onclick = start;
-    setTimeout(() => exp.querySelector('[data-act="play"]')?.focus(), 50);
-    if (app.autoplayGame) later(900, start);
+    exp.querySelector('[data-act="play"]').onclick = () => {
+      run.userPlays = true;
+      start();
+    };
+    // the walkthrough starts it for the viewer; a ghost finger catches a few
+    // until they tap themselves
+    if (!run.native) later(1400, () => !playing && start());
+    loop(() => {
+      if (!playing || run.userPlays || run.native) return;
+      for (const it of items) {
+        if (it.y > c.height * 0.42 && it.y < c.height * 0.7 && Math.random() < 0.05) {
+          hit(it.x, it.y);
+          break;
+        }
+      }
+    });
   }
 
   function playUnlock(h) {
@@ -446,13 +479,13 @@ export function createActivation(app) {
   function reward(h, { score = null } = {}) {
     if (!run || run.rewarded) return;
     run.rewarded = true;
-    setStep(2);
     const scr = $("scrReward");
     const a = h.product.activation;
     scr.innerHTML = `
       <div class="badge">${ICON.gift}</div>
       <h3>Reward unlocked</h3>
       <p>${score != null ? `You caught ${score}! ` : ""}${esc(a.reward || "A reward only fans with the merch can get.")}</p>
+      <div class="code"><small>Your code</small><code>${esc(run.code)}</code><span>Saved to this phone</span></div>
       <button type="button" class="btn btn-primary" data-act="cta">Make this real${ICON.arrow}</button>
       <button type="button" class="btn btn-ghost" data-act="close">${run.native ? "Explore the shelf" : "Back to the shelf"}</button>`;
     el.querySelector(".pop").classList.remove("go");
@@ -462,53 +495,157 @@ export function createActivation(app) {
     track("reward_redeem", { id: h.id, kind: a.kind });
   }
 
+  /* ---- the steps ------------------------------------------------------------------ */
+  const STEPS = [
+    {
+      label: "Tap",
+      title: "A fan taps the tag",
+      text: (h) =>
+        `The NFC tag sits ${TAG_WHERE[h.product.type] || "in the product"} on the ${h.product.name}. A tap, or a scan of the QR on the swing tag, is all it takes.`,
+    },
+    {
+      label: "It opens",
+      title: "The immersive experience opens",
+      text: () => "Straight into the phone's browser. No app to install, no account.",
+    },
+    {
+      label: "Unlock",
+      title: "They explore, then unlock a reward",
+      text: (h) => {
+        const a = h.product.activation;
+        const r = a.reward ? a.reward.charAt(0).toLowerCase() + a.reward.slice(1) : "";
+        return `${a.description}${r ? ` Then a reward only buyers get unlocks: ${r}.` : ""}`;
+      },
+    },
+  ];
+  const stepMs = (i, h) =>
+    i === 0 ? TAP.end * 1000 : i === 1 ? OPEN_MS : KIND_MS[h.product.activation.kind] || 7000;
+
+  function goStep(i, h) {
+    run.step = i;
+    run.stepAt = run.clock;
+    run.stepLen = stepMs(i, h);
+    const stage = el.querySelector(".act-stage");
+    stage.dataset.step = String(i);
+    el.querySelectorAll(".act-steps .stp").forEach((b, k) => {
+      b.classList.toggle("on", k === i);
+      b.classList.toggle("done", k < i);
+      b.setAttribute("aria-current", k === i ? "step" : "false");
+    });
+    const s = STEPS[i];
+    const cap = el.querySelector(".act-cap");
+    cap.innerHTML = `<b>${esc(s.title)}</b><span>${esc(s.text(h))}</span>`;
+    cap.classList.remove("in");
+    void cap.offsetWidth;
+    cap.classList.add("in");
+    el.querySelector('[data-act="prev"]').disabled = i === 0 || run.native;
+    el.querySelector('[data-act="next"]').disabled = i === 2;
+  }
+
+  function progress() {
+    el.querySelectorAll(".act-steps .stp").forEach((b, k) => {
+      let f = k < run.step ? 1 : 0;
+      if (k === run.step)
+        f = run.rewarded ? 1 : Math.min(1, (run.clock - run.stepAt) / run.stepLen);
+      b.style.setProperty("--p", f.toFixed(4));
+    });
+  }
+
+  /** 1 · the tap, in 3D */
+  function stepTap(h) {
+    goStep(0, h);
+    if (!tap) tap = createTap3D(app, el.querySelector(".tap3d"));
+    tap.begin(h);
+    later(TAP.touch * 1000, () => navigator.vibrate?.(30));
+    later(TAP.end * 1000, () => stepOpen(h));
+  }
+
+  /** 2 · the experience opens in the phone's browser */
+  function stepOpen(h) {
+    goStep(1, h);
+    later(900, () => tap?.release());
+    const b = $("scrBrowser");
+    b.classList.remove("ready", "press");
+    show("scrBrowser");
+    b.classList.add("loading");
+    later(1700, () => b.classList.add("ready"));
+    later(4100, () => b.classList.add("press"));
+    later(OPEN_MS, () => stepUnlock(h));
+  }
+
+  /** 3 · explore, then the reward */
+  function stepUnlock(h) {
+    goStep(2, h);
+    const kind = h.product.activation.kind;
+    track("activation_launch", { id: h.id, kind });
+    ({ ar: playAR, model: playModel, video: playVideo, game: playGame, unlock: playUnlock })[kind](
+      h,
+    );
+  }
+
   /* ---- shell ----------------------------------------------------------------------- */
   function render(h, native) {
     const a = h.product.activation;
-    const product = h.product.name;
+    const { name } = app.config.creator;
+    const logo = app.kit.logo("light").toDataURL("image/png");
     el.classList.toggle("native", native);
     el.innerHTML = `
       <button type="button" class="icon-btn close" data-act="close" aria-label="Close">${ICON.close}</button>
-      <div class="act-copy">
-        <p class="kicker">What fans experience</p>
-        <h2>${esc(a.title)}</h2>
-        <p>${esc(a.description)}</p>
-        <ol class="act-steps">
-          <li class="on"><i>1</i>A fan scans the tag on the ${esc(product)}</li>
-          <li><i>2</i>An immersive experience opens in the browser — no app</li>
-          <li><i>3</i>Reward unlocked${a.reward ? `: ${esc(a.reward)}` : ""}</li>
+      <div class="act-wrap">
+        <header class="act-head">
+          <p class="kicker">What fans experience · ${esc(h.product.name)}</p>
+          <h2 tabindex="-1">${esc(a.title)}</h2>
+        </header>
+        <div class="act-stage" data-step="0">
+          <canvas class="tap3d" aria-hidden="true"></canvas>
+          <div class="phone-wrap">
+            <div class="phone">
+              <div class="notch" aria-hidden="true"></div>
+              <div class="screen">
+                <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G ▮▮▮</span></div>
+                <div class="scr browser" id="scrBrowser">
+                  <div class="url"><span class="lock" aria-hidden="true">🔒</span>medialife.ai/a/${esc(h.id)}</div>
+                  <div class="load" aria-hidden="true"><i></i></div>
+                  <div class="splash">
+                    <img src="${logo}" alt="" />
+                    <p class="by">${esc(name)} presents</p>
+                    <h4>${esc(a.title)}</h4>
+                    <p class="sub">An immersive experience</p>
+                    <span class="enter">Enter${ICON.arrow}</span>
+                  </div>
+                </div>
+                <div class="scr cam" id="scrCam">
+                  <div class="feed" style="background-image:url(${h.thumbLarge || ""})"></div>
+                  <div class="cam-chip">${ICON.nfc}<span>${esc(a.title)}</span></div>
+                </div>
+                <div class="scr exp" id="scrExp"></div>
+                <div class="scr reward" id="scrReward" aria-live="polite"></div>
+                <canvas class="confetti" aria-hidden="true"></canvas>
+              </div>
+            </div>
+            <div class="pop" aria-hidden="true" hidden><canvas class="sparkles"></canvas><div class="pop-shadow"></div><div class="pop-inner"></div></div>
+          </div>
+        </div>
+        <ol class="act-steps" aria-label="Steps">
+          ${STEPS.map((s, i) => `<li><button type="button" class="stp" data-goto="${i}"><span class="track"><i></i></span><span class="lbl"><b>${i + 1}</b>${esc(s.label)}</span></button></li>`).join("")}
         </ol>
-        <div class="act-actions">
+        <p class="act-cap" aria-live="polite"></p>
+        <div class="act-ctrl">
+          <div class="transport">
+            <button type="button" class="icon-btn" data-act="prev" aria-label="Previous step">${ICON.prev}</button>
+            <button type="button" class="icon-btn" data-act="pause" aria-label="Pause"><span class="i-pause" aria-hidden="true"></span></button>
+            <button type="button" class="icon-btn" data-act="next" aria-label="Next step">${ICON.next}</button>
+          </div>
           <button type="button" class="btn btn-ghost" data-act="replay">${ICON.replay}Replay</button>
           <a class="btn btn-primary" href="${esc(app.joinUrl())}" data-act="cta">Make this real${ICON.arrow}</a>
         </div>
-        <div class="act-qr">
-          <canvas width="192" height="192" role="img" aria-label="QR code that opens this experience on your phone"></canvas>
-          <p><b>Try it on your phone</b>Scan with your camera — this exact experience opens full-screen.</p>
-        </div>
       </div>
-      <div class="phone-wrap">
-        <div class="phone">
-          <div class="notch" aria-hidden="true"></div>
-          <div class="screen">
-            <div class="statusbar" aria-hidden="true"><span>9:41</span><span>5G ▮▮▮</span></div>
-            <div class="scr cam on" id="scrCam">
-              <div class="feed" style="background-image:url(${h.thumbLarge || ""})"></div>
-              <p class="cam-hint">${native ? "Tag detected" : "Point your camera at the tag"}</p>
-              <div class="brackets" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-              <div class="scanline" aria-hidden="true"></div>
-              <div class="ripple" aria-hidden="true"></div>
-              <div class="cam-chip">${ICON.nfc}<span>medialife.ai/a/${esc(h.id)}</span></div>
-            </div>
-            <div class="scr exp" id="scrExp"></div>
-            <div class="scr reward" id="scrReward" aria-live="polite"></div>
-            <canvas class="confetti" aria-hidden="true"></canvas>
-          </div>
-        </div>
-        <div class="pop" aria-hidden="true" hidden><canvas class="sparkles"></canvas><div class="pop-shadow"></div><div class="pop-inner"></div></div>
-      </div>`;
+      <aside class="act-qr">
+        <canvas width="192" height="192" role="img" aria-label="QR code that opens this experience on your phone"></canvas>
+        <p><b>Try it on your phone</b>Scan with your camera and this experience opens full-screen.</p>
+      </aside>`;
     const qr = el.querySelector(".act-qr canvas");
-    if (qr && !native && matchMedia("(min-width: 761px)").matches) {
+    if (qr && !native && matchMedia("(min-width: 1100px)").matches) {
       drawQR(qr.getContext("2d"), app.activateUrl(h.id), 0, 0, 192, {
         dark: "#111216",
         light: "#ffffff",
@@ -518,35 +655,112 @@ export function createActivation(app) {
     }
   }
 
-  function start(h, native) {
+  function setPaused(p) {
+    if (!run) return;
+    run.paused = p;
+    el.classList.toggle("paused", p);
+    const b = el.querySelector('[data-act="pause"]');
+    b.setAttribute("aria-label", p ? "Play" : "Pause");
+    b.classList.toggle("is-paused", p);
+  }
+
+  function start(h, native, from = native ? 1 : 0, delay = 150) {
     stop();
-    run = { id: h.id, timers: [], rafs: [], cleanup: [], native, rewarded: false };
+    const code = `${
+      app.config.creator.name
+        .replace(/[^a-z0-9]/gi, "")
+        .slice(0, 6)
+        .toUpperCase() || "DROP"
+    }-${(Math.random() * 9000 + 1000) | 0}`;
+    run = {
+      id: h.id,
+      native,
+      code,
+      queue: [],
+      rafs: [],
+      cleanup: [],
+      clock: 0,
+      step: from,
+      stepAt: 0,
+      stepLen: 1,
+      ready: false,
+      paused: false,
+      rewarded: false,
+      userPlays: false,
+      raf: 0,
+    };
+    const r = run;
     render(h, native);
-    setStep(0);
-    const kind = h.product.activation.kind;
-    const t0 = native ? 200 : 900;
-    later(t0, () => $("scrCam").classList.add("locking"));
-    later(native ? 700 : 2100, () => {
-      $("scrCam").classList.add("found");
-      navigator.vibrate?.(30);
-    });
-    later(native ? 1500 : 3000, () => {
-      setStep(1);
-      track("activation_launch", { id: h.id, kind });
-      ({ ar: playAR, model: playModel, video: playVideo, game: playGame, unlock: playUnlock })[
-        kind
-      ](h);
-    });
+    el.classList.remove("paused");
+    if (from === 0) stepTap(h);
+    else if (from === 1) stepOpen(h);
+    else stepUnlock(h);
+    if (from === 2) $("scrBrowser").classList.add("loading", "ready");
+    // the clock: starts once the overlay is on screen, stops while paused or hidden
+    let last = performance.now();
+    const tick = (now) => {
+      if (r !== run) return;
+      const dt = Math.min(100, now - last);
+      last = now;
+      if (r.ready && !r.paused && !document.hidden) {
+        r.clock += dt;
+        for (let i = 0; i < r.queue.length; i++) {
+          if (r.queue[i].at > r.clock) continue;
+          const [q] = r.queue.splice(i, 1);
+          i--;
+          q.fn();
+          if (r !== run) return;
+        }
+        progress();
+        if (r.step === 0 && tap) tap.draw((r.clock - r.stepAt) / 1000);
+      }
+      r.raf = requestAnimationFrame(tick);
+    };
+    r.raf = requestAnimationFrame(tick);
+    // draw the first 3D frame straight away so the stage isn't empty
+    if (from === 0) tap.draw(0);
+    setTimeout(() => r === run && (r.ready = true), delay);
   }
 
   el.addEventListener("click", (e) => {
-    const t = e.target.closest("[data-act]");
-    if (!t) return;
-    if (t.dataset.act === "close") api.close();
-    if (t.dataset.act === "replay" && run) start(app.products.get(run.id), run.native);
-    if (t.dataset.act === "cta") {
-      track("apply_open", { from: "activation" });
-      if (t.tagName === "BUTTON") location.href = app.joinUrl();
+    const t = e.target.closest("[data-act], [data-goto]");
+    if (!t || !run) return;
+    const h = app.products.get(run.id);
+    if (t.dataset.goto !== undefined) {
+      start(h, run.native, Number(t.dataset.goto));
+      return;
+    }
+    switch (t.dataset.act) {
+      case "close":
+        api.close();
+        break;
+      case "replay":
+        start(h, run.native, run.native ? 1 : 0);
+        break;
+      case "prev":
+        start(h, run.native, Math.max(run.native ? 1 : 0, run.step - 1));
+        break;
+      case "next":
+        if (run.step < 2) start(h, run.native, run.step + 1);
+        break;
+      case "pause":
+        setPaused(!run.paused);
+        break;
+      case "cta":
+        track("apply_open", { from: "activation" });
+        if (t.tagName === "BUTTON") location.href = app.joinUrl();
+        break;
+    }
+  });
+  addEventListener("keydown", (e) => {
+    if (!run || !isOpen(el) || e.target.closest?.("input, textarea")) return;
+    if (e.key === " " && !e.target.closest?.("button, a")) {
+      e.preventDefault();
+      setPaused(!run.paused);
+    } else if (e.key === "ArrowRight" && run.step < 2) {
+      start(app.products.get(run.id), run.native, run.step + 1);
+    } else if (e.key === "ArrowLeft" && run.step > (run.native ? 1 : 0)) {
+      start(app.products.get(run.id), run.native, run.step - 1);
     }
   });
 
@@ -556,18 +770,21 @@ export function createActivation(app) {
       if (!h) return;
       track("activation_open", { id, kind: h.product.activation.kind, native });
       h.thumbLarge = h.thumbLarge || app.thumbnail(id, 384, "#2a2622");
-      start(h, native);
-      if (!isOpen(el)) {
+      const fresh = !isOpen(el);
+      if (fresh) {
         app.scene?.setPaused(true);
+        document.body.classList.add("is-activation");
         openLayer(el, {
-          focus: native ? '[data-act="close"]' : ".act-copy h2",
+          focus: native ? '[data-act="close"]' : ".act-head h2",
           onClose: () => {
             stop();
+            document.body.classList.remove("is-activation");
             app.scene?.setPaused(false);
           },
         });
-        el.querySelector(".act-copy h2")?.setAttribute("tabindex", "-1");
       }
+      // the clock waits for the overlay to finish fading in
+      start(h, native, native ? 1 : 0, fresh ? 700 : 150);
     },
     close() {
       closeLayer(el);

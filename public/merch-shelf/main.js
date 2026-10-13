@@ -882,7 +882,7 @@ function onFocusDrag(d, end) {
   turn.vel = d * Math.PI * 30;
 }
 
-app.thumbnail = (id, size = 192, bg = "#e9e7e1") => {
+app.thumbnail = (id, size = 192, bg = "#e9e7e1", { yaw = null } = {}) => {
   const h = app.products.get(id);
   if (!h) return null;
   const q = h.item.quaternion.clone();
@@ -890,7 +890,7 @@ app.thumbnail = (id, size = 192, bg = "#e9e7e1") => {
   const s = h.item.scale.clone();
   h.item.quaternion.identity();
   if (h.product.type === "deskmat") h.item.rotation.x = 0;
-  h.spin.rotation.y = h.turnMode === "faces" ? -0.3 : h.product.type === "cap" ? 0.5 : 0;
+  h.spin.rotation.y = yaw ?? (h.turnMode === "faces" ? -0.3 : h.product.type === "cap" ? 0.5 : 0);
   h.item.scale.setScalar(1);
   let url = null;
   try {

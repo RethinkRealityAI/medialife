@@ -12,7 +12,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { buildDecal, PRINT_ZONES } from "/roblox/creators/assets/js/product.js";
+import { buildDecal, resolveZone, PRINT_ZONES } from "/roblox/creators/assets/js/product.js";
 import {
   fitToAspect,
   makeCanvas,
@@ -841,6 +841,24 @@ export async function buildProduct({ product, slot, kit, accent, neon, activateU
     size,
     restYaw: item.rotation.y,
     turnMode,
+    /**
+     * Where the NFC tag sits, in the item's own space: under the chest print on
+     * apparel, behind the front print elsewhere, else the middle of the front.
+     */
+    tagPoint() {
+      spin.updateWorldMatrix(true, true);
+      const zone = model && (model.zones.chest || model.zones.front);
+      if (zone) {
+        const p = resolveZone(zone, model.box).position.clone();
+        model.wrap.localToWorld(p);
+        return item.worldToLocal(p);
+      }
+      // (called with the item unrotated, so its world box is its own)
+      const box = new THREE.Box3().setFromObject(spin);
+      const c = box.getCenter(new THREE.Vector3());
+      c.z = box.max.z;
+      return item.worldToLocal(c);
+    },
     get face() {
       return face;
     },

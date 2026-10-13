@@ -147,7 +147,7 @@ export const DEFAULT_SHELF: ShelfConfig = {
         "ar",
         "Your art comes alive",
         "Fans scan the back print and step into an immersive experience built around your art.",
-        "A reward only buyers can unlock",
+        "15% off your next drop",
       ),
     },
     {
