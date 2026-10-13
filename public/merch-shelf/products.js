@@ -287,7 +287,67 @@ function instantiate(gltf, { targetSize, vintage }) {
     meshes.push(o);
     washes.push(makeWash(o.material, { vintage, scale }));
   });
-  return { root, meshes, washes, box: new THREE.Box3().setFromObject(root) };
+  const box = new THREE.Box3().setFromObject(root);
+  return { root, meshes, washes, box, profile: topProfile(meshes, box) };
+}
+
+/**
+ * The garment's top silhouette, front to back: for each sliver of x, the
+ * highest point of the cloth and the middle of the cloth's depth there. The
+ * hanger is fitted under it so it sits inside the garment, the way a real
+ * one does, with only the hook coming out of the neck.
+ */
+function topProfile(meshes, box, bins = 48) {
+  const w = Math.max(1e-6, box.max.x - box.min.x);
+  const top = new Float32Array(bins).fill(-Infinity);
+  const v = new THREE.Vector3();
+  const binOf = (x) => Math.min(bins - 1, Math.max(0, Math.floor(((x - box.min.x) / w) * bins)));
+  for (const m of meshes) {
+    const pos = m.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      const b = binOf(v.x);
+      if (v.y > top[b]) top[b] = v.y;
+    }
+  }
+  // depth of the cloth near the top of each sliver
+  const zMin = new Float32Array(bins).fill(Infinity);
+  const zMax = new Float32Array(bins).fill(-Infinity);
+  const band = (box.max.y - box.min.y) * 0.06;
+  for (const m of meshes) {
+    const pos = m.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+      const b = binOf(v.x);
+      if (v.y < top[b] - band) continue;
+      if (v.z < zMin[b]) zMin[b] = v.z;
+      if (v.z > zMax[b]) zMax[b] = v.z;
+    }
+  }
+  // fill empty slivers from their neighbours
+  for (let b = 0; b < bins; b++) {
+    if (top[b] > -Infinity) continue;
+    let l = b - 1;
+    let r = b + 1;
+    while (l >= 0 && top[l] === -Infinity) l--;
+    while (r < bins && top[r] === -Infinity) r++;
+    const src = l >= 0 ? l : r;
+    top[b] = src < bins ? top[src] : box.max.y;
+    zMin[b] = src < bins ? zMin[src] : box.min.z;
+    zMax[b] = src < bins ? zMax[src] : box.max.z;
+  }
+  const at = (arr, x) => {
+    const f = ((x - box.min.x) / w) * bins - 0.5;
+    const i = Math.max(0, Math.min(bins - 2, Math.floor(f)));
+    const k = Math.max(0, Math.min(1, f - i));
+    return arr[i] * (1 - k) + arr[i + 1] * k;
+  };
+  return {
+    /** Highest cloth at x. */
+    top: (x) => at(top, x),
+    /** Middle of the cloth's depth near the top at x. */
+    midZ: (x) => (at(zMin, x) + at(zMax, x)) / 2,
+  };
 }
 
 /* ---------------------------------------------------------------------------
@@ -523,34 +583,65 @@ export async function buildProduct({ product, slot, kit, accent, neon, activateU
     const b = model.box;
     if (meta.apparel) {
       turnMode = "faces";
-      // hanger: black shoulder bar + chrome hook, garment hung from it
-      const top = b.max.y;
+      // hanger: a black shoulder bar fitted just under the shoulders (inside the
+      // garment) and a chrome hook rising out of the neck
+      const prof = model.profile;
       const w = size.x;
+      const span = w * 0.3;
+      const inset = 0.022; // cloth + the bar's radius
+      const shoulder = (x) => prof.top(x) - inset;
+      const shoulderY = (shoulder(-span * 0.55) + shoulder(span * 0.55)) / 2;
+      const midY = Math.min(shoulder(0), shoulderY + size.y * 0.04);
+      // centre the garment's shoulders on the hook (and so on the rail)
+      const z0 = prof.midZ(0);
+      model.wrap.position.z = -z0;
+      const zAt = (x) => prof.midZ(x) - z0;
       const bar = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-w * 0.36, top - size.y * 0.12, 0),
-        new THREE.Vector3(-w * 0.18, top - size.y * 0.02, 0),
-        new THREE.Vector3(0, top + 0.012, 0),
-        new THREE.Vector3(w * 0.18, top - size.y * 0.02, 0),
-        new THREE.Vector3(w * 0.36, top - size.y * 0.12, 0),
+        new THREE.Vector3(-span, Math.min(shoulder(-span), shoulderY), zAt(-span)),
+        new THREE.Vector3(
+          -span * 0.55,
+          Math.min(shoulder(-span * 0.55), shoulderY + 0.01),
+          zAt(-span * 0.55),
+        ),
+        new THREE.Vector3(0, midY, zAt(0)),
+        new THREE.Vector3(
+          span * 0.55,
+          Math.min(shoulder(span * 0.55), shoulderY + 0.01),
+          zAt(span * 0.55),
+        ),
+        new THREE.Vector3(span, Math.min(shoulder(span), shoulderY), zAt(span)),
       ]);
       const hm = keep(HANG_MAT());
-      const barMesh = new THREE.Mesh(keep(new THREE.TubeGeometry(bar, 24, 0.009, 8, false)), hm);
+      const barMesh = new THREE.Mesh(keep(new THREE.TubeGeometry(bar, 32, 0.0065, 8, false)), hm);
       barMesh.castShadow = true;
       spin.add(barMesh);
+      // the hook clears the collar (or the hood) by a few centimetres
+      const neckTop = Math.max(prof.top(0), midY + 0.03);
+      const hz = zAt(0);
+      const top = neckTop + 0.035;
+      // a hood stands up around the neck: the hook comes out of the top of it
+      // rather than running up in front of the opening
+      const hookFrom = type === "hoodie" ? prof.top(0) - 0.014 : midY;
       const hook = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0, top + 0.012, 0),
-        new THREE.Vector3(0, top + 0.05, 0),
-        new THREE.Vector3(0.012, top + 0.075, 0),
-        new THREE.Vector3(0.028, top + 0.07, 0),
-        new THREE.Vector3(0.028, top + 0.055, 0),
+        new THREE.Vector3(0, hookFrom, hz),
+        new THREE.Vector3(0, neckTop, hz),
+        new THREE.Vector3(0, top + 0.012, hz),
+        new THREE.Vector3(0.013, top + 0.036, hz),
+        new THREE.Vector3(0.028, top + 0.031, hz),
+        new THREE.Vector3(0.028, top + 0.016, hz),
       ]);
       const cm = keep(CHROME());
-      spin.add(new THREE.Mesh(keep(new THREE.TubeGeometry(hook, 20, 0.0035, 6, false)), cm));
+      spin.add(new THREE.Mesh(keep(new THREE.TubeGeometry(hook, 28, 0.0032, 6, false)), cm));
       addHangTag(
-        new THREE.Vector3(b.max.x * 0.62, top - size.y * 0.22, b.max.z * 0.5 + 0.004),
+        // pinned just under the shoulder seam, on the front
+        new THREE.Vector3(
+          b.max.x * 0.62,
+          prof.top(b.max.x * 0.62) - size.y * 0.1,
+          b.max.z * 0.5 + 0.004 - z0,
+        ),
         0.08,
       );
-      item.position.set(slot.center.x, slot.topY - 0.105 - top, 0.0);
+      item.position.set(slot.center.x, slot.topY - 0.03 - (top + 0.036) + 0.004, 0.0);
       item.rotation.y = restYaw;
       // the rail it hangs from
       const rail = new THREE.Mesh(
@@ -782,7 +873,7 @@ export async function buildProduct({ product, slot, kit, accent, neon, activateU
     },
     /** The activation tag catching the light, 0..1. */
     glint(a) {
-      for (const m of tagMats) m.emissiveIntensity = 0.03 + a * 0.45;
+      for (const m of tagMats) m.emissiveIntensity = 0.03 + a * 0.22;
     },
     idle: (dt) => idle(dt),
     dispose() {

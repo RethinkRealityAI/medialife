@@ -15,9 +15,9 @@ export function holoMaterial(tex) {
     alphaTest: 0.5,
     roughness: 0.3,
     metalness: 0.25,
-    clearcoat: 1,
-    clearcoatRoughness: 0.08,
-    iridescence: 1,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.14,
+    iridescence: 0.7,
     iridescenceIOR: 1.35,
     iridescenceThicknessRange: [180, 820],
     side: THREE.FrontSide,
@@ -36,12 +36,12 @@ export function holoMaterial(tex) {
            float facing = dot( normal, normalize( vViewPosition ) );
            vec2 uvh = vMapUv;
            vec3 rainbow = 0.5 + 0.5 * cos( 6.28318 * ( vec3( 0.0, 0.33, 0.67 ) + facing * 2.4 + uvh.x * 1.6 + uvh.y * 0.9 + mlTime * 0.05 ) );
-           totalEmissiveRadiance += rainbow * ( 0.02 + 0.07 * white );
-           diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * rainbow * 1.2, 0.35 * white );
+           totalEmissiveRadiance += rainbow * ( 0.008 + 0.03 * white );
+           diffuseColor.rgb = mix( diffuseColor.rgb, diffuseColor.rgb * rainbow * 1.1, 0.28 * white );
          }`,
       );
   };
-  m.customProgramCacheKey = () => "ml-holo-v1";
+  m.customProgramCacheKey = () => "ml-holo-v2";
   return { material: m, uniforms };
 }
 

@@ -768,6 +768,8 @@ function cameraForFocus(h) {
     zoom: FOCUS_ZOOM[h.product.type] ?? 1,
   });
 }
+/** The light pool behind a held product: fainter behind clear and shiny pieces. */
+const SPOT_LEVEL = { keychain: 0.08, sticker: 0.1, cap: 0.16 };
 /** How much of the free area each product fills when held up (1 = edge to edge-ish). */
 const FOCUS_ZOOM = { keychain: 0.78, sticker: 0.82, cap: 0.92 };
 
@@ -796,7 +798,12 @@ async function openProduct(id) {
   });
   h.setFace("front");
   app.sheet.setFaceUI("front");
-  app.scene.setSpot(presentationPoint(h), h.boxSize, app.config.theme.accent);
+  app.scene.setSpot(
+    presentationPoint(h),
+    h.boxSize,
+    app.config.theme.accent,
+    SPOT_LEVEL[h.product.type] ?? 0.2,
+  );
   const jobs = [];
   if (prevId) {
     const ph = app.products.get(prevId);
@@ -916,7 +923,10 @@ function tick(dt, clock, raw = dt) {
     const period = 2.4;
     const idx = Math.floor(glintClock / period) % list.length;
     const ph = (glintClock % period) / period;
-    list.forEach((h, i) => h.glint(i === idx ? Math.sin(Math.min(1, ph * 2.2) * Math.PI) : 0));
+    // never on the product being inspected: it should read clearly as it turns
+    list.forEach((h, i) =>
+      h.glint(i === idx && h.id !== app.focusedId ? Math.sin(Math.min(1, ph * 2.2) * Math.PI) : 0),
+    );
   }
   const h = app.focusedId && app.products.get(app.focusedId);
   if (h) {

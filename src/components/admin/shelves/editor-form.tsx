@@ -565,7 +565,7 @@ function ProductRow({
                 When a fan scans it
               </p>
               <Segmented
-                label="Activation"
+                label="Demo shown on the shelf"
                 value={p.activation.kind}
                 options={ACTIVATION_KINDS.map((k) => ({
                   value: k,

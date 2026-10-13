@@ -25,8 +25,8 @@
       "activation": {
         "kind": "ar",
         "title": "Your art comes alive",
-        "description": "Fans scan the back print and it comes alive in augmented reality.",
-        "reward": "A secret clip only buyers can watch"
+        "description": "Fans scan the back print and step into an immersive experience built around your art.",
+        "reward": "A reward only buyers can unlock"
       }
     },
     {
@@ -41,8 +41,8 @@
       "blurb": "Heavyweight washed-black hoodie with a full back print.",
       "activation": {
         "kind": "video",
-        "title": "Behind-the-scenes video",
-        "description": "Scan the back print to unlock a video message from you.",
+        "title": "An exclusive experience",
+        "description": "Scan the back print to open an immersive experience made just for the people wearing it.",
         "reward": "Early access to your next drop"
       }
     },
@@ -58,8 +58,8 @@
       "blurb": "12oz heavyweight long-sleeve in washed navy, sleeve and back prints.",
       "activation": {
         "kind": "model",
-        "title": "A 3D collectible",
-        "description": "Your character spins up as a 3D model fans can place on their desk.",
+        "title": "A collectible experience",
+        "description": "Scan the sleeve to open an immersive experience fans can keep coming back to.",
         "reward": "A digital collectible"
       }
     },
@@ -76,7 +76,7 @@
       "activation": {
         "kind": "unlock",
         "title": "Unlock a reward",
-        "description": "Scan under the brim to unlock a reward fans can't get anywhere else.",
+        "description": "Scan under the brim to open an immersive experience with a reward fans can't get anywhere else.",
         "reward": "A discount code for the next drop"
       }
     },
@@ -92,9 +92,9 @@
       "blurb": "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
       "activation": {
         "kind": "game",
-        "title": "A quick mini-game",
-        "description": "Scan the charm and play a quick game starring your character.",
-        "reward": "A shout-out for top scores"
+        "title": "A pocket-sized experience",
+        "description": "Scan the charm to open an immersive experience starring your character.",
+        "reward": "A shout-out for your top fans"
       }
     },
     {
@@ -106,11 +106,11 @@
       "color": "#ffffff",
       "print": null,
       "backPrint": null,
-      "blurb": "Holographic weatherproof vinyl. Tap a phone to a sticker and it animates.",
+      "blurb": "Holographic weatherproof vinyl, each sticker activated with its own NFC tag.",
       "activation": {
         "kind": "ar",
         "title": "The sticker comes alive",
-        "description": "Tap your phone to the sticker and its animation launches. No app.",
+        "description": "Tap a phone to the sticker and an immersive experience opens. No app.",
         "reward": "A bonus wallpaper"
       }
     },
@@ -123,12 +123,12 @@
       "color": "#f2efe9",
       "print": null,
       "backPrint": null,
-      "blurb": "Soft, huggable, and it talks back when scanned.",
+      "blurb": "Soft, huggable and activated: scan the tag for an immersive experience.",
       "activation": {
         "kind": "game",
-        "title": "A mini-game",
-        "description": "Scan the tag and play a quick game starring your mascot.",
-        "reward": "A shout-out for top scores"
+        "title": "Your mascot, immersive",
+        "description": "Scan the tag to open an immersive experience starring your mascot.",
+        "reward": "A shout-out for your top fans"
       }
     },
     {
@@ -143,8 +143,8 @@
       "blurb": "XL mat with the QR built into the art.",
       "activation": {
         "kind": "video",
-        "title": "Your setup tour",
-        "description": "Scan the corner to open a setup tour video.",
+        "title": "Your setup, unlocked",
+        "description": "Scan the corner to open an immersive experience of your setup.",
         "reward": "Your settings and keybinds"
       }
     }

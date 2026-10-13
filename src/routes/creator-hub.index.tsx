@@ -123,9 +123,9 @@ function Hero({ join, invited }: { join: string; invited: boolean }) {
               Merch your fans can <span className="ember-text">experience.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground">
-              T-shirts, keychains and stickers that come alive when fans scan them: an AR moment, a
-              3D model, a video, a game or a reward. We design, make and ship it with you. You watch
-              it all in the hub.
+              T-shirts, keychains and stickers that open an immersive experience when fans scan
+              them, with a reward only buyers can unlock. We design, make and ship it with you. You
+              see it all in the hub.
             </p>
             <div className="mt-8">
               <Ctas join={join} />
@@ -461,7 +461,7 @@ const STEPS = [
     b: "Production, tag programming, fulfilment and customer service. All handled.",
   },
   {
-    t: "You get paid, and watch it live",
+    t: "You get paid, and see it live",
     b: "Every order and your share, in the hub as it happens.",
   },
 ];
@@ -496,7 +496,7 @@ const FEATURES: { t: string; b: string; icon: LucideIcon }[] = [
   },
   {
     t: "Experiences",
-    b: "Preview the AR moment, 3D model, video or game your merch unlocks before fans ever see it.",
+    b: "Preview the immersive experience your merch unlocks before fans ever see it.",
     icon: Sparkles,
   },
   {

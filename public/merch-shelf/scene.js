@@ -229,7 +229,8 @@ export function createScene({
   });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.8, 0.42, 1.2);
+  const BLOOM_BASE = 0.8;
+  const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), BLOOM_BASE, 0.42, 1.2);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const BLOOM_SCALE = mobile ? 0.4 : 0.5;
@@ -615,12 +616,17 @@ export function createScene({
     const from = dim.material.opacity;
     const to = on ? 0.86 : 0;
     const s0 = spot.material.opacity;
-    const s1 = on && spot.userData.placed ? 0.38 : 0;
+    const s1 = on && spot.userData.placed ? spot.userData.level : 0;
+    // bloom eases off while a product is held: highlights on acrylic, foil
+    // and tags shouldn't flare as it turns
+    const b0 = bloom.strength;
+    const b1 = on ? BLOOM_BASE * 0.45 : BLOOM_BASE;
     dim.visible = true;
     spot.visible = true;
     await tween(0.6, (k) => {
       dim.material.opacity = from + (to - from) * k;
       spot.material.opacity = s0 + (s1 - s0) * k;
+      bloom.strength = b0 + (b1 - b0) * k;
     });
     if (!on) {
       dim.visible = false;
@@ -630,7 +636,8 @@ export function createScene({
   }
 
   /** Put the light pool behind a product held at `point` (size = its box). */
-  function setSpot(point, size, color = theme.accent) {
+  function setSpot(point, size, color = theme.accent, level = 0.2) {
+    spot.userData.level = level;
     const r = Math.max(size.x, size.y) * 1.9;
     spot.scale.set(r, r, 1);
     spot.position.x = point.x;
@@ -640,7 +647,7 @@ export function createScene({
     if (dim.visible && dim.material.opacity > 0.3) {
       spot.visible = true;
       const s0 = spot.material.opacity;
-      tween(0.5, (k) => (spot.material.opacity = s0 + (0.38 - s0) * k));
+      tween(0.5, (k) => (spot.material.opacity = s0 + (level - s0) * k));
     }
     dirty = true;
   }

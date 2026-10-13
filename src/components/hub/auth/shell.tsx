@@ -176,7 +176,7 @@ const VALUE_POINTS = [
   },
   {
     title: "Fans scan, it comes alive",
-    body: "An AR moment, a 3D model, a video or a game opens in the phone browser. No app.",
+    body: "An immersive experience opens in the phone browser. No app.",
   },
   {
     title: "Every stage, order and payout",

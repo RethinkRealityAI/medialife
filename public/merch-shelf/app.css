@@ -21,7 +21,7 @@
   --r-lg: 22px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --sheet-w: 340px;
+  --sheet-w: clamp(360px, 26vw, 460px);
 
   /* liquid glass, shared with the activated-retail showcase: a diagonal sheen
      over a dark tint; brightness() in the blur keeps white text legible over
@@ -1085,6 +1085,34 @@ body:not(.is-sheet) .view-ctl {
   color: var(--fg);
   font-size: 13.5px;
   margin-bottom: 2px;
+}
+.how {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.how li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.how i {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 500 11px/1 var(--mono);
+  font-style: normal;
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 .more-cta {
   display: flex;
@@ -3088,6 +3116,97 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* ---- beside the product (desktop, landscape tablets, phones on their side) ----
+   The buy-box pattern: the panel takes the right quarter of the screen, full
+   height under the bar. Name and price sit at the top beside the product, the
+   details and the fan experience fill the middle, and the actions are pinned
+   to the bottom right, where the eye and the pointer finish. */
+@media not all and (max-width: 1100px) and (orientation: portrait) {
+  .sheet {
+    bottom: calc(16px + var(--safe-b));
+    max-height: none;
+    border-radius: 26px;
+  }
+  .sheet-scroll {
+    display: flex;
+    flex-direction: column;
+    padding: 20px 22px 0;
+  }
+  .sheet h2 {
+    font-size: 22px;
+  }
+  .sheet .price {
+    font-size: 20px;
+    margin-top: 6px;
+  }
+  .opts {
+    margin-top: 18px;
+  }
+  .size-set {
+    margin-top: 16px;
+  }
+  .swatch {
+    width: 30px;
+    height: 30px;
+  }
+  .size {
+    height: 38px;
+  }
+  .more-toggle {
+    display: none;
+  }
+  .sheet-more,
+  .sheet.is-expanded .sheet-more {
+    display: block;
+    animation: none;
+    margin-top: 18px;
+    padding-top: 16px;
+  }
+  .sheet .blurb {
+    font-size: 14.5px;
+  }
+  .activated {
+    padding: 16px;
+  }
+  .activated h3 {
+    font-size: 16px;
+  }
+  .activated p {
+    font-size: 13.5px;
+  }
+  .tryphone canvas {
+    width: 76px;
+    height: 76px;
+  }
+  .buy {
+    order: 10;
+    position: sticky;
+    bottom: 0;
+    margin: auto -22px 0;
+    padding: 14px 22px 20px;
+    background: rgba(13, 12, 26, 0.86);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 1;
+  }
+  .buy .btn {
+    height: 48px;
+    font-size: 15px;
+  }
+  .more-cta {
+    margin-bottom: 18px;
+  }
+}
+/* short windows: the panel scrolls, the actions stay pinned */
+@media not all and (max-width: 1100px) and (orientation: portrait) {
+  @media (max-height: 640px) {
+    .buy .btn {
+      height: 44px;
+    }
+  }
+}
+
 /* ---- portrait phones and tablets: the card rides over the bottom of the scene */
 @media (max-width: 1100px) and (orientation: portrait) {
   .sheet {
@@ -3235,6 +3354,11 @@ input[type="range"]::-moz-range-thumb {
     padding-right: calc(var(--sheet-w) + 24px);
   }
   .sheet-scroll {
+    padding: 12px 14px 0;
+  }
+  .buy {
+    margin-left: -14px;
+    margin-right: -14px;
     padding: 12px 14px 14px;
   }
   .sheet h2 {

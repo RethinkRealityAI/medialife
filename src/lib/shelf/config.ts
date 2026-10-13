@@ -146,8 +146,8 @@ export const DEFAULT_SHELF: ShelfConfig = {
       activation: act(
         "ar",
         "Your art comes alive",
-        "Fans scan the back print and it comes alive in augmented reality.",
-        "A secret clip only buyers can watch",
+        "Fans scan the back print and step into an immersive experience built around your art.",
+        "A reward only buyers can unlock",
       ),
     },
     {
@@ -162,8 +162,8 @@ export const DEFAULT_SHELF: ShelfConfig = {
       blurb: "Heavyweight washed-black hoodie with a full back print.",
       activation: act(
         "video",
-        "Behind-the-scenes video",
-        "Scan the back print to unlock a video message from you.",
+        "An exclusive experience",
+        "Scan the back print to open an immersive experience made just for the people wearing it.",
         "Early access to your next drop",
       ),
     },
@@ -179,8 +179,8 @@ export const DEFAULT_SHELF: ShelfConfig = {
       blurb: "12oz heavyweight long-sleeve in washed navy, sleeve and back prints.",
       activation: act(
         "model",
-        "A 3D collectible",
-        "Your character spins up as a 3D model fans can place on their desk.",
+        "A collectible experience",
+        "Scan the sleeve to open an immersive experience fans can keep coming back to.",
         "A digital collectible",
       ),
     },
@@ -197,7 +197,7 @@ export const DEFAULT_SHELF: ShelfConfig = {
       activation: act(
         "unlock",
         "Unlock a reward",
-        "Scan under the brim to unlock a reward fans can't get anywhere else.",
+        "Scan under the brim to open an immersive experience with a reward fans can't get anywhere else.",
         "A discount code for the next drop",
       ),
     },
@@ -213,9 +213,9 @@ export const DEFAULT_SHELF: ShelfConfig = {
       blurb: "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
       activation: act(
         "game",
-        "A quick mini-game",
-        "Scan the charm and play a quick game starring your character.",
-        "A shout-out for top scores",
+        "A pocket-sized experience",
+        "Scan the charm to open an immersive experience starring your character.",
+        "A shout-out for your top fans",
       ),
     },
     {
@@ -227,11 +227,11 @@ export const DEFAULT_SHELF: ShelfConfig = {
       color: "#ffffff",
       print: null,
       backPrint: null,
-      blurb: "Holographic weatherproof vinyl. Tap a phone to a sticker and it animates.",
+      blurb: "Holographic weatherproof vinyl, each sticker activated with its own NFC tag.",
       activation: act(
         "ar",
         "The sticker comes alive",
-        "Tap your phone to the sticker and its animation launches. No app.",
+        "Tap a phone to the sticker and an immersive experience opens. No app.",
         "A bonus wallpaper",
       ),
     },
@@ -244,12 +244,12 @@ export const DEFAULT_SHELF: ShelfConfig = {
       color: "#f2efe9",
       print: null,
       backPrint: null,
-      blurb: "Soft, huggable, and it talks back when scanned.",
+      blurb: "Soft, huggable and activated: scan the tag for an immersive experience.",
       activation: act(
         "game",
-        "A mini-game",
-        "Scan the tag and play a quick game starring your mascot.",
-        "A shout-out for top scores",
+        "Your mascot, immersive",
+        "Scan the tag to open an immersive experience starring your mascot.",
+        "A shout-out for your top fans",
       ),
     },
     {
@@ -264,8 +264,8 @@ export const DEFAULT_SHELF: ShelfConfig = {
       blurb: "XL mat with the QR built into the art.",
       activation: act(
         "video",
-        "Your setup tour",
-        "Scan the corner to open a setup tour video.",
+        "Your setup, unlocked",
+        "Scan the corner to open an immersive experience of your setup.",
         "Your settings and keybinds",
       ),
     },

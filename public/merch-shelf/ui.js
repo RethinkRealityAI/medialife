@@ -59,13 +59,6 @@ export const KIND_ICON = {
   game: ICON.game,
   unlock: ICON.unlock,
 };
-export const KIND_LABEL = {
-  ar: "AR moment",
-  model: "3D collectible",
-  video: "Video drop",
-  game: "Mini-game",
-  unlock: "Reward unlock",
-};
 
 /* ---- layers ------------------------------------------------------------------ */
 const stack = [];

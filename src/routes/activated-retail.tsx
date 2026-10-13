@@ -168,7 +168,7 @@ const STEPS = [
   },
   {
     t: "Fans tap, scan, unlock",
-    b: "One tap opens an AR moment, a 3D model, a video, a game or a reward in the browser. Nothing to download.",
+    b: "One tap opens an immersive experience in the browser, with a reward at the end. Nothing to download.",
   },
   {
     t: "You see every scan",
@@ -317,7 +317,7 @@ const MERCH = [
   {
     name: "Vinyl collectible",
     img: `${A}/ml_reward_figure.webp`,
-    how: "An NFC chip in the base unlocks an AR moment and a digital twin.",
+    how: "An NFC chip in the base unlocks an immersive experience and a digital twin.",
     zone: "plush",
   },
   {

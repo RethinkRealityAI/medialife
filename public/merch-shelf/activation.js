@@ -10,18 +10,7 @@
  * …ending on "Reward unlocked: {reward}". Opened from #activate=<id> on a phone,
  * the phone frame drops away and the experience fills the screen.
  */
-import {
-  $,
-  esc,
-  ICON,
-  KIND_ICON,
-  KIND_LABEL,
-  openLayer,
-  closeLayer,
-  isOpen,
-  reducedMotion,
-  track,
-} from "./ui.js";
+import { $, esc, ICON, openLayer, closeLayer, isOpen, reducedMotion, track } from "./ui.js";
 import { drawQR, makeCanvas, FONT_SANS } from "./art.js";
 
 export function createActivation(app) {
@@ -167,7 +156,7 @@ export function createActivation(app) {
     const badge = app.kit.badge().toDataURL("image/png");
     const N = 14;
     exp.innerHTML = `
-      <div class="exp-top"><span class="live"></span>3D collectible</div>
+      <div class="exp-top"><span class="live"></span>Immersive experience</div>
       <p class="exp-title">${esc(h.product.activation.title)}</p>
       <div class="exp-body">
         <div class="coin-stage"><div class="rays"></div>
@@ -188,7 +177,7 @@ export function createActivation(app) {
   function playVideo(h) {
     const exp = $("scrExp");
     exp.innerHTML = `
-      <div class="exp-top"><span class="live"></span>Video drop · buyers only</div>
+      <div class="exp-top"><span class="live"></span>Immersive experience · buyers only</div>
       <p class="exp-title">${esc(h.product.activation.title)}</p>
       <div class="exp-body">
         <div class="vid">
@@ -213,8 +202,8 @@ export function createActivation(app) {
     const name = app.config.creator.name;
     const caps = [
       `Hey — it's ${name}.`,
-      "If you're watching this, you've got the drop.",
-      "This clip only plays for people holding the merch.",
+      "If you're here, you've got the drop.",
+      "This only opens for people holding the merch.",
       "Your reward's waiting below. ↓",
     ];
     const capEl = exp.querySelector(".vid-cap");
@@ -302,12 +291,12 @@ export function createActivation(app) {
   function playGame(h) {
     const exp = $("scrExp");
     exp.innerHTML = `
-      <div class="exp-top"><span class="live"></span>Mini-game · 10 seconds</div>
+      <div class="exp-top"><span class="live"></span>Immersive experience</div>
       <p class="exp-title">Catch the ${esc(app.config.creator.name)} drops</p>
       <div class="exp-body">
         <canvas class="full" aria-label="Tap the falling logos to catch them"></canvas>
         <div class="game-hud" aria-live="polite"><span>Score <b class="g-score">0</b></span><span>⏱ <b class="g-time">10</b>s</span></div>
-        <div class="game-start"><div><p>Tap the falling logos before they hit the floor.</p><button type="button" class="btn btn-primary" data-act="play">Play</button></div></div>
+        <div class="game-start"><div><p>Tap the falling logos before they hit the floor.</p><button type="button" class="btn btn-primary" data-act="play">Start</button></div></div>
       </div>`;
     show("scrExp");
     const c = exp.querySelector("canvas");
@@ -481,12 +470,12 @@ export function createActivation(app) {
     el.innerHTML = `
       <button type="button" class="icon-btn close" data-act="close" aria-label="Close">${ICON.close}</button>
       <div class="act-copy">
-        <p class="kicker">What fans experience · ${esc(KIND_LABEL[a.kind])}</p>
+        <p class="kicker">What fans experience</p>
         <h2>${esc(a.title)}</h2>
         <p>${esc(a.description)}</p>
         <ol class="act-steps">
           <li class="on"><i>1</i>A fan scans the tag on the ${esc(product)}</li>
-          <li><i>2</i>${esc(KIND_LABEL[a.kind])} opens in the browser — no app</li>
+          <li><i>2</i>An immersive experience opens in the browser — no app</li>
           <li><i>3</i>Reward unlocked${a.reward ? `: ${esc(a.reward)}` : ""}</li>
         </ol>
         <div class="act-actions">

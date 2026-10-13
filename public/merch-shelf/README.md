@@ -81,11 +81,19 @@ and the imports in `products.js`.
 - **A product:** it's lifted well clear of the shelf, the scene is dimmed and a soft pool of the accent colour
   lights it from behind. The camera frames it to fill most of the space the card leaves (`focusPose` in
   `scene.js`; `FOCUS_ZOOM` in `main.js` trims small items like the charms).
-- **The card** (`sheet.js`): a compact glass card with the essentials (name, price, colour, size, _Experience
-  it_, _Add to cart_); the description, the fan experience, the reward and the try-on-phone QR fold into
-  _details_. On portrait screens up to 1100 px wide it sits over the bottom of the scene (swipe up for details,
-  down to fold them, down again to close); elsewhere it floats beside the product. Front/Back and "drag to turn"
-  are a separate pill under the product, since they control the 3D view, not the order.
+- **The card** (`sheet.js`): on portrait screens up to 1100 px wide it's a compact glass card over the
+  bottom of the scene with the essentials (name, price, colour, size, _Experience it_, _Add to cart_); the
+  description, the immersive experience, the reward, how it works and the try-on-phone QR fold into _details_
+  (swipe up for details, down to fold them, down again to close). Everywhere else it's the buy-box pattern: a
+  full-height panel on the right quarter of the screen, name and price at the top beside the product, the
+  details in the middle and the actions pinned to the bottom right. Front/Back and "drag to turn" are a
+  separate pill under the product, since they control the 3D view, not the order.
+- **Hangers** sit inside the garments: `topProfile` in `products.js` samples each model's shoulder line and the
+  bar is fitted just under it, so only the hook comes out of the neck (out of the top of the hood).
+- **Glow**: while a product is held, bloom eases off, the light pool behind it is fainter for clear and shiny
+  pieces (`SPOT_LEVEL` in `main.js`) and the tags don't glint, so it stays readable as it turns.
+- **Copy**: every product opens an _immersive experience_. The activation `kind` only picks which demo the
+  shelf plays; the shelf never names the format (no "clip", "play", "watch", "AR moment").
 - **Back prints** (`prints.js`): real artwork (a back-print file dropped into _Make it yours_, then the product's
   `backPrint`, then the creator's logo) is printed whole, fitted inside the print's safe area (`SAFE_INSET`), with
   no frame and no sample type. Only the generated wordmark gets the sample panel, so the shelf never looks empty.
@@ -97,7 +105,7 @@ and the imports in `products.js`.
 3. Modelled: add an entry to `MODELS` in `products.js` (`url` + `zones`, first entry wins, later ones are fallbacks),
    a `TARGET` size, and a display branch in `buildProduct` (where it sits in the cubby, its hang tag).
    Procedural: write a `buildX()` like `keychain.js` / `sticker.js` returning `{ group, materials, size, idle, dispose }`.
-4. Optional: an icon/label for a new activation kind lives in `ui.js` (`KIND_ICON`, `KIND_LABEL`) and `activation.js`.
+4. Optional: an icon/label for a new activation kind lives in `ui.js` (`KIND_ICON`) and `activation.js`.
 
 ## Analytics
 

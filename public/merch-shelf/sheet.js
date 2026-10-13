@@ -3,19 +3,7 @@
  * Colour, size, quantity, add to cart, front/back for apparel, and the
  * "Activated" section that launches the fan-experience demo.
  */
-import {
-  $,
-  esc,
-  ICON,
-  KIND_ICON,
-  KIND_LABEL,
-  openLayer,
-  closeLayer,
-  isOpen,
-  toast,
-  flyToCart,
-  track,
-} from "./ui.js";
+import { $, esc, ICON, openLayer, closeLayer, isOpen, toast, flyToCart, track } from "./ui.js";
 import { PRODUCT_META, SWATCHES, money } from "./config.js";
 import { drawQR } from "./art.js";
 
@@ -64,7 +52,7 @@ export function createSheet(app) {
       <div class="sheet-scroll">
         <div class="sheet-head">
           <div class="titles">
-            <p class="kicker"><span class="kind">${KIND_ICON[a.kind]}${esc(KIND_LABEL[a.kind])}</span><span class="sr-only"> · ${esc(meta.label)}</span></p>
+            <p class="kicker"><span class="kind">${ICON.sparkle}Immersive experience</span><span class="sr-only"> · ${esc(meta.label)}</span></p>
             <div class="title-row"><h2 id="sheetTitle">${esc(p.name)}</h2><span class="tprice" aria-hidden="true">${money(p.price)}</span></div>
           </div>
           <div class="sheet-nav">
@@ -114,7 +102,7 @@ export function createSheet(app) {
           <p class="blurb">${esc(p.blurb)}</p>
           <section class="activated" aria-labelledby="actTitle">
             <div class="act-head">
-              <span class="act-icon">${KIND_ICON[a.kind]}</span>
+              <span class="act-icon">${ICON.sparkle}</span>
               <div>
                 <p class="kicker">When a fan scans it</p>
                 <h3 id="actTitle">${esc(a.title)}</h3>
@@ -127,6 +115,11 @@ export function createSheet(app) {
               <p><b>Try it on your phone</b>Point your camera here. It opens straight into this product's experience — no app.</p>
             </div>
           </section>
+          <ol class="how" aria-label="How it works">
+            <li><i>1</i><span>A fan scans the tag or taps it with their phone</span></li>
+            <li><i>2</i><span>The immersive experience opens in the browser, no app</span></li>
+            <li><i>3</i><span>They unlock a reward, and you see every scan</span></li>
+          </ol>
           <a class="more-cta" href="${esc(app.joinUrl())}" data-act="cta">Make this real — apply to the Creator Hub${ICON.arrow}</a>
         </div>
       </div>`;

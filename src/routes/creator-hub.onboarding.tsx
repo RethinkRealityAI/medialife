@@ -665,7 +665,7 @@ const NEXT_STEPS = [
     title: "Design & approvals in the hub",
     body: "You approve every proof before anything is made.",
   },
-  { title: "Production, launch & live earnings", body: "Watch orders and payouts as they land." },
+  { title: "Production, launch & live earnings", body: "See orders and payouts as they land." },
 ];
 
 function Submitted({

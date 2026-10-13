@@ -45,7 +45,7 @@ export function createTour(app) {
           ? `…and ${first.activation.title.charAt(0).toLowerCase() + first.activation.title.slice(1)}. Then they unlock a reward only buyers can get.`
           : "…and something happens.",
         extra: `<div class="mini-scan"><div class="mini-phone" aria-hidden="true"><div class="qrish"></div><div class="scanline"></div></div>
-                  <button type="button" class="btn btn-ghost" data-act="try">${ICON.scan}Watch it play</button></div>`,
+                  <button type="button" class="btn btn-ghost" data-act="try">${ICON.scan}See the experience</button></div>`,
         enter: async () => {
           if (first) await app.peekProduct(first.id, { glint: true });
         },
