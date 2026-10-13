@@ -60,7 +60,7 @@ No loader/tour, a "Preview" badge, no analytics.
 | `shelf.js`                                                                                       | the cubby unit (layout chosen for the viewport), finishes, LED strips + washes                                                                                     |
 | `neon.js`                                                                                        | per-letter neon tubes, ignition flicker and hum, backer, wires, halo                                                                                               |
 | `products.js`                                                                                    | model table (model + print zones per type, with fallbacks), loader with byte progress, vintage wash shader, decals, displays (hanger/stand/peg), hang + price tags |
-| `prints.js`                                                                                      | art kit: logo or generated wordmark, framed back panel, sleeve type, badge, distress/embroidery                                                                    |
+| `prints.js`                                                                                      | art kit: logo or generated wordmark, back prints (real art fitted to the safe area; sample panel only for the wordmark), sleeve type, badge, distress/embroidery   |
 | `keychain.js`                                                                                    | procedural clear-acrylic two-charm set on a silver clasp                                                                                                           |
 | `sticker.js`                                                                                     | procedural holographic die-cut 3-pack                                                                                                                              |
 | `art.js`                                                                                         | canvas helpers: wordmark, die-cut, wood/fluted textures, QR drawing                                                                                                |
@@ -73,6 +73,22 @@ Reused, not copied: `/roblox/creators/vendor/three` (r180 + addons),
 from `/roblox/creators/assets/js/product.js` (cap, plush and desk mat models also
 come from `/roblox/creators/assets/models/`). If those move, update the importmap
 and the imports in `products.js`.
+
+## Layout
+
+- **Hero:** the shelf is framed into the space between the top bar and the dock. The tour card and the dock are
+  glass, so the shelf may sit just under their top edges.
+- **A product:** it's lifted well clear of the shelf, the scene is dimmed and a soft pool of the accent colour
+  lights it from behind. The camera frames it to fill most of the space the card leaves (`focusPose` in
+  `scene.js`; `FOCUS_ZOOM` in `main.js` trims small items like the charms).
+- **The card** (`sheet.js`): a compact glass card with the essentials (name, price, colour, size, _Experience
+  it_, _Add to cart_); the description, the fan experience, the reward and the try-on-phone QR fold into
+  _details_. On portrait screens up to 1100 px wide it sits over the bottom of the scene (swipe up for details,
+  down to fold them, down again to close); elsewhere it floats beside the product. Front/Back and "drag to turn"
+  are a separate pill under the product, since they control the 3D view, not the order.
+- **Back prints** (`prints.js`): real artwork (a back-print file dropped into _Make it yours_, then the product's
+  `backPrint`, then the creator's logo) is printed whole, fitted inside the print's safe area (`SAFE_INSET`), with
+  no frame and no sample type. Only the generated wordmark gets the sample panel, so the shelf never looks empty.
 
 ## Adding a product type
 
@@ -88,5 +104,5 @@ and the imports in `products.js`.
 `ARTrack.init({ demo: "shelf:<slug>" | "merch-shelf" })` (skipped in preview). Events:
 `enter`, `product_open`, `add_to_cart`, `cart_open`, `checkout`, `activation_open`,
 `activation_launch`, `game_start`, `game_end`, `reward_redeem`, `ar_qr`, `tour_step`,
-`tour_finish`, `tour_skip`, `shelf_customize` (`what`: open/logo/neon/…/share/snapshot),
-`estimator_use`, `apply_open` (`from`: dock/sheet/checkout/activation/tour/estimator).
+`tour_finish`, `tour_skip`, `shelf_customize` (`what`: open/logo/back/neon/…/share/snapshot),
+`sheet_details`, `estimator_use`, `apply_open` (`from`: dock/sheet/checkout/activation/tour/estimator).

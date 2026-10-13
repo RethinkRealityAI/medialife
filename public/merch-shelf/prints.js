@@ -4,8 +4,14 @@
  *   logo     creator.logo (URL or a local file from "Make it yours"), trimmed;
  *            or a wordmark generated from the name when there is none / it fails
  *   front    product.print ?? logo     (apparel: small, left chest)
- *   back     product.backPrint, framed  (apparel: large back panel)
- *            ?? the logo set large on a framed accent panel, like the lineup
+ *   back     (apparel: the large back print)
+ *            a back-print file dropped in by the visitor
+ *            ?? product.backPrint
+ *            ?? the creator's own logo, whole and large
+ *            Real artwork is printed as-is, fitted inside the print's safe
+ *            area: no frame, no sample type. Only when there is no artwork at
+ *            all (the generated wordmark) does the back show the sample panel
+ *            in the lineup's style, so the shelf never looks empty.
  *
  * Images are cached by URL so a live re-render in the admin preview does not
  * re-download anything.
@@ -109,39 +115,51 @@ export function embroider(art) {
   return c;
 }
 
+/** Fraction of the print area kept clear at each edge (seams, the collar, the hem). */
+export const SAFE_INSET = 0.05;
+
+const canvasAt = (aspect, size) =>
+  makeCanvas(
+    aspect >= 1 ? size : Math.round(size * aspect),
+    aspect >= 1 ? Math.round(size / aspect) : size,
+  );
+
 /**
- * The lineup's signature back print: a framed rectangular art panel.
- * With artwork (backPrint) the art fills the frame; without, the creator's
- * logo is set large on a deep panel in the accent colour.
+ * Real artwork for the back: the whole piece, contain-fit inside the safe
+ * area — never cropped, never framed. A wide mark (a wordmark logo) sits on
+ * the upper back, the way back prints are placed; tall or square art centres.
+ * `bleed` cover-fits instead, for surfaces printed edge to edge (the desk mat).
  */
-export function backPanel({ art, userArt, name, handle, accent, neon, aspect, size = 1024 }) {
-  const W = aspect >= 1 ? size : Math.round(size * aspect);
-  const H = aspect >= 1 ? Math.round(size / aspect) : size;
-  const c = makeCanvas(W, H);
+export function backArt(art, aspect, { size = 1024, bleed = false, fill = null } = {}) {
+  const c = canvasAt(aspect, size);
+  const W = c.width;
+  const H = c.height;
+  const ctx = c.getContext("2d");
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fillRect(0, 0, W, H);
+  }
+  const m = bleed ? 0 : Math.round(Math.min(W, H) * SAFE_INSET);
+  const fit = bleed ? Math.max : Math.min;
+  const s = fit((W - m * 2) / art.width, (H - m * 2) / art.height);
+  const w = art.width * s;
+  const h = art.height * s;
+  const wide = art.width / art.height > (W / H) * 1.4;
+  const y = bleed ? (H - h) / 2 : m + (H - m * 2 - h) * (wide ? 0.22 : 0.5);
+  ctx.drawImage(art, (W - w) / 2, y, w, h);
+  return distress(c, 0.12, 9);
+}
+
+/**
+ * The sample back print, shown only while there's no real artwork: the
+ * lineup's framed panel with the generated wordmark set large on it.
+ */
+export function backPanel({ art, name, handle, accent, neon, aspect, size = 1024 }) {
+  const c = canvasAt(aspect, size);
+  const W = c.width;
+  const H = c.height;
   const ctx = c.getContext("2d");
   const m = Math.round(Math.min(W, H) * 0.035);
-  if (userArt) {
-    // cover-fit the artwork inside a thin frame
-    ctx.fillStyle = "#0d0d10";
-    ctx.fillRect(0, 0, W, H);
-    const s = Math.max((W - m * 2) / userArt.width, (H - m * 2) / userArt.height);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(m, m, W - m * 2, H - m * 2);
-    ctx.clip();
-    ctx.drawImage(
-      userArt,
-      (W - userArt.width * s) / 2,
-      (H - userArt.height * s) / 2,
-      userArt.width * s,
-      userArt.height * s,
-    );
-    ctx.restore();
-    ctx.strokeStyle = "rgba(255,255,255,0.85)";
-    ctx.lineWidth = Math.max(3, m * 0.3);
-    ctx.strokeRect(m * 0.5, m * 0.5, W - m, H - m);
-    return distress(c, 0.18, 9);
-  }
   // panel
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, mixHex(accent, "#000000", 0.5));
@@ -307,7 +325,7 @@ export function neonPlateArt({ name, neon }) {
  * @param {object} config ShelfConfig
  * @param {{ localLogo?: HTMLCanvasElement|null }} opts a logo dropped in by the visitor
  */
-export async function makeArtKit(config, { localLogo = null } = {}) {
+export async function makeArtKit(config, { localLogo = null, localBack = null } = {}) {
   await ensureFonts();
   const { name, handle } = config.creator;
   const { accent, neon } = config.theme;
@@ -326,24 +344,30 @@ export async function makeArtKit(config, { localLogo = null } = {}) {
   const toneFor = (hex) => (luminance(hex) > 0.35 ? "dark" : "light");
 
   const kit = {
-    key: `${name}|${handle}|${accent}|${neon}|${config.creator.logo || ""}|${localLogo ? "local" : ""}`,
+    key: `${name}|${handle}|${accent}|${neon}|${config.creator.logo || ""}|${localLogo ? "local" : ""}|${localBack ? "back" : ""}`,
     isWordmark: !userLogo,
     hasLocalLogo: !!localLogo,
+    hasLocalBack: !!localBack,
     toneFor,
     logo: (tone = "light") => userLogo || wordmark(tone),
     /** Front / chest art for a product in a given colour. */
     front: (p, hex = p.color) => (p.print && prints.get(p.print)) || kit.logo(toneFor(hex)),
-    /** The back panel canvas at a zone aspect. */
-    back: (p, aspect) =>
-      backPanel({
-        art: kit.logo("light"),
-        userArt: (p.backPrint && prints.get(p.backPrint)) || null,
-        name,
-        handle,
-        accent,
-        neon,
-        aspect,
-      }),
+    /**
+     * The back print at a zone aspect: real artwork when there is any, else the
+     * sample panel. `bleed` = a surface printed edge to edge (the desk mat).
+     */
+    back: (p, aspect, { bleed = false } = {}) => {
+      const art = localBack || (p.backPrint && prints.get(p.backPrint)) || userLogo;
+      if (art) {
+        const ownArt = art !== userLogo;
+        return backArt(art, aspect, {
+          bleed: bleed && ownArt,
+          // a logo on a mat sits on the mat's own colour
+          fill: bleed && !ownArt ? p.color : null,
+        });
+      }
+      return backPanel({ art: kit.logo("light"), name, handle, accent, neon, aspect });
+    },
     /** Vertical sleeve print: the name set sideways, like the lineup's sleeve type. */
     sleeve: (tone = "light") => sleeveArt({ name, tone }),
     badge: () => badgeArt({ name, logo: kit.logo("light"), accent, neon }),

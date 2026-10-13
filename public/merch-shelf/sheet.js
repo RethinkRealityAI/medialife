@@ -41,6 +41,12 @@ export function createSheet(app) {
     return { list, sel };
   }
 
+  /** Bottom card (portrait phones) or floating side card (everything else). */
+  const BOTTOM_Q = "(max-width: 1100px) and (orientation: portrait)";
+  const isBottom = () => matchMedia(BOTTOM_Q).matches;
+  /** Details start open where there's room for them beside the product. */
+  let expanded = false; // remembered across products
+
   function render(id) {
     const h = app.products.get(id);
     if (!h) return;
@@ -51,49 +57,42 @@ export function createSheet(app) {
     const a = p.activation;
     const enabled = app.enabledProducts();
     const idx = enabled.findIndex((x) => x.id === id);
+    const many = enabled.length > 1;
     const { list, sel } = swatchesFor(p, h.color);
     el.innerHTML = `
-      <div class="sheet-handle" aria-hidden="true"></div>
+      <button type="button" class="sheet-grab" data-act="more" aria-expanded="false" aria-controls="sheetMore"><i aria-hidden="true"></i><span class="sr-only">Show details</span></button>
       <div class="sheet-scroll">
         <div class="sheet-head">
           <div class="titles">
-            <p class="kicker">Activated · ${esc(meta.label)}</p>
-            <h2 id="sheetTitle">${esc(p.name)}</h2>
-            <p class="price">${money(p.price)}<small>PREVIEW PRICE</small></p>
+            <p class="kicker"><span class="kind">${KIND_ICON[a.kind]}${esc(KIND_LABEL[a.kind])}</span><span class="sr-only"> · ${esc(meta.label)}</span></p>
+            <div class="title-row"><h2 id="sheetTitle">${esc(p.name)}</h2><span class="tprice" aria-hidden="true">${money(p.price)}</span></div>
           </div>
           <div class="sheet-nav">
-            <button type="button" class="icon-btn" data-act="prev" aria-label="Previous product"${enabled.length < 2 ? " hidden" : ""}>${ICON.prev}</button>
-            <button type="button" class="icon-btn" data-act="next" aria-label="Next product"${enabled.length < 2 ? " hidden" : ""}>${ICON.next}</button>
+            ${many ? `<button type="button" class="icon-btn" data-act="prev" aria-label="Previous product">${ICON.prev}</button><span class="pos" aria-hidden="true">${idx + 1}/${enabled.length}</span><button type="button" class="icon-btn" data-act="next" aria-label="Next product">${ICON.next}</button>` : ""}
             <button type="button" class="icon-btn" data-act="close" aria-label="Close and go back to the shelf">${ICON.close}</button>
           </div>
         </div>
-        <p class="blurb">${esc(p.blurb)}</p>
-        ${
-          meta.apparel
-            ? `<div class="seg" role="group" aria-label="View">
-                <button type="button" data-face="front" aria-pressed="${h.face === "front"}">Front</button>
-                <button type="button" data-face="back" aria-pressed="${h.face === "back"}">Back print</button>
-              </div>`
-            : ""
-        }
-        ${
-          meta.tintable
-            ? `<fieldset>
-                <legend>Colour · <b id="colorName">${esc(sel.name)}</b></legend>
-                <div class="swatches" role="radiogroup" aria-label="Colour">
-                  ${list
-                    .map(
-                      (c) =>
-                        `<button type="button" class="swatch" role="radio" style="--c:${c.hex}" data-color="${c.hex}" data-name="${esc(c.name)}" aria-checked="${c.hex === sel.hex}" aria-label="${esc(c.name)}"></button>`,
-                    )
-                    .join("")}
-                </div>
-              </fieldset>`
-            : `<p class="finish-note"><i aria-hidden="true"></i>${esc(meta.finish || "")}</p>`
-        }
+        <p class="price">${money(p.price)}<small>Preview price</small></p>
+        <div class="opts">
+          ${
+            meta.tintable
+              ? `<fieldset class="colour">
+                  <legend>Colour · <b id="colorName">${esc(sel.name)}</b></legend>
+                  <div class="swatches" role="radiogroup" aria-label="Colour">
+                    ${list
+                      .map(
+                        (c) =>
+                          `<button type="button" class="swatch" role="radio" style="--c:${c.hex}" data-color="${c.hex}" data-name="${esc(c.name)}" aria-checked="${c.hex === sel.hex}" aria-label="${esc(c.name)}" title="${esc(c.name)}"></button>`,
+                      )
+                      .join("")}
+                  </div>
+                </fieldset>`
+              : `<p class="finish-note"><i aria-hidden="true"></i>${esc(meta.finish || "")}</p>`
+          }
+        </div>
         ${
           meta.sizes
-            ? `<fieldset>
+            ? `<fieldset class="size-set">
                 <legend>Size · <b id="sizeName">${esc(s.size)}</b></legend>
                 <div class="sizes" role="radiogroup" aria-label="Size">
                   ${meta.sizes.map((z) => `<button type="button" class="size" role="radio" data-size="${z}" aria-checked="${z === s.size}">${z}</button>`).join("")}
@@ -107,28 +106,29 @@ export function createSheet(app) {
             <output id="qtyOut" aria-live="polite">${s.qty}</output>
             <button type="button" data-act="plus" aria-label="One more">+</button>
           </div>
-          <button type="button" class="btn btn-primary" data-act="add" id="addBtn">${ICON.cart}Add to cart</button>
+          <button type="button" class="btn btn-act" data-act="activate">${ICON.scan}<span>Experience it</span></button>
+          <button type="button" class="btn btn-primary" data-act="add" id="addBtn">${ICON.cart}<span>Add to cart</span></button>
         </div>
-        <section class="activated" aria-labelledby="actTitle">
-          <div class="act-head">
-            <span class="act-icon">${KIND_ICON[a.kind]}</span>
-            <div>
-              <p class="kicker">Fans experience · ${esc(KIND_LABEL[a.kind])}</p>
-              <h3 id="actTitle">${esc(a.title)}</h3>
+        <button type="button" class="more-toggle" data-act="more" aria-expanded="false" aria-controls="sheetMore"><span>Details &amp; the fan experience</span>${ICON.chevron}</button>
+        <div class="sheet-more" id="sheetMore">
+          <p class="blurb">${esc(p.blurb)}</p>
+          <section class="activated" aria-labelledby="actTitle">
+            <div class="act-head">
+              <span class="act-icon">${KIND_ICON[a.kind]}</span>
+              <div>
+                <p class="kicker">When a fan scans it</p>
+                <h3 id="actTitle">${esc(a.title)}</h3>
+              </div>
             </div>
-          </div>
-          <p>${esc(a.description)}</p>
-          ${a.reward ? `<div class="reward-chip">${ICON.gift}<span><b>Reward:</b> ${esc(a.reward)}</span></div>` : ""}
-          <button type="button" class="btn btn-ghost btn-block" data-act="activate">${ICON.scan}See what fans experience</button>
-          <div class="tryphone">
-            <canvas width="168" height="168" id="sheetQr" aria-label="QR code that opens this experience on your phone" role="img"></canvas>
-            <p><b>Try it on your phone</b>Point your camera here. It opens straight into this product's experience — no app.</p>
-          </div>
-        </section>
-      </div>
-      <div class="sheet-foot">
-        <span>${idx + 1} of ${enabled.length}</span>
-        <a class="linkish" href="${esc(app.joinUrl())}" data-act="cta">Make this real →</a>
+            <p>${esc(a.description)}</p>
+            ${a.reward ? `<div class="reward-chip">${ICON.gift}<span><b>Reward:</b> ${esc(a.reward)}</span></div>` : ""}
+            <div class="tryphone">
+              <canvas width="168" height="168" id="sheetQr" aria-label="QR code that opens this experience on your phone" role="img"></canvas>
+              <p><b>Try it on your phone</b>Point your camera here. It opens straight into this product's experience — no app.</p>
+            </div>
+          </section>
+          <a class="more-cta" href="${esc(app.joinUrl())}" data-act="cta">Make this real — apply to the Creator Hub${ICON.arrow}</a>
+        </div>
       </div>`;
     const qr = el.querySelector("#sheetQr");
     if (qr)
@@ -137,7 +137,86 @@ export function createSheet(app) {
         light: "#ffffff",
         margin: 1,
       });
+    setExpanded(expanded, { silent: true });
+    renderView(h);
   }
+
+  /* The view control floats by the product (it turns the product, it isn't an order option). */
+  const view = $("viewCtl");
+  function renderView(h) {
+    const apparel = PRODUCT_META[h.product.type].apparel;
+    view.innerHTML = `
+      ${
+        apparel
+          ? `<div class="seg" role="group" aria-label="Show the">
+              <button type="button" data-face="front" aria-pressed="${h.face === "front"}">Front</button>
+              <button type="button" data-face="back" aria-pressed="${h.face === "back"}">Back</button>
+            </div>`
+          : ""
+      }
+      <span class="turn-hint">${ICON.turn}<span>Drag to turn</span></span>`;
+    view.hidden = false;
+  }
+  view.addEventListener("click", (e) => {
+    const t = e.target.closest("[data-face]");
+    if (!t || !current) return;
+    app.setFace(current, t.dataset.face);
+    view
+      .querySelectorAll("[data-face]")
+      .forEach((b) => b.setAttribute("aria-pressed", String(b === t)));
+  });
+  // keep the floating controls just above the card as it grows and shrinks
+  let peekH = 0; // the card's height with the details folded away
+  new ResizeObserver(() => {
+    if (!el.classList.contains("is-expanded")) peekH = el.offsetHeight;
+    document.documentElement.style.setProperty("--sheet-h", `${el.offsetHeight}px`);
+    document.documentElement.style.setProperty("--sheet-w-px", `${el.offsetWidth}px`);
+  }).observe(el);
+
+  function setExpanded(on, { silent = false } = {}) {
+    const was = el.classList.contains("is-expanded");
+    el.classList.toggle("is-expanded", on);
+    el.querySelectorAll('[data-act="more"]').forEach((b) =>
+      b.setAttribute("aria-expanded", String(on)),
+    );
+    const label = el.querySelector(".sheet-grab .sr-only");
+    if (label) label.textContent = on ? "Hide details" : "Show details";
+    const text = el.querySelector(".more-toggle span");
+    if (text) text.textContent = on ? "Fewer details" : "Details & the fan experience";
+    if (!on) el.querySelector(".sheet-scroll")?.scrollTo({ top: 0 });
+    if (!silent && was !== on) {
+      expanded = on;
+      // beside the product the card's height doesn't matter; over it (phones)
+      // the details are a reading state, so the product keeps its framing
+      if (on) track("sheet_details", { id: current });
+    }
+  }
+
+  // Swipe the card: up shows the details, down hides them, down again closes.
+  (() => {
+    let y0 = null;
+    let t0 = 0;
+    el.addEventListener("pointerdown", (e) => {
+      if (!isBottom() || e.target.closest("button:not(.sheet-grab), a, input")) return;
+      const scroller = el.querySelector(".sheet-scroll");
+      if (scroller && scroller.scrollTop > 0 && !e.target.closest(".sheet-grab")) return;
+      y0 = e.clientY;
+      t0 = performance.now();
+    });
+    const end = (e) => {
+      if (y0 === null) return;
+      const dy = e.clientY - y0;
+      const fast = performance.now() - t0 < 400;
+      y0 = null;
+      if (Math.abs(dy) < (fast ? 24 : 48)) return;
+      const open = el.classList.contains("is-expanded");
+      if (dy < 0 && !open) setExpanded(true);
+      else if (dy > 0 && open) setExpanded(false);
+      else if (dy > 0 && !open) app.closeProduct();
+    };
+    el.addEventListener("pointerup", end);
+    el.addEventListener("pointercancel", () => (y0 = null));
+  })();
 
   el.addEventListener("click", async (e) => {
     const t = e.target.closest("button, a");
@@ -158,14 +237,10 @@ export function createSheet(app) {
       el.querySelector("#sizeName").textContent = s.size;
       return;
     }
-    if (t.dataset.face) {
-      app.setFace(current, t.dataset.face);
-      el.querySelectorAll("[data-face]").forEach((b) =>
-        b.setAttribute("aria-pressed", String(b === t)),
-      );
-      return;
-    }
     switch (t.dataset.act) {
+      case "more":
+        setExpanded(!el.classList.contains("is-expanded"));
+        break;
       case "close":
         app.closeProduct();
         break;
@@ -231,6 +306,7 @@ export function createSheet(app) {
           modal: false,
           focus: "h2",
           onClose: () => {
+            view.hidden = true;
             document.body.classList.remove("is-sheet");
             if (!closing) app.closeProduct({ fromSheet: true });
           },
@@ -242,6 +318,7 @@ export function createSheet(app) {
       }
     },
     close() {
+      view.hidden = true;
       if (!isOpen(el)) return;
       closing = true;
       closeLayer(el);
@@ -249,18 +326,31 @@ export function createSheet(app) {
       current = null;
     },
     setFaceUI(face) {
-      el.querySelectorAll("[data-face]").forEach((b) =>
-        b.setAttribute("aria-pressed", String(b.dataset.face === face)),
-      );
+      view
+        .querySelectorAll("[data-face]")
+        .forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.face === face)));
     },
     get current() {
       return current;
     },
-    /** Pixel size the sheet covers, for the camera framing. */
+    /** The face the view control shows. */
+    get face() {
+      return view.querySelector('[data-face][aria-pressed="true"]')?.dataset.face || null;
+    },
+    get bottomLayout() {
+      return isBottom();
+    },
+    /**
+     * Pixels the card and the view pill cover, for the camera framing.
+     */
     footprint() {
-      const phone = matchMedia("(max-width: 760px)").matches;
-      if (phone) return { side: 0, bottom: Math.min(window.innerHeight * 0.56, 560) };
-      return { side: 420 + 16, bottom: 0 };
+      if (!isOpen(el)) return { side: 0, bottom: 0 };
+      // + the floating Front/Back pill, which sits just above the card (or at the bottom)
+      if (isBottom()) {
+        const h = el.classList.contains("is-expanded") && peekH ? peekH : el.offsetHeight;
+        return { side: 0, bottom: h + 52 };
+      }
+      return { side: el.offsetWidth + 28, bottom: 64 };
     },
   };
 }

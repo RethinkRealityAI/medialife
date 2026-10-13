@@ -188,10 +188,39 @@ export function createScene({
       depthWrite: false,
     }),
   );
-  dim.position.z = 0.32;
+  dim.position.z = 0.5; // in front of everything on the shelf, behind a held product
   dim.renderOrder = 20;
   dim.visible = false;
   scene.add(dim);
+
+  // a soft pool of light behind the product held up for inspection
+  const spotTex = new THREE.CanvasTexture(
+    radialCanvas(
+      [
+        [0, "rgba(255,255,255,0.9)"],
+        [0.35, "rgba(255,255,255,0.32)"],
+        [0.7, "rgba(255,255,255,0.08)"],
+        [1, "rgba(255,255,255,0)"],
+      ],
+      256,
+    ),
+  );
+  spotTex.colorSpace = THREE.SRGBColorSpace;
+  const spot = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      map: spotTex,
+      color: 0x19affe,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
+  spot.position.z = 0.51;
+  spot.renderOrder = 21;
+  spot.visible = false;
+  scene.add(spot);
 
   // ---- post ---------------------------------------------------------------
   const rt = new THREE.WebGLRenderTarget(1, 1, {
@@ -429,7 +458,7 @@ export function createScene({
     const aspect = w / h;
     const usableH = Math.max(0.3, 1 - (ins.top + ins.bottom) / h);
     const usableW = Math.max(0.3, 1 - (ins.left + ins.right) / w);
-    const margin = mobile ? 0.97 : 0.93;
+    const margin = mobile ? 0.97 : 0.96;
     const dV = size.y / (2 * tanHalf() * usableH * margin);
     const dH = size.x / (2 * tanHalf() * aspect * usableW * margin);
     const dist = Math.max(dV, dH) + size.z * 0.5;
@@ -523,39 +552,55 @@ export function createScene({
     else camera.setViewOffset(width, height, x, y, width, height);
   }
 
-  /** Fly the camera to a pose (position + target), with an optional view offset. */
+  /**
+   * Fly the camera to a pose (position + target), with an optional view offset.
+   * A newer flight takes over from one still in the air (tap a product while
+   * the camera is still heading home and it goes to the product). Resolves
+   * true when this flight landed, false when it was superseded.
+   */
+  let flight = 0;
+  let flightFrom = "hero";
   async function flyTo({ pos, target, viewX = 0, viewY = 0 }, dur = 1.1) {
     removeParallax();
+    const my = ++flight;
     const p0 = camera.position.clone();
     const t0 = controls.target.clone();
     const v0 = { ...view };
-    const prev = mode;
+    if (mode !== "flight") flightFrom = mode;
     mode = "flight";
     controls.enabled = false;
     await tween(dur, (k) => {
+      if (my !== flight) return;
       camera.position.lerpVectors(p0, pos, k);
       controls.target.lerpVectors(t0, target, k);
       camera.lookAt(controls.target);
       setView(v0.x + (viewX - v0.x) * k, v0.y + (viewY - v0.y) * k);
     });
-    mode = prev === "flight" ? "hero" : prev;
+    if (my !== flight) return false;
+    if (mode === "flight") mode = flightFrom;
+    return true;
   }
 
   async function goHero(dur = 1.0) {
-    await flyTo({ pos: heroPose.pos, target: heroPose.target }, dur);
+    if (!(await flyTo({ pos: heroPose.pos, target: heroPose.target }, dur))) return;
     mode = "hero";
     controls.enabled = true;
     controls.update();
   }
 
   /** Where the camera should sit to look at an object of `size` at `point`. */
-  function focusPose(point, size, { sheetSide = 0, sheetBottom = 0 } = {}) {
+  /**
+   * Where the camera should sit to look at an object of `size` at `point`, so
+   * it fills `zoom` × most of the area the cards leave free.
+   */
+  function focusPose(point, size, { sheetSide = 0, sheetBottom = 0, zoom = 1 } = {}) {
     const aspect = width / height;
     const freeW = Math.max(0.35, 1 - sheetSide / width);
-    const freeH = Math.max(0.35, 1 - sheetBottom / height - insets.top / height);
-    const dV = (size.y * (mobile ? 1.35 : 1.25)) / (2 * tanHalf() * freeH);
-    const dH = (Math.max(size.x, size.z) * 1.35) / (2 * tanHalf() * aspect * freeW);
-    const dist = Math.max(dV, dH, 0.55);
+    const freeH = Math.max(0.3, 1 - sheetBottom / height - insets.top / height);
+    const share = 0.9 * zoom;
+    const dV = size.y / (2 * tanHalf() * freeH * share);
+    const dH = Math.max(size.x, size.z) / (2 * tanHalf() * aspect * freeW * share);
+    const dist = Math.max(dV, dH, 0.28);
     const target = point.clone();
     const pos = target.clone().add(new THREE.Vector3(0, dist * 0.06, dist));
     return { pos, target, viewX: sheetSide / 2, viewY: (sheetBottom - insets.top) / 2 };
@@ -568,10 +613,36 @@ export function createScene({
 
   async function setDim(on) {
     const from = dim.material.opacity;
-    const to = on ? 0.62 : 0;
+    const to = on ? 0.86 : 0;
+    const s0 = spot.material.opacity;
+    const s1 = on && spot.userData.placed ? 0.38 : 0;
     dim.visible = true;
-    await tween(0.6, (k) => (dim.material.opacity = from + (to - from) * k));
-    if (!on) dim.visible = false;
+    spot.visible = true;
+    await tween(0.6, (k) => {
+      dim.material.opacity = from + (to - from) * k;
+      spot.material.opacity = s0 + (s1 - s0) * k;
+    });
+    if (!on) {
+      dim.visible = false;
+      spot.visible = false;
+      spot.userData.placed = false;
+    }
+  }
+
+  /** Put the light pool behind a product held at `point` (size = its box). */
+  function setSpot(point, size, color = theme.accent) {
+    const r = Math.max(size.x, size.y) * 1.9;
+    spot.scale.set(r, r, 1);
+    spot.position.x = point.x;
+    spot.position.y = point.y;
+    spot.material.color.set(color);
+    spot.userData.placed = true;
+    if (dim.visible && dim.material.opacity > 0.3) {
+      spot.visible = true;
+      const s0 = spot.material.opacity;
+      tween(0.5, (k) => (spot.material.opacity = s0 + (0.38 - s0) * k));
+    }
+    dirty = true;
   }
 
   // ---- parallax -------------------------------------------------------------
@@ -847,6 +918,10 @@ export function createScene({
     setInsets,
     computeHero,
     focusPose,
+    setSpot,
+    get dimLevel() {
+      return dim.visible ? dim.material.opacity : 0;
+    },
     flyTo,
     goHero,
     setDim,

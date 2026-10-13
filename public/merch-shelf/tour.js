@@ -127,8 +127,9 @@ export function createTour(app) {
       }),
     );
     el.querySelector("h2").focus({ preventScroll: true });
-    // keep the shelf clear of the caption card
-    app.scene.setInsets({ bottom: el.getBoundingClientRect().height + 40 });
+    // frame the shelf above the caption card; the card is glass, so the
+    // shelf's foot may sit just under its top edge
+    app.scene.setInsets({ bottom: app.tourFootprint() + 8 });
     placeSpot(s.spot);
     await s.enter?.();
     placeSpot(s.spot);

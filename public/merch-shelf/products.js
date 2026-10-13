@@ -463,7 +463,7 @@ export async function buildProduct({ product, slot, kit, accent, neon, activateU
       add(zones.front, embroider(front));
     } else if (type === "deskmat") {
       const fz = sizeOfZone(zones.front, model.box);
-      add(zones.front, kit.back(product, fz.x / fz.y));
+      add(zones.front, kit.back(product, fz.x / fz.y, { bleed: true }));
     } else {
       add(zones.front, front);
     }

@@ -43,6 +43,7 @@ export function createCustomise(app) {
   function render() {
     const c = app.config;
     const logo = app.localLogo;
+    const back = app.localBack;
     el.innerHTML = `
       <div class="panel-head">
         <div><p class="kicker">Make it yours</p><h2 id="customTitle">Customise the shelf</h2></div>
@@ -57,7 +58,16 @@ export function createCustomise(app) {
             <input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" id="logoFile" />
           </label>
           ${logo || c.creator.logo ? `<button type="button" class="linkish" data-act="wordmark" style="font-size:13px;margin-top:8px">Use the generated wordmark instead</button>` : ""}
-          <p class="privacy">Your file stays in this browser — it's never uploaded.</p>
+        </div>
+        <div class="field">
+          <span class="lbl">Back print <small>optional</small></span>
+          <label class="drop" id="dropBack">
+            <span class="thumb" id="backThumb"></span>
+            <span><b>${back ? esc(app.localBackName || "Your back art") : "Drop back-print art here"}</b><span>${back ? "Click to change · printed full size across the back" : "Key art, a character, a big graphic. Without it, your logo goes on the back."}</span></span>
+            <input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" id="backFile" />
+          </label>
+          ${back ? `<button type="button" class="linkish" data-act="noback" style="font-size:13px;margin-top:8px">Remove the back art</button>` : ""}
+          <p class="privacy">Your files stay in this browser — they're never uploaded.</p>
         </div>
         <div class="field"><label for="fName">Sign text</label><input class="text" id="fName" maxlength="28" value="${esc(c.creator.name)}" autocomplete="off" /></div>
         <div class="field"><label for="fHandle">Handle</label><input class="text" id="fHandle" maxlength="40" value="${esc(c.creator.handle)}" placeholder="@yourchannel" autocomplete="off" /></div>
@@ -87,19 +97,21 @@ export function createCustomise(app) {
         <button type="button" class="btn btn-ghost" data-act="share">${ICON.link}Share this shelf</button>
         <button type="button" class="btn btn-ghost" data-act="save">${ICON.image}Save image</button>
       </div>`;
-    const thumb = el.querySelector("#logoThumb");
-    const art = app.kit?.logo("light");
-    if (art) {
+    const show = (id, art) => {
+      if (!art) return;
       const cv = document.createElement("canvas");
       cv.width = art.width;
       cv.height = art.height;
       cv.getContext("2d").drawImage(art, 0, 0);
-      thumb.appendChild(cv);
-    }
-    wireDrop();
+      el.querySelector(id).appendChild(cv);
+    };
+    show("#logoThumb", app.kit?.logo("light"));
+    show("#backThumb", app.localBack);
+    wireDrop("#drop", "#logoFile", "logo");
+    wireDrop("#dropBack", "#backFile", "back");
   }
 
-  function readFile(file) {
+  function readFile(file, what = "logo") {
     if (!file || !/^image\//.test(file.type)) {
       toast("That file isn't an image. Try a PNG, SVG or WebP.");
       return;
@@ -112,11 +124,17 @@ export function createCustomise(app) {
     reader.onload = () => {
       const img = new Image();
       img.onload = async () => {
-        const art = trimmed(img, 1400);
-        track("shelf_customize", { what: "logo" });
-        await app.setLocalLogo(art, file.name);
-        render();
-        toast("Your logo is on every product now.");
+        const art = trimmed(img, what === "back" ? 2000 : 1400);
+        track("shelf_customize", { what });
+        if (what === "back") {
+          await app.setLocalBack(art, file.name);
+          render();
+          toast("Your art is on the back of the apparel. Open a tee and tap Back.");
+        } else {
+          await app.setLocalLogo(art, file.name);
+          render();
+          toast("Your logo is on every product now.");
+        }
       };
       img.onerror = () => toast("Couldn't read that image.");
       img.src = reader.result;
@@ -124,10 +142,11 @@ export function createCustomise(app) {
     reader.readAsDataURL(file);
   }
 
-  function wireDrop() {
-    const drop = el.querySelector("#drop");
-    const input = el.querySelector("#logoFile");
-    input.addEventListener("change", () => readFile(input.files[0]));
+  function wireDrop(dropSel, inputSel, what) {
+    const drop = el.querySelector(dropSel);
+    const input = el.querySelector(inputSel);
+    if (!drop || !input) return;
+    input.addEventListener("change", () => readFile(input.files[0], what));
     ["dragenter", "dragover"].forEach((t) =>
       drop.addEventListener(t, (e) => {
         e.preventDefault();
@@ -139,7 +158,7 @@ export function createCustomise(app) {
     );
     drop.addEventListener("drop", (e) => {
       e.preventDefault();
-      readFile(e.dataTransfer.files[0]);
+      readFile(e.dataTransfer.files[0], what);
     });
   }
 
@@ -204,7 +223,9 @@ export function createCustomise(app) {
       t.setAttribute("aria-checked", String(on));
       commit(next, 250);
     } else if (d.act === "close") closeLayer(el);
-    else if (d.act === "wordmark") {
+    else if (d.act === "noback") {
+      app.setLocalBack(null).then(render);
+    } else if (d.act === "wordmark") {
       next.creator.logo = null;
       app.setLocalLogo(null).then(() => app.applyConfig(next).then(render));
     } else if (d.act === "share") share();
@@ -223,21 +244,23 @@ export function createCustomise(app) {
   }
 
   async function share() {
+    const local = !!(app.localLogo || app.localBack);
     const url = buildQuickLink(app.config, { includeLogo: !app.localLogo });
-    track("shelf_customize", { what: "share", local: !!app.localLogo });
-    if (!app.localLogo) {
+    track("shelf_customize", { what: "share", local });
+    if (!local) {
       if (await copy(url)) toast("Link copied — paste it anywhere.");
       else showLink(url, "Copy this link");
       return;
     }
     showLink(
       url,
-      "Your logo can't travel in a link",
-      "The logo you dropped in lives only in this browser, so a link can't carry it. This link keeps your name, colours, finish and products — the shelf will show your generated wordmark. To share it with your logo, save an image or ask us to publish a shelf for you.",
+      "Your art can't travel in a link",
+      "The files you dropped in live only in this browser, so a link can't carry them. This link keeps your name, colours, finish and products. To share it with your art, save an image or ask us to publish a shelf for you.",
     );
   }
 
   function showLink(url, title, body = "") {
+    const local = !!(app.localLogo || app.localBack);
     const m = $("modal");
     m.setAttribute("aria-labelledby", "shareTitle");
     m.innerHTML = `
@@ -250,7 +273,7 @@ export function createCustomise(app) {
         <input class="text" id="shareUrl" readonly value="${esc(url)}" />
         <div class="actions-row">
           <button type="button" class="btn btn-primary" data-act="copy">${ICON.link}Copy link</button>
-          ${app.localLogo ? `<button type="button" class="btn btn-ghost" data-act="img">${ICON.image}Save image instead</button>` : ""}
+          ${local ? `<button type="button" class="btn btn-ghost" data-act="img">${ICON.image}Save image instead</button>` : ""}
         </div>
       </div>`;
     m.onclick = async (e) => {

@@ -44,6 +44,7 @@ export const AR_EVENTS = {
   shelf_customize: "Customised the shelf (name, logo or colours)",
   estimator_use: "Used the earnings estimator",
   apply_open: "Opened the Creator Hub application",
+  sheet_details: "Opened a product's details",
 } as const;
 export type ArEventName = keyof typeof AR_EVENTS | (string & {});
 

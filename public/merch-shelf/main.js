@@ -7,7 +7,7 @@
  * protocol and the no-WebGL fallback. See README.md for the file map.
  */
 import { resolveConfig, sanitize, loadDefaults, joinUrl, money, PRODUCT_META } from "./config.js";
-import { $, esc, toast, track, isPhone, reducedMotion, closeLayer, topLayer } from "./ui.js";
+import { $, esc, toast, track, reducedMotion, closeLayer, topLayer } from "./ui.js";
 import { ensureFonts } from "./art.js";
 import { makeArtKit } from "./prints.js";
 
@@ -24,6 +24,8 @@ const app = {
   products: new Map(),
   localLogo: null,
   localLogoName: "",
+  localBack: null,
+  localBackName: "",
   focusedId: null,
   preview: PREVIEW,
   autoplayGame: false,
@@ -281,6 +283,7 @@ async function render(config, { first = false } = {}) {
     c.theme.neon,
     c.creator.logo || "",
     app.localLogo ? app.localLogoId : "",
+    app.localBack ? app.localBackId : "",
   ].join("|");
   const shelfKey = [c.theme.shelf, layout.cols, layout.rows, enabled.length].join("|");
   const signKey = [
@@ -303,7 +306,7 @@ async function render(config, { first = false } = {}) {
   // --- art kit
   if (keys.kit !== kitKey || !app.kit) {
     if (first) loaderText("Printing your art");
-    const kit = await makeArtKit(c, { localLogo: app.localLogo });
+    const kit = await makeArtKit(c, { localLogo: app.localLogo, localBack: app.localBack });
     if (my !== gen) return;
     app.kit = kit;
     keys.kit = kitKey;
@@ -418,6 +421,12 @@ async function render(config, { first = false } = {}) {
         app.scene.requestRender();
       }),
     );
+    // a product rebuilt while it was held up (new art dropped in) goes back up
+    const held = app.focusedId && app.products.get(app.focusedId);
+    if (held && !held.lifted && my === gen) {
+      await liftOut(held, 0.01);
+      held.setFace(app.sheet.face || "front");
+    }
     // empty cubbies get a framed print of the creator's mark
     decorateEmpty(my);
   } else {
@@ -448,7 +457,7 @@ function decorateEmpty(my) {
   const n = app.enabledProducts().length;
   for (const slot of app.shelf.slots.slice(n)) {
     const g = new THREE.Group();
-    const art = app.kit.back({ backPrint: null }, 0.75);
+    const art = app.kit.back({ backPrint: null, color: "#0d0e13" }, 0.75, { bleed: true });
     const tex = new THREE.CanvasTexture(art);
     tex.colorSpace = THREE.SRGBColorSpace;
     const frameMat = new THREE.MeshStandardMaterial({
@@ -493,6 +502,14 @@ app.setLocalLogo = async (canvas, name = "") => {
   app.localLogo = canvas;
   app.localLogoName = name;
   app.localLogoId = canvas ? String(Date.now()) : "";
+  await render(app.config);
+};
+
+/** Back-print artwork dropped in by the visitor (apparel back panels). */
+app.setLocalBack = async (canvas, name = "") => {
+  app.localBack = canvas;
+  app.localBackName = name;
+  app.localBackId = canvas ? String(Date.now()) : "";
   await render(app.config);
 };
 
@@ -690,12 +707,23 @@ function onPick(id) {
 /* ------------------------------------------------------------------------- */
 const turn = { drag: 0, vel: 0, base: 0, faceTimer: 0, autoFaced: false, t: 0, released: 0 };
 
+/**
+ * Where a picked product is held up for inspection: well clear of the shelf
+ * (so its neighbours drop out of frame and behind the dimmer), drawn toward
+ * the middle and a little toward the camera's eye line.
+ */
 function presentationPoint(h) {
   const slot = h.slot;
-  return new THREE.Vector3(slot.center.x * 0.85, slot.center.y, slot.frontZ + 0.42);
+  const mid = (app.bounds.min.y + app.bounds.max.y) / 2;
+  return new THREE.Vector3(
+    slot.center.x * 0.55,
+    slot.center.y + (mid - slot.center.y) * 0.25,
+    slot.frontZ + 0.78,
+  );
 }
 
 async function liftOut(h, dur = 0.9) {
+  h.lifted = true;
   const P = presentationPoint(h);
   const to = P.clone().sub(h.centerOffset);
   const p0 = h.item.position.clone();
@@ -708,6 +736,7 @@ async function liftOut(h, dur = 0.9) {
 }
 
 async function putBack(h, dur = 0.8) {
+  h.lifted = false;
   const p0 = h.item.position.clone();
   const r0 = h.item.rotation.clone();
   // turn the shortest way home
@@ -733,8 +762,14 @@ function cameraForFocus(h) {
   const fp = app.sheet.footprint();
   const size = h.boxSize.clone();
   size.x = Math.max(size.x, size.z); // it turns
-  return app.scene.focusPose(P, size, { sheetSide: fp.side, sheetBottom: fp.bottom });
+  return app.scene.focusPose(P, size, {
+    sheetSide: fp.side,
+    sheetBottom: fp.bottom,
+    zoom: FOCUS_ZOOM[h.product.type] ?? 1,
+  });
 }
+/** How much of the free area each product fills when held up (1 = edge to edge-ish). */
+const FOCUS_ZOOM = { keychain: 0.78, sticker: 0.82, cap: 0.92 };
 
 async function openProduct(id) {
   const h = app.products.get(id);
@@ -761,6 +796,7 @@ async function openProduct(id) {
   });
   h.setFace("front");
   app.sheet.setFaceUI("front");
+  app.scene.setSpot(presentationPoint(h), h.boxSize, app.config.theme.accent);
   const jobs = [];
   if (prevId) {
     const ph = app.products.get(prevId);
@@ -771,10 +807,11 @@ async function openProduct(id) {
   await Promise.all(jobs);
 }
 
-function refocus() {
+function refocus(dur = 0.45) {
   const h = app.products.get(app.focusedId);
-  if (h) app.scene.flyTo(cameraForFocus(h), 0.4);
+  if (h) app.scene.flyTo(cameraForFocus(h), dur);
 }
+app.refocus = () => refocus(0.5);
 
 async function closeProduct({ fromSheet = false, instant = false } = {}) {
   const id = app.focusedId;
@@ -820,6 +857,7 @@ function onFocusDrag(d, end) {
   const h = app.products.get(app.focusedId);
   if (!h) return;
   turn.autoFaced = true;
+  $("viewCtl").classList.add("used");
   if (end) {
     turn.released = turn.t;
     if (h.turnMode === "faces") {
@@ -912,6 +950,14 @@ function tick(dt, clock, raw = dt) {
 /* ------------------------------------------------------------------------- */
 /* tour helpers                                                               */
 /* ------------------------------------------------------------------------- */
+/** Pixels the tour card covers; the glass card may overlap the scene a little. */
+function tourFootprint() {
+  const r = $("tour").getBoundingClientRect();
+  if (!r.height) return 0;
+  return Math.max(0, innerHeight - r.top - r.height * 0.22);
+}
+app.tourFootprint = tourFootprint;
+
 app.toHero = async () => {
   if (app.focusedId) return closeProduct();
   for (const h of app.products.values()) h.glint(0);
@@ -927,8 +973,7 @@ app.peekProduct = async (id, { glint = false } = {}) => {
   const size = h.slot
     ? new THREE.Vector3(h.slot.width * 1.1, h.slot.height * 1.05, 0.3)
     : h.boxSize;
-  const fp = isPhone() ? { bottom: 260 } : { bottom: 200 };
-  const pose = app.scene.focusPose(center, size, { sheetBottom: fp.bottom });
+  const pose = app.scene.focusPose(center, size, { sheetBottom: tourFootprint(), zoom: 0.92 });
   app.scene.setMode("flight");
   await app.scene.flyTo(pose, 1.2);
   app.scene.setMode("tour");
