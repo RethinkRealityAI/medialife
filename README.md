@@ -80,6 +80,8 @@ page and signable Statement of Work. It has no build step. Submissions go to the
 reads. Talent assets upload to that project's private `sow-uploads` bucket under
 `cln/<SOW id>/`. The anon key can only insert there, never read or list. File paths are
 stored in each submission's `full_state.roster[].files`.
+The talent roster step (`#s3`) is hidden for now as a fill-in-later item; remove its
+`hidden` attribute and restore its TOC link to bring it back.
 
 Unlisted SSR routes for the activated-retail tools (see [Activated-retail tools](#activated-retail-tools-admin)):
 `/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`.

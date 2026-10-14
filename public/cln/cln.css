@@ -442,7 +442,8 @@ body.nav-on .kana-tag {
 }
 .hero-copy p {
   margin: 0;
-  font-size: 15px;
+  font: italic 600 17px/1.45 var(--display);
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
   line-height: 1.6;
   color: #fff;
 }
@@ -866,7 +867,7 @@ body.nav-on .kana-tag {
 /* ── 03 Evergreen program ───────────────────────────────────────────────── */
 .ever-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18px;
   margin-bottom: 44px;
 }
@@ -1045,6 +1046,18 @@ body.nav-on .kana-tag {
 .merge-left .h-deck {
   margin-bottom: 36px;
 }
+.merge-kicker {
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+.merge-left {
+  position: relative;
+  z-index: 2;
+}
+.merge-left .lede,
+.merge-left .merge-kicker {
+  max-width: 30ch;
+}
 .merge-left .align {
   margin-top: 26px;
   max-width: 38ch;
@@ -1062,7 +1075,7 @@ body.nav-on .kana-tag {
   position: absolute;
   left: 50%;
   bottom: -40px;
-  height: 112%;
+  height: 100%;
   width: auto;
   max-width: none;
   transform: translateX(-50%);
@@ -3387,6 +3400,12 @@ select.inp {
   background: rgba(47, 209, 122, 0.16);
   color: #128a4b;
 }
+.pad .hint[hidden] {
+  display: none;
+}
+.pad.counter .hint {
+  font-style: italic;
+}
 .pad.pre img {
   mix-blend-mode: multiply;
   position: absolute;
@@ -3590,9 +3609,6 @@ dialog.done::backdrop {
   }
 }
 @media (max-width: 1100px) and (min-width: 761px) {
-  .hero-copy p {
-    display: none;
-  }
   .hero-char {
     transform: translateX(-24%);
   }
@@ -3720,6 +3736,9 @@ dialog.done::backdrop {
   }
 }
 @media (max-width: 760px) {
+  html {
+    scroll-padding-top: 128px;
+  }
   body {
     font-size: 16px;
   }
@@ -3735,7 +3754,8 @@ dialog.done::backdrop {
     max-width: 62%;
   }
   .hero-copy p {
-    display: none;
+    font-size: 13.5px;
+    max-width: 190px;
   }
   .hero-copy .lockup img {
     height: 18px;
@@ -3753,6 +3773,11 @@ dialog.done::backdrop {
   }
   .cal-grid .rowlbl {
     font-size: 12.5px;
+  }
+  .cal-bar {
+    padding: 0 6px;
+    font-size: 10px;
+    letter-spacing: 0;
   }
   .cal-swipe {
     display: block !important;

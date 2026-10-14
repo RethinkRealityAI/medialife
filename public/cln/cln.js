@@ -923,13 +923,6 @@
     need("f-name", filled("f-name"));
     need("f-title", filled("f-title"));
     need("f-email", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#f-email").value.trim()));
-    if (!S.roster.some((v) => v.name.trim())) {
-      const card = $(".vt");
-      card.open = true;
-      const f = $('[data-k="name"]', card).closest(".fld");
-      f.classList.add("bad");
-      bad.push(f);
-    }
     need("f-sname", filled("f-sname"));
     need("f-stitle", filled("f-stitle"));
     const msgs = [];
@@ -1027,7 +1020,7 @@
         date: today(),
         image: S.sig,
       },
-      medialife_signatory: "Sofia Gorenstein, Head of Corporate Development",
+      medialife_signatory: "Alexander Pinto, Head of Immersive Merchandising",
       source_url: location.href,
       user_agent: navigator.userAgent,
       submitted_at: new Date().toISOString(),
@@ -1035,16 +1028,6 @@
   }
 
   /* ── PDF ────────────────────────────────────────────────────────────── */
-  async function toDataUrl(src) {
-    const im = new Image();
-    im.src = src;
-    await im.decode();
-    const c = document.createElement("canvas");
-    c.width = im.naturalWidth;
-    c.height = im.naturalHeight;
-    c.getContext("2d").drawImage(im, 0, 0);
-    return c.toDataURL("image/png");
-  }
   async function pdf() {
     collectFields();
     if (!window.jspdf) return toast("PDF tools are still loading — try again in a second");
@@ -1068,7 +1051,12 @@
       d.setFont("helvetica", style);
       d.setFontSize(size);
       d.setTextColor(...color);
-      d.splitTextToSize(String(t || "—"), W - M * 2).forEach((ln) => {
+      d.splitTextToSize(
+        String(t || "—")
+          .replace(/\s+/g, " ")
+          .trim(),
+        W - M * 2,
+      ).forEach((ln) => {
         ensure(size + gap);
         d.text(ln, M, y);
         y += size + gap;
@@ -1098,7 +1086,7 @@
       y += Math.max(1, lines.length) * 13 + 3;
     };
     const bullet = (t) => {
-      const lines = d.splitTextToSize(String(t), W - M * 2 - 14);
+      const lines = d.splitTextToSize(String(t).replace(/\s+/g, " ").trim(), W - M * 2 - 14);
       ensure(lines.length * 13);
       d.setFillColor(...red);
       d.rect(M + 1, y - 6, 4, 4, "F");
@@ -1141,7 +1129,7 @@
     if (S.fields["f-addr"]) kv("Address", S.fields["f-addr"]);
     kv(
       "Service provider",
-      "MEDIALIFE™ · Sofia Gorenstein, Head of Corporate Development · sofia@medialife.ai · Wilmington, Delaware, USA",
+      "MEDIALIFE™ · Alexander Pinto, Head of Immersive Merchandising · 250 Park Avenue, New York, NY 10177",
     );
 
     h2("2. Program scope");
@@ -1152,53 +1140,27 @@
     kv("2027 conventions", S.cons.join(", "));
     if (S.fields["f-notes"]) kv("Notes", S.fields["f-notes"]);
 
-    h2("3. Talent roster & assets");
-    S.roster.forEach((v, i) => {
-      ensure(40);
-      text(
-        `${String(i + 1).padStart(2, "0")}  ${v.name || "(name pending)"}${v.handle ? "  ·  " + v.handle : ""}  ·  ${v.platform}`,
-        10.5,
-        ink,
-        "bold",
-        4,
-      );
-      const meta = [
-        v.url,
-        v.debut && "Debut " + v.debut,
-        v.followers && v.followers + " followers",
-        v.lang,
-      ]
-        .filter(Boolean)
-        .join("  ·  ");
-      if (meta) text(meta, 9.5, grey, "normal", 3);
-      if (v.skus.length) text("Preferred SKUs: " + v.skus.join(", "), 9.5, ink, "normal", 3);
-      const n = v.files.filter((f) => f.status === "ok").length;
-      text(`Assets uploaded: ${n}`, 9.5, grey, "normal", 3);
-      y += 4;
-    });
-    const nb = S.brandFiles.filter((f) => f.status === "ok").length;
-    if (nb) text(`Shared brand assets uploaded: ${nb}`, 9.5, grey);
-
-    h2("4. Deliverables & responsibilities");
+    h2("3. Deliverables & responsibilities");
     text("MEDIALIFE™ will deliver", 10, gold, "bold");
     $$("#s4 .dl-col:first-child li").forEach((li) => bullet(li.textContent.trim()));
     y += 4;
     text("cLaN Entertainment will provide", 10, gold, "bold");
     $$("#s4 .dl-col:last-child li").forEach((li) => bullet(li.textContent.trim()));
 
-    h2("5. Timeline");
+    h2("4. Timeline");
     if (S.fields["f-start"] || S.fields["f-launch"])
       kv(
         "Target dates",
         `Agreement ${S.fields["f-start"] || "TBC"} · Store launch ${S.fields["f-launch"] || "TBC"}`,
       );
     $$("#s5 .tl li").forEach((li) => {
+      ensure(44);
       text($(".when", li).textContent, 9, gold, "bold", 3);
       text($("b", li).textContent + " — " + $("p", li).textContent, 10, ink, "normal", 3);
       y += 3;
     });
 
-    h2("6. Commercial terms");
+    h2("5. Commercial terms");
     $$("#s6 .comm tr").forEach((tr) => {
       const td = $("td", tr).cloneNode(true);
       $$(".flag", td).forEach((f) => f.replaceWith(" [to finalize] "));
@@ -1206,7 +1168,7 @@
       kv($("th", tr).textContent, td.textContent.replace(/\s+/g, " ").trim());
     });
 
-    h2("7. Terms & conditions");
+    h2("6. Terms & conditions");
     TERMS.forEach(([h, p]) => {
       ensure(48);
       text(h, 10, ink, "bold", 3);
@@ -1214,7 +1176,7 @@
       y += 5;
     });
 
-    h2("8. Signatures");
+    h2("7. Signatures");
     ensure(170);
     const colW = (W - M * 2 - 20) / 2;
     const sy = y;
@@ -1232,18 +1194,6 @@
       } catch {
         /* bad image */
       }
-    try {
-      d.addImage(
-        await toDataUrl("assets/sofia-signature.png"),
-        "PNG",
-        M + colW + 30 + (colW - 20 - 80) / 2,
-        sy + 22,
-        80,
-        70,
-      );
-    } catch {
-      /* offline */
-    }
     d.setFont("helvetica", "normal");
     d.setFontSize(9.5);
     d.text(
@@ -1256,7 +1206,7 @@
       sy + 112,
     );
     d.text(
-      ["Sofia Gorenstein", "Head of Corporate Development", "sofia@medialife.ai"],
+      ["Alexander Pinto", "Head of Immersive Merchandising", "Date: ________________"],
       M + colW + 30,
       sy + 112,
     );
