@@ -979,7 +979,7 @@
       const m = $("#formMsg");
       m.hidden = false;
       m.textContent =
-        "We couldn't reach the server. Your progress is saved on this device — please try again, or email sofia@medialife.ai.";
+        "We couldn't reach the server. Your progress is saved on this device — please try again, or email pinto@medialife.ai.";
     } finally {
       btn.disabled = false;
       btn.textContent = "Sign & submit";
@@ -1129,7 +1129,7 @@
     if (S.fields["f-addr"]) kv("Address", S.fields["f-addr"]);
     kv(
       "Service provider",
-      "MEDIALIFE™ · Alexander Pinto, Head of Immersive Merchandising · 250 Park Avenue, New York, NY 10177",
+      "MEDIALIFE™ · Alexander Pinto, Head of Immersive Merchandising · pinto@medialife.ai · 250 Park Avenue, New York, NY 10177",
     );
 
     h2("2. Program scope");
@@ -1206,7 +1206,12 @@
       sy + 112,
     );
     d.text(
-      ["Alexander Pinto", "Head of Immersive Merchandising", "Date: ________________"],
+      [
+        "Alexander Pinto",
+        "Head of Immersive Merchandising",
+        "pinto@medialife.ai",
+        "Date: ________________",
+      ],
       M + colW + 30,
       sy + 112,
     );
