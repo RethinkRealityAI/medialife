@@ -35,6 +35,8 @@ export type CreatorSummary = {
   email: string;
   status: CreatorStatus;
   agency: string | null;
+  /** The partner id; absent on index entries written before partners existed. */
+  agencyId?: string | null;
   createdAt: number;
   submittedAt: number | null;
   updatedAt: number;
@@ -49,6 +51,7 @@ const summarize = (c: Creator): CreatorSummary => ({
   email: c.profile.email,
   status: c.status,
   agency: c.agency?.name ?? null,
+  agencyId: c.agency?.id ?? null,
   createdAt: c.createdAt,
   submittedAt: c.submittedAt,
   updatedAt: c.updatedAt,
@@ -57,7 +60,9 @@ const summarize = (c: Creator): CreatorSummary => ({
   platforms: c.channels.filter((ch) => ch.handle.trim()).map((ch) => ch.platform),
 });
 
-export async function getCreator(ns: HubNamespace, id: string) {
+/** null for a partner-only account (no creator profile). */
+export async function getCreator(ns: HubNamespace, id: string | null) {
+  if (!id) return null;
   return (await hubStore(ns)).getJSON<Creator>(KEYS.creator(id));
 }
 
@@ -277,7 +282,8 @@ const ACTIVITY_CAP = 200;
 
 export async function logActivity(
   ns: HubNamespace,
-  creatorId: string,
+  /** null (a partner-only account): nothing to log against. */
+  creatorId: string | null,
   a: {
     kind: ActivityKind;
     title: string;
@@ -296,6 +302,7 @@ export async function logActivity(
     productId: a.productId ?? null,
     actionable: a.actionable ?? false,
   };
+  if (!creatorId) return entry;
   await (
     await hubStore(ns)
   ).update<Activity[]>(KEYS.activity(creatorId), (cur) =>

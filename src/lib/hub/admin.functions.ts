@@ -35,7 +35,9 @@ import {
   scansFor,
   getInvite,
 } from "./data.server";
+import { COUNSEL_REVIEWED, CURRENT, signatureStatus } from "./agreements";
 import { mailConfigured, sendNotice } from "./mail.server";
+import { listSignatures } from "./partners.server";
 import {
   CREATOR_STATUS,
   HUB,
@@ -109,18 +111,29 @@ export const adminGetCreator = createServerFn({ method: "GET" })
     const ns = await requireHubAdmin();
     const creator = await getCreator(ns, data.id);
     if (!creator) return null;
-    const [admin, user, products, experiences, files, folders, orders, payouts, activity] =
-      await Promise.all([
-        getCreatorAdmin(ns, creator.id),
-        getUser(ns, creator.userId),
-        listProducts(ns, creator.id),
-        listExperiences(ns, creator.id),
-        listFiles(ns, creator.id),
-        listFolders(ns, creator.id),
-        listOrders(ns, creator.id),
-        listPayouts(ns, creator.id),
-        listActivity(ns, creator.id),
-      ]);
+    const [
+      admin,
+      user,
+      products,
+      experiences,
+      files,
+      folders,
+      orders,
+      payouts,
+      activity,
+      signatures,
+    ] = await Promise.all([
+      getCreatorAdmin(ns, creator.id),
+      getUser(ns, creator.userId),
+      listProducts(ns, creator.id),
+      listExperiences(ns, creator.id),
+      listFiles(ns, creator.id),
+      listFolders(ns, creator.id),
+      listOrders(ns, creator.id),
+      listPayouts(ns, creator.id),
+      listActivity(ns, creator.id),
+      listSignatures(ns, creator.id),
+    ]);
     const scans = await scansFor(
       ns,
       creator.id,
@@ -147,6 +160,19 @@ export const adminGetCreator = createServerFn({ method: "GET" })
       experiences,
       files,
       folders,
+      agreement: {
+        ...signatureStatus(signatures),
+        current: CURRENT.version,
+        counselReviewed: COUNSEL_REVIEWED,
+        signatures: signatures.map((x) => ({
+          id: x.id,
+          version: x.version,
+          signedName: x.signedName,
+          signedAt: x.signedAt,
+          ip: x.ip,
+          textHash: x.textHash,
+        })),
+      },
       orders,
       payouts,
       activity,

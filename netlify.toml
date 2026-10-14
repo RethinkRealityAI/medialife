@@ -221,6 +221,15 @@
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# /partner-kit/ is collateral for partners to share with creators (one-pagers,
+# graphics, photography). Unlisted; files keep their names when updated, so a
+# day's cache, not a year's.
+[[headers]]
+  for = "/partner-kit/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=86400"
+
 # /hub-viewer/ is the Creator Hub asset library's 3D preview, framed by the hub
 # (same origin) and reading only /api/hub/files/ paths. Unlisted; revalidated
 # like the shelf, since its file name isn't versioned.

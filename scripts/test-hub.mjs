@@ -21,7 +21,7 @@ const tmp = await mkdtemp(path.join(tmpdir(), "hub-tests-"));
 let failed = false;
 
 try {
-  for (const name of ["commerce", "auth", "assets"]) {
+  for (const name of ["commerce", "auth", "assets", "partners"]) {
     const outfile = path.join(tmp, `${name}.mjs`);
     await build({
       entryPoints: [path.join(dir, `${name}.test.ts`)],

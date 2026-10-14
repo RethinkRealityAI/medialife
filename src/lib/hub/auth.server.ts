@@ -14,6 +14,8 @@ import { KEYS, hubStore, newId, sha256Hex, type HubNamespace } from "./store.ser
 // tools already use). Production refuses to issue sessions without one; dev and
 // deploy previews fall back to a fixed development key.
 
+import type { PartnerMembership } from "./partners";
+
 export const HUB_COOKIE = "hub_session";
 export const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -24,7 +26,12 @@ export type HubUser = {
   /** null for accounts created with Discord and no password yet. */
   passwordHash: string | null;
   discord: { id: string; username: string; avatar: string | null } | null;
-  creatorId: string;
+  /** The creator profile this account runs; null for a partner-only account. */
+  creatorId: string | null;
+  /** Set for members of a partner team (Partner Hub). */
+  partner?: PartnerMembership | null;
+  /** The person's name, for partner team lists (creators use their profile). */
+  name?: string;
   createdAt: number;
   lastLoginAt: number | null;
   disabled: boolean;

@@ -32,7 +32,9 @@ function layout({
   cta,
   url,
   footer,
+  eyebrow = "MEDIALIFE&trade; Creator Hub",
 }: {
+  eyebrow?: string;
   heading: string;
   body: string;
   cta: string;
@@ -42,7 +44,7 @@ function layout({
   return `<!doctype html><html><body style="margin:0;background:#0b0b10;font-family:Helvetica,Arial,sans-serif;color:#ececf1">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b0b10;padding:32px 16px"><tr><td align="center">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#121219;border:1px solid #26262f;border-radius:10px">
-<tr><td style="padding:28px 28px 0;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8c8e9c">MEDIALIFE&trade; Creator Hub</td></tr>
+<tr><td style="padding:28px 28px 0;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#8c8e9c">${eyebrow}</td></tr>
 <tr><td style="padding:12px 28px 0;font-size:22px;font-weight:600;color:#ffffff">${escape(heading)}</td></tr>
 <tr><td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:#b9bac6">${body}</td></tr>
 <tr><td style="padding:24px 28px"><a href="${escape(url)}" style="display:inline-block;background:#1f7fd1;background-image:linear-gradient(135deg,#1f7fd1,#c4207a);color:#ffffff;text-decoration:none;font-weight:600;font-size:14px;padding:12px 22px;border-radius:999px">${escape(cta)}</a></td></tr>
@@ -150,5 +152,29 @@ export function sendNotice(
     }),
     `${heading}\n\n${bodyText}\n\n${url}`,
     url,
+  );
+}
+
+/** An invitation to join a partner's team in the Partner Hub. */
+export function sendPartnerInvite(
+  ns: HubNamespace,
+  to: string,
+  input: { name: string; partnerName: string; invitedBy: string; url: string; days: number },
+) {
+  const hi = input.name ? `Hi ${escape(input.name)},<br><br>` : "";
+  return send(
+    ns,
+    to,
+    `Join ${input.partnerName} in the MEDIALIFE Partner Hub`,
+    layout({
+      eyebrow: "MEDIALIFE&trade; Partner Hub",
+      heading: `Join ${input.partnerName} on MEDIALIFE`,
+      body: `${hi}${escape(input.invitedBy)} invited you to the ${escape(input.partnerName)} team in the MEDIALIFE Partner Hub: the creators you bring into the Activated Merchandise Program, their progress, and every piece of collateral you need to pitch it.`,
+      cta: "Accept invitation",
+      url: input.url,
+      footer: `The invitation works for ${input.days} days and only for this email address. If you weren't expecting it, you can ignore it.`,
+    }),
+    `${input.invitedBy} invited you to the ${input.partnerName} team in the MEDIALIFE Partner Hub.\n\nAccept: ${input.url}\n\nThe invitation works for ${input.days} days.`,
+    input.url,
   );
 }

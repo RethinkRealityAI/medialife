@@ -134,9 +134,15 @@ function SignIn() {
       }
     >
       <AuthCard>
-        <AuthHeading eyebrow={HUB.name} title="Welcome back">
-          Sign in to check your products, approvals, orders and earnings.
-        </AuthHeading>
+        {target?.startsWith("/partner-hub") ? (
+          <AuthHeading eyebrow="MEDIALIFE Partner Hub" title="Welcome back">
+            Sign in to see your creators, collateral and links.
+          </AuthHeading>
+        ) : (
+          <AuthHeading eyebrow={HUB.name} title="Welcome back">
+            Sign in to check your products, approvals, orders and earnings.
+          </AuthHeading>
+        )}
 
         {!session.configured ? (
           <Notice className="mt-6" tone="warn">

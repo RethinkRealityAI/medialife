@@ -40,7 +40,7 @@ import { deleteHubFile, formatBytes } from "@/lib/hub/upload-client";
 import { cn } from "@/lib/utils";
 
 import { TYPE_ICON, errorText, useFontFamily } from "./shared";
-import { TagPicker } from "./tag-picker";
+import { TagChip, TagPicker } from "./tag-picker";
 
 const selectClass =
   "h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-60";
@@ -220,8 +220,11 @@ export function AssetDetails({
   onPatch,
   onDeleted,
   mode,
+  readOnly = false,
 }: {
   mode: "creator" | "admin";
+  /** View and download only (partners looking at a creator's or the kit's files). */
+  readOnly?: boolean;
   file: HubFile | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -286,16 +289,18 @@ export function AssetDetails({
               </a>
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            aria-pressed={!!f.starred}
-            aria-label={f.starred ? "Unstar" : "Star"}
-            onClick={() => onPatch(f, { starred: !f.starred })}
-          >
-            <Star className={cn(f.starred && "fill-amber-300 text-amber-300")} aria-hidden />
-          </Button>
-          {canDelete ? (
+          {readOnly ? null : (
+            <Button
+              type="button"
+              variant="outline"
+              aria-pressed={!!f.starred}
+              aria-label={f.starred ? "Unstar" : "Star"}
+              onClick={() => onPatch(f, { starred: !f.starred })}
+            >
+              <Star className={cn(f.starred && "fill-amber-300 text-amber-300")} aria-hidden />
+            </Button>
+          )}
+          {canDelete && !readOnly ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
@@ -361,52 +366,68 @@ export function AssetDetails({
           )}
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Section" htmlFor="asset-section">
-            <select
-              id="asset-section"
-              className={selectClass}
-              value={section}
-              onChange={(e) =>
-                onPatch(
-                  f,
-                  { section: e.target.value as AssetSection, folderId: null },
-                  `Moved to ${SECTION_META[e.target.value as AssetSection].label}`,
-                )
-              }
-            >
-              {ASSET_SECTIONS.map((s) => (
-                <option key={s} value={s}>
-                  {SECTION_META[s].label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Folder" htmlFor="asset-folder">
-            <select
-              id="asset-folder"
-              className={selectClass}
-              value={f.folderId ?? ""}
-              disabled={!inSection.length}
-              onChange={(e) => onPatch(f, { folderId: e.target.value || null }, "Moved")}
-            >
-              <option value="">{inSection.length ? "No folder" : "No folders here yet"}</option>
-              {inSection.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </div>
+        {readOnly ? (
+          <>
+            {tags.length ? (
+              <Field label="Tags">
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((t) => (
+                    <TagChip key={t} tag={t} />
+                  ))}
+                </div>
+              </Field>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Section" htmlFor="asset-section">
+                <select
+                  id="asset-section"
+                  className={selectClass}
+                  value={section}
+                  onChange={(e) =>
+                    onPatch(
+                      f,
+                      { section: e.target.value as AssetSection, folderId: null },
+                      `Moved to ${SECTION_META[e.target.value as AssetSection].label}`,
+                    )
+                  }
+                >
+                  {ASSET_SECTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {SECTION_META[s].label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Folder" htmlFor="asset-folder">
+                <select
+                  id="asset-folder"
+                  className={selectClass}
+                  value={f.folderId ?? ""}
+                  disabled={!inSection.length}
+                  onChange={(e) => onPatch(f, { folderId: e.target.value || null }, "Moved")}
+                >
+                  <option value="">{inSection.length ? "No folder" : "No folders here yet"}</option>
+                  {inSection.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
 
-        <Field label="Tags">
-          <TagPicker
-            value={tags}
-            yourTags={yourTags}
-            onChange={(t) => onPatch(f, { setTags: t })}
-          />
-        </Field>
+            <Field label="Tags">
+              <TagPicker
+                value={tags}
+                yourTags={yourTags}
+                onChange={(t) => onPatch(f, { setTags: t })}
+              />
+            </Field>
+          </>
+        )}
 
         <Field label="Note" htmlFor="asset-note">
           {canEdit ? (

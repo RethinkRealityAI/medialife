@@ -25,6 +25,8 @@ export const Route = createFileRoute("/creator-hub/_app")({
         href: `/creator-hub/sign-in?next=${encodeURIComponent(location.pathname + (location.searchStr ?? ""))}`,
       });
     }
+    // A partner team member without a creator profile belongs in the Partner Hub.
+    if (!session.creator && session.partner) throw redirect({ href: "/partner-hub" });
     if (!session.creator || session.creator.status === "draft") {
       throw redirect({ href: "/creator-hub/onboarding" });
     }

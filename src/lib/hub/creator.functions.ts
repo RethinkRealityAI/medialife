@@ -18,7 +18,9 @@ import {
   saveCreator,
   saveProduct,
 } from "./data.server";
+import { signatureStatus } from "./agreements";
 import { sendNotice } from "./mail.server";
+import { listSignatures } from "./partners.server";
 import {
   CONTENT_CATEGORIES,
   HUB,
@@ -203,7 +205,7 @@ export const submitApplication = createServerFn({ method: "POST" }).handler(asyn
    --------------------------------------------------------------------------- */
 
 /** What a creator may see of an order: no internal ids beyond the order number. */
-const publicOrder = (o: Order) => ({
+export const publicOrder = (o: Order) => ({
   id: o.id,
   number: o.number,
   channel: o.channel,
@@ -217,7 +219,10 @@ const publicOrder = (o: Order) => ({
 /** Everything the dashboard shows, in one round trip. */
 export const getWorkspace = createServerFn({ method: "GET" }).handler(async () => {
   const { ns, creator } = await requireCreator();
-  const w = await creatorWorkspace(ns, creator.id);
+  const [w, signatures] = await Promise.all([
+    creatorWorkspace(ns, creator.id),
+    listSignatures(ns, creator.id),
+  ]);
   const byProduct = Object.fromEntries(earningsByProduct(w.earnings.orders));
   return {
     creator,
@@ -230,6 +235,7 @@ export const getWorkspace = createServerFn({ method: "GET" }).handler(async () =
     experiences: w.experiences,
     files: w.files,
     folders: w.folders,
+    agreement: signatureStatus(signatures),
     activity: w.activity.slice(0, 40),
     manager: w.manager,
     earnings: w.earnings.summary,

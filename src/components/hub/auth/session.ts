@@ -4,6 +4,7 @@
  * Discord OAuth links.
  */
 import { HUB, type CreatorStatus } from "@/lib/hub/model";
+import { PARTNER_BASE } from "@/lib/hub/partners";
 
 export const HUB_PATHS = {
   landing: HUB.base,
@@ -18,24 +19,33 @@ export const HUB_PATHS = {
 type SessionLike = {
   signedIn: boolean;
   creator?: { status: CreatorStatus } | null;
+  partner?: { id: string } | null;
 };
 
 /**
- * Where a signed-in creator belongs: the application while it's a draft, the
- * dashboard once it's been sent.
+ * Where a signed-in account belongs: a partner team member without a creator
+ * profile goes to the Partner Hub; a creator to the application while it's a
+ * draft, the dashboard once it's been sent.
  */
 export function homeFor(s: SessionLike): string {
+  if (!s.creator && s.partner) return PARTNER_BASE;
   if (s.creator?.status === "draft") return HUB_PATHS.onboarding;
   return HUB_PATHS.dashboard;
 }
 
 /**
  * Only follow `next` when it's a path inside the hub. Rejects protocol-relative
- * (`//evil.com`), backslash tricks and anything outside /creator-hub/.
+ * (`//evil.com`), backslash tricks and anything outside /creator-hub/ and
+ * /partner-hub/.
  */
 export function safeNext(next: string | undefined | null): string | null {
   if (!next) return null;
-  if (!next.startsWith(`${HUB.base}/`)) return null;
+  if (
+    !next.startsWith(`${HUB.base}/`) &&
+    next !== PARTNER_BASE &&
+    !next.startsWith(`${PARTNER_BASE}/`)
+  )
+    return null;
   if (next.startsWith("//") || next.includes("\\") || /[\r\n\t]/.test(next)) return null;
   // The account pages themselves are never a useful destination.
   if (/^\/creator-hub\/(sign-in|join|forgot-password|reset-password)(\/|\?|#|$)/.test(next)) {

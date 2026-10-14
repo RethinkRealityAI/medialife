@@ -33,6 +33,7 @@ import {
   saveCreator,
 } from "./data.server";
 import { sendResetEmail, sendVerifyEmail } from "./mail.server";
+import { getPartner } from "./partners.server";
 import { HUB } from "./model";
 import { clearSessionCookie, currentUser, startSession } from "./session.server";
 import { hubNs, newId } from "./store.server";
@@ -57,7 +58,10 @@ export const getHubSession = createServerFn({ method: "GET" }).handler(async () 
   const s = await currentUser();
   const discordEnabled = !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET);
   if (!s) return { signedIn: false as const, discordEnabled, configured: authConfigured(hubNs()) };
-  const creator = await getCreator(s.ns, s.user.creatorId);
+  const [creator, partner] = await Promise.all([
+    getCreator(s.ns, s.user.creatorId),
+    s.user.partner ? getPartner(s.ns, s.user.partner.id) : null,
+  ]);
   return {
     signedIn: true as const,
     discordEnabled,
@@ -84,6 +88,11 @@ export const getHubSession = createServerFn({ method: "GET" }).handler(async () 
           agency: creator.agency?.name ?? null,
         }
       : null,
+    partner:
+      partner && s.user.partner && partner.status === "active"
+        ? { id: partner.id, name: partner.name, role: s.user.partner.role, brand: partner.brand }
+        : null,
+    name: s.user.name ?? creator?.profile.displayName ?? "",
   };
 });
 

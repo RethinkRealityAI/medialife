@@ -10,6 +10,7 @@ import {
   Sparkles,
   Truck,
   type LucideIcon,
+  FileSignature,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export const ACTION_ICONS: Record<ActionItem["kind"], LucideIcon> = {
   verify: MailCheck,
   payout: CreditCard,
   shipping: Truck,
+  agreement: FileSignature,
 };
 
 /* ---------------------------------------------------------------------------
@@ -152,6 +154,10 @@ export function ActionButton({
         </Link>
       ) : l.to === "/creator-hub/assets" ? (
         <Link to={l.to} search={{ s: l.s }} onClick={onClick}>
+          {label}
+        </Link>
+      ) : l.to === "/creator-hub/agreement" ? (
+        <Link to={l.to} onClick={onClick}>
           {label}
         </Link>
       ) : (

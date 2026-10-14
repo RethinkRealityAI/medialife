@@ -107,6 +107,7 @@ function SeedButton() {
   const [result, setResult] = useState<{
     creatorId: string | null;
     login: { email: string; password: string };
+    partnerLogin?: { email: string; password: string };
     created: boolean;
   } | null>(null);
   return (
@@ -132,16 +133,22 @@ function SeedButton() {
             </DialogTitle>
             <DialogDescription>
               PixelPine has products at every stage, a live experience, a proof waiting for
-              approval, orders and a payout. Sign in to the Creator Hub with this login to see the
-              creator side.
+              approval, orders and a payout. Sign in to the Creator Hub with the first login to see
+              the creator side, or the second for Snowday Media's Partner Hub.
             </DialogDescription>
           </DialogHeader>
           {result ? (
             <div className="divide-y divide-border rounded-md border border-border text-sm">
               {(
                 [
-                  ["Email", result.login.email],
+                  ["Creator", result.login.email],
                   ["Password", result.login.password],
+                  ...(result.partnerLogin
+                    ? ([
+                        ["Partner", result.partnerLogin.email],
+                        ["Password ", result.partnerLogin.password],
+                      ] as const)
+                    : []),
                 ] as const
               ).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-3 py-1 pr-1 pl-3">
@@ -149,8 +156,8 @@ function SeedButton() {
                   <span className="mono min-w-0 flex-1 truncate text-xs">{v}</span>
                   <CopyButton
                     text={v}
-                    label={`Copy ${k.toLowerCase()}`}
-                    toastText={`${k} copied`}
+                    label={`Copy ${k.trim().toLowerCase()}`}
+                    toastText={`${k.trim()} copied`}
                   />
                 </div>
               ))}

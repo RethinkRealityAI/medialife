@@ -1,8 +1,11 @@
 import { getRequest } from "@tanstack/react-start/server";
 
 import { claimEmail, findUserByEmail, hashPassword, saveUser, type HubUser } from "./auth.server";
+import { CURRENT, agreementText, termsFor } from "./agreements";
 import {
   createCreator,
+  getCreator,
+  getInvite,
   logActivity,
   newTriggerCode,
   postToThread,
@@ -10,6 +13,7 @@ import {
   saveCreatorAdmin,
   saveExperience,
   saveFolder,
+  saveInvite,
   saveOrder,
   savePayout,
   saveProduct,
@@ -26,7 +30,9 @@ import {
   type SkuId,
   type StageId,
 } from "./model";
-import { KEYS, hubStore, newId, type HubNamespace } from "./store.server";
+import { SNOWDAY_PRESET } from "./partners";
+import { getPartner, saveMember, savePartner, saveSignature } from "./partners.server";
+import { KEYS, hubStore, newId, sha256Hex, type HubNamespace } from "./store.server";
 
 // A complete sample creator for deploy previews and localhost: an account you
 // can sign in to, products at every stage, a live experience, a proof waiting
@@ -60,7 +66,15 @@ function rng(seed: number) {
 
 export async function seedSampleCreator(ns: HubNamespace) {
   const existing = await findUserByEmail(ns, SAMPLE_LOGIN.email);
-  if (existing) return { creatorId: existing.creatorId, login: SAMPLE_LOGIN, created: false };
+  if (existing) {
+    await seedSamplePartner(ns, existing.creatorId);
+    return {
+      creatorId: existing.creatorId,
+      login: SAMPLE_LOGIN,
+      partnerLogin: SAMPLE_PARTNER_LOGIN,
+      created: false,
+    };
+  }
 
   const now = Date.now();
   const userId = newId();
@@ -74,8 +88,8 @@ export async function seedSampleCreator(ns: HubNamespace) {
     approvedAt: now - 68 * DAY,
     intakeStep: 4,
     revenueShare: 0.2,
-    agency: { id: "sample-agency", name: "Sample Agency", rep: "Alex" },
-    inviteCode: "sample",
+    agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
+    inviteCode: SNOWDAY_PRESET.id,
   });
   creator.profile = {
     ...creator.profile,
@@ -566,5 +580,153 @@ export async function seedSampleCreator(ns: HubNamespace) {
   ];
   for (const e of events) await logActivity(ns, creator.id, e);
 
-  return { creatorId: creator.id, login: SAMPLE_LOGIN, created: true };
+  // They signed the program agreement when they were approved.
+  const terms = termsFor(creator);
+  await saveSignature(ns, {
+    id: newId(8),
+    creatorId: creator.id,
+    agreementId: CURRENT.id,
+    version: CURRENT.version,
+    title: CURRENT.title,
+    signedName: creator.profile.legalName || creator.profile.displayName,
+    legalName: creator.profile.legalName,
+    email: SAMPLE_LOGIN.email,
+    terms,
+    textHash: await sha256Hex(agreementText(CURRENT, terms)),
+    signedAt: now - 67 * DAY,
+    ip: "sample",
+    userAgent: "sample",
+    guardian: null,
+  });
+
+  await seedSamplePartner(ns, creator.id);
+  return {
+    creatorId: creator.id,
+    login: SAMPLE_LOGIN,
+    partnerLogin: SAMPLE_PARTNER_LOGIN,
+    created: true,
+  };
+}
+
+export const SAMPLE_PARTNER_LOGIN = {
+  email: "sample.partner@medialife.test",
+  password: "partner-hub-demo",
+} as const;
+
+/**
+ * Snowday Media as a sample partner: the partner, its default invite link, a
+ * team admin you can sign in as, and two more creators at earlier steps so the
+ * Partner Hub has a pipeline to show. Safe to run again.
+ */
+async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | null) {
+  const now = Date.now();
+  if (!(await getPartner(ns, SNOWDAY_PRESET.id))) {
+    await savePartner(ns, {
+      ...SNOWDAY_PRESET,
+      brand: { ...SNOWDAY_PRESET.brand },
+      status: "active",
+      notes: "Sample partner for previews.",
+      createdAt: now - 75 * DAY,
+      updatedAt: now,
+    });
+  }
+  if (!(await getInvite(ns, SNOWDAY_PRESET.id))) {
+    await saveInvite(ns, {
+      code: SNOWDAY_PRESET.id,
+      agencyId: SNOWDAY_PRESET.id,
+      agencyName: SNOWDAY_PRESET.name,
+      rep: "",
+      note: "Default link",
+      createdAt: now - 75 * DAY,
+      uses: 3,
+      archived: false,
+    });
+    await saveInvite(ns, {
+      code: "snowday-alex",
+      agencyId: SNOWDAY_PRESET.id,
+      agencyName: SNOWDAY_PRESET.name,
+      rep: "Alex",
+      note: "VTuber outreach",
+      createdAt: now - 72 * DAY,
+      uses: 2,
+      archived: false,
+    });
+  }
+  if (sampleCreatorId) {
+    const c = await getCreator(ns, sampleCreatorId);
+    if (c && c.agency?.id !== SNOWDAY_PRESET.id)
+      await saveCreator(ns, {
+        ...c,
+        agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
+      });
+  }
+
+  if (await findUserByEmail(ns, SAMPLE_PARTNER_LOGIN.email)) return;
+  const userId = newId();
+  if (!(await claimEmail(ns, SAMPLE_PARTNER_LOGIN.email, userId))) return;
+  await saveUser(ns, {
+    id: userId,
+    email: SAMPLE_PARTNER_LOGIN.email,
+    emailVerified: true,
+    passwordHash: await hashPassword(SAMPLE_PARTNER_LOGIN.password),
+    discord: null,
+    creatorId: null,
+    partner: { id: SNOWDAY_PRESET.id, role: "admin" },
+    name: "Alex (Snowday)",
+    createdAt: now - 74 * DAY,
+    lastLoginAt: null,
+    disabled: false,
+  });
+  await saveMember(ns, {
+    userId,
+    partnerId: SNOWDAY_PRESET.id,
+    email: SAMPLE_PARTNER_LOGIN.email,
+    name: "Alex (Snowday)",
+    role: "admin",
+    joinedAt: now - 74 * DAY,
+    invitedBy: "The MEDIALIFE team",
+  });
+
+  // Two more creators, earlier in the journey.
+  const more: Array<{ name: string; status: "submitted" | "approved"; days: number }> = [
+    { name: "Frostbyte", status: "submitted", days: 2 },
+    { name: "Mochi Lune", status: "approved", days: 9 },
+  ];
+  for (const m of more) {
+    const uid = newId();
+    const email = `${m.name.toLowerCase().replace(/[^a-z]/g, "")}@sample.test`;
+    if (!(await claimEmail(ns, email, uid))) continue;
+    const c = await createCreator(ns, uid, email);
+    Object.assign(c, {
+      status: m.status,
+      submittedAt: now - m.days * DAY,
+      approvedAt: m.status === "approved" ? now - (m.days - 2) * DAY : null,
+      intakeStep: 4,
+      revenueShare: 0.2,
+      agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
+      inviteCode: "snowday-alex",
+    });
+    c.profile = { ...c.profile, displayName: m.name, email };
+    c.channels = [
+      {
+        platform: "twitch",
+        handle: m.name.toLowerCase().replace(/\s/g, ""),
+        url: null,
+        audience: m.status === "approved" ? 48_000 : 12_500,
+        primary: true,
+      },
+    ];
+    await saveCreator(ns, c);
+    await saveUser(ns, {
+      id: uid,
+      email,
+      emailVerified: true,
+      passwordHash: null,
+      discord: null,
+      creatorId: c.id,
+      createdAt: now - m.days * DAY,
+      lastLoginAt: null,
+      disabled: false,
+    });
+  }
 }

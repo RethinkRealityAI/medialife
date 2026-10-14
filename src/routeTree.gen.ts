@@ -37,15 +37,21 @@ import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
 import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
 import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
+import { Route as PartnerHubAppRouteImport } from './routes/partner-hub._app'
+import { Route as PartnerHubJoinRouteImport } from './routes/partner-hub.join'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as ShelfIndexRouteImport } from './routes/shelf.index'
 import { Route as ShelfSlugRouteImport } from './routes/shelf.$slug'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
+import { Route as WithPartnerIdRouteImport } from './routes/with.$partnerId'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
 import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
 import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
+import { Route as AdminPartnersIndexRouteImport } from './routes/admin.partners.index'
+import { Route as AdminPartnersPartnerIdRouteImport } from './routes/admin.partners.$partnerId'
+import { Route as AdminPartnersKitRouteImport } from './routes/admin.partners.kit'
 import { Route as AdminShelvesIndexRouteImport } from './routes/admin.shelves.index'
 import { Route as AdminShelvesSlugRouteImport } from './routes/admin.shelves.$slug'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
@@ -53,6 +59,7 @@ import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
+import { Route as CreatorHubAppAgreementRouteImport } from './routes/creator-hub._app.agreement'
 import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
 import { Route as CreatorHubAppAssetsRouteImport } from './routes/creator-hub._app.assets'
 import { Route as CreatorHubAppDashboardRouteImport } from './routes/creator-hub._app.dashboard'
@@ -60,6 +67,11 @@ import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub.
 import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
 import { Route as CreatorHubAppLaunchKitRouteImport } from './routes/creator-hub._app.launch-kit'
 import { Route as CreatorHubAppLiveRouteImport } from './routes/creator-hub._app.live'
+import { Route as PartnerHubAppIndexRouteImport } from './routes/partner-hub._app.index'
+import { Route as PartnerHubAppCollateralRouteImport } from './routes/partner-hub._app.collateral'
+import { Route as PartnerHubAppLinksRouteImport } from './routes/partner-hub._app.links'
+import { Route as PartnerHubAppPlaybookRouteImport } from './routes/partner-hub._app.playbook'
+import { Route as PartnerHubAppTeamRouteImport } from './routes/partner-hub._app.team'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
 import { Route as RobloxPortalGuidelinesRouteImport } from './routes/roblox.portal.guidelines'
@@ -79,6 +91,8 @@ import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay
 import { Route as ApiHubWebhooksShopifyRouteImport } from './routes/api.hub.webhooks.shopify'
 import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
 import { Route as CreatorHubAppProductsProductIdRouteImport } from './routes/creator-hub._app.products.$productId'
+import { Route as PartnerHubAppCreatorsIndexRouteImport } from './routes/partner-hub._app.creators.index'
+import { Route as PartnerHubAppCreatorsCreatorIdRouteImport } from './routes/partner-hub._app.creators.$creatorId'
 import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblox.portal.submissions.index'
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
 import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
@@ -232,6 +246,16 @@ const OverlayTokenRoute = OverlayTokenRouteImport.update({
   path: '/overlay/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PartnerHubAppRoute = PartnerHubAppRouteImport.update({
+  id: '/partner-hub/_app',
+  path: '/partner-hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnerHubJoinRoute = PartnerHubJoinRouteImport.update({
+  id: '/partner-hub/join',
+  path: '/partner-hub/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RobloxPortalRoute = RobloxPortalRouteImport.update({
   id: '/roblox/portal',
   path: '/roblox/portal',
@@ -251,6 +275,11 @@ const TechnologySlugRoute = TechnologySlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => TechnologyRoute,
+} as any)
+const WithPartnerIdRoute = WithPartnerIdRouteImport.update({
+  id: '/with/$partnerId',
+  path: '/with/$partnerId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const XSlugRoute = XSlugRouteImport.update({
   id: '/x/$slug',
@@ -275,6 +304,21 @@ const AdminCreatorsIndexRoute = AdminCreatorsIndexRouteImport.update({
 const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
   id: '/creators/$creatorId',
   path: '/creators/$creatorId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPartnersIndexRoute = AdminPartnersIndexRouteImport.update({
+  id: '/partners/',
+  path: '/partners/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPartnersPartnerIdRoute = AdminPartnersPartnerIdRouteImport.update({
+  id: '/partners/$partnerId',
+  path: '/partners/$partnerId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPartnersKitRoute = AdminPartnersKitRouteImport.update({
+  id: '/partners/kit',
+  path: '/partners/kit',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminShelvesIndexRoute = AdminShelvesIndexRouteImport.update({
@@ -312,6 +356,11 @@ const CreatorHubAppAccountRoute = CreatorHubAppAccountRouteImport.update({
   path: '/account',
   getParentRoute: () => CreatorHubAppRoute,
 } as any)
+const CreatorHubAppAgreementRoute = CreatorHubAppAgreementRouteImport.update({
+  id: '/agreement',
+  path: '/agreement',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
 const CreatorHubAppArtworkRoute = CreatorHubAppArtworkRouteImport.update({
   id: '/artwork',
   path: '/artwork',
@@ -347,6 +396,31 @@ const CreatorHubAppLiveRoute = CreatorHubAppLiveRouteImport.update({
   id: '/live',
   path: '/live',
   getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const PartnerHubAppIndexRoute = PartnerHubAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PartnerHubAppRoute,
+} as any)
+const PartnerHubAppCollateralRoute = PartnerHubAppCollateralRouteImport.update({
+  id: '/collateral',
+  path: '/collateral',
+  getParentRoute: () => PartnerHubAppRoute,
+} as any)
+const PartnerHubAppLinksRoute = PartnerHubAppLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => PartnerHubAppRoute,
+} as any)
+const PartnerHubAppPlaybookRoute = PartnerHubAppPlaybookRouteImport.update({
+  id: '/playbook',
+  path: '/playbook',
+  getParentRoute: () => PartnerHubAppRoute,
+} as any)
+const PartnerHubAppTeamRoute = PartnerHubAppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => PartnerHubAppRoute,
 } as any)
 const RobloxPortalIndexRoute = RobloxPortalIndexRouteImport.update({
   id: '/',
@@ -445,6 +519,18 @@ const CreatorHubAppProductsProductIdRoute =
     path: '/products/$productId',
     getParentRoute: () => CreatorHubAppRoute,
   } as any)
+const PartnerHubAppCreatorsIndexRoute =
+  PartnerHubAppCreatorsIndexRouteImport.update({
+    id: '/creators/',
+    path: '/creators/',
+    getParentRoute: () => PartnerHubAppRoute,
+  } as any)
+const PartnerHubAppCreatorsCreatorIdRoute =
+  PartnerHubAppCreatorsCreatorIdRouteImport.update({
+    id: '/creators/$creatorId',
+    path: '/creators/$creatorId',
+    getParentRoute: () => PartnerHubAppRoute,
+  } as any)
 const RobloxPortalSubmissionsIndexRoute =
   RobloxPortalSubmissionsIndexRouteImport.update({
     id: '/submissions/',
@@ -536,21 +622,27 @@ export interface FileRoutesByFullPath {
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
+  '/partner-hub': typeof PartnerHubAppRouteWithChildren
+  '/partner-hub/join': typeof PartnerHubJoinRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
+  '/with/$partnerId': typeof WithPartnerIdRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
   '/creator-hub/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
@@ -558,6 +650,10 @@ export interface FileRoutesByFullPath {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
+  '/partner-hub/links': typeof PartnerHubAppLinksRoute
+  '/partner-hub/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -568,7 +664,9 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
+  '/partner-hub/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -579,8 +677,10 @@ export interface FileRoutesByFullPath {
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
+  '/partner-hub/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/creator-hub/products/': typeof CreatorHubAppProductsIndexRoute
+  '/partner-hub/creators/': typeof PartnerHubAppCreatorsIndexRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
@@ -616,19 +716,24 @@ export interface FileRoutesByTo {
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
+  '/partner-hub/join': typeof PartnerHubJoinRoute
   '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
+  '/with/$partnerId': typeof WithPartnerIdRoute
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
   '/shelf': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
   '/creator-hub/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
@@ -636,6 +741,10 @@ export interface FileRoutesByTo {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
+  '/partner-hub/links': typeof PartnerHubAppLinksRoute
+  '/partner-hub/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -646,7 +755,9 @@ export interface FileRoutesByTo {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
   '/admin/creators': typeof AdminCreatorsIndexRoute
+  '/admin/partners': typeof AdminPartnersIndexRoute
   '/admin/shelves': typeof AdminShelvesIndexRoute
+  '/partner-hub': typeof PartnerHubAppIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -657,8 +768,10 @@ export interface FileRoutesByTo {
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
+  '/partner-hub/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/creator-hub/products': typeof CreatorHubAppProductsIndexRoute
+  '/partner-hub/creators': typeof PartnerHubAppCreatorsIndexRoute
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
@@ -698,21 +811,27 @@ export interface FileRoutesById {
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
+  '/partner-hub/_app': typeof PartnerHubAppRouteWithChildren
+  '/partner-hub/join': typeof PartnerHubJoinRoute
   '/roblox/portal': typeof RobloxPortalRouteWithChildren
   '/shelf/$slug': typeof ShelfSlugRoute
   '/technology/$slug': typeof TechnologySlugRoute
+  '/with/$partnerId': typeof WithPartnerIdRoute
   '/x/$slug': typeof XSlugRoute
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
+  '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
   '/creator-hub/_app/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/_app/dashboard': typeof CreatorHubAppDashboardRoute
@@ -720,6 +839,10 @@ export interface FileRoutesById {
   '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/_app/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/_app/live': typeof CreatorHubAppLiveRoute
+  '/partner-hub/_app/collateral': typeof PartnerHubAppCollateralRoute
+  '/partner-hub/_app/links': typeof PartnerHubAppLinksRoute
+  '/partner-hub/_app/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/_app/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
   '/roblox/portal/performance': typeof RobloxPortalPerformanceRoute
@@ -730,7 +853,9 @@ export interface FileRoutesById {
   '/roblox/portal/support': typeof RobloxPortalSupportRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
+  '/partner-hub/_app/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/api/ar/admin/assets': typeof ApiArAdminAssetsRouteWithChildren
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
@@ -741,8 +866,10 @@ export interface FileRoutesById {
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
   '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
+  '/partner-hub/_app/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
   '/creator-hub/_app/products/': typeof CreatorHubAppProductsIndexRoute
+  '/partner-hub/_app/creators/': typeof PartnerHubAppCreatorsIndexRoute
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
@@ -783,21 +910,27 @@ export interface FileRouteTypes {
     | '/creator-hub/verify-email'
     | '/go/$code'
     | '/overlay/$token'
+    | '/partner-hub'
+    | '/partner-hub/join'
     | '/roblox/portal'
     | '/shelf/$slug'
     | '/technology/$slug'
+    | '/with/$partnerId'
     | '/x/$slug'
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/partners/$partnerId'
+    | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/creator-hub/account'
+    | '/creator-hub/agreement'
     | '/creator-hub/artwork'
     | '/creator-hub/assets'
     | '/creator-hub/dashboard'
@@ -805,6 +938,10 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/partner-hub/collateral'
+    | '/partner-hub/links'
+    | '/partner-hub/playbook'
+    | '/partner-hub/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -815,7 +952,9 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/partners/'
     | '/admin/shelves/'
+    | '/partner-hub/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -826,8 +965,10 @@ export interface FileRouteTypes {
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/products/$productId'
+    | '/partner-hub/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
     | '/creator-hub/products/'
+    | '/partner-hub/creators/'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
@@ -863,19 +1004,24 @@ export interface FileRouteTypes {
     | '/creator-hub/verify-email'
     | '/go/$code'
     | '/overlay/$token'
+    | '/partner-hub/join'
     | '/shelf/$slug'
     | '/technology/$slug'
+    | '/with/$partnerId'
     | '/x/$slug'
     | '/admin'
     | '/shelf'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/partners/$partnerId'
+    | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/creator-hub/account'
+    | '/creator-hub/agreement'
     | '/creator-hub/artwork'
     | '/creator-hub/assets'
     | '/creator-hub/dashboard'
@@ -883,6 +1029,10 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/partner-hub/collateral'
+    | '/partner-hub/links'
+    | '/partner-hub/playbook'
+    | '/partner-hub/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -893,7 +1043,9 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder'
     | '/admin/creators'
+    | '/admin/partners'
     | '/admin/shelves'
+    | '/partner-hub'
     | '/roblox/portal'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -904,8 +1056,10 @@ export interface FileRouteTypes {
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/products/$productId'
+    | '/partner-hub/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
     | '/creator-hub/products'
+    | '/partner-hub/creators'
     | '/roblox/portal/submissions'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
@@ -944,21 +1098,27 @@ export interface FileRouteTypes {
     | '/creator-hub/verify-email'
     | '/go/$code'
     | '/overlay/$token'
+    | '/partner-hub/_app'
+    | '/partner-hub/join'
     | '/roblox/portal'
     | '/shelf/$slug'
     | '/technology/$slug'
+    | '/with/$partnerId'
     | '/x/$slug'
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/partners/$partnerId'
+    | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/creator-hub/_app/account'
+    | '/creator-hub/_app/agreement'
     | '/creator-hub/_app/artwork'
     | '/creator-hub/_app/assets'
     | '/creator-hub/_app/dashboard'
@@ -966,6 +1126,10 @@ export interface FileRouteTypes {
     | '/creator-hub/_app/experiences'
     | '/creator-hub/_app/launch-kit'
     | '/creator-hub/_app/live'
+    | '/partner-hub/_app/collateral'
+    | '/partner-hub/_app/links'
+    | '/partner-hub/_app/playbook'
+    | '/partner-hub/_app/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
     | '/roblox/portal/performance'
@@ -976,7 +1140,9 @@ export interface FileRouteTypes {
     | '/roblox/portal/support'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/partners/'
     | '/admin/shelves/'
+    | '/partner-hub/_app/'
     | '/roblox/portal/'
     | '/api/ar/admin/assets'
     | '/api/ar/asset/$id'
@@ -987,8 +1153,10 @@ export interface FileRouteTypes {
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
     | '/creator-hub/_app/products/$productId'
+    | '/partner-hub/_app/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
     | '/creator-hub/_app/products/'
+    | '/partner-hub/_app/creators/'
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
@@ -1023,8 +1191,11 @@ export interface RootRouteChildren {
   CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
   GoCodeRoute: typeof GoCodeRoute
   OverlayTokenRoute: typeof OverlayTokenRoute
+  PartnerHubAppRoute: typeof PartnerHubAppRouteWithChildren
+  PartnerHubJoinRoute: typeof PartnerHubJoinRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   ShelfSlugRoute: typeof ShelfSlugRoute
+  WithPartnerIdRoute: typeof WithPartnerIdRoute
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
   ShelfIndexRoute: typeof ShelfIndexRoute
@@ -1241,6 +1412,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OverlayTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/partner-hub/_app': {
+      id: '/partner-hub/_app'
+      path: '/partner-hub'
+      fullPath: '/partner-hub'
+      preLoaderRoute: typeof PartnerHubAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partner-hub/join': {
+      id: '/partner-hub/join'
+      path: '/partner-hub/join'
+      fullPath: '/partner-hub/join'
+      preLoaderRoute: typeof PartnerHubJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/roblox/portal': {
       id: '/roblox/portal'
       path: '/roblox/portal'
@@ -1268,6 +1453,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
       parentRoute: typeof TechnologyRoute
+    }
+    '/with/$partnerId': {
+      id: '/with/$partnerId'
+      path: '/with/$partnerId'
+      fullPath: '/with/$partnerId'
+      preLoaderRoute: typeof WithPartnerIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/x/$slug': {
       id: '/x/$slug'
@@ -1302,6 +1494,27 @@ declare module '@tanstack/react-router' {
       path: '/creators/$creatorId'
       fullPath: '/admin/creators/$creatorId'
       preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/partners/': {
+      id: '/admin/partners/'
+      path: '/partners'
+      fullPath: '/admin/partners/'
+      preLoaderRoute: typeof AdminPartnersIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/partners/$partnerId': {
+      id: '/admin/partners/$partnerId'
+      path: '/partners/$partnerId'
+      fullPath: '/admin/partners/$partnerId'
+      preLoaderRoute: typeof AdminPartnersPartnerIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/partners/kit': {
+      id: '/admin/partners/kit'
+      path: '/partners/kit'
+      fullPath: '/admin/partners/kit'
+      preLoaderRoute: typeof AdminPartnersKitRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shelves/': {
@@ -1353,6 +1566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreatorHubAppAccountRouteImport
       parentRoute: typeof CreatorHubAppRoute
     }
+    '/creator-hub/_app/agreement': {
+      id: '/creator-hub/_app/agreement'
+      path: '/agreement'
+      fullPath: '/creator-hub/agreement'
+      preLoaderRoute: typeof CreatorHubAppAgreementRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
     '/creator-hub/_app/artwork': {
       id: '/creator-hub/_app/artwork'
       path: '/artwork'
@@ -1401,6 +1621,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/creator-hub/live'
       preLoaderRoute: typeof CreatorHubAppLiveRouteImport
       parentRoute: typeof CreatorHubAppRoute
+    }
+    '/partner-hub/_app/': {
+      id: '/partner-hub/_app/'
+      path: '/'
+      fullPath: '/partner-hub/'
+      preLoaderRoute: typeof PartnerHubAppIndexRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/collateral': {
+      id: '/partner-hub/_app/collateral'
+      path: '/collateral'
+      fullPath: '/partner-hub/collateral'
+      preLoaderRoute: typeof PartnerHubAppCollateralRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/links': {
+      id: '/partner-hub/_app/links'
+      path: '/links'
+      fullPath: '/partner-hub/links'
+      preLoaderRoute: typeof PartnerHubAppLinksRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/playbook': {
+      id: '/partner-hub/_app/playbook'
+      path: '/playbook'
+      fullPath: '/partner-hub/playbook'
+      preLoaderRoute: typeof PartnerHubAppPlaybookRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/team': {
+      id: '/partner-hub/_app/team'
+      path: '/team'
+      fullPath: '/partner-hub/team'
+      preLoaderRoute: typeof PartnerHubAppTeamRouteImport
+      parentRoute: typeof PartnerHubAppRoute
     }
     '/roblox/portal/': {
       id: '/roblox/portal/'
@@ -1535,6 +1790,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreatorHubAppProductsProductIdRouteImport
       parentRoute: typeof CreatorHubAppRoute
     }
+    '/partner-hub/_app/creators/': {
+      id: '/partner-hub/_app/creators/'
+      path: '/creators'
+      fullPath: '/partner-hub/creators/'
+      preLoaderRoute: typeof PartnerHubAppCreatorsIndexRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/creators/$creatorId': {
+      id: '/partner-hub/_app/creators/$creatorId'
+      path: '/creators/$creatorId'
+      fullPath: '/partner-hub/creators/$creatorId'
+      preLoaderRoute: typeof PartnerHubAppCreatorsCreatorIdRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
     '/roblox/portal/submissions/': {
       id: '/roblox/portal/submissions/'
       path: '/submissions'
@@ -1651,7 +1920,10 @@ interface AdminRouteChildren {
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
+  AdminPartnersPartnerIdRoute: typeof AdminPartnersPartnerIdRoute
+  AdminPartnersKitRoute: typeof AdminPartnersKitRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
+  AdminPartnersIndexRoute: typeof AdminPartnersIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1662,7 +1934,10 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
+  AdminPartnersPartnerIdRoute: AdminPartnersPartnerIdRoute,
+  AdminPartnersKitRoute: AdminPartnersKitRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
+  AdminPartnersIndexRoute: AdminPartnersIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -1681,6 +1956,7 @@ const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
 
 interface CreatorHubAppRouteChildren {
   CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
+  CreatorHubAppAgreementRoute: typeof CreatorHubAppAgreementRoute
   CreatorHubAppArtworkRoute: typeof CreatorHubAppArtworkRoute
   CreatorHubAppAssetsRoute: typeof CreatorHubAppAssetsRoute
   CreatorHubAppDashboardRoute: typeof CreatorHubAppDashboardRoute
@@ -1694,6 +1970,7 @@ interface CreatorHubAppRouteChildren {
 
 const CreatorHubAppRouteChildren: CreatorHubAppRouteChildren = {
   CreatorHubAppAccountRoute: CreatorHubAppAccountRoute,
+  CreatorHubAppAgreementRoute: CreatorHubAppAgreementRoute,
   CreatorHubAppArtworkRoute: CreatorHubAppArtworkRoute,
   CreatorHubAppAssetsRoute: CreatorHubAppAssetsRoute,
   CreatorHubAppDashboardRoute: CreatorHubAppDashboardRoute,
@@ -1707,6 +1984,30 @@ const CreatorHubAppRouteChildren: CreatorHubAppRouteChildren = {
 
 const CreatorHubAppRouteWithChildren = CreatorHubAppRoute._addFileChildren(
   CreatorHubAppRouteChildren,
+)
+
+interface PartnerHubAppRouteChildren {
+  PartnerHubAppCollateralRoute: typeof PartnerHubAppCollateralRoute
+  PartnerHubAppLinksRoute: typeof PartnerHubAppLinksRoute
+  PartnerHubAppPlaybookRoute: typeof PartnerHubAppPlaybookRoute
+  PartnerHubAppTeamRoute: typeof PartnerHubAppTeamRoute
+  PartnerHubAppIndexRoute: typeof PartnerHubAppIndexRoute
+  PartnerHubAppCreatorsCreatorIdRoute: typeof PartnerHubAppCreatorsCreatorIdRoute
+  PartnerHubAppCreatorsIndexRoute: typeof PartnerHubAppCreatorsIndexRoute
+}
+
+const PartnerHubAppRouteChildren: PartnerHubAppRouteChildren = {
+  PartnerHubAppCollateralRoute: PartnerHubAppCollateralRoute,
+  PartnerHubAppLinksRoute: PartnerHubAppLinksRoute,
+  PartnerHubAppPlaybookRoute: PartnerHubAppPlaybookRoute,
+  PartnerHubAppTeamRoute: PartnerHubAppTeamRoute,
+  PartnerHubAppIndexRoute: PartnerHubAppIndexRoute,
+  PartnerHubAppCreatorsCreatorIdRoute: PartnerHubAppCreatorsCreatorIdRoute,
+  PartnerHubAppCreatorsIndexRoute: PartnerHubAppCreatorsIndexRoute,
+}
+
+const PartnerHubAppRouteWithChildren = PartnerHubAppRoute._addFileChildren(
+  PartnerHubAppRouteChildren,
 )
 
 interface RobloxPortalRouteChildren {
@@ -1839,8 +2140,11 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
   GoCodeRoute: GoCodeRoute,
   OverlayTokenRoute: OverlayTokenRoute,
+  PartnerHubAppRoute: PartnerHubAppRouteWithChildren,
+  PartnerHubJoinRoute: PartnerHubJoinRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   ShelfSlugRoute: ShelfSlugRoute,
+  WithPartnerIdRoute: WithPartnerIdRoute,
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
   ShelfIndexRoute: ShelfIndexRoute,

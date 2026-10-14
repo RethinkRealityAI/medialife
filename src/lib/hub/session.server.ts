@@ -5,6 +5,8 @@ import { isAdminRequest } from "@/lib/ar/auth.server";
 import { HUB_COOKIE, createSession, resolveSession, type HubUser } from "./auth.server";
 import { getCreator } from "./data.server";
 import type { Creator } from "./model";
+import type { Partner, PartnerRole } from "./partners";
+import { getPartner } from "./partners.server";
 import { hubNs, type HubNamespace } from "./store.server";
 
 // Session plumbing shared by every Creator Hub server function.
@@ -32,6 +34,22 @@ export async function requireCreator(): Promise<{
   const creator = await getCreator(s.ns, s.user.creatorId);
   if (!creator) throw new HubAuthError("no-creator");
   return { ...s, creator };
+}
+
+/** The signed-in partner team member, or throws. Every Partner Hub function starts here. */
+export async function requirePartner(opts: { admin?: boolean } = {}): Promise<{
+  ns: HubNamespace;
+  user: HubUser;
+  partner: Partner;
+  role: PartnerRole;
+}> {
+  const s = await currentUser();
+  if (!s) throw new HubAuthError("signed-out");
+  const m = s.user.partner;
+  const partner = m ? await getPartner(s.ns, m.id) : null;
+  if (!m || !partner || partner.status !== "active") throw new HubAuthError("forbidden");
+  if (opts.admin && m.role !== "admin") throw new HubAuthError("forbidden");
+  return { ...s, partner, role: m.role };
 }
 
 /** For admin functions: the shared /admin cookie (AR_ADMIN_PASSWORD). */

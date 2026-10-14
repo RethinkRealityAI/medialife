@@ -22,6 +22,7 @@ import {
   saveFolder,
 } from "./data.server";
 import type { AssetFolder, HubFile } from "./model";
+import { isLibraryOwner } from "./partners";
 import { HubAuthError, requireCreator, requireHubAdmin } from "./session.server";
 import { newId, type HubNamespace } from "./store.server";
 
@@ -42,7 +43,9 @@ type Who = { ns: HubNamespace; creatorId: string; admin: boolean };
 async function who(creatorId?: string): Promise<Who> {
   if (creatorId) {
     const ns = await requireHubAdmin();
-    if (!(await getCreator(ns, creatorId))) throw new HubAuthError("no-creator");
+    // The MEDIALIFE kit and partner libraries have no creator record.
+    if (!isLibraryOwner(creatorId) && !(await getCreator(ns, creatorId)))
+      throw new HubAuthError("no-creator");
     return { ns, creatorId, admin: true };
   }
   const { ns, creator } = await requireCreator();

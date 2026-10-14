@@ -91,11 +91,12 @@ export type ActionLink =
     }
   | { to: "/creator-hub/experiences"; preview?: string }
   | { to: "/creator-hub/assets"; s?: string }
+  | { to: "/creator-hub/agreement" }
   | { to: "/creator-hub/account"; section?: AccountSection };
 
 export type ActionItem = {
   id: string;
-  kind: "proof" | "experience" | "payout" | "shipping" | "verify" | "product";
+  kind: "proof" | "experience" | "payout" | "shipping" | "verify" | "product" | "agreement";
   title: string;
   body: string;
   cta: string;
@@ -110,6 +111,22 @@ export type ActionItem = {
 export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
   const items: ActionItem[] = [];
   const approved = ws.creator.status === "approved";
+
+  // Step 2 of the program: nothing is made until the agreement is signed.
+  if (approved && !ws.agreement.signedCurrent) {
+    items.push({
+      id: "agreement",
+      kind: "agreement",
+      title: ws.agreement.signedOlder
+        ? "Sign the updated agreement"
+        : "Sign your program agreement",
+      body: ws.agreement.signedOlder
+        ? "The program agreement changed. Read what's new and sign the new version."
+        : "Read it and sign it right here. It takes a few minutes, and it's what lets us start making.",
+      cta: "Read and sign",
+      link: { to: "/creator-hub/agreement" },
+    });
+  }
 
   for (const p of ws.products) {
     const proof = latestProof(p);

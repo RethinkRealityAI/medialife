@@ -71,6 +71,34 @@ export function CreatorHeader({ data }: { data: CreatorDetail }) {
               {p.displayName || p.email || "Unnamed creator"}
             </h1>
             <StatusPill status={creator.status} />
+            {creator.status === "approved" ? (
+              <span
+                className={
+                  data.agreement.signedCurrent
+                    ? "rounded-full border border-emerald-400/40 px-2 py-0.5 text-xs text-emerald-300"
+                    : "rounded-full border border-amber-400/40 px-2 py-0.5 text-xs text-amber-300"
+                }
+                title={
+                  data.agreement.signatures[0]
+                    ? `Signed by ${data.agreement.signatures[0].signedName}, ${formatDateTime(data.agreement.signatures[0].signedAt)}, from ${data.agreement.signatures[0].ip}. Record ${data.agreement.signatures[0].textHash.slice(0, 16)}.`
+                    : undefined
+                }
+              >
+                {data.agreement.signedCurrent
+                  ? `Agreement signed (v${data.agreement.current})`
+                  : data.agreement.signedOlder
+                    ? "Signed an older agreement"
+                    : "Agreement not signed"}
+              </span>
+            ) : null}
+            {!data.agreement.counselReviewed ? (
+              <span
+                className="rounded-full border border-red-400/40 px-2 py-0.5 text-xs text-red-300"
+                title="The creator agreement text (src/lib/hub/agreements.ts) hasn't been approved by a lawyer yet. Set COUNSEL_REVIEWED once it has."
+              >
+                Agreement text needs legal review
+              </span>
+            ) : null}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">

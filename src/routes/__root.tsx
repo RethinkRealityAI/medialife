@@ -153,7 +153,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  // The partner portal, the Creator Hub app (sign-in, onboarding, dashboard) and
+  // The partner portal, the Creator Hub and Partner Hub apps and
   // the internal /admin tools are applications, not pages on the marketing site:
   // they bring their own chrome and must not sit inside the site nav and footer.
   // Everything else on the site does — including the Creator Hub landing page.
@@ -164,6 +164,9 @@ function RootComponent() {
         p.startsWith("/roblox/portal") ||
         p.startsWith("/admin") ||
         p.startsWith("/overlay/") ||
+        p.startsWith("/partner-hub") ||
+        // Co-branded partner program pages carry both brands, not the site nav.
+        p.startsWith("/with/") ||
         (p.startsWith("/creator-hub/") && p !== "/creator-hub/")
       );
     },

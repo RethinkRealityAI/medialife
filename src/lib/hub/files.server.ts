@@ -16,6 +16,7 @@ import {
 } from "./data.server";
 import { ASSET_LIMITS, ASSET_SECTIONS, normaliseTags } from "./assets";
 import { HUB, type FileKind, type HubFile } from "./model";
+import { KIT_OWNER, isLibraryOwner, partnerOwner, type PartnerMembership } from "./partners";
 import { KEYS, hubFileStore, hubStore, newId, type HubNamespace } from "./store.server";
 
 // Files in the Creator Hub: creator artwork, MEDIALIFE proofs and collateral.
@@ -175,16 +176,29 @@ function readCookie(request: Request, name: string) {
   return null;
 }
 
-export type Caller = { kind: "admin" } | { kind: "creator"; creatorId: string; userId: string };
+/**
+ * Who is calling. A hub account may run a creator profile, sit on a partner
+ * team, or both.
+ */
+export type Caller =
+  | { kind: "admin" }
+  | { kind: "user"; userId: string; creatorId: string | null; partner: PartnerMembership | null };
 
-/** Who is calling: the team (admin cookie) or a signed-in creator. null when neither. */
+/** Who is calling: the team (admin cookie) or a signed-in hub account. null when neither. */
 export async function caller(ns: HubNamespace, request: Request): Promise<Caller | null> {
   if (await isAdminRequest(request)) return { kind: "admin" };
   const s = await resolveSession(
     ns,
     readCookie(request, "hub_session" satisfies typeof HUB_COOKIE),
   );
-  return s ? { kind: "creator", creatorId: s.user.creatorId, userId: s.user.id } : null;
+  return s
+    ? {
+        kind: "user",
+        userId: s.user.id,
+        creatorId: s.user.creatorId,
+        partner: s.user.partner ?? null,
+      }
+    : null;
 }
 
 /** Guard for every non-GET request: a signed-in caller, plus the x-hub header (CSRF). */
@@ -197,7 +211,27 @@ export async function guard(ns: HubNamespace, request: Request): Promise<Caller 
   return c;
 }
 
-const canAccess = (c: Caller, creatorId: string) => c.kind === "admin" || c.creatorId === creatorId;
+/** Uploading, finishing and deleting: the team, or the creator whose library it is. */
+const canWrite = (c: Caller, owner: string) => c.kind === "admin" || c.creatorId === owner;
+
+/**
+ * Reading: also a partner team, for the MEDIALIFE kit, its own library and the
+ * creators tied to it (partners see everything about their creators).
+ */
+async function canRead(ns: HubNamespace, c: Caller, owner: string) {
+  if (canWrite(c, owner)) return true;
+  if (c.kind !== "user" || !c.partner) return false;
+  if (owner === KIT_OWNER || owner === partnerOwner(c.partner.id)) return true;
+  const creator = isLibraryOwner(owner) ? null : await getCreator(ns, owner);
+  return creator?.agency?.id === c.partner.id;
+}
+
+/** Libraries that aren't a creator's: the MEDIALIFE kit and partner libraries. */
+async function ownerExists(ns: HubNamespace, owner: string) {
+  if (owner === KIT_OWNER) return true;
+  if (owner.startsWith("partner")) return true;
+  return !!(await getCreator(ns, owner));
+}
 
 /** Kinds a creator may upload. Proofs, mockups and collateral come from the team. */
 const CREATOR_KINDS: FileKind[] = ["artwork"];
@@ -208,9 +242,11 @@ export async function initUpload(ns: HubNamespace, c: Caller, body: unknown) {
   const d = parsed.data;
   const creatorId = c.kind === "admin" ? d.creatorId : c.creatorId;
   if (!creatorId) return json({ error: "creatorId is required" }, 400);
-  if (c.kind === "creator" && !CREATOR_KINDS.includes(d.kind))
+  if (c.kind === "user" && !CREATOR_KINDS.includes(d.kind))
     return json({ error: "forbidden kind" }, 403);
-  if (!(await getCreator(ns, creatorId))) return json({ error: "creator not found" }, 404);
+  // Only the team uploads to the MEDIALIFE kit and partner libraries.
+  if (isLibraryOwner(creatorId) && c.kind !== "admin") return json({ error: "forbidden" }, 403);
+  if (!(await ownerExists(ns, creatorId))) return json({ error: "creator not found" }, 404);
   const mime = resolveMime(d.name, d.mime);
   if (!mime)
     return json(
@@ -259,7 +295,7 @@ export async function putChunk(
   n: number,
   request: Request,
 ) {
-  if (!canAccess(c, creatorId)) return json({ error: "forbidden" }, 403);
+  if (!canWrite(c, creatorId)) return json({ error: "forbidden" }, 403);
   const file = await getFile(ns, creatorId, id);
   if (!file || file.complete) return json({ error: "not found" }, 404);
   if (!Number.isInteger(n) || n < 0 || n >= file.chunks)
@@ -299,7 +335,7 @@ function sniffOk(mime: string, head: Uint8Array) {
 }
 
 export async function completeUpload(ns: HubNamespace, c: Caller, creatorId: string, id: string) {
-  if (!canAccess(c, creatorId)) return json({ error: "forbidden" }, 403);
+  if (!canWrite(c, creatorId)) return json({ error: "forbidden" }, 403);
   const store = await hubStore(ns);
   const file = await getFile(ns, creatorId, id);
   if (!file) return json({ error: "not found" }, 404);
@@ -344,10 +380,10 @@ async function deleteFileBytes(ns: HubNamespace, file: HubFile) {
 }
 
 export async function deleteFile(ns: HubNamespace, c: Caller, creatorId: string, id: string) {
-  if (!canAccess(c, creatorId)) return json({ error: "forbidden" }, 403);
+  if (!canWrite(c, creatorId)) return json({ error: "forbidden" }, 403);
   const file = await getFile(ns, creatorId, id);
   if (!file) return new Response(null, { status: 204 });
-  if (c.kind === "creator" && file.uploadedBy !== "creator")
+  if (c.kind === "user" && file.uploadedBy !== "creator")
     return json({ error: "You can only delete files you uploaded." }, 403);
   // A sent proof is part of the approval record: it stays.
   const products = await listProducts(ns, creatorId);
@@ -385,7 +421,7 @@ export async function fileResponse(
   rangeHeader: string | null = null,
 ) {
   if (!c) return json({ error: "unauthorized" }, 401);
-  if (!canAccess(c, creatorId)) return json({ error: "forbidden" }, 403);
+  if (!(await canRead(ns, c, creatorId))) return json({ error: "forbidden" }, 403);
   const file = await getFile(ns, creatorId, id);
   if (!file || !file.complete) return json({ error: "not found" }, 404);
   const inline = !download && (ALLOWED[file.mime]?.inline ?? false);

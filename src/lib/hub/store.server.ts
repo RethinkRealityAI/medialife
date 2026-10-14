@@ -62,6 +62,16 @@ export const KEYS = {
   activity: (creatorId: string) => `activity/${creatorId}`,
   thread: (creatorId: string, productId: string) => `threads/${creatorId}/${productId}`,
 
+  partner: (id: string) => `partners/${id}`,
+  partners: () => `partners/`,
+  partnerMember: (partnerId: string, userId: string) => `partner-members/${partnerId}/${userId}`,
+  partnerMembers: (partnerId: string) => `partner-members/${partnerId}/`,
+  partnerInvite: (partnerId: string, id: string) => `partner-invites/${partnerId}/${id}`,
+  partnerInvites: (partnerId: string) => `partner-invites/${partnerId}/`,
+
+  signature: (creatorId: string, id: string) => `signatures/${creatorId}/${id}`,
+  signatures: (creatorId: string) => `signatures/${creatorId}/`,
+
   invite: (code: string) => `invites/${code}`,
   invites: () => `invites/`,
 } as const;
