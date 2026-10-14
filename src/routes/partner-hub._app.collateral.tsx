@@ -3,7 +3,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import {
   Camera,
+  Clapperboard,
   Download,
+  ImagePlay,
   ExternalLink,
   Inbox,
   Maximize2,
@@ -28,15 +30,17 @@ import {
   surface,
   type TabDef,
 } from "@/components/partner/ui";
-import { inviteFor, usePartnerWorkspace } from "@/components/partner/workspace";
+import { GifsPanel, VideosPanel } from "@/components/partner/showcase";
+import { inviteFor, programUrl, usePartnerWorkspace } from "@/components/partner/workspace";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ASSET_SECTIONS, SECTION_META, sectionOf, type AssetSection } from "@/lib/hub/assets";
 import { KIT_GROUPS, fillHref, kitFor, type KitGroup, type KitItem } from "@/lib/hub/collateral";
 import { HUB, type HubFile } from "@/lib/hub/model";
+import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS } from "@/lib/hub/showcase";
 import { cn } from "@/lib/utils";
 
-const TAB_IDS = ["explain", "show", "post", "photos", "team"] as const;
+const TAB_IDS = ["explain", "show", "videos", "post", "gifs", "photos", "team"] as const;
 type TabId = (typeof TAB_IDS)[number];
 
 export const Route = createFileRoute("/partner-hub/_app/collateral")({
@@ -77,19 +81,27 @@ function Collateral() {
   const banner =
     items.find((i) => i.id === "stream-diorama")?.href ?? items.find((i) => i.preview)?.preview;
 
+  const count = (n: number) => (
+    <span className="text-xs text-muted-foreground tabular-nums">{n}</span>
+  );
+  const groupTab = (g: KitGroup): TabDef<TabId>[] =>
+    items.some((i) => i.group === g)
+      ? [
+          {
+            id: g,
+            label: KIT_GROUPS[g].title,
+            icon: GROUP_ICONS[g],
+            badge: count(items.filter((i) => i.group === g).length),
+          },
+        ]
+      : [];
   const tabs: TabDef<TabId>[] = [
-    ...(Object.keys(KIT_GROUPS) as KitGroup[])
-      .filter((g) => items.some((i) => i.group === g))
-      .map((g) => ({
-        id: g,
-        label: KIT_GROUPS[g].title,
-        icon: GROUP_ICONS[g],
-        badge: (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {items.filter((i) => i.group === g).length}
-          </span>
-        ),
-      })),
+    ...groupTab("explain"),
+    ...groupTab("show"),
+    { id: "videos", label: "Videos", icon: Clapperboard, badge: count(MEDIALIFE_VIDEOS.length) },
+    ...groupTab("post"),
+    { id: "gifs", label: "Email GIFs", icon: ImagePlay, badge: count(MEDIALIFE_GIFS.length) },
+    ...groupTab("photos"),
     {
       id: "team",
       label: "From MEDIALIFE",
@@ -99,7 +111,7 @@ function Collateral() {
           {freshCount} new
         </span>
       ) : (
-        <span className="text-xs text-muted-foreground tabular-nums">{uploads.length}</span>
+        count(uploads.length)
       ),
     },
   ];
@@ -163,6 +175,21 @@ function Collateral() {
             </ul>
           </PartnerTab>
         ))}
+
+        <PartnerTab value="videos">
+          <TabIntro>
+            Real activations on video: standees, products, fans and creators. Tap any video to play
+            it.
+          </TabIntro>
+          <VideosPanel origin={ws.origin} />
+        </PartnerTab>
+
+        <PartnerTab value="gifs">
+          <TabIntro>
+            Five short loops, each under 2 MB, made to drop into an email or a DM.
+          </TabIntro>
+          <GifsPanel origin={ws.origin} link={programUrl(ws, invite)} />
+        </PartnerTab>
 
         <PartnerTab value="team">
           <TabIntro>

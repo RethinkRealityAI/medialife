@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { kitFor, kitHero, kitLogo } from "@/lib/hub/collateral";
 import { HUB, money } from "@/lib/hub/model";
 import { JOURNEY, type JourneyStep } from "@/lib/hub/partners";
+import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS } from "@/lib/hub/showcase";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/partner-hub/_app/")({
@@ -434,6 +435,49 @@ function Home() {
                 Your kit is ready in Collateral. New files from the team show up here first.
               </p>
             )}
+            <ul className="mt-3 grid gap-2">
+              {[
+                {
+                  tab: "videos" as const,
+                  title: "Activation videos",
+                  sub: `${MEDIALIFE_VIDEOS.length} clips: standees, products, fans, creators`,
+                  thumbs: MEDIALIFE_VIDEOS.slice(0, 3).map((v) => v.poster),
+                },
+                {
+                  tab: "gifs" as const,
+                  title: "Email GIFs",
+                  sub: `${MEDIALIFE_GIFS.length} loops, ready for email and DMs`,
+                  thumbs: MEDIALIFE_GIFS.slice(0, 3).map(
+                    (g) => MEDIALIFE_VIDEOS.find((v) => v.id === g.from)?.poster ?? g.src,
+                  ),
+                },
+              ].map((r) => (
+                <li key={r.tab}>
+                  <Link
+                    to="/partner-hub/collateral"
+                    search={{ tab: r.tab }}
+                    className={cn(surface, lift, "flex items-center gap-3 rounded-xl p-2.5")}
+                  >
+                    <span className="flex -space-x-3" aria-hidden>
+                      {r.thumbs.map((t) => (
+                        <img
+                          key={t}
+                          src={t}
+                          alt=""
+                          loading="lazy"
+                          className="h-12 w-8 rounded-md object-cover ring-2 ring-background"
+                        />
+                      ))}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium">{r.title}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{r.sub}</span>
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </Surface>
         </div>
       </div>
