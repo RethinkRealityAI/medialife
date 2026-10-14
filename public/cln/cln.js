@@ -70,7 +70,6 @@
     const dec = parseInt(el.dataset.dec || "0", 10);
     const sep = el.dataset.sep === "1";
     const fmt = (v) => (sep ? Math.round(v).toLocaleString("en-US") : v.toFixed(dec));
-    if (reduced) return void (el.textContent = fmt(to));
     const t0 = performance.now();
     const dur = 1400;
     const step = (t) => {
@@ -222,7 +221,7 @@
       i = (i + 1) % nodes.length;
     };
     tick();
-    if (!reduced) setInterval(tick, 1500);
+    setInterval(tick, 1500);
   })();
 
   /* ── Map pins ↔ convention list ─────────────────────────────────────── */

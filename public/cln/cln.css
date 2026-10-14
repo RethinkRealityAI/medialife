@@ -173,6 +173,13 @@ section {
   text-transform: uppercase;
   margin: 0 0 10px;
 }
+.subline {
+  margin: 22px 0 0;
+  font: italic 700 clamp(20px, 2.1vw, 27px) / 1.2 var(--display);
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
 .lede {
   font-size: clamp(17px, 1.5vw, 19px);
   color: #dcd6d0;
@@ -466,7 +473,8 @@ body.nav-on .kana-tag {
   z-index: 2;
   left: 50%;
   bottom: 21.6%;
-  width: min(104vw, 1480px);
+  /* The mark is 0.29× as tall as it is wide; this keeps its top under the intro copy. */
+  width: clamp(62vw, calc(270svh - 1060px), min(104vw, 1480px));
   transform: translateX(-50%);
   pointer-events: none;
 }
@@ -788,18 +796,34 @@ body.nav-on .kana-tag {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  min-height: 640px;
+  min-height: min(640px, calc(100svh - 64px));
   background: linear-gradient(110deg, #3b0006 0%, #170003 38%, #000 60%);
   overflow: hidden;
 }
 .challenge-copy {
   position: relative;
   z-index: 2;
-  padding: clamp(60px, 8vw, 110px) var(--gutter);
+  padding: clamp(56px, 7vw, 96px) var(--gutter);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
+  justify-content: center;
+  gap: 30px;
+}
+/* Copy and list arrive one at a time once the section is in view. */
+.challenge {
+  --stagger: 0.8s;
+}
+.challenge .stg {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.7s var(--ease),
+    transform 0.7s var(--ease);
+  transition-delay: calc(0.3s + var(--i) * var(--stagger));
+}
+.challenge.in .stg {
+  opacity: 1;
+  transform: none;
 }
 .challenge-copy .ghost-slash {
   position: absolute;
@@ -816,7 +840,7 @@ body.nav-on .kana-tag {
   pointer-events: none;
 }
 .challenge-copy p {
-  margin: 0 0 16px;
+  margin: 0 0 14px;
   max-width: 46ch;
   font-size: 17px;
 }
@@ -4021,17 +4045,34 @@ dialog.done::backdrop {
   }
 }
 
+/* Reduced motion: no slides, parallax or looping drift. Fades, reveals, counters and
+   chart draws still play — they don't move content around the screen. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  html {
+    scroll-behavior: auto;
   }
-  .rv {
-    opacity: 1;
+  .rv,
+  .challenge .stg {
+    transform: none !important;
+  }
+  .hero-char img {
+    transform: none;
+    animation-name: fade-in;
+  }
+  .hero-red::after,
+  .loop .ring-run,
+  .pin .pulse {
+    animation: none;
+  }
+  .device {
+    transform: none !important;
+  }
+  .challenge-art img {
+    transform: none;
+  }
+  .vcard:hover .bevel,
+  .pcard:hover,
+  .con:hover {
     transform: none;
   }
 }
