@@ -1,10 +1,29 @@
 /** Pieces several Partner Hub pages share: the five-step journey, a creator's status. */
-import { Check } from "lucide-react";
+import {
+  Check,
+  FileSignature,
+  Package,
+  Palette,
+  UserPlus,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+
+import { Link } from "@tanstack/react-router";
 
 import { Pill } from "@/components/hub/app/ui";
+import { IconTile, accentEdge, lift, surface } from "@/components/partner/ui";
 import { CREATOR_STATUS, type CreatorStatus } from "@/lib/hub/model";
 import { JOURNEY, type JourneyStep } from "@/lib/hub/partners";
 import { cn } from "@/lib/utils";
+
+export const STEP_ICONS: Record<JourneyStep, LucideIcon> = {
+  apply: UserPlus,
+  sign: FileSignature,
+  approve: Palette,
+  make: Package,
+  paid: Wallet,
+};
 
 export const journeyIndex = (id: JourneyStep) => JOURNEY.findIndex((s) => s.id === id);
 
@@ -63,45 +82,71 @@ export function JourneyTrack({
   );
 }
 
-/** How many creators are at each step. */
+const STEP_TONES = ["ice", "blue", "violet", "mint", "amber"] as const;
+
+/**
+ * How many creators are at each step. Pick a step to filter (`onPick`), or
+ * follow it to Creators filtered to that step (`linked`).
+ */
 export function JourneyFunnel({
   counts,
   onPick,
   active,
+  linked,
 }: {
   counts: Record<JourneyStep, number>;
   onPick?: (s: JourneyStep | null) => void;
   active?: JourneyStep | null;
+  linked?: boolean;
 }) {
+  const max = Math.max(1, ...Object.values(counts));
   return (
-    <ol className="grid grid-cols-2 gap-2 @2xl/inset:grid-cols-5">
-      {JOURNEY.map((s) => {
-        const Tag = onPick ? "button" : "div";
-        return (
-          <li key={s.id}>
-            <Tag
-              {...(onPick
-                ? {
-                    type: "button" as const,
-                    onClick: () => onPick(active === s.id ? null : s.id),
-                    "aria-pressed": active === s.id,
-                  }
-                : {})}
-              className={cn(
-                "flex h-full w-full flex-col rounded-xl border p-3 text-left transition-colors",
-                active === s.id
-                  ? "border-[var(--partner)] bg-[var(--partner)]/10"
-                  : "border-border bg-white/[0.02]",
-                onPick &&
-                  "hover:border-[var(--partner)]/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-              )}
-            >
+    <ol className="-mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl/inset:grid @2xl/inset:grid-cols-5 @2xl/inset:overflow-visible [&::-webkit-scrollbar]:hidden">
+      {JOURNEY.map((s, i) => {
+        const Icon = STEP_ICONS[s.id];
+        const body = (
+          <>
+            <span className="flex items-center justify-between gap-2">
+              <IconTile icon={Icon} tone={STEP_TONES[i]} size="sm" />
               <span className="text-[11px] text-muted-foreground tabular-nums">Step {s.n}</span>
-              <span className="mt-0.5 text-sm font-medium">{s.title}</span>
-              <span className="mt-auto pt-2 text-2xl font-semibold tabular-nums">
-                {counts[s.id]}
-              </span>
-            </Tag>
+            </span>
+            <span className="mt-3 text-sm font-medium">{s.short}</span>
+            <span className="mt-auto pt-1 text-3xl font-semibold tracking-tight tabular-nums">
+              {counts[s.id]}
+            </span>
+            <span aria-hidden className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
+              <span
+                className="block h-full rounded-full bg-gradient-to-r from-[var(--partner-2)] to-[var(--partner)]"
+                style={{ width: `${(counts[s.id] / max) * 100}%` }}
+              />
+            </span>
+          </>
+        );
+        const cls = cn(
+          surface,
+          "flex h-full w-full flex-col p-3.5 text-left",
+          (onPick || linked) && lift,
+          active === s.id && accentEdge,
+          active === s.id && "bg-[var(--partner)]/10",
+        );
+        return (
+          <li key={s.id} className="w-36 shrink-0 snap-start @2xl/inset:w-auto">
+            {linked ? (
+              <Link to="/partner-hub/creators" search={{ step: s.id }} className={cls}>
+                {body}
+              </Link>
+            ) : onPick ? (
+              <button
+                type="button"
+                onClick={() => onPick(active === s.id ? null : s.id)}
+                aria-pressed={active === s.id}
+                className={cls}
+              >
+                {body}
+              </button>
+            ) : (
+              <div className={cls}>{body}</div>
+            )}
           </li>
         );
       })}

@@ -3,11 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Search, UsersRound } from "lucide-react";
 import { z } from "zod";
 
-import { EmptyState, Page, PageHeader } from "@/components/hub/app/ui";
+import { EmptyState, Monogram, Page } from "@/components/hub/app/ui";
 import { CreatorStatusPill, JourneyFunnel, JourneyTrack } from "@/components/partner/parts";
+import { PartnerBanner } from "@/components/partner/ui";
 import { usePartnerWorkspace } from "@/components/partner/workspace";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { kitFor, kitHero } from "@/lib/hub/collateral";
 import { PLATFORMS, money, shortDate } from "@/lib/hub/model";
 import { JOURNEY, type JourneyStep } from "@/lib/hub/partners";
 
@@ -48,8 +50,14 @@ function Creators() {
 
   return (
     <Page className="lg:pt-8">
-      <PageHeader
-        title="Creators"
+      <PartnerBanner
+        image={
+          kitFor(ws.partner.kit).find((i) => i.id === "fan-unlock-story")?.href ??
+          kitHero(ws.partner.kit)
+        }
+        imageClassName="object-[50%_42%]"
+        eyebrow="Creators"
+        title="Your creators"
         description="Everyone who joined through your links: where they are, what they're making and how it's selling."
       />
 
@@ -90,7 +98,7 @@ function Creators() {
           </div>
 
           {shown.length ? (
-            <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border">
+            <ul className="mt-3 divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(180deg,rgb(255_255_255/0.05),rgb(255_255_255/0.015))] shadow-[0_20px_40px_-24px_rgb(0_0_0/0.9)]">
               {shown.map((c) => (
                 <li key={c.id}>
                   <Link
@@ -98,20 +106,23 @@ function Creators() {
                     params={{ creatorId: c.id }}
                     className="grid grid-cols-1 gap-3 p-4 hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset @3xl/inset:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_8rem] @3xl/inset:items-center"
                   >
-                    <span className="min-w-0">
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span className="truncate font-medium">{c.displayName}</span>
-                        <CreatorStatusPill status={c.status} />
-                      </span>
-                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                        {[
-                          c.platforms.map((p) => PLATFORMS[p]?.label ?? p).join(", "),
-                          c.audience ? `${compact(c.audience)} audience` : null,
-                          c.rep ? `via ${c.rep}` : null,
-                          `joined ${shortDate(c.joinedAt)}`,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Monogram name={c.displayName} />
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="truncate font-medium">{c.displayName}</span>
+                          <CreatorStatusPill status={c.status} />
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {[
+                            c.platforms.map((p) => PLATFORMS[p]?.label ?? p).join(", "),
+                            c.audience ? `${compact(c.audience)} audience` : null,
+                            c.rep ? `via ${c.rep}` : null,
+                            `joined ${shortDate(c.joinedAt)}`,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
                       </span>
                     </span>
                     <JourneyTrack current={c.journey} status={c.status} />

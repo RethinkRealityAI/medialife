@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { kitHero } from "@/lib/hub/collateral";
+import { kitHero, kitLogo } from "@/lib/hub/collateral";
 import { HUB } from "@/lib/hub/model";
 import { getPartnerLanding } from "@/lib/hub/partner.functions";
 import { JOURNEY } from "@/lib/hub/partners";
@@ -106,7 +106,15 @@ function ProgramPage() {
           <span aria-hidden className="text-[var(--partner)]">
             ×
           </span>
-          <span className="truncate text-base font-semibold sm:text-lg">{partner.name}</span>
+          {kitLogo(partner.kit) ? (
+            <img
+              src={kitLogo(partner.kit)!.wordmark}
+              alt={partner.name}
+              className="h-8 w-auto sm:h-9"
+            />
+          ) : (
+            <span className="truncate text-base font-semibold sm:text-lg">{partner.name}</span>
+          )}
         </div>
         <a
           href={join}

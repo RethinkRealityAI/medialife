@@ -1,14 +1,25 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Check, FileSignature, Mail, MessageCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  FileSignature,
+  FolderOpen,
+  History,
+  Mail,
+  Package,
+  TrendingUp,
+  UserRound,
+} from "lucide-react";
 
 import { TrendChart } from "@/components/hub/app/earnings-chart";
-import { EmptyState, Facts, Panel, Pill, TimeAgo } from "@/components/hub/app/ui";
+import { CopyButton, EmptyState, Facts, Monogram, Pill, TimeAgo } from "@/components/hub/app/ui";
 import { AssetDetails } from "@/components/hub/assets/details";
 import { AssetThumb } from "@/components/hub/assets/shared";
 import { CreatorStatusPill, JourneyTrack } from "@/components/partner/parts";
 import { Page } from "@/components/hub/app/ui";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PartnerTab, PartnerTabs, Surface } from "@/components/partner/ui";
+import { Button } from "@/components/ui/button";
 import { getPartnerCreator } from "@/lib/hub/partner.functions";
 import {
   EXPERIENCE_KINDS,
@@ -49,6 +60,9 @@ const pct = (n: number) => `${Math.round(n * 1000) / 10}%`;
 function CreatorDetail() {
   const d = Route.useLoaderData();
   const [file, setFile] = useState<HubFile | null>(null);
+  const [tab, setTab] = useState<"overview" | "products" | "sales" | "files" | "activity">(
+    "overview",
+  );
   const row = d.row!;
   const c = d.creator;
   const step = JOURNEY.find((s) => s.id === row.journey)!;
@@ -61,55 +75,74 @@ function CreatorDetail() {
       >
         <ArrowLeft className="size-4" aria-hidden /> Creators
       </Link>
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-medium tracking-tight sm:text-3xl">{row.displayName}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <CreatorStatusPill status={c.status} />
-            {c.agency?.rep ? <span>Brought in by {c.agency.rep}</span> : null}
-            <span>Joined {shortDate(c.createdAt)}</span>
+      <Surface accent className="relative mt-3 overflow-hidden p-5 sm:p-6">
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_16%,transparent),transparent)]"
+        />
+        <header className="relative flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <Monogram name={row.displayName} className="size-14 text-lg" />
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+                {row.displayName}
+              </h1>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <CreatorStatusPill status={c.status} />
+                {c.agency?.rep ? <span>Brought in by {c.agency.rep}</span> : null}
+                <span>Joined {shortDate(c.createdAt)}</span>
+              </div>
+            </div>
           </div>
+          <div className="flex flex-wrap gap-2">
+            {c.profile.email ? (
+              <Button asChild variant="outline" size="sm">
+                <a href={`mailto:${c.profile.email}`}>
+                  <Mail aria-hidden /> Email
+                </a>
+              </Button>
+            ) : null}
+            {c.contact.discordUsername ? (
+              <CopyButton
+                value={c.contact.discordUsername}
+                label={`@${c.contact.discordUsername}`}
+                copiedLabel="Copied"
+                toastText="Discord username copied"
+                variant="outline"
+              />
+            ) : null}
+          </div>
+        </header>
+        <div className="relative mt-5 border-t border-white/[0.06] pt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-medium">
+              Step {step.n} of 5: {step.title}
+            </h2>
+            <span className="text-xs text-muted-foreground">{nextFor(row.journey, c.status)}</span>
+          </div>
+          <JourneyTrack current={row.journey} status={c.status} className="mt-3" />
         </div>
-        <div className="flex gap-2">
-          {c.profile.email ? (
-            <a
-              href={`mailto:${c.profile.email}`}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm hover:bg-white/5"
-            >
-              <Mail className="size-4" aria-hidden /> Email
-            </a>
-          ) : null}
-          {c.contact.discordUsername ? (
-            <span className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm">
-              <MessageCircle className="size-4" aria-hidden /> @{c.contact.discordUsername}
-            </span>
-          ) : null}
-        </div>
-      </header>
+      </Surface>
 
-      <Panel className="mt-5 p-4 sm:p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-sm font-medium">
-            Step {step.n} of 5: {step.title}
-          </h2>
-          <span className="text-xs text-muted-foreground">{nextFor(row.journey, c.status)}</span>
-        </div>
-        <JourneyTrack current={row.journey} status={c.status} className="mt-3" />
-      </Panel>
-
-      <Tabs defaultValue="overview" className="mt-6">
-        <div className="-mx-4 overflow-x-auto px-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="products">Products ({d.products.length})</TabsTrigger>
-            <TabsTrigger value="sales">Sales</TabsTrigger>
-            <TabsTrigger value="files">Files ({d.files.length})</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="overview" className="mt-4 grid gap-4 @3xl/inset:grid-cols-2">
-          <Panel className="p-4 sm:p-5">
+      <PartnerTabs
+        tabs={[
+          { id: "overview", label: "Overview", icon: UserRound },
+          {
+            id: "products",
+            label: "Products",
+            icon: Package,
+            badge: <Count n={d.products.length} />,
+          },
+          { id: "sales", label: "Sales", icon: TrendingUp },
+          { id: "files", label: "Files", icon: FolderOpen, badge: <Count n={d.files.length} /> },
+          { id: "activity", label: "Activity", icon: History },
+        ]}
+        value={tab}
+        onChange={setTab}
+        label="Creator details"
+      >
+        <PartnerTab value="overview" className="mt-4 grid gap-4 @3xl/inset:grid-cols-2">
+          <Surface className="p-4 sm:p-5">
             <h3 className="text-sm font-medium text-muted-foreground">Profile</h3>
             <Facts
               className="mt-2"
@@ -125,8 +158,8 @@ function CreatorDetail() {
             {c.profile.bio ? (
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{c.profile.bio}</p>
             ) : null}
-          </Panel>
-          <Panel className="p-4 sm:p-5">
+          </Surface>
+          <Surface className="p-4 sm:p-5">
             <h3 className="text-sm font-medium text-muted-foreground">Channels</h3>
             {c.channels.filter((ch) => ch.handle.trim()).length ? (
               <ul className="mt-2 divide-y divide-border text-sm">
@@ -165,8 +198,8 @@ function CreatorDetail() {
             ) : (
               <p className="mt-2 text-sm text-muted-foreground">No channels yet.</p>
             )}
-          </Panel>
-          <Panel className="p-4 sm:p-5">
+          </Surface>
+          <Surface className="p-4 sm:p-5">
             <h3 className="text-sm font-medium text-muted-foreground">Program</h3>
             <Facts
               className="mt-2"
@@ -183,8 +216,8 @@ function CreatorDetail() {
                 ],
               ]}
             />
-          </Panel>
-          <Panel className="p-4 sm:p-5">
+          </Surface>
+          <Surface className="p-4 sm:p-5">
             <h3 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <FileSignature className="size-4" aria-hidden /> Agreement
             </h3>
@@ -209,10 +242,10 @@ function CreatorDetail() {
                   : "Opens once their application is approved."}
               </p>
             )}
-          </Panel>
-        </TabsContent>
+          </Surface>
+        </PartnerTab>
 
-        <TabsContent value="products" className="mt-4">
+        <PartnerTab value="products" className="mt-4">
           {d.products.length ? (
             <ul className="grid grid-cols-1 gap-3 @3xl/inset:grid-cols-2">
               {d.products.map((p) => {
@@ -220,7 +253,7 @@ function CreatorDetail() {
                 const proof = p.proofs[p.proofs.length - 1];
                 return (
                   <li key={p.id}>
-                    <Panel className="flex h-full gap-4 p-4">
+                    <Surface className="flex h-full gap-4 p-4">
                       <img
                         src={
                           p.imageFileId
@@ -279,7 +312,7 @@ function CreatorDetail() {
                             : ""}
                         </p>
                       </div>
-                    </Panel>
+                    </Surface>
                   </li>
                 );
               })}
@@ -289,9 +322,9 @@ function CreatorDetail() {
               No products yet. MEDIALIFE sets them up once the creator is approved and signed.
             </p>
           )}
-        </TabsContent>
+        </PartnerTab>
 
-        <TabsContent value="sales" className="mt-4 space-y-4">
+        <PartnerTab value="sales" className="mt-4 space-y-4">
           <div className="grid grid-cols-2 gap-3 @3xl/inset:grid-cols-4">
             {[
               ["Orders", d.earnings.orders.toLocaleString()],
@@ -299,14 +332,14 @@ function CreatorDetail() {
               ["Creator earned", money(d.earnings.earned, d.earnings.currency)],
               ["Paid out", money(d.earnings.paid, d.earnings.currency)],
             ].map(([k, v]) => (
-              <Panel key={k} className="p-4">
+              <Surface key={k} className="p-4">
                 <div className="text-xs text-muted-foreground">{k}</div>
                 <div className="mt-1 text-xl font-semibold tabular-nums">{v}</div>
-              </Panel>
+              </Surface>
             ))}
           </div>
           {d.earnings.orders ? (
-            <Panel className="p-4">
+            <Surface className="p-4">
               <h3 className="text-sm font-medium text-muted-foreground">Sales, last 60 days</h3>
               <TrendChart
                 data={d.trend}
@@ -314,10 +347,10 @@ function CreatorDetail() {
                 currency={d.earnings.currency}
                 className="mt-3 h-48"
               />
-            </Panel>
+            </Surface>
           ) : null}
           {d.orders.length ? (
-            <Panel className="overflow-x-auto p-0">
+            <Surface className="overflow-x-auto p-0">
               <table className="w-full min-w-[32rem] text-sm">
                 <thead className="text-left text-xs text-muted-foreground">
                   <tr className="border-b border-border">
@@ -342,12 +375,12 @@ function CreatorDetail() {
                   ))}
                 </tbody>
               </table>
-            </Panel>
+            </Surface>
           ) : (
             <p className="text-sm text-muted-foreground">No orders yet.</p>
           )}
           {d.payouts.length ? (
-            <Panel className="p-4">
+            <Surface className="p-4">
               <h3 className="text-sm font-medium text-muted-foreground">Payouts</h3>
               <ul className="mt-2 divide-y divide-border text-sm">
                 {d.payouts.map((p) => (
@@ -357,11 +390,11 @@ function CreatorDetail() {
                   </li>
                 ))}
               </ul>
-            </Panel>
+            </Surface>
           ) : null}
-        </TabsContent>
+        </PartnerTab>
 
-        <TabsContent value="files" className="mt-4">
+        <PartnerTab value="files" className="mt-4">
           {d.files.length ? (
             <ul className="grid grid-cols-2 gap-2.5 @md/inset:grid-cols-3 @3xl/inset:grid-cols-5">
               {d.files.map((f) => (
@@ -394,11 +427,11 @@ function CreatorDetail() {
             onPatch={() => {}}
             onDeleted={() => {}}
           />
-        </TabsContent>
+        </PartnerTab>
 
-        <TabsContent value="activity" className="mt-4">
+        <PartnerTab value="activity" className="mt-4">
           {d.activity.length ? (
-            <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+            <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02]">
               {d.activity.map((a) => (
                 <li key={a.id} className="flex items-start justify-between gap-4 p-3 text-sm">
                   <span className="min-w-0">
@@ -414,8 +447,8 @@ function CreatorDetail() {
           ) : (
             <p className="text-sm text-muted-foreground">Nothing yet.</p>
           )}
-        </TabsContent>
-      </Tabs>
+        </PartnerTab>
+      </PartnerTabs>
     </Page>
   );
 }
@@ -430,3 +463,7 @@ function nextFor(step: string, status: string) {
   if (step === "make") return "Next: production, then launch.";
   return "Live and selling.";
 }
+
+const Count = ({ n }: { n: number }) => (
+  <span className="text-xs text-muted-foreground tabular-nums">{n}</span>
+);

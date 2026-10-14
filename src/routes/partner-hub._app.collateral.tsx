@@ -1,10 +1,33 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Download, ExternalLink, FileText, Globe, Inbox, Maximize2 } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
+import {
+  Camera,
+  Download,
+  ExternalLink,
+  Inbox,
+  Maximize2,
+  MonitorPlay,
+  Megaphone,
+  Presentation,
+  Sparkles,
+  Wand2,
+  type LucideIcon,
+} from "lucide-react";
 
-import { CopyButton, Page, PageHeader, Pill } from "@/components/hub/app/ui";
+import { CopyButton, Page, Pill } from "@/components/hub/app/ui";
 import { AssetDetails } from "@/components/hub/assets/details";
 import { AssetThumb } from "@/components/hub/assets/shared";
+import {
+  PartnerBanner,
+  PartnerTab,
+  PartnerTabs,
+  TabIntro,
+  Tag,
+  lift,
+  surface,
+  type TabDef,
+} from "@/components/partner/ui";
 import { inviteFor, usePartnerWorkspace } from "@/components/partner/workspace";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -13,40 +36,83 @@ import { KIT_GROUPS, fillHref, kitFor, type KitGroup, type KitItem } from "@/lib
 import { HUB, type HubFile } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
+const TAB_IDS = ["explain", "show", "post", "photos", "team"] as const;
+type TabId = (typeof TAB_IDS)[number];
+
 export const Route = createFileRoute("/partner-hub/_app/collateral")({
+  validateSearch: z.object({ tab: z.enum(TAB_IDS).optional().catch(undefined) }),
   head: () => ({ meta: [{ title: "Collateral · Partner Hub | MEDIALIFE" }] }),
   component: Collateral,
 });
 
 const NEW_DAYS = 21;
+const isNew = (f: HubFile) => Date.now() - f.createdAt < NEW_DAYS * 86_400_000;
+
+const GROUP_ICONS: Record<KitGroup, LucideIcon> = {
+  explain: Presentation,
+  show: MonitorPlay,
+  post: Megaphone,
+  photos: Camera,
+};
 
 function Collateral() {
   const ws = usePartnerWorkspace();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const { tab = "explain" } = Route.useSearch();
   const invite = inviteFor(ws, ws.me.name);
   const items = kitFor(ws.partner.kit);
   const [zoom, setZoom] = useState<KitItem | null>(null);
   const [file, setFile] = useState<HubFile | null>(null);
   const [section, setSection] = useState<AssetSection | "all">("all");
-  const groups = (Object.keys(KIT_GROUPS) as KitGroup[]).filter((g) =>
-    items.some((i) => i.group === g),
-  );
 
   const uploads = useMemo(
     () => ws.library.files.filter((f) => f.complete).sort((a, b) => b.createdAt - a.createdAt),
     [ws.library.files],
   );
+  const freshCount = uploads.filter(isNew).length;
   const sectionsHere = ASSET_SECTIONS.filter((s) => uploads.some((f) => sectionOf(f) === s));
   const shownUploads = uploads.filter((f) => section === "all" || sectionOf(f) === section);
   const fill = (href: string) => fillHref(href, { partner: ws.partner.id, invite });
   const abs = (href: string) => (href.startsWith("/") ? `${ws.origin}${href}` : href);
+  const banner =
+    items.find((i) => i.id === "stream-diorama")?.href ?? items.find((i) => i.preview)?.preview;
+
+  const tabs: TabDef<TabId>[] = [
+    ...(Object.keys(KIT_GROUPS) as KitGroup[])
+      .filter((g) => items.some((i) => i.group === g))
+      .map((g) => ({
+        id: g,
+        label: KIT_GROUPS[g].title,
+        icon: GROUP_ICONS[g],
+        badge: (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {items.filter((i) => i.group === g).length}
+          </span>
+        ),
+      })),
+    {
+      id: "team",
+      label: "From MEDIALIFE",
+      icon: Sparkles,
+      badge: freshCount ? (
+        <span className="rounded-full bg-[var(--partner)] px-1.5 text-[10px] font-semibold text-[var(--partner-ink)]">
+          {freshCount} new
+        </span>
+      ) : (
+        <span className="text-xs text-muted-foreground tabular-nums">{uploads.length}</span>
+      ),
+    },
+  ];
 
   return (
     <Page className="lg:pt-8">
-      <PageHeader
-        title="Collateral"
-        description="Everything to explain, show and post about activated merch, made for you. Each piece says what it's for and when to use it. We keep adding to it."
+      <PartnerBanner
+        image={banner ?? "/partner-kit/medialife/shelf-preview.webp"}
+        eyebrow="Collateral"
+        title="Your kit"
+        description="Ready to send, post and print, each with your links built in. We keep adding to it."
         actions={
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" className="bg-black/30 backdrop-blur">
             <a
               href={`mailto:${HUB.supportEmail}?subject=${encodeURIComponent(`Collateral request from ${ws.partner.name}`)}`}
             >
@@ -56,151 +122,164 @@ function Collateral() {
         }
       />
 
-      <nav aria-label="Collateral sections" className="mt-5 -mx-4 overflow-x-auto px-4">
-        <ul className="flex w-max gap-1.5">
-          {[...groups, ...(uploads.length ? (["uploads"] as const) : [])].map((g) => (
-            <li key={g}>
-              <a
-                href={`#${g}`}
-                className="inline-flex h-8 items-center rounded-full border border-border px-3 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-              >
-                {g === "uploads" ? "From the MEDIALIFE team" : KIT_GROUPS[g].title}
-                {g === "uploads" ? (
-                  <span className="ml-1.5 text-xs tabular-nums">{uploads.length}</span>
-                ) : null}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
-
-      {uploads.some((f) => Date.now() - f.createdAt < NEW_DAYS * 86_400_000) ? (
-        <a
-          href="#uploads"
-          className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--partner)]/40 bg-[var(--partner)]/10 px-4 py-3 text-sm"
-        >
-          <Pill tone="primary">New</Pill>
-          The MEDIALIFE team added new materials. See them below.
-        </a>
-      ) : null}
-
-      {groups.map((g) => (
-        <section key={g} id={g} aria-labelledby={`${g}-title`} className="mt-10 scroll-mt-20">
-          <h2 id={`${g}-title`} className="text-lg font-medium tracking-tight">
-            {KIT_GROUPS[g].title}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{KIT_GROUPS[g].blurb}</p>
-          <ul
-            className={cn(
-              "mt-4 grid grid-cols-1 gap-3",
-              g === "photos"
-                ? "grid-cols-2 @3xl/inset:grid-cols-3"
-                : "@2xl/inset:grid-cols-2 @5xl/inset:grid-cols-3",
-            )}
-          >
-            {items
-              .filter((i) => i.group === g)
-              .map((i) =>
-                g === "photos" ? (
-                  <PhotoCard key={i.id} item={i} onZoom={() => setZoom(i)} />
-                ) : (
-                  <KitCard
-                    key={i.id}
-                    item={i}
-                    href={fill(i.href)}
-                    absolute={abs(fill(i.href))}
-                    onZoom={() => setZoom(i)}
-                  />
-                ),
+      <PartnerTabs
+        tabs={tabs}
+        value={tab}
+        label="Collateral"
+        onChange={(t) =>
+          void navigate({
+            search: { tab: t === "explain" ? undefined : t },
+            replace: true,
+            resetScroll: false,
+          })
+        }
+      >
+        {(Object.keys(KIT_GROUPS) as KitGroup[]).map((g) => (
+          <PartnerTab key={g} value={g}>
+            <TabIntro>{KIT_GROUPS[g].blurb}</TabIntro>
+            <ul
+              className={cn(
+                "grid gap-3",
+                g === "photos"
+                  ? "grid-cols-2 @3xl/inset:grid-cols-3"
+                  : "grid-cols-1 @2xl/inset:grid-cols-2 @5xl/inset:grid-cols-3",
               )}
-          </ul>
-        </section>
-      ))}
-
-      <section id="uploads" aria-labelledby="uploads-title" className="mt-12 scroll-mt-20">
-        <h2 id="uploads-title" className="text-lg font-medium tracking-tight">
-          From the MEDIALIFE team
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Decks, case studies, product photos and anything else we add for you. New files show up
-          here first.
-        </p>
-        {uploads.length ? (
-          <>
-            {sectionsHere.length > 1 ? (
-              <div
-                role="group"
-                aria-label="Filter by section"
-                className="mt-4 flex flex-wrap gap-1.5"
-              >
-                {(["all", ...sectionsHere] as const).map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    aria-pressed={section === s}
-                    onClick={() => setSection(s)}
-                    className={cn(
-                      "h-8 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      section === s
-                        ? "border-[var(--partner)] bg-[var(--partner)]/10 text-foreground"
-                        : "border-border text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {s === "all" ? "All" : SECTION_META[s].label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-            <ul className="mt-4 grid grid-cols-2 gap-2.5 @md/inset:grid-cols-3 @3xl/inset:grid-cols-5">
-              {shownUploads.map((f) => (
-                <li key={f.id} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setFile(f)}
-                    className="block w-full overflow-hidden rounded-xl border border-border text-left hover:border-[var(--partner)]/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                  >
-                    <AssetThumb file={f} className="aspect-square" />
-                    <span className="block truncate px-2.5 pt-2 text-xs font-medium">{f.name}</span>
-                    <span className="block truncate px-2.5 pb-2.5 text-[11px] text-muted-foreground">
-                      {SECTION_META[sectionOf(f)].label}
-                    </span>
-                  </button>
-                  {Date.now() - f.createdAt < NEW_DAYS * 86_400_000 ? (
-                    <span className="pointer-events-none absolute top-2 left-2">
-                      <Pill tone="primary">New</Pill>
-                    </span>
-                  ) : null}
-                </li>
-              ))}
+            >
+              {items
+                .filter((i) => i.group === g)
+                .map((i) =>
+                  g === "photos" ? (
+                    <PhotoCard key={i.id} item={i} onZoom={() => setZoom(i)} />
+                  ) : (
+                    <KitCard
+                      key={i.id}
+                      item={i}
+                      href={fill(i.href)}
+                      absolute={abs(fill(i.href))}
+                      onZoom={() => setZoom(i)}
+                    />
+                  ),
+                )}
             </ul>
-          </>
-        ) : (
-          <p className="mt-4 rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-            Nothing extra yet. When the MEDIALIFE team adds case studies, product photos or new
-            graphics for you, they appear here, and on your Home page.
-          </p>
-        )}
-      </section>
+          </PartnerTab>
+        ))}
+
+        <PartnerTab value="team">
+          <TabIntro>
+            Decks, case studies, product photos and anything else the MEDIALIFE team adds for you.
+          </TabIntro>
+          {uploads.length ? (
+            <>
+              {sectionsHere.length > 1 ? (
+                <div
+                  role="group"
+                  aria-label="Filter by section"
+                  className="mb-4 flex flex-wrap gap-1.5"
+                >
+                  {(["all", ...sectionsHere] as const).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-pressed={section === s}
+                      onClick={() => setSection(s)}
+                      className={cn(
+                        "h-8 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none",
+                        section === s
+                          ? "border-[var(--partner)]/60 bg-[var(--partner)]/15 text-foreground"
+                          : "border-white/[0.08] text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      {s === "all" ? "All" : SECTION_META[s].label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <ul className="grid grid-cols-2 gap-3 @md/inset:grid-cols-3 @3xl/inset:grid-cols-5">
+                {shownUploads.map((f) => (
+                  <li key={f.id} className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setFile(f)}
+                      className={cn(surface, lift, "block w-full overflow-hidden text-left")}
+                    >
+                      <AssetThumb file={f} className="aspect-square" />
+                      <span className="block truncate px-3 pt-2.5 text-sm font-medium">
+                        {f.name}
+                      </span>
+                      <span className="block truncate px-3 pb-3 text-[11px] text-muted-foreground">
+                        {SECTION_META[sectionOf(f)].label}
+                      </span>
+                    </button>
+                    {isNew(f) ? (
+                      <span className="pointer-events-none absolute top-2 left-2">
+                        <Pill tone="primary">New</Pill>
+                      </span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div
+              className={cn(
+                surface,
+                "grid place-items-center gap-2 border-dashed px-6 py-12 text-center",
+              )}
+            >
+              <Sparkles className="size-8 text-[var(--partner)]" aria-hidden />
+              <p className="font-medium">Nothing extra yet</p>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                New decks, case studies and graphics from the team land here, and on your Home page.
+              </p>
+            </div>
+          )}
+        </PartnerTab>
+      </PartnerTabs>
 
       <Dialog open={!!zoom} onOpenChange={(o) => !o && setZoom(null)}>
-        <DialogContent className="max-h-[94dvh] w-[calc(100vw-1.5rem)] max-w-5xl gap-3 overflow-y-auto p-3 sm:p-4">
-          <DialogTitle className="pr-8 text-base">{zoom?.title}</DialogTitle>
-          <DialogDescription className="sr-only">{zoom?.what}</DialogDescription>
+        <DialogContent className="max-h-[94dvh] w-[calc(100vw-1.5rem)] max-w-5xl gap-0 overflow-y-auto p-0">
           {zoom ? (
-            <img
-              src={zoom.kind === "pdf" ? zoom.preview : zoom.href}
-              alt={zoom.title}
-              className="max-h-[78dvh] w-full rounded-lg object-contain"
-            />
-          ) : null}
-          {zoom ? (
-            <div className="flex justify-end">
-              <Button asChild>
-                <a href={zoom.href} download>
-                  <Download aria-hidden /> Download
-                </a>
-              </Button>
-            </div>
+            <>
+              <div className="bg-black/40 p-3 sm:p-4">
+                <img
+                  src={zoom.kind === "image" ? zoom.href : zoom.preview}
+                  alt={zoom.title}
+                  className="mx-auto max-h-[68dvh] w-auto rounded-lg object-contain"
+                />
+              </div>
+              <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+                <div className="max-w-2xl min-w-0">
+                  <DialogTitle className="text-lg">{zoom.title}</DialogTitle>
+                  <DialogDescription className="mt-1">{zoom.what}</DialogDescription>
+                  <p className="mt-2 text-sm">
+                    <span className="font-medium text-[var(--partner)]">Use it: </span>
+                    {zoom.when}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {zoom.kind === "link" ? (
+                    <>
+                      <CopyButton
+                        value={abs(fill(zoom.href))}
+                        label="Copy link"
+                        variant="default"
+                      />
+                      <Button asChild variant="outline">
+                        <a href={fill(zoom.href)} target="_blank" rel="noopener">
+                          <ExternalLink aria-hidden /> Open
+                        </a>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button asChild>
+                      <a href={zoom.href} download>
+                        <Download aria-hidden /> Download
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -236,52 +315,52 @@ function KitCard({
 }) {
   const preview = i.kind === "image" ? i.href : i.preview;
   return (
-    <li className="flex flex-col overflow-hidden rounded-xl border border-border bg-gradient-to-b from-white/[0.035] to-white/[0.01]">
-      {preview ? (
-        <button
-          type="button"
-          onClick={onZoom}
-          className="group relative block aspect-[16/9] overflow-hidden bg-black/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
-          aria-label={`Preview ${i.title}`}
-        >
-          <img
-            src={preview}
-            alt=""
-            loading="lazy"
-            className="size-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-          />
-          <Maximize2
-            className="absolute top-2 right-2 size-7 rounded-full bg-background/80 p-1.5 opacity-0 transition-opacity group-hover:opacity-100"
-            aria-hidden
-          />
-        </button>
-      ) : (
-        <div className="grid aspect-[16/9] place-items-center bg-[radial-gradient(ellipse_at_top,color-mix(in_oklab,var(--partner)_30%,transparent),transparent_70%)]">
-          {i.kind === "link" ? (
-            <Globe className="size-8 text-[var(--partner)]" aria-hidden />
-          ) : (
-            <FileText className="size-8 text-[var(--partner)]" aria-hidden />
-          )}
-        </div>
-      )}
+    <li className={cn(surface, "group flex flex-col overflow-hidden")}>
+      <button
+        type="button"
+        onClick={onZoom}
+        className="relative block aspect-[16/10] overflow-hidden bg-[var(--partner-ink)] focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none focus-visible:ring-inset"
+        aria-label={`Preview ${i.title}`}
+      >
+        {preview ? (
+          <>
+            {/* The same image, blurred, fills the frame behind odd aspect ratios. */}
+            <img
+              src={preview}
+              alt=""
+              aria-hidden
+              loading="lazy"
+              className="absolute inset-0 size-full scale-110 object-cover opacity-50 blur-2xl"
+            />
+            <img
+              src={preview}
+              alt=""
+              loading="lazy"
+              className={cn(
+                "relative size-full transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none",
+                i.kind === "link" ? "object-cover object-top" : "object-contain",
+              )}
+            />
+          </>
+        ) : null}
+        <span className="absolute top-2.5 left-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium backdrop-blur">
+          {i.format}
+        </span>
+        <Maximize2
+          className="absolute top-2.5 right-2.5 size-7 rounded-full bg-black/60 p-1.5 opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
+          aria-hidden
+        />
+      </button>
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-medium">{i.title}</h3>
-          <span className="shrink-0 text-[11px] text-muted-foreground">{i.format}</span>
-        </div>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{i.what}</p>
-        <p className="mt-2 text-sm leading-relaxed">
-          <span className="font-medium text-[var(--partner)]">When to use it: </span>
-          {i.when}
-        </p>
+        <h3 className="font-medium">{i.title}</h3>
+        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{i.when}</p>
         {i.channels?.length ? (
           <ul className="mt-3 flex flex-wrap gap-1" aria-label="Works well on">
             {i.channels.map((c) => (
-              <li
-                key={c}
-                className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] text-muted-foreground"
-              >
-                {c}
+              <li key={c}>
+                <Tag tone="blue" className="h-5 px-2 text-[10px]">
+                  {c}
+                </Tag>
               </li>
             ))}
           </ul>
@@ -289,13 +368,7 @@ function KitCard({
         <div className="mt-auto flex flex-wrap gap-2 pt-4">
           {i.kind === "link" ? (
             <>
-              <CopyButton
-                value={absolute}
-                label="Copy link"
-                copiedLabel="Copied"
-                size="sm"
-                variant="default"
-              />
+              <CopyButton value={absolute} label="Copy link" size="sm" variant="default" />
               <Button asChild size="sm" variant="outline">
                 <a href={href} target="_blank" rel="noopener">
                   <ExternalLink aria-hidden /> Open
@@ -303,8 +376,8 @@ function KitCard({
               </Button>
               {i.id === "merch-shelf" ? (
                 <Button asChild size="sm" variant="ghost">
-                  <Link to="/partner-hub/links" hash="shelf">
-                    Personalise
+                  <Link to="/partner-hub/links">
+                    <Wand2 aria-hidden /> Personalise
                   </Link>
                 </Button>
               ) : null}
@@ -326,9 +399,9 @@ function KitCard({
               <CopyButton
                 value={absolute}
                 label="Copy link"
-                copiedLabel="Copied"
-                size="sm"
+                size="icon"
                 variant="ghost"
+                ariaLabel={`Copy a link to ${i.title}`}
               />
             </>
           )}
@@ -340,24 +413,29 @@ function KitCard({
 
 function PhotoCard({ item: i, onZoom }: { item: KitItem; onZoom: () => void }) {
   return (
-    <li className="group relative overflow-hidden rounded-xl border border-border">
+    <li className={cn(surface, "group relative overflow-hidden")}>
       <button
         type="button"
         onClick={onZoom}
-        className="block w-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
+        className="block w-full focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none focus-visible:ring-inset"
         aria-label={`Preview ${i.title}`}
       >
-        <img src={i.href} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
+        <img
+          src={i.href}
+          alt=""
+          loading="lazy"
+          className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none"
+        />
       </button>
-      <div className="flex items-center gap-2 p-2.5">
-        <span className="min-w-0 flex-1">
+      <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 bg-gradient-to-t from-black/85 to-transparent p-3 pt-8">
+        <span className="pointer-events-none min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">{i.title}</span>
-          <span className="block truncate text-[11px] text-muted-foreground">{i.format}</span>
+          <span className="block truncate text-[11px] text-white/65">{i.format}</span>
         </span>
         <a
           href={i.href}
           download
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-border hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 backdrop-blur hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none"
           aria-label={`Download ${i.title}`}
         >
           <Download className="size-4" aria-hidden />

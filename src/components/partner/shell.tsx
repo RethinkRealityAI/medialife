@@ -3,7 +3,7 @@
  * a thumb-reach tab bar on phones) with the partner's accent colour, so it
  * reads as their space.
  */
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -53,6 +53,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { signOut } from "@/lib/hub/auth.functions";
+import { kitLogo } from "@/lib/hub/collateral";
 import { HUB } from "@/lib/hub/model";
 import { PARTNER_BASE } from "@/lib/hub/partners";
 import { cn } from "@/lib/utils";
@@ -91,8 +92,36 @@ async function doSignOut() {
   window.location.assign("/creator-hub/sign-in?next=%2Fpartner-hub");
 }
 
+/**
+ * The partner's colours as CSS variables. Buttons, focus rings and accents take
+ * the partner's colour, so the hub feels like theirs.
+ */
+function brandVars(b: ShellPartner["brand"]): Record<string, string> {
+  return {
+    "--partner": b.accent,
+    "--partner-2": b.primary,
+    "--partner-ink": b.ink,
+    "--primary": b.accent,
+    "--primary-foreground": b.ink,
+    "--ring": b.accent,
+  };
+}
+
+/** Dialogs and menus render outside the shell, so the colours go on <html> too. */
+function useRootBrand(b: ShellPartner["brand"]) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const vars = brandVars(b);
+    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+    return () => {
+      for (const k of Object.keys(vars)) root.style.removeProperty(k);
+    };
+  }, [b]);
+}
+
 export type ShellPartner = {
   name: string;
+  kit: string;
   brand: { primary: string; accent: string; ink: string };
 };
 
@@ -111,16 +140,10 @@ export function PartnerShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const loading = useRouterState({ select: (s) => s.status === "pending" });
   const name = me.name || me.email;
+  useRootBrand(partner.brand);
 
   return (
-    <SidebarProvider
-      style={
-        {
-          "--partner": partner.brand.accent,
-          "--partner-2": partner.brand.primary,
-        } as React.CSSProperties
-      }
-    >
+    <SidebarProvider style={brandVars(partner.brand) as React.CSSProperties}>
       <a
         href="#partner-main"
         className="sr-only z-50 rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
@@ -141,7 +164,7 @@ export function PartnerShell({
             to="/partner-hub"
             className="flex items-center gap-2.5 rounded-md px-2 py-2.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
           >
-            <PartnerMark />
+            <PartnerMark kit={partner.kit} />
             <span className="min-w-0 group-data-[collapsible=icon]:hidden">
               <span className="block truncate text-sm leading-tight font-semibold tracking-tight">
                 {partner.name}
@@ -163,7 +186,7 @@ export function PartnerShell({
                         asChild
                         isActive={current?.to === item.to}
                         tooltip={item.label}
-                        className="h-9"
+                        className="h-10 rounded-lg data-[active=true]:bg-[linear-gradient(90deg,color-mix(in_oklab,var(--partner)_22%,transparent),transparent)] data-[active=true]:font-medium data-[active=true]:text-foreground data-[active=true]:shadow-[inset_2px_0_0_0_var(--partner)] [&[data-active=true]>svg]:text-[var(--partner)]"
                       >
                         <HubLink
                           to={item.to}
@@ -206,7 +229,7 @@ export function PartnerShell({
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-xl sm:gap-3">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Link to="/partner-hub" className="-ml-1 md:hidden" aria-label="Partner Hub home">
-            <PartnerMark />
+            <PartnerMark kit={partner.kit} />
           </Link>
           <div className="min-w-0 flex-1">
             <span className="block truncate text-sm font-medium">
@@ -360,12 +383,26 @@ export function PartnerShell({
   );
 }
 
-/** A snowflake-ish mark in the partner's colours (no partner logo needed). */
-export function PartnerMark() {
+/** The partner's logo mark, or a mark in their colours when there's no logo. */
+export function PartnerMark({ kit, className }: { kit: string; className?: string }) {
+  const logo = kitLogo(kit);
+  if (logo) {
+    return (
+      <span
+        aria-hidden
+        className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--partner-ink)] ring-1 ring-[var(--partner)]/35",
+          className,
+        )}
+      >
+        <img src={logo.mark} alt="" className="size-6 object-contain" />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden
-      className="grid size-8 shrink-0 place-items-center rounded-md"
+      className={cn("grid size-9 shrink-0 place-items-center rounded-xl", className)}
       style={{ background: "linear-gradient(135deg, var(--partner), var(--partner-2))" }}
     >
       <span className="size-3 rounded-full bg-background/85" />

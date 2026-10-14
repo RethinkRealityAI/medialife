@@ -69,6 +69,7 @@ const MEDIALIFE_BASE: KitItem[] = [
     when: "The link to send. It answers the first questions before you have to.",
     kind: "link",
     href: "/with/{partner}?invite={invite}",
+    preview: "{kit}/program-page.webp",
     format: "Web page",
     channels: ["Discord", "DM", "Email", "Bio link"],
   },
@@ -80,6 +81,7 @@ const MEDIALIFE_BASE: KitItem[] = [
     when: "The “wow” moment in outreach. Make one per creator below, with their name on it.",
     kind: "link",
     href: "/shelf?name={name}&invite={invite}",
+    preview: "/partner-kit/medialife/shelf-preview.webp",
     format: "Web page · 3D",
     channels: ["DM", "Email", "Calls"],
   },
@@ -91,6 +93,7 @@ const MEDIALIFE_BASE: KitItem[] = [
     when: "Only for creators who run a Roblox experience.",
     kind: "link",
     href: "/roblox/creators/",
+    preview: "/partner-kit/medialife/roblox-program.webp",
     format: "Web page",
     channels: ["Roblox creators"],
   },
@@ -221,20 +224,44 @@ const SNOWDAY: KitItem[] = [
   })),
 ];
 
-export const PARTNER_KITS: Record<string, { label: string; hero: string; items: KitItem[] }> = {
+type PartnerKit = {
+  label: string;
+  hero: string;
+  /** The partner's own logo: a square mark and a wordmark, both on transparent. */
+  logo?: { mark: string; wordmark: string };
+  items: KitItem[];
+};
+
+export const PARTNER_KITS: Record<string, PartnerKit> = {
   snowday: {
     label: "Snowday Media × MEDIALIFE",
     hero: "/partner-kit/snowday/hero-tap-hoodie.webp",
+    logo: {
+      mark: "/partner-kit/snowday/brand/snowflake.webp",
+      wordmark: "/partner-kit/snowday/brand/wordmark.webp",
+    },
     items: SNOWDAY,
   },
   base: { label: "MEDIALIFE", hero: "/merch/keychain-hand.webp", items: [] },
 };
 
-export const kitHero = (kit: string) => (PARTNER_KITS[kit] ?? PARTNER_KITS.base).hero;
+const kitOf = (kit: string) => PARTNER_KITS[kit] ?? PARTNER_KITS.base;
 
-/** Everything curated for a partner: their own set first, then MEDIALIFE's. */
+export const kitHero = (kit: string) => kitOf(kit).hero;
+export const kitLogo = (kit: string) => kitOf(kit).logo ?? null;
+
+/**
+ * Everything curated for a partner: their own set first, then MEDIALIFE's.
+ * A "{kit}/…" preview is the partner's own screenshot (their program page),
+ * dropped when the kit doesn't have one.
+ */
 export function kitFor(kit: string): KitItem[] {
-  return [...(PARTNER_KITS[kit]?.items ?? []), ...MEDIALIFE_BASE];
+  const own = PARTNER_KITS[kit];
+  return [...(own?.items ?? []), ...MEDIALIFE_BASE].map((i) =>
+    i.preview?.startsWith("{kit}/")
+      ? { ...i, preview: own ? i.preview.replace("{kit}", `/partner-kit/${kit}`) : undefined }
+      : i,
+  );
 }
 
 export function fillHref(

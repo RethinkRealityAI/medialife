@@ -3,16 +3,10 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Loader2, Mail, Send, UserMinus, X } from "lucide-react";
 import { toast } from "sonner";
 
-import {
-  CopyButton,
-  Monogram,
-  Page,
-  PageHeader,
-  Panel,
-  Pill,
-  Section,
-} from "@/components/hub/app/ui";
+import { CopyButton, Monogram, Page, Pill, Section } from "@/components/hub/app/ui";
+import { PartnerBanner, Surface } from "@/components/partner/ui";
 import { usePartnerWorkspace } from "@/components/partner/workspace";
+import { kitFor, kitHero } from "@/lib/hub/collateral";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,13 +51,19 @@ function Team() {
 
   return (
     <Page className="lg:pt-8">
-      <PageHeader
+      <PartnerBanner
+        image={
+          kitFor(ws.partner.kit).find((i) => i.id === "aurora-banner")?.href ??
+          kitHero(ws.partner.kit)
+        }
+        imageClassName="object-left"
+        eyebrow={ws.partner.name}
         title="Team"
-        description={`Everyone at ${ws.partner.name} with access to the Partner Hub. ${isAdmin ? "Invite teammates by email; they choose a password when they accept." : "Ask an admin to invite teammates."}`}
+        description={`Everyone with access to the Partner Hub. ${isAdmin ? "Invite teammates by email; they choose a password when they accept." : "Ask an admin to invite teammates."}`}
       />
 
       <Section title={`Members (${team.members.length})`}>
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(180deg,rgb(255_255_255/0.05),rgb(255_255_255/0.015))] shadow-[0_20px_40px_-24px_rgb(0_0_0/0.9)]">
           {team.members.map((m) => {
             const me = m.userId === ws.me.id;
             return (
@@ -220,7 +220,7 @@ function InviteForm({
       title="Invite a teammate"
       description="They get an email with a link that works for 14 days."
     >
-      <Panel className="p-4 sm:p-5">
+      <Surface className="p-4 sm:p-5">
         <form
           onSubmit={submit}
           className="grid gap-3 @3xl/inset:grid-cols-[1.3fr_1fr_9rem_auto] @3xl/inset:items-end"
@@ -277,9 +277,9 @@ function InviteForm({
             </div>
           </div>
         ) : null}
-      </Panel>
+      </Surface>
       {pending.length ? (
-        <ul className="mt-3 divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <ul className="mt-3 divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(180deg,rgb(255_255_255/0.05),rgb(255_255_255/0.015))] shadow-[0_20px_40px_-24px_rgb(0_0_0/0.9)]">
           {pending.map((i) => (
             <li key={i.id} className="flex items-center gap-3 p-3 text-sm">
               <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -320,7 +320,7 @@ function AccountForms() {
 
   return (
     <div className="grid gap-3 @3xl/inset:grid-cols-2">
-      <Panel className="p-4 sm:p-5">
+      <Surface className="p-4 sm:p-5">
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -351,8 +351,8 @@ function AccountForms() {
             Save
           </Button>
         </form>
-      </Panel>
-      <Panel className="p-4 sm:p-5">
+      </Surface>
+      <Surface className="p-4 sm:p-5">
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -401,7 +401,7 @@ function AccountForms() {
             Change password
           </Button>
         </form>
-      </Panel>
+      </Surface>
     </div>
   );
 }
