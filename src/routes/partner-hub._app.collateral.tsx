@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { z } from "zod";
 import {
   Camera,
@@ -10,6 +11,7 @@ import {
   Inbox,
   Maximize2,
   MonitorPlay,
+  Plus,
   Megaphone,
   Presentation,
   Sparkles,
@@ -30,12 +32,40 @@ import {
   surface,
   type TabDef,
 } from "@/components/partner/ui";
+import {
+  AddTile,
+  EntryCard,
+  EntryDialog,
+  EntryViewer,
+  entryView,
+  type EntryView,
+} from "@/components/partner/collateral-entries";
 import { GifsPanel, VideosPanel } from "@/components/partner/showcase";
 import { inviteFor, programUrl, usePartnerWorkspace } from "@/components/partner/workspace";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ASSET_SECTIONS, SECTION_META, sectionOf, type AssetSection } from "@/lib/hub/assets";
-import { KIT_GROUPS, fillHref, kitFor, type KitGroup, type KitItem } from "@/lib/hub/collateral";
+import {
+  COLLATERAL_TABS,
+  KIT_GROUPS,
+  fillHref,
+  kitFor,
+  type CollateralEntry,
+  type CollateralTab,
+  type KitGroup,
+  type KitItem,
+} from "@/lib/hub/collateral";
+import { deletePartnerCollateral, savePartnerCollateral } from "@/lib/hub/collateral.functions";
 import { HUB, type HubFile } from "@/lib/hub/model";
 import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS } from "@/lib/hub/showcase";
 import { cn } from "@/lib/utils";
@@ -64,15 +94,35 @@ function Collateral() {
   const navigate = useNavigate({ from: Route.fullPath });
   const { tab = "explain" } = Route.useSearch();
   const invite = inviteFor(ws, ws.me.name);
-  const items = kitFor(ws.partner.kit);
+  const hidden = useMemo(() => new Set(ws.collateral.hidden), [ws.collateral.hidden]);
+  const items = kitFor(ws.partner.kit).filter((i) => !hidden.has(i.id));
+  const router = useRouter();
+  const entries = ws.collateral.entries;
+  const views = useMemo(
+    () => entries.map((e) => entryView(e, ws.library.files)),
+    [entries, ws.library.files],
+  );
+  const [adding, setAdding] = useState<{ tab: CollateralTab; entry?: CollateralEntry } | null>(
+    null,
+  );
+  const [viewing, setViewing] = useState<EntryView | null>(null);
+  const [removing, setRemoving] = useState<CollateralEntry | null>(null);
+  const canEdit = (e: CollateralEntry) =>
+    e.addedBy.kind === "partner" && (ws.me.role === "admin" || e.addedBy.userId === ws.me.id);
+  const videoCount = MEDIALIFE_VIDEOS.filter((v) => !hidden.has(v.id)).length;
+  const gifCount = MEDIALIFE_GIFS.filter((g) => !hidden.has(g.id)).length;
+  const entryCount = (t: CollateralTab) => entries.filter((e) => e.tab === t).length;
   const [zoom, setZoom] = useState<KitItem | null>(null);
   const [file, setFile] = useState<HubFile | null>(null);
   const [section, setSection] = useState<AssetSection | "all">("all");
 
-  const uploads = useMemo(
-    () => ws.library.files.filter((f) => f.complete).sort((a, b) => b.createdAt - a.createdAt),
-    [ws.library.files],
-  );
+  // Loose files from the team; files that belong to a piece show with it instead.
+  const uploads = useMemo(() => {
+    const used = new Set(entries.flatMap((e) => [e.fileId, e.previewFileId]));
+    return ws.library.files
+      .filter((f) => f.complete && f.uploadedBy === "medialife" && !used.has(f.id))
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }, [ws.library.files, entries]);
   const freshCount = uploads.filter(isNew).length;
   const sectionsHere = ASSET_SECTIONS.filter((s) => uploads.some((f) => sectionOf(f) === s));
   const shownUploads = uploads.filter((f) => section === "all" || sectionOf(f) === section);
@@ -84,23 +134,26 @@ function Collateral() {
   const count = (n: number) => (
     <span className="text-xs text-muted-foreground tabular-nums">{n}</span>
   );
-  const groupTab = (g: KitGroup): TabDef<TabId>[] =>
-    items.some((i) => i.group === g)
-      ? [
-          {
-            id: g,
-            label: KIT_GROUPS[g].title,
-            icon: GROUP_ICONS[g],
-            badge: count(items.filter((i) => i.group === g).length),
-          },
-        ]
-      : [];
+  const groupTab = (g: KitGroup): TabDef<TabId>[] => {
+    const n = items.filter((i) => i.group === g).length + entryCount(g);
+    return [{ id: g, label: KIT_GROUPS[g].title, icon: GROUP_ICONS[g], badge: count(n) }];
+  };
   const tabs: TabDef<TabId>[] = [
     ...groupTab("explain"),
     ...groupTab("show"),
-    { id: "videos", label: "Videos", icon: Clapperboard, badge: count(MEDIALIFE_VIDEOS.length) },
+    {
+      id: "videos",
+      label: "Videos",
+      icon: Clapperboard,
+      badge: count(videoCount + entryCount("videos")),
+    },
     ...groupTab("post"),
-    { id: "gifs", label: "Email GIFs", icon: ImagePlay, badge: count(MEDIALIFE_GIFS.length) },
+    {
+      id: "gifs",
+      label: "Email GIFs",
+      icon: ImagePlay,
+      badge: count(gifCount + entryCount("gifs")),
+    },
     ...groupTab("photos"),
     {
       id: "team",
@@ -124,13 +177,22 @@ function Collateral() {
         title="Your kit"
         description="Ready to send, post and print, each with your links built in. We keep adding to it."
         actions={
-          <Button asChild variant="outline" className="bg-black/30 backdrop-blur">
-            <a
-              href={`mailto:${HUB.supportEmail}?subject=${encodeURIComponent(`Collateral request from ${ws.partner.name}`)}`}
+          <>
+            <Button
+              onClick={() =>
+                setAdding({ tab: tab === "team" ? "explain" : (tab as CollateralTab) })
+              }
             >
-              <Inbox aria-hidden /> Request something
-            </a>
-          </Button>
+              <Plus aria-hidden /> Add collateral
+            </Button>
+            <Button asChild variant="outline" className="bg-black/30 backdrop-blur">
+              <a
+                href={`mailto:${HUB.supportEmail}?subject=${encodeURIComponent(`Collateral request from ${ws.partner.name}`)}`}
+              >
+                <Inbox aria-hidden /> Request something
+              </a>
+            </Button>
+          </>
         }
       />
 
@@ -173,6 +235,17 @@ function Collateral() {
                   ),
                 )}
             </ul>
+            <Added
+              tab={g}
+              views={views}
+              origin={ws.origin}
+              partnerName={ws.partner.name}
+              canEdit={canEdit}
+              onAdd={(tab) => setAdding({ tab })}
+              onEdit={(entry) => setAdding({ tab: entry.tab, entry })}
+              onDelete={setRemoving}
+              onOpen={setViewing}
+            />
           </PartnerTab>
         ))}
 
@@ -181,14 +254,38 @@ function Collateral() {
             Real activations on video: standees, products, fans and creators. Tap any video to play
             it.
           </TabIntro>
-          <VideosPanel origin={ws.origin} />
+          <VideosPanel origin={ws.origin} hidden={hidden} />
+          <Added
+            tab="videos"
+            views={views}
+            origin={ws.origin}
+            partnerName={ws.partner.name}
+            canEdit={canEdit}
+            onAdd={(tab) => setAdding({ tab })}
+            onEdit={(entry) => setAdding({ tab: entry.tab, entry })}
+            onDelete={setRemoving}
+            onOpen={setViewing}
+            portrait
+          />
         </PartnerTab>
 
         <PartnerTab value="gifs">
           <TabIntro>
             Five short loops, each under 2 MB, made to drop into an email or a DM.
           </TabIntro>
-          <GifsPanel origin={ws.origin} link={programUrl(ws, invite)} />
+          <GifsPanel origin={ws.origin} link={programUrl(ws, invite)} hidden={hidden} />
+          <Added
+            tab="gifs"
+            views={views}
+            origin={ws.origin}
+            partnerName={ws.partner.name}
+            canEdit={canEdit}
+            onAdd={(tab) => setAdding({ tab })}
+            onEdit={(entry) => setAdding({ tab: entry.tab, entry })}
+            onDelete={setRemoving}
+            onOpen={setViewing}
+            portrait
+          />
         </PartnerTab>
 
         <PartnerTab value="team">
@@ -310,6 +407,47 @@ function Collateral() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <EntryDialog
+        open={!!adding}
+        onOpenChange={(o) => !o && setAdding(null)}
+        owner={ws.library.ownOwner}
+        initial={adding?.entry ?? null}
+        defaultTab={adding?.tab ?? "explain"}
+        heading={adding?.entry ? "Edit your collateral" : `Add collateral for ${ws.partner.name}`}
+        onSave={async (input) => {
+          const r = await savePartnerCollateral({ data: input });
+          if (r.ok) await router.invalidate();
+          return r;
+        }}
+      />
+      <EntryViewer view={viewing} origin={ws.origin} onClose={() => setViewing(null)} />
+      <AlertDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove “{removing?.title}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It disappears from everyone's collateral, and its file is deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                const e = removing;
+                setRemoving(null);
+                if (!e) return;
+                const r = await deletePartnerCollateral({ data: { id: e.id } });
+                if (!r.ok) return void toast.error(r.error);
+                toast.success("Removed");
+                await router.invalidate();
+              }}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AssetDetails
         mode="admin"
@@ -469,5 +607,73 @@ function PhotoCard({ item: i, onZoom }: { item: KitItem; onZoom: () => void }) {
         </a>
       </div>
     </li>
+  );
+}
+
+/** Pieces added for this partner: MEDIALIFE's, then the team's own, with a tile to add more. */
+function Added({
+  tab,
+  views,
+  origin,
+  partnerName,
+  canEdit,
+  portrait,
+  onAdd,
+  onEdit,
+  onDelete,
+  onOpen,
+}: {
+  tab: CollateralTab;
+  views: EntryView[];
+  origin: string;
+  partnerName: string;
+  canEdit: (e: CollateralEntry) => boolean;
+  portrait?: boolean;
+  onAdd: (tab: CollateralTab) => void;
+  onEdit: (e: CollateralEntry) => void;
+  onDelete: (e: CollateralEntry) => void;
+  onOpen: (v: EntryView) => void;
+}) {
+  const here = views.filter((v) => v.entry.tab === tab);
+  const medialife = here.filter((v) => v.entry.addedBy.kind === "medialife");
+  const team = here.filter((v) => v.entry.addedBy.kind === "partner");
+  const grid = portrait
+    ? "grid grid-cols-2 gap-3 @2xl/inset:grid-cols-3 @4xl/inset:grid-cols-4 @6xl/inset:grid-cols-5"
+    : "grid grid-cols-1 gap-3 @2xl/inset:grid-cols-2 @5xl/inset:grid-cols-3";
+  const card = (v: EntryView) => (
+    <EntryCard
+      key={v.entry.id}
+      view={v}
+      origin={origin}
+      portrait={portrait}
+      partnerName={partnerName}
+      canEdit={canEdit(v.entry)}
+      onOpen={() => onOpen(v)}
+      onEdit={() => onEdit(v.entry)}
+      onDelete={() => onDelete(v.entry)}
+    />
+  );
+  return (
+    <>
+      {medialife.length ? (
+        <section aria-label="More from MEDIALIFE" className="mt-8">
+          <h3 className="mb-3 text-sm font-medium text-muted-foreground">More from MEDIALIFE</h3>
+          <ul className={grid}>{medialife.map(card)}</ul>
+        </section>
+      ) : null}
+      <section aria-label={`From ${partnerName}`} className="mt-8">
+        <h3 className="mb-3 text-sm font-medium text-muted-foreground">
+          From your team <span className="font-normal">· only {partnerName} sees these</span>
+        </h3>
+        <ul className={grid}>
+          {team.map(card)}
+          <AddTile
+            label={`Add to ${COLLATERAL_TABS[tab]}`}
+            onClick={() => onAdd(tab)}
+            portrait={portrait}
+          />
+        </ul>
+      </section>
+    </>
   );
 }

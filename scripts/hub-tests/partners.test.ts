@@ -3,7 +3,14 @@
 import assert from "node:assert/strict";
 
 import { CURRENT, agreementText, nameMatches, signatureStatus } from "@/lib/hub/agreements";
-import { fillHref, kitFor } from "@/lib/hub/collateral";
+import {
+  KIT_SCOPE,
+  builtinPieces,
+  fillHref,
+  kitFor,
+  scopeOwner,
+  youtubeIdOf,
+} from "@/lib/hub/collateral";
 import {
   KIT_OWNER,
   isLibraryOwner,
@@ -87,6 +94,35 @@ assert.deepEqual(signatureStatus([{ agreementId: CURRENT.id, version: "old" }]),
 assert.equal(
   signatureStatus([{ agreementId: CURRENT.id, version: CURRENT.version }]).signedCurrent,
   true,
+);
+
+// Managed collateral: scopes, YouTube links, built-in pieces.
+assert.equal(scopeOwner(KIT_SCOPE), KIT_OWNER);
+assert.equal(scopeOwner("snowday-media"), partnerOwner("snowday-media"));
+for (const u of [
+  "https://www.youtube.com/watch?v=C2176gcsBGg",
+  "https://youtu.be/C2176gcsBGg",
+  "https://youtube.com/shorts/C2176gcsBGg",
+  "https://www.youtube-nocookie.com/embed/C2176gcsBGg?rel=0",
+]) {
+  assert.equal(youtubeIdOf(u), "C2176gcsBGg", u);
+}
+assert.equal(youtubeIdOf("https://portfolio.medialife.ai/"), null);
+assert.equal(youtubeIdOf("not a url"), null);
+const pieces = builtinPieces("snowday");
+assert.ok(pieces.some((p) => p.id === "portfolio" && p.tab === "show"));
+assert.ok(pieces.some((p) => p.tab === "videos") && pieces.some((p) => p.tab === "gifs"));
+assert.equal(new Set(pieces.map((p) => p.id)).size, pieces.length, "built-in ids are unique");
+assert.ok(
+  pieces.every((p) => /^[a-z0-9-]{2,60}$/.test(p.id)),
+  "ids fit the hide API",
+);
+// A kit without its own screenshots doesn't point at one.
+assert.equal(kitFor("base").find((i) => i.id === "program-page")?.preview, undefined);
+assert.ok(
+  kitFor("snowday")
+    .find((i) => i.id === "program-page")
+    ?.preview?.includes("snowday"),
 );
 
 console.log("partners: ok");

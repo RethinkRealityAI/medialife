@@ -69,6 +69,10 @@ export const KEYS = {
   partnerInvite: (partnerId: string, id: string) => `partner-invites/${partnerId}/${id}`,
   partnerInvites: (partnerId: string) => `partner-invites/${partnerId}/`,
 
+  collateral: (scope: string, id: string) => `collateral/${scope}/${id}`,
+  collaterals: (scope: string) => `collateral/${scope}/`,
+  collateralSettings: (scope: string) => `collateral-settings/${scope}`,
+
   signature: (creatorId: string, id: string) => `signatures/${creatorId}/${id}`,
   signatures: (creatorId: string) => `signatures/${creatorId}/`,
 

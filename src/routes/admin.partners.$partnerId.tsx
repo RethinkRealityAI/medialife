@@ -47,6 +47,11 @@ function PartnerDetail() {
         }
         actions={
           <>
+            <Button asChild size="sm">
+              <Link to="/admin/partners/collateral" search={{ scope: p.id }}>
+                Collateral
+              </Link>
+            </Button>
             <Button asChild variant="outline" size="sm">
               <a href={program} target="_blank" rel="noopener">
                 <ExternalLink aria-hidden /> Program page

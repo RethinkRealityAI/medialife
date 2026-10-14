@@ -51,6 +51,7 @@ import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
 import { Route as AdminPartnersIndexRouteImport } from './routes/admin.partners.index'
 import { Route as AdminPartnersPartnerIdRouteImport } from './routes/admin.partners.$partnerId'
+import { Route as AdminPartnersCollateralRouteImport } from './routes/admin.partners.collateral'
 import { Route as AdminPartnersKitRouteImport } from './routes/admin.partners.kit'
 import { Route as AdminShelvesIndexRouteImport } from './routes/admin.shelves.index'
 import { Route as AdminShelvesSlugRouteImport } from './routes/admin.shelves.$slug'
@@ -314,6 +315,11 @@ const AdminPartnersIndexRoute = AdminPartnersIndexRouteImport.update({
 const AdminPartnersPartnerIdRoute = AdminPartnersPartnerIdRouteImport.update({
   id: '/partners/$partnerId',
   path: '/partners/$partnerId',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPartnersCollateralRoute = AdminPartnersCollateralRouteImport.update({
+  id: '/partners/collateral',
+  path: '/partners/collateral',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPartnersKitRoute = AdminPartnersKitRouteImport.update({
@@ -635,6 +641,7 @@ export interface FileRoutesByFullPath {
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
@@ -726,6 +733,7 @@ export interface FileRoutesByTo {
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
@@ -824,6 +832,7 @@ export interface FileRoutesById {
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
+  '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
   '/admin/shelves/$slug': typeof AdminShelvesSlugRoute
   '/api/ar/link': typeof ApiArLinkRoute
@@ -923,6 +932,7 @@ export interface FileRouteTypes {
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
+    | '/admin/partners/collateral'
     | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
@@ -1014,6 +1024,7 @@ export interface FileRouteTypes {
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
+    | '/admin/partners/collateral'
     | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
@@ -1111,6 +1122,7 @@ export interface FileRouteTypes {
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
+    | '/admin/partners/collateral'
     | '/admin/partners/kit'
     | '/admin/shelves/$slug'
     | '/api/ar/link'
@@ -1508,6 +1520,13 @@ declare module '@tanstack/react-router' {
       path: '/partners/$partnerId'
       fullPath: '/admin/partners/$partnerId'
       preLoaderRoute: typeof AdminPartnersPartnerIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/partners/collateral': {
+      id: '/admin/partners/collateral'
+      path: '/partners/collateral'
+      fullPath: '/admin/partners/collateral'
+      preLoaderRoute: typeof AdminPartnersCollateralRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/partners/kit': {
@@ -1921,6 +1940,7 @@ interface AdminRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
   AdminPartnersPartnerIdRoute: typeof AdminPartnersPartnerIdRoute
+  AdminPartnersCollateralRoute: typeof AdminPartnersCollateralRoute
   AdminPartnersKitRoute: typeof AdminPartnersKitRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
   AdminPartnersIndexRoute: typeof AdminPartnersIndexRoute
@@ -1935,6 +1955,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
   AdminPartnersPartnerIdRoute: AdminPartnersPartnerIdRoute,
+  AdminPartnersCollateralRoute: AdminPartnersCollateralRoute,
   AdminPartnersKitRoute: AdminPartnersKitRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
   AdminPartnersIndexRoute: AdminPartnersIndexRoute,

@@ -31,41 +31,51 @@ const CAT_TONE: Record<VideoCategory, TileTone> = {
   creators: "mint",
 };
 
-export function VideosPanel({ origin }: { origin: string }) {
+export function VideosPanel({
+  origin,
+  hidden = new Set(),
+}: {
+  origin: string;
+  /** Built-in videos the MEDIALIFE team has hidden for this partner. */
+  hidden?: Set<string>;
+}) {
+  const videos = MEDIALIFE_VIDEOS.filter((v) => !hidden.has(v.id));
   const [cat, setCat] = useState<VideoCategory | "all">("all");
   const [open, setOpen] = useState<KitVideo | null>(null);
-  const featured = MEDIALIFE_VIDEOS[0];
-  const shown = MEDIALIFE_VIDEOS.filter((v) => cat === "all" || v.category === cat);
+  const featured = videos[0];
+  const shown = videos.filter((v) => cat === "all" || v.category === cat);
   const cats = Object.keys(VIDEO_CATEGORIES) as VideoCategory[];
 
   return (
     <>
       {/* The opener: the award-winning recap, with the numbers beside it. */}
       <div className="grid gap-4 @3xl/inset:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <button
-          type="button"
-          onClick={() => setOpen(featured)}
-          className={cn(
-            surface,
-            lift,
-            "group relative isolate flex min-h-64 items-end overflow-hidden text-left",
-          )}
-        >
-          <img
-            src={featured.poster}
-            alt=""
-            className="absolute inset-0 -z-10 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
-          />
-          <span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
-          <PlayBadge className="absolute top-4 right-4 size-14" />
-          <span className="block p-5">
-            <Tag tone="amber">Start here · {featured.duration}</Tag>
-            <span className="mt-2 block text-xl font-semibold tracking-tight text-balance">
-              {featured.title}
+        {featured ? (
+          <button
+            type="button"
+            onClick={() => setOpen(featured)}
+            className={cn(
+              surface,
+              lift,
+              "group relative isolate flex min-h-64 items-end overflow-hidden text-left",
+            )}
+          >
+            <img
+              src={featured.poster}
+              alt=""
+              className="absolute inset-0 -z-10 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+            />
+            <span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+            <PlayBadge className="absolute top-4 right-4 size-14" />
+            <span className="block p-5">
+              <Tag tone="amber">Start here · {featured.duration}</Tag>
+              <span className="mt-2 block text-xl font-semibold tracking-tight text-balance">
+                {featured.title}
+              </span>
+              <span className="mt-1 line-clamp-2 block text-sm text-white/75">{featured.what}</span>
             </span>
-            <span className="mt-1 line-clamp-2 block text-sm text-white/75">{featured.what}</span>
-          </span>
-        </button>
+          </button>
+        ) : null}
 
         <Surface accent className="flex flex-col p-5">
           <div className="text-[11px] font-semibold tracking-[0.18em] text-[var(--partner)] uppercase">
@@ -103,7 +113,7 @@ export function VideosPanel({ origin }: { origin: string }) {
 
       <div role="group" aria-label="Filter videos" className="mt-6 flex flex-wrap gap-1.5">
         {(["all", ...cats] as const).map((c) => {
-          const n = MEDIALIFE_VIDEOS.filter((v) => c === "all" || v.category === c).length;
+          const n = videos.filter((v) => c === "all" || v.category === c).length;
           return (
             <button
               key={c}
@@ -278,7 +288,15 @@ function VideoCard({ video: v, onOpen }: { video: KitVideo; onOpen: () => void }
   );
 }
 
-export function GifsPanel({ origin, link }: { origin: string; link: string }) {
+export function GifsPanel({
+  origin,
+  link,
+  hidden = new Set(),
+}: {
+  origin: string;
+  link: string;
+  hidden?: Set<string>;
+}) {
   return (
     <>
       <Surface className="mb-4 grid gap-3 p-4 text-sm @3xl/inset:grid-cols-3">
@@ -300,7 +318,7 @@ export function GifsPanel({ origin, link }: { origin: string; link: string }) {
         </p>
       </Surface>
       <ul className="grid grid-cols-2 gap-3 @3xl/inset:grid-cols-3 @5xl/inset:grid-cols-5">
-        {MEDIALIFE_GIFS.map((g) => (
+        {MEDIALIFE_GIFS.filter((g) => !hidden.has(g.id)).map((g) => (
           <li key={g.id} className={cn(surface, "flex flex-col overflow-hidden")}>
             <span className="relative block aspect-[9/16] overflow-hidden bg-black">
               <img src={g.src} alt={g.alt} loading="lazy" className="size-full object-cover" />

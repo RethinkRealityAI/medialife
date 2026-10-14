@@ -239,7 +239,7 @@ const G = "/partner-kit/medialife/gifs";
 /** Short, small loops for email: 270px wide, about 4 seconds, under 2 MB. */
 export const MEDIALIFE_GIFS: KitGif[] = [
   {
-    id: "standee-transformation",
+    id: "gif-standee-transformation",
     title: "The standee transformation",
     alt: "A character steps off a standee in AR",
     src: `${G}/standee-transformation.gif`,
@@ -247,7 +247,7 @@ export const MEDIALIFE_GIFS: KitGif[] = [
     from: "standee-sakamoto",
   },
   {
-    id: "fans-react-merch",
+    id: "gif-fans-react-merch",
     title: "Fans react to activated merch",
     alt: "Fans at a convention reacting to activated merch on their phones",
     src: `${G}/fans-react-merch.gif`,
@@ -255,7 +255,7 @@ export const MEDIALIFE_GIFS: KitGif[] = [
     from: "fans-merch-apparel",
   },
   {
-    id: "fans-experienced-it",
+    id: "gif-fans-experienced-it",
     title: "“Fans didn't just see it…”",
     alt: "A fan laughing at an activated Sakamoto Days experience",
     src: `${G}/fans-experienced-it.gif`,
@@ -263,7 +263,7 @@ export const MEDIALIFE_GIFS: KitGif[] = [
     from: "fans-sakamoto-recap",
   },
   {
-    id: "sticker-trading-cards",
+    id: "gif-sticker-trading-cards",
     title: "Stickers that come alive",
     alt: "Trading-card stickers animating on a phone",
     src: `${G}/sticker-trading-cards.gif`,
@@ -271,7 +271,7 @@ export const MEDIALIFE_GIFS: KitGif[] = [
     from: "sticker-trading-cards",
   },
   {
-    id: "creator-logan-chitwood",
+    id: "gif-creator-logan-chitwood",
     title: "Creator collab at Anime NYC",
     alt: "Creator Logan Chitwood showing activated apparel at Anime NYC",
     src: `${G}/creator-logan-chitwood.gif`,

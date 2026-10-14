@@ -9,6 +9,9 @@
  * shared with creators, so nothing confidential belongs there.
  */
 
+import { KIT_OWNER, partnerOwner } from "./partners";
+import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS, type VideoCategory } from "./showcase";
+
 export type KitGroup = "explain" | "show" | "post" | "photos";
 
 export const KIT_GROUPS: Record<KitGroup, { title: string; blurb: string }> = {
@@ -84,6 +87,18 @@ const MEDIALIFE_BASE: KitItem[] = [
     preview: "/partner-kit/medialife/shelf-preview.webp",
     format: "Web page · 3D",
     channels: ["DM", "Email", "Calls"],
+  },
+  {
+    id: "portfolio",
+    group: "show",
+    title: "MEDIALIFE portfolio",
+    what: "Every activation in one place: Netflix's award-winning Sakamoto Days, shirts, stickers, standees, fan reactions and creator collabs, with results.",
+    when: "When a creator wants proof at scale, or a manager asks for credentials.",
+    kind: "link",
+    href: "https://portfolio.medialife.ai/",
+    preview: "/partner-kit/medialife/portfolio.webp",
+    format: "Web page",
+    channels: ["Email", "DM", "Calls"],
   },
   {
     id: "roblox-program",
@@ -259,7 +274,13 @@ export function kitFor(kit: string): KitItem[] {
   const own = PARTNER_KITS[kit];
   return [...(own?.items ?? []), ...MEDIALIFE_BASE].map((i) =>
     i.preview?.startsWith("{kit}/")
-      ? { ...i, preview: own ? i.preview.replace("{kit}", `/partner-kit/${kit}`) : undefined }
+      ? {
+          ...i,
+          // Only co-branded kits have their own program-page screenshot.
+          preview: own?.items.length
+            ? i.preview.replace("{kit}", `/partner-kit/${kit}`)
+            : undefined,
+        }
       : i,
   );
 }
@@ -272,4 +293,98 @@ export function fillHref(
     .replace("{partner}", encodeURIComponent(v.partner))
     .replace("{invite}", encodeURIComponent(v.invite))
     .replace("{name}", encodeURIComponent(v.name ?? "Your Name"));
+}
+
+/* ---------------------------------------------------------------------------
+   Managed collateral: pieces the MEDIALIFE team adds for every partner (scope
+   "kit") or for one partner (scope = partner id), and pieces a partner team
+   adds for itself. Each is a file in that scope's library, or a link. The
+   built-in pieces above can be hidden per scope.
+   --------------------------------------------------------------------------- */
+
+export type CollateralTab = KitGroup | "videos" | "gifs";
+
+/** In the order the Collateral page shows them. */
+export const COLLATERAL_TABS: Record<CollateralTab, string> = {
+  explain: "Explain it",
+  show: "Show it live",
+  videos: "Videos",
+  post: "Post it",
+  gifs: "Email GIFs",
+  photos: "Photography",
+};
+export const COLLATERAL_TAB_IDS = Object.keys(COLLATERAL_TABS) as CollateralTab[];
+
+export const KIT_SCOPE = "kit";
+
+export type CollateralEntry = {
+  id: string;
+  /** "kit" (every partner) or a partner id. */
+  scope: string;
+  tab: CollateralTab;
+  /** Videos only: which shelf it sits on. */
+  videoCategory?: VideoCategory;
+  title: string;
+  /** What it is. */
+  what: string;
+  /** When to use it. */
+  when: string;
+  channels: string[];
+  /** A file in the scope's library, or a link. Exactly one is set. */
+  fileId: string | null;
+  link: string | null;
+  /** An optional cover image, also in the scope's library. */
+  previewFileId: string | null;
+  addedBy: { kind: "medialife" } | { kind: "partner"; userId: string; name: string };
+  createdAt: number;
+  updatedAt: number;
+};
+
+export type CollateralSettings = { hidden: string[]; updatedAt: number };
+
+/** The library a scope's files live in. */
+export const scopeOwner = (scope: string) =>
+  scope === KIT_SCOPE ? KIT_OWNER : partnerOwner(scope);
+
+/** A YouTube video id from any of its URL shapes, or null. */
+export function youtubeIdOf(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\.|^m\./, "");
+    if (host === "youtu.be") return u.pathname.slice(1).split("/")[0] || null;
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
+      if (u.searchParams.get("v")) return u.searchParams.get("v");
+      const m = u.pathname.match(/^\/(?:shorts|embed|live)\/([\w-]{6,20})/);
+      return m?.[1] ?? null;
+    }
+  } catch {
+    // not a URL
+  }
+  return null;
+}
+
+export type BuiltinPiece = { id: string; tab: CollateralTab; title: string; thumb?: string };
+
+/** Every built-in piece a partner sees, by tab: what the admin can hide. */
+export function builtinPieces(kit: string): BuiltinPiece[] {
+  return [
+    ...kitFor(kit).map((i) => ({
+      id: i.id,
+      tab: i.group as CollateralTab,
+      title: i.title,
+      thumb: i.kind === "image" ? i.href : i.preview,
+    })),
+    ...MEDIALIFE_VIDEOS.map((v) => ({
+      id: v.id,
+      tab: "videos" as const,
+      title: v.title,
+      thumb: v.poster,
+    })),
+    ...MEDIALIFE_GIFS.map((g) => ({
+      id: g.id,
+      tab: "gifs" as const,
+      title: g.title,
+      thumb: g.src,
+    })),
+  ];
 }

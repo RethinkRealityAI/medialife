@@ -57,15 +57,20 @@ function Partners() {
         <Panel className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
           <FolderOpen className="size-5 text-primary" aria-hidden />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">MEDIALIFE kit</div>
+            <div className="font-medium">Collateral</div>
             <div className="text-sm text-muted-foreground">
-              Files every partner sees in their collateral ({d.kitFiles} uploaded). Partner-specific
-              files go in each partner's library.
+              Add, edit and hide what partners see in their Collateral, for every partner or just
+              one. Loose files for every partner live in the MEDIALIFE kit ({d.kitFiles} uploaded).
             </div>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/admin/partners/kit">Manage kit</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/admin/partners/collateral">Manage collateral</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/admin/partners/kit">Kit files</Link>
+            </Button>
+          </div>
         </Panel>
 
         {d.partners.length ? (

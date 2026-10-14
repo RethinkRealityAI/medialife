@@ -211,8 +211,14 @@ export async function guard(ns: HubNamespace, request: Request): Promise<Caller 
   return c;
 }
 
-/** Uploading, finishing and deleting: the team, or the creator whose library it is. */
-const canWrite = (c: Caller, owner: string) => c.kind === "admin" || c.creatorId === owner;
+/**
+ * Uploading, finishing and deleting: the team, the creator whose library it
+ * is, or a partner team in its own library (their own collateral).
+ */
+const canWrite = (c: Caller, owner: string) =>
+  c.kind === "admin" ||
+  c.creatorId === owner ||
+  (!!c.partner && owner === partnerOwner(c.partner.id));
 
 /**
  * Reading: also a partner team, for the MEDIALIFE kit, its own library and the
@@ -235,17 +241,24 @@ async function ownerExists(ns: HubNamespace, owner: string) {
 
 /** Kinds a creator may upload. Proofs, mockups and collateral come from the team. */
 const CREATOR_KINDS: FileKind[] = ["artwork"];
+/** What a partner team uploads to its own library. */
+const PARTNER_KINDS: FileKind[] = ["collateral"];
 
 export async function initUpload(ns: HubNamespace, c: Caller, body: unknown) {
   const parsed = initSchema.safeParse(body);
   if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "invalid" }, 400);
   const d = parsed.data;
-  const creatorId = c.kind === "admin" ? d.creatorId : c.creatorId;
+  // A partner team uploads its own collateral to its own library.
+  const toOwnPartnerLibrary =
+    c.kind === "user" && !!c.partner && d.creatorId === partnerOwner(c.partner.id);
+  const creatorId =
+    c.kind === "admin" ? d.creatorId : toOwnPartnerLibrary ? d.creatorId : c.creatorId;
   if (!creatorId) return json({ error: "creatorId is required" }, 400);
-  if (c.kind === "user" && !CREATOR_KINDS.includes(d.kind))
+  if (c.kind === "user" && !(toOwnPartnerLibrary ? PARTNER_KINDS : CREATOR_KINDS).includes(d.kind))
     return json({ error: "forbidden kind" }, 403);
-  // Only the team uploads to the MEDIALIFE kit and partner libraries.
-  if (isLibraryOwner(creatorId) && c.kind !== "admin") return json({ error: "forbidden" }, 403);
+  // Only the team uploads to the MEDIALIFE kit and to other partners' libraries.
+  if (isLibraryOwner(creatorId) && c.kind !== "admin" && !toOwnPartnerLibrary)
+    return json({ error: "forbidden" }, 403);
   if (!(await ownerExists(ns, creatorId))) return json({ error: "creator not found" }, 404);
   const mime = resolveMime(d.name, d.mime);
   if (!mime)
@@ -356,7 +369,9 @@ export async function completeUpload(ns: HubNamespace, c: Caller, creatorId: str
   }
   const done: HubFile = { ...file, complete: true };
   await store.setJSON(KEYS.file(creatorId, id), done);
-  if (done.uploadedBy === "creator") {
+  if (isLibraryOwner(creatorId)) {
+    // The MEDIALIFE kit and partner libraries have no activity feed.
+  } else if (done.uploadedBy === "creator") {
     await logActivity(ns, creatorId, {
       kind: "file",
       title: `You uploaded ${done.name}`,
@@ -377,6 +392,15 @@ export async function completeUpload(ns: HubNamespace, c: Caller, creatorId: str
 async function deleteFileBytes(ns: HubNamespace, file: HubFile) {
   const bytes = await hubFileStore(ns);
   await Promise.all(Array.from({ length: file.chunks }, (_, n) => bytes.del(chunkKey(file.id, n))));
+}
+
+/** Removes a file from the MEDIALIFE kit or a partner library (no product links there). */
+export async function removeLibraryFile(ns: HubNamespace, owner: string, id: string) {
+  if (!isLibraryOwner(owner)) return;
+  const file = await getFile(ns, owner, id);
+  if (!file) return;
+  await deleteFileBytes(ns, file);
+  await (await hubStore(ns)).del(KEYS.file(owner, id));
 }
 
 export async function deleteFile(ns: HubNamespace, c: Caller, creatorId: string, id: string) {

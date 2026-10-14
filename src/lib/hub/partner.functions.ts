@@ -2,6 +2,9 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 
+import { KIT_SCOPE } from "./collateral";
+import { getCollateralSettings, listCollateral } from "./collateral.server";
+
 import { signatureStatus } from "./agreements";
 import {
   authConfigured,
@@ -121,13 +124,28 @@ export type PartnerCreatorRow = NonNullable<Awaited<ReturnType<typeof creatorRow
 export const getPartnerWorkspace = createServerFn({ method: "GET" }).handler(async () => {
   const { ns, user, partner, role } = await requirePartner();
   const summaries = await partnerCreatorSummaries(ns, partner.id);
-  const [rows, kitFiles, kitFolders, ownFiles, ownFolders, invites] = await Promise.all([
+  const [
+    rows,
+    kitFiles,
+    kitFolders,
+    ownFiles,
+    ownFolders,
+    invites,
+    kitEntries,
+    ownEntries,
+    kitSettings,
+    ownSettings,
+  ] = await Promise.all([
     Promise.all(summaries.map((s) => creatorRow(ns, s.id))),
     listFiles(ns, KIT_OWNER),
     listFolders(ns, KIT_OWNER),
     listFiles(ns, partnerOwner(partner.id)),
     listFolders(ns, partnerOwner(partner.id)),
     listInvites(ns),
+    listCollateral(ns, KIT_SCOPE),
+    listCollateral(ns, partner.id),
+    getCollateralSettings(ns, KIT_SCOPE),
+    getCollateralSettings(ns, partner.id),
   ]);
   return {
     partner: publicPartner(partner),
@@ -138,6 +156,12 @@ export const getPartnerWorkspace = createServerFn({ method: "GET" }).handler(asy
       files: [...ownFiles, ...kitFiles],
       folders: [...ownFolders, ...kitFolders],
       ownOwner: partnerOwner(partner.id),
+    },
+    // Pieces the MEDIALIFE team added for everyone and for this partner, the
+    // team's own, and the built-in pieces hidden from them.
+    collateral: {
+      entries: [...ownEntries, ...kitEntries],
+      hidden: [...new Set([...kitSettings.hidden, ...ownSettings.hidden])],
     },
     links: invites
       .filter((i) => i.agencyId === partner.id && !i.archived)
