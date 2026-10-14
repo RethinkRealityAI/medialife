@@ -6,8 +6,8 @@ import { LIST_TABS } from "@/components/admin/creators/creators-table";
 import { adminListCreators, adminListUnmatched } from "@/lib/hub/admin.functions";
 
 // /admin/creators: the Creator Hub roster. Applications to review, active
-// creators, agency invite links, integration status and Shopify orders that
-// matched no product. ?status, ?q and ?agency keep the list's filters.
+// creators, agency invite links and Shopify orders that matched no product.
+// ?status, ?q and ?agency keep the list's filters.
 
 export const Route = createFileRoute("/admin/creators/")({
   validateSearch: z.object({

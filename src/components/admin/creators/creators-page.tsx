@@ -17,7 +17,6 @@ import { HUB } from "@/lib/hub/model";
 
 import { CopyButton, NamespaceBadge, PageHeader, Panel, StatTile } from "../kit";
 import { CreatorsTable, type Filters } from "./creators-table";
-import { IntegrationsPanel } from "./integrations";
 import { InvitesPanel } from "./invites";
 import type { CreatorsList, UnmatchedOrder } from "./types";
 import { ghostBtn, outlineBtn, useRun } from "./ui";
@@ -91,10 +90,7 @@ export function CreatorsPage({
           onFilters={onFilters}
         />
 
-        <div className="grid items-start gap-5 @5xl/inset:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-          <InvitesPanel invites={data.invites} />
-          <IntegrationsPanel data={data} />
-        </div>
+        <InvitesPanel invites={data.invites} />
 
         <UnmatchedPanel orders={unmatched} />
       </div>

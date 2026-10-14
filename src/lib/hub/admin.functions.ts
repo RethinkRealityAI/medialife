@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
-import process from "node:process";
 import { z } from "zod";
 
 import { getUser, publicOrigin } from "./auth.server";
@@ -36,7 +35,7 @@ import {
   getInvite,
 } from "./data.server";
 import { COUNSEL_REVIEWED, CURRENT, signatureStatus } from "./agreements";
-import { mailConfigured, sendNotice } from "./mail.server";
+import { sendNotice } from "./mail.server";
 import { listSignatures } from "./partners.server";
 import {
   CREATOR_STATUS,
@@ -98,10 +97,6 @@ export const adminListCreators = createServerFn({ method: "GET" }).handler(async
     creators,
     counts,
     invites,
-    mailConfigured: mailConfigured(),
-    shopifyConfigured: !!process.env.SHOPIFY_WEBHOOK_SECRET,
-    ingestConfigured: !!process.env.HUB_INGEST_KEY,
-    discordConfigured: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET),
   };
 });
 
