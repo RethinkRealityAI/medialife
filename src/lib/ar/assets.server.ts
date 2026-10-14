@@ -285,7 +285,8 @@ export async function releaseGenerated(ns: ArNamespace, refs: (string | null | u
 
 // ---- public download ----
 
-function parseRange(header: string | null, size: number) {
+/** A single "bytes=" range, clamped to the file; null for none (or a form we don't serve). */
+export function parseRange(header: string | null, size: number) {
   if (!header) return null;
   const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
   if (!m) return null; // multi-range and other units: send the whole file

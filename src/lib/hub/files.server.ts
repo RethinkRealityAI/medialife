@@ -1,17 +1,20 @@
 import { z } from "zod";
 
+import { parseRange } from "@/lib/ar/assets.server";
 import { isAdminRequest } from "@/lib/ar/auth.server";
 
 import { HUB_COOKIE, resolveSession } from "./auth.server";
 import {
   getCreator,
   getFile,
+  getFolder,
   listExperiences,
   listProducts,
   logActivity,
   saveExperience,
   saveProduct,
 } from "./data.server";
+import { ASSET_LIMITS, ASSET_SECTIONS, normaliseTags } from "./assets";
 import { HUB, type FileKind, type HubFile } from "./model";
 import { KEYS, hubFileStore, hubStore, newId, type HubNamespace } from "./store.server";
 
@@ -23,28 +26,80 @@ import { KEYS, hubFileStore, hubStore, newId, type HubNamespace } from "./store.
 //
 // HTTP contract (all JSON unless noted; non-GET requests need "x-hub: 1", which a
 // cross-site form cannot send):
-//   POST   /api/hub/files                              {name,size,mime,kind,category,productId?,note?,creatorId? (admin)}
+//   POST   /api/hub/files                              {name,size,mime,kind,category,productId?,note?,creatorId? (admin),
+//                                                       section?,folderId?,tags? (the asset library)}
 //                                                      → 201 {id, creatorId, chunkSize, chunks}
 //   PUT    /api/hub/files/:creatorId/:id/chunks/:n     raw bytes → 204
 //   POST   /api/hub/files/:creatorId/:id/complete      → {file}
-//   GET    /api/hub/files/:creatorId/:id[?download=1]  → the bytes
+//   GET    /api/hub/files/:creatorId/:id[?download=1]  → the bytes; honours Range, and caps a
+//                                                      206 at HUB.maxResponseBytes (a streamed
+//                                                      Netlify response tops out near 20 MB), so
+//                                                      players and downloadHubFile() read big
+//                                                      files in pieces
 //   DELETE /api/hub/files/:creatorId/:id               → 204 (creators: their own artwork only)
 
-/** What may be uploaded. Anything that could run in a browser is served as a download. */
+/**
+ * What may be uploaded. `inline` types are shown in the browser (images, PDFs,
+ * video, audio); everything else is served as a download. 3D models are read by
+ * the hub's viewer with fetch(), which doesn't care about the disposition.
+ */
 const ALLOWED: Record<string, { ext: string[]; inline: boolean }> = {
+  // images
   "image/png": { ext: ["png"], inline: true },
   "image/jpeg": { ext: ["jpg", "jpeg"], inline: true },
   "image/webp": { ext: ["webp"], inline: true },
   "image/gif": { ext: ["gif"], inline: true },
   "image/avif": { ext: ["avif"], inline: true },
   "image/svg+xml": { ext: ["svg"], inline: true },
+  "image/heic": { ext: ["heic"], inline: false },
+  "image/tiff": { ext: ["tif", "tiff"], inline: false },
+  // documents
   "application/pdf": { ext: ["pdf"], inline: true },
-  "video/mp4": { ext: ["mp4"], inline: true },
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
+    ext: ["docx"],
+    inline: false,
+  },
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
+    ext: ["pptx"],
+    inline: false,
+  },
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+    ext: ["xlsx"],
+    inline: false,
+  },
+  "application/vnd.apple.keynote": { ext: ["key"], inline: false },
+  "text/plain": { ext: ["txt"], inline: false },
+  "text/csv": { ext: ["csv"], inline: false },
+  "text/markdown": { ext: ["md"], inline: false },
+  // video and audio
+  "video/mp4": { ext: ["mp4", "m4v"], inline: true },
   "video/quicktime": { ext: ["mov"], inline: true },
+  "video/webm": { ext: ["webm"], inline: true },
+  "audio/mpeg": { ext: ["mp3"], inline: true },
+  "audio/wav": { ext: ["wav"], inline: true },
+  "audio/mp4": { ext: ["m4a"], inline: true },
+  "audio/aac": { ext: ["aac"], inline: true },
+  "audio/ogg": { ext: ["ogg"], inline: true },
+  "audio/flac": { ext: ["flac"], inline: true },
+  // 3D
+  "model/gltf-binary": { ext: ["glb"], inline: false },
+  "model/gltf+json": { ext: ["gltf"], inline: false },
+  "model/obj": { ext: ["obj"], inline: false },
+  "model/stl": { ext: ["stl"], inline: false },
+  "model/vnd.usdz+zip": { ext: ["usdz"], inline: false },
+  "application/vnd.autodesk.fbx": { ext: ["fbx"], inline: false },
+  "application/x-blender": { ext: ["blend"], inline: false },
+  // design files and archives
   "application/zip": { ext: ["zip"], inline: false },
   "image/vnd.adobe.photoshop": { ext: ["psd"], inline: false },
   "application/postscript": { ext: ["ai", "eps"], inline: false },
   "application/illustrator": { ext: ["ai"], inline: false },
+  "application/x-figma": { ext: ["fig"], inline: false },
+  "application/x-sketch": { ext: ["sketch"], inline: false },
+  "application/vnd.adobe.xd": { ext: ["xd"], inline: false },
+  "application/x-procreate": { ext: ["procreate"], inline: false },
+  "application/x-indesign": { ext: ["indd"], inline: false },
+  // fonts
   "font/otf": { ext: ["otf"], inline: false },
   "font/ttf": { ext: ["ttf"], inline: false },
   "font/woff2": { ext: ["woff2"], inline: false },
@@ -63,6 +118,8 @@ export const ACCEPT = Object.values(ALLOWED)
   .flatMap((v) => v.ext.map((e) => `.${e}`))
   .join(",");
 
+const tagSchema = z.string().max(ASSET_LIMITS.tagLength * 2);
+
 export const initSchema = z.object({
   name: z.string().min(1).max(300),
   size: z.number().int().positive().max(HUB.maxUploadBytes),
@@ -78,6 +135,17 @@ export const initSchema = z.object({
   creatorId: z
     .string()
     .regex(/^[A-Za-z0-9]{6,60}$/)
+    .optional(),
+  // the asset library
+  section: z.enum(ASSET_SECTIONS).optional(),
+  folderId: z
+    .string()
+    .regex(/^[A-Za-z0-9]{6,60}$/)
+    .nullable()
+    .optional(),
+  tags: z
+    .array(tagSchema)
+    .max(ASSET_LIMITS.tagsPerFile * 2)
     .optional(),
 });
 
@@ -148,10 +216,12 @@ export async function initUpload(ns: HubNamespace, c: Caller, body: unknown) {
     return json(
       {
         error:
-          "That file type isn't supported. Use PNG, JPG, SVG, PDF, PSD, AI, ZIP, a font or MP4.",
+          "That file type isn't supported. Zip it and upload the ZIP, or ask us for another format.",
       },
       415,
     );
+  // A folder pins the section; one that's gone (or someone else's) is ignored.
+  const folder = d.folderId ? await getFolder(ns, creatorId, d.folderId) : null;
 
   const id = newId(10);
   const chunks = Math.max(1, Math.ceil(d.size / HUB.chunkBytes));
@@ -169,6 +239,13 @@ export async function initUpload(ns: HubNamespace, c: Caller, body: unknown) {
     createdAt: Date.now(),
     chunks,
     complete: false,
+    ...(d.section || folder || d.tags
+      ? {
+          section: folder?.section ?? d.section,
+          folderId: folder?.id ?? null,
+          tags: normaliseTags(d.tags ?? []),
+        }
+      : {}),
   };
   await (await hubStore(ns)).setJSON(KEYS.file(creatorId, id), file);
   return json({ id, creatorId, chunkSize: HUB.chunkBytes, chunks }, 201);
@@ -212,6 +289,10 @@ function sniffOk(mime: string, head: Uint8Array) {
       return s(0, [0x25, 0x50, 0x44, 0x46]);
     case "application/zip":
       return s(0, [0x50, 0x4b]);
+    case "video/webm":
+      return s(0, [0x1a, 0x45, 0xdf, 0xa3]);
+    case "model/gltf-binary":
+      return s(0, [0x67, 0x6c, 0x54, 0x46]);
     default:
       return true;
   }
@@ -301,6 +382,7 @@ export async function fileResponse(
   id: string,
   download: boolean,
   head = false,
+  rangeHeader: string | null = null,
 ) {
   if (!c) return json({ error: "unauthorized" }, 401);
   if (!canAccess(c, creatorId)) return json({ error: "forbidden" }, 403);
@@ -309,11 +391,11 @@ export async function fileResponse(
   const inline = !download && (ALLOWED[file.mime]?.inline ?? false);
   const headers: Record<string, string> = {
     "content-type": file.mime,
-    "content-length": String(file.size),
     "content-disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(file.name)}`,
     // private: only the creator and the team can read it; a file never changes under its id
     "cache-control": "private, max-age=31536000, immutable",
     "x-content-type-options": "nosniff",
+    "accept-ranges": "bytes",
   };
   // An uploaded SVG (or anything else) opened directly can't run script against
   // the site. PDFs are left to the browser's own isolated viewer, which a
@@ -322,18 +404,38 @@ export async function fileResponse(
     headers["content-security-policy"] =
       "default-src 'none'; img-src 'self' data:; media-src 'self'; style-src 'unsafe-inline'; sandbox";
   }
-  if (head) return new Response(null, { status: 200, headers });
+
+  const range = parseRange(rangeHeader, file.size);
+  if (range === "invalid") {
+    return new Response(null, {
+      status: 416,
+      headers: { ...headers, "content-range": `bytes */${file.size}` },
+    });
+  }
+  const start = range ? range.start : 0;
+  // A range answer may be shorter than asked; clients ask again for the rest.
+  const end = range ? Math.min(range.end, start + HUB.maxResponseBytes - 1) : file.size - 1;
+  headers["content-length"] = String(end - start + 1);
+  if (range) headers["content-range"] = `bytes ${start}-${end}/${file.size}`;
+  const status = range ? 206 : 200;
+  if (head) return new Response(null, { status, headers });
+
   const store = await hubFileStore(ns);
-  let n = 0;
+  const cs = HUB.chunkBytes;
+  const last = Math.floor(end / cs);
+  let n = Math.floor(start / cs);
   const stream = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      if (n >= file.chunks) return controller.close();
-      const buf = await store.getBytes(chunkKey(file.id, n++));
+      const buf = await store.getBytes(chunkKey(file.id, n));
       if (!buf) return controller.error(new Error("missing chunk"));
-      controller.enqueue(new Uint8Array(buf));
+      const from = n === Math.floor(start / cs) ? start - n * cs : 0;
+      const to = n === last ? end - n * cs + 1 : buf.byteLength;
+      controller.enqueue(new Uint8Array(buf, from, to - from));
+      n++;
+      if (n > last) controller.close();
     },
   });
-  return new Response(stream, { status: 200, headers });
+  return new Response(stream, { status, headers });
 }
 
 /** Server-side write of a whole file (sample data, generated collateral). */

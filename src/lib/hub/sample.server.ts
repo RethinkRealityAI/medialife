@@ -9,10 +9,12 @@ import {
   saveCreator,
   saveCreatorAdmin,
   saveExperience,
+  saveFolder,
   saveOrder,
   savePayout,
   saveProduct,
 } from "./data.server";
+import type { AssetSection } from "./assets";
 import { writeFile } from "./files.server";
 import {
   SKUS,
@@ -147,16 +149,21 @@ export async function seedSampleCreator(ns: HubNamespace) {
   };
   await saveUser(ns, user);
 
-  // Files: product mockups from the site's own merch art.
+  // Files: product mockups from the site's own merch art, and a small asset
+  // library (sections, folders, tags) built from the site's own media.
   const file = async (
     path: string,
     name: string,
     kind: HubFile["kind"],
     category: string,
     productId: string | null,
+    extra: Partial<Pick<HubFile, "mime" | "section" | "folderId" | "tags" | "starred" | "note">> & {
+      ageDays?: number;
+    } = {},
   ) => {
     const bytes = await fetchBytes(path);
     if (!bytes) return null;
+    const { ageDays, ...meta } = extra;
     return writeFile(
       ns,
       {
@@ -168,10 +175,21 @@ export async function seedSampleCreator(ns: HubNamespace) {
         productId,
         note: "",
         uploadedBy: kind === "artwork" ? "creator" : "medialife",
+        ...(ageDays ? { createdAt: now - ageDays * DAY } : {}),
+        ...meta,
       },
       bytes,
     );
   };
+  const folder = async (name: string, section: AssetSection, ageDays: number) =>
+    saveFolder(ns, {
+      id: newId(10),
+      creatorId: creator.id,
+      name,
+      section,
+      createdAt: now - ageDays * DAY,
+      createdBy: "creator",
+    });
 
   const experience: Experience = {
     id: newId(),
@@ -350,12 +368,69 @@ export async function seedSampleCreator(ns: HubNamespace) {
     products.push(product);
   }
 
+  const logos = await folder("Logos", "branding", 66);
+  const launch = await folder("Launch drop posts", "social", 58);
+  const models = await folder("Game models", "3d", 40);
+  await file("/merch/keychain-cutout.webp", "pixelpine-character.webp", "artwork", "asset", null, {
+    section: "art",
+    tags: ["Character", "Key art", "Transparent"],
+    starred: true,
+    note: "Grove Spirit, the main character. Use this pose for merch.",
+    ageDays: 65,
+  });
+  await file("/merch/evade-wordmark.png", "pixelpine-wordmark.png", "artwork", "asset", null, {
+    mime: "image/png",
+    section: "branding",
+    folderId: logos.id,
+    tags: ["Wordmark", "Logo", "Transparent"],
+    starred: true,
+    ageDays: 66,
+  });
+  await file("/merch/keychain-hand.webp", "launch-teaser-post.webp", "artwork", "asset", null, {
+    section: "social",
+    folderId: launch.id,
+    tags: ["Post", "Merch idea"],
+    ageDays: 57,
+  });
+  await file("/merch/keychain-qr.webp", "scan-me-story.webp", "artwork", "asset", null, {
+    section: "social",
+    folderId: launch.id,
+    tags: ["Story"],
+    ageDays: 56,
+  });
+  await file("/work/sakamoto-motion-character.mp4", "channel-intro.mp4", "artwork", "asset", null, {
+    mime: "video/mp4",
+    section: "video",
+    tags: ["Intro", "Animation"],
+    ageDays: 45,
+  });
   await file(
-    "/merch/keychain-cutout.webp",
-    "pixelpine-character.webp",
+    "/roblox/activated-retail/models/catbobo.glb",
+    "grove-spirit.glb",
     "artwork",
-    "character",
+    "asset",
     null,
+    {
+      mime: "model/gltf-binary",
+      section: "3d",
+      folderId: models.id,
+      tags: ["Character", "Merch idea"],
+      note: "Game-ready model. Good base for a plush or a figure.",
+      ageDays: 40,
+    },
+  );
+  await file(
+    "/roblox/activated-retail/models/ev_hoodie.glb",
+    "hoodie-concept.glb",
+    "artwork",
+    "asset",
+    null,
+    {
+      mime: "model/gltf-binary",
+      section: "3d",
+      tags: ["Merch idea", "Draft"],
+      ageDays: 20,
+    },
   );
 
   // Orders and scans for the live products, over the last 60 days. Built in

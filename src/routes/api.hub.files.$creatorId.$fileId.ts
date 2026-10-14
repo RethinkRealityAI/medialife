@@ -17,6 +17,8 @@ export const Route = createFileRoute("/api/hub/files/$creatorId/$fileId")({
           params.creatorId,
           params.fileId,
           download,
+          false,
+          request.headers.get("range"),
         );
       },
       HEAD: async ({ request, params }) => {
@@ -28,6 +30,7 @@ export const Route = createFileRoute("/api/hub/files/$creatorId/$fileId")({
           params.fileId,
           false,
           true,
+          request.headers.get("range"),
         );
       },
       DELETE: async ({ request, params }) => {

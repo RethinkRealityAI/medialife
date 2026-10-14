@@ -150,12 +150,12 @@ export function ActionButton({
         <Link to={l.to} search={{ preview: l.preview }} onClick={onClick}>
           {label}
         </Link>
-      ) : l.to === "/creator-hub/account" ? (
-        <Link to={l.to} search={{ section: l.section }} onClick={onClick}>
+      ) : l.to === "/creator-hub/assets" ? (
+        <Link to={l.to} search={{ s: l.s }} onClick={onClick}>
           {label}
         </Link>
       ) : (
-        <Link to={l.to} onClick={onClick}>
+        <Link to={l.to} search={{ section: l.section }} onClick={onClick}>
           {label}
         </Link>
       )}

@@ -54,6 +54,7 @@ import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
 import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
+import { Route as CreatorHubAppAssetsRouteImport } from './routes/creator-hub._app.assets'
 import { Route as CreatorHubAppDashboardRouteImport } from './routes/creator-hub._app.dashboard'
 import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub._app.earnings'
 import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
@@ -316,6 +317,11 @@ const CreatorHubAppArtworkRoute = CreatorHubAppArtworkRouteImport.update({
   path: '/artwork',
   getParentRoute: () => CreatorHubAppRoute,
 } as any)
+const CreatorHubAppAssetsRoute = CreatorHubAppAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
+  getParentRoute: () => CreatorHubAppRoute,
+} as any)
 const CreatorHubAppDashboardRoute = CreatorHubAppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -546,6 +552,7 @@ export interface FileRoutesByFullPath {
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
   '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
@@ -623,6 +630,7 @@ export interface FileRoutesByTo {
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/dashboard': typeof CreatorHubAppDashboardRoute
   '/creator-hub/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
@@ -706,6 +714,7 @@ export interface FileRoutesById {
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
+  '/creator-hub/_app/assets': typeof CreatorHubAppAssetsRoute
   '/creator-hub/_app/dashboard': typeof CreatorHubAppDashboardRoute
   '/creator-hub/_app/earnings': typeof CreatorHubAppEarningsRoute
   '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
@@ -790,6 +799,7 @@ export interface FileRouteTypes {
     | '/api/hub/orders'
     | '/creator-hub/account'
     | '/creator-hub/artwork'
+    | '/creator-hub/assets'
     | '/creator-hub/dashboard'
     | '/creator-hub/earnings'
     | '/creator-hub/experiences'
@@ -867,6 +877,7 @@ export interface FileRouteTypes {
     | '/api/hub/orders'
     | '/creator-hub/account'
     | '/creator-hub/artwork'
+    | '/creator-hub/assets'
     | '/creator-hub/dashboard'
     | '/creator-hub/earnings'
     | '/creator-hub/experiences'
@@ -949,6 +960,7 @@ export interface FileRouteTypes {
     | '/api/hub/orders'
     | '/creator-hub/_app/account'
     | '/creator-hub/_app/artwork'
+    | '/creator-hub/_app/assets'
     | '/creator-hub/_app/dashboard'
     | '/creator-hub/_app/earnings'
     | '/creator-hub/_app/experiences'
@@ -1348,6 +1360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreatorHubAppArtworkRouteImport
       parentRoute: typeof CreatorHubAppRoute
     }
+    '/creator-hub/_app/assets': {
+      id: '/creator-hub/_app/assets'
+      path: '/assets'
+      fullPath: '/creator-hub/assets'
+      preLoaderRoute: typeof CreatorHubAppAssetsRouteImport
+      parentRoute: typeof CreatorHubAppRoute
+    }
     '/creator-hub/_app/dashboard': {
       id: '/creator-hub/_app/dashboard'
       path: '/dashboard'
@@ -1663,6 +1682,7 @@ const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
 interface CreatorHubAppRouteChildren {
   CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
   CreatorHubAppArtworkRoute: typeof CreatorHubAppArtworkRoute
+  CreatorHubAppAssetsRoute: typeof CreatorHubAppAssetsRoute
   CreatorHubAppDashboardRoute: typeof CreatorHubAppDashboardRoute
   CreatorHubAppEarningsRoute: typeof CreatorHubAppEarningsRoute
   CreatorHubAppExperiencesRoute: typeof CreatorHubAppExperiencesRoute
@@ -1675,6 +1695,7 @@ interface CreatorHubAppRouteChildren {
 const CreatorHubAppRouteChildren: CreatorHubAppRouteChildren = {
   CreatorHubAppAccountRoute: CreatorHubAppAccountRoute,
   CreatorHubAppArtworkRoute: CreatorHubAppArtworkRoute,
+  CreatorHubAppAssetsRoute: CreatorHubAppAssetsRoute,
   CreatorHubAppDashboardRoute: CreatorHubAppDashboardRoute,
   CreatorHubAppEarningsRoute: CreatorHubAppEarningsRoute,
   CreatorHubAppExperiencesRoute: CreatorHubAppExperiencesRoute,

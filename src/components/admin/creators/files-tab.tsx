@@ -16,24 +16,17 @@ import {
   type HubFile,
 } from "@/lib/hub/model";
 
+import { AssetLibrary, type LibraryNav } from "@/components/hub/assets/library";
+
 import { Panel, PanelTitle } from "../kit";
 import { UploadButton } from "./files-kit";
 import { FileGrid } from "./product-panels";
 import type { CreatorDetail } from "./types";
 
+// Everything except proofs is in the asset library above; proofs stay a
+// separate record of what was sent for approval.
 const GROUPS: Array<{ kind: FileKind; title: string; sub: string }> = [
-  {
-    kind: "artwork",
-    title: "Artwork from the creator",
-    sub: "Logos, characters, references and guidelines they uploaded.",
-  },
   { kind: "proof", title: "Design proofs", sub: "Every version sent for approval." },
-  { kind: "mockup", title: "Mockups", sub: "Product renders and photos." },
-  {
-    kind: "collateral",
-    title: "Launch collateral",
-    sub: "Posters, social assets, QR artwork, video.",
-  },
 ];
 
 const CATEGORIES: Record<FileKind, Record<string, string>> = {
@@ -46,6 +39,7 @@ const CATEGORIES: Record<FileKind, Record<string, string>> = {
 const NONE = "__none";
 
 export function FilesTab({ data }: { data: CreatorDetail }) {
+  const [nav, setNav] = useState<LibraryNav>({});
   const [kind, setKind] = useState<FileKind>("collateral");
   const [category, setCategory] = useState("social");
   const [productId, setProductId] = useState(NONE);
@@ -66,8 +60,26 @@ export function FilesTab({ data }: { data: CreatorDetail }) {
     <div className="@container/files space-y-4">
       <Panel className="p-4 sm:p-5">
         <PanelTitle
-          title="Upload on behalf"
-          sub="Files you add here appear in the creator's hub."
+          title={`Asset library (${data.files.filter((f) => f.kind !== "proof").length})`}
+          sub="The creator's brand, content and source files, and anything we've added for them. Same library they see in their hub."
+        />
+        <div className="mt-4">
+          <AssetLibrary
+            mode="admin"
+            creatorId={data.creator.id}
+            files={data.files}
+            folders={data.folders}
+            products={data.products}
+            nav={nav}
+            onNav={setNav}
+          />
+        </div>
+      </Panel>
+
+      <Panel className="p-4 sm:p-5">
+        <PanelTitle
+          title="Launch assets, mockups and proofs"
+          sub="For files tied to the launch kit or a product. Brand and source files go in the library above."
         />
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <Select
@@ -82,7 +94,6 @@ export function FilesTab({ data }: { data: CreatorDetail }) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="artwork">Artwork (for the creator)</SelectItem>
               <SelectItem value="proof">Proof (not sent)</SelectItem>
               <SelectItem value="mockup">Mockup</SelectItem>
               <SelectItem value="collateral">Collateral</SelectItem>

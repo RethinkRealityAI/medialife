@@ -49,6 +49,8 @@ export const KEYS = {
 
   file: (creatorId: string, id: string) => `files/${creatorId}/${id}`,
   files: (creatorId: string) => `files/${creatorId}/`,
+  folder: (creatorId: string, id: string) => `folders/${creatorId}/${id}`,
+  folders: (creatorId: string) => `folders/${creatorId}/`,
 
   order: (creatorId: string, id: string) => `orders/${creatorId}/${id}`,
   orders: (creatorId: string) => `orders/${creatorId}/`,

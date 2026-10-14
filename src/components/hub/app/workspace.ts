@@ -90,7 +90,7 @@ export type ActionLink =
       review?: boolean;
     }
   | { to: "/creator-hub/experiences"; preview?: string }
-  | { to: "/creator-hub/artwork" }
+  | { to: "/creator-hub/assets"; s?: string }
   | { to: "/creator-hub/account"; section?: AccountSection };
 
 export type ActionItem = {
@@ -138,7 +138,7 @@ export function needsYou(ws: Workspace, session: HubSession): ActionItem[] {
         cta: p.stage === "artwork" ? "Send artwork" : "Open product",
         link:
           p.stage === "artwork"
-            ? { to: "/creator-hub/artwork" }
+            ? { to: "/creator-hub/assets", s: "branding" }
             : { to: "/creator-hub/products/$productId", productId: p.id },
         image: productImage(p),
         productId: p.id,

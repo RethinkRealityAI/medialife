@@ -70,9 +70,14 @@ export const HUB = {
   holdDays: 30,
   /** Used when an admin has not set a creator's share yet. Admin-editable per creator and per product. */
   defaultRevenueShare: 0.2,
-  /** File uploads: max size, and the chunk size that keeps each request under Netlify's 6 MB. */
-  maxUploadBytes: 50 * 1024 * 1024,
+  /**
+   * File uploads: max size, and the chunk size that keeps each request under
+   * Netlify's 6 MB. 250 MB fits a short 4K clip or a detailed 3D scene.
+   */
+  maxUploadBytes: 250 * 1024 * 1024,
   chunkBytes: 4 * 1024 * 1024,
+  /** Largest single download response (a streamed Netlify function stops near 20 MB). */
+  maxResponseBytes: 16 * 1024 * 1024,
 } as const;
 
 /* ---------------------------------------------------------------------------
@@ -425,6 +430,28 @@ export type HubFile = {
   chunks: number;
   /** false while the chunks are still arriving. */
   complete: boolean;
+  /*
+   * The asset library (src/lib/hub/assets.ts). Optional: files from before it
+   * existed derive a section and tags from `kind` / `category`.
+   */
+  /** An AssetSection. */
+  section?: string;
+  /** An AssetFolder in that section; null or absent = loose in the section. */
+  folderId?: string | null;
+  tags?: string[];
+  starred?: boolean;
+  updatedAt?: number;
+};
+
+/** A folder in the asset library. One level deep, inside one section. */
+export type AssetFolder = {
+  id: string;
+  creatorId: string;
+  name: string;
+  /** An AssetSection. */
+  section: string;
+  createdAt: number;
+  createdBy: "creator" | "medialife";
 };
 
 export const fileUrl = (f: Pick<HubFile, "creatorId" | "id">, download = false) =>

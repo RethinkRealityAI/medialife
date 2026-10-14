@@ -229,6 +229,7 @@ export const getWorkspace = createServerFn({ method: "GET" }).handler(async () =
     })),
     experiences: w.experiences,
     files: w.files,
+    folders: w.folders,
     activity: w.activity.slice(0, 40),
     manager: w.manager,
     earnings: w.earnings.summary,

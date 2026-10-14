@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { getHubSession } from "@/lib/hub/auth.functions";
 import { getWorkspace } from "@/lib/hub/creator.functions";
 
-// The signed-in Creator Hub app: Home, Products, Artwork, Experiences, Launch
+// The signed-in Creator Hub app: Home, Products, Assets, Experiences, Launch
 // kit, Earnings and Account. A layout route without its own URL segment beyond
 // /creator-hub, so the landing page (creator-hub.index.tsx) and the auth pages
 // (creator-hub.sign-in.tsx and friends) stay outside it.

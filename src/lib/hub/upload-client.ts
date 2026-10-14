@@ -1,6 +1,7 @@
 /**
  * Browser side of Creator Hub uploads (see src/lib/hub/files.server.ts for the
- * HTTP contract). Used by the creator's Artwork page and the admin.
+ * HTTP contract). Used by the asset library (creator and admin) and the admin's
+ * proof and launch-kit uploads.
  *
  * Splits the file into the chunk size the server asks for, sends chunks two at
  * a time with a retry each, and reports progress as a 0–1 fraction.
@@ -14,6 +15,10 @@ export type UploadOptions = {
   note?: string;
   /** Admin uploads name the creator; creators always upload to themselves. */
   creatorId?: string;
+  /** The asset library: where the file goes and how it's tagged. */
+  section?: string;
+  folderId?: string | null;
+  tags?: string[];
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
 };
@@ -42,6 +47,9 @@ export async function uploadHubFile(file: File, opts: UploadOptions): Promise<Hu
       productId: opts.productId ?? null,
       note: opts.note ?? "",
       creatorId: opts.creatorId,
+      section: opts.section,
+      folderId: opts.folderId,
+      tags: opts.tags,
     }),
     signal: opts.signal,
   });
@@ -103,6 +111,12 @@ export const formatBytes = (n: number) =>
       : `${n} B`;
 
 /** For <input accept>. Mirrors ALLOWED in files.server.ts. */
-export const UPLOAD_ACCEPT =
-  ".png,.jpg,.jpeg,.webp,.gif,.avif,.svg,.pdf,.mp4,.mov,.zip,.psd,.ai,.eps,.otf,.ttf,.woff,.woff2";
+export const UPLOAD_ACCEPT = [
+  ".png,.jpg,.jpeg,.webp,.gif,.avif,.svg,.heic,.tif,.tiff",
+  ".pdf,.docx,.pptx,.xlsx,.key,.txt,.csv,.md",
+  ".mp4,.m4v,.mov,.webm,.mp3,.wav,.m4a,.aac,.ogg,.flac",
+  ".glb,.gltf,.obj,.stl,.usdz,.fbx,.blend",
+  ".zip,.psd,.ai,.eps,.fig,.sketch,.xd,.procreate,.indd",
+  ".otf,.ttf,.woff2,.woff",
+].join(",");
 export const IMAGE_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.avif,.svg";

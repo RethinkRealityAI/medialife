@@ -17,6 +17,7 @@ import {
   listCreatorSummaries,
   listExperiences,
   listFiles,
+  listFolders,
   listInvites,
   listOrders,
   listPayouts,
@@ -108,13 +109,14 @@ export const adminGetCreator = createServerFn({ method: "GET" })
     const ns = await requireHubAdmin();
     const creator = await getCreator(ns, data.id);
     if (!creator) return null;
-    const [admin, user, products, experiences, files, orders, payouts, activity] =
+    const [admin, user, products, experiences, files, folders, orders, payouts, activity] =
       await Promise.all([
         getCreatorAdmin(ns, creator.id),
         getUser(ns, creator.userId),
         listProducts(ns, creator.id),
         listExperiences(ns, creator.id),
         listFiles(ns, creator.id),
+        listFolders(ns, creator.id),
         listOrders(ns, creator.id),
         listPayouts(ns, creator.id),
         listActivity(ns, creator.id),
@@ -144,6 +146,7 @@ export const adminGetCreator = createServerFn({ method: "GET" })
       products,
       experiences,
       files,
+      folders,
       orders,
       payouts,
       activity,

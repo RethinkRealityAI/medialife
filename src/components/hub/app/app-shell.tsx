@@ -14,8 +14,8 @@ import {
   BriefcaseBusiness,
   ChevronDown,
   Coins,
+  FolderOpen,
   House,
-  ImageUp,
   LifeBuoy,
   LogOut,
   Mail,
@@ -71,7 +71,7 @@ import type { ActionItem } from "./workspace";
 type NavTo =
   | "/creator-hub/dashboard"
   | "/creator-hub/products"
-  | "/creator-hub/artwork"
+  | "/creator-hub/assets"
   | "/creator-hub/experiences"
   | "/creator-hub/launch-kit"
   | "/creator-hub/live"
@@ -83,7 +83,7 @@ type NavItem = { to: NavTo; label: string; icon: LucideIcon; badge?: string };
 const NAV: NavItem[] = [
   { to: "/creator-hub/dashboard", label: "Home", icon: House },
   { to: "/creator-hub/products", label: "Products", icon: Package },
-  { to: "/creator-hub/artwork", label: "Artwork", icon: ImageUp },
+  { to: "/creator-hub/assets", label: "Assets", icon: FolderOpen },
   { to: "/creator-hub/experiences", label: "Experiences", icon: Sparkles },
   { to: "/creator-hub/launch-kit", label: "Launch kit", icon: BriefcaseBusiness },
   { to: "/creator-hub/live", label: "Go live", icon: Radio, badge: "New" },
@@ -99,7 +99,7 @@ const TABS: NavTo[] = [
 ];
 const MORE: NavTo[] = [
   "/creator-hub/live",
-  "/creator-hub/artwork",
+  "/creator-hub/assets",
   "/creator-hub/experiences",
   "/creator-hub/account",
 ];

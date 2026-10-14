@@ -21,6 +21,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { adminSaveProduct } from "@/lib/hub/admin.functions";
+import { ASSET_SECTIONS, sectionOf } from "@/lib/hub/assets";
 import {
   SKUS,
   SKU_IDS,
@@ -154,7 +155,17 @@ export function ProductEditor({
     const others = imgs.filter((x) => !product || x.productId !== product.id);
     return { mine, others };
   }, [data.files, product]);
-  const artwork = data.files.filter((x) => x.kind === "artwork");
+  // The whole library can be long: what this product already uses, then starred
+  // files, then by section (Branding and art first). Sorted on the saved
+  // product, so options don't jump while ticking them.
+  const artwork = useMemo(() => {
+    const rank = (x: HubFile) =>
+      (product?.artworkIds.includes(x.id) ? 0 : x.starred ? 1 : 2) * 100 +
+      ASSET_SECTIONS.indexOf(sectionOf(x));
+    return data.files
+      .filter((x) => x.kind === "artwork" && x.complete)
+      .sort((a, b) => rank(a) - rank(b) || b.createdAt - a.createdAt);
+  }, [data.files, product]);
   const hero = data.files.find((x) => x.id === f.imageFileId);
 
   function validate() {

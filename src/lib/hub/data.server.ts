@@ -5,6 +5,7 @@ import {
   totalAudience,
   type Activity,
   type ActivityKind,
+  type AssetFolder,
   type Creator,
   type CreatorAdminFields,
   type CreatorStatus,
@@ -212,6 +213,32 @@ export async function getFile(ns: HubNamespace, creatorId: string, id: string) {
   return (await hubStore(ns)).getJSON<HubFile>(KEYS.file(creatorId, id));
 }
 
+export async function saveFile(ns: HubNamespace, f: HubFile) {
+  f.updatedAt = Date.now();
+  await (await hubStore(ns)).setJSON(KEYS.file(f.creatorId, f.id), f);
+  return f;
+}
+
+/* Asset library folders */
+
+export async function listFolders(ns: HubNamespace, creatorId: string) {
+  const all = await readAll<AssetFolder>(await hubStore(ns), KEYS.folders(creatorId));
+  return all.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+}
+
+export async function getFolder(ns: HubNamespace, creatorId: string, id: string) {
+  return (await hubStore(ns)).getJSON<AssetFolder>(KEYS.folder(creatorId, id));
+}
+
+export async function saveFolder(ns: HubNamespace, f: AssetFolder) {
+  await (await hubStore(ns)).setJSON(KEYS.folder(f.creatorId, f.id), f);
+  return f;
+}
+
+export async function deleteFolder(ns: HubNamespace, f: AssetFolder) {
+  await (await hubStore(ns)).del(KEYS.folder(f.creatorId, f.id));
+}
+
 /* ---------------------------------------------------------------------------
    Orders and payouts
    --------------------------------------------------------------------------- */
@@ -391,21 +418,23 @@ export async function countInviteUse(ns: HubNamespace, code: string) {
    --------------------------------------------------------------------------- */
 
 export async function creatorWorkspace(ns: HubNamespace, creatorId: string) {
-  const [creator, products, experiences, files, activity, earnings, manager] = await Promise.all([
-    getCreator(ns, creatorId),
-    listProducts(ns, creatorId),
-    listExperiences(ns, creatorId),
-    listFiles(ns, creatorId),
-    listActivity(ns, creatorId),
-    earningsFor(ns, creatorId),
-    getManager(ns, creatorId),
-  ]);
+  const [creator, products, experiences, files, folders, activity, earnings, manager] =
+    await Promise.all([
+      getCreator(ns, creatorId),
+      listProducts(ns, creatorId),
+      listExperiences(ns, creatorId),
+      listFiles(ns, creatorId),
+      listFolders(ns, creatorId),
+      listActivity(ns, creatorId),
+      earningsFor(ns, creatorId),
+      getManager(ns, creatorId),
+    ]);
   const scans = await scansFor(
     ns,
     creatorId,
     products.map((p) => p.id),
   );
-  return { creator, products, experiences, files, activity, earnings, manager, scans };
+  return { creator, products, experiences, files, folders, activity, earnings, manager, scans };
 }
 
 export { HUB };

@@ -221,6 +221,15 @@
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=0, must-revalidate"
 
+# /hub-viewer/ is the Creator Hub asset library's 3D preview, framed by the hub
+# (same origin) and reading only /api/hub/files/ paths. Unlisted; revalidated
+# like the shelf, since its file name isn't versioned.
+[[headers]]
+  for = "/hub-viewer/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # /ar/ is the "View in your space" page the desktop AR QR code opens on a phone. Unlisted.
 [[headers]]
   for = "/ar/*"
