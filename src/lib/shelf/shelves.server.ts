@@ -62,6 +62,7 @@ export function summarizeShelf(doc: ShelfDoc): ShelfSummary {
         doc.owner.partnerId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
       : null,
     isDefault: !!doc.owner?.isDefault,
+    creatorId: doc.owner?.creatorId ?? null,
   };
 }
 

@@ -1,5 +1,7 @@
 import { getRequest } from "@tanstack/react-start/server";
 
+import { ensurePartnerCreatorShelves } from "@/lib/shelf/partner-seed.server";
+
 import { claimEmail, findUserByEmail, hashPassword, saveUser, type HubUser } from "./auth.server";
 import { CURRENT, agreementText, termsFor } from "./agreements";
 import {
@@ -24,6 +26,7 @@ import {
   SKUS,
   type Experience,
   type HubFile,
+  type Invite,
   type Order,
   type Product,
   type ScanStats,
@@ -31,7 +34,7 @@ import {
   type StageId,
 } from "./model";
 import { SNOWDAY_PRESET } from "./partners";
-import { getPartner, saveMember, savePartner, saveSignature } from "./partners.server";
+import { getPartner, listMembers, saveMember, savePartner, saveSignature } from "./partners.server";
 import { KEYS, hubStore, newId, sha256Hex, type HubNamespace } from "./store.server";
 
 // A complete sample creator for deploy previews and localhost: an account you
@@ -88,7 +91,7 @@ export async function seedSampleCreator(ns: HubNamespace) {
     approvedAt: now - 68 * DAY,
     intakeStep: 4,
     revenueShare: 0.2,
-    agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
+    agency: { ...SNOWDAY_AGENCY },
     inviteCode: SNOWDAY_PRESET.id,
   });
   creator.profile = {
@@ -613,15 +616,82 @@ export const SAMPLE_PARTNER_LOGIN = {
   password: "partner-hub-demo",
 } as const;
 
+/** Snowday's contact for the program, who brings the sample creators in. */
+const SNOWDAY_REP = "Fay Chukwueke";
+/** Her own invite link: the code createPartnerLink derives for her name. */
+const SNOWDAY_REP_CODE = "snowday-fay-chukwueke";
+const SNOWDAY_AGENCY = { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: SNOWDAY_REP };
+
 /**
- * Snowday Media as a sample partner: the partner, its default invite link, a
- * team admin you can sign in as, and two more creators at earlier steps so the
- * Partner Hub has a pipeline to show. Safe to run again.
+ * Snowday Media's own creators, as listed on snowdaymedia.ca: handles and
+ * audiences from their channels, contact emails in the agency's format. No
+ * orders or earnings: they're new to the program. Avatars (cropped from
+ * Snowday's roster cards) live in public/partner-kit/snowday/creators/.
+ */
+const SNOWDAY_CREATORS: Array<{
+  name: string;
+  /** file name in public/partner-kit/snowday/creators/ and the email's local part */
+  key: string;
+  status: "submitted" | "approved";
+  signed: boolean;
+  /** applied this many days ago */
+  days: number;
+  bio: string;
+  categories: string[];
+  youtube: { handle: string; audience: number };
+  x: { handle: string; audience: number };
+}> = [
+  {
+    name: "JellyBean",
+    key: "jellybean",
+    status: "approved",
+    signed: true,
+    days: 12,
+    bio: "Variety gaming.",
+    categories: ["Gaming", "Variety"],
+    youtube: { handle: "@JellyBean", audience: 6_150_000 },
+    x: { handle: "@BeanNotHere", audience: 159_100 },
+  },
+  {
+    name: "SmokeeBee",
+    key: "smokeebee",
+    status: "approved",
+    signed: false,
+    days: 8,
+    bio: "Art and animation, and gaming.",
+    categories: ["Animation / Art", "Gaming"],
+    youtube: { handle: "@SmokeeBee", audience: 2_100_000 },
+    x: { handle: "@Smokee_Bee", audience: 36_200 },
+  },
+  {
+    name: "Augusttheduck",
+    key: "augusttheduck",
+    status: "submitted",
+    signed: false,
+    days: 1,
+    bio: "Commentary and creator news.",
+    categories: ["Commentary"],
+    youtube: { handle: "@augusttheduck", audience: 2_160_000 },
+    x: { handle: "@oohgust", audience: 10_100 },
+  },
+];
+
+const snowdayAvatar = (key: string) => `/partner-kit/snowday/creators/${key}.webp`;
+
+/** Made-up creators earlier versions of this seed tied to Snowday. */
+const RETIRED_SAMPLE_EMAILS = ["frostbyte@sample.test", "mochilune@sample.test"];
+
+/**
+ * Snowday Media as a sample partner: the partner, its invite links, a team
+ * admin you can sign in as (Fay), Snowday's real creators at different steps,
+ * and a live merch shelf already built for each of them. Safe to run again,
+ * and it brings stores seeded by earlier versions up to date.
  */
 async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | null) {
   const now = Date.now();
-  if (!(await getPartner(ns, SNOWDAY_PRESET.id))) {
-    await savePartner(ns, {
+  let partner = await getPartner(ns, SNOWDAY_PRESET.id);
+  if (!partner) {
+    partner = await savePartner(ns, {
       ...SNOWDAY_PRESET,
       brand: { ...SNOWDAY_PRESET.brand },
       status: "active",
@@ -638,30 +708,58 @@ async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | nul
       rep: "",
       note: "Default link",
       createdAt: now - 75 * DAY,
-      uses: 3,
+      uses: 1,
       archived: false,
     });
+  }
+  if (!(await getInvite(ns, SNOWDAY_REP_CODE))) {
     await saveInvite(ns, {
-      code: "snowday-alex",
+      code: SNOWDAY_REP_CODE,
       agencyId: SNOWDAY_PRESET.id,
       agencyName: SNOWDAY_PRESET.name,
-      rep: "Alex",
-      note: "VTuber outreach",
+      rep: SNOWDAY_REP,
+      note: "Snowday roster",
       createdAt: now - 72 * DAY,
-      uses: 2,
+      uses: SNOWDAY_CREATORS.length,
       archived: false,
     });
   }
+  // Earlier versions made a link for a made-up rep, Alex; nothing uses it now.
+  // Read directly: getInvite hides archived links.
+  const store = await hubStore(ns);
+  const oldLink = await store.getJSON<Invite>(KEYS.invite("snowday-alex"));
+  if (oldLink?.agencyId === SNOWDAY_PRESET.id && oldLink.rep === "Alex")
+    await store.del(KEYS.invite(oldLink.code));
+
   if (sampleCreatorId) {
     const c = await getCreator(ns, sampleCreatorId);
-    if (c && c.agency?.id !== SNOWDAY_PRESET.id)
-      await saveCreator(ns, {
-        ...c,
-        agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
-      });
+    if (c && (c.agency?.id !== SNOWDAY_PRESET.id || c.agency.rep !== SNOWDAY_REP))
+      await saveCreator(ns, { ...c, agency: { ...SNOWDAY_AGENCY } });
   }
 
-  if (await findUserByEmail(ns, SAMPLE_PARTNER_LOGIN.email)) return;
+  await seedSamplePartnerAdmin(ns, now);
+  await retireOldSampleCreators(ns);
+
+  const shelfFor: Array<{ id: string; name: string; logo: string; handle: string }> = [];
+  for (const sc of SNOWDAY_CREATORS) {
+    const id = await seedSnowdayCreator(ns, sc, now);
+    if (id)
+      shelfFor.push({ id, name: sc.name, logo: snowdayAvatar(sc.key), handle: sc.youtube.handle });
+  }
+  // Their shelves, already built and live. The hub and the shelves share a namespace.
+  await ensurePartnerCreatorShelves(ns, partner, shelfFor);
+}
+
+/** The team admin you sign in as. Renames the earlier "Alex (Snowday)" in place. */
+async function seedSamplePartnerAdmin(ns: HubNamespace, now: number) {
+  const existing = await findUserByEmail(ns, SAMPLE_PARTNER_LOGIN.email);
+  if (existing) {
+    if (existing.name !== SNOWDAY_REP) await saveUser(ns, { ...existing, name: SNOWDAY_REP });
+    const member = (await listMembers(ns, SNOWDAY_PRESET.id)).find((m) => m.userId === existing.id);
+    if (member && member.name !== SNOWDAY_REP)
+      await saveMember(ns, { ...member, name: SNOWDAY_REP });
+    return;
+  }
   const userId = newId();
   if (!(await claimEmail(ns, SAMPLE_PARTNER_LOGIN.email, userId))) return;
   await saveUser(ns, {
@@ -672,7 +770,7 @@ async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | nul
     discord: null,
     creatorId: null,
     partner: { id: SNOWDAY_PRESET.id, role: "admin" },
-    name: "Alex (Snowday)",
+    name: SNOWDAY_REP,
     createdAt: now - 74 * DAY,
     lastLoginAt: null,
     disabled: false,
@@ -681,52 +779,123 @@ async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | nul
     userId,
     partnerId: SNOWDAY_PRESET.id,
     email: SAMPLE_PARTNER_LOGIN.email,
-    name: "Alex (Snowday)",
+    name: SNOWDAY_REP,
     role: "admin",
     joinedAt: now - 74 * DAY,
     invitedBy: "The MEDIALIFE team",
   });
+}
 
-  // Two more creators, earlier in the journey.
-  const more: Array<{ name: string; status: "submitted" | "approved"; days: number }> = [
-    { name: "Frostbyte", status: "submitted", days: 2 },
-    { name: "Mochi Lune", status: "approved", days: 9 },
-  ];
-  for (const m of more) {
-    const uid = newId();
-    const email = `${m.name.toLowerCase().replace(/[^a-z]/g, "")}@sample.test`;
-    if (!(await claimEmail(ns, email, uid))) continue;
-    const c = await createCreator(ns, uid, email);
-    Object.assign(c, {
-      status: m.status,
-      submittedAt: now - m.days * DAY,
-      approvedAt: m.status === "approved" ? now - (m.days - 2) * DAY : null,
-      intakeStep: 4,
-      revenueShare: 0.2,
-      agency: { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: "Alex" },
-      inviteCode: "snowday-alex",
+/**
+ * Takes the made-up creators earlier versions seeded (Frostbyte, Mochi Lune)
+ * off every list: their profile and index entry go, their login is disabled.
+ * Only ever those sample addresses, and only while they're tied to Snowday.
+ */
+async function retireOldSampleCreators(ns: HubNamespace) {
+  const store = await hubStore(ns);
+  for (const email of RETIRED_SAMPLE_EMAILS) {
+    const user = await findUserByEmail(ns, email);
+    if (!user?.creatorId) continue;
+    const c = await getCreator(ns, user.creatorId);
+    if (c && c.agency?.id !== SNOWDAY_PRESET.id) continue;
+    const id = user.creatorId;
+    await store.del(KEYS.creator(id));
+    await store.update<Record<string, unknown>>(KEYS.creatorIndex(), (cur) => {
+      const next = { ...(cur ?? {}) };
+      delete next[id];
+      return next;
     });
-    c.profile = { ...c.profile, displayName: m.name, email };
-    c.channels = [
-      {
-        platform: "twitch",
-        handle: m.name.toLowerCase().replace(/\s/g, ""),
-        url: null,
-        audience: m.status === "approved" ? 48_000 : 12_500,
-        primary: true,
-      },
-    ];
-    await saveCreator(ns, c);
-    await saveUser(ns, {
-      id: uid,
-      email,
-      emailVerified: true,
-      passwordHash: null,
-      discord: null,
-      creatorId: c.id,
-      createdAt: now - m.days * DAY,
-      lastLoginAt: null,
-      disabled: false,
+    await saveUser(ns, { ...user, creatorId: null, disabled: true });
+  }
+}
+
+/** One of Snowday's creators; returns their creator id (made now or before). */
+async function seedSnowdayCreator(
+  ns: HubNamespace,
+  sc: (typeof SNOWDAY_CREATORS)[number],
+  now: number,
+): Promise<string | null> {
+  const email = `${sc.key}@snwdy.ca`;
+  const existing = await findUserByEmail(ns, email);
+  if (existing) return existing.creatorId;
+  const uid = newId();
+  if (!(await claimEmail(ns, email, uid))) return null;
+  const c = await createCreator(ns, uid, email);
+  const submittedAt = now - sc.days * DAY;
+  const approvedAt = sc.status === "approved" ? submittedAt + 2 * DAY : null;
+  Object.assign(c, {
+    status: sc.status,
+    createdAt: submittedAt - DAY,
+    submittedAt,
+    approvedAt,
+    intakeStep: 4,
+    revenueShare: 0.2,
+    agency: { ...SNOWDAY_AGENCY },
+    inviteCode: SNOWDAY_REP_CODE,
+  });
+  c.profile = {
+    ...c.profile,
+    displayName: sc.name,
+    email,
+    bio: sc.bio,
+    categories: sc.categories,
+  };
+  c.channels = [
+    {
+      platform: "youtube",
+      handle: sc.youtube.handle,
+      url: `https://www.youtube.com/${sc.youtube.handle}`,
+      audience: sc.youtube.audience,
+      primary: true,
+    },
+    {
+      platform: "x",
+      handle: sc.x.handle,
+      url: `https://x.com/${sc.x.handle.replace(/^@/, "")}`,
+      audience: sc.x.audience,
+      primary: false,
+    },
+  ];
+  c.contact = { ...c.contact, managerName: SNOWDAY_REP };
+  c.consent = { termsAt: submittedAt, marketing: false };
+  await saveCreator(ns, c);
+  await saveUser(ns, {
+    id: uid,
+    email,
+    emailVerified: true,
+    passwordHash: null,
+    discord: null,
+    creatorId: c.id,
+    createdAt: submittedAt - DAY,
+    lastLoginAt: null,
+    disabled: false,
+  });
+  if (approvedAt) {
+    await logActivity(ns, c.id, {
+      kind: "application",
+      title: "Application approved",
+      body: "Welcome to the Activated Merchandise Program.",
+      at: approvedAt,
     });
   }
+  if (approvedAt && sc.signed) {
+    const terms = termsFor(c);
+    await saveSignature(ns, {
+      id: newId(8),
+      creatorId: c.id,
+      agreementId: CURRENT.id,
+      version: CURRENT.version,
+      title: CURRENT.title,
+      signedName: c.profile.legalName || c.profile.displayName,
+      legalName: c.profile.legalName,
+      email,
+      terms,
+      textHash: await sha256Hex(agreementText(CURRENT, terms)),
+      signedAt: approvedAt + DAY,
+      ip: "sample",
+      userAgent: "sample",
+      guardian: null,
+    });
+  }
+  return c.id;
 }

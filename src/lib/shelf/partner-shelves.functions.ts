@@ -4,23 +4,23 @@ import { z } from "zod";
 
 import { releaseGenerated } from "@/lib/ar/assets.server";
 import { purgeCacheTags } from "@/lib/ar/cdn.server";
-import { namespaceFromRequest, type ArNamespace } from "@/lib/ar/store.server";
-import { listInvites } from "@/lib/hub/data.server";
-import type { Partner } from "@/lib/hub/partners";
+import { namespaceFromRequest } from "@/lib/ar/store.server";
+import { getCreator, listInvites } from "@/lib/hub/data.server";
 import { requirePartner } from "@/lib/hub/session.server";
 
 import { shelfConfigSchema, type ShelfConfig } from "./config";
 import { partnerShelfConfig } from "./partner-presets";
-import { shelfSlugSchema, shelfSlugify, type ShelfDoc } from "./shelves";
+import { ensureDefaultShelf, ownedShelves, ownsShelf as owns } from "./partner-seed.server";
+import { shelfSlugSchema, shelfSlugify, type ShelfStatus } from "./shelves";
 import {
   createShelf,
   deleteShelf,
   freeShelfSlug,
   publishShelf,
-  readAllShelves,
   readShelf,
   renameShelf,
   saveShelfDraft,
+  shelfStatus,
   snapshotRef,
   summarizeShelf,
 } from "./shelves.server";
@@ -32,32 +32,8 @@ import {
 
 const shelfNs = () => namespaceFromRequest(getRequest());
 
-const owns = (doc: ShelfDoc | null, partnerId: string): doc is ShelfDoc =>
-  !!doc && doc.owner?.kind === "partner" && doc.owner.partnerId === partnerId;
-
-async function ownedShelves(ns: ArNamespace, partnerId: string) {
-  return (await readAllShelves(ns))
-    .filter((d) => owns(d, partnerId))
-    .sort(
-      (a, b) =>
-        Number(!!b.owner?.isDefault) - Number(!!a.owner?.isDefault) || b.updatedAt - a.updatedAt,
-    );
-}
-
-/** The partner's starting shelf, made (and put live) the first time it's needed. */
-async function ensureDefault(ns: ArNamespace, partner: Partner) {
-  const mine = await ownedShelves(ns, partner.id);
-  if (mine.length) return mine;
-  const slug = await freeShelfSlug(ns, partner.id);
-  await createShelf(ns, {
-    slug,
-    name: `${partner.name} shelf`,
-    config: partnerShelfConfig(partner),
-    owner: { kind: "partner", partnerId: partner.id, partnerName: partner.name, isDefault: true },
-    publish: true,
-  });
-  return ownedShelves(ns, partner.id);
-}
+/** A Creator Hub creator id, as the hub's own routes accept it. */
+const creatorIdSchema = z.string().regex(/^[A-Za-z0-9]{6,60}$/);
 
 async function teamCodes(partnerId: string) {
   const { ns } = await requirePartner();
@@ -88,7 +64,7 @@ export const partnerShelvesFn = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { partner } = await requirePartner();
     const ns = shelfNs();
-    const mine = await ensureDefault(ns, partner);
+    const mine = await ensureDefaultShelf(ns, partner);
     const current = mine.find((d) => d.slug === data.slug) ?? mine[0];
     return {
       shelves: mine.map(summarizeShelf),
@@ -105,11 +81,23 @@ export const partnerCreateShelfFn = createServerFn({ method: "POST" })
       /** "preset" = the partner's starting design; "copy" = a copy of `from` */
       start: z.enum(["preset", "copy", "blank"]),
       from: shelfSlugSchema.optional(),
+      /** One of the team's creators: the shelf then shows on their page. */
+      creatorId: creatorIdSchema.optional(),
     }),
   )
   .handler(async ({ data }) => {
-    const { partner } = await requirePartner();
+    const { partner, ns: hubNs } = await requirePartner();
     const ns = shelfNs();
+    if (data.creatorId) {
+      const creator = await getCreator(hubNs, data.creatorId);
+      if (creator?.agency?.id !== partner.id)
+        return { ok: false as const, error: "That creator isn't on your team." };
+      // One shelf per creator from here: a second click opens the first.
+      const have = (await ownedShelves(ns, partner.id)).find(
+        (d) => d.owner?.creatorId === data.creatorId,
+      );
+      if (have) return { ok: true as const, slug: have.slug };
+    }
     let config: ShelfConfig;
     if (data.start === "copy") {
       const src = data.from ? await readShelf(ns, data.from) : null;
@@ -132,12 +120,42 @@ export const partnerCreateShelfFn = createServerFn({ method: "POST" })
       name: data.label || `${data.creator} · ${partner.name}`,
       creator: data.creator,
       config,
-      owner: { kind: "partner", partnerId: partner.id, partnerName: partner.name },
+      owner: {
+        kind: "partner",
+        partnerId: partner.id,
+        partnerName: partner.name,
+        ...(data.creatorId ? { creatorId: data.creatorId } : {}),
+      },
     });
     return r.ok
       ? { ok: true as const, slug: r.doc.slug }
       : { ok: false as const, error: "Couldn't create it. Try again." };
   });
+
+export type CreatorShelf = {
+  slug: string;
+  status: ShelfStatus;
+  /** "/api/ar/asset/<id>" once published from the builder, else null */
+  snapshot: string | null;
+  updatedAt: number;
+};
+
+/** creatorId → the team's shelf for that creator (the newest, if there are several). */
+export const partnerCreatorShelvesFn = createServerFn({ method: "GET" }).handler(async () => {
+  const { partner } = await requirePartner();
+  const out: Record<string, CreatorShelf> = {};
+  for (const d of await ownedShelves(shelfNs(), partner.id)) {
+    const id = d.owner?.creatorId;
+    if (!id || out[id]) continue;
+    out[id] = {
+      slug: d.slug,
+      status: shelfStatus(d),
+      snapshot: snapshotRef(d.snapshotAssetId),
+      updatedAt: d.updatedAt,
+    };
+  }
+  return out;
+});
 
 export const partnerSaveShelfDraftFn = createServerFn({ method: "POST" })
   .validator(

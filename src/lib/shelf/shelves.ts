@@ -80,9 +80,16 @@ export interface ShelfDoc {
   /**
    * A partner's own shelf, made in the Partner Hub (/partner-hub/shelves).
    * Absent = the MEDIALIFE team's. `isDefault` marks the shelf the hub starts
-   * every partner with (it can be reset, not deleted).
+   * every partner with (it can be reset, not deleted). `creatorId` ties a shelf
+   * to one of the partner's creators in the Creator Hub, so their page shows it.
    */
-  owner?: { kind: "partner"; partnerId: string; partnerName?: string; isDefault?: boolean };
+  owner?: {
+    kind: "partner";
+    partnerId: string;
+    partnerName?: string;
+    isDefault?: boolean;
+    creatorId?: string;
+  };
 }
 
 export type ShelfStatus = "draft" | "published" | "changed";
@@ -104,6 +111,8 @@ export interface ShelfSummary {
   /** The partner team's name, for the admin's list. */
   partnerName: string | null;
   isDefault: boolean;
+  /** The Creator Hub creator a partner made it for, or null. */
+  creatorId: string | null;
 }
 
 export const shelfDemoId = (slug: string) => `shelf:${slug}`;

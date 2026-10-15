@@ -16,9 +16,11 @@ import { TrendChart } from "@/components/hub/app/earnings-chart";
 import { CopyButton, EmptyState, Facts, Monogram, Pill, TimeAgo } from "@/components/hub/app/ui";
 import { AssetDetails } from "@/components/hub/assets/details";
 import { AssetThumb } from "@/components/hub/assets/shared";
+import { MerchShelfCard } from "@/components/partner/creator-shelf";
 import { CreatorStatusPill, JourneyTrack } from "@/components/partner/parts";
 import { Page } from "@/components/hub/app/ui";
 import { PartnerTab, PartnerTabs, Surface } from "@/components/partner/ui";
+import { usePartnerWorkspace } from "@/components/partner/workspace";
 import { Button } from "@/components/ui/button";
 import { getPartnerCreator } from "@/lib/hub/partner.functions";
 import {
@@ -59,6 +61,7 @@ const pct = (n: number) => `${Math.round(n * 1000) / 10}%`;
 
 function CreatorDetail() {
   const d = Route.useLoaderData();
+  const ws = usePartnerWorkspace();
   const [file, setFile] = useState<HubFile | null>(null);
   const [tab, setTab] = useState<"overview" | "products" | "sales" | "files" | "activity">(
     "overview",
@@ -123,6 +126,14 @@ function CreatorDetail() {
           <JourneyTrack current={row.journey} status={c.status} className="mt-3" />
         </div>
       </Surface>
+
+      <MerchShelfCard
+        creatorId={c.id}
+        name={row.displayName}
+        kit={ws.partner.kit}
+        origin={ws.origin}
+        className="mt-4"
+      />
 
       <PartnerTabs
         tabs={[

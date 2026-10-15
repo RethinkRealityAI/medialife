@@ -4,6 +4,7 @@ import { Search, UsersRound } from "lucide-react";
 import { z } from "zod";
 
 import { EmptyState, Monogram, Page } from "@/components/hub/app/ui";
+import { CreatorShelfStatus, useCreatorShelves } from "@/components/partner/creator-shelf";
 import { CreatorStatusPill, JourneyFunnel, JourneyTrack } from "@/components/partner/parts";
 import { PartnerBanner } from "@/components/partner/ui";
 import { usePartnerWorkspace } from "@/components/partner/workspace";
@@ -33,6 +34,7 @@ function Creators() {
   const { step } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [q, setQ] = useState("");
+  const shelves = useCreatorShelves();
 
   const counts = useMemo(() => {
     const c = Object.fromEntries(JOURNEY.map((s) => [s.id, 0])) as Record<JourneyStep, number>;
@@ -100,32 +102,39 @@ function Creators() {
           {shown.length ? (
             <ul className="mt-3 divide-y divide-white/[0.06] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(180deg,rgb(255_255_255/0.05),rgb(255_255_255/0.015))] shadow-[0_20px_40px_-24px_rgb(0_0_0/0.9)]">
               {shown.map((c) => (
-                <li key={c.id}>
-                  <Link
-                    to="/partner-hub/creators/$creatorId"
-                    params={{ creatorId: c.id }}
-                    className="grid grid-cols-1 gap-3 p-4 hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset @3xl/inset:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_8rem] @3xl/inset:items-center"
-                  >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <Monogram name={c.displayName} />
-                      <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="truncate font-medium">{c.displayName}</span>
-                          <CreatorStatusPill status={c.status} />
-                        </span>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                          {[
-                            c.platforms.map((p) => PLATFORMS[p]?.label ?? p).join(", "),
-                            c.audience ? `${compact(c.audience)} audience` : null,
-                            c.rep ? `via ${c.rep}` : null,
-                            `joined ${shortDate(c.joinedAt)}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
+                // The name is the row's link, stretched over it, so the shelf
+                // control can sit on top without nesting a link in a link.
+                <li
+                  key={c.id}
+                  className="relative grid grid-cols-1 gap-3 p-4 focus-within:bg-white/[0.03] hover:bg-white/[0.03] @3xl/inset:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_8rem_8.5rem] @3xl/inset:items-center"
+                >
+                  <span className="flex min-w-0 items-center gap-3">
+                    <Monogram name={c.displayName} />
+                    <span className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Link
+                          to="/partner-hub/creators/$creatorId"
+                          params={{ creatorId: c.id }}
+                          className="truncate font-medium after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
+                        >
+                          {c.displayName}
+                        </Link>
+                        <CreatorStatusPill status={c.status} />
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        {[
+                          c.platforms.map((p) => PLATFORMS[p]?.label ?? p).join(", "),
+                          c.audience ? `${compact(c.audience)} audience` : null,
+                          c.rep ? `via ${c.rep}` : null,
+                          `joined ${shortDate(c.joinedAt)}`,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </span>
                     </span>
-                    <JourneyTrack current={c.journey} status={c.status} />
+                  </span>
+                  <JourneyTrack current={c.journey} status={c.status} />
+                  <span className="flex items-center justify-between gap-3 @3xl/inset:contents">
                     <span className="text-sm tabular-nums @3xl/inset:text-right">
                       {c.products ? (
                         <>
@@ -140,7 +149,14 @@ function Creators() {
                         <span className="text-xs text-muted-foreground">No products yet</span>
                       )}
                     </span>
-                  </Link>
+                    <CreatorShelfStatus
+                      creatorId={c.id}
+                      name={c.displayName}
+                      shelf={shelves.data?.[c.id]}
+                      loading={shelves.isPending}
+                      className="relative z-10 flex justify-end"
+                    />
+                  </span>
                 </li>
               ))}
             </ul>
