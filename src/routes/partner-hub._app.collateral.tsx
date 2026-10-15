@@ -271,7 +271,7 @@ function Collateral() {
 
         <PartnerTab value="gifs">
           <TabIntro>
-            Five short loops, each under 2 MB, made to drop into an email or a DM.
+            {gifCount} short loops, each under 2 MB, made to drop into an email or a DM.
           </TabIntro>
           <GifsPanel origin={ws.origin} link={programUrl(ws, invite)} hidden={hidden} />
           <Added

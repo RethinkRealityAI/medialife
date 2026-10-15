@@ -91,6 +91,16 @@ export const MEDIALIFE_VIDEOS: KitVideo[] = [
     duration: "0:08",
     ...hosted("building-sakamoto"),
   },
+  // The explainer: how a fan activates a tee. First among the products.
+  {
+    id: "yt-activate-tees",
+    category: "product",
+    title: "How to activate NFC tees",
+    what: "Hold a phone to the tag and the tee's experience opens. No app.",
+    tag: "T-shirt · NFC",
+    duration: "Short",
+    ...yt("DjvVaDR68oY", "yt-activate-tees"),
+  },
   {
     id: "yt-tshirt-initial-d",
     category: "product",
