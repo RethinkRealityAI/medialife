@@ -15,12 +15,14 @@ import {
   LogOut,
   Menu,
   Sparkles,
+  Store,
   Users,
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { GlassTabBar } from "@/components/glass/tab-bar";
 import { HubLink } from "@/components/hub/app/app-shell";
 import { Monogram } from "@/components/hub/app/ui";
 import {
@@ -65,11 +67,20 @@ export const PARTNER_NAV: NavItem[] = [
   { to: `${PARTNER_BASE}/creators`, label: "Creators", icon: UsersRound },
   { to: `${PARTNER_BASE}/collateral`, label: "Collateral", icon: FolderOpen },
   { to: `${PARTNER_BASE}/playbook`, label: "Playbook", icon: BookOpen },
+  { to: `${PARTNER_BASE}/shelves`, label: "Merch shelves", icon: Store },
   { to: `${PARTNER_BASE}/links`, label: "Links & demos", icon: Link2 },
   { to: `${PARTNER_BASE}/team`, label: "Team", icon: Users },
 ];
-const TABS = PARTNER_NAV.slice(0, 4);
-const MORE = PARTNER_NAV.slice(4);
+/** Phones: four tabs and More. The shelf builder is the star, so it stands out. */
+const TAB_PATHS = [
+  PARTNER_BASE,
+  `${PARTNER_BASE}/creators`,
+  `${PARTNER_BASE}/shelves`,
+  `${PARTNER_BASE}/collateral`,
+];
+const TABS = TAB_PATHS.map((to) => PARTNER_NAV.find((n) => n.to === to)!);
+const MORE = PARTNER_NAV.filter((n) => !TAB_PATHS.includes(n.to));
+const SHORT: Record<string, string> = { "Merch shelves": "Shelves" };
 
 function useCurrent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname }).replace(/\/$/, "");
@@ -226,7 +237,7 @@ export function PartnerShell({
       </Sidebar>
 
       <SidebarInset className="@container/inset min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur-xl sm:gap-3">
+        <header className="glass-strong sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 rounded-none border-x-0 border-t-0 px-4 sm:gap-3">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Link to="/partner-hub" className="-ml-1 md:hidden" aria-label="Partner Hub home">
             <PartnerMark kit={partner.kit} />
@@ -283,60 +294,36 @@ export function PartnerShell({
         </main>
       </SidebarInset>
 
-      <nav
-        aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 backdrop-blur-xl md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        <ul className="mx-auto grid max-w-lg grid-cols-5">
-          {TABS.map((item) => {
-            const active = current?.to === item.to;
-            return (
-              <li key={item.to}>
-                <HubLink
-                  to={item.to}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "relative flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium focus-visible:bg-white/5 focus-visible:outline-none",
-                    active ? "text-[var(--partner)]" : "text-muted-foreground",
-                  )}
-                >
-                  <item.icon className="size-5" aria-hidden />
-                  {item.label}
-                  {active ? (
-                    <span
-                      aria-hidden
-                      className="absolute top-0 h-0.5 w-8 rounded-full bg-[var(--partner)]"
-                    />
-                  ) : null}
-                </HubLink>
-              </li>
-            );
-          })}
-          <li>
-            <button
-              type="button"
-              onClick={() => setMoreOpen(true)}
-              aria-haspopup="dialog"
-              aria-expanded={moreOpen}
-              className={cn(
-                "relative flex h-16 w-full flex-col items-center justify-center gap-1 text-[11px] font-medium focus-visible:bg-white/5 focus-visible:outline-none",
-                current && MORE.includes(current)
-                  ? "text-[var(--partner)]"
-                  : "text-muted-foreground",
-              )}
-            >
-              <Menu className="size-5" aria-hidden />
-              More
-            </button>
-          </li>
-        </ul>
-      </nav>
+      <GlassTabBar
+        tabs={[
+          ...TABS.map((item) => ({
+            key: item.to,
+            label: SHORT[item.label] ?? item.label,
+            icon: item.icon,
+            to: item.to,
+            active: current?.to === item.to,
+            highlight: item.to === `${PARTNER_BASE}/shelves`,
+          })),
+          {
+            key: "more",
+            label: "More",
+            icon: Menu,
+            onClick: () => setMoreOpen(true),
+            expanded: moreOpen,
+            active: !!current && MORE.includes(current),
+          },
+        ]}
+        renderLink={({ to, className, children, ...rest }) => (
+          <HubLink to={to} className={className} aria-current={rest["aria-current"]}>
+            {children}
+          </HubLink>
+        )}
+      />
 
       <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl border-border px-4 pt-5"
+          className="glass-strong rounded-t-[28px] px-4 pt-5"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
         >
           <SheetHeader className="text-left">

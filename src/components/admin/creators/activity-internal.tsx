@@ -10,6 +10,7 @@ import {
   MessageSquare,
   ShoppingBag,
   Sparkles,
+  UserCog,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -20,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { adminUpdateCreator } from "@/lib/hub/admin.functions";
 import type { ActivityKind } from "@/lib/hub/model";
 
-import { Panel, PanelTitle } from "../kit";
+import { EmptyState, IconTile, Panel, PanelTitle } from "../kit";
 import type { CreatorDetail } from "./types";
 import { Ago, ChipsInput, Field, Pill, useRun } from "./ui";
 
@@ -50,23 +51,38 @@ export function ActivityTab({
     <Panel>
       <PanelTitle
         className="p-4 sm:p-5"
+        icon={Layers}
+        tone="sky"
         title="Activity"
         sub="What the creator sees in their feed, newest first."
       />
       {!items.length ? (
-        <p className="border-t border-border px-4 py-10 text-center text-sm text-muted-foreground">
-          Nothing yet.
-        </p>
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <EmptyState icon={Layers} tone="slate" title="Nothing yet">
+            Applications, stage changes, proofs and orders show up here.
+          </EmptyState>
+        </div>
       ) : (
-        <ol className="divide-y divide-border border-t border-border">
+        <ol className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
           {items.map((a) => {
             const Icon = ICONS[a.kind] ?? Layers;
             const pname = a.productId ? products.get(a.productId) : null;
             return (
               <li key={a.id} className="flex gap-3 px-4 py-3 sm:px-5">
-                <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md border border-border bg-white/[0.03] text-muted-foreground">
-                  <Icon className="size-3.5" aria-hidden />
-                </span>
+                <IconTile
+                  icon={Icon}
+                  size="sm"
+                  tone={
+                    a.actionable
+                      ? "amber"
+                      : a.kind === "order" || a.kind === "payout"
+                        ? "mint"
+                        : a.kind === "experience"
+                          ? "violet"
+                          : "slate"
+                  }
+                  className="mt-0.5"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                     <span className="text-sm font-medium">{a.title}</span>
@@ -153,10 +169,7 @@ export function InternalTab({ data }: { data: CreatorDetail }) {
       }}
     >
       <Panel className="border-amber-400/25 p-4 sm:p-5 @5xl/inset:row-span-2">
-        <div className="flex items-center gap-2 text-amber-200">
-          <Lock className="size-4" aria-hidden />
-          <span className="text-sm font-medium">Never shown to the creator</span>
-        </div>
+        <PanelTitle icon={Lock} tone="amber" title="Team notes" sub="Never shown to the creator." />
         <Field
           label="Internal notes"
           htmlFor={`${uid}-notes`}
@@ -184,6 +197,8 @@ export function InternalTab({ data }: { data: CreatorDetail }) {
       </Panel>
       <Panel className="p-4 sm:p-5">
         <PanelTitle
+          icon={UserCog}
+          tone="violet"
           title="Manager"
           sub="The MEDIALIFE person looking after them. The creator sees the name and how to reach them."
         />

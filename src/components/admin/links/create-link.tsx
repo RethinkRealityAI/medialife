@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Plus, RotateCcw } from "lucide-react";
+import { Check, Loader2, Plus, RotateCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -284,8 +284,10 @@ export function CreateLink({
   const preview = effectiveCode && origin ? shareUrl(origin, { demo, code: effectiveCode }) : null;
 
   return (
-    <Panel className="p-4 sm:p-5">
+    <Panel accent className="p-4 sm:p-5">
       <PanelTitle
+        icon={Wand2}
+        tone="amber"
         title="New client link"
         sub="The demo greets them by name and every visit shows up under their name in Analytics."
       />

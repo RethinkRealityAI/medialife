@@ -36,7 +36,7 @@ export function EmptyState({
         came through a client link), how long they stayed and every step they took.
       </p>
 
-      <ul className="mt-5 divide-y divide-border rounded-lg border border-border">
+      <ul className="mt-5 divide-y divide-white/[0.06] rounded-lg border border-border">
         {DEMOS.map((d) => {
           const url = `${origin}${DEMO_PATHS[d.id]}`;
           return (

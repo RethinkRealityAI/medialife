@@ -1,15 +1,17 @@
 /**
  * The small kit every Creator Hub app screen is built from: page furniture,
- * panels, status pills, empty states and a copy button.
+ * panels, status pills, empty states and a copy button. Surfaces are raised
+ * (a soft drop and a lit top edge) in the same family as the Partner Hub's,
+ * src/components/partner/ui.tsx.
  *
- * Deliberately plainer than the Roblox portal kit: creators read these on
- * phones, so labels are words in sentence case, spacing is generous, and every
- * status carries a word as well as a colour.
+ * Creators read these on phones, so labels are words in sentence case, spacing
+ * is generous, and every status carries a word as well as a colour.
  */
 import { useState, type ReactNode } from "react";
 import { Check, Copy, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
+import { IconTile, accentEdge, surface, type TileTone } from "@/components/partner/ui";
 import { Button } from "@/components/ui/button";
 import { timeAgo, type Tone } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
@@ -18,12 +20,12 @@ import { cn } from "@/lib/utils";
    Page furniture
    --------------------------------------------------------------------------- */
 
-/** Width and gutters for every page. The bottom padding clears the phone tab bar. */
+/** Width and gutters for every page. The bottom padding clears the floating phone tab bar. */
 export function Page({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-6xl px-4 pt-6 pb-32 sm:px-6 md:pb-16 lg:px-8 lg:pt-10",
+        "mx-auto w-full max-w-6xl px-4 pt-5 pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pb-16 lg:px-8 lg:pt-8",
         className,
       )}
     >
@@ -32,24 +34,87 @@ export function Page({ children, className }: { children: ReactNode; className?:
   );
 }
 
+/**
+ * A page's title. With `image`, it's a banner: the picture behind the title,
+ * darkened on the text side (the Partner Hub's banner).
+ */
 export function PageHeader({
   eyebrow,
   title,
   description,
   actions,
   className,
+  image,
+  imageClassName,
 }: {
   eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
   className?: string;
+  image?: string;
+  imageClassName?: string;
 }) {
+  if (image) {
+    return (
+      <header
+        className={cn(
+          "relative isolate overflow-hidden rounded-3xl border bg-[var(--partner-ink)]",
+          accentEdge,
+          "shadow-[0_30px_60px_-34px_color-mix(in_oklab,var(--partner-2)_75%,black)]",
+          className,
+        )}
+      >
+        <img
+          src={image}
+          alt=""
+          className={cn(
+            "absolute inset-y-0 right-0 -z-10 h-full w-full object-cover object-center opacity-90 [mask-image:linear-gradient(90deg,transparent_0%,rgb(0_0_0/0.55)_35%,black_70%)] sm:w-[75%] @4xl/inset:w-[62%]",
+            imageClassName,
+          )}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(8_10_24/0.94)_0%,rgb(8_10_24/0.78)_60%,rgb(8_10_24/0.5)_100%)] sm:bg-[linear-gradient(90deg,rgb(8_10_24/0.6)_0%,transparent_60%)]"
+        />
+        <div
+          aria-hidden
+          className="absolute -top-24 -left-16 -z-10 size-72 rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--partner)_28%,transparent),transparent_70%)] blur-2xl"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-[var(--partner)] to-transparent opacity-80"
+        />
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 p-5 sm:p-7">
+          <div className="max-w-xl min-w-0">
+            {eyebrow ? (
+              <div className="text-[11px] font-semibold tracking-[0.18em] text-[var(--partner)] uppercase">
+                {eyebrow}
+              </div>
+            ) : null}
+            <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+              {title}
+            </h1>
+            {description ? (
+              <div className="mt-1.5 text-sm leading-relaxed text-white/75 sm:text-[15px]">
+                {description}
+              </div>
+            ) : null}
+          </div>
+          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+        </div>
+      </header>
+    );
+  }
   return (
     <header className={cn("flex flex-wrap items-end justify-between gap-x-6 gap-y-4", className)}>
-      <div className="min-w-0 max-w-2xl">
-        {eyebrow ? <div className="text-sm text-muted-foreground">{eyebrow}</div> : null}
-        <h1 className="mt-1 text-2xl font-medium tracking-tight text-balance sm:text-3xl">
+      <div className="max-w-2xl min-w-0">
+        {eyebrow ? (
+          <div className="text-[11px] font-semibold tracking-[0.18em] text-[var(--partner)] uppercase">
+            {eyebrow}
+          </div>
+        ) : null}
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
           {title}
         </h1>
         {description ? (
@@ -88,7 +153,7 @@ export function Section({
       {title ? (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
-            <h2 id={headingId} className="text-lg font-medium tracking-tight">
+            <h2 id={headingId} className="text-lg font-semibold tracking-tight">
               {title}
             </h2>
             {description ? (
@@ -112,16 +177,7 @@ export function Panel({
   className?: string;
   as?: "div" | "li" | "article" | "section";
 }) {
-  return (
-    <As
-      className={cn(
-        "rounded-xl border border-border bg-gradient-to-b from-white/[0.035] to-white/[0.01]",
-        className,
-      )}
-    >
-      {children}
-    </As>
-  );
+  return <As className={cn(surface, className)}>{children}</As>;
 }
 
 /* ---------------------------------------------------------------------------
@@ -176,27 +232,51 @@ export function EmptyState({
   children,
   action,
   className,
+  image,
 }: {
   icon: LucideIcon;
   title: ReactNode;
   children?: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** An optional picture shown softly behind the icon. */
+  image?: string;
 }) {
   return (
     <Panel
       className={cn(
-        "flex flex-col items-center px-6 py-12 text-center sm:py-16",
-        "border-dashed bg-none",
+        "relative isolate flex flex-col items-center overflow-hidden px-6 py-10 text-center sm:py-14",
         className,
       )}
     >
-      <span className="grid grid-cols-1 size-12 place-items-center rounded-full border border-border bg-white/[0.04]">
-        <Icon className="size-5 text-primary" aria-hidden />
+      {image ? (
+        <img
+          src={image}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 -z-10 size-full object-cover opacity-20 [mask-image:radial-gradient(ellipse_at_center,black,transparent_70%)]"
+        />
+      ) : null}
+      <span
+        aria-hidden
+        className="absolute top-0 left-1/2 -z-10 h-40 w-72 -translate-x-1/2 rounded-full bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--partner)_22%,transparent),transparent_70%)] blur-2xl"
+      />
+      <span className="relative">
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-2xl opacity-60 blur-xl"
+          style={{ background: "var(--gradient-ember)" }}
+        />
+        <span
+          className="relative grid size-14 place-items-center rounded-2xl text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.35)] ring-1 ring-white/20"
+          style={{ background: "var(--gradient-ember-btn)" }}
+        >
+          <Icon className="size-6" aria-hidden />
+        </span>
       </span>
-      <h3 className="mt-4 text-base font-medium">{title}</h3>
+      <h3 className="mt-5 text-lg font-semibold tracking-tight">{title}</h3>
       {children ? (
-        <div className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+        <div className="mt-1.5 max-w-md text-sm leading-relaxed text-muted-foreground">
           {children}
         </div>
       ) : null}
@@ -317,10 +397,11 @@ export function TimeAgo({ ts, className }: { ts: number; className?: string }) {
   );
 }
 
-/** A bento card: a small title row with one action, and a body that fills the height. */
+/** A bento card: a title row (an icon tile when `icon` is set) with one action, and a body that fills the height. */
 export function Card({
   title,
-  icon: Icon,
+  icon,
+  tone = "ice",
   action,
   children,
   className,
@@ -329,6 +410,8 @@ export function Card({
 }: {
   title: ReactNode;
   icon?: LucideIcon;
+  /** The icon tile's colour. */
+  tone?: TileTone;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -338,26 +421,23 @@ export function Card({
   return (
     <section
       aria-labelledby={labelledBy}
-      className={cn(
-        "flex min-w-0 flex-col rounded-xl border border-border bg-gradient-to-b from-white/[0.035] to-white/[0.01] p-4 sm:p-5",
-        className,
-      )}
+      className={cn(surface, "flex min-w-0 flex-col p-4 sm:p-5", className)}
     >
       <div className="flex min-h-8 items-center justify-between gap-3">
         <h2
           id={labelledBy}
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground"
+          className="flex min-w-0 items-center gap-2.5 text-base font-semibold tracking-tight"
         >
-          {Icon ? <Icon className="size-4" aria-hidden /> : null}
-          {title}
+          {icon ? <IconTile icon={icon} tone={tone} size="sm" /> : null}
+          <span className="truncate">{title}</span>
         </h2>
         {action}
       </div>
-      <div className={cn("mt-3 flex min-h-0 flex-1 flex-col", bodyClassName)}>{children}</div>
+      <div className={cn("mt-4 flex min-h-0 flex-1 flex-col", bodyClassName)}>{children}</div>
     </section>
   );
 }
 
 /** Small "View …" link for a card's corner. */
 export const cardActionClass =
-  "inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&_svg]:size-3.5";
+  "inline-flex h-8 shrink-0 items-center gap-1 rounded-full px-3 text-xs font-medium text-[var(--partner)] transition-colors hover:bg-[var(--partner)]/10 focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none [&_svg]:size-3.5";

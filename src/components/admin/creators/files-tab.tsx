@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FolderOpen, Rocket } from "lucide-react";
 
 import {
   Select,
@@ -60,6 +61,8 @@ export function FilesTab({ data }: { data: CreatorDetail }) {
     <div className="@container/files space-y-4">
       <Panel className="p-4 sm:p-5">
         <PanelTitle
+          icon={FolderOpen}
+          tone="sky"
           title={`Asset library (${data.files.filter((f) => f.kind !== "proof").length})`}
           sub="The creator's brand, content and source files, and anything we've added for them. Same library they see in their hub."
         />
@@ -78,6 +81,8 @@ export function FilesTab({ data }: { data: CreatorDetail }) {
 
       <Panel className="p-4 sm:p-5">
         <PanelTitle
+          icon={Rocket}
+          tone="rose"
           title="Launch assets, mockups and proofs"
           sub="For files tied to the launch kit or a product. Brand and source files go in the library above."
         />

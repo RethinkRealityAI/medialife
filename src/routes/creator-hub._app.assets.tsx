@@ -1,7 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lightbulb } from "lucide-react";
+import { Box, Lightbulb, Palette, PenTool, Type, Weight, type LucideIcon } from "lucide-react";
 import { z } from "zod";
 
+import { ART, Tile, type Tone } from "@/components/hub/app/look";
 import { Page, PageHeader } from "@/components/hub/app/ui";
 import { useWorkspace } from "@/components/hub/app/workspace";
 import { AssetLibrary, type LibraryNav } from "@/components/hub/assets/library";
@@ -34,21 +35,32 @@ export const Route = createFileRoute("/creator-hub/_app/assets")({
 
 const MAX_MB = `${Math.round(HUB.maxUploadBytes / 1_048_576)} MB`;
 
-const TIPS = [
+const TIPS: Array<{ icon: LucideIcon; tone: Tone; title: string; body: string }> = [
   {
+    icon: PenTool,
+    tone: "ice",
     title: "Logos & wordmarks",
-    body: "Vector files (AI, SVG, EPS or PDF) stay sharp at any print size. Add a transparent PNG too.",
+    body: "Vector (AI, SVG, EPS or PDF) stays sharp at any size. Add a transparent PNG too.",
   },
   {
+    icon: Palette,
+    tone: "pink",
     title: "Characters & art",
-    body: "Transparent PNG, 3000px or more on the long side. Layered PSDs are great.",
+    body: "Transparent PNG, 3000px+ on the long side. Layered PSDs are great.",
   },
   {
+    icon: Box,
+    tone: "violet",
     title: "3D",
-    body: "GLB is best: one file with its textures. FBX, OBJ, STL, USDZ and Blender work too.",
+    body: "GLB is best: one file with textures. FBX, OBJ, STL, USDZ and Blender work too.",
   },
-  { title: "Fonts", body: "OTF or TTF files for the lettering in your logo and graphics." },
-  { title: "Size", body: `Up to ${MAX_MB} per file. Zip a folder of many small files.` },
+  { icon: Type, tone: "amber", title: "Fonts", body: "OTF or TTF for the lettering in your logo." },
+  {
+    icon: Weight,
+    tone: "mint",
+    title: "Size",
+    body: `Up to ${MAX_MB} per file. Zip a folder of many small files.`,
+  },
 ];
 
 function Assets() {
@@ -57,23 +69,31 @@ function Assets() {
   const navigate = useNavigate({ from: Route.fullPath });
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Assets"
-        description="Your brand, content and source files in one place. We work from here when we design your merch and experiences."
+        image={ART.keychain}
+        imageClassName="object-[50%_40%]"
+        eyebrow="Assets"
+        title="Your brand, art and files"
+        description="One place for everything we design from: logos, characters, 3D, video and more."
         actions={
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" className="rounded-full bg-black/30 backdrop-blur">
                 <Lightbulb aria-hidden /> What works best
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80">
-              <dl className="space-y-2.5 text-sm">
+            <PopoverContent align="end" className="glass-strong w-80 rounded-2xl p-3">
+              <dl className="space-y-1">
                 {TIPS.map((t) => (
-                  <div key={t.title}>
-                    <dt className="font-medium">{t.title}</dt>
-                    <dd className="mt-0.5 leading-relaxed text-muted-foreground">{t.body}</dd>
+                  <div key={t.title} className="flex gap-3 rounded-xl p-2 text-sm">
+                    <Tile icon={t.icon} tone={t.tone} size="sm" />
+                    <div className="min-w-0">
+                      <dt className="font-medium">{t.title}</dt>
+                      <dd className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                        {t.body}
+                      </dd>
+                    </div>
                   </div>
                 ))}
               </dl>
@@ -81,7 +101,7 @@ function Assets() {
           </Popover>
         }
       />
-      <div className="mt-6">
+      <div className="mt-5">
         <AssetLibrary
           mode="creator"
           files={ws.files}

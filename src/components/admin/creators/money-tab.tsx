@@ -1,5 +1,16 @@
 import { useEffect, useId, useState } from "react";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  BadgeCheck,
+  ChevronDown,
+  CircleCheck,
+  Landmark,
+  Loader2,
+  Plus,
+  Receipt,
+  Trash2,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +33,7 @@ import { adminRecordOrder, adminRecordPayout } from "@/lib/hub/admin.functions";
 import { HUB, lineEarning, lineNet, money, shortDate, type Order } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
-import { Panel, PanelTitle, StatTile } from "../kit";
+import { EmptyState, Panel, PanelTitle, StatTile } from "../kit";
 import type { CreatorDetail } from "./types";
 import { CheckRow, Field, Pill, ghostBtn, parseNum, todayIso, useRun } from "./ui";
 
@@ -36,36 +47,50 @@ const ORDER_STATUS: Record<
   cancelled: { tone: "danger", label: "Cancelled" },
 };
 
-const th = "px-3 py-2.5 font-normal";
+const th = "px-3 py-2.5 font-medium";
+/** Orders shown before "Show more". */
+const PAGE = 25;
 const thead =
-  "mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase";
+  "border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase";
 
 export function MoneyTab({ data }: { data: CreatorDetail }) {
   const e = data.earnings;
   const [orderOpen, setOrderOpen] = useState(false);
   const [payoutOpen, setPayoutOpen] = useState(false);
+  const [shown, setShown] = useState(PAGE);
   const cur = e.currency;
+  const orders = data.orders.slice(0, shown);
+  const more = data.orders.length - orders.length;
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
         <StatTile
           label="Net revenue"
+          icon={TrendingUp}
+          tone="sky"
           value={money(e.net, cur)}
           hint={`${e.orders} orders · ${e.units} units · ${money(e.gross, cur)} gross`}
         />
         <StatTile
           label="Creator earned"
+          icon={Wallet}
+          tone="violet"
           value={money(e.earned, cur)}
           hint={`${money(e.pending, cur)} still in the ${HUB.holdDays}-day returns window`}
         />
         <StatTile
           label="Available to pay"
+          icon={CircleCheck}
+          tone="mint"
+          active={e.available > 0}
           value={money(e.available, cur)}
           hint="Out of the returns window, unpaid"
         />
         <StatTile
           label="Paid out"
+          icon={BadgeCheck}
+          tone="amber"
           value={money(e.paid, cur)}
           hint={`${data.payouts.length} payout${data.payouts.length === 1 ? "" : "s"}`}
         />
@@ -74,6 +99,8 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
       <Panel>
         <PanelTitle
           className="p-4 sm:p-5"
+          icon={Receipt}
+          tone="sky"
           title={`Orders (${data.orders.length})`}
           sub="From Shopify and the ingest API automatically. Record sales from other channels by hand."
           actions={
@@ -89,11 +116,13 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
           }
         />
         {!data.orders.length ? (
-          <p className="border-t border-border px-4 py-10 text-center text-sm text-muted-foreground">
-            No orders yet.
-          </p>
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            <EmptyState icon={Receipt} tone="slate" title="No orders yet">
+              Shopify orders for this creator's products land here.
+            </EmptyState>
+          </div>
         ) : (
-          <div className="overflow-x-auto border-t border-border">
+          <div className="overflow-x-auto border-t border-white/[0.06]">
             <table className="w-full min-w-[44rem] text-sm">
               <thead>
                 <tr className={thead}>
@@ -105,8 +134,8 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
                   <th className={cn(th, "pr-5")}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
-                {data.orders.map((o) => {
+              <tbody className="divide-y divide-white/[0.06]">
+                {orders.map((o) => {
                   const net = o.lines.reduce((s, l) => s + lineNet(l), 0);
                   const earned = o.lines.reduce((s, l) => s + lineEarning(l), 0);
                   const st = ORDER_STATUS[o.status];
@@ -152,6 +181,20 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
                 })}
               </tbody>
             </table>
+            {more > 0 ? (
+              <div className="border-t border-white/[0.06] p-3 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn("text-muted-foreground", ghostBtn)}
+                  onClick={() => setShown((n) => n + PAGE * 4)}
+                >
+                  <ChevronDown aria-hidden />
+                  Show {Math.min(more, PAGE * 4)} more
+                  <span className="text-xs opacity-70">({more} hidden)</span>
+                </Button>
+              </div>
+            ) : null}
           </div>
         )}
       </Panel>
@@ -159,6 +202,8 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
       <Panel>
         <PanelTitle
           className="p-4 sm:p-5"
+          icon={Landmark}
+          tone="violet"
           title={`Payouts (${data.payouts.length})`}
           sub="Record a payout after sending it through PayPal, Wise or the bank."
           actions={
@@ -169,11 +214,13 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
           }
         />
         {!data.payouts.length ? (
-          <p className="border-t border-border px-4 py-10 text-center text-sm text-muted-foreground">
-            No payouts yet.
-          </p>
+          <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+            <EmptyState icon={Landmark} tone="slate" title="No payouts yet">
+              Record one after sending it.
+            </EmptyState>
+          </div>
         ) : (
-          <div className="overflow-x-auto border-t border-border">
+          <div className="overflow-x-auto border-t border-white/[0.06]">
             <table className="w-full min-w-[32rem] text-sm">
               <thead>
                 <tr className={thead}>
@@ -183,7 +230,7 @@ export function MoneyTab({ data }: { data: CreatorDetail }) {
                   <th className={cn(th, "pr-5 text-right")}>Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.06]">
                 {[...data.payouts]
                   .sort((a, b) => b.paidAt - a.paidAt)
                   .map((p) => (

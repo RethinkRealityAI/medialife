@@ -43,7 +43,7 @@ export function ResponsiveDrawer({
   if (mobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange} shouldScaleBackground={false}>
-        <DrawerContent className={cn("max-h-[88dvh] border-border", className)}>
+        <DrawerContent className={cn("glass-strong max-h-[88dvh] rounded-t-[28px]", className)}>
           <DrawerHeader className="px-5 pb-2 text-left">
             <DrawerTitle className="text-lg font-medium">{title}</DrawerTitle>
             {description ? (
@@ -72,9 +72,9 @@ export function ResponsiveDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className={cn("flex w-full flex-col gap-0 border-border p-0 sm:max-w-md", className)}
+        className={cn("glass-strong flex w-full flex-col gap-0 p-0 sm:max-w-md", className)}
       >
-        <SheetHeader className="border-b border-border px-6 py-5 pr-12 text-left">
+        <SheetHeader className="border-b border-white/10 px-6 py-5 pr-12 text-left">
           <SheetTitle className="text-lg font-medium">{title}</SheetTitle>
           {description ? (
             <SheetDescription>{description}</SheetDescription>
@@ -83,7 +83,7 @@ export function ResponsiveDrawer({
           )}
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer ? <div className="border-t border-border px-6 py-4">{footer}</div> : null}
+        {footer ? <div className="border-t border-white/10 px-6 py-4">{footer}</div> : null}
       </SheetContent>
     </Sheet>
   );

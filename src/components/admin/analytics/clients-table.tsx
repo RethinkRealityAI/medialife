@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, Link2 } from "lucide-react";
+import { ChevronRight, Contact, Link2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { ClientRow, Dashboard } from "@/lib/ar/analytics.server";
@@ -80,6 +80,8 @@ export function ClientsTable({
     <Panel className={className}>
       <div className="p-4 pb-3 sm:p-5 sm:pb-3">
         <PanelTitle
+          icon={Contact}
+          tone="amber"
           title="Clients"
           sub="Everyone you sent a personal link to, most recent first. Select one to see only their visits."
           actions={
@@ -99,7 +101,7 @@ export function ClientsTable({
       </div>
 
       {!rows.length ? (
-        <div className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
+        <div className="border-t border-white/[0.06] px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
           No client links yet.{" "}
           <Link to="/admin/links" className="text-primary underline-offset-4 hover:underline">
             Create one
@@ -109,11 +111,11 @@ export function ClientsTable({
       ) : (
         <>
           {/* wide: a table */}
-          <div className="hidden border-t border-border @3xl/inset:block">
+          <div className="hidden border-t border-white/[0.06] @3xl/inset:block">
             <table className="w-full text-sm">
               <caption className="sr-only">Clients and what they did</caption>
               <thead>
-                <tr className="mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
                   <th scope="col" className="px-5 py-2.5 font-normal">
                     Client
                   </th>
@@ -134,7 +136,7 @@ export function ClientsTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.06]">
                 {rows.map((r) => (
                   <tr
                     key={r.id}
@@ -193,7 +195,7 @@ export function ClientsTable({
           </div>
 
           {/* narrow: cards */}
-          <ul className="divide-y divide-border border-t border-border @3xl/inset:hidden">
+          <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06] @3xl/inset:hidden">
             {rows.map((r) => (
               <li key={r.id}>
                 <button
@@ -241,7 +243,7 @@ export function ClientsTable({
         </>
       )}
       {all.length > COLLAPSED ? (
-        <div className="border-t border-border px-4 py-2 sm:px-5">
+        <div className="border-t border-white/[0.06] px-4 py-2 sm:px-5">
           <Button
             variant="ghost"
             size="sm"
@@ -253,7 +255,7 @@ export function ClientsTable({
         </div>
       ) : null}
       {linkCount === 0 && rows.length > 0 ? (
-        <p className="border-t border-border px-4 py-3 text-xs text-muted-foreground sm:px-5">
+        <p className="border-t border-white/[0.06] px-4 py-3 text-xs text-muted-foreground sm:px-5">
           Tip:{" "}
           <Link to="/admin/links" className="text-primary underline-offset-4 hover:underline">
             create a client link

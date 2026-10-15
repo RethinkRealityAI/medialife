@@ -1,6 +1,18 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ExternalLink, FlaskConical, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ExternalLink,
+  FlaskConical,
+  Hourglass,
+  Inbox,
+  Link2,
+  Loader2,
+  Rocket,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,85 +27,161 @@ import { Toaster } from "@/components/ui/sonner";
 import { adminSeedSample } from "@/lib/hub/admin.functions";
 import { HUB } from "@/lib/hub/model";
 
-import { CopyButton, NamespaceBadge, PageHeader, Panel, StatTile } from "../kit";
+import {
+  AdminTab,
+  AdminTabs,
+  CopyButton,
+  NamespaceBadge,
+  PageBody,
+  PageHeader,
+  Panel,
+  StatTile,
+  TabCount,
+  well,
+} from "../kit";
 import { CreatorsTable, type Filters } from "./creators-table";
 import { InvitesPanel } from "./invites";
 import type { CreatorsList, UnmatchedOrder } from "./types";
 import { ghostBtn, outlineBtn, useRun } from "./ui";
 import { UnmatchedPanel } from "./unmatched";
 
+export const CREATORS_VIEWS = ["roster", "invites", "unmatched"] as const;
+export type CreatorsView = (typeof CREATORS_VIEWS)[number];
+
 export function CreatorsPage({
   data,
   unmatched,
+  view,
   filters,
   onFilters,
 }: {
   data: CreatorsList;
   unmatched: UnmatchedOrder[];
+  view: CreatorsView;
   filters: Filters;
-  onFilters: (f: Partial<Filters>) => void;
+  onFilters: (f: Partial<Filters> & { view?: CreatorsView }) => void;
 }) {
   const { counts, creators } = data;
   const drafts = counts.draft;
+  const activeInvites = data.invites.filter((i) => !i.archived).length;
+  const showRoster = (status: Filters["status"]) =>
+    onFilters({ view: "roster", status: filters.status === status ? "all" : status });
+  const on = (status: Filters["status"]) => view === "roster" && filters.status === status;
+
   return (
     <>
       <Toaster theme="dark" position="bottom-right" />
       <PageHeader
         title="Creators"
+        icon={Users}
         badge={<NamespaceBadge ns={data.ns} />}
+        image="/partner-kit/medialife/shelf-preview.webp"
+        imageClassName="object-[50%_58%] opacity-55"
+        description="Review applications, set terms and run every product from brief to live."
         actions={data.ns !== "prod" ? <SeedButton /> : null}
-      >
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          The {HUB.program}: review applications, set terms, and run each creator's products from
-          brief to live.
-        </p>
-      </PageHeader>
+      />
 
-      <div className="space-y-5 px-4 py-5 sm:px-6 lg:px-8">
+      <PageBody>
         <div className="grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
           <StatTile
-            label="Applications to review"
+            label="To review"
             value={counts.submitted}
+            icon={Inbox}
+            tone={counts.submitted ? "amber" : "slate"}
             hint={counts.submitted ? "Waiting on a decision" : "All caught up"}
+            onClick={() => showRoster("submitted")}
+            active={on("submitted")}
           />
-          <StatTile label="Active creators" value={counts.approved} hint="Approved and onboarded" />
-          <StatTile label="Waitlist" value={counts.waitlist} hint="Approved for later" />
           <StatTile
-            label="Total creators"
+            label="Active creators"
+            value={counts.approved}
+            icon={Rocket}
+            tone="mint"
+            hint="Approved and onboarded"
+            onClick={() => showRoster("approved")}
+            active={on("approved")}
+          />
+          <StatTile
+            label="Waitlist"
+            value={counts.waitlist}
+            icon={Hourglass}
+            tone="violet"
+            hint="Approved for later"
+            onClick={() => showRoster("waitlist")}
+            active={on("waitlist")}
+          />
+          <StatTile
+            label="All creators"
             value={creators.length}
-            hint={
-              drafts
-                ? `Including ${drafts} unfinished draft${drafts === 1 ? "" : "s"}`
-                : "No drafts"
-            }
+            icon={Users}
+            tone="sky"
+            hint={drafts ? `Including ${drafts} draft${drafts === 1 ? "" : "s"}` : "No drafts"}
+            onClick={() => onFilters({ view: "roster", status: "all" })}
+            active={on("all")}
           />
         </div>
 
-        {unmatched.length ? (
-          <a
-            href="#unmatched"
-            className="flex items-center gap-3 rounded-xl border border-amber-400/35 bg-amber-400/[0.07] px-4 py-3 text-sm hover:bg-amber-400/[0.1]"
+        {unmatched.length && view !== "unmatched" ? (
+          <button
+            type="button"
+            onClick={() => onFilters({ view: "unmatched" })}
+            className="flex w-full items-center gap-3 rounded-2xl border border-amber-400/35 bg-[linear-gradient(90deg,rgb(251_191_36/0.12),rgb(251_191_36/0.03))] px-4 py-3 text-left text-sm shadow-[0_14px_30px_-22px_rgb(251_191_36/0.6)] transition-colors hover:border-amber-400/60 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none"
           >
             <AlertTriangle className="size-4 shrink-0 text-amber-300" aria-hidden />
             <span className="flex-1">
-              {unmatched.length} Shopify order{unmatched.length === 1 ? "" : "s"} didn't match a
-              product, so no creator earned on {unmatched.length === 1 ? "it" : "them"} yet.
+              <span className="font-medium">
+                {unmatched.length} Shopify order{unmatched.length === 1 ? "" : "s"} matched no
+                product
+              </span>
+              <span className="text-muted-foreground"> · no creator has earned on them yet</span>
             </span>
-            <span className="text-xs text-amber-200 underline underline-offset-2">Review</span>
-          </a>
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-200">
+              Review <ArrowRight className="size-3.5" aria-hidden />
+            </span>
+          </button>
         ) : null}
 
-        <CreatorsTable
-          creators={creators}
-          counts={counts}
-          filters={filters}
-          onFilters={onFilters}
-        />
-
-        <InvitesPanel invites={data.invites} />
-
-        <UnmatchedPanel orders={unmatched} />
-      </div>
+        <AdminTabs
+          label="Creator sections"
+          value={view}
+          onChange={(v) => onFilters({ view: v })}
+          tabs={[
+            {
+              id: "roster",
+              label: "Roster",
+              icon: Users,
+              badge: <TabCount n={creators.length} />,
+            },
+            {
+              id: "invites",
+              label: "Invite links",
+              icon: Link2,
+              badge: <TabCount n={activeInvites} />,
+            },
+            {
+              id: "unmatched",
+              label: "Unmatched orders",
+              icon: ShoppingBag,
+              badge: unmatched.length ? <TabCount n={unmatched.length} alert="amber" /> : null,
+            },
+          ]}
+        >
+          <AdminTab value="roster">
+            <CreatorsTable
+              creators={creators}
+              counts={counts}
+              filters={filters}
+              onFilters={onFilters}
+            />
+          </AdminTab>
+          <AdminTab value="invites">
+            <InvitesPanel invites={data.invites} />
+          </AdminTab>
+          <AdminTab value="unmatched">
+            <UnmatchedPanel orders={unmatched} />
+          </AdminTab>
+        </AdminTabs>
+      </PageBody>
     </>
   );
 }
@@ -111,7 +199,7 @@ function SeedButton() {
       <Button
         variant="outline"
         size="sm"
-        className={`h-9 ${outlineBtn}`}
+        className={`h-9 bg-black/30 backdrop-blur ${outlineBtn}`}
         disabled={!!pending}
         onClick={async () => {
           const r = await run("seed", () => adminSeedSample());
@@ -128,13 +216,13 @@ function SeedButton() {
               {result?.created ? "Sample creator loaded" : "Sample creator is already here"}
             </DialogTitle>
             <DialogDescription>
-              PixelPine has products at every stage, a live experience, a proof waiting for
-              approval, orders and a payout. Sign in to the Creator Hub with the first login to see
-              the creator side, or the second for Snowday Media's Partner Hub.
+              PixelPine has products at every stage, a live experience, a proof to approve, orders
+              and a payout. Use the first login for the Creator Hub, the second for Snowday Media's
+              Partner Hub.
             </DialogDescription>
           </DialogHeader>
           {result ? (
-            <div className="divide-y divide-border rounded-md border border-border text-sm">
+            <div className={`divide-y divide-white/[0.06] text-sm ${well}`}>
               {(
                 [
                   ["Creator", result.login.email],
@@ -182,13 +270,14 @@ function SeedButton() {
 
 export function CreatorsSkeleton() {
   return (
-    <div className="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="h-9 w-48 animate-pulse rounded bg-white/[0.06]" />
+    <div className="space-y-5 px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
+      <Panel className="h-32 animate-pulse rounded-3xl" />
       <div className="grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
           <Panel key={i} className="h-28 animate-pulse" />
         ))}
       </div>
+      <Panel className="h-12 animate-pulse" />
       <Panel className="h-96 animate-pulse" />
     </div>
   );

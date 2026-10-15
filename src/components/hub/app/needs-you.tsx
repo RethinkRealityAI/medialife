@@ -67,7 +67,9 @@ export function NeedsYouProvider({
           <NeedsYouRows items={items} onAction={() => setOpen(false)} />
         ) : (
           <div className="flex flex-col items-center py-10 text-center">
-            <CheckCircle2 className="size-8 text-emerald-400" aria-hidden />
+            <span className="grid size-14 place-items-center rounded-2xl bg-emerald-400/15 ring-1 ring-emerald-400/30 ring-inset">
+              <CheckCircle2 className="size-7 text-emerald-300" aria-hidden />
+            </span>
             <p className="mt-3 font-medium">You're all caught up</p>
             <p className="mt-1 text-sm text-muted-foreground">
               We'll let you know when something needs you.
@@ -197,8 +199,10 @@ export function NeedsYouRows({ items, onAction }: { items: ActionItem[]; onActio
         <li
           key={item.id}
           className={cn(
-            "flex gap-3 rounded-xl border p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1",
-            item.kind === "proof" ? "border-amber-400/40 bg-amber-400/[0.05]" : "border-border",
+            "flex gap-3 rounded-2xl border p-3 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06)] motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1",
+            item.kind === "proof"
+              ? "border-amber-400/40 bg-amber-400/[0.07]"
+              : "border-white/10 bg-white/[0.04]",
           )}
           style={{ animationDelay: `${i * 40}ms`, animationFillMode: "both" }}
         >
@@ -211,6 +215,7 @@ export function NeedsYouRows({ items, onAction }: { items: ActionItem[]; onActio
                 item={item}
                 variant={item.kind === "proof" ? "default" : "outline"}
                 onClick={onAction}
+                className="rounded-full"
               />
             </div>
           </div>

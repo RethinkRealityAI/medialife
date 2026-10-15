@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import {
   Archive,
   Box,
@@ -9,6 +9,7 @@ import {
   Loader2,
   Plus,
   QrCode,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -102,7 +103,11 @@ function Links() {
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Their name in neon over activated merch with their name on it. The best opener there
-              is.
+              is. For one made just for them, with their logo and your look, use the{" "}
+              <Link to="/partner-hub/shelves" className="font-medium text-foreground underline">
+                shelf builder
+              </Link>
+              .
             </p>
             <div className="mt-4 grid gap-3 @xl/inset:grid-cols-2">
               <label className="grid gap-1.5 text-sm">
@@ -152,6 +157,11 @@ function Links() {
                 }
               >
                 <QrCode aria-hidden />
+              </Button>
+              <Button asChild variant="outline" className="sm:ml-auto">
+                <Link to="/partner-hub/shelves">
+                  <Store aria-hidden /> Build a custom shelf
+                </Link>
               </Button>
             </div>
           </div>

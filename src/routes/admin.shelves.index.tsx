@@ -7,6 +7,7 @@ import {
   Copy,
   CopyPlus,
   ExternalLink,
+  Handshake,
   Images,
   Link2,
   MoreHorizontal,
@@ -26,7 +27,8 @@ import {
   shelvesQueryKey,
   STATUS_LABEL,
 } from "@/components/admin/shelves/shared";
-import { PageHeader, Panel, Pill } from "@/components/portal/kit";
+import { PageHeader } from "@/components/admin/kit";
+import { Panel, Pill } from "@/components/portal/kit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -98,6 +100,9 @@ function ShelvesPage() {
       <PageHeader
         eyebrow="Creator Merch Shelf"
         title="Merch shelves"
+        icon={Store}
+        tone="rose"
+        description="3D shelves to send creators. Partner teams' shelves show here too, tagged with the partner."
         actions={
           <>
             <Button
@@ -111,7 +116,7 @@ function ShelvesPage() {
           </>
         }
       />
-      <div className="grid gap-8 px-4 py-8 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 px-4 py-6 sm:px-6 lg:px-8 xl:grid-cols-[minmax(0,1fr)_380px]">
         <section aria-label="Shelves" className="min-w-0">
           {shelves.isPending ? (
             <CardGrid>
@@ -192,7 +197,11 @@ function ShelvesPage() {
 }
 
 function CardGrid({ children }: { children: React.ReactNode }) {
-  return <ul className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">{children}</ul>;
+  return (
+    <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 2xl:grid-cols-3">
+      {children}
+    </ul>
+  );
 }
 
 function EmptyState({
@@ -287,6 +296,12 @@ function ShelfCard({
               {s.name}
               {s.handle ? <span className="text-muted-foreground/70"> · {s.handle}</span> : null}
             </p>
+            {s.partnerName ? (
+              <p className="mt-1.5 inline-flex max-w-full items-center gap-1.5 text-xs text-violet-300">
+                <Handshake className="size-3.5 shrink-0" aria-hidden />
+                <span className="truncate">Partner Hub · {s.partnerName}</span>
+              </p>
+            ) : null}
             <p className="mono mt-3 truncate text-[10px] tracking-[0.08em] text-muted-foreground uppercase">
               Edited {formatDistanceToNow(s.updatedAt, { addSuffix: true })}
               {s.publishedAt && live

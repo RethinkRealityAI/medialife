@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Check, Circle, ExternalLink, Link2, Loader2, Minus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -50,6 +50,9 @@ export function PublishShelfDialog({
   preview,
   flush,
   onPublished,
+  publish = publishShelfFn,
+  upload = uploadBlob,
+  doneLinks,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -59,6 +62,13 @@ export function PublishShelfDialog({
   preview: ShelfPreview;
   flush: () => Promise<boolean>;
   onPublished: (doc: ShelfDoc, summary: ShelfSummary) => void;
+  /** Where it publishes and how the link-preview image is uploaded (admin by default). */
+  publish?: (args: {
+    data: { slug: string; snapshotAssetId: string | null };
+  }) => ReturnType<typeof publishShelfFn>;
+  upload?: (blob: Blob, meta: Parameters<typeof uploadBlob>[1]) => Promise<{ id: string }>;
+  /** The links after publishing; defaults to Open + Create personal link (admin). */
+  doneLinks?: ReactNode;
 }) {
   const [steps, setSteps] = useState(initial);
   const [running, setRunning] = useState(false);
@@ -100,7 +110,7 @@ export function PublishShelfDialog({
           const blob = await (await fetch(dataUrl)).blob();
           const ext =
             blob.type === "image/jpeg" ? "jpg" : blob.type === "image/webp" ? "webp" : "png";
-          const a = await uploadBlob(blob, {
+          const a = await upload(blob, {
             name: `shelf-${slug}-preview.${ext}`,
             kind: "image",
             mime: blob.type || "image/png",
@@ -117,7 +127,7 @@ export function PublishShelfDialog({
       }
 
       mark("publish", "doing");
-      const r = await publishShelfFn({ data: { slug, snapshotAssetId } });
+      const r = await publish({ data: { slug, snapshotAssetId } });
       if (!r.ok) {
         mark("publish", "error");
         throw new Error(
@@ -147,7 +157,9 @@ export function PublishShelfDialog({
           <DialogTitle>{done ? "Your shelf is live" : "Publish this shelf"}</DialogTitle>
           <DialogDescription>
             {done
-              ? "Send the link as it is, or make a personal link so you can see when they open it."
+              ? doneLinks
+                ? "Send the link to the creator. Edits stay in the draft until you publish again."
+                : "Send the link as it is, or make a personal link so you can see when they open it."
               : "Puts the draft live at its link and takes the image link previews show."}
           </DialogDescription>
         </DialogHeader>
@@ -186,18 +198,20 @@ export function PublishShelfDialog({
                 Copy
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="outline" size="sm">
-                <a href={`${shelfPath(slug)}?notrack=1`} target="_blank" rel="noreferrer">
-                  <ExternalLink aria-hidden /> Open
-                </a>
-              </Button>
-              <Button asChild size="sm">
-                <Link to="/admin/links" search={{ demo: shelfDemoId(slug) }}>
-                  <Link2 aria-hidden /> Create personal link
-                </Link>
-              </Button>
-            </div>
+            {doneLinks ?? (
+              <div className="flex flex-wrap gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <a href={`${shelfPath(slug)}?notrack=1`} target="_blank" rel="noreferrer">
+                    <ExternalLink aria-hidden /> Open
+                  </a>
+                </Button>
+                <Button asChild size="sm">
+                  <Link to="/admin/links" search={{ demo: shelfDemoId(slug) }}>
+                    <Link2 aria-hidden /> Create personal link
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

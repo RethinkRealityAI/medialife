@@ -5,21 +5,23 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Link2,
   Loader2,
   Lock,
   Megaphone,
   MonitorPlay,
   Pin,
-  Radio,
   RefreshCw,
   RotateCcw,
   ShieldAlert,
+  SlidersHorizontal,
   Target,
   TriangleAlert,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { ART, Tile, segGroup, segItem, type Tone } from "@/components/hub/app/look";
 import { CopyButton, Page, PageHeader, Panel, Pill } from "@/components/hub/app/ui";
 import { ACCENTS, ACCENT_IDS } from "@/components/hub/overlay/accents";
 import { OVERLAY_MSG, type OverlayFeedMessage } from "@/components/hub/overlay/live-overlay";
@@ -177,27 +179,22 @@ function Studio({ view, setView }: { view: View; setView: (v: View) => void }) {
   );
 
   return (
-    <Page className="max-w-7xl lg:pt-8">
+    <Page className="max-w-7xl">
       <PageHeader
-        eyebrow={
-          <span className="inline-flex items-center gap-2">
-            <Radio className="size-4 text-accent" aria-hidden />
-            Live Drop
-          </span>
-        }
+        image={ART.hoodie}
+        imageClassName="object-[50%_28%]"
+        eyebrow="Live Drop"
         title={
           <>
             Turn your stream into a <span className="ember-text">merch drop</span>
           </>
         }
-        description="A stream overlay that shows your merch selling as it happens: a sales goal, an alert for every order and a QR your viewers scan."
+        description="A sales goal, an alert for every order and a QR your viewers scan, right on your stream."
         actions={
           <label
             className={cn(
-              "flex cursor-pointer items-center gap-3 rounded-full border py-2 pr-4 pl-3 text-sm transition-colors",
-              draft.enabled
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
-                : "border-border bg-white/[0.03] text-muted-foreground",
+              "glass flex cursor-pointer items-center gap-3 rounded-full py-2 pr-4 pl-3 text-sm transition-colors",
+              draft.enabled ? "text-emerald-200" : "text-white/70",
             )}
           >
             <Switch
@@ -214,17 +211,16 @@ function Studio({ view, setView }: { view: View; setView: (v: View) => void }) {
       />
 
       {liveProducts.length === 0 ? (
-        <div className="mt-6 flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+        <Panel className="mt-4 flex items-center gap-3 border-amber-400/35 bg-amber-400/[0.06] px-4 py-3 text-sm text-amber-100">
+          <Tile icon={TriangleAlert} tone="amber" size="sm" />
           <p>
-            None of your products is live yet. Set the overlay up now: it shows on stream as soon as
-            your first product goes on sale.
+            Nothing's live yet. Set it up now: the overlay shows on stream from your first sale day.
           </p>
-        </div>
+        </Panel>
       ) : null}
 
       {/* Phones: preview, settings, then the link. Desktop: settings in a sticky column. */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
+      <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
         <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           <Preview
             view={view}
@@ -278,7 +274,7 @@ function StreamFrame({
   return (
     <div
       className={cn(
-        "relative aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-white/10",
+        "relative aspect-video w-full overflow-hidden rounded-2xl bg-black ring-1 ring-white/10",
         "shadow-[0_30px_80px_-30px_rgba(0,0,0,0.9),0_0_60px_-30px_var(--glow)]",
         className,
       )}
@@ -338,11 +334,11 @@ function Preview({
   return (
     <section aria-labelledby="preview-title">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 id="preview-title" className="flex items-center gap-2 text-sm font-medium">
-          <MonitorPlay className="size-4 text-primary" aria-hidden />
+        <h2 id="preview-title" className="flex items-center gap-2.5 text-base font-semibold">
+          <Tile icon={MonitorPlay} tone="pink" size="sm" />
           Live preview
         </h2>
-        <p className="text-xs text-muted-foreground">Exactly what your viewers see</p>
+        <p className="text-xs text-muted-foreground">What your viewers see</p>
       </div>
 
       <StreamFrame position={draft.position}>
@@ -358,7 +354,7 @@ function Preview({
         />
         {!draft.enabled ? (
           <div className="absolute inset-0 grid place-items-center bg-black/55 backdrop-blur-[2px]">
-            <div className="rounded-full border border-white/15 bg-black/60 px-4 py-2 text-sm text-white/85">
+            <div className="glass rounded-full px-4 py-2 text-sm text-white/90">
               Overlay is off — viewers see nothing
             </div>
           </div>
@@ -488,14 +484,10 @@ function Segmented<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       aria-label={label}
-      className="grid w-full grid-cols-2 rounded-lg border border-border p-1"
+      className={cn(segGroup, "grid w-full grid-cols-2")}
     >
       {options.map((o) => (
-        <ToggleGroupItem
-          key={o.value}
-          value={o.value}
-          className="h-8 rounded-md px-3 text-xs data-[state=on]:bg-white/10 data-[state=on]:text-foreground data-[state=on]:text-foreground"
-        >
+        <ToggleGroupItem key={o.value} value={o.value} className={cn(segItem, "h-8 text-xs")}>
           {o.label}
         </ToggleGroupItem>
       ))}
@@ -525,7 +517,10 @@ function SettingsPanel({
   return (
     <Panel as="section" className={cn("p-5 sm:p-6", className)}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-medium">Overlay settings</h2>
+        <h2 className="flex items-center gap-2.5 text-base font-semibold">
+          <Tile icon={SlidersHorizontal} tone="violet" size="sm" />
+          Overlay settings
+        </h2>
         <SaveState state={saveState} />
       </div>
 
@@ -585,8 +580,8 @@ function SettingsPanel({
                 className={cn(
                   "h-9 rounded-full border px-3 font-mono text-xs tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   draft.goal === n
-                    ? "border-primary/60 bg-primary/15 text-foreground"
-                    : "border-border text-muted-foreground hover:border-white/25 hover:text-foreground",
+                    ? "glass-pill border-[var(--partner)]/50 text-[var(--partner)]"
+                    : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/25 hover:text-foreground",
                 )}
               >
                 {n}
@@ -644,10 +639,10 @@ function SettingsPanel({
                   aria-checked={on}
                   onClick={() => change({ accent: id }, 0)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 rounded-lg border px-1 py-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    "flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                     on
-                      ? "border-white/40 bg-white/[0.07] text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground",
+                      ? "glass-pill border-white/30 text-foreground"
+                      : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <span
@@ -667,7 +662,7 @@ function SettingsPanel({
           </div>
         </fieldset>
 
-        <div className="divide-y divide-border rounded-lg border border-border">
+        <div className="divide-y divide-white/[0.06] rounded-xl border border-white/10 bg-white/[0.03]">
           <SwitchRow
             id="ov-qr"
             label="Show the QR code"
@@ -838,7 +833,8 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
   return (
     <Panel as="section" className="p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="add-title" className="text-base font-medium">
+        <h2 id="add-title" className="flex items-center gap-2.5 text-base font-semibold">
+          <Tile icon={Link2} tone="ice" size="sm" />
           Add to your stream
         </h2>
         <Pill tone="accent" icon={Lock}>
@@ -848,7 +844,7 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div
-          className="flex h-10 min-w-0 flex-1 items-center rounded-lg border border-border bg-black/30 px-3 font-mono text-xs sm:text-sm"
+          className="flex h-10 min-w-0 flex-1 items-center rounded-full border border-white/10 bg-black/30 px-4 font-mono text-xs sm:text-sm"
           aria-label={revealed ? "Overlay link" : "Overlay link (hidden)"}
         >
           <span className="truncate select-all">{revealed ? view.url : maskUrl(view.url)}</span>
@@ -857,7 +853,7 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
           <Button
             type="button"
             variant="outline"
-            className="h-10 flex-1 sm:flex-none"
+            className="h-10 flex-1 rounded-full sm:flex-none"
             onClick={() => setRevealed((r) => !r)}
             aria-pressed={revealed}
           >
@@ -870,7 +866,7 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
             toastText="Overlay link copied. Paste it into your streaming app."
             variant="default"
             size="default"
-            className="h-10 flex-1 sm:flex-none"
+            className="h-10 flex-1 rounded-full sm:flex-none"
           />
         </div>
       </div>
@@ -914,9 +910,21 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
       </div>
 
       <Tabs defaultValue="obs" className="mt-5">
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 sm:w-auto">
+        <TabsList
+          className={cn(
+            segGroup,
+            "flex h-auto max-w-full justify-start overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          )}
+        >
           {APPS.map((a) => (
-            <TabsTrigger key={a.id} value={a.id} className="text-xs sm:text-sm">
+            <TabsTrigger
+              key={a.id}
+              value={a.id}
+              className={cn(
+                segItem,
+                "shrink-0 text-xs data-[state=active]:bg-transparent data-[state=active]:text-[var(--partner)] data-[state=active]:shadow-none data-[state=active]:glass-pill sm:text-sm",
+              )}
+            >
               {a.label}
             </TabsTrigger>
           ))}
@@ -927,7 +935,7 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
               {a.steps.map((s, i) => (
                 <li
                   key={i}
-                  className="flex gap-3 rounded-lg border border-border bg-white/[0.02] p-3 text-sm leading-relaxed text-muted-foreground [&_b]:font-medium [&_b]:text-foreground"
+                  className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm leading-relaxed text-muted-foreground [&_b]:font-medium [&_b]:text-foreground"
                 >
                   <span
                     aria-hidden
@@ -951,19 +959,22 @@ function AddToStream({ view, onRotated }: { view: View; onRotated: (v: View) => 
    Tips
    --------------------------------------------------------------------------- */
 
-const TIPS = [
+const TIPS: Array<{ icon: typeof Pin; tone: Tone; title: string; body: string }> = [
   {
     icon: Pin,
+    tone: "pink",
     title: "Pin the QR during your merch segment",
     body: "Hold the product up, point at the code and give chat ten seconds to scan.",
   },
   {
     icon: Target,
+    tone: "amber",
     title: "Run a goal for the stream",
     body: "Restart the goal when you go live. Chat loves pushing a bar over the line.",
   },
   {
     icon: Megaphone,
+    tone: "ice",
     title: "Shout out alerts live",
     body: "Read the country out when an alert pops. “Canada's in!” gets the next order.",
   },
@@ -971,20 +982,20 @@ const TIPS = [
 
 function Tips() {
   return (
-    <section aria-label="Tips" className="mt-8">
+    <section aria-labelledby="tips-title" className="mt-8">
+      <h2 id="tips-title" className="mb-3 text-lg font-semibold tracking-tight">
+        Tips that sell
+      </h2>
       <ul className="grid gap-3 sm:grid-cols-3">
         {TIPS.map((t) => (
-          <li
-            key={t.title}
-            className="flex gap-3 rounded-xl border border-border bg-white/[0.02] p-4"
-          >
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-white/[0.04]">
-              <t.icon className="size-4 text-primary" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <h3 className="text-sm font-medium">{t.title}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t.body}</p>
-            </div>
+          <li key={t.title}>
+            <Panel className="flex h-full gap-3 p-4">
+              <Tile icon={t.icon} tone={t.tone} />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium">{t.title}</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{t.body}</p>
+              </div>
+            </Panel>
           </li>
         ))}
       </ul>
@@ -1012,22 +1023,19 @@ const DEMO: OverlayModel = {
 
 function Locked() {
   return (
-    <Page className="max-w-7xl lg:pt-8">
+    <Page className="max-w-7xl">
       <PageHeader
-        eyebrow={
-          <span className="inline-flex items-center gap-2">
-            <Radio className="size-4 text-accent" aria-hidden />
-            Live Drop
-          </span>
-        }
+        image={ART.hoodie}
+        imageClassName="object-[50%_28%]"
+        eyebrow="Live Drop"
         title={
           <>
             Turn your stream into a <span className="ember-text">merch drop</span>
           </>
         }
-        description="A stream overlay that shows your merch selling as it happens: a sales goal, an alert for every order and a QR your viewers scan."
+        description="A sales goal, an alert for every order and a QR your viewers scan, right on your stream."
       />
-      <div className="mt-6">
+      <div className="mt-5">
         <StreamFrame position="bottom">
           <OverlayStage>
             <OverlayView
@@ -1044,10 +1052,8 @@ function Locked() {
             />
           </OverlayStage>
           <div className="absolute inset-0 grid place-items-center bg-black/55 p-4 backdrop-blur-[3px]">
-            <div className="max-w-md rounded-2xl border border-white/15 bg-background/80 p-6 text-center shadow-2xl backdrop-blur-xl">
-              <span className="mx-auto grid size-12 place-items-center rounded-full border border-border bg-white/[0.05]">
-                <Lock className="size-5 text-primary" aria-hidden />
-              </span>
+            <div className="glass-strong max-w-md rounded-3xl p-6 text-center">
+              <Tile icon={Lock} tone="pink" size="lg" className="mx-auto" />
               <h2 className="mt-4 text-lg font-medium">Go live unlocks with your first product</h2>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 Once you're approved and your first product goes on sale, you'll get your own

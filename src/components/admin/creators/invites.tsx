@@ -1,5 +1,13 @@
 import { useEffect, useId, useState } from "react";
-import { Archive, ArchiveRestore, Loader2, Plus, QrCode as QrIcon } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  Link2,
+  Loader2,
+  Plus,
+  QrCode as QrIcon,
+  UserPlus,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +25,7 @@ import { HUB } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
 import { formatDate, formatDateTime } from "../format";
-import { CopyButton, Panel, PanelTitle } from "../kit";
+import { Avatar, CopyButton, EmptyState, Panel, PanelTitle, Tag, surface, well } from "../kit";
 import { UrlText } from "../links/url-text";
 import { randomSuffix, slugify, useOrigin } from "../links/util";
 import { QrCode } from "../qr";
@@ -44,8 +52,10 @@ export function InvitesPanel({ invites }: { invites: InviteRow[] }) {
     <Panel>
       <PanelTitle
         className="p-4 sm:p-5"
+        icon={Link2}
+        tone="amber"
         title="Invite links"
-        sub="For agency partners. Creators who join with this link are tagged with the agency."
+        sub="For agency partners. Creators who join with a link are tagged with the agency."
         actions={
           <Button size="sm" onClick={() => setCreating(true)}>
             <Plus aria-hidden />
@@ -54,68 +64,78 @@ export function InvitesPanel({ invites }: { invites: InviteRow[] }) {
         }
       />
       {!shown.length ? (
-        <p className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          {showArchived ? "Nothing archived." : "No invite links yet."}
-        </p>
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <EmptyState
+            icon={showArchived ? Archive : Link2}
+            tone={showArchived ? "slate" : "amber"}
+            title={showArchived ? "Nothing archived" : "No invite links yet"}
+          >
+            {showArchived ? null : "Make one for each agency or rep that sends you creators."}
+          </EmptyState>
+        </div>
       ) : (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="grid grid-cols-1 gap-3 px-4 pb-4 sm:px-5 sm:pb-5 @4xl/inset:grid-cols-2">
           {shown.map((inv) => {
             const url = inviteUrl(origin, inv.code);
             return (
               <li
                 key={inv.code}
-                className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 sm:px-5"
+                className={cn(
+                  surface,
+                  "flex min-w-0 flex-col gap-3 p-4",
+                  inv.archived && "opacity-70",
+                )}
               >
-                <div className="min-w-0 flex-1 basis-56">
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-medium">{inv.agencyName || "No agency"}</span>
-                    {inv.rep ? (
-                      <span className="text-xs text-muted-foreground">via {inv.rep}</span>
-                    ) : null}
-                  </div>
-                  <div className="mt-1 flex min-w-0 items-center gap-1">
-                    <UrlText url={url} className="min-w-0" />
-                    <CopyButton
-                      text={url}
-                      label="Copy invite link"
-                      toastText="Invite link copied"
-                      className="size-7"
-                    />
-                  </div>
-                  {inv.note ? (
-                    <p
-                      className="mt-0.5 line-clamp-2 text-xs text-muted-foreground/80"
-                      title={inv.note}
+                <div className="flex items-start gap-3">
+                  <Avatar name={inv.agencyName || inv.code} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="truncate font-medium">{inv.agencyName || "No agency"}</span>
+                      {inv.rep ? <Tag tone="violet">via {inv.rep}</Tag> : null}
+                    </div>
+                    <div
+                      className="mt-0.5 text-xs text-muted-foreground"
+                      suppressHydrationWarning
+                      title={formatDateTime(inv.createdAt)}
                     >
-                      {inv.note}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="text-right text-xs whitespace-nowrap">
-                  <div>
-                    <span className="font-medium tabular-nums">{inv.uses}</span>{" "}
-                    <span className="text-muted-foreground">
+                      Created {formatDate(inv.createdAt)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-center justify-end gap-1 text-xl font-semibold tabular-nums">
+                      <UserPlus className="size-4 text-emerald-300" aria-hidden />
+                      {inv.uses}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground">
                       sign-up{inv.uses === 1 ? "" : "s"}
-                    </span>
-                  </div>
-                  <div
-                    className="text-muted-foreground"
-                    suppressHydrationWarning
-                    title={formatDateTime(inv.createdAt)}
-                  >
-                    Created {formatDate(inv.createdAt)}
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center">
+                <div className={cn(well, "flex min-w-0 items-center gap-1 py-1 pr-1 pl-3")}>
+                  <UrlText url={url} className="min-w-0 flex-1" />
+                  <CopyButton
+                    text={url}
+                    label="Copy invite link"
+                    toastText="Invite link copied"
+                    className="size-8"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <p
+                    className="line-clamp-1 min-w-0 flex-1 text-xs text-muted-foreground"
+                    title={inv.note || undefined}
+                  >
+                    {inv.note || " "}
+                  </p>
                   <Button
                     variant="ghost"
-                    size="icon"
-                    className={cn("size-8 text-muted-foreground", ghostBtn)}
+                    size="sm"
+                    className={cn("h-8 text-muted-foreground", ghostBtn)}
                     onClick={() => setQrFor(inv)}
                     aria-label={`QR code for ${inv.code}`}
-                    title="QR code"
                   >
                     <QrIcon aria-hidden />
+                    QR
                   </Button>
                   <Button
                     variant="ghost"
@@ -150,11 +170,11 @@ export function InvitesPanel({ invites }: { invites: InviteRow[] }) {
         </ul>
       )}
       {archived.length ? (
-        <div className="border-t border-border px-4 py-2 sm:px-5">
+        <div className="border-t border-white/[0.06] px-4 py-2.5 sm:px-5">
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            className="rounded text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             {showArchived
               ? `Back to active links (${active.length})`

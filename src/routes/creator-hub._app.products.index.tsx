@@ -1,8 +1,19 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Kanban, LayoutGrid, Package, Search } from "lucide-react";
+import {
+  Factory,
+  Kanban,
+  LayoutGrid,
+  Layers,
+  Package,
+  Palette,
+  Search,
+  Store,
+  type LucideIcon,
+} from "lucide-react";
 import { z } from "zod";
 
+import { ART, Tile, segGroup, segItem, surface, type Tone } from "@/components/hub/app/look";
 import { BoardCard, ProductCard } from "@/components/hub/app/product-card";
 import { EmptyState, Page, PageHeader } from "@/components/hub/app/ui";
 import {
@@ -15,6 +26,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+
+const PHASE_LOOK: Record<PhaseId | "all", { icon: LucideIcon; tone: Tone }> = {
+  all: { icon: Layers, tone: "ice" },
+  design: { icon: Palette, tone: "violet" },
+  making: { icon: Factory, tone: "blue" },
+  live: { icon: Store, tone: "mint" },
+};
 
 export const Route = createFileRoute("/creator-hub/_app/products/")({
   validateSearch: z.object({
@@ -53,70 +71,90 @@ function Products() {
   if (!ws.products.length) {
     return (
       <Page>
-        <PageHeader title="Products" />
-        <EmptyState icon={Package} title="Your products will appear here" className="mt-6">
-          Once you're approved, your manager sets up your first product with you: what it is, the
-          look, and what scanning it unlocks. From then on you can follow it here from brief to on
-          sale.
+        <PageHeader
+          image={ART.figure}
+          imageClassName="object-[50%_42%]"
+          eyebrow="Products"
+          title="Your merch, brief to on sale"
+        />
+        <EmptyState
+          icon={Package}
+          title="Your products will appear here"
+          className="mt-4"
+          image={ART.tee}
+        >
+          After your welcome call, your manager sets up your first product with you. Follow it here
+          from brief to on sale.
         </EmptyState>
       </Page>
     );
   }
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Products"
-        description={`${ws.products.length} in your program · ${count("live")} on sale`}
+        image={ART.figure}
+        imageClassName="object-[50%_42%]"
+        eyebrow="Products"
+        title="Your merch, brief to on sale"
+        description={`${ws.products.length} in your program · ${count("live")} on sale${
+          base.some((p) => p.waitingOn === "creator") ? " · some need you" : ""
+        }`}
         actions={
           <ToggleGroup
             type="single"
             value={view}
             onValueChange={(v) => v && set({ view: v as "grid" | "board" })}
             aria-label="Layout"
-            className="rounded-lg border border-border p-1"
+            className={segGroup}
           >
-            <ToggleGroupItem
-              value="grid"
-              className="h-8 gap-1.5 rounded-md px-3 text-sm data-[state=on]:bg-white/10 data-[state=on]:text-foreground data-[state=on]:text-foreground"
-            >
+            <ToggleGroupItem value="grid" className={segItem}>
               <LayoutGrid className="size-4" aria-hidden /> Grid
             </ToggleGroupItem>
-            <ToggleGroupItem
-              value="board"
-              className="h-8 gap-1.5 rounded-md px-3 text-sm data-[state=on]:bg-white/10 data-[state=on]:text-foreground data-[state=on]:text-foreground"
-            >
+            <ToggleGroupItem value="board" className={segItem}>
               <Kanban className="size-4" aria-hidden /> Board
             </ToggleGroupItem>
           </ToggleGroup>
         }
       />
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         {view === "grid" ? (
-          <div role="group" aria-label="Filter by phase" className="flex flex-wrap gap-1.5">
+          <div
+            role="group"
+            aria-label="Filter by phase"
+            className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0 [&::-webkit-scrollbar]:hidden"
+          >
             {(
               [
                 { id: undefined, label: "All", n: base.length },
                 ...PHASES.map((p) => ({ id: p.id, label: p.label, n: count(p.id) })),
               ] as Array<{ id: PhaseId | undefined; label: string; n: number }>
-            ).map((c) => (
-              <button
-                key={c.label}
-                type="button"
-                aria-pressed={phase === c.id}
-                onClick={() => set({ phase: c.id })}
-                className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  phase === c.id
-                    ? "border-primary/50 bg-primary/12 text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {c.label}
-                <span className="text-xs tabular-nums opacity-70">{c.n}</span>
-              </button>
-            ))}
+            ).map((c) => {
+              const look = PHASE_LOOK[c.id ?? "all"];
+              const on = phase === c.id;
+              return (
+                <button
+                  key={c.label}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => set({ phase: c.id })}
+                  className={cn(
+                    surface,
+                    "inline-flex h-11 shrink-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1.5 text-sm whitespace-nowrap transition-[border-color,background] focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none",
+                    on
+                      ? "border-[var(--partner)]/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_22%,transparent),color-mix(in_oklab,var(--partner-2)_16%,transparent))] text-foreground"
+                      : "text-muted-foreground hover:border-white/20 hover:text-foreground",
+                  )}
+                >
+                  <Tile icon={look.icon} tone={look.tone} size="sm" className="rounded-full" />
+                  {c.label}
+                  <span className="rounded-full bg-white/[0.08] px-1.5 text-xs text-foreground tabular-nums">
+                    {c.n}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         ) : null}
         <div className="flex flex-1 flex-wrap items-center justify-end gap-2">
@@ -131,7 +169,7 @@ function Products() {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search"
-                className="h-8 pl-8"
+                className="h-10 rounded-full pl-8"
               />
             </label>
           ) : null}
@@ -140,7 +178,7 @@ function Products() {
               aria-label="Campaign"
               value={campaign}
               onChange={(e) => setCampaign(e.target.value)}
-              className="h-8 min-w-0 rounded-md border border-input bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="h-10 min-w-0 rounded-full border border-white/10 bg-white/[0.04] px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
               <option value="all">All campaigns</option>
               {campaigns.map((c) => (
@@ -161,18 +199,20 @@ function Products() {
         <div className="-mx-4 mt-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:thin] sm:mx-0 sm:px-0 @4xl/inset:grid @4xl/inset:grid-cols-3 @4xl/inset:overflow-visible">
           {PHASES.map((ph) => {
             const items = base.filter((p) => phaseOf(p.stage) === ph.id);
+            const look = PHASE_LOOK[ph.id];
             return (
               <section
                 key={ph.id}
                 aria-labelledby={`col-${ph.id}`}
-                className="w-[82%] shrink-0 snap-start rounded-xl border border-border bg-white/[0.02] p-3 @4xl/inset:w-auto"
+                className={cn(surface, "w-[82%] shrink-0 snap-start p-3 @4xl/inset:w-auto")}
               >
                 <h2
                   id={`col-${ph.id}`}
-                  className="mb-3 flex items-center justify-between px-1 text-sm font-medium"
+                  className="mb-3 flex items-center gap-2.5 px-1 text-sm font-semibold"
                 >
+                  <Tile icon={look.icon} tone={look.tone} size="sm" />
                   {ph.label}
-                  <span className="rounded-full bg-white/[0.06] px-2 text-xs text-muted-foreground tabular-nums">
+                  <span className="ml-auto rounded-full bg-white/[0.08] px-2 text-xs text-muted-foreground tabular-nums">
                     {items.length}
                   </span>
                 </h2>
@@ -183,7 +223,7 @@ function Products() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-muted-foreground">
                     Nothing here right now
                   </p>
                 )}
@@ -198,7 +238,7 @@ function Products() {
           ))}
         </ul>
       ) : (
-        <EmptyState icon={Package} title="Nothing here" className="mt-5">
+        <EmptyState icon={Package} title="Nothing here" className="mt-5" image={ART.sticker}>
           {phase === "live"
             ? "None of these products is on sale yet. They'll show here the day they go live."
             : "No products match. Try another filter."}

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { fileUrl, isImage, shortDate, type HubFile } from "@/lib/hub/model";
 import { deleteHubFile, formatBytes } from "@/lib/hub/upload-client";
+import { lift, surface } from "@/components/partner/ui";
 import { cn } from "@/lib/utils";
 
 const fileExt = (name: string) =>
@@ -72,7 +73,7 @@ export function FileTile({
   label?: string;
 }) {
   return (
-    <li className="group relative min-w-0 overflow-hidden rounded-xl border border-border bg-white/[0.02] transition-colors hover:border-primary/50">
+    <li className={cn(surface, lift, "group relative min-w-0 overflow-hidden")}>
       <button
         type="button"
         onClick={onOpen}
@@ -80,7 +81,11 @@ export function FileTile({
       >
         <FilePreview file={file} className="aspect-square" />
         <span className="block min-w-0 p-2.5">
-          {label ? <span className="block truncate text-[11px] text-primary">{label}</span> : null}
+          {label ? (
+            <span className="block truncate text-[11px] font-medium text-[var(--partner)]">
+              {label}
+            </span>
+          ) : null}
           <span className="block truncate text-xs font-medium" title={file.name}>
             {file.name}
           </span>
@@ -93,7 +98,7 @@ export function FileTile({
       <a
         href={fileUrl(file, true)}
         download={file.name}
-        className="absolute top-2 right-2 grid size-8 place-items-center rounded-full border border-white/15 bg-background/80 opacity-100 backdrop-blur transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
+        className="glass absolute top-2 right-2 grid size-8 place-items-center rounded-full opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:opacity-0 sm:group-hover:opacity-100"
         aria-label={`Download ${file.name}`}
       >
         <Download className="size-4" aria-hidden />

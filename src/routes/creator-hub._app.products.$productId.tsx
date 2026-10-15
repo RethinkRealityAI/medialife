@@ -4,13 +4,22 @@ import {
   ArrowLeft,
   BadgeCheck,
   BriefcaseBusiness,
+  Coins,
   ExternalLink,
   FileText,
+  Info,
+  LayoutDashboard,
+  ListChecks,
   Maximize2,
   MessageSquare,
   PackageOpen,
+  Palette,
+  Percent,
   PencilLine,
   Play,
+  QrCode,
+  Receipt,
+  ScanLine,
   Send,
   ShoppingBag,
   Sparkles,
@@ -22,7 +31,8 @@ import { ExperiencePreview } from "@/components/hub/app/experience-preview";
 import { FileGallery } from "@/components/hub/app/gallery";
 import { Kpi } from "@/components/hub/app/kpi";
 import { LIGHTBOX_CONTENT } from "@/components/hub/app/lightbox";
-import { ProductThumb, WaitingChip, waitingOnYou } from "@/components/hub/app/product-card";
+import { HubTab, HubTabs, Tile, surface, type TabDef } from "@/components/hub/app/look";
+import { WaitingChip, waitingOnYou } from "@/components/hub/app/product-card";
 import { TriggerCard } from "@/components/hub/app/qr-download";
 import { ScanBars } from "@/components/hub/app/scan-bars";
 import { StageTimeline, StageTrack } from "@/components/hub/app/stage-track";
@@ -31,15 +41,15 @@ import {
   EmptyState,
   Facts,
   Page,
+  PageHeader,
   Pill,
   TimeAgo,
   cardActionClass,
 } from "@/components/hub/app/ui";
-import { PRODUCT_TABS, type ProductTab } from "@/components/hub/app/workspace";
+import { PRODUCT_TABS, productImage, type ProductTab } from "@/components/hub/app/workspace";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { decideProof, getProductDetail, postMessage } from "@/lib/hub/creator.functions";
 import {
@@ -84,13 +94,13 @@ export const Route = createFileRoute("/creator-hub/_app/products/$productId")({
 
 type Detail = NonNullable<Awaited<ReturnType<typeof getProductDetail>>>;
 
-const TAB_LABELS: Record<ProductTab, string> = {
-  overview: "Overview",
-  design: "Design",
-  experience: "Experience & QR",
-  kit: "Launch kit",
-  sales: "Sales",
-  messages: "Messages",
+const TAB_LOOK: Record<ProductTab, { label: string; icon: TabDef<ProductTab>["icon"] }> = {
+  overview: { label: "Overview", icon: LayoutDashboard },
+  design: { label: "Design", icon: Palette },
+  experience: { label: "Experience & QR", icon: QrCode },
+  kit: { label: "Launch kit", icon: BriefcaseBusiness },
+  sales: { label: "Sales", icon: ShoppingBag },
+  messages: { label: "Messages", icon: MessageSquare },
 };
 
 /** Messages from the team since the creator last wrote: the "unread" count. */
@@ -122,20 +132,13 @@ function ProductNotFound() {
 
 function ProductSkeleton() {
   return (
-    <Page className="pt-4 lg:pt-6">
+    <Page className="lg:pt-6">
       <Skeleton className="h-4 w-28" />
-      <div className="mt-4 flex gap-4">
-        <Skeleton className="size-20 rounded-xl sm:size-24" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-7 w-64" />
-          <Skeleton className="h-2 w-full max-w-md" />
-        </div>
-      </div>
-      <Skeleton className="mt-6 h-10 w-full max-w-xl" />
-      <div className="mt-5 grid grid-cols-1 gap-4 @4xl/inset:grid-cols-2">
-        <Skeleton className="h-80 rounded-xl" />
-        <Skeleton className="h-80 rounded-xl" />
+      <Skeleton className="mt-3 h-52 rounded-3xl" />
+      <Skeleton className="mt-5 h-14 w-full rounded-[22px]" />
+      <div className="mt-4 grid grid-cols-1 gap-4 @4xl/inset:grid-cols-2">
+        <Skeleton className="h-80 rounded-2xl" />
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     </Page>
   );
@@ -157,9 +160,9 @@ function ProductPage() {
     if (review && latest) setProofOpen(latest.id);
   }, [review, latest]);
 
-  const setTab = (t: string) =>
+  const setTab = (t: ProductTab) =>
     navigate({
-      search: (p) => ({ ...p, tab: t === "overview" ? undefined : (t as ProductTab) }),
+      search: (p) => ({ ...p, tab: t === "overview" ? undefined : t }),
       replace: true,
       resetScroll: false,
     });
@@ -172,44 +175,43 @@ function ProductPage() {
   };
 
   return (
-    <Page className="pt-4 lg:pt-6">
+    <Page className="lg:pt-6">
       <Link
         to="/creator-hub/products"
-        className="inline-flex items-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="inline-flex items-center gap-1.5 rounded-full px-1 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
       >
         <ArrowLeft className="size-4" aria-hidden /> All products
       </Link>
 
-      <header className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-4 @3xl/inset:grid-cols-[auto_minmax(0,1fr)_auto]">
-        <ProductThumb product={product} className="size-20 rounded-xl @3xl/inset:size-24" />
-        <div className="min-w-0">
-          <p className="truncate text-sm text-muted-foreground">
-            {SKUS[product.sku].name}
-            {product.campaign ? ` · ${product.campaign}` : ""}
-          </p>
-          <h1 className="mt-0.5 truncate text-2xl font-medium tracking-tight sm:text-3xl">
-            {product.name}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <WaitingChip product={product} />
-            {product.stage !== "live" && product.eta ? (
-              <span className="text-xs text-muted-foreground">
-                On sale ~ {shortDate(product.eta)}
-              </span>
-            ) : null}
-          </div>
-        </div>
-        <div className="col-span-2 flex flex-col gap-2 @3xl/inset:col-span-1 @3xl/inset:items-end">
-          {pending ? (
-            <Button
-              size="lg"
-              onClick={() => setProofOpen(latest.id)}
-              className="w-full @3xl/inset:w-auto"
-            >
+      <PageHeader
+        className="mt-3"
+        image={productImage(product)}
+        imageClassName="opacity-100"
+        eyebrow={`${SKUS[product.sku].name}${product.campaign ? ` · ${product.campaign}` : ""}`}
+        title={product.name}
+        description={
+          <>
+            <span className="flex flex-wrap items-center gap-2">
+              <WaitingChip product={product} className="bg-black/50 backdrop-blur" />
+              {product.stage !== "live" && product.eta ? (
+                <span className="text-xs text-white/75">On sale ~ {shortDate(product.eta)}</span>
+              ) : null}
+            </span>
+            <StageTrack stage={product.stage} className="mt-4 max-w-md" />
+          </>
+        }
+        actions={
+          pending ? (
+            <Button size="lg" onClick={() => setProofOpen(latest.id)} className="rounded-full">
               <BadgeCheck aria-hidden /> Review design v{latest.version}
             </Button>
           ) : product.stage === "live" && product.commerce.shopUrl ? (
-            <Button asChild size="lg" variant="outline" className="w-full @3xl/inset:w-auto">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="rounded-full bg-black/30 backdrop-blur"
+            >
               <a href={product.commerce.shopUrl} target="_blank" rel="noreferrer">
                 Open shop page <ExternalLink aria-hidden />
               </a>
@@ -219,65 +221,52 @@ function ProductPage() {
               size="lg"
               variant="outline"
               onClick={() => setTab("messages")}
-              className="w-full @3xl/inset:w-auto"
+              className="rounded-full bg-black/30 backdrop-blur"
             >
               <MessageSquare aria-hidden /> Message the team
             </Button>
-          )}
-        </div>
-        <div className="col-span-2 @3xl/inset:col-span-3">
-          <StageTrack stage={product.stage} className="max-w-2xl" />
-        </div>
-      </header>
+          )
+        }
+      />
 
-      <Tabs value={tab} onValueChange={setTab} className="mt-5">
-        <div className="sticky top-14 z-20 -mx-4 border-b border-border bg-background/90 px-4 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-          <TabsList className="-mb-px h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 [scrollbar-width:none]">
-            {PRODUCT_TABS.map((t) => (
-              <TabsTrigger
-                key={t}
-                value={t}
-                className="relative h-11 shrink-0 rounded-none border-b-2 border-transparent px-3 text-sm text-muted-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-              >
-                {TAB_LABELS[t]}
-                {t === "design" && pending ? (
-                  <span
-                    className="ml-1.5 size-1.5 rounded-full bg-amber-400"
-                    aria-label="(needs you)"
-                  />
-                ) : null}
-                {t === "messages" && unread ? (
-                  <span className="ml-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground tabular-nums">
-                    {unread}
-                    <span className="sr-only"> new from the team</span>
-                  </span>
-                ) : null}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-
-        <div className="mt-5">
-          <TabsContent value="overview" className={TAB_ANIM}>
-            <Overview detail={d} onTab={setTab} />
-          </TabsContent>
-          <TabsContent value="design" className={TAB_ANIM}>
-            <DesignTab detail={d} onOpen={(id) => setProofOpen(id)} />
-          </TabsContent>
-          <TabsContent value="experience" className={TAB_ANIM}>
-            <ExperienceTab detail={d} />
-          </TabsContent>
-          <TabsContent value="kit" className={TAB_ANIM}>
-            <KitTab detail={d} />
-          </TabsContent>
-          <TabsContent value="sales" className={TAB_ANIM}>
-            <SalesTab detail={d} />
-          </TabsContent>
-          <TabsContent value="messages" className={TAB_ANIM}>
-            <Thread productId={product.id} thread={d.thread} />
-          </TabsContent>
-        </div>
-      </Tabs>
+      <HubTabs<ProductTab>
+        label="Product sections"
+        value={tab}
+        onChange={setTab}
+        tabs={PRODUCT_TABS.map((t) => ({
+          id: t,
+          label: TAB_LOOK[t].label,
+          icon: TAB_LOOK[t].icon,
+          badge:
+            t === "design" && pending ? (
+              <span className="size-2 rounded-full bg-amber-400" aria-label="(needs you)" />
+            ) : t === "messages" && unread ? (
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-[var(--partner)] px-1 text-[10px] font-semibold text-[var(--partner-ink)] tabular-nums">
+                {unread}
+                <span className="sr-only"> new from the team</span>
+              </span>
+            ) : undefined,
+        }))}
+      >
+        <HubTab value="overview">
+          <Overview detail={d} onTab={setTab} />
+        </HubTab>
+        <HubTab value="design">
+          <DesignTab detail={d} onOpen={(id) => setProofOpen(id)} />
+        </HubTab>
+        <HubTab value="experience">
+          <ExperienceTab detail={d} />
+        </HubTab>
+        <HubTab value="kit">
+          <KitTab detail={d} />
+        </HubTab>
+        <HubTab value="sales">
+          <SalesTab detail={d} />
+        </HubTab>
+        <HubTab value="messages">
+          <Thread productId={product.id} thread={d.thread} />
+        </HubTab>
+      </HubTabs>
 
       <ProofLightbox
         detail={d}
@@ -292,9 +281,6 @@ function ProductPage() {
   );
 }
 
-const TAB_ANIM =
-  "mt-0 focus-visible:outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300";
-
 /* ---------------------------------------------------------------------------
    Overview
    --------------------------------------------------------------------------- */
@@ -305,18 +291,24 @@ function Overview({ detail: d, onTab }: { detail: Detail; onTab: (t: ProductTab)
   const e = d.experience;
   return (
     <div className="grid grid-cols-1 gap-4 @4xl/inset:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <Card title="Progress" labelledBy="ov-progress">
+      <Card title="Progress" icon={ListChecks} tone="blue" labelledBy="ov-progress">
         <StageTimeline product={p} />
       </Card>
       <div className="flex min-w-0 flex-col gap-4">
         {live ? (
           <div className="grid grid-cols-3 gap-3">
-            <Kpi label="Sold" value={compact(d.sales.units)} />
-            <Kpi label="Earned" value={money(d.sales.earned, p.currency)} emphasis />
-            <Kpi label="Scans" value={compact(d.scans.total)} />
+            <Kpi label="Sold" icon={ShoppingBag} tone="violet" value={compact(d.sales.units)} />
+            <Kpi
+              label="Earned"
+              icon={Coins}
+              tone="mint"
+              value={money(d.sales.earned, p.currency)}
+              emphasis
+            />
+            <Kpi label="Scans" icon={ScanLine} tone="pink" value={compact(d.scans.total)} />
           </div>
         ) : null}
-        <Card title="At a glance" labelledBy="ov-glance">
+        <Card title="At a glance" icon={Info} tone="ice" labelledBy="ov-glance">
           <Facts
             rows={[
               ...(!live && p.nextStep ? [["Next", p.nextStep] as [string, string]] : []),
@@ -336,6 +328,8 @@ function Overview({ detail: d, onTab }: { detail: Detail; onTab: (t: ProductTab)
         </Card>
         <Card
           title="Experience"
+          icon={Sparkles}
+          tone="violet"
           labelledBy="ov-exp"
           action={
             <button type="button" onClick={() => onTab("experience")} className={cardActionClass}>
@@ -344,11 +338,18 @@ function Overview({ detail: d, onTab }: { detail: Detail; onTab: (t: ProductTab)
           }
         >
           {e ? (
-            <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onTab("experience")}
+              className={cn(
+                surface,
+                "flex items-center gap-3 rounded-xl p-3 text-left transition-colors hover:border-[var(--partner)]/50 focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none",
+              )}
+            >
               <span
                 aria-hidden
-                className="grid size-11 shrink-0 place-items-center rounded-lg"
-                style={{ background: "var(--gradient-ember)" }}
+                className="grid size-11 shrink-0 place-items-center rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.3)]"
+                style={{ background: "var(--gradient-ember-btn)" }}
               >
                 <Sparkles className="size-5 text-white" />
               </span>
@@ -358,7 +359,7 @@ function Overview({ detail: d, onTab }: { detail: Detail; onTab: (t: ProductTab)
                   {EXPERIENCE_KINDS[e.kind]} · {EXPERIENCE_STATUS[e.status].label}
                 </div>
               </div>
-            </div>
+            </button>
           ) : (
             <p className="text-sm text-muted-foreground">
               Chosen in the brief, and linked here once it's agreed.
@@ -427,22 +428,24 @@ function DesignTab({ detail: d, onOpen }: { detail: Detail; onOpen: (proofId: st
       <button
         type="button"
         onClick={() => onOpen(latest.id)}
-        className="group relative overflow-hidden rounded-xl border border-border bg-[conic-gradient(at_50%_50%,#121218_25%,#17171f_0_50%,#121218_0_75%,#17171f_0)] bg-[length:24px_24px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        className="group relative overflow-hidden rounded-2xl border border-white/10 bg-[conic-gradient(at_50%_50%,#121218_25%,#17171f_0_50%,#121218_0_75%,#17171f_0)] bg-[length:24px_24px] shadow-[0_20px_40px_-24px_rgb(0_0_0/0.9)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         aria-label={`Open design version ${latest.version} full screen`}
       >
         <ProofImage file={fileOf(latest)} className="mx-auto h-64 w-full sm:h-80" />
-        <span className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-background/85 px-3 py-1.5 text-xs backdrop-blur transition-colors group-hover:border-primary/60">
+        <span className="glass absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-white">
           <Maximize2 className="size-3.5" aria-hidden /> Full screen
         </span>
       </button>
       <Card
         title={`Version ${latest.version}`}
+        icon={Palette}
+        tone="violet"
         labelledBy="design-latest"
         action={<DecisionPill proof={latest} />}
       >
         <p className="text-xs text-muted-foreground">Sent {shortDate(latest.createdAt)}</p>
         {latest.note ? (
-          <p className="mt-3 rounded-lg border border-border bg-white/[0.03] p-3 text-sm leading-relaxed">
+          <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm leading-relaxed">
             <span className="block text-xs text-muted-foreground">From MEDIALIFE</span>
             {latest.note}
           </p>
@@ -452,7 +455,7 @@ function DesignTab({ detail: d, onOpen }: { detail: Detail; onOpen: (proofId: st
             <p className="mb-3 text-sm text-muted-foreground">
               Nothing is produced until you approve.
             </p>
-            <Button className="h-11 w-full" onClick={() => onOpen(latest.id)}>
+            <Button className="h-11 w-full rounded-full" onClick={() => onOpen(latest.id)}>
               <BadgeCheck aria-hidden /> Review and decide
             </Button>
           </div>
@@ -776,14 +779,14 @@ function ExperienceTab({ detail: d }: { detail: Detail }) {
   const p = d.product;
   return (
     <div className="grid grid-cols-1 gap-4 @4xl/inset:grid-cols-2">
-      <Card title="Experience" labelledBy="exp-card">
+      <Card title="Experience" icon={Sparkles} tone="violet" labelledBy="exp-card">
         {e ? (
           <>
             <div className="flex items-start gap-3">
               <span
                 aria-hidden
-                className="grid size-12 shrink-0 place-items-center rounded-xl"
-                style={{ background: "var(--gradient-ember)" }}
+                className="grid size-12 shrink-0 place-items-center rounded-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.3)]"
+                style={{ background: "var(--gradient-ember-btn)" }}
               >
                 <Sparkles className="size-5 text-white" />
               </span>
@@ -810,8 +813,8 @@ function ExperienceTab({ detail: d }: { detail: Detail }) {
             ) : null}
             {e.previewUrl || e.url ? (
               <div className="mt-auto pt-4">
-                <Button onClick={() => setPreview(true)}>
-                  <Play aria-hidden /> Preview
+                <Button onClick={() => setPreview(true)} className="rounded-full">
+                  <Play aria-hidden /> Preview on your phone
                 </Button>
               </div>
             ) : null}
@@ -819,12 +822,18 @@ function ExperienceTab({ detail: d }: { detail: Detail }) {
           </>
         ) : (
           <p className="text-sm text-muted-foreground">
-            The experience is chosen in the brief: an AR moment, a 3D model, a video, a game or a
-            reward. It'll be linked here once it's agreed.
+            Chosen in the brief: an AR moment, a 3D model, a video, a game or a reward. Linked here
+            once it's agreed.
           </p>
         )}
       </Card>
-      <Card title="QR code & NFC" labelledBy="qr-card" className="@container">
+      <Card
+        title="QR code & NFC"
+        icon={QrCode}
+        tone="ice"
+        labelledBy="qr-card"
+        className="@container"
+      >
         <TriggerCard
           url={triggerUrl(d.origin, p.trigger.code)}
           name={p.name}
@@ -874,8 +883,8 @@ function KitTab({ detail: d }: { detail: Detail }) {
       : (COLLATERAL_KINDS[f.category as CollateralKind] ?? COLLATERAL_KINDS.other);
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-white/[0.02] p-4 sm:flex-row sm:items-center">
-        <BriefcaseBusiness className="size-5 shrink-0 text-primary" aria-hidden />
+      <div className={cn(surface, "flex flex-col gap-3 p-4 sm:flex-row sm:items-center")}>
+        <Tile icon={BriefcaseBusiness} tone="amber" />
         <div className="min-w-0 flex-1 text-sm">
           <div className="text-muted-foreground">Shop link</div>
           {p.commerce.shopUrl ? (
@@ -891,7 +900,7 @@ function KitTab({ detail: d }: { detail: Detail }) {
             <span>Arrives at launch</span>
           )}
         </div>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild size="sm" className="rounded-full">
           <Link to="/creator-hub/launch-kit" search={{ product: p.id }}>
             Posts & full launch kit
           </Link>
@@ -901,7 +910,7 @@ function KitTab({ detail: d }: { detail: Detail }) {
         <FileGallery files={kit} label={label} onDeleted={() => router.invalidate()} />
       ) : (
         <EmptyState icon={BriefcaseBusiness} title="Promo files arrive before launch">
-          Mockups, posters and social posts for this product will appear here.
+          Mockups, posters and social posts for this product land here.
         </EmptyState>
       )}
     </div>
@@ -923,18 +932,33 @@ function SalesTab({ detail: d }: { detail: Detail }) {
         <Kpi
           label="Units sold"
           icon={ShoppingBag}
+          tone="violet"
           value={compact(d.sales.units)}
           hint={`${d.sales.orders} orders`}
         />
         <Kpi
           label="Net revenue"
+          icon={Receipt}
+          tone="blue"
           value={money(d.sales.net, p.currency)}
           explain="What fans paid for this product, after discounts and refunds, before tax and shipping."
         />
-        <Kpi label="Your earnings" value={money(d.sales.earned, p.currency)} emphasis />
-        <Kpi label="Your share" value={pct(d.revenueShare)} hint="of net revenue" />
+        <Kpi
+          label="Your earnings"
+          icon={Coins}
+          tone="mint"
+          value={money(d.sales.earned, p.currency)}
+          emphasis
+        />
+        <Kpi
+          label="Your share"
+          icon={Percent}
+          tone="amber"
+          value={pct(d.revenueShare)}
+          hint="of net revenue"
+        />
       </div>
-      <Button asChild variant="outline">
+      <Button asChild variant="outline" className="rounded-full">
         <Link to="/creator-hub/earnings">All earnings and orders</Link>
       </Button>
     </div>
@@ -994,7 +1018,7 @@ function Thread({ productId, thread }: { productId: string; thread: Message[] })
   }
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-border bg-white/[0.02]">
+    <div className={cn(surface, "flex flex-col overflow-hidden")}>
       {messages.length ? (
         <ol
           ref={listRef}
@@ -1017,8 +1041,8 @@ function Thread({ productId, thread }: { productId: string; thread: Message[] })
                     className={cn(
                       "rounded-2xl px-4 py-2.5 text-left text-sm leading-relaxed whitespace-pre-line",
                       mine
-                        ? "rounded-tr-sm bg-primary/15 text-foreground"
-                        : "rounded-tl-sm border border-border bg-white/[0.04]",
+                        ? "rounded-tr-sm bg-[linear-gradient(135deg,color-mix(in_oklab,var(--partner)_30%,transparent),color-mix(in_oklab,var(--partner-2)_25%,transparent))] text-foreground ring-1 ring-[var(--partner)]/25 ring-inset"
+                        : "rounded-tl-sm border border-white/10 bg-white/[0.05]",
                       m.sending && "opacity-60",
                     )}
                   >
@@ -1031,14 +1055,13 @@ function Thread({ productId, thread }: { productId: string; thread: Message[] })
         </ol>
       ) : (
         <div className="flex items-center gap-3 p-5 text-sm text-muted-foreground">
-          <MessageSquare className="size-5 shrink-0" aria-hidden />
-          No messages yet. Ask the team anything about this product. We usually reply within a
-          business day.
+          <Tile icon={MessageSquare} tone="ice" />
+          No messages yet. Ask the team anything; we usually reply within a business day.
         </div>
       )}
       <form
         onSubmit={send}
-        className="flex items-end gap-2 border-t border-border bg-background/60 p-3"
+        className="flex items-end gap-2 border-t border-white/10 bg-black/20 p-3"
       >
         <label htmlFor="message" className="sr-only">
           Write a message to the team
@@ -1053,12 +1076,12 @@ function Thread({ productId, thread }: { productId: string; thread: Message[] })
           placeholder="Write a message…"
           rows={2}
           maxLength={4000}
-          className="min-h-11 resize-none"
+          className="min-h-11 resize-none rounded-xl"
         />
         <Button
           type="submit"
           disabled={busy || !body.trim()}
-          className="h-11"
+          className="h-11 rounded-full"
           aria-label="Send message"
         >
           <Send aria-hidden />{" "}

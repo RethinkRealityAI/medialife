@@ -207,17 +207,17 @@ export function PartnerTabs<T extends string>({
       className={cn("mt-5", className)}
     >
       <div ref={top} className="scroll-mt-14" />
-      <div className="sticky top-14 z-20 -mx-4 bg-background/80 px-4 py-2 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky top-16 z-20 py-2">
         <TabsList
           ref={list}
           aria-label={label}
-          className="flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-white/[0.08] bg-white/[0.03] p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="glass flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-[22px] p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map((t) => (
             <TabsTrigger
               key={t.id}
               value={t.id}
-              className="h-10 shrink-0 gap-2 rounded-xl px-3.5 text-sm text-muted-foreground hover:text-foreground data-[state=active]:bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_26%,transparent),color-mix(in_oklab,var(--partner-2)_22%,transparent))] data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--partner)_45%,transparent)] focus-visible:ring-offset-0"
+              className="h-10 shrink-0 gap-2 rounded-xl px-3.5 text-sm text-muted-foreground hover:text-foreground max-sm:gap-1.5 max-sm:px-2.5 max-sm:text-[13px] data-[state=active]:bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_26%,transparent),color-mix(in_oklab,var(--partner-2)_22%,transparent))] data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--partner)_45%,transparent)] focus-visible:ring-offset-0"
             >
               <t.icon className="size-4" aria-hidden />
               {t.label}

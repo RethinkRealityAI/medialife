@@ -34,6 +34,12 @@
   --color-ring: var(--ring);
   --color-glow: var(--glow);
   --color-surface: var(--surface);
+  /* The sidebar's own surface (also its sheet on phones); the hubs style its
+     items themselves. */
+  --color-sidebar: var(--background);
+  --color-sidebar-foreground: var(--foreground);
+  --color-sidebar-border: var(--border);
+  --color-sidebar-ring: var(--ring);
 }
 
 :root {
@@ -72,6 +78,42 @@
      same colour while the label stays legible. */
   --gradient-ember-btn: linear-gradient(135deg, oklch(0.556 0.16 240), oklch(0.595 0.26 350));
   --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
+
+  /* Hub surfaces (src/components/partner/ui.tsx) take these accents. The
+     Partner Hub sets them to the partner's colours; elsewhere they're ours. */
+  --partner: oklch(0.72 0.16 240);
+  --partner-2: oklch(0.55 0.22 300);
+  --partner-ink: oklch(0.13 0.03 275);
+
+  /* Liquid glass (the same recipe as the merch shelf, public/merch-shelf/app.css):
+     a diagonal sheen over a dark tint, a bright top edge and a soft drop. Used
+     through the .glass / .glass-strong / .glass-pill utilities below. */
+  --lg-tint: rgba(16, 15, 30, 0.5);
+  --lg-tint-strong: rgba(12, 12, 24, 0.68);
+  --lg-sheen: linear-gradient(
+    165deg,
+    rgba(255, 255, 255, 0.14) 0%,
+    rgba(255, 255, 255, 0.05) 38%,
+    rgba(255, 255, 255, 0.02) 70%,
+    rgba(255, 255, 255, 0.045) 100%
+  );
+  --lg-blur: blur(20px) saturate(180%) brightness(0.8);
+  --lg-blur-strong: blur(28px) saturate(190%) brightness(0.7);
+  --lg-edges: rgba(255, 255, 255, 0.28) rgba(255, 255, 255, 0.1) rgba(255, 255, 255, 0.06)
+    rgba(255, 255, 255, 0.16);
+  --lg-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26), inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 18px rgba(255, 255, 255, 0.03), 0 18px 44px rgba(2, 2, 10, 0.45),
+    0 2px 6px rgba(2, 2, 10, 0.25);
+  --lg-pill-on: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.24) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+  --lg-pill-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45), inset 0 -1px 1px rgba(255, 255, 255, 0.08),
+    0 1px 2px rgba(0, 0, 0, 0.26), 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
 @layer base {
@@ -313,4 +355,34 @@
   .animate-pulse-glow {
     animation: pulse-glow 3s ease-in-out infinite;
   }
+}
+
+/* Liquid glass surfaces. Fall back to a solid tint where backdrop-filter
+   isn't supported, so text stays readable. */
+@utility glass {
+  background: var(--lg-sheen), var(--lg-tint);
+  -webkit-backdrop-filter: var(--lg-blur);
+  backdrop-filter: var(--lg-blur);
+  border: 1px solid;
+  border-color: var(--lg-edges);
+  box-shadow: var(--lg-shadow);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: var(--lg-sheen), rgba(12, 12, 24, 0.92);
+  }
+}
+@utility glass-strong {
+  background: var(--lg-sheen), var(--lg-tint-strong);
+  -webkit-backdrop-filter: var(--lg-blur-strong);
+  backdrop-filter: var(--lg-blur-strong);
+  border: 1px solid;
+  border-color: var(--lg-edges);
+  box-shadow: var(--lg-shadow);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: var(--lg-sheen), rgba(12, 12, 24, 0.95);
+  }
+}
+/* A raised pill inside a glass bar: the selected tab, a segmented control. */
+@utility glass-pill {
+  background: var(--lg-pill-on);
+  box-shadow: var(--lg-pill-shadow);
 }

@@ -56,6 +56,12 @@ export function summarizeShelf(doc: ShelfDoc): ShelfSummary {
     publishedAt: doc.publishedAt,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
+    partnerId: doc.owner?.partnerId ?? null,
+    partnerName: doc.owner
+      ? (doc.owner.partnerName ??
+        doc.owner.partnerId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()))
+      : null,
+    isDefault: !!doc.owner?.isDefault,
   };
 }
 
@@ -88,13 +94,30 @@ function startingConfig(creatorName: string | undefined): ShelfConfig {
 
 export async function createShelf(
   ns: ArNamespace,
-  input: { slug: string; name: string; creator?: string; from?: string | null },
+  input: {
+    slug: string;
+    name: string;
+    creator?: string;
+    from?: string | null;
+    /** start from this config instead of the default (a partner's preset) */
+    config?: ShelfConfig;
+    owner?: ShelfDoc["owner"];
+    /** put it live straight away (a partner's starting shelf) */
+    publish?: boolean;
+  },
 ): Promise<{ ok: true; doc: ShelfDoc } | Fail<"bad-slug" | "taken" | "not-found">> {
   if (!isValidShelfSlug(input.slug)) return { ok: false, error: "bad-slug" };
   if (await readShelf(ns, input.slug)) return { ok: false, error: "taken" };
   let draft: ShelfConfig;
   let snapshotAssetId: string | null = null;
-  if (input.from) {
+  if (input.config) {
+    draft = structuredClone(input.config);
+    const n = (input.creator ?? "").trim().slice(0, 28);
+    if (n) {
+      draft.creator.name = n;
+      draft.pitch.preparedFor = n.slice(0, 60);
+    }
+  } else if (input.from) {
     const src = await readShelf(ns, input.from);
     if (!src) return { ok: false, error: "not-found" };
     draft = structuredClone(src.draft);
@@ -110,15 +133,17 @@ export async function createShelf(
     draft = startingConfig(input.creator);
   }
   const now = Date.now();
+  const parsed = shelfConfigSchema.parse(draft);
   const doc: ShelfDoc = {
     slug: input.slug,
     name: input.name.trim().slice(0, 80) || input.slug,
-    draft: shelfConfigSchema.parse(draft),
-    published: null,
-    publishedAt: null,
+    draft: parsed,
+    published: input.publish ? structuredClone(parsed) : null,
+    publishedAt: input.publish ? now : null,
     createdAt: now,
     updatedAt: now,
     snapshotAssetId,
+    ...(input.owner ? { owner: input.owner } : {}),
   };
   await writeShelf(ns, doc);
   return { ok: true, doc };

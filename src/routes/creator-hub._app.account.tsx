@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import {
   BadgeCheck,
   ChevronDown,
@@ -22,6 +22,7 @@ import {
   toDrafts,
   type ChannelDraft,
 } from "@/components/hub/app/channel-editor";
+import { ART, HubTab, HubTabs, Tile, type Tone } from "@/components/hub/app/look";
 import { Page, PageHeader, Panel, Pill } from "@/components/hub/app/ui";
 import { ACCOUNT_SECTIONS, type AccountSection } from "@/components/hub/app/workspace";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,37 @@ export const Route = createFileRoute("/creator-hub/_app/account")({
   component: Account,
 });
 
-const SECTIONS: Array<{ id: AccountSection; label: string; icon: LucideIcon; hint: string }> = [
-  { id: "profile", label: "Profile", icon: UserRound, hint: "Name, country, what you make" },
-  { id: "channels", label: "Channels", icon: Tv, hint: "Where you publish" },
-  { id: "contact", label: "Contact", icon: MessageCircle, hint: "Discord, email, phone" },
-  { id: "shipping", label: "Shipping", icon: Truck, hint: "Where samples go" },
-  { id: "payout", label: "Payouts", icon: Wallet, hint: "How you get paid" },
-  { id: "security", label: "Security", icon: ShieldCheck, hint: "Email, password, sign-in" },
+const SECTIONS: Array<{
+  id: AccountSection;
+  label: string;
+  icon: LucideIcon;
+  tone: Tone;
+  hint: string;
+}> = [
+  {
+    id: "profile",
+    label: "Profile",
+    icon: UserRound,
+    tone: "ice",
+    hint: "Name, country, what you make",
+  },
+  { id: "channels", label: "Channels", icon: Tv, tone: "pink", hint: "Where you publish" },
+  {
+    id: "contact",
+    label: "Contact",
+    icon: MessageCircle,
+    tone: "blue",
+    hint: "Discord, email, phone",
+  },
+  { id: "shipping", label: "Shipping", icon: Truck, tone: "amber", hint: "Where samples go" },
+  { id: "payout", label: "Payouts", icon: Wallet, tone: "mint", hint: "How you get paid" },
+  {
+    id: "security",
+    label: "Security",
+    icon: ShieldCheck,
+    tone: "violet",
+    hint: "Email, password, sign-in",
+  },
 ];
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -147,22 +172,28 @@ function Card({
   saveLabel?: string;
   footer?: ReactNode;
 }) {
+  const look = SECTIONS.find((x) => x.id === id);
   const body = (
     <>
       <div className="p-5 sm:p-6">
-        <h2 id={`${id}-title`} className="text-lg font-medium tracking-tight">
-          {title}
-        </h2>
-        {description ? (
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
-        ) : null}
-        <div className="mt-5">{children}</div>
+        <div className="flex items-center gap-3">
+          {look ? <Tile icon={look.icon} tone={look.tone} /> : null}
+          <div className="min-w-0">
+            <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight">
+              {title}
+            </h2>
+            {description ? (
+              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+        </div>
+        <div className="mt-6">{children}</div>
       </div>
       {onSubmit || footer ? (
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-3 sm:px-6">
+        <div className="flex flex-wrap items-center justify-end gap-3 rounded-b-2xl border-t border-white/[0.06] bg-black/20 px-5 py-3 sm:px-6">
           {footer}
           {onSubmit ? (
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} className="rounded-full px-6">
               {busy ? "Saving…" : saveLabel}
             </Button>
           ) : null}
@@ -202,7 +233,6 @@ function Account() {
   const status = CREATOR_STATUS[creator.status];
 
   const section: AccountSection = search.section ?? "profile";
-  const current = SECTIONS.find((x) => x.id === section)!;
   const go = (id: AccountSection) =>
     navigate({
       search: { section: id === "profile" ? undefined : id },
@@ -211,100 +241,73 @@ function Account() {
     });
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Account"
-        description="Your profile, how we reach you, where we send samples and how you get paid."
+        image={ART.box}
+        imageClassName="object-[50%_22%]"
+        eyebrow="Account"
+        title={creator.profile.displayName || "Your account"}
+        description="Your profile, how we reach you, where samples go and how you get paid."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone={status.tone}>{status.label}</Pill>
-            {creator.agency ? <Pill tone="muted">Via {creator.agency.name}</Pill> : null}
+            <Pill tone={status.tone} className="bg-black/50 backdrop-blur">
+              {status.label}
+            </Pill>
+            {creator.agency ? (
+              <Pill tone="muted" className="bg-black/50 backdrop-blur">
+                Via {creator.agency.name}
+              </Pill>
+            ) : null}
           </div>
         }
       />
 
-      <div className="mt-6 grid grid-cols-1 gap-6 @4xl/inset:grid-cols-[13rem_minmax(0,1fr)]">
-        {/* Phones: a select. Desktop: a section list. */}
-        <div className="@4xl/inset:hidden">
-          <label htmlFor="account-section" className="sr-only">
-            Section
-          </label>
-          <select
-            id="account-section"
-            value={section}
-            onChange={(e) => go(e.target.value as AccountSection)}
-            className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            {SECTIONS.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.label} — {x.hint}
-              </option>
-            ))}
-          </select>
-        </div>
-        <nav aria-label="Account sections" className="hidden @4xl/inset:block">
-          <ul className="sticky top-20 space-y-0.5">
-            {SECTIONS.map((x) => {
-              const on = x.id === section;
-              return (
-                <li key={x.id}>
-                  <Link
-                    to="/creator-hub/account"
-                    search={{ section: x.id === "profile" ? undefined : x.id }}
-                    replace
-                    resetScroll={false}
-                    aria-current={on ? "page" : undefined}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                      on
-                        ? "bg-white/[0.06] text-foreground"
-                        : "text-muted-foreground hover:bg-white/[0.03] hover:text-foreground",
-                    )}
-                  >
-                    <x.icon className={cn("size-4", on && "text-primary")} aria-hidden />
-                    <span className="min-w-0">
-                      <span className="block font-medium">{x.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{x.hint}</span>
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        <div
-          key={section}
-          className="min-w-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300"
-        >
-          <h2 className="sr-only">{current.label}</h2>
-          {section === "profile" ? <ProfileCard creator={creator} /> : null}
-          {section === "channels" ? <ChannelsCard creator={creator} /> : null}
-          {section === "contact" ? <ContactCard creator={creator} account={account} /> : null}
-          {section === "shipping" ? <ShippingCard creator={creator} /> : null}
-          {section === "payout" ? <PayoutCard creator={creator} /> : null}
-          {section === "security" ? (
-            <div className="space-y-4">
-              <SecurityCard account={account} />
-              <Panel className="flex flex-wrap items-center justify-between gap-3 p-5">
-                <div className="text-sm">
+      <HubTabs<AccountSection>
+        label="Account sections"
+        value={section}
+        onChange={go}
+        tabs={SECTIONS.map((x) => ({ id: x.id, label: x.label, icon: x.icon }))}
+      >
+        <HubTab value="profile">
+          <ProfileCard creator={creator} />
+        </HubTab>
+        <HubTab value="channels">
+          <ChannelsCard creator={creator} />
+        </HubTab>
+        <HubTab value="contact">
+          <ContactCard creator={creator} account={account} />
+        </HubTab>
+        <HubTab value="shipping">
+          <ShippingCard creator={creator} />
+        </HubTab>
+        <HubTab value="payout">
+          <PayoutCard creator={creator} />
+        </HubTab>
+        <HubTab value="security">
+          <div className="space-y-4">
+            <SecurityCard account={account} />
+            <Panel className="flex flex-wrap items-center justify-between gap-3 p-5">
+              <div className="flex items-center gap-3 text-sm">
+                <Tile icon={LogOut} tone="ice" size="sm" />
+                <div>
                   <div className="font-medium">Sign out</div>
                   <p className="text-muted-foreground">Signs you out on this device.</p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={async () => {
-                    await signOut();
-                    window.location.assign("/creator-hub/sign-in");
-                  }}
-                >
-                  <LogOut aria-hidden /> Sign out
-                </Button>
-              </Panel>
-            </div>
-          ) : null}
-        </div>
-      </div>
+              </div>
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={async () => {
+                  await signOut();
+                  window.location.assign("/creator-hub/sign-in");
+                }}
+              >
+                <LogOut aria-hidden /> Sign out
+              </Button>
+            </Panel>
+          </div>
+        </HubTab>
+      </HubTabs>
     </Page>
   );
 }
@@ -423,10 +426,10 @@ function ProfileCard({ creator }: { creator: Creator }) {
                   })
                 }
                 className={cn(
-                  "h-8 rounded-full border px-3 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "h-9 rounded-full border px-3.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   on
-                    ? "border-primary/50 bg-primary/12 text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground",
+                    ? "border-[var(--partner)]/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_24%,transparent),color-mix(in_oklab,var(--partner-2)_18%,transparent))] text-foreground"
+                    : "border-white/10 bg-white/[0.03] text-muted-foreground hover:border-white/20 hover:text-foreground",
                 )}
               >
                 {on ? <span aria-hidden>✓ </span> : null}
@@ -502,7 +505,7 @@ function ContactCard({
       }}
     >
       {account.discord ? (
-        <div className="mb-5 flex items-center gap-3 rounded-lg border border-emerald-400/35 bg-emerald-400/[0.06] p-3 text-sm">
+        <div className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-400/35 bg-emerald-400/[0.06] p-3 text-sm">
           {account.discord.avatar ? (
             <img src={account.discord.avatar} alt="" className="size-8 rounded-full" />
           ) : (
@@ -715,8 +718,8 @@ function PayoutCard({ creator }: { creator: Creator }) {
         );
       }}
     >
-      <div className="mb-5 flex gap-3 rounded-lg border border-border bg-white/[0.03] p-3 text-sm">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
+      <div className="mb-5 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3 text-sm">
+        <ShieldCheck className="size-4 shrink-0 text-[var(--partner)]" aria-hidden />
         <p className="leading-relaxed text-muted-foreground">
           <span className="font-medium text-foreground">We never ask for bank passwords;</span>{" "}
           payouts are sent to this address.
@@ -729,10 +732,10 @@ function PayoutCard({ creator }: { creator: Creator }) {
             <label
               key={m.id}
               className={cn(
-                "flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
+                "flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border text-sm transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring",
                 p.method === m.id
-                  ? "border-primary/60 bg-primary/12 text-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground",
+                  ? "border-[var(--partner)]/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_24%,transparent),color-mix(in_oklab,var(--partner-2)_18%,transparent))] text-foreground"
+                  : "border-white/10 bg-white/[0.03] text-muted-foreground hover:text-foreground",
               )}
             >
               <input
@@ -744,7 +747,7 @@ function PayoutCard({ creator }: { creator: Creator }) {
                 className="sr-only"
               />
               {p.method === m.id ? (
-                <BadgeCheck className="size-4 text-primary" aria-hidden />
+                <BadgeCheck className="size-4 text-[var(--partner)]" aria-hidden />
               ) : null}
               {m.label}
             </label>

@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { kitFor, kitHero, kitLogo } from "@/lib/hub/collateral";
 import { HUB, money } from "@/lib/hub/model";
 import { JOURNEY, type JourneyStep } from "@/lib/hub/partners";
+import { kitShelfPreview } from "@/lib/shelf/partner-presets";
 import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS } from "@/lib/hub/showcase";
 import { cn } from "@/lib/utils";
 
@@ -114,7 +115,11 @@ function Home() {
   ];
 
   const actions: {
-    to: "/partner-hub/links" | "/partner-hub/playbook" | "/partner-hub/collateral";
+    to:
+      | "/partner-hub/links"
+      | "/partner-hub/playbook"
+      | "/partner-hub/collateral"
+      | "/partner-hub/shelves";
     search?: { tab: "messages" };
     image?: string;
     /** How to crop the image; the top by default. */
@@ -124,11 +129,12 @@ function Home() {
     body: string;
   }[] = [
     {
-      to: "/partner-hub/links",
-      image: "/partner-kit/medialife/shelf-preview.webp",
+      to: "/partner-hub/shelves",
+      image: kitShelfPreview(ws.partner.kit),
+      position: "object-[50%_35%]",
       icon: Box,
-      title: "Make a 3D shop",
-      body: "A personalised demo for any creator",
+      title: "Build a merch shelf",
+      body: "Yours is ready. Make one for each creator",
     },
     {
       to: "/partner-hub/playbook",
@@ -200,8 +206,8 @@ function Home() {
               toastText="Program link copied"
             />
             <Button asChild variant="outline" className="bg-black/30 backdrop-blur">
-              <Link to="/partner-hub/links">
-                <Box aria-hidden /> Make a 3D shop
+              <Link to="/partner-hub/shelves">
+                <Box aria-hidden /> Build a merch shelf
               </Link>
             </Button>
           </div>

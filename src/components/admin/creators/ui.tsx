@@ -15,12 +15,12 @@ import { Eyebrow } from "../kit";
 // Small pieces the /admin/creators screens share.
 
 export const TONE_CLASSES: Record<Tone, string> = {
-  live: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-  primary: "border-sky-400/40 bg-sky-400/10 text-sky-300",
-  accent: "border-fuchsia-400/40 bg-fuchsia-400/10 text-fuchsia-300",
-  watch: "border-amber-400/45 bg-amber-400/10 text-amber-300",
-  muted: "border-white/15 bg-white/[0.04] text-muted-foreground",
-  danger: "border-red-400/45 bg-red-400/10 text-red-300",
+  live: "from-emerald-400/25 to-emerald-400/[0.06] text-emerald-200 ring-emerald-400/35",
+  primary: "from-sky-400/25 to-sky-400/[0.06] text-sky-200 ring-sky-400/35",
+  accent: "from-fuchsia-400/25 to-fuchsia-400/[0.06] text-fuchsia-200 ring-fuchsia-400/35",
+  watch: "from-amber-400/25 to-amber-400/[0.06] text-amber-200 ring-amber-400/40",
+  muted: "from-white/[0.1] to-white/[0.03] text-white/70 ring-white/15",
+  danger: "from-red-400/25 to-red-400/[0.06] text-red-200 ring-red-400/40",
 };
 
 export function Pill({
@@ -40,12 +40,17 @@ export function Pill({
     <span
       title={title}
       className={cn(
-        "mono inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em] whitespace-nowrap uppercase",
+        "inline-flex h-6 items-center gap-1.5 rounded-full bg-gradient-to-br px-2.5 text-[11px] font-medium whitespace-nowrap ring-1 ring-inset",
         TONE_CLASSES[tone],
         className,
       )}
     >
-      {dot ? <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-current" /> : null}
+      {dot ? (
+        <span
+          aria-hidden
+          className="size-1.5 shrink-0 rounded-full bg-current shadow-[0_0_6px_currentColor]"
+        />
+      ) : null}
       {children}
     </span>
   );
@@ -175,7 +180,7 @@ export function DataList({
   className?: string;
 }) {
   return (
-    <dl className={cn("divide-y divide-border text-sm", className)}>
+    <dl className={cn("divide-y divide-white/[0.06] text-sm", className)}>
       {rows.map(([k, v], i) => (
         <div key={i} className="grid gap-x-4 gap-y-0.5 py-2 sm:grid-cols-[11rem_minmax(0,1fr)]">
           <dt className="text-muted-foreground">{k}</dt>

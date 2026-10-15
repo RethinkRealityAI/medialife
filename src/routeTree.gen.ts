@@ -59,6 +59,7 @@ import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
+import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
 import { Route as CreatorHubAppAgreementRouteImport } from './routes/creator-hub._app.agreement'
 import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
@@ -72,6 +73,7 @@ import { Route as PartnerHubAppIndexRouteImport } from './routes/partner-hub._ap
 import { Route as PartnerHubAppCollateralRouteImport } from './routes/partner-hub._app.collateral'
 import { Route as PartnerHubAppLinksRouteImport } from './routes/partner-hub._app.links'
 import { Route as PartnerHubAppPlaybookRouteImport } from './routes/partner-hub._app.playbook'
+import { Route as PartnerHubAppShelvesRouteImport } from './routes/partner-hub._app.shelves'
 import { Route as PartnerHubAppTeamRouteImport } from './routes/partner-hub._app.team'
 import { Route as RobloxPortalIndexRouteImport } from './routes/roblox.portal.index'
 import { Route as RobloxPortalApplyRouteImport } from './routes/roblox.portal.apply'
@@ -101,8 +103,10 @@ import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin
 import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
 import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
 import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
+import { Route as ApiHubShelfAssetsIdCompleteRouteImport } from './routes/api.hub.shelf-assets.$id.complete'
 import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
 import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
+import { Route as ApiHubShelfAssetsIdChunksNRouteImport } from './routes/api.hub.shelf-assets.$id.chunks.$n'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
 import { Route as ApiHubFilesCreatorIdFileIdChunksNRouteImport } from './routes/api.hub.files.$creatorId.$fileId.chunks.$n'
 
@@ -357,6 +361,11 @@ const ApiHubOrdersRoute = ApiHubOrdersRouteImport.update({
   path: '/api/hub/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHubShelfAssetsRoute = ApiHubShelfAssetsRouteImport.update({
+  id: '/api/hub/shelf-assets',
+  path: '/api/hub/shelf-assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CreatorHubAppAccountRoute = CreatorHubAppAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -421,6 +430,11 @@ const PartnerHubAppLinksRoute = PartnerHubAppLinksRouteImport.update({
 const PartnerHubAppPlaybookRoute = PartnerHubAppPlaybookRouteImport.update({
   id: '/playbook',
   path: '/playbook',
+  getParentRoute: () => PartnerHubAppRoute,
+} as any)
+const PartnerHubAppShelvesRoute = PartnerHubAppShelvesRouteImport.update({
+  id: '/shelves',
+  path: '/shelves',
   getParentRoute: () => PartnerHubAppRoute,
 } as any)
 const PartnerHubAppTeamRoute = PartnerHubAppTeamRouteImport.update({
@@ -576,6 +590,12 @@ const ApiHubOverlayTokenImageRoute = ApiHubOverlayTokenImageRouteImport.update({
   path: '/image',
   getParentRoute: () => ApiHubOverlayTokenRoute,
 } as any)
+const ApiHubShelfAssetsIdCompleteRoute =
+  ApiHubShelfAssetsIdCompleteRouteImport.update({
+    id: '/$id/complete',
+    path: '/$id/complete',
+    getParentRoute: () => ApiHubShelfAssetsRoute,
+  } as any)
 const ApiArAdminAssetsIdCompleteRoute =
   ApiArAdminAssetsIdCompleteRouteImport.update({
     id: '/complete',
@@ -587,6 +607,12 @@ const ApiHubFilesCreatorIdFileIdCompleteRoute =
     id: '/complete',
     path: '/complete',
     getParentRoute: () => ApiHubFilesCreatorIdFileIdRoute,
+  } as any)
+const ApiHubShelfAssetsIdChunksNRoute =
+  ApiHubShelfAssetsIdChunksNRouteImport.update({
+    id: '/$id/chunks/$n',
+    path: '/$id/chunks/$n',
+    getParentRoute: () => ApiHubShelfAssetsRoute,
   } as any)
 const ApiArAdminAssetsIdChunksNRoute =
   ApiArAdminAssetsIdChunksNRouteImport.update({
@@ -648,6 +674,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -660,6 +687,7 @@ export interface FileRoutesByFullPath {
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
   '/partner-hub/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/shelves': typeof PartnerHubAppShelvesRoute
   '/partner-hub/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -694,8 +722,10 @@ export interface FileRoutesByFullPath {
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
+  '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
+  '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -740,6 +770,7 @@ export interface FileRoutesByTo {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -752,6 +783,7 @@ export interface FileRoutesByTo {
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
   '/partner-hub/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/shelves': typeof PartnerHubAppShelvesRoute
   '/partner-hub/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -786,8 +818,10 @@ export interface FileRoutesByTo {
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
+  '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
+  '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -839,6 +873,7 @@ export interface FileRoutesById {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
+  '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
@@ -851,6 +886,7 @@ export interface FileRoutesById {
   '/partner-hub/_app/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/_app/links': typeof PartnerHubAppLinksRoute
   '/partner-hub/_app/playbook': typeof PartnerHubAppPlaybookRoute
+  '/partner-hub/_app/shelves': typeof PartnerHubAppShelvesRoute
   '/partner-hub/_app/team': typeof PartnerHubAppTeamRoute
   '/roblox/portal/apply': typeof RobloxPortalApplyRoute
   '/roblox/portal/guidelines': typeof RobloxPortalGuidelinesRoute
@@ -885,8 +921,10 @@ export interface FileRoutesById {
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
+  '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
+  '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -939,6 +977,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
+    | '/api/hub/shelf-assets'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -951,6 +990,7 @@ export interface FileRouteTypes {
     | '/partner-hub/collateral'
     | '/partner-hub/links'
     | '/partner-hub/playbook'
+    | '/partner-hub/shelves'
     | '/partner-hub/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -985,8 +1025,10 @@ export interface FileRouteTypes {
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
+    | '/api/hub/shelf-assets/$id/complete'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
+    | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesByTo: FileRoutesByTo
@@ -1031,6 +1073,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
+    | '/api/hub/shelf-assets'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -1043,6 +1086,7 @@ export interface FileRouteTypes {
     | '/partner-hub/collateral'
     | '/partner-hub/links'
     | '/partner-hub/playbook'
+    | '/partner-hub/shelves'
     | '/partner-hub/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -1077,8 +1121,10 @@ export interface FileRouteTypes {
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
+    | '/api/hub/shelf-assets/$id/complete'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
+    | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   id:
@@ -1129,6 +1175,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/hub/files'
     | '/api/hub/orders'
+    | '/api/hub/shelf-assets'
     | '/creator-hub/_app/account'
     | '/creator-hub/_app/agreement'
     | '/creator-hub/_app/artwork'
@@ -1141,6 +1188,7 @@ export interface FileRouteTypes {
     | '/partner-hub/_app/collateral'
     | '/partner-hub/_app/links'
     | '/partner-hub/_app/playbook'
+    | '/partner-hub/_app/shelves'
     | '/partner-hub/_app/team'
     | '/roblox/portal/apply'
     | '/roblox/portal/guidelines'
@@ -1175,8 +1223,10 @@ export interface FileRouteTypes {
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
+    | '/api/hub/shelf-assets/$id/complete'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
+    | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesById: FileRoutesById
@@ -1215,6 +1265,7 @@ export interface RootRouteChildren {
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
+  ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
@@ -1578,6 +1629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/hub/shelf-assets': {
+      id: '/api/hub/shelf-assets'
+      path: '/api/hub/shelf-assets'
+      fullPath: '/api/hub/shelf-assets'
+      preLoaderRoute: typeof ApiHubShelfAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/creator-hub/_app/account': {
       id: '/creator-hub/_app/account'
       path: '/account'
@@ -1667,6 +1725,13 @@ declare module '@tanstack/react-router' {
       path: '/playbook'
       fullPath: '/partner-hub/playbook'
       preLoaderRoute: typeof PartnerHubAppPlaybookRouteImport
+      parentRoute: typeof PartnerHubAppRoute
+    }
+    '/partner-hub/_app/shelves': {
+      id: '/partner-hub/_app/shelves'
+      path: '/shelves'
+      fullPath: '/partner-hub/shelves'
+      preLoaderRoute: typeof PartnerHubAppShelvesRouteImport
       parentRoute: typeof PartnerHubAppRoute
     }
     '/partner-hub/_app/team': {
@@ -1872,6 +1937,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubOverlayTokenImageRouteImport
       parentRoute: typeof ApiHubOverlayTokenRoute
     }
+    '/api/hub/shelf-assets/$id/complete': {
+      id: '/api/hub/shelf-assets/$id/complete'
+      path: '/$id/complete'
+      fullPath: '/api/hub/shelf-assets/$id/complete'
+      preLoaderRoute: typeof ApiHubShelfAssetsIdCompleteRouteImport
+      parentRoute: typeof ApiHubShelfAssetsRoute
+    }
     '/api/ar/admin/assets/$id/complete': {
       id: '/api/ar/admin/assets/$id/complete'
       path: '/complete'
@@ -1885,6 +1957,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/hub/files/$creatorId/$fileId/complete'
       preLoaderRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRouteImport
       parentRoute: typeof ApiHubFilesCreatorIdFileIdRoute
+    }
+    '/api/hub/shelf-assets/$id/chunks/$n': {
+      id: '/api/hub/shelf-assets/$id/chunks/$n'
+      path: '/$id/chunks/$n'
+      fullPath: '/api/hub/shelf-assets/$id/chunks/$n'
+      preLoaderRoute: typeof ApiHubShelfAssetsIdChunksNRouteImport
+      parentRoute: typeof ApiHubShelfAssetsRoute
     }
     '/api/ar/admin/assets/$id/chunks/$n': {
       id: '/api/ar/admin/assets/$id/chunks/$n'
@@ -2011,6 +2090,7 @@ interface PartnerHubAppRouteChildren {
   PartnerHubAppCollateralRoute: typeof PartnerHubAppCollateralRoute
   PartnerHubAppLinksRoute: typeof PartnerHubAppLinksRoute
   PartnerHubAppPlaybookRoute: typeof PartnerHubAppPlaybookRoute
+  PartnerHubAppShelvesRoute: typeof PartnerHubAppShelvesRoute
   PartnerHubAppTeamRoute: typeof PartnerHubAppTeamRoute
   PartnerHubAppIndexRoute: typeof PartnerHubAppIndexRoute
   PartnerHubAppCreatorsCreatorIdRoute: typeof PartnerHubAppCreatorsCreatorIdRoute
@@ -2021,6 +2101,7 @@ const PartnerHubAppRouteChildren: PartnerHubAppRouteChildren = {
   PartnerHubAppCollateralRoute: PartnerHubAppCollateralRoute,
   PartnerHubAppLinksRoute: PartnerHubAppLinksRoute,
   PartnerHubAppPlaybookRoute: PartnerHubAppPlaybookRoute,
+  PartnerHubAppShelvesRoute: PartnerHubAppShelvesRoute,
   PartnerHubAppTeamRoute: PartnerHubAppTeamRoute,
   PartnerHubAppIndexRoute: PartnerHubAppIndexRoute,
   PartnerHubAppCreatorsCreatorIdRoute: PartnerHubAppCreatorsCreatorIdRoute,
@@ -2092,6 +2173,19 @@ const ApiHubFilesRouteChildren: ApiHubFilesRouteChildren = {
 const ApiHubFilesRouteWithChildren = ApiHubFilesRoute._addFileChildren(
   ApiHubFilesRouteChildren,
 )
+
+interface ApiHubShelfAssetsRouteChildren {
+  ApiHubShelfAssetsIdCompleteRoute: typeof ApiHubShelfAssetsIdCompleteRoute
+  ApiHubShelfAssetsIdChunksNRoute: typeof ApiHubShelfAssetsIdChunksNRoute
+}
+
+const ApiHubShelfAssetsRouteChildren: ApiHubShelfAssetsRouteChildren = {
+  ApiHubShelfAssetsIdCompleteRoute: ApiHubShelfAssetsIdCompleteRoute,
+  ApiHubShelfAssetsIdChunksNRoute: ApiHubShelfAssetsIdChunksNRoute,
+}
+
+const ApiHubShelfAssetsRouteWithChildren =
+  ApiHubShelfAssetsRoute._addFileChildren(ApiHubShelfAssetsRouteChildren)
 
 interface ApiArAdminAssetsIdRouteChildren {
   ApiArAdminAssetsIdCompleteRoute: typeof ApiArAdminAssetsIdCompleteRoute
@@ -2173,6 +2267,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArTrackRoute: ApiArTrackRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
+  ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,

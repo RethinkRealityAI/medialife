@@ -551,7 +551,7 @@ export function AssetLibrary({
     <div className="@container/lib">
       <div className="grid gap-6 @4xl/lib:grid-cols-[13.5rem_minmax(0,1fr)]">
         <aside className="hidden @4xl/lib:block">
-          <div className="sticky top-20">
+          <div className="sticky top-20 rounded-2xl border border-white/[0.08] bg-[linear-gradient(180deg,rgb(255_255_255/0.05),rgb(255_255_255/0.01))] p-2 shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06),0_20px_40px_-24px_rgb(0_0_0/0.9)]">
             <LibrarySidebar {...navProps} />
           </div>
         </aside>
@@ -574,8 +574,8 @@ export function AssetLibrary({
                   {SECTION_META[folder.section as AssetSection].label}
                 </button>
               ) : null}
-              <h2 className="flex items-center gap-2 text-lg font-medium">
-                <Icon className="size-5 text-primary" aria-hidden />
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                <Icon className="size-5 text-[var(--partner)]" aria-hidden />
                 <span className="truncate">{title}</span>
                 {folder ? (
                   <FolderMenu
@@ -592,7 +592,7 @@ export function AssetLibrary({
               <p className="mt-0.5 hidden text-sm text-muted-foreground sm:block">{blurb}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button type="button" onClick={() => openPicker()}>
+              <Button type="button" onClick={() => openPicker()} className="rounded-full px-4">
                 <Upload aria-hidden /> Upload
               </Button>
               <DropdownMenu>
@@ -928,7 +928,7 @@ export function AssetLibrary({
       {zipProgress !== null ? (
         <div
           role="status"
-          className="fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] z-50 flex items-center gap-3 rounded-xl border border-border bg-background/95 px-4 py-3 text-sm shadow-xl backdrop-blur md:bottom-6"
+          className="glass-strong fixed right-4 bottom-[calc(env(safe-area-inset-bottom)+6.75rem)] z-50 flex items-center gap-3 rounded-2xl px-4 py-3 text-sm md:bottom-6"
         >
           <Loader2
             className="size-4 animate-spin text-primary motion-reduce:animate-none"
@@ -1177,8 +1177,10 @@ function AssetTile(props: ItemProps & { folderName?: string; showSection: boolea
   return (
     <li
       className={cn(
-        "group relative min-w-0 overflow-hidden rounded-xl border bg-white/[0.02] transition-colors",
-        selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-primary/50",
+        "group relative min-w-0 overflow-hidden rounded-2xl border bg-[linear-gradient(180deg,rgb(255_255_255/0.06),rgb(255_255_255/0.015))] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06),0_18px_36px_-24px_rgb(0_0_0/0.9)] transition-[border-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        selected
+          ? "border-[var(--partner)] ring-1 ring-[var(--partner)]"
+          : "border-white/[0.08] hover:border-[var(--partner)]/55",
       )}
     >
       <button

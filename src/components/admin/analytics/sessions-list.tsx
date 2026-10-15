@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronRight, Monitor, Smartphone } from "lucide-react";
+import { ChevronRight, History, Monitor, Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { Dashboard, SessionRow } from "@/lib/ar/analytics.server";
@@ -63,21 +63,23 @@ export function SessionsList({
     <Panel className={className}>
       <div className="p-4 pb-3 sm:p-5 sm:pb-3">
         <PanelTitle
+          icon={History}
+          tone="mint"
           title="Recent visits"
           sub="Newest first. Open one to see every step, in order."
         />
       </div>
       {!rows.length ? (
-        <p className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
+        <p className="border-t border-white/[0.06] px-4 py-8 text-center text-sm text-muted-foreground">
           No visits in this range
         </p>
       ) : (
         <>
-          <div className="hidden border-t border-border @3xl/inset:block">
+          <div className="hidden border-t border-white/[0.06] @3xl/inset:block">
             <table className="w-full text-sm">
               <caption className="sr-only">Recent visits</caption>
               <thead>
-                <tr className="mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
                   <th scope="col" className="px-5 py-2.5 font-normal">
                     When
                   </th>
@@ -104,7 +106,7 @@ export function SessionsList({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.06]">
                 {rows.map((r) => (
                   <tr
                     key={r.key}
@@ -160,7 +162,7 @@ export function SessionsList({
             </table>
           </div>
 
-          <ul className="divide-y divide-border border-t border-border @3xl/inset:hidden">
+          <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06] @3xl/inset:hidden">
             {rows.map((r) => (
               <li key={r.key}>
                 <button
@@ -206,7 +208,7 @@ export function SessionsList({
             ))}
           </ul>
           {data.sessions.length > limit ? (
-            <div className="border-t border-border px-4 py-2 sm:px-5">
+            <div className="border-t border-white/[0.06] px-4 py-2 sm:px-5">
               <Button
                 variant="ghost"
                 size="sm"

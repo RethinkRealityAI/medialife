@@ -154,15 +154,15 @@ function NavRow({
       aria-current={active ? "page" : undefined}
       {...(drop ? props : {})}
       className={cn(
-        "flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+        "flex h-9 w-full min-w-0 items-center gap-2 rounded-xl px-2.5 text-left text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         indent && "pl-7",
         active
-          ? "bg-primary/12 font-medium text-foreground"
+          ? "bg-[linear-gradient(90deg,color-mix(in_oklab,var(--partner)_24%,transparent),transparent)] font-medium text-foreground shadow-[inset_2px_0_0_0_var(--partner)]"
           : "text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
         over && "bg-primary/20 text-foreground ring-1 ring-primary",
       )}
     >
-      <Icon className={cn("size-4 shrink-0", active && "text-primary")} aria-hidden />
+      <Icon className={cn("size-4 shrink-0", active && "text-[var(--partner)]")} aria-hidden />
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined ? (
         <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
@@ -271,10 +271,10 @@ export function LibraryChips(p: NavProps) {
                 onClick={() => p.onGo(pl)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  "inline-flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-sm whitespace-nowrap shadow-[inset_0_1px_0_0_rgb(255_255_255/0.06)] transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                   active
-                    ? "border-primary/50 bg-primary/12 text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground",
+                    ? "border-[var(--partner)]/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_24%,transparent),color-mix(in_oklab,var(--partner-2)_18%,transparent))] text-foreground"
+                    : "border-white/10 bg-white/[0.04] text-muted-foreground hover:text-foreground",
                 )}
               >
                 <Icon className="size-3.5" aria-hidden />
@@ -635,7 +635,7 @@ export function SelectionBar({
     <div
       role="toolbar"
       aria-label={`${count} selected`}
-      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] z-40 mx-auto flex max-w-max items-center gap-0.5 rounded-2xl border border-white/15 bg-background/90 p-1.5 shadow-2xl backdrop-blur-xl motion-safe:animate-in motion-safe:slide-in-from-bottom-4 md:bottom-6"
+      className="glass-strong fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6.75rem)] z-40 mx-auto flex max-w-max items-center gap-0.5 rounded-[22px] p-1.5 motion-safe:animate-in motion-safe:slide-in-from-bottom-4 md:bottom-6"
     >
       <span className="px-2 text-sm font-medium tabular-nums whitespace-nowrap">
         {busy ? (

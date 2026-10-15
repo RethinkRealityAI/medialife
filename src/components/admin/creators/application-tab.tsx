@@ -1,5 +1,14 @@
 import type { ReactNode } from "react";
-import { ExternalLink } from "lucide-react";
+import {
+  ExternalLink,
+  Heart,
+  Radio,
+  Truck,
+  UserRound,
+  Wallet,
+  Contact as ContactIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 import {
   PLATFORMS,
@@ -15,7 +24,7 @@ import {
 } from "@/lib/hub/model";
 
 import { countryName } from "../format";
-import { Panel, PanelTitle } from "../kit";
+import { Panel, PanelTitle, type Tone } from "../kit";
 import type { CreatorDetail } from "./types";
 import { Blank, DataList, Pill } from "./ui";
 
@@ -36,14 +45,18 @@ function Section({
   title,
   sub,
   children,
+  icon,
+  tone,
 }: {
   title: string;
   sub?: ReactNode;
   children: ReactNode;
+  icon?: LucideIcon;
+  tone?: Tone;
 }) {
   return (
     <Panel className="p-4 sm:p-5">
-      <PanelTitle title={title} sub={sub} />
+      <PanelTitle title={title} sub={sub} icon={icon} tone={tone} />
       <div className="mt-2">{children}</div>
     </Panel>
   );
@@ -87,7 +100,7 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
       ) : null}
 
       <div className="grid items-start gap-4 @5xl/inset:grid-cols-2">
-        <Section title="Profile">
+        <Section title="Profile" icon={UserRound} tone="sky">
           <DataList
             rows={[
               ["Creator name", c.profile.displayName],
@@ -117,6 +130,8 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
 
         <Section
           title="Channels"
+          icon={Radio}
+          tone="violet"
           sub={
             audience
               ? `${compact(audience)} total reported audience`
@@ -128,51 +143,53 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
               <Blank>No channels added</Blank>
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="mono text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
-                  <th className="py-2 pr-3 font-normal">Platform</th>
-                  <th className="py-2 pr-3 font-normal">Handle</th>
-                  <th className="py-2 text-right font-normal">Audience</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border border-t border-border">
-                {channels.map((ch, i) => {
-                  const url = ch.url || channelUrl(ch.platform, ch.handle);
-                  return (
-                    <tr key={i}>
-                      <td className="py-2 pr-3 whitespace-nowrap">
-                        {PLATFORMS[ch.platform]?.label ?? ch.platform}
-                        {ch.primary ? (
-                          <span className="ml-1.5 text-[10px] text-muted-foreground uppercase">
-                            primary
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="max-w-[16rem] truncate py-2 pr-3 whitespace-nowrap">
-                        {url ? <Ext href={url}>{ch.handle}</Ext> : ch.handle}
-                      </td>
-                      <td className="py-2 text-right whitespace-nowrap tabular-nums">
-                        {ch.audience != null ? (
-                          <>
-                            {ch.audience.toLocaleString()}{" "}
-                            <span className="text-xs text-muted-foreground">
-                              {PLATFORMS[ch.platform]?.audience.toLowerCase()}
+            <div className="-mx-1 overflow-x-auto px-1">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
+                    <th className="py-2 pr-3 font-normal">Platform</th>
+                    <th className="py-2 pr-3 font-normal">Handle</th>
+                    <th className="py-2 text-right font-normal">Audience</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
+                  {channels.map((ch, i) => {
+                    const url = ch.url || channelUrl(ch.platform, ch.handle);
+                    return (
+                      <tr key={i}>
+                        <td className="py-2 pr-3 whitespace-nowrap">
+                          {PLATFORMS[ch.platform]?.label ?? ch.platform}
+                          {ch.primary ? (
+                            <span className="ml-1.5 text-[10px] text-muted-foreground uppercase">
+                              primary
                             </span>
-                          </>
-                        ) : (
-                          <Blank>–</Blank>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          ) : null}
+                        </td>
+                        <td className="max-w-[16rem] truncate py-2 pr-3 whitespace-nowrap">
+                          {url ? <Ext href={url}>{ch.handle}</Ext> : ch.handle}
+                        </td>
+                        <td className="py-2 text-right whitespace-nowrap tabular-nums">
+                          {ch.audience != null ? (
+                            <>
+                              {ch.audience.toLocaleString()}{" "}
+                              <span className="text-xs text-muted-foreground">
+                                {PLATFORMS[ch.platform]?.audience.toLowerCase()}
+                              </span>
+                            </>
+                          ) : (
+                            <Blank>–</Blank>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </Section>
 
-        <Section title="Contact">
+        <Section title="Contact" icon={ContactIcon} tone="mint">
           <DataList
             rows={[
               ["Discord username", c.contact.discordUsername],
@@ -239,7 +256,7 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
           />
         </Section>
 
-        <Section title="Interests">
+        <Section title="Interests" icon={Heart} tone="rose">
           <DataList
             rows={[
               [
@@ -278,7 +295,7 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
           />
         </Section>
 
-        <Section title="Shipping" sub="Where samples go">
+        <Section title="Shipping" sub="Where samples go" icon={Truck} tone="amber">
           {c.shipping ? (
             <address className="py-2 text-sm leading-relaxed not-italic">
               {[
@@ -304,7 +321,7 @@ export function ApplicationTab({ data }: { data: CreatorDetail }) {
           )}
         </Section>
 
-        <Section title="Payout & consent">
+        <Section title="Payout & consent" icon={Wallet} tone="mint">
           <DataList
             rows={[
               [

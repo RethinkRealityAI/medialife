@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight, SearchX, Search, Users } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
-import { Panel } from "../kit";
+import { Avatar, EmptyState, Panel } from "../kit";
 import type { CreatorRow } from "./types";
 import { Ago, StatusPill } from "./ui";
 
@@ -72,13 +72,16 @@ function Platforms({ c }: { c: CreatorRow }) {
         <span
           key={p}
           title={PLATFORMS[p]?.label ?? p}
-          className="mono rounded border border-border bg-white/[0.03] px-1.5 py-px text-[10px] text-muted-foreground"
+          className="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-medium text-white/70 ring-1 ring-white/[0.08] ring-inset"
         >
           {PLATFORM_SHORT[p] ?? PLATFORMS[p]?.label ?? p}
         </span>
       ))}
       {c.audience ? (
-        <span className="ml-0.5 text-xs font-medium tabular-nums" title="Total reported audience">
+        <span
+          className="ml-1 text-xs font-semibold text-sky-200 tabular-nums"
+          title="Total reported audience"
+        >
           {compact(c.audience)}
         </span>
       ) : null}
@@ -144,18 +147,27 @@ export function CreatorsTable({
     void navigate({ to: "/admin/creators/$creatorId", params: { creatorId: id } });
 
   return (
-    <Panel>
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
-        <div className="-mx-1 max-w-full overflow-x-auto px-1">
+    <Panel className="overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
+        <div className="-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <Tabs value={filters.status} onValueChange={(v) => onFilters({ status: v as ListTab })}>
-            <TabsList className="bg-white/[0.04]">
+            <TabsList
+              aria-label="Filter by status"
+              className="h-10 gap-0.5 rounded-xl bg-black/30 p-1 ring-1 ring-white/[0.06] ring-inset"
+            >
               {LIST_TABS.map((t) => (
-                <TabsTrigger key={t} value={t} className="gap-1.5 px-2.5">
+                <TabsTrigger
+                  key={t}
+                  value={t}
+                  className="h-8 gap-1.5 rounded-lg px-2.5 text-white/60 hover:text-white data-[state=active]:bg-white/[0.1] data-[state=active]:text-white data-[state=active]:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]"
+                >
                   {TAB_LABEL[t]}
                   <span
                     className={cn(
-                      "mono text-[10px] tabular-nums",
-                      t === "submitted" && counts.submitted ? "text-sky-300" : "opacity-60",
+                      "text-[11px] tabular-nums",
+                      t === "submitted" && counts.submitted
+                        ? "font-semibold text-amber-300"
+                        : "opacity-55",
                     )}
                   >
                     {count(t)}
@@ -177,14 +189,17 @@ export function CreatorsTable({
               onChange={(e) => onFilters({ q: e.target.value })}
               placeholder="Name or email"
               aria-label="Search creators by name or email"
-              className="pl-8"
+              className="h-10 rounded-xl bg-black/30 pl-8"
             />
           </div>
           <Select
             value={filters.agency || "__any"}
             onValueChange={(v) => onFilters({ agency: v === "__any" ? ANY : v })}
           >
-            <SelectTrigger className="w-44" aria-label="Filter by agency">
+            <SelectTrigger
+              className="h-10 w-44 rounded-xl bg-black/30"
+              aria-label="Filter by agency"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -201,28 +216,53 @@ export function CreatorsTable({
         </div>
       </div>
       {filters.status === "draft" ? (
-        <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
+        <p className="border-t border-white/[0.06] bg-white/[0.02] px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
           Drafts have an account but haven't submitted their application yet.
         </p>
       ) : null}
 
       {!shown.length ? (
-        <p className="border-t border-border px-4 py-12 text-center text-sm text-muted-foreground">
-          {!creators.length
-            ? "No creators yet. Share an invite link below, or send creators to the Creator Hub."
-            : q || filters.agency
-              ? "No creators match these filters."
-              : filters.status === "submitted"
-                ? "Nothing to review. New applications appear here."
-                : `No ${TAB_LABEL[filters.status].toLowerCase()} creators.`}
-        </p>
+        <div className="border-t border-white/[0.06] p-4">
+          <EmptyState
+            icon={!creators.length ? Users : SearchX}
+            tone={!creators.length ? "sky" : "slate"}
+            title={
+              !creators.length
+                ? "No creators yet"
+                : q || filters.agency
+                  ? "No matches"
+                  : filters.status === "submitted"
+                    ? "Nothing to review"
+                    : `No ${TAB_LABEL[filters.status].toLowerCase()} creators`
+            }
+            action={
+              q || filters.agency ? (
+                <button
+                  type="button"
+                  onClick={() => onFilters({ q: "", agency: ANY })}
+                  className="text-sm font-medium text-sky-300 underline-offset-2 hover:underline"
+                >
+                  Clear search and agency
+                </button>
+              ) : null
+            }
+          >
+            {!creators.length
+              ? "Share an invite link, or send creators to the Creator Hub."
+              : q || filters.agency
+                ? "Nobody matches these filters."
+                : filters.status === "submitted"
+                  ? "New applications land here."
+                  : null}
+          </EmptyState>
+        </div>
       ) : (
         <>
-          <div className="hidden border-t border-border @4xl/inset:block">
+          <div className="hidden border-t border-white/[0.06] @4xl/inset:block">
             <table className="w-full text-sm">
               <caption className="sr-only">Creators</caption>
               <thead>
-                <tr className="mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
                   <th scope="col" className="px-5 py-2.5 font-normal">
                     Creator
                   </th>
@@ -246,26 +286,31 @@ export function CreatorsTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.05]">
                 {shown.map((c) => (
                   <tr
                     key={c.id}
                     onClick={() => open(c.id)}
                     className={cn(
-                      "cursor-pointer align-middle transition-colors hover:bg-white/[0.03]",
+                      "group cursor-pointer align-middle transition-colors hover:bg-[linear-gradient(90deg,color-mix(in_oklab,var(--partner)_9%,transparent),transparent_60%)]",
                       c.status === "draft" && "opacity-55 hover:opacity-80",
                     )}
                   >
-                    <td className="max-w-[18rem] px-5 py-2.5">
-                      <Link
-                        to="/admin/creators/$creatorId"
-                        params={{ creatorId: c.id }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="block truncate font-medium outline-none hover:underline focus-visible:underline"
-                      >
-                        {c.displayName || "Unnamed"}
-                      </Link>
-                      <div className="truncate text-xs text-muted-foreground">{c.email}</div>
+                    <td className="max-w-[20rem] px-5 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <Avatar name={c.displayName || c.email} />
+                        <div className="min-w-0">
+                          <Link
+                            to="/admin/creators/$creatorId"
+                            params={{ creatorId: c.id }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="block truncate font-medium outline-none hover:underline focus-visible:underline"
+                          >
+                            {c.displayName || "Unnamed"}
+                          </Link>
+                          <div className="truncate text-xs text-muted-foreground">{c.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-3 py-2.5">
                       <Platforms c={c} />
@@ -283,7 +328,10 @@ export function CreatorsTable({
                       <Applied c={c} />
                     </td>
                     <td className="px-3 py-2.5 text-muted-foreground">
-                      <ChevronRight className="size-4" aria-hidden />
+                      <ChevronRight
+                        className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none"
+                        aria-hidden
+                      />
                     </td>
                   </tr>
                 ))}
@@ -291,14 +339,15 @@ export function CreatorsTable({
             </table>
           </div>
 
-          <ul className="divide-y divide-border border-t border-border @4xl/inset:hidden">
+          <ul className="divide-y divide-white/[0.05] border-t border-white/[0.06] @4xl/inset:hidden">
             {shown.map((c) => (
               <li key={c.id} className={cn(c.status === "draft" && "opacity-55")}>
                 <Link
                   to="/admin/creators/$creatorId"
                   params={{ creatorId: c.id }}
-                  className="flex items-start gap-3 px-4 py-3.5 hover:bg-white/[0.03]"
+                  className="flex items-start gap-3 px-4 py-3.5 hover:bg-white/[0.03] focus-visible:bg-white/[0.04] focus-visible:outline-none"
                 >
+                  <Avatar name={c.displayName || c.email} />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate font-medium">{c.displayName || "Unnamed"}</span>

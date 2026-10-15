@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { FolderOpen, Library } from "lucide-react";
 
-import { PageHeader, Panel } from "@/components/admin/kit";
+import { BackLink, PageBody, PageHeader, Panel, Tag } from "@/components/admin/kit";
+import { Button } from "@/components/ui/button";
 import { AssetLibrary, type LibraryNav } from "@/components/hub/assets/library";
 import { Toaster } from "@/components/ui/sonner";
 import { adminGetKit } from "@/lib/hub/admin-partners.functions";
@@ -21,20 +22,22 @@ function Kit() {
   const [nav, setNav] = useState<LibraryNav>({});
   return (
     <>
-      <PageHeader title="MEDIALIFE kit">
-        <Link
-          to="/admin/partners"
-          className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" aria-hidden /> Partners
-        </Link>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Every partner sees these in their collateral, marked “New” for three weeks. Use sections
-          and tags so they can find things; anything meant for one partner only goes in that
-          partner's library instead.
-        </p>
-      </PageHeader>
-      <div className="p-4 sm:p-6 lg:p-8">
+      <PageHeader
+        title="MEDIALIFE kit"
+        icon={Library}
+        tone="violet"
+        badge={<Tag tone="violet">{d.files.length} files</Tag>}
+        back={<BackLink to="/admin/partners">Partners</BackLink>}
+        description="Every partner sees these in Collateral, marked “New” for three weeks. Use sections and tags so they're easy to find; files for one partner go in that partner's library."
+        actions={
+          <Button asChild variant="outline" className="bg-black/30 backdrop-blur">
+            <Link to="/admin/partners/collateral">
+              <FolderOpen aria-hidden /> Collateral
+            </Link>
+          </Button>
+        }
+      />
+      <PageBody>
         <Panel className="p-4 sm:p-5">
           <AssetLibrary
             mode="admin"
@@ -46,7 +49,7 @@ function Kit() {
             onNav={setNav}
           />
         </Panel>
-      </div>
+      </PageBody>
       <Toaster theme="dark" position="top-center" richColors closeButton />
     </>
   );

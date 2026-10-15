@@ -47,7 +47,8 @@ const FINISH = {
   black: {
     color: "#0c0c0f",
     back: ["#0b0b0e", "rgba(255,255,255,0.03)"],
-    phys: { roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 },
+    // satin, not mirror: a mirror coat turns each row light into a hot spot
+    phys: { roughness: 0.42, clearcoat: 0.6, clearcoatRoughness: 0.3 },
   },
   white: {
     color: "#e9e8e4",
@@ -149,9 +150,14 @@ export function buildShelf({ count, cols, rows, finish, accent, quality = "high"
 
   // ---- slots, LEDs, washes --------------------------------------------------
   const accentCol = new THREE.Color(accent);
+  // Pale accents (ice blue, white) put every channel over the bloom threshold
+  // and wash the shelf out, so they're driven down by luminance. Up to the
+  // default #19affe (luminance ~0.38) keeps the full drive.
+  const accentLum = 0.2126 * accentCol.r + 0.7152 * accentCol.g + 0.0722 * accentCol.b;
+  const pale = Math.min(1, Math.max(0.4, 0.4 / Math.max(0.05, accentLum)));
   const ledMat = keep(
     new THREE.MeshBasicMaterial({
-      color: accentCol.clone().multiplyScalar(3.2),
+      color: accentCol.clone().multiplyScalar(3.2 * pale),
       toneMapped: false,
     }),
   );
@@ -160,7 +166,7 @@ export function buildShelf({ count, cols, rows, finish, accent, quality = "high"
   const washMat = keep(
     new THREE.MeshBasicMaterial({
       map: washTex,
-      color: accentCol.clone().multiplyScalar(0.19),
+      color: accentCol.clone().multiplyScalar(0.19 * Math.sqrt(pale)),
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
@@ -179,7 +185,7 @@ export function buildShelf({ count, cols, rows, finish, accent, quality = "high"
   const spillMat = keep(
     new THREE.MeshBasicMaterial({
       map: spillTex,
-      color: accentCol.clone().multiplyScalar(0.32),
+      color: accentCol.clone().multiplyScalar(0.32 * Math.sqrt(pale)),
       transparent: true,
       blending: THREE.AdditiveBlending,
       depthWrite: false,

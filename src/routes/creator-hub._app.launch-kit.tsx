@@ -1,21 +1,36 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  ArrowRight,
   AtSign,
   BriefcaseBusiness,
   ExternalLink,
   Heart,
+  Images,
   MessageCircle,
   MessagesSquare,
   MonitorPlay,
   Pin,
+  QrCode,
   Repeat2,
+  Store,
   ThumbsUp,
   type LucideIcon,
 } from "lucide-react";
 import { z } from "zod";
 
 import { FileGallery } from "@/components/hub/app/gallery";
+import {
+  ART,
+  GoChip,
+  HubTab,
+  HubTabs,
+  TabIntro,
+  Tile,
+  lift,
+  surface,
+  type Tone,
+} from "@/components/hub/app/look";
 import { ProductThumb } from "@/components/hub/app/product-card";
 import { TriggerCard } from "@/components/hub/app/qr-download";
 import {
@@ -50,14 +65,34 @@ import {
 } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
+const KIT_TABS = ["link", "posts", "files"] as const;
+type KitTab = (typeof KIT_TABS)[number];
+
 export const Route = createFileRoute("/creator-hub/_app/launch-kit")({
-  validateSearch: z.object({ product: z.string().max(60).optional().catch(undefined) }),
+  validateSearch: z.object({
+    product: z.string().max(60).optional().catch(undefined),
+    tab: z.enum(KIT_TABS).optional().catch(undefined),
+  }),
   head: () => ({ meta: [{ title: "Launch kit · Creator Hub | MEDIALIFE" }] }),
   component: LaunchKit,
 });
 
 type PlatformId = "youtube" | "x" | "discord" | "pinned";
 type Template = { id: PlatformId; label: string; icon: LucideIcon; limit?: number; text: string };
+
+/** Each platform's own colour on its tile, so the posts read at a glance. */
+const PLATFORM_TILE: Record<PlatformId, { tone: Tone; className?: string }> = {
+  youtube: {
+    tone: "amber",
+    className: "from-[#ff4e45]/35 to-[#ff4e45]/5 text-[#ff8a84] ring-[#ff4e45]/30",
+  },
+  x: { tone: "ice", className: "from-white/25 to-white/5 text-white ring-white/25" },
+  discord: {
+    tone: "blue",
+    className: "from-[#5865f2]/40 to-[#5865f2]/5 text-[#aab1fb] ring-[#5865f2]/35",
+  },
+  pinned: { tone: "amber" },
+};
 
 function templates(p: WsProduct, e: WsExperience | undefined): Template[] {
   const live = p.stage === "live";
@@ -132,7 +167,7 @@ function templates(p: WsProduct, e: WsExperience | undefined): Template[] {
 
 function LaunchKit() {
   const ws = useWorkspace();
-  const { product: wanted } = Route.useSearch();
+  const { product: wanted, tab = "link" } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const products = [...ws.products].sort(
     (a, b) =>
@@ -144,29 +179,37 @@ function LaunchKit() {
   if (!p) {
     return (
       <Page>
-        <PageHeader title="Launch kit" />
+        <PageHeader
+          image={ART.mat}
+          imageClassName="object-[40%_50%]"
+          eyebrow="Launch kit"
+          title="Everything to promote a drop"
+        />
         <EmptyState
           icon={BriefcaseBusiness}
-          title="Your launch kit fills up as products get close to launch"
-          className="mt-6"
+          title="Your kit fills up as launch gets close"
+          className="mt-4"
+          image={ART.hoodie}
         >
-          Activation links, QR codes, mockups and ready-to-post announcements appear here for each
-          product.
+          Activation links, QR codes, mockups and ready-to-post announcements for each product.
         </EmptyState>
       </Page>
     );
   }
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Launch kit"
-        description="Everything to promote a drop: the link, the QR code, promo files and posts to copy."
+        image={ART.mat}
+        imageClassName="object-[40%_50%]"
+        eyebrow="Launch kit"
+        title="Everything to promote a drop"
+        description="Your link and QR code, posts to copy, and promo files. Pick a product."
       />
 
       <nav
         aria-label="Choose a product"
-        className="-mx-4 mt-5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0"
+        className="-mx-4 mt-4 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
       >
         <ul className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
           {products.map((x) => {
@@ -177,19 +220,24 @@ function LaunchKit() {
                   type="button"
                   aria-pressed={on}
                   onClick={() =>
-                    navigate({ search: { product: x.id }, replace: true, resetScroll: false })
+                    navigate({
+                      search: (prev) => ({ ...prev, product: x.id }),
+                      replace: true,
+                      resetScroll: false,
+                    })
                   }
                   className={cn(
-                    "flex h-10 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                    surface,
+                    "flex h-12 items-center gap-2.5 rounded-full py-1 pr-4 pl-1 text-sm whitespace-nowrap transition-[border-color,background] focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none",
                     on
-                      ? "border-primary/60 bg-primary/12 text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground",
+                      ? "border-[var(--partner)]/55 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--partner)_22%,transparent),color-mix(in_oklab,var(--partner-2)_16%,transparent))] text-foreground"
+                      : "text-muted-foreground hover:border-white/20 hover:text-foreground",
                   )}
                 >
-                  <ProductThumb product={x} className="size-8 rounded-full" />
+                  <ProductThumb product={x} className="size-10 rounded-full border-white/15" />
                   {x.name}
                   {x.stage === "live" ? (
-                    <span className="size-1.5 rounded-full bg-emerald-400" aria-label="(on sale)" />
+                    <span className="size-2 rounded-full bg-emerald-400" aria-label="(on sale)" />
                   ) : null}
                 </button>
               </li>
@@ -201,6 +249,14 @@ function LaunchKit() {
       <ProductKit
         key={p.id}
         product={p}
+        tab={tab}
+        onTab={(t) =>
+          navigate({
+            search: (prev) => ({ ...prev, tab: t === "link" ? undefined : t }),
+            replace: true,
+            resetScroll: false,
+          })
+        }
         origin={ws.origin}
         creatorName={ws.creator.profile.displayName || "You"}
         handle={
@@ -218,6 +274,8 @@ function LaunchKit() {
 
 function ProductKit({
   product: p,
+  tab,
+  onTab,
   origin,
   creatorName,
   handle,
@@ -225,6 +283,8 @@ function ProductKit({
   files,
 }: {
   product: WsProduct;
+  tab: KitTab;
+  onTab: (t: KitTab) => void;
   origin: string;
   creatorName: string;
   handle: string;
@@ -240,112 +300,164 @@ function ProductKit({
   const sorted = [...files].sort((a, b) => order.indexOf(kindOf(a)) - order.indexOf(kindOf(b)));
 
   return (
-    <div className="mt-5 space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 className="text-lg font-medium">
-          <Link
-            to="/creator-hub/products/$productId"
-            params={{ productId: p.id }}
-            className="hover:text-primary"
-          >
-            {p.name}
-          </Link>
-        </h2>
-        <Pill tone={live ? "live" : "primary"}>{live ? "On sale" : stageOf(p.stage).name}</Pill>
-        <span className="text-sm text-muted-foreground">
-          {SKUS[p.sku].short}
-          {p.campaign ? ` · ${p.campaign}` : ""}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 @4xl/inset:grid-cols-2">
-        <Card title="Link & QR code" labelledBy="kit-qr" className="@container">
-          <TriggerCard
-            url={triggerUrl(origin, p.trigger.code)}
-            name={p.name}
-            method={p.trigger.method}
-            placement={p.trigger.placement}
-          />
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-3 text-sm">
-            <span className="text-muted-foreground">Shop link</span>
-            {p.commerce.shopUrl ? (
-              <>
-                <a
-                  href={p.commerce.shopUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="min-w-0 flex-1 truncate font-medium underline-offset-4 hover:underline"
-                >
-                  {p.commerce.shopUrl.replace(/^https?:\/\//, "")}
-                </a>
-                <CopyButton value={p.commerce.shopUrl} label="Copy" toastText="Shop link copied" />
-                <Button asChild variant="ghost" size="sm">
+    <div className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-300">
+      <HubTabs<KitTab>
+        label="Launch kit sections"
+        value={tab}
+        onChange={onTab}
+        className="mt-3"
+        tabs={[
+          { id: "link", label: "Link & QR", icon: QrCode },
+          {
+            id: "posts",
+            label: "Posts",
+            icon: MessagesSquare,
+            badge: (
+              <span className="rounded-full bg-white/[0.08] px-1.5 text-xs tabular-nums">
+                {list.length}
+              </span>
+            ),
+          },
+          {
+            id: "files",
+            label: "Promo files",
+            icon: Images,
+            badge: (
+              <span className="rounded-full bg-white/[0.08] px-1.5 text-xs tabular-nums">
+                {files.length}
+              </span>
+            ),
+          },
+        ]}
+      >
+        <HubTab value="link">
+          <div className="grid grid-cols-1 gap-4 @4xl/inset:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+            <Card
+              title="Activation link & QR code"
+              icon={QrCode}
+              tone="ice"
+              labelledBy="kit-qr"
+              className="@container"
+            >
+              <TriggerCard
+                url={triggerUrl(origin, p.trigger.code)}
+                name={p.name}
+                method={p.trigger.method}
+                placement={p.trigger.placement}
+              />
+            </Card>
+            <Card title="Shop link" icon={Store} tone="mint" labelledBy="kit-shop">
+              <div className="flex items-center gap-3">
+                <ProductThumb product={p} className="size-14 rounded-xl border-white/10" />
+                <div className="min-w-0">
+                  <Link
+                    to="/creator-hub/products/$productId"
+                    params={{ productId: p.id }}
+                    className="block truncate font-medium hover:text-[var(--partner)]"
+                  >
+                    {p.name}
+                  </Link>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <Pill tone={live ? "live" : "primary"}>
+                      {live ? "On sale" : stageOf(p.stage).name}
+                    </Pill>
+                    <span className="text-xs text-muted-foreground">{SKUS[p.sku].short}</span>
+                  </div>
+                </div>
+              </div>
+              {p.commerce.shopUrl ? (
+                <div className="mt-4 flex flex-wrap items-center gap-2">
                   <a
                     href={p.commerce.shopUrl}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={`Open the shop page for ${p.name}`}
+                    className="min-w-0 flex-1 truncate rounded-full border border-white/10 bg-black/30 px-3 py-2 font-mono text-xs underline-offset-4 hover:underline"
                   >
-                    <ExternalLink aria-hidden />
+                    {p.commerce.shopUrl.replace(/^https?:\/\//, "")}
                   </a>
-                </Button>
-              </>
-            ) : (
-              <span className="text-muted-foreground">· arrives at launch</span>
-            )}
+                  <CopyButton
+                    value={p.commerce.shopUrl}
+                    label="Copy"
+                    toastText="Shop link copied"
+                    className="rounded-full"
+                  />
+                  <Button asChild variant="ghost" size="sm" className="rounded-full">
+                    <a
+                      href={p.commerce.shopUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Open the shop page for ${p.name}`}
+                    >
+                      <ExternalLink aria-hidden />
+                    </a>
+                  </Button>
+                </div>
+              ) : (
+                <p className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-sm text-muted-foreground">
+                  The shop link arrives on launch day. Posts pick it up automatically.
+                </p>
+              )}
+            </Card>
           </div>
-        </Card>
+        </HubTab>
 
-        <Card title="Posts to copy" labelledBy="kit-posts">
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <HubTab value="posts">
+          <TabIntro>
+            {live ? "Ready to post now." : "Teasers for before launch."} Open one to edit, preview
+            and copy.
+          </TabIntro>
+          <ul className="grid grid-cols-1 gap-3 @3xl/inset:grid-cols-2">
             {list.map((t) => (
               <li key={t.id}>
                 <button
                   type="button"
                   onClick={() => setOpen(t.id)}
-                  className="group flex h-full w-full flex-col gap-1.5 rounded-lg border border-border bg-background/40 p-3 text-left transition-colors hover:border-primary/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  className={cn(surface, lift, "group flex h-full w-full gap-3.5 p-4 text-left")}
                   aria-haspopup="dialog"
                 >
-                  <span className="flex items-center gap-2 text-xs font-medium">
-                    <t.icon className="size-3.5 text-primary" aria-hidden />
-                    {t.label}
+                  <Tile
+                    icon={t.icon}
+                    tone={PLATFORM_TILE[t.id].tone}
+                    className={PLATFORM_TILE[t.id].className}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-medium">{t.label}</span>
+                    <span className="mt-1 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                      {t.text.replace(/\*\*/g, "")}
+                    </span>
                   </span>
-                  <span className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                    {t.text.replace(/\*\*/g, "")}
-                  </span>
+                  <GoChip className="self-center" />
                 </button>
               </li>
             ))}
           </ul>
-          {!p.commerce.shopUrl ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Shop link arrives at launch; the posts will include it automatically.
-            </p>
-          ) : null}
-        </Card>
-      </div>
+        </HubTab>
 
-      <Card
-        title="Promo files"
-        labelledBy="kit-files"
-        action={
-          <span className="text-xs text-muted-foreground">
-            {files.length} file{files.length === 1 ? "" : "s"}
-          </span>
-        }
-      >
-        {sorted.length ? (
-          <FileGallery
-            files={sorted}
-            label={(f) => COLLATERAL_KINDS[kindOf(f) as CollateralKind]}
-            className="@3xl/inset:grid-cols-5 @5xl/inset:grid-cols-6"
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Posters, social posts and mockups for this product arrive before launch.
+        <HubTab value="files">
+          {sorted.length ? (
+            <FileGallery
+              files={sorted}
+              label={(f) => COLLATERAL_KINDS[kindOf(f) as CollateralKind]}
+              className="grid-cols-2 gap-3 @3xl/inset:grid-cols-4 @5xl/inset:grid-cols-5"
+            />
+          ) : (
+            <EmptyState icon={Images} title="Promo files arrive before launch" image={ART.tee}>
+              Posters, social posts and mockups for {p.name} land here.
+            </EmptyState>
+          )}
+          <p className="mt-4 text-sm text-muted-foreground">
+            Need something else?{" "}
+            <Link
+              to="/creator-hub/products/$productId"
+              params={{ productId: p.id }}
+              search={{ tab: "messages" }}
+              className="inline-flex items-center gap-1 text-[var(--partner)] hover:underline"
+            >
+              Ask the team <ArrowRight className="size-3.5" aria-hidden />
+            </Link>
           </p>
-        )}
-      </Card>
+        </HubTab>
+      </HubTabs>
 
       <PostDialog
         template={list.find((t) => t.id === open) ?? null}
@@ -381,12 +493,18 @@ function PostDialog({
 
   return (
     <Dialog open={!!t} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[100dvh] w-full overflow-y-auto sm:max-w-3xl">
+      <DialogContent className="glass-strong max-h-[100dvh] w-full overflow-y-auto sm:max-w-3xl sm:rounded-3xl">
         {t ? (
           <>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <t.icon className="size-4 text-primary" aria-hidden /> {t.label}
+              <DialogTitle className="flex items-center gap-2.5">
+                <Tile
+                  icon={t.icon}
+                  tone={PLATFORM_TILE[t.id].tone}
+                  size="sm"
+                  className={PLATFORM_TILE[t.id].className}
+                />
+                {t.label}
               </DialogTitle>
               <DialogDescription>
                 Edit it if you like, then copy it into{" "}
@@ -444,6 +562,7 @@ function PostDialog({
                 variant="default"
                 size="default"
                 toastText={`${t.label} copied`}
+                className="rounded-full"
               />
             </div>
           </>

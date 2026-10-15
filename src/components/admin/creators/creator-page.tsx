@@ -1,11 +1,19 @@
 import { Link } from "@tanstack/react-router";
+import {
+  Activity,
+  FileText,
+  FolderOpen,
+  Lock,
+  Package,
+  Receipt,
+  Sparkles,
+  UserX,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 
-import { Panel } from "../kit";
+import { AdminTab, AdminTabs, EmptyState, Panel, TabCount, type AdminTabDef } from "../kit";
 import { ActivityTab, InternalTab } from "./activity-internal";
 import { ApplicationTab } from "./application-tab";
 import { CreatorHeader } from "./creator-header";
@@ -48,84 +56,79 @@ export function CreatorPage({
   const waiting = data.products.filter(
     (p) => p.stage !== "live" && p.waitingOn === "creator",
   ).length;
-  const tabs: Array<{ id: DetailTab; label: string; count?: number; alert?: boolean }> = [
-    { id: "application", label: "Application", alert: data.creator.status === "submitted" },
-    { id: "products", label: "Products", count: data.products.length, alert: waiting > 0 },
-    { id: "experiences", label: "Experiences", count: data.experiences.length },
-    { id: "files", label: "Files", count: data.files.length },
-    { id: "orders", label: "Orders & payouts", count: data.orders.length },
-    { id: "activity", label: "Activity" },
-    { id: "internal", label: "Internal" },
+  const submitted = data.creator.status === "submitted";
+  const tabs: AdminTabDef<DetailTab>[] = [
+    {
+      id: "application",
+      label: "Application",
+      icon: FileText,
+      badge: submitted ? (
+        <span className="size-2 rounded-full bg-sky-400 shadow-[0_0_8px_var(--color-sky-400)]">
+          <span className="sr-only">(to review)</span>
+        </span>
+      ) : null,
+    },
+    {
+      id: "products",
+      label: "Products",
+      icon: Package,
+      badge: <TabCount n={data.products.length} alert={waiting > 0 ? "amber" : undefined} />,
+    },
+    {
+      id: "experiences",
+      label: "Experiences",
+      icon: Sparkles,
+      badge: <TabCount n={data.experiences.length} />,
+    },
+    { id: "files", label: "Files", icon: FolderOpen, badge: <TabCount n={data.files.length} /> },
+    {
+      id: "orders",
+      label: "Orders & payouts",
+      icon: Receipt,
+      badge: <TabCount n={data.orders.length} />,
+    },
+    { id: "activity", label: "Activity", icon: Activity },
+    { id: "internal", label: "Internal", icon: Lock },
   ];
 
   return (
     <>
       <Toaster theme="dark" position="bottom-right" />
       <CreatorHeader data={data} />
-      <Tabs
-        value={tab}
-        onValueChange={(v) => onTab(v as DetailTab)}
-        className="px-4 py-4 sm:px-6 lg:px-8"
-      >
-        <div className="-mx-1 overflow-x-auto px-1 pb-1">
-          <TabsList className="bg-white/[0.04]">
-            {tabs.map((t) => (
-              <TabsTrigger key={t.id} value={t.id} className="gap-1.5 px-2.5">
-                {t.label}
-                {t.count !== undefined ? (
-                  <span className="mono text-[10px] tabular-nums opacity-60">{t.count}</span>
-                ) : null}
-                {t.alert ? (
-                  <span
-                    aria-hidden
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      t.id === "application" ? "bg-sky-400" : "bg-amber-300",
-                    )}
-                  />
-                ) : null}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </div>
-        <TabsContent value="application" className="mt-4">
-          <ApplicationTab data={data} />
-        </TabsContent>
-        <TabsContent value="products" className="mt-4">
-          <ProductsTab data={data} productId={productId} onProduct={onProduct} />
-        </TabsContent>
-        <TabsContent value="experiences" className="mt-4">
-          <ExperiencesTab data={data} />
-        </TabsContent>
-        <TabsContent value="files" className="mt-4">
-          <FilesTab data={data} />
-        </TabsContent>
-        <TabsContent value="orders" className="mt-4">
-          <MoneyTab data={data} />
-        </TabsContent>
-        <TabsContent value="activity" className="mt-4">
-          <ActivityTab
-            data={data}
-            onProduct={(id) => {
-              onProduct(id);
-            }}
-          />
-        </TabsContent>
-        <TabsContent value="internal" className="mt-4">
-          <InternalTab data={data} />
-        </TabsContent>
-      </Tabs>
+      <div className="px-4 py-5 sm:px-6 lg:px-8">
+        <AdminTabs label="Creator sections" tabs={tabs} value={tab} onChange={onTab}>
+          <AdminTab value="application">
+            <ApplicationTab data={data} />
+          </AdminTab>
+          <AdminTab value="products">
+            <ProductsTab data={data} productId={productId} onProduct={onProduct} />
+          </AdminTab>
+          <AdminTab value="experiences">
+            <ExperiencesTab data={data} />
+          </AdminTab>
+          <AdminTab value="files">
+            <FilesTab data={data} />
+          </AdminTab>
+          <AdminTab value="orders">
+            <MoneyTab data={data} />
+          </AdminTab>
+          <AdminTab value="activity">
+            <ActivityTab data={data} onProduct={(id) => onProduct(id)} />
+          </AdminTab>
+          <AdminTab value="internal">
+            <InternalTab data={data} />
+          </AdminTab>
+        </AdminTabs>
+      </div>
     </>
   );
 }
 
 export function CreatorSkeleton() {
   return (
-    <div className="space-y-5 px-4 py-6 sm:px-6 lg:px-8">
-      <div className="h-4 w-20 animate-pulse rounded bg-white/[0.06]" />
-      <div className="h-9 w-64 animate-pulse rounded bg-white/[0.06]" />
-      <div className="h-5 w-96 max-w-full animate-pulse rounded bg-white/[0.04]" />
-      <div className="h-9 w-[32rem] max-w-full animate-pulse rounded bg-white/[0.04]" />
+    <div className="space-y-5 px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:px-8">
+      <Panel className="h-60 animate-pulse rounded-3xl" />
+      <Panel className="h-12 animate-pulse" />
       <Panel className="h-96 animate-pulse" />
     </div>
   );
@@ -133,14 +136,19 @@ export function CreatorSkeleton() {
 
 export function CreatorNotFound() {
   return (
-    <Panel className="mx-4 mt-10 max-w-md p-6 text-center sm:mx-auto">
-      <h2 className="text-base font-medium">Creator not found</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+    <div className="mx-auto mt-10 max-w-md px-4">
+      <EmptyState
+        icon={UserX}
+        tone="slate"
+        title="Creator not found"
+        action={
+          <Button asChild>
+            <Link to="/admin/creators">All creators</Link>
+          </Button>
+        }
+      >
         They may have been removed, or the link is wrong.
-      </p>
-      <Button asChild className="mt-4">
-        <Link to="/admin/creators">All creators</Link>
-      </Button>
-    </Panel>
+      </EmptyState>
+    </div>
   );
 }

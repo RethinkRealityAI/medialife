@@ -8,8 +8,13 @@ import {
   CircleDollarSign,
   Clock,
   Coins,
+  Globe2,
   HelpCircle,
+  LineChart,
+  Package,
+  PieChart as PieIcon,
   Receipt,
+  Store,
   Wallet,
 } from "lucide-react";
 import { Bar, BarChart, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
@@ -23,6 +28,7 @@ import {
   type Metric,
 } from "@/components/hub/app/earnings-chart";
 import { Kpi } from "@/components/hub/app/kpi";
+import { ART, HubTab, HubTabs, Tile, segGroup, segItem, surface } from "@/components/hub/app/look";
 import { ResponsiveDrawer } from "@/components/hub/app/responsive-drawer";
 import { Card, EmptyState, Facts, Page, PageHeader, Pill } from "@/components/hub/app/ui";
 import { useWorkspace } from "@/components/hub/app/workspace";
@@ -30,7 +36,6 @@ import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getEarnings } from "@/lib/hub/creator.functions";
 import {
@@ -102,15 +107,14 @@ function orderTotals(o: PublicOrder) {
 
 function EarningsSkeleton() {
   return (
-    <Page className="lg:pt-8">
-      <Skeleton className="h-8 w-40" />
-      <Skeleton className="mt-2 h-4 w-80 max-w-full" />
-      <div className="mt-5 grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
+    <Page>
+      <Skeleton className="h-40 rounded-3xl" />
+      <div className="mt-4 grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 rounded-xl" />
+          <Skeleton key={i} className="h-32 rounded-2xl" />
         ))}
       </div>
-      <Skeleton className="mt-4 h-80 rounded-xl" />
+      <Skeleton className="mt-4 h-80 rounded-2xl" />
     </Page>
   );
 }
@@ -127,25 +131,32 @@ function Earnings() {
   const weekly = days > 31;
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Earnings"
-        description={
+        image={ART.sunset}
+        imageClassName="object-[50%_60%]"
+        eyebrow="Earnings"
+        title={
           <>
-            You earn <span className="font-medium text-foreground">{pct(d.revenueShare)}</span> of
-            net merch revenue — after discounts and refunds, before tax and shipping.
+            You earn <span className="ember-text">{pct(d.revenueShare)}</span> of net revenue
           </>
         }
+        description="After discounts and refunds, before tax and shipping. Paid monthly."
       />
 
       {!d.payoutSetUp && ws.creator.status === "approved" ? (
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-amber-400/45 bg-amber-400/[0.07] px-4 py-3">
-          <Wallet className="size-5 shrink-0 text-amber-300" aria-hidden />
+        <div
+          className={cn(
+            surface,
+            "mt-4 flex flex-wrap items-center gap-3 border-amber-400/40 bg-amber-400/[0.07] px-4 py-3",
+          )}
+        >
+          <Tile icon={Wallet} tone="amber" size="sm" />
           <p className="min-w-0 flex-1 text-sm">
             <span className="font-medium">Add your payout details so we can pay you.</span>{" "}
             <span className="text-muted-foreground">Your earnings are safe until then.</span>
           </p>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="rounded-full">
             <Link to="/creator-hub/account" search={{ section: "payout" }}>
               Add payout details <ArrowRight aria-hidden />
             </Link>
@@ -153,10 +164,11 @@ function Earnings() {
         </div>
       ) : null}
 
-      <div className="mt-5 grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
         <Kpi
           label="Total earned"
           icon={Coins}
+          tone="mint"
           value={money(d.summary.earned, cur)}
           hint={`${compact(d.summary.units)} units sold`}
           emphasis
@@ -164,38 +176,41 @@ function Earnings() {
         <Kpi
           label="Available"
           icon={Wallet}
+          tone="ice"
           value={money(d.summary.available, cur)}
-          hint="Ready for your next payout"
+          hint="In your next payout"
           explain={`Earnings from orders older than ${d.holdDays} days that we haven't paid you yet. They go out with your next payout.`}
         />
         <Kpi
           label="Pending"
           icon={Clock}
+          tone="amber"
           value={money(d.summary.pending, cur)}
-          hint={`In the ${d.holdDays}-day returns window`}
+          hint={`${d.holdDays}-day returns window`}
           explain={`Earnings from orders in the last ${d.holdDays} days. Fans can still return items in that window, so these move to Available once it closes.`}
         />
         <Kpi
           label="Paid out"
           icon={Banknote}
+          tone="violet"
           value={money(d.summary.paid, cur)}
           hint={`${d.payouts.length} payout${d.payouts.length === 1 ? "" : "s"}`}
         />
       </div>
 
-      <section
-        aria-labelledby="trend-title"
-        className="mt-4 rounded-xl border border-border bg-gradient-to-b from-white/[0.035] to-white/[0.01] p-4 sm:p-5"
-      >
+      <section aria-labelledby="trend-title" className={cn(surface, "mt-4 p-4 sm:p-5")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 id="trend-title" className="text-sm text-muted-foreground">
-              {METRICS[metric].label}, last {days === 365 ? "year" : `${days} days`}
-            </h2>
-            <div className="mt-1 text-2xl font-medium tracking-tight tabular-nums">
-              {formatMetric(total, metric, cur)}
+          <div className="flex items-start gap-3">
+            <Tile icon={LineChart} tone="mint" size="sm" />
+            <div>
+              <h2 id="trend-title" className="text-sm font-medium text-muted-foreground">
+                {METRICS[metric].label}, last {days === 365 ? "year" : `${days} days`}
+              </h2>
+              <div className="mt-0.5 text-3xl font-semibold tracking-tight tabular-nums">
+                {formatMetric(total, metric, cur)}
+              </div>
+              {weekly ? <div className="text-xs text-muted-foreground">Shown by week</div> : null}
             </div>
-            {weekly ? <div className="text-xs text-muted-foreground">Shown by week</div> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <ToggleGroup
@@ -203,7 +218,7 @@ function Earnings() {
               value={metric}
               onValueChange={(v) => v && setMetric(v as Metric)}
               aria-label="Measure"
-              className="rounded-lg border border-border p-0.5"
+              className={segGroup}
             >
               {(
                 [
@@ -212,11 +227,7 @@ function Earnings() {
                   ["net", "Revenue"],
                 ] as Array<[Metric, string]>
               ).map(([v, l]) => (
-                <ToggleGroupItem
-                  key={v}
-                  value={v}
-                  className="h-8 rounded-md px-2.5 text-xs data-[state=on]:bg-white/10 data-[state=on]:text-foreground data-[state=on]:text-foreground"
-                >
+                <ToggleGroupItem key={v} value={v} className={cn(segItem, "h-8 px-3 text-xs")}>
                   {l}
                 </ToggleGroupItem>
               ))}
@@ -233,14 +244,14 @@ function Earnings() {
                 })
               }
               aria-label="Date range"
-              className="rounded-lg border border-border p-0.5"
+              className={segGroup}
             >
               {RANGES.map((r) => (
                 <ToggleGroupItem
                   key={r}
                   value={String(r)}
                   aria-label={`Last ${r} days`}
-                  className="h-8 rounded-md px-2.5 text-xs data-[state=on]:bg-white/10 data-[state=on]:text-foreground data-[state=on]:text-foreground"
+                  className={cn(segItem, "h-8 px-3 text-xs")}
                 >
                   {r === 365 ? "1y" : `${r}d`}
                 </ToggleGroupItem>
@@ -249,7 +260,7 @@ function Earnings() {
           </div>
         </div>
         {total === 0 && metric !== "units" && d.trend.every((x) => !x.units) ? (
-          <div className="mt-4 grid h-56 place-items-center rounded-lg border border-dashed border-border px-4 text-center text-sm text-muted-foreground">
+          <div className="mt-4 grid h-56 place-items-center rounded-xl border border-dashed border-white/10 px-4 text-center text-sm text-muted-foreground">
             No sales in this period. The chart fills in with your first order.
           </div>
         ) : (
@@ -263,54 +274,48 @@ function Earnings() {
         )}
       </section>
 
-      <Tabs
+      <HubTabs<(typeof TABS)[number]>
+        label="Earnings details"
         value={tab}
-        onValueChange={(t) =>
+        onChange={(t) =>
           navigate({
-            search: (p) => ({
-              ...p,
-              tab: t === "overview" ? undefined : (t as (typeof TABS)[number]),
-            }),
+            search: (p) => ({ ...p, tab: t === "overview" ? undefined : t }),
             replace: true,
             resetScroll: false,
           })
         }
-        className="mt-6"
+        tabs={[
+          { id: "overview", label: "Breakdown", icon: PieIcon },
+          {
+            id: "orders",
+            label: "Orders",
+            icon: Receipt,
+            badge: (
+              <span className="rounded-full bg-white/[0.08] px-1.5 text-xs tabular-nums">
+                {d.orders.length}
+              </span>
+            ),
+          },
+          { id: "payouts", label: "Payouts", icon: Banknote },
+        ]}
       >
-        <TabsList className="h-10 w-full justify-start rounded-lg bg-white/[0.04] p-1 sm:w-auto">
-          <TabsTrigger value="overview" className="flex-1 sm:flex-none">
-            Breakdown
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="flex-1 sm:flex-none">
-            Orders{" "}
-            <span className="ml-1.5 text-xs text-muted-foreground tabular-nums">
-              {d.orders.length}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="payouts" className="flex-1 sm:flex-none">
-            Payouts
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="overview" className={TAB_ANIM}>
+        <HubTab value="overview">
           <Breakdown d={d} />
-        </TabsContent>
-        <TabsContent value="orders" className={TAB_ANIM}>
+        </HubTab>
+        <HubTab value="orders">
           <Orders orders={d.orders} currency={cur} />
-        </TabsContent>
-        <TabsContent value="payouts" className={TAB_ANIM}>
+        </HubTab>
+        <HubTab value="payouts">
           <Payouts d={d} />
-        </TabsContent>
-      </Tabs>
+        </HubTab>
+      </HubTabs>
 
-      <p className="mt-8 text-xs text-muted-foreground">
+      <p className="mt-6 text-xs text-muted-foreground">
         Orders sync from our stores automatically. Figures in {cur}.
       </p>
     </Page>
   );
 }
-
-const TAB_ANIM =
-  "mt-4 focus-visible:outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-300";
 
 /* ---------------------------------------------------------------------------
    Breakdown: by product, by channel, by country
@@ -329,6 +334,8 @@ function Breakdown({ d }: { d: Data }) {
     <div className="grid grid-cols-1 gap-4 @4xl/inset:grid-cols-2 @6xl/inset:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)]">
       <Card
         title="By product"
+        icon={Package}
+        tone="blue"
         labelledBy="bp-title"
         className="@4xl/inset:col-span-2 @6xl/inset:col-span-1"
       >
@@ -411,7 +418,7 @@ function Breakdown({ d }: { d: Data }) {
         ) : null}
       </Card>
 
-      <Card title="Where fans bought" labelledBy="ch-title">
+      <Card title="Where fans bought" icon={Store} tone="violet" labelledBy="ch-title">
         {channels.length ? (
           <div className="flex items-center gap-4">
             <figure className="relative m-0 size-32 shrink-0">
@@ -467,7 +474,7 @@ function Breakdown({ d }: { d: Data }) {
         )}
       </Card>
 
-      <Card title="Top countries" labelledBy="co-title">
+      <Card title="Top countries" icon={Globe2} tone="ice" labelledBy="co-title">
         {countries.length ? (
           <ol className="space-y-2.5">
             {countries.map((c) => (
@@ -480,7 +487,7 @@ function Breakdown({ d }: { d: Data }) {
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-white/[0.06]" aria-hidden>
                   <div
-                    className="h-full rounded-full bg-primary/80"
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--partner-2)] to-[var(--partner)]"
                     style={{ width: `${(c.units / cMax) * 100}%` }}
                   />
                 </div>
@@ -506,8 +513,8 @@ function Orders({ orders, currency }: { orders: PublicOrder[]; currency: string 
   const [openId, setOpenId] = useState<string | null>(null);
   if (!orders.length) {
     return (
-      <EmptyState icon={Receipt} title="No orders yet">
-        Orders appear here within minutes of a fan buying, once a product is on sale.
+      <EmptyState icon={Receipt} title="No orders yet" image={ART.tee}>
+        Orders show up within minutes of a fan buying, once a product is on sale.
       </EmptyState>
     );
   }
@@ -517,12 +524,12 @@ function Orders({ orders, currency }: { orders: PublicOrder[]; currency: string 
 
   return (
     <>
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className={cn(surface, "overflow-hidden")}>
         <table className="w-full text-sm">
           <caption className="sr-only">
             Orders, newest first. Select an order to see its details.
           </caption>
-          <thead className="hidden border-b border-border bg-white/[0.02] text-left text-xs text-muted-foreground @3xl/inset:table-header-group">
+          <thead className="hidden border-b border-white/10 bg-white/[0.03] text-left text-xs text-muted-foreground @3xl/inset:table-header-group">
             <tr>
               <th scope="col" className="px-4 py-2.5 font-normal">
                 Order
@@ -547,7 +554,7 @@ function Orders({ orders, currency }: { orders: PublicOrder[]; currency: string 
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-white/[0.06]">
             {list.map((o) => {
               const t = orderTotals(o);
               const s = STATUS[o.status];
@@ -556,7 +563,7 @@ function Orders({ orders, currency }: { orders: PublicOrder[]; currency: string 
                 <tr
                   key={o.id}
                   onClick={() => setOpenId(o.id)}
-                  className="grid cursor-pointer grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 px-4 py-3 transition-colors hover:bg-white/[0.03] @3xl/inset:table-row @3xl/inset:p-0"
+                  className="grid cursor-pointer grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 px-4 py-3 transition-colors hover:bg-[var(--partner)]/[0.06] @3xl/inset:table-row @3xl/inset:p-0"
                 >
                   <th
                     scope="row"
@@ -658,7 +665,7 @@ function OrderDetail({ order: o, currency }: { order: PublicOrder; currency: str
   const s = STATUS[o.status];
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/35 bg-primary/[0.06] p-4">
+      <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--partner)]/35 bg-[radial-gradient(120%_100%_at_0%_0%,color-mix(in_oklab,var(--partner)_18%,transparent),transparent_60%)] p-4">
         <div>
           <div className="text-xs text-muted-foreground">Your cut</div>
           <div className="text-2xl font-medium tracking-tight tabular-nums">{money(t.cut, c)}</div>
@@ -667,7 +674,7 @@ function OrderDetail({ order: o, currency }: { order: PublicOrder; currency: str
       </div>
       <div>
         <h3 className="mb-2 text-sm font-medium">Items</h3>
-        <ul className="divide-y divide-border rounded-xl border border-border">
+        <ul className="divide-y divide-white/[0.06] rounded-2xl border border-white/10 bg-white/[0.03]">
           {o.lines.map((l, i) => (
             <li key={`${l.productId}-${i}`} className="p-3 text-sm">
               <div className="flex items-baseline justify-between gap-3">
@@ -718,11 +725,14 @@ function Payouts({ d }: { d: Data }) {
         </p>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className="rounded-full">
               <HelpCircle aria-hidden /> How payouts work
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-80 text-sm leading-relaxed">
+          <PopoverContent
+            align="end"
+            className="glass-strong w-80 rounded-2xl text-sm leading-relaxed"
+          >
             <ol className="list-decimal space-y-2 pl-4 text-muted-foreground">
               <li>
                 <span className="text-foreground">A fan orders.</span> Your share of the net revenue
@@ -744,10 +754,13 @@ function Payouts({ d }: { d: Data }) {
         </Popover>
       </div>
       {d.payouts.length ? (
-        <ul className="divide-y divide-border rounded-xl border border-border">
+        <ul className="grid grid-cols-1 gap-2">
           {d.payouts.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 p-4 text-sm">
-              <CircleDollarSign className="size-5 shrink-0 text-emerald-400" aria-hidden />
+            <li
+              key={p.id}
+              className={cn(surface, "flex flex-wrap items-center gap-x-4 gap-y-1 p-4 text-sm")}
+            >
+              <Tile icon={CircleDollarSign} tone="mint" size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{p.periodLabel}</div>
                 <div className="text-xs text-muted-foreground">
@@ -760,14 +773,16 @@ function Payouts({ d }: { d: Data }) {
                   ) : null}
                 </div>
               </div>
-              <div className="font-medium tabular-nums">{money(p.amount, p.currency)}</div>
+              <div className="text-base font-semibold tabular-nums">
+                {money(p.amount, p.currency)}
+              </div>
             </li>
           ))}
         </ul>
       ) : (
-        <EmptyState icon={Banknote} title="No payouts yet">
-          We pay out monthly once your available balance is ready. Each payout shows up here with
-          its reference.
+        <EmptyState icon={Banknote} title="No payouts yet" image={ART.sunset}>
+          We pay monthly once your available balance is ready. Each payout lands here with its
+          reference.
         </EmptyState>
       )}
     </div>

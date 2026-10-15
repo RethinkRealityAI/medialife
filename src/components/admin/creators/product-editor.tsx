@@ -224,7 +224,7 @@ export function ProductEditor({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-2xl">
-        <SheetHeader className="border-b border-border px-5 py-4 text-left">
+        <SheetHeader className="border-b border-white/[0.06] px-5 py-4 text-left">
           <SheetTitle>{product ? `Edit ${product.name}` : "New product"}</SheetTitle>
           <SheetDescription>
             {product
@@ -542,7 +542,7 @@ export function ProductEditor({
               </div>
             </section>
           </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
+          <div className="flex justify-end gap-2 border-t border-white/[0.06] px-5 py-3">
             <Button
               type="button"
               variant="ghost"

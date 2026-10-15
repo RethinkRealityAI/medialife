@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
+  ChevronRight,
   Gift,
   MessageSquare,
   Play,
@@ -11,9 +12,10 @@ import {
 import { z } from "zod";
 
 import { ExperiencePreview } from "@/components/hub/app/experience-preview";
+import { ART, Tile, lift, surface, type Tone } from "@/components/hub/app/look";
 import { ProductThumb } from "@/components/hub/app/product-card";
 import { EmptyState, Page, PageHeader, Pill } from "@/components/hub/app/ui";
-import { useWorkspace } from "@/components/hub/app/workspace";
+import { productImage, useWorkspace } from "@/components/hub/app/workspace";
 import { Button } from "@/components/ui/button";
 import { EXPERIENCE_KINDS, EXPERIENCE_STATUS, compact, fileUrl } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
@@ -24,11 +26,11 @@ export const Route = createFileRoute("/creator-hub/_app/experiences")({
   component: Experiences,
 });
 
-const HOW = [
-  { icon: ShoppingBag, title: "Fan buys", body: "Your activated merch" },
-  { icon: ScanLine, title: "Scans or taps", body: "QR code or NFC tag" },
-  { icon: Smartphone, title: "It opens", body: "In the browser, no app" },
-  { icon: Gift, title: "Reward unlocks", body: "Only owners get it" },
+const HOW: Array<{ icon: typeof Gift; tone: Tone; title: string; body: string }> = [
+  { icon: ShoppingBag, tone: "blue", title: "Fan buys", body: "Your activated merch" },
+  { icon: ScanLine, tone: "ice", title: "Scans or taps", body: "QR code or NFC tag" },
+  { icon: Smartphone, tone: "violet", title: "It opens", body: "In the browser, no app" },
+  { icon: Gift, tone: "pink", title: "Reward unlocks", body: "Only owners get it" },
 ];
 
 function Experiences() {
@@ -40,28 +42,30 @@ function Experiences() {
     navigate({ search: { preview: id }, replace: true, resetScroll: false });
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
-        title="Experiences"
-        description="What fans see when they scan your merch: an AR moment, a 3D model, a video, a game or a reward."
+        image={ART.sticker}
+        imageClassName="object-[50%_55%]"
+        eyebrow="Experiences"
+        title="What fans unlock when they scan"
+        description="An AR moment, a 3D model, a video, a game or a reward. Try each one on your phone."
       />
 
-      <ol
-        aria-label="How it works"
-        className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border @4xl/inset:grid-cols-4"
-      >
+      <ol aria-label="How it works" className="mt-4 grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
         {HOW.map((s, i) => (
-          <li key={s.title} className="flex items-center gap-3 bg-background px-3 py-2.5">
-            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/12 text-primary">
-              <s.icon className="size-4" aria-hidden />
-            </span>
+          <li key={s.title} className={cn(surface, "relative flex items-center gap-3 p-3")}>
+            <Tile icon={s.icon} tone={s.tone} />
             <div className="min-w-0 text-sm">
-              <div className="truncate font-medium">
-                <span className="text-muted-foreground tabular-nums">{i + 1}. </span>
-                {s.title}
-              </div>
+              <div className="text-[11px] text-muted-foreground tabular-nums">Step {i + 1}</div>
+              <div className="truncate font-medium">{s.title}</div>
               <p className="truncate text-xs text-muted-foreground">{s.body}</p>
             </div>
+            {i < HOW.length - 1 ? (
+              <ChevronRight
+                aria-hidden
+                className="absolute top-1/2 -right-3 z-10 hidden size-4 -translate-y-1/2 text-[var(--partner)] @4xl/inset:block"
+              />
+            ) : null}
           </li>
         ))}
       </ol>
@@ -77,8 +81,10 @@ function Experiences() {
               <li key={e.id}>
                 <article
                   className={cn(
-                    "group flex h-full flex-col overflow-hidden rounded-xl border bg-white/[0.02] transition-colors",
-                    review ? "border-amber-400/45" : "border-border hover:border-primary/40",
+                    surface,
+                    lift,
+                    "group flex h-full flex-col overflow-hidden",
+                    review && "border-amber-400/45",
                   )}
                 >
                   <button
@@ -87,41 +93,43 @@ function Experiences() {
                     className="relative aspect-[16/8] overflow-hidden text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset"
                     aria-label={`Preview ${e.name}`}
                   >
-                    {e.imageFileId ? (
-                      <img
-                        src={fileUrl({ creatorId: e.creatorId, id: e.imageFileId })}
-                        alt=""
-                        className="size-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div
-                        aria-hidden
-                        className="relative size-full"
-                        style={{ background: "var(--gradient-ember)" }}
-                      >
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.35),transparent_45%)]" />
-                        <Sparkles className="absolute right-5 bottom-4 size-9 text-white/85" />
-                      </div>
-                    )}
+                    <img
+                      src={
+                        e.imageFileId
+                          ? fileUrl({ creatorId: e.creatorId, id: e.imageFileId })
+                          : products[0]
+                            ? productImage(products[0])
+                            : ART.sticker
+                      }
+                      alt=""
+                      className="size-full object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.04]"
+                    />
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgb(11_13_26/0.85)),radial-gradient(120%_80%_at_100%_100%,color-mix(in_oklab,var(--partner-2)_35%,transparent),transparent_60%)]"
+                    />
                     <span className="absolute top-3 left-3">
-                      <Pill tone={status.tone} className="bg-background/85 backdrop-blur">
+                      <Pill tone={status.tone} className="bg-black/60 backdrop-blur-md">
                         {status.label}
                       </Pill>
                     </span>
-                    <span className="absolute inset-0 grid place-items-center bg-background/0 transition-colors group-hover:bg-background/30">
-                      <span className="grid size-12 scale-90 place-items-center rounded-full bg-background/85 opacity-0 backdrop-blur transition-all group-hover:scale-100 group-hover:opacity-100">
+                    <span className="absolute right-3 bottom-3 flex items-center gap-2">
+                      <span className="glass grid size-12 place-items-center rounded-full text-white transition-transform group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100">
                         <Play className="size-5 translate-x-0.5" aria-hidden />
                       </span>
+                    </span>
+                    <span className="absolute bottom-3 left-3 flex items-center gap-2 text-xs font-medium text-white/90">
+                      <Sparkles className="size-3.5 text-[#f9a8d4]" aria-hidden />
+                      {EXPERIENCE_KINDS[e.kind]}
                     </span>
                   </button>
                   <div className="flex flex-1 flex-col gap-3 p-4">
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">{EXPERIENCE_KINDS[e.kind]}</p>
-                      <h2 className="truncate text-base font-medium">{e.name}</h2>
+                      <h2 className="truncate text-lg font-semibold tracking-tight">{e.name}</h2>
                       {e.reward ? (
                         <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                           <Gift
-                            className="mr-1 inline size-3.5 align-[-2px] text-primary"
+                            className="mr-1 inline size-3.5 align-[-2px] text-[#f9a8d4]"
                             aria-hidden
                           />
                           {e.reward}
@@ -158,11 +166,12 @@ function Experiences() {
                         size="sm"
                         variant={review ? "default" : "outline"}
                         onClick={() => setPreview(e.id)}
+                        className="rounded-full"
                       >
                         <Play aria-hidden /> {review ? "Preview and review" : "Preview"}
                       </Button>
                       {review && products[0] ? (
-                        <Button asChild size="sm" variant="ghost">
+                        <Button asChild size="sm" variant="ghost" className="rounded-full">
                           <Link
                             to="/creator-hub/products/$productId"
                             params={{ productId: products[0].id }}
@@ -180,9 +189,9 @@ function Experiences() {
           })}
         </ul>
       ) : (
-        <EmptyState icon={Sparkles} title="No experiences yet" className="mt-6">
-          Your experience is planned in each product's brief. Once the team starts building it,
-          you'll see it here and can try it on your phone before launch.
+        <EmptyState icon={Sparkles} title="No experiences yet" className="mt-4" image={ART.sticker}>
+          Each product's experience is planned in its brief. Once the team starts building it, try
+          it here on your phone before launch.
         </EmptyState>
       )}
 

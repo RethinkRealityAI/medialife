@@ -325,6 +325,20 @@ svg {
 .tool:hover {
   background: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.08)), var(--lg-bg);
 }
+/* Labels stay on one line; the "prepared for" pill gives way instead. */
+.tool {
+  flex: none;
+  white-space: nowrap;
+}
+.prepared > span {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prepared .by {
+  flex-shrink: 4;
+}
 .tool:active {
   transform: scale(0.96);
 }
@@ -3006,6 +3020,13 @@ body.is-activation .stage {
   background: rgba(255, 196, 0, 0.16);
   border: 1px solid rgba(255, 196, 0, 0.5);
   color: #ffd25a;
+}
+/* Phone-sized previews: the editor's pane already says it's a preview, and
+   down here the badge would sit on the "tap a product" hint. */
+@media (max-width: 760px) {
+  .preview-badge {
+    display: none;
+  }
 }
 .fly {
   position: fixed;

@@ -10,11 +10,13 @@ import {
   Loader2,
   MoreHorizontal,
   RotateCcw,
+  Presentation,
   Rocket,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { IconTile, surface } from "@/components/admin/kit";
 import { Segmented } from "@/components/ar-builder/fields";
 import { ProgramShowcaseCard } from "@/components/ar-demos/program-showcase-card";
 import { useDemoAutosave, type DemoSaveStatus } from "@/components/ar-demos/use-demo-autosave";
@@ -178,14 +180,21 @@ function DemoEditor({ demo, doc: initial }: { demo: DemoId; doc: DemoContentDoc 
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 pt-6 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-8">
-      <div className="mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-        Live demos
+      <div className="flex items-start gap-4">
+        <IconTile icon={Presentation} tone="violet" size="lg" className="hidden sm:grid" />
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold tracking-[0.16em] text-[var(--partner)] uppercase">
+            Live demos
+          </div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-[1.75rem]">
+            Guided tour
+          </h1>
+          <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            Change the tour clients see in the demos, no code needed. Edits save as a draft; preview
+            them on the real page, then publish.
+          </p>
+        </div>
       </div>
-      <h1 className="mt-2 text-2xl font-medium tracking-tight md:text-3xl">Guided tour</h1>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-        Change the tour clients see in the demos, without a code change. Edits save as a draft;
-        preview them on the real page, then publish.
-      </p>
 
       <div className="mt-6 flex flex-wrap items-end gap-3">
         <div className="w-full sm:w-72">
@@ -252,7 +261,7 @@ function DemoEditor({ demo, doc: initial }: { demo: DemoId; doc: DemoContentDoc 
       </div>
 
       <div
-        className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-white/[0.02] px-3 py-2.5 text-xs"
+        className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-white/[0.08] bg-black/25 px-3 py-2.5 text-xs"
         role="status"
       >
         {live ? (
@@ -292,12 +301,9 @@ function DemoEditor({ demo, doc: initial }: { demo: DemoId; doc: DemoContentDoc 
             <li key={s.id}>
               <section
                 aria-labelledby={`stop-${s.id}`}
-                className={cn(
-                  "rounded-xl border border-border bg-gradient-to-b from-white/[0.03] to-transparent",
-                  s.hidden && "opacity-70",
-                )}
+                className={cn(surface, s.hidden && "opacity-70")}
               >
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/[0.06] px-4 py-3">
                   <div className="min-w-0">
                     <p className="mono text-[10px] tracking-[0.14em] text-muted-foreground uppercase">
                       {s.hidden ? "Hidden" : `Stop ${n} of ${shown}`}

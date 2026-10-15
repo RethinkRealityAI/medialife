@@ -7,6 +7,7 @@ import {
   Package,
   Pencil,
   Plus,
+  Store,
   Trash2,
 } from "lucide-react";
 
@@ -48,7 +49,7 @@ import {
 } from "@/lib/hub/model";
 import { cn } from "@/lib/utils";
 
-import { Panel } from "../kit";
+import { EmptyState, IconTile, Panel } from "../kit";
 import { FileThumb } from "./files-kit";
 import { ProductEditor } from "./product-editor";
 import {
@@ -90,7 +91,7 @@ function Hero({
   return (
     <div
       className={cn(
-        "grid aspect-square place-items-center rounded-md border border-border bg-white/[0.03] text-muted-foreground",
+        "grid aspect-square place-items-center rounded-xl border border-white/[0.08] bg-white/[0.03] text-muted-foreground",
         className,
       )}
     >
@@ -154,13 +155,16 @@ function ProductList({
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
-        <div>
-          <h2 className="text-base font-medium tracking-tight">Products ({products.length})</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {products.length
-              ? `${products.filter((p) => p.stage === "live").length} live · ${products.filter((p) => p.stage !== "live").length} in the pipeline${waitingOnCreator ? ` · ${waitingOnCreator} waiting on the creator` : ""}`
-              : "Create the first product to start the brief."}
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <IconTile icon={Package} tone="sky" size="sm" />
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight">Products ({products.length})</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {products.length
+                ? `${products.filter((p) => p.stage === "live").length} live · ${products.filter((p) => p.stage !== "live").length} in the pipeline${waitingOnCreator ? ` · ${waitingOnCreator} waiting on the creator` : ""}`
+                : "Create the first product to start the brief."}
+            </p>
+          </div>
         </div>
         <Button size="sm" onClick={onNew}>
           <Plus aria-hidden />
@@ -168,17 +172,24 @@ function ProductList({
         </Button>
       </div>
       {!products.length ? (
-        <div className="border-t border-border px-4 py-12 text-center">
-          <Package className="mx-auto size-6 text-muted-foreground" aria-hidden />
-          <p className="mt-2 text-sm text-muted-foreground">
-            No products yet.{" "}
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <EmptyState
+            icon={Package}
+            title="No products yet"
+            action={
+              <Button size="sm" onClick={onNew}>
+                <Plus aria-hidden />
+                New product
+              </Button>
+            }
+          >
             {data.creator.interests.skus.length
               ? `They asked about: ${data.creator.interests.skus.map((s) => SKUS[s].short.toLowerCase()).join(", ")}.`
-              : ""}
-          </p>
+              : "Create one to start the brief."}
+          </EmptyState>
         </div>
       ) : (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
           {products.map((p) => {
             const s = sales.get(p.id);
             const scans = data.scans[p.id]?.total ?? 0;
@@ -188,7 +199,7 @@ function ProductList({
                 <button
                   type="button"
                   onClick={() => onOpen(p.id)}
-                  className="grid w-full grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.03] sm:px-5 @4xl/inset:grid-cols-[3rem_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]"
+                  className="group grid w-full grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 text-left transition-colors hover:bg-[linear-gradient(90deg,color-mix(in_oklab,var(--partner)_9%,transparent),transparent_60%)] focus-visible:bg-white/[0.04] focus-visible:outline-none sm:px-5 @4xl/inset:grid-cols-[3rem_minmax(0,1.4fr)_minmax(0,1.6fr)_minmax(0,1fr)_auto]"
                 >
                   <Hero data={data} product={p} className="size-12" />
                   <div className="min-w-0">
@@ -294,7 +305,7 @@ function ProductWorkspace({
         ) : null}
       </div>
 
-      <Panel className="flex flex-wrap items-start gap-4 p-4 sm:p-5">
+      <Panel accent className="flex flex-wrap items-start gap-4 p-4 sm:p-5">
         <Hero data={data} product={product} className="size-20 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -410,11 +421,14 @@ function CommercePanel({ product, onEdit }: { product: Product; onEdit: () => vo
   return (
     <Panel className="p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-medium tracking-tight">Store & order matching</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Incoming orders are credited by Shopify product id, then SKU.
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <IconTile icon={Store} tone="sky" size="sm" />
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight">Store & order matching</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Incoming orders are credited by Shopify product id, then SKU.
+            </p>
+          </div>
         </div>
         <Button
           variant="ghost"

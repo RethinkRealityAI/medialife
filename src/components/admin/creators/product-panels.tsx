@@ -1,5 +1,16 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { Check, ImageIcon, Loader2, Send, Star } from "lucide-react";
+import {
+  Check,
+  Images,
+  ImageIcon,
+  Layers,
+  Loader2,
+  MessageSquare,
+  Palette,
+  ScanLine,
+  Send,
+  Star,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +159,8 @@ export function StagePanel({ data, product }: { data: CreatorDetail; product: Pr
   return (
     <Panel className="p-4 sm:p-5">
       <PanelTitle
+        icon={Layers}
+        tone="sky"
         title="Stage"
         sub={`In ${STAGES[stageIndex(product.stage)].name} since ${shortDate(product.stageUpdatedAt)}. Click a stage to move it.`}
       />
@@ -255,7 +268,7 @@ export function StagePanel({ data, product }: { data: CreatorDetail; product: Pr
         </div>
       </form>
       {history.length ? (
-        <details className="mt-4 border-t border-border pt-3">
+        <details className="mt-4 border-t border-white/[0.06] pt-3">
           <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
             Stage history ({history.length})
           </summary>
@@ -311,10 +324,12 @@ export function ProofsPanel({ data, product }: { data: CreatorDetail; product: P
   return (
     <Panel className="p-4 sm:p-5">
       <PanelTitle
+        icon={Palette}
+        tone="rose"
         title="Design proofs"
         sub="The creator approves or asks for changes. Nothing is made until they approve."
       />
-      <div className="mt-3 rounded-lg border border-dashed border-border p-3">
+      <div className="mt-3 rounded-xl border border-dashed border-white/[0.12] bg-white/[0.015] p-3">
         <div className="text-sm font-medium">Send design v{next}</div>
         {staged ? (
           <form
@@ -418,7 +433,7 @@ export function ProofsPanel({ data, product }: { data: CreatorDetail; product: P
       </div>
 
       {proofs.length ? (
-        <ul className="mt-4 divide-y divide-border">
+        <ul className="mt-4 divide-y divide-white/[0.06]">
           {proofs.map((pr) => {
             const f = byId.get(pr.fileId);
             const d = DECISION[pr.decision];
@@ -519,6 +534,8 @@ export function AssetsPanel({ data, product }: { data: CreatorDetail; product: P
   return (
     <Panel className="p-4 sm:p-5">
       <PanelTitle
+        icon={Images}
+        tone="violet"
         title="Mockups & launch collateral"
         sub="Shared with the creator on this product: mockups, posters, social assets, QR artwork."
       />
@@ -610,7 +627,12 @@ export function ActivationPanel({ data, product }: { data: CreatorDetail; produc
   const exp = data.experiences.find((e) => e.id === product.experienceId);
   return (
     <Panel className="p-4 sm:p-5">
-      <PanelTitle title="Activation" sub={TRIGGER_METHODS[product.trigger.method].label} />
+      <PanelTitle
+        icon={ScanLine}
+        tone="mint"
+        title="Activation"
+        sub={TRIGGER_METHODS[product.trigger.method].label}
+      />
       <div className="mt-3 flex gap-3">
         <button
           type="button"
@@ -674,6 +696,8 @@ export function ThreadPanel({ data, product }: { data: CreatorDetail; product: P
   return (
     <Panel className="flex flex-col p-4 sm:p-5">
       <PanelTitle
+        icon={MessageSquare}
+        tone="amber"
         title="Messages"
         sub={`With ${data.creator.profile.displayName || "the creator"} about this product`}
       />
@@ -705,7 +729,7 @@ export function ThreadPanel({ data, product }: { data: CreatorDetail; product: P
         <div ref={end} />
       </div>
       <form
-        className="mt-3 grid gap-2 border-t border-border pt-3"
+        className="mt-3 grid gap-2 border-t border-white/[0.06] pt-3"
         onSubmit={async (e) => {
           e.preventDefault();
           if (!body.trim() || !name.trim()) return;

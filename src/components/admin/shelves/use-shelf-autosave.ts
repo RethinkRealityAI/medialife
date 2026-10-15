@@ -9,6 +9,10 @@ import type { ShelfSummary } from "@/lib/shelf/shelves";
 // name, say) isn't sent; it waits until it's fixed. A save that fails keeps the
 // edits and retries on the next change or on "Retry"; leaving flushes first.
 
+type SaveDraft = (args: {
+  data: { slug: string; draft: ShelfConfig; base?: number; force?: boolean };
+}) => ReturnType<typeof saveShelfDraftFn>;
+
 export type ShelfSaveStatus =
   "saved" | "pending" | "saving" | "invalid" | "error" | "conflict" | "signed-out";
 
@@ -20,6 +24,8 @@ export function useShelfAutosave(opts: {
   valid: boolean;
   updatedAt: number;
   onSaved?: (r: { updatedAt: number; summary: ShelfSummary }) => void;
+  /** Where drafts go. Defaults to the admin's; the Partner Hub passes its own. */
+  save?: SaveDraft;
 }) {
   const { slug, draft, valid } = opts;
   const [status, setStatus] = useState<ShelfSaveStatus>("saved");
@@ -33,6 +39,8 @@ export function useShelfAutosave(opts: {
   const blocked = useRef(false); // conflict / signed out: wait for the user
   const onSaved = useRef(opts.onSaved);
   onSaved.current = opts.onSaved;
+  const save = useRef<SaveDraft>(opts.save ?? saveShelfDraftFn);
+  save.current = opts.save ?? saveShelfDraftFn;
 
   const dirty = () => latest.current !== saved.current;
 
@@ -51,7 +59,7 @@ export function useShelfAutosave(opts: {
           setStatus("saving");
           let r: Awaited<ReturnType<typeof saveShelfDraftFn>>;
           try {
-            r = await saveShelfDraftFn({
+            r = await save.current({
               data: { slug, draft: snapshot, base: base.current, force },
             });
           } catch (e) {
@@ -81,7 +89,9 @@ export function useShelfAutosave(opts: {
           setError(
             r.error === "not-found"
               ? "This shelf was deleted."
-              : "The server refused this draft. Check the highlighted fields.",
+              : r.error === "invalid" && "issues" in r && r.issues[0]
+                ? r.issues[0].message
+                : "The server refused this draft. Check the highlighted fields.",
           );
           setStatus("error");
           return false;

@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowDownRight, ArrowUpRight, HelpCircle, Minus, type LucideIcon } from "lucide-react";
 
+import { accentEdge, lift, surface } from "@/components/partner/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import { Panel } from "./ui";
+import { Tile, type Tone } from "./look";
 
 type KpiLink = { to: "/creator-hub/earnings" | "/creator-hub/products"; label: string };
 
@@ -25,12 +26,15 @@ export function Kpi({
   chart,
   link,
   emphasis = false,
+  tone = "ice",
   className,
 }: {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   icon?: LucideIcon;
+  /** The icon tile's colour. */
+  tone?: Tone;
   explain?: string;
   /** Fractional change, e.g. 0.12 for +12%. null hides it. */
   delta?: number | null;
@@ -41,21 +45,33 @@ export function Kpi({
   className?: string;
 }) {
   return (
-    <Panel
+    <div
       className={cn(
-        "relative flex min-w-0 flex-col p-4 transition-colors",
-        link && "hover:border-primary/45 hover:bg-white/[0.035]",
-        emphasis && "border-primary/35 shadow-[0_0_50px_-30px_var(--color-primary)]",
+        surface,
+        "group relative flex min-w-0 flex-col p-4",
+        link && lift,
+        link && "has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-[var(--partner)]",
+        emphasis && accentEdge,
+        emphasis &&
+          "bg-[radial-gradient(120%_100%_at_0%_0%,color-mix(in_oklab,var(--partner)_16%,transparent),transparent_60%),linear-gradient(180deg,rgb(255_255_255/0.06),rgb(255_255_255/0.015))]",
         className,
       )}
     >
-      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
-        <span className="leading-tight">{label}</span>
+      <div className="flex items-center gap-2">
+        {Icon ? <Tile icon={Icon} tone={tone} size="sm" /> : null}
+        <span className="min-w-0 text-sm leading-tight font-medium text-muted-foreground">
+          {label}
+        </span>
         {explain ? <Explain label={label} text={explain} /> : null}
+        {link ? (
+          <ArrowUpRight
+            className="ml-auto size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-[var(--partner)]"
+            aria-hidden
+          />
+        ) : null}
       </div>
-      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <span className="truncate text-xl font-medium tracking-tight tabular-nums sm:text-2xl">
+      <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="truncate text-2xl font-semibold tracking-tight tabular-nums sm:text-[1.7rem]">
           {value}
         </span>
         {delta !== undefined ? <Delta value={delta} label={deltaLabel} /> : null}
@@ -63,16 +79,13 @@ export function Kpi({
       {hint ? (
         <div className="mt-0.5 text-xs leading-snug text-muted-foreground">{hint}</div>
       ) : null}
-      {chart ? <div className="mt-auto pt-2">{chart}</div> : null}
+      {chart ? <div className="mt-auto pt-3">{chart}</div> : null}
       {link ? (
-        <Link
-          to={link.to}
-          className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
+        <Link to={link.to} className="absolute inset-0 rounded-2xl focus-visible:outline-none">
           <span className="sr-only">{link.label}</span>
         </Link>
       ) : null}
-    </Panel>
+    </div>
   );
 }
 
@@ -87,8 +100,12 @@ export function Delta({ value, label }: { value: number | null; label: string })
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 text-xs font-medium tabular-nums",
-        flat ? "text-muted-foreground" : up ? "text-emerald-400" : "text-amber-300",
+        "inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums",
+        flat
+          ? "bg-white/[0.06] text-muted-foreground"
+          : up
+            ? "bg-emerald-400/12 text-emerald-300"
+            : "bg-amber-400/12 text-amber-300",
       )}
       title={`${flat ? "No change" : up ? "Up" : "Down"} ${pctText} ${label}`}
     >

@@ -1,3 +1,5 @@
+import { Filter } from "lucide-react";
+
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Dashboard } from "@/lib/ar/analytics.server";
 
@@ -18,6 +20,8 @@ export function Funnel({ data, className }: { data: Dashboard; className?: strin
     <Panel className={className}>
       <div className="p-4 sm:p-5">
         <PanelTitle
+          icon={Filter}
+          tone="violet"
           title="How far they got"
           sub="Each step counts the opens that got at least that far."
         />

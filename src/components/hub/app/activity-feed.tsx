@@ -81,9 +81,7 @@ export function ActivityFeed({
                 ) : null}
               </span>
               {a.body && !compact ? (
-                <span className="mt-0.5 line-clamp-2 block text-sm text-muted-foreground">
-                  {a.body}
-                </span>
+                <span className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{a.body}</span>
               ) : null}
               <TimeAgo
                 ts={a.at}

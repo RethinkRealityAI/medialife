@@ -90,6 +90,11 @@ export interface ShelfFormProps {
   openProduct: string | null;
   setOpenProduct: (id: string | null) => void;
   sharing: ReactNode;
+  /**
+   * Partner Hub: the team's own invite codes. The field becomes a choice of
+   * these instead of free text (and the admin-only code check isn't used).
+   */
+  inviteOptions?: { code: string; label: string }[];
 }
 
 export function ShelfForm(props: ShelfFormProps) {
@@ -661,7 +666,7 @@ function InviteStatus({ code }: { code: string }) {
   );
 }
 
-function PitchSection({ draft, update, issues, sharing }: ShelfFormProps) {
+function PitchSection({ draft, update, issues, sharing, inviteOptions }: ShelfFormProps) {
   const p = draft.pitch;
   return (
     <>
@@ -704,27 +709,46 @@ function PitchSection({ draft, update, issues, sharing }: ShelfFormProps) {
           }
           error={issues.get("pitch.inviteCode")}
         >
-          <Input
-            id={fid("pitch.inviteCode")}
-            value={p.inviteCode}
-            maxLength={40}
-            spellCheck={false}
-            placeholder="snowday"
-            aria-invalid={!!issues.get("pitch.inviteCode")}
-            className={cn(inputClass, "mono text-xs")}
-            onChange={(e) =>
-              update(
-                (d) =>
-                  void (d.pitch.inviteCode = e.target.value
-                    .toLowerCase()
-                    .replace(/[^a-z0-9-]/g, "")
-                    .slice(0, 40)),
-              )
-            }
-          />
-          <div className="mt-1.5 min-h-4">
-            <InviteStatus code={p.inviteCode} />
-          </div>
+          {inviteOptions ? (
+            <select
+              id={fid("pitch.inviteCode")}
+              value={p.inviteCode}
+              aria-invalid={!!issues.get("pitch.inviteCode")}
+              onChange={(e) => update((d) => void (d.pitch.inviteCode = e.target.value))}
+              className={cn(inputClass, "h-9 w-full rounded-md border border-input px-2 text-sm")}
+            >
+              <option value="">None (not credited)</option>
+              {inviteOptions.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <>
+              <Input
+                id={fid("pitch.inviteCode")}
+                value={p.inviteCode}
+                maxLength={40}
+                spellCheck={false}
+                placeholder="snowday"
+                aria-invalid={!!issues.get("pitch.inviteCode")}
+                className={cn(inputClass, "mono text-xs")}
+                onChange={(e) =>
+                  update(
+                    (d) =>
+                      void (d.pitch.inviteCode = e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, "")
+                        .slice(0, 40)),
+                  )
+                }
+              />
+              <div className="mt-1.5 min-h-4">
+                <InviteStatus code={p.inviteCode} />
+              </div>
+            </>
+          )}
         </FieldShell>
       </Group>
       <Group title="Earnings estimator" description="An illustrative calculator on the shelf.">

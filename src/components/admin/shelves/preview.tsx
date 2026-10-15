@@ -56,7 +56,8 @@ export function ShelfPreviewPane({
           </span>
         ) : null}
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <div className="w-[88px] pointer-coarse:w-[108px]">
+          {/* a phone already shows the phone layout */}
+          <div className="w-[88px] max-md:hidden pointer-coarse:w-[108px]">
             <Segmented
               label="Preview size"
               hideLabel

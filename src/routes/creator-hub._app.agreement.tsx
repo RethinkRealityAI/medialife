@@ -1,8 +1,18 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { CheckCircle2, FileSignature, Loader2, Printer, ShieldCheck } from "lucide-react";
+import {
+  BadgeCheck,
+  CheckCircle2,
+  FileSignature,
+  FileText,
+  Loader2,
+  PenLine,
+  Printer,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 
+import { ART, Tile, accentEdge } from "@/components/hub/app/look";
 import { EmptyState, Page, PageHeader, Panel } from "@/components/hub/app/ui";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { getAgreements, getSignedCopy, signAgreement } from "@/lib/hub/agreement.functions";
 import { nameMatches, type AgreementSection } from "@/lib/hub/agreements";
 import { shortDate } from "@/lib/hub/model";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/creator-hub/_app/agreement")({
   loader: () => getAgreements(),
@@ -17,25 +28,75 @@ export const Route = createFileRoute("/creator-hub/_app/agreement")({
   component: Agreement,
 });
 
-function Sections({ sections }: { sections: AgreementSection[] }) {
+/**
+ * The agreement text in a contained panel: section chips to jump, and the text
+ * scrolling inside, so the page stays short. Printing shows all of it.
+ */
+function Document({
+  title,
+  version,
+  sections,
+  footer,
+}: {
+  title: string;
+  version: string;
+  sections: AgreementSection[];
+  footer?: ReactNode;
+}) {
   return (
-    <div className="space-y-6">
-      {sections.map((s) => (
-        <section key={s.id} aria-labelledby={`ag-${s.id}`}>
-          <h3 id={`ag-${s.id}`} className="font-medium">
-            {s.title}
-          </h3>
-          {s.paragraphs.map((p, i) => (
-            <p
-              key={i}
-              className="mt-2 text-sm leading-relaxed text-muted-foreground print:text-black"
-            >
-              {p}
-            </p>
-          ))}
-        </section>
-      ))}
-    </div>
+    <Panel className="mt-4 overflow-hidden print:border-0 print:shadow-none">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] p-4 sm:px-6 print:hidden">
+        <h2 className="flex min-w-0 items-center gap-3 text-base font-semibold tracking-tight">
+          <Tile icon={FileText} tone="blue" size="sm" />
+          <span className="truncate">{title}</span>
+        </h2>
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-xs text-muted-foreground">
+          Version {version}
+        </span>
+      </div>
+      <nav
+        aria-label="Agreement sections"
+        className="flex gap-1.5 overflow-x-auto border-b border-white/[0.06] px-4 py-2.5 [scrollbar-width:none] sm:px-6 print:hidden [&::-webkit-scrollbar]:hidden"
+      >
+        {sections.map((x) => (
+          <a
+            key={x.id}
+            href={`#ag-${x.id}`}
+            className="shrink-0 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs whitespace-nowrap text-muted-foreground transition-colors hover:border-[var(--partner)]/50 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            {x.title}
+          </a>
+        ))}
+      </nav>
+      <div
+        tabIndex={0}
+        role="region"
+        aria-label={`${title}, full text`}
+        className="max-h-[60vh] space-y-6 overflow-y-auto scroll-smooth p-5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset sm:p-6 print:max-h-none print:overflow-visible"
+      >
+        {sections.map((x) => (
+          <section
+            key={x.id}
+            id={`ag-${x.id}`}
+            aria-labelledby={`ag-${x.id}-t`}
+            className="scroll-mt-4"
+          >
+            <h3 id={`ag-${x.id}-t`} className="font-semibold">
+              {x.title}
+            </h3>
+            {x.paragraphs.map((para, i) => (
+              <p
+                key={i}
+                className="mt-2 text-sm leading-relaxed text-muted-foreground print:text-black"
+              >
+                {para}
+              </p>
+            ))}
+          </section>
+        ))}
+        {footer}
+      </div>
+    </Panel>
   );
 }
 
@@ -53,15 +114,21 @@ function Agreement() {
 
   if (!d.eligible) {
     return (
-      <Page className="lg:pt-8">
-        <PageHeader title="Agreement" />
+      <Page>
+        <PageHeader
+          image={ART.stickerCard}
+          imageClassName="object-[50%_35%]"
+          eyebrow="Agreement"
+          title="Your program agreement"
+        />
         <EmptyState
           icon={FileSignature}
-          title="Your agreement opens once you're approved"
-          className="mt-6"
+          title="Opens once you're approved"
+          className="mt-4"
+          image={ART.box}
         >
-          When your application is approved, your program agreement appears here to read and sign.
-          Nothing to do until then.
+          When your application is approved, your agreement appears here to read and sign. Nothing
+          to do until then.
         </EmptyState>
       </Page>
     );
@@ -76,35 +143,54 @@ function Agreement() {
   if (d.signedCurrent) {
     const sig = d.signatures[0];
     return (
-      <Page className="lg:pt-8">
+      <Page>
         <PageHeader
-          title="Agreement"
-          description="Signed. A copy is kept here; you can print it or save it as a PDF any time."
+          className="print:hidden"
+          image={ART.stickerCard}
+          imageClassName="object-[50%_35%]"
+          eyebrow="Agreement"
+          title="Signed and on file"
+          description="A copy lives here. Print it or save it as a PDF any time."
+          actions={
+            sig ? (
+              <Button
+                variant="outline"
+                className="rounded-full bg-black/30 backdrop-blur"
+                onClick={() => void openCopy(sig.id)}
+              >
+                <Printer aria-hidden /> Print or save a copy
+              </Button>
+            ) : null
+          }
         />
-        <Panel className="mt-6 flex flex-wrap items-center gap-4 p-5 print:hidden">
-          <CheckCircle2 className="size-8 shrink-0 text-emerald-400" aria-hidden />
+        <Panel
+          className={cn(
+            "mt-4 flex flex-wrap items-center gap-4 p-4 sm:p-5 print:hidden",
+            accentEdge,
+          )}
+        >
+          <Tile icon={BadgeCheck} tone="mint" size="lg" />
           <div className="min-w-0 flex-1">
-            <div className="font-medium">{d.template.title}</div>
+            <div className="font-semibold">{d.template.title}</div>
             <div className="text-sm text-muted-foreground">
               Version {sig?.version} · signed by {sig?.signedName} on{" "}
               {sig ? shortDate(sig.signedAt) : ""}
             </div>
           </div>
-          {sig ? (
-            <Button variant="outline" onClick={() => void openCopy(sig.id)}>
-              <Printer aria-hidden /> Print or save a copy
-            </Button>
-          ) : null}
         </Panel>
-        <Panel className="mt-4 p-5 sm:p-6">
-          <Sections sections={copy?.sections ?? d.template.sections} />
-          {sig ? (
-            <p className="mt-8 border-t border-border pt-4 text-sm">
-              Signed electronically by <span className="font-medium">{sig.signedName}</span> on{" "}
-              {new Date(sig.signedAt).toLocaleString()}. Record {sig.textHash.slice(0, 16)}.
-            </p>
-          ) : null}
-        </Panel>
+        <Document
+          title={d.template.title}
+          version={sig?.version ?? d.template.version}
+          sections={copy?.sections ?? d.template.sections}
+          footer={
+            sig ? (
+              <p className="border-t border-white/10 pt-4 text-sm">
+                Signed electronically by <span className="font-medium">{sig.signedName}</span> on{" "}
+                {new Date(sig.signedAt).toLocaleString()}. Record {sig.textHash.slice(0, 16)}.
+              </p>
+            ) : null
+          }
+        />
       </Page>
     );
   }
@@ -142,47 +228,51 @@ function Agreement() {
   }
 
   return (
-    <Page className="lg:pt-8">
+    <Page>
       <PageHeader
+        className="print:hidden"
+        image={ART.stickerCard}
+        imageClassName="object-[50%_35%]"
+        eyebrow={d.signedOlder ? "Updated agreement" : "Step 2 · Agreement"}
         title={d.signedOlder ? "Your agreement has been updated" : "Your program agreement"}
-        description="Read it, then sign at the bottom by typing your name. Questions first? Message your manager; nothing is final until you sign."
+        description="Read it, then sign at the bottom by typing your name. Questions first? Message your manager."
         actions={
           <Button
             variant="outline"
-            size="sm"
             onClick={() => window.print()}
-            className="print:hidden"
+            className="rounded-full bg-black/30 backdrop-blur"
           >
             <Printer aria-hidden /> Print
           </Button>
         }
       />
 
-      <Panel className="mt-6 p-5 print:hidden">
-        <h2 className="flex items-center gap-2 font-medium">
-          <ShieldCheck className="size-5 text-primary" aria-hidden /> In short
+      <section aria-labelledby="short-title" className="mt-4 print:hidden">
+        <h2 id="short-title" className="mb-3 flex items-center gap-2.5 text-lg font-semibold">
+          <ShieldCheck className="size-5 text-[var(--partner)]" aria-hidden /> In short
         </h2>
-        <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          {d.template.summary.map((s) => (
-            <li key={s} className="flex gap-2">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" aria-hidden />
-              {s}
+        <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          {d.template.summary.map((x) => (
+            <li key={x}>
+              <Panel className="flex h-full items-start gap-3 p-3.5 text-sm">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" aria-hidden />
+                {x}
+              </Panel>
             </li>
           ))}
         </ul>
-      </Panel>
+      </section>
 
-      <Panel className="mt-4 p-5 sm:p-6">
-        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-lg font-medium">{d.template.title}</h2>
-          <span className="text-xs text-muted-foreground">Version {d.template.version}</span>
-        </div>
-        <Sections sections={d.template.sections} />
-      </Panel>
+      <Document
+        title={d.template.title}
+        version={d.template.version}
+        sections={d.template.sections}
+      />
 
       <form onSubmit={sign} className="mt-4 print:hidden" aria-labelledby="sign-title">
-        <Panel className="p-5 sm:p-6">
-          <h2 id="sign-title" className="text-lg font-medium">
+        <Panel className={cn("p-5 sm:p-6", accentEdge)}>
+          <h2 id="sign-title" className="flex items-center gap-3 text-lg font-semibold">
+            <Tile icon={PenLine} tone="pink" />
             Sign
           </h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -257,7 +347,7 @@ function Agreement() {
             </p>
           ) : null}
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={!ready || busy}>
+            <Button type="submit" disabled={!ready || busy} className="rounded-full px-6">
               {busy ? (
                 <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden />
               ) : (

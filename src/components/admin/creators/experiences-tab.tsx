@@ -31,7 +31,7 @@ import {
 import { IMAGE_ACCEPT } from "@/lib/hub/upload-client";
 import { cn } from "@/lib/utils";
 
-import { Panel } from "../kit";
+import { EmptyState, IconTile, Panel } from "../kit";
 import { FileThumb, UploadButton } from "./files-kit";
 import type { CreatorDetail } from "./types";
 import { Ago, CheckRow, Field, Pill, ghostBtn, outlineBtn, useRun } from "./ui";
@@ -42,14 +42,17 @@ export function ExperiencesTab({ data }: { data: CreatorDetail }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
-        <div>
-          <h2 className="text-base font-medium tracking-tight">
-            Experiences ({data.experiences.length})
-          </h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            What a fan opens when they scan or tap the merch. Attach one to a product in its
-            details.
-          </p>
+        <div className="flex min-w-0 items-start gap-3">
+          <IconTile icon={Sparkles} tone="violet" size="sm" />
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold tracking-tight">
+              Experiences ({data.experiences.length})
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              What a fan opens when they scan or tap the merch. Attach one to a product in its
+              details.
+            </p>
+          </div>
         </div>
         <Button size="sm" onClick={() => setEditing("new")}>
           <Plus aria-hidden />
@@ -57,18 +60,15 @@ export function ExperiencesTab({ data }: { data: CreatorDetail }) {
         </Button>
       </div>
       {!data.experiences.length ? (
-        <div className="border-t border-border px-4 py-12 text-center">
-          <Sparkles className="mx-auto size-6 text-muted-foreground" aria-hidden />
-          <p className="mt-2 text-sm text-muted-foreground">No experiences yet.</p>
-          {data.creator.interests.experienceIdeas ? (
-            <p className="mx-auto mt-2 max-w-lg text-sm">
-              <span className="text-muted-foreground">Their idea: </span>“
-              {data.creator.interests.experienceIdeas}”
-            </p>
-          ) : null}
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <EmptyState icon={Sparkles} tone="violet" title="No experiences yet">
+            {data.creator.interests.experienceIdeas
+              ? `Their idea: “${data.creator.interests.experienceIdeas}”`
+              : "Make one, then attach it to a product."}
+          </EmptyState>
         </div>
       ) : (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06]">
           {data.experiences.map((e) => {
             const img = e.imageFileId ? byId.get(e.imageFileId) : undefined;
             const used = data.products.filter((p) => p.experienceId === e.id);
@@ -78,7 +78,7 @@ export function ExperiencesTab({ data }: { data: CreatorDetail }) {
                 {img ? (
                   <FileThumb file={img} className="size-16 shrink-0" />
                 ) : (
-                  <div className="grid size-16 shrink-0 place-items-center rounded-md border border-border bg-white/[0.03] text-muted-foreground">
+                  <div className="grid size-16 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-400/25 to-violet-400/[0.04] text-violet-200 ring-1 ring-violet-400/25 ring-inset">
                     <Sparkles className="size-5" aria-hidden />
                   </div>
                 )}

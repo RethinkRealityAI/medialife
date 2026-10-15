@@ -82,10 +82,11 @@ export function buildSign({ name, handle, neon, accent, maxWidth, reduced = fals
   }
   const letters = [];
   const neonCol = new THREE.Color(neon);
-  // Pale tubes (cyan, lime, white) clip to white under bloom at the same drive,
-  // so drive them down by luminance to keep the colour.
+  // Pale tubes (cyan, ice blue, lime, white) clip to white under bloom at the
+  // same drive, so they're driven down by luminance: the glow then matches a
+  // #ff37ae tube's and the letters stay readable.
   const lum = 0.2126 * neonCol.r + 0.7152 * neonCol.g + 0.0722 * neonCol.b;
-  const LIT = Math.max(1.25, LIT_BASE * Math.min(1, Math.sqrt(0.27 / Math.max(0.05, lum))));
+  const LIT = Math.max(1.1, LIT_BASE * Math.min(1, 0.27 / Math.max(0.05, lum)));
   for (let i = 0; i < chars.length; i++) {
     const u0 = t.edges[i] / t.W;
     const u1 = t.edges[i + 1] / t.W;

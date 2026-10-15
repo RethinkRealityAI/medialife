@@ -20,6 +20,8 @@ import {
   slugifyPartner,
 } from "@/lib/hub/partners";
 import { fillCopy, TEMPLATES } from "@/lib/hub/playbook";
+import { DEFAULT_SHELF, shelfConfigSchema } from "@/lib/shelf/config";
+import { kitShelfPreview, partnerShelfConfig } from "@/lib/shelf/partner-presets";
 
 // The five-step journey
 const j = (status: string, signed: boolean, stages: string[], earned = 0) =>
@@ -124,5 +126,44 @@ assert.ok(
     .find((i) => i.id === "program-page")
     ?.preview?.includes("snowday"),
 );
+
+// Partner shelves: their own starts finished; a creator's carries no kit art.
+{
+  const snowday = {
+    id: "snowday-media",
+    name: "Snowday Media",
+    kit: "snowday",
+    brand: { primary: "#405d96", accent: "#96c8ec", ink: "#21254a" },
+  };
+  const own = partnerShelfConfig(snowday);
+  assert.ok(shelfConfigSchema.safeParse(own).success, "the starting shelf is valid");
+  assert.equal(own.creator.name, "Snowday Media");
+  assert.equal(own.pitch.inviteCode, "snowday-media");
+  assert.equal(own.pitch.preparedFor, "");
+  assert.ok(own.products.find((x) => x.id === "tee")?.backPrint?.includes("/snowday/"));
+
+  const forCreator = partnerShelfConfig(snowday, { creator: "PixelPine" });
+  assert.ok(shelfConfigSchema.safeParse(forCreator).success);
+  assert.equal(forCreator.creator.name, "PixelPine");
+  assert.equal(forCreator.creator.handle, "");
+  assert.equal(forCreator.creator.logo, null, "the partner's logo isn't the creator's");
+  assert.equal(forCreator.pitch.preparedFor, "PixelPine");
+  assert.deepEqual(forCreator.theme, own.theme, "the partner's look carries over");
+  assert.ok(
+    forCreator.products.every((x) => !x.print?.includes("/snowday/") && !x.backPrint),
+    "no kit artwork on a creator's merch",
+  );
+
+  const classic = partnerShelfConfig(snowday, { creator: "PixelPine", classic: true });
+  assert.deepEqual(classic.theme, DEFAULT_SHELF.theme);
+  assert.equal(classic.pitch.inviteCode, "snowday-media", "still credited to the partner");
+
+  // A kit without its own shelf art falls back to the brand colours.
+  const other = partnerShelfConfig({ ...snowday, kit: "base" });
+  assert.equal(other.theme.neon, "#96c8ec");
+  assert.ok(shelfConfigSchema.safeParse(other).success);
+  assert.ok(kitShelfPreview("snowday").includes("/snowday/"));
+  assert.ok(kitShelfPreview("base").includes("/medialife/"));
+}
 
 console.log("partners: ok");

@@ -1,11 +1,11 @@
-import { Loader2, X } from "lucide-react";
+import { CircleCheck, Loader2, ShoppingBag, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { adminDismissUnmatched } from "@/lib/hub/admin.functions";
 import { cn } from "@/lib/utils";
 
 import { formatDateTime } from "../format";
-import { Panel, PanelTitle } from "../kit";
+import { EmptyState, Panel, PanelTitle, Tag, surface } from "../kit";
 import type { UnmatchedOrder } from "./types";
 import { ghostBtn, useRun } from "./ui";
 
@@ -16,26 +16,30 @@ export function UnmatchedPanel({ orders }: { orders: UnmatchedOrder[] }) {
     <Panel id="unmatched" className={cn(orders.length && "border-amber-400/30")}>
       <PanelTitle
         className="p-4 sm:p-5"
+        icon={ShoppingBag}
+        tone="amber"
         title={`Unmatched orders${orders.length ? ` (${orders.length})` : ""}`}
-        sub="Orders from Shopify that matched no product. Add the Shopify product id or SKU to the right product; future orders will match."
+        sub="Shopify orders that matched no product. Add the Shopify product id or SKU to the right product and future orders will match."
       />
       {!orders.length ? (
-        <p className="border-t border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          Every order matched a product.
-        </p>
+        <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+          <EmptyState icon={CircleCheck} tone="mint" title="All matched">
+            Every Shopify order was credited to a product.
+          </EmptyState>
+        </div>
       ) : (
-        <ul className="divide-y divide-border border-t border-border">
+        <ul className="grid grid-cols-1 gap-2 px-4 pb-4 sm:px-5 sm:pb-5">
           {orders.map((o) => (
-            <li key={o.id} className="flex items-start gap-3 px-4 py-3 sm:px-5">
+            <li key={o.id} className={cn(surface, "flex items-start gap-3 rounded-xl p-3 sm:p-4")}>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-medium">#{o.number.replace(/^#/, "")}</span>
-                  <span className="text-xs text-muted-foreground">{o.channel}</span>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-semibold tabular-nums">#{o.number.replace(/^#/, "")}</span>
+                  <Tag>{o.channel}</Tag>
                   <span className="text-xs text-muted-foreground" suppressHydrationWarning>
                     {formatDateTime(o.at)}
                   </span>
                 </div>
-                <ul className="mt-1 space-y-0.5 text-xs">
+                <ul className="mt-2 space-y-1 text-xs">
                   {o.lines.map((l, i) => (
                     <li key={i} className="flex flex-wrap gap-x-2">
                       <span>
