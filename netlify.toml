@@ -259,6 +259,27 @@
   [headers.values]
     Cache-Control = "public, max-age=300, must-revalidate"
 
+# ── cLaN Entertainment partnership + SOW ─────────────────────────────────────
+# /cln/ is a static client proposal with a signable Statement of Work (public/cln/).
+# Unlisted: it carries commercial terms. The page and its script aren't versioned
+# by name, so they revalidate quickly; generated imagery only changes on a rebuild.
+[[redirects]]
+  from = "/clan"
+  to = "/cln/"
+  status = 301
+
+[[headers]]
+  for = "/cln/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/cln/assets/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=86400"
+
 # ── Virtual business cards ───────────────────────────────────────────────────
 # Cards are static files at the site root (medialife.ai/dapo), so unlike the SSR
 # routes they DO receive netlify.toml headers. The per-card noindex rules below
