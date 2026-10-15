@@ -11,6 +11,7 @@ import {
   Boxes,
   ChevronRight,
   Handshake,
+  House,
   Link2,
   LogOut,
   Menu,
@@ -65,6 +66,10 @@ type NavItem = { to: string; label: string; short?: string; icon: LucideIcon; to
 
 const GROUPS: { label: string; items: NavItem[] }[] = [
   {
+    label: "Overview",
+    items: [{ to: "/admin", label: "Home", icon: House, tone: "sky" }],
+  },
+  {
     label: "Programs",
     items: [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
@@ -84,7 +89,11 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
 ];
 const NAV = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
 /** The phone tab bar's destinations; the rest live behind "More". */
-const TAB_BAR = ["/admin/creators", "/admin/partners", "/admin/analytics", "/admin/links"];
+const TAB_BAR = ["/admin", "/admin/creators", "/admin/partners", "/admin/analytics"];
+
+/** Home matches only itself; every other item also matches the pages under it. */
+const isAt = (pathname: string, to: string) =>
+  pathname === to || (to !== "/admin" && pathname.startsWith(`${to}/`));
 
 /** Full-height editors keep the whole screen: no tab bar, no bottom padding. */
 const isEditor = (pathname: string) => /^\/admin\/(shelves|builder)\/[^/]+/.test(pathname);
@@ -93,7 +102,7 @@ function AdminLayout() {
   const router = useRouter();
   const pathname = useRouterState({ select: (s) => s.location.pathname }).replace(/\/$/, "");
   const loading = useRouterState({ select: (s) => s.status === "pending" });
-  const current = NAV.find((n) => pathname === n.to || pathname.startsWith(`${n.to}/`));
+  const current = NAV.find((n) => isAt(pathname, n.to));
   const editor = isEditor(pathname);
 
   async function logout() {
@@ -122,7 +131,7 @@ function AdminLayout() {
         <div className="flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,oklch(0.115_0.014_280),oklch(0.085_0.008_280))] max-md:glass-strong max-md:rounded-r-3xl max-md:border-l-0!">
           <SidebarHeader className="border-b border-white/[0.07]">
             <Link
-              to="/admin/analytics"
+              to="/admin"
               className="flex items-center gap-2.5 rounded-lg px-2 py-2.5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             >
               <Mark />
@@ -196,7 +205,7 @@ function AdminLayout() {
         <header className="glass-strong sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 rounded-none border-x-0! border-t-0! px-4">
           <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
           <Link
-            to="/admin/analytics"
+            to="/admin"
             className="-ml-1 rounded-lg focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:hidden"
             aria-label="MEDIALIFE admin"
           >
@@ -244,7 +253,7 @@ function AdminLayout() {
 /** Phones: the main destinations in a floating glass bar; "More" opens the full menu. */
 function AdminTabBar({ pathname }: { pathname: string }) {
   const { openMobile, setOpenMobile } = useSidebar();
-  const inMore = !TAB_BAR.some((to) => pathname === to || pathname.startsWith(`${to}/`));
+  const inMore = !TAB_BAR.some((to) => isAt(pathname, to));
   return (
     <GlassTabBar
       label="Admin"
@@ -256,7 +265,7 @@ function AdminTabBar({ pathname }: { pathname: string }) {
             to,
             label: n.short ?? n.label,
             icon: n.icon,
-            active: pathname === to || pathname.startsWith(`${to}/`),
+            active: isAt(pathname, to),
           };
         }),
         {

@@ -35,7 +35,7 @@ function Login() {
       const r = await adminLogin({ data: { password } });
       if (r.ok) {
         // only follow same-site paths under /admin
-        const target = next && next.startsWith("/admin") ? next : "/admin/analytics";
+        const target = next && next.startsWith("/admin") ? next : "/admin";
         await router.navigate({ href: target });
       } else setState(r.error === "wrong" ? "wrong" : "error");
     } catch {
