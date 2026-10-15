@@ -278,6 +278,55 @@ export const MEDIALIFE_GIFS: KitGif[] = [
     size: "1.5 MB",
     from: "creator-logan-chitwood",
   },
+  // Shirts and stickers, for pitches about apparel and print.
+  {
+    id: "gif-shirt-comes-alive",
+    title: "The shirt comes alive",
+    alt: "The Sukeban shirt's artwork animating when scanned",
+    src: `${G}/shirt-comes-alive.gif`,
+    size: "1.6 MB",
+    from: "fans-merch-apparel",
+  },
+  {
+    id: "gif-scan-the-shirt",
+    title: "Scan the shirt",
+    alt: "A phone held up to an activated shirt, the art moving on screen",
+    src: `${G}/scan-the-shirt.gif`,
+    size: "1.3 MB",
+    from: "fans-merch-apparel",
+  },
+  {
+    id: "gif-scanning-stickers",
+    title: "Scanning stickers at the booth",
+    alt: "Two fans scanning activated stickers at a convention booth",
+    src: `${G}/scanning-stickers.gif`,
+    size: "1.4 MB",
+    from: "fans-merch-apparel",
+  },
+  {
+    id: "gif-her-reaction",
+    title: "The moment it works",
+    alt: "A fan smiling at her phone as a sticker comes alive",
+    src: `${G}/her-reaction.gif`,
+    size: "0.9 MB",
+    from: "fans-merch-apparel",
+  },
+  {
+    id: "gif-sticker-hearts",
+    title: "A sticker that reacts",
+    alt: "A creator holding an activated sticker as AR hearts appear",
+    src: `${G}/sticker-hearts.gif`,
+    size: "1.4 MB",
+    from: "creator-anime-community",
+  },
+  {
+    id: "gif-shirt-scan-anime-nyc",
+    title: "Scanning a shirt at Anime NYC",
+    alt: "A fan scanning a friend's activated shirt at Anime NYC",
+    src: `${G}/shirt-scan-anime-nyc.gif`,
+    size: "1.6 MB",
+    from: "creator-fikshun",
+  },
 ];
 
 export const youtubeUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;
