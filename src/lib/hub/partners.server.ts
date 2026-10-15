@@ -63,6 +63,10 @@ export async function listMembers(ns: HubNamespace, partnerId: string) {
   return all.sort((a, b) => a.joinedAt - b.joinedAt);
 }
 
+export async function getMember(ns: HubNamespace, partnerId: string, userId: string) {
+  return (await hubStore(ns)).getJSON<PartnerMember>(KEYS.partnerMember(partnerId, userId));
+}
+
 export async function saveMember(ns: HubNamespace, m: PartnerMember) {
   await (await hubStore(ns)).setJSON(KEYS.partnerMember(m.partnerId, m.userId), m);
   return m;

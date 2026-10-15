@@ -42,6 +42,7 @@ import {
 } from "./partners";
 import {
   deleteMember,
+  getMember,
   getPartner,
   listMembers,
   listPartnerInvites,
@@ -125,6 +126,7 @@ export const getPartnerWorkspace = createServerFn({ method: "GET" }).handler(asy
   const { ns, user, partner, role } = await requirePartner();
   const summaries = await partnerCreatorSummaries(ns, partner.id);
   const [
+    member,
     rows,
     kitFiles,
     kitFolders,
@@ -136,6 +138,7 @@ export const getPartnerWorkspace = createServerFn({ method: "GET" }).handler(asy
     kitSettings,
     ownSettings,
   ] = await Promise.all([
+    getMember(ns, partner.id, user.id),
     Promise.all(summaries.map((s) => creatorRow(ns, s.id))),
     listFiles(ns, KIT_OWNER),
     listFolders(ns, KIT_OWNER),
@@ -149,7 +152,14 @@ export const getPartnerWorkspace = createServerFn({ method: "GET" }).handler(asy
   ]);
   return {
     partner: publicPartner(partner),
-    me: { id: user.id, email: user.email, name: user.name ?? "", role },
+    me: {
+      id: user.id,
+      email: user.email,
+      name: user.name ?? "",
+      role,
+      // Without a team record there's nowhere to remember it, so don't nag.
+      welcomed: member ? !!member.welcomedAt : true,
+    },
     origin: publicOrigin(getRequest(), ns),
     creators: rows.filter((r): r is PartnerCreatorRow => !!r),
     library: {
@@ -553,6 +563,15 @@ export const acceptPartnerInvite = createServerFn({ method: "POST" })
     await startSession(ns, userId);
     return { ok: true as const, next: PARTNER_BASE };
   });
+
+/** Closes the first-visit welcome for good (for this member, on every device). */
+export const dismissPartnerWelcomeFn = createServerFn({ method: "POST" }).handler(async () => {
+  const { ns, user, partner } = await requirePartner();
+  const member = await getMember(ns, partner.id, user.id);
+  if (!member) return { ok: false as const, error: "Couldn't find you on the team." };
+  if (!member.welcomedAt) await saveMember(ns, { ...member, welcomedAt: Date.now() });
+  return { ok: true as const };
+});
 
 /** For the Partner Hub's account page. */
 export const updatePartnerProfile = createServerFn({ method: "POST" })

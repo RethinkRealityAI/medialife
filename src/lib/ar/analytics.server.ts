@@ -284,7 +284,7 @@ export function isBounce(s: StoredSession): boolean {
 const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
 /** "mouse_pad" → "Mouse pad": for events that only carry an id. */
-function humanizeId(id: string): string {
+export function humanizeId(id: string): string {
   const s = id.replace(/[_-]+/g, " ").trim();
   return s ? s[0].toUpperCase() + s.slice(1) : id;
 }
@@ -994,7 +994,7 @@ export async function linkStats(
 // Sample sessions carry a visitor id starting "sample-" (real ids never contain
 // a dash) and sample links a fixed code prefix plus note, so they can be removed
 // without touching anything real.
-const SAMPLE_VID = "sample-";
+export const SAMPLE_VID = "sample-";
 const SAMPLE_LINK_PREFIX = "sample-";
 export const SAMPLE_NOTE = "Sample data: remove it from Analytics.";
 

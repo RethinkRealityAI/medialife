@@ -56,6 +56,8 @@ export type PartnerMember = {
   role: PartnerRole;
   joinedAt: number;
   invitedBy: string;
+  /** When they closed the Partner Hub welcome; it opens until they do. */
+  welcomedAt?: number;
 };
 
 /** An emailed invitation to join a partner team. The token's secret half is never stored. */

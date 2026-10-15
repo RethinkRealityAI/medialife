@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { PartnerShell } from "@/components/partner/shell";
+import { PartnerWelcome, WelcomeProvider } from "@/components/partner/welcome";
 import { Toaster } from "@/components/ui/sonner";
 import { getHubSession } from "@/lib/hub/auth.functions";
 import { getPartnerWorkspace } from "@/lib/hub/partner.functions";
@@ -35,9 +36,13 @@ function PartnerLayout() {
   const { session } = Route.useRouteContext();
   const ws = Route.useLoaderData();
   return (
-    <PartnerShell partner={ws.partner} me={ws.me} hasCreatorProfile={!!session.creator}>
-      <Outlet />
-      <Toaster theme="dark" position="top-center" richColors closeButton />
-    </PartnerShell>
+    <WelcomeProvider welcomed={ws.me.welcomed}>
+      <PartnerShell partner={ws.partner} me={ws.me} hasCreatorProfile={!!session.creator}>
+        <Outlet />
+        <Toaster theme="dark" position="top-center" richColors closeButton />
+      </PartnerShell>
+      {/* First visit only (and "Take the tour" in the account menu). */}
+      <PartnerWelcome />
+    </WelcomeProvider>
   );
 }

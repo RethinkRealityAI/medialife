@@ -81,6 +81,7 @@ import {
 import { shelfPath, type ShelfDoc, type ShelfSummary } from "@/lib/shelf/shelves";
 import { cn } from "@/lib/utils";
 
+import { ShelfActivitySheet, useShelfOpens } from "./shelf-activity";
 import { SHELF_IMAGE_TYPES, imageSize, uploadShelfImage } from "./shelf-upload";
 
 type Start = "preset" | "copy" | "blank";
@@ -119,6 +120,8 @@ export function PartnerShelfEditor({
   const [creating, setCreating] = useState<Start | null>(null);
   const [confirm, setConfirm] = useState<"reset" | "delete" | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [activity, setActivity] = useState(false);
+  const opens = useShelfOpens(slug)?.opens ?? 0;
   const fileInput = useRef<HTMLInputElement>(null);
   const picking = useRef<LibraryRequest | null>(null);
 
@@ -291,6 +294,24 @@ export function PartnerShelfEditor({
             variant="outline"
             size="sm"
             className="h-9 rounded-full max-sm:hidden"
+            onClick={() => setActivity(true)}
+            aria-label={opens > 0 ? `Activity: ${opens} open${opens === 1 ? "" : "s"}` : "Activity"}
+            title="Who opened this shelf"
+          >
+            <Eye aria-hidden /> <span className="hidden lg:inline">Activity</span>
+            {opens > 0 ? (
+              <span
+                aria-hidden
+                className="min-w-5 rounded-full bg-[var(--partner)] px-1.5 text-center text-[11px] leading-5 font-semibold text-[var(--partner-ink)] tabular-nums"
+              >
+                {opens > 999 ? "999+" : opens}
+              </span>
+            ) : null}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-full max-sm:hidden"
             onClick={() => void saveAsNew()}
             aria-label="Save as new"
           >
@@ -332,6 +353,14 @@ export function PartnerShelfEditor({
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setCreating("preset")} className="sm:hidden">
                 <Plus aria-hidden /> New shelf
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setActivity(true)} className="sm:hidden">
+                <Eye aria-hidden /> Who opened this
+                {opens > 0 ? (
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                    {opens}
+                  </span>
+                ) : null}
               </DropdownMenuItem>
               <DropdownMenuSeparator className="sm:hidden" />
               <DropdownMenuItem onSelect={() => void copyLink()}>
@@ -474,6 +503,8 @@ export function PartnerShelfEditor({
         aria-hidden
         onChange={(e) => void onFile(e.target.files?.[0])}
       />
+
+      <ShelfActivitySheet slug={slug} open={activity} onOpenChange={setActivity} />
 
       <PublishShelfDialog
         open={publishing}

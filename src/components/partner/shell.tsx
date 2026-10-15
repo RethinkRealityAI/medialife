@@ -8,6 +8,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   BookOpen,
   ChevronDown,
+  Compass,
   FolderOpen,
   House,
   Link2,
@@ -25,6 +26,7 @@ import { toast } from "sonner";
 import { GlassTabBar } from "@/components/glass/tab-bar";
 import { HubLink } from "@/components/hub/app/app-shell";
 import { Monogram } from "@/components/hub/app/ui";
+import { useWelcome } from "@/components/partner/welcome-context";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -151,6 +153,7 @@ export function PartnerShell({
   const [moreOpen, setMoreOpen] = useState(false);
   const loading = useRouterState({ select: (s) => s.status === "pending" });
   const name = me.name || me.email;
+  const welcome = useWelcome();
   useRootBrand(partner.brand);
 
   return (
@@ -269,6 +272,12 @@ export function PartnerShell({
                   <Users className="size-4" aria-hidden /> Team and account
                 </Link>
               </DropdownMenuItem>
+              {welcome ? (
+                // After the menu has closed, so focus moves into the welcome.
+                <DropdownMenuItem onSelect={() => window.setTimeout(welcome.show, 0)}>
+                  <Compass className="size-4" aria-hidden /> Take the tour
+                </DropdownMenuItem>
+              ) : null}
               {hasCreatorProfile ? (
                 <DropdownMenuItem asChild>
                   <a href="/creator-hub/dashboard">

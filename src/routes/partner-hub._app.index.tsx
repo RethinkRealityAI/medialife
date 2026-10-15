@@ -24,6 +24,7 @@ import { inviteFor, programUrl, usePartnerWorkspace } from "@/components/partner
 import { Button } from "@/components/ui/button";
 import { kitFor, kitHero, kitLogo } from "@/lib/hub/collateral";
 import { HUB, money } from "@/lib/hub/model";
+import { ShelfActivityCard } from "@/components/partner/shelf-activity";
 import { JOURNEY, type JourneyStep } from "@/lib/hub/partners";
 import { kitShelfPreview } from "@/lib/shelf/partner-presets";
 import { MEDIALIFE_GIFS, MEDIALIFE_VIDEOS } from "@/lib/hub/showcase";
@@ -326,8 +327,10 @@ function Home() {
       </section>
 
       {/* Pipeline + what needs you */}
-      <div className="mt-8 grid gap-4 @5xl/inset:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-        <div className="grid h-fit gap-4">
+      {/* Explicit minmax(0) columns: the pipeline scrolls sideways on phones, and an
+          auto column would grow to fit it and push the page wider than the screen. */}
+      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 @5xl/inset:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <div className="grid h-fit min-w-0 grid-cols-[minmax(0,1fr)] gap-4">
           <Surface accent as="section" className="p-4 sm:p-5">
             <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
               <div>
@@ -378,7 +381,7 @@ function Home() {
           </Surface>
         </div>
 
-        <div className="order-first grid h-fit gap-4 @5xl/inset:order-none">
+        <div className="order-first grid h-fit min-w-0 grid-cols-[minmax(0,1fr)] gap-4 @5xl/inset:order-none">
           <Surface as="section" className="p-4 sm:p-5">
             <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
               <Bell className="size-4 text-amber-300" aria-hidden /> Worth a nudge
@@ -408,6 +411,9 @@ function Home() {
               </p>
             )}
           </Surface>
+
+          {/* Who opened the shelves the team sent out (the shelf page tracks it). */}
+          <ShelfActivityCard />
 
           <Surface as="section" className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-2">
