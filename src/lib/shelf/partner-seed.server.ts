@@ -3,7 +3,12 @@ import type { ArNamespace } from "@/lib/ar/store.server";
 
 import { partnerShelfConfig, type ShelfPartner } from "./partner-presets";
 import { shelfSlugify, type ShelfDoc } from "./shelves";
-import { createShelf, freeShelfSlug, readAllShelves } from "./shelves.server";
+import {
+  backfillShelfSnapshot,
+  createShelf,
+  freeShelfSlug,
+  readAllShelves,
+} from "./shelves.server";
 
 // Partner shelves made on the server, not in the editor: every partner's own
 // starting shelf, and shelves "already built" for the creators a partner brings
@@ -28,9 +33,18 @@ export async function ownedShelves(ns: ArNamespace, partnerId: string) {
  * Checked by `isDefault`, not "any shelf": seeded creator shelves can exist
  * before the team first opens the builder.
  */
-export async function ensureDefaultShelf(ns: ArNamespace, partner: ShelfPartner) {
+export async function ensureDefaultShelf(
+  ns: ArNamespace,
+  partner: ShelfPartner,
+  opts: { snapshot?: string } = {},
+) {
   const mine = await ownedShelves(ns, partner.id);
-  if (mine.some((d) => d.owner?.isDefault)) return mine;
+  const have = mine.find((d) => d.owner?.isDefault);
+  if (have) {
+    if (opts.snapshot && !have.snapshotAssetId)
+      await backfillShelfSnapshot(ns, have.slug, opts.snapshot);
+    return mine;
+  }
   const slug = await freeShelfSlug(ns, partner.id);
   await createShelf(ns, {
     slug,
@@ -38,6 +52,7 @@ export async function ensureDefaultShelf(ns: ArNamespace, partner: ShelfPartner)
     config: partnerShelfConfig(partner),
     owner: { kind: "partner", partnerId: partner.id, partnerName: partner.name, isDefault: true },
     publish: true,
+    snapshot: opts.snapshot,
   });
   return ownedShelves(ns, partner.id);
 }
@@ -47,21 +62,24 @@ export async function ensureDefaultShelf(ns: ArNamespace, partner: ShelfPartner)
  * with the creator's name in neon and, when given, their picture (a site path
  * such as /partner-kit/snowday/creators/jellybean.webp) printed on the merch.
  * Safe to run again. Returns creatorId → slug for every creator passed in.
- * No snapshot is taken here (that happens in the browser on publish), so cards
- * show their placeholder until someone publishes from the builder.
+ * A `snapshot` is a ready-made picture of the shelf (a site path); without one,
+ * cards show their placeholder until someone publishes from the builder.
  */
 export async function ensurePartnerCreatorShelves(
   arNs: ArNamespace,
   partner: ShelfPartner,
-  creators: Array<{ id: string; name: string; logo?: string; handle?: string }>,
+  creators: Array<{ id: string; name: string; logo?: string; handle?: string; snapshot?: string }>,
+  opts: { snapshot?: string } = {},
 ): Promise<Record<string, string>> {
-  const mine = await ensureDefaultShelf(arNs, partner);
+  const mine = await ensureDefaultShelf(arNs, partner, opts);
   const out: Record<string, string> = {};
   const made: string[] = [];
   for (const c of creators) {
     const have = mine.find((d) => d.owner?.creatorId === c.id);
     if (have) {
       out[c.id] = have.slug;
+      if (c.snapshot && !have.snapshotAssetId)
+        await backfillShelfSnapshot(arNs, have.slug, c.snapshot);
       continue;
     }
     const config = partnerShelfConfig(partner, { creator: c.name });
@@ -80,6 +98,7 @@ export async function ensurePartnerCreatorShelves(
         creatorId: c.id,
       },
       publish: true,
+      snapshot: c.snapshot,
     });
     if (r.ok) {
       out[c.id] = r.doc.slug;

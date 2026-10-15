@@ -1,5 +1,6 @@
 import { getRequest } from "@tanstack/react-start/server";
 
+import { writeSampleShelfSessions } from "@/lib/ar/shelf-sample.server";
 import { ensurePartnerCreatorShelves } from "@/lib/shelf/partner-seed.server";
 
 import { claimEmail, findUserByEmail, hashPassword, saveUser, type HubUser } from "./auth.server";
@@ -618,6 +619,8 @@ export const SAMPLE_PARTNER_LOGIN = {
 
 /** Snowday's contact for the program, who brings the sample creators in. */
 const SNOWDAY_REP = "Fay Chukwueke";
+/** Pictures of the seeded shelves (scripts: see the PR), one per slug. */
+const SNOWDAY_SNAPSHOTS = "/partner-kit/snowday/shelf/snapshots";
 /** Her own invite link: the code createPartnerLink derives for her name. */
 const SNOWDAY_REP_CODE = "snowday-fay-chukwueke";
 const SNOWDAY_AGENCY = { id: SNOWDAY_PRESET.id, name: SNOWDAY_PRESET.name, rep: SNOWDAY_REP };
@@ -740,14 +743,32 @@ async function seedSamplePartner(ns: HubNamespace, sampleCreatorId: string | nul
   await seedSamplePartnerAdmin(ns, now);
   await retireOldSampleCreators(ns);
 
-  const shelfFor: Array<{ id: string; name: string; logo: string; handle: string }> = [];
+  const shelfFor: Array<{
+    id: string;
+    name: string;
+    logo: string;
+    handle: string;
+    snapshot: string;
+  }> = [];
   for (const sc of SNOWDAY_CREATORS) {
     const id = await seedSnowdayCreator(ns, sc, now);
     if (id)
-      shelfFor.push({ id, name: sc.name, logo: snowdayAvatar(sc.key), handle: sc.youtube.handle });
+      shelfFor.push({
+        id,
+        name: sc.name,
+        logo: snowdayAvatar(sc.key),
+        handle: sc.youtube.handle,
+        snapshot: `${SNOWDAY_SNAPSHOTS}/${sc.key}.webp`,
+      });
   }
-  // Their shelves, already built and live. The hub and the shelves share a namespace.
-  await ensurePartnerCreatorShelves(ns, partner, shelfFor);
+  // Their shelves, already built and live, with link-preview pictures shipped
+  // with the site. The hub and the shelves share a namespace.
+  const slugs = await ensurePartnerCreatorShelves(ns, partner, shelfFor, {
+    snapshot: `${SNOWDAY_SNAPSHOTS}/${SNOWDAY_PRESET.id}.webp`,
+  });
+  // A fortnight of visits to each shelf, so "Shelf activity" has a story to
+  // tell. Never written in prod; cleared with the other sample data.
+  await writeSampleShelfSessions(ns, [SNOWDAY_PRESET.id, ...Object.values(slugs)]).catch(() => {});
 }
 
 /** The team admin you sign in as. Renames the earlier "Alex (Snowday)" in place. */

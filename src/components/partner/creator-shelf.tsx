@@ -21,7 +21,7 @@ import {
 import { shelfPath } from "@/lib/shelf/shelves";
 import { cn } from "@/lib/utils";
 
-export const creatorShelvesKey = ["partner-hub", "creator-shelves"] as const;
+const creatorShelvesKey = ["partner-hub", "creator-shelves"] as const;
 
 /** creatorId → their shelf, for the team's creators. */
 export function useCreatorShelves() {

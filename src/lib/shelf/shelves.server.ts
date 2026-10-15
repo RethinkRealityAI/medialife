@@ -41,7 +41,17 @@ export function shelfStatus(doc: ShelfDoc): ShelfStatus {
   return sameJSON(doc.draft, doc.published) ? "published" : "changed";
 }
 
-export const snapshotRef = (id: string | null) => (id ? `/api/ar/asset/${id}` : null);
+/** Give a shelf without a picture a ready-made one (a site path). Seeding only. */
+export async function backfillShelfSnapshot(ns: ArNamespace, slug: string, path: string) {
+  const doc = await readShelf(ns, slug);
+  if (!doc || doc.snapshotAssetId || !path.startsWith("/")) return;
+  doc.snapshotAssetId = path;
+  await writeShelf(ns, doc);
+}
+
+/** The snapshot's URL: an uploaded asset, or a site path for a seeded shelf. */
+export const snapshotRef = (id: string | null) =>
+  id ? (id.startsWith("/") ? id : `/api/ar/asset/${id}`) : null;
 
 export function summarizeShelf(doc: ShelfDoc): ShelfSummary {
   const shown = doc.published ?? doc.draft;
@@ -105,6 +115,8 @@ export async function createShelf(
     owner?: ShelfDoc["owner"];
     /** put it live straight away (a partner's starting shelf) */
     publish?: boolean;
+    /** a ready-made link-preview picture (a site path), for seeded shelves */
+    snapshot?: string | null;
   },
 ): Promise<{ ok: true; doc: ShelfDoc } | Fail<"bad-slug" | "taken" | "not-found">> {
   if (!isValidShelfSlug(input.slug)) return { ok: false, error: "bad-slug" };
@@ -113,6 +125,7 @@ export async function createShelf(
   let snapshotAssetId: string | null = null;
   if (input.config) {
     draft = structuredClone(input.config);
+    if (input.snapshot?.startsWith("/")) snapshotAssetId = input.snapshot;
     const n = (input.creator ?? "").trim().slice(0, 28);
     if (n) {
       draft.creator.name = n;
