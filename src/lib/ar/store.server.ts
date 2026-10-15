@@ -191,7 +191,15 @@ const cache = new Map<string, Promise<ArStore>>();
 
 /** The store for one kind of record in one namespace. */
 export function arStore(kind: ArKind, ns: ArNamespace): Promise<ArStore> {
-  const name = `ar-${kind}-${ns}`;
+  return namedStore(`ar-${kind}-${ns}`);
+}
+
+/**
+ * A store by its full name. Other features (the Creator Hub) keep their own
+ * stores beside the activated-retail ones, with the same Blobs / local-file
+ * behaviour and the same namespacing by host.
+ */
+export function namedStore(name: string): Promise<ArStore> {
   let p = cache.get(name);
   if (!p) {
     p = loadBlobs().then((mod) => (mod && netlifyStore(mod, name)) || fileStore(name));

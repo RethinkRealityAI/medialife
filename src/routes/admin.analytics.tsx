@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { AnalyticsDashboard, type AnalyticsSearch } from "@/components/admin/analytics/dashboard";
+import {
+  ANALYTICS_VIEWS,
+  AnalyticsDashboard,
+  type AnalyticsSearch,
+} from "@/components/admin/analytics/dashboard";
 
 // /admin/analytics: first-party analytics for the activated-retail demos.
 // Filters live in the URL so a view can be shared with the team.
@@ -11,6 +15,7 @@ const searchSchema = z.object({
   demo: z.string().max(80).optional().catch(undefined),
   client: z.string().max(120).optional().catch(undefined),
   s: z.string().max(80).optional().catch(undefined),
+  view: z.enum(ANALYTICS_VIEWS).optional().catch(undefined),
 });
 
 export const Route = createFileRoute("/admin/analytics")({

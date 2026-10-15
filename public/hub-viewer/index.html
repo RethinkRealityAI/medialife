@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>3D preview · Creator Hub</title>
+<!--
+  The Creator Hub asset library's 3D preview, framed by the hub (same origin, so
+  the creator's session cookie reads the file).
+
+  /hub-viewer/index.html?src=/api/hub/files/<creatorId>/<fileId>&ext=glb&size=<bytes>
+  (the full file name: Netlify serves a bare folder, the dev server does not)
+    src   a hub file path; nothing else is accepted
+    ext   glb | gltf | fbx | obj | stl
+    size  bytes, so big files are read in range pieces (a single function
+          response tops out near 20 MB; see fileResponse)
+
+  Orbit with a drag, zoom with the wheel or a pinch. Spins slowly until touched.
+-->
+<script type="importmap">{"imports":{"three":"/vendor/three@0.170.0/three.module.min.js","three/addons/":"/vendor/three@0.170.0/jsm/"}}</script>
+<style>
+:root{color-scheme:dark;--bg:#0d0c16;--text:#f5f3fb;--muted:#a9a4c2;--line:rgba(255,255,255,.12);--accent:#9270ff}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+body.light{--bg:#eceaf3;--text:#16141f;--muted:#5b5770;--line:rgba(0,0,0,.12)}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+.msg{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--muted)}
+.msg b{display:block;color:var(--text);font-weight:600;margin-bottom:4px}
+.bar{position:absolute;left:16px;right:16px;bottom:16px;height:4px;border-radius:4px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.tools{position:absolute;top:10px;right:10px;display:flex;gap:6px}
+.tools button{appearance:none;border:1px solid var(--line);background:color-mix(in oklab,var(--bg) 75%,transparent);color:var(--text);
+  border-radius:999px;height:32px;padding:0 12px;font:inherit;font-weight:500;cursor:pointer;backdrop-filter:blur(8px)}
+.tools button[aria-pressed="true"]{border-color:var(--accent);background:color-mix(in oklab,var(--accent) 25%,var(--bg))}
+.tools button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stats{position:absolute;left:10px;bottom:10px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);
+  background:color-mix(in oklab,var(--bg) 75%,transparent);color:var(--muted);font:500 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;backdrop-filter:blur(8px)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="msg" id="msg"><div><b>Loading model…</b><span id="sub"></span></div></div>
+<div class="bar" id="bar"><i id="fill"></i></div>
+<div class="tools" id="tools" hidden>
+  <button type="button" id="spin" aria-pressed="true">Spin</button>
+  <button type="button" id="wire" aria-pressed="false">Wireframe</button>
+  <button type="button" id="bg" aria-pressed="false">Light</button>
+  <button type="button" id="reset">Reset</button>
+</div>
+<div class="stats" id="stats" hidden></div>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+const src = q.get("src") || "";
+const ext = (q.get("ext") || "").toLowerCase();
+const size = Number(q.get("size")) || 0;
+const PIECE = 16 * 1024 * 1024;
+
+function fail(title, body = "") {
+  $("msg").hidden = false;
+  $("msg").innerHTML = "";
+  const d = document.createElement("div");
+  const b = document.createElement("b");
+  b.textContent = title;
+  d.append(b, body);
+  $("msg").append(d);
+  $("bar").hidden = true;
+}
+
+/* Only hub files, read in range pieces. */
+async function read() {
+  if (!/^\/api\/hub\/files\/[A-Za-z0-9]{6,60}\/[A-Za-z0-9]{6,60}$/.test(src)) throw new Error("bad-src");
+  const parts = [];
+  let at = 0;
+  const total = size || PIECE;
+  for (;;) {
+    const res = await fetch(src, { headers: { range: `bytes=${at}-${at + PIECE - 1}` }, credentials: "same-origin" });
+    if (!res.ok) throw new Error(`http-${res.status}`);
+    const buf = await res.arrayBuffer();
+    parts.push(new Uint8Array(buf));
+    at += buf.byteLength;
+    $("fill").style.width = `${Math.min(100, (at / total) * 100)}%`;
+    const full = Number((res.headers.get("content-range") || "").split("/")[1]) || at;
+    if (res.status === 200 || at >= full || !buf.byteLength) break;
+  }
+  const out = new Uint8Array(at);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out.buffer;
+}
+
+async function parse(buf) {
+  switch (ext) {
+    case "glb":
+    case "gltf": {
+      const [{ GLTFLoader }, { DRACOLoader }, { MeshoptDecoder }] = await Promise.all([
+        import("three/addons/loaders/GLTFLoader.js"),
+        import("three/addons/loaders/DRACOLoader.js"),
+        import("three/addons/libs/meshopt_decoder.module.js"),
+      ]);
+      // Compressed meshes, as exported by Blender (Draco) and gltfpack (meshopt).
+      const draco = new DRACOLoader().setDecoderPath("/vendor/three@0.170.0/jsm/libs/draco/gltf/").setDecoderConfig({ type: "wasm" });
+      const loader = new GLTFLoader().setDRACOLoader(draco).setMeshoptDecoder(MeshoptDecoder);
+      try {
+        return (await loader.parseAsync(buf, "")).scene;
+      } finally {
+        draco.dispose();
+      }
+    }
+    case "fbx": {
+      const { FBXLoader } = await import("three/addons/loaders/FBXLoader.js");
+      return new FBXLoader().parse(buf, "");
+    }
+    case "obj": {
+      const { OBJLoader } = await import("three/addons/loaders/OBJLoader.js");
+      return new OBJLoader().parse(new TextDecoder().decode(buf));
+    }
+    case "stl": {
+      const { STLLoader } = await import("three/addons/loaders/STLLoader.js");
+      const geo = new STLLoader().parse(buf);
+      geo.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xcfcbe0, roughness: 0.55, metalness: 0.1, vertexColors: !!geo.hasColors });
+      return new THREE.Mesh(geo, mat);
+    }
+    default:
+      throw new Error("ext");
+  }
+}
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.2;
+const setBg = (light) => {
+  document.body.classList.toggle("light", light);
+  scene.background = new THREE.Color(light ? 0xeceaf3 : 0x0d0c16);
+};
+setBg(false);
+
+let home = null;
+function frame(obj) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const s = box.getSize(new THREE.Vector3());
+  const c = box.getCenter(new THREE.Vector3());
+  const r = Math.max(s.x, s.y, s.z) || 1;
+  obj.position.sub(c); // centre on the origin
+  const dist = (r * 0.5) / Math.tan(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 1.55;
+  camera.near = r / 200;
+  camera.far = r * 200;
+  camera.updateProjectionMatrix();
+  home = new THREE.Vector3(dist * 0.62, dist * 0.38, dist * 0.78);
+  camera.position.copy(home);
+  controls.target.set(0, 0, 0);
+  controls.minDistance = r * 0.05;
+  controls.maxDistance = r * 20;
+  controls.update();
+  return s;
+}
+
+function stats(obj, dims) {
+  let tris = 0, meshes = 0;
+  const mats = new Set();
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    meshes++;
+    const g = o.geometry;
+    tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => mats.add(m));
+  });
+  const f = (n) => n.toLocaleString(undefined, { maximumFractionDigits: n < 10 ? 2 : 0 });
+  $("stats").textContent = `${f(Math.round(tris))} triangles · ${meshes} mesh${meshes === 1 ? "" : "es"} · ${mats.size} material${mats.size === 1 ? "" : "s"} · ${f(dims.x)} × ${f(dims.y)} × ${f(dims.z)}`;
+  $("stats").hidden = false;
+}
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / Math.max(1, h);
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+
+const press = (btn, on) => btn.setAttribute("aria-pressed", String(on));
+controls.addEventListener("start", () => { controls.autoRotate = false; press($("spin"), false); });
+$("spin").onclick = () => { controls.autoRotate = !controls.autoRotate; press($("spin"), controls.autoRotate); };
+$("bg").onclick = () => { const on = !document.body.classList.contains("light"); setBg(on); press($("bg"), on); };
+let wire = false;
+$("wire").onclick = () => {
+  wire = !wire;
+  press($("wire"), wire);
+  scene.traverse((o) => { if (o.isMesh) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.wireframe = wire; }); });
+};
+$("reset").onclick = () => { if (home) { camera.position.copy(home); controls.target.set(0, 0, 0); controls.update(); } };
+
+(async () => {
+  let buf;
+  try {
+    buf = await read();
+  } catch (e) {
+    return fail("Couldn't open this file.", String(e.message).startsWith("http-4") ? "You may need to sign in again." : "Check your connection and try again.");
+  }
+  let obj;
+  try {
+    obj = await parse(buf);
+  } catch (e) {
+    console.warn("hub-viewer: couldn't parse the model", e);
+    return fail(
+      "This model can't be previewed here.",
+      ext === "gltf" ? "A .gltf that points to separate .bin or texture files needs them too: export a single .glb instead." : "Download it to open it in your 3D app.",
+    );
+  }
+  $("msg").hidden = true;
+  $("bar").hidden = true;
+  $("tools").hidden = false;
+  document.body.prepend(renderer.domElement);
+  scene.add(obj);
+  const dims = frame(obj);
+  stats(obj, dims);
+  resize();
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (still) { controls.autoRotate = false; press($("spin"), false); }
+  renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+})();
+</script>
+</body>
+</html>

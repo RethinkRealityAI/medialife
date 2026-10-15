@@ -189,7 +189,7 @@ export function SessionSheet({
   return (
     <Sheet open={!!sessionKey} onOpenChange={onOpenChange}>
       <SheetContent className="flex w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
-        <SheetHeader className="border-b border-border px-5 pt-5 pb-4 text-left">
+        <SheetHeader className="border-b border-white/[0.06] px-5 pt-5 pb-4 text-left">
           <Eyebrow>Visit</Eyebrow>
           <SheetTitle className="pr-8 text-xl font-medium tracking-tight">{title}</SheetTitle>
           <SheetDescription>

@@ -41,7 +41,7 @@ export function TrackingToggle({ className }: { className?: string }) {
 
   return (
     <div className={cn("flex min-w-0 flex-col gap-1", className)}>
-      <div className="flex h-9 items-center gap-2.5 self-start rounded-md border border-border px-3">
+      <div className="flex h-9 items-center gap-2.5 self-start rounded-full bg-black/30 px-3 ring-1 ring-white/10 ring-inset">
         <label htmlFor={id} className="cursor-pointer text-xs whitespace-nowrap">
           <span className="text-muted-foreground">This browser: </span>
           <span className={excluded ? "text-amber-300" : "text-foreground"}>

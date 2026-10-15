@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Globe2, Package, Palette, Smartphone } from "lucide-react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CountRow, Dashboard } from "@/lib/ar/analytics.server";
@@ -124,7 +125,12 @@ export function Breakdowns({ data }: { data: Dashboard }) {
   return (
     <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
       <Panel className="p-4 sm:p-5">
-        <PanelTitle title="Products opened" sub="Visits that opened each product." />
+        <PanelTitle
+          icon={Package}
+          tone="sky"
+          title="Products opened"
+          sub="Visits that opened each product."
+        />
         <div className="mt-4">
           <BarList
             rows={data.products}
@@ -135,7 +141,12 @@ export function Breakdowns({ data }: { data: Dashboard }) {
         </div>
       </Panel>
       <Panel className="p-4 sm:p-5">
-        <PanelTitle title="Themes switched to" sub="Property or campaign they switched to." />
+        <PanelTitle
+          icon={Palette}
+          tone="rose"
+          title="Themes switched to"
+          sub="Property or campaign they switched to."
+        />
         <div className="mt-4">
           <BarList
             rows={data.themes}
@@ -146,10 +157,15 @@ export function Breakdowns({ data }: { data: Dashboard }) {
         </div>
       </Panel>
       <Panel className="p-4 sm:p-5">
-        <PanelTitle title="Devices" sub="What they opened the demo on." />
+        <PanelTitle
+          icon={Smartphone}
+          tone="violet"
+          title="Devices"
+          sub="What they opened the demo on."
+        />
         <div className="mt-4">
           <DeviceSplit {...data.devices} />
-          <div className="mt-5 border-t border-border pt-4">
+          <div className="mt-5 border-t border-white/[0.06] pt-4">
             <BarList
               rows={data.os}
               total={visits}
@@ -160,7 +176,12 @@ export function Breakdowns({ data }: { data: Dashboard }) {
         </div>
       </Panel>
       <Panel className="p-4 sm:p-5">
-        <PanelTitle title="Countries" sub="From the visitor's network location." />
+        <PanelTitle
+          icon={Globe2}
+          tone="mint"
+          title="Countries"
+          sub="From the visitor's network location."
+        />
         <div className="mt-4">
           <BarList
             rows={data.countries}

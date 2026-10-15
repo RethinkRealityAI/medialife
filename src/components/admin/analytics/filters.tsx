@@ -21,6 +21,12 @@ const RANGES: Array<{ id: RangeId; label: string }> = [
   { id: "90d", label: "90 days" },
 ];
 
+const DEMO_GROUPS = [
+  { kind: "demo", label: null },
+  { kind: "endcap", label: "Builder endcaps" },
+  { kind: "shelf", label: "Merch shelves" },
+] as const;
+
 export interface Filters {
   range: RangeId;
   demo: string;
@@ -54,13 +60,13 @@ export function FilterBar({
         value={value.range}
         onValueChange={(v) => v && onChange({ range: v as RangeId })}
         aria-label="Date range"
-        className="w-full gap-0.5 rounded-md border border-border p-0.5 sm:w-auto"
+        className="h-10 w-full gap-0.5 rounded-xl bg-black/30 p-1 ring-1 ring-white/[0.08] ring-inset sm:w-auto"
       >
         {RANGES.map((r) => (
           <ToggleGroupItem
             key={r.id}
             value={r.id}
-            className="h-8 flex-1 px-3 text-xs text-muted-foreground hover:bg-white/[0.05] hover:text-foreground data-[state=on]:bg-white/[0.1] data-[state=on]:text-foreground sm:flex-none"
+            className="h-8 flex-1 rounded-lg px-3 text-xs text-muted-foreground hover:bg-white/[0.05] hover:text-foreground data-[state=on]:bg-white/[0.1] data-[state=on]:text-foreground data-[state=on]:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)] sm:flex-none"
           >
             {r.label}
           </ToggleGroupItem>
@@ -69,22 +75,42 @@ export function FilterBar({
 
       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
         <Select value={value.demo} onValueChange={(v) => onChange({ demo: v })}>
-          <SelectTrigger className="h-9 min-w-0 text-xs sm:w-44" aria-label="Demo">
+          <SelectTrigger
+            className="h-10 min-w-0 rounded-xl bg-black/30 text-xs sm:w-44"
+            aria-label="Demo"
+          >
             <SelectValue placeholder="All demos" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All demos</SelectItem>
-            {demos.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
-                {d.label}
-              </SelectItem>
-            ))}
+            {DEMO_GROUPS.map((g) => {
+              const items = demos.filter((d) => (d.kind ?? "demo") === g.kind);
+              if (!items.length) return null;
+              const list = items.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.label}
+                </SelectItem>
+              ));
+              // the sent demos stay ungrouped at the top, like before
+              return g.label ? (
+                <SelectGroup key={g.kind}>
+                  <SelectSeparator />
+                  <SelectLabel className="text-xs text-muted-foreground">{g.label}</SelectLabel>
+                  {list}
+                </SelectGroup>
+              ) : (
+                list
+              );
+            })}
             {!demoKnown ? <SelectItem value={value.demo}>{value.demo}</SelectItem> : null}
           </SelectContent>
         </Select>
 
         <Select value={value.client} onValueChange={(v) => onChange({ client: v })}>
-          <SelectTrigger className="h-9 min-w-0 text-xs sm:w-52" aria-label="Client">
+          <SelectTrigger
+            className="h-10 min-w-0 rounded-xl bg-black/30 text-xs sm:w-52"
+            aria-label="Client"
+          >
             <SelectValue placeholder="All clients" />
           </SelectTrigger>
           <SelectContent className="max-h-80">

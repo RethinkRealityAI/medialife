@@ -29,6 +29,13 @@
  * assets-src/ and this script never sees them.
  *
  *   node scripts/optimize-models.mjs [--force] [--only tee,plush]
+ *        [--src assets-src/merch-shelf] [--out public/merch-shelf/models] [--keep-wash]
+ *
+ * --keep-wash is for the Creator Merch Shelf's apparel, modelled on the
+ * vintage garment-washed lineup at shop.medialife.ai: a lighter blur and a
+ * wider tonal band, so the mottled fading and darker seams survive (the
+ * colourway wash then tints them) while the colour cast and fine hallucinated
+ * detail still go.
  */
 
 import { execFile } from "node:child_process";
@@ -41,8 +48,14 @@ import { MeshoptDecoder } from "meshoptimizer";
 import sharp from "sharp";
 
 const run = promisify(execFile);
-const RAW_DIR = path.resolve("assets-src/models");
-const OUT_DIR = path.resolve("public/roblox/creators/assets/models");
+const arg = (name, fallback) => {
+  const i = process.argv.indexOf(name);
+  return i > -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
+};
+const RAW_DIR = path.resolve(arg("--src", "assets-src/models"));
+const OUT_DIR = path.resolve(arg("--out", "public/roblox/creators/assets/models"));
+const keepWash = process.argv.includes("--keep-wash");
+const FLATTEN = keepWash ? { sigma: 2.2, floor: 70 } : { sigma: 7, floor: 150 };
 
 const force = process.argv.includes("--force");
 const onlyArg = process.argv.indexOf("--only");
@@ -82,7 +95,7 @@ async function flattenModel(srcPath, tmpPath) {
       const image = tex.getImage();
       if (image) {
         try {
-          const out = await flattenBaseColor(Buffer.from(image));
+          const out = await flattenBaseColor(Buffer.from(image), FLATTEN);
           tex.setImage(new Uint8Array(out)).setMimeType("image/png");
           count++;
         } catch (err) {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Link2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
@@ -26,13 +26,15 @@ export function LinksPage({ initialDemo }: { initialDemo: string | undefined }) 
       <Toaster theme="dark" position="bottom-right" />
       <PageHeader
         title="Client links"
+        icon={Link2}
+        tone="amber"
         badge={<NamespaceBadge ns={data?.ns} />}
         actions={
           <Button
             asChild
             variant="outline"
             size="sm"
-            className="h-9 bg-transparent hover:bg-white/[0.06] hover:text-foreground"
+            className="h-9 bg-black/30 backdrop-blur hover:bg-white/[0.06] hover:text-foreground"
           >
             <Link to="/admin/analytics">
               <BarChart3 aria-hidden />
@@ -41,9 +43,9 @@ export function LinksPage({ initialDemo }: { initialDemo: string | undefined }) 
           </Button>
         }
       >
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          A personal link for each client or contact. The demo says who it was prepared for, and
-          every visit is attributed to them.
+        <p className="mt-1 max-w-2xl text-sm text-white/65">
+          A personal demo link for each client. The demo greets them by name, and every visit is
+          attributed to them.
         </p>
       </PageHeader>
 

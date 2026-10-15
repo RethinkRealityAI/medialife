@@ -20,7 +20,7 @@ import { AssetLibrary } from "@/components/ar-builder/asset-library";
 import { copyText, projectsQueryKey, shareUrl } from "@/components/ar-builder/api";
 import { NewProjectDialog } from "@/components/ar-builder/new-project-dialog";
 import { StatusPill } from "@/components/ar-builder/status";
-import { PageHeader, Panel } from "@/components/portal/kit";
+import { IconTile, PageHeader, Panel, lift, surface } from "@/components/admin/kit";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -79,13 +79,15 @@ function ProjectsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Endcap builder"
         title="Endcaps"
+        icon={Boxes}
+        tone="rose"
+        description="Interactive retail endcaps for pitches: build one from a demo, preview it live, share the link."
         actions={
           <>
             <Button
               variant="outline"
-              className="pointer-coarse:h-11"
+              className="bg-black/30 backdrop-blur pointer-coarse:h-11"
               onClick={() => setLibrary(true)}
             >
               <Images aria-hidden /> Asset library
@@ -100,11 +102,11 @@ function ProjectsPage() {
           </>
         }
       />
-      <div className="px-4 py-8 sm:px-6 lg:px-8">
+      <div className="px-4 py-5 sm:px-6 lg:px-8">
         {projects.isPending ? (
           <CardGrid>
             {Array.from({ length: 6 }, (_, i) => (
-              <li key={i} className="overflow-hidden rounded-xl border border-border">
+              <li key={i} className={`overflow-hidden ${surface}`}>
                 <Skeleton className="aspect-[16/10] rounded-none" />
                 <div className="space-y-2 p-4">
                   <Skeleton className="h-4 w-2/3" />
@@ -115,7 +117,7 @@ function ProjectsPage() {
           </CardGrid>
         ) : projects.isError ? (
           <EmptyState
-            icon={<AlertTriangle aria-hidden />}
+            icon={<IconTile icon={AlertTriangle} tone="amber" size="lg" />}
             title="Couldn't load your endcaps"
             body="Check your connection and try again."
             action={
@@ -126,7 +128,7 @@ function ProjectsPage() {
           />
         ) : !projects.data.length ? (
           <EmptyState
-            icon={<Boxes aria-hidden />}
+            icon={<IconTile icon={Boxes} tone="rose" size="lg" />}
             title="No endcaps yet"
             body="Make one from the Roblox, EVADE or Monkey Quest demo, or start blank. You can preview it live and share a link when it's ready."
             action={
@@ -200,9 +202,7 @@ function EmptyState({
 }) {
   return (
     <Panel className="mx-auto flex max-w-lg flex-col items-center px-6 py-14 text-center">
-      <span className="grid size-12 place-items-center rounded-full border border-border bg-white/[0.03] text-muted-foreground [&_svg]:size-5">
-        {icon}
-      </span>
+      {icon}
       <h2 className="mt-5 text-lg font-medium">{title}</h2>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
       <div className="mt-6">{action}</div>
@@ -222,8 +222,10 @@ function ProjectCard({
   const live = p.status !== "draft";
   return (
     <li className="group relative">
-      <Panel className="overflow-hidden transition-colors group-hover:border-primary/45 group-focus-within:border-primary/45">
-        <div className="relative aspect-[16/10] overflow-hidden border-b border-border bg-[radial-gradient(ellipse_at_top,oklch(0.3_0.12_260/35%),transparent_70%)]">
+      <Panel
+        className={`overflow-hidden ${lift} group-focus-within:border-[color-mix(in_oklab,var(--partner)_50%,transparent)]`}
+      >
+        <div className="relative aspect-[16/10] overflow-hidden border-b border-white/[0.06] bg-[radial-gradient(ellipse_at_top,oklch(0.3_0.12_260/35%),transparent_70%)]">
           {p.thumb ? (
             <img
               src={p.thumb}
@@ -248,7 +250,7 @@ function ProjectCard({
               <Link
                 to="/admin/builder/$slug"
                 params={{ slug: p.slug }}
-                className="after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
+                className="after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring"
               >
                 {p.name}
               </Link>

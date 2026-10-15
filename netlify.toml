@@ -207,6 +207,38 @@
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=86400"
 
+# ── Creator Merch Shelf ─────────────────────────────────────────────────────
+# /merch-shelf/ is the static 3D shelf page. People don't open it directly: the
+# SSR routes /shelf (quick links) and /shelf/<slug> (published shelves, config
+# injected) serve it, and /admin/shelves embeds it as a same-origin preview
+# (?preview=1), so SAMEORIGIN framing, never DENY. Unlisted like the rest of the
+# client work. File names aren't versioned and the page is iterated on, so
+# everything under it is revalidated (cheap 304s) rather than cached for a day;
+# one rule on purpose, since overlapping rules merge their Cache-Control values.
+[[headers]]
+  for = "/merch-shelf/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# /partner-kit/ is collateral for partners to share with creators (one-pagers,
+# graphics, photography). Unlisted; files keep their names when updated, so a
+# day's cache, not a year's.
+[[headers]]
+  for = "/partner-kit/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=86400"
+
+# /hub-viewer/ is the Creator Hub asset library's 3D preview, framed by the hub
+# (same origin) and reading only /api/hub/files/ paths. Unlisted; revalidated
+# like the shelf, since its file name isn't versioned.
+[[headers]]
+  for = "/hub-viewer/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 # /ar/ is the "View in your space" page the desktop AR QR code opens on a phone. Unlisted.
 [[headers]]
   for = "/ar/*"

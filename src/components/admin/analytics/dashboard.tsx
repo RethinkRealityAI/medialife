@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FlaskConical, Loader2, RefreshCw } from "lucide-react";
+import {
+  BarChart3,
+  Contact,
+  FlaskConical,
+  History,
+  LayoutDashboard,
+  Loader2,
+  PieChart,
+  RefreshCw,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +19,15 @@ import type { RangeId } from "@/lib/ar/analytics.server";
 import { cn } from "@/lib/utils";
 
 import { formatTime, isUnauthorized } from "../format";
-import { NamespaceBadge, PageHeader, Panel, SignInAgain } from "../kit";
+import {
+  AdminTab,
+  AdminTabs,
+  NamespaceBadge,
+  PageHeader,
+  Panel,
+  SignInAgain,
+  TabCount,
+} from "../kit";
 import { TrackingToggle } from "../tracking-toggle";
 import { Breakdowns } from "./breakdowns";
 import { ClientsTable } from "./clients-table";
@@ -22,7 +39,12 @@ import { SessionSheet } from "./session-sheet";
 import { SessionsList } from "./sessions-list";
 import { VisitsChart } from "./visits-chart";
 
+export const ANALYTICS_VIEWS = ["overview", "clients", "visits", "breakdown"] as const;
+export type AnalyticsView = (typeof ANALYTICS_VIEWS)[number];
+
 export interface AnalyticsSearch {
+  /** the section tab */
+  view?: AnalyticsView;
   range?: RangeId;
   demo?: string;
   client?: string;
@@ -49,6 +71,7 @@ export function AnalyticsDashboard({
   search: AnalyticsSearch;
   onSearch: (patch: Partial<AnalyticsSearch>) => void;
 }) {
+  const view: AnalyticsView = search.view ?? "overview";
   const filters: Filters = {
     range: search.range ?? DEFAULT_RANGE,
     demo: search.demo ?? "all",
@@ -123,6 +146,8 @@ export function AnalyticsDashboard({
       <Toaster theme="dark" position="bottom-right" />
       <PageHeader
         title="Analytics"
+        icon={BarChart3}
+        tone="mint"
         badge={<NamespaceBadge ns={data?.ns} />}
         actions={
           <div className="flex flex-wrap items-start gap-2">
@@ -176,7 +201,7 @@ export function AnalyticsDashboard({
             </div>
 
             {data && data.ns !== "prod" && data.sampleCount > 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-amber-400/30 bg-amber-400/[0.06] px-4 py-2 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-2xl border border-amber-400/30 bg-[linear-gradient(90deg,rgb(251_191_36/0.1),rgb(251_191_36/0.03))] px-4 py-2 text-sm">
                 <span className="flex items-center gap-2">
                   <FlaskConical className="size-4 shrink-0 text-amber-300" aria-hidden />
                   Includes {data.sampleCount} sample visit{data.sampleCount === 1 ? "" : "s"}:
@@ -196,7 +221,7 @@ export function AnalyticsDashboard({
             ) : null}
 
             {data && filtered && data.totals.opens === 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] px-4 py-2 text-sm text-muted-foreground">
                 Nothing matches these filters in this range.
                 <Button
                   variant="ghost"
@@ -218,26 +243,55 @@ export function AnalyticsDashboard({
               aria-busy={q.isFetching}
             >
               <KpiRow data={data} />
-              {data ? (
-                <>
-                  <ClientsTable data={data} selected={filters.client} onSelect={selectClient} />
+              <AdminTabs
+                label="Analytics sections"
+                value={view}
+                onChange={(v) => onSearch({ view: v === "overview" ? undefined : v })}
+                tabs={[
+                  { id: "overview", label: "Overview", icon: LayoutDashboard },
+                  { id: "clients", label: "Clients", icon: Contact },
+                  {
+                    id: "visits",
+                    label: "Visits",
+                    icon: History,
+                    badge: data ? <TabCount n={data.sessions.length} /> : null,
+                  },
+                  { id: "breakdown", label: "Breakdown", icon: PieChart },
+                ]}
+              >
+                <AdminTab value="overview">
                   <div className="grid gap-4 @5xl/inset:grid-cols-5">
-                    <VisitsChart data={data} className="@5xl/inset:col-span-3" />
-                    <Funnel data={data} className="@5xl/inset:col-span-2" />
+                    {data ? (
+                      <>
+                        <VisitsChart data={data} className="@5xl/inset:col-span-3" />
+                        <Funnel data={data} className="@5xl/inset:col-span-2" />
+                      </>
+                    ) : (
+                      <>
+                        <SkeletonPanel className="h-80 @5xl/inset:col-span-3" />
+                        <SkeletonPanel className="h-80 @5xl/inset:col-span-2" />
+                      </>
+                    )}
                   </div>
-                  <SessionsList data={data} onOpen={(key) => onSearch({ s: key })} />
-                  <Breakdowns data={data} />
-                </>
-              ) : (
-                <>
-                  <SkeletonPanel className="h-72" />
-                  <div className="grid gap-4 @5xl/inset:grid-cols-5">
-                    <SkeletonPanel className="h-80 @5xl/inset:col-span-3" />
-                    <SkeletonPanel className="h-80 @5xl/inset:col-span-2" />
-                  </div>
-                  <SkeletonPanel className="h-96" />
-                </>
-              )}
+                </AdminTab>
+                <AdminTab value="clients">
+                  {data ? (
+                    <ClientsTable data={data} selected={filters.client} onSelect={selectClient} />
+                  ) : (
+                    <SkeletonPanel className="h-72" />
+                  )}
+                </AdminTab>
+                <AdminTab value="visits">
+                  {data ? (
+                    <SessionsList data={data} onOpen={(key) => onSearch({ s: key })} />
+                  ) : (
+                    <SkeletonPanel className="h-96" />
+                  )}
+                </AdminTab>
+                <AdminTab value="breakdown">
+                  {data ? <Breakdowns data={data} /> : <SkeletonPanel className="h-80" />}
+                </AdminTab>
+              </AdminTabs>
             </div>
           </>
         )}

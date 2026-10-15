@@ -1,0 +1,132 @@
+# Creator Merch Shelf (`public/merch-shelf/`)
+
+A static, no-build page: one creator's activated merch on a floating lit shelf,
+their name in neon above it. Plain ES modules, three.js r180 via an importmap.
+Served at `/merch-shelf/` (quick links) and, through the server, at `/shelf` and
+`/shelf/<slug>` (published shelves). All asset URLs are absolute (`/merch-shelf/…`)
+because the same HTML is served from `/shelf/<slug>`.
+
+## Config resolution (`config.js` → `resolveConfig`)
+
+The contract is `ShelfConfig` in `src/lib/shelf/config.ts`. `default.json` is
+generated from it (`npm run check:shelf -- --write`); never hand-edit it.
+
+1. `window.__SHELF` — a published shelf. The server replaces the
+   `<!--SHELF_CONFIG-->` marker in `<head>` with
+   `<script>window.__SHELF=…;window.__SHELF_SLUG="…"</script>` (+ meta tags).
+2. Otherwise `/merch-shelf/default.json`, then the quick-link params below.
+3. `?preview=1` (admin builder iframe) additionally listens for `postMessage`.
+
+Every field is re-validated in the page (`sanitize`) and falls back to the
+default field by field, so a bad value never blanks the shelf.
+
+## Quick-link params
+
+| param            | effect                                                                                             |
+| ---------------- | -------------------------------------------------------------------------------------------------- |
+| `name`           | sign text (max 28). Clears the placeholder handle unless `handle` is given                         |
+| `handle`         | under the sign (`@` added if missing)                                                              |
+| `neon`, `accent` | hex without `#`                                                                                    |
+| `shelf`          | `walnut` \| `black` \| `white` \| `maple`                                                          |
+| `backdrop`       | `midnight` \| `sunset` \| `arcade` \| `snow`                                                       |
+| `logo`           | https URL or same-site path; loaded with CORS, falls back to the generated wordmark on error/taint |
+| `for` / `by`     | `pitch.preparedFor` / `pitch.presentedBy` (text only)                                              |
+| `invite`         | invite code carried to `/creator-hub/join?invite=`                                                 |
+| `audience`       | estimator starting audience                                                                        |
+| `products`       | comma list of types to show, in order (e.g. `tee,hoodie,sticker`)                                  |
+
+Also: `#activate=<productId>` opens that product's fan experience straight away
+(full-screen on a phone — it's what the "Try it on your phone" QR points to).
+`?c=CODE` / `?to=Name` personal links come from `ARTrack.link`.
+
+## Preview protocol (`?preview=1`, same origin only)
+
+No loader/tour, a "Preview" badge, no analytics.
+
+- page → parent: `{type:"shelf:ready"}`, re-posted every 500 ms until the first config arrives
+- parent → page: `{type:"shelf:config", config}` — re-render live (models are cached; only what changed is rebuilt)
+- parent → page: `{type:"shelf:snapshot", width, height}` — waits for the current build, renders the hero view at that size
+- page → parent: `{type:"shelf:snapshot-result", dataUrl}` (PNG, or `null` on failure)
+
+## Files
+
+| file                                                                                             | what                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.html`                                                                                     | shell: head (marker, importmap, fonts), DOM for bar/dock/panels, loader, no-WebGL fallback                                                                         |
+| `app.css`                                                                                        | all styling (site tokens: dark, cyan→magenta, Space Grotesk + JetBrains Mono; Tilt Neon for the sign)                                                              |
+| `main.js`                                                                                        | boot, config → scene, render/re-render diffing, hover, focus (lift-out + turntable), preview protocol, fallback, hash activation                                   |
+| `config.js`                                                                                      | resolution, sanitising, quick links, product meta, lineup swatches, money formatting                                                                               |
+| `scene.js`                                                                                       | renderer, bloom, limited orbit + parallax, lights, backdrops + particles, picking, camera flights, snapshots, thumbnails, sleep-when-idle loop                     |
+| `shelf.js`                                                                                       | the cubby unit (layout chosen for the viewport), finishes, LED strips + washes                                                                                     |
+| `neon.js`                                                                                        | per-letter neon tubes, ignition flicker and hum, backer, wires, halo                                                                                               |
+| `products.js`                                                                                    | model table (model + print zones per type, with fallbacks), loader with byte progress, vintage wash shader, decals, displays (hanger/stand/peg), hang + price tags |
+| `prints.js`                                                                                      | art kit: logo or generated wordmark, back prints (real art fitted to the safe area; sample panel only for the wordmark), sleeve type, badge, distress/embroidery   |
+| `keychain.js`                                                                                    | procedural clear-acrylic two-charm set on a silver clasp                                                                                                           |
+| `sticker.js`                                                                                     | procedural holographic die-cut 3-pack                                                                                                                              |
+| `art.js`                                                                                         | canvas helpers: wordmark, die-cut, wood/fluted textures, QR drawing                                                                                                |
+| `ui.js`                                                                                          | layer stack (Esc, focus trap/return), icons, toast, fly-to-cart, analytics wrapper                                                                                 |
+| `sheet.js`, `cart.js`, `activation.js`, `tour.js`, `customise.js`, `estimator.js`, `snapshot.js` | the panels                                                                                                                                                         |
+| `tap3d.js`                                                                                       | step 1 of the experience walkthrough in real 3D: the product's own model and a modelled phone tapping its NFC tag, drawn through the shelf's renderer              |
+| `models/`                                                                                        | the lineup's boxy tee / hoodie / long-sleeve GLBs                                                                                                                  |
+
+Reused, not copied: `/roblox/creators/vendor/three` (r180 + addons),
+`/roblox/creators/vendor/qrcode`, and `buildDecal` / `resolveZone` / `PRINT_ZONES`
+from `/roblox/creators/assets/js/product.js` (cap, plush and desk mat models also
+come from `/roblox/creators/assets/models/`). If those move, update the importmap
+and the imports in `products.js`.
+
+## Layout
+
+- **Hero:** the shelf is framed into the space between the top bar and the dock. The tour card and the dock are
+  glass, so the shelf may sit just under their top edges.
+- **A product:** it's lifted well clear of the shelf, the scene is dimmed and a soft pool of the accent colour
+  lights it from behind. The camera frames it to fill most of the space the card leaves (`focusPose` in
+  `scene.js`; `FOCUS_ZOOM` in `main.js` trims small items like the charms).
+- **The card** (`sheet.js`): on portrait screens up to 1100 px wide it's a compact glass card over the
+  bottom of the scene with the essentials (name, price, colour, size, _Experience it_, _Add to cart_); the
+  description, the immersive experience, the reward, how it works and the try-on-phone QR fold into _details_
+  (swipe up for details, down to fold them, down again to close). Everywhere else it's the buy-box pattern: a
+  full-height panel on the right quarter of the screen, name and price at the top beside the product, the
+  details in the middle and the actions pinned to the bottom right. Front/Back and "drag to turn" are a
+  separate pill under the product, since they control the 3D view, not the order.
+- **Hangers** sit inside the garments: `topProfile` in `products.js` samples each model's shoulder line and the
+  bar is fitted just under it, so only the hook comes out of the neck (out of the top of the hood).
+- **Glow**: while a product is held, bloom eases off, the light pool behind it is fainter for clear and shiny
+  pieces (`SPOT_LEVEL` in `main.js`) and the tags don't glint, so it stays readable as it turns.
+- **Copy**: every product opens an _immersive experience_. The activation `kind` only picks which demo the
+  shelf plays; the shelf never names the format (no "clip", "play", "watch", "AR moment").
+- **Back prints** (`prints.js`): real artwork (a back-print file dropped into _Make it yours_, then the product's
+  `backPrint`, then the creator's logo) is printed whole, fitted inside the print's safe area (`SAFE_INSET`), with
+  no frame and no sample type. Only the generated wordmark gets the sample panel, so the shelf never looks empty.
+
+## The experience walkthrough (`activation.js`)
+
+"Experience it" opens a centred, three-step story of what a fan does with the merch:
+
+1. **Tap**, in real 3D (`tap3d.js`): the product's own model (borrowed from the shelf, prints and all) and a
+   modelled phone that glides in and taps the NFC tag under the chest print (`tagPoint()` on the product
+   handle); rings ripple out and the phone shows the "open" sheet. It draws through the shelf's renderer
+   (`scene.renderView`), so nothing loads twice and no second WebGL context opens.
+2. **It opens**: the phone's browser opens straight into the creator's splash.
+3. **Unlock**: the demo for the product's `activation.kind` runs, then the reward, with a code.
+
+It runs on its own clock, which starts only once the overlay has faded in and stops while paused or hidden.
+Each step is a segment that fills like a story; click one to jump to it, or use ←/→ and Space. Opened from
+the QR on a phone (`#activate=<id>`), step 1 is skipped and the experience fills the screen.
+
+## Adding a product type
+
+1. Add it to `PRODUCT_TYPES` (+ defaults) in `src/lib/shelf/config.ts` and regenerate `default.json`.
+2. `config.js`: add it to `PRODUCT_TYPES` and `PRODUCT_META` (label, apparel?, tintable?, sizes, fallback image).
+3. Modelled: add an entry to `MODELS` in `products.js` (`url` + `zones`, first entry wins, later ones are fallbacks),
+   a `TARGET` size, and a display branch in `buildProduct` (where it sits in the cubby, its hang tag).
+   Procedural: write a `buildX()` like `keychain.js` / `sticker.js` returning `{ group, materials, size, idle, dispose }`.
+4. Optional: an icon/label for a new activation kind lives in `ui.js` (`KIND_ICON`) and `activation.js`.
+
+## Analytics
+
+`ARTrack.init({ demo: "shelf:<slug>" | "merch-shelf" })` (skipped in preview). Events:
+`enter`, `product_open`, `add_to_cart`, `cart_open`, `checkout`, `activation_open`,
+`activation_launch`, `game_start`, `game_end`, `reward_redeem`, `ar_qr`, `tour_step`,
+`tour_finish`, `tour_skip`, `shelf_customize` (`what`: open/logo/back/neon/…/share/snapshot),
+`sheet_details`, `estimator_use`, `apply_open` (`from`: dock/sheet/checkout/activation/tour/estimator).

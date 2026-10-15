@@ -1,3 +1,4 @@
+import { LineChart } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart";
@@ -103,6 +104,8 @@ export function VisitsChart({ data, className }: { data: Dashboard; className?: 
     <Panel className={className}>
       <div className="p-4 sm:p-5">
         <PanelTitle
+          icon={LineChart}
+          tone="sky"
           title={title}
           sub={
             bucket === "hour"
@@ -178,7 +181,7 @@ export function VisitsChart({ data, className }: { data: Dashboard; className?: 
         </div>
 
         {/* The table twin: every value without hovering. */}
-        <details className="mt-3 border-t border-border pt-3">
+        <details className="mt-3 border-t border-white/[0.06] pt-3">
           <summary className="mono cursor-pointer text-[10px] tracking-[0.14em] text-muted-foreground uppercase hover:text-foreground">
             View as a table
           </summary>
@@ -186,7 +189,7 @@ export function VisitsChart({ data, className }: { data: Dashboard; className?: 
             <table className="w-full text-sm">
               <caption className="sr-only">{title}</caption>
               <thead>
-                <tr className="mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
                   <th scope="col" className="py-2 font-normal">
                     {bucket === "hour" ? "Hour" : "Day"}
                   </th>
@@ -198,7 +201,7 @@ export function VisitsChart({ data, className }: { data: Dashboard; className?: 
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.06]">
                 {[...series].reverse().map((p) => (
                   <tr key={p.t}>
                     <th scope="row" className="py-1.5 text-left font-normal">

@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Plus, RotateCcw } from "lucide-react";
+import { Check, Loader2, Plus, RotateCcw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ function Field({
   );
 }
 
-/** The demo picker: the two sent demos, then published builder endcaps. */
+/** The demo picker: the sent demos, then published builder endcaps, then merch shelves. */
 export function DemoSelect({
   id,
   value,
@@ -74,8 +74,9 @@ export function DemoSelect({
   onChange: (v: string) => void;
   demos: DemoOption[];
 }) {
-  const builtin = demos.filter((d) => !d.builder);
-  const endcaps = demos.filter((d) => d.builder);
+  const builtin = demos.filter((d) => d.kind === "demo");
+  const endcaps = demos.filter((d) => d.kind === "endcap");
+  const shelves = demos.filter((d) => d.kind === "shelf");
   const unknown = value && !demos.some((d) => d.id === value);
   return (
     <Select value={value} onValueChange={onChange}>
@@ -101,9 +102,26 @@ export function DemoSelect({
             </SelectGroup>
           </>
         ) : null}
+        {shelves.length ? (
+          <>
+            <SelectSeparator />
+            <SelectGroup>
+              <SelectLabel className="text-xs text-muted-foreground">Merch shelves</SelectLabel>
+              {shelves.map((d) => (
+                <SelectItem key={d.id} value={d.id}>
+                  {d.short}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </>
+        ) : null}
         {unknown ? (
           <SelectItem value={value}>
-            {value.startsWith("x:") ? `${value.slice(2)} (not published)` : value}
+            {value.startsWith("x:")
+              ? `${value.slice(2)} (not published)`
+              : value.startsWith("shelf:")
+                ? `${value.slice(6)} shelf (not published)`
+                : value}
           </SelectItem>
         ) : null}
       </SelectContent>
@@ -266,8 +284,10 @@ export function CreateLink({
   const preview = effectiveCode && origin ? shareUrl(origin, { demo, code: effectiveCode }) : null;
 
   return (
-    <Panel className="p-4 sm:p-5">
+    <Panel accent className="p-4 sm:p-5">
       <PanelTitle
+        icon={Wand2}
+        tone="amber"
         title="New client link"
         sub="The demo greets them by name and every visit shows up under their name in Analytics."
       />
@@ -351,11 +371,13 @@ export function CreateLink({
             />
           </label>
           <p className="mt-1.5 text-xs text-muted-foreground">
-            {unlock
-              ? "They go straight in."
-              : demoOption?.password
-                ? `They'll need the password: ${demoOption.password}`
-                : "They'll need the demo's password."}
+            {demoOption?.kind === "shelf"
+              ? "Merch shelves have no password."
+              : unlock
+                ? "They go straight in."
+                : demoOption?.password
+                  ? `They'll need the password: ${demoOption.password}`
+                  : "They'll need the demo's password."}
           </p>
         </div>
         <Field

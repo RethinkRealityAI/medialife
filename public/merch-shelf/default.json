@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "creator": {
+    "name": "YOUR NAME",
+    "handle": "@yourchannel",
+    "logo": null
+  },
+  "theme": {
+    "neon": "#ff37ae",
+    "accent": "#19affe",
+    "shelf": "walnut",
+    "backdrop": "midnight"
+  },
+  "products": [
+    {
+      "id": "tee",
+      "type": "tee",
+      "enabled": true,
+      "name": "Activated Heavyweight Tee",
+      "price": 7500,
+      "color": "#1c1c1f",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Boxy heavyweight cotton, vintage washed. Your mark on the chest, your art across the back.",
+      "activation": {
+        "kind": "ar",
+        "title": "Your art comes alive",
+        "description": "Fans scan the back print and step into an immersive experience built around your art.",
+        "reward": "15% off your next drop"
+      }
+    },
+    {
+      "id": "hoodie",
+      "type": "hoodie",
+      "enabled": true,
+      "name": "Activated Hoodie",
+      "price": 9000,
+      "color": "#19191b",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Heavyweight washed-black hoodie with a full back print.",
+      "activation": {
+        "kind": "video",
+        "title": "An exclusive experience",
+        "description": "Scan the back print to open an immersive experience made just for the people wearing it.",
+        "reward": "Early access to your next drop"
+      }
+    },
+    {
+      "id": "longsleeve",
+      "type": "longsleeve",
+      "enabled": true,
+      "name": "Activated Long-Sleeve",
+      "price": 7500,
+      "color": "#1d2433",
+      "print": null,
+      "backPrint": null,
+      "blurb": "12oz heavyweight long-sleeve in washed navy, sleeve and back prints.",
+      "activation": {
+        "kind": "model",
+        "title": "A collectible experience",
+        "description": "Scan the sleeve to open an immersive experience fans can keep coming back to.",
+        "reward": "A digital collectible"
+      }
+    },
+    {
+      "id": "cap",
+      "type": "cap",
+      "enabled": true,
+      "name": "Embroidered Cap",
+      "price": 5000,
+      "color": "#141416",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Embroidered cotton cap, one size, adjustable.",
+      "activation": {
+        "kind": "unlock",
+        "title": "Unlock a reward",
+        "description": "Scan under the brim to open an immersive experience with a reward fans can't get anywhere else.",
+        "reward": "A discount code for the next drop"
+      }
+    },
+    {
+      "id": "keychain",
+      "type": "keychain",
+      "enabled": true,
+      "name": "Acrylic Charm Set",
+      "price": 1499,
+      "color": "#ffffff",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Clear acrylic charms, double-sided UV print, silver clasp. QR on the back.",
+      "activation": {
+        "kind": "game",
+        "title": "A pocket-sized experience",
+        "description": "Scan the charm to open an immersive experience starring your character.",
+        "reward": "A shout-out for your top fans"
+      }
+    },
+    {
+      "id": "sticker",
+      "type": "sticker",
+      "enabled": true,
+      "name": "AR Sticker 3-Pack",
+      "price": 1500,
+      "color": "#ffffff",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Holographic weatherproof vinyl, each sticker activated with its own NFC tag.",
+      "activation": {
+        "kind": "ar",
+        "title": "The sticker comes alive",
+        "description": "Tap a phone to the sticker and an immersive experience opens. No app.",
+        "reward": "A bonus wallpaper"
+      }
+    },
+    {
+      "id": "plush",
+      "type": "plush",
+      "enabled": false,
+      "name": "Mascot Plush",
+      "price": 3500,
+      "color": "#f2efe9",
+      "print": null,
+      "backPrint": null,
+      "blurb": "Soft, huggable and activated: scan the tag for an immersive experience.",
+      "activation": {
+        "kind": "game",
+        "title": "Your mascot, immersive",
+        "description": "Scan the tag to open an immersive experience starring your mascot.",
+        "reward": "A shout-out for your top fans"
+      }
+    },
+    {
+      "id": "deskmat",
+      "type": "deskmat",
+      "enabled": false,
+      "name": "Desk Mat",
+      "price": 3000,
+      "color": "#15161c",
+      "print": null,
+      "backPrint": null,
+      "blurb": "XL mat with the QR built into the art.",
+      "activation": {
+        "kind": "video",
+        "title": "Your setup, unlocked",
+        "description": "Scan the corner to open an immersive experience of your setup.",
+        "reward": "Your settings and keybinds"
+      }
+    }
+  ],
+  "pitch": {
+    "preparedFor": "",
+    "presentedBy": "",
+    "inviteCode": "",
+    "audience": 250000,
+    "showEstimator": true
+  }
+}

@@ -1,3 +1,5 @@
+import { Eye, Flag, Inbox, Package, ScanLine, Sparkles, Timer, Users } from "lucide-react";
+
 import type { Dashboard } from "@/lib/ar/analytics.server";
 
 import { formatDuration, formatNumber, pct } from "../format";
@@ -10,10 +12,12 @@ export function KpiRow({ data }: { data: Dashboard | undefined }) {
   const loading = !t;
   const v = t?.visits ?? 0;
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 @4xl/inset:grid-cols-4">
       <StatTile
         loading={loading}
         label="Visits"
+        icon={Eye}
+        tone="sky"
         value={formatNumber(v)}
         hint={
           t?.bounced
@@ -24,18 +28,24 @@ export function KpiRow({ data }: { data: Dashboard | undefined }) {
       <StatTile
         loading={loading}
         label="Unique visitors"
+        icon={Users}
+        tone="violet"
         value={formatNumber(t?.visitors ?? 0)}
         hint="Counted per browser"
       />
       <StatTile
         loading={loading}
         label="Avg engaged time"
+        icon={Timer}
+        tone="mint"
         value={formatDuration(t?.avgEngagedMs ?? 0)}
         hint={t ? `${formatDuration(t.engagedMs)} in total, tab visible` : undefined}
       />
       <StatTile
         loading={loading}
         label="Finished the tour"
+        icon={Flag}
+        tone="amber"
         value={pct(t?.tourFinished ?? 0, v)}
         meter={v ? share(t?.tourFinished ?? 0, v) : null}
         hint={t ? `${pct(t.tourSkipped, v)} skipped it` : undefined}
@@ -43,6 +53,8 @@ export function KpiRow({ data }: { data: Dashboard | undefined }) {
       <StatTile
         loading={loading}
         label="Opened a product"
+        icon={Package}
+        tone="sky"
         value={pct(t?.productVisits ?? 0, v)}
         meter={v ? share(t?.productVisits ?? 0, v) : null}
         hint={t ? `${t.productVisits} of ${v} visits` : undefined}
@@ -50,6 +62,8 @@ export function KpiRow({ data }: { data: Dashboard | undefined }) {
       <StatTile
         loading={loading}
         label="Tried the activation"
+        icon={Sparkles}
+        tone="rose"
         value={pct(t?.activationVisits ?? 0, v)}
         meter={v ? share(t?.activationVisits ?? 0, v) : null}
         hint={t ? `${t.activationVisits} of ${v} visits` : undefined}
@@ -57,12 +71,16 @@ export function KpiRow({ data }: { data: Dashboard | undefined }) {
       <StatTile
         loading={loading}
         label="AR opens"
+        icon={ScanLine}
+        tone="violet"
         value={formatNumber(t?.arOpens ?? 0)}
         hint={t ? `In ${t.arVisits} visit${t.arVisits === 1 ? "" : "s"}` : undefined}
       />
       <StatTile
         loading={loading}
         label="Leads"
+        icon={Inbox}
+        tone="mint"
         value={formatNumber(t?.leads ?? 0)}
         hint="Contact requests sent from a demo"
       />

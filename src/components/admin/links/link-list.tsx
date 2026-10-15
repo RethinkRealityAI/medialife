@@ -60,6 +60,8 @@ function VisitsCell({ s, days }: { s: Stats[string] | undefined; days: number })
 }
 
 function PasswordLine({ link, demo }: { link: ArLink; demo: DemoOption | undefined }) {
+  if (link.demo === "merch-shelf" || link.demo.startsWith("shelf:"))
+    return <span className="text-xs text-muted-foreground">No password</span>;
   if (link.unlock)
     return <span className="text-xs text-muted-foreground">Opens without a password</span>;
   if (!demo?.password)
@@ -190,7 +192,12 @@ export function LinkList({
 
   const demoById = useMemo(() => new Map(demos.map((d) => [d.id, d])), [demos]);
   const demoName = (id: string) =>
-    demoById.get(id)?.short ?? (id.startsWith("x:") ? `${id.slice(2)} (endcap)` : id);
+    demoById.get(id)?.short ??
+    (id.startsWith("x:")
+      ? `${id.slice(2)} (endcap)`
+      : id.startsWith("shelf:")
+        ? `${id.slice(6)} (shelf)`
+        : id);
   const active = links.filter((l) => !l.archived);
   const archived = links.filter((l) => l.archived);
   const q = query.trim().toLowerCase();
@@ -224,9 +231,19 @@ export function LinkList({
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 sm:p-5">
         <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "archived")}>
-          <TabsList className="bg-white/[0.04]">
-            <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
-            <TabsTrigger value="archived">Archived ({archived.length})</TabsTrigger>
+          <TabsList className="h-10 gap-0.5 rounded-xl bg-black/30 p-1 ring-1 ring-white/[0.06] ring-inset">
+            <TabsTrigger
+              value="active"
+              className="h-8 rounded-lg px-3 text-white/60 hover:text-white data-[state=active]:bg-white/[0.1] data-[state=active]:text-white data-[state=active]:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]"
+            >
+              Active ({active.length})
+            </TabsTrigger>
+            <TabsTrigger
+              value="archived"
+              className="h-8 rounded-lg px-3 text-white/60 hover:text-white data-[state=active]:bg-white/[0.1] data-[state=active]:text-white data-[state=active]:shadow-[inset_0_1px_0_rgb(255_255_255/0.12)]"
+            >
+              Archived ({archived.length})
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         {links.length > 6 ? (
@@ -247,14 +264,14 @@ export function LinkList({
         ) : null}
       </div>
       {tab === "archived" ? (
-        <p className="border-t border-border px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
+        <p className="border-t border-white/[0.06] px-4 py-2.5 text-xs text-muted-foreground sm:px-5">
           Archived links still open the demo, but no longer greet the client by name or skip the
           password. Visits are still counted.
         </p>
       ) : null}
 
       {!shown.length ? (
-        <p className="border-t border-border px-4 py-10 text-center text-sm text-muted-foreground">
+        <p className="border-t border-white/[0.06] px-4 py-10 text-center text-sm text-muted-foreground">
           {q
             ? "No links match that search."
             : tab === "active"
@@ -264,11 +281,11 @@ export function LinkList({
       ) : (
         <>
           {/* wide: table */}
-          <div className="hidden border-t border-border @4xl/inset:block">
+          <div className="hidden border-t border-white/[0.06] @4xl/inset:block">
             <table className="w-full text-sm">
               <caption className="sr-only">Client links</caption>
               <thead>
-                <tr className="mono border-b border-border text-left text-[10px] tracking-[0.12em] text-muted-foreground uppercase">
+                <tr className="border-b border-white/[0.06] bg-white/[0.02] text-left text-[11px] font-medium tracking-wide text-white/55 uppercase">
                   <th scope="col" className="px-5 py-2.5 font-normal">
                     Client
                   </th>
@@ -289,7 +306,7 @@ export function LinkList({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-white/[0.06]">
                 {shown.map((l) => {
                   const url = shareUrl(origin, l);
                   return (
@@ -361,7 +378,7 @@ export function LinkList({
           </div>
 
           {/* narrow: cards */}
-          <ul className="divide-y divide-border border-t border-border @4xl/inset:hidden">
+          <ul className="divide-y divide-white/[0.06] border-t border-white/[0.06] @4xl/inset:hidden">
             {shown.map((l) => {
               const url = shareUrl(origin, l);
               return (
