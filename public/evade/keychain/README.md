@@ -26,7 +26,7 @@
 ## Materials
 - `Acrylic_Clear` uses `KHR_materials_transmission` and `ior` 1.49. It also sets baseColor alpha to 0.2 with BLEND, so viewers without transmission still show a clear, lightly glossy slab.
 - `Acrylic_Polished_Edge` is a bright, glassy, semi-transparent clearcoat that stands in for the edge glow of real polished acrylic.
-- The print materials are standard PBR with PNG textures (the largest is 1024 px).
+- The print materials are standard PBR with WebP textures (`EXT_texture_webp`, the largest is 1024 px). Vertex data is quantized (`KHR_mesh_quantization`). three.js's GLTFLoader reads both with no extra decoder. The file is about 0.9 MB.
 - For true print colours, render with `THREE.NeutralToneMapping` (or AgX). ACES washes out the pastel art.
 
 ## How it was built (no generative AI)
@@ -39,6 +39,13 @@ To rebuild and check the model:
 ```
 node scripts/build-evade-keychain/build.mjs          # writes evade-keychain.glb
 node scripts/build-evade-keychain/verify.mjs <dir>   # renders review screenshots
+```
+
+The build writes PNG textures and float geometry (about 2.2 MB). Compress the output before you commit it:
+
+```
+G=public/evade/keychain/evade-keychain.glb
+npx @gltf-transform/cli@4 dedup $G $G && npx @gltf-transform/cli@4 quantize $G $G && npx @gltf-transform/cli@4 webp $G $G --quality 90
 ```
 
 The scripts need Playwright with Chromium, and they use three r180. If `node_modules/three` is missing, they fetch it once into a temporary directory.
