@@ -6,6 +6,7 @@
  *
  * Usage:  npm run test:hub          every suite
  *         npm run test:ugc          the UGC Hub suite only (node scripts/test-hub.mjs ugc)
+ *         npm run test:media        the Media Library suite only
  *
  * The auth checks write to a throwaway directory, never to .data/.
  */
@@ -20,7 +21,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dir = path.join(root, "scripts", "hub-tests");
 const tmp = await mkdtemp(path.join(tmpdir(), "hub-tests-"));
 let failed = false;
-const ALL = ["commerce", "auth", "assets", "partners", "ugc"];
+const ALL = ["commerce", "auth", "assets", "partners", "ugc", "media"];
 const only = process.argv.slice(2);
 const suites = only.length ? ALL.filter((n) => only.includes(n)) : ALL;
 if (only.length && suites.length !== only.length) {

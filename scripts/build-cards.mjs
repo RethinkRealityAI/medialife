@@ -50,6 +50,7 @@ const RESERVED = new Set([
   "go",
   "insights",
   "live",
+  "m",
   "merch",
   "public",
   "static",

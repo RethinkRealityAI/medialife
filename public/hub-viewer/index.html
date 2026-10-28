@@ -11,7 +11,7 @@
 
   /hub-viewer/index.html?src=/api/hub/files/<creatorId>/<fileId>&ext=glb&size=<bytes>
   (the full file name: Netlify serves a bare folder, the dev server does not)
-    src   a hub file path; nothing else is accepted
+    src   a hub file path, or a Media Library file (/api/media/files/<id>); nothing else
     ext   glb | gltf | fbx | obj | stl
     size  bytes, so big files are read in range pieces (a single function
           response tops out near 20 MB; see fileResponse)
@@ -73,9 +73,12 @@ function fail(title, body = "") {
   $("bar").hidden = true;
 }
 
-/* Only hub files, read in range pieces. */
+/* Only hub files and Media Library files (/admin/media), read in range pieces. */
 async function read() {
-  if (!/^\/api\/hub\/files\/[A-Za-z0-9]{6,60}\/[A-Za-z0-9]{6,60}$/.test(src)) throw new Error("bad-src");
+  if (
+    !/^\/api\/hub\/files\/[A-Za-z0-9]{6,60}\/[A-Za-z0-9]{6,60}$/.test(src) &&
+    !/^\/api\/media\/files\/[A-Za-z0-9]{6,60}$/.test(src)
+  ) throw new Error("bad-src");
   const parts = [];
   let at = 0;
   const total = size || PIECE;

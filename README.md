@@ -86,6 +86,8 @@ The talent roster step (`#s3`) is hidden for now as a fill-in-later item; remove
 Unlisted SSR routes for the activated-retail tools (see [Activated-retail tools](#activated-retail-tools-admin)):
 `/admin/*` (password-protected), `/x/$slug` (published endcaps) and `/api/ar/*`, plus
 `/shelf` and `/shelf/$slug` (see [Creator Merch Shelf](#creator-merch-shelf-shelf)).
+The Media Library (see [Media Library](#media-library-adminmedia)) adds `/admin/media`,
+`/api/media/*` and the public file URLs `/m/<id>/<filename>`.
 
 Tech stack slugs live in `src/lib/tech-stacks.ts`. **Adding one means adding its URL
 to `public/sitemap.xml`** — the sitemap is static and does not generate itself.
@@ -637,3 +639,105 @@ link (`ugc_session` cookie, separate from the Creator Hub). Uploads use the Crea
 chunk pipeline on Netlify Blobs behind a storage adapter (2 GB per file, 5 GB per creator).
 Server, data model, endpoints, env vars and local sample data: `src/lib/ugc/README.md`.
 Tests: `npm run test:ugc`.
+
+## Media Library (`/admin/media`)
+
+The site-wide home for video, images, audio, 3D (GLB, glTF, USDZ), PDFs, ZIPs, fonts and
+JSON / CSV / TXT files, for the site and for clients. Admin only (the `/admin` password).
+There's no cap on file count or total storage. Files go up through the same resumable 4 MB
+chunk pipeline as the Creator Hub, up to 5 GB each, and a gentle warning above 1 GB suggests
+a 1080p web export.
+
+- **Upload**: drop files anywhere on the page or choose them. Before sending, set the client
+  / property, collection, purpose, tags, rights, AI flag and visibility once for the batch.
+  The queue shows per-file progress with pause, resume, retry and cancel. An upload cut off by
+  a reload resumes when the same file is added again. Poster frames, duration, dimensions,
+  thumbnails and average colour are worked out in the browser (no server ffmpeg). The server
+  sniffs the first bytes, so a file whose content doesn't match its type is refused.
+- **Organise**: kind tabs, search (title, file name, tags, description, client, collection,
+  notes, rights), filters (client, collection, purpose, visibility, AI-generated,
+  orientation, tags), sort, grid or list. Multi-select (shift-click for a range) gives bulk
+  tag add/remove, move (client / collection), public / private, AI flag and delete (with a
+  confirm). The detail drawer has the preview, every field, *Copy URL*, *Copy embed* and
+  *Download*. 3D previews use the vendored three.js viewer (`/hub-viewer/`); USDZ is
+  download-only.
+- **Private by default.** Private files are served from `/api/media/files/<id>`, which needs
+  the admin session or the API token. Switching **Public** on gives a stable, cacheable,
+  Range-capable URL, `/m/<id>/<filename>`, that any page can embed. The CDN may keep serving
+  it for up to an hour after you switch it off. Every file is served with `nosniff` and a
+  sandbox CSP (PDFs aside, so they can render), so an SVG or text file can never run script
+  on medialife.ai. Anything that isn't safe to show inline downloads as an attachment.
+- **Clients and AI**: the `aiGenerated` flag is filterable everywhere. EVADE assets carry a
+  `clientPolicy`: EVADE forbids image-to-image and image-to-3D generation from its assets,
+  so never feed them to a generative model as a reference.
+
+Code: `src/lib/media/` (model, storage interface, uploads, catalogue, admin functions, dev
+seed), `src/components/media/` (page, upload queue, drawer), `src/routes/admin.media.tsx`,
+`src/routes/api.media.*`, `src/routes/m.$id.$filename.ts`. Bytes live in their own Netlify
+Blobs stores, `media-<ns>` (records) and `media-files-<ns>` (chunks and thumbnails), where
+`<ns>` is `prod`, `preview` or `dev`. Storage sits behind `MediaStorage` in
+`storage.server.ts`, so R2 can be swapped in later (`MEDIA_STORAGE=r2`, not built yet).
+Tests: `npm run test:media` (also part of `npm run test:hub`).
+
+### Configuration (Netlify env vars)
+
+| Variable | What it does |
+| --- | --- |
+| `AR_ADMIN_PASSWORD` | The `/admin` password; the session cookie covers the whole library. |
+| `MEDIA_API_TOKEN` | Read-only bearer token for agents, 24+ random characters (`openssl rand -hex 24`). Unset means only a signed-in admin can read the catalogue. It can never upload, edit or delete: writes answer 403. |
+| `MEDIA_STORAGE` | `blobs` (default). `r2` is reserved for the future adapter. |
+
+### Querying it from an agent
+
+Two read-only endpoints return the whole catalogue. Without the admin cookie or the
+bearer token they answer 401.
+
+- `GET /api/media/index.json`: JSON. Each record has `id`, `title`, `filename`, `type`,
+  `mime`, `size`, `width`, `height`, `aspect`, `orientation`, `durationSeconds`, `tags`,
+  `collection`, `client`, `clientPolicy`, `purpose`, `description`, `altText`,
+  `usageNotes`, `rights`, `aiGenerated`, `public`, `publicUrl` (null when private),
+  `embedHtml`, `downloadUrl`, `thumbnailUrl`, `color`, `uploader`, `createdAt` and
+  `updatedAt`. The page also carries `facets`, paging (`total`, `nextOffset`,
+  `links.next`) and `howToQuery`.
+- `GET /api/media/llms.txt`: the same catalogue as Markdown, for pasting into a prompt.
+
+Both take the same filters:
+
+| Param | Meaning |
+| --- | --- |
+| `q` | Words, all of which must appear (title, file name, tags, description, client, collection, notes, rights). |
+| `tags` | A comma list (or repeat `tag=`). Every tag must be on the file. |
+| `type` | `video`, `image`, `audio`, `model` (or `3d`), `document` (or `pdf`), `archive` (or `zip`), `font`, `data`, or a MIME type. |
+| `client` / `property` | Exact client or property, case-insensitive. |
+| `collection` | Exact collection, case-insensitive. |
+| `purpose` | `marketing`, `gameplay`, `product-shot`, `logo-brand`, `ugc`, `3d-model`, `audio`, `doc`, `other`. |
+| `public` / `ai` | `true` or `false`. |
+| `orientation` | `landscape`, `portrait` or `square`. |
+| `sort` | `relevance`, `new`, `old`, `updated`, `title`, `size`, `duration`. |
+| `limit` / `offset` | Paging: 500 a page by default, up to 5000. |
+
+```sh
+# Every EVADE gameplay video, as JSON
+curl -H "Authorization: Bearer $MEDIA_API_TOKEN" \
+  "https://medialife.ai/api/media/index.json?client=EVADE&type=video&tags=gameplay"
+
+# Public marketing images, as Markdown for an LLM
+curl -H "Authorization: Bearer $MEDIA_API_TOKEN" \
+  "https://medialife.ai/api/media/llms.txt?type=image&purpose=marketing&public=true"
+
+# Download a private file (Range works too)
+curl -H "Authorization: Bearer $MEDIA_API_TOKEN" -OJ \
+  "https://medialife.ai/api/media/files/<id>?download=1"
+```
+
+On web pages, use `publicUrl` (or `embedHtml`). It needs no auth and caches well. A private
+file has `publicUrl: null`, so ask an admin to make it public rather than embedding
+`downloadUrl`. Always respect `rights`, `usageNotes` and `clientPolicy`.
+
+### Local sample data
+
+On localhost and deploy previews the empty library offers **Load sample data**, which
+imports real repo art: EVADE creator images, keychain sources, the portal key art, the
+activated-retail GLBs and two labelled SAMPLE video clips. Or run
+`curl -X POST -H "x-media: 1" -b <admin cookie> http://localhost:5175/api/media/dev/seed`
+(add `?reset=1` to reload it). Production refuses it.

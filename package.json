@@ -15,6 +15,7 @@
     "check:demo-tours": "node scripts/check-demo-tours.mjs",
     "test:hub": "node scripts/test-hub.mjs",
     "test:ugc": "node scripts/test-hub.mjs ugc",
+    "test:media": "node scripts/test-hub.mjs media",
     "check:shelf": "node scripts/check-shelf-default.mjs"
   },
   "dependencies": {
