@@ -17,7 +17,15 @@ export async function fetchHubFile(
   f: Pick<HubFile, "creatorId" | "id" | "size" | "mime">,
   opts: { onProgress?: Progress; signal?: AbortSignal } = {},
 ): Promise<Blob> {
-  const url = fileUrl(f, true);
+  return fetchRanged(fileUrl(f, true), f, opts);
+}
+
+/** Any Range-capable URL whose size is known, read in pieces of at most HUB.maxResponseBytes. */
+export async function fetchRanged(
+  url: string,
+  f: { size: number; mime: string },
+  opts: { onProgress?: Progress; signal?: AbortSignal } = {},
+): Promise<Blob> {
   const parts: ArrayBuffer[] = [];
   let at = 0;
   while (at < f.size) {

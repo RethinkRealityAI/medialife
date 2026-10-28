@@ -10,8 +10,10 @@ import {
   BarChart3,
   Boxes,
   ChevronRight,
+  Clapperboard,
   Handshake,
   House,
+  Images,
   Link2,
   LogOut,
   Menu,
@@ -67,13 +69,17 @@ type NavItem = { to: string; label: string; short?: string; icon: LucideIcon; to
 const GROUPS: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
-    items: [{ to: "/admin", label: "Home", icon: House, tone: "sky" }],
+    items: [
+      { to: "/admin", label: "Home", icon: House, tone: "sky" },
+      { to: "/admin/media", label: "Media library", short: "Media", icon: Images, tone: "violet" },
+    ],
   },
   {
     label: "Programs",
     items: [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
+      { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
     ],
   },
   {
