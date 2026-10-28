@@ -60,6 +60,7 @@ import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
+import { Route as ApiUgcUploadsRouteImport } from './routes/api.ugc.uploads'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
 import { Route as CreatorHubAppAgreementRouteImport } from './routes/creator-hub._app.agreement'
 import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
@@ -92,6 +93,8 @@ import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.dis
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
 import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
 import { Route as ApiHubWebhooksShopifyRouteImport } from './routes/api.hub.webhooks.shopify'
+import { Route as ApiUgcDevSeedRouteImport } from './routes/api.ugc.dev.seed'
+import { Route as ApiUgcUploadsIdRouteImport } from './routes/api.ugc.uploads.$id'
 import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
 import { Route as CreatorHubAppProductsProductIdRouteImport } from './routes/creator-hub._app.products.$productId'
 import { Route as PartnerHubAppCreatorsIndexRouteImport } from './routes/partner-hub._app.creators.index'
@@ -104,9 +107,15 @@ import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.
 import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
 import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
 import { Route as ApiHubShelfAssetsIdCompleteRouteImport } from './routes/api.hub.shelf-assets.$id.complete'
+import { Route as ApiUgcFilesPostersIdRouteImport } from './routes/api.ugc.files.posters.$id'
+import { Route as ApiUgcFilesSubmissionsIdRouteImport } from './routes/api.ugc.files.submissions.$id'
+import { Route as ApiUgcUploadsIdCompleteRouteImport } from './routes/api.ugc.uploads.$id.complete'
+import { Route as ApiUgcUploadsIdPosterRouteImport } from './routes/api.ugc.uploads.$id.poster'
 import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.admin.assets.$id.complete'
 import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiHubShelfAssetsIdChunksNRouteImport } from './routes/api.hub.shelf-assets.$id.chunks.$n'
+import { Route as ApiUgcFilesAssetsCampaignIdIdRouteImport } from './routes/api.ugc.files.assets.$campaignId.$id'
+import { Route as ApiUgcUploadsIdChunksNRouteImport } from './routes/api.ugc.uploads.$id.chunks.$n'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
 import { Route as ApiHubFilesCreatorIdFileIdChunksNRouteImport } from './routes/api.hub.files.$creatorId.$fileId.chunks.$n'
 
@@ -366,6 +375,11 @@ const ApiHubShelfAssetsRoute = ApiHubShelfAssetsRouteImport.update({
   path: '/api/hub/shelf-assets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUgcUploadsRoute = ApiUgcUploadsRouteImport.update({
+  id: '/api/ugc/uploads',
+  path: '/api/ugc/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CreatorHubAppAccountRoute = CreatorHubAppAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -527,6 +541,16 @@ const ApiHubWebhooksShopifyRoute = ApiHubWebhooksShopifyRouteImport.update({
   path: '/api/hub/webhooks/shopify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiUgcDevSeedRoute = ApiUgcDevSeedRouteImport.update({
+  id: '/api/ugc/dev/seed',
+  path: '/api/ugc/dev/seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUgcUploadsIdRoute = ApiUgcUploadsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiUgcUploadsRoute,
+} as any)
 const CreatorHubAppProductsIndexRoute =
   CreatorHubAppProductsIndexRouteImport.update({
     id: '/products/',
@@ -596,6 +620,27 @@ const ApiHubShelfAssetsIdCompleteRoute =
     path: '/$id/complete',
     getParentRoute: () => ApiHubShelfAssetsRoute,
   } as any)
+const ApiUgcFilesPostersIdRoute = ApiUgcFilesPostersIdRouteImport.update({
+  id: '/api/ugc/files/posters/$id',
+  path: '/api/ugc/files/posters/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiUgcFilesSubmissionsIdRoute =
+  ApiUgcFilesSubmissionsIdRouteImport.update({
+    id: '/api/ugc/files/submissions/$id',
+    path: '/api/ugc/files/submissions/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiUgcUploadsIdCompleteRoute = ApiUgcUploadsIdCompleteRouteImport.update({
+  id: '/complete',
+  path: '/complete',
+  getParentRoute: () => ApiUgcUploadsIdRoute,
+} as any)
+const ApiUgcUploadsIdPosterRoute = ApiUgcUploadsIdPosterRouteImport.update({
+  id: '/poster',
+  path: '/poster',
+  getParentRoute: () => ApiUgcUploadsIdRoute,
+} as any)
 const ApiArAdminAssetsIdCompleteRoute =
   ApiArAdminAssetsIdCompleteRouteImport.update({
     id: '/complete',
@@ -614,6 +659,17 @@ const ApiHubShelfAssetsIdChunksNRoute =
     path: '/$id/chunks/$n',
     getParentRoute: () => ApiHubShelfAssetsRoute,
   } as any)
+const ApiUgcFilesAssetsCampaignIdIdRoute =
+  ApiUgcFilesAssetsCampaignIdIdRouteImport.update({
+    id: '/api/ugc/files/assets/$campaignId/$id',
+    path: '/api/ugc/files/assets/$campaignId/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiUgcUploadsIdChunksNRoute = ApiUgcUploadsIdChunksNRouteImport.update({
+  id: '/chunks/$n',
+  path: '/chunks/$n',
+  getParentRoute: () => ApiUgcUploadsIdRoute,
+} as any)
 const ApiArAdminAssetsIdChunksNRoute =
   ApiArAdminAssetsIdChunksNRouteImport.update({
     id: '/chunks/$n',
@@ -675,6 +731,7 @@ export interface FileRoutesByFullPath {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -711,6 +768,8 @@ export interface FileRoutesByFullPath {
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
+  '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/partner-hub/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -723,9 +782,15 @@ export interface FileRoutesByFullPath {
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
+  '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
+  '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
+  '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
+  '/api/ugc/uploads/$id/poster': typeof ApiUgcUploadsIdPosterRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
+  '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
+  '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -771,6 +836,7 @@ export interface FileRoutesByTo {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -807,6 +873,8 @@ export interface FileRoutesByTo {
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
+  '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/partner-hub/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -819,9 +887,15 @@ export interface FileRoutesByTo {
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
+  '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
+  '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
+  '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
+  '/api/ugc/uploads/$id/poster': typeof ApiUgcUploadsIdPosterRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
+  '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
+  '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -874,6 +948,7 @@ export interface FileRoutesById {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
@@ -910,6 +985,8 @@ export interface FileRoutesById {
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
   '/api/hub/webhooks/shopify': typeof ApiHubWebhooksShopifyRoute
+  '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
+  '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
   '/partner-hub/_app/creators/$creatorId': typeof PartnerHubAppCreatorsCreatorIdRoute
   '/roblox/portal/submissions/$id': typeof RobloxPortalSubmissionsIdRoute
@@ -922,9 +999,15 @@ export interface FileRoutesById {
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
+  '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
+  '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
+  '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
+  '/api/ugc/uploads/$id/poster': typeof ApiUgcUploadsIdPosterRoute
   '/api/ar/admin/assets/$id/complete': typeof ApiArAdminAssetsIdCompleteRoute
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
+  '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
+  '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
   '/api/hub/files/$creatorId/$fileId/chunks/$n': typeof ApiHubFilesCreatorIdFileIdChunksNRoute
 }
@@ -978,6 +1061,7 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/ugc/uploads'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -1014,6 +1098,8 @@ export interface FileRouteTypes {
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
+    | '/api/ugc/dev/seed'
+    | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
     | '/partner-hub/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
@@ -1026,9 +1112,15 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
+    | '/api/ugc/files/posters/$id'
+    | '/api/ugc/files/submissions/$id'
+    | '/api/ugc/uploads/$id/complete'
+    | '/api/ugc/uploads/$id/poster'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
+    | '/api/ugc/files/assets/$campaignId/$id'
+    | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesByTo: FileRoutesByTo
@@ -1074,6 +1166,7 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/ugc/uploads'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -1110,6 +1203,8 @@ export interface FileRouteTypes {
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
+    | '/api/ugc/dev/seed'
+    | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
     | '/partner-hub/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
@@ -1122,9 +1217,15 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
+    | '/api/ugc/files/posters/$id'
+    | '/api/ugc/files/submissions/$id'
+    | '/api/ugc/uploads/$id/complete'
+    | '/api/ugc/uploads/$id/poster'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
+    | '/api/ugc/files/assets/$campaignId/$id'
+    | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   id:
@@ -1176,6 +1277,7 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/ugc/uploads'
     | '/creator-hub/_app/account'
     | '/creator-hub/_app/agreement'
     | '/creator-hub/_app/artwork'
@@ -1212,6 +1314,8 @@ export interface FileRouteTypes {
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
     | '/api/hub/webhooks/shopify'
+    | '/api/ugc/dev/seed'
+    | '/api/ugc/uploads/$id'
     | '/creator-hub/_app/products/$productId'
     | '/partner-hub/_app/creators/$creatorId'
     | '/roblox/portal/submissions/$id'
@@ -1224,9 +1328,15 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
+    | '/api/ugc/files/posters/$id'
+    | '/api/ugc/files/submissions/$id'
+    | '/api/ugc/uploads/$id/complete'
+    | '/api/ugc/uploads/$id/poster'
     | '/api/ar/admin/assets/$id/complete'
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
+    | '/api/ugc/files/assets/$campaignId/$id'
+    | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
     | '/api/hub/files/$creatorId/$fileId/chunks/$n'
   fileRoutesById: FileRoutesById
@@ -1266,6 +1376,7 @@ export interface RootRouteChildren {
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
+  ApiUgcUploadsRoute: typeof ApiUgcUploadsRouteWithChildren
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
@@ -1274,7 +1385,11 @@ export interface RootRouteChildren {
   ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
   ApiHubOverlayTokenRoute: typeof ApiHubOverlayTokenRouteWithChildren
   ApiHubWebhooksShopifyRoute: typeof ApiHubWebhooksShopifyRoute
+  ApiUgcDevSeedRoute: typeof ApiUgcDevSeedRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
+  ApiUgcFilesPostersIdRoute: typeof ApiUgcFilesPostersIdRoute
+  ApiUgcFilesSubmissionsIdRoute: typeof ApiUgcFilesSubmissionsIdRoute
+  ApiUgcFilesAssetsCampaignIdIdRoute: typeof ApiUgcFilesAssetsCampaignIdIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1636,6 +1751,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubShelfAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ugc/uploads': {
+      id: '/api/ugc/uploads'
+      path: '/api/ugc/uploads'
+      fullPath: '/api/ugc/uploads'
+      preLoaderRoute: typeof ApiUgcUploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/creator-hub/_app/account': {
       id: '/creator-hub/_app/account'
       path: '/account'
@@ -1860,6 +1982,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubWebhooksShopifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ugc/dev/seed': {
+      id: '/api/ugc/dev/seed'
+      path: '/api/ugc/dev/seed'
+      fullPath: '/api/ugc/dev/seed'
+      preLoaderRoute: typeof ApiUgcDevSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ugc/uploads/$id': {
+      id: '/api/ugc/uploads/$id'
+      path: '/$id'
+      fullPath: '/api/ugc/uploads/$id'
+      preLoaderRoute: typeof ApiUgcUploadsIdRouteImport
+      parentRoute: typeof ApiUgcUploadsRoute
+    }
     '/creator-hub/_app/products/': {
       id: '/creator-hub/_app/products/'
       path: '/products'
@@ -1944,6 +2080,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubShelfAssetsIdCompleteRouteImport
       parentRoute: typeof ApiHubShelfAssetsRoute
     }
+    '/api/ugc/files/posters/$id': {
+      id: '/api/ugc/files/posters/$id'
+      path: '/api/ugc/files/posters/$id'
+      fullPath: '/api/ugc/files/posters/$id'
+      preLoaderRoute: typeof ApiUgcFilesPostersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ugc/files/submissions/$id': {
+      id: '/api/ugc/files/submissions/$id'
+      path: '/api/ugc/files/submissions/$id'
+      fullPath: '/api/ugc/files/submissions/$id'
+      preLoaderRoute: typeof ApiUgcFilesSubmissionsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ugc/uploads/$id/complete': {
+      id: '/api/ugc/uploads/$id/complete'
+      path: '/complete'
+      fullPath: '/api/ugc/uploads/$id/complete'
+      preLoaderRoute: typeof ApiUgcUploadsIdCompleteRouteImport
+      parentRoute: typeof ApiUgcUploadsIdRoute
+    }
+    '/api/ugc/uploads/$id/poster': {
+      id: '/api/ugc/uploads/$id/poster'
+      path: '/poster'
+      fullPath: '/api/ugc/uploads/$id/poster'
+      preLoaderRoute: typeof ApiUgcUploadsIdPosterRouteImport
+      parentRoute: typeof ApiUgcUploadsIdRoute
+    }
     '/api/ar/admin/assets/$id/complete': {
       id: '/api/ar/admin/assets/$id/complete'
       path: '/complete'
@@ -1964,6 +2128,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/hub/shelf-assets/$id/chunks/$n'
       preLoaderRoute: typeof ApiHubShelfAssetsIdChunksNRouteImport
       parentRoute: typeof ApiHubShelfAssetsRoute
+    }
+    '/api/ugc/files/assets/$campaignId/$id': {
+      id: '/api/ugc/files/assets/$campaignId/$id'
+      path: '/api/ugc/files/assets/$campaignId/$id'
+      fullPath: '/api/ugc/files/assets/$campaignId/$id'
+      preLoaderRoute: typeof ApiUgcFilesAssetsCampaignIdIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ugc/uploads/$id/chunks/$n': {
+      id: '/api/ugc/uploads/$id/chunks/$n'
+      path: '/chunks/$n'
+      fullPath: '/api/ugc/uploads/$id/chunks/$n'
+      preLoaderRoute: typeof ApiUgcUploadsIdChunksNRouteImport
+      parentRoute: typeof ApiUgcUploadsIdRoute
     }
     '/api/ar/admin/assets/$id/chunks/$n': {
       id: '/api/ar/admin/assets/$id/chunks/$n'
@@ -2187,6 +2365,34 @@ const ApiHubShelfAssetsRouteChildren: ApiHubShelfAssetsRouteChildren = {
 const ApiHubShelfAssetsRouteWithChildren =
   ApiHubShelfAssetsRoute._addFileChildren(ApiHubShelfAssetsRouteChildren)
 
+interface ApiUgcUploadsIdRouteChildren {
+  ApiUgcUploadsIdCompleteRoute: typeof ApiUgcUploadsIdCompleteRoute
+  ApiUgcUploadsIdPosterRoute: typeof ApiUgcUploadsIdPosterRoute
+  ApiUgcUploadsIdChunksNRoute: typeof ApiUgcUploadsIdChunksNRoute
+}
+
+const ApiUgcUploadsIdRouteChildren: ApiUgcUploadsIdRouteChildren = {
+  ApiUgcUploadsIdCompleteRoute: ApiUgcUploadsIdCompleteRoute,
+  ApiUgcUploadsIdPosterRoute: ApiUgcUploadsIdPosterRoute,
+  ApiUgcUploadsIdChunksNRoute: ApiUgcUploadsIdChunksNRoute,
+}
+
+const ApiUgcUploadsIdRouteWithChildren = ApiUgcUploadsIdRoute._addFileChildren(
+  ApiUgcUploadsIdRouteChildren,
+)
+
+interface ApiUgcUploadsRouteChildren {
+  ApiUgcUploadsIdRoute: typeof ApiUgcUploadsIdRouteWithChildren
+}
+
+const ApiUgcUploadsRouteChildren: ApiUgcUploadsRouteChildren = {
+  ApiUgcUploadsIdRoute: ApiUgcUploadsIdRouteWithChildren,
+}
+
+const ApiUgcUploadsRouteWithChildren = ApiUgcUploadsRoute._addFileChildren(
+  ApiUgcUploadsRouteChildren,
+)
+
 interface ApiArAdminAssetsIdRouteChildren {
   ApiArAdminAssetsIdCompleteRoute: typeof ApiArAdminAssetsIdCompleteRoute
   ApiArAdminAssetsIdChunksNRoute: typeof ApiArAdminAssetsIdChunksNRoute
@@ -2268,6 +2474,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
+  ApiUgcUploadsRoute: ApiUgcUploadsRouteWithChildren,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
@@ -2276,7 +2483,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHubDevSeedRoute: ApiHubDevSeedRoute,
   ApiHubOverlayTokenRoute: ApiHubOverlayTokenRouteWithChildren,
   ApiHubWebhooksShopifyRoute: ApiHubWebhooksShopifyRoute,
+  ApiUgcDevSeedRoute: ApiUgcDevSeedRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
+  ApiUgcFilesPostersIdRoute: ApiUgcFilesPostersIdRoute,
+  ApiUgcFilesSubmissionsIdRoute: ApiUgcFilesSubmissionsIdRoute,
+  ApiUgcFilesAssetsCampaignIdIdRoute: ApiUgcFilesAssetsCampaignIdIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

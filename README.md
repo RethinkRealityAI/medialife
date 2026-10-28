@@ -627,3 +627,13 @@ On a deploy preview or localhost, `/admin/creators` → **Load sample creator** 
 complete creator (products at several stages, a proof awaiting approval, a live experience,
 collateral, two months of orders, scans and a payout) and shows its sign-in. Production
 refuses it.
+
+## EVADE UGC Hub (`/ugc-hub`, `/admin/ugc`)
+
+A workspace for accepted EVADE UGC creators (brief, assets, package tracking, uploads, review,
+perks) and its admin side. Sign-ups come from the Netlify form `evade-ugc-creator` on
+`/evade/creators/` (admin "Sync from Netlify Forms", or a CSV export). Creators sign in by magic
+link (`ugc_session` cookie, separate from the Creator Hub). Uploads use the Creator Hub's 4 MB
+chunk pipeline on Netlify Blobs behind a storage adapter (2 GB per file, 5 GB per creator).
+Server, data model, endpoints, env vars and local sample data: `src/lib/ugc/README.md`.
+Tests: `npm run test:ugc`.

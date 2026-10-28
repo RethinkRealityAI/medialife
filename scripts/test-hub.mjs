@@ -4,7 +4,8 @@
  * email-link origins). No test runner needed: each file is bundled with esbuild
  * (already installed with Vite) and run with node's assert.
  *
- * Usage:  npm run test:hub
+ * Usage:  npm run test:hub          every suite
+ *         npm run test:ugc          the UGC Hub suite only (node scripts/test-hub.mjs ugc)
  *
  * The auth checks write to a throwaway directory, never to .data/.
  */
@@ -19,9 +20,16 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dir = path.join(root, "scripts", "hub-tests");
 const tmp = await mkdtemp(path.join(tmpdir(), "hub-tests-"));
 let failed = false;
+const ALL = ["commerce", "auth", "assets", "partners", "ugc"];
+const only = process.argv.slice(2);
+const suites = only.length ? ALL.filter((n) => only.includes(n)) : ALL;
+if (only.length && suites.length !== only.length) {
+  console.error(`Unknown suite. Pick from: ${ALL.join(", ")}`);
+  process.exit(1);
+}
 
 try {
-  for (const name of ["commerce", "auth", "assets", "partners"]) {
+  for (const name of suites) {
     const outfile = path.join(tmp, `${name}.mjs`);
     await build({
       entryPoints: [path.join(dir, `${name}.test.ts`)],
