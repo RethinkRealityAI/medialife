@@ -90,5 +90,54 @@
       <input name="page" type="text" />
       <input name="source" type="text" />
     </form>
+    <!--
+      EVADE UGC creator sign-up (public/evade/creators/index.html, multi-step form
+      driven by public/evade/creators/assets/js/page.js, which POSTs here as
+      urlencoded data). Field names MUST stay in sync with that page and page.js.
+
+      Reserved-name rule as above: the contact field is `contact-name` and the
+      free-text field is `notes`. Platform fields are `<platform>_handle` and
+      `<platform>_audience` for roblox, instagram, youtube, discord, x, tiktok;
+      `platforms` is the comma list of the ones picked and `main_platform` the one
+      marked main. Handles for instagram, x and tiktok are sent with a leading @.
+    -->
+    <form name="evade-ugc-creator" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="evade-ugc-creator" />
+      <input name="bot-field" type="text" />
+      <input name="contact-name" type="text" />
+      <input name="email" type="email" />
+      <input name="phone" type="tel" />
+      <input name="creator_name" type="text" />
+      <input name="country" type="text" />
+      <input name="platforms" type="text" />
+      <input name="main_platform" type="text" />
+      <input name="roblox_handle" type="text" />
+      <input name="roblox_audience" type="text" />
+      <input name="instagram_handle" type="text" />
+      <input name="instagram_audience" type="text" />
+      <input name="youtube_handle" type="text" />
+      <input name="youtube_audience" type="text" />
+      <input name="discord_handle" type="text" />
+      <input name="discord_audience" type="text" />
+      <input name="x_handle" type="text" />
+      <input name="x_audience" type="text" />
+      <input name="tiktok_handle" type="text" />
+      <input name="tiktok_audience" type="text" />
+      <input name="address_line1" type="text" />
+      <input name="address_line2" type="text" />
+      <input name="city" type="text" />
+      <input name="region" type="text" />
+      <input name="postal_code" type="text" />
+      <input name="address_country" type="text" />
+      <textarea name="notes"></textarea>
+      <input name="consent" type="text" />
+      <input name="source" type="text" />
+      <input name="page" type="text" />
+      <input name="utm_source" type="text" />
+      <input name="utm_medium" type="text" />
+      <input name="utm_campaign" type="text" />
+      <input name="utm_content" type="text" />
+      <input name="utm_term" type="text" />
+    </form>
   </body>
 </html>
