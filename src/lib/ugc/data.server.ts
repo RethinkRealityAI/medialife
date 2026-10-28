@@ -44,6 +44,11 @@ export type UgcCreatorSummary = {
   approvedAt: number | null;
   deletionRequested: boolean;
   sample: boolean;
+  /** For the admin pipeline's handle links and audience column (absent on rows indexed before they were added). */
+  handles?: UgcCreator["handles"];
+  audiences?: UgcCreator["audiences"];
+  /** Latest of the record's last change and last sign-in. */
+  lastActiveAt?: number;
 };
 
 const summarize = (c: UgcCreator): UgcCreatorSummary => ({
@@ -61,6 +66,9 @@ const summarize = (c: UgcCreator): UgcCreatorSummary => ({
   approvedAt: c.approvedAt,
   deletionRequested: !!c.deletionRequest,
   sample: !!c.sample,
+  handles: c.handles,
+  audiences: c.audiences,
+  lastActiveAt: Math.max(c.updatedAt, c.lastLoginAt ?? 0),
 });
 
 export async function getCreator(ns: UgcNamespace, id: string | null | undefined) {

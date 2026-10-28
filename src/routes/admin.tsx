@@ -10,6 +10,7 @@ import {
   BarChart3,
   Boxes,
   ChevronRight,
+  Clapperboard,
   Handshake,
   House,
   Link2,
@@ -74,6 +75,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
+      { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
     ],
   },
   {
