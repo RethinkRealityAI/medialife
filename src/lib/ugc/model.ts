@@ -953,8 +953,7 @@ export type UgcNextAction = {
     | "on-its-way"
     | "film-and-upload"
     | "in-review"
-    | "enjoy-perks"
-    | "read-brief";
+    | "enjoy-perks";
   title: string;
   body: string;
   cta: { label: string; href: string; external?: boolean } | null;
