@@ -79,7 +79,8 @@ export const MODELS = {
     { url: `${LINEUP}longsleeve.glb`, zones: LINEUP_ZONES.longsleeve },
     { url: `${LEGACY}tee.glb`, zones: LEGACY_TEE_ZONES },
   ],
-  cap: [{ url: `${LEGACY}cap.glb`, zones: { front: PRINT_ZONES.cap[0] } }],
+  // seated: the brim juts past the crown, so a projector on the box face misses the front panel
+  cap: [{ url: `${LEGACY}cap.glb`, zones: { front: { ...PRINT_ZONES.cap[0], seat: true, seatDepth: 0.1 } } }],
   plush: [{ url: `${LEGACY}plush.glb`, zones: { front: PRINT_ZONES.plush[0] } }],
   deskmat: [
     {
@@ -930,7 +931,8 @@ function seatedBox(zone, box, meshes) {
   _ray.set(new THREE.Vector3(x, y, box.max.z + 1), new THREE.Vector3(0, 0, -1));
   const hit = _ray.intersectObjects(meshes, false)[0];
   if (!hit) return box;
-  const depth = 0.05;
+  // the cap's crown curves away fast, so it asks for a deeper projector than a sleeve
+  const depth = zone.seatDepth ?? 0.05;
   const b = box.clone();
   b.max.z = hit.point.z + depth * 0.35;
   b.min.z = b.max.z - depth / 0.62;

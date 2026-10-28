@@ -28,7 +28,7 @@ const ACTIVATE_URL = "https://medialife.ai/evade/creators/";
 export const FUTURE = [
   { id: "tee", type: "tee", name: "Activated Tee", slot: "L0", color: "#e9e4d8", yaw: Math.PI - 0.34 },
   { id: "hoodie", type: "hoodie", name: "Activated Hoodie", slot: "R0", color: "#1d2433", yaw: Math.PI + 0.34 },
-  { id: "cap", type: "cap", name: "Activated Cap", slot: "L1", color: "#2f5fb3", yaw: 0.42 },
+  { id: "cap", type: "cap", name: "Activated Cap", slot: "L1", color: "#141416", yaw: 0.42 },
   { id: "deskmat", type: "deskmat", name: "Activated Desk Mat", slot: "R1", color: "#14191f", yaw: 0 },
 ];
 

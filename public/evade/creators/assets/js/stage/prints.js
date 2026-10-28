@@ -178,10 +178,23 @@ export function glowSprite(art, color = CYAN) {
   return c;
 }
 
+/** Cap front: the EVADE plate on its own, sized for an embroidered front panel. */
+function capPrint() {
+  const W = 1024;
+  const H = 420;
+  const c = makeCanvas(W, H);
+  wordmark(c.getContext("2d"), W / 2, H / 2, W * 0.92, { sub: null });
+  return c;
+}
+
 /** The kit products.js expects (front/back/sleeve/toneFor/logo/badge). */
 export function makeEvadeKit({ bobo, can }) {
   const toneFor = (hex) => (lum(hex) > 0.5 ? "dark" : "light");
-  const front = (p) => (p.type === "hoodie" ? can : bobo);
+  let capArt = null;
+  const front = (p) => {
+    if (p.type === "cap") return (capArt ||= capPrint());
+    return p.type === "hoodie" ? can : bobo;
+  };
   const kit = {
     key: "evade",
     isWordmark: false,
