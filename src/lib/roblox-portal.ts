@@ -354,7 +354,7 @@ export const ACTIVATIONS: Record<string, Activation> = {
         transparent: true,
         launch: "qr",
         placement: "Printed code on the back of the can charm",
-        alt: "The two-charm acrylic keychain set: Bobo in a blue BOBO cap with one arm raised, beside an ECLIPSE cola can charm, hanging from a steel swivel clasp.",
+        alt: "The two-charm acrylic keychain set: Bobo the cat in a blue BOBO visor, beside an upright ECLIPSE cola can charm, both clear acrylic and hanging from a steel swivel clasp.",
       },
       {
         id: "tshirt",
@@ -407,7 +407,7 @@ export const PRODUCTS: Product[] = [
     category: "Keychains / pins",
     price: 18,
     status: "live",
-    activation: "NFC in the charm body + printed QR on the backing card",
+    activation: "QR printed on the back of the can charm",
     sourcing: "China",
     leadWeeks: "6–13",
     marginOnPlatform: 0.51,
