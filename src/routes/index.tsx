@@ -600,9 +600,9 @@ function Home() {
                 >
                   <img
                     src="/merch/keychain-cutout.webp"
-                    alt="Activated acrylic keychain set in development with Evade"
+                    alt="The EVADE activated keychain: a Bobo the cat charm and an ECLIPSE can charm in clear acrylic on a swivel clasp"
                     width={632}
-                    height={820}
+                    height={883}
                     loading="lazy"
                     className="w-full select-none"
                     style={{ filter: "drop-shadow(0 28px 56px oklch(0.68 0.26 350 / 38%))" }}
