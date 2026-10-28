@@ -61,10 +61,18 @@ function backPrint(art, aspect, { sub }) {
   const ctx = c.getContext("2d");
   const aw = art.width;
   const ah = art.height;
-  const room = H * 0.7;
-  const s = Math.min((W * 0.86) / aw, room / ah);
-  ctx.drawImage(art, (W - aw * s) / 2, H * 0.02, aw * s, ah * s);
-  wordmark(ctx, W / 2, H * 0.02 + ah * s + H * 0.09, W * 0.62, { sub });
+  // Budget the whole print (art + EVADE plate + sub line) inside the canvas, so a short,
+  // wide zone like the hoodie's back never crops the lockup. The plate is at most 0.33×its
+  // width tall and the sub line hangs ~0.25×width below it.
+  const pad = H * 0.02;
+  const gap = H * 0.03;
+  const lockW = Math.min(W * 0.62, (H * 0.3) / 0.6);
+  const lockH = lockW * 0.6;
+  const room = H - pad * 2 - gap - lockH;
+  const s = Math.min((W * 0.9) / aw, room / ah);
+  const top = (H - (ah * s + gap + lockH)) / 2;
+  ctx.drawImage(art, (W - aw * s) / 2, top, aw * s, ah * s);
+  wordmark(ctx, W / 2, top + ah * s + gap + lockW * 0.165, lockW, { sub });
   return c;
 }
 

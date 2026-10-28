@@ -435,10 +435,13 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   const addLip = (slot, text, live) => {
     const t = canvasTex(lipLabel(text, { live }));
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(live ? 0.34 : 0.27, live ? 0.053 : 0.042),
+      new THREE.PlaneGeometry(live ? 0.56 : 0.27, live ? 0.087 : 0.042),
       new THREE.MeshBasicMaterial({ map: t, color: new THREE.Color(1, 1, 1).multiplyScalar(live ? 1.15 : 0.9), toneMapped: false }),
     );
-    m.position.set(slot.center.x, slot.floorY - 0.025, slot.frontZ + 0.003);
+    // the live label hangs at the top of the hero bay, above the clasp, where it reads first;
+    // the future-drop labels stay on the shelf lips
+    if (live) m.position.set(slot.center.x, slot.topY - 0.064, slot.frontZ + 0.006);
+    else m.position.set(slot.center.x, slot.floorY - 0.025, slot.frontZ + 0.003);
     scene.add(m);
     lips.push(m);
   };
