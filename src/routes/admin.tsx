@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   Presentation,
+  Sparkles,
   Store,
   Users,
   type LucideIcon,
@@ -85,6 +86,10 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/admin/shelves", label: "Merch shelves", icon: Store, tone: "sky" },
       { to: "/admin/demos", label: "Live demos", icon: Presentation, tone: "violet" },
     ],
+  },
+  {
+    label: "Brand",
+    items: [{ to: "/admin/medialife", label: "MEDIALIFE", icon: Sparkles, tone: "rose" }],
   },
 ];
 const NAV = GROUPS.flatMap((g) => g.items.map((i) => ({ ...i, group: g.label })));
