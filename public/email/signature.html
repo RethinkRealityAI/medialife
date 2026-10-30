@@ -60,13 +60,13 @@
 </main>
 
 <script>
+  // Confidentiality footer, the same for everyone.
+  const DISCLAIMER = "This email message and any accompanying data or files is confidential and may contain privileged information intended only for the named recipient(s). If you are not the intended recipient(s), you are hereby notified that the dissemination, distribution, and or copying of this message is strictly prohibited. If you receive this message in error, or are not the named recipient(s), please notify the sender at the email address above, delete this email from your computer, and destroy any copies in any form immediately.";
+
   // One entry per person. `title` may hold <br> for a two-line title.
   const PEOPLE = {
     dapo: { name: "Dapo Ajisafe", title: "Head of Innovation and Immersive Development", city: "Toronto" },
-    sofia: {
-      name: "Sofia Gorenstein", title: "Chief Executive Officer", city: "New York",
-      disclaimer: "This email message and any accompanying data or files is confidential and may contain privileged information intended only for the named recipient(s). If you are not the intended recipient(s), you are hereby notified that the dissemination, distribution, and or copying of this message is strictly prohibited. If you receive this message in error, or are not the named recipient(s), please notify the sender at the email address above, delete this email from your computer, and destroy any copies in any form immediately.",
-    },
+    sofia: { name: "Sofia Gorenstein", title: "Chief Executive Officer", city: "New York" },
     alex: { name: "Alexander Pinto", title: "Chief Creative Officer &amp;<br>Head of Immersive Merchandising", city: "New York" },
   };
 
@@ -83,7 +83,7 @@
     '<tr><td style="padding:2px 0 0;font-size:14px;line-height:20px;font-weight:bold;"><a href="https://medialife.ai" style="color:#e00093;text-decoration:none;">medialife.ai</a></td></tr>',
     rule,
     '<tr><td style="padding:14px 0 0;"><a href="https://medialife.ai" style="text-decoration:none;"><img src="https://medialife.ai/email/activated-by-medialife.gif" width="240" height="64" alt="Activated by MEDIALIFE" style="display:block;width:240px;height:64px;border:0;outline:none;"></a></td></tr>',
-    p.disclaimer ? `<tr><td style="padding:18px 0 0;max-width:560px;font-size:11px;line-height:16px;color:#8c8e9c;">${p.disclaimer}</td></tr>` : "",
+    `<tr><td style="padding:18px 0 0;max-width:560px;font-size:11px;line-height:16px;color:#8c8e9c;">${DISCLAIMER}</td></tr>`,
     "</table>",
   ].join("");
 
