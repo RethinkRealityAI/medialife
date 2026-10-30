@@ -28,6 +28,12 @@
   to = "/roblox/creators/:splat"
   status = 301
 
+# The signature page started as Dapo's alone; it now covers every founder.
+[[redirects]]
+  from = "/email/dapo-signature.html"
+  to = "/email/signature.html?who=dapo"
+  status = 301
+
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
 # src/server.ts instead. Keep the two lists in sync.
