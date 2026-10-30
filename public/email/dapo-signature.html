@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Email signature · Dapo Ajisafe · MEDIALIFE</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #f4f5f8; color: #191a22; }
+  main { max-width: 680px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p.lede { margin: 0 0 24px; color: #4b4f5e; }
+  .previews { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 600px) { .previews { grid-template-columns: 1fr; } }
+  .pane { border-radius: 12px; padding: 20px; border: 1px solid #e6e9f0; }
+  .pane.light { background: #ffffff; color: #1f1f1f; }
+  .pane.dark { background: #1f1f1f; color: #e8eaed; border-color: #2c2d33; }
+  .pane small { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .6; margin-bottom: 14px; }
+  .actions { display: flex; gap: 12px; align-items: center; margin: 24px 0 8px; flex-wrap: wrap; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 999px; padding: 12px 22px; cursor: pointer; color: #fff; background: linear-gradient(135deg, #19affe, #ff2fae); }
+  button:focus-visible { outline: 3px solid #19affe; outline-offset: 3px; }
+  #status { color: #4b4f5e; min-height: 1.5em; }
+  ol { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  code { font-size: 13px; background: #e6e9f0; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Your MEDIALIFE email signature</h1>
+  <p class="lede">Shown below as it looks in a light and a dark inbox. Press the button, then paste into Gmail.</p>
+
+  <div class="previews">
+    <div class="pane light"><small>Light inbox</small><div data-sig></div></div>
+    <div class="pane dark"><small>Dark inbox</small><div data-sig></div></div>
+  </div>
+
+  <div class="actions">
+    <button type="button" id="copy">Copy signature</button>
+    <span id="status" role="status" aria-live="polite"></span>
+  </div>
+
+  <h2 style="font-size:16px;margin-top:28px">Add it to Gmail (desktop browser)</h2>
+  <ol>
+    <li>Press <strong>Copy signature</strong> above.</li>
+    <li>In Gmail, open <strong>Settings</strong> (gear icon) → <strong>See all settings</strong> → <strong>General</strong>.</li>
+    <li>Scroll to <strong>Signature</strong> → <strong>Create new</strong>, name it “MEDIALIFE”.</li>
+    <li>Click in the signature box and paste (<code>Ctrl</code>/<code>⌘</code> + <code>V</code>).</li>
+    <li>Under <strong>Signature defaults</strong>, pick it for new emails and for replies/forwards.</li>
+    <li>Scroll to the bottom and press <strong>Save Changes</strong>.</li>
+  </ol>
+  <p style="color:#4b4f5e">Set it up in Gmail on the web. The Gmail phone apps keep their own plain-text signature, so emails sent from your phone won’t show the animated logo.</p>
+</main>
+
+<!--
+  The signature itself. Table layout, inline styles, absolute image URLs: the
+  only combination that survives Gmail, Outlook and Apple Mail. No text colour
+  on the name, so each inbox uses its own (black in light mode, white in dark).
+-->
+<template id="signature">
+<table cellpadding="0" cellspacing="0" border="0" role="presentation" style="border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;">
+  <tr><td style="padding:0;font-size:16px;line-height:22px;font-weight:bold;">Dapo Ajisafe</td></tr>
+  <tr><td style="padding:2px 0 0;font-size:13px;line-height:18px;color:#8c8e9c;">Head of AR Development and Innovation</td></tr>
+  <tr><td style="padding:12px 0 0;"><table cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td width="120" height="1" style="width:120px;height:1px;line-height:1px;font-size:1px;background-color:#8c8e9c;">&nbsp;</td></tr></table></td></tr>
+  <tr><td style="padding:12px 0 0;font-size:13px;line-height:18px;color:#8c8e9c;">Toronto</td></tr>
+  <tr><td style="padding:2px 0 0;font-size:14px;line-height:20px;font-weight:bold;"><a href="https://medialife.ai" style="color:#e00093;text-decoration:none;">medialife.ai</a></td></tr>
+  <tr><td style="padding:12px 0 0;"><table cellpadding="0" cellspacing="0" border="0" role="presentation"><tr><td width="120" height="1" style="width:120px;height:1px;line-height:1px;font-size:1px;background-color:#8c8e9c;">&nbsp;</td></tr></table></td></tr>
+  <tr><td style="padding:14px 0 0;"><a href="https://medialife.ai" style="text-decoration:none;"><img src="https://medialife.ai/email/activated-by-medialife.gif" width="240" height="64" alt="Activated by MEDIALIFE" style="display:block;width:240px;height:64px;border:0;outline:none;"></a></td></tr>
+</table>
+</template>
+
+<script>
+  const html = document.getElementById("signature").innerHTML.trim();
+  document.querySelectorAll("[data-sig]").forEach((el) => { el.innerHTML = html; });
+
+  const status = document.getElementById("status");
+  document.getElementById("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob(["Dapo Ajisafe\nHead of AR Development and Innovation\nToronto\nmedialife.ai"], { type: "text/plain" }),
+        }),
+      ]);
+    } catch {
+      // Older browsers: copy the rendered light preview as a selection instead.
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelector(".pane.light [data-sig]"));
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("copy");
+      sel.removeAllRanges();
+    }
+    status.textContent = "Copied. Now paste it into Gmail’s signature box.";
+  });
+</script>
+</body>
+</html>
