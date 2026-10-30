@@ -24,6 +24,7 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminMedialifeRouteImport } from './routes/admin.medialife'
 import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
@@ -183,6 +184,11 @@ const AdminDemosRoute = AdminDemosRouteImport.update({
 const AdminLinksRoute = AdminLinksRouteImport.update({
   id: '/links',
   path: '/links',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMedialifeRoute = AdminMedialifeRouteImport.update({
+  id: '/medialife',
+  path: '/medialife',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminShelvesRoute = AdminShelvesRouteImport.update({
@@ -642,6 +648,7 @@ export interface FileRoutesByFullPath {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
@@ -742,6 +749,7 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
@@ -841,6 +849,7 @@ export interface FileRoutesById {
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
@@ -945,6 +954,7 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/medialife'
     | '/admin/shelves'
     | '/admin/login'
     | '/creator-hub'
@@ -1045,6 +1055,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/medialife'
     | '/admin/login'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
@@ -1143,6 +1154,7 @@ export interface FileRouteTypes {
     | '/admin/builder'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/medialife'
     | '/admin/shelves'
     | '/admin_/login'
     | '/creator-hub/_app'
@@ -1382,6 +1394,13 @@ declare module '@tanstack/react-router' {
       path: '/links'
       fullPath: '/admin/links'
       preLoaderRoute: typeof AdminLinksRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/medialife': {
+      id: '/admin/medialife'
+      path: '/medialife'
+      fullPath: '/admin/medialife'
+      preLoaderRoute: typeof AdminMedialifeRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shelves': {
@@ -2015,6 +2034,7 @@ interface AdminRouteChildren {
   AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
+  AdminMedialifeRoute: typeof AdminMedialifeRoute
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
@@ -2030,6 +2050,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBuilderRoute: AdminBuilderRouteWithChildren,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
+  AdminMedialifeRoute: AdminMedialifeRoute,
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
