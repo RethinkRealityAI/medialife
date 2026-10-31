@@ -243,6 +243,8 @@ h3 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; line-height: 1.
   grid-template-areas: "head" "cta" "stage" "clips";
 }
 .hero-head { grid-area: head; display: grid; gap: 14px; position: relative; z-index: 2; }
+.hero-eyebrow { display: inline-flex; align-items: center; gap: 10px; color: var(--teal); font-size: 11px; }
+.hero-eyebrow sup { font-size: 0.7em; }
 .hero-sub { color: var(--fg-2); font-size: clamp(17px, 2.1vw, 21px); max-width: 30ch; }
 .hero-sub b { color: var(--fg); font-weight: 600; }
 .hero-cta { grid-area: cta; display: flex; flex-wrap: wrap; gap: 10px; position: relative; z-index: 2; }
