@@ -17,6 +17,7 @@ export const UGC_FORM_FIELDS = [
   "platforms",
   "main_platform",
   ...UGC_PLATFORMS.flatMap((p) => [`${p}_handle`, `${p}_audience`]),
+  "ship_name",
   "address_line1",
   "address_line2",
   "city",
@@ -128,7 +129,7 @@ export function mapSignup(
   const line1 = clip(fields.address_line1, 200);
   const address: ShippingAddress | null = line1
     ? {
-        name,
+        name: clip(fields.ship_name, 120) || name,
         line1,
         line2: clip(fields.address_line2, 200),
         city: clip(fields.city, 120),

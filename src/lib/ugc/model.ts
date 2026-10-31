@@ -74,7 +74,7 @@ export const UGC_ROUTES = {
    --------------------------------------------------------------------------- */
 
 /** The six platforms on the sign-up form, in its order. */
-export const UGC_PLATFORMS = ["roblox", "instagram", "youtube", "discord", "x", "tiktok"] as const;
+export const UGC_PLATFORMS = ["roblox", "instagram", "youtube", "discord", "x", "tiktok", "twitch"] as const;
 export type UgcPlatform = (typeof UGC_PLATFORMS)[number];
 
 export const UGC_PLATFORM_LABELS: Record<UgcPlatform, string> = {
@@ -84,6 +84,7 @@ export const UGC_PLATFORM_LABELS: Record<UgcPlatform, string> = {
   discord: "Discord",
   x: "X",
   tiktok: "TikTok",
+  twitch: "Twitch",
 };
 
 /** Where a submission will be posted. */
@@ -105,7 +106,7 @@ export const UGC_POST_PLATFORM_LABELS: Record<UgcPostPlatform, string> = {
   other: "Other",
 };
 
-/** Audience bands offered on the sign-up form. */
+/** Audience bands the first sign-up form offered (the form now asks for a follower count). */
 export const UGC_AUDIENCE_BANDS = ["Under 1K", "1K–10K", "10K–50K", "50K–250K", "250K+"] as const;
 
 /** A link to a handle, best effort (handles are stored as the form sent them). */
@@ -122,6 +123,8 @@ export function ugcHandleUrl(platform: UgcPlatform, handle: string): string | nu
       return `https://x.com/${bare}`;
     case "tiktok":
       return `https://www.tiktok.com/@${bare}`;
+    case "twitch":
+      return `https://www.twitch.tv/${bare}`;
     case "youtube":
       return `https://www.youtube.com/@${bare}`;
     case "roblox":

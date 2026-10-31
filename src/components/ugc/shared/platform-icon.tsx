@@ -1,4 +1,4 @@
-/** Marks for the six profile platforms and the places a post can go. */
+/** Marks for the seven profile platforms and the places a post can go. */
 import { Globe, Instagram, Youtube } from "lucide-react";
 
 import type { UgcPlatform, UgcPostPlatform } from "@/lib/ugc/model";
@@ -17,6 +17,7 @@ const TIKTOK =
 const X =
   "M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.78L17.75 3Zm-1.08 16.2h1.7L7.4 4.73H5.58L16.67 19.2Z";
 const ROBLOX = "M5.1 2 2 18.9 18.9 22 22 5.1 5.1 2Zm8.6 13.3-4.9-.9.9-4.9 4.9.9-.9 4.9Z";
+const TWITCH = "M4.3 2 3 5.4v13.8h4.7V22h2.6l2.7-2.8h3.9l5.1-5.2V2H4.3Zm15.6 11-3 3h-4.7l-2.6 2.6V16H5.6V3.8h14.3V13Zm-3-6.2v5.3h-1.8V6.8h1.8Zm-4.9 0v5.3h-1.8V6.8H12Z";
 const DISCORD =
   "M20.317 4.369A19.79 19.79 0 0 0 15.432 2.85a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.249.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03ZM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418Z";
 
@@ -27,6 +28,7 @@ const COLORS: Record<UgcPlatform | "other", string> = {
   discord: "text-[#8b93f8]",
   x: "text-slate-100",
   tiktok: "text-slate-100",
+  twitch: "text-[#a970ff]",
   other: "text-muted-foreground",
 };
 
@@ -54,6 +56,8 @@ export function UgcPlatformIcon({
       return <Svg d={ROBLOX} className={cls} />;
     case "discord":
       return <Svg d={DISCORD} className={cls} />;
+    case "twitch":
+      return <Svg d={TWITCH} className={cls} />;
     default:
       return <Globe className={cls} aria-hidden />;
   }

@@ -85,11 +85,59 @@ $$('a[href="#join"]').forEach((a) =>
   a.addEventListener("click", () => track("cta_click", { where: a.closest("section, header")?.id || "nav" })),
 );
 
+/* ---------------------------------------------------------------- qr codes */
+// The keychain's real code: Cola Run at evade.medialife.ai (the same target as the printed QR).
+const COLA_URL = "https://evade.medialife.ai";
+const qrSvg = (dark = "#0a0a0a") =>
+  import("qrcode").then((m) => (m.default || m).toString(COLA_URL, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark, light: "#ffffff" } }));
+qrSvg()
+  .then((svg) => {
+    for (const id of ["heroQr", "realQr"]) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = svg;
+    }
+  })
+  .catch(() => {
+    /* the link under the code still works */
+  });
+
 /* ---------------------------------------------------------------- hero keychain */
 (() => {
   const kc = $("#heroKeychain");
+  if (!kc) return;
   const tilt = $(".kc-tilt", kc);
-  if (!kc || REDUCED || !matchMedia("(pointer: fine)").matches) return;
+  const hit = $("#kcHit");
+  let t = 0;
+  // tap (or Enter): the can flips to its QR back, NFC waves pulse out, Bobo hops
+  function activate(user) {
+    clearTimeout(t);
+    kc.classList.remove("is-act");
+    void kc.offsetWidth;
+    kc.classList.add("is-act");
+    if (user) {
+      kc.classList.add("was-tapped");
+      try {
+        navigator.vibrate?.(12);
+      } catch {
+        /* ignore */
+      }
+      track("hero_keychain_tap");
+    }
+    t = setTimeout(() => kc.classList.remove("is-act"), 3200);
+  }
+  hit.addEventListener("click", () => activate(true));
+  // play it once by itself so the interaction is discoverable
+  if (!REDUCED) {
+    new IntersectionObserver(
+      ([e], io) => {
+        if (!e.isIntersecting) return;
+        io.disconnect();
+        setTimeout(() => !kc.classList.contains("was-tapped") && activate(false), 1800);
+      },
+      { threshold: 0.6 },
+    ).observe(kc);
+  }
+  if (REDUCED || !matchMedia("(pointer: fine)").matches) return;
   let raf = 0;
   const hero = $(".hero");
   hero.addEventListener("pointermove", (e) => {
@@ -108,19 +156,39 @@ $$('a[href="#join"]').forEach((a) =>
   });
 })();
 
-/* ---------------------------------------------------------------- activated demo */
+/* ---------------------------------------------------------------- how it comes alive */
+// The retail display's activation demo, for EVADE: tap → verified → Cola Run opens → play.
 (() => {
-  const list = $("#actSteps");
-  const tabs = $$(".act-step", list);
-  const screens = $("#phoneScreens");
+  const seq = $("#seq");
+  if (!seq) return;
+  const items = $$("#loopSteps li");
+  const say = $("#seqSay");
   const score = $("#hudScore");
-  const pop = $(".hud-pop");
-  const DUR = [3600, 3200, 4200];
+  const pop = $(".hud-pop", seq);
+  const LINES = ["Tapping the keychain on a phone", "Verified as real EVADE merch", "Cola Run opens in the browser", "Playing Cola Run"];
+  const DUR = [2700, 1900, 3400, 6800];
   let step = 0;
   let timer = 0;
   let scoreTimer = 0;
   let auto = !REDUCED;
   let visible = false;
+
+  // the gameplay screen plays the real footage once it exists (same file as the Cola Run section)
+  const gp = $("#gpVideo");
+  const footage = (gp?.dataset.src || "").trim();
+  const pv = $(".pp-video", seq);
+  let videoReady = false;
+  function startVideo() {
+    if (!footage || REDUCED) return;
+    if (!videoReady) {
+      videoReady = true;
+      pv.src = footage;
+      pv.hidden = false;
+      $(".pp-still", seq).hidden = true;
+    }
+    pv.currentTime = 0;
+    pv.play().catch(() => {});
+  }
 
   function countUp() {
     clearInterval(scoreTimer);
@@ -136,71 +204,48 @@ $$('a[href="#join"]').forEach((a) =>
       pop.classList.remove("is-pop");
       void pop.offsetWidth;
       pop.classList.add("is-pop");
-      if (n >= 12) clearInterval(scoreTimer);
-    }, 330);
+      if (n >= 18) clearInterval(scoreTimer);
+    }, 360);
   }
-
-  function select(i, user = false) {
+  function go(i, user = false) {
     step = i;
-    tabs.forEach((t, k) => {
-      const on = k === i;
-      t.classList.toggle("is-on", on);
-      t.setAttribute("aria-selected", on ? "true" : "false");
-      t.tabIndex = on ? 0 : -1;
+    seq.dataset.step = String(i);
+    items.forEach((li, k) => {
+      li.classList.toggle("is-on", k === i);
+      li.classList.toggle("is-done", k < i);
+      $("button", li).setAttribute("aria-current", k === i ? "step" : "false");
     });
-    // restart the progress bar animation
-    const bar = $(".as-bar", tabs[i]);
-    bar.style.animation = "none";
-    void bar.offsetWidth;
-    bar.style.animation = "";
-    list.style.setProperty("--dur", `${DUR[i]}ms`);
-    screens.dataset.step = String(i);
-    screens.setAttribute("aria-labelledby", tabs[i].id);
-    if (i === 2) countUp();
+    say.textContent = LINES[i];
+    if (i === 3) {
+      countUp();
+      startVideo();
+    } else {
+      clearInterval(scoreTimer);
+      pv?.pause();
+    }
     if (user) {
-      auto = false;
-      list.classList.remove("is-auto");
       track("activated_step", { step: i + 1 });
+      auto = !REDUCED; // keep playing from the step they picked
     }
     schedule();
   }
   function schedule() {
     clearTimeout(timer);
     if (!auto || !visible) return;
-    timer = setTimeout(() => select((step + 1) % tabs.length), DUR[step]);
+    timer = setTimeout(() => go((step + 1) % items.length), DUR[step]);
   }
-  tabs.forEach((t, i) => {
-    t.addEventListener("click", () => select(i, true));
-    t.addEventListener("keydown", (e) => {
-      const k = e.key;
-      if (k !== "ArrowDown" && k !== "ArrowUp" && k !== "ArrowRight" && k !== "ArrowLeft") return;
-      e.preventDefault();
-      const d = k === "ArrowDown" || k === "ArrowRight" ? 1 : -1;
-      const n = (i + d + tabs.length) % tabs.length;
-      select(n, true);
-      tabs[n].focus();
-    });
-    t.tabIndex = i === 0 ? 0 : -1;
-  });
-  if (auto) list.classList.add("is-auto");
+  items.forEach((li, k) => $("button", li).addEventListener("click", () => go(k, true)));
   new IntersectionObserver(
     ([e]) => {
       visible = e.isIntersecting;
-      if (visible) select(step);
-      else clearTimeout(timer);
+      if (visible) go(REDUCED ? 3 : 0);
+      else {
+        clearTimeout(timer);
+        pv?.pause();
+      }
     },
-    { threshold: 0.35 },
-  ).observe(screens);
-
-  // a real QR on the back of the charm (points here; the product QR opens Cola Run)
-  import("qrcode")
-    .then((m) => (m.default || m).toString("https://medialife.ai/evade/creators/", { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0a0a0a", light: "#ffffff" } }))
-    .then((svg) => {
-      $("#charmQr").innerHTML = svg;
-    })
-    .catch(() => {
-      /* CSS fallback pattern stays */
-    });
+    { threshold: 0.4 },
+  ).observe(seq);
 })();
 
 /* ---------------------------------------------------------------- 3D stage hooks */
@@ -272,17 +317,18 @@ function localeCountry() {
 }
 
 /* ---------------------------------------------------------------- onboarding form */
+// Order matches the tiles. The follower count goes out as <platform>_audience (the field the UGC Hub import reads).
 const PLATFORMS = {
-  roblox: { label: "Roblox", field: "Roblox username", prefix: "", ph: "BoboFan123", audience: "Followers / friends" },
-  instagram: { label: "Instagram", field: "Instagram handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
-  youtube: { label: "YouTube", field: "Channel @handle or URL", prefix: "", ph: "@yourchannel", audience: "Subscribers" },
-  discord: { label: "Discord", field: "Discord username", prefix: "", ph: "yourname", audience: "Server / community size" },
-  x: { label: "X", field: "X handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
   tiktok: { label: "TikTok", field: "TikTok handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
+  youtube: { label: "YouTube", field: "Channel @handle or URL", prefix: "", ph: "@yourchannel", audience: "Subscribers" },
+  instagram: { label: "Instagram", field: "Instagram handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
+  twitch: { label: "Twitch", field: "Twitch username", prefix: "", ph: "yourchannel", audience: "Followers" },
+  roblox: { label: "Roblox", field: "Roblox username", prefix: "", ph: "BoboFan123", audience: "Followers" },
+  x: { label: "X", field: "X handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
+  discord: { label: "Discord", field: "Discord username", prefix: "", ph: "yourname", audience: "Server members" },
 };
-const AUDIENCE = ["Under 1K", "1K–10K", "10K–50K", "50K–250K", "250K+"];
 const ORDER = Object.keys(PLATFORMS);
-const STORE_KEY = "evade-ugc-creator:v1";
+const STORE_KEY = "evade-ugc-creator:v2";
 const LABELS = ["About you", "Your platforms", "Shipping address", "Check and send"];
 
 /** Normalise what people paste: URLs, @@handles, stray spaces. */
@@ -294,6 +340,7 @@ function normaliseHandle(p, raw) {
     instagram: /^instagram\.com\/@?([^/?#]+)/i,
     x: /^(?:x|twitter)\.com\/@?([^/?#]+)/i,
     tiktok: /^tiktok\.com\/@?([^/?#]+)/i,
+    twitch: /^twitch\.tv\/([^/?#]+)/i,
   };
   if (hosts[p]) {
     const m = url.match(hosts[p]);
@@ -312,17 +359,31 @@ function normaliseHandle(p, raw) {
   return v.replace(/^@+/, "").replace(/\s+/g, "");
 }
 function handleError(p, v) {
-  if (!v) return `Add your ${PLATFORMS[p].field.toLowerCase()}.`;
+  if (!v) return `Add your ${PLATFORMS[p].field.replace(/^Channel /, "channel ")}.`;
   if (p === "instagram" || p === "x" || p === "tiktok") {
     if (!/^[A-Za-z0-9._]{1,30}$/.test(v)) return "Use letters, numbers, dots or underscores.";
   } else if (p === "youtube") {
     if (!/^@[A-Za-z0-9._-]{2,100}$/.test(v) && !/^(youtube\.com|youtu\.be)\/\S+$/i.test(v)) return "Use your @handle or paste the channel link.";
   } else if (p === "roblox") {
     if (!/^[A-Za-z0-9_]{3,20}$/.test(v) && !/^roblox\.com\/\S+$/i.test(v)) return "Roblox usernames are 3 to 20 letters, numbers or underscores.";
+  } else if (p === "twitch") {
+    if (!/^[A-Za-z0-9_]{3,25}$/.test(v)) return "Twitch usernames are letters, numbers or underscores.";
   } else if (p === "discord") {
     if (!/^[A-Za-z0-9._#]{2,40}$/.test(v)) return "Use your Discord username, no spaces.";
   }
   return "";
+}
+/** "12.5k", "1,200", "1.2M" → "12,500" etc. Returns null when it isn't a count. */
+function normaliseCount(raw) {
+  const v = String(raw || "").trim().toLowerCase().replace(/\s+/g, "").replace(/^~/, "").replace(/\+$/, "");
+  if (!v) return "";
+  const m = v.match(/^(\d+(?:[.,]\d+)?)(k|m)$/);
+  let n;
+  if (m) n = parseFloat(m[1].replace(",", ".")) * (m[2] === "k" ? 1e3 : 1e6);
+  else if (/^\d{1,3}([,.]\d{3})+$/.test(v) || /^\d+$/.test(v)) n = Number(v.replace(/[,.]/g, ""));
+  else return null;
+  if (!Number.isFinite(n) || n > 2e9) return null;
+  return Math.round(n).toLocaleString("en-US");
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -370,8 +431,9 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
           <p class="err" id="e-h-${p}"></p>
         </div>
         <div class="field">
-          <label for="a-${p}">${cfg.audience} <span class="opt">optional</span></label>
-          <select id="a-${p}" name="${p}_audience"><option value="">Pick one</option>${AUDIENCE.map((a) => `<option>${a}</option>`).join("")}</select>
+          <label for="a-${p}">${cfg.audience}</label>
+          <input id="a-${p}" name="${p}_audience" type="text" inputmode="decimal" autocomplete="off" maxlength="16" placeholder="e.g. 12.5K" data-count="${p}" aria-describedby="e-a-${p}" />
+          <p class="err" id="e-a-${p}"></p>
         </div>
       </div>`;
     panelCache[p] = el;
@@ -427,14 +489,18 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
       const norm = normaliseHandle(p, input.value);
       if (norm !== input.value) input.value = norm;
       msg = handleError(p, norm);
-    } else if (n === "contact-name") msg = v.length < 2 ? "Add your full name." : "";
+    } else if (input.dataset.count) {
+      const c = normaliseCount(input.value);
+      if (c) input.value = c;
+      msg = c === "" ? (input.dataset.count === "discord" ? "" : "Add your follower count.") : c === null ? "Use a number, like 12500 or 12.5K." : "";
+    } else if (n === "contact-name" || n === "ship_name") msg = v.length < 2 ? "Add your full name." : "";
     else if (n === "email") msg = !v ? "Add your email." : EMAIL.test(v) ? "" : "That email looks off. Check for typos.";
     else if (n === "phone") msg = v && !/^\+?[\d\s().-]{7,20}$/.test(v) ? "Use digits, with your country code (e.g. +44)." : "";
     else if (n === "country" || n === "address_country") msg = v ? "" : "Add your country.";
     else if (n === "address_line1") msg = v.length < 3 ? "Add your street address." : "";
     else if (n === "city") msg = v ? "" : "Add your city.";
     else if (n === "postal_code") msg = v ? "" : "Add your postal or ZIP code.";
-    else if (n === "consent") msg = input.checked ? "" : "Tick this so we can contact you and ship the package.";
+    else if (n === "consent") msg = input.checked ? "" : "Tick this so we can contact you and ship your merch.";
     const errEl = $(`#${input.getAttribute("aria-describedby")?.split(" ").pop()}`);
     setErr(errEl, msg);
     if (input.type !== "checkbox") input.closest(".field")?.classList.toggle("is-ok", !msg && !!v);
@@ -482,7 +548,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     // only clear an error while typing; new errors wait for blur or Next
     const wrap = el.closest(".field, .consent");
     if (wrap?.classList.contains("has-err")) {
-      if (el.dataset.handle ? !handleError(el.dataset.handle, normaliseHandle(el.dataset.handle, el.value)) : checkFieldQuiet(el)) checkField(el);
+      const ok = el.dataset.handle ? !handleError(el.dataset.handle, normaliseHandle(el.dataset.handle, el.value)) : el.dataset.count ? !!normaliseCount(el.value) : checkFieldQuiet(el);
+      if (ok) checkField(el);
     }
     if (!started) {
       started = true;
@@ -498,7 +565,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     const v = el.value.trim();
     switch (el.name) {
       case "email": return EMAIL.test(v);
-      case "contact-name": return v.length >= 2;
+      case "contact-name":
+      case "ship_name": return v.length >= 2;
       case "address_line1": return v.length >= 3;
       case "phone": return !v || /^\+?[\d\s().-]{7,20}$/.test(v);
       case "consent": return el.checked;
@@ -533,11 +601,15 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     if (i === 2) {
       const ac = form.elements.address_country;
       if (!ac.value.trim()) ac.value = form.elements.country.value.trim();
+      const sn = form.elements.ship_name;
+      if (!sn.value.trim()) sn.value = form.elements["contact-name"].value.trim();
     }
+    $("#stepsScroll").scrollTop = 0;
     if (i === 3) renderReview();
     if (prev !== i && !quiet) {
-      const top = card.getBoundingClientRect().top;
-      if (top < 0 || top > innerHeight * 0.6) card.scrollIntoView({ block: "start", behavior: REDUCED ? "auto" : "smooth" });
+      // keep the whole card (it is sized to the viewport) on screen below the nav
+      const r = card.getBoundingClientRect();
+      if (r.top < nav.offsetHeight || r.bottom > innerHeight + 2) card.scrollIntoView({ block: "start", behavior: REDUCED ? "auto" : "smooth" });
       // move focus to the step heading region for keyboard and screen-reader users
       const firstInput = $("input:not([type=hidden]):not([type=checkbox]), select, textarea", steps[i]);
       if (i === 1) $("input", tiles.find((t) => !$("input", t).checked) || tiles[0]).focus({ preventScroll: true });
@@ -584,11 +656,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
       .map((p) => {
         const h = f[`${p}_handle`]?.value || "";
         const shown = PLATFORMS[p].prefix && h ? "@" + h : h;
-        const aud = f[`${p}_audience`]?.value;
+        const aud = panelCache[p]?.querySelector("[data-count]")?.value;
         return `<span class="${p === main ? "is-main" : ""}"><svg aria-hidden="true"><use href="#i-${p}"/></svg>${esc(shown)}${aud ? ` · ${esc(aud)}` : ""}${p === main ? " · main" : ""}</span>`;
       })
       .join("");
-    const addr = [f.address_line1.value, f.address_line2.value, [f.city.value, f.region.value, f.postal_code.value].filter(Boolean).join(", "), f.address_country.value]
+    const addr = [f.ship_name.value, f.address_line1.value, f.address_line2.value, [f.city.value, f.region.value, f.postal_code.value].filter(Boolean).join(", "), f.address_country.value]
       .map((s) => s.trim())
       .filter(Boolean);
     $("#review").innerHTML = `
@@ -621,7 +693,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
           const pn = panelCache[p];
           if (pn && !pn.isConnected) {
             data[`${p}_handle`] = $("input[data-handle]", pn).value;
-            data[`${p}_audience`] = $("select", pn).value;
+            data[`${p}_audience`] = $("[data-count]", pn).value;
           }
         }
         localStorage.setItem(STORE_KEY, JSON.stringify(data));

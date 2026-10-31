@@ -134,6 +134,7 @@ export const PLATFORM_SHORT: Record<UgcPlatform, string> = {
   discord: "Discord",
   x: "X",
   tiktok: "TikTok",
+  twitch: "Twitch",
 };
 
 const isPlatform = (p: string | null | undefined): p is UgcPlatform =>
