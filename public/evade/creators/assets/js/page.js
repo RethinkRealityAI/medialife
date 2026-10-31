@@ -140,6 +140,7 @@ qrSvg()
   if (REDUCED || !matchMedia("(pointer: fine)").matches) return;
   let raf = 0;
   const hero = $(".hero");
+  const poster = $(".hs-poster");
   hero.addEventListener("pointermove", (e) => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(() => {
@@ -148,11 +149,16 @@ qrSvg()
       const y = (e.clientY - (r.top + r.height / 2)) / innerHeight;
       tilt.style.setProperty("--ry", `${(x * 22).toFixed(2)}deg`);
       tilt.style.setProperty("--rx", `${(-y * 14).toFixed(2)}deg`);
+      // the splash behind leans less, so the two read as layers
+      poster?.style.setProperty("--sy", `${(x * 8).toFixed(2)}deg`);
+      poster?.style.setProperty("--sx", `${(-y * 5).toFixed(2)}deg`);
     });
   });
   hero.addEventListener("pointerleave", () => {
     tilt.style.setProperty("--ry", "0deg");
     tilt.style.setProperty("--rx", "0deg");
+    poster?.style.setProperty("--sy", "0deg");
+    poster?.style.setProperty("--sx", "0deg");
   });
 })();
 

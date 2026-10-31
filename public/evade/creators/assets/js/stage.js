@@ -90,7 +90,7 @@ function posterHTML(fallback) {
               <p class="ds-pill ds-pill-live"><span class="ds-dot"></span>Current drop · Live now</p>
               <p class="ds-poster-name">Bobo × Eclipse charm set</p>
               <p class="ds-poster-line">Scan the back → play Cola Run, starring Bobo</p>
-              <p class="ds-pill ds-pill-soon">Future drops · Tee · Hoodie · Cap · Desk mat — coming soon</p>
+              <p class="ds-pill ds-pill-soon">Designs · Tee · Hoodie · Cap · Desk mat — mock-ups, coming soon</p>
             </div>`
           : `<div class="ds-loader" role="progressbar" aria-label="Loading the drop" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>`
       }
@@ -101,7 +101,7 @@ function overlayHTML(gameplayUrl) {
   const live = ITEMS[0];
   const btn = (it) => `
       <button type="button" class="ds-opt ${it.status === "live" ? "ds-opt-live" : "ds-opt-soon"}" data-id="${it.id}" aria-pressed="false"
-        aria-label="${esc(it.name)} — ${it.status === "live" ? "current drop, live now" : "future drop, coming soon"}">
+        aria-label="${esc(it.name)} — ${it.status === "live" ? "current drop, live now" : "mock-up design, coming soon"}">
         <span class="ds-opt-icon">${ICON[it.id]}</span>
         <span class="ds-opt-label">${esc(it.short)}</span>
         ${it.status === "live" ? '<span class="ds-opt-tag"><span class="ds-dot"></span>Live now</span>' : ""}
@@ -124,7 +124,7 @@ function overlayHTML(gameplayUrl) {
           <div class="ds-row">${btn(live)}</div>
         </div>
         <div class="ds-group ds-group-soon">
-          <p class="ds-group-label">Future drops <span>· coming soon</span></p>
+          <p class="ds-group-label">Designs <span>· mock-ups, coming soon</span></p>
           <div class="ds-row">${ITEMS.slice(1).map(btn).join("")}</div>
         </div>
       </nav>
@@ -184,7 +184,7 @@ function boot(el) {
     el.classList.add("is-focus");
     const pill = caption.querySelector(".ds-pill");
     pill.className = `ds-pill ${it.status === "live" ? "ds-pill-live" : "ds-pill-soon"}`;
-    pill.innerHTML = it.status === "live" ? '<span class="ds-dot"></span>Current drop · Live now' : "Future drop · Coming soon";
+    pill.innerHTML = it.status === "live" ? '<span class="ds-dot"></span>Current drop · Live now' : "Design · Mock-up, coming soon";
     caption.querySelector(".ds-cap-name").textContent = it.name;
     caption.querySelector(".ds-cap-line").textContent = it.line;
     const meta = caption.querySelector(".ds-cap-meta");
