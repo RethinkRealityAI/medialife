@@ -265,7 +265,11 @@ qrSvg()
             v.src = v.dataset.src;
             if (REDUCED) v.controls = true;
           }
-          if (!REDUCED) v.play().catch(() => (v.controls = true));
+          if (!REDUCED) {
+            v.muted = true; // some browsers only honour the attribute once set as a property
+            // an interrupted play() (scrolled away mid-load) is not a failure; only a blocked autoplay gets controls
+            v.play().catch((err) => err?.name === "NotAllowedError" && (v.controls = true));
+          }
           if (!tracked) {
             tracked = true;
             track("gameplay_video");
