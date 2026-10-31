@@ -187,10 +187,9 @@
           <h2 id="actTitle">Tap it. <span class="teal">Play it.</span></h2>
         </div>
         <ol class="loop rv rv-d1" id="loopSteps" aria-label="What happens when you tap the keychain">
-          <li data-step="0"><button type="button"><i aria-hidden="true"><b>1</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Tap or scan the keychain</button></li>
-          <li data-step="1"><button type="button"><i aria-hidden="true"><b>2</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Verified as real EVADE merch</button></li>
-          <li data-step="2"><button type="button"><i aria-hidden="true"><b>3</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Cola Run opens. No app.</button></li>
-          <li data-step="3"><button type="button"><i aria-hidden="true"><b>4</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Fly with Bobo. Grab every can.</button></li>
+          <li data-step="0"><button type="button"><i aria-hidden="true"><b>1</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Scan the QR or tap the keychain</button></li>
+          <li data-step="1"><button type="button"><i aria-hidden="true"><b>2</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Cola Run opens in your browser</button></li>
+          <li data-step="2"><button type="button"><i aria-hidden="true"><b>3</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Play and get rewarded</button></li>
         </ol>
         <div class="realqr rv rv-d2">
           <div class="rq-code" id="realQr" aria-hidden="true"></div>
@@ -212,38 +211,29 @@
           <div class="phone">
             <div class="phone-notch" aria-hidden="true"></div>
             <div class="phone-screens">
-              <!-- 0 + 1: reading the tag, then verified -->
+              <!-- 1: scan or tap -->
               <section class="ps ps-tap" data-screen="0">
                 <span class="ps-bar mono">Activated Merchandise<sup>®</sup></span>
                 <div class="tapfx" aria-hidden="true">
                   <i class="tf-wave"></i><i class="tf-wave"></i><i class="tf-wave"></i>
                   <svg class="tf-ring" viewBox="0 0 120 120"><circle class="tf-track" cx="60" cy="60" r="54"/><circle class="tf-prog" cx="60" cy="60" r="54"/></svg>
                   <img class="tf-item" src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" loading="lazy" />
-                  <span class="tf-ok"><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></span>
                 </div>
-                <p class="ps-title"><span class="t-read">Reading your keychain</span><span class="t-ok">Verified</span></p>
-                <ul class="tf-steps"><li>Tag detected</li><li>Real EVADE merch</li><li>Opening Cola Run</li></ul>
+                <p class="ps-title">Opening Cola Run</p>
+                <p class="ps-sub mono">evade.medialife.ai</p>
               </section>
               <!-- 2: Cola Run opens in the browser -->
               <section class="ps ps-splash" data-screen="1">
                 <span class="ps-bar mono">evade.medialife.ai</span>
                 <div class="sp-art"><img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="" width="540" height="967" loading="lazy" /></div>
-                <div class="sp-verified">
-                  <img src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="944" height="1032" loading="lazy" />
-                  <span><b>EVADE Keychain</b><small class="mono">Verified · activated</small></span>
-                  <i><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>
-                </div>
-                <p class="sp-title">You own a piece of EVADE</p>
-                <span class="pbtn">Play Cola Run</span>
+                <p class="sp-title">Fly with Bobo.<br />Grab every can.</p>
+                <span class="pbtn">Play</span>
               </section>
               <!-- 3: gameplay -->
               <section class="ps ps-play" data-screen="2">
-                <img class="pp-still" src="/roblox/activated-retail/assets/ev_intro.webp" alt="" width="1200" height="670" loading="lazy" />
-                <video class="pp-video" muted loop playsinline preload="none" hidden aria-hidden="true"></video>
-                <div class="hud" aria-hidden="true">
-                  <span class="hud-score"><img src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" loading="lazy" /><b id="hudScore">0</b></span>
-                  <span class="hud-pop">+1</span>
-                </div>
+                <img class="pp-still" src="/evade/creators/assets/video/bobo-golden-gate.webp" alt="" width="540" height="1130" loading="lazy" />
+                <video class="pp-video" data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" hidden aria-hidden="true" width="540" height="1130"></video>
+                <div class="reward-toast" aria-hidden="true"><svg><use href="#i-gift"/></svg><span><b>Reward unlocked</b>Nice run!</span></div>
               </section>
             </div>
             <div class="phone-glow" aria-hidden="true"></div>
@@ -297,20 +287,27 @@
           <li><svg aria-hidden="true"><use href="#i-browser"/></svg>Plays in the browser</li>
           <li><img src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="944" height="1032" loading="lazy" />Stars Bobo</li>
         </ul>
-        <!--
-          GAMEPLAY VIDEO SLOT
-          The still below shows until footage exists. To switch to video, put the file URL
-          in data-src on the <video> (e.g. data-src="/evade/creators/assets/video/cola-run.mp4",
-          optionally data-src-webm="...webm"). page.js then loads it lazily when the frame
-          scrolls into view, unhides the video, and autoplays it muted on loop
-          (reduced-motion users get controls and no autoplay). Keep it H.264 MP4, 16:9,
-          under ~8 MB; the poster is the still, so nothing jumps while it loads.
-        -->
-        <div class="gp-frame rv rv-d2" id="gpFrame">
-          <img class="gp-still" src="/roblox/activated-retail/assets/ev_intro.webp" alt="Cola Run gameplay: Bobo flying through the neon arena collecting Eclipse cans" width="1200" height="670" loading="lazy" decoding="async" />
-          <video class="gp-video" id="gpVideo" data-src="" data-src-webm="" poster="/roblox/activated-retail/assets/ev_intro.webp" muted loop playsinline preload="none" hidden width="1200" height="670" aria-label="Cola Run gameplay footage"></video>
-          <span class="gp-badge mono"><span class="dot"></span>In game</span>
+        <!-- Real phone recordings (Samsung browser, no app). Clips are 540x1130 H.264, ~0.5 MB each;
+             page.js loads each one when it scrolls into view and pauses it when it leaves. -->
+        <div class="reel rv rv-d2" id="reel" role="group" aria-label="Cola Run in the wild, recorded on a phone">
+          <figure class="clip">
+            <video data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Golden Gate Bridge"></video>
+            <figcaption class="mono"><span class="dot"></span>Golden Gate, SF</figcaption>
+          </figure>
+          <figure class="clip">
+            <video data-src="/evade/creators/assets/video/bobo-bridge.mp4" poster="/evade/creators/assets/video/bobo-bridge.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR walking the Golden Gate Bridge railing"></video>
+            <figcaption class="mono"><span class="dot"></span>On the bridge</figcaption>
+          </figure>
+          <figure class="clip">
+            <video data-src="/evade/creators/assets/video/bobo-walk.mp4" poster="/evade/creators/assets/video/bobo-walk.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR following along the bridge walkway"></video>
+            <figcaption class="mono"><span class="dot"></span>Bridge walk</figcaption>
+          </figure>
+          <figure class="clip">
+            <video data-src="/evade/creators/assets/video/bobo-rdc26.mp4" poster="/evade/creators/assets/video/bobo-rdc26.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Roblox Developers Conference"></video>
+            <figcaption class="mono"><span class="dot"></span>RDC 2026</figcaption>
+          </figure>
         </div>
+        <p class="reel-note mono">Recorded on a phone. No app.</p>
       </div>
     </div>
   </section>

@@ -157,26 +157,22 @@ qrSvg()
 })();
 
 /* ---------------------------------------------------------------- how it comes alive */
-// The retail display's activation demo, for EVADE: tap → verified → Cola Run opens → play.
+// The retail display's activation demo, for EVADE: scan or tap → Cola Run opens → play and get rewarded.
 (() => {
   const seq = $("#seq");
   if (!seq) return;
   const items = $$("#loopSteps li");
   const say = $("#seqSay");
-  const score = $("#hudScore");
-  const pop = $(".hud-pop", seq);
-  const LINES = ["Tapping the keychain on a phone", "Verified as real EVADE merch", "Cola Run opens in the browser", "Playing Cola Run"];
-  const DUR = [2700, 1900, 3400, 6800];
+  const LINES = ["Tapping the keychain on a phone", "Cola Run opens in the browser", "Playing Cola Run and unlocking a reward"];
+  const DUR = [3000, 3400, 7200];
   let step = 0;
   let timer = 0;
-  let scoreTimer = 0;
   let auto = !REDUCED;
   let visible = false;
 
-  // the gameplay screen plays the real footage once it exists (same file as the Cola Run section)
-  const gp = $("#gpVideo");
-  const footage = (gp?.dataset.src || "").trim();
+  // the gameplay screen plays a real phone recording of the experience
   const pv = $(".pp-video", seq);
+  const footage = (pv?.dataset.src || "").trim();
   let videoReady = false;
   function startVideo() {
     if (!footage || REDUCED) return;
@@ -190,23 +186,6 @@ qrSvg()
     pv.play().catch(() => {});
   }
 
-  function countUp() {
-    clearInterval(scoreTimer);
-    let n = 0;
-    score.textContent = "0";
-    if (REDUCED) {
-      score.textContent = "12";
-      return;
-    }
-    scoreTimer = setInterval(() => {
-      n += 1;
-      score.textContent = String(n);
-      pop.classList.remove("is-pop");
-      void pop.offsetWidth;
-      pop.classList.add("is-pop");
-      if (n >= 18) clearInterval(scoreTimer);
-    }, 360);
-  }
   function go(i, user = false) {
     step = i;
     seq.dataset.step = String(i);
@@ -216,13 +195,8 @@ qrSvg()
       $("button", li).setAttribute("aria-current", k === i ? "step" : "false");
     });
     say.textContent = LINES[i];
-    if (i === 3) {
-      countUp();
-      startVideo();
-    } else {
-      clearInterval(scoreTimer);
-      pv?.pause();
-    }
+    if (i === 2) startVideo();
+    else pv?.pause();
     if (user) {
       track("activated_step", { step: i + 1 });
       auto = !REDUCED; // keep playing from the step they picked
@@ -238,7 +212,7 @@ qrSvg()
   new IntersectionObserver(
     ([e]) => {
       visible = e.isIntersecting;
-      if (visible) go(REDUCED ? 3 : 0);
+      if (visible) go(REDUCED ? 2 : 0);
       else {
         clearTimeout(timer);
         pv?.pause();
@@ -270,33 +244,32 @@ qrSvg()
   }, 8000);
 })();
 
-/* ---------------------------------------------------------------- gameplay video slot */
+/* ---------------------------------------------------------------- Cola Run reel */
+// Each clip loads when it first nears the viewport and only plays while it is on screen,
+// so a phone never decodes four videos it can't see. Reduced motion: posters + controls, no autoplay.
 (() => {
-  const v = $("#gpVideo");
-  const still = $(".gp-still");
-  const src = (v?.dataset.src || "").trim();
-  if (!v || !src) return; // no footage yet: the still stays
-  const webm = (v.dataset.srcWebm || "").trim();
-  new IntersectionObserver(
-    ([e], io) => {
-      if (!e.isIntersecting) return;
-      io.disconnect();
-      if (webm) v.insertAdjacentHTML("beforeend", `<source src="${webm}" type="video/webm">`);
-      v.insertAdjacentHTML("beforeend", `<source src="${src}" type="video/mp4">`);
-      v.preload = "auto";
-      v.hidden = false;
-      still.hidden = true;
-      if (REDUCED) {
-        v.controls = true;
-        v.load();
-      } else {
-        v.load();
-        v.play().catch(() => (v.controls = true));
+  const reel = $("#reel");
+  if (!reel) return;
+  let tracked = false;
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const { target: v, isIntersecting } of entries) {
+        if (isIntersecting) {
+          if (!v.src) {
+            v.src = v.dataset.src;
+            if (REDUCED) v.controls = true;
+          }
+          if (!REDUCED) v.play().catch(() => (v.controls = true));
+          if (!tracked) {
+            tracked = true;
+            track("gameplay_video");
+          }
+        } else v.pause();
       }
-      track("gameplay_video");
     },
-    { rootMargin: "200px" },
-  ).observe($("#gpFrame"));
+    { threshold: 0.35 },
+  );
+  $$("video", reel).forEach((v) => io.observe(v));
 })();
 
 /* ---------------------------------------------------------------- countries */
