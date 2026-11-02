@@ -282,6 +282,17 @@ qrSvg()
   $$("video", reel).forEach((v) => io.observe(v));
 })();
 
+/* ---------------------------------------------------------------- perks: pointer spotlight */
+if (matchMedia("(pointer: fine)").matches) {
+  $$(".perk").forEach((card) =>
+    card.addEventListener("pointermove", (e) => {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      card.style.setProperty("--my", `${e.clientY - r.top}px`);
+    }),
+  );
+}
+
 /* ---------------------------------------------------------------- countries */
 const COUNTRIES =
   "Argentina|Australia|Austria|Bahrain|Belgium|Bolivia|Brazil|Bulgaria|Canada|Chile|China|Colombia|Costa Rica|Croatia|Cyprus|Czechia|Denmark|Dominican Republic|Ecuador|Egypt|El Salvador|Estonia|Finland|France|Germany|Ghana|Greece|Guatemala|Honduras|Hong Kong|Hungary|Iceland|India|Indonesia|Ireland|Israel|Italy|Jamaica|Japan|Jordan|Kenya|Kuwait|Latvia|Lithuania|Luxembourg|Malaysia|Malta|Mexico|Morocco|Netherlands|New Zealand|Nigeria|Norway|Oman|Pakistan|Panama|Paraguay|Peru|Philippines|Poland|Portugal|Puerto Rico|Qatar|Romania|Saudi Arabia|Serbia|Singapore|Slovakia|Slovenia|South Africa|South Korea|Spain|Sri Lanka|Sweden|Switzerland|Taiwan|Thailand|Trinidad and Tobago|Turkey|Ukraine|United Arab Emirates|United Kingdom|United States|Uruguay|Vietnam".split(

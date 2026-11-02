@@ -40,7 +40,6 @@
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script type="module" src="/evade/creators/assets/js/stage.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
@@ -81,8 +80,9 @@
       <img class="brand-evade" src="/brand/evade-logo.webp" alt="EVADE" width="88" height="23" />
     </a>
     <nav class="nav-links" aria-label="Sections">
+      <a href="#footage">In the wild</a>
       <a href="#activated">How it works</a>
-      <a href="#drop">The drop</a>
+      <a href="#perks">Perks</a>
       <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn--sm btn--gold" href="#join">Join the crew</a>
@@ -100,7 +100,7 @@
       <img class="float-can fc2" src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" />
       <img class="float-can fc3" src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" />
     </div>
-    <div class="wrap wrap--hero hero-grid">
+    <div class="wrap hero-grid">
       <div class="hero-head rv">
         <span class="hero-eyebrow mono"><span class="dot"></span><span>Activated Merchandise<sup>®</sup></span></span>
         <h1 id="heroTitle">Merch,<br class="br-lg" /> <span class="gold">next level.</span></h1>
@@ -111,7 +111,7 @@
         <a class="btn btn--ghost btn--lg" href="#activated">How it works</a>
       </div>
 
-      <!-- the Cola Run splash at the back, the activated keychain in front of its corner -->
+      <!-- the Cola Run splash at the back, the activated keychain hanging over its right side -->
       <div class="hero-stage rv rv-d1" id="heroStage">
         <div class="hs-glow" aria-hidden="true"></div>
         <div class="hs-poster">
@@ -176,27 +176,44 @@
             </button>
           </figure>
       </div>
+    </div>
+  </section>
 
-      <!-- real phone recordings of the experience (Samsung browser, no app); page.js plays them only on screen -->
-      <div class="hero-clips reel rv rv-d2" id="reel" role="group" aria-label="Bobo in AR, recorded on a phone">
+  <!-- 2. LIVE FOOTAGE: real phone recordings (Samsung browser, no app); page.js plays each one only while it's on screen -->
+  <section class="band band--footage" id="footage" aria-labelledby="footTitle">
+    <div class="wrap">
+      <div class="sec-head sec-head--center rv">
+        <span class="mono">01 · In the wild</span>
+        <h2 id="footTitle">Bobo, <span class="gold">out in the world.</span></h2>
+      </div>
+      <div class="reel rv rv-d1" id="reel" role="group" aria-label="Bobo in AR, recorded on a phone">
+        <figure class="clip">
+          <video data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Golden Gate Bridge"></video>
+          <figcaption class="mono"><span class="dot"></span>Golden Gate</figcaption>
+        </figure>
         <figure class="clip">
           <video data-src="/evade/creators/assets/video/bobo-rdc26.mp4" poster="/evade/creators/assets/video/bobo-rdc26.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Roblox Developers Conference"></video>
           <figcaption class="mono"><span class="dot"></span>RDC 2026</figcaption>
         </figure>
         <figure class="clip">
-          <video data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Golden Gate Bridge"></video>
-          <figcaption class="mono"><span class="dot"></span>Golden Gate</figcaption>
+          <video data-src="/evade/creators/assets/video/bobo-bridge.mp4" poster="/evade/creators/assets/video/bobo-bridge.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR on the Golden Gate Bridge walkway"></video>
+          <figcaption class="mono"><span class="dot"></span>On the bridge</figcaption>
+        </figure>
+        <figure class="clip">
+          <video data-src="/evade/creators/assets/video/bobo-walk.mp4" poster="/evade/creators/assets/video/bobo-walk.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR following along the bridge"></video>
+          <figcaption class="mono"><span class="dot"></span>Bridge walk</figcaption>
         </figure>
       </div>
+      <p class="reel-note mono rv rv-d2">Recorded on a phone · No app</p>
     </div>
   </section>
 
-  <!-- 2. HOW IT COMES ALIVE: the retail display's activation sequence, for EVADE -->
+  <!-- 3. HOW IT COMES ALIVE: the retail display's activation sequence, for EVADE -->
   <section class="band" id="activated" aria-labelledby="actTitle">
     <div class="wrap act-grid">
       <div class="act-copy">
         <div class="sec-head rv">
-          <span class="mono">01 · How it comes alive</span>
+          <span class="mono">02 · How it comes alive</span>
           <h2 id="actTitle">Tap it. <span class="teal">Play it.</span></h2>
         </div>
         <ol class="loop rv rv-d1" id="loopSteps" aria-label="What happens when you tap the keychain">
@@ -257,44 +274,77 @@
     </div>
   </section>
 
-  <!-- 3. THE DROP (3D module mounts in #dropStage) -->
-  <section class="band band--drop" id="drop" aria-labelledby="dropTitle">
+  <!-- 4. WHAT YOU GET -->
+  <section class="band band--perks" id="perks" aria-labelledby="perksTitle">
     <div class="wrap">
-      <div class="sec-head sec-head--row rv">
-        <div>
-          <span class="mono">02 · The drop</span>
-          <h2 id="dropTitle">Current drop <span class="dim">·</span> <span class="gold">Future drops</span></h2>
-        </div>
-        <p class="sec-aside">Spin it. Pick a product. Meet Bobo.</p>
+      <div class="sec-head sec-head--center rv">
+        <span class="mono">03 · What you get</span>
+        <h2 id="perksTitle">Make content. <span class="gold">Get the goods.</span></h2>
       </div>
-      <!-- stage.js renders the 3D product selector here and fires stage:ready / stage:select / stage:bobo -->
-      <div id="dropStage" class="drop-stage" data-gameplay-url="#top" aria-label="Interactive 3D view of the current and future EVADE drops"></div>
-      <div class="drop-foot rv">
-        <ul class="drop-legend" aria-label="Drops">
-          <li class="is-now"><span class="lg-dot"></span><b>Now</b> Bobo + Eclipse keychain</li>
-          <li><span class="lg-dot"></span><b>Designs</b> Tees · Hoodies · Caps · Desk mats (mock-ups)</li>
-        </ul>
-        <a class="play-chip" id="playChip" href="#activated" hidden>
-          <img src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="944" height="1032" />
-          <span>Bobo wants to play. <b>Scan it, play Cola Run</b></span>
-          <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg>
-        </a>
-      </div>
+      <ul class="perks">
+        <li class="perk perk--pkg rv">
+          <div class="perk-medal" aria-hidden="true">
+            <svg class="pm" viewBox="0 0 64 64">
+              <g class="pm-pop"><image href="/evade/creators/assets/img/bobo-cat.webp" x="19" y="9" width="26" height="28" /></g>
+              <path class="pm-box draw" pathLength="1" d="M13 31 32 40 51 31V49L32 58 13 49Z" />
+              <path class="draw" pathLength="1" d="M32 40V58" />
+              <g class="pm-lid"><path class="draw" pathLength="1" d="M10 25 32 15 54 25 32 35Z" /></g>
+              <g class="pm-spark"><path d="M54 8v6M51 11h6" /><path d="M9 12v4M7 14h4" /></g>
+            </svg>
+          </div>
+          <h3>Free merch package</h3>
+          <p>2 keychains, a sticker and a tee. Shipped to you.</p>
+        </li>
+        <li class="perk perk--gift rv rv-d1">
+          <div class="perk-medal" aria-hidden="true">
+            <svg class="pm" viewBox="0 0 64 64">
+              <g class="pm-ticket">
+                <path class="pm-fill draw" pathLength="1" d="M9 21h46v7a4 4 0 0 0 0 8v7H9v-7a4 4 0 0 0 0-8Z" />
+                <path class="pm-perf" d="M41 22v20" />
+                <text x="25" y="35.5" text-anchor="middle">FREE</text>
+              </g>
+              <g class="pm-confetti"><circle cx="12" cy="12" r="2" /><circle cx="54" cy="12" r="1.6" /><circle cx="52" cy="54" r="2" /><path d="M8 52l4-3M30 6l1 4M58 34l-4 1" /></g>
+            </svg>
+          </div>
+          <h3>Giveaway codes</h3>
+          <p>Free merch codes for your community. Repost to enter.</p>
+        </li>
+        <li class="perk perk--tag rv rv-d2">
+          <div class="perk-medal" aria-hidden="true">
+            <svg class="pm" viewBox="0 0 64 64">
+              <path class="pm-string" d="M44 6c-6 4-4 10 0 14" />
+              <g class="pm-swing">
+                <path class="pm-fill draw" pathLength="1" d="M33 13h15a3 3 0 0 1 3 3v15L32 50a3 3 0 0 1-4 0L14 36a3 3 0 0 1 0-4Z" />
+                <circle cx="44" cy="20" r="2.6" />
+                <path class="pm-pct" d="M27 38l10-10" /><circle class="pm-pct" cx="27.5" cy="29.5" r="2.2" /><circle class="pm-pct" cx="36.5" cy="37.5" r="2.2" />
+              </g>
+            </svg>
+          </div>
+          <h3>Exclusive discounts</h3>
+          <p>Creator pricing on future drops.</p>
+        </li>
+        <li class="perk perk--collab rv rv-d3">
+          <div class="perk-medal" aria-hidden="true">
+            <svg class="pm" viewBox="0 0 64 64">
+              <g class="pm-ring-l"><circle class="draw" pathLength="1" cx="25" cy="34" r="14" /></g>
+              <g class="pm-ring-r"><circle class="draw" pathLength="1" cx="39" cy="34" r="14" /></g>
+              <path class="pm-lens" d="M32 21.8a14 14 0 0 1 0 24.4 14 14 0 0 1 0-24.4Z" />
+              <g class="pm-star"><path d="M32 4l1.6 4.4L38 10l-4.4 1.6L32 16l-1.6-4.4L26 10l4.4-1.6Z" /></g>
+            </svg>
+          </div>
+          <h3>Potential collabs</h3>
+          <p>Stand out and we build bigger things together.</p>
+        </li>
+      </ul>
     </div>
   </section>
 
-  <!-- 4. ONBOARDING FORM -->
+  <!-- 5. ONBOARDING FORM -->
   <section class="band band--join" id="join" aria-labelledby="joinTitle">
     <div class="wrap join-grid">
       <div class="join-copy rv">
-        <span class="mono">03 · Join the crew</span>
+        <span class="mono">04 · Join the crew</span>
         <h2 id="joinTitle">Claim your <span class="gold">free merch.</span></h2>
-        <ul class="gets" aria-label="What you get">
-          <li><svg aria-hidden="true"><use href="#i-box"/></svg>Free merch package</li>
-          <li><svg aria-hidden="true"><use href="#i-gift"/></svg>Giveaway codes</li>
-          <li><svg aria-hidden="true"><use href="#i-tag"/></svg>Creator discounts</li>
-          <li><svg aria-hidden="true"><use href="#i-collab"/></svg>Collab chances</li>
-        </ul>
         <blockquote class="note">
           <p>Hello! Thanks for joining the free EVADE merch handout. Fill this in so we can ship your package. When it lands, show it off, and host a giveaway with your free codes: viewers enter by reposting your video or completing a task. Thanks for being part of the EVADE community!</p>
           <footer class="mono">~beef · EVADE</footer>
@@ -462,14 +512,14 @@
             <li><i>2</i><b>We email you</b><span>Your brief and package details.</span></li>
             <li><i>3</i><b>Your package ships</b><span>Then you film.</span></li>
           </ol>
-          <a class="btn btn--ghost" href="#drop">Back to the drop</a>
+          <a class="btn btn--ghost" href="#footage">See Bobo in the wild</a>
         </div>
       </div>
     </div>
     <datalist id="countryList"></datalist>
   </section>
 
-  <!-- 5. FAQ -->
+  <!-- 6. FAQ -->
   <section class="band band--faq" id="faq" aria-labelledby="faqTitle">
     <div class="wrap faq-wrap">
       <div class="sec-head rv">
@@ -505,8 +555,9 @@
       <div>
         <h4>Crew</h4>
         <ul>
+          <li><a href="#footage">In the wild</a></li>
           <li><a href="#activated">How it works</a></li>
-          <li><a href="#drop">The drop</a></li>
+          <li><a href="#perks">Perks</a></li>
         </ul>
       </div>
       <div>
