@@ -27,14 +27,7 @@ import {
   type PublicTask,
   type WinnerStatus,
 } from "./model";
-import {
-  GKEYS,
-  gwStore,
-  newId,
-  readAllLimited,
-  sha256Hex,
-  type GwNamespace,
-} from "./store.server";
+import { GKEYS, gwStore, newId, readAllLimited, sha256Hex, type GwNamespace } from "./store.server";
 
 // Points giveaways: campaigns, entry by confirmed email, tasks and points, referrals,
 // fraud flags and the audited weighted draw. Every function takes the namespace,
@@ -88,7 +81,8 @@ export function campaignTemplate(id: string, slug: string, now = Date.now()): Gi
       t("code", {
         title: "Scan your keychain and play Cola Run",
         description: "Find the code in Cola Run after you scan the QR on your keychain.",
-        codeHint: "Scan the QR on the back of your EVADE keychain, play Cola Run, and enter the code it shows you.",
+        codeHint:
+          "Scan the QR on the back of your EVADE keychain, play Cola Run, and enter the code it shows you.",
         points: 15,
       }),
       t("discord", { title: "Join the EVADE Discord", points: 5 }),
@@ -194,7 +188,13 @@ export function publicCampaign(c: GiveawayCampaign, now = Date.now()): PublicCam
 export const GW_COOKIE = "gw_session";
 export const GW_DEVICE_COOKIE = "gw_device";
 
-type Session = { id: string; emailKey: string; email: string; createdAt: number; expiresAt: number };
+type Session = {
+  id: string;
+  emailKey: string;
+  email: string;
+  createdAt: number;
+  expiresAt: number;
+};
 type Token = {
   campaignId: string;
   entrantId: string;
@@ -222,7 +222,10 @@ export async function createGwSession(ns: GwNamespace, email: string) {
     expiresAt: now + GIVEAWAY.sessionTtlMs,
   };
   await (await gwStore(ns)).setJSON(GKEYS.session(s.id), s);
-  return { cookie: `${s.id}.${await sign(ns, s.id)}`, maxAge: Math.floor(GIVEAWAY.sessionTtlMs / 1000) };
+  return {
+    cookie: `${s.id}.${await sign(ns, s.id)}`,
+    maxAge: Math.floor(GIVEAWAY.sessionTtlMs / 1000),
+  };
 }
 
 /** The confirmed email behind a session cookie, or null. */
@@ -246,7 +249,9 @@ export async function endGwSession(ns: GwNamespace, cookie: string | null | unde
 
 async function issueToken(ns: GwNamespace, e: Entrant): Promise<string> {
   const raw = newId(32, false);
-  await (await gwStore(ns)).setJSON(GKEYS.token(await sha256Hex(raw)), {
+  await (
+    await gwStore(ns)
+  ).setJSON(GKEYS.token(await sha256Hex(raw)), {
     campaignId: e.campaignId,
     entrantId: e.id,
     emailKey: e.emailKey,
@@ -307,7 +312,8 @@ const row = (fields: Partial<LedgerRow> & Pick<LedgerRow, "kind" | "points">): L
 function honourPoints(c: GiveawayCampaign, e: Entrant) {
   const honour = new Set(c.tasks.filter((t) => !TASK_VERIFIED[t.kind]).map((t) => t.id));
   return e.ledger.reduce(
-    (s, r) => (!r.voided && r.kind === "task" && r.taskId && honour.has(r.taskId) ? s + r.points : s),
+    (s, r) =>
+      !r.voided && r.kind === "task" && r.taskId && honour.has(r.taskId) ? s + r.points : s,
     0,
   );
 }
@@ -335,7 +341,9 @@ export async function enter(
   input: EnterInput,
   meta: RequestMeta,
   sessionEmailKey: string | null,
-): Promise<Result<{ status: "check-email" | "confirmed"; devLink: string | null; entrantId: string }>> {
+): Promise<
+  Result<{ status: "check-email" | "confirmed"; devLink: string | null; entrantId: string }>
+> {
   if (campaignPhase(c) !== "open") return fail("This giveaway isn't open for entries right now.");
   if (!input.ageConfirmed) return fail(`You need to be at least ${c.minAge} to enter.`);
   const problem = eligibilityProblem(c, input.country, input.region);
@@ -387,7 +395,10 @@ export async function enter(
       confirmedAt: null,
       lastSeenAt: now,
     };
-    const claimed = await store.update<{ id: string } | null>(GKEYS.byEmail(c.id, emailHash), (cur) => cur ?? { id });
+    const claimed = await store.update<{ id: string } | null>(
+      GKEYS.byEmail(c.id, emailHash),
+      (cur) => cur ?? { id },
+    );
     if (claimed?.id !== id) {
       e = await getEntrant(ns, c.id, claimed!.id);
       if (!e) return fail("Something went wrong. Please try again.");
@@ -398,20 +409,31 @@ export async function enter(
   }
 
   if (e.status === "confirmed") {
-    return { ok: true, status: sessionEmailKey === emailKey ? "confirmed" : "check-email", devLink: sessionEmailKey === emailKey ? null : await sendLink(ns, c, e, meta.origin), entrantId: e.id };
+    return {
+      ok: true,
+      status: sessionEmailKey === emailKey ? "confirmed" : "check-email",
+      devLink: sessionEmailKey === emailKey ? null : await sendLink(ns, c, e, meta.origin),
+      entrantId: e.id,
+    };
   }
   if (sessionEmailKey === emailKey) {
     await confirmEntrant(ns, c, e.id);
     return { ok: true, status: "confirmed", devLink: null, entrantId: e.id };
   }
-  return { ok: true, status: "check-email", devLink: await sendLink(ns, c, e, meta.origin), entrantId: e.id };
+  return {
+    ok: true,
+    status: "check-email",
+    devLink: await sendLink(ns, c, e, meta.origin),
+    entrantId: e.id,
+  };
 }
 
 async function sendLink(ns: GwNamespace, c: GiveawayCampaign, e: Entrant, origin: string) {
   const token = await issueToken(ns, e);
   const url = `${origin}${GIVEAWAY_ROUTES.auth}?token=${token}`;
   const r = await sendProgramEmail(ns, e.email, {
-    subject: e.status === "confirmed" ? `Your link to ${c.title}` : `Confirm your entry: ${c.title}`,
+    subject:
+      e.status === "confirmed" ? `Your link to ${c.title}` : `Confirm your entry: ${c.title}`,
     eyebrow: c.brandLine || "MEDIALIFE",
     heading: e.status === "confirmed" ? "Here's your link" : "One tap to confirm your entry",
     body:
@@ -426,7 +448,12 @@ async function sendLink(ns: GwNamespace, c: GiveawayCampaign, e: Entrant, origin
 }
 
 /** Resends a link for an existing entry (always "ok" so it can't reveal who entered). */
-export async function resendLink(ns: GwNamespace, c: GiveawayCampaign, email: string, origin: string) {
+export async function resendLink(
+  ns: GwNamespace,
+  c: GiveawayCampaign,
+  email: string,
+  origin: string,
+) {
   const e = await findEntrant(ns, c.id, email);
   if (!e || e.status === "void") return { devLink: null };
   return { devLink: await sendLink(ns, c, e, origin) };
@@ -439,10 +466,16 @@ async function confirmEntrant(ns: GwNamespace, c: GiveawayCampaign, entrantId: s
     firstConfirm = true;
     e.status = "confirmed";
     e.confirmedAt = Date.now();
-    if (c.entryPoints > 0) e.ledger.push(row({ kind: "entry", points: c.entryPoints, note: "Confirmed entry" }));
+    if (c.entryPoints > 0)
+      e.ledger.push(row({ kind: "entry", points: c.entryPoints, note: "Confirmed entry" }));
     // Mailing-list tasks ticked on the entry form count once the email is proven.
     for (const t of c.tasks) {
-      if (t.enabled && t.kind === "newsletter" && e.consents.some((x) => x.listId === t.listId) && !e.completed[t.id]) {
+      if (
+        t.enabled &&
+        t.kind === "newsletter" &&
+        e.consents.some((x) => x.listId === t.listId) &&
+        !e.completed[t.id]
+      ) {
         e.completed[t.id] = { at: Date.now(), handle: "", detail: "Opted in on entry" };
         e.ledger.push(row({ kind: "task", taskId: t.id, points: t.points, note: t.title }));
       }
@@ -467,7 +500,9 @@ async function creditReferral(ns: GwNamespace, c: GiveawayCampaign, friend: Entr
         kind: "referral",
         refEntrantId: friend.id,
         points: c.referralPoints,
-        note: samePerson ? "Referral (same network or device as you: held for review)" : `Referral: ${maskEmail(friend.email)}`,
+        note: samePerson
+          ? "Referral (same network or device as you: held for review)"
+          : `Referral: ${maskEmail(friend.email)}`,
         voided: samePerson,
       }),
     );
@@ -476,8 +511,7 @@ async function creditReferral(ns: GwNamespace, c: GiveawayCampaign, friend: Entr
 }
 
 export type ConsumeResult =
-  | { ok: true; slug: string; email: string }
-  | { ok: false; reason: "invalid" | "expired" };
+  { ok: true; slug: string; email: string } | { ok: false; reason: "invalid" | "expired" };
 
 /** Uses an emailed link once: confirms the entry and returns the email to sign in as. */
 export async function consumeLink(ns: GwNamespace, raw: string): Promise<ConsumeResult> {
@@ -490,7 +524,8 @@ export async function consumeLink(ns: GwNamespace, raw: string): Promise<Consume
   if (t.expiresAt < Date.now()) return { ok: false, reason: "expired" };
   const c = await getCampaign(ns, t.campaignId);
   const e = await getEntrant(ns, t.campaignId, t.entrantId);
-  if (!c || !e || e.emailKey !== t.emailKey || e.status === "void") return { ok: false, reason: "invalid" };
+  if (!c || !e || e.emailKey !== t.emailKey || e.status === "void")
+    return { ok: false, reason: "invalid" };
   await confirmEntrant(ns, c, e.id);
   return { ok: true, slug: c.slug, email: e.email };
 }
@@ -533,7 +568,12 @@ export function entrantView(c: GiveawayCampaign, e: Entrant, origin: string): En
 /* ── Tasks ───────────────────────────────────────────────────────────────── */
 
 /** Records that the entrant opened an honour task's link (needed before claiming it). */
-export async function openTask(ns: GwNamespace, c: GiveawayCampaign, entrantId: string, taskId: string) {
+export async function openTask(
+  ns: GwNamespace,
+  c: GiveawayCampaign,
+  entrantId: string,
+  taskId: string,
+) {
   const t = c.tasks.find((x) => x.id === taskId && x.enabled);
   if (!t) return;
   await updateEntrant(ns, c.id, entrantId, (e) => {
@@ -553,15 +593,19 @@ export async function claimTask(
   input: ClaimInput,
   meta: { ipHash?: string } = {},
 ): Promise<Result<{ points: number; awarded: number }>> {
-  if (campaignPhase(c) !== "open") return fail("This giveaway has ended, so points can't be added.");
+  if (campaignPhase(c) !== "open")
+    return fail("This giveaway has ended, so points can't be added.");
   const t = c.tasks.find((x) => x.id === input.taskId && x.enabled);
   if (!t) return fail("That task isn't available.");
   if (t.kind === "discord") return fail("Use the Discord button to check this one.");
   const handle = (input.handle ?? "").trim().replace(/^@+/, "").slice(0, 60);
   const code = (input.code ?? "").trim().toUpperCase();
   if (t.kind === "follow" && !/^[A-Za-z0-9._-]{2,60}$/.test(handle))
-    return fail(`Enter your ${t.platform === "youtube" ? "YouTube channel name" : "username"} so we can check it if you win.`);
-  if (t.kind === "code" && !t.codes.includes(code)) return fail("That code isn't right. Check it and try again.");
+    return fail(
+      `Enter your ${t.platform === "youtube" ? "YouTube channel name" : "username"} so we can check it if you win.`,
+    );
+  if (t.kind === "code" && !t.codes.includes(code))
+    return fail("That code isn't right. Check it and try again.");
 
   let error: string | null = null;
   let awarded = 0;
@@ -583,10 +627,26 @@ export async function claimTask(
       pts = Math.max(0, Math.min(pts, c.honourCap - honourPoints(c, e)));
     if (t.kind === "newsletter" && t.listId && !e.consents.some((x) => x.listId === t.listId)) {
       const list = c.optIns.find((o) => o.id === t.listId);
-      e.consents.push({ listId: t.listId, label: list?.label ?? t.title, at: Date.now(), ipHash: meta.ipHash ?? e.ipHash });
+      e.consents.push({
+        listId: t.listId,
+        label: list?.label ?? t.title,
+        at: Date.now(),
+        ipHash: meta.ipHash ?? e.ipHash,
+      });
     }
-    e.completed[t.id] = { at: Date.now(), handle, detail: t.kind === "code" ? "Code accepted" : "" };
-    e.ledger.push(row({ kind: "task", taskId: t.id, points: pts, note: t.title + (handle ? ` (@${handle})` : "") }));
+    e.completed[t.id] = {
+      at: Date.now(),
+      handle,
+      detail: t.kind === "code" ? "Code accepted" : "",
+    };
+    e.ledger.push(
+      row({
+        kind: "task",
+        taskId: t.id,
+        points: pts,
+        note: t.title + (handle ? ` (@${handle})` : ""),
+      }),
+    );
     e.lastSeenAt = Date.now();
     awarded = pts;
     return e;
@@ -609,12 +669,26 @@ export async function completeDiscordTask(
   if (!t?.guildId) return "error";
   if (!discord.guildIds.includes(t.guildId)) return "not-member";
   const store = await gwStore(ns);
-  const owner = await store.update<{ id: string } | null>(GKEYS.byDiscord(c.id, discord.id), (cur) => cur ?? { id: entrantId });
+  const owner = await store.update<{ id: string } | null>(
+    GKEYS.byDiscord(c.id, discord.id),
+    (cur) => cur ?? { id: entrantId },
+  );
   if (owner?.id !== entrantId) return "taken";
   const e = await updateEntrant(ns, c.id, entrantId, (e) => {
     if (e.status !== "confirmed" || e.completed[t.id]) return e;
-    e.completed[t.id] = { at: Date.now(), handle: discord.username, detail: `Discord ${discord.id}` };
-    e.ledger.push(row({ kind: "task", taskId: t.id, points: t.points, note: `${t.title} (@${discord.username})` }));
+    e.completed[t.id] = {
+      at: Date.now(),
+      handle: discord.username,
+      detail: `Discord ${discord.id}`,
+    };
+    e.ledger.push(
+      row({
+        kind: "task",
+        taskId: t.id,
+        points: t.points,
+        note: `${t.title} (@${discord.username})`,
+      }),
+    );
     return e;
   });
   return e ? "done" : "error";
@@ -641,7 +715,13 @@ export type AdminEntrantRow = {
   points: number;
   tasksDone: number;
   referrals: number;
-  handles: { taskId: string; title: string; platform: string | null; handle: string; url: string }[];
+  handles: {
+    taskId: string;
+    title: string;
+    platform: string | null;
+    handle: string;
+    url: string;
+  }[];
   optIns: string[];
   flags: EntrantFlag[];
   createdAt: number;
@@ -685,7 +765,13 @@ export function adminRows(c: GiveawayCampaign, entrants: Entrant[]): AdminEntran
       referrals: e.ledger.filter((r) => r.kind === "referral" && !r.voided).length,
       handles: c.tasks
         .filter((t) => e.completed[t.id]?.handle)
-        .map((t) => ({ taskId: t.id, title: t.title, platform: t.platform, handle: e.completed[t.id].handle, url: t.url })),
+        .map((t) => ({
+          taskId: t.id,
+          title: t.title,
+          platform: t.platform,
+          handle: e.completed[t.id].handle,
+          url: t.url,
+        })),
       optIns: e.consents.map((x) => x.listId),
       flags: flags.get(e.id) ?? [],
       createdAt: e.createdAt,
@@ -726,7 +812,13 @@ export async function adjustPoints(
       const r = e.ledger.find((x) => x.id === input.rowId);
       if (r && input.voided != null) r.voided = input.voided;
     } else if (input.points) {
-      e.ledger.push(row({ kind: "adjust", points: Math.round(input.points), note: (input.note || "Adjusted by the team").slice(0, 200) }));
+      e.ledger.push(
+        row({
+          kind: "adjust",
+          points: Math.round(input.points),
+          note: (input.note || "Adjusted by the team").slice(0, 200),
+        }),
+      );
     }
     return e;
   });
@@ -741,10 +833,15 @@ export async function listDraws(ns: GwNamespace, campaignId: string) {
 }
 
 /** Draws one winner per prize unit plus alternates, from confirmed entries with ≥1 point. */
-export async function runDraw(ns: GwNamespace, c: GiveawayCampaign): Promise<Result<{ draw: GiveawayDraw }>> {
+export async function runDraw(
+  ns: GwNamespace,
+  c: GiveawayCampaign,
+): Promise<Result<{ draw: GiveawayDraw }>> {
   const slots = c.prizes.flatMap((p) => Array.from({ length: p.quantity }, () => p.id));
   if (!slots.length) return fail("Add the prizes first: the draw picks one winner per prize.");
-  const entrants = (await listEntrants(ns, c.id)).filter((e) => e.status === "confirmed" && e.points > 0);
+  const entrants = (await listEntrants(ns, c.id)).filter(
+    (e) => e.status === "confirmed" && e.points > 0,
+  );
   if (!entrants.length) return fail("There are no confirmed entries with points yet.");
   const pool = snapshot(entrants.map((e) => ({ id: e.id, tickets: e.points })));
   const seed = newSeed();
@@ -839,7 +936,9 @@ export async function emailWinner(
     url: `${origin}${GIVEAWAY_ROUTES.rules(c.slug)}`,
     footer: `You entered ${c.title} with this address. If you don't reply within ${GIVEAWAY.claimDays} days the prize goes to an alternate.`,
   });
-  return r.sent || r.devLink ? { ok: true as const, devLink: r.sent ? null : (r.devLink ?? null) } : fail("The email couldn't be sent. Check RESEND_API_KEY on Netlify.");
+  return r.sent || r.devLink
+    ? { ok: true as const, devLink: r.sent ? null : (r.devLink ?? null) }
+    : fail("The email couldn't be sent. Check RESEND_API_KEY on Netlify.");
 }
 
 /* ── CSV ─────────────────────────────────────────────────────────────────── */
@@ -855,7 +954,20 @@ export function entrantsCsv(c: GiveawayCampaign, entrants: Entrant[]) {
   const rows = adminRows(c, entrants);
   const honourTasks = c.tasks.filter((t) => t.kind === "follow");
   return csv([
-    ["name", "email", "country", "region", "status", "points", "tasks_done", "referrals", "flags", "entered", "confirmed", ...honourTasks.map((t) => t.title)],
+    [
+      "name",
+      "email",
+      "country",
+      "region",
+      "status",
+      "points",
+      "tasks_done",
+      "referrals",
+      "flags",
+      "entered",
+      "confirmed",
+      ...honourTasks.map((t) => t.title),
+    ],
     ...rows.map((r) => [
       r.name,
       r.email,
@@ -882,7 +994,14 @@ export function subscribersCsv(entrants: Entrant[], listId: string) {
       .flatMap((e) =>
         e.consents
           .filter((x) => x.listId === listId)
-          .map((x) => [e.email, e.name, e.country, x.listId, x.label, new Date(x.at).toISOString()]),
+          .map((x) => [
+            e.email,
+            e.name,
+            e.country,
+            x.listId,
+            x.label,
+            new Date(x.at).toISOString(),
+          ]),
       ),
   ]);
 }

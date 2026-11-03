@@ -70,9 +70,7 @@ const ready: GiveawayCampaign = {
   sponsor: "MEDIALIFE Inc.",
   startsAt: Date.now() - 1000,
   endsAt: Date.now() + 86_400_000,
-  prizes: [
-    { id: "p1", title: "EVADE merch pack", description: "", retailValue: 60, quantity: 2 },
-  ],
+  prizes: [{ id: "p1", title: "EVADE merch pack", description: "", retailValue: 60, quantity: 2 }],
   honourCap: 8,
   tasks: c.tasks.map((t) =>
     t.id === igEvade.id
@@ -89,11 +87,22 @@ const ready: GiveawayCampaign = {
 const saved = await saveCampaign(ns, ready);
 assert.ok(saved.ok, saved.ok ? "" : saved.error);
 c = saved.campaign;
-assert.deepEqual(c.tasks.find((t) => t.kind === "code")!.codes, ["BOBO-2026"], "codes are normalised");
+assert.deepEqual(
+  c.tasks.find((t) => t.kind === "code")!.codes,
+  ["BOBO-2026"],
+  "codes are normalised",
+);
 
 // 4. Entry → confirm
 const meta = { ip: "1.1.1.1", device: "dev-a", origin: "http://localhost:3000" };
-const base = { name: "Ana", country: "CA", region: "ON", ageConfirmed: true, optIns: ["medialife"], ref: null };
+const base = {
+  name: "Ana",
+  country: "CA",
+  region: "ON",
+  ageConfirmed: true,
+  optIns: ["medialife"],
+  ref: null,
+};
 assert.ok(!(await enter(ns, c, { ...base, email: "x@mailinator.com" }, meta, null)).ok);
 assert.ok(!(await enter(ns, c, { ...base, email: "q@x.com", region: "QC" }, meta, null)).ok);
 const a = await enter(ns, c, { ...base, email: "Ana.B@gmail.com" }, meta, null);
@@ -112,7 +121,11 @@ assert.ok(consumed.ok && consumed.slug === "evade-launch");
 assert.equal((await consumeLink(ns, token)).ok, false, "links work once");
 ana = (await getEntrant(ns, c.id, a.entrantId))!;
 assert.equal(ana.status, "confirmed");
-assert.equal(ana.points, c.entryPoints + newsletter.points, "entry + mailing list ticked on the form");
+assert.equal(
+  ana.points,
+  c.entryPoints + newsletter.points,
+  "entry + mailing list ticked on the form",
+);
 
 // 5. Tasks
 assert.ok(!(await claimTask(ns, c, ana.id, { taskId: codeTask.id, code: "nope" })).ok);
@@ -131,14 +144,23 @@ await openTask(ns, c, ana.id, igEvade.id);
   rec.opened[igEvade.id] = Date.now() - GIVEAWAY.minOpenMs - 10;
   await s.setJSON(`entrants/${c.id}/${ana.id}`, rec);
 }
-assert.ok(!(await claimTask(ns, c, ana.id, { taskId: igEvade.id, handle: "a" })).ok, "handle needed");
+assert.ok(
+  !(await claimTask(ns, c, ana.id, { taskId: igEvade.id, handle: "a" })).ok,
+  "handle needed",
+);
 const ig = await claimTask(ns, c, ana.id, { taskId: igEvade.id, handle: "@ana_b" });
 assert.ok(ig.ok && ig.awarded === 5);
 assert.equal((await getEntrant(ns, c.id, ana.id))!.completed[igEvade.id].handle, "ana_b");
 
 // 6. Referrals: paid on the friend's confirm; same device is held
 const refCode = ana.refCode;
-const b = await enter(ns, c, { ...base, email: "ben@example.com", ref: refCode }, { ...meta, ip: "2.2.2.2", device: "dev-b" }, null);
+const b = await enter(
+  ns,
+  c,
+  { ...base, email: "ben@example.com", ref: refCode },
+  { ...meta, ip: "2.2.2.2", device: "dev-b" },
+  null,
+);
 assert.ok(b.ok);
 await consumeLink(ns, new URL(b.devLink!).searchParams.get("token")!);
 const d = await enter(ns, c, { ...base, email: "dup@example.com", ref: refCode }, meta, null);
@@ -155,7 +177,13 @@ assert.ok(rows.find((r) => r.id === ana.id)!.flags.includes("held-referrals"));
 const sess = await createGwSession(ns, "Ana.B@gmail.com");
 assert.equal((await resolveGwSession(ns, sess.cookie))!.emailKey, "anab@gmail.com");
 assert.equal(await resolveGwSession(ns, sess.cookie + "x"), null);
-const quick = await enter(ns, c, { ...base, email: "cara@example.com" }, { ...meta, ip: "3.3.3.3" }, foldEmail("cara@example.com"));
+const quick = await enter(
+  ns,
+  c,
+  { ...base, email: "cara@example.com" },
+  { ...meta, ip: "3.3.3.3" },
+  foldEmail("cara@example.com"),
+);
 assert.ok(quick.ok && quick.status === "confirmed", "a signed-in email confirms straight away");
 
 // 8. Void + adjust
@@ -170,7 +198,11 @@ const pool = [
   { id: "c", tickets: 0 },
 ];
 const seed = "00".repeat(32);
-assert.deepEqual(await weightedDraw(seed, pool, 2), await weightedDraw(seed, pool, 2), "same seed, same result");
+assert.deepEqual(
+  await weightedDraw(seed, pool, 2),
+  await weightedDraw(seed, pool, 2),
+  "same seed, same result",
+);
 assert.equal(await snapshotHash(pool), await snapshotHash([...pool].reverse()));
 let bFirst = 0;
 for (let i = 0; i < 200; i++) {
@@ -191,7 +223,11 @@ if (drawn.draw.picks.some((p) => p.role === "alternate")) {
   const first = winners[0];
   const after = await setPickStatus(ns, c.id, drawn.draw.id, first.entrantId, "forfeited");
   assert.ok(after.ok);
-  assert.equal(after.draw.picks.filter((p) => p.role === "winner").length, winners.length, "alternate steps in");
+  assert.equal(
+    after.draw.picks.filter((p) => p.role === "winner").length,
+    winners.length,
+    "alternate steps in",
+  );
 }
 
 // 10. CSV: formulas neutralised, opt-ins only for confirmed
