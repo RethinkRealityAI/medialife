@@ -21,7 +21,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dir = path.join(root, "scripts", "hub-tests");
 const tmp = await mkdtemp(path.join(tmpdir(), "hub-tests-"));
 let failed = false;
-const ALL = ["commerce", "auth", "assets", "partners", "ugc", "media", "collector"];
+const ALL = ["commerce", "auth", "assets", "partners", "ugc", "media", "collector", "giveaway"];
 const only = process.argv.slice(2);
 const suites = only.length ? ALL.filter((n) => only.includes(n)) : ALL;
 if (only.length && suites.length !== only.length) {
