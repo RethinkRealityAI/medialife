@@ -404,6 +404,14 @@ function EntryForm({ data, refCode }: { data: GiveawayData; refCode?: string }) 
         We'll email you a link to confirm. Then complete tasks for more points: every point is a
         ticket.
       </p>
+      {c.tasks.length ? (
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-[#bff7f4]">
+          <Sparkles className="size-3.5" aria-hidden />
+          {c.tasks.length} ways to earn up to{" "}
+          {c.entryPoints + c.tasks.reduce((s, t) => s + t.points, 0)} points
+          {c.referralPoints > 0 ? ", plus more for each friend you invite" : ""}
+        </p>
+      ) : null}
       {refCode ? (
         <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#f6c344]/10 px-3 py-1 text-[13px] text-[#ffe48a] ring-1 ring-[#f6c344]/30 ring-inset">
           <Users className="size-3.5" aria-hidden /> A friend invited you
