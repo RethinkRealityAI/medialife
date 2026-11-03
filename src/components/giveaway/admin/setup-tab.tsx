@@ -39,6 +39,7 @@ import {
   type GiveawayTask,
   type TaskKind,
 } from "@/lib/giveaway/model";
+import { DateTimePicker } from "./date-time-picker";
 import { SAMPLE_HOW_IT_WORKS, generatedRules } from "@/lib/giveaway/rules";
 import { cn } from "@/lib/utils";
 
@@ -53,14 +54,6 @@ const PROFILE_HINT: Record<string, string> = {
 };
 
 const rid = () => Math.random().toString(36).slice(2, 10);
-
-const toLocal = (ms: number | null) => {
-  if (!ms) return "";
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
-const fromLocal = (v: string) => (v ? new Date(v).getTime() || null : null);
 
 const select =
   "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none";
@@ -250,28 +243,28 @@ export function SetupTab({ campaign, origin }: { campaign: GiveawayCampaign; ori
       <Panel className="p-5">
         <PanelTitle
           title="Dates"
-          sub="In your computer's time zone. Entries and points only count between start and end."
+          sub="Click a date to open the calendar. Times are in your computer's time zone. Entries and points only count between start and end."
         />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Field label="Starts">
-            <Input
-              type="datetime-local"
-              value={toLocal(c.startsAt)}
-              onChange={(e) => set("startsAt", fromLocal(e.target.value))}
+            <DateTimePicker
+              value={c.startsAt}
+              onChange={(ms) => set("startsAt", ms)}
+              defaultTime={{ h: 0, m: 0 }}
             />
           </Field>
           <Field label="Ends">
-            <Input
-              type="datetime-local"
-              value={toLocal(c.endsAt)}
-              onChange={(e) => set("endsAt", fromLocal(e.target.value))}
+            <DateTimePicker
+              value={c.endsAt}
+              onChange={(ms) => set("endsAt", ms)}
+              defaultTime={{ h: 23, m: 59 }}
             />
           </Field>
           <Field label="Draw date">
-            <Input
-              type="datetime-local"
-              value={toLocal(c.drawAt)}
-              onChange={(e) => set("drawAt", fromLocal(e.target.value))}
+            <DateTimePicker
+              value={c.drawAt}
+              onChange={(ms) => set("drawAt", ms)}
+              defaultTime={{ h: 12, m: 0 }}
             />
           </Field>
           <Field label="Time zone label" hint="Shown in the rules, e.g. ET.">

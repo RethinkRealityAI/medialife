@@ -41,6 +41,24 @@ const fail = (error: string) => ({ ok: false as const, error });
 
 /** A new campaign, pre-filled with the agreed points table. Handles and links stay blank for the team. */
 /**
+ * The first EVADE giveaway runs Nov 15 to Dec 30, 2026 (Eastern), drawn Jan 5.
+ * Once those dates have passed, a new sample starts a week out and runs 4 weeks.
+ */
+const FIRST_RUN = {
+  startsAt: Date.UTC(2026, 10, 15, 5, 0), // Nov 15, 12:00 AM EST
+  endsAt: Date.UTC(2026, 11, 31, 4, 59), // Dec 30, 11:59 PM EST
+  drawAt: Date.UTC(2027, 0, 5, 17, 0), // Jan 5, 12:00 PM EST
+};
+function sampleDates(now: number) {
+  if (now < FIRST_RUN.startsAt) return FIRST_RUN;
+  return {
+    startsAt: sampleNoonET(now, 7),
+    endsAt: sampleNoonET(now, 35),
+    drawAt: sampleNoonET(now, 37),
+  };
+}
+
+/**
  * Noon Eastern on the day `days` from now. The sample dates are only a starting
  * point; the team sets the real ones in admin.
  */
@@ -72,9 +90,7 @@ export function campaignTemplate(id: string, slug: string, now = Date.now()): Gi
       "REPLACE with the sponsor's mailing address (street, city, province, postal code)",
     brandLine: "MEDIALIFE × EVADE",
     heroImage: "/evade/creators/assets/img/cola-run-splash.webp",
-    startsAt: sampleNoonET(now, 7),
-    endsAt: sampleNoonET(now, 35),
-    drawAt: sampleNoonET(now, 37),
+    ...sampleDates(now),
     timeZoneLabel: "ET",
     prizes: [
       {
