@@ -156,6 +156,11 @@ export type GiveawayCampaign = {
    * lines starting "## " = headings). Empty = the page shows the generated rules.
    */
   rulesText: string;
+  /**
+   * "How it works" for entrants, shown on the campaign page (same plain-text
+   * format as the rules). Empty = a short generated version.
+   */
+  howItWorks: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -420,8 +425,27 @@ export function blankTask(id: string, kind: TaskKind): GiveawayTask {
 }
 
 /** What still needs filling in before a campaign can go live (empty = ready). */
+/**
+ * The sample campaign marks what the team still has to fill in with "REPLACE"
+ * (e.g. "https://www.instagram.com/REPLACE_EVADE_HANDLE"). Going live is blocked
+ * while any of it is left.
+ */
+export const PLACEHOLDER = "REPLACE";
+const hasPlaceholder = (...v: (string | null | undefined)[]) =>
+  v.some((x) => (x ?? "").includes(PLACEHOLDER));
+
 export function goLiveProblems(c: GiveawayCampaign): string[] {
   const out: string[] = [];
+  const sample = (where: string) =>
+    out.push(`${where}: replace the sample text marked ${PLACEHOLDER}.`);
+  if (hasPlaceholder(c.title, c.tagline, c.brandLine)) sample("Title or tagline");
+  if (hasPlaceholder(c.sponsor, c.sponsorAddress)) sample("Sponsor");
+  if (c.prizes.some((p) => hasPlaceholder(p.title, p.description))) sample("Prizes");
+  if (hasPlaceholder(c.howItWorks)) sample("How it works");
+  if (hasPlaceholder(c.rulesText)) sample("Official rules");
+  for (const t of c.tasks.filter((t) => t.enabled))
+    if (hasPlaceholder(t.title, t.description, t.url, t.codeHint, ...t.codes))
+      sample(`"${t.title.trim() || TASK_KIND_LABELS[t.kind]}"`);
   if (!c.title.trim()) out.push("Add a title.");
   if (!c.sponsor.trim()) out.push("Add the sponsor (who legally runs the giveaway).");
   if (!c.endsAt) out.push("Set the end date.");

@@ -104,6 +104,7 @@ const campaignSchema = z.object({
   optIns: z.array(z.object({ id: z.string().regex(/^[a-z0-9-]{2,40}$/), label: str(200) })).max(10),
   tasks: z.array(taskSchema).max(30),
   rulesText: z.string().max(60_000),
+  howItWorks: z.string().max(10_000).default(""),
 });
 
 export const adminListGiveaways = createServerFn({ method: "GET" }).handler(async () => {

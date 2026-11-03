@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { signWithHubSecret, authConfigured } from "@/lib/hub/auth.server";
 import { sendProgramEmail } from "@/lib/hub/mail.server";
 
+import { SAMPLE_HOW_IT_WORKS } from "./rules";
 import { newSeed, skillQuestion, snapshot, snapshotHash, weightedDraw } from "./draw";
 import {
   GIVEAWAY,
@@ -39,6 +40,21 @@ const fail = (error: string) => ({ ok: false as const, error });
 /* ── Campaigns ───────────────────────────────────────────────────────────── */
 
 /** A new campaign, pre-filled with the agreed points table. Handles and links stay blank for the team. */
+/**
+ * Noon Eastern on the day `days` from now. The sample dates are only a starting
+ * point; the team sets the real ones in admin.
+ */
+function sampleNoonET(now: number, days: number) {
+  const d = new Date(now + days * 86_400_000);
+  // 17:00 UTC is noon EST (Nov–Mar) and 1 pm EDT, close enough for a sample.
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 17);
+}
+
+/**
+ * A new campaign starts as a filled-in sample built on the agreed points table:
+ * the team edits it rather than starting from blank. Anything the team still has
+ * to supply is marked REPLACE, and goLiveProblems blocks going live until it's gone.
+ */
 export function campaignTemplate(id: string, slug: string, now = Date.now()): GiveawayCampaign {
   const t = (kind: GiveawayTask["kind"], fields: Partial<GiveawayTask>): GiveawayTask => ({
     ...blankTask(newId(6, false), kind),
@@ -49,16 +65,34 @@ export function campaignTemplate(id: string, slug: string, now = Date.now()): Gi
     slug,
     status: "draft",
     title: "Win the EVADE drop",
-    tagline: "Complete tasks, earn points. Every point is one more ticket in the draw.",
+    tagline:
+      "Complete tasks, earn points, and every point is one more ticket in the draw. The more you do, the better your odds.",
     sponsor: "MEDIALIFE",
-    sponsorAddress: "",
+    sponsorAddress:
+      "REPLACE with the sponsor's mailing address (street, city, province, postal code)",
     brandLine: "MEDIALIFE × EVADE",
     heroImage: "/evade/creators/assets/img/cola-run-splash.webp",
-    startsAt: null,
-    endsAt: null,
-    drawAt: null,
+    startsAt: sampleNoonET(now, 7),
+    endsAt: sampleNoonET(now, 35),
+    drawAt: sampleNoonET(now, 37),
     timeZoneLabel: "ET",
-    prizes: [],
+    prizes: [
+      {
+        id: newId(6, false),
+        title: "EVADE × MEDIALIFE grand prize pack",
+        description:
+          "REPLACE with what's in the pack (e.g. hoodie, cans, Bobo keychain, signed merch)",
+        retailValue: 250,
+        quantity: 1,
+      },
+      {
+        id: newId(6, false),
+        title: "Bobo cat + Eclipse can keychain",
+        description: "The limited EVADE keychain with the Cola Run QR on the back.",
+        retailValue: 25,
+        quantity: 5,
+      },
+    ],
     currency: "CAD",
     countries: ["CA", "US"],
     excludedRegions: ["CA-QC"],
@@ -74,49 +108,91 @@ export function campaignTemplate(id: string, slug: string, now = Date.now()): Gi
     tasks: [
       t("newsletter", {
         title: "Join the MEDIALIFE mailing list",
-        description: "Drops, behind the scenes and first dibs on merch.",
+        description: "Drops, behind the scenes and first dibs on merch. Unsubscribe any time.",
         points: 10,
         listId: "medialife",
       }),
       t("code", {
         title: "Scan your keychain and play Cola Run",
-        description: "Find the code in Cola Run after you scan the QR on your keychain.",
-        codeHint:
+        description:
           "Scan the QR on the back of your EVADE keychain, play Cola Run, and enter the code it shows you.",
+        codeHint: "The code appears in Cola Run after you scan your keychain.",
+        codes: ["REPLACE-WITH-CODE"],
         points: 15,
       }),
-      t("discord", { title: "Join the EVADE Discord", points: 5 }),
+      t("discord", {
+        title: "Join the EVADE Discord",
+        description:
+          "Sign in with Discord and we'll check you're in the server. Nothing is posted for you.",
+        url: "https://discord.gg/REPLACE_INVITE",
+        points: 5,
+      }),
       t("follow", {
         title: "Follow MEDIALIFE on Instagram",
+        description: "Tap Follow, then come back and add your Instagram handle.",
         platform: "instagram",
         url: "https://www.instagram.com/medialife.ai",
         points: 5,
       }),
-      t("follow", { title: "Follow EVADE on Instagram", platform: "instagram", points: 5 }),
-      t("follow", { title: "Follow EVADE on TikTok", platform: "tiktok", points: 5 }),
-      t("follow", { title: "Subscribe on YouTube", platform: "youtube", points: 5 }),
-      t("follow", { title: "Follow on X", platform: "x", points: 3 }),
-      t("visit", { title: "Watch the Cola Run trailer", points: 2 }),
+      t("follow", {
+        title: "Follow EVADE on Instagram",
+        description: "Tap Follow, then come back and add your Instagram handle.",
+        platform: "instagram",
+        url: "https://www.instagram.com/REPLACE_EVADE_HANDLE",
+        points: 5,
+      }),
+      t("follow", {
+        title: "Follow EVADE on TikTok",
+        description: "Tap Follow, then come back and add your TikTok handle.",
+        platform: "tiktok",
+        url: "https://www.tiktok.com/@REPLACE_EVADE_HANDLE",
+        points: 5,
+      }),
+      t("follow", {
+        title: "Subscribe on YouTube",
+        description: "Subscribe to the channel, then come back and add your YouTube handle.",
+        platform: "youtube",
+        url: "https://www.youtube.com/@REPLACE_CHANNEL",
+        points: 5,
+      }),
+      t("follow", {
+        title: "Follow on X",
+        description: "Tap Follow, then come back and add your X handle.",
+        platform: "x",
+        url: "https://x.com/REPLACE_HANDLE",
+        points: 3,
+      }),
+      t("visit", {
+        title: "Watch the Cola Run trailer",
+        description: "Watch the trailer, then come back to collect your points.",
+        url: "https://www.youtube.com/watch?v=REPLACE_TRAILER_ID",
+        points: 2,
+      }),
     ],
     rulesText: "",
+    howItWorks: SAMPLE_HOW_IT_WORKS,
     createdAt: now,
     updatedAt: now,
   };
 }
 
+/** Fills fields added after a campaign was saved, so older campaigns still load. */
+const withDefaults = (c: GiveawayCampaign | null): GiveawayCampaign | null =>
+  c ? { ...c, howItWorks: c.howItWorks ?? "" } : null;
+
 export async function getCampaign(ns: GwNamespace, id: string) {
-  return (await gwStore(ns)).getJSON<GiveawayCampaign>(GKEYS.campaign(id));
+  return withDefaults(await (await gwStore(ns)).getJSON<GiveawayCampaign>(GKEYS.campaign(id)));
 }
 
 export async function getCampaignBySlug(ns: GwNamespace, slug: string) {
   const store = await gwStore(ns);
   const ref = await store.getJSON<{ id: string }>(GKEYS.slug(slug));
-  return ref ? store.getJSON<GiveawayCampaign>(GKEYS.campaign(ref.id)) : null;
+  return ref ? withDefaults(await store.getJSON<GiveawayCampaign>(GKEYS.campaign(ref.id))) : null;
 }
 
 export async function listCampaigns(ns: GwNamespace): Promise<GiveawayCampaign[]> {
   const all = await readAllLimited<GiveawayCampaign>(await gwStore(ns), GKEYS.campaigns());
-  return all.sort((a, b) => b.updatedAt - a.updatedAt);
+  return all.map((c) => withDefaults(c)!).sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export async function createCampaign(
