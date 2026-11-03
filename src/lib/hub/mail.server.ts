@@ -178,3 +178,39 @@ export function sendPartnerInvite(
     input.url,
   );
 }
+
+/**
+ * A one-button email for programs outside the Creator Hub (the EVADE UGC Hub):
+ * its own eyebrow and footer, the same layout and the same no-key behaviour
+ * (the link is logged and handed back on localhost and previews).
+ */
+export function sendProgramEmail(
+  ns: HubNamespace,
+  to: string,
+  input: {
+    subject: string;
+    eyebrow: string;
+    heading: string;
+    /** Plain text; escaped here. Blank lines become paragraph breaks. */
+    body: string;
+    cta: string;
+    url: string;
+    footer: string;
+  },
+) {
+  return send(
+    ns,
+    to,
+    input.subject,
+    layout({
+      eyebrow: escape(input.eyebrow),
+      heading: input.heading,
+      body: escape(input.body).replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>"),
+      cta: input.cta,
+      url: input.url,
+      footer: escape(input.footer),
+    }),
+    `${input.heading}\n\n${input.body}\n\n${input.cta}: ${input.url}\n\n${input.footer}`,
+    input.url,
+  );
+}

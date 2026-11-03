@@ -61,12 +61,20 @@ export function authConfigured(ns: HubNamespace): boolean {
   return sessionSecret(ns) !== null;
 }
 
-async function hmac(ns: HubNamespace, data: string): Promise<string> {
+/**
+ * HMAC-SHA256 with the hub secret, kept apart per purpose: "hub" signs Creator
+ * Hub session cookies; the UGC Hub signs its own cookies with "ugc".
+ */
+export async function signWithHubSecret(
+  ns: HubNamespace,
+  purpose: string,
+  data: string,
+): Promise<string> {
   const secret = sessionSecret(ns);
   if (!secret) throw new Error("HUB_SESSION_SECRET is not set");
   const key = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(`${secret}:hub`),
+    new TextEncoder().encode(`${secret}:${purpose}`),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"],
@@ -74,6 +82,8 @@ async function hmac(ns: HubNamespace, data: string): Promise<string> {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return Buffer.from(sig).toString("base64url");
 }
+
+const hmac = (ns: HubNamespace, data: string) => signWithHubSecret(ns, "hub", data);
 
 function safeEqual(a: string, b: string): boolean {
   const x = Buffer.from(a);

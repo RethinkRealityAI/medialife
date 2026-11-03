@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Drop stage test · EVADE</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Tilt+Neon&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/",
+          "qrcode": "/roblox/creators/vendor/qrcode/qrcode.esm.js"
+        }
+      }
+    </script>
+    <script type="module" src="/evade/creators/assets/js/stage.js"></script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #05080b;
+        color: #eee;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+      }
+      .wrap {
+        padding: 24px 16px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      #dropStage {
+        width: 100%;
+        height: min(78vh, 760px);
+        border-radius: 24px;
+      }
+      @media (max-width: 640px) {
+        .wrap {
+          padding: 12px 0;
+        }
+        #dropStage {
+          height: 600px;
+          border-radius: 0;
+        }
+      }
+      .spacer {
+        height: 60vh;
+        display: grid;
+        place-items: center;
+        color: #6b7c85;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div id="dropStage" class="drop-stage" data-gameplay-url="#cola-run"></div>
+    </div>
+    <div class="spacer">(scroll test area)</div>
+  </body>
+</html>

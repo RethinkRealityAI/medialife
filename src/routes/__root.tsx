@@ -165,6 +165,7 @@ function RootComponent() {
         p.startsWith("/admin") ||
         p.startsWith("/overlay/") ||
         p.startsWith("/partner-hub") ||
+        p.startsWith("/ugc-hub") ||
         // Co-branded partner program pages carry both brands, not the site nav.
         p.startsWith("/with/") ||
         (p.startsWith("/creator-hub/") && p !== "/creator-hub/")

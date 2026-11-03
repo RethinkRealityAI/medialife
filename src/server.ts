@@ -52,6 +52,8 @@ const UNLISTED_PREFIXES = [
   "/overlay",
   "/shelf",
   "/merch-shelf",
+  // the EVADE UGC Hub is an app for accepted creators
+  "/ugc-hub",
 ] as const;
 
 function isUnlisted(pathname: string): boolean {
