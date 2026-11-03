@@ -61,14 +61,23 @@ const taskSchema = z.object({
 
 const campaignSchema = z.object({
   id,
-  slug: z.string().refine((s) => !slugProblem(s), "Use 3 to 48 lowercase letters, numbers and dashes."),
+  slug: z
+    .string()
+    .refine((s) => !slugProblem(s), "Use 3 to 48 lowercase letters, numbers and dashes."),
   status: z.enum(CAMPAIGN_STATUSES),
   title: str(120),
   tagline: str(300),
   sponsor: str(160),
   sponsorAddress: str(300),
   brandLine: str(80),
-  heroImage: z.union([z.literal(""), z.string().trim().max(500).regex(/^(https:\/\/|\/)/, "Use a /path or https:// link")]),
+  heroImage: z.union([
+    z.literal(""),
+    z
+      .string()
+      .trim()
+      .max(500)
+      .regex(/^(https:\/\/|\/)/, "Use a /path or https:// link"),
+  ]),
   startsAt: ms,
   endsAt: ms,
   drawAt: ms,
@@ -140,7 +149,8 @@ export const adminGetGiveaway = createServerFn({ method: "GET" })
     const rows = adminRows(c, entrants);
     const confirmed = rows.filter((r) => r.status === "confirmed");
     const taskCounts: Record<string, number> = {};
-    for (const e of entrants) for (const t of Object.keys(e.completed)) taskCounts[t] = (taskCounts[t] ?? 0) + 1;
+    for (const e of entrants)
+      for (const t of Object.keys(e.completed)) taskCounts[t] = (taskCounts[t] ?? 0) + 1;
     return {
       ns,
       origin: publicOrigin(getRequest(), ns),
@@ -185,7 +195,9 @@ export const adminGetEntrant = createServerFn({ method: "GET" })
   });
 
 export const adminVoidEntrant = createServerFn({ method: "POST" })
-  .validator(z.object({ campaignId: id, entrantId: id, voided: z.boolean(), reason: str(200).default("") }))
+  .validator(
+    z.object({ campaignId: id, entrantId: id, voided: z.boolean(), reason: str(200).default("") }),
+  )
   .handler(async ({ data }) => {
     const ns = await requireHubAdmin();
     return setEntrantVoid(ns, data.campaignId, data.entrantId, data.voided, data.reason);
@@ -243,7 +255,13 @@ export const adminEmailWinner = createServerFn({ method: "POST" })
   });
 
 export const adminExportCsv = createServerFn({ method: "GET" })
-  .validator(z.object({ campaignId: id, kind: z.enum(["entrants", "subscribers"]), listId: z.string().max(40).optional() }))
+  .validator(
+    z.object({
+      campaignId: id,
+      kind: z.enum(["entrants", "subscribers"]),
+      listId: z.string().max(40).optional(),
+    }),
+  )
   .handler(async ({ data }) => {
     const ns = await requireHubAdmin();
     const c = await getCampaign(ns, data.campaignId);
@@ -251,5 +269,8 @@ export const adminExportCsv = createServerFn({ method: "GET" })
     const entrants = await listEntrants(ns, c.id);
     return data.kind === "entrants"
       ? { filename: `${c.slug}-entrants.csv`, csv: entrantsCsv(c, entrants) }
-      : { filename: `${c.slug}-${data.listId}-subscribers.csv`, csv: subscribersCsv(entrants, data.listId ?? "") };
+      : {
+          filename: `${c.slug}-${data.listId}-subscribers.csv`,
+          csv: subscribersCsv(entrants, data.listId ?? ""),
+        };
   });

@@ -425,7 +425,8 @@ export function goLiveProblems(c: GiveawayCampaign): string[] {
   if (!c.title.trim()) out.push("Add a title.");
   if (!c.sponsor.trim()) out.push("Add the sponsor (who legally runs the giveaway).");
   if (!c.endsAt) out.push("Set the end date.");
-  if (c.startsAt && c.endsAt && c.endsAt <= c.startsAt) out.push("The end date must be after the start date.");
+  if (c.startsAt && c.endsAt && c.endsAt <= c.startsAt)
+    out.push("The end date must be after the start date.");
   if (!c.prizes.length) out.push("Add at least one prize.");
   if (c.prizes.some((p) => !p.title.trim() || !(p.retailValue > 0)))
     out.push("Every prize needs a name and an approximate retail value.");
@@ -433,7 +434,10 @@ export function goLiveProblems(c: GiveawayCampaign): string[] {
   for (const t of c.tasks.filter((t) => t.enabled)) {
     const name = t.title.trim() || TASK_KIND_LABELS[t.kind];
     if (!t.title.trim()) out.push(`Give the "${TASK_KIND_LABELS[t.kind]}" task a title.`);
-    if ((t.kind === "follow" || t.kind === "visit" || t.kind === "discord") && !/^https:\/\//.test(t.url))
+    if (
+      (t.kind === "follow" || t.kind === "visit" || t.kind === "discord") &&
+      !/^https:\/\//.test(t.url)
+    )
       out.push(`"${name}": add the link (https://...).`);
     if (t.kind === "discord" && !/^\d{15,25}$/.test(t.guildId ?? ""))
       out.push(`"${name}": add the Discord server ID.`);

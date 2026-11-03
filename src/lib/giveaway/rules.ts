@@ -76,9 +76,7 @@ export function generatedRules(c: GiveawayCampaign): string {
 
 /** Plain text → blocks: "## " lines are headings, "- " runs are lists, the rest paragraphs. */
 export type RuleBlock =
-  | { kind: "h"; text: string }
-  | { kind: "p"; text: string }
-  | { kind: "ul"; items: string[] };
+  { kind: "h"; text: string } | { kind: "p"; text: string } | { kind: "ul"; items: string[] };
 
 export function parseRules(text: string): RuleBlock[] {
   const out: RuleBlock[] = [];

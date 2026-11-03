@@ -89,10 +89,17 @@ export const enterGiveaway = createServerFn({ method: "POST" })
       email: z.string().trim().toLowerCase().email("Enter a valid email address").max(254),
       name: z.string().trim().max(80).default(""),
       country: z.string().regex(/^[A-Z]{2}$/, "Pick your country"),
-      region: z.string().regex(/^[A-Z0-9]{0,3}$/).default(""),
+      region: z
+        .string()
+        .regex(/^[A-Z0-9]{0,3}$/)
+        .default(""),
       ageConfirmed: z.boolean(),
       optIns: z.array(z.string().max(40)).max(10).default([]),
-      ref: z.string().regex(/^[a-z0-9]{3,20}$/).nullable().optional(),
+      ref: z
+        .string()
+        .regex(/^[a-z0-9]{3,20}$/)
+        .nullable()
+        .optional(),
       turnstileToken: z.string().max(2048).optional().nullable(),
     }),
   )
@@ -101,10 +108,14 @@ export const enterGiveaway = createServerFn({ method: "POST" })
     if (!gwAuthConfigured(ns))
       return { ok: false as const, error: "Entries aren't open yet. Please try again later." };
     const c = await getCampaignBySlug(ns, data.slug);
-    if (!c || c.status === "draft") return { ok: false as const, error: "This giveaway doesn't exist." };
+    if (!c || c.status === "draft")
+      return { ok: false as const, error: "This giveaway doesn't exist." };
     const ip = clientIp();
     if (!(await verifyTurnstile(data.turnstileToken ?? null, ip)))
-      return { ok: false as const, error: "We couldn't check you're a person. Refresh the page and try again." };
+      return {
+        ok: false as const,
+        error: "We couldn't check you're a person. Refresh the page and try again.",
+      };
     if (
       !(await rateLimit(ns, "gw-enter-ip", `${c.id}:${ip}`, 12, 60 * MINUTE)) ||
       !(await rateLimit(ns, "gw-enter-email", `${c.id}:${foldEmail(data.email)}`, 5, 15 * MINUTE))
@@ -149,7 +160,13 @@ export const consumeGiveawayLink = createServerFn({ method: "POST" })
             : "That link doesn't work any more. Enter your email on the giveaway page to get a new one.",
       };
     const { cookie, maxAge } = await createGwSession(ns, r.email);
-    setCookie(GW_COOKIE, cookie, { httpOnly: true, secure: secure(ns), sameSite: "lax", path: "/", maxAge });
+    setCookie(GW_COOKIE, cookie, {
+      httpOnly: true,
+      secure: secure(ns),
+      sameSite: "lax",
+      path: "/",
+      maxAge,
+    });
     return { ok: true as const, slug: r.slug };
   });
 
@@ -158,7 +175,8 @@ async function requireEntrant(slugValue: string) {
   const c = await getCampaignBySlug(ns, slugValue);
   if (!c || c.status === "draft") return { error: "This giveaway doesn't exist." } as const;
   const { entrant } = await signedInEntrant(ns, c.id);
-  if (!entrant || entrant.status === "void") return { error: "Enter with your email first." } as const;
+  if (!entrant || entrant.status === "void")
+    return { error: "Enter with your email first." } as const;
   return { ns, c, entrant } as const;
 }
 

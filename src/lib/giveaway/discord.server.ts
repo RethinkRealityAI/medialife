@@ -2,7 +2,13 @@ import process from "node:process";
 
 import { publicOrigin } from "@/lib/hub/auth.server";
 
-import { GW_COOKIE, completeDiscordTask, findEntrant, getCampaignBySlug, resolveGwSession } from "./giveaway.server";
+import {
+  GW_COOKIE,
+  completeDiscordTask,
+  findEntrant,
+  getCampaignBySlug,
+  resolveGwSession,
+} from "./giveaway.server";
 import { GIVEAWAY_ROUTES } from "./model";
 import { newId, type GwNamespace } from "./store.server";
 
@@ -26,7 +32,8 @@ function cookie(name: string, value: string, maxAge: number, secure: boolean) {
 function readCookie(request: Request, name: string) {
   for (const part of (request.headers.get("cookie") ?? "").split(";")) {
     const i = part.indexOf("=");
-    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0 && part.slice(0, i).trim() === name)
+      return decodeURIComponent(part.slice(i + 1).trim());
   }
   return null;
 }
@@ -37,7 +44,8 @@ function redirect(location: string, cookies: string[] = []) {
   return new Response(null, { status: 302, headers });
 }
 
-const back = (slug: string, result: string) => `${GIVEAWAY_ROUTES.campaign(slug)}?discord=${result}`;
+const back = (slug: string, result: string) =>
+  `${GIVEAWAY_ROUTES.campaign(slug)}?discord=${result}`;
 
 /** GET /api/giveaway/discord?slug=…&task=… */
 export function startGiveawayDiscord(request: Request, ns: GwNamespace): Response {
