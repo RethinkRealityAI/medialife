@@ -269,7 +269,7 @@ function EntrantSheet({
             <Loader2 className="animate-spin text-muted-foreground" aria-label="Loading" />
           </div>
         ) : (
-          <div className="grid gap-5 px-4 pb-8">
+          <div className="grid min-w-0 gap-5 px-4 pb-8 [&>*]:min-w-0">
             <div className="flex items-baseline gap-2">
               <span className="text-4xl font-semibold tabular-nums">{e.points}</span>
               <span className="text-sm text-muted-foreground">points</span>

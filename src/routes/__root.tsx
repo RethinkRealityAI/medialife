@@ -166,6 +166,8 @@ function RootComponent() {
         p.startsWith("/overlay/") ||
         p.startsWith("/partner-hub") ||
         p.startsWith("/ugc-hub") ||
+        // Giveaway campaign pages are co-branded campaign microsites.
+        p.startsWith("/giveaway") ||
         // Co-branded partner program pages carry both brands, not the site nav.
         p.startsWith("/with/") ||
         (p.startsWith("/creator-hub/") && p !== "/creator-hub/")
