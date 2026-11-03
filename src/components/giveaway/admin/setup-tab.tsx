@@ -42,6 +42,16 @@ import {
 import { generatedRules } from "@/lib/giveaway/rules";
 import { cn } from "@/lib/utils";
 
+const PROFILE_HINT: Record<string, string> = {
+  instagram: "https://www.instagram.com/handle",
+  tiktok: "https://www.tiktok.com/@handle",
+  youtube: "https://www.youtube.com/@channel",
+  x: "https://x.com/handle",
+  twitch: "https://www.twitch.tv/handle",
+  roblox: "https://www.roblox.com/communities/…",
+  other: "https://…",
+};
+
 const rid = () => Math.random().toString(36).slice(2, 10);
 
 const toLocal = (ms: number | null) => {
@@ -712,7 +722,7 @@ function TaskEditor({
               <Input
                 value={t.url}
                 onChange={(e) => onChange({ url: e.target.value.trim() })}
-                placeholder="https://www.instagram.com/…"
+                placeholder={PROFILE_HINT[t.platform ?? "other"]}
               />
             </Field>
           </>
