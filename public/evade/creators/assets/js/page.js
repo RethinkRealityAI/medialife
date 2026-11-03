@@ -167,14 +167,18 @@ qrSvg()
 (() => {
   const seq = $("#seq");
   if (!seq) return;
-  const items = $$("#loopSteps li");
+  const loop = $("#loopSteps");
+  const items = $$("li", loop);
   const say = $("#seqSay");
   const LINES = ["Tapping the keychain on a phone", "Cola Run opens in the browser", "Playing Cola Run and unlocking a reward"];
-  const DUR = [3000, 3400, 7200];
+  const DUR = [3600, 4000, 7200];
   let step = 0;
   let timer = 0;
   let auto = !REDUCED;
   let visible = false;
+  let played = false; // has the sequence started at least once?
+  let leftAt = 0;
+  let enterT = 0;
 
   // the gameplay screen plays a real phone recording of the experience
   const pv = $(".pp-video", seq);
@@ -201,6 +205,7 @@ qrSvg()
       $("button", li).setAttribute("aria-current", k === i ? "step" : "false");
     });
     say.textContent = LINES[i];
+    loop.style.setProperty("--dur", `${DUR[i]}ms`);
     if (i === 2) startVideo();
     else pv?.pause();
     if (user) {
@@ -214,17 +219,42 @@ qrSvg()
     if (!auto || !visible) return;
     timer = setTimeout(() => go((step + 1) % items.length), DUR[step]);
   }
-  items.forEach((li, k) => $("button", li).addEventListener("click", () => go(k, true)));
+  items.forEach((li, k) =>
+    $("button", li).addEventListener("click", () => {
+      seq.classList.add("is-live");
+      loop.classList.toggle("is-live", !REDUCED);
+      go(k, true);
+    }),
+  );
+  // Start from step 1 only once the phone is properly on screen (most of it, away from the
+  // edges, for a moment), so people see the whole story instead of arriving at the end.
+  // CSS keeps the screen animations paused until then (.seq:not(.is-live)).
+  function start() {
+    visible = true;
+    seq.classList.add("is-live");
+    loop.classList.toggle("is-live", !REDUCED);
+    if (REDUCED) return go(2);
+    if (played && Date.now() - leftAt < 4000) return go(step); // a quick scroll away: carry on
+    played = true;
+    seq.dataset.step = "";
+    void seq.offsetWidth; // restart the step-1 animations from the top
+    go(0);
+  }
   new IntersectionObserver(
     ([e]) => {
-      visible = e.isIntersecting;
-      if (visible) go(REDUCED ? 2 : 0);
-      else {
+      const inView = e.isIntersecting && e.intersectionRatio >= 0.6;
+      clearTimeout(enterT);
+      if (inView && !visible) enterT = setTimeout(start, 300);
+      else if (!inView && visible) {
+        visible = false;
+        leftAt = Date.now();
         clearTimeout(timer);
+        seq.classList.remove("is-live");
+        loop.classList.remove("is-live");
         pv?.pause();
       }
     },
-    { threshold: 0.4 },
+    { threshold: [0, 0.6, 0.8], rootMargin: "-12% 0px -12% 0px" },
   ).observe(seq);
 })();
 

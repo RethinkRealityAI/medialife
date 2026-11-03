@@ -190,6 +190,7 @@ h3 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; line-height: 1.
 /* ---------- sections ---------- */
 .band { position: relative; overflow-x: clip; padding: clamp(64px, 10vw, 120px) 0; }
 .sec-head { display: grid; gap: 14px; margin-bottom: clamp(28px, 5vw, 52px); }
+.sec-head > .mono, .sec-head > div > .mono { font-size: 13px; letter-spacing: 0.2em; color: var(--teal); }
 .sec-head--center { text-align: center; justify-items: center; }
 .sec-head--row { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 14px 32px; }
 .sec-head--row > div { display: grid; gap: 14px; }
@@ -442,25 +443,44 @@ h3 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; line-height: 1.
 @media (min-width: 900px) { .act-grid { grid-template-columns: minmax(0, 500px) auto; justify-content: center; gap: clamp(48px, 7vw, 120px); } }
 .act-copy { display: grid; gap: 22px; }
 .act-copy .sec-head { margin-bottom: 4px; }
-.loop { display: grid; gap: 4px; counter-reset: s; }
+.loop { display: grid; gap: 10px; counter-reset: s; }
 .loop button {
-  width: 100%; min-height: 48px; display: flex; align-items: center; gap: 14px; text-align: left;
-  padding: 8px 12px 8px 8px; border: 0; border-radius: 14px; background: none;
-  font-size: clamp(16px, 2vw, 18px); font-weight: 500; color: var(--dim); transition: color 0.35s, background 0.35s;
+  position: relative; overflow: hidden;
+  width: 100%; min-height: 66px; display: flex; align-items: center; gap: 16px; text-align: left;
+  padding: 12px 18px 12px 12px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255, 255, 255, 0.02);
+  font-size: clamp(18px, 2.1vw, 22px); font-weight: 650; letter-spacing: -0.015em; line-height: 1.2; color: var(--muted);
+  transition: color 0.35s, background 0.35s, border-color 0.35s, box-shadow 0.35s, transform 0.5s var(--spring);
 }
-.loop button:hover { background: rgba(255, 255, 255, 0.03); color: var(--fg-2); }
+.loop button:hover { border-color: rgba(255, 255, 255, 0.18); color: var(--fg-2); }
+.loop button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+/* a bar along the bottom of the live step fills while the phone plays it (page.js sets --dur) */
+.loop button::after {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 0;
+  background: linear-gradient(90deg, var(--teal), var(--gold)); box-shadow: 0 0 12px rgba(246, 195, 68, 0.8);
+}
+.loop.is-live li.is-on button::after { animation: stepFill var(--dur, 4s) linear forwards; }
+@keyframes stepFill { to { width: 100%; } }
 .loop i {
-  position: relative; flex: none; width: 32px; height: 32px; border-radius: 50%; font-style: normal;
+  position: relative; flex: none; width: 42px; height: 42px; border-radius: 50%; font-style: normal;
   display: grid; place-items: center; border: 1.5px solid var(--line-2);
-  font-family: var(--font-mono); font-size: 12px; transition: all 0.35s var(--ease);
+  font-family: var(--font-mono); font-size: 15px; font-weight: 600; transition: all 0.35s var(--ease);
 }
-.loop i svg { position: absolute; width: 15px; height: 15px; opacity: 0; transform: scale(0.4); transition: all 0.35s var(--spring); }
-.loop li.is-done button { color: var(--fg-2); }
+.loop i svg { position: absolute; width: 18px; height: 18px; opacity: 0; transform: scale(0.4); transition: all 0.35s var(--spring); }
+.loop li.is-done button { color: var(--fg-2); border-color: rgba(63, 230, 224, 0.22); }
 .loop li.is-done i { border-color: rgba(63, 230, 224, 0.7); background: rgba(63, 230, 224, 0.14); color: var(--teal); }
 .loop li.is-done i b { opacity: 0; }
 .loop li.is-done i svg { opacity: 1; transform: none; }
-.loop li.is-on button { color: var(--fg); }
-.loop li.is-on i { border-color: var(--gold); background: var(--gold); color: #1a1203; box-shadow: 0 0 22px -4px rgba(246, 195, 68, 0.8); }
+.loop li.is-on button {
+  color: var(--fg); border-color: rgba(246, 195, 68, 0.6); transform: translateX(6px);
+  background: linear-gradient(100deg, rgba(246, 195, 68, 0.18), rgba(246, 195, 68, 0.03) 75%);
+  box-shadow: 0 0 0 1px rgba(246, 195, 68, 0.2) inset, 0 16px 36px -18px rgba(246, 195, 68, 0.75);
+}
+.loop li.is-on i { border-color: var(--gold); background: var(--gold); color: #1a1203; box-shadow: 0 0 24px -2px rgba(246, 195, 68, 0.85); animation: stepPop 0.5s var(--spring); }
+@keyframes stepPop { 40% { transform: scale(1.18); } }
+@media (prefers-reduced-motion: reduce) {
+  .loop li.is-on button { transform: none; }
+  .loop.is-live li.is-on button::after, .loop li.is-on i { animation: none; }
+}
 
 .realqr {
   display: flex; align-items: center; gap: 16px; max-width: 380px;
@@ -480,6 +500,8 @@ h3 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; line-height: 1.
 /* stage: the keychain flies in and taps a tilted phone */
 .act-visual { display: grid; place-items: center; position: relative; }
 .seq { position: relative; perspective: 1400px; padding: 10px 0 10px 12%; }
+/* screen animations wait until the sequence starts (page.js adds .is-live once it is in view) */
+.seq:not(.is-live) *, .seq:not(.is-live) *::before, .seq:not(.is-live) *::after { animation-play-state: paused !important; }
 .seq .phone { transform: rotateY(-16deg) rotateX(6deg) rotateZ(1deg); transform-style: preserve-3d; transition: transform 1.2s var(--ease); }
 .seq[data-step="1"] .phone, .seq[data-step="2"] .phone { transform: rotateY(-6deg) rotateX(3deg); }
 .seq-key { position: absolute; z-index: 6; left: -6%; top: 26%; width: 46%; pointer-events: none;
@@ -562,7 +584,9 @@ h3 { font-size: 20px; letter-spacing: -0.02em; font-weight: 600; line-height: 1.
   .seq { padding-left: 16%; }
   .seq .phone { width: min(60vw, 240px); }
   .seq-key { width: 44%; }
-  .loop button { min-height: 44px; font-size: 15.5px; }
+  .loop button { min-height: 58px; font-size: 17.5px; gap: 12px; }
+  .loop i { width: 36px; height: 36px; font-size: 13px; }
+  .loop li.is-on button { transform: none; }
   .realqr { padding: 6px 16px 6px 6px; }
   .rq-code { display: none; }
   .rq-copy span { display: none; }
