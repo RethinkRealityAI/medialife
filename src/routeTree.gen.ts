@@ -25,6 +25,7 @@ import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
+import { Route as AdminMedialifeRouteImport } from './routes/admin.medialife'
 import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
 import { Route as AdminUgcRouteImport } from './routes/admin.ugc'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
@@ -227,6 +228,11 @@ const AdminLinksRoute = AdminLinksRouteImport.update({
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
   path: '/media',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMedialifeRoute = AdminMedialifeRouteImport.update({
+  id: '/medialife',
+  path: '/medialife',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminShelvesRoute = AdminShelvesRouteImport.update({
@@ -883,6 +889,7 @@ export interface FileRoutesByFullPath {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
@@ -1022,6 +1029,7 @@ export interface FileRoutesByTo {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
@@ -1158,6 +1166,7 @@ export interface FileRoutesById {
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
@@ -1301,6 +1310,7 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
+    | '/admin/medialife'
     | '/admin/shelves'
     | '/admin/ugc'
     | '/admin/login'
@@ -1440,6 +1450,7 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
+    | '/admin/medialife'
     | '/admin/login'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
@@ -1575,6 +1586,7 @@ export interface FileRouteTypes {
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
+    | '/admin/medialife'
     | '/admin/shelves'
     | '/admin/ugc'
     | '/admin_/login'
@@ -1875,6 +1887,13 @@ declare module '@tanstack/react-router' {
       path: '/media'
       fullPath: '/admin/media'
       preLoaderRoute: typeof AdminMediaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/medialife': {
+      id: '/admin/medialife'
+      path: '/medialife'
+      fullPath: '/admin/medialife'
+      preLoaderRoute: typeof AdminMedialifeRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/shelves': {
@@ -2799,6 +2818,7 @@ interface AdminRouteChildren {
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
   AdminMediaRoute: typeof AdminMediaRoute
+  AdminMedialifeRoute: typeof AdminMedialifeRoute
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
   AdminUgcRoute: typeof AdminUgcRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
@@ -2816,6 +2836,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
   AdminMediaRoute: AdminMediaRoute,
+  AdminMedialifeRoute: AdminMedialifeRoute,
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
   AdminUgcRoute: AdminUgcRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
