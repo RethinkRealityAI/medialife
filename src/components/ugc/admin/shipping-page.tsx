@@ -507,6 +507,11 @@ function AddressCell({ r }: { r: ShippingRow }) {
           {r.phone}
         </a>
       ) : null}
+      {r.notes ? (
+        <p className="mt-1 line-clamp-2 text-amber-100/80" title={r.notes}>
+          Note: {r.notes}
+        </p>
+      ) : null}
     </div>
   );
 }

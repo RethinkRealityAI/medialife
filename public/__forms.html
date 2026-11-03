@@ -101,6 +101,10 @@
       `platforms` is the comma list of the ones picked and `main_platform` the one
       marked main. Handles for instagram, x and tiktok are sent with a leading @.
     -->
+    <!-- evade-ugc-creator: the quick intake form sends contact-name, email, phone, platforms,
+         *_handle, creator_name, the address fields, notes, consent and the tracking fields.
+         country, main_platform and *_audience are from the earlier form; kept so older
+         submissions keep those columns. -->
     <form name="evade-ugc-creator" data-netlify="true" netlify-honeypot="bot-field" hidden>
       <input type="hidden" name="form-name" value="evade-ugc-creator" />
       <input name="bot-field" type="text" />

@@ -620,6 +620,8 @@ export type ShippingRow = {
   campaignTitle: string | null;
   phone: string;
   address: ShippingAddress | null;
+  /** What they wrote in the form's notes box (delivery notes on the quick intake form). */
+  notes: string;
   shipment: UgcShipment | null;
 };
 
@@ -652,6 +654,7 @@ export async function shippingRows(
       campaignTitle: campaign?.title ?? null,
       phone: pii.phone,
       address: pii.address,
+      notes: c.applicationNotes,
       shipment,
     });
   }
@@ -675,6 +678,7 @@ export const SHIPPING_CSV_COLUMNS = [
   "campaign",
   "carrier",
   "tracking",
+  "delivery_notes",
 ] as const;
 
 export async function shippingCsv(
@@ -706,6 +710,7 @@ export async function shippingCsv(
       r.campaignTitle ?? "",
       r.shipment?.carrier ?? "",
       r.shipment?.tracking ?? "",
+      r.notes,
     ]);
   }
   const date = new Date().toISOString().slice(0, 10);

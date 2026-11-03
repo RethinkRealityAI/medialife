@@ -250,7 +250,7 @@ Shipping
 | Function | Input | Output |
 | --- | --- | --- |
 | `adminUgcShipping` | `{ campaignId?, onlyUnshipped? }` | `ShippingRow[]`: `{ creatorId, name, creatorName, email, status, campaignId, campaignTitle, phone, address, shipment }` |
-| `adminExportUgcShippingCsv` | `{ campaignId?, onlyUnshipped? (default true) }` | `{ filename, csv, count, missingAddress: creatorId[] }`. Columns: `reference,name,address_line1,address_line2,city,region,postal_code,country,phone,email,items,creator_name,campaign,carrier,tracking`. Save with `new Blob([csv], {type: "text/csv"})` + `saveBlob` from `@/lib/hub/download-client`. |
+| `adminExportUgcShippingCsv` | `{ campaignId?, onlyUnshipped? (default true) }` | `{ filename, csv, count, missingAddress: creatorId[] }`. Columns: `reference,name,address_line1,address_line2,city,region,postal_code,country,phone,email,items,creator_name,campaign,carrier,tracking,delivery_notes`. Save with `new Blob([csv], {type: "text/csv"})` + `saveBlob` from `@/lib/hub/download-client`. |
 | `adminMarkUgcPacked` | `{ creatorIds[], campaignId? }` | `{ results }` |
 | `adminMarkUgcShipped` | `{ entries: {creatorId, carrier, tracking, url?}[], campaignId?, notify? }` | `{ results }`. Tracking URL derived for USPS/UPS/FedEx/DHL/Royal Mail/Canada Post/Evri unless `url`. Moves approved → shipped; emails the tracking link. |
 | `adminImportUgcTrackingCsv` | `{ csv ("email,carrier,tracking[,url]", header optional), campaignId?, notify? }` | `{ results: {creatorId, email, ok, error?}[] }` |

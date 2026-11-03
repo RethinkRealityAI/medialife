@@ -477,7 +477,10 @@ function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: Pipe
                 </a>,
               ],
               ["Country", c.country],
-              ["Main platform", c.mainPlatform ? UGC_PLATFORM_LABELS[c.mainPlatform] : null],
+              // the quick intake form doesn't ask for a main platform; older sign-ups may have one
+              ...(c.mainPlatform
+                ? ([["Main platform", UGC_PLATFORM_LABELS[c.mainPlatform]]] as [string, string][])
+                : []),
               [
                 "Contact consent",
                 c.consent.contact
@@ -495,7 +498,7 @@ function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: Pipe
                 </span>,
               ],
               [
-                "Their notes",
+                "Sign-up notes",
                 c.applicationNotes ? (
                   <span className="whitespace-pre-wrap">{c.applicationNotes}</span>
                 ) : null,

@@ -2,7 +2,7 @@
  *
  * Everything except the 3D stage (stage.js owns #dropStage). Sections:
  *   chrome (nav, reveal, mobile CTA) · hero keychain tilt · "activated" phone demo
- *   · stage hooks · gameplay video slot · onboarding form · analytics.
+ *   · stage hooks · gameplay video slot · quick intake form (contact, channels, address) · analytics.
  *
  * Form: POSTs urlencoded to /__forms.html as Netlify form "evade-ugc-creator"
  * (declared in public/__forms.html; keep field names in sync).
@@ -311,19 +311,20 @@ function localeCountry() {
 }
 
 /* ---------------------------------------------------------------- onboarding form */
-// Order matches the tiles. The follower count goes out as <platform>_audience (the field the UGC Hub import reads).
+// A quick intake: contact, channels (usernames), shipping address. Order matches the tiles.
+// Each channel goes out as <platform>_handle (the field the UGC Hub import reads).
 const PLATFORMS = {
-  tiktok: { label: "TikTok", field: "TikTok handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
-  youtube: { label: "YouTube", field: "Channel @handle or URL", prefix: "", ph: "@yourchannel", audience: "Subscribers" },
-  instagram: { label: "Instagram", field: "Instagram handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
-  twitch: { label: "Twitch", field: "Twitch username", prefix: "", ph: "yourchannel", audience: "Followers" },
-  roblox: { label: "Roblox", field: "Roblox username", prefix: "", ph: "BoboFan123", audience: "Followers" },
-  x: { label: "X", field: "X handle", prefix: "@", ph: "yourhandle", audience: "Followers" },
-  discord: { label: "Discord", field: "Discord username", prefix: "", ph: "yourname", audience: "Server members" },
+  tiktok: { label: "TikTok", prefix: "@", ph: "yourhandle" },
+  youtube: { label: "YouTube", prefix: "", ph: "@yourchannel or link" },
+  instagram: { label: "Instagram", prefix: "@", ph: "yourhandle" },
+  twitch: { label: "Twitch", prefix: "", ph: "yourchannel" },
+  roblox: { label: "Roblox", prefix: "", ph: "BoboFan123" },
+  x: { label: "X", prefix: "@", ph: "yourhandle" },
+  discord: { label: "Discord", prefix: "", ph: "yourname" },
 };
 const ORDER = Object.keys(PLATFORMS);
-const STORE_KEY = "evade-ugc-creator:v2";
-const LABELS = ["About you", "Your platforms", "Shipping address", "Check and send"];
+const STORE_KEY = "evade-ugc-creator:v3";
+const LABELS = ["About you", "Your channels", "Shipping address", "Check and send"];
 
 /** Normalise what people paste: URLs, @@handles, stray spaces. */
 function normaliseHandle(p, raw) {
@@ -353,31 +354,28 @@ function normaliseHandle(p, raw) {
   return v.replace(/^@+/, "").replace(/\s+/g, "");
 }
 function handleError(p, v) {
-  if (!v) return `Add your ${PLATFORMS[p].field.replace(/^Channel /, "channel ")}.`;
+  const L = PLATFORMS[p].label;
+  if (!v || v === "@") return `Add your ${L} username.`;
   if (p === "instagram" || p === "x" || p === "tiktok") {
-    if (!/^[A-Za-z0-9._]{1,30}$/.test(v)) return "Use letters, numbers, dots or underscores.";
+    if (!/^[A-Za-z0-9._]{1,30}$/.test(v)) return `${L} usernames use letters, numbers, dots or underscores.`;
   } else if (p === "youtube") {
-    if (!/^@[A-Za-z0-9._-]{2,100}$/.test(v) && !/^(youtube\.com|youtu\.be)\/\S+$/i.test(v)) return "Use your @handle or paste the channel link.";
+    if (!/^@[A-Za-z0-9._-]{2,100}$/.test(v) && !/^(youtube\.com|youtu\.be)\/\S+$/i.test(v)) return "Use your YouTube @handle or paste the channel link.";
   } else if (p === "roblox") {
     if (!/^[A-Za-z0-9_]{3,20}$/.test(v) && !/^roblox\.com\/\S+$/i.test(v)) return "Roblox usernames are 3 to 20 letters, numbers or underscores.";
   } else if (p === "twitch") {
-    if (!/^[A-Za-z0-9_]{3,25}$/.test(v)) return "Twitch usernames are letters, numbers or underscores.";
+    if (!/^[A-Za-z0-9_]{3,25}$/.test(v)) return "Twitch usernames are 3 to 25 letters, numbers or underscores.";
   } else if (p === "discord") {
     if (!/^[A-Za-z0-9._#]{2,40}$/.test(v)) return "Use your Discord username, no spaces.";
   }
   return "";
 }
-/** "12.5k", "1,200", "1.2M" → "12,500" etc. Returns null when it isn't a count. */
-function normaliseCount(raw) {
-  const v = String(raw || "").trim().toLowerCase().replace(/\s+/g, "").replace(/^~/, "").replace(/\+$/, "");
-  if (!v) return "";
-  const m = v.match(/^(\d+(?:[.,]\d+)?)(k|m)$/);
-  let n;
-  if (m) n = parseFloat(m[1].replace(",", ".")) * (m[2] === "k" ? 1e3 : 1e6);
-  else if (/^\d{1,3}([,.]\d{3})+$/.test(v) || /^\d+$/.test(v)) n = Number(v.replace(/[,.]/g, ""));
-  else return null;
-  if (!Number.isFinite(n) || n > 2e9) return null;
-  return Math.round(n).toLocaleString("en-US");
+/** The shared username, typed once: strip a pasted profile link and any leading @. */
+function cleanShared(raw) {
+  let v = String(raw || "").trim();
+  const url = v.replace(/^https?:\/\//i, "").replace(/^(www\.|m\.)/i, "");
+  const m = url.match(/^(?:instagram\.com|x\.com|twitter\.com|tiktok\.com|twitch\.tv|youtube\.com)\/@?([^/?#]+)\/?$/i);
+  if (m) v = m[1];
+  return v.replace(/^@+/, "").replace(/\s+/g, "");
 }
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -391,14 +389,23 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   const btnNext = $("#btnNext");
   const btnBack = $("#btnBack");
   const saveNote = $("#saveNote");
-  const panels = $("#platPanels");
   const tiles = $$(".ptile", form);
   const card = $("#joinCard");
+  const unames = $("#unames");
+  const shared = $("#f-uname");
+  const unWrap = $("#unWrap");
+  const unLabel = $("#l-uname");
+  const unApply = $("#unApply");
+  const unChips = $("#unChips");
+  const unOwn = $("#unOwn");
+  const unRows = $("#unRows");
+  const sharedErr = $("#e-uname");
   let current = 0;
   let maxReached = 0;
   let started = false;
   const touched = new Set();
-  const panelCache = {};
+  // Channels that use the shared username. A newly ticked channel joins it.
+  const linked = new Set(ORDER);
 
   // utm + page context
   for (const k of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
@@ -406,60 +413,138 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   }
   form.elements.page.value = location.pathname + (params.get("c") ? `?c=${params.get("c")}` : "");
 
-  /* ---- platform panels ---- */
-  function buildPanel(p) {
-    if (panelCache[p]) return panelCache[p];
+  /* ---- usernames ---- */
+  // One chip and one "different username" row per channel, built once and shown as needed.
+  const chips = {};
+  const rows = {};
+  for (const p of ORDER) {
     const cfg = PLATFORMS[p];
-    const el = document.createElement("div");
-    el.className = "ppanel";
-    el.dataset.p = p;
-    el.innerHTML = `
-      <div class="pp-head"><svg aria-hidden="true"><use href="#i-${p}"/></svg><b>${cfg.label}</b>
-        <label class="pp-main"><input type="radio" name="main_platform" value="${p}" />Main platform</label></div>
-      <div class="pp-row">
-        <div class="field">
-          <label for="h-${p}">${cfg.field}</label>
-          <div class="ph-input${cfg.prefix ? "" : " no-pfx"}">${cfg.prefix ? `<span class="pfx" aria-hidden="true">${cfg.prefix}</span>` : ""}
-            <input id="h-${p}" name="${p}_handle" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="${cfg.ph}" data-handle="${p}" aria-describedby="e-h-${p}" />
-          </div>
-          <p class="err" id="e-h-${p}"></p>
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "un-chip";
+    chip.dataset.p = p;
+    chip.innerHTML = `<svg aria-hidden="true"><use href="#i-${p}"/></svg><span>${cfg.label}</span><i aria-hidden="true"><svg><use href="#i-check"/></svg></i>`;
+    chip.hidden = true;
+    chip.addEventListener("click", () => {
+      if (linked.has(p)) {
+        linked.delete(p);
+        syncUsernames();
+        rows[p].querySelector("input").focus({ preventScroll: true });
+        rows[p].scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+      } else {
+        linked.add(p);
+        syncUsernames();
+      }
+      if (touched.has("username")) checkShared();
+      save();
+    });
+    unChips.appendChild(chip);
+    chips[p] = chip;
+
+    const row = document.createElement("div");
+    row.className = "un-row field";
+    row.dataset.p = p;
+    row.hidden = true;
+    row.innerHTML = `
+      <label for="h-${p}" class="sr-only">${cfg.label} username</label>
+      <div class="un-line">
+        <span class="un-ico" aria-hidden="true"><svg><use href="#i-${p}"/></svg></span>
+        <div class="ph-input${cfg.prefix ? "" : " no-pfx"}">${cfg.prefix ? `<span class="pfx" aria-hidden="true">${cfg.prefix}</span>` : ""}
+          <input id="h-${p}" name="${p}_handle" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="${cfg.ph}" data-handle="${p}" aria-describedby="e-h-${p}" disabled />
         </div>
-        <div class="field">
-          <label for="a-${p}">${cfg.audience}</label>
-          <input id="a-${p}" name="${p}_audience" type="text" inputmode="decimal" autocomplete="off" maxlength="16" placeholder="e.g. 12.5K" data-count="${p}" aria-describedby="e-a-${p}" />
-          <p class="err" id="e-a-${p}"></p>
-        </div>
-      </div>`;
-    panelCache[p] = el;
-    return el;
+        <button type="button" class="un-same" aria-label="Use the same username on ${cfg.label}" title="Use the same username">Same</button>
+      </div>
+      <p class="err" id="e-h-${p}"></p>`;
+    $(".un-same", row).addEventListener("click", () => {
+      linked.add(p);
+      setErr($(`#e-h-${p}`), "");
+      syncUsernames();
+      chips[p].focus({ preventScroll: true });
+      if (touched.has("username")) checkShared();
+      save();
+    });
+    unRows.appendChild(row);
+    rows[p] = row;
   }
+
   function selectedPlatforms() {
     return tiles.filter((t) => $("input", t).checked).map((t) => t.dataset.p);
   }
-  function syncPanels(focusNew) {
+  /** Channels that read the shared field. With one channel, that field is simply "Your X username". */
+  function sharedUsers(sel = selectedPlatforms()) {
+    return sel.filter((p) => linked.has(p));
+  }
+  function syncUsernames() {
     const sel = selectedPlatforms();
     tiles.forEach((t) => t.classList.toggle("is-on", $("input", t).checked));
-    // keep DOM order = platform order; detach unselected panels (cached, so data survives a re-toggle)
-    for (const p of ORDER) {
-      const el = panelCache[p];
-      if (sel.includes(p)) {
-        const panel = buildPanel(p);
-        if (!panel.isConnected) panels.appendChild(panel);
-      } else if (el?.isConnected) el.remove();
-    }
-    ORDER.filter((p) => sel.includes(p)).forEach((p) => panels.appendChild(panelCache[p]));
     form.elements.platforms.value = sel.join(",");
+    unames.hidden = !sel.length;
+    const single = sel.length === 1;
+    // one channel: the shared field is simply "Your X username", so fold any own username into it
+    if (single && !linked.has(sel[0])) {
+      const own = rows[sel[0]].querySelector("input");
+      if (own.value.trim()) shared.value = own.value.trim();
+      own.value = "";
+      linked.add(sel[0]);
+    }
+    unApply.hidden = single;
+    const one = single ? PLATFORMS[sel[0]] : null;
+    unLabel.textContent = one ? `Your ${one.label} username` : "Your username";
+    shared.placeholder = one ? one.ph : "yourname";
+    const pfx = one ? one.prefix : "@";
+    $(".pfx", unWrap).hidden = !pfx;
+    unWrap.classList.toggle("no-pfx", !pfx);
+    for (const p of ORDER) {
+      const on = sel.includes(p);
+      chips[p].hidden = !on;
+      chips[p].setAttribute("aria-pressed", String(linked.has(p)));
+      chips[p].classList.toggle("is-on", linked.has(p));
+      const own = on && !linked.has(p);
+      rows[p].hidden = !own;
+      rows[p].querySelector("input").disabled = !own;
+    }
+    unOwn.hidden = !sel.some((p) => !linked.has(p));
     if (sel.length) setErr($("#e-platforms"), "");
-    if (focusNew) $(`#h-${focusNew}`)?.focus({ preventScroll: true });
   }
+  /** What a channel's username will be, as it is sent. */
+  function handleFor(p) {
+    const raw = linked.has(p) ? (selectedPlatforms().length === 1 ? shared.value : cleanShared(shared.value)) : rows[p].querySelector("input").value;
+    return normaliseHandle(p, raw);
+  }
+  function sharedError() {
+    const sel = selectedPlatforms();
+    const users = sharedUsers(sel);
+    if (!users.length) return "";
+    if (!shared.value.trim()) return sel.length === 1 ? `Add your ${PLATFORMS[sel[0]].label} username.` : "Add your username.";
+    for (const p of users) {
+      const msg = handleError(p, handleFor(p));
+      if (msg) return sel.length === 1 ? msg : `${msg} Tap ${PLATFORMS[p].label} above to give it a different one.`;
+    }
+    return "";
+  }
+  function checkShared() {
+    const sel = selectedPlatforms();
+    if (sel.length > 1) {
+      const c = cleanShared(shared.value);
+      if (c !== shared.value) shared.value = c;
+    } else if (sel.length === 1 && PLATFORMS[sel[0]].prefix) {
+      shared.value = shared.value.trim().replace(/^@+/, "");
+    }
+    const msg = sharedError();
+    setErr(sharedErr, msg);
+    shared.closest(".field").classList.toggle("is-ok", !msg && !!shared.value.trim());
+    return !msg;
+  }
+
   tiles.forEach((t) => {
     const cb = $("input", t);
     cb.addEventListener("change", () => {
-      syncPanels(cb.checked ? t.dataset.p : null);
-      if (cb.checked) {
-        const panel = panelCache[t.dataset.p];
-        panel.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
-      }
+      const p = t.dataset.p;
+      // a channel you tick again starts on the shared username unless it has its own
+      if (cb.checked && !rows[p].querySelector("input").value.trim()) linked.add(p);
+      syncUsernames();
+      if (cb.checked && selectedPlatforms().length === 1) shared.focus({ preventScroll: true });
+      if (touched.has("username")) checkShared();
       save();
     });
   });
@@ -475,22 +560,20 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   }
   const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   function checkField(input) {
+    if (input.dataset.shared) return checkShared();
     const n = input.name;
     const v = input.value.trim();
     let msg = "";
     if (input.dataset.handle) {
       const p = input.dataset.handle;
       const norm = normaliseHandle(p, input.value);
-      if (norm !== input.value) input.value = norm;
+      const shown = PLATFORMS[p].prefix ? norm.replace(/^@+/, "") : norm;
+      if (shown !== input.value) input.value = shown;
       msg = handleError(p, norm);
-    } else if (input.dataset.count) {
-      const c = normaliseCount(input.value);
-      if (c) input.value = c;
-      msg = c === "" ? (input.dataset.count === "discord" ? "" : "Add your follower count.") : c === null ? "Use a number, like 12500 or 12.5K." : "";
     } else if (n === "contact-name" || n === "ship_name") msg = v.length < 2 ? "Add your full name." : "";
     else if (n === "email") msg = !v ? "Add your email." : EMAIL.test(v) ? "" : "That email looks off. Check for typos.";
     else if (n === "phone") msg = v && !/^\+?[\d\s().-]{7,20}$/.test(v) ? "Use digits, with your country code (e.g. +44)." : "";
-    else if (n === "country" || n === "address_country") msg = v ? "" : "Add your country.";
+    else if (n === "address_country") msg = v ? "" : "Add your country.";
     else if (n === "address_line1") msg = v.length < 3 ? "Add your street address." : "";
     else if (n === "city") msg = v ? "" : "Add your city.";
     else if (n === "postal_code") msg = v ? "" : "Add your postal or ZIP code.";
@@ -500,22 +583,25 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     if (input.type !== "checkbox") input.closest(".field")?.classList.toggle("is-ok", !msg && !!v);
     return !msg;
   }
+  const OPTIONAL = new Set(["notes", "address_line2", "region"]);
   function validateStep(i) {
     let firstBad = null;
     const step = steps[i];
-    let inputs = $$("input[name], select[name], textarea[name]", step).filter(
-      (el) => el.type !== "hidden" && el.type !== "radio" && !el.closest(".hp") && el.tagName !== "SELECT" && el.name !== "notes" && el.name !== "address_line2" && el.name !== "region",
+    const inputs = $$("input[name], textarea[name]", step).filter(
+      (el) => el.type !== "hidden" && !el.disabled && !el.dataset.shared && !el.closest(".hp") && !OPTIONAL.has(el.name),
     );
+    if (i === 1) {
+      if (!selectedPlatforms().length) {
+        setErr($("#e-platforms"), "Pick at least one channel.");
+        firstBad = $("input", tiles[0]);
+      } else {
+        touched.add("username");
+        if (!checkShared()) firstBad = shared;
+      }
+    }
     for (const el of inputs) {
       touched.add(el.name);
       if (!checkField(el) && !firstBad) firstBad = el;
-    }
-    if (i === 1) {
-      const sel = selectedPlatforms();
-      if (!sel.length) {
-        setErr($("#e-platforms"), "Pick at least one platform.");
-        firstBad = firstBad || $("input", tiles[0]);
-      }
     }
     if (firstBad) {
       firstBad.focus({ preventScroll: true });
@@ -529,7 +615,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     "blur",
     (e) => {
       const el = e.target;
-      if (!el.name || el.type === "hidden" || el.type === "radio" || el.tagName === "SELECT") return;
+      if (!el.name || el.type === "hidden" || el.type === "checkbox" || el.disabled) return;
       if (el.value.trim() || touched.has(el.name)) {
         touched.add(el.name);
         checkField(el);
@@ -542,7 +628,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     // only clear an error while typing; new errors wait for blur or Next
     const wrap = el.closest(".field, .consent");
     if (wrap?.classList.contains("has-err")) {
-      const ok = el.dataset.handle ? !handleError(el.dataset.handle, normaliseHandle(el.dataset.handle, el.value)) : el.dataset.count ? !!normaliseCount(el.value) : checkFieldQuiet(el);
+      const ok = el.dataset.shared ? !sharedError() : el.dataset.handle ? !handleError(el.dataset.handle, normaliseHandle(el.dataset.handle, el.value)) : checkFieldQuiet(el);
       if (ok) checkField(el);
     }
     if (!started) {
@@ -594,7 +680,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     announce.textContent = `Step ${i + 1} of ${steps.length}: ${LABELS[i]}`;
     if (i === 2) {
       const ac = form.elements.address_country;
-      if (!ac.value.trim()) ac.value = form.elements.country.value.trim();
+      if (!ac.value.trim()) ac.value = localeCountry();
       const sn = form.elements.ship_name;
       if (!sn.value.trim()) sn.value = form.elements["contact-name"].value.trim();
     }
@@ -605,9 +691,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
       const r = card.getBoundingClientRect();
       if (r.top < nav.offsetHeight || r.bottom > innerHeight + 2) card.scrollIntoView({ block: "start", behavior: REDUCED ? "auto" : "smooth" });
       // move focus to the step heading region for keyboard and screen-reader users
-      const firstInput = $("input:not([type=hidden]):not([type=checkbox]), select, textarea", steps[i]);
-      if (i === 1) $("input", tiles.find((t) => !$("input", t).checked) || tiles[0]).focus({ preventScroll: true });
-      else if (i === 3) $("legend", steps[i]).setAttribute("tabindex", "-1"), $("legend", steps[i]).focus({ preventScroll: true });
+      const firstInput = $("input:not([type=hidden]):not([type=checkbox]), textarea", steps[i]);
+      if (i === 1) {
+        if (!selectedPlatforms().length) $("input", tiles[0]).focus({ preventScroll: true });
+        else $("legend", steps[i]).setAttribute("tabindex", "-1"), $("legend", steps[i]).focus({ preventScroll: true });
+      } else if (i === 3) $("legend", steps[i]).setAttribute("tabindex", "-1"), $("legend", steps[i]).focus({ preventScroll: true });
       else if (firstInput && !firstInput.value) firstInput.focus({ preventScroll: true });
       else $("legend", steps[i]).setAttribute("tabindex", "-1"), $("legend", steps[i]).focus({ preventScroll: true });
       track("form_step", { step: i + 1 });
@@ -633,7 +721,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     }
     send();
   });
-  // Enter in a text field advances (form submit does this natively); keep textarea newlines
+  // Enter on a focused tile toggles it instead of submitting
   form.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target.type === "checkbox" && e.target.closest(".ptile")) {
       e.preventDefault();
@@ -642,29 +730,27 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   });
 
   /* ---- review ---- */
+  const shownHandle = (p) => {
+    const h = handleFor(p);
+    return PLATFORMS[p].prefix && h ? "@" + h.replace(/^@+/, "") : h;
+  };
   function renderReview() {
     const f = form.elements;
-    const sel = selectedPlatforms();
-    const main = form.querySelector('input[name="main_platform"]:checked')?.value;
-    const plats = sel
-      .map((p) => {
-        const h = f[`${p}_handle`]?.value || "";
-        const shown = PLATFORMS[p].prefix && h ? "@" + h : h;
-        const aud = panelCache[p]?.querySelector("[data-count]")?.value;
-        return `<span class="${p === main ? "is-main" : ""}"><svg aria-hidden="true"><use href="#i-${p}"/></svg>${esc(shown)}${aud ? ` · ${esc(aud)}` : ""}${p === main ? " · main" : ""}</span>`;
-      })
+    const plats = selectedPlatforms()
+      .map((p) => `<span><svg aria-hidden="true"><use href="#i-${p}"/></svg>${esc(shownHandle(p))}</span>`)
       .join("");
     const addr = [f.ship_name.value, f.address_line1.value, f.address_line2.value, [f.city.value, f.region.value, f.postal_code.value].filter(Boolean).join(", "), f.address_country.value]
       .map((s) => s.trim())
       .filter(Boolean);
+    const notes = f.notes.value.trim();
     $("#review").innerHTML = `
       <div class="rv-block"><div class="rv-top"><span class="mono">You</span><button type="button" class="rv-edit" data-edit="0" aria-label="Edit your details">Edit</button></div>
-        <p><b>${esc(f["contact-name"].value)}</b>${f.creator_name.value ? ` · ${esc(f.creator_name.value)}` : ""}</p>
-        <p class="m">${esc(f.email.value)}${f.phone.value ? ` · ${esc(f.phone.value)}` : ""} · ${esc(f.country.value)}</p></div>
-      <div class="rv-block"><div class="rv-top"><span class="mono">Platforms</span><button type="button" class="rv-edit" data-edit="1" aria-label="Edit your platforms">Edit</button></div>
+        <p><b>${esc(f["contact-name"].value)}</b></p>
+        <p class="m">${esc(f.email.value)}${f.phone.value ? ` · ${esc(f.phone.value)}` : ""}</p></div>
+      <div class="rv-block"><div class="rv-top"><span class="mono">Channels</span><button type="button" class="rv-edit" data-edit="1" aria-label="Edit your channels">Edit</button></div>
         <div class="rv-plats">${plats}</div></div>
       <div class="rv-block"><div class="rv-top"><span class="mono">Ships to</span><button type="button" class="rv-edit" data-edit="2" aria-label="Edit your shipping address">Edit</button></div>
-        <p>${addr.map(esc).join("<br>")}</p></div>`;
+        <p>${addr.map(esc).join("<br>")}</p>${notes ? `<p class="m">${esc(notes)}</p>` : ""}</div>`;
     $$(".rv-edit", $("#review")).forEach((b) => b.addEventListener("click", () => show(+b.dataset.edit, -1)));
   }
 
@@ -674,21 +760,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     clearTimeout(saveT);
     saveT = setTimeout(() => {
       try {
-        const data = { _step: current, _max: maxReached, _platforms: selectedPlatforms() };
+        const data = { _step: current, _max: maxReached, _platforms: selectedPlatforms(), _own: ORDER.filter((p) => !linked.has(p)) };
         for (const el of form.elements) {
           if (!el.name || el.type === "hidden" || el.name === "bot-field") continue;
-          if (el.type === "radio") {
-            if (el.checked) data[el.name] = el.value;
-          } else if (el.type === "checkbox") data[el.name] = el.checked;
+          if (el.type === "checkbox") data[el.name] = el.checked;
           else data[el.name] = el.value;
-        }
-        // panels that are detached still hold values; keep them
-        for (const p of ORDER) {
-          const pn = panelCache[p];
-          if (pn && !pn.isConnected) {
-            data[`${p}_handle`] = $("input[data-handle]", pn).value;
-            data[`${p}_audience`] = $("[data-count]", pn).value;
-          }
         }
         localStorage.setItem(STORE_KEY, JSON.stringify(data));
         saveNote.textContent = "Saved on this device";
@@ -704,28 +780,15 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     } catch {
       data = null;
     }
-    if (!data) {
-      if (!form.elements.country.value) form.elements.country.value = localeCountry();
-      return 0;
-    }
+    if (!data) return 0;
     for (const p of data._platforms || []) {
       const t = tiles.find((x) => x.dataset.p === p);
       if (t) $("input", t).checked = true;
     }
-    syncPanels();
+    for (const p of data._own || []) if (PLATFORMS[p]) linked.delete(p);
     for (const [k, v] of Object.entries(data)) {
       if (k.startsWith("_")) continue;
-      if (k === "main_platform") {
-        const r = form.querySelector(`input[name="main_platform"][value="${CSS.escape(v)}"]`);
-        if (r) r.checked = true;
-        continue;
-      }
-      let el = form.elements[k];
-      if (!el) {
-        const p = k.split("_")[0];
-        const pn = panelCache[p] || (PLATFORMS[p] ? buildPanel(p) : null);
-        el = pn?.querySelector(`[name="${k}"]`);
-      }
+      const el = form.elements[k];
       if (!el || el instanceof RadioNodeList) continue;
       if (el.type === "checkbox") el.checked = !!v;
       else el.value = v ?? "";
@@ -758,13 +821,15 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     form.elements.platforms.value = sel.join(",");
     const body = new URLSearchParams();
     for (const el of form.elements) {
-      if (!el.name || el.disabled) continue;
-      if ((el.type === "checkbox" || el.type === "radio") && !el.checked) continue;
-      let v = el.value;
-      if (el.dataset.handle && PLATFORMS[el.dataset.handle].prefix && v) v = "@" + v.replace(/^@+/, "");
-      body.append(el.name, v.trim ? v.trim() : v);
+      // usernames are added below, resolved per channel
+      if (!el.name || el.dataset.handle || el.dataset.shared) continue;
+      if (el.type === "checkbox" && !el.checked) continue;
+      body.append(el.name, el.value.trim());
     }
-    if (!body.has("main_platform")) body.append("main_platform", sel.length === 1 ? sel[0] : "");
+    for (const p of sel) body.append(`${p}_handle`, shownHandle(p));
+    // the name the team sees first in the hub: the shared username, else the first channel's
+    const first = sel[0] ? shownHandle(sel[0]).replace(/^@/, "") : "";
+    body.append("creator_name", sharedUsers(sel).length ? cleanShared(shared.value) : first);
     if (!body.has("consent")) body.append("consent", "");
     btnNext.setAttribute("aria-busy", "true");
     btnNext.innerHTML = "Sending…";
@@ -775,7 +840,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
       } catch {
         /* ignore */
       }
-      track("form_submit", { platforms: sel.join(","), count: sel.length, main: body.get("main_platform") || "" });
+      track("form_submit", { platforms: sel.join(","), count: sel.length, shared: sharedUsers(sel).length });
       success();
     } catch (e) {
       err.hidden = false;
@@ -787,7 +852,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   }
   function success() {
     const s = $("#success");
-    const nm = (form.elements.creator_name.value || form.elements["contact-name"].value.split(" ")[0] || "").trim();
+    const nm = (form.elements["contact-name"].value.split(" ")[0] || "").trim();
     $("#successName").textContent = nm ? `, ${nm}` : "";
     form.hidden = true;
     s.hidden = false;
@@ -798,6 +863,6 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 
   // boot
   const startAt = restore();
-  syncPanels();
+  syncUsernames();
   show(startAt, 1, true);
 })();

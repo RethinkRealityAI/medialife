@@ -135,6 +135,45 @@ const FORM = {
     postalCode: "78701",
     country: "United States", // falls back to `country`
   });
+  // the quick intake form: no country, main platform or follower counts
+  const q = mapSignup(
+    normaliseFields({
+      "contact-name": "Sam Lee",
+      email: "sam@example.com",
+      platforms: "tiktok,youtube,discord",
+      tiktok_handle: "@samplays",
+      youtube_handle: "@samplays",
+      discord_handle: "sam.discord",
+      creator_name: "samplays",
+      ship_name: "Sam Lee",
+      address_line1: "9 High St",
+      city: "Leeds",
+      postal_code: "LS1 1AA",
+      address_country: "United Kingdom",
+      notes: "Leave with reception",
+      consent: "yes",
+    }),
+    { kind: "netlify-form", submissionId: "q1", submittedAt: 2000 },
+  );
+  assert.ok(q.ok);
+  assert.equal(q.signup.creator.country, "United Kingdom", "country from the address");
+  assert.equal(q.signup.creator.creatorName, "samplays");
+  assert.equal(q.signup.creator.mainPlatform, null);
+  assert.deepEqual(q.signup.creator.audiences, {});
+  assert.deepEqual(q.signup.creator.platforms.sort(), ["discord", "tiktok", "youtube"]);
+  assert.equal(q.signup.creator.applicationNotes, "Leave with reception");
+  // no creator_name: the first channel's username, before the first name
+  const q2 = mapSignup(
+    normaliseFields({
+      "contact-name": "Ali Khan",
+      email: "ali@example.com",
+      platforms: "x",
+      x_handle: "@alik",
+    }),
+    { kind: "csv", submissionId: null },
+  );
+  assert.ok(q2.ok);
+  assert.equal(q2.signup.creator.creatorName, "alik");
   // headers from a CSV export, in other spellings
   const f = normaliseFields({
     "Contact Name": "A B",

@@ -7,7 +7,13 @@
  */
 import { UGC_PLATFORMS, type ShippingAddress, type UgcPlatform, type UgcSource } from "./model";
 
-/** Every field the form sends, by its exact name. */
+/**
+ * Every field the form sends, by its exact name. The quick intake form sends
+ * contact-name, email, phone, platforms, <platform>_handle, creator_name (the
+ * username they typed once), the address fields, notes (delivery notes) and
+ * consent. country, main_platform and <platform>_audience came from the
+ * earlier, longer form and are still read so older sign-ups import the same.
+ */
 export const UGC_FORM_FIELDS = [
   "contact-name",
   "email",
@@ -89,6 +95,15 @@ const clip = (s: string | undefined, n: number) => (s ?? "").trim().slice(0, n);
 const isPlatform = (p: string): p is UgcPlatform =>
   (UGC_PLATFORMS as readonly string[]).includes(p);
 
+/** "@bobofan" from the first channel with a plain username (not a link). */
+function firstHandle(platforms: UgcPlatform[], handles: Partial<Record<UgcPlatform, string>>) {
+  for (const p of platforms) {
+    const h = (handles[p] ?? "").replace(/^@+/, "");
+    if (h && !h.includes("/")) return h.slice(0, 80);
+  }
+  return "";
+}
+
 function toTime(v: string | undefined): number | null {
   if (!v) return null;
   const t = Date.parse(v);
@@ -125,7 +140,8 @@ export function mapSignup(
   const mainPlatform = isPlatform(main) ? main : platforms.length === 1 ? platforms[0] : null;
 
   const name = clip(fields["contact-name"], 120);
-  const country = clip(fields.country, 80);
+  // The quick intake form (Nov 2026) asks for country only in the address.
+  const country = clip(fields.country, 80) || clip(fields.address_country, 80);
   const line1 = clip(fields.address_line1, 200);
   const address: ShippingAddress | null = line1
     ? {
@@ -146,7 +162,11 @@ export function mapSignup(
     signup: {
       creator: {
         name,
-        creatorName: clip(fields.creator_name, 80) || name.split(" ")[0] || email.split("@")[0],
+        creatorName:
+          clip(fields.creator_name, 80) ||
+          firstHandle(platforms, handles) ||
+          name.split(" ")[0] ||
+          email.split("@")[0],
         email,
         country,
         platforms,

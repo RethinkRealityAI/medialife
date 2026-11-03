@@ -192,16 +192,20 @@
           <figcaption class="mono"><span class="dot"></span>Golden Gate</figcaption>
         </figure>
         <figure class="clip">
+          <video data-src="/evade/creators/assets/video/bobo-meetup.mp4" poster="/evade/creators/assets/video/bobo-meetup.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR meeting a mascot outside an event"></video>
+          <figcaption class="mono"><span class="dot"></span>Meet &amp; greet</figcaption>
+        </figure>
+        <figure class="clip">
+          <video data-src="/evade/creators/assets/video/bobo-exhibit.mp4" poster="/evade/creators/assets/video/bobo-exhibit.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR running and flipping by an outdoor exhibit"></video>
+          <figcaption class="mono"><span class="dot"></span>Outdoor exhibit</figcaption>
+        </figure>
+        <figure class="clip">
           <video data-src="/evade/creators/assets/video/bobo-rdc26.mp4" poster="/evade/creators/assets/video/bobo-rdc26.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Roblox Developers Conference"></video>
           <figcaption class="mono"><span class="dot"></span>RDC 2026</figcaption>
         </figure>
         <figure class="clip">
           <video data-src="/evade/creators/assets/video/bobo-bridge.mp4" poster="/evade/creators/assets/video/bobo-bridge.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR on the Golden Gate Bridge walkway"></video>
           <figcaption class="mono"><span class="dot"></span>On the bridge</figcaption>
-        </figure>
-        <figure class="clip">
-          <video data-src="/evade/creators/assets/video/bobo-walk.mp4" poster="/evade/creators/assets/video/bobo-walk.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR following along the bridge"></video>
-          <figcaption class="mono"><span class="dot"></span>Bridge walk</figcaption>
         </figure>
       </div>
       <p class="reel-note mono rv rv-d2">Recorded on a phone · No app</p>
@@ -371,7 +375,7 @@
           <div class="progress" aria-hidden="false">
             <ol class="prog-steps" id="progSteps">
               <li class="is-on"><button type="button" data-go="0" disabled><i>1</i><span>You</span></button></li>
-              <li><button type="button" data-go="1" disabled><i>2</i><span>Platforms</span></button></li>
+              <li><button type="button" data-go="1" disabled><i>2</i><span>Channels</span></button></li>
               <li><button type="button" data-go="2" disabled><i>3</i><span>Shipping</span></button></li>
               <li><button type="button" data-go="3" disabled><i>4</i><span>Send</span></button></li>
             </ol>
@@ -395,29 +399,19 @@
                 <input id="f-email" name="email" type="email" autocomplete="email" inputmode="email" required maxlength="200" aria-describedby="e-email" spellcheck="false" autocapitalize="off" />
                 <p class="err" id="e-email"></p>
               </div>
-              <div class="field">
-                <label for="f-creator">Creator name <span class="opt">optional</span></label>
-                <input id="f-creator" name="creator_name" type="text" autocomplete="nickname" maxlength="80" placeholder="What fans call you" aria-describedby="e-creator" />
-                <p class="err" id="e-creator"></p>
-              </div>
-              <div class="field">
+              <div class="field field--full">
                 <label for="f-phone">Phone <span class="opt">optional</span></label>
                 <input id="f-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="40" placeholder="+1 555 123 4567" aria-describedby="h-phone e-phone" />
-                <p class="hint" id="h-phone">Include your country code.</p>
+                <p class="hint" id="h-phone">Only for the courier. Include your country code.</p>
                 <p class="err" id="e-phone"></p>
-              </div>
-              <div class="field field--full">
-                <label for="f-country">Country</label>
-                <input id="f-country" name="country" type="text" autocomplete="country-name" list="countryList" required maxlength="80" aria-describedby="e-country" />
-                <p class="err" id="e-country"></p>
               </div>
             </div>
           </fieldset>
 
           <!-- STEP 2 -->
           <fieldset class="step" data-step="1" id="step1" hidden>
-            <legend><span class="mono">Step 2 of 4</span>Where you post</legend>
-            <p class="step-sub" id="platHelp">Tap every platform you post on. Add your handle and follower count.</p>
+            <legend><span class="mono">Step 2 of 4</span>Your channels</legend>
+            <p class="step-sub" id="platHelp">Tap every channel you post on.</p>
             <div class="plat-tiles" role="group" aria-describedby="platHelp e-platforms">
               <label class="ptile" data-p="tiktok"><input type="checkbox" value="tiktok" /><svg aria-hidden="true"><use href="#i-tiktok"/></svg><span>TikTok</span><i class="pt-check" aria-hidden="true"><svg><use href="#i-check"/></svg></i></label>
               <label class="ptile" data-p="youtube"><input type="checkbox" value="youtube" /><svg aria-hidden="true"><use href="#i-youtube"/></svg><span>YouTube</span><i class="pt-check" aria-hidden="true"><svg><use href="#i-check"/></svg></i></label>
@@ -428,7 +422,27 @@
               <label class="ptile" data-p="discord"><input type="checkbox" value="discord" /><svg aria-hidden="true"><use href="#i-discord"/></svg><span>Discord</span><i class="pt-check" aria-hidden="true"><svg><use href="#i-check"/></svg></i></label>
             </div>
             <p class="err err--block" id="e-platforms" role="alert"></p>
-            <div class="plat-panels" id="platPanels"><!-- built by page.js from PLATFORMS --></div>
+
+            <!-- usernames: one shared username + per-channel exceptions (page.js) -->
+            <div class="unames" id="unames" hidden>
+              <div class="un-shared" id="unShared">
+                <div class="field">
+                  <label for="f-uname" id="l-uname">Your username</label>
+                  <div class="ph-input no-pfx" id="unWrap"><span class="pfx" aria-hidden="true" hidden>@</span>
+                    <input id="f-uname" name="username" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="120" placeholder="yourname" data-shared="1" aria-describedby="e-uname" />
+                  </div>
+                  <p class="err" id="e-uname"></p>
+                </div>
+                <div class="un-apply" id="unApply">
+                  <p class="un-lbl" id="unApplyLbl">Same username on <span>· tap any that's different</span></p>
+                  <div class="un-chips" id="unChips" role="group" aria-labelledby="unApplyLbl"></div>
+                </div>
+              </div>
+              <div class="un-own" id="unOwn" hidden>
+                <p class="un-lbl" id="unOwnLbl">Different username on</p>
+                <div class="un-rows" id="unRows"><!-- built by page.js from PLATFORMS --></div>
+              </div>
+            </div>
           </fieldset>
 
           <!-- STEP 3 -->
@@ -469,20 +483,20 @@
                 <p class="err" id="e-acountry"></p>
               </div>
             </div>
-            <p class="step-sub step-sub--tiny">Only used to ship your merch.</p>
+            <div class="field field--full field--notes">
+              <label for="f-notes">Delivery notes <span class="opt">optional</span></label>
+              <textarea id="f-notes" name="notes" rows="2" maxlength="600" placeholder="Gate code, best time to deliver"></textarea>
+            </div>
+            <p class="step-sub step-sub--tiny">Only used to ship your package.</p>
           </fieldset>
 
           <!-- STEP 4 -->
           <fieldset class="step" data-step="3" id="step3" hidden>
             <legend><span class="mono">Step 4 of 4</span>Check and send</legend>
             <div class="review" id="review"></div>
-            <div class="field field--full">
-              <label for="f-notes">Notes for us <span class="opt">optional</span></label>
-              <textarea id="f-notes" name="notes" rows="3" maxlength="1500" placeholder="Anything about the merch, or delivery notes (gate code, best time to deliver)"></textarea>
-            </div>
             <div class="consent">
               <input id="f-consent" name="consent" type="checkbox" value="yes" required aria-describedby="e-consent" />
-              <label for="f-consent">MEDIALIFE can contact me about the EVADE creator program and use these details to ship my package. <a href="/contact" target="_blank" rel="noopener">Questions about your data?</a></label>
+              <label for="f-consent">MEDIALIFE can email me about the EVADE creator program and use these details to ship my package. <a href="/contact" target="_blank" rel="noopener">Questions about your data?</a></label>
             </div>
             <p class="err err--block" id="e-consent"></p>
             <div class="send-error" id="sendError" role="alert" hidden>
@@ -509,7 +523,7 @@
           <p class="sub">Here's what happens next.</p>
           <ol class="next-steps">
             <li><i>1</i><b>We review</b><span>Every sign-up, by a human.</span></li>
-            <li><i>2</i><b>We email you</b><span>Your brief and package details.</span></li>
+            <li><i>2</i><b>We email you</b><span>To confirm your package.</span></li>
             <li><i>3</i><b>Your package ships</b><span>Then you film.</span></li>
           </ol>
           <a class="btn btn--ghost" href="#footage">See Bobo in the wild</a>
