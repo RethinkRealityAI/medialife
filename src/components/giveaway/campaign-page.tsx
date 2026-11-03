@@ -407,8 +407,7 @@ function EntryForm({ data, refCode }: { data: GiveawayData; refCode?: string }) 
       {c.tasks.length ? (
         <p className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-[#bff7f4]">
           <Sparkles className="size-3.5" aria-hidden />
-          {c.tasks.length} ways to earn up to{" "}
-          {c.entryPoints + c.tasks.reduce((s, t) => s + t.points, 0)} points
+          {c.tasks.length} ways to earn up to {maxPoints(c)} points
           {c.referralPoints > 0 ? ", plus more for each friend you invite" : ""}
         </p>
       ) : null}
@@ -550,6 +549,17 @@ function EntryForm({ data, refCode }: { data: GiveawayData; refCode?: string }) 
         </p>
       </div>
     </form>
+  );
+}
+
+/** Most points one person can earn from tasks (follow/visit points respect the cap). */
+function maxPoints(c: PublicCampaign) {
+  const sum = (ts: PublicTask[]) => ts.reduce((s, t) => s + t.points, 0);
+  const honour = sum(c.tasks.filter((t) => !t.verified));
+  return (
+    c.entryPoints +
+    sum(c.tasks.filter((t) => t.verified)) +
+    (c.honourCap > 0 ? Math.min(honour, c.honourCap) : honour)
   );
 }
 
