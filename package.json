@@ -16,6 +16,7 @@
     "test:hub": "node scripts/test-hub.mjs",
     "test:ugc": "node scripts/test-hub.mjs ugc",
     "test:media": "node scripts/test-hub.mjs media",
+    "test:giveaway": "node scripts/test-hub.mjs giveaway",
     "check:shelf": "node scripts/check-shelf-default.mjs"
   },
   "dependencies": {
