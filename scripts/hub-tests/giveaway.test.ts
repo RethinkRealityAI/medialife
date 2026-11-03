@@ -57,6 +57,11 @@ assert.ok(created.ok);
 let c = created.campaign;
 assert.ok((await createCampaign(ns, "evade-launch")).ok === false, "slug is unique");
 assert.ok(goLiveProblems(c).length > 0);
+assert.ok(
+  goLiveProblems(c).some((p) => /REPLACE/.test(p)),
+  "sample placeholders block going live",
+);
+assert.ok(c.prizes.length && c.startsAt && c.endsAt && c.howItWorks, "the sample is filled in");
 const blocked = await saveCampaign(ns, { ...c, status: "live" });
 assert.ok(!blocked.ok);
 
@@ -68,6 +73,7 @@ const ready: GiveawayCampaign = {
   ...c,
   status: "live",
   sponsor: "MEDIALIFE Inc.",
+  sponsorAddress: "1 Test St, Toronto, ON",
   startsAt: Date.now() - 1000,
   endsAt: Date.now() + 86_400_000,
   prizes: [{ id: "p1", title: "EVADE merch pack", description: "", retailValue: 60, quantity: 2 }],

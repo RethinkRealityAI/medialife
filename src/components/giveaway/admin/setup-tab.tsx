@@ -39,7 +39,7 @@ import {
   type GiveawayTask,
   type TaskKind,
 } from "@/lib/giveaway/model";
-import { generatedRules } from "@/lib/giveaway/rules";
+import { SAMPLE_HOW_IT_WORKS, generatedRules } from "@/lib/giveaway/rules";
 import { cn } from "@/lib/utils";
 
 const PROFILE_HINT: Record<string, string> = {
@@ -574,6 +574,25 @@ export function SetupTab({ campaign, origin }: { campaign: GiveawayCampaign; ori
             onAdd={(kind) => set("tasks", [...c.tasks, { ...blankTask(rid(), kind), title: "" }])}
           />
         </div>
+      </Panel>
+
+      {/* How it works */}
+      <Panel className="p-5">
+        <PanelTitle
+          title="How it works"
+          sub="Shown on the giveaway page under the prizes. Same format as the rules: “## ” for headings, “- ” for bullet points. Leave empty for a short version generated from the settings."
+          actions={
+            <Button variant="outline" onClick={() => set("howItWorks", SAMPLE_HOW_IT_WORKS)}>
+              <ClipboardPaste aria-hidden /> Use the sample text
+            </Button>
+          }
+        />
+        <Textarea
+          className="mt-4 min-h-48 font-mono text-[13px]"
+          value={c.howItWorks ?? ""}
+          onChange={(e) => set("howItWorks", e.target.value)}
+          placeholder="Leave empty to use the generated version."
+        />
       </Panel>
 
       {/* Rules */}

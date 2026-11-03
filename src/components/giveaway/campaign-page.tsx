@@ -41,6 +41,8 @@ import {
   type PublicTask,
 } from "@/lib/giveaway/model";
 import type { EntrantView, PublicCampaign } from "@/lib/giveaway/giveaway.server";
+import { generatedHowItWorks, parseRules } from "@/lib/giveaway/rules";
+import type { GiveawayCampaign } from "@/lib/giveaway/model";
 import { cn } from "@/lib/utils";
 
 export type GiveawayData = {
@@ -202,6 +204,8 @@ export function GiveawayPage({
               </ul>
             </div>
           ) : null}
+
+          <HowItWorks c={c} />
         </section>
 
         <section aria-label="Your entry" className="min-w-0 lg:pt-10">
@@ -250,6 +254,36 @@ export function GiveawayPage({
           .
         </p>
       </footer>
+    </div>
+  );
+}
+
+/** The team's "How it works" text (same format as the rules), or a generated one. */
+function HowItWorks({ c }: { c: PublicCampaign }) {
+  const text =
+    c.howItWorks?.trim() ||
+    generatedHowItWorks({ ...c, tasks: [], createdAt: 0, updatedAt: 0 } as GiveawayCampaign);
+  const blocks = parseRules(text);
+  if (!blocks.length) return null;
+  return (
+    <div className={cn(card, "mt-6 rounded-2xl p-5 text-[15px] leading-relaxed text-[#c9d1d8]")}>
+      {blocks.map((b, i) =>
+        b.kind === "h" ? (
+          <h2 key={i} className={cn("text-sm font-semibold text-[#ffe48a]", i > 0 && "mt-5")}>
+            {b.text}
+          </h2>
+        ) : b.kind === "ul" ? (
+          <ul key={i} className="mt-2.5 list-disc space-y-1.5 pl-5 marker:text-[#3fe6e0]">
+            {b.items.map((x, j) => (
+              <li key={j}>{x}</li>
+            ))}
+          </ul>
+        ) : (
+          <p key={i} className="mt-2.5">
+            {b.text}
+          </p>
+        ),
+      )}
     </div>
   );
 }

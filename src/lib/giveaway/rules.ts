@@ -65,13 +65,49 @@ export function generatedRules(c: GiveawayCampaign): string {
     `On or about ${fmtDate(c.drawAt ?? c.endsAt, c.timeZoneLabel)}, the Sponsor will draw winners at random from all eligible confirmed entries. Each point is one ticket in the draw, so the odds of winning depend on the number of eligible entries and points earned. Before a prize is awarded, the Sponsor will check that the winner completed the tasks they claimed points for; points for tasks that can't be confirmed will be removed and the draw re-run among the remaining tickets if needed.`,
     "## 7. Claiming a prize",
     `Winners are contacted by email and must reply within ${GIVEAWAY.claimDays} days. To be declared a winner, a selected entrant must first correctly answer, unaided, a time-limited mathematical skill-testing question, and may be asked to sign a declaration of eligibility and release. If a winner can't be reached, doesn't answer correctly or doesn't meet these rules, the prize is forfeited and an alternate winner may be drawn.`,
-    "## 8. Privacy",
+    "## 8. Release and publicity",
+    "By accepting a prize, the winner (or, for a minor, their parent or guardian) releases the Sponsor and its partners from any liability for loss or injury arising from the prize or this giveaway. With the winner's consent (and a parent's or guardian's consent for a minor), the Sponsor may share the winner's first name, city and province or state when announcing results. Nobody will be shown without that consent.",
+    "## 9. Winners list",
+    `To ask for the first names of the winners, email ${GIVEAWAY.supportEmail} within 60 days after the giveaway ends.`,
+    "## 10. Privacy",
     "We use your information to run this giveaway and contact winners. We'll only send you marketing emails if you tick the box to join a mailing list, and you can unsubscribe at any time.",
-    "## 9. General",
+    "## 11. General",
     "The Sponsor may disqualify anyone who tampers with the giveaway or breaks these rules, and may cancel or change the giveaway if it can't run as planned. These rules are governed by the laws of the Province of Ontario and the federal laws of Canada that apply there.",
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+/** "How it works" text the sample campaign starts with (no dates or numbers, so it can't go stale). */
+export const SAMPLE_HOW_IT_WORKS = [
+  "## How it works",
+  [
+    "- Enter your name and email, then tap the link in the email we send you to confirm. That's your first point.",
+    "- Complete as many tasks as you like. Each one shows how many points it's worth, and every point is one more ticket in the draw.",
+    "- Share your personal link with friends. You earn bonus points for each friend who enters and confirms their email.",
+    "- When the giveaway ends, winners are drawn at random and contacted by email, so keep an eye on your inbox (and spam folder).",
+  ].join("\n"),
+  "## Good to know",
+  [
+    "- One entry per person. Extra or fake email addresses are removed.",
+    "- We check winners' follows and subscriptions before awarding a prize, so only claim the ones you've done.",
+    "- No purchase necessary. Don't have a keychain? Email us and we'll send you a free code (see the official rules).",
+    "- Canadian winners answer a quick skill-testing question before they can claim.",
+  ].join("\n"),
+].join("\n\n");
+
+/** The "How it works" box on the campaign page when the team hasn't written one. */
+export function generatedHowItWorks(c: GiveawayCampaign): string {
+  const ends = c.endsAt ? fmtDate(c.endsAt, c.timeZoneLabel) : "when the giveaway ends";
+  const steps = [
+    `- Enter your email and tap the confirm link we send you. That's your first ${c.entryPoints === 1 ? "point" : `${c.entryPoints} points`}.`,
+    "- Complete tasks to earn more points. Every point is one more ticket in the draw.",
+    c.referralPoints > 0
+      ? `- Share your personal link: ${c.referralPoints} points for each friend who enters and confirms (up to ${c.referralCap}).`
+      : "",
+    `- Entries close ${ends}. Winners are drawn at random and contacted by email.`,
+  ].filter(Boolean);
+  return `## How it works\n\n${steps.join("\n")}`;
 }
 
 /** Plain text → blocks: "## " lines are headings, "- " runs are lists, the rest paragraphs. */
