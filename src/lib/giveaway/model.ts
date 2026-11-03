@@ -151,8 +151,11 @@ export type GiveawayCampaign = {
   honourCap: number;
   optIns: OptInList[];
   tasks: GiveawayTask[];
-  /** Extra plain-text paragraphs appended to the official rules. */
-  rulesExtra: string;
+  /**
+   * The official rules, pasted in by the team (plain text; blank lines = paragraphs,
+   * lines starting "## " = headings). Empty = the page shows the generated rules.
+   */
+  rulesText: string;
   createdAt: number;
   updatedAt: number;
 };
@@ -414,4 +417,29 @@ export function blankTask(id: string, kind: TaskKind): GiveawayTask {
     codeHint: "",
     enabled: true,
   };
+}
+
+/** What still needs filling in before a campaign can go live (empty = ready). */
+export function goLiveProblems(c: GiveawayCampaign): string[] {
+  const out: string[] = [];
+  if (!c.title.trim()) out.push("Add a title.");
+  if (!c.sponsor.trim()) out.push("Add the sponsor (who legally runs the giveaway).");
+  if (!c.endsAt) out.push("Set the end date.");
+  if (c.startsAt && c.endsAt && c.endsAt <= c.startsAt) out.push("The end date must be after the start date.");
+  if (!c.prizes.length) out.push("Add at least one prize.");
+  if (c.prizes.some((p) => !p.title.trim() || !(p.retailValue > 0)))
+    out.push("Every prize needs a name and an approximate retail value.");
+  if (!c.countries.length) out.push("Pick at least one country that can enter.");
+  for (const t of c.tasks.filter((t) => t.enabled)) {
+    const name = t.title.trim() || TASK_KIND_LABELS[t.kind];
+    if (!t.title.trim()) out.push(`Give the "${TASK_KIND_LABELS[t.kind]}" task a title.`);
+    if ((t.kind === "follow" || t.kind === "visit" || t.kind === "discord") && !/^https:\/\//.test(t.url))
+      out.push(`"${name}": add the link (https://...).`);
+    if (t.kind === "discord" && !/^\d{15,25}$/.test(t.guildId ?? ""))
+      out.push(`"${name}": add the Discord server ID.`);
+    if (t.kind === "newsletter" && !c.optIns.some((o) => o.id === t.listId))
+      out.push(`"${name}": pick which mailing list it signs people up to.`);
+    if (t.kind === "code" && !t.codes.length) out.push(`"${name}": add at least one code.`);
+  }
+  return out;
 }
