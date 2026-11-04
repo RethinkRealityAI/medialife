@@ -13,8 +13,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js";
-import { createHologram } from "./holo.js";
+import { loadBobo } from "./bobo.js?v=4";
+import { createHologram } from "./holo.js?v=4";
+import { createLandmarks } from "./landmarks.js?v=4";
 
 const D2R = Math.PI / 180;
 const C = {
@@ -48,7 +49,12 @@ const FOCUS = FOCUS_WIDE.clone();
 const LAND_H = 0.03;
 const R_LAND = 1 + LAND_H;
 const FOCUS_LAND = FOCUS.clone().multiplyScalar(R_LAND);
+// where a landmark pops up: between Bobo and the beam, just behind the
+// horizon, so it rises like a skyline without covering either of them
+const LANDMARK = new THREE.Vector3(0.31, 1, -0.2).normalize();
+let landmarkSize = 0.3;
 function setFocusDir(portrait) {
+  landmarkSize = portrait ? 0.24 : 0.3;
   FOCUS.copy(portrait ? FOCUS_TALL : FOCUS_WIDE);
   FOCUS_LAND.copy(FOCUS).multiplyScalar(R_LAND);
 }
@@ -481,7 +487,7 @@ export async function createGlobe(canvas, opts) {
   }
 
   /* land dots, coastlines, borders */
-  const geo = await loadGeo("/evade/where-is-bobo/assets/data/globe.bin");
+  const geo = await loadGeo("/evade/where-is-bobo/assets/data/globe.bin?v=4");
   const nDots = geo.lat.length;
   const dotPos = new Float32Array(nDots * 3);
   const dotRand = new Float32Array(nDots);
@@ -520,7 +526,7 @@ export async function createGlobe(canvas, opts) {
   const landState = new Uint8Array(256 * 4);
   const landTex = new THREE.DataTexture(landState, 256, 1, THREE.RGBAFormat);
   landTex.needsUpdate = true;
-  const land = new THREE.Mesh(await loadLand("/evade/where-is-bobo/assets/data/land.bin"), landMat(landTex));
+  const land = new THREE.Mesh(await loadLand("/evade/where-is-bobo/assets/data/land.bin?v=4"), landMat(landTex));
   globe.add(land);
   const ccIndex = new Map(geo.codes.map((c, i) => [c, i + 1]));
   function paintLand(f, focusCc) {
@@ -590,6 +596,12 @@ export async function createGlobe(canvas, opts) {
 
   /* hologram */
   const holo = createHologram(scene, { reduced, maxTex: mobile ? 1024 : 2048 });
+  const landmarks = createLandmarks(globe, { reduced });
+  function showItem(item) {
+    holo.show(item);
+    if (landmarks.show(item.place, LANDMARK, R_LAND - 0.004, landmarkSize, camera))
+      setTimeout(() => opts.onLandmark?.(), 120);
+  }
 
   /* ── state ──────────────────────────────────────────────────────────────── */
   const st = {
@@ -918,6 +930,7 @@ export async function createGlobe(canvas, opts) {
     };
     st.vYaw = st.vPitch = 0;
     holo.hide();
+    landmarks.hide();
     bobo?.setMode("travel");
     Object.assign(st.goal, focusGoal());
     for (const [k, x] of hotspots) x.label?.classList.toggle("is-focus", k === key);
@@ -942,6 +955,7 @@ export async function createGlobe(canvas, opts) {
     st.pendingMedia = null;
     st.tween = null;
     holo.hide();
+    landmarks.hide();
     bobo?.setMode("auto");
     st.lastInput = st.time;
     Object.assign(st.goal, overviewGoal());
@@ -1021,6 +1035,7 @@ export async function createGlobe(canvas, opts) {
     down.ly = e.clientY;
     down.moved += Math.abs(dx) + Math.abs(dy);
     if (down.moved > 6) {
+      if (st.summon && !st.tween) endSummon();
       if (st.focus) {
         clearFocus();
         opts.onUserMove?.();
@@ -1104,18 +1119,19 @@ export async function createGlobe(canvas, opts) {
       st.pitch = tw.from.pitch + (tw.to.pitch - tw.from.pitch) * k;
       if (tw.t >= 1) {
         st.tween = null;
+        if (tw.summon) summonArrived();
         if (tw.key && tw.key === st.focus) {
           st.arrived = true;
           bobo?.react("Excited", t);
           setTimeout(() => {
             if (st.focus === tw.key) bobo?.setMode("watch");
           }, 900);
-          if (st.pendingMedia) holo.show(st.pendingMedia);
+          if (st.pendingMedia) showItem(st.pendingMedia);
           st.pendingMedia = null;
           opts.onArrive?.(tw.key);
         }
       }
-    } else if (!st.dragging && !st.focus) {
+    } else if (!st.dragging && !st.focus && !st.summon) {
       // inertia, then a gentle spin while nobody's touching it
       st.yaw += st.vYaw * dt;
       st.pitch = clamp(st.pitch + st.vPitch * dt, -1.35, 1.35);
@@ -1174,6 +1190,8 @@ export async function createGlobe(canvas, opts) {
 
     // hologram at the focus point
     holo.update(dt, t, FOCUS_LAND, camera);
+    landmarks.update(dt, t);
+    updateSummon(dt, t);
 
     renderer.render(scene, camera);
 
@@ -1222,8 +1240,13 @@ export async function createGlobe(canvas, opts) {
       tmpV.copy(h.local).multiplyScalar(R_LAND + h.top + 0.012).applyQuaternion(globe.quaternion);
       const facing = tmpV.clone().normalize().dot(camDir);
       const isFocus = st.focus === h.place.key;
+      // labels right where Bobo was summoned would sit on top of him
+      const underBobo = st.summon && h.local.angleTo(st.summon.local) < 0.12;
       const visible =
-        facing > 0.25 && (showAll || h.isLatest || isFocus) && !(isFocus && holo.active && st.arrived);
+        facing > 0.25 &&
+        !underBobo &&
+        (showAll || h.isLatest || isFocus) &&
+        !(isFocus && holo.active && st.arrived);
       h.label.classList.toggle("is-hidden", !visible);
       if (!visible) continue;
       tmpV.project(camera);
@@ -1244,6 +1267,194 @@ export async function createGlobe(canvas, opts) {
     }
   }
 
+  /* ── "Bring Bobo to me" ─────────────────────────────────────────────────── */
+  // A beacon shoots up at the visitor's city, an arc races there from Bobo's
+  // latest sighting, the planet spins it under his feet while he runs, and he
+  // lands in a burst of confetti.
+  const beaconMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uOn: { value: 0 }, uColor: { value: C.pink } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      uniform float uTime; uniform float uOn; uniform vec3 uColor; varying vec2 vUv;
+      void main() {
+        float fade = pow(1.0 - vUv.y, 1.6);
+        float bands = 0.65 + 0.35 * sin(vUv.y * 40.0 - uTime * 9.0);
+        float edge = 1.0 - abs(vUv.x - 0.5) * 2.0;
+        gl_FragColor = vec4(uColor * 1.6, fade * bands * (0.35 + 0.65 * edge) * uOn);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+  });
+  const beacon = new THREE.Group();
+  {
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.04, 0.9, 20, 1, true).translate(0, 0.45, 0), beaconMat);
+    const ring = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.26, 0.26),
+      new THREE.ShaderMaterial({
+        uniforms: { uTime: { value: 0 }, uOpacity: { value: 1 }, uColor: { value: C.pink }, uSpeed: { value: 0.9 } },
+        vertexShader: uvVert,
+        fragmentShader: rippleFrag,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.003;
+    col.renderOrder = ring.renderOrder = 6;
+    beacon.add(col, ring);
+    beacon.userData = { col, ring };
+    beacon.visible = false;
+    globe.add(beacon);
+  }
+  let summonArc = null;
+
+  // confetti: brand colours, launched from Bobo, pulled back to the planet
+  const CONF = mobile ? 140 : 220;
+  const confPos = new Float32Array(CONF * 3);
+  const confCol = new Float32Array(CONF * 3);
+  const confVel = new Float32Array(CONF * 3);
+  const confGeo = new THREE.BufferGeometry();
+  confGeo.setAttribute("position", new THREE.BufferAttribute(confPos, 3));
+  confGeo.setAttribute("color", new THREE.BufferAttribute(confCol, 3));
+  const confetti = new THREE.Points(
+    confGeo,
+    new THREE.PointsMaterial({ size: mobile ? 0.03 : 0.024, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false }),
+  );
+  confetti.visible = false;
+  confetti.renderOrder = 8;
+  scene.add(confetti);
+  let confT = 0;
+  function burst() {
+    const palette = [C.gold, C.pink, C.teal, C.blue, new THREE.Color("#ffffff")];
+    const origin = ANCHOR.clone().multiplyScalar(R_LAND + BOBO_H * 0.9);
+    const up = ANCHOR.clone();
+    const v = new THREE.Vector3();
+    for (let i = 0; i < CONF; i++) {
+      origin.toArray(confPos, i * 3);
+      v.randomDirection().multiplyScalar(0.35 + Math.random() * 0.55).addScaledVector(up, 0.9 + Math.random() * 0.6);
+      v.toArray(confVel, i * 3);
+      palette[i % palette.length].toArray(confCol, i * 3);
+    }
+    confGeo.attributes.position.needsUpdate = true;
+    confGeo.attributes.color.needsUpdate = true;
+    confetti.visible = true;
+    confT = 0;
+  }
+
+  function summon(loc) {
+    if (!loc || !Number.isFinite(loc.lat)) return false;
+    clearFocus();
+    endSummon(true);
+    const local = toVec(loc.lat, loc.lng, 1);
+    beacon.position.copy(local).multiplyScalar(R_LAND);
+    beacon.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), local);
+    beacon.visible = true;
+    beacon.scale.set(1, 0.001, 1);
+    // arc from the latest sighting to you
+    const from = latestKey && hotspots.get(latestKey)?.local;
+    if (from && from.angleTo(local) > 0.02) {
+      const ang = from.angleTo(local);
+      const axis = new THREE.Vector3().crossVectors(from, local).normalize();
+      const pts = [];
+      const q = new THREE.Quaternion();
+      for (let k = 0; k <= 64; k++) {
+        const t = k / 64;
+        q.setFromAxisAngle(axis, ang * t);
+        pts.push(from.clone().applyQuaternion(q).multiplyScalar(R_LAND + 0.005 + Math.sin(Math.PI * t) * (0.06 + 0.3 * (ang / Math.PI))));
+      }
+      const mat = arcMat(0);
+      mat.uniforms.uA.value = C.gold;
+      mat.uniforms.uB.value = C.pink;
+      mat.uniforms.uHi.value = 1;
+      summonArc = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 96, mobile ? 0.006 : 0.005, 6, false), mat);
+      summonArc.renderOrder = 4;
+      globe.add(summonArc);
+    }
+    const to = orientFor(local, ANCHOR, st.yaw);
+    const ang = Math.hypot(wrap(to.yaw - st.yaw), to.pitch - st.pitch);
+    st.summon = { loc, local, t: 0, arrived: false };
+    st.tween = { from: { yaw: st.yaw, pitch: st.pitch }, to, t: 0, dur: reduced ? 0.01 : clamp(1.6 + ang * 0.9, 2.2, 4.2), key: null, summon: true };
+    st.vYaw = st.vPitch = 0;
+    bobo?.setMode("travel");
+    const portrait = st.h > st.w * 1.1;
+    // phones: pull back so Bobo stands mid-screen under the (compact) title
+    Object.assign(st.goal, {
+      tx: 0,
+      ty: portrait ? 0.98 : 1.22,
+      tz: 0.2,
+      dist: portrait ? 3.6 : 2.3,
+      elev: portrait ? 0.1 : 0.14,
+      azim: -0.05,
+    });
+    return true;
+  }
+  function summonArrived() {
+    if (!st.summon) return;
+    st.summon.arrived = true;
+    bobo?.react("Excited", st.time);
+    setTimeout(() => st.summon?.arrived && bobo?.setMode("watch"), 1200);
+    burst();
+    opts.onSummoned?.(st.summon.loc);
+  }
+  function endSummon(silent = false) {
+    if (!st.summon && !summonArc) return;
+    st.summon = null;
+    opts.onSummonEnd?.();
+    beacon.visible = false;
+    if (summonArc) {
+      globe.remove(summonArc);
+      summonArc.geometry.dispose();
+      summonArc = null;
+    }
+    bobo?.setMode("auto");
+    if (!silent) {
+      st.lastInput = st.time;
+      Object.assign(st.goal, overviewGoal());
+    }
+  }
+  function updateSummon(dt, t) {
+    beaconMat.uniforms.uTime.value = t;
+    if (st.summon) {
+      const s = st.summon;
+      s.t += dt;
+      // the beacon shoots up, then settles into a glowing ring under Bobo
+      const rise = Math.min(1, s.t / 0.5);
+      if (s.arrived && s.doneAt === undefined) s.doneAt = s.t;
+      const settle = s.arrived ? 1 - Math.min(1, (s.t - s.doneAt) / 0.8) * 0.88 : 1;
+      beacon.scale.set(1, rise * settle, 1);
+      beaconMat.uniforms.uOn.value = rise;
+      beacon.userData.ring.material.uniforms.uTime.value += dt;
+      if (summonArc) {
+        const u = summonArc.material.uniforms;
+        u.uTime.value = t;
+        u.uReveal.value = reduced ? 1 : clamp(s.t / 1.1, 0, 1);
+      }
+    }
+    if (confetti.visible) {
+      confT += dt;
+      const g = new THREE.Vector3();
+      for (let i = 0; i < CONF; i++) {
+        const o = i * 3;
+        g.set(confPos[o], confPos[o + 1], confPos[o + 2]).normalize().multiplyScalar(-1.6 * dt);
+        confVel[o] = confVel[o] * (1 - dt * 1.2) + g.x;
+        confVel[o + 1] = confVel[o + 1] * (1 - dt * 1.2) + g.y;
+        confVel[o + 2] = confVel[o + 2] * (1 - dt * 1.2) + g.z;
+        confPos[o] += confVel[o] * dt;
+        confPos[o + 1] += confVel[o + 1] * dt;
+        confPos[o + 2] += confVel[o + 2] * dt;
+      }
+      confGeo.attributes.position.needsUpdate = true;
+      confetti.material.opacity = clamp(2.4 - confT, 0, 1);
+      if (confT > 2.4) confetti.visible = false;
+    }
+  }
+
   document.addEventListener("visibilitychange", () => {
     running = !document.hidden;
     if (running) clock.getDelta();
@@ -1258,6 +1469,11 @@ export async function createGlobe(canvas, opts) {
 
   return {
     setFeed,
+    summon,
+    endSummon: () => endSummon(),
+    get summoned() {
+      return !!st.summon;
+    },
     focus,
     showMedia,
     clearFocus,

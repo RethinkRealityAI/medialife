@@ -70,6 +70,7 @@ import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiBoboEventsRouteImport } from './routes/api.bobo.events'
 import { Route as ApiBoboFeedDotjsonRouteImport } from './routes/api.bobo.feed[.]json'
+import { Route as ApiBoboNearRouteImport } from './routes/api.bobo.near'
 import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
@@ -458,6 +459,11 @@ const ApiBoboEventsRoute = ApiBoboEventsRouteImport.update({
 const ApiBoboFeedDotjsonRoute = ApiBoboFeedDotjsonRouteImport.update({
   id: '/api/bobo/feed.json',
   path: '/api/bobo/feed.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBoboNearRoute = ApiBoboNearRouteImport.update({
+  id: '/api/bobo/near',
+  path: '/api/bobo/near',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiBoboPlacesRoute = ApiBoboPlacesRouteImport.update({
@@ -954,6 +960,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
@@ -1092,6 +1099,7 @@ export interface FileRoutesByTo {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
@@ -1239,6 +1247,7 @@ export interface FileRoutesById {
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
@@ -1387,6 +1396,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/bobo/events'
     | '/api/bobo/feed.json'
+    | '/api/bobo/near'
     | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
@@ -1525,6 +1535,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/bobo/events'
     | '/api/bobo/feed.json'
+    | '/api/bobo/near'
     | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
@@ -1671,6 +1682,7 @@ export interface FileRouteTypes {
     | '/api/ar/track'
     | '/api/bobo/events'
     | '/api/bobo/feed.json'
+    | '/api/bobo/near'
     | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
@@ -1799,6 +1811,7 @@ export interface RootRouteChildren {
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiBoboEventsRoute: typeof ApiBoboEventsRoute
   ApiBoboFeedDotjsonRoute: typeof ApiBoboFeedDotjsonRoute
+  ApiBoboNearRoute: typeof ApiBoboNearRoute
   ApiBoboPlacesRoute: typeof ApiBoboPlacesRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
@@ -2254,6 +2267,13 @@ declare module '@tanstack/react-router' {
       path: '/api/bobo/feed.json'
       fullPath: '/api/bobo/feed.json'
       preLoaderRoute: typeof ApiBoboFeedDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bobo/near': {
+      id: '/api/bobo/near'
+      path: '/api/bobo/near'
+      fullPath: '/api/bobo/near'
+      preLoaderRoute: typeof ApiBoboNearRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/bobo/places': {
@@ -3236,6 +3256,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArTrackRoute: ApiArTrackRoute,
   ApiBoboEventsRoute: ApiBoboEventsRoute,
   ApiBoboFeedDotjsonRoute: ApiBoboFeedDotjsonRoute,
+  ApiBoboNearRoute: ApiBoboNearRoute,
   ApiBoboPlacesRoute: ApiBoboPlacesRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,

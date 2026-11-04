@@ -131,7 +131,9 @@ function clientIp(request: Request): string {
 }
 
 /** Netlify's x-nf-geo header (base64 JSON): the visitor's city from their IP. */
-function ipGeo(request: Request): { city: string; cc: string; lat: number; lng: number } | null {
+export function ipGeo(
+  request: Request,
+): { city: string; cc: string; lat: number; lng: number } | null {
   const raw = request.headers.get("x-nf-geo");
   if (!raw) return null;
   try {

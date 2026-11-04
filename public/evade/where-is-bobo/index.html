@@ -27,16 +27,16 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <!-- Same href as the rest of the site, so the font file is a cache hit. -->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet" />
-<link rel="preload" href="/evade/where-is-bobo/assets/data/globe.bin" as="fetch" crossorigin />
+<link rel="preload" href="/evade/where-is-bobo/assets/data/globe.bin?v=4" as="fetch" crossorigin />
 <link rel="preload" href="/api/bobo/feed.json" as="fetch" crossorigin />
-<link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css" />
+<link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css?v=4" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
 <script src="/vendor/ar-kit/track.js" defer></script>
-<script type="module" src="/evade/where-is-bobo/assets/js/main.js"></script>
+<script type="module" src="/evade/where-is-bobo/assets/js/main.js?v=4"></script>
 </head>
 <body>
 <a class="skip-link" href="#sightings">Skip to the list of sightings</a>
@@ -51,6 +51,7 @@
     <symbol id="i-list" viewBox="0 0 16 16"><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 4h8M6 8h8M6 12h8"/><circle cx="2.5" cy="4" r=".6" fill="currentColor"/><circle cx="2.5" cy="8" r=".6" fill="currentColor"/><circle cx="2.5" cy="12" r=".6" fill="currentColor"/></g></symbol>
     <symbol id="i-route" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="3.5" cy="12.5" r="1.8"/><circle cx="12.5" cy="3.5" r="1.8"/><path d="M5.3 12.5H11a2.2 2.2 0 0 0 0-4.5H5a2.2 2.2 0 0 1 0-4.5h5.7" stroke-dasharray="2 2"/></g></symbol>
     <symbol id="i-sound" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6v4h3l4 3V3L5 6Z" fill="currentColor"/><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5M13.5 3.5a6.5 6.5 0 0 1 0 9"/></g></symbol>
+    <symbol id="i-beacon" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.5s4.5-4.2 4.5-8a4.5 4.5 0 0 0-9 0c0 3.8 4.5 8 4.5 8Z"/><circle cx="8" cy="6.5" r="1.6" fill="currentColor"/></g></symbol>
     <symbol id="i-stop" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor"/></symbol>
     <symbol id="i-scan" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 5.5V3a1 1 0 0 1 1-1h2.5M10.5 2H13a1 1 0 0 1 1 1v2.5M14 10.5V13a1 1 0 0 1-1 1h-2.5M5.5 14H3a1 1 0 0 1-1-1v-2.5M4.5 8h7"/></g></symbol>
   </defs>
@@ -67,10 +68,15 @@
     <span class="x" aria-hidden="true">×</span>
     <img class="brand-evade" src="/brand/evade-logo.webp" alt="EVADE" width="80" height="21" />
   </a>
-  <a class="btn btn-gold btn-sm" id="playCta" href="https://evade.medialife.ai" rel="noopener">
-    <svg width="14" height="14" aria-hidden="true"><use href="#i-play"/></svg>
-    <span>Play Cola Run</span>
-  </a>
+  <div class="top-right">
+    <button type="button" class="icon-btn sound-btn" id="soundBtn" aria-pressed="true" aria-label="Turn sound and vibration off" title="Sound and vibration">
+      <svg width="16" height="16" aria-hidden="true"><use href="#i-sound"/></svg>
+    </button>
+    <a class="btn btn-gold btn-sm" id="playCta" href="https://evade.medialife.ai" rel="noopener">
+      <svg width="14" height="14" aria-hidden="true"><use href="#i-play"/></svg>
+      <span>Play Cola Run</span>
+    </a>
+  </div>
 </header>
 
 <main id="main" class="ui">
@@ -85,6 +91,10 @@
       <div class="stat-scans"><dt>Scans</dt><dd data-stat="events">0</dd></div>
     </dl>
     <div class="hero-actions">
+      <button type="button" class="btn btn-primary summon-btn" id="summonBtn">
+        <span class="summon-ico" aria-hidden="true"><svg width="16" height="16"><use href="#i-beacon"/></svg></span>
+        <span>Bring Bobo to me</span>
+      </button>
       <button type="button" class="btn btn-glass" id="tourBtn" hidden>
         <svg width="16" height="16" aria-hidden="true"><use href="#i-route"/></svg>
         <span>Replay his trip</span>

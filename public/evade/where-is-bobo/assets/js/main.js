@@ -5,6 +5,8 @@
  *
  * Data: GET /api/bobo/feed.json (src/lib/bobo/model.ts → BoboFeed).
  */
+import { sfx } from "./sfx.js?v=4";
+
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 45_000;
 const GAME = "https://evade.medialife.ai";
@@ -90,15 +92,26 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js");
+      const { createGlobe } = await import("./globe.js?v=4");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
         mobile,
         onSelect: (key) => select(key, { from: "globe" }),
-        onBobo: boboSays,
+        onBobo: () => {
+          sfx.chirp();
+          boboSays();
+        },
+        onHover: (key) => {
+          if (key && key !== lastHover) sfx.hover();
+          lastHover = key;
+        },
+        onLandmark: () => sfx.pop(),
+        onSummoned: summoned,
+    onSummonEnd: () => document.body.classList.remove("is-summon"),
         onUserMove: () => closeCard({ keepGlobe: true }),
         onArrive: () => {
+          sfx.arrive();
           const p = current && placeBy(current.key);
           if (p) globe.showMedia(p.media[current.i]);
         },
@@ -132,6 +145,7 @@ async function boot() {
 }
 
 let userTouched = false;
+let lastHover = null;
 addEventListener("pointerdown", () => (userTouched = true), { once: true, capture: true });
 
 function emptyFeed() {
@@ -292,6 +306,9 @@ function select(key, { from = "ui", i = 0 } = {}) {
   const p = placeBy(key);
   if (!p?.media.length) return;
   if (from !== "tour") stopTour();
+  if (from !== "auto" && from !== "link") sfx.select();
+  if (current?.key !== key) sfx.whoosh(from === "tour" ? 1.1 : 0.8);
+  globe?.endSummon();
   current = { key, i: Math.min(i, p.media.length - 1) };
   renderCard();
   $("card").hidden = false;
@@ -561,6 +578,7 @@ function showTick(e) {
   void t.offsetWidth;
   t.classList.add("is-swap");
   if (e.key) globe?.ping(e.key);
+  if (userTouched) sfx.ping();
 }
 function startTicker() {
   // replays the latest real events so the globe feels alive; new ones jump the queue
@@ -632,6 +650,118 @@ addEventListener("keydown", (e) => {
     if (p.media.length > 1) setMedia((current.i + (e.key === "ArrowRight" ? 1 : -1) + p.media.length) % p.media.length);
   }
 });
+
+// a soft tick and a tiny buzz on every button
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    const b = e.target.closest("button, .btn, a.nav-btn");
+    if (b && !b.disabled && !b.matches("#soundBtn, #summonBtn")) sfx.tap();
+  },
+  { capture: true },
+);
+
+/* ── sound toggle ─────────────────────────────────────────────────────────── */
+function paintSound() {
+  const b = $("soundBtn");
+  b.setAttribute("aria-pressed", String(!sfx.muted));
+  b.setAttribute("aria-label", sfx.muted ? "Turn sound and vibration on" : "Turn sound and vibration off");
+  b.classList.toggle("is-off", sfx.muted);
+}
+$("soundBtn").addEventListener("click", () => {
+  sfx.setMuted(!sfx.muted);
+  paintSound();
+  if (!sfx.muted) sfx.chirp();
+  track("sound", { on: !sfx.muted });
+});
+paintSound();
+
+/* ── "Bring Bobo to me" ───────────────────────────────────────────────────── */
+// The visitor's city comes from Netlify's IP lookup (no permission prompt);
+// if that's unknown we ask the browser. Nothing is stored or sent anywhere else.
+async function whereAmI() {
+  try {
+    const r = await fetch("/api/bobo/near", { cache: "no-store" });
+    if (r.ok) return await r.json();
+  } catch {
+    /* fall through */
+  }
+  if (!navigator.geolocation) return null;
+  return new Promise((res) =>
+    navigator.geolocation.getCurrentPosition(
+      async (p) => {
+        const { latitude: lat, longitude: lng } = p.coords;
+        // name the nearest city (the coordinates aren't stored)
+        const named = await fetch(`/api/bobo/near?lat=${lat.toFixed(2)}&lng=${lng.toFixed(2)}`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null);
+        res(named ?? { city: "", country: "", countryCode: "", lat, lng });
+      },
+      () => res(null),
+      { maximumAge: 600000, timeout: 8000 },
+    ),
+  );
+}
+let summoning = false;
+async function summonBobo() {
+  if (summoning || !globe) return;
+  summoning = true;
+  const btn = $("summonBtn");
+  btn.classList.add("is-busy");
+  btn.setAttribute("aria-busy", "true");
+  sfx.select();
+  stopTour();
+  closeCard({ keepGlobe: true });
+  if (mobile) closeList();
+  const me = await whereAmI();
+  btn.classList.remove("is-busy");
+  btn.removeAttribute("aria-busy");
+  if (!me) {
+    summoning = false;
+    toast("We couldn't tell where you are. Allow location to call Bobo over.");
+    return;
+  }
+  sfx.whoosh(2.2);
+  if (globe.summon(me)) document.body.classList.add("is-summon");
+  track("summon", { cc: me.countryCode || null });
+  setTimeout(() => (summoning = false), 1500);
+}
+function haversine(a, b) {
+  const r = Math.PI / 180;
+  const h =
+    Math.sin(((b.lat - a.lat) * r) / 2) ** 2 +
+    Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lng - a.lng) * r) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function summoned(loc) {
+  sfx.fanfare();
+  const where = loc.city || "your city";
+  const last = mediaPlaces()[0];
+  const km = last ? haversine(last, loc) : 0;
+  const b = $("bubble");
+  b.textContent = `I made it to ${where}! Scan a keychain to make it official.`;
+  const pos = globe.boboScreen();
+  b.style.left = `${pos.x}px`;
+  b.style.top = `${pos.y}px`;
+  b.hidden = false;
+  clearTimeout(bubbleT);
+  bubbleT = setTimeout(() => (b.hidden = true), 5200);
+  toast(last && km > 50 ? `Bobo ran ${fmtN(km)} km to ${where}!` : `Bobo ran to ${where}!`, "Share", () =>
+    shareSummon(where),
+  );
+}
+async function shareSummon(where) {
+  const url = new URL("/evade/where-is-bobo/", location.origin).toString();
+  const text = `I just called Bobo to ${where}. Where is Bobo?`;
+  try {
+    if (navigator.share) await navigator.share({ title: "Where is Bobo?", text, url });
+    else if (await navigator.clipboard?.writeText(`${text} ${url}`).then(() => true)) toast("Link copied");
+  } catch {
+    /* cancelled */
+  }
+  track("summon_share");
+}
+$("summonBtn").addEventListener("click", summonBobo);
 
 $("playCta").addEventListener("click", () => track("play_cola_run", { at: current?.key ?? null }));
 $("playCta").href = GAME;

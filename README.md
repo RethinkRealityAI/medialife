@@ -756,6 +756,26 @@ feed is requested on any deploy, production included (`src/lib/bobo/launch.serve
 They're ordinary files after that: edit, unpublish or delete them in `/admin/media`, and a
 marker stops them coming back.
 
+**Landmarks.** When a place's venue (or city) names a famous landmark, a chunky toon 3D
+model of it pops out of the ground beside Bobo while the hologram plays, placed so it never
+covers Bobo or the video. Built procedurally in `assets/js/landmarks.js` (no generated
+assets): Golden Gate Bridge, Eiffel Tower, Big Ben, Tokyo Tower, Sydney Opera House,
+Statue of Liberty. Add one by writing a builder and a regex in its `CATALOG`.
+
+**Sound and haptics.** Tiny Web Audio sounds (no files) for taps, hovers, picking a place,
+the camera whoosh, the hologram arriving, a landmark popping, tapping Bobo, live scans and
+the summon fanfare, plus short vibrations on Android (iOS Safari has no vibration API).
+Nothing plays before the first tap; the speaker button in the header mutes both, remembered
+per device (`assets/js/sfx.js`).
+
+**"Bring Bobo to me".** The hero button spins the globe to the visitor's city, fires a pink
+beacon from the ground, draws an arc from Bobo's latest sighting, and Bobo runs over to a
+confetti burst and a shareable "Bobo ran 8,616 km to London!" toast. The city comes from
+`GET /api/bobo/near` (Netlify's IP geolocation, snapped to the nearest big city, no prompt);
+if that's unknown the browser's location prompt is the fallback, and `?lat=&lng=` on the
+same endpoint names the nearest city. Nothing is stored. It's a moment for the visitor
+only: it doesn't add a pin (a real keychain scan does).
+
 **Where the pins come from.** Any Media Library video or image that has a location, the
 **Public** link on and **Show on the globe** switched on. Set all three in the file drawer
 (*Where was this?*: city search, optional venue, date seen). The library filter *Where is
@@ -771,7 +791,7 @@ WebGL (or with reduced motion) the page falls back to the sightings list. Bobo i
 `catbobo.glb` + `bobo-clips.glb` as the retail displays (walk, run, idle, sit, sleep).
 
 Files: `public/evade/where-is-bobo/` (page, `assets/js/globe.js` scene, `bobo.js`
-character, `holo.js` hologram, `main.js` UI), `src/lib/bobo/` (locations, feed, events,
+character, `holo.js` hologram, `landmarks.js`, `sfx.js` sounds, `main.js` UI), `src/lib/bobo/` (locations, feed, events,
 geo lookup, preview sample), `src/routes/api.bobo.*`, the drawer section in
 `src/components/media/globe-location.tsx`.
 
@@ -785,6 +805,7 @@ Everything the game sends shows up on the next feed refresh (the page polls ever
 | `POST /api/bobo/events` | Game server (bearer token) or the game in a browser (allowed `Origin`) | One event `{type, …}` or `{events: [...]}` (max 50). |
 | `POST /api/media/uploads` + chunks + `complete` | Game server (bearer token) | A player capture (video or image) into the Media Library. |
 | `GET /api/bobo/places?q=` | Admin or bearer token | City search (the drawer's picker). |
+| `GET /api/bobo/near` | The page | The visitor's approximate city for "Bring Bobo to me" (never cached or stored). |
 
 Event fields: `type` (`scan`, `play`, `reward`, `sighting`, `share`, `capture`, `custom`),
 `at` (ISO or ms, clamped to the last 7 days), `lat`/`lng` or `city`+`countryCode`,

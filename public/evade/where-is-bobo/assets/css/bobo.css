@@ -123,7 +123,7 @@ img, video { display: block; max-width: 100%; }
 .brand sup { font-size: 0.55em; }
 .brand .x { color: var(--muted); font-size: 13px; }
 .brand-evade { height: 18px; width: auto; }
-@media (max-width: 380px) { .brand b { display: none; } }
+@media (max-width: 480px) { .brand b { display: none; } }
 
 /* ── buttons ──────────────────────────────────────────────────────────────── */
 .btn {
@@ -414,7 +414,15 @@ img, video { display: block; max-width: 100%; }
   .stats dd { font-size: 19px; }
   .hero-actions { margin-top: 12px; }
   .hero-actions .btn { min-height: 40px; padding: 0 14px; font-size: 13px; }
-  .has-card .hero .sub, .has-card .hero .stats, .has-card .hero .hero-actions, .has-card .hero .eyebrow { display: none; }
+  .has-card .hero .sub, .has-card .hero .stats, .has-card .hero .eyebrow,
+  .is-summon .hero .sub, .is-summon .hero .stats, .is-summon .hero .eyebrow { display: none; }
+  .is-summon .hero h1 { font-size: 28px; }
+  .is-summon .ticker { display: none; }
+  .is-summon .hero .hero-actions > :not(.summon-btn) { display: none; }
+  /* with a place open, keep only "Bring Bobo to me" (compact) under the title */
+  .has-card .hero .hero-actions { margin-top: 10px; }
+  .has-card .hero .hero-actions > :not(.summon-btn) { display: none; }
+  .has-card .hero .summon-btn { min-height: 36px; padding: 0 12px; font-size: 12.5px; gap: 6px; }
   .has-card .hero h1 { font-size: 28px; }
   .stat-scans { display: none; }
 
@@ -464,4 +472,59 @@ img, video { display: block; max-width: 100%; }
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* ── micro-interactions: sound toggle, summon, springy presses ───────────── */
+.top-right { display: flex; align-items: center; gap: 8px; }
+.sound-btn { position: relative; width: 40px; height: 40px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.sound-btn::after {
+  content: ""; position: absolute; width: 20px; height: 2px; border-radius: 2px;
+  background: currentColor; transform: rotate(-45deg) scaleX(0);
+  transition: transform 0.28s var(--spring);
+}
+.sound-btn.is-off { color: var(--muted); }
+.sound-btn.is-off::after { transform: rotate(-45deg) scaleX(1); }
+.sound-btn:active, .icon-btn:active { transform: scale(0.88); }
+.icon-btn { transition: background 0.2s, color 0.2s, transform 0.35s var(--spring); }
+
+:root { --spring: cubic-bezier(0.34, 1.56, 0.64, 1); }
+.btn { transition: transform 0.35s var(--spring), background 0.2s, border-color 0.2s, box-shadow 0.25s; }
+@media (hover: hover) { .btn:hover { transform: translateY(-1px); } }
+.btn:active { transform: scale(0.95); transition-duration: 0.08s; }
+
+.summon-btn { position: relative; overflow: hidden; isolation: isolate; }
+.summon-btn::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-120%); animation: shimmer 3.6s 1.2s infinite;
+}
+@keyframes shimmer { 0%, 60% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+.summon-ico { display: grid; place-items: center; position: relative; }
+.summon-ico::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.7); opacity: 0;
+  animation: beaconPing 2.4s 0.6s infinite;
+}
+@keyframes beaconPing { 0% { transform: scale(0.5); opacity: 0.9; } 70%, 100% { transform: scale(1.6); opacity: 0; } }
+.summon-btn.is-busy { pointer-events: none; }
+.summon-btn.is-busy .summon-ico svg { opacity: 0; }
+.summon-btn.is-busy .summon-ico::before {
+  content: ""; position: absolute; width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* place card and pins get a little lift */
+.card { animation-timing-function: var(--spring) !important; animation-duration: 0.55s !important; }
+.thumb { transition: transform 0.3s var(--spring), box-shadow 0.2s; }
+@media (hover: hover) { .thumb:hover { transform: translateY(-2px) scale(1.04); } }
+.thumb:active { transform: scale(0.94); }
+
+@media (max-width: 719px) {
+  .top-right { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .summon-btn::before, .summon-ico::after { animation: none; }
+  .card { animation: none !important; }
+  .btn, .icon-btn, .thumb { transition-duration: 0.01s; }
 }

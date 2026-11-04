@@ -345,10 +345,12 @@
 # <<< end generated
 
 # ── Where is Bobo? ───────────────────────────────────────────────────────────
-# The page's code and the globe outline change rarely and aren't hashed: a day
-# at the edge, revalidated after an hour in the browser. The live data is
-# /api/bobo/feed.json, which sets its own short cache.
+# The page's files aren't hashed, so browsers revalidate them on every visit
+# (a cheap 304 with Netlify's ETags) and an update shows up at once. The
+# page also appends ?v=N to its own imports; bump N in index.html, main.js
+# and globe.js when shipping a change. The live data is /api/bobo/feed.json,
+# which sets its own short cache.
 [[headers]]
   for = "/evade/where-is-bobo/assets/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+    Cache-Control = "public, max-age=0, must-revalidate"
