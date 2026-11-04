@@ -744,11 +744,17 @@ activated-retail GLBs and two labelled SAMPLE video clips. Or run
 
 ## Where is Bobo? (`/evade/where-is-bobo/`)
 
-EVADE's public 3D globe: Bobo walks on a dotted planet, every city he's been seen in is a
+EVADE's public 3D globe: Bobo walks on a cartoon planet with raised continents (a colour per country, snow caps, gold for countries he's visited), every city he's been seen in is a
 hotspot, and tapping one flies the camera there and raises a holographic beam playing that
 place's video or photo. Also: a trip replay (oldest sighting first, arcs drawn between
 cities), a live ticker of keychain scans and plays, a sightings list, share links
 (`?at=<place>`), and a "Play Cola Run" call to action. Short links: `/where-is-bobo`, `/bobo`.
+
+**Launch sightings.** The two real clips in the repo, Bobo at the Golden Gate (San Francisco)
+and Bobo at RDC (San Jose), are added to the Media Library automatically the first time the
+feed is requested on any deploy, production included (`src/lib/bobo/launch.server.ts`).
+They're ordinary files after that: edit, unpublish or delete them in `/admin/media`, and a
+marker stops them coming back.
 
 **Where the pins come from.** Any Media Library video or image that has a location, the
 **Public** link on and **Show on the globe** switched on. Set all three in the file drawer
@@ -808,7 +814,8 @@ live. The token can only touch uploads it started, for 24 hours.
 | `BOBO_INGEST_TOKEN` | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures. |
 | `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. |
 
-Preview and dev deploys can load sample sightings (made-up places, using the committed
-Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.
+Preview and dev deploys can load sample sightings (made-up places, using the other
+committed Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.
 City data: GeoNames (CC BY 4.0) and Natural Earth via `world-atlas`, rebuilt with
-`node scripts/build-bobo-geo.mjs` into `src/lib/bobo/*.json` and `assets/data/globe.bin`.
+`node scripts/build-bobo-geo.mjs` into `src/lib/bobo/*.json`, `assets/data/globe.bin`
+(dots, outlines) and `assets/data/land.bin` (the raised continent mesh, ~240 KB).

@@ -40,7 +40,18 @@ const clamp = THREE.MathUtils.clamp;
 // Bobo stands on the top edge of the planet (in profile against space); a
 // focused place is brought just to his right, where the beam goes up.
 const ANCHOR = new THREE.Vector3(0, 1, 0.22).normalize();
-const FOCUS = new THREE.Vector3(0.26, 1, 0.34).normalize();
+const FOCUS_WIDE = new THREE.Vector3(0.52, 1, 0.3).normalize();
+// phones: the beam stands closer to Bobo so both fit the narrow screen
+const FOCUS_TALL = new THREE.Vector3(0.4, 1, 0.34).normalize();
+const FOCUS = FOCUS_WIDE.clone();
+/** Continents are raised this far above the ocean (globe radius 1). */
+const LAND_H = 0.03;
+const R_LAND = 1 + LAND_H;
+const FOCUS_LAND = FOCUS.clone().multiplyScalar(R_LAND);
+function setFocusDir(portrait) {
+  FOCUS.copy(portrait ? FOCUS_TALL : FOCUS_WIDE);
+  FOCUS_LAND.copy(FOCUS).multiplyScalar(R_LAND);
+}
 /** Resting tilt: north pole towards the viewer, so the ground moves under Bobo as it spins. */
 const REST_PITCH = 0.62;
 
@@ -72,7 +83,7 @@ const bodyMat = () =>
         gl_Position = projectionMatrix * mv;
       }`,
     fragmentShader: /* glsl */ `
-      uniform vec3 uRim; varying vec3 vN; varying vec3 vL; varying vec3 vV;
+      uniform vec3 uRim; uniform float uTime; varying vec3 vN; varying vec3 vL; varying vec3 vV;
       float gridLine(float v, float step) {
         float x = v / step;
         float w = fwidth(x);
@@ -80,11 +91,18 @@ const bodyMat = () =>
       }
       void main() {
         float fres = 1.0 - max(dot(vN, vV), 0.0);
-        vec3 base = mix(vec3(0.008, 0.02, 0.032), vec3(0.018, 0.06, 0.085), smoothstep(-0.3, 1.0, vN.y + vN.z * 0.3));
+        // cartoon ocean: two-tone light bands, soft wave stripes, a bright rim
+        float l = dot(vN, normalize(vec3(0.35, 0.8, 0.55)));
+        float band = smoothstep(-0.05, 0.05, l) * 0.55 + smoothstep(0.55, 0.65, l) * 0.45;
+        vec3 deep = vec3(0.012, 0.05, 0.14);
+        vec3 shallow = vec3(0.03, 0.15, 0.34);
+        vec3 base = mix(deep, shallow, band);
         float lat = asin(clamp(vL.y, -1.0, 1.0));
         float lng = atan(vL.x, vL.z);
+        float wave = sin(lat * 60.0 + sin(lng * 9.0 + uTime * 0.4) * 1.6 + uTime * 0.6);
+        base += vec3(0.05, 0.14, 0.2) * smoothstep(0.92, 1.0, wave) * 0.35;
         float g = max(gridLine(lat, 0.2618), gridLine(lng, 0.2618) * step(abs(vL.y), 0.97));
-        vec3 col = base + uRim * g * 0.045 + uRim * pow(fres, 4.0) * 0.4;
+        vec3 col = base + uRim * g * 0.035 + uRim * pow(fres, 3.0) * 0.55;
         gl_FragColor = vec4(col, 1.0);
         #include <colorspace_fragment>
       }`,
@@ -123,8 +141,8 @@ const dotsMat = () =>
       uSize: { value: 11 },
       uPr: { value: 1 },
       uIntro: { value: 0 },
-      uBase: { value: C.dot },
-      uVisited: { value: C.teal },
+      uBase: { value: new THREE.Color("#fff4c2") },
+      uVisited: { value: new THREE.Color("#fff4c2") },
       uHot: { value: C.gold },
       uFocus: { value: new THREE.Vector3(0, 0, 1) },
       uFocusOn: { value: 0 },
@@ -157,13 +175,127 @@ const dotsMat = () =>
         vec3 col = mix(uBase, uVisited * vTw, vV);
         col = mix(col, uHot, clamp(vHeat + vF, 0.0, 1.0) * 0.85);
         float edge = smoothstep(-0.05, 0.35, vFace);
-        float a = smoothstep(0.5, 0.32, d) * (0.45 + 0.55 * edge) * (0.55 + vV * 0.45 + vHeat * 0.4);
+        float a = smoothstep(0.5, 0.32, d) * (0.45 + 0.55 * edge) * clamp(vV * 0.35 + vHeat + vF, 0.0, 1.0);
         gl_FragColor = vec4(col * (1.0 + vHeat * 0.6), a);
         #include <colorspace_fragment>
       }`,
     transparent: true,
     depthWrite: false,
   });
+
+/** Cartoon land: flat toon bands, a colour per country, snow near the poles,
+ * dark cliff walls, visited countries warmed to gold. */
+const landMat = (stateTex) =>
+  new THREE.ShaderMaterial({
+    uniforms: {
+      uState: { value: stateTex },
+      uIntro: { value: 0 },
+      uTime: { value: 0 },
+    },
+    vertexShader: /* glsl */ `
+      attribute float aCc; attribute float aWall;
+      uniform sampler2D uState; uniform float uIntro;
+      varying vec3 vN; varying vec3 vL; varying float vWall; varying vec4 vState; varying float vCc;
+      void main() {
+        vL = normalize(position);
+        vWall = aWall;
+        vCc = aCc;
+        vState = texture2D(uState, vec2((aCc + 0.5) / 256.0, 0.5));
+        // the land rises out of the sea during the intro
+        float d = acos(clamp(dot(vL, vec3(0.0, 0.5, 0.86)), -1.0, 1.0));
+        float on = smoothstep(d - 0.6, d, uIntro * 3.8);
+        vec3 p = vL * mix(0.985, length(position), on);
+        vN = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      varying vec3 vN; varying vec3 vL; varying float vWall; varying vec4 vState; varying float vCc;
+      float hash(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+      void main() {
+        vec3 nn = normalize(vN);
+        if (vWall > 0.01 && !gl_FrontFacing) nn = -nn;
+        float l = dot(nn, normalize(vec3(0.35, 0.8, 0.55)));
+        float band = 0.55 + smoothstep(-0.1, 0.0, l) * 0.25 + smoothstep(0.5, 0.6, l) * 0.2;
+        // a patchwork of greens and teals, one per country
+        float h = hash(vCc + 1.0);
+        vec3 green = mix(vec3(0.26, 0.78, 0.52), vec3(0.2, 0.74, 0.7), h);
+        green = mix(green, vec3(0.55, 0.82, 0.42), step(0.72, h) * 0.6);
+        float lat = abs(vL.y);
+        vec3 top = mix(green, vec3(0.93, 0.97, 1.0), smoothstep(0.84, 0.9, lat));
+        // visited: gold; with media: gold + a little pink; focus: brighter
+        top = mix(top, vec3(1.0, 0.72, 0.16), vState.r * 0.85);
+        top = mix(top, vec3(1.0, 0.45, 0.62), vState.g * 0.25);
+        top *= 1.0 + vState.b * 0.35;
+        vec3 wall = mix(vec3(0.05, 0.25, 0.3), vec3(0.42, 0.3, 0.12), vState.r * 0.6);
+        vec3 col = mix(top, wall, vWall) * band;
+        gl_FragColor = vec4(col, 1.0);
+        #include <colorspace_fragment>
+      }`,
+    side: THREE.DoubleSide,
+  });
+
+async function loadLand(url) {
+  const buf = await (await fetch(url)).arrayBuffer();
+  const dv = new DataView(buf);
+  if (String.fromCharCode(...new Uint8Array(buf, 0, 4)) !== "BLND") throw new Error("bad land.bin");
+  const nV = dv.getUint32(8, true);
+  const nI = dv.getUint32(12, true);
+  const nE = dv.getUint32(16, true);
+  const pad4 = (n) => (n + 3) & ~3;
+  let o = 20;
+  const ll = new Int16Array(buf, o, nV * 2);
+  o += nV * 4;
+  const cc = new Uint8Array(buf, o, nV);
+  o += pad4(nV);
+  const index = new Uint16Array(buf, o, nI);
+  o += pad4(nI * 2);
+  const edges = new Int16Array(buf, o, nE * 4);
+  o += nE * 8;
+  const ecc = new Uint8Array(buf, o, nE);
+
+  // surface: shared vertices at R_LAND; walls: a quad per edge from below the sea up
+  const nWallV = nE * 4;
+  const pos = new Float32Array((nV + nWallV) * 3);
+  const nor = new Float32Array((nV + nWallV) * 3);
+  const aCc = new Float32Array(nV + nWallV);
+  const aWall = new Float32Array(nV + nWallV);
+  const idx = new Uint32Array(nI + nE * 6);
+  const v = new THREE.Vector3();
+  for (let i = 0; i < nV; i++) {
+    toVec(ll[i * 2] / 180, ll[i * 2 + 1] / 180, 1, v);
+    nor.set([v.x, v.y, v.z], i * 3);
+    pos.set([v.x * R_LAND, v.y * R_LAND, v.z * R_LAND], i * 3);
+    aCc[i] = cc[i];
+  }
+  idx.set(index);
+  const a = new THREE.Vector3();
+  const b = new THREE.Vector3();
+  const n = new THREE.Vector3();
+  const R0 = 0.992;
+  for (let e = 0; e < nE; e++) {
+    toVec(edges[e * 4] / 180, edges[e * 4 + 1] / 180, 1, a);
+    toVec(edges[e * 4 + 2] / 180, edges[e * 4 + 3] / 180, 1, b);
+    n.subVectors(b, a).cross(a).normalize(); // outward, sideways
+    const base = nV + e * 4;
+    const quad = [a.clone().multiplyScalar(R0), b.clone().multiplyScalar(R0), b.clone().multiplyScalar(R_LAND), a.clone().multiplyScalar(R_LAND)];
+    quad.forEach((q, k) => {
+      pos.set([q.x, q.y, q.z], (base + k) * 3);
+      nor.set([n.x, n.y, n.z], (base + k) * 3);
+      aCc[base + k] = ecc[e];
+      aWall[base + k] = k < 2 ? 1 : 0.55;
+    });
+    // both windings, so the wall shows whichever way the ring ran
+    idx.set([base, base + 1, base + 2, base, base + 2, base + 3], nI + e * 6);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  g.setAttribute("normal", new THREE.BufferAttribute(nor, 3));
+  g.setAttribute("aCc", new THREE.BufferAttribute(aCc, 1));
+  g.setAttribute("aWall", new THREE.BufferAttribute(aWall, 1));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeBoundingSphere();
+  return g;
+}
 
 const arcMat = (delay) =>
   new THREE.ShaderMaterial({
@@ -358,7 +490,7 @@ export async function createGlobe(canvas, opts) {
   {
     const v = new THREE.Vector3();
     for (let i = 0; i < nDots; i++) {
-      toVec(geo.lat[i] / 180, geo.lng[i] / 180, 1.004, v);
+      toVec(geo.lat[i] / 180, geo.lng[i] / 180, R_LAND + 0.003, v);
       dotPos.set([v.x, v.y, v.z], i * 3);
       dotRand[i] = Math.random();
     }
@@ -372,16 +504,38 @@ export async function createGlobe(canvas, opts) {
   dots.renderOrder = 2;
   globe.add(dots);
 
+  // cartoon ink: dark outlines along the cliff tops and the borders
   const coast = new THREE.LineSegments(
-    linesGeometry(geo.coast, 1.0025),
-    new THREE.LineBasicMaterial({ color: C.teal, transparent: true, opacity: 0.22, depthWrite: false }),
+    linesGeometry(geo.coast, R_LAND + 0.001),
+    new THREE.LineBasicMaterial({ color: 0x06202c, transparent: true, opacity: 0.55, depthWrite: false }),
   );
   const borders = new THREE.LineSegments(
-    linesGeometry(geo.border, 1.0025),
-    new THREE.LineBasicMaterial({ color: C.teal, transparent: true, opacity: 0.09, depthWrite: false }),
+    linesGeometry(geo.border, R_LAND + 0.001),
+    new THREE.LineBasicMaterial({ color: 0x06202c, transparent: true, opacity: 0.3, depthWrite: false }),
   );
   coast.renderOrder = borders.renderOrder = 1;
   globe.add(coast, borders);
+
+  // raised continents (state texture: r visited, g has media, b focus; one texel per country)
+  const landState = new Uint8Array(256 * 4);
+  const landTex = new THREE.DataTexture(landState, 256, 1, THREE.RGBAFormat);
+  landTex.needsUpdate = true;
+  const land = new THREE.Mesh(await loadLand("/evade/where-is-bobo/assets/data/land.bin"), landMat(landTex));
+  globe.add(land);
+  const ccIndex = new Map(geo.codes.map((c, i) => [c, i + 1]));
+  function paintLand(f, focusCc) {
+    landState.fill(0);
+    const media = new Set(f.places.filter((p) => p.media.length).map((p) => p.countryCode));
+    for (const c of f.countries) {
+      const i = ccIndex.get(c);
+      if (!i) continue;
+      landState[i * 4] = 255;
+      landState[i * 4 + 1] = media.has(c) ? 255 : 0;
+    }
+    const fi = focusCc && ccIndex.get(focusCc);
+    if (fi) landState[fi * 4 + 2] = 255;
+    landTex.needsUpdate = true;
+  }
 
   /* layers rebuilt from the feed */
   const glowTex = glowTexture();
@@ -426,8 +580,8 @@ export async function createGlobe(canvas, opts) {
   /* Bobo */
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   let bobo = null;
-  const BOBO_H = 0.13;
-  loadBobo({ loader, parent: scene, anchor: ANCHOR, height: BOBO_H, reduced })
+  const BOBO_H = 0.24;
+  loadBobo({ loader, parent: scene, anchor: ANCHOR.clone().multiplyScalar(R_LAND), height: BOBO_H, reduced })
     .then((b) => {
       bobo = b;
       hitList.push(b.hit);
@@ -464,17 +618,18 @@ export async function createGlobe(canvas, opts) {
 
   function overviewGoal() {
     const portrait = st.h > st.w * 1.1;
-    const dist = (portrait ? 5.2 : st.w < 900 ? 4.3 : 3.9) * st.zoom;
-    return { tx: 0, ty: portrait ? 0.12 : 0.1, tz: 0, dist, elev: 0.16, azim: 0 };
+    const dist = (portrait ? 5.6 : st.w < 900 ? 4.9 : 4.5) * st.zoom;
+    // leave headroom above the planet for Bobo
+    return { tx: 0, ty: portrait ? 0.22 : 0.24, tz: 0, dist, elev: 0.16, azim: 0 };
   }
   function focusGoal() {
     const portrait = st.h > st.w * 1.1;
     // frame Bobo, the beam and the screen above them, the planet's curve below
     return {
-      tx: 0.12,
-      ty: portrait ? 1.34 : 1.22,
+      tx: portrait ? 0.2 : 0.14,
+      ty: portrait ? 1.36 : 1.22,
       tz: 0.22,
-      dist: (portrait ? 3.5 : 2.05) * clamp(st.zoom, 0.8, 1.3),
+      dist: (portrait ? 4.6 : 2.2) * clamp(st.zoom, 0.8, 1.3),
       elev: 0.12,
       azim: 0.06,
     };
@@ -495,6 +650,7 @@ export async function createGlobe(canvas, opts) {
     st.h = Math.max(1, r.height);
     renderer.setSize(st.w, st.h, false);
     camera.aspect = st.w / st.h;
+    setFocusDir(st.h > st.w * 1.1);
     setView();
     if (!st.focus) Object.assign(st.goal, overviewGoal());
     else Object.assign(st.goal, focusGoal());
@@ -537,7 +693,7 @@ export async function createGlobe(canvas, opts) {
   function buildHotspot(p, isLatest) {
     const local = toVec(p.lat, p.lng, 1);
     const group = new THREE.Group();
-    group.position.copy(local);
+    group.position.copy(local).multiplyScalar(R_LAND);
     group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), local);
     const color = isLatest ? C.gold : C.teal;
     const n = p.media.length;
@@ -629,7 +785,7 @@ export async function createGlobe(canvas, opts) {
       for (let k = 0; k <= 48; k++) {
         const t = k / 48;
         qa.setFromAxisAngle(axis, ang * t);
-        pts.push(a.clone().applyQuaternion(qa).multiplyScalar(1.004 + Math.sin(Math.PI * t) * lift));
+        pts.push(a.clone().applyQuaternion(qa).multiplyScalar(R_LAND + 0.004 + Math.sin(Math.PI * t) * lift));
       }
       const curve = new THREE.CatmullRomCurve3(pts);
       const mesh = new THREE.Mesh(
@@ -652,7 +808,7 @@ export async function createGlobe(canvas, opts) {
     const v = new THREE.Vector3();
     const now = Date.now();
     ev.forEach((p, i) => {
-      toVec(p.lat, p.lng, 1.006, v);
+      toVec(p.lat, p.lng, R_LAND + 0.006, v);
       pos.set([v.x, v.y, v.z], i * 3);
       size[i] = 1 + Math.log10(p.events + 1) * 1.3;
       seed[i] = Math.random();
@@ -734,6 +890,7 @@ export async function createGlobe(canvas, opts) {
     buildArcs(f.journey);
     buildEvents(f.places);
     paintDots(f);
+    paintLand(f, focusKey && hotspots.get(focusKey)?.place.countryCode);
     if (firstTime && latestKey) {
       // start with the latest sighting turned towards the camera
       const o = orientFor(hotspots.get(latestKey).local, new THREE.Vector3(0.35, 0.25, 0.9).normalize(), st.yaw);
@@ -766,6 +923,7 @@ export async function createGlobe(canvas, opts) {
     for (const [k, x] of hotspots) x.label?.classList.toggle("is-focus", k === key);
     for (const a of arcs) a.mesh.material.uniforms.uHi.value = a.to === key || a.from === key ? 1 : 0;
     dots.material.uniforms.uFocus.value.copy(h.local);
+    paintLand(feed, h.place.countryCode);
     return true;
   }
 
@@ -789,13 +947,14 @@ export async function createGlobe(canvas, opts) {
     Object.assign(st.goal, overviewGoal());
     for (const x of hotspots.values()) x.label?.classList.remove("is-focus");
     for (const a of arcs) a.mesh.material.uniforms.uHi.value = 0;
+    if (feed) paintLand(feed, null);
   }
 
   function ping(key) {
     const p = feed?.places.find((x) => x.key === key);
     if (!p) return;
     const slot = pings.find((x) => x.t >= 1) ?? pings[0];
-    const v = toVec(p.lat, p.lng, 1.007);
+    const v = toVec(p.lat, p.lng, R_LAND + 0.007);
     slot.m.position.copy(v);
     slot.m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), v.clone().normalize());
     slot.m.visible = true;
@@ -932,6 +1091,7 @@ export async function createGlobe(canvas, opts) {
     // intro
     st.intro = Math.min(1, st.intro + dt / (reduced ? 0.01 : 2.2));
     dots.material.uniforms.uIntro.value = ease(st.intro);
+    land.material.uniforms.uIntro.value = ease(st.intro);
 
     // rotation
     const yaw0 = st.yaw;
@@ -1013,7 +1173,7 @@ export async function createGlobe(canvas, opts) {
     }
 
     // hologram at the focus point
-    holo.update(dt, t, FOCUS, camera);
+    holo.update(dt, t, FOCUS_LAND, camera);
 
     renderer.render(scene, camera);
 
@@ -1052,13 +1212,14 @@ export async function createGlobe(canvas, opts) {
     let fy = 0;
     const fh = st.focus && holo.active && st.arrived ? hotspots.get(st.focus) : null;
     if (fh) {
-      tmpV.copy(fh.local).multiplyScalar(1 + fh.top).applyQuaternion(globe.quaternion).project(camera);
+      tmpV.copy(fh.local).multiplyScalar(R_LAND + fh.top).applyQuaternion(globe.quaternion).project(camera);
       fx = (tmpV.x * 0.5 + 0.5) * st.w;
       fy = (-tmpV.y * 0.5 + 0.5) * st.h;
     }
+    const placed = []; // labels already shown this pass (newest sightings first)
     for (const h of hotspots.values()) {
       if (!h.label) continue;
-      tmpV.copy(h.local).multiplyScalar(1 + h.top + 0.012).applyQuaternion(globe.quaternion);
+      tmpV.copy(h.local).multiplyScalar(R_LAND + h.top + 0.012).applyQuaternion(globe.quaternion);
       const facing = tmpV.clone().normalize().dot(camDir);
       const isFocus = st.focus === h.place.key;
       const visible =
@@ -1072,6 +1233,12 @@ export async function createGlobe(canvas, opts) {
         h.label.classList.add("is-hidden");
         continue;
       }
+      // neighbours (San Francisco and San Jose) would overlap: the newer one wins
+      if (placed.some((q) => Math.abs(q[0] - x) < 95 && Math.abs(q[1] - y) < (h.isLatest ? 0 : 30))) {
+        h.label.classList.add("is-hidden");
+        continue;
+      }
+      placed.push([x, y]);
       h.label.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
       h.label.style.opacity = String(clamp((facing - 0.25) * 4, 0, 1));
     }
@@ -1110,7 +1277,7 @@ export async function createGlobe(canvas, opts) {
     resize,
     /** Screen position of Bobo's head, for speech bubbles. */
     boboScreen() {
-      const v = ANCHOR.clone().multiplyScalar(1 + BOBO_H * 1.15).project(camera);
+      const v = ANCHOR.clone().multiplyScalar(R_LAND + BOBO_H * 1.15).project(camera);
       return { x: (v.x * 0.5 + 0.5) * st.w, y: (-v.y * 0.5 + 0.5) * st.h };
     },
     destroy() {

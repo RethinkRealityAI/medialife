@@ -25,6 +25,14 @@
  *   Int16[dotCount] lat×180, Int16[dotCount] lng×180, Uint8[dotCount] country (padded to 4)
  *   Int16[coastVerts×2] (lat×180, lng×180) pairs as GL line segments
  *   Int16[borderVerts×2] same, land borders between countries
+ *
+ * land.bin (little-endian): the raised, cartoon continents
+ *   "BLND" u16 version=2 u16 0 u32 verts u32 indices u32 edges
+ *   Int16[verts×2] (lat×180, lng×180), Uint8[verts] country (padded to 4)
+ *   Uint16[indices] the land surface as GL triangles, subdivided so it follows
+ *     the curve (padded to 4)
+ *   Int16[edges×4] (lat1, lng1, lat2, lng2): coastline + border edges, for the
+ *     cliff walls; Uint8[edges] country (padded to 4)
  */
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -33,6 +41,7 @@ import readline from "node:readline";
 import { fileURLToPath } from "node:url";
 
 import { geoArea, geoBounds, geoCentroid, geoContains, geoInterpolate } from "d3-geo";
+import earcut from "earcut";
 import { feature, mesh } from "topojson-client";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -225,9 +234,143 @@ function segments(ml) {
 const coast = segments(mesh(topo, topo.objects.countries, (a, b) => a === b));
 const borders = segments(mesh(topo, topo.objects.countries, (a, b) => a !== b));
 
-const q = (v) => Math.max(-32767, Math.min(32767, Math.round(v * 180)));
-const nDots = dLat.length;
 const pad4 = (n) => (n + 3) & ~3;
+const q = (v) => Math.max(-32767, Math.min(32767, Math.round(v * 180)));
+
+// Land surface: each country polygon triangulated in lon/lat (earcut), then
+// split until no edge is longer than MAX_DEG so the raised shell hugs the
+// sphere. Rings that cross the antimeridian (Russia, Fiji) are unwrapped past
+// 180° first; Antarctica's ring runs along ±180 and the pole, so it is left as is.
+const MAX_DEG = 5;
+const topLL = [];
+const topCc = [];
+const edges = [];
+const edgeCc = [];
+function unwrap(ring) {
+  let jump = false;
+  for (let i = 1; i < ring.length; i++)
+    if (Math.abs(ring[i][0] - ring[i - 1][0]) > 180) jump = true;
+  if (!jump) return { ring, wrapped: false };
+  const out = ring.map(([x, y]) => [x < 0 ? x + 360 : x, y]);
+  const xs = out.map((p) => p[0]);
+  if (Math.max(...xs) - Math.min(...xs) > 300) return { ring, wrapped: false, polar: true };
+  return { ring: out, wrapped: true };
+}
+function splitTri(a, b, c, idx, depth = 0) {
+  // great-circle-ish length: a degree of longitude shrinks towards the poles
+  const d = (p, q) =>
+    Math.hypot((p[0] - q[0]) * Math.cos((((p[1] + q[1]) / 2) * Math.PI) / 180), p[1] - q[1]);
+  const ab = d(a, b);
+  const bc = d(b, c);
+  const ca = d(c, a);
+  const m = Math.max(ab, bc, ca);
+  if (m <= MAX_DEG || depth > 14) {
+    for (const p of [a, b, c]) {
+      topLL.push(p[1], p[0]);
+      topCc.push(idx);
+    }
+    return;
+  }
+  const mid = (p, q) => [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+  if (m === ab) {
+    const x = mid(a, b);
+    splitTri(a, x, c, idx, depth + 1);
+    splitTri(x, b, c, idx, depth + 1);
+  } else if (m === bc) {
+    const x = mid(b, c);
+    splitTri(a, b, x, idx, depth + 1);
+    splitTri(a, x, c, idx, depth + 1);
+  } else {
+    const x = mid(c, a);
+    splitTri(a, b, x, idx, depth + 1);
+    splitTri(x, b, c, idx, depth + 1);
+  }
+}
+for (const f of feats) {
+  const cc = featCode.get(f);
+  const idx = cc ? codes.indexOf(cc) + 1 : 0;
+  const g = f.geometry;
+  if (!g) continue;
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.coordinates;
+  for (const poly of polys) {
+    const rings = poly.map(unwrap);
+    const flat = [];
+    const holes = [];
+    for (const [ri, r] of rings.entries()) {
+      if (ri) holes.push(flat.length / 2);
+      // GeoJSON rings repeat the first point at the end
+      const pts = r.ring.slice(0, -1);
+      for (const p of pts) flat.push(p[0], p[1]);
+      for (let i = 0; i < r.ring.length - 1; i++) {
+        const a = r.ring[i];
+        const b = r.ring[i + 1];
+        if (Math.abs(b[0] - a[0]) > 180) continue; // the antimeridian seam
+        if (r.polar && (a[1] < -89 || b[1] < -89 || (Math.abs(a[0]) === 180 && a[0] === b[0])))
+          continue;
+        const deg = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        const n = Math.max(1, Math.ceil(deg / 2));
+        for (let k = 0; k < n; k++) {
+          const t0 = k / n;
+          const t1 = (k + 1) / n;
+          edges.push(
+            a[1] + (b[1] - a[1]) * t0,
+            a[0] + (b[0] - a[0]) * t0,
+            a[1] + (b[1] - a[1]) * t1,
+            a[0] + (b[0] - a[0]) * t1,
+          );
+          edgeCc.push(idx);
+        }
+      }
+    }
+    const tri = earcut(flat, holes, 2);
+    const P = (i) => [flat[i * 2], flat[i * 2 + 1]];
+    for (let i = 0; i < tri.length; i += 3) splitTri(P(tri[i]), P(tri[i + 1]), P(tri[i + 2]), idx);
+  }
+}
+{
+  // share vertices (earcut's and the splits' midpoints) through an index
+  const vLL = [];
+  const vCc = [];
+  const index = [];
+  const seen = new Map();
+  for (let i = 0; i < topCc.length; i++) {
+    const la = q(topLL[i * 2]);
+    const ln = q(topLL[i * 2 + 1]);
+    const k = `${la},${ln},${topCc[i]}`;
+    let v = seen.get(k);
+    if (v === undefined) {
+      v = vCc.length;
+      seen.set(k, v);
+      vLL.push(la, ln);
+      vCc.push(topCc[i]);
+    }
+    index.push(v);
+  }
+  if (vCc.length > 65535) throw new Error("land mesh needs 32-bit indices");
+  const nV = vCc.length;
+  const nI = index.length;
+  const nE = edgeCc.length;
+  const lb = Buffer.alloc(20 + nV * 4 + pad4(nV) + pad4(nI * 2) + nE * 8 + pad4(nE));
+  lb.write("BLND", 0, "ascii");
+  lb.writeUInt16LE(2, 4);
+  lb.writeUInt32LE(nV, 8);
+  lb.writeUInt32LE(nI, 12);
+  lb.writeUInt32LE(nE, 16);
+  let p = 20;
+  for (const v of vLL) (lb.writeInt16LE(v, p), (p += 2));
+  for (const v of vCc) (lb.writeUInt8(v, p), (p += 1));
+  p = 20 + nV * 4 + pad4(nV);
+  for (const v of index) (lb.writeUInt16LE(v, p), (p += 2));
+  p = 20 + nV * 4 + pad4(nV) + pad4(nI * 2);
+  for (const v of edges) (lb.writeInt16LE(q(v), p), (p += 2));
+  for (const v of edgeCc) (lb.writeUInt8(v, p), (p += 1));
+  var landBuf = lb;
+  console.log(
+    `land: ${nI / 3} triangles, ${nV} vertices, ${nE} wall edges, ${(lb.length / 1024).toFixed(0)} KB`,
+  );
+}
+
+const nDots = dLat.length;
 const headerBytes = 4 + 2 + 2 + 4 + 4 + 4;
 const size =
   headerBytes +
@@ -266,6 +409,7 @@ const outDir = path.join(root, "public/evade/where-is-bobo/assets/data");
 mkdirSync(outDir, { recursive: true });
 mkdirSync(path.join(root, "src/lib/bobo"), { recursive: true });
 writeFileSync(path.join(outDir, "globe.bin"), buf);
+writeFileSync(path.join(outDir, "land.bin"), landBuf);
 writeFileSync(path.join(root, "src/lib/bobo/places.json"), JSON.stringify(places));
 writeFileSync(path.join(root, "src/lib/bobo/countries.json"), JSON.stringify(labels));
 

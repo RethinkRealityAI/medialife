@@ -1,3 +1,4 @@
+import { ensureLaunchSightings } from "./launch.server";
 import type { ArNamespace } from "@/lib/ar/store.server";
 import { listAssets } from "@/lib/media/data.server";
 import { isOnGlobe, mediaPublicPath, mediaThumbUrl, type MediaAsset } from "@/lib/media/model";
@@ -128,6 +129,7 @@ export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.n
 }
 
 export async function boboFeed(ns: ArNamespace): Promise<BoboFeed> {
+  await ensureLaunchSightings(ns);
   const [assets, agg] = await Promise.all([listAssets(ns), readAggregate(ns)]);
   return buildFeed(assets, agg);
 }

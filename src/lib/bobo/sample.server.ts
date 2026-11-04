@@ -11,8 +11,8 @@ import type { BoboEvent, BoboEventType } from "./model";
 
 // Sample sightings for "Where is Bobo?" on localhost and deploy previews, so
 // the globe has something to show before the team tags real footage. Uses the
-// real Bobo AR clips and EVADE photos from the repo; the LOCATIONS are made up
-// (except the Golden Gate clip). Every record is `sample: true` and every
+// other Bobo AR clips and EVADE photos from the repo; the LOCATIONS are made up.
+// The real Golden Gate and RDC sightings come from launch.server.ts. Every record is `sample: true` and every
 // event has source "sample". Production refuses (the route checks the namespace).
 
 const DAY = 86_400_000;
@@ -35,36 +35,6 @@ type Spec = {
 
 const V = "evade/creators/assets/video/";
 const SPECS: Spec[] = [
-  {
-    id: "boboseedgoldengate",
-    file: `${V}bobo-golden-gate.mp4`,
-    poster: `${V}bobo-golden-gate.webp`,
-    title: "Bobo at the Golden Gate",
-    description: "Bobo in AR on a phone in front of the Golden Gate Bridge.",
-    city: "San Francisco",
-    cc: "US",
-    place: "Golden Gate Bridge",
-    daysAgo: 1.2,
-    tags: ["AR", "Vertical", "Landmark"],
-    durationS: 8,
-    width: 540,
-    height: 1130,
-  },
-  {
-    id: "boboseedrdc26",
-    file: `${V}bobo-rdc26.mp4`,
-    poster: `${V}bobo-rdc26.webp`,
-    title: "Bobo at RDC",
-    description: "Bobo shows up in AR at the Roblox Developers Conference.",
-    city: "San Jose",
-    cc: "US",
-    place: "RDC 2026",
-    daysAgo: 6,
-    tags: ["AR", "Vertical", "Event"],
-    durationS: 8,
-    width: 540,
-    height: 1130,
-  },
   {
     id: "boboseedmeetup",
     file: `${V}bobo-meetup.mp4`,
