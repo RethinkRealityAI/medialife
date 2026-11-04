@@ -741,3 +741,74 @@ imports real repo art: EVADE creator images, keychain sources, the portal key ar
 activated-retail GLBs and two labelled SAMPLE video clips. Or run
 `curl -X POST -H "x-media: 1" -b <admin cookie> http://localhost:5175/api/media/dev/seed`
 (add `?reset=1` to reload it). Production refuses it.
+
+## Where is Bobo? (`/evade/where-is-bobo/`)
+
+EVADE's public 3D globe: Bobo walks on a dotted planet, every city he's been seen in is a
+hotspot, and tapping one flies the camera there and raises a holographic beam playing that
+place's video or photo. Also: a trip replay (oldest sighting first, arcs drawn between
+cities), a live ticker of keychain scans and plays, a sightings list, share links
+(`?at=<place>`), and a "Play Cola Run" call to action. Short links: `/where-is-bobo`, `/bobo`.
+
+**Where the pins come from.** Any Media Library video or image that has a location, the
+**Public** link on and **Show on the globe** switched on. Set all three in the file drawer
+(*Where was this?*: city search, optional venue, date seen). The library filter *Where is
+Bobo?* lists what's on the globe, tagged, or untagged. Unpublishing a file takes it off the
+globe within a minute or so (the feed's CDN cache).
+
+**3D stack.** Vanilla three.js (the vendored r180 under `/roblox/creators/vendor/three/`),
+no framework and no post-processing, so the page ships ~85 KB of its own JS (uncompressed) and runs on
+mid-range phones: glows are additive shaders, the pixel ratio adapts to the frame rate, and
+rendering pauses in a background tab. React Three Fiber / Drei were considered; they'd add a
+React runtime and a build step to a standalone landing page for no visual gain. Without
+WebGL (or with reduced motion) the page falls back to the sightings list. Bobo is the same
+`catbobo.glb` + `bobo-clips.glb` as the retail displays (walk, run, idle, sit, sleep).
+
+Files: `public/evade/where-is-bobo/` (page, `assets/js/globe.js` scene, `bobo.js`
+character, `holo.js` hologram, `main.js` UI), `src/lib/bobo/` (locations, feed, events,
+geo lookup, preview sample), `src/routes/api.bobo.*`, the drawer section in
+`src/components/media/globe-location.tsx`.
+
+### The AR experience → globe contract
+
+Everything the game sends shows up on the next feed refresh (the page polls every 45 s).
+
+| Endpoint | Who | What |
+| --- | --- | --- |
+| `GET /api/bobo/feed.json` | Anyone (CORS `*`) | Places with their media, the journey order, recent events, totals. Cached 15 s in browsers, 60 s at the edge. |
+| `POST /api/bobo/events` | Game server (bearer token) or the game in a browser (allowed `Origin`) | One event `{type, …}` or `{events: [...]}` (max 50). |
+| `POST /api/media/uploads` + chunks + `complete` | Game server (bearer token) | A player capture (video or image) into the Media Library. |
+| `GET /api/bobo/places?q=` | Admin or bearer token | City search (the drawer's picker). |
+
+Event fields: `type` (`scan`, `play`, `reward`, `sighting`, `share`, `capture`, `custom`),
+`at` (ISO or ms, clamped to the last 7 days), `lat`/`lng` or `city`+`countryCode`,
+`source` (`cola-run`), `sessionId` (hashed before storage), `mediaId`, `props` (≤ 20 flat
+values). With the token, coordinates are trusted and kept exact; from a browser they're
+rounded to ~5 km, rate limited (120/min per IP) and, when missing, filled from Netlify's IP
+geolocation. The public feed never carries more than a city.
+
+```sh
+curl -X POST https://medialife.ai/api/bobo/events \
+  -H "Authorization: Bearer $BOBO_INGEST_TOKEN" -H "content-type: application/json" \
+  -d '{"type":"scan","lat":6.45,"lng":3.39,"source":"ar-keychain"}'
+```
+
+Captures: `POST /api/media/uploads` with the bearer token and `{name, size, mime,
+location: {lat, lng, place?, seenAt?}, source, title?, description?}`, then `PUT` each
+chunk to `/api/media/uploads/<id>/chunks/<n>` (`chunkSize` from the reply) and `POST
+/api/media/uploads/<id>/complete`. Ingested files are images or videos ≤ 512 MB, land
+**private** in collection *Where is Bobo · AR captures* tagged `AR capture`, `Needs review`,
+with *Show on the globe* already on: one Public switch in the drawer after review puts them
+live. The token can only touch uploads it started, for 24 hours.
+
+### Configuration (Netlify env vars)
+
+| Variable | What it does |
+| --- | --- |
+| `BOBO_INGEST_TOKEN` | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures. |
+| `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. |
+
+Preview and dev deploys can load sample sightings (made-up places, using the committed
+Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.
+City data: GeoNames (CC BY 4.0) and Natural Earth via `world-atlas`, rebuilt with
+`node scripts/build-bobo-geo.mjs` into `src/lib/bobo/*.json` and `assets/data/globe.bin`.

@@ -39,6 +39,7 @@ export const Route = createFileRoute("/admin/media")({
     purpose: z.enum(MEDIA_PURPOSES).optional().catch(undefined),
     vis: z.enum(["public", "private"]).optional().catch(undefined),
     ai: z.enum(["yes", "no"]).optional().catch(undefined),
+    geo: z.enum(["globe", "located", "none"]).optional().catch(undefined),
     orient: z
       .enum(MEDIA_ORIENTATIONS as [string, ...string[]])
       .optional()
@@ -82,6 +83,7 @@ function MediaRoute() {
     purpose: s.purpose,
     vis: s.vis,
     ai: s.ai,
+    geo: s.geo,
     orient: s.orient as MediaFilters["orient"],
     sort: s.sort,
     view: s.view ?? "grid",

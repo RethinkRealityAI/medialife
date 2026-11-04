@@ -104,7 +104,9 @@ for (const line of admin1.split("\n")) {
 /* ── Places ────────────────────────────────────────────────────────────────── */
 
 const places = [];
-const rl = readline.createInterface({ input: createReadStream(path.join(cache, "cities15000.txt")) });
+const rl = readline.createInterface({
+  input: createReadStream(path.join(cache, "cities15000.txt")),
+});
 for await (const line of rl) {
   const c = line.split("\t");
   const name = c[1];
@@ -186,8 +188,8 @@ for (let i = 0; i < N; i++) {
   const r = Math.sqrt(1 - y * y);
   const th = golden * i;
   const lat = (Math.asin(y) * 180) / Math.PI;
-  const lng = ((((Math.atan2(Math.sin(th) * r, Math.cos(th) * r) * 180) / Math.PI + 540) % 360) -
-    180);
+  const lng =
+    (((Math.atan2(Math.sin(th) * r, Math.cos(th) * r) * 180) / Math.PI + 540) % 360) - 180;
   if (lat < -60) continue; // Antarctica reads as noise at the bottom of the globe
   const p = [lng, lat];
   for (const { f, b, idx } of boxes) {

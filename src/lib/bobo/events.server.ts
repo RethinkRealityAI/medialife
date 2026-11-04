@@ -114,7 +114,8 @@ function rateOk(key: string, n: number, now: number): boolean {
   const b = buckets.get(key);
   if (!b || now - b.t > 60_000) {
     buckets.set(key, { t: now, n });
-    if (buckets.size > 5000) for (const [k, v] of buckets) if (now - v.t > 60_000) buckets.delete(k);
+    if (buckets.size > 5000)
+      for (const [k, v] of buckets) if (now - v.t > 60_000) buckets.delete(k);
     return n <= BOBO.ratePerMinute;
   }
   b.n += n;
@@ -292,9 +293,7 @@ export function foldEvents(agg: BoboAggregate | null, events: BoboEvent[]): Bobo
     };
     next.recent.unshift(fe);
   }
-  next.recent = next.recent
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .slice(0, BOBO.recentEvents);
+  next.recent = next.recent.sort((a, b) => b.at.localeCompare(a.at)).slice(0, BOBO.recentEvents);
   next.updatedAt = Date.now();
   return next;
 }
@@ -332,9 +331,9 @@ export async function clearEvents(ns: ArNamespace, onlySample = false): Promise<
   await store.del(KEYS.agg());
   if (onlySample) {
     // rebuild from what's left
-    const rest = (await Promise.all((await store.list("events/")).map((k) => store.getJSON<BoboEvent>(k)))).filter(
-      (e): e is BoboEvent => !!e,
-    );
+    const rest = (
+      await Promise.all((await store.list("events/")).map((k) => store.getJSON<BoboEvent>(k)))
+    ).filter((e): e is BoboEvent => !!e);
     if (rest.length) await store.setJSON(KEYS.agg(), foldEvents(null, rest));
   }
   return n;
@@ -393,7 +392,10 @@ export async function handleEvents(ns: ArNamespace, request: Request): Promise<R
     const p = eventSchema.safeParse(item);
     if (!p.success) {
       const issue = p.error.issues[0];
-      rejected.push({ index, error: `${issue?.path.join(".") || "event"}: ${issue?.message ?? "invalid"}` });
+      rejected.push({
+        index,
+        error: `${issue?.path.join(".") || "event"}: ${issue?.message ?? "invalid"}`,
+      });
       continue;
     }
     const e = p.data;

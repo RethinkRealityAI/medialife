@@ -167,8 +167,7 @@ async function uploadLocation(
   raw: z.infer<typeof initSchema>["location"],
 ): Promise<MediaLocation | null> {
   if (!raw) return null;
-  const seen =
-    typeof raw.seenAt === "string" ? Date.parse(raw.seenAt) : (raw.seenAt ?? Number.NaN);
+  const seen = typeof raw.seenAt === "string" ? Date.parse(raw.seenAt) : (raw.seenAt ?? Number.NaN);
   let fill: { city: string; region: string; country: string; countryCode: string } | null = null;
   if (!raw.city || !raw.countryCode) {
     const near = await nearestPlace(raw.lat, raw.lng);

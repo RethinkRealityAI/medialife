@@ -731,7 +731,8 @@ export function applyMediaPatch(
   if (p.purpose !== undefined) next.purpose = p.purpose;
   if (p.aiGenerated !== undefined) next.aiGenerated = p.aiGenerated;
   if (p.public !== undefined) next.public = p.public;
-  if (p.location !== undefined) next.location = p.location === null ? null : cleanLocation(p.location);
+  if (p.location !== undefined)
+    next.location = p.location === null ? null : cleanLocation(p.location);
   if (p.onGlobe !== undefined) next.onGlobe = p.onGlobe;
   if (p.setTags || p.addTags || p.removeTags) {
     const removing = new Set((p.removeTags ?? []).map(tagKey));

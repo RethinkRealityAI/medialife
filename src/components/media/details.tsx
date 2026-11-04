@@ -50,6 +50,7 @@ import type { MediaLibraryData } from "@/lib/media/admin.server";
 import { adminDeleteMedia, adminUpdateMedia } from "@/lib/media/admin.functions";
 import {
   MEDIA,
+  GLOBE_KINDS,
   MEDIA_CLIENT_SUGGESTIONS,
   MEDIA_KIND_LABELS,
   MEDIA_ORIENTATION_LABELS,
@@ -68,6 +69,7 @@ import {
 import { downloadMediaFile } from "@/lib/media/upload-client";
 import { cn } from "@/lib/utils";
 
+import { GlobeLocationSection, globeDiff, globeFormOf, type GlobeForm } from "./globe-location";
 import {
   AiBadge,
   AssetThumb,
@@ -90,6 +92,7 @@ type Form = {
   rights: string;
   usageNotes: string;
   aiGenerated: boolean;
+  globe: GlobeForm;
 };
 
 const formOf = (a: MediaAssetView): Form => ({
@@ -102,6 +105,7 @@ const formOf = (a: MediaAssetView): Form => ({
   rights: a.rights,
   usageNotes: a.usageNotes,
   aiGenerated: a.aiGenerated,
+  globe: globeFormOf(a),
 });
 
 function diff(a: MediaAssetView, f: Form): MediaPatch {
@@ -116,6 +120,7 @@ function diff(a: MediaAssetView, f: Form): MediaPatch {
   if (f.rights.trim() !== a.rights) p.rights = f.rights;
   if (f.usageNotes.trim() !== a.usageNotes) p.usageNotes = f.usageNotes;
   if (f.aiGenerated !== a.aiGenerated) p.aiGenerated = f.aiGenerated;
+  Object.assign(p, globeDiff(a, f.globe));
   return p;
 }
 
@@ -364,6 +369,10 @@ function DrawerBody({
               </p>
             ) : null}
           </section>
+
+          {GLOBE_KINDS.includes(a.kind) || a.location ? (
+            <GlobeLocationSection a={a} value={form.globe} onChange={(globe) => set({ globe })} />
+          ) : null}
 
           {/* Classification */}
           <section aria-labelledby="details-h" className="space-y-3">

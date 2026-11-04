@@ -16,14 +16,10 @@ type Data = {
 
 let data: Promise<Data> | null = null;
 
-const fold = (s: string) =>
-  s
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+const fold = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 const cell = (lat: number, lng: number) =>
-  `${Math.floor((lat + 90) / 10)}:${Math.floor((((lng + 180) % 360) + 360) % 360 / 10)}`;
+  `${Math.floor((lat + 90) / 10)}:${Math.floor(((((lng + 180) % 360) + 360) % 360) / 10)}`;
 
 function load(): Promise<Data> {
   data ||= Promise.all([import("./places.json"), import("./countries.json")]).then(([p, c]) => {
@@ -119,7 +115,11 @@ export async function searchPlaces(q: string, limit = 8): Promise<PlaceHit[]> {
   const fullQ = words.join(" ");
   for (const [cc, c] of Object.entries(d.countries)) {
     const name = fold(c[0]);
-    if (name === fullQ || (fullQ.length >= 3 && name.startsWith(fullQ)) || cc.toLowerCase() === fullQ) {
+    if (
+      name === fullQ ||
+      (fullQ.length >= 3 && name.startsWith(fullQ)) ||
+      cc.toLowerCase() === fullQ
+    ) {
       const cp = await countryPlace(cc);
       if (cp) out.splice(Math.min(out.length, name === fullQ ? 0 : 3), 0, cp);
       break;
@@ -133,12 +133,16 @@ export async function searchPlaces(q: string, limit = 8): Promise<PlaceHit[]> {
  * of nowhere). A point inside a big city's metro radius maps to that city, not
  * the suburb it's technically nearest to (Mushin → Lagos); otherwise the nearest.
  */
-export async function nearestPlace(lat: number, lng: number, maxKm = 120): Promise<PlaceHit | null> {
+export async function nearestPlace(
+  lat: number,
+  lng: number,
+  maxKm = 120,
+): Promise<PlaceHit | null> {
   const d = await load();
   let nearest: { i: number; km: number } | null = null;
   let metro: { i: number; pop: number } | null = null;
   const la = Math.floor((lat + 90) / 10);
-  const lo = Math.floor((((lng + 180) % 360) + 360) % 360 / 10);
+  const lo = Math.floor(((((lng + 180) % 360) + 360) % 360) / 10);
   for (let dy = -1; dy <= 1; dy++)
     for (let dx = -1; dx <= 1; dx++) {
       const k = `${la + dy}:${(lo + dx + 36) % 36}`;

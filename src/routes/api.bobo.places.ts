@@ -15,10 +15,7 @@ export const Route = createFileRoute("/api/bobo/places")({
           return Response.json({ error: "unauthorized" }, { status: 401 });
         const q = new URL(request.url).searchParams.get("q")?.slice(0, 80) ?? "";
         const places = await searchPlaces(q, 8);
-        return Response.json(
-          { places },
-          { headers: { "cache-control": "private, max-age=3600" } },
-        );
+        return Response.json({ places }, { headers: { "cache-control": "private, max-age=3600" } });
       },
     },
   },
