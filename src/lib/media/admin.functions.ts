@@ -16,6 +16,16 @@ const id = z.string().regex(/^[A-Za-z0-9]{6,60}$/);
 const ids = z.array(id).min(1).max(2000);
 const L = MEDIA.limits;
 const str = (max: number) => z.string().max(max * 2);
+const locationSchema = z.object({
+  place: z.string().max(200).default(""),
+  city: z.string().max(200).default(""),
+  region: z.string().max(200).default(""),
+  country: z.string().max(200).default(""),
+  countryCode: z.string().regex(/^[A-Za-z]{2}$/),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  seenAt: z.number().int().positive().nullable().default(null),
+});
 const tags = z.array(z.string().max(L.tag * 2)).max(L.tagsPerAsset * 2);
 
 export const adminMediaLibrary = createServerFn({ method: "GET" }).handler(async () => {
@@ -36,6 +46,8 @@ const patchSchema = z.object({
   setTags: tags.optional(),
   addTags: tags.optional(),
   removeTags: tags.optional(),
+  location: locationSchema.nullable().optional(),
+  onGlobe: z.boolean().optional(),
 });
 
 export const adminUpdateMedia = createServerFn({ method: "POST" })

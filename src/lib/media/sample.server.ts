@@ -319,7 +319,7 @@ const SPECS: Spec[] = [
 ];
 
 /** Bytes of a file in /public: from disk on localhost, else fetched from the deploy itself. */
-async function publicBytes(p: string): Promise<Uint8Array | null> {
+export async function publicBytes(p: string): Promise<Uint8Array | null> {
   try {
     return new Uint8Array(await fs.readFile(path.join(process.cwd(), "public", p)));
   } catch {
@@ -336,7 +336,7 @@ async function publicBytes(p: string): Promise<Uint8Array | null> {
 
 const b64 = (s: string) => new Uint8Array(Buffer.from(s, "base64"));
 
-async function writeFile(ns: MediaNamespace, id: string, data: Uint8Array) {
+export async function writeSampleFile(ns: MediaNamespace, id: string, data: Uint8Array) {
   const storage = mediaStorage(ns);
   const ref = { kind: "blobs" as const, key: `files/${id}` };
   const chunks = Math.max(1, Math.ceil(data.byteLength / MEDIA.chunkBytes));
@@ -480,7 +480,7 @@ export async function seedMediaSample(
   const records: MediaAsset[] = [];
   for (const b of built) {
     const { data, poster, ...r } = b;
-    const { ref, chunks } = await writeFile(ns, b.id, data);
+    const { ref, chunks } = await writeSampleFile(ns, b.id, data);
     let thumb: MediaAsset["thumb"] = null;
     if (poster) {
       const key = `thumbs/${b.id}`;

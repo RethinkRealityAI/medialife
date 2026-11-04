@@ -23,6 +23,10 @@ import {
   type MediaStorageRef,
 } from "./model";
 import { configuredMediaStorage, mediaStorage, type UploadPlan } from "./storage.server";
+import { hasIngestToken } from "@/lib/bobo/events.server";
+import { countryPlace, nearestPlace } from "@/lib/bobo/geo.server";
+import { cleanLocation, type MediaLocation } from "@/lib/bobo/location";
+import { BOBO } from "@/lib/bobo/model";
 import { newId, type MediaNamespace } from "./store.server";
 
 // Uploads and downloads for the Media Library: the Creator Hub's resumable
@@ -81,6 +85,30 @@ export const initSchema = z.object({
     .regex(/^[a-f0-9]{16,128}$/)
     .nullable()
     .optional(),
+  /** Where it was filmed. lat/lng alone is enough: the city is looked up. */
+  location: z
+    .object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      place: z.string().max(200).optional(),
+      city: z.string().max(200).optional(),
+      region: z.string().max(200).optional(),
+      country: z.string().max(200).optional(),
+      countryCode: z
+        .string()
+        .regex(/^[A-Za-z]{2}$/)
+        .optional(),
+      seenAt: z.union([z.number().int().positive(), z.string().max(40)]).optional(),
+    })
+    .nullable()
+    .optional(),
+  onGlobe: z.boolean().optional(),
+  /** Ingest only: what sent it ("cola-run"). */
+  source: z
+    .string()
+    .max(40)
+    .regex(/^[\w.-]*$/)
+    .optional(),
 });
 export type InitBody = z.input<typeof initSchema>;
 
@@ -118,16 +146,61 @@ export const bigFileWarning = (size: number) =>
     : null;
 
 /* ---------------------------------------------------------------------------
+   Who may upload
+   --------------------------------------------------------------------------- */
+
+// The team (admin cookie + x-media header) can do anything here. The AR
+// experience can upload captures with `Authorization: Bearer <BOBO_INGEST_TOKEN>`:
+// images and videos only, always private, tagged for review, and it can only
+// touch the uploads it started (the asset's `ingest` field), never edit or
+// delete anything else. The team makes a capture public in /admin/media.
+type Uploader = { kind: "admin" } | { kind: "ingest" };
+
+async function uploadGuard(request: Request): Promise<Uploader | Response> {
+  if (hasIngestToken(request)) return { kind: "ingest" };
+  const denied = await writeGuard(request);
+  return denied ?? { kind: "admin" };
+}
+
+/** A location from an upload body: fills the city in from coordinates when missing. */
+async function uploadLocation(
+  raw: z.infer<typeof initSchema>["location"],
+): Promise<MediaLocation | null> {
+  if (!raw) return null;
+  const seen =
+    typeof raw.seenAt === "string" ? Date.parse(raw.seenAt) : (raw.seenAt ?? Number.NaN);
+  let fill: { city: string; region: string; country: string; countryCode: string } | null = null;
+  if (!raw.city || !raw.countryCode) {
+    const near = await nearestPlace(raw.lat, raw.lng);
+    const cp = !near && raw.countryCode ? await countryPlace(raw.countryCode) : null;
+    fill = near ?? cp;
+  }
+  return cleanLocation({
+    place: raw.place ?? "",
+    city: raw.city ?? fill?.city ?? "",
+    region: raw.region ?? fill?.region ?? "",
+    country: raw.country ?? fill?.country ?? "",
+    countryCode: raw.countryCode ?? fill?.countryCode ?? "",
+    lat: raw.lat,
+    lng: raw.lng,
+    seenAt: Number.isFinite(seen) ? seen : null,
+  });
+}
+
+/* ---------------------------------------------------------------------------
    Init
    --------------------------------------------------------------------------- */
 
 export async function initUpload(ns: MediaNamespace, request: Request, body: unknown) {
-  const denied = await writeGuard(request);
-  if (denied) return denied;
+  const who = await uploadGuard(request);
+  if (who instanceof Response) return who;
   if (body === undefined) return json({ error: "invalid JSON" }, 400);
   const parsed = initSchema.safeParse(body);
   if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "invalid" }, 400);
   const d = parsed.data;
+  const ingest = who.kind === "ingest";
+  if (ingest && d.size > BOBO.maxIngestBytes)
+    return json({ error: `Captures can be up to ${formatBytes(BOBO.maxIngestBytes)}.` }, 413);
   if (d.size > MEDIA.maxFileBytes)
     return json(
       {
@@ -144,6 +217,11 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       },
       415,
     );
+  if (ingest && !["video", "image"].includes(kindOf(mime)))
+    return json({ error: "The AR experience can upload images and videos only." }, 415);
+  const location = await uploadLocation(d.location);
+  if (ingest && !location)
+    return json({ error: "location (lat, lng) is required for an AR capture" }, 400);
   const id = newId(10);
   const kind = configuredMediaStorage();
   const storage = mediaStorage(ns, kind);
@@ -176,12 +254,17 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
     rights: "",
     aiGenerated: false,
     public: false,
-    uploader: cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
+    uploader: ingest
+      ? `AR experience (${d.source || "ingest"})`
+      : cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
     fingerprint: d.fingerprint ?? null,
     complete: false,
     createdAt: now,
     updatedAt: now,
     completedAt: null,
+    location,
+    onGlobe: ingest ? true : !!d.onGlobe,
+    ingest: ingest ? { source: d.source || "ingest", receivedAt: now } : null,
   };
   const known = knownValues(await listAssets(ns));
   const asset = applyMediaPatch(
@@ -190,13 +273,14 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       title: d.title,
       description: d.description,
       usageNotes: d.usageNotes,
-      rights: d.rights,
-      client: d.client,
-      collection: d.collection,
-      purpose: d.purpose === undefined ? undefined : d.purpose,
+      client: ingest ? d.client || "EVADE" : d.client,
+      collection: ingest ? d.collection || BOBO.captureCollection : d.collection,
+      purpose: ingest ? "ugc" : d.purpose === undefined ? undefined : d.purpose,
       aiGenerated: d.aiGenerated,
-      public: d.public,
-      setTags: d.tags,
+      // captures stay private until the team reviews them
+      public: ingest ? false : d.public,
+      setTags: ingest ? [...BOBO.captureTags, ...(d.tags ?? [])] : d.tags,
+      rights: ingest ? d.rights || "Player capture (AR experience)" : d.rights,
     },
     known,
     now,
@@ -219,10 +303,13 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
    --------------------------------------------------------------------------- */
 
 async function writable(ns: MediaNamespace, request: Request, id: string) {
-  const denied = await writeGuard(request);
-  if (denied) return denied;
+  const who = await uploadGuard(request);
+  if (who instanceof Response) return who;
   const a = await getAsset(ns, id);
   if (!a) return json({ error: "not found" }, 404);
+  // the ingest token only reaches its own captures, and only for a day
+  if (who.kind === "ingest" && (!a.ingest || Date.now() - a.createdAt > 86_400_000))
+    return json({ error: "not found" }, 404);
   return a;
 }
 

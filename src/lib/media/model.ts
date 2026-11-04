@@ -28,7 +28,10 @@
  *   POST /api/media/uploads/:id/complete, PUT /api/media/uploads/:id/thumb,
  *   GET|DELETE /api/media/uploads/:id
  */
+import { cleanLocation, locationLabel, type MediaLocation } from "@/lib/bobo/location";
 import { HUB } from "@/lib/hub/model";
+
+export type { MediaLocation };
 
 const MiB = 1024 * 1024;
 const GiB = 1024 * MiB;
@@ -529,6 +532,12 @@ export type MediaAsset = {
   completedAt: number | null;
   /** Loaded by the dev seed. */
   sample?: boolean;
+  /** Where it was filmed / photographed (city, country, coordinates). Optional on older records. */
+  location?: MediaLocation | null;
+  /** Show it on the public "Where is Bobo?" globe (also needs public + a location). */
+  onGlobe?: boolean;
+  /** Set when the AR experience uploaded it through the ingest token (stays private until reviewed). */
+  ingest?: { source: string; receivedAt: number } | null;
 };
 
 /** What the admin page receives: the record without storage internals, plus URLs. */
@@ -543,7 +552,19 @@ export type MediaAssetView = Omit<MediaAsset, "storage" | "chunks" | "thumb" | "
   /** /m/<id>/<name> when public, else null. */
   publicPath: string | null;
   clientPolicy: string | null;
+  location: MediaLocation | null;
+  onGlobe: boolean;
+  /** Public, located, a video or image, and switched on: it's on the globe right now. */
+  liveOnGlobe: boolean;
 };
+
+/** Kinds the globe can show. */
+export const GLOBE_KINDS: readonly MediaKind[] = ["video", "image"];
+
+/** True when the asset shows on the public "Where is Bobo?" globe. */
+export const isOnGlobe = (
+  a: Pick<MediaAsset, "complete" | "public" | "onGlobe" | "location" | "kind">,
+) => !!(a.complete && a.public && a.onGlobe && a.location && GLOBE_KINDS.includes(a.kind));
 
 /** A URL-safe version of the file name for the public URL. */
 export function publicFileName(name: string): string {
@@ -584,6 +605,9 @@ export function mediaView(a: MediaAsset): MediaAssetView {
     thumbUrl: mediaThumbUrl(a),
     publicPath: a.public && a.complete ? mediaPublicPath(a) : null,
     clientPolicy: clientPolicy(a.client),
+    location: a.location ?? null,
+    onGlobe: !!a.onGlobe,
+    liveOnGlobe: isOnGlobe(a),
   };
 }
 
@@ -680,6 +704,9 @@ export type MediaPatch = {
   setTags?: string[];
   addTags?: string[];
   removeTags?: string[];
+  /** null clears it. */
+  location?: MediaLocation | null;
+  onGlobe?: boolean;
 };
 
 export type MediaKnown = { clients: string[]; collections: string[]; tags: string[] };
@@ -704,6 +731,8 @@ export function applyMediaPatch(
   if (p.purpose !== undefined) next.purpose = p.purpose;
   if (p.aiGenerated !== undefined) next.aiGenerated = p.aiGenerated;
   if (p.public !== undefined) next.public = p.public;
+  if (p.location !== undefined) next.location = p.location === null ? null : cleanLocation(p.location);
+  if (p.onGlobe !== undefined) next.onGlobe = p.onGlobe;
   if (p.setTags || p.addTags || p.removeTags) {
     const removing = new Set((p.removeTags ?? []).map(tagKey));
     next.tags = normaliseTags(
@@ -742,6 +771,10 @@ export type MediaQuery = {
   public?: boolean;
   aiGenerated?: boolean;
   orientation?: MediaOrientation;
+  /** true: has a location; false: has none. */
+  located?: boolean;
+  /** true: live on the Where is Bobo? globe. */
+  onGlobe?: boolean;
   sort?: MediaSort;
 };
 
@@ -766,7 +799,8 @@ type Searchable = Pick<
   | "durationS"
   | "createdAt"
   | "updatedAt"
->;
+> &
+  Partial<Pick<MediaAsset, "location" | "onGlobe" | "complete">>;
 
 const fold = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
@@ -791,6 +825,7 @@ function haystack(a: Searchable) {
       a.purpose ? MEDIA_PURPOSE_LABELS[a.purpose] : "",
       MEDIA_KIND_LABELS[a.kind],
       extOf(a.name),
+      a.location ? `${locationLabel(a.location)} ${a.location.region}` : "",
     ].join("\n"),
   );
 }
@@ -824,6 +859,18 @@ export function matchesFilters(a: Searchable, f: MediaQuery): boolean {
   if (f.public !== undefined && a.public !== f.public) return false;
   if (f.aiGenerated !== undefined && a.aiGenerated !== f.aiGenerated) return false;
   if (f.orientation && orientationOf(a.width, a.height) !== f.orientation) return false;
+  if (f.located !== undefined && !!a.location !== f.located) return false;
+  if (
+    f.onGlobe !== undefined &&
+    isOnGlobe({
+      kind: a.kind,
+      public: a.public,
+      complete: a.complete ?? true,
+      onGlobe: !!a.onGlobe,
+      location: a.location ?? null,
+    }) !== f.onGlobe
+  )
+    return false;
   if (f.tags?.length) {
     const have = new Set(a.tags.map(tagKey));
     if (!f.tags.every((t) => have.has(tagKey(t)))) return false;
@@ -862,6 +909,9 @@ export type MediaFacets = {
   purposes: Partial<Record<MediaPurpose, number>>;
   publicCount: number;
   aiCount: number;
+  /** With a location / live on the Where is Bobo? globe. */
+  locatedCount: number;
+  globeCount: number;
   totalBytes: number;
 };
 
@@ -882,8 +932,21 @@ export function mediaFacets(list: readonly Searchable[]): MediaFacets {
   const purposes: MediaFacets["purposes"] = {};
   let publicCount = 0;
   let aiCount = 0;
+  let locatedCount = 0;
+  let globeCount = 0;
   let totalBytes = 0;
   for (const a of list) {
+    if (a.location) locatedCount++;
+    if (
+      isOnGlobe({
+        kind: a.kind,
+        public: a.public,
+        complete: a.complete ?? true,
+        onGlobe: !!a.onGlobe,
+        location: a.location ?? null,
+      })
+    )
+      globeCount++;
     kinds[a.kind] = (kinds[a.kind] ?? 0) + 1;
     if (a.purpose) purposes[a.purpose] = (purposes[a.purpose] ?? 0) + 1;
     if (a.public) publicCount++;
@@ -899,6 +962,8 @@ export function mediaFacets(list: readonly Searchable[]): MediaFacets {
     purposes,
     publicCount,
     aiCount,
+    locatedCount,
+    globeCount,
     totalBytes,
   };
 }
