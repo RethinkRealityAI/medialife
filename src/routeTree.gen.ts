@@ -22,6 +22,7 @@ import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
+import { Route as AdminCollectorRouteImport } from './routes/admin.collector'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
@@ -72,6 +73,9 @@ import { Route as ApiBoboEventsRouteImport } from './routes/api.bobo.events'
 import { Route as ApiBoboFeedDotjsonRouteImport } from './routes/api.bobo.feed[.]json'
 import { Route as ApiBoboNearRouteImport } from './routes/api.bobo.near'
 import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
+import { Route as ApiCollectorAlertsDotjsonRouteImport } from './routes/api.collector.alerts[.]json'
+import { Route as ApiCollectorMeRouteImport } from './routes/api.collector.me'
+import { Route as ApiCollectorUnlockRouteImport } from './routes/api.collector.unlock'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
@@ -136,6 +140,7 @@ import { Route as RobloxPortalSubmissionsIndexRouteImport } from './routes/roblo
 import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.portal.submissions.$id'
 import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
 import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
+import { Route as ApiCollectorAdminBatchesKeyRouteImport } from './routes/api.collector.admin.batches.$key'
 import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
 import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
 import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
@@ -218,6 +223,11 @@ const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
 const AdminBuilderRoute = AdminBuilderRouteImport.update({
   id: '/builder',
   path: '/builder',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCollectorRoute = AdminCollectorRouteImport.update({
+  id: '/collector',
+  path: '/collector',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDemosRoute = AdminDemosRouteImport.update({
@@ -469,6 +479,22 @@ const ApiBoboNearRoute = ApiBoboNearRouteImport.update({
 const ApiBoboPlacesRoute = ApiBoboPlacesRouteImport.update({
   id: '/api/bobo/places',
   path: '/api/bobo/places',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCollectorAlertsDotjsonRoute =
+  ApiCollectorAlertsDotjsonRouteImport.update({
+    id: '/api/collector/alerts.json',
+    path: '/api/collector/alerts.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiCollectorMeRoute = ApiCollectorMeRouteImport.update({
+  id: '/api/collector/me',
+  path: '/api/collector/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCollectorUnlockRoute = ApiCollectorUnlockRouteImport.update({
+  id: '/api/collector/unlock',
+  path: '/api/collector/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
@@ -800,6 +826,12 @@ const ApiArAdminProjectSlugRoute = ApiArAdminProjectSlugRouteImport.update({
   path: '/api/ar/admin/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCollectorAdminBatchesKeyRoute =
+  ApiCollectorAdminBatchesKeyRouteImport.update({
+    id: '/api/collector/admin/batches/$key',
+    path: '/api/collector/admin/batches/$key',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiHubAuthDiscordCallbackRoute =
   ApiHubAuthDiscordCallbackRouteImport.update({
     id: '/callback',
@@ -916,6 +948,7 @@ export interface FileRoutesByFullPath {
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
@@ -962,6 +995,9 @@ export interface FileRoutesByFullPath {
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
   '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
+  '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
+  '/api/collector/me': typeof ApiCollectorMeRoute
+  '/api/collector/unlock': typeof ApiCollectorUnlockRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1031,6 +1067,7 @@ export interface FileRoutesByFullPath {
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
@@ -1061,6 +1098,7 @@ export interface FileRoutesByTo {
   '/live': typeof LiveRoute
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
+  '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
@@ -1101,6 +1139,9 @@ export interface FileRoutesByTo {
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
   '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
+  '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
+  '/api/collector/me': typeof ApiCollectorMeRoute
+  '/api/collector/unlock': typeof ApiCollectorUnlockRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1170,6 +1211,7 @@ export interface FileRoutesByTo {
   '/roblox/portal/submissions': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
@@ -1203,6 +1245,7 @@ export interface FileRoutesById {
   '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
+  '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
@@ -1249,6 +1292,9 @@ export interface FileRoutesById {
   '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
   '/api/bobo/near': typeof ApiBoboNearRoute
   '/api/bobo/places': typeof ApiBoboPlacesRoute
+  '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
+  '/api/collector/me': typeof ApiCollectorMeRoute
+  '/api/collector/unlock': typeof ApiCollectorUnlockRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1318,6 +1364,7 @@ export interface FileRoutesById {
   '/roblox/portal/submissions/': typeof RobloxPortalSubmissionsIndexRoute
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
+  '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
@@ -1352,6 +1399,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
+    | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
@@ -1398,6 +1446,9 @@ export interface FileRouteTypes {
     | '/api/bobo/feed.json'
     | '/api/bobo/near'
     | '/api/bobo/places'
+    | '/api/collector/alerts.json'
+    | '/api/collector/me'
+    | '/api/collector/unlock'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1467,6 +1518,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/collector/admin/batches/$key'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
@@ -1497,6 +1549,7 @@ export interface FileRouteTypes {
     | '/live'
     | '/technology'
     | '/admin/analytics'
+    | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
@@ -1537,6 +1590,9 @@ export interface FileRouteTypes {
     | '/api/bobo/feed.json'
     | '/api/bobo/near'
     | '/api/bobo/places'
+    | '/api/collector/alerts.json'
+    | '/api/collector/me'
+    | '/api/collector/unlock'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1606,6 +1662,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/submissions'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/collector/admin/batches/$key'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
@@ -1638,6 +1695,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
+    | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
     | '/admin/media'
@@ -1684,6 +1742,9 @@ export interface FileRouteTypes {
     | '/api/bobo/feed.json'
     | '/api/bobo/near'
     | '/api/bobo/places'
+    | '/api/collector/alerts.json'
+    | '/api/collector/me'
+    | '/api/collector/unlock'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1753,6 +1814,7 @@ export interface FileRouteTypes {
     | '/roblox/portal/submissions/'
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
+    | '/api/collector/admin/batches/$key'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
@@ -1813,6 +1875,9 @@ export interface RootRouteChildren {
   ApiBoboFeedDotjsonRoute: typeof ApiBoboFeedDotjsonRoute
   ApiBoboNearRoute: typeof ApiBoboNearRoute
   ApiBoboPlacesRoute: typeof ApiBoboPlacesRoute
+  ApiCollectorAlertsDotjsonRoute: typeof ApiCollectorAlertsDotjsonRoute
+  ApiCollectorMeRoute: typeof ApiCollectorMeRoute
+  ApiCollectorUnlockRoute: typeof ApiCollectorUnlockRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
@@ -1835,6 +1900,7 @@ export interface RootRouteChildren {
   ApiMediaThumbsIdRoute: typeof ApiMediaThumbsIdRoute
   ApiUgcDevSeedRoute: typeof ApiUgcDevSeedRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
+  ApiCollectorAdminBatchesKeyRoute: typeof ApiCollectorAdminBatchesKeyRoute
   ApiUgcFilesPostersIdRoute: typeof ApiUgcFilesPostersIdRoute
   ApiUgcFilesSubmissionsIdRoute: typeof ApiUgcFilesSubmissionsIdRoute
   ApiUgcFilesAssetsCampaignIdIdRoute: typeof ApiUgcFilesAssetsCampaignIdIdRoute
@@ -1931,6 +1997,13 @@ declare module '@tanstack/react-router' {
       path: '/builder'
       fullPath: '/admin/builder'
       preLoaderRoute: typeof AdminBuilderRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/collector': {
+      id: '/admin/collector'
+      path: '/collector'
+      fullPath: '/admin/collector'
+      preLoaderRoute: typeof AdminCollectorRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/demos': {
@@ -2281,6 +2354,27 @@ declare module '@tanstack/react-router' {
       path: '/api/bobo/places'
       fullPath: '/api/bobo/places'
       preLoaderRoute: typeof ApiBoboPlacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/collector/alerts.json': {
+      id: '/api/collector/alerts.json'
+      path: '/api/collector/alerts.json'
+      fullPath: '/api/collector/alerts.json'
+      preLoaderRoute: typeof ApiCollectorAlertsDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/collector/me': {
+      id: '/api/collector/me'
+      path: '/api/collector/me'
+      fullPath: '/api/collector/me'
+      preLoaderRoute: typeof ApiCollectorMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/collector/unlock': {
+      id: '/api/collector/unlock'
+      path: '/api/collector/unlock'
+      fullPath: '/api/collector/unlock'
+      preLoaderRoute: typeof ApiCollectorUnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/hub/files': {
@@ -2731,6 +2825,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArAdminProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/collector/admin/batches/$key': {
+      id: '/api/collector/admin/batches/$key'
+      path: '/api/collector/admin/batches/$key'
+      fullPath: '/api/collector/admin/batches/$key'
+      preLoaderRoute: typeof ApiCollectorAdminBatchesKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hub/auth/discord/callback': {
       id: '/api/hub/auth/discord/callback'
       path: '/callback'
@@ -2915,6 +3016,7 @@ const AdminUgcRouteWithChildren = AdminUgcRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminAnalyticsRoute: typeof AdminAnalyticsRoute
   AdminBuilderRoute: typeof AdminBuilderRouteWithChildren
+  AdminCollectorRoute: typeof AdminCollectorRoute
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
   AdminMediaRoute: typeof AdminMediaRoute
@@ -2933,6 +3035,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnalyticsRoute: AdminAnalyticsRoute,
   AdminBuilderRoute: AdminBuilderRouteWithChildren,
+  AdminCollectorRoute: AdminCollectorRoute,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
   AdminMediaRoute: AdminMediaRoute,
@@ -3258,6 +3361,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBoboFeedDotjsonRoute: ApiBoboFeedDotjsonRoute,
   ApiBoboNearRoute: ApiBoboNearRoute,
   ApiBoboPlacesRoute: ApiBoboPlacesRoute,
+  ApiCollectorAlertsDotjsonRoute: ApiCollectorAlertsDotjsonRoute,
+  ApiCollectorMeRoute: ApiCollectorMeRoute,
+  ApiCollectorUnlockRoute: ApiCollectorUnlockRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
@@ -3280,6 +3386,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMediaThumbsIdRoute: ApiMediaThumbsIdRoute,
   ApiUgcDevSeedRoute: ApiUgcDevSeedRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
+  ApiCollectorAdminBatchesKeyRoute: ApiCollectorAdminBatchesKeyRoute,
   ApiUgcFilesPostersIdRoute: ApiUgcFilesPostersIdRoute,
   ApiUgcFilesSubmissionsIdRoute: ApiUgcFilesSubmissionsIdRoute,
   ApiUgcFilesAssetsCampaignIdIdRoute: ApiUgcFilesAssetsCampaignIdIdRoute,

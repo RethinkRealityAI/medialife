@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=2";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=4";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");
@@ -259,6 +260,7 @@ function enterLounge() {
   // what the component does on the game's onLoungeEnter
   capture.setHud({ badge: "Lounging with Bobo" });
   capture.showHint(qs.has("hint"));
+  if (!hubOn) showModeButton(true);
   log("lounge entered");
 }
 function exitLounge() {
@@ -294,6 +296,7 @@ function startRound() {
   scoreEl.textContent = `0 / ${TARGET}`;
   capture.setHud({ score: 0, target: TARGET });
   capture.showHint(qs.has("hint"));
+  showModeButton(false);
   log("round started");
 }
 
@@ -372,6 +375,139 @@ const capture = new ColaCapture({
   },
 });
 
+
+/* ── Bobo's Hideout: the Collector Hub as a game mode ──
+   Same core as the Mattercraft component (hub-core.js is generated from
+   mattercraft/cola-run/HubCore.ts). Tap the mode → unlock (first time) → the
+   portal appears ahead of Bobo → walk him into it → his room builds around
+   him. The OS's Cola Run app brings you back here to play or record. */
+const hub = new CollectorHub({
+  parent: scene,
+  host: overlay,
+  canvas,
+  getCamera: () => camera,
+  loader,
+  api: qs.get("endpoint") || "",
+  modelUrl: "/hub/evade/room.glb",
+  globeUrl: "/evade/where-is-bobo/index.html",
+  testHint: qs.has("test") ? "BOBO-TEST-CATS" : null,
+  hubCode: qs.get("hub"),
+  exitLabel: "Back to Cola Run",
+  on: (name, p) => {
+    log(`hub: ${name}${typeof p === "string" ? " " + p : ""}`);
+    if (name === "exit") leaveHideout();
+    else if (name === "signedOut") leaveHideout();
+    else if (name === "play") leaveHideout(p.record ? "record" : "play");
+    else if (name === "portal") hub.prompt("Walk Bobo into the portal");
+  },
+});
+let hubOn = false; // the hideout mode is active (portal or room)
+let hubCam = 0; // 0 = follow cam, 1 = room cam
+const hubCamPos = new THREE.Vector3();
+const hubLook = new THREE.Vector3();
+const orbit = { yaw: 0, pitch: 0.38 };
+const PLAYER_H = 1.1;
+const inRoom = () => hubOn && hub.state !== "portal";
+function showModeButton(on) {
+  hub.modeButton(on ? () => openHideout() : null);
+}
+
+async function openHideout() {
+  if (hubOn) return;
+  if (!ac) {
+    audioStart();
+    capture.configure({ audioContext: ac });
+  }
+  $("#intro").hidden = true;
+  if (!lounge) enterLounge();
+  loungeBar.hidden = true;
+  showModeButton(false);
+  hubOn = true;
+  hub.prompt("Opening the portal…");
+  try {
+    await hub.load();
+  } catch (e) {
+    log(`hub load failed: ${e?.message || e}`);
+    hub.prompt(null);
+    hubOn = false;
+    loungeBar.hidden = false;
+    showModeButton(true);
+    return;
+  }
+  hub.prompt(null);
+  const ok = await hub.ensureAccess();
+  if (!ok) {
+    hubOn = false;
+    loungeBar.hidden = false;
+    showModeButton(true);
+    return;
+  }
+  // Room Bobo the same size as the player's Bobo; the portal 3.2 m ahead of him.
+  hub.placeNear(player.position, camera.position, 3.2, PLAYER_H / hub.boboHeight());
+  hub.showPortal();
+  hub.prompt("Walk Bobo into the portal");
+  stick.hidden = false;
+  log("hideout: portal open");
+}
+
+function hubStep(dt) {
+  hub.update(dt);
+  if (!hubOn) {
+    hubCam = Math.max(0, hubCam - dt * 1.2);
+    return;
+  }
+  if (hub.state === "portal" && player.visible && hub.distanceToPortal(player.position) < 0.75) {
+    // Through the portal: the room's Bobo takes over and walks home.
+    player.visible = false;
+    stick.hidden = true;
+    hudEl.hidden = true; // the room has its own top bar
+    capture.setVisible(false);
+    orbit.yaw = 0;
+    orbit.pitch = 0.38;
+    hub.enter({ walk: true });
+    log("hideout: entered");
+  }
+  const want = hub.state === "building" || hub.state === "live" || hub.state === "leaving" ? 1 : 0;
+  hubCam += (want - hubCam) * (1 - Math.exp(-2.5 * dt));
+}
+
+async function leaveHideout(then) {
+  if (!hubOn) return;
+  await hub.leave();
+  // Bobo steps back out of the portal, towards the camera.
+  const p = hub.portalPosition(new THREE.Vector3());
+  const toCam = tmp.set(camera.position.x - p.x, 0, camera.position.z - p.z).normalize();
+  player.position.set(p.x + toCam.x * 1.1, 0, p.z + toCam.z * 1.1);
+  player.rotation.y = Math.atan2(toCam.x, toCam.z);
+  player.visible = true;
+  hubOn = false;
+  hub.hide();
+  stick.hidden = false;
+  hudEl.hidden = false;
+  capture.setVisible(true);
+  log("hideout: left");
+  if (then === "play" || then === "record") {
+    startRound();
+    if (then === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 400);
+    showModeButton(false);
+  } else {
+    loungeBar.hidden = false;
+    showModeButton(true);
+  }
+}
+
+// Drag to look around the room (taps still go to the hub).
+let drag = null;
+canvas.addEventListener("pointerdown", (e) => {
+  if (inRoom()) drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch, id: e.pointerId };
+});
+addEventListener("pointermove", (e) => {
+  if (!drag || e.pointerId !== drag.id) return;
+  orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
+  orbit.pitch = Math.min(1.1, Math.max(0.05, drag.pitch + (e.clientY - drag.y) * 0.004));
+});
+addEventListener("pointerup", () => (drag = null));
+
 /* ── settings panel ── */
 const endpointIn = $("#o-endpoint");
 endpointIn.value = qs.get("endpoint") || location.origin;
@@ -431,6 +567,7 @@ $("#lounge").addEventListener("click", async () => {
   $("#intro").hidden = true;
   enterLounge();
 });
+$("#hideout").addEventListener("click", () => openHideout());
 $("#o-lounge").addEventListener("click", () => {
   $("#intro").hidden = true;
   if (!ac) {
@@ -460,7 +597,7 @@ resize();
 let moving = 0;
 function step() {
   const dt = Math.min(0.1, clock.getDelta());
-  if (playing) {
+  if (playing && !inRoom()) {
     const mv = new THREE.Vector2(stickV.x, stickV.y);
     if (keys.has("arrowleft") || keys.has("a")) mv.x -= 1;
     if (keys.has("arrowright") || keys.has("d")) mv.x += 1;
@@ -505,9 +642,24 @@ function step() {
   }
   mixer?.update(dt);
   for (const c of cans) c.mixer?.update(dt);
-  camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5));
-  camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
-  camera.lookAt(player.position.x, player.position.y + 0.8, player.position.z);
+  hubStep(dt);
+  if (hubCam > 0.001) {
+    // In the hideout: orbit the room (drag to look around), blended from the follow cam.
+    const f = hub.focus();
+    const yaw = f.yaw + orbit.yaw;
+    const dist = (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.25 : 0.95);
+    hubCamPos.set(Math.sin(yaw) * Math.cos(orbit.pitch), Math.sin(orbit.pitch), Math.cos(yaw) * Math.cos(orbit.pitch))
+      .multiplyScalar(dist).add(f.target);
+    camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5)).lerp(hubCamPos, hubCam);
+    camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
+    hubLook.lerp(tmp.copy(player.position).setY(player.position.y + 0.8).lerp(f.target, hubCam), 1 - Math.exp(-6 * dt));
+    camera.lookAt(hubLook);
+  } else {
+    camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5));
+    camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
+    hubLook.set(player.position.x, player.position.y + 0.8, player.position.z);
+    camera.lookAt(hubLook);
+  }
 
   renderer.render(scene, camera);
   // same moment as Mattercraft's onAfterRender
@@ -520,6 +672,13 @@ loadModels()
     layoutCans();
     log("scene ready");
     window.__lab.ready = true;
+    // Deep links: ?mode=play|record|hideout (from the hideout's Cola Run app), ?hub=CODE (a product QR).
+    const mode = qs.get("mode") || (qs.get("hub") ? "hideout" : "");
+    if (mode === "hideout") openHideout();
+    else if (mode === "play" || mode === "record") {
+      $("#play").click();
+      if (mode === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 600);
+    }
   })
   .catch((e) => log(`model load failed: ${e?.message || e}`));
 requestAnimationFrame(step);
@@ -534,5 +693,9 @@ window.__lab = {
   status: () => capture.status,
   state: () => ({ playing, score, timeLeft, done, lounge, emote }),
   lounge: () => enterLounge(),
+  hub,
+  hideout: () => openHideout(),
+  walkTo: (x, z) => player.position.set(x, 0, z),
+  player,
   emote: (n) => setEmote(n),
 };

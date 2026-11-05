@@ -22,6 +22,7 @@ import {
   Store,
   Users,
   type LucideIcon,
+  Gem,
 } from "lucide-react";
 
 import { toneText, type Tone } from "@/components/admin/kit";
@@ -81,6 +82,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
       { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
+      { to: "/admin/collector", label: "Collector Hub", short: "Collector", icon: Gem, tone: "sky" },
     ],
   },
   {

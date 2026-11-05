@@ -10,157 +10,29 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="/hub/evade/room.glb" as="fetch" type="model/gltf-binary" crossorigin>
 <style>
-  :root{--bg:#070b1c;--panel:rgba(10,16,40,.86);--line:rgba(120,200,255,.18);--text:#eef3ff;--muted:#a3b0d0;
-    --cyan:#36e3ff;--pink:#ff4fa3;--gold:#ffc42e;color-scheme:dark}
+  :root{--bg:#070b1c;--muted:#a3b0d0;--cyan:#36e3ff;--pink:#ff4fa3;color-scheme:dark}
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:hidden;
+  html,body{margin:0;height:100%;background:var(--bg);color:#eef3ff;overflow:hidden;
     font:500 15px/1.5 ui-sans-serif,-apple-system,"SF Pro Text",Inter,"Segoe UI",Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
   canvas#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
-  button{font:inherit;color:inherit}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:12px;border:1px solid var(--line);
-    background:rgba(255,255,255,.06);color:var(--text);font-weight:700;text-decoration:none;cursor:pointer}
-  .btn:hover{background:rgba(255,255,255,.12)}
-  .btn:focus-visible,.icon-btn:focus-visible,.cta:focus-visible{outline:2px solid #fff;outline-offset:2px}
-  .btn.primary{background:var(--cyan);border-color:transparent;color:#041824}
-  .btn[aria-disabled="true"]{opacity:.5;pointer-events:none}
-
-  /* top bar */
-  .top{position:fixed;left:0;right:0;top:0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
-    padding:calc(env(safe-area-inset-top) + 12px) 16px 0;pointer-events:none;z-index:5}
-  .brand{pointer-events:auto}
-  .kicker{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan)}
-  .brand h1{margin:2px 0 0;font-size:clamp(18px,4.6vw,24px);line-height:1.15}
-  .chip{display:inline-block;margin-top:6px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(255,196,46,.12);color:#ffe2a3}
-  .top-actions{display:flex;gap:8px;pointer-events:auto}
-  .icon-btn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
-  .icon-btn svg{width:20px;height:20px}
-
-  /* intro call to action */
-  .cta-wrap{position:fixed;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 24px);display:flex;flex-direction:column;align-items:center;gap:10px;z-index:4;padding:0 16px;text-align:center}
-  .cta{min-height:56px;padding:0 28px;border-radius:999px;border:0;cursor:pointer;font-size:17px;font-weight:800;letter-spacing:.02em;color:#041824;
-    background:linear-gradient(90deg,var(--cyan),#9af1ff 50%,var(--pink));box-shadow:0 0 28px rgba(54,227,255,.45)}
-  .cta-note{color:var(--muted);font-size:13.5px;max-width:420px}
-  .skip{position:fixed;right:16px;bottom:calc(env(safe-area-inset-bottom) + 24px);z-index:4}
-
-  /* hint + toast */
-  .hint{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 20px);z-index:3;padding:10px 14px;border-radius:999px;
-    background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:13.5px;white-space:nowrap;backdrop-filter:blur(8px);transition:opacity .4s}
-  .toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 92px);transform:translate(-50%,-8px);opacity:0;z-index:6;padding:10px 16px;border-radius:999px;
-    background:var(--panel);border:1px solid var(--line);font-weight:700;transition:opacity .25s,transform .25s;pointer-events:none;max-width:calc(100% - 32px);text-align:center}
-  .toast.show{opacity:1;transform:translate(-50%,0)}
-
-  /* item sheet */
-  .sheet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 16px);width:min(440px,calc(100% - 32px));transform:translate(-50%,24px);opacity:0;
-    pointer-events:none;z-index:7;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 18px 16px;backdrop-filter:blur(14px);
-    transition:opacity .2s,transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  .sheet.open{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-  .sheet h2{margin:0 36px 2px 0;font-size:19px}
-  .sheet .sub{color:var(--muted);font-size:13.5px;margin:0 0 10px}
-  .sheet p{margin:0 0 12px;color:#d6def5;font-size:14.5px}
-  .status{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;margin-bottom:10px}
-  .status.owned{background:rgba(54,227,255,.14);color:#aef3ff}
-  .status.locked{background:rgba(255,79,163,.14);color:#ffc0de}
-  .status.earned{background:rgba(255,196,46,.14);color:#ffe2a3}
-  .status.live{background:rgba(90,230,160,.14);color:#b8f5d6}
-  .sheet .row{display:flex;flex-wrap:wrap;gap:8px}
-  .close{position:absolute;right:10px;top:10px;width:40px;height:40px;border-radius:10px;border:0;background:transparent;cursor:pointer;color:var(--muted);font-size:22px}
-  .close:hover{color:#fff;background:rgba(255,255,255,.08)}
-  .close:focus-visible{outline:2px solid #fff}
-
-  /* BOBO OS */
-  .os{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(3,6,16,.6);backdrop-filter:blur(6px)}
-  .os.open{display:flex}
-  .os-win{position:relative;width:min(720px,100%);max-height:calc(100% - 24px);overflow:auto;border-radius:22px;border:1px solid rgba(54,227,255,.4);
-    background:linear-gradient(180deg,#0a1230,#16285a);box-shadow:0 0 50px rgba(54,227,255,.2);padding:0 0 18px}
-  .os-bar{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(5,9,24,.92);border-bottom:1px solid var(--line)}
-  .os-bar b{color:var(--cyan);letter-spacing:.08em}
-  .os-bar .close{position:static}
-  .os-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;padding:16px}
-  .app{position:relative;text-align:left;display:flex;flex-direction:column;gap:4px;padding:16px;min-height:112px;border-radius:16px;border:1px solid var(--line);
-    background:rgba(10,18,44,.9);color:var(--text);text-decoration:none;cursor:pointer}
-  .app:hover{border-color:rgba(54,227,255,.6)}
-  .app:focus-visible{outline:2px solid #fff;outline-offset:2px}
-  .app .t{font-weight:800;font-size:16px}
-  .app .d{color:var(--muted);font-size:13.5px}
-  .app .soon{margin-top:auto;font-size:11.5px;font-weight:700;color:#ffe2a3}
-  .badge{position:absolute;right:12px;top:12px;min-width:24px;height:24px;padding:0 7px;border-radius:999px;background:var(--pink);color:#fff;font-weight:800;font-size:13px;display:grid;place-items:center}
-  .alerts{padding:0 16px;display:none}
-  .alerts.open{display:block}
-  .alert{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:14px;background:rgba(24,40,86,.9);margin-bottom:10px}
-  .alert .dot{flex:none;width:12px;height:12px;border-radius:50%;margin-top:6px;background:var(--gold)}
-  .alert.read .dot{background:#4a5677}
-  .alert b{display:block}
-  .alert span{color:var(--muted);font-size:13.5px}
-
-  /* loader */
-  .loader{position:fixed;inset:0;z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);transition:opacity .5s}
+  .lab-tag{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 8px);z-index:1;font-size:10.5px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.35);pointer-events:none}
+  @media (max-width:700px){.lab-tag{display:none}}
+  .loader{position:fixed;inset:0;z-index:2000300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--bg);transition:opacity .5s}
   .loader.done{opacity:0;pointer-events:none}
+  .kicker{font-size:11px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--cyan)}
   .bar{width:min(260px,70vw);height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
   .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink));transition:width .2s}
   .loader p{margin:0;color:var(--muted);font-size:14px}
   .err{color:#ffc0de}
-  [hidden]{display:none!important}
-  @media (max-width:520px){.hint{white-space:normal;text-align:center;width:calc(100% - 32px);border-radius:14px}}
 </style>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./hub.js?v=2"></script>
+<script type="module" src="./hub.js?v=4"></script>
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="Bobo's room, a 3D scene inside a giant Eclipse can. Drag to look around; use the Room items button for a list of everything in the room."></canvas>
-
-<header class="top">
-  <div class="brand">
-    <div class="kicker">Collector Hub · lab</div>
-    <h1>Bobo's Hideout</h1>
-    <span class="chip">Owner view · demo data</span>
-  </div>
-  <div class="top-actions">
-    <button class="icon-btn" id="btnItems" type="button" aria-label="Room items" title="Room items">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-    </button>
-    <button class="icon-btn" id="btnReplay" type="button" aria-label="Replay the Go home intro" title="Replay intro">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
-    </button>
-  </div>
-</header>
-
-<div class="cta-wrap" id="intro" hidden>
-  <button class="cta" id="btnHome" type="button">Go home</button>
-  <div class="cta-note">Bobo is waiting at the portal. Tap to walk him home and build your room.</div>
-</div>
-<button class="btn skip" id="btnSkip" type="button" hidden>Skip</button>
-
-<div class="hint" id="hint" hidden>Drag to look around · tap anything in the room</div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-<section class="sheet" id="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle">
-  <button class="close" id="sheetClose" type="button" aria-label="Close">×</button>
-  <span class="status" id="sheetStatus"></span>
-  <h2 id="sheetTitle"></h2>
-  <p class="sub" id="sheetSub"></p>
-  <p id="sheetBody"></p>
-  <div class="row" id="sheetActions"></div>
-</section>
-
-<div class="os" id="os" role="dialog" aria-modal="true" aria-labelledby="osTitle">
-  <div class="os-win">
-    <div class="os-bar"><b id="osTitle">BOBO OS</b><button class="close" id="osClose" type="button" aria-label="Close BOBO OS">×</button></div>
-    <div class="os-grid">
-      <button class="app" id="appAlerts" type="button"><span class="badge" id="alertBadge">2</span><span class="t">Alerts</span><span class="d">New drops, events and rewards for your room.</span></button>
-      <a class="app" href="/evade/cola-run-lab/index.html"><span class="t">My Clips</span><span class="d">Record a Cola Run or a lounge session with Bobo.</span></a>
-      <a class="app" href="/evade/where-is-bobo/"><span class="t">Bobo Live</span><span class="d">See where Bobo has been around the world.</span></a>
-      <div class="app" aria-disabled="true"><span class="t">Leaderboard</span><span class="d">Top Cola Run scores this week.</span><span class="soon">Coming soon</span></div>
-      <div class="app" aria-disabled="true"><span class="t">Shop</span><span class="d">Merch that unlocks new things in your room.</span><span class="soon">Coming soon</span></div>
-    </div>
-    <div class="alerts" id="alerts">
-      <div class="alert" data-id="drop"><span class="dot"></span><div><b>New drop incoming</b><span>Something new is coming for your room. Keep an eye on this screen.</span></div></div>
-      <div class="alert" data-id="weekend"><span class="dot"></span><div><b>Cola Run weekend</b><span>Beat 25 cans in Cola Run to put a trophy on your shelf.</span></div></div>
-    </div>
-  </div>
-</div>
-
+<canvas id="stage" tabindex="0" aria-label="Bobo's room, a 3D scene inside a giant Eclipse can. Drag to look around; the Room items button lists everything in the room."></canvas>
+<div class="lab-tag" aria-hidden="true">Collector Hub · test lab</div>
 <div class="loader" id="loader">
   <div class="kicker">Collector Hub</div>
   <div class="bar"><i id="barFill"></i></div>

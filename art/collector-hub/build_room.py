@@ -80,8 +80,8 @@ def img_mat(name, file, emit_str=0.0, rough=0.5, alpha=False, metal=0.0):
 M = dict(
     wall_in=mat('Wall_Inside_Navy', '#24356a', 0.85),
     wainscot=mat('Wall_Wainscot', '#17244c', 0.8),
-    trim=mat('Neon_Cyan', '#36e3ff', 0.4, emit='#36e3ff', emit_str=6),
-    pink=mat('Neon_Pink', '#ff4fa3', 0.4, emit='#ff4fa3', emit_str=6),
+    trim=mat('Neon_Cyan', '#36e3ff', 0.4, emit='#36e3ff', emit_str=3.5),
+    pink=mat('Neon_Pink', '#ff4fa3', 0.4, emit='#ff4fa3', emit_str=3.5),
     gold=mat('Gold', '#ffc42e', 0.25, metal=1.0),
     rim=mat('Diorama_Rim', '#0d1430', 0.7),
     alu=mat('Can_Aluminium', '#dfe4ec', 0.22, metal=1.0),
@@ -95,8 +95,8 @@ M = dict(
     glass=mat('Glass', '#ffffff', 0.05, trans=1.0),
     rail_glass=mat('Rail_Glass', '#9fe9ff', 0.05, alpha=0.18),
     lamp_glass=mat('Lamp_Glass', '#ff8fc4', 0.08, trans=0.85),
-    lamp_blob=mat('Lamp_Blob', '#ff4fa3', 0.3, emit='#ff4fa3', emit_str=9),
-    lamp_blob2=mat('Lamp_Blob_Cyan', '#36e3ff', 0.3, emit='#36e3ff', emit_str=7),
+    lamp_blob=mat('Lamp_Blob', '#ff4fa3', 0.3, emit='#ff4fa3', emit_str=5),
+    lamp_blob2=mat('Lamp_Blob_Cyan', '#36e3ff', 0.3, emit='#36e3ff', emit_str=4),
     eclipse_red=mat('Eclipse_Red', '#9b1c45', 0.4), eclipse_white=mat('Eclipse_White', '#fbf6ee', 0.4),
     eclipse_blue=mat('Eclipse_Blue', '#a5d8f7', 0.35),
     beanbag=mat('Beanbag_Purple', '#5b3fb0', 0.9),
@@ -104,8 +104,8 @@ M = dict(
     rug_navy=mat('Rug_Navy', '#1b2a5e', 0.95), rug_cyan=mat('Rug_Cyan', '#2fd6f0', 0.9, emit='#2fd6f0', emit_str=0.6),
     rug_white=mat('Rug_White', '#e9f6ff', 0.95),
     felt=mat('Felt_Case', '#2a3f86', 0.95),
-    bulb=mat('Bulb_Warm', '#ffd9a0', 0.4, emit='#ffcf8a', emit_str=12),
-    ghost=mat('Hologram_Ghost', '#36e3ff', 0.2, emit='#36e3ff', emit_str=2.5, alpha=0.35),
+    bulb=mat('Bulb_Warm', '#ffd9a0', 0.4, emit='#ffcf8a', emit_str=6),
+    ghost=mat('Hologram_Ghost', '#36e3ff', 0.2, emit='#36e3ff', emit_str=1.6, alpha=0.35),
     pad=mat('Spawn_Pad', '#1d6f8a', 0.3, emit='#36e3ff', emit_str=0.25, alpha=0.12),
     fizz=mat('Fizz_Bubble', '#d9f6ff', 0.05, emit='#bff2ff', emit_str=1.2, alpha=0.45),
     bed=mat('CatBed_Blue', '#3c6ee0', 0.9), bed_in=mat('CatBed_Cream', '#f3e6d0', 0.95),
@@ -387,6 +387,66 @@ tx = bpy.context.object; tx.name = 'Case_Plaque_Serial'; tx.data.body = '#00412'
 tx.data.materials.append(M['rim']); link(tx); tx.parent = case
 bpy.ops.object.convert(target='MESH')
 
+# ---------------------------------------------------------------- the EVADE collection wall
+# The keychain case sits in the middle; four holographic cubbies flank it, one per
+# upcoming drop. Each cubby is its own hub_slot_* node with a *_Holo child, so the
+# web room can spin the hologram and swap in the real item once it's unlocked.
+coll = empty('hub_collection', (0, 0, 0))
+case.parent = coll
+def cubby(name, a_deg, z, shape):
+    c = on_wall(name, a_deg, R - 0.12, z, coll)
+    W_, H_ = 0.36, 0.42
+    box(f'{name}_Back', (W_, 0.03, H_), (0, 0.02, 0), M['felt'], parent=c)
+    for nm, sz, l in [('T', (W_ + 0.04, 0.09, 0.02), (0, -0.03, H_ / 2)), ('B', (W_ + 0.04, 0.09, 0.02), (0, -0.03, -H_ / 2)),
+                      ('L', (0.02, 0.09, H_ + 0.04), (-W_ / 2, -0.03, 0)), ('R', (0.02, 0.09, H_ + 0.04), (W_ / 2, -0.03, 0))]:
+        box(f'{name}_Frame_{nm}', sz, l, M['plastic'], 0.004, parent=c)
+    box(f'{name}_Edge', (W_, 0.006, 0.006), (0, -0.075, H_ / 2 - 0.012), M['trim'], parent=c)
+    cyl(f'{name}_Projector', 0.07, 0.025, (0, -0.03, -H_ / 2 + 0.022), M['alu'], 32, parent=c)
+    torus(f'{name}_Projector_Glow', 0.07, 0.006, (0, -0.03, -H_ / 2 + 0.036), M['trim'], parent=c)
+    h = empty(f'{name}_Holo', (0, -0.03, -H_ / 2 + 0.05), c)
+    g = M['ghost']
+    if shape == 'hoodie':
+        box(f'{name}_Hoodie_Body', (0.17, 0.05, 0.17), (0, 0, 0.12), g, 0.02, parent=h)
+        box(f'{name}_Hoodie_Pocket', (0.1, 0.012, 0.045), (0, -0.03, 0.08), g, 0.01, parent=h)
+        sphere(f'{name}_Hoodie_Hood', 0.07, (0, 0.005, 0.225), g, (1, 0.8, 0.85), 16, parent=h)
+        for sx in (-1, 1):
+            box(f'{name}_Hoodie_Sleeve_{sx}', (0.05, 0.045, 0.16), (sx * 0.11, 0, 0.12), g, 0.015, rot=(0, sx * math.radians(18), 0), parent=h)
+    elif shape == 'tee':
+        box(f'{name}_Tee_Body', (0.15, 0.02, 0.18), (0, 0, 0.13), g, 0.01, parent=h)
+        for sx in (-1, 1):
+            box(f'{name}_Tee_Sleeve_{sx}', (0.07, 0.02, 0.06), (sx * 0.1, 0, 0.19), g, 0.01, rot=(0, -sx * math.radians(30), 0), parent=h)
+        cyl(f'{name}_Tee_Logo', 0.03, 0.004, (0, -0.012, 0.15), M['pink'], 24, rot=(math.radians(90), 0, 0), parent=h)
+    elif shape == 'deskmat':
+        mt = empty(f'{name}_Mat', (0, 0, 0.12), h); mt.rotation_euler = (math.radians(70), 0, 0)
+        box(f'{name}_Mat_Slab', (0.28, 0.16, 0.01), (0, 0, 0), g, 0.02, parent=mt)
+        cyl(f'{name}_Mat_Moon', 0.035, 0.004, (0.06, 0.02, 0.007), M['pink'], 24, parent=mt)
+        box(f'{name}_Mat_Stripe', (0.24, 0.012, 0.003), (0, -0.05, 0.007), M['trim'], parent=mt)
+    else:
+        bpy.ops.object.text_add(location=(0, 0, 0.06), rotation=(math.radians(90), 0, 0))
+        q = bpy.context.object; q.name = f'{name}_Mystery_Mark'; q.data.body = '?'; q.data.align_x = 'CENTER'
+        q.data.size = 0.26; q.data.extrude = 0.02
+        try: q.data.font = bpy.data.fonts.load(os.path.join(REPO, 'scripts/brand/fonts/SpaceGrotesk-Bold.ttf'))
+        except Exception: pass
+        q.data.materials.append(g); link(q); q.parent = h
+        bpy.ops.object.select_all(action='DESELECT'); q.select_set(True); bpy.context.view_layer.objects.active = q
+        bpy.ops.object.convert(target='MESH')
+    return c
+cubby('hub_slot_hoodie', CA + 23, 1.16, 'hoodie')
+cubby('hub_slot_tee', CA + 23, 0.68, 'tee')
+cubby('hub_slot_deskmat', CA - 23, 1.16, 'deskmat')
+cubby('hub_slot_mystery', CA - 23, 0.68, 'mystery')
+# "EVADE COLLECTION" sign over the case
+bpy.ops.object.text_add(location=(0, 0, 0), rotation=(math.radians(90), 0, 0))
+st = bpy.context.object; st.name = 'Collection_Sign'; st.data.body = 'EVADE COLLECTION'; st.data.align_x = 'CENTER'
+st.data.size = 0.085; st.data.extrude = 0.006
+try: st.data.font = bpy.data.fonts.load(os.path.join(REPO, 'scripts/brand/fonts/SpaceGrotesk-Bold.ttf'))
+except Exception: pass
+st.data.materials.append(M['trim']); link(st)
+sign_anchor = on_wall('Collection_Sign_Anchor', CA, R - 0.1, 1.53, coll)
+st.parent = sign_anchor; st.location = (0, -0.06, 0)
+bpy.ops.object.select_all(action='DESELECT'); st.select_set(True); bpy.context.view_layer.objects.active = st
+bpy.ops.object.convert(target='MESH')
+
 # ---------------------------------------------------------------- lounge: shelves, lamp, rug, Bobo's bed, beanbag, porthole
 shelf = on_wall('hub_shelf', 62, R - 0.14, 0)
 for k, z in enumerate((0.95, 1.38)):
@@ -404,21 +464,9 @@ sphere('Globe_Glass', 0.08, (0, 0, 0.12), M['glass'], parent=sg)
 box('Globe_Bridge_Deck', (0.1, 0.012, 0.006), (0, 0, 0.09), M['orange'], parent=sg)
 for xx in (-0.03, 0.03):
     box(f'Globe_Bridge_Tower_{xx:+.2f}', (0.01, 0.01, 0.07), (xx, 0, 0.115), M['orange'], parent=sg)
-def holo_slot(name, loc, shape):
-    h = empty(name, loc, shelf)
-    torus(f'{name}_Ring', 0.08, 0.006, (0, 0, 0.01), M['trim'], parent=h)
-    if shape == 'tee':
-        box(f'{name}_Tee_Body', (0.12, 0.02, 0.14), (0, 0, 0.12), M['ghost'], 0.01, parent=h)
-        for s in (-1, 1):
-            box(f'{name}_Tee_Sleeve_{s}', (0.06, 0.02, 0.05), (s * 0.085, 0, 0.165), M['ghost'], 0.01, rot=(0, -s * math.radians(30), 0), parent=h)
-    else:
-        sphere(f'{name}_Plush_Body', 0.06, (0, 0, 0.08), M['ghost'], (1, 1, 0.9), 16, parent=h)
-        sphere(f'{name}_Plush_Head', 0.05, (0, 0, 0.17), M['ghost'], seg=16, parent=h)
-        for s in (-1, 1):
-            cyl(f'{name}_Plush_Ear_{s}', 0.018, 0.04, (s * 0.03, 0, 0.22), M['ghost'], 12, r2=0.0, parent=h)
-    return h
-holo_slot('hub_slot_tee', (-0.25, 0, 1.40), 'tee')
-holo_slot('hub_slot_plush', (0.25, 0, 1.40), 'plush')
+# top shelf: a row of Eclipse cans (the hologram slots moved to the collection wall)
+for k, x in enumerate((-0.3, -0.18, 0.2, 0.32)):
+    mini_can(f'Shelf_Can_{k}', (x, 0, 1.40), 1.3, parent=shelf)
 
 lamp_tbl = empty('Side_Table', P(168, 1.42, 0))
 cyl('Side_Table_Top', 0.24, 0.05, (0, 0, 0.55), M['wood_dark'], 32, parent=lamp_tbl)
@@ -432,7 +480,7 @@ cyl('Lamp_Label', 0.0865, 0.09, (0, 0, 0.27), M['eclipse_red'], 32, parent=lamp)
 for k, (x, y, z, r) in enumerate([(0.01, 0.0, 0.18, 0.045), (-0.02, 0.01, 0.33, 0.035), (0.02, -0.01, 0.45, 0.03), (0.0, 0.02, 0.4, 0.022)]):
     sphere(f'Lamp_Blob_{k}', r, (x, y, z), M['lamp_blob'] if k != 2 else M['lamp_blob2'], (1, 1, 1.25), 16, parent=lamp)
 
-port = on_wall('hub_window', 145, R - 0.02, 1.05)
+port = on_wall('hub_window', 156, R - 0.02, 1.05)
 disc_sky = prism('Porthole_Sky', circle_pts(0.36, 48), 0, 0.01, img_mat('Porthole_Sky', 'sky.png', emit_str=1.6), parent=port)
 disc_sky.rotation_euler = (math.radians(90), 0, 0)
 torus('Porthole_Frame', 0.39, 0.045, (0, -0.02, 0), M['alu'], rot=(math.radians(90), 0, 0), parent=port)

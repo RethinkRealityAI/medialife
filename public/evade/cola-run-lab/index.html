@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Cola Run recorder lab</title>
+<title>Cola Run lab</title>
 <meta name="theme-color" content="#14161a">
-<link rel="stylesheet" href="./assets/lab.css?v=2">
+<link rel="stylesheet" href="./assets/lab.css?v=3">
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./assets/lab.js?v=2"></script>
+<script type="module" src="./assets/lab.js?v=3"></script>
 </head>
 <body>
 <!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with
@@ -41,11 +41,12 @@
     <div class="lab-intro" id="intro">
       <div class="lab-card">
         <div class="lab-kicker">Test lab</div>
-        <h1>Cola Run recorder</h1>
-        <p>A stand-in Cola Run scene for trying the record button before it goes into Mattercraft. Collect the cans with the joystick (or arrow keys / WASD), or just hang out in lounge mode. Tap the <span class="lab-reddot"></span> button to record (R on a keyboard), then send the clip.</p>
+        <h1>Cola Run</h1>
+        <p>A stand-in Cola Run scene for trying the record button before it goes into Mattercraft. Collect the cans with the joystick (or arrow keys / WASD), or just hang out in lounge mode. Tap the <span class="lab-reddot"></span> button to record (R on a keyboard), then send the clip. Or open <b>Bobo's Hideout</b>: walk Bobo through the portal and his room builds around him.</p>
         <label class="lab-check"><input type="checkbox" id="useCam"> Use my camera as the background (closer to AR)</label>
         <button class="lab-play" id="play" type="button">Play</button>
         <button class="lab-play lab-ghost" id="lounge" type="button">Lounge with Bobo</button>
+        <button class="lab-play lab-ghost" id="hideout" type="button">Bobo's Hideout</button>
         <p class="lab-small">Clips you send from here go to <b id="endpointLabel"></b> as private, "Needs review" captures.</p>
       </div>
     </div>

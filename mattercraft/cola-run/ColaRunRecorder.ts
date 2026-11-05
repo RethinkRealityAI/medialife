@@ -531,6 +531,16 @@ export class ColaRunRecorder extends Group {
     });
   }
 
+  /** Start recording (e.g. from Bobo's Hideout's "Record a run"). */
+  public startRecording() {
+    if (this._capture?.status === "idle") this._capture.start();
+  }
+
+  /** Stop recording and open the review sheet. */
+  public stopRecording() {
+    if (this._capture?.status === "recording") this._capture.stop();
+  }
+
   public dispose() {
     for (const off of this._gameOff) off();
     this._gameOff = [];
