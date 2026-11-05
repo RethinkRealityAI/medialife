@@ -15,7 +15,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { CollectorHub } from "./hub-core.js?v=6";
+import { CollectorHub } from "./hub-core.js?v=7";
 import { mountViewControls } from "./view-controls.js?v=1";
 
 const params = new URLSearchParams(location.search);
@@ -120,6 +120,12 @@ const hub = new CollectorHub({
     } else if (name === "play")
       location.href = `/evade/cola-run-lab/?mode=${p.record ? "record" : "play"}`;
     else if (name === "state") onState(p);
+    else if (name === "focus") focusOn(p);
+    else if (name === "tour") {
+      touring = p === "start";
+      controls.autoRotate = !touring && !reduceMotion;
+      viewUi.show(!touring && hub.state === "live");
+    }
   },
 });
 
@@ -208,9 +214,23 @@ const viewUi = mountViewControls({
   onRecenter: () => flyTo(viewFor(viewKind()), 0.9),
 });
 
+// The welcome tour points the camera at each stop.
+let touring = false;
+function focusOn(p) {
+  clearTimeout(pushIn);
+  controls.autoRotate = false;
+  if (!p) return flyTo(viewFor("room"), 1.3);
+  const tall = innerWidth / innerHeight < 0.8;
+  const dir = VIEW_DIR.clone();
+  dir.y *= 0.8;
+  dir.normalize();
+  const dist = p.distance * (tall ? 1.6 : 1);
+  flyTo({ pos: p.target.clone().addScaledVector(dir, dist), target: p.target.clone() }, 1.3);
+}
+
 let pushIn;
 function onState(p) {
-  controls.autoRotate = !reduceMotion && p !== "building" && p !== "leaving";
+  controls.autoRotate = !reduceMotion && !touring && p !== "building" && p !== "leaving";
   clearTimeout(pushIn);
   // While the wireframe draws, glide in so the built room fills the screen.
   if (p === "building") pushIn = setTimeout(() => flyTo(viewFor("room"), 3.4), 1600);
@@ -271,7 +291,7 @@ controls.addEventListener("start", () => {
 controls.addEventListener("end", () => {
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => {
-    if (!reduceMotion && hub.state !== "building") controls.autoRotate = true;
+    if (!reduceMotion && !touring && hub.state === "live") controls.autoRotate = true;
   }, 6000);
 });
 
@@ -304,6 +324,12 @@ if (!params.has("manual")) renderer.setAnimationLoop(() => frame(Math.min(clock.
 window.__hub = {
   hub,
   frame,
+  // advance time without drawing (tests)
+  tick(dt) {
+    hub.update(dt);
+    stepFly(dt);
+    controls.update(dt);
+  },
   camera,
   controls,
   get state() {

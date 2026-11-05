@@ -244,6 +244,100 @@ const ALIAS = {
   hub_keychain_case: "hub_collection",
   hub_keychain: "hub_collection"
 };
+const SPOT_COLOR = {
+  cola: "#2ec5ff",
+  red: "#ff3b4e",
+  evade: "#ffc42e",
+  bobo: "#6f86ff"
+};
+const SPOT_ICON = {
+  pc: svg(
+    '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="m8.5 10 2 2 4-4"/>'
+  ),
+  vault: ICON_GEM(),
+  paw: svg(
+    '<circle cx="6.5" cy="10" r="1.8"/><circle cx="10" cy="6" r="1.8"/><circle cx="14" cy="6" r="1.8"/><circle cx="17.5" cy="10" r="1.8"/><path d="M12 11.5c-3 0-5.5 3.2-5.5 5.6 0 1.6 1.3 2.4 2.8 2.4 1.1 0 1.7-.6 2.7-.6s1.6.6 2.7.6c1.5 0 2.8-.8 2.8-2.4 0-2.4-2.5-5.6-5.5-5.6z"/>'
+  ),
+  play: svg('<path d="M8 5.5v13l10.5-6.5z"/>'),
+  globe: svg(
+    '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'
+  ),
+  fizz: svg(
+    '<circle cx="9" cy="15" r="4"/><circle cx="16" cy="8" r="2.6"/><circle cx="17" cy="16.5" r="1.6"/><circle cx="8.5" cy="5.5" r="1.3"/>'
+  )
+};
+function ICON_GEM() {
+  return svg('<path d="M6 3h12l3 6-9 12L3 9z"/><path d="M3 9h18M12 21 8.5 9 12 3l3.5 6z"/>');
+}
+const SPOTS = [
+  {
+    id: "hub_bobo",
+    label: "Bobo",
+    color: SPOT_COLOR.bobo,
+    icon: SPOT_ICON.paw,
+    lift: 0.75,
+    tour: {
+      title: "Meet Bobo",
+      body: "This is Bobo's room and he lives here. Tap him any time to say hi.",
+      distance: 3
+    }
+  },
+  {
+    id: "hub_computer",
+    label: "BOBO OS",
+    color: SPOT_COLOR.cola,
+    icon: SPOT_ICON.pc,
+    tour: {
+      title: "Bobo's computer",
+      body: "BOBO OS has alerts from the EVADE team, the Where's Bobo? globe, the leaderboard and Cola Run. The monitor glows when there's something new.",
+      distance: 3.2
+    }
+  },
+  {
+    id: "hub_collection",
+    label: "Digital Collection",
+    color: SPOT_COLOR.evade,
+    icon: SPOT_ICON.vault,
+    tour: {
+      title: "Your Digital Collection",
+      body: "Every EVADE piece you own lives in your vault. The ones you don't have yet show as holograms until you activate them.",
+      distance: 3.2
+    }
+  },
+  {
+    id: "hub_trophy_colarun",
+    label: "Cola Run",
+    color: SPOT_COLOR.red,
+    icon: SPOT_ICON.play,
+    lift: 0.6,
+    tour: {
+      title: "Cola Run",
+      body: "Play a round or record a clip from here. Your clips can put your city on the Where's Bobo? globe.",
+      distance: 2.9
+    }
+  },
+  {
+    id: "hub_snowglobe_sf",
+    label: "Where's Bobo?",
+    color: SPOT_COLOR.cola,
+    icon: SPOT_ICON.globe,
+    lift: 0.6,
+    tour: {
+      title: "Where's Bobo?",
+      body: "Every souvenir is a city Bobo has visited. Open the globe to see where fans have spotted him.",
+      distance: 2.9
+    }
+  },
+  { id: "hub_cola_lamp", label: "Fizz lamp", color: SPOT_COLOR.red, icon: SPOT_ICON.fizz }
+];
+const TOUR_INTRO = {
+  title: "Welcome to Bobo's Hideout",
+  body: "Your room lives inside a giant Eclipse can, and it grows with every EVADE piece you own. Here's a quick look around."
+};
+const TOUR_OUTRO = {
+  title: "You're all set",
+  body: "Tap any glowing dot to open it, or use the list button at the top for everything in the room. You can replay this tour from there too."
+};
 const REVEAL_COMMON = (
   /* glsl */
   `
@@ -624,6 +718,45 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
   .mlh-dock button:hover::before{display:none}
   .mlh-title small{display:none}
 }
+/* \u2500\u2500 hotspots \u2500\u2500 */
+.mlh-spots{position:absolute;inset:0;pointer-events:none!important;overflow:hidden}
+.mlh-spot{position:absolute;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;cursor:pointer;color:#071022;
+  background:radial-gradient(circle at 34% 28%,#fff 0,color-mix(in srgb,var(--c) 55%,#fff) 22%,var(--c) 62%,color-mix(in srgb,var(--c) 70%,#000) 100%);
+  box-shadow:0 0 0 2.5px rgba(6,10,28,.7),0 0 0 4px color-mix(in srgb,var(--c) 55%,transparent),0 0 22px 2px color-mix(in srgb,var(--c) 70%,transparent),0 6px 14px rgba(0,0,0,.45);
+  pointer-events:auto!important;transition:opacity .3s,width .25s,height .25s,margin .25s;will-change:transform}
+.mlh-spot::before{content:"";position:absolute;inset:-5px;border-radius:50%;border:2px solid var(--c);opacity:0;animation:mlh-ping 2.4s cubic-bezier(.2,.7,.3,1) infinite;pointer-events:none}
+@keyframes mlh-ping{0%{transform:scale(.75);opacity:.85}80%,100%{transform:scale(1.75);opacity:0}}
+.mlh-spot svg{width:17px;height:17px;stroke-width:2.3}
+.mlh-spot span{position:absolute;left:calc(100% + 9px);top:50%;transform:translate(-4px,-50%);white-space:nowrap;padding:5px 11px;border-radius:999px;background:rgba(8,13,34,.88);
+  border:1px solid color-mix(in srgb,var(--c) 55%,transparent);color:#fff;font-size:12.5px;font-weight:700;letter-spacing:.01em;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;
+  box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.mlh-spot:hover span,.mlh-spot:focus-visible span,.mlh-spot.focus span{opacity:1;transform:translate(0,-50%)}
+.mlh-spot:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.mlh-spot.gone{opacity:0;pointer-events:none!important}
+.mlh-spots.off .mlh-spot{opacity:0;pointer-events:none!important}
+.mlh-spots.touring .mlh-spot{opacity:.28;pointer-events:none!important}
+.mlh-spots.touring .mlh-spot.focus{opacity:1;width:44px;height:44px;margin:-22px 0 0 -22px}
+.mlh-spots.touring .mlh-spot.gone{opacity:0}
+/* \u2500\u2500 welcome tour \u2500\u2500 */
+.mlh-tour{position:absolute;left:50%;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 20px);transform:translate(-50%,12px);width:min(470px,calc(100% - 28px));
+  padding:16px 18px 14px;border-radius:20px;background:linear-gradient(160deg,rgba(26,38,84,.94),rgba(10,15,38,.95));border:1px solid rgba(110,200,255,.28);
+  box-shadow:0 24px 60px rgba(0,0,0,.5),0 0 40px -12px rgba(54,227,255,.45);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  opacity:0;transition:opacity .3s,transform .3s;pointer-events:auto!important}
+.mlh-tour.on{opacity:1;transform:translate(-50%,0)}
+.mlh-tour[hidden]{display:block!important;visibility:hidden}
+.mlh-tour .mlh-kicker{margin:0 0 4px}
+.mlh-tour h3{margin:0 0 6px;font-size:19px;line-height:1.25;letter-spacing:-.01em}
+.mlh-tour p{margin:0 0 14px;color:#c9d5f2;font-size:14.5px;line-height:1.5}
+.mlh-tour-row{display:flex;align-items:center;gap:8px}
+.mlh-tour-row .mlh-btn{min-height:42px}
+.mlh-tour-row .mlh-btn.pri{min-width:96px}
+.mlh-tour-skip{all:unset;cursor:pointer;color:#9fb0d8;font-size:13.5px;font-weight:600;padding:8px 4px;border-radius:8px}
+.mlh-tour-skip:hover{color:#fff}
+.mlh-tour-skip:focus-visible{outline:2px solid var(--cyan)}
+.mlh-tour-dots{flex:1;display:flex;justify-content:center;gap:5px}
+.mlh-tour-dots i{width:6px;height:6px;border-radius:99px;background:rgba(255,255,255,.22);transition:width .25s,background .25s}
+.mlh-tour-dots i.on{width:18px;background:linear-gradient(90deg,var(--cyan),var(--pink))}
+@media (max-width:520px){.mlh-tour{padding:14px 14px 12px}.mlh-tour h3{font-size:17px}.mlh-tour p{font-size:14px}.mlh-tour-dots{display:none}.mlh-tour-row .mlh-btn{flex:1}.mlh-spot span{display:none}.mlh-spot.focus span{display:block}}
 @media (prefers-reduced-motion:reduce){
   .mlh *{animation:none!important;transition:none!important}
 }
@@ -938,6 +1071,11 @@ class CollectorHub {
     });
     __publicField(this, "_time", 0);
     __publicField(this, "_reduceMotion");
+    /* hotspots + tour */
+    __publicField(this, "_spots", []);
+    __publicField(this, "_spotFrame", 0);
+    __publicField(this, "_tourI", -1);
+    __publicField(this, "_afterTour", null);
     __publicField(this, "_solidCache", {});
     __publicField(this, "_ray", new THREE.Raycaster());
     __publicField(this, "_ndc", new THREE.Vector2());
@@ -1044,6 +1182,7 @@ class CollectorHub {
     if (this._state !== "live" && this._state !== "building") {
       return Promise.resolve();
     }
+    if (this._tourI >= 0) this._tourEnd(false);
     this._closeAllLayers();
     this._hideBeam(false);
     this._seqT = 0;
@@ -1211,6 +1350,7 @@ class CollectorHub {
     if (this._state === "portal") this._updatePortal(dt);
     else if (this._state === "building") this._updateBuild(dt);
     else if (this._state === "leaving") this._updateLeave(dt);
+    if (this._spots.length) this._updateSpots();
     this._mixer?.update(dt);
     const still = this._reduceMotion;
     if (this._swirl && !still)
@@ -1409,6 +1549,7 @@ class CollectorHub {
     this._buildWalk(local);
     this._applyOwnership();
     this._setShadows(false);
+    this._buildSpots();
     this._renderHud();
   }
   /**
@@ -1825,11 +1966,18 @@ class CollectorHub {
     this._setState("live");
     this._hud(true);
     this._renderHud();
-    this._showHint();
-    if (!this._greeted) {
+    const greet = () => {
+      if (this._greeted) return;
       this._greeted = true;
       const fresh = this._alerts.find((a) => !this._read.has(a.id));
       if (fresh) setTimeout(() => this._state === "live" && this._beamAlertOut(fresh), 1400);
+    };
+    if (this.opts.tour !== false && store.get(this._k("toured")) !== "1") {
+      this._afterTour = greet;
+      setTimeout(() => this._state === "live" && this._tourI < 0 && this.startTour(), 900);
+    } else {
+      this._showHint();
+      greet();
     }
   }
   _updateLeave(dt) {
@@ -1952,6 +2100,18 @@ class CollectorHub {
 <button type="button" class="mlh-btn mlh-skip" data-r="skip" hidden>Skip</button>
 <button type="button" class="mlh-mode" data-r="mode" hidden><i>${ICON.home}</i><span><span data-r="modeLabel">Bobo's Hideout</span><small data-r="modeSub">Your room</small></span></button>
 <div class="mlh-toast" data-r="toast" role="status" aria-live="polite"></div>
+<div class="mlh-spots" data-r="spots"></div>
+<div class="mlh-tour" data-r="tour" role="dialog" aria-modal="false" aria-labelledby="mlh-tour-h" hidden>
+  <div class="mlh-kicker" data-r="tourKick"></div>
+  <h3 id="mlh-tour-h" data-r="tourTitle"></h3>
+  <p data-r="tourBody"></p>
+  <div class="mlh-tour-row">
+    <button type="button" class="mlh-tour-skip" data-r="tourSkip">Skip tour</button>
+    <span class="mlh-tour-dots" data-r="tourDots" aria-hidden="true"></span>
+    <button type="button" class="mlh-btn" data-r="tourBack">Back</button>
+    <button type="button" class="mlh-btn pri" data-r="tourNext">Next</button>
+  </div>
+</div>
 
 <div class="mlh-layer" data-r="gate" role="dialog" aria-modal="true" aria-labelledby="mlh-gate-h">
   <div class="mlh-card" data-r="gateCard"></div>
@@ -2026,6 +2186,9 @@ class CollectorHub {
     on(this._el.pc, "click", () => this.openOS());
     on(this._el.exit, "click", () => this._emit("exit", void 0));
     on(this._el.skip, "click", () => this.skip());
+    on(this._el.tourNext, "click", () => this._tourGo(this._tourI + 1));
+    on(this._el.tourBack, "click", () => this._tourGo(this._tourI - 1));
+    on(this._el.tourSkip, "click", () => this._tourEnd(true));
     on(this._el.bell, "click", () => this._openApp("alerts"));
     on(this._el.power, "click", () => this.closeOS());
     on(this._el.os, "click", (e) => e.target === this._el.os && this.closeOS());
@@ -2046,6 +2209,12 @@ class CollectorHub {
     for (const x of ui.querySelectorAll("[data-close]"))
       on(x, "click", () => this._closeLayer(x.closest(".mlh-layer")));
     on(window, "keydown", (e) => {
+      if (this._tourI >= 0) {
+        if (e.key === "Escape") this._tourEnd(true);
+        else if (e.key === "ArrowRight") this._tourGo(this._tourI + 1);
+        else if (e.key === "ArrowLeft") this._tourGo(this._tourI - 1);
+        return;
+      }
       if (e.key !== "Escape") return;
       if (this._el.os.classList.contains("open")) {
         if (this._focused) this._closeApp(this._focused);
@@ -2113,8 +2282,138 @@ class CollectorHub {
   }
   _showHint() {
     clearTimeout(this._hintTimer);
-    this.prompt("Tap anything in the room. Tap the computer for BOBO OS.");
+    this.prompt(
+      this._spots.length ? "Tap a glowing dot, or anything in the room." : "Tap anything in the room. Tap the computer for BOBO OS."
+    );
     this._hintTimer = setTimeout(() => this._state === "live" && this.prompt(null), 5500);
+  }
+  /* ── hotspots ─────────────────────────────────────────────────────── */
+  _buildSpots() {
+    if (this.opts.hotspots === false || !this._room) return;
+    const box = new THREE.Box3();
+    for (const def of SPOTS) {
+      const node = this._room.getObjectByName(def.id);
+      if (!node) continue;
+      node.updateWorldMatrix(true, true);
+      box.setFromObject(node);
+      if (box.isEmpty()) continue;
+      const c = box.getCenter(new THREE.Vector3());
+      c.y += (box.max.y - c.y) * (def.lift ?? 0.35);
+      const local = node.worldToLocal(c);
+      const el = document.createElement("button");
+      el.type = "button";
+      el.className = "mlh-spot gone";
+      el.style.setProperty("--c", def.color);
+      el.setAttribute("aria-label", def.label);
+      el.innerHTML = `${def.icon}<span>${esc(def.label)}</span>`;
+      el.addEventListener("click", () => this._onTap(def.id));
+      this._el.spots.appendChild(el);
+      this._spots.push({ def, node, local, el, hidden: true });
+    }
+  }
+  _layerOpen() {
+    const e = this._el;
+    return e.os.classList.contains("open") || e.col.classList.contains("open") || e.sheet.classList.contains("open") || e.gate.classList.contains("open");
+  }
+  _updateSpots() {
+    const cam = this.opts.getCamera();
+    const show = this._state === "live" && !!cam && !this._layerOpen();
+    this._el.spots.classList.toggle("off", !show);
+    if (!show || !cam) return;
+    const r = this.opts.canvas.getBoundingClientRect();
+    const host = this._el.spots.getBoundingClientRect();
+    const check = this._spotFrame++ % this._spots.length;
+    const camPos = cam.getWorldPosition(this._t.v2);
+    const placed = [];
+    this._spots.forEach((s, i) => {
+      const w = s.node.localToWorld(this._t.v.copy(s.local));
+      if (i === check || i === (check + 3) % this._spots.length) {
+        const dir = w.clone().sub(camPos);
+        const dist = dir.length();
+        this._ray.set(camPos, dir.normalize());
+        this._ray.far = dist - 0.05;
+        let blocked = false;
+        for (const hit of this._ray.intersectObjects(this._pickables, false)) {
+          const o = hit.object;
+          if (!o.visible || o.material?.transparent && o.material.opacity < 0.5) continue;
+          if (this._isUnder(o, s.node)) break;
+          if (hit.distance < dist - 0.25) blocked = true;
+          break;
+        }
+        this._ray.far = Infinity;
+        s.hidden = blocked;
+      }
+      const p = w.project(cam);
+      let off = p.z > 1 || Math.abs(p.x) > 1.05 || Math.abs(p.y) > 1.05 || s.hidden;
+      const x = r.left - host.left + (p.x + 1) / 2 * r.width;
+      const y = r.top - host.top + (1 - p.y) / 2 * r.height;
+      if (!off && placed.some((q) => Math.hypot(q.x - x, q.y - y) < 40)) off = true;
+      s.el.classList.toggle("gone", off);
+      if (off) return;
+      placed.push({ x, y });
+      s.el.style.transform = `translate3d(${x.toFixed(1)}px,${y.toFixed(1)}px,0)`;
+    });
+  }
+  /* ── welcome tour ─────────────────────────────────────────────────── */
+  /** Walk a first-timer round the room: a card per stop, the camera follows. */
+  startTour() {
+    if (this._state !== "live") return;
+    this._closeAllLayers();
+    this.prompt(null);
+    clearTimeout(this._hintTimer);
+    this._tourI = 0;
+    this._el.tour.hidden = false;
+    requestAnimationFrame(() => this._el.tour.classList.add("on"));
+    this._el.spots.classList.add("touring");
+    this._emit("tour", "start");
+    this._tourGo(0);
+  }
+  _tourStops() {
+    const stops = [TOUR_INTRO];
+    for (const s of this._spots) if (s.def.tour) stops.push({ ...s.def.tour, spot: s });
+    stops.push(TOUR_OUTRO);
+    return stops;
+  }
+  _tourGo(i) {
+    if (this._tourI < 0) return;
+    const stops = this._tourStops();
+    if (i >= stops.length) return this._tourEnd(true);
+    i = Math.max(0, i);
+    this._tourI = i;
+    const st = stops[i];
+    this._el.tourKick.textContent = `Welcome tour \xB7 ${i + 1} of ${stops.length}`;
+    this._el.tourTitle.textContent = st.title;
+    this._el.tourBody.textContent = st.body;
+    this._el.tourBack.hidden = i === 0;
+    this._el.tourNext.textContent = i === 0 ? "Show me" : i === stops.length - 1 ? "Start exploring" : "Next";
+    this._el.tourDots.innerHTML = stops.map((_, k) => `<i class="${k === i ? "on" : ""}"></i>`).join("");
+    for (const s of this._spots) s.el.classList.toggle("focus", s === st.spot);
+    if (st.spot) {
+      const scale = this.root.getWorldScale(this._t.v).x;
+      const distance = (st.spot.def.tour?.distance ?? 3) * scale;
+      const target = st.spot.node.localToWorld(st.spot.local.clone());
+      target.y -= distance * 0.13;
+      this._emit("focus", { target, distance });
+      if (st.spot.def.id === "hub_bobo") this._tapBobo();
+    } else this._emit("focus", null);
+    this._sfx("click");
+    setTimeout(() => this._el.tourNext.focus({ preventScroll: true }), 60);
+  }
+  _tourEnd(remember) {
+    if (this._tourI < 0) return;
+    this._tourI = -1;
+    if (remember) store.set(this._k("toured"), "1");
+    this._el.tour.classList.remove("on");
+    setTimeout(() => this._tourI < 0 && (this._el.tour.hidden = true), 320);
+    this._el.spots.classList.remove("touring");
+    for (const s of this._spots) s.el.classList.remove("focus");
+    this._emit("focus", null);
+    this._emit("tour", "end");
+    if (this._state === "live") {
+      const after = this._afterTour;
+      this._afterTour = null;
+      after?.();
+    }
   }
   /* ── unlock form ──────────────────────────────────────────────────── */
   _showGateForm(mode, error) {
@@ -2335,7 +2634,7 @@ class CollectorHub {
       if (this._state === "portal") this._emit("portal", void 0);
       return;
     }
-    if (this._state !== "live") return;
+    if (this._state !== "live" || this._tourI >= 0) return;
     switch (id) {
       case "hub_hologram":
         return this.openOS("alerts");
@@ -2425,6 +2724,7 @@ class CollectorHub {
       };
       row.appendChild(b);
     };
+    if (this.opts.tour !== false) add("Take the tour", () => this.startTour());
     add("Bobo's computer", () => this.openOS());
     add("My collection", () => this.openCollection());
     add("Bobo", () => this._tapBobo());

@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=6";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=7";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=1";
 
 const $ = (s) => document.querySelector(s);
@@ -403,6 +403,17 @@ const hub = new CollectorHub({
     else if (name === "signedOut") leaveHideout();
     else if (name === "play") leaveHideout(p.record ? "record" : "play");
     else if (name === "portal") hub.prompt("Walk Bobo into the portal");
+    else if (name === "focus") {
+      // The welcome tour: aim the room camera at each stop.
+      resetOrbit();
+      if (p) {
+        const f = hub.focus();
+        orbit.pan.copy(p.target).sub(f.target);
+        const base =
+          (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.1 : 0.8);
+        orbit.zoom = Math.min(1, Math.max(0.2, (p.distance * (camera.aspect < 0.8 ? 1.6 : 1)) / base));
+      }
+    }
   },
 });
 let hubOn = false; // the hideout mode is active (portal or room)
