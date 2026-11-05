@@ -26,10 +26,31 @@ const IMG = "/evade/creators/assets/img/";
 const ACTIVATE_URL = "https://medialife.ai/evade/creators/";
 
 export const FUTURE = [
-  { id: "tee", type: "tee", name: "Activated Tee", slot: "L0", color: "#e9e4d8", yaw: Math.PI - 0.34 },
-  { id: "hoodie", type: "hoodie", name: "Activated Hoodie", slot: "R0", color: "#1d2433", yaw: Math.PI + 0.34 },
+  {
+    id: "tee",
+    type: "tee",
+    name: "Activated Tee",
+    slot: "L0",
+    color: "#e9e4d8",
+    yaw: Math.PI - 0.34,
+  },
+  {
+    id: "hoodie",
+    type: "hoodie",
+    name: "Activated Hoodie",
+    slot: "R0",
+    color: "#1d2433",
+    yaw: Math.PI + 0.34,
+  },
   { id: "cap", type: "cap", name: "Activated Cap", slot: "L1", color: "#141416", yaw: 0.42 },
-  { id: "deskmat", type: "deskmat", name: "Activated Desk Mat", slot: "R1", color: "#14191f", yaw: 0 },
+  {
+    id: "deskmat",
+    type: "deskmat",
+    name: "Activated Desk Mat",
+    slot: "R1",
+    color: "#14191f",
+    yaw: 0,
+  },
 ];
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -168,13 +189,149 @@ async function loadKeychainGLB(loader, url, reduced) {
 /**
  * @param {{canvas:HTMLCanvasElement, el:HTMLElement, reduced:boolean, onProgress?:Function, onSelect?:Function, onBobo?:Function, onBoboReady?:Function, onHoverChange?:Function}} o
  */
-export async function createStage({ canvas, el, reduced, keychainUrl = "", onProgress, onSelect, onBobo, onBoboReady, onHoverChange }) {
+
+/* ---- vault mode: locked items are holograms ------------------------------------ */
+const HOLO_VERT = /* glsl */ `
+  varying vec3 vN; varying vec3 vV; varying vec3 vW;
+  void main(){
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    vN = normalize(mat3(modelMatrix) * normal);
+    vV = normalize(cameraPosition - w.xyz);
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }`;
+const HOLO_FRAG = /* glsl */ `
+  uniform vec3 uColor; uniform float uTime; uniform float uAlpha;
+  varying vec3 vN; varying vec3 vV; varying vec3 vW;
+  void main(){
+    float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.2);
+    float scan = 0.55 + 0.45 * sin(vW.y * 140.0 - uTime * 5.0);
+    float band = smoothstep(0.0, 0.08, fract(vW.y * 1.4 - uTime * 0.35)) * (1.0 - smoothstep(0.08, 0.16, fract(vW.y * 1.4 - uTime * 0.35)));
+    float flick = 0.9 + 0.1 * sin(uTime * 23.0 + vW.x * 7.0);
+    float a = (0.07 + f * 0.75) * scan * flick + band * 0.35;
+    gl_FragColor = vec4(uColor * (0.6 + f * 1.4 + band), a * uAlpha);
+  }`;
+export function makeHolo(color = CYAN) {
+  const uniforms = {
+    uColor: { value: new THREE.Color(color) },
+    uTime: { value: 0 },
+    uAlpha: { value: 1 },
+  };
+  const surface = new THREE.ShaderMaterial({
+    uniforms,
+    vertexShader: HOLO_VERT,
+    fragmentShader: HOLO_FRAG,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+  });
+  const lines = new THREE.LineBasicMaterial({
+    color: new THREE.Color(color).multiplyScalar(1.4),
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  return { surface, lines, uniforms };
+}
+/** Turn a product into a hologram: see-through surfaces plus its wire edges. */
+function holoify(root, holo) {
+  const meshes = [];
+  root.traverse((o) => o.isMesh && meshes.push(o));
+  for (const m of meshes) {
+    m.material = holo.surface;
+    m.castShadow = false;
+    m.receiveShadow = false;
+    m.renderOrder = 5;
+    if (m.geometry?.attributes?.position?.count < 40000) {
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry, 28), holo.lines);
+      e.raycast = () => {};
+      e.renderOrder = 6;
+      m.add(e);
+    }
+  }
+}
+/** The mystery drop: a spinning wire crate with a question mark. */
+function mysteryItem(slot, holo) {
+  const item = new THREE.Group();
+  const spin = new THREE.Group();
+  item.add(spin);
+  const s = Math.min(slot.width, slot.height) * 0.46;
+  const box = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), holo.surface);
+  box.renderOrder = 5;
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), holo.lines);
+  box.add(edges);
+  const c = makeCanvas(256, 256);
+  const g = c.getContext("2d");
+  g.font = "800 200px Space Grotesk, system-ui, sans-serif";
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillStyle = "#fff";
+  g.shadowColor = CYAN;
+  g.shadowBlur = 24;
+  g.fillText("?", 128, 140);
+  const q = new THREE.Mesh(
+    new THREE.PlaneGeometry(s * 0.8, s * 0.8),
+    new THREE.MeshBasicMaterial({
+      map: canvasTex(c),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      color: new THREE.Color(CYAN).multiplyScalar(1.3),
+      side: THREE.DoubleSide,
+    }),
+  );
+  q.renderOrder = 7;
+  spin.add(box, q);
+  spin.rotation.x = 0.35;
+  item.position.set(slot.center.x, slot.floorY + s * 0.5 + 0.06, (slot.backZ + slot.frontZ) / 2);
+  let t = 0;
+  return {
+    item,
+    spin,
+    idle: (dt) => {
+      t += dt;
+      box.rotation.y += dt * 0.6;
+      q.position.y = Math.sin(t * 1.6) * 0.012;
+      q.lookAt(q.position.clone().add(new THREE.Vector3(0, 0, 1)));
+    },
+    highlight: () => {},
+  };
+}
+
+export async function createStage({
+  canvas,
+  el,
+  reduced,
+  keychainUrl = "",
+  onProgress,
+  onSelect,
+  onBobo,
+  onBoboReady,
+  onHoverChange,
+  vault = null,
+}) {
+  // vault: { owned: Set<string> } turns the drop stage into a fan's Digital Collection:
+  // owned pieces are real, the rest are holograms, the cap bay holds the mystery drop.
+  const owns = (id) => !vault || vault.owned.has(id);
+  const holo = vault ? makeHolo(CYAN) : null;
+  const future = vault
+    ? FUTURE.map((f) =>
+        f.id === "cap" ? { ...f, id: "mystery", type: "mystery", name: "Mystery drop" } : f,
+      )
+    : FUTURE;
   const coarse = matchMedia("(pointer: coarse)").matches;
   const small = Math.min(innerWidth, innerHeight) < 700;
   const mobile = coarse || small;
   const quality = mobile ? "low" : "high";
 
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "high-performance" });
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: false,
+    alpha: false,
+    powerPreference: "high-performance",
+  });
   if (!renderer.getContext()) throw new Error("no webgl");
   const maxDpr = mobile ? 1.5 : 1.75;
   let dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
@@ -276,7 +433,12 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   // ---- dim plane + light pool for focus -------------------------------------------
   const dim = new THREE.Mesh(
     new THREE.PlaneGeometry(30, 20),
-    new THREE.MeshBasicMaterial({ color: 0x03060a, transparent: true, opacity: 0, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      color: 0x03060a,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+    }),
   );
   dim.position.set(0, 1, wardrobe.size.d / 2 + 0.1);
   dim.renderOrder = 20;
@@ -305,7 +467,10 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   scene.add(pool);
 
   // ---- post -------------------------------------------------------------------
-  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: mobile ? 2 : 4 });
+  const rt = new THREE.WebGLRenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    samples: mobile ? 2 : 4,
+  });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
   const BLOOM = 0.7;
@@ -318,7 +483,9 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
 
   // ---- art (the hero keychain model starts loading first) ----------------------
   const gltfLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-  const keychainGLB = keychainUrl ? loadKeychainGLB(gltfLoader, keychainUrl, reduced) : Promise.resolve(null);
+  const keychainGLB = keychainUrl
+    ? loadKeychainGLB(gltfLoader, keychainUrl, reduced)
+    : Promise.resolve(null);
   await ensureFonts();
   const [boboImg, canImg] = await Promise.all([
     loadImage(IMG + "bobo-cat.webp").catch(() => loadImage(IMG + "bobo-cat.png")),
@@ -330,7 +497,14 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   onProgress?.(0.6);
 
   // ---- neon sign ------------------------------------------------------------------
-  const sign = buildSign({ name: "EVADE", handle: "COLA RUN DROP", neon: GOLD, accent: CYAN, maxWidth: W * 0.62, reduced });
+  const sign = buildSign({
+    name: "EVADE",
+    handle: vault ? "DIGITAL COLLECTION" : "COLA RUN DROP",
+    neon: GOLD,
+    accent: CYAN,
+    maxWidth: W * 0.62,
+    reduced,
+  });
   sign.group.position.set(0, wardrobe.top + 0.16 - sign.bounds.bottom, -0.12);
   scene.add(sign.group);
   const signTop = sign.group.position.y + sign.bounds.top;
@@ -350,7 +524,12 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   for (const [x, y, z, h, r] of FLOAT) {
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(h * canAspect, h),
-      new THREE.MeshBasicMaterial({ map: canTex, transparent: true, depthWrite: false, color: 0xbcc8cc }),
+      new THREE.MeshBasicMaterial({
+        map: canTex,
+        transparent: true,
+        depthWrite: false,
+        color: 0xbcc8cc,
+      }),
     );
     m.position.set(x, y, z);
     m.rotation.z = r;
@@ -375,7 +554,16 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     mgeo,
     new THREE.PointsMaterial({
       size: 0.022,
-      map: canvasTex(radialCanvas([[0, "rgba(255,255,255,1)"], [0.3, "rgba(255,255,255,0.6)"], [1, "rgba(255,255,255,0)"]], 64)),
+      map: canvasTex(
+        radialCanvas(
+          [
+            [0, "rgba(255,255,255,1)"],
+            [0.3, "rgba(255,255,255,0.6)"],
+            [1, "rgba(255,255,255,0)"],
+          ],
+          64,
+        ),
+      ),
       color: new THREE.Color(CYAN).multiplyScalar(0.9),
       transparent: true,
       opacity: 0.7,
@@ -391,6 +579,7 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   const charms =
     (await keychainGLB) ||
     buildDropCharms({ bobo, can, activateUrl: ACTIVATE_URL, quality, reduced });
+  if (vault && !owns("keychain")) holoify(charms.group, holo);
   const heroItem = new THREE.Group();
   heroItem.name = "item-keychain";
   const heroSpin = new THREE.Group();
@@ -399,7 +588,11 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   const pegY = heroSlot.topY - 0.13;
   const pegLen = heroSlot.depth * 0.5;
   {
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xd9dce3, roughness: 0.18, metalness: 1 });
+    const chrome = new THREE.MeshStandardMaterial({
+      color: 0xd9dce3,
+      roughness: 0.18,
+      metalness: 1,
+    });
     const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, pegLen, 12), chrome);
     peg.rotation.x = Math.PI / 2;
     peg.position.set(0, pegY, heroSlot.backZ + pegLen / 2);
@@ -436,7 +629,11 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     const t = canvasTex(lipLabel(text, { live }));
     const m = new THREE.Mesh(
       new THREE.PlaneGeometry(live ? 0.56 : 0.27, live ? 0.087 : 0.042),
-      new THREE.MeshBasicMaterial({ map: t, color: new THREE.Color(1, 1, 1).multiplyScalar(live ? 1.15 : 0.9), toneMapped: false }),
+      new THREE.MeshBasicMaterial({
+        map: t,
+        color: new THREE.Color(1, 1, 1).multiplyScalar(live ? 1.15 : 0.9),
+        toneMapped: false,
+      }),
     );
     // the live label hangs at the top of the hero bay, above the clasp, where it reads first;
     // the future-drop labels stay on the shelf lips
@@ -445,8 +642,18 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     scene.add(m);
     lips.push(m);
   };
-  addLip(heroSlot, "LIVE NOW · DROP 01", true);
-  for (const f of FUTURE) addLip(wardrobe.slots[f.slot], "FUTURE DROP · SOON", false);
+  if (vault) {
+    addLip(heroSlot, owns("keychain") ? "COLLECTED · DROP 01" : "LOCKED · DROP 01", true);
+    for (const f of future)
+      addLip(
+        wardrobe.slots[f.slot],
+        owns(f.id) ? "COLLECTED" : f.id === "mystery" ? "MYSTERY · LOCKED" : "LOCKED · HOLOGRAM",
+        false,
+      );
+  } else {
+    addLip(heroSlot, "LIVE NOW · DROP 01", true);
+    for (const f of FUTURE) addLip(wardrobe.slots[f.slot], "FUTURE DROP · SOON", false);
+  }
 
   // pick proxies
   const heroHit = new THREE.Mesh(
@@ -457,7 +664,7 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   heroHit.userData.productId = "keychain";
   scene.add(heroHit);
   const hits = [heroHit];
-  for (const f of FUTURE) {
+  for (const f of future) {
     const s = wardrobe.slots[f.slot];
     const h = new THREE.Mesh(
       new THREE.BoxGeometry(s.width * 0.94, s.height * 0.94, s.depth),
@@ -482,7 +689,8 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     color: GOLD,
     ready: true,
   });
-  for (const f of FUTURE) items.set(f.id, { id: f.id, slot: wardrobe.slots[f.slot], ready: false, color: CYAN, def: f });
+  for (const f of future)
+    items.set(f.id, { id: f.id, slot: wardrobe.slots[f.slot], ready: false, color: CYAN, def: f });
 
   // ---- camera rig ------------------------------------------------------------------
   let width = 1;
@@ -640,7 +848,14 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
 
   function liftOut(it) {
     const l = liftTarget(it);
-    animItem(it, l.pos, it.id === "keychain" ? 0 : it.home.yaw, it.spin.rotation.y, 0.9, it.def?.type === "deskmat" ? -0.05 : undefined);
+    animItem(
+      it,
+      l.pos,
+      it.id === "keychain" ? 0 : it.home.yaw,
+      it.spin.rotation.y,
+      0.9,
+      it.def?.type === "deskmat" ? -0.05 : undefined,
+    );
   }
 
   function select(id) {
@@ -669,7 +884,12 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     } else {
       const s = it.slot;
       flyTo(
-        { target: s.center.clone().add(new THREE.Vector3(0, -0.05, 0.3)), dist: 2.4, yaw: 0, pitch: 0.03 },
+        {
+          target: s.center.clone().add(new THREE.Vector3(0, -0.05, 0.3)),
+          dist: 2.4,
+          yaw: 0,
+          pitch: 0.03,
+        },
         1.1,
       );
     }
@@ -717,7 +937,14 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
   let down = null;
   canvas.addEventListener("pointerdown", (e) => {
     if (!e.isPrimary) return;
-    down = { x: e.clientX, y: e.clientY, lx: e.clientX, t: performance.now(), horiz: null, id: e.pointerId };
+    down = {
+      x: e.clientX,
+      y: e.clientY,
+      lx: e.clientX,
+      t: performance.now(),
+      horiz: null,
+      id: e.pointerId,
+    };
   });
   canvas.addEventListener("pointermove", (e) => {
     if (e.pointerType === "mouse") {
@@ -853,6 +1080,7 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     }
 
     sign.update(dt);
+    if (holo) holo.uniforms.uTime.value = clock;
     if (!reduced) {
       floorMat.uniforms.time.value = clock;
       rings.forEach((r, i) => (r.rotation.z += dt * (i % 2 ? -0.15 : 0.2)));
@@ -925,7 +1153,12 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
       boboApi = await loadBobo({
         loader: gltfLoader,
         scene,
-        bounds: { x0: -b + 0.2, x1: b - 0.2, z0: wardrobe.size.d / 2 + 0.2, z1: wardrobe.size.d / 2 + 0.55 },
+        bounds: {
+          x0: -b + 0.2,
+          x1: b - 0.2,
+          z0: wardrobe.size.d / 2 + 0.2,
+          z1: wardrobe.size.d / 2 + 0.55,
+        },
         home: HOME,
         camera,
         reduced,
@@ -934,18 +1167,42 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
     } catch (e) {
       console.warn("[stage] Bobo unavailable:", e.message);
     }
-    for (const f of FUTURE) {
+    for (const f of future) {
       try {
-        const product = { id: f.id, type: f.type, name: f.name, price: 0, color: f.color, enabled: true };
-        const h = await buildProduct({ product, slot: wardrobe.slots[f.slot], kit, accent: CYAN, neon: GOLD, activateUrl: ACTIVATE_URL, quality });
+        let h;
+        if (f.type === "mystery") {
+          h = mysteryItem(wardrobe.slots[f.slot], holo);
+          h.mount = new THREE.Group();
+          h.hit = new THREE.Mesh();
+        } else {
+          const product = {
+            id: f.id,
+            type: f.type,
+            name: f.name,
+            price: 0,
+            color: f.color,
+            enabled: true,
+          };
+          h = await buildProduct({
+            product,
+            slot: wardrobe.slots[f.slot],
+            kit,
+            accent: CYAN,
+            neon: GOLD,
+            activateUrl: ACTIVATE_URL,
+            quality,
+          });
+          if (vault && !owns(f.id)) holoify(h.item, holo);
+        }
         // the stage never shows prices: hide the shelf's price tag
         h.mount.traverse((o) => {
           const p = o.geometry?.parameters;
-          if (o.isMesh && p && Math.abs(p.width - 0.2) < 1e-6 && Math.abs(p.height - 0.035) < 1e-6) o.visible = false;
+          if (o.isMesh && p && Math.abs(p.width - 0.2) < 1e-6 && Math.abs(p.height - 0.035) < 1e-6)
+            o.visible = false;
         });
         h.hit.visible = false;
         h.hit.removeFromParent();
-        h.item.rotation.y = f.yaw;
+        if (f.type !== "mystery") h.item.rotation.y = f.yaw;
         scene.add(h.mount, h.item);
         const it = items.get(f.id);
         Object.assign(it, {
@@ -994,7 +1251,13 @@ export async function createStage({ canvas, el, reduced, keychainUrl = "", onPro
       items,
       renderer,
       get state() {
-        return { k: wardrobeFocus.k, dim: dim.visible && dim.material.opacity, mode, focused, cam: { ...cam, target: cam.target.toArray() } };
+        return {
+          k: wardrobeFocus.k,
+          dim: dim.visible && dim.material.opacity,
+          mode,
+          focused,
+          cam: { ...cam, target: cam.target.toArray() },
+        };
       },
       /** Tests: Bobo's position on screen (CSS px, relative to the stage). */
       boboScreen() {

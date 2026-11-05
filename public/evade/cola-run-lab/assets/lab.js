@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=4";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=5";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");

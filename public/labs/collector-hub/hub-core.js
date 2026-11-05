@@ -112,14 +112,72 @@ const ICON = {
   )
 };
 const APPS = [
-  { id: "alerts", name: "Alerts", color: "#ff4fa3", w: 420, h: 520 },
-  { id: "globe", name: "Where's Bobo?", color: "#36e3ff", w: 780, h: 540 },
-  { id: "leaderboard", name: "Leaderboard", color: "#ffc42e", w: 460, h: 560 },
-  { id: "colarun", name: "Cola Run", color: "#ff5b5b", w: 440, h: 500 },
-  { id: "collection", name: "Collection", color: "#9b7bff", w: 640, h: 580 },
-  { id: "shop", name: "Shop", color: "#4fe0a5", w: 420, h: 460 },
-  { id: "me", name: "Me", color: "#8fb3ff", w: 380, h: 400 }
+  { id: "alerts", name: "Alerts", color: "#ff4fa3", g: ["#ff7ab8", "#c2186a"], w: 420, h: 520 },
+  {
+    id: "globe",
+    name: "Where's Bobo?",
+    color: "#36e3ff",
+    g: ["#2a5bd7", "#0b1f6b"],
+    w: 820,
+    h: 560
+  },
+  {
+    id: "leaderboard",
+    name: "Leaderboard",
+    color: "#ffc42e",
+    g: ["#7a3cff", "#2b0d77"],
+    w: 460,
+    h: 560
+  },
+  { id: "colarun", name: "Cola Run", color: "#ff5b5b", g: ["#ffd84d", "#ff7a1a"], w: 440, h: 500 },
+  {
+    id: "collection",
+    name: "Digital Collection",
+    color: "#9b7bff",
+    g: ["#1e2a4f", "#070b1e"],
+    w: 980,
+    h: 640
+  },
+  { id: "shop", name: "Shop", color: "#4fe0a5", g: ["#3df0b0", "#078a61"], w: 420, h: 460 },
+  { id: "me", name: "Me", color: "#8fb3ff", g: ["#6f8cff", "#2d3fa8"], w: 380, h: 400 }
 ];
+const tileFor = (a, badge = false) => `<span class="mlh-tile" style="--a:${a.g[0]};--b:${a.g[1]}">${ICON3D[a.id]}${badge ? '<span class="mlh-badge" data-badge hidden></span>' : ""}</span>`;
+const DEFS = `<svg class="mlh-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs>
+<linearGradient id="mlhg-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d6e4ff"/></linearGradient>
+<linearGradient id="mlhg-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff6c8"/><stop offset=".45" stop-color="#ffcf3a"/><stop offset="1" stop-color="#c97d00"/></linearGradient>
+<radialGradient id="mlhg-globe" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#e9fdff"/><stop offset=".45" stop-color="#5ae8ff"/><stop offset="1" stop-color="#0a6aa8"/></radialGradient>
+<linearGradient id="mlhg-can" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7a0f1d"/><stop offset=".3" stop-color="#ff4b5c"/><stop offset=".55" stop-color="#ffb3ba"/><stop offset=".75" stop-color="#e3243a"/><stop offset="1" stop-color="#6d0b18"/></linearGradient>
+<linearGradient id="mlhg-alu" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8f9aad"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#7d889b"/></linearGradient>
+<linearGradient id="mlhg-gem1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4ecff"/><stop offset="1" stop-color="#b79bff"/></linearGradient>
+<linearGradient id="mlhg-gem2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a98bff"/><stop offset="1" stop-color="#5a33d6"/></linearGradient>
+<linearGradient id="mlhg-bag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b8f5dc"/></linearGradient>
+<radialGradient id="mlhg-head" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#b9cdff"/></radialGradient>
+</defs></svg>`;
+const OS_MARK = `<svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mlhg-mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df2ff"/><stop offset="1" stop-color="#ff5fb1"/></linearGradient></defs><path d="M6 9 4 3l7 4h10l7-4-2 6c1.3 1.8 2 4 2 6.4C28 22.4 22.6 28 16 28S4 22.4 4 15.4C4 13 4.7 10.8 6 9z" fill="url(#mlhg-mk)"/><circle cx="11.5" cy="15.5" r="2" fill="#061024"/><circle cx="20.5" cy="15.5" r="2" fill="#061024"/><path d="M14 20.5c1.2 1 2.8 1 4 0" stroke="#061024" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>`;
+const g3 = (d) => `<svg viewBox="0 0 48 48" class="g3" aria-hidden="true">${d}</svg>`;
+const ICON3D = {
+  alerts: g3(
+    '<path d="M24 7c-6.6 0-11 5-11 11.5v6.8c0 2-1 3.6-2.6 5L9 31.6c-.9.9-.3 2.4 1 2.4h28c1.3 0 1.9-1.5 1-2.4l-1.4-1.3c-1.6-1.4-2.6-3-2.6-5v-6.8C35 12 30.6 7 24 7z" fill="url(#mlhg-w)"/><path d="M15.5 19c.4-4.4 3.4-8 8.5-8.6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".9"/><ellipse cx="24" cy="38.5" rx="4.6" ry="3.4" fill="url(#mlhg-gold)"/><circle cx="35" cy="12" r="5" fill="#ff2d6f" stroke="#fff" stroke-width="2"/>'
+  ),
+  globe: g3(
+    '<circle cx="24" cy="24" r="15" fill="url(#mlhg-globe)"/><path d="M9 24h30M24 9c5 4.5 5 25.5 0 30M24 9c-5 4.5-5 25.5 0 30M12 16h24M12 32h24" stroke="#063a63" stroke-opacity=".45" stroke-width="1.6" fill="none"/><ellipse cx="24" cy="24" rx="22" ry="7" transform="rotate(-20 24 24)" fill="none" stroke="#fff" stroke-width="2" stroke-opacity=".85"/><circle cx="41.5" cy="17.5" r="2.6" fill="#ffd23a"/><path d="M18 13.5c2.5-1.6 5.5-2 8-1.6" stroke="#fff" stroke-width="2.4" stroke-linecap="round" fill="none" opacity=".8"/>'
+  ),
+  leaderboard: g3(
+    '<path d="M15 9h18v9.5c0 5.2-4 9.5-9 9.5s-9-4.3-9-9.5z" fill="url(#mlhg-gold)"/><path d="M15 12H9.5c0 5 2.6 8 6.5 8.6M33 12h5.5c0 5-2.6 8-6.5 8.6" stroke="#ffd85a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M21.5 28h5l1 6h-7z" fill="#e7a300"/><rect x="15" y="34" width="18" height="5.5" rx="2" fill="url(#mlhg-gold)"/><path d="m24 13 1.6 3.3 3.6.5-2.6 2.5.6 3.6-3.2-1.7-3.2 1.7.6-3.6-2.6-2.5 3.6-.5z" fill="#fff" opacity=".95"/><path d="M18 11.5v6" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".7"/>'
+  ),
+  colarun: g3(
+    '<ellipse cx="24" cy="39" rx="9.5" ry="3" fill="#000" opacity=".25"/><path d="M14.5 12.5h19v23.5c0 1.9-4.3 3.5-9.5 3.5s-9.5-1.6-9.5-3.5z" fill="url(#mlhg-can)"/><ellipse cx="24" cy="12.5" rx="9.5" ry="3.2" fill="url(#mlhg-alu)"/><ellipse cx="24" cy="12.3" rx="7" ry="2.1" fill="#c9d1de"/><rect x="21.5" y="10.6" width="5" height="2.6" rx="1.3" fill="#7d889b"/><path d="M14.5 20.5c3 1.6 16 1.6 19 0v7c-3 1.6-16 1.6-19 0z" fill="#fff" opacity=".92"/><path d="m21.5 22.3 5 2.2-5 2.2z" fill="#e3243a"/><path d="M17.5 15v19" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".45"/>'
+  ),
+  collection: g3(
+    '<path d="M12 18 18 10h12l6 8-12 21z" fill="url(#mlhg-gem2)"/><path d="M12 18h24L24 39z" fill="url(#mlhg-gem2)"/><path d="M18 10l-6 8h9.5zM30 10l6 8h-9.5zM18 10h12l-3.5 8h-5z" fill="url(#mlhg-gem1)"/><path d="M21.5 18h5L24 39z" fill="#d6c6ff"/><path d="M12 18h9.5L24 39z" fill="#7b55ef"/><path d="M19.5 12.5l-3 4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="37" cy="9" r="1.8" fill="#fff"/><circle cx="10" cy="31" r="1.3" fill="#fff" opacity=".8"/>'
+  ),
+  shop: g3(
+    '<path d="M11 17h26l-1.6 20.5a2.5 2.5 0 0 1-2.5 2.3H15.1a2.5 2.5 0 0 1-2.5-2.3z" fill="url(#mlhg-bag)"/><path d="M11 17h26l-.4 4.5H11.4z" fill="#fff"/><path d="M18 21v-6a6 6 0 0 1 12 0v6" stroke="#0e7a53" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="18" cy="21.5" r="1.8" fill="#0e7a53"/><circle cx="30" cy="21.5" r="1.8" fill="#0e7a53"/><path d="m24 26.5 1.4 2.9 3.2.5-2.3 2.2.5 3.1-2.8-1.5-2.8 1.5.5-3.1-2.3-2.2 3.2-.5z" fill="#14b87d"/>'
+  ),
+  me: g3(
+    '<circle cx="24" cy="18" r="8" fill="url(#mlhg-head)"/><path d="M9.5 39c1.2-7.4 7.2-12 14.5-12s13.3 4.6 14.5 12z" fill="url(#mlhg-head)"/><path d="M19.5 14.5c1.2-1.6 3-2.4 5-2.2" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none"/><path d="M16 12.5l-2-5 5 2.5M32 12.5l2-5-5 2.5" fill="#dfe8ff"/>'
+  )
+};
 const KIND_LABEL = {
   drop: "New drop",
   event: "Event",
@@ -373,61 +431,124 @@ const CSS = (
 .mlh-reward small{color:#e9dcb4;font-size:13px}
 @keyframes mlh-holo{0%,100%{opacity:.55;filter:drop-shadow(0 0 0 rgba(54,227,255,0))}50%{opacity:.95;filter:drop-shadow(0 0 8px rgba(54,227,255,.7))}}
 
-/* BOBO OS */
+/* Digital Collection vault */
+.mlh-vaultcard{width:min(1080px,100%)!important;padding:18px 18px 16px!important}
+.mlh-vhead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-right:44px}
+.mlh-vhead h2{margin:2px 0 0!important}
+.mlh-vhead .mlh-prog{min-width:220px;flex:0 1 300px;margin:0}
+.mlh-vault{position:relative;margin:14px 0 10px;height:min(62vh,600px);border-radius:16px;overflow:hidden;background:#05080b;border:1px solid rgba(54,227,255,.25);box-shadow:0 0 40px -12px rgba(54,227,255,.45)}
+.mlh-vnote{font-size:13px!important;color:#aab8d8!important;margin:0 0 10px!important}
+.mlh-list summary{cursor:pointer;color:#9fe9ff;font-weight:700;font-size:13.5px;margin-bottom:10px}
+.mlh-win .mlh-vwrap{display:flex;flex-direction:column;height:100%}
+.mlh-win .mlh-vwrap .mlh-vault{flex:1;margin:0;height:auto;border-radius:0;border:0}
+.mlh-win .mlh-vbar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:13px;color:#cfd8f3}
+.mlh-win .mlh-vbar .mlh-prog{flex:1;margin:0}
+.mlh-win .mlh-vbar .mlh-btn{min-height:36px;padding:0 14px;font-size:13px}
+
+/* BOBO OS v2: glass, depth and light */
+.mlh-defs{position:absolute;width:0;height:0;overflow:hidden}
 .mlh-os{padding:clamp(0px,3vw,28px)}
-.mlh-screen{position:relative;width:min(1180px,100%);height:min(760px,100%);border-radius:20px;overflow:hidden;border:2px solid #22305e;box-shadow:0 0 0 6px #0b1022,0 0 0 7px rgba(54,227,255,.35),0 40px 100px rgba(0,0,0,.6);
-  background:radial-gradient(1200px 600px at 85% 110%,rgba(255,79,163,.45),transparent 60%),radial-gradient(900px 600px at 5% -10%,rgba(54,227,255,.35),transparent 60%),linear-gradient(160deg,#0b1440,#120b33 55%,#1d0b2e);transform:scale(.96);opacity:.4;transition:transform .3s cubic-bezier(.2,1,.3,1),opacity .25s}
+.mlh-screen{position:relative;width:min(1240px,100%);height:min(780px,100%);border-radius:26px;overflow:hidden;isolation:isolate;background:#050817;
+  box-shadow:0 0 0 1px rgba(140,220,255,.25),0 0 0 8px #070b19,0 0 0 9px rgba(255,255,255,.08),0 0 60px rgba(54,227,255,.18),0 50px 120px rgba(0,0,0,.7);
+  transform:perspective(1400px) rotateX(6deg) scale(.94);opacity:0;transition:transform .5s cubic-bezier(.2,1,.25,1),opacity .3s}
 .mlh-os.open .mlh-screen{transform:none;opacity:1}
-.mlh-screen::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(54,227,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(54,227,255,.06) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);pointer-events:none}
-.mlh-wall{position:absolute;right:6%;bottom:16%;font:900 clamp(60px,12vw,150px)/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.06em;color:rgba(255,255,255,.05);pointer-events:none;user-select:none}
-.mlh-menubar{position:absolute;left:0;right:0;top:0;height:34px;display:flex;align-items:center;gap:14px;padding:0 12px;background:rgba(5,8,24,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;z-index:5}
-.mlh-menubar .logo{display:flex;align-items:center;gap:7px;font-weight:900;letter-spacing:.06em;color:var(--cyan)}
-.mlh-menubar .lg-dot{width:12px;height:12px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--pink));box-shadow:0 0 8px rgba(54,227,255,.6)}
-.mlh-menubar .app{font-weight:700}
+.mlh-screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:30;border-radius:inherit;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 18%),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);mix-blend-mode:screen}
+.mlh-wallp{position:absolute;inset:0;z-index:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 120%,#1a0b3a,#060a1d 55%,#03050f)}
+.mlh-wallp i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.75;animation:mlh-drift 18s ease-in-out infinite alternate}
+.mlh-wallp .a1{width:55%;height:60%;left:-10%;top:-15%;background:radial-gradient(circle,#00d5ff 0%,rgba(0,213,255,0) 70%)}
+.mlh-wallp .a2{width:50%;height:55%;right:-12%;bottom:-10%;background:radial-gradient(circle,#ff3fa4 0%,rgba(255,63,164,0) 70%);animation-delay:-6s}
+.mlh-wallp .a3{width:40%;height:40%;left:35%;top:25%;background:radial-gradient(circle,#6a3cff 0%,rgba(106,60,255,0) 70%);opacity:.5;animation-delay:-11s}
+@keyframes mlh-drift{to{transform:translate(8%,6%) scale(1.15)}}
+.mlh-wallp .floor{position:absolute;left:-50%;right:-50%;bottom:-8%;height:55%;transform:perspective(500px) rotateX(62deg);transform-origin:50% 100%;
+  background-image:linear-gradient(rgba(54,227,255,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(54,227,255,.35) 1px,transparent 1px);background-size:56px 56px;
+  -webkit-mask-image:linear-gradient(0deg,#000 10%,transparent 85%);mask-image:linear-gradient(0deg,#000 10%,transparent 85%);animation:mlh-floor 6s linear infinite}
+@keyframes mlh-floor{to{background-position:0 56px}}
+.mlh-wall{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:900 clamp(70px,13vw,190px)/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.08em;color:transparent;-webkit-text-stroke:1px rgba(140,230,255,.13);pointer-events:none;user-select:none;white-space:nowrap}
+.mlh-menubar{position:absolute;left:10px;right:10px;top:10px;height:40px;display:flex;align-items:center;gap:10px;padding:0 8px 0 12px;border-radius:14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);font-size:13px;z-index:5;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.mlh-menubar .logo{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.14em;font-size:12.5px;color:#eaf6ff}
+.mlh-menubar .logo b{font-weight:900;margin-left:3px;background:linear-gradient(90deg,#5df2ff,#ff5fb1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mlh-menubar .lg-mark svg{width:22px;height:22px;display:block;filter:drop-shadow(0 0 6px rgba(93,242,255,.55))}
+.mlh-menubar .app{font-weight:700;color:#cfe0ff;padding-left:10px;border-left:1px solid rgba(255,255,255,.14)}
 .mlh-menubar .sp{flex:1}
-.mlh-menubar .tray{display:flex;align-items:center;gap:6px;color:#cfd8f3}
+.mlh-menubar .chip{display:flex;align-items:center;gap:6px;height:24px;padding:0 10px;border-radius:999px;background:rgba(40,200,120,.12);border:1px solid rgba(80,240,160,.3);color:#9ff5c9;font-size:11.5px;font-weight:700;letter-spacing:.04em}
+.mlh-menubar .chip i{width:7px;height:7px;border-radius:50%;background:#3dff9a;box-shadow:0 0 8px #3dff9a;animation:mlh-pulse 2s ease-in-out infinite}
+@keyframes mlh-pulse{50%{opacity:.35}}
+.mlh-menubar .tray{display:flex;align-items:center;gap:6px;color:#dbe6ff;font-variant-numeric:tabular-nums;font-weight:600}
 .mlh-menubar .tray svg{width:16px;height:16px}
-.mlh-menubar button.tb{position:relative;display:grid;place-items:center;width:32px;height:28px;border-radius:8px;border:0;background:transparent;color:#eef3ff}
-.mlh-menubar button.tb:hover{background:rgba(255,255,255,.1)}
+.mlh-menubar button.tb{position:relative;display:grid;place-items:center;width:34px;height:30px;border-radius:10px;border:0;background:transparent;color:#eef3ff}
+.mlh-menubar button.tb:hover{background:rgba(255,255,255,.12)}
 .mlh-menubar button.tb svg{width:17px;height:17px}
-.mlh-badge{position:absolute;top:0;right:0;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--pink);color:#fff;font-size:10.5px;font-weight:800;line-height:16px;text-align:center}
-.mlh-desk{position:absolute;left:0;right:0;top:34px;bottom:0}
-.mlh-icons{position:absolute;left:14px;top:14px;bottom:96px;display:grid;grid-auto-flow:column;grid-template-rows:repeat(auto-fill,106px);grid-auto-columns:92px;gap:2px 6px;align-content:start}
-.mlh-dicon{width:92px;height:104px;border:0;border-radius:12px;background:transparent;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 2px;color:#eef3ff;font-size:12px;line-height:1.2;font-weight:700;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.6)}
-.mlh-dicon:hover{background:rgba(255,255,255,.08)}
-.mlh-tile{position:relative;flex:none;width:48px;height:48px;border-radius:14px;display:grid;place-items:center;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.35)}
-.mlh-tile svg{width:26px;height:26px}
-.mlh-tile .mlh-badge{top:-5px;right:-5px}
-.mlh-dock{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:8px;padding:8px;border-radius:20px;background:rgba(10,14,36,.55);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);z-index:4;max-width:calc(100% - 20px);overflow-x:auto}
-.mlh-dock button{position:relative;border:0;background:transparent;padding:0;border-radius:14px;transition:transform .15s}
-.mlh-dock button:hover{transform:translateY(-6px) scale(1.1)}
-.mlh-dock button.run::after{content:"";position:absolute;left:50%;bottom:-6px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#fff}
-.mlh-win{position:absolute;display:flex;flex-direction:column;min-width:280px;border-radius:14px;overflow:hidden;background:rgba(11,17,44,.94);border:1px solid rgba(160,200,255,.22);box-shadow:0 24px 60px rgba(0,0,0,.55);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:mlh-open .22s cubic-bezier(.2,1,.3,1)}
-.mlh-win.focus{border-color:rgba(54,227,255,.45);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(54,227,255,.2)}
+.mlh-badge{position:absolute;top:-2px;right:-2px;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:linear-gradient(180deg,#ff5b93,#e0175c);color:#fff;font-size:10.5px;font-weight:800;line-height:17px;text-align:center;box-shadow:0 0 0 2px #0b1027,0 0 10px rgba(255,60,130,.6)}
+.mlh-desk{position:absolute;left:0;right:0;top:56px;bottom:0;z-index:2}
+.mlh-icons{position:absolute;left:18px;top:18px;display:grid;grid-template-columns:repeat(2,96px);grid-auto-rows:118px;gap:6px 8px;align-content:start}
+.mlh-dicon{width:96px;height:116px;border:0;border-radius:18px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;padding:8px 2px 4px;color:#f1f6ff;font-size:12px;line-height:1.2;font-weight:700;text-align:center;text-shadow:0 1px 4px rgba(0,0,0,.8);transition:background .15s}
+.mlh-dicon:hover{background:rgba(255,255,255,.07)}
+.mlh-dicon:hover .mlh-tile{transform:translateY(-3px) rotateX(8deg)}
+.mlh-tile{position:relative;flex:none;width:58px;height:58px;border-radius:17px;display:grid;place-items:center;color:#fff;
+  background:radial-gradient(120% 90% at 30% 15%,rgba(255,255,255,.35),transparent 45%),linear-gradient(160deg,var(--a),var(--b));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -3px 6px rgba(0,0,0,.35),inset 0 0 0 1px rgba(255,255,255,.12),0 10px 18px -6px rgba(0,0,0,.7),0 0 18px -4px var(--a);
+  transition:transform .2s cubic-bezier(.2,1,.3,1);transform-style:preserve-3d}
+.mlh-tile::after{content:"";position:absolute;left:8%;right:8%;top:4%;height:42%;border-radius:14px 14px 40% 40%;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0));pointer-events:none}
+.mlh-tile .g3{width:78%;height:78%;filter:drop-shadow(0 3px 3px rgba(0,0,0,.35));position:relative;z-index:1}
+.mlh-tile.sm{width:40px;height:40px;border-radius:12px}
+.mlh-tile .mlh-badge{top:-6px;right:-6px;z-index:2}
+.mlh-widgets{position:absolute;right:18px;top:18px;width:268px;display:grid;gap:12px}
+.mlh-wg{position:relative;padding:14px 16px;border-radius:20px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);box-shadow:0 14px 30px rgba(0,0,0,.3);text-align:left;color:#eef4ff;width:100%;font:inherit}
+button.mlh-wg{cursor:pointer;transition:transform .15s,border-color .15s}
+button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)}
+.mlh-wg .k{font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#8fe9ff;font-weight:800}
+.mlh-wg .big{font:800 40px/1.05 ui-sans-serif,system-ui,sans-serif;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:4px}
+.mlh-wg small{display:block;color:#b8c6e6;font-size:12.5px;margin-top:2px}
+.mlh-wg .row{display:flex;align-items:center;gap:12px;margin-top:6px}
+.mlh-ring{--p:0;width:58px;height:58px;flex:none;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#5df2ff calc(var(--p)*1%),#ff5fb1 calc(var(--p)*1%),rgba(255,255,255,.08) 0);-webkit-mask:radial-gradient(circle,transparent 21px,#000 22px);mask:radial-gradient(circle,transparent 21px,#000 22px)}
+.mlh-ringwrap{position:relative;width:58px;height:58px;flex:none}
+.mlh-ringwrap b{position:absolute;inset:0;display:grid;place-items:center;font-size:14px}
+.mlh-wg .al{display:flex;gap:10px;align-items:flex-start;margin-top:8px}
+.mlh-wg .al b{display:block;font-size:13.5px;line-height:1.3}
+.mlh-dock{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:10px;padding:10px 12px;border-radius:24px;
+  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);z-index:4;max-width:calc(100% - 20px);box-shadow:0 20px 40px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2)}
+.mlh-dock::before{content:"";position:absolute;left:12%;right:12%;bottom:-14px;height:14px;background:radial-gradient(50% 100% at 50% 0,rgba(93,242,255,.35),transparent);filter:blur(4px);pointer-events:none}
+.mlh-dock button{position:relative;border:0;background:transparent;padding:0;border-radius:17px;transition:transform .2s cubic-bezier(.2,1,.3,1)}
+.mlh-dock button:hover{transform:translateY(-10px) scale(1.18)}
+.mlh-dock button:hover::before{content:attr(aria-label);position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);padding:4px 9px;border-radius:8px;background:rgba(8,12,30,.9);border:1px solid rgba(255,255,255,.15);font-size:11.5px;font-weight:700;white-space:nowrap;color:#fff}
+.mlh-dock button.run::after{content:"";position:absolute;left:50%;bottom:-7px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#5df2ff;box-shadow:0 0 8px #5df2ff}
+.mlh-win{position:absolute;display:flex;flex-direction:column;min-width:280px;border-radius:20px;overflow:hidden;
+  background:linear-gradient(165deg,rgba(26,36,78,.92),rgba(10,14,36,.94));border:1px solid rgba(160,210,255,.2);box-shadow:0 30px 70px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.12);backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);animation:mlh-open .28s cubic-bezier(.2,1,.3,1);z-index:3}
+.mlh-win::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,rgba(93,242,255,.0),rgba(93,242,255,0));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;transition:background .2s}
+.mlh-win.focus{z-index:4;box-shadow:0 40px 90px rgba(0,0,0,.65),0 0 40px -10px rgba(93,242,255,.35),inset 0 1px 0 rgba(255,255,255,.14)}
+.mlh-win.focus::before{background:linear-gradient(135deg,rgba(93,242,255,.8),rgba(255,95,177,.55) 60%,rgba(255,255,255,.1))}
 .mlh-win.max{left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0}
 .mlh-win.closing{animation:mlh-close .16s ease-in forwards}
-.mlh-bar2{flex:none;height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07);cursor:grab;user-select:none;touch-action:none}
+.mlh-bar2{flex:none;height:46px;display:flex;align-items:center;gap:10px;padding:0 14px;background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border-bottom:1px solid rgba(255,255,255,.08);cursor:grab;user-select:none;touch-action:none}
 .mlh-bar2:active{cursor:grabbing}
-.mlh-dots{display:flex;gap:7px}
-.mlh-dot{width:14px;height:14px;padding:0;border-radius:50%;border:0;display:block}
-.mlh-dot.c{background:#ff5f57}.mlh-dot.m{background:#febc2e}.mlh-dot.x{background:#28c840}
-.mlh-bar2 .t{flex:1;text-align:center;font-size:13px;font-weight:700;color:#dfe7ff;margin-right:52px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mlh-body{flex:1;overflow:auto;padding:16px;overscroll-behavior:contain}
+.mlh-dots{display:flex;gap:8px}
+.mlh-dot{width:13px;height:13px;padding:0;border-radius:50%;border:0;display:block;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 0 6px currentColor}
+.mlh-dot.c{background:#ff5f7a;color:rgba(255,95,122,.5)}.mlh-dot.m{background:#ffc94a;color:rgba(255,201,74,.45)}.mlh-dot.x{background:#3ddc97;color:rgba(61,220,151,.45)}
+.mlh-bar2 .t{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;font-weight:700;color:#e6eeff;margin-right:62px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mlh-bar2 .mi{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;flex:none;background:linear-gradient(160deg,var(--a),var(--b));box-shadow:inset 0 1px 0 rgba(255,255,255,.4)}
+.mlh-bar2 .mi .g3{width:84%;height:84%}
+.mlh-body{flex:1;overflow:auto;padding:18px;overscroll-behavior:contain}
 .mlh-body.flush{padding:0;overflow:hidden}
-.mlh-body h3{margin:0 0 4px;font-size:18px}
+.mlh-body h3{margin:0 0 4px;font-size:19px;letter-spacing:-.01em}
 .mlh-body p{margin:0 0 10px;color:#cfd8f3;font-size:14px}
-@keyframes mlh-open{from{transform:scale(.9) translateY(10px);opacity:0}to{transform:none;opacity:1}}
-@keyframes mlh-close{to{transform:scale(.92);opacity:0}}
-.mlh-notif{position:absolute;right:12px;top:46px;width:min(340px,calc(100% - 24px));display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:14px;background:rgba(14,22,56,.96);border:1px solid rgba(54,227,255,.35);box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:6;text-align:left;transform:translateX(120%);transition:transform .35s cubic-bezier(.2,1,.3,1)}
+@keyframes mlh-open{from{transform:scale(.88) translateY(14px);opacity:0;filter:blur(6px)}to{transform:none;opacity:1;filter:none}}
+@keyframes mlh-close{to{transform:scale(.9) translateY(8px);opacity:0;filter:blur(4px)}}
+.mlh-notif{position:absolute;right:14px;top:62px;width:min(350px,calc(100% - 28px));display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:18px;background:linear-gradient(160deg,rgba(32,44,92,.95),rgba(14,20,48,.96));border:1px solid rgba(93,242,255,.4);box-shadow:0 20px 50px rgba(0,0,0,.55),0 0 30px -8px rgba(93,242,255,.5);z-index:6;text-align:left;transform:translateX(130%);transition:transform .4s cubic-bezier(.2,1,.3,1);color:#fff}
 .mlh-notif.on{transform:none}
 .mlh-notif b{display:block;font-size:14px}
 .mlh-notif small{display:block;color:#cfd8f3;font-size:12.5px}
-.mlh-boot{position:absolute;inset:0;display:grid;place-items:center;background:#05081a;z-index:20;transition:opacity .35s}
-.mlh-boot.off{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s,visibility 0s .35s}
+.mlh-boot{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(60% 60% at 50% 45%,#0e1a44,#03050f);z-index:20;transition:opacity .4s}
+.mlh-boot.off{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .4s,visibility 0s .4s}
 .mlh-boot .in{text-align:center}
-.mlh-boot .lg{font:900 34px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.12em;background:linear-gradient(90deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
-.mlh-boot .bb{width:180px;height:4px;border-radius:9px;background:rgba(255,255,255,.1);margin:18px auto 0;overflow:hidden}
-.mlh-boot .bb i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink));animation:mlh-boot .75s ease-out forwards}
+.mlh-boot .mk svg{width:74px;height:74px;filter:drop-shadow(0 0 22px rgba(93,242,255,.6));animation:mlh-bootmk .9s cubic-bezier(.2,1,.3,1)}
+@keyframes mlh-bootmk{from{transform:scale(.6);opacity:0}}
+.mlh-boot .lg{margin-top:14px;font:800 30px/1 ui-sans-serif,system-ui,sans-serif;letter-spacing:.3em;color:#eaf6ff}
+.mlh-boot .lg b{background:linear-gradient(90deg,#5df2ff,#ff5fb1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.mlh-boot .ver{margin-top:8px;font-size:11px;letter-spacing:.3em;color:#7f92c4}
+.mlh-boot .bb{width:200px;height:3px;border-radius:9px;background:rgba(255,255,255,.1);margin:20px auto 0;overflow:hidden}
+.mlh-boot .bb i{display:block;height:100%;width:0;background:linear-gradient(90deg,#5df2ff,#ff5fb1);box-shadow:0 0 10px #5df2ff;animation:mlh-boot .8s ease-out forwards}
 @keyframes mlh-boot{to{width:100%}}
 
 /* app content */
@@ -473,16 +594,29 @@ const CSS = (
 @media (max-width:700px){
   .mlh-os{padding:0}
   .mlh-screen{border-radius:0;border:0;box-shadow:none;height:100%;width:100%}
-  .mlh-icons{grid-auto-flow:row;grid-template-columns:repeat(4,1fr);grid-template-rows:none;left:8px;right:8px;max-height:none}
-  .mlh-dicon{width:auto}
+  .mlh-icons{grid-template-columns:repeat(4,1fr);grid-auto-rows:108px;left:10px;right:10px;top:176px}
+  .mlh-menubar .app{display:none}
+  .mlh-menubar .tray{white-space:nowrap}
+  .mlh-wg{height:150px;overflow:hidden}
+  .mlh-wg small{font-size:11.5px}
+  .mlh-dicon{width:auto;height:98px}
+  .mlh-widgets{left:12px;right:12px;top:12px;width:auto;grid-template-columns:1fr 1fr;gap:10px}
+  .mlh-widgets .mlh-wg:nth-child(n+3){display:none}
+  .mlh-wg{padding:10px 12px;border-radius:16px}
+  .mlh-wg .big{font-size:28px}
+  .mlh-menubar .chip{display:none}
+  .mlh-screen{transform:none}
   .mlh-win{left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0;min-width:0}
   .mlh-bar2{cursor:default;height:48px}
   .mlh-dot{width:18px;height:18px}
-  .mlh-menubar{padding-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));height:calc(34px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
-  .mlh-desk{top:calc(34px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
+  .mlh-menubar{left:0;right:0;top:0;border-radius:0;border-width:0 0 1px;padding-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));height:calc(44px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
+  .mlh-desk{top:calc(44px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
   .mlh-dock{bottom:calc(10px + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)));gap:6px;padding:6px}
+  .mlh-dock{gap:7px;padding:8px}
   .mlh-dock .mlh-tile{width:40px;height:40px;border-radius:12px}
-  .mlh-dock .mlh-tile svg{width:22px;height:22px}
+  .mlh-dock .mlh-tile::after{border-radius:10px 10px 40% 40%}
+  .mlh-dock button:hover{transform:none}
+  .mlh-dock button:hover::before{display:none}
   .mlh-title small{display:none}
 }
 @media (prefers-reduced-motion:reduce){
@@ -490,6 +624,171 @@ const CSS = (
 }
 `
 );
+function hash2(x, y, seed) {
+  let h = x * 374761393 + y * 668265263 + seed * 2147483647 | 0;
+  h = Math.imul(h ^ h >>> 13, 1274126177);
+  return ((h ^ h >>> 16) >>> 0) / 4294967295;
+}
+function vnoise(u, v, px, seed, py = px) {
+  const x = u * px;
+  const y = v * py;
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const fx = x - x0;
+  const fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const wx = (n) => (n % px + px) % px;
+  const wy = (n) => (n % py + py) % py;
+  const a = hash2(wx(x0), wy(y0), seed);
+  const b = hash2(wx(x0 + 1), wy(y0), seed);
+  const c = hash2(wx(x0), wy(y0 + 1), seed);
+  const d = hash2(wx(x0 + 1), wy(y0 + 1), seed);
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+const HEIGHTS = {
+  // brushed aluminium: long fine streaks
+  brushed: (u, v) => 0.65 * vnoise(u, v, 3, 2, 220) + 0.35 * vnoise(u, v, 8, 3, 90),
+  // painted plaster
+  plaster: (u, v) => 0.55 * vnoise(u, v, 24, 4) + 0.3 * vnoise(u, v, 64, 5) + 0.15 * vnoise(u, v, 160, 6),
+  // woven fabric
+  fabric: (u, v) => {
+    const a = Math.sin(u * Math.PI * 2 * 96) * 0.5 + 0.5;
+    const b = Math.sin(v * Math.PI * 2 * 96) * 0.5 + 0.5;
+    return 0.45 * (Math.floor(u * 96 + v * 96) % 2 ? a : b) + 0.55 * vnoise(u, v, 48, 7);
+  },
+  // satin plastic / lacquer: almost flat, a little orange peel
+  peel: (u, v) => 0.7 * vnoise(u, v, 48, 8) + 0.3 * vnoise(u, v, 128, 9)
+};
+function heightField(size, fn) {
+  const h = new Float32Array(size * size);
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) h[y * size + x] = fn(x / size, y / size);
+  return h;
+}
+function dataTexture(size, data) {
+  const c = document.createElement("canvas");
+  c.width = c.height = size;
+  const ctx = c.getContext("2d");
+  ctx.putImageData(new ImageData(data, size, size), 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
+  return t;
+}
+function detailMaps(size, h, rough) {
+  const n = new Uint8ClampedArray(size * size * 4);
+  const r = new Uint8ClampedArray(size * size * 4);
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (const v of h) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
+  const span = hi - lo || 1;
+  const at = (x, y) => h[(y + size) % size * size + (x + size) % size];
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const dx = (at(x + 1, y) - at(x - 1, y)) / span;
+      const dy = (at(x, y + 1) - at(x, y - 1)) / span;
+      const len = Math.hypot(dx * 6, dy * 6, 1);
+      const i = (y * size + x) * 4;
+      n[i] = -dx * 6 / len * 127 + 128;
+      n[i + 1] = dy * 6 / len * 127 + 128;
+      n[i + 2] = 1 / len * 127 + 128;
+      n[i + 3] = 255;
+      const k = (at(x, y) - lo) / span;
+      const g = (rough[0] + (rough[1] - rough[0]) * k) * 255;
+      r[i] = r[i + 1] = r[i + 2] = g;
+      r[i + 3] = 255;
+    }
+  return { normal: dataTexture(size, n), rough: dataTexture(size, r) };
+}
+function normalFromImage(img, max = 512) {
+  const k = Math.min(1, max / Math.max(img.width, img.height));
+  const w = Math.max(4, Math.round(img.width * k));
+  const hgt = Math.max(4, Math.round(img.height * k));
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = hgt;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, hgt);
+  const px = ctx.getImageData(0, 0, w, hgt).data;
+  const lum = new Float32Array(w * hgt);
+  for (let i = 0; i < w * hgt; i++)
+    lum[i] = (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) / 255;
+  const out = new Uint8ClampedArray(w * hgt * 4);
+  const rough = new Uint8ClampedArray(w * hgt * 4);
+  const at = (x, y) => lum[(y + hgt) % hgt * w + (x + w) % w];
+  for (let y = 0; y < hgt; y++)
+    for (let x = 0; x < w; x++) {
+      const dx = (at(x + 1, y) - at(x - 1, y)) * 3;
+      const dy = (at(x, y + 1) - at(x, y - 1)) * 3;
+      const len = Math.hypot(dx, dy, 1);
+      const i = (y * w + x) * 4;
+      out[i] = -dx / len * 127 + 128;
+      out[i + 1] = dy / len * 127 + 128;
+      out[i + 2] = 1 / len * 127 + 128;
+      out[i + 3] = 255;
+      const g = (0.62 - at(x, y) * 0.3) * 255;
+      rough[i] = rough[i + 1] = rough[i + 2] = g;
+      rough[i + 3] = 255;
+    }
+  const make = (d) => {
+    const cc = document.createElement("canvas");
+    cc.width = w;
+    cc.height = hgt;
+    cc.getContext("2d").putImageData(new ImageData(d, w, hgt), 0, 0);
+    const t = new THREE.CanvasTexture(cc);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = 4;
+    return t;
+  };
+  return { normal: make(out), rough: make(rough) };
+}
+function studioEnv() {
+  const W = 512;
+  const H = 256;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const g = c.getContext("2d");
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#2a3350");
+  sky.addColorStop(0.48, "#121828");
+  sky.addColorStop(0.52, "#0c0f19");
+  sky.addColorStop(1, "#07080d");
+  g.fillStyle = sky;
+  g.fillRect(0, 0, W, H);
+  const box = (x, y, w, h, col, a = 1) => {
+    const gr = g.createRadialGradient(
+      x + w / 2,
+      y + h / 2,
+      2,
+      x + w / 2,
+      y + h / 2,
+      Math.max(w, h) * 0.75
+    );
+    gr.addColorStop(0, col);
+    gr.addColorStop(0.55, col);
+    gr.addColorStop(1, "rgba(0,0,0,0)");
+    g.globalAlpha = a;
+    g.fillStyle = gr;
+    g.fillRect(x - w * 0.25, y - h * 0.25, w * 1.5, h * 1.5);
+    g.globalAlpha = 1;
+  };
+  box(70, 40, 120, 60, "#fff4e6");
+  box(330, 55, 90, 50, "#dfe9ff", 0.75);
+  box(250, 6, 160, 18, "#ffffff", 0.55);
+  g.fillStyle = "rgba(54,227,255,.85)";
+  g.fillRect(0, 118, W, 3);
+  g.fillStyle = "rgba(255,79,163,.7)";
+  g.fillRect(200, 98, 46, 40);
+  const t = new THREE.CanvasTexture(c);
+  t.mapping = THREE.EquirectangularReflectionMapping;
+  srgb(t);
+  return t;
+}
 const PRODUCT_ICON = {
   keychain: svg('<circle cx="8" cy="8" r="4"/><path d="m11 11 9 9M17 17l2-2M15 15l2-2"/>'),
   hoodie: svg(
@@ -540,6 +839,8 @@ class CollectorHub {
     __publicField(this, "_walkIn", true);
     __publicField(this, "_leaveResolve");
     __publicField(this, "_portalT", 0);
+    __publicField(this, "_portalShut", false);
+    __publicField(this, "_steps", []);
     /* room pieces */
     __publicField(this, "_portal");
     __publicField(this, "_pad");
@@ -717,6 +1018,7 @@ class CollectorHub {
     if (this._state === "hidden") this.showPortal();
     this._walkIn = opts.walk !== false;
     this._seqT = 0;
+    this._portalShut = false;
     if (this._bobo) this._bobo.visible = false;
     this.prompt(null);
     this._setState("building");
@@ -739,6 +1041,7 @@ class CollectorHub {
     this._seqT = 0;
     this._el.skip.hidden = true;
     this._hud(false);
+    this._setShadows(false);
     this._setState("leaving");
     if (this._reduceMotion) this._finishLeave();
     return new Promise((res) => this._leaveResolve = res);
@@ -1008,6 +1311,7 @@ class CollectorHub {
         if (!o.isMesh) return;
         o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
       });
+    if (this.opts.pbr !== false) this._upgradeMaterials(room);
     this._makeWireMaterial();
     this._makeHoloMaterial();
     const inSub = (o, n) => {
@@ -1077,10 +1381,10 @@ class CollectorHub {
         room.add(l);
         this._lights.push(l);
       };
-      add(new THREE.PointLight(16766896, 3.5, 6, 1.6), new THREE.Vector3(0, 1.4, 0.2));
-      add(new THREE.PointLight(10480127, 2.5, 5, 1.6), new THREE.Vector3(-0.6, 3, -0.6));
+      add(new THREE.PointLight(16766896, 2.4, 6, 1.6), new THREE.Vector3(0, 1.4, 0.2));
+      add(new THREE.PointLight(10480127, 1.6, 5, 1.6), new THREE.Vector3(-0.6, 3, -0.6));
       add(
-        new THREE.PointLight(16736174, 2, 2.5, 1.6),
+        new THREE.PointLight(16736174, 1.4, 2.5, 1.6),
         this._lampPos.clone().add(new THREE.Vector3(0, 0.2, 0))
       );
     }
@@ -1093,6 +1397,172 @@ class CollectorHub {
     this._buildWalk(local);
     this._applyOwnership();
     this._renderHud();
+  }
+  /**
+   * Make the room read more like real materials: shiny brushed aluminium,
+   * a clear-coated printed can, real-feeling wood grain, plaster and fabric.
+   */
+  _upgradeMaterials(room) {
+    const env = studioEnv();
+    this._texs.push(env);
+    const maps = {};
+    const detail = (kind, rough, size = 256) => {
+      const key = kind + rough.join();
+      if (!maps[key]) {
+        maps[key] = detailMaps(size, heightField(size, HEIGHTS[kind]), rough);
+        this._texs.push(maps[key].normal, maps[key].rough);
+      }
+      return maps[key];
+    };
+    const swap = /* @__PURE__ */ new Map();
+    const metal = (m, rough, tint) => {
+      m.metalness = 1;
+      m.roughness = rough;
+      if (tint !== void 0) m.color.setHex(tint);
+      const d = detail("brushed", [0.55, 1], 256);
+      m.roughnessMap = d.rough;
+      m.normalMap = d.normal;
+      m.normalScale = new THREE.Vector2(0.12, 0.12);
+      m.envMap = env;
+      m.envMapIntensity = 1.15;
+    };
+    const surface = (m, kind, rough, n, rep = 4) => {
+      const d = detail(kind, [0.7, 1]);
+      const nm = d.normal.clone();
+      const rm = d.rough.clone();
+      nm.repeat.set(rep, rep);
+      rm.repeat.set(rep, rep);
+      nm.needsUpdate = rm.needsUpdate = true;
+      this._texs.push(nm, rm);
+      m.normalMap = nm;
+      m.normalScale = new THREE.Vector2(n, n);
+      m.roughnessMap = rm;
+      m.roughness = rough;
+      m.envMap = env;
+      m.envMapIntensity = 0.5;
+    };
+    room.traverse((o) => {
+      if (!o.isMesh) return;
+      const list = Array.isArray(o.material) ? o.material : [o.material];
+      const next = list.map((m) => {
+        if (!m?.isMeshStandardMaterial) return m;
+        if (swap.has(m)) return swap.get(m);
+        let out = m;
+        switch (m.name) {
+          case "Can_Aluminium":
+          case "Diorama_Rim":
+            metal(m, 0.2, 14672874);
+            break;
+          case "Metal_Silver":
+          case "Metal_Nickel":
+            metal(m, 0.16);
+            break;
+          case "Metal_Nickel_Brushed":
+            metal(m, 0.3);
+            break;
+          case "Gold":
+          case "Trophy_Gold":
+            metal(m, 0.18);
+            break;
+          case "Can_Label": {
+            const p = new THREE.MeshPhysicalMaterial();
+            THREE.MeshStandardMaterial.prototype.copy.call(p, m);
+            p.metalness = 0.42;
+            p.roughness = 0.24;
+            p.clearcoat = 1;
+            p.clearcoatRoughness = 0.05;
+            p.envMap = env;
+            p.envMapIntensity = 1.7;
+            out = p;
+            this._owned.push(p);
+            break;
+          }
+          case "Wood_Floor":
+          case "Wood_Dark": {
+            const img = m.map?.image;
+            if (img && img.width) {
+              const d = normalFromImage(img);
+              this._texs.push(d.normal, d.rough);
+              d.normal.repeat.copy(m.map.repeat);
+              d.rough.repeat.copy(m.map.repeat);
+              d.normal.offset.copy(m.map.offset);
+              d.rough.offset.copy(m.map.offset);
+              m.normalMap = d.normal;
+              m.normalScale = new THREE.Vector2(0.55, 0.55);
+              m.roughnessMap = d.rough;
+              m.roughness = 1;
+            } else surface(m, "plaster", 0.55, 0.2);
+            m.envMap = env;
+            m.envMapIntensity = 0.6;
+            break;
+          }
+          case "Wall_Inside_Navy":
+          case "Wall_Wainscot":
+            surface(m, "plaster", 0.82, 0.35, 6);
+            break;
+          case "Rug_White":
+          case "Rug_Navy":
+          case "Rug_Cyan":
+          case "CatBed_Cream":
+          case "CatBed_Blue":
+          case "Beanbag_Purple":
+          case "Felt_Case":
+          case "Chair_Blue":
+          case "Chair_Dark":
+            surface(m, "fabric", 0.95, 0.45, 5);
+            break;
+          case "Desk_Black":
+          case "Plastic_Dark":
+            surface(m, "peel", 0.32, 0.08, 3);
+            m.envMapIntensity = 0.8;
+            break;
+          case "Pot_Cream":
+          case "Eclipse_Red":
+          case "Eclipse_White":
+          case "Eclipse_Blue":
+          case "Bridge_Orange":
+            m.roughness = Math.min(m.roughness, 0.3);
+            m.envMap = env;
+            m.envMapIntensity = 0.8;
+            break;
+          case "Leaf_Green":
+            m.roughness = 0.45;
+            m.envMap = env;
+            m.envMapIntensity = 0.5;
+            break;
+          case "Glass":
+          case "Acrylic_Clear":
+          case "Rail_Glass":
+          case "Lamp_Glass":
+            m.envMap = env;
+            m.envMapIntensity = 1.4;
+            break;
+          default:
+            if (!m.envMap) {
+              m.envMap = env;
+              m.envMapIntensity = 0.45;
+            }
+        }
+        m.needsUpdate = true;
+        swap.set(m, out);
+        return out;
+      });
+      o.material = Array.isArray(o.material) ? next : next[0];
+    });
+  }
+  /** Shadows only once the room is solid (the reveal's cut-away would cast too). */
+  _setShadows(on) {
+    if (!this.opts.shadows || !this._room) return;
+    this._room.traverse((o) => {
+      if (!o.isMesh) return;
+      const glass = o.material?.transparent;
+      o.castShadow = on && !glass;
+      o.receiveShadow = on;
+    });
+    if (this._bobo)
+      this._bobo.traverse((o) => {
+        if (o.isMesh) o.castShadow = on;
+      });
   }
   _patch(material) {
     if (material.userData.mlhReveal) return;
@@ -1217,6 +1687,7 @@ class CollectorHub {
     const portal = local(this._portal);
     const pts = [portal.clone()];
     const steps = [0, 1, 2, 3].map((i) => this._room.getObjectByName("Step_" + i)).filter(Boolean);
+    this._steps.push(...steps);
     if (steps.length) {
       const first = local(steps[0]);
       pts.push(portal.clone().lerp(first, 0.55).setY(portal.y));
@@ -1255,13 +1726,25 @@ class CollectorHub {
   _updatePortal(dt) {
     this._portalT += dt;
     const p = clamp01(this._portalT / 0.7);
-    const s = p < 1 ? Math.max(1e-3, backOut(p)) : 1;
-    for (const n of [this._portal, this._pad]) n?.scale.setScalar(s);
+    this._portalScale(p < 1 ? backOut(p) : 1);
+  }
+  /** The portal only exists until Bobo is home: it opens, he steps through, it closes. */
+  _portalScale(s, steps = s) {
+    const on = s > 2e-3;
+    this._steps.forEach((st, i) => {
+      const k = clamp01(steps * this._steps.length - (this._steps.length - 1 - i));
+      st.visible = k > 2e-3;
+      st.scale.setScalar(Math.max(1e-3, k));
+    });
+    for (const n of [this._portal, this._pad]) {
+      if (!n) continue;
+      n.visible = on;
+      n.scale.setScalar(Math.max(1e-3, s));
+    }
   }
   _updateBuild(dt) {
     this._seqT += dt;
     const t = this._seqT;
-    for (const n of [this._portal, this._pad]) n?.scale.setScalar(1);
     const BUILD = 6.2;
     const LAG = 1;
     const b = ease(clamp01((t - 0.3) / BUILD));
@@ -1288,6 +1771,13 @@ class CollectorHub {
         if (this._current !== this._actions.Sit) this._play("Sit", 0.5);
       }
     }
+    const shut = clamp01((t - (WALK0 + WALK * 0.3)) / 0.8);
+    const stepsGone = clamp01((t - (WALK0 + WALK * 0.62)) / 1);
+    this._portalScale(shut <= 0 ? 1 : 1 - ease(shut), 1 - ease(stepsGone));
+    if (shut > 0 && !this._portalShut) {
+      this._portalShut = true;
+      this._sfx("whoosh");
+    }
     if (t >= 8.6) this._finishBuild();
   }
   _faceAlong(w, dt, reverse) {
@@ -1305,7 +1795,9 @@ class CollectorHub {
     u.uWire.value = 1e3;
     u.uGhost.value = 0;
     for (const w of this._wires) w.visible = false;
-    for (const n of [this._portal, this._pad]) n?.scale.setScalar(1);
+    this._portalScale(0);
+    this._portalShut = true;
+    this._setShadows(true);
     const bobo = this._bobo;
     if (bobo) {
       bobo.visible = true;
@@ -1335,6 +1827,8 @@ class CollectorHub {
     u.uWire.value = (1 - ease(clamp01((t - 0.5) / (DUR - 0.5)))) * this._maxDist;
     for (const w of this._wires) w.visible = true;
     u.uGhost.value = 0.05 * k;
+    const open = clamp01(t / 0.7);
+    this._portalScale(open < 1 ? backOut(open) : 1);
     const bobo = this._bobo;
     if (bobo && this._walk) {
       if (this._current !== this._actions.Walk) this._play("Walk", 0.2);
@@ -1352,6 +1846,7 @@ class CollectorHub {
     this._reveal.uWire.value = -1;
     this._setState("portal");
     this._portalT = 1;
+    this._portalScale(1);
     const r = this._leaveResolve;
     this._leaveResolve = void 0;
     r?.();
@@ -1460,28 +1955,31 @@ class CollectorHub {
 </div>
 
 <div class="mlh-layer" data-r="col" role="dialog" aria-modal="true" aria-labelledby="mlh-col-h">
-  <div class="mlh-card mlh-col">
+  <div class="mlh-card mlh-col mlh-vaultcard">
     <button type="button" class="mlh-x" data-close aria-label="Close">${ICON.close}</button>
     <div data-r="colBody"></div>
   </div>
 </div>
 
 <div class="mlh-layer mlh-os" data-r="os" role="dialog" aria-modal="true" aria-label="Bobo's computer">
+  ${DEFS}
   <div class="mlh-screen" data-r="screen">
+    <div class="mlh-wallp" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i><div class="floor"></div><div class="mlh-wall">\u03A3VAD\u03A3</div></div>
     <div class="mlh-menubar">
-      <span class="logo"><i class="lg-dot"></i>BOBO OS</span><span class="app" data-r="appName">Desktop</span>
+      <span class="logo"><span class="lg-mark">${OS_MARK}</span>BOBO<b>OS</b></span><span class="app" data-r="appName">Desktop</span>
       <span class="sp"></span>
+      <span class="chip live"><i></i>Online</span>
       <span class="tray">${ICON.wifi}<span data-r="clock"></span></span>
       <button type="button" class="tb" data-r="bell" aria-label="Alerts">${ICON.alerts}<span class="mlh-badge" data-r="bellBadge" hidden></span></button>
       <button type="button" class="tb" data-r="power" aria-label="Turn off the computer" title="Back to the room">${ICON.power}</button>
     </div>
     <div class="mlh-desk" data-r="desk">
-      <div class="mlh-wall" aria-hidden="true">\u03A3VAD\u03A3</div>
       <div class="mlh-icons" data-r="icons"></div>
+      <aside class="mlh-widgets" data-r="widgets" aria-label="Widgets"></aside>
       <div class="mlh-dock" data-r="dock" role="toolbar" aria-label="Apps"></div>
     </div>
     <button type="button" class="mlh-notif" data-r="notif" aria-live="polite"></button>
-    <div class="mlh-boot off" data-r="boot" aria-hidden="true"><div class="in"><div class="lg">BOBO OS</div><div class="bb"><i></i></div></div></div>
+    <div class="mlh-boot off" data-r="boot" aria-hidden="true"><div class="in"><div class="mk">${OS_MARK}</div><div class="lg">BOBO<b>OS</b></div><div class="ver">v2 \xB7 EVADE EDITION</div><div class="bb"><i></i></div></div></div>
   </div>
 </div>`;
     for (const el of ui.querySelectorAll("[data-r]")) this._el[el.dataset.r] = el;
@@ -1489,7 +1987,7 @@ class CollectorHub {
     const icons = this._el.icons;
     const dock = this._el.dock;
     for (const a of APPS) {
-      const tile = `<span class="mlh-tile" style="background:linear-gradient(145deg,${a.color},${a.color}99)">${ICON[a.id]}${a.id === "alerts" ? '<span class="mlh-badge" data-badge hidden></span>' : ""}</span>`;
+      const tile = tileFor(a, a.id === "alerts");
       const d = document.createElement("button");
       d.type = "button";
       d.className = "mlh-dicon";
@@ -1550,6 +2048,7 @@ class CollectorHub {
       if (s !== this._screenClock) {
         this._screenClock = s;
         this._screenDirty = true;
+        this._renderWidgets();
       }
     };
     clock();
@@ -1789,6 +2288,7 @@ class CollectorHub {
       const o = hit.object;
       if (!o.visible) continue;
       const isPortal = this._isUnder(o, this._portal) || this._isUnder(o, this._pad);
+      if (isPortal && !this._portal?.visible) continue;
       if (this._state !== "live") {
         if (isPortal) return "hub_portal";
         continue;
@@ -1919,6 +2419,17 @@ class CollectorHub {
     this._open(this._el.sheet);
   }
   /* ── collection ───────────────────────────────────────────────────── */
+  /** The vault page for this fan: owned pieces are real, the rest holograms. */
+  _vaultSrc(focus) {
+    const base = this.opts.vaultUrl || `${this.opts.api || ""}/evade/vault/index.html`;
+    const items = this._me?.items || [];
+    const owned = [...new Set(items.map((i) => i.product))].filter((p) => /^[a-z]+$/.test(p));
+    const serials = items.filter((i) => /^[a-z]+$/.test(i.product)).map((i) => `${i.product}:${i.serial}`).join(",");
+    const q = new URLSearchParams({ owned: owned.join(",") });
+    if (serials) q.set("s", serials);
+    if (focus) q.set("focus", focus);
+    return `${base}?${q}`;
+  }
   _renderCollection(box, focus) {
     const me = this._me;
     const col = me?.collection ?? {
@@ -1942,11 +2453,14 @@ class CollectorHub {
 </div>`;
     }).join("");
     box.innerHTML = `
-<div class="mlh-kicker">Bobo's Hideout</div>
-<h2 id="mlh-col-h">${esc(col.name)}</h2>
-<p>Collect every piece for an exclusive reward. Each item you activate shows up on your room's collection wall.</p>
-<div class="mlh-prog"><div class="mlh-bar"><i style="width:${Math.round(100 * n / Math.max(1, total))}%"></i></div><b>${n} of ${total}</b></div>
-<div class="mlh-grid">${cards}</div>
+<div class="mlh-vhead">
+  <div><div class="mlh-kicker">Bobo's Hideout \xB7 Vault</div>
+  <h2 id="mlh-col-h">EVADE Digital Collection</h2></div>
+  <div class="mlh-prog"><div class="mlh-bar"><i style="width:${Math.round(100 * n / Math.max(1, total))}%"></i></div><b>${n} of ${total}</b></div>
+</div>
+<div class="mlh-vault"><iframe class="mlh-frame" title="Your EVADE Digital Collection in 3D" src="${esc(this._vaultSrc(focus))}" allow="autoplay" loading="lazy"></iframe></div>
+<p class="mlh-vnote">Every activated piece of EVADE merch lands here for real. Locked pieces show as holograms until you activate one. Collect the set for an exclusive reward.</p>
+<details class="mlh-list"><summary>List view</summary><div class="mlh-grid">${cards}</div></details>
 <div class="mlh-reward${me?.complete ? " done" : ""}">
   <div class="medal">${me?.complete ? "\u2605" : ICON.lock}</div>
   <div><b>${esc(col.reward)}${me?.complete ? " \xB7 unlocked!" : ""}</b><small>${esc(col.rewardBlurb)}</small></div>
@@ -1989,9 +2503,9 @@ class CollectorHub {
     el.innerHTML = `
 <div class="mlh-bar2">
   <div class="mlh-dots"><button type="button" class="mlh-dot c" aria-label="Close ${esc(app.name)}"></button><button type="button" class="mlh-dot m" aria-label="Minimise"></button><button type="button" class="mlh-dot x" aria-label="Full size"></button></div>
-  <div class="t">${esc(app.name)}</div>
+  <div class="t"><span class="mi" style="--a:${app.g[0]};--b:${app.g[1]}">${ICON3D[id]}</span>${esc(app.name)}</div>
 </div>
-<div class="mlh-body${id === "globe" ? " flush" : ""}"></div>`;
+<div class="mlh-body${id === "globe" || id === "collection" ? " flush" : ""}"></div>`;
     const body = el.querySelector(".mlh-body");
     this._el.desk.appendChild(el);
     this._wins.set(id, { el, body });
@@ -2068,6 +2582,30 @@ class CollectorHub {
     }
     for (const b of this._el.dock.querySelectorAll("button"))
       b.classList.toggle("run", this._wins.has(b.dataset.app));
+    this._renderWidgets();
+  }
+  /** Desktop widgets: time, collection progress, newest alert. */
+  _renderWidgets() {
+    const box = this._el.widgets;
+    if (!box || !this._el.os.classList.contains("open")) return;
+    const now = /* @__PURE__ */ new Date();
+    const time = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const date = now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+    const me = this._me;
+    const total = me?.collection?.products.length || me?.total || 5;
+    const n = me?.owned ?? 0;
+    const pct = Math.round(100 * n / Math.max(1, total));
+    const latest = this._alerts[0];
+    const unread = this._unread();
+    box.innerHTML = `
+<div class="mlh-wg"><div class="k">Bobo's Hideout</div><div class="big">${esc(time)}</div><small>${esc(date)} \xB7 Bobo is home</small></div>
+<button type="button" class="mlh-wg" data-w="collection"><div class="k">Digital Collection</div>
+  <div class="row"><div class="mlh-ringwrap"><div class="mlh-ring" style="--p:${pct}"></div><b>${n}/${total}</b></div>
+  <div><b>${n} of ${total} collected</b><small>Collect all for ${esc(me?.collection?.reward || "The Golden Bobo")}</small></div></div></button>
+<button type="button" class="mlh-wg" data-w="alerts"><div class="k">${unread ? `${unread} new alert${unread > 1 ? "s" : ""}` : "Alerts"}</div>
+  ${latest ? `<div class="al"><span class="mlh-tile sm" style="--a:${KIND_COLOR[latest.kind]};--b:#1a1440">${ICON3D.alerts}</span><div><b>${esc(latest.title)}</b><small>${esc(KIND_LABEL[latest.kind])} \xB7 ${esc(ago(latest.at))}</small></div></div>` : "<small>No alerts yet. New drops and events land here.</small>"}</button>`;
+    box.querySelector('[data-w="collection"]').addEventListener("click", () => this._openApp("collection"));
+    box.querySelector('[data-w="alerts"]').addEventListener("click", () => this._openApp("alerts"));
   }
   _renderApp(id, body, highlight) {
     switch (id) {
@@ -2090,8 +2628,18 @@ class CollectorHub {
         body.querySelector("[data-play]").addEventListener("click", () => this._play2(false));
         body.querySelector("[data-rec]").addEventListener("click", () => this._play2(true));
         return;
-      case "collection":
-        return this._renderCollection(body);
+      case "collection": {
+        const me = this._me;
+        const total = me?.collection?.products.length || me?.total || 5;
+        const n = me?.owned ?? 0;
+        body.innerHTML = `<div class="mlh-vwrap"><div class="mlh-vault"><iframe class="mlh-frame" title="Your EVADE Digital Collection in 3D" src="${esc(this._vaultSrc())}"></iframe></div>
+<div class="mlh-vbar"><div class="mlh-prog"><div class="mlh-bar"><i style="width:${Math.round(100 * n / Math.max(1, total))}%"></i></div><b>${n} of ${total} \xB7 collect all for ${esc(me?.collection?.reward || "The Golden Bobo")}</b></div><button type="button" class="mlh-btn" data-add>Add an item</button></div></div>`;
+        body.querySelector("[data-add]").addEventListener("click", () => {
+          this.closeOS();
+          this.openGate("add");
+        });
+        return;
+      }
       case "shop":
         body.innerHTML = `
 <div class="mlh-empty">${ICON.shop}</div>
@@ -2267,7 +2815,7 @@ ${rows.length ? `<ol class="mlh-lb">${rows.slice(0, 20).map(
   _osNotify(a) {
     const n = this._el.notif;
     n.dataset.id = a.id;
-    n.innerHTML = `<span class="mlh-tile" style="width:38px;height:38px;flex:none;background:${KIND_COLOR[a.kind]}">${ICON.alerts}</span><span><b>${esc(a.title)}</b><small>${esc(a.body || KIND_LABEL[a.kind])}</small></span>`;
+    n.innerHTML = `<span class="mlh-tile sm" style="--a:${KIND_COLOR[a.kind]};--b:#1a1440">${ICON3D.alerts}</span><span><b>${esc(a.title)}</b><small>${esc(a.body || KIND_LABEL[a.kind])}</small></span>`;
     n.classList.add("on");
     setTimeout(() => n.classList.remove("on"), 6e3);
   }
