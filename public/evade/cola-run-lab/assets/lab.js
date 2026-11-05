@@ -7,7 +7,8 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=5";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=6";
+import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=1";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");
@@ -408,7 +409,13 @@ let hubOn = false; // the hideout mode is active (portal or room)
 let hubCam = 0; // 0 = follow cam, 1 = room cam
 const hubCamPos = new THREE.Vector3();
 const hubLook = new THREE.Vector3();
-const orbit = { yaw: 0, pitch: 0.38 };
+const orbit = { yaw: 0, pitch: 0.38, zoom: 1, pan: new THREE.Vector3() };
+const resetOrbit = () => {
+  orbit.yaw = 0;
+  orbit.pitch = 0.38;
+  orbit.zoom = 1;
+  orbit.pan.set(0, 0, 0);
+};
 const PLAYER_H = 1.1;
 const inRoom = () => hubOn && hub.state !== "portal";
 function showModeButton(on) {
@@ -456,6 +463,7 @@ async function openHideout() {
 function hubStep(dt) {
   hub.update(dt);
   if (!hubOn) {
+    viewUi.show(false);
     hubCam = Math.max(0, hubCam - dt * 1.2);
     return;
   }
@@ -465,12 +473,12 @@ function hubStep(dt) {
     stick.hidden = true;
     hudEl.hidden = true; // the room has its own top bar
     capture.setVisible(false);
-    orbit.yaw = 0;
-    orbit.pitch = 0.38;
+    resetOrbit();
     hub.enter({ walk: true });
     log("hideout: entered");
   }
   const want = hub.state === "building" || hub.state === "live" || hub.state === "leaving" ? 1 : 0;
+  viewUi.show(hubOn && (hub.state === "building" || hub.state === "live"));
   hubCam += (want - hubCam) * (1 - Math.exp(-2.5 * dt));
 }
 
@@ -499,17 +507,83 @@ async function leaveHideout(then) {
   }
 }
 
-// Drag to look around the room (taps still go to the hub).
+// In the room: drag to look around, scroll or pinch to zoom, right-drag,
+// shift-drag or two fingers to move the view (taps still go to the hub).
+const ZOOM_MIN = 0.35,
+  ZOOM_MAX = 1.8;
+const setZoom = (z) => (orbit.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z)));
+function panBy(dx, dy) {
+  const f = hub.focus();
+  const k = (f.radius * orbit.zoom * 1.6) / innerHeight;
+  const right = tmp.setFromMatrixColumn(camera.matrixWorld, 0);
+  orbit.pan.addScaledVector(right, -dx * k);
+  orbit.pan.y += dy * k;
+  if (orbit.pan.length() > f.radius * 0.75) orbit.pan.setLength(f.radius * 0.75);
+}
+const pointers = new Map();
 let drag = null;
+let pinch = null;
+canvas.addEventListener("contextmenu", (e) => inRoom() && e.preventDefault());
 canvas.addEventListener("pointerdown", (e) => {
-  if (inRoom()) drag = { x: e.clientX, y: e.clientY, yaw: orbit.yaw, pitch: orbit.pitch, id: e.pointerId };
+  if (!inRoom()) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: orbit.zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    drag = null;
+  } else
+    drag = {
+      x: e.clientX,
+      y: e.clientY,
+      yaw: orbit.yaw,
+      pitch: orbit.pitch,
+      id: e.pointerId,
+      pan: e.button === 2 || e.shiftKey,
+    };
 });
 addEventListener("pointermove", (e) => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (d > 10) setZoom(pinch.zoom * (pinch.d / d));
+    const mx = (a.x + b.x) / 2,
+      my = (a.y + b.y) / 2;
+    panBy(mx - pinch.mx, my - pinch.my);
+    pinch.mx = mx;
+    pinch.my = my;
+    return;
+  }
   if (!drag || e.pointerId !== drag.id) return;
+  if (drag.pan) {
+    panBy(e.clientX - drag.x, e.clientY - drag.y);
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    return;
+  }
   orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
   orbit.pitch = Math.min(1.1, Math.max(0.05, drag.pitch + (e.clientY - drag.y) * 0.004));
 });
-addEventListener("pointerup", () => (drag = null));
+const endPointer = (e) => {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+  if (drag && e.pointerId === drag.id) drag = null;
+};
+addEventListener("pointerup", endPointer);
+addEventListener("pointercancel", endPointer);
+canvas.addEventListener(
+  "wheel",
+  (e) => {
+    if (!inRoom()) return;
+    e.preventDefault();
+    setZoom(orbit.zoom * Math.exp(e.deltaY * 0.0012));
+  },
+  { passive: false },
+);
+const viewUi = mountViewControls({
+  onZoom: (dir) => setZoom(orbit.zoom * (dir > 0 ? 0.85 : 1.18)),
+  onRecenter: resetOrbit,
+});
 
 /* ── settings panel ── */
 const endpointIn = $("#o-endpoint");
@@ -650,7 +724,9 @@ function step() {
     // In the hideout: orbit the room (drag to look around), blended from the follow cam.
     const f = hub.focus();
     const yaw = f.yaw + orbit.yaw;
-    const dist = (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.25 : 0.95);
+    const dist =
+      (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.1 : 0.8) * orbit.zoom;
+    f.target.add(orbit.pan);
     hubCamPos.set(Math.sin(yaw) * Math.cos(orbit.pitch), Math.sin(orbit.pitch), Math.cos(yaw) * Math.cos(orbit.pitch))
       .multiplyScalar(dist).add(f.target);
     camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5)).lerp(hubCamPos, hubCam);

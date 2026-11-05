@@ -207,6 +207,7 @@ const store = {
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const smooth01 = (t: number) => t * t * (3 - 2 * t);
 const backOut = (t: number) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 
 /** sRGB on a texture, on three before and after r152. */
@@ -416,12 +417,16 @@ const ALIAS: Record<string, string> = {
 // puts the room and at any scale.
 const REVEAL_COMMON = /* glsl */ `
 uniform float uSolid; uniform float uWire; uniform float uGhost; uniform vec3 uOrigin; uniform vec3 uGlow;
+uniform float uFloor;
 varying vec3 vRevealPos;
-float revealDist(vec3 p) {
+float revealNoise(vec3 p) {
   vec3 q = floor(p * 12.0);
-  float n = fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-  return length(p - uOrigin) + (n - 0.5) * 0.22;
-}`;
+  return fract(sin(dot(q, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+}
+// The wireframe draws out from the portal...
+float revealDist(vec3 p) { return length(p - uOrigin) + (revealNoise(p) - 0.5) * 0.22; }
+// ...then the room materialises floor to ceiling behind a glowing scan line.
+float solidDist(vec3 p) { return (p.y - uFloor) + (revealNoise(p) - 0.5) * 0.08; }`;
 const REVEAL_VERT = /* glsl */ `
 vec4 revealP = vec4(transformed, 1.0);
 #ifdef USE_INSTANCING
@@ -991,10 +996,13 @@ export class CollectorHub {
     uWire: { value: 1e3 },
     uGhost: { value: 0 },
     uOrigin: { value: new THREE.Vector3() },
+    uFloor: { value: 0 },
     uGlow: { value: new THREE.Color(0x36e3ff) },
     uRoomInv: { value: new THREE.Matrix4() },
   };
   private _maxDist = 6;
+  /** Room height above uFloor: how far the materialise scan line travels. */
+  private _maxH = 3;
   private _wireMat!: THREE.LineBasicMaterial;
   private readonly _wires: THREE.LineSegments[] = [];
   private readonly _patched: THREE.Material[] = [];
@@ -1197,7 +1205,7 @@ export class CollectorHub {
     this.root.visible = true;
     this._reveal.uSolid.value = -1;
     this._reveal.uWire.value = -1;
-    this._reveal.uGhost.value = 0.05;
+    this._reveal.uGhost.value = 0; // only the portal: no hint of the room yet
     for (const w of this._wires) w.visible = true;
     if (this._bobo) this._bobo.visible = false;
     this._holoUniforms.uAlpha.value = 0;
@@ -1532,6 +1540,8 @@ export class CollectorHub {
             this._t.v.set(x, y, z).distanceTo(this._reveal.uOrigin.value),
           );
     this._maxDist += 0.3;
+    this._reveal.uFloor.value = box.min.y;
+    this._maxH = box.max.y - box.min.y + 0.15;
 
     if (this._swirl && (this._swirl as any).geometry) {
       const g = (this._swirl as any).geometry as THREE.BufferGeometry;
@@ -1542,7 +1552,12 @@ export class CollectorHub {
     }
 
     // The portal and pad stay solid during the build: their own unpatched materials.
-    for (const n of [this._portal, this._pad])
+    // The portal, pad and floating steps belong to the portal, not the room:
+    // they stay solid (own, unpatched materials) and fold away with it.
+    const stepNodes = [0, 1, 2, 3]
+      .map((i) => room.getObjectByName("Step_" + i))
+      .filter(Boolean) as THREE.Object3D[];
+    for (const n of [this._portal, this._pad, ...stepNodes])
       n?.traverse((o: any) => {
         if (!o.isMesh) return;
         o.material = Array.isArray(o.material)
@@ -1601,7 +1616,8 @@ export class CollectorHub {
         return;
       }
       this._pickables.push(o);
-      if (inSub(o, this._portal) || inSub(o, this._pad)) return;
+      if (inSub(o, this._portal) || inSub(o, this._pad) || stepNodes.some((n) => inSub(o, n)))
+        return;
       for (const m of mats) this._patch(m);
       if (
         !o.isSkinnedMesh &&
@@ -1646,6 +1662,7 @@ export class CollectorHub {
     }
     this._buildWalk(local);
     this._applyOwnership();
+    this._setShadows(false);
     this._renderHud();
   }
 
@@ -1803,18 +1820,22 @@ export class CollectorHub {
     });
   }
 
-  /** Shadows only once the room is solid (the reveal's cut-away would cast too). */
+  /**
+   * The room casts shadows only once it is solid (the reveal's cut-away would
+   * cast too). Receiving is always on, so every shader is compiled with shadows
+   * up front and nothing stalls the moment the room finishes building.
+   */
   private _setShadows(on: boolean) {
     if (!this.opts.shadows || !this._room) return;
     this._room.traverse((o: any) => {
       if (!o.isMesh) return;
       const glass = o.material?.transparent;
       o.castShadow = on && !glass;
-      o.receiveShadow = on;
+      o.receiveShadow = true;
     });
     if (this._bobo)
       this._bobo.traverse((o: any) => {
-        if (o.isMesh) o.castShadow = on;
+        if (o.isMesh) o.castShadow = true;
       });
   }
 
@@ -1837,11 +1858,11 @@ export class CollectorHub {
         .replace("#include <common>", "#include <common>\n" + REVEAL_COMMON)
         .replace(
           "#include <clipping_planes_fragment>",
-          "#include <clipping_planes_fragment>\n  float rd = revealDist(vRevealPos);\n  if (rd > uSolid) discard;",
+          "#include <clipping_planes_fragment>\n  float rd = solidDist(vRevealPos);\n  if (rd > uSolid) discard;",
         )
         .replace(
           "#include <dithering_fragment>",
-          "#include <dithering_fragment>\n  float edge = 1.0 - smoothstep(0.0, 0.14, uSolid - rd);\n  gl_FragColor.rgb = mix(gl_FragColor.rgb, uGlow * 2.4, edge * 0.85);",
+          "#include <dithering_fragment>\n  float edge = 1.0 - smoothstep(0.0, 0.12, uSolid - rd);\n  gl_FragColor.rgb = mix(gl_FragColor.rgb, uGlow * 2.6, edge * 0.9);",
         );
     };
     material.customProgramCacheKey = () => "mlh-reveal";
@@ -1873,7 +1894,7 @@ export class CollectorHub {
   float rd = revealDist(vRevealPos);
   float lit = step(rd, uWire);
   float front = 1.0 - smoothstep(0.0, 0.5, uWire - rd);
-  float fade = 1.0 - smoothstep(0.0, 0.9, uSolid - rd);
+  float fade = 1.0 - smoothstep(0.0, 0.35, uSolid - solidDist(vRevealPos));
   float a = max(lit * (0.4 + 0.5 * front) * fade, uGhost * (1.0 - lit));
   if (a < 0.003) discard;
   gl_FragColor = vec4(uGlow * (0.9 + 2.0 * front * lit), a);`,
@@ -2028,13 +2049,16 @@ export class CollectorHub {
   private _updateBuild(dt: number) {
     this._seqT += dt;
     const t = this._seqT;
-    const BUILD = 6.2;
-    const LAG = 1.0;
-    const b = ease(clamp01((t - 0.3) / BUILD));
+    // 1) the wireframe draws out from the portal, 2) a beat to take it in,
+    // 3) the room materialises floor to ceiling over ~3.2 s.
+    const WIRE0 = 0.4,
+      WIRE_T = 2.0,
+      SOLID0 = 2.7,
+      SOLID_T = 3.2;
     const u = this._reveal;
-    u.uWire.value = b * this._maxDist;
-    u.uSolid.value = ease(clamp01((t - 0.3 - LAG) / BUILD)) * this._maxDist;
-    u.uGhost.value = 0.05 * (1 - b);
+    u.uWire.value = ease(clamp01((t - WIRE0) / WIRE_T)) * this._maxDist;
+    u.uSolid.value = smooth01(clamp01((t - SOLID0) / SOLID_T)) * this._maxH;
+    u.uGhost.value = 0;
 
     const bobo = this._bobo;
     const POP = this._walkIn ? 0.5 : 0.1;
@@ -2110,12 +2134,11 @@ export class CollectorHub {
     this._seqT += dt;
     const t = this._seqT;
     const DUR = 3.2;
-    const k = ease(clamp01(t / DUR));
     const u = this._reveal;
-    u.uSolid.value = (1 - ease(clamp01(t / (DUR - 0.5)))) * this._maxDist;
+    u.uSolid.value = (1 - ease(clamp01(t / (DUR - 0.5)))) * this._maxH;
     u.uWire.value = (1 - ease(clamp01((t - 0.5) / (DUR - 0.5)))) * this._maxDist;
     for (const w of this._wires) w.visible = true;
-    u.uGhost.value = 0.05 * k;
+    u.uGhost.value = 0;
     // The portal reopens for the walk out.
     const open = clamp01(t / 0.7);
     this._portalScale(open < 1 ? backOut(open) : 1);
