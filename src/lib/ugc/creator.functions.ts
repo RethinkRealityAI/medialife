@@ -16,7 +16,7 @@ import {
   updateSubmission,
 } from "./creator.server";
 import { listPerks } from "./data.server";
-import { UGC, UGC_PLATFORMS, UGC_POST_PLATFORMS } from "./model";
+import { UGC, UGC_PLATFORMS, UGC_POST_PLATFORMS, UGC_TEE_SIZES } from "./model";
 import { requireUgcCreator } from "./session.server";
 
 // Creator-facing server functions for /ugc-hub. Every one starts with
@@ -140,6 +140,7 @@ export const updateUgcProfile = createServerFn({ method: "POST" })
       name: str(120).optional(),
       country: str(80).optional(),
       handles: z.record(z.enum(UGC_PLATFORMS), str(200)).optional(),
+      teeSize: z.enum(UGC_TEE_SIZES).nullable().optional(),
       phone: str(40).optional(),
       address: addressSchema.nullable().optional(),
     }),

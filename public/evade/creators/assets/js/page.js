@@ -579,6 +579,49 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     });
   });
 
+  /* ---- tee size ---- */
+  const teeBtn = $("#teeGuideBtn");
+  const teeGuide = $("#teeGuide");
+  const teeRows = $$("#teeGuide tbody tr");
+  // inches in the US (and Liberia, Myanmar), centimetres everywhere else
+  const usesInches = (() => {
+    try {
+      const r = new Intl.Locale(navigator.language || "en-US").maximize().region;
+      return ["US", "LR", "MM"].includes(r);
+    } catch {
+      return true;
+    }
+  })();
+  function setUnit(u) {
+    $$(".tee-units button", teeGuide).forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.unit === u)));
+    $$("tbody td", teeGuide).forEach((td) => (td.textContent = td.dataset[u]));
+    $("caption", teeGuide).textContent = `T-shirt measurements in ${u === "in" ? "inches" : "centimetres"}, laid flat`;
+  }
+  function syncTee() {
+    const v = form.elements.tee_size.value;
+    teeRows.forEach((tr) => tr.classList.toggle("is-on", tr.dataset.size === v));
+  }
+  teeBtn.addEventListener("click", () => {
+    const open = teeGuide.hidden;
+    teeGuide.hidden = !open;
+    teeBtn.setAttribute("aria-expanded", String(open));
+    if (open) {
+      teeGuide.scrollIntoView({ block: "nearest", behavior: REDUCED ? "auto" : "smooth" });
+      track("size_guide_open");
+    }
+  });
+  $$(".tee-units button", teeGuide).forEach((b) => b.addEventListener("click", () => setUnit(b.dataset.unit)));
+  teeRows.forEach((tr) =>
+    tr.addEventListener("click", () => {
+      const r = form.querySelector(`input[name="tee_size"][value="${tr.dataset.size}"]`);
+      r.checked = true;
+      r.dispatchEvent(new Event("change", { bubbles: true }));
+      r.dispatchEvent(new Event("input", { bubbles: true }));
+    }),
+  );
+  form.addEventListener("change", (e) => e.target.name === "tee_size" && syncTee());
+  setUnit(usesInches ? "in" : "cm");
+
   /* ---- validation ---- */
   function setErr(errEl, msg, field) {
     if (!errEl) return;
@@ -603,6 +646,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     } else if (n === "contact-name" || n === "ship_name") msg = v.length < 2 ? "Add your full name." : "";
     else if (n === "email") msg = !v ? "Add your email." : EMAIL.test(v) ? "" : "That email looks off. Check for typos.";
     else if (n === "phone") msg = v && !/^\+?[\d\s().-]{7,20}$/.test(v) ? "Use digits, with your country code (e.g. +44)." : "";
+    else if (n === "tee_size") msg = form.elements.tee_size.value ? "" : "Pick your tee size.";
     else if (n === "address_country") msg = v ? "" : "Add your country.";
     else if (n === "address_line1") msg = v.length < 3 ? "Add your street address." : "";
     else if (n === "city") msg = v ? "" : "Add your city.";
@@ -780,7 +824,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
       <div class="rv-block"><div class="rv-top"><span class="mono">Channels</span><button type="button" class="rv-edit" data-edit="1" aria-label="Edit your channels">Edit</button></div>
         <div class="rv-plats">${plats}</div></div>
       <div class="rv-block"><div class="rv-top"><span class="mono">Ships to</span><button type="button" class="rv-edit" data-edit="2" aria-label="Edit your shipping address">Edit</button></div>
-        <p>${addr.map(esc).join("<br>")}</p>${notes ? `<p class="m">${esc(notes)}</p>` : ""}</div>`;
+        <p>${addr.map(esc).join("<br>")}</p>${notes ? `<p class="m">${esc(notes)}</p>` : ""}
+        <p class="m">Tee size <b class="rv-size">${esc(f.tee_size.value)}</b></p></div>`;
     $$(".rv-edit", $("#review")).forEach((b) => b.addEventListener("click", () => show(+b.dataset.edit, -1)));
   }
 
@@ -794,7 +839,9 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
         for (const el of form.elements) {
           if (!el.name || el.type === "hidden" || el.name === "bot-field") continue;
           if (el.type === "checkbox") data[el.name] = el.checked;
-          else data[el.name] = el.value;
+          else if (el.type === "radio") {
+            if (el.checked) data[el.name] = el.value;
+          } else data[el.name] = el.value;
         }
         localStorage.setItem(STORE_KEY, JSON.stringify(data));
         saveNote.textContent = "Saved on this device";
@@ -819,7 +866,11 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     for (const [k, v] of Object.entries(data)) {
       if (k.startsWith("_")) continue;
       const el = form.elements[k];
-      if (!el || el instanceof RadioNodeList) continue;
+      if (el instanceof RadioNodeList) {
+        el.value = v ?? "";
+        continue;
+      }
+      if (!el) continue;
       if (el.type === "checkbox") el.checked = !!v;
       else el.value = v ?? "";
     }
@@ -853,7 +904,7 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
     for (const el of form.elements) {
       // usernames are added below, resolved per channel
       if (!el.name || el.dataset.handle || el.dataset.shared) continue;
-      if (el.type === "checkbox" && !el.checked) continue;
+      if ((el.type === "checkbox" || el.type === "radio") && !el.checked) continue;
       body.append(el.name, el.value.trim());
     }
     for (const p of sel) body.append(`${p}_handle`, shownHandle(p));
@@ -894,5 +945,6 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
   // boot
   const startAt = restore();
   syncUsernames();
+  syncTee();
   show(startAt, 1, true);
 })();

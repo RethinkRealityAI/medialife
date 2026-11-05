@@ -74,8 +74,34 @@ export const UGC_ROUTES = {
    --------------------------------------------------------------------------- */
 
 /** The six platforms on the sign-up form, in its order. */
-export const UGC_PLATFORMS = ["roblox", "instagram", "youtube", "discord", "x", "tiktok", "twitch"] as const;
+export const UGC_PLATFORMS = [
+  "roblox",
+  "instagram",
+  "youtube",
+  "discord",
+  "x",
+  "tiktok",
+  "twitch",
+] as const;
 export type UgcPlatform = (typeof UGC_PLATFORMS)[number];
+
+/** T-shirt sizes on the sign-up form, smallest first (the package includes a tee). */
+export const UGC_TEE_SIZES = ["S", "M", "L", "XL", "2XL", "3XL"] as const;
+export type UgcTeeSize = (typeof UGC_TEE_SIZES)[number];
+/** "xxl", "XX-Large", "2 xl" → "2XL". null when it isn't one of the sizes. */
+export function normaliseTeeSize(raw: string | null | undefined): UgcTeeSize | null {
+  const v = String(raw ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, "")
+    .replace(/^SMALL$/, "S")
+    .replace(/^MEDIUM$/, "M")
+    .replace(/^LARGE$/, "L")
+    .replace(/LARGE$/, "L")
+    .replace(/^XXXL$/, "3XL")
+    .replace(/^XXL$/, "2XL");
+  return (UGC_TEE_SIZES as readonly string[]).includes(v) ? (v as UgcTeeSize) : null;
+}
 
 export const UGC_PLATFORM_LABELS: Record<UgcPlatform, string> = {
   roblox: "Roblox",
@@ -295,6 +321,8 @@ export type UgcCreator = {
   audiences: Partial<Record<UgcPlatform, string>>;
   /** What they wrote in the form's notes box. */
   applicationNotes: string;
+  /** T-shirt size for their package (form "tee_size"). Missing on sign-ups before Nov 2026. */
+  teeSize?: UgcTeeSize | null;
   consent: { contact: boolean; at: number | null };
   source: UgcSource;
   /** Placeholders: the age policy and the licence are not decided. Always null in v1. */

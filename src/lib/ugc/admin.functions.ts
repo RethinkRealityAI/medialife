@@ -45,6 +45,7 @@ import {
   UGC_ASSET_GROUPS,
   UGC_PERK_KINDS,
   UGC_PLATFORMS,
+  UGC_TEE_SIZES,
   UGC_STATUSES,
   UGC_SUBMISSION_STATUSES,
 } from "./model";
@@ -139,6 +140,7 @@ export const adminEditUgcCreator = createServerFn({ method: "POST" })
       country: str(80).optional(),
       handles: z.record(z.enum(UGC_PLATFORMS), str(200)).optional(),
       mainPlatform: z.enum(UGC_PLATFORMS).nullable().optional(),
+      teeSize: z.enum(UGC_TEE_SIZES).nullable().optional(),
       phone: str(40).optional(),
       address: address.nullable().optional(),
     }),
@@ -160,6 +162,7 @@ export const adminAddUgcCreator = createServerFn({ method: "POST" })
       phone: str(40).optional(),
       address: address.nullable().optional(),
       notes: str(2000).optional(),
+      teeSize: z.enum(UGC_TEE_SIZES).nullable().optional(),
       status: z.enum(["applied", "approved"]).optional(),
       notify: z.boolean().optional(),
       campaignId: id.optional().nullable(),

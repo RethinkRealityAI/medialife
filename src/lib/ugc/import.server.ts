@@ -69,6 +69,7 @@ export function newCreatorFrom(
     handles: s.handles,
     audiences: s.audiences,
     applicationNotes: s.applicationNotes,
+    teeSize: s.teeSize,
     consent: s.consent,
     source: s.source,
     ageBand: null,
@@ -324,6 +325,7 @@ export type ManualCreatorInput = {
   phone?: string;
   address?: MappedSignup["pii"]["address"];
   notes?: string;
+  teeSize?: string | null;
   status?: "applied" | "approved";
 };
 
@@ -336,6 +338,7 @@ export function manualSignup(i: ManualCreatorInput): MappedSignup | { error: str
     country: i.country ?? "",
     phone: i.phone ?? "",
     notes: i.notes ?? "",
+    tee_size: i.teeSize ?? "",
     consent: "yes",
   };
   for (const [p, h] of Object.entries(i.handles ?? {})) if (h) fields[`${p}_handle`] = h;

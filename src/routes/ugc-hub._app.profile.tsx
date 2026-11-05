@@ -38,9 +38,11 @@ import {
   UGC_PLATFORMS,
   UGC_PLATFORM_LABELS,
   UGC_ROUTES,
+  UGC_TEE_SIZES,
   ugcHandleUrl,
   type ShippingAddress,
   type UgcPlatform,
+  type UgcTeeSize,
 } from "@/lib/ugc/model";
 import { cn } from "@/lib/utils";
 
@@ -210,6 +212,7 @@ function DetailsForm({ p }: { p: Profile }) {
     name: p.creator.name,
     country: p.creator.country,
     phone: p.phone,
+    teeSize: (p.creator.teeSize ?? "") as UgcTeeSize | "",
   };
   const [v, setV] = useState(init);
   const dirty = (Object.keys(init) as (keyof typeof init)[]).some((k) => v[k] !== init[k]);
@@ -220,7 +223,7 @@ function DetailsForm({ p }: { p: Profile }) {
       title="You"
       dirty={dirty}
       busy={busy}
-      onSubmit={() => void save(v)}
+      onSubmit={() => void save({ ...v, teeSize: v.teeSize || null })}
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
@@ -270,6 +273,28 @@ function DetailsForm({ p }: { p: Profile }) {
           onChange={(x) => setV({ ...v, country: x })}
           className="sm:col-span-2"
         />
+        <fieldset className="sm:col-span-2">
+          <legend className="mb-1.5 block text-sm font-medium">T-shirt size</legend>
+          <div className="flex flex-wrap gap-2">
+            {UGC_TEE_SIZES.map((s) => (
+              <button
+                key={s}
+                type="button"
+                aria-pressed={v.teeSize === s}
+                onClick={() => setV({ ...v, teeSize: s })}
+                className={cn(
+                  "min-h-11 min-w-12 rounded-xl border px-3 text-sm font-semibold transition-colors",
+                  v.teeSize === s
+                    ? "border-amber-300 bg-amber-300/15 text-amber-100"
+                    : "border-white/15 text-muted-foreground hover:border-white/30 hover:text-white",
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-muted-foreground">For the tee in your package.</p>
+        </fieldset>
       </div>
     </FormCard>
   );

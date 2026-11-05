@@ -151,6 +151,7 @@ const FORM = {
       postal_code: "LS1 1AA",
       address_country: "United Kingdom",
       notes: "Leave with reception",
+      tee_size: "xxl",
       consent: "yes",
     }),
     { kind: "netlify-form", submissionId: "q1", submittedAt: 2000 },
@@ -162,6 +163,7 @@ const FORM = {
   assert.deepEqual(q.signup.creator.audiences, {});
   assert.deepEqual(q.signup.creator.platforms.sort(), ["discord", "tiktok", "youtube"]);
   assert.equal(q.signup.creator.applicationNotes, "Leave with reception");
+  assert.equal(q.signup.creator.teeSize, "2XL", "tee size normalised");
   // no creator_name: the first channel's username, before the first name
   const q2 = mapSignup(
     normaliseFields({
@@ -174,6 +176,7 @@ const FORM = {
   );
   assert.ok(q2.ok);
   assert.equal(q2.signup.creator.creatorName, "alik");
+  assert.equal(q2.signup.creator.teeSize, null, "no size given");
   // headers from a CSV export, in other spellings
   const f = normaliseFields({
     "Contact Name": "A B",

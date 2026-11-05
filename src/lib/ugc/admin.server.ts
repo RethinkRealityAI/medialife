@@ -74,6 +74,7 @@ import {
   type UgcSubmission,
   type UgcSubmissionStatus,
   type UgcSubmissionView,
+  type UgcTeeSize,
 } from "./model";
 import { newId, type UgcNamespace } from "./store.server";
 import type { Fail, Ok } from "./creator.server";
@@ -292,7 +293,10 @@ export async function saveNotes(ns: UgcNamespace, id: string, f: UgcAdminFields)
 }
 
 export type AdminCreatorEdit = Partial<
-  Pick<UgcCreator, "name" | "creatorName" | "email" | "country" | "handles" | "mainPlatform">
+  Pick<
+    UgcCreator,
+    "name" | "creatorName" | "email" | "country" | "handles" | "mainPlatform" | "teeSize"
+  >
 > & { phone?: string; address?: ShippingAddress | null };
 
 export async function editCreator(
@@ -317,6 +321,7 @@ export async function editCreator(
     c.platforms = (Object.keys(c.handles) as UgcCreator["platforms"]).filter(Boolean);
   }
   if (patch.mainPlatform !== undefined) c.mainPlatform = patch.mainPlatform;
+  if (patch.teeSize !== undefined) c.teeSize = patch.teeSize;
   await saveCreator(ns, c);
   if (patch.phone !== undefined || patch.address !== undefined) {
     const p = await getPii(ns, id);
@@ -622,6 +627,7 @@ export type ShippingRow = {
   address: ShippingAddress | null;
   /** What they wrote in the form's notes box (delivery notes on the quick intake form). */
   notes: string;
+  teeSize: UgcTeeSize | null;
   shipment: UgcShipment | null;
 };
 
@@ -655,6 +661,7 @@ export async function shippingRows(
       phone: pii.phone,
       address: pii.address,
       notes: c.applicationNotes,
+      teeSize: c.teeSize ?? null,
       shipment,
     });
   }
@@ -674,6 +681,7 @@ export const SHIPPING_CSV_COLUMNS = [
   "phone",
   "email",
   "items",
+  "tee_size",
   "creator_name",
   "campaign",
   "carrier",
@@ -706,6 +714,7 @@ export async function shippingCsv(
       r.phone,
       r.email,
       items.join(" + "),
+      r.teeSize ?? "",
       r.creatorName,
       r.campaignTitle ?? "",
       r.shipment?.carrier ?? "",
