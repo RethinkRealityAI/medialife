@@ -418,6 +418,11 @@ export function createLandmarks(globe, { reduced }) {
     hide();
     if (!entry) return false;
     let obj = cache.get(key);
+    // the same landmark may still be shrinking away from a moment ago: take it back
+    if (obj) {
+      const i = leaving.findIndex((l) => l.obj === obj);
+      if (i >= 0) leaving.splice(i, 1);
+    }
     if (!obj) {
       obj = new THREE.Group();
       obj.add(entry.build());

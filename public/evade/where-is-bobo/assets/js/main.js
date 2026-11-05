@@ -9,7 +9,7 @@
  * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
  * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=5";
+import { sfx } from "./sfx.js?v=6";
 
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 15_000;
@@ -195,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=5");
+      const { createGlobe } = await import("./globe.js?v=6");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
