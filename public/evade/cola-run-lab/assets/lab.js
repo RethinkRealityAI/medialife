@@ -95,8 +95,8 @@ let canClip = null;
 
 async function loadModels() {
   const [bobo, cola] = await Promise.all([
-    loader.loadAsync("/roblox/activated-retail/models/catrun.glb"),
-    loader.loadAsync("/roblox/activated-retail/models/cola.glb"),
+    loader.loadAsync("/roblox/activated-retail/models/catrun.glb?v=2"),
+    loader.loadAsync("/roblox/activated-retail/models/cola.glb?v=2"),
   ]);
   const b = bobo.scene;
   fit(b, 1.1);
