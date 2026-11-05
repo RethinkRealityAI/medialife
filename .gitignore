@@ -45,3 +45,4 @@ assets-src/
 
 # local dev storage for /admin tools (Netlify Blobs in production)
 .data/
+.cache/

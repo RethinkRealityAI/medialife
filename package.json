@@ -83,6 +83,8 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "d3-geo": "^3.1.2",
+    "earcut": "^3.0.1",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -93,8 +95,10 @@
     "pngjs": "^7.0.0",
     "prettier": "^3.7.3",
     "sharp": "^0.35.4",
+    "topojson-client": "^3.1.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "world-atlas": "^2.0.2"
   }
 }

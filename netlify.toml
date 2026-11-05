@@ -34,6 +34,18 @@
   to = "/email/signature.html?who=dapo"
   status = 301
 
+# "Where is Bobo?" (EVADE's live globe) is easy to say out loud and print on
+# packaging, so the short paths resolve to it.
+[[redirects]]
+  from = "/where-is-bobo"
+  to = "/evade/where-is-bobo/"
+  status = 301
+
+[[redirects]]
+  from = "/bobo"
+  to = "/evade/where-is-bobo/"
+  status = 301
+
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
 # src/server.ts instead. Keep the two lists in sync.
@@ -331,3 +343,14 @@
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=300"
 # <<< end generated
+
+# ── Where is Bobo? ───────────────────────────────────────────────────────────
+# The page's files aren't hashed, so browsers revalidate them on every visit
+# (a cheap 304 with Netlify's ETags) and an update shows up at once. The
+# page also appends ?v=N to its own imports; bump N in index.html, main.js
+# and globe.js when shipping a change. The live data is /api/bobo/feed.json,
+# which sets its own short cache.
+[[headers]]
+  for = "/evade/where-is-bobo/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

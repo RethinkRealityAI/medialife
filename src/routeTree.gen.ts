@@ -68,6 +68,10 @@ import { Route as AdminUgcReviewRouteImport } from './routes/admin.ugc.review'
 import { Route as AdminUgcShippingRouteImport } from './routes/admin.ugc.shipping'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
+import { Route as ApiBoboEventsRouteImport } from './routes/api.bobo.events'
+import { Route as ApiBoboFeedDotjsonRouteImport } from './routes/api.bobo.feed[.]json'
+import { Route as ApiBoboNearRouteImport } from './routes/api.bobo.near'
+import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
@@ -113,6 +117,7 @@ import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.asse
 import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
 import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-content.$demo'
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
+import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
 import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
@@ -446,6 +451,26 @@ const ApiArTrackRoute = ApiArTrackRouteImport.update({
   path: '/api/ar/track',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBoboEventsRoute = ApiBoboEventsRouteImport.update({
+  id: '/api/bobo/events',
+  path: '/api/bobo/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBoboFeedDotjsonRoute = ApiBoboFeedDotjsonRouteImport.update({
+  id: '/api/bobo/feed.json',
+  path: '/api/bobo/feed.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBoboNearRoute = ApiBoboNearRouteImport.update({
+  id: '/api/bobo/near',
+  path: '/api/bobo/near',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBoboPlacesRoute = ApiBoboPlacesRouteImport.update({
+  id: '/api/bobo/places',
+  path: '/api/bobo/places',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
   id: '/api/hub/files',
   path: '/api/hub/files',
@@ -672,6 +697,11 @@ const ApiArDemoContentDemoRoute = ApiArDemoContentDemoRouteImport.update({
 const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
   id: '/api/ar/project/$slug',
   path: '/api/ar/project/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBoboDevSeedRoute = ApiBoboDevSeedRouteImport.update({
+  id: '/api/bobo/dev/seed',
+  path: '/api/bobo/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
@@ -928,6 +958,10 @@ export interface FileRoutesByFullPath {
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/bobo/events': typeof ApiBoboEventsRoute
+  '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
+  '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -977,6 +1011,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1062,6 +1097,10 @@ export interface FileRoutesByTo {
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/bobo/events': typeof ApiBoboEventsRoute
+  '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
+  '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1111,6 +1150,7 @@ export interface FileRoutesByTo {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1205,6 +1245,10 @@ export interface FileRoutesById {
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
+  '/api/bobo/events': typeof ApiBoboEventsRoute
+  '/api/bobo/feed.json': typeof ApiBoboFeedDotjsonRoute
+  '/api/bobo/near': typeof ApiBoboNearRoute
+  '/api/bobo/places': typeof ApiBoboPlacesRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1254,6 +1298,7 @@ export interface FileRoutesById {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1349,6 +1394,10 @@ export interface FileRouteTypes {
     | '/admin/ugc/shipping'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/bobo/events'
+    | '/api/bobo/feed.json'
+    | '/api/bobo/near'
+    | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1398,6 +1447,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1483,6 +1533,10 @@ export interface FileRouteTypes {
     | '/admin/ugc/shipping'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/bobo/events'
+    | '/api/bobo/feed.json'
+    | '/api/bobo/near'
+    | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1532,6 +1586,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1625,6 +1680,10 @@ export interface FileRouteTypes {
     | '/admin/ugc/shipping'
     | '/api/ar/link'
     | '/api/ar/track'
+    | '/api/bobo/events'
+    | '/api/bobo/feed.json'
+    | '/api/bobo/near'
+    | '/api/bobo/places'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1674,6 +1733,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1749,6 +1809,10 @@ export interface RootRouteChildren {
   ShelfIndexRoute: typeof ShelfIndexRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
+  ApiBoboEventsRoute: typeof ApiBoboEventsRoute
+  ApiBoboFeedDotjsonRoute: typeof ApiBoboFeedDotjsonRoute
+  ApiBoboNearRoute: typeof ApiBoboNearRoute
+  ApiBoboPlacesRoute: typeof ApiBoboPlacesRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
@@ -1761,6 +1825,7 @@ export interface RootRouteChildren {
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
+  ApiBoboDevSeedRoute: typeof ApiBoboDevSeedRoute
   ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
   ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
   ApiHubOverlayTokenRoute: typeof ApiHubOverlayTokenRouteWithChildren
@@ -2190,6 +2255,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArTrackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bobo/events': {
+      id: '/api/bobo/events'
+      path: '/api/bobo/events'
+      fullPath: '/api/bobo/events'
+      preLoaderRoute: typeof ApiBoboEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bobo/feed.json': {
+      id: '/api/bobo/feed.json'
+      path: '/api/bobo/feed.json'
+      fullPath: '/api/bobo/feed.json'
+      preLoaderRoute: typeof ApiBoboFeedDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bobo/near': {
+      id: '/api/bobo/near'
+      path: '/api/bobo/near'
+      fullPath: '/api/bobo/near'
+      preLoaderRoute: typeof ApiBoboNearRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bobo/places': {
+      id: '/api/bobo/places'
+      path: '/api/bobo/places'
+      fullPath: '/api/bobo/places'
+      preLoaderRoute: typeof ApiBoboPlacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hub/files': {
       id: '/api/hub/files'
       path: '/api/hub/files'
@@ -2503,6 +2596,13 @@ declare module '@tanstack/react-router' {
       path: '/api/ar/project/$slug'
       fullPath: '/api/ar/project/$slug'
       preLoaderRoute: typeof ApiArProjectSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bobo/dev/seed': {
+      id: '/api/bobo/dev/seed'
+      path: '/api/bobo/dev/seed'
+      fullPath: '/api/bobo/dev/seed'
+      preLoaderRoute: typeof ApiBoboDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/hub/auth/discord': {
@@ -3154,6 +3254,10 @@ const rootRouteChildren: RootRouteChildren = {
   ShelfIndexRoute: ShelfIndexRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
+  ApiBoboEventsRoute: ApiBoboEventsRoute,
+  ApiBoboFeedDotjsonRoute: ApiBoboFeedDotjsonRoute,
+  ApiBoboNearRoute: ApiBoboNearRoute,
+  ApiBoboPlacesRoute: ApiBoboPlacesRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
@@ -3166,6 +3270,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
+  ApiBoboDevSeedRoute: ApiBoboDevSeedRoute,
   ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
   ApiHubDevSeedRoute: ApiHubDevSeedRoute,
   ApiHubOverlayTokenRoute: ApiHubOverlayTokenRouteWithChildren,

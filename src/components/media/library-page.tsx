@@ -143,6 +143,8 @@ export type MediaFilters = {
   purpose?: MediaPurpose;
   vis?: "public" | "private";
   ai?: "yes" | "no";
+  /** Where is Bobo?: live on the globe, tagged with a place, or not tagged. */
+  geo?: "globe" | "located" | "none";
   orient?: MediaOrientation;
   sort?: MediaSort;
   view: "grid" | "list";
@@ -208,6 +210,8 @@ function Library({
         purpose: f.purpose,
         public: f.vis === undefined ? undefined : f.vis === "public",
         aiGenerated: f.ai === undefined ? undefined : f.ai === "yes",
+        onGlobe: f.geo === "globe" ? true : undefined,
+        located: f.geo === undefined || f.geo === "globe" ? undefined : f.geo === "located",
         orientation: f.orient,
         sort: f.sort,
       }),
@@ -216,7 +220,7 @@ function Library({
   const visible = results.slice(0, shown);
   useEffect(
     () => setShown(PAGE),
-    [f.q, f.kind, f.tags, f.client, f.collection, f.purpose, f.vis, f.ai, f.orient, f.sort],
+    [f.q, f.kind, f.tags, f.client, f.collection, f.purpose, f.vis, f.ai, f.geo, f.orient, f.sort],
   );
 
   // drop selections that left the library (deleted elsewhere)
@@ -265,7 +269,7 @@ function Library({
 
   const activeCount =
     f.tags.length +
-    [f.client, f.collection, f.purpose, f.vis, f.ai, f.orient].filter((v) => v !== undefined)
+    [f.client, f.collection, f.purpose, f.vis, f.ai, f.geo, f.orient].filter((v) => v !== undefined)
       .length;
   const clearAll = () =>
     onFilters({
@@ -277,6 +281,7 @@ function Library({
       purpose: undefined,
       vis: undefined,
       ai: undefined,
+      geo: undefined,
       orient: undefined,
     });
   const filtered = activeCount > 0 || !!f.q || !!f.kind;
@@ -894,6 +899,22 @@ function FilterControls({
         ]}
       />
       <FilterSelect
+        label="Where is Bobo?"
+        anyLabel="Any location"
+        stack={stack}
+        value={f.geo}
+        onChange={(geo) => onFilters({ geo: geo as MediaFilters["geo"] })}
+        options={[
+          { value: "globe", label: "On the globe", count: data.facets.globeCount },
+          { value: "located", label: "Has a location", count: data.facets.locatedCount },
+          {
+            value: "none",
+            label: "No location",
+            count: data.facets.total - data.facets.locatedCount,
+          },
+        ]}
+      />
+      <FilterSelect
         label="Orientation"
         stack={stack}
         value={f.orient}
@@ -1104,6 +1125,13 @@ function ActiveChips({
       key: "a",
       label: f.ai === "yes" ? "AI-generated" : "Not AI-generated",
       clear: () => onFilters({ ai: undefined }),
+    });
+  if (f.geo)
+    chips.push({
+      key: "g",
+      label:
+        f.geo === "globe" ? "On the globe" : f.geo === "located" ? "Has a location" : "No location",
+      clear: () => onFilters({ geo: undefined }),
     });
   if (f.orient)
     chips.push({

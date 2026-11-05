@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Where is Bobo? · EVADE × MEDIALIFE</title>
+<meta name="description" content="Follow Bobo, EVADE's cat, around the world on a live 3D globe. Every pin is a real sighting from fans, creators and activated merch." />
+<meta name="theme-color" content="#03060a" />
+<link rel="canonical" href="https://medialife.ai/evade/where-is-bobo/" />
+
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="MEDIALIFE" />
+<meta property="og:title" content="Where is Bobo?" />
+<meta property="og:description" content="Follow EVADE's cat around the world on a live 3D globe. Every pin is a real sighting." />
+<meta property="og:url" content="https://medialife.ai/evade/where-is-bobo/" />
+<meta property="og:image" content="https://medialife.ai/evade/where-is-bobo/assets/img/og-card.jpg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Bobo the cat walking on a glowing dotted globe with sighting hotspots" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Where is Bobo?" />
+<meta name="twitter:description" content="Follow EVADE's cat around the world on a live 3D globe." />
+<meta name="twitter:image" content="https://medialife.ai/evade/where-is-bobo/assets/img/og-card.jpg" />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Same href as the rest of the site, so the font file is a cache hit. -->
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet" />
+<link rel="preload" href="/evade/where-is-bobo/assets/data/globe.bin?v=4" as="fetch" crossorigin />
+<link rel="preload" href="/api/bobo/feed.json" as="fetch" crossorigin />
+<link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css?v=4" />
+
+<script>document.documentElement.classList.add("js");</script>
+<script type="importmap">
+{"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
+</script>
+<script src="/vendor/ar-kit/track.js" defer></script>
+<script type="module" src="/evade/where-is-bobo/assets/js/main.js?v=4"></script>
+</head>
+<body>
+<a class="skip-link" href="#sightings">Skip to the list of sightings</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-play" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 2.8v10.4c0 .6.6.9 1.1.6l8.2-5.2a.7.7 0 0 0 0-1.2L5.6 2.2c-.5-.3-1.1 0-1.1.6Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-left" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-right" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-share" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10V2M5 5l3-3 3 3"/><path d="M3 8.5V13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5"/></g></symbol>
+    <symbol id="i-list" viewBox="0 0 16 16"><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M6 4h8M6 8h8M6 12h8"/><circle cx="2.5" cy="4" r=".6" fill="currentColor"/><circle cx="2.5" cy="8" r=".6" fill="currentColor"/><circle cx="2.5" cy="12" r=".6" fill="currentColor"/></g></symbol>
+    <symbol id="i-route" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="3.5" cy="12.5" r="1.8"/><circle cx="12.5" cy="3.5" r="1.8"/><path d="M5.3 12.5H11a2.2 2.2 0 0 0 0-4.5H5a2.2 2.2 0 0 1 0-4.5h5.7" stroke-dasharray="2 2"/></g></symbol>
+    <symbol id="i-sound" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6v4h3l4 3V3L5 6Z" fill="currentColor"/><path d="M11.5 5.5a3.5 3.5 0 0 1 0 5M13.5 3.5a6.5 6.5 0 0 1 0 9"/></g></symbol>
+    <symbol id="i-beacon" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 14.5s4.5-4.2 4.5-8a4.5 4.5 0 0 0-9 0c0 3.8 4.5 8 4.5 8Z"/><circle cx="8" cy="6.5" r="1.6" fill="currentColor"/></g></symbol>
+    <symbol id="i-stop" viewBox="0 0 16 16"><rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 5.5V3a1 1 0 0 1 1-1h2.5M10.5 2H13a1 1 0 0 1 1 1v2.5M14 10.5V13a1 1 0 0 1-1 1h-2.5M5.5 14H3a1 1 0 0 1-1-1v-2.5M4.5 8h7"/></g></symbol>
+  </defs>
+</svg>
+
+<div class="sky" aria-hidden="true"></div>
+<canvas id="globe" class="globe" aria-label="3D globe showing the places Bobo has been. The list of sightings below has the same information." role="img"></canvas>
+<div id="labels" class="labels" aria-hidden="true"></div>
+
+<header class="top">
+  <a class="brand" href="https://medialife.ai/" aria-label="MEDIALIFE home">
+    <img src="/card/mark.svg" alt="" width="22" height="22" />
+    <b>MEDIALIFE<sup>™</sup></b>
+    <span class="x" aria-hidden="true">×</span>
+    <img class="brand-evade" src="/brand/evade-logo.webp" alt="EVADE" width="80" height="21" />
+  </a>
+  <div class="top-right">
+    <button type="button" class="icon-btn sound-btn" id="soundBtn" aria-pressed="true" aria-label="Turn sound and vibration off" title="Sound and vibration">
+      <svg width="16" height="16" aria-hidden="true"><use href="#i-sound"/></svg>
+    </button>
+    <a class="btn btn-gold btn-sm" id="playCta" href="https://evade.medialife.ai" rel="noopener">
+      <svg width="14" height="14" aria-hidden="true"><use href="#i-play"/></svg>
+      <span>Play Cola Run</span>
+    </a>
+  </div>
+</header>
+
+<main id="main" class="ui">
+  <section class="hero" id="hero" aria-labelledby="title">
+    <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span id="eyebrowText">Live</span><span class="sample-pill" id="samplePill" hidden>Preview · sample sightings</span></p>
+    <h1 id="title">Where is <span class="grad">Bobo</span>?</h1>
+    <p class="sub" id="sub">Follow EVADE's cat around the world. Every pin is a real sighting.</p>
+    <dl class="stats" id="stats" aria-live="polite">
+      <div><dt>Cities</dt><dd data-stat="places">0</dd></div>
+      <div><dt>Countries</dt><dd data-stat="countries">0</dd></div>
+      <div><dt>km travelled</dt><dd data-stat="km">0</dd></div>
+      <div class="stat-scans"><dt>Scans</dt><dd data-stat="events">0</dd></div>
+    </dl>
+    <div class="hero-actions">
+      <button type="button" class="btn btn-primary summon-btn" id="summonBtn">
+        <span class="summon-ico" aria-hidden="true"><svg width="16" height="16"><use href="#i-beacon"/></svg></span>
+        <span>Bring Bobo to me</span>
+      </button>
+      <button type="button" class="btn btn-glass" id="tourBtn" hidden>
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-route"/></svg>
+        <span>Replay his trip</span>
+      </button>
+      <button type="button" class="btn btn-glass" id="listBtn" aria-controls="sightings" aria-expanded="false">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-list"/></svg>
+        <span>All sightings</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- the selected place -->
+  <aside class="card" id="card" aria-labelledby="cardCity" hidden>
+    <div class="card-grab" aria-hidden="true"></div>
+    <div class="card-head">
+      <span class="flag" id="cardFlag" aria-hidden="true"></span>
+      <div class="card-where">
+        <h2 id="cardCity" tabindex="-1"></h2>
+        <p id="cardCountry"></p>
+      </div>
+      <button type="button" class="icon-btn" id="cardClose" aria-label="Close">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="card-body">
+      <p class="card-when" id="cardWhen"></p>
+      <div class="card-strip" id="cardStrip" role="list"></div>
+      <h3 class="card-title" id="cardTitle"></h3>
+      <p class="card-desc" id="cardDesc"></p>
+      <div class="card-actions">
+        <button type="button" class="btn btn-primary" id="watchBtn">
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-sound"/></svg>
+          <span>Watch with sound</span>
+        </button>
+        <button type="button" class="btn btn-glass" id="shareBtn">
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-share"/></svg>
+          <span>Share</span>
+        </button>
+      </div>
+      <p class="card-scans" id="cardScans" hidden></p>
+    </div>
+    <div class="card-nav">
+      <button type="button" class="nav-btn" id="prevPlace"><svg width="14" height="14" aria-hidden="true"><use href="#i-left"/></svg><span id="prevName">Previous</span></button>
+      <button type="button" class="nav-btn" id="nextPlace"><span id="nextName">Next</span><svg width="14" height="14" aria-hidden="true"><use href="#i-right"/></svg></button>
+    </div>
+  </aside>
+
+  <!-- every sighting, as a list (the accessible way through the globe) -->
+  <aside class="drawer" id="sightings" aria-labelledby="sightingsTitle" hidden>
+    <div class="drawer-head">
+      <h2 id="sightingsTitle">Sightings</h2>
+      <button type="button" class="icon-btn" id="listClose" aria-label="Close the list">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body">
+      <ol class="places" id="placeList"></ol>
+      <div class="empty" id="emptyList" hidden>
+        <img src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="96" height="96" />
+        <p><b>Bobo's packing his bags.</b> The first sightings land here soon.</p>
+      </div>
+      <h3 class="drawer-sub" id="scanTitle" hidden>Live scans</h3>
+      <ol class="scans" id="scanList"></ol>
+      <p class="credits">Map data: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> (CC BY 4.0), <a href="https://www.naturalearthdata.com/" target="_blank" rel="noopener">Natural Earth</a>.</p>
+    </div>
+  </aside>
+
+  <div class="tour-bar" id="tourBar" hidden>
+    <span class="tour-step" id="tourStep"></span>
+    <button type="button" class="btn btn-glass btn-sm" id="tourStop">
+      <svg width="12" height="12" aria-hidden="true"><use href="#i-stop"/></svg><span>Stop</span>
+    </button>
+  </div>
+
+  <div class="ticker" id="ticker" aria-live="off" hidden>
+    <span class="ticker-dot" aria-hidden="true"></span>
+    <span class="ticker-text" id="tickerText"></span>
+  </div>
+
+  <div class="cta-strip" id="ctaStrip">
+    <svg width="16" height="16" aria-hidden="true"><use href="#i-scan"/></svg>
+    <span>Got the keychain? Scan it to bring Bobo to your city.</span>
+  </div>
+</main>
+
+<div class="bubble" id="bubble" role="status" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<div class="loader" id="loader" aria-hidden="true">
+  <div class="loader-ring"></div>
+  <p>Locating Bobo…</p>
+</div>
+
+<div class="fallback" id="fallback" hidden>
+  <p>Your browser can't show the 3D globe, but every sighting is in the list.</p>
+</div>
+
+<dialog class="viewer" id="viewer" aria-labelledby="viewerTitle">
+  <div class="viewer-inner">
+    <div class="viewer-head">
+      <h2 id="viewerTitle"></h2>
+      <button type="button" class="icon-btn" id="viewerClose" aria-label="Close">
+        <svg width="16" height="16" aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </div>
+    <div class="viewer-media" id="viewerMedia"></div>
+  </div>
+</dialog>
+
+<noscript><p class="noscript">Where is Bobo? needs JavaScript for the globe.</p></noscript>
+</body>
+</html>
