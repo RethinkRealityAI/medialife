@@ -9,11 +9,18 @@ phone.
 | --- | --- |
 | `ColaRunRecorder.ts` | The Mattercraft component (property panel, game hookup). |
 | `CaptureCore.ts` | The recorder, review sheet and uploader. No Mattercraft imports. |
+| `OrbHuntGame.ts` | The Cola Run game itself (a copy of the Mattercraft project's file, kept here so the lab runs the real thing). |
 
 Both go into the Mattercraft project's Scripts folder. `CaptureCore.ts` is also
 what the browser test lab runs: `/evade/cola-run-lab/` loads
 `capture-core.js`, generated from it with `node scripts/build-cola-capture.mjs`
-(add `--check` to confirm the lab copy matches).
+(add `--check` to confirm the lab copies match).
+
+The lab also runs the real game: the same script bundles `OrbHuntGame.ts` into
+`orb-hunt-game.js`, with `mattercraft/lab-shim/zcomponent.ts` standing in for
+the `@zcomponent/*` packages. So when the game changes in Mattercraft, copy the
+new `OrbHuntGame.ts` over this one and rebuild; the lab's menu, intro, HUD,
+lounge bar and modals then match what players see.
 
 ## Add it to the project
 
