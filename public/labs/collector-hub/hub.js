@@ -542,8 +542,7 @@ const clock = new THREE.Clock();
 let t = 0;
 const pullTab = () => room?.getObjectByName('hub_pull_tab');
 let pullRest;
-renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05);
+function frame(dt) {
   t += dt;
   if (room) {
     if (state === 'intro') updateSequence(dt);
@@ -562,8 +561,10 @@ renderer.setAnimationLoop(() => {
   }
   controls.update(dt);
   composer.render();
-});
+}
+// ?manual drives time from outside (used to record smooth preview clips).
+if (!params.has('manual')) renderer.setAnimationLoop(() => frame(Math.min(clock.getDelta(), 0.05)));
 
 syncAlerts();
 // Handy for automated checks of the page.
-window.__hub = { get state() { return state; }, get seqT() { return seqT; }, startSequence, finishBuild, camera, controls, get room() { return room; }, actions };
+window.__hub = { frame, get state() { return state; }, get seqT() { return seqT; }, startSequence, finishBuild, camera, controls, get room() { return room; }, actions };

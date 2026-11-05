@@ -477,7 +477,7 @@ sphere('hub_alert_light', 0.035, P(SC_A + SC_SPAN / 2 - 2, R - 0.09, SC_Z0 - 0.0
 box('Keyboard', (0.44, 0.14, 0.022), (-0.05, -0.15, 0.8), M['plastic'], 0.006, parent=desk)
 box('Keyboard_Glow', (0.42, 0.12, 0.004), (-0.05, -0.15, 0.812), M['trim'], parent=desk)
 sphere('Mouse', 0.035, (0.3, -0.15, 0.8), M['plastic'], (0.8, 1.2, 0.5), 16, parent=desk)
-tw = empty('PC_Tower', (0.6, 0.08, 0.79), desk)
+tw = empty('PC_Tower', (0.45, 0.06, 0.0), desk)  # under the desk so the wall screen stays clear
 box('Tower_Case', (0.2, 0.42, 0.46), (0, 0, 0.23), M['plastic'], 0.01, parent=tw)
 box('Tower_Glass', (0.005, 0.38, 0.4), (-0.102, 0, 0.23), M['glass'], parent=tw)
 for k, z in enumerate((0.12, 0.25, 0.38)):
