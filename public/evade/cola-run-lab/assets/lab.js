@@ -13,7 +13,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
 import { OrbHuntGame, LabContext } from "./orb-hunt-game.js?v=1";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=7";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=8";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=1";
 
 const $ = (s) => document.querySelector(s);
