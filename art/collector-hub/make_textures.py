@@ -132,3 +132,18 @@ for i in range(12):
     off = rnd2.randrange(0, FW); d.line([(i * pw_, off), ((i + 1) * pw_, off)], fill=(70, 45, 30), width=3)
 wood = wood.filter(ImageFilter.GaussianBlur(0.8)); wood.save(os.path.join(OUT, 'wood.png'))
 print('can label + wood ok')
+
+# --- "Go home" portal swirl ----------------------------------------------------------------
+PS = 512
+por = Image.new('RGBA', (PS, PS), (0, 0, 0, 0)); px = por.load()
+for y in range(PS):
+    for x in range(PS):
+        dx, dy = (x - PS / 2) / (PS / 2), (y - PS / 2) / (PS / 2); rr = math.hypot(dx, dy)
+        if rr > 1: continue
+        ang = math.atan2(dy, dx); sw = 0.5 + 0.5 * math.sin(ang * 3 + rr * 9)
+        t = min(1, rr * 1.1)
+        c0, c1 = (255, 255, 255), (CYAN if sw > 0.5 else PINK)
+        col = tuple(int(c0[i] * (1 - t) + c1[i] * t * (0.6 + 0.4 * sw)) for i in range(3))
+        px[x, y] = col + (255,)
+por = por.filter(ImageFilter.GaussianBlur(2)); por.convert('RGB').save(os.path.join(OUT, 'portal.png'))
+print('portal ok')

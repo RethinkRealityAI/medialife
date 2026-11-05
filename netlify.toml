@@ -362,6 +362,14 @@
     Cache-Control = "public, max-age=0, must-revalidate"
     X-Robots-Tag = "noindex, nofollow"
 
+# Collector Hub room models (built by art/collector-hub/build_room.py). Revalidated while the room is iterating.
+[[headers]]
+  for = "/hub/*/*.glb"
+  [headers.values]
+    Content-Type = "model/gltf-binary"
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Robots-Tag = "noindex, nofollow"
+
 [[headers]]
   for = "/evade/cola-run-lab/*"
   [headers.values]

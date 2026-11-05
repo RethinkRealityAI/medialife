@@ -205,13 +205,17 @@ def ring_wall(name, r_in, r_out, z0, z1, a0, a1, m_out, m_in, m_edge, seg=96):
     bm.normal_update()
     return new_mesh_obj(name, bm, [m_out, m_in, m_edge])
 
-def arc_band(name, r, z, h, a0, a1, m, seg=96, parent=None):
-    bm = bmesh.new(); n = max(4, int(seg * (a1 - a0) / 360)); prev = None
+def arc_band(name, r, z, h, a0, a1, m, seg=96, parent=None, uv=False):
+    """A curved strip on the inside of the wall. With uv=True the image reads correctly from the centre."""
+    bm = bmesh.new(); uvl = bm.loops.layers.uv.new(); n = max(4, int(seg * (a1 - a0) / 360)); prev = None
     for i in range(n + 1):
         a = math.radians(a0 + (a1 - a0) * i / n); c, s = math.cos(a), math.sin(a)
-        cur = (bm.verts.new((r * c, r * s, z)), bm.verts.new((r * c, r * s, z + h)))
-        if prev: bm.faces.new([prev[0], prev[1], cur[1], cur[0]])
+        cur = (bm.verts.new((r * c, r * s, z)), bm.verts.new((r * c, r * s, z + h)), 1 - i / n)
+        if prev:
+            f = bm.faces.new([prev[0], prev[1], cur[1], cur[0]])
+            for l, t in zip(f.loops, [(prev[2], 0), (prev[2], 1), (cur[2], 1), (cur[2], 0)]): l[uvl].uv = t
         prev = cur
+    bm.normal_update()
     return new_mesh_obj(name, bm, [m], parent)
 
 def prism(name, pts, z0, z1, m_top, m_side=None, parent=None, uv_r=None):
@@ -270,16 +274,37 @@ for sx in (-0.22, 0.22):
 for k in range(7):
     cyl(f'Ladder_Rung_{k}', 0.02, 0.44, (0, 0, 0.25 + k * 0.25), M['trim'] if k % 2 == 0 else M['alu'], 12, rot=(0, math.radians(90), 0), parent=lad)
 # giant ring-pull on the rim
-tab = empty('hub_pull_tab', P(135, R + 0.02, H + 0.03), rz=math.radians(135 - 90))
-tabp = empty('Pull_Tab_Tilt', (0, 0, 0), tab); tabp.rotation_euler = (math.radians(-48), 0, 0)
-bm = bmesh.new()
-outline = [(0.42 * math.cos(math.radians(t)), -0.55 + 0.55 * math.sin(math.radians(t)) * 1.0) for t in range(0, 361, 10)]
-prism('Pull_Tab', [(x, y * 0.95) for x, y in outline[:-1]], 0, 0.04, M['alu'], parent=tabp).location = (0, -0.05, 0)
-prism('Pull_Tab_Hole', [(0.22 * math.cos(math.radians(t)), -0.62 + 0.24 * math.sin(math.radians(t))) for t in range(0, 360, 12)], 0.041, 0.05, M['rim'], parent=tabp).location = (0, -0.05, 0)
-cyl('Pull_Tab_Rivet', 0.07, 0.06, (0, -0.12, 0.04), M['alu'], 24, parent=tabp)
+def stadium(w, h, n=14, cy=0.0):
+    """Rounded-rectangle outline (semicircle ends at +/- y), w wide and h long."""
+    r = w / 2; pts = []
+    for i in range(n + 1):
+        t = math.pi * i / n; pts.append((r * math.cos(t), cy + h / 2 - r + r * math.sin(t)))
+    for i in range(n + 1):
+        t = math.pi + math.pi * i / n; pts.append((r * math.cos(t), cy - h / 2 + r + r * math.sin(t)))
+    return pts
+def ring_prism(name, outer, inner, z0, z1, m, parent=None):
+    """A flat ring between two outlines with the same point count (no holes needed)."""
+    bm = bmesh.new(); k = len(outer)
+    ob = [bm.verts.new((x, y, z0)) for x, y in outer]; ot = [bm.verts.new((x, y, z1)) for x, y in outer]
+    ib = [bm.verts.new((x, y, z0)) for x, y in inner]; it = [bm.verts.new((x, y, z1)) for x, y in inner]
+    for i in range(k):
+        j = (i + 1) % k
+        bm.faces.new([ot[i], ot[j], it[j], it[i]]); bm.faces.new([ob[i], ib[i], ib[j], ob[j]])
+        bm.faces.new([ob[i], ob[j], ot[j], ot[i]]); bm.faces.new([ib[i], it[i], it[j], ib[j]])
+    bm.normal_update()
+    o = new_mesh_obj(name, bm, [m], parent, smooth=False)
+    bv = o.modifiers.new('bevel', 'BEVEL'); bv.width = 0.012; bv.segments = 2
+    return o
+# giant ring-pull standing up on the rim, like a can that's just been opened
+tab = empty('hub_pull_tab', P(150, R + WT / 2, H + 0.02), rz=math.radians(150 - 90))
+tabp = empty('Pull_Tab_Tilt', (0, 0, 0), tab); tabp.rotation_euler = (math.radians(-72), 0, 0)
+ring_prism('Pull_Tab', stadium(0.62, 1.05, cy=-0.5), stadium(0.36, 0.5, cy=-0.66), 0, 0.045, M['alu'], parent=tabp)
+ring_prism('Pull_Tab_Rivet_Ring', stadium(0.62, 0.36, cy=-0.12)[:30], stadium(0.2, 0.2, cy=-0.12)[:30], 0, 0.05, M['alu'], parent=tabp)
+cyl('Pull_Tab_Rivet', 0.06, 0.07, (0, -0.12, 0.03), M['metal'], 24, parent=tabp)
 # string lights along the inside of the rim
 for k in range(22):
     a = WALL_A0 + 4 + k * (WALL_A1 - WALL_A0 - 8) / 21
+    if 96 < a < 174: continue  # the big screen sits here
     sag = 0.1 * math.sin(math.pi * ((k % 5) / 5))
     sphere(f'String_Bulb_{k:02d}', 0.024, P(a, R - 0.06, H - 0.15 - sag), M['bulb'], seg=10, parent=shell)
 
@@ -305,6 +330,36 @@ def mini_can(name, loc, s=1.0, tilt=(0, 0, 0), parent=None):
 orbit = empty('hub_orbit_cans', (0, 0, 0))
 for k, (a, z, rr) in enumerate(((95, 2.6, 2.45), (180, 1.4, 2.5), (255, 3.4, 2.3))):
     mini_can(f'Orbit_Can_{k}', P(a, rr, z), 3.4, (math.radians(25), math.radians(15 * k), math.radians(a)), orbit)
+
+# ---------------------------------------------------------------- "Go home" portal on the spawn pad
+PAD_TOP = -0.6
+PA = -112.0
+portal = empty('hub_portal', P(PA, 2.25, PAD_TOP), rz=math.radians(OPEN + 90 - 25)); portal.scale = (1.3, 1.3, 1.3)
+prt_m = img_mat('Portal_Swirl', 'portal.png', emit_str=3.5, rough=0.2)
+disc = prism('Portal_Swirl', circle_pts(0.5, 48), -0.01, 0.01, prt_m, parent=portal)
+disc.rotation_euler = (math.radians(90), 0, 0); disc.location = (0, 0, 0.62)
+torus('Portal_Ring', 0.54, 0.05, (0, 0, 0.62), M['trim'], rot=(math.radians(90), 0, 0), parent=portal)
+torus('Portal_Ring_Outer', 0.62, 0.018, (0, 0, 0.62), M['pink'], rot=(math.radians(90), 0, 0), parent=portal)
+cyl('Portal_Base', 0.42, 0.06, (0, 0, 0.03), M['alu'], 48, parent=portal)
+torus('Portal_Base_Glow', 0.42, 0.012, (0, 0, 0.06), M['trim'], parent=portal)
+bpy.ops.object.text_add(location=(0, -0.02, 1.33), rotation=(math.radians(90), 0, 0))
+gt = bpy.context.object; gt.name = 'Portal_GoHome_Text'; gt.data.body = 'GO HOME'; gt.data.align_x = 'CENTER'
+gt.data.size = 0.16; gt.data.extrude = 0.01
+try: gt.data.font = bpy.data.fonts.load(os.path.join(REPO, 'scripts/brand/fonts/SpaceGrotesk-Bold.ttf'))
+except Exception: pass
+gt.data.materials.append(M['trim']); link(gt); gt.parent = portal
+bpy.ops.object.select_all(action='DESELECT'); gt.select_set(True); bpy.context.view_layer.objects.active = gt
+bpy.ops.object.convert(target='MESH')
+# floating steps from the portal up to the floor, and glowing paw prints
+p0 = Vector(P(PA, 2.0, PAD_TOP)); p1 = Vector(P(OPEN - 40, R - 0.1, 0))
+for k in range(4):
+    t = (k + 1) / 5; q = p0.lerp(p1, t); z = PAD_TOP + (0 - PAD_TOP) * t
+    st = empty(f'Step_{k}', (q.x, q.y, z - 0.03))
+    cyl(f'Step_{k}_Disc', 0.2, 0.05, (0, 0, 0), M['alu'], 32, parent=st)
+    torus(f'Step_{k}_Glow', 0.2, 0.01, (0, 0, 0.026), M['trim'], parent=st)
+for k in range(5):
+    q = Vector(P(OPEN - 40, R - 0.4, 0)).lerp(Vector((0.25, -0.3, 0)), k / 5)
+    sphere(f'Paw_{k}', 0.045, (q.x + (0.05 if k % 2 else -0.05), q.y, 0.004), M['ghost'], (1, 1.2, 0.08), 12)
 
 # ---------------------------------------------------------------- posters (EVADE's own art)
 def poster(name, file, w, h, a_deg, z, glow=None):
@@ -410,13 +465,15 @@ for sx in (-0.7, 0.7):
     box(f'Desk_Leg_{sx:+.1f}', (0.06, 0.58, 0.74), (sx, 0, 0.37), M['plastic'], 0.01, parent=desk)
 box('Desk_Mat', (1.1, 0.4, 0.006), (-0.08, -0.08, 0.788), M['rug_navy'], 0.003, parent=desk)
 box('Desk_Mat_Edge', (1.11, 0.41, 0.004), (-0.08, -0.08, 0.786), M['trim'], parent=desk)
-pc = empty('hub_computer', (-0.05, 0.16, 0.79), desk)
-box('Monitor_Body', (1.1, 0.05, 0.47), (0, 0.0, 0.48), M['plastic'], 0.012, parent=pc)
-image_plane('Monitor_Screen', 1.05, 0.42, (0, -0.0265, 0.48), (math.radians(90), 0, 0), img_mat('Monitor_Screen', 'screen.png', emit_str=2.4, rough=0.2), parent=pc)
-box('Monitor_Neck', (0.06, 0.05, 0.26), (0, 0.04, 0.16), M['metal'], 0.01, parent=pc)
-box('Monitor_Foot', (0.3, 0.2, 0.02), (0, 0.0, 0.01), M['metal'], 0.008, parent=pc)
-box('Monitor_Backglow', (1.16, 0.01, 0.53), (0, 0.035, 0.48), M['pink'], parent=pc)
-sphere('hub_alert_light', 0.02, (0.52, -0.03, 0.26), M['pink'], parent=pc)
+# the hub computer's screen: a giant curved display that follows the can's wall
+SC_A, SC_SPAN = 135.0, 70.0
+SC_Z0, SC_Z1 = LOFT + 0.1 + 0.86, H - 0.08
+pc = empty('hub_computer', (0, 0, 0))
+arc_band('Screen_Bezel', R - 0.06, SC_Z0 - 0.05, SC_Z1 - SC_Z0 + 0.1, SC_A - SC_SPAN / 2 - 1.6, SC_A + SC_SPAN / 2 + 1.6, M['plastic'], parent=pc)
+arc_band('Screen_Backglow', R - 0.03, SC_Z0 - 0.09, SC_Z1 - SC_Z0 + 0.18, SC_A - SC_SPAN / 2 - 3.2, SC_A + SC_SPAN / 2 + 3.2, M['pink'], parent=pc)
+scr = arc_band('Monitor_Screen', R - 0.075, SC_Z0, SC_Z1 - SC_Z0, SC_A - SC_SPAN / 2, SC_A + SC_SPAN / 2,
+               img_mat('Monitor_Screen', 'screen.png', emit_str=2.6, rough=0.15), parent=pc, uv=True)
+sphere('hub_alert_light', 0.035, P(SC_A + SC_SPAN / 2 - 2, R - 0.09, SC_Z0 - 0.03), M['pink'], parent=pc)
 box('Keyboard', (0.44, 0.14, 0.022), (-0.05, -0.15, 0.8), M['plastic'], 0.006, parent=desk)
 box('Keyboard_Glow', (0.42, 0.12, 0.004), (-0.05, -0.15, 0.812), M['trim'], parent=desk)
 sphere('Mouse', 0.035, (0.3, -0.15, 0.8), M['plastic'], (0.8, 1.2, 0.5), 16, parent=desk)
@@ -427,7 +484,7 @@ for k, z in enumerate((0.12, 0.25, 0.38)):
     torus(f'Tower_Fan_{k}', 0.055, 0.008, (-0.09, 0.1, z), M['pink'] if k == 1 else M['trim'], rot=(0, math.radians(90), 0), parent=tw)
 mini_can('Desk_Can_1', (-0.55, -0.12, 0.785), parent=desk)
 mini_can('Desk_Can_2', (-0.46, -0.05, 0.785), parent=desk)
-ch = empty('Gaming_Chair', (0.2, -0.78, 0), desk); ch.rotation_euler = (0, 0, math.radians(25))
+ch = empty('Gaming_Chair', (0.62, -0.72, 0), desk); ch.rotation_euler = (0, 0, math.radians(58))
 box('Chair_Seat', (0.5, 0.48, 0.1), (0, 0, 0.5), M['chair'], 0.04, parent=ch)
 box('Chair_Back', (0.48, 0.1, 0.7), (0, -0.24, 0.88), M['chair'], 0.05, parent=ch)
 box('Chair_Back_Stripe', (0.12, 0.105, 0.66), (0, -0.24, 0.88), M['chair_dark'], 0.03, parent=ch)
@@ -436,9 +493,10 @@ for k in range(5):
     a = k * 2 * math.pi / 5
     box(f'Chair_Leg_{k}', (0.28, 0.05, 0.04), (0.14 * math.cos(a), 0.14 * math.sin(a), 0.07), M['plastic'], 0.01, rot=(0, 0, a), parent=ch)
     sphere(f'Chair_Wheel_{k}', 0.03, (0.27 * math.cos(a), 0.27 * math.sin(a), 0.03), M['plastic'], seg=12, parent=ch)
-sign = on_wall('hub_sign_evade', 135, R - 0.04, H - 0.42)
-image_plane('Sign_EVADE_Logo', 1.05, 1.05 * 158 / 600, (0, -0.03, 0), (math.radians(90), 0, 0), img_mat('Sign_EVADE', 'sign_evade.png', emit_str=2.2, alpha=True), parent=sign)
-box('Sign_Backplate', (1.17, 0.02, 0.36), (0, 0.0, 0), M['plastic'], 0.01, parent=sign)
+sign = empty('hub_sign_evade', (mid.x + 0.03, mid.y - 0.03, LOFT + 0.1 + 0.3), rz=math.radians(45))
+image_plane('Sign_EVADE_Logo', 1.05, 1.05 * 158 / 600, (0, -0.012, 0), (math.radians(90), 0, 0), img_mat('Sign_EVADE', 'sign_evade.png', emit_str=2.2, alpha=True), parent=sign)
+box('Sign_Backplate', (1.17, 0.02, 0.34), (0, 0.0, 0), M['plastic'], 0.01, parent=sign)
+box('Sign_Underglow', (1.21, 0.012, 0.38), (0, 0.012, 0), M['trim'], parent=sign)
 pl2 = empty('Plant_Loft', P(205, 1.45, LOFT + 0.1))
 cyl('Plant2_Pot', 0.14, 0.3, (0, 0, 0.15), M['pot'], 32, r2=0.12, parent=pl2)
 for k in range(7):
@@ -514,10 +572,11 @@ def orbit_cam(az, el, dist, tgt_z):
     a, e = math.radians(az), math.radians(el)
     return (dist * math.cos(e) * math.cos(a), dist * math.cos(e) * math.sin(a), tgt_z + dist * math.sin(e)), (0, 0, tgt_z)
 SHOTS = {  # name: (camera location, look-at target, lens)
-    'hero': orbit_cam(OPEN, 24, 11.0, 1.5) + (50,),
+    'hero': orbit_cam(OPEN - 8, 22, 12.2, 1.4) + (50,),
     'side': orbit_cam(15, 18, 12.5, 1.45) + (50,),
     'back': orbit_cam(150, 15, 12.5, 1.45) + (50,),
-    'top': orbit_cam(OPEN, 58, 12.0, 1.0) + (50,),
+    'top': orbit_cam(OPEN, 58, 12.5, 1.0) + (50,)
+    ,'portal': (P(PA + 25, 4.2, 0.6), P(PA, 2.2, 0.0), 35),
     'case': (P(OPEN + 20, 0.9, 1.25), P(CA, R, 0.95), 30),
     'loft': (P(OPEN, 1.2, LOFT + 1.6), P(135, R, LOFT + 0.9), 26),
     'lounge': (P(OPEN - 5, 2.6, 0.9), (-0.2, 0.4, 0.55), 30),
