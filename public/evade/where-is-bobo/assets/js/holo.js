@@ -6,9 +6,10 @@
  */
 import * as THREE from "three";
 
-const TEAL = new THREE.Color("#3fe6e0");
-const BLUE = new THREE.Color("#19affe");
-const PINK = new THREE.Color("#ff37ae");
+// EVADE yellow hologram: gold light, amber falloff, a warm screen glow
+const TEAL = new THREE.Color("#ffd75e");
+const BLUE = new THREE.Color("#ff9f1a");
+const PINK = new THREE.Color("#fff1b8");
 
 const beamVert = /* glsl */ `
   varying vec2 vUv;
@@ -214,6 +215,19 @@ export function createHologram(scene, { reduced, maxTex = 1024 }) {
   const screen = new THREE.Group();
   screen.position.y = beamH + 0.02;
   group.add(screen);
+  // wide screens: the screen floats beside the beam, tied to it by a light line
+  const tetherGeo = new THREE.BufferGeometry();
+  tetherGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(6), 3));
+  const tether = new THREE.Line(
+    tetherGeo,
+    new THREE.LineBasicMaterial({ color: TEAL, transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending }),
+  );
+  tether.renderOrder = 29;
+  tether.frustumCulled = false;
+  group.add(tether);
+  const _v = new THREE.Vector3();
+  const _r = new THREE.Vector3();
+  const _u = new THREE.Vector3();
   const screenUni = {
     ...uni,
     uMap: { value: null },
@@ -256,10 +270,13 @@ export function createHologram(scene, { reduced, maxTex = 1024 }) {
   }
 
   function sizePanel(w, h) {
+    state.lastW = w;
+    state.lastH = h;
     const ar = w && h ? w / h : 9 / 16;
     // portrait clips stand tall, landscape ones spread out
-    const H = ar < 1 ? 0.44 : 0.3;
-    const W = Math.min(0.56, H * ar);
+    const k = state.k || 1;
+    const H = (ar < 1 ? 0.44 : 0.3) * k;
+    const W = Math.min(0.56 * k, H * ar);
     const realH = W / ar;
     state.panelW = W;
     state.panelH = Math.min(H, realH);
@@ -385,7 +402,25 @@ export function createHologram(scene, { reduced, maxTex = 1024 }) {
     // the screen faces the camera, upright in screen space
     group.updateMatrixWorld();
     const parentQ = group.getWorldQuaternion(new THREE.Quaternion()).invert();
-    screen.quaternion.copy(parentQ.multiply(camera.quaternion));
+    screen.quaternion.copy(parentQ.clone().multiply(camera.quaternion));
+    // side layout: slide the screen along the camera's right/up axes
+    const side = state.side || 0;
+    _r.set(1, 0, 0).applyQuaternion(camera.quaternion).applyQuaternion(parentQ);
+    _u.set(0, 1, 0).applyQuaternion(camera.quaternion).applyQuaternion(parentQ);
+    const comp = state.comp || 1;
+    screen.scale.setScalar(comp);
+    const offX = side ? (state.panelW / 2) * comp + side : 0;
+    const offY = side ? -state.panelH * 0.42 * comp : 0;
+    screen.position.set(0, beamH + 0.02, 0).addScaledVector(_r, offX).addScaledVector(_u, offY);
+    if (side) {
+      const pos = tetherGeo.attributes.position;
+      // from the top of the beam to the screen's near edge
+      _v.copy(screen.position).addScaledVector(_r, (-state.panelW / 2) * comp).addScaledVector(_u, state.panelH * 0.5 * comp);
+      pos.setXYZ(0, 0, beamH, 0);
+      pos.setXYZ(1, _v.x, _v.y, _v.z);
+      pos.needsUpdate = true;
+    }
+    tether.material.opacity = side ? 0.7 * o.value * Math.min(1, screenUni.uReveal.value * 2) : 0;
     // materialise: scan from bottom to top, glitch settles
     state.revealT += dt;
     screenUni.uReveal.value = reduced ? 1 : Math.min(1, Math.max(0, (state.revealT - 0.25) / 0.6));
@@ -412,6 +447,44 @@ export function createHologram(scene, { reduced, maxTex = 1024 }) {
     },
     get active() {
       return state.on;
+    },
+    /** 0 = the screen stands on the beam; > 0 = it floats this far to the right of it. */
+    setSide(gap) {
+      state.side = gap;
+    },
+    /** Extra scale for the screen, e.g. to keep its size on screen while zooming. */
+    setComp(k) {
+      state.comp = k;
+    },
+    /** Bigger screens get a bigger screen (1 = phone size). */
+    setScale(k) {
+      if (Math.abs((state.k || 1) - k) < 0.01) return;
+      state.k = k;
+      if (state.lastW !== undefined) sizePanel(state.lastW, state.lastH);
+    },
+    /** The screen's rectangle in CSS pixels (null while hidden). */
+    screenRect(camera, w, h) {
+      if (!state.on || uni.uOpacity.value < 0.05) return null;
+      let x0 = Infinity;
+      let y0 = Infinity;
+      let x1 = -Infinity;
+      let y1 = -Infinity;
+      const v = new THREE.Vector3();
+      for (const [cx, cy] of [
+        [-0.5, -0.5],
+        [0.5, -0.5],
+        [0.5, 0.5],
+        [-0.5, 0.5],
+      ]) {
+        panel.localToWorld(v.set(cx, cy, 0)).project(camera);
+        const x = (v.x * 0.5 + 0.5) * w;
+        const y = (-v.y * 0.5 + 0.5) * h;
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+      }
+      return { left: x0, top: y0, right: x1, bottom: y1, ready: screenUni.uReveal.value > 0.6 };
     },
     /** World position of the top of the screen, for pinning HTML to it. */
     topWorld(out = new THREE.Vector3()) {

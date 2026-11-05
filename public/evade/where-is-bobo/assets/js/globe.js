@@ -13,15 +13,17 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js?v=6";
-import { createHologram } from "./holo.js?v=6";
-import { createLandmarks } from "./landmarks.js?v=6";
+import { loadBobo } from "./bobo.js?v=7";
+import { createHologram } from "./holo.js?v=7";
+import { createLandmarks } from "./landmarks.js?v=7";
 
 const D2R = Math.PI / 180;
 const C = {
   teal: new THREE.Color("#3fe6e0"),
-  blue: new THREE.Color("#19affe"),
-  pink: new THREE.Color("#ff37ae"),
+  // EVADE yellow is the highlight; amber / orange stand in where blue and pink were
+  blue: new THREE.Color("#ffb020"),
+  pink: new THREE.Color("#ff8a1f"),
+  sky: new THREE.Color("#19affe"),
   gold: new THREE.Color("#f6c344"),
   dot: new THREE.Color("#2b4d5e"),
 };
@@ -52,9 +54,9 @@ const FOCUS_LAND = FOCUS.clone().multiplyScalar(R_LAND);
 // where a landmark pops up: between Bobo and the beam, just behind the
 // horizon, so it rises like a skyline without covering either of them
 const LANDMARK = new THREE.Vector3(0.31, 1, -0.2).normalize();
-let landmarkSize = 0.3;
+let landmarkSize = 0.42;
 function setFocusDir(portrait) {
-  landmarkSize = portrait ? 0.24 : 0.3;
+  landmarkSize = portrait ? 0.32 : 0.42;
   FOCUS.copy(portrait ? FOCUS_TALL : FOCUS_WIDE);
   FOCUS_LAND.copy(FOCUS).multiplyScalar(R_LAND);
 }
@@ -116,7 +118,7 @@ const bodyMat = () =>
 
 const atmoMat = () =>
   new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: C.blue.clone().lerp(C.teal, 0.4) } },
+    uniforms: { uColor: { value: C.sky.clone().lerp(C.teal, 0.4) } },
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vV;
       void main() {
@@ -422,7 +424,7 @@ export async function createGlobe(canvas, opts) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.0;
   let maxPr = Math.min(window.devicePixelRatio || 1, mobile ? 1.75 : 2);
   let pr = maxPr;
   renderer.setPixelRatio(pr);
@@ -430,8 +432,9 @@ export async function createGlobe(canvas, opts) {
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.add(new THREE.HemisphereLight(0xbfefff, 0x1a1030, 1.2));
-  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  // softer, warmer light so Bobo's yellow fur reads as yellow, not blown-out white
+  scene.add(new THREE.HemisphereLight(0xdfeaff, 0x2a1c10, 0.8));
+  const key = new THREE.DirectionalLight(0xfff0d8, 1.15);
   key.position.set(1.5, 3, 2.5);
   scene.add(key);
 
@@ -622,6 +625,7 @@ export async function createGlobe(canvas, opts) {
     goal: { tx: 0, ty: 0.12, tz: 0, dist: 3.6, elev: 0.3, azim: 0 },
     zoom: 1,
     shift: { x: 0, y: 0 },
+    pan: { x: 0, y: 0 }, // right-drag / two-finger drag moves the planet on screen
     w: 1,
     h: 1,
     frameTimes: [],
@@ -635,11 +639,15 @@ export async function createGlobe(canvas, opts) {
     // him. Wide screens crop the bottom of the globe; scroll / pinch to zoom out.
     if (portrait) return { tx: 0.12, ty: 0.86, tz: 0.18, dist: 3.9 * st.zoom, elev: 0.12, azim: 0.04 };
     const narrow = st.w < 900;
-    return { tx: 0.06, ty: narrow ? 1.0 : 1.08, tz: 0.18, dist: (narrow ? 2.8 : 2.25) * st.zoom, elev: 0.13, azim: 0.05 };
+    return { tx: 0.06, ty: narrow ? 0.9 : 0.84, tz: 0.18, dist: (narrow ? 2.9 : 2.45) * st.zoom, elev: 0.13, azim: 0.05 };
   }
   function focusGoal() {
     const portrait = st.h > st.w * 1.1;
     // frame Bobo, the beam and the screen above them, the planet's curve below
+    if (st.sideLayout)
+      // the screen floats right of the pin and the report docks right of it:
+      // planet high in the frame, everything at Bobo's eye level
+      return { tx: st.w < 1100 ? 0.5 : st.w < 1700 ? 0.36 : 0.42, ty: 0.98, tz: 0.22, dist: 2.45 * clamp(st.zoom, 0.8, 1.6), elev: 0.12, azim: 0.06 };
     return {
       tx: portrait ? 0.2 : st.w < 1700 ? 0.0 : 0.14,
       ty: portrait ? 1.36 : 1.22,
@@ -666,17 +674,27 @@ export async function createGlobe(canvas, opts) {
     renderer.setSize(st.w, st.h, false);
     camera.aspect = st.w / st.h;
     setFocusDir(st.h > st.w * 1.1);
+    // big screens: a big screen (video about half the window's height)
+    const sideLayout = st.w >= 720 && st.w > st.h * 1.1;
+    holo.setScale(sideLayout ? 1.7 : st.h > st.w * 1.1 ? 1 : 1.15);
+    holo.setSide(sideLayout ? 0.12 : 0);
+    st.sideLayout = sideLayout;
     setView();
     if (!st.focus) Object.assign(st.goal, overviewGoal());
     else Object.assign(st.goal, focusGoal());
   }
   /** Moves the 3D centre by (x right, y up) pixels, so the globe sits in the space the UI leaves. */
   function setView() {
-    const { x, y } = st.shift;
-    if (x || y) {
-      const a = Math.abs(x);
-      const b = Math.abs(y);
-      camera.setViewOffset(st.w + 2 * a, st.h + 2 * b, a - x, b + y, st.w, st.h);
+    // insets (st.shift) frame the scene around the UI; panning (st.pan) slides
+    // the view without zooming it
+    const sx = st.shift.x;
+    const sy = st.shift.y;
+    const px = st.pan.x;
+    const py = st.pan.y;
+    if (sx || sy || px || py) {
+      const a = Math.abs(sx);
+      const b = Math.abs(sy);
+      camera.setViewOffset(st.w + 2 * a, st.h + 2 * b, a - sx - px, b + sy + py, st.w, st.h);
     } else camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
@@ -932,6 +950,7 @@ export async function createGlobe(canvas, opts) {
     if (!h) return false;
     st.focus = key;
     st.arrived = false;
+    st.panBack = true; // a sighting always frames itself: glide any pan back
     const to = orientFor(h.local, FOCUS, st.yaw);
     const ang = Math.hypot(wrap(to.yaw - st.yaw), to.pitch - st.pitch);
     st.tween = {
@@ -1043,13 +1062,14 @@ export async function createGlobe(canvas, opts) {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
-      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom };
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
       st.touched = true;
       down = null;
       return;
     }
     down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, lx: e.clientX, ly: e.clientY };
-    st.dragging = true;
+    down.pan = e.button === 2 || e.button === 1 || e.shiftKey;
+    st.dragging = !down.pan;
     st.touched = true;
     st.vYaw = st.vPitch = 0;
   });
@@ -1060,6 +1080,11 @@ export async function createGlobe(canvas, opts) {
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       st.zoom = clamp((pinch.zoom * pinch.d) / Math.max(1, d), 0.75, 2.3);
       Object.assign(st.goal, st.focus ? focusGoal() : overviewGoal());
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      panBy(mx - pinch.mx, my - pinch.my);
+      pinch.mx = mx;
+      pinch.my = my;
       return;
     }
     if (!down) {
@@ -1075,6 +1100,11 @@ export async function createGlobe(canvas, opts) {
     down.lx = e.clientX;
     down.ly = e.clientY;
     down.moved += Math.abs(dx) + Math.abs(dy);
+    if (down.pan) {
+      panBy(dx, dy);
+      canvas.style.cursor = "move";
+      return;
+    }
     if (down.moved > 6) {
       if (st.summon && !st.tween) endSummon();
       if (st.focus) {
@@ -1099,7 +1129,7 @@ export async function createGlobe(canvas, opts) {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (!down) return;
-    const tap = down.moved <= 6 && performance.now() - down.t < 600;
+    const tap = !down.pan && down.moved <= 6 && performance.now() - down.t < 600;
     down = null;
     st.dragging = false;
     canvas.style.cursor = "grab";
@@ -1114,6 +1144,14 @@ export async function createGlobe(canvas, opts) {
     }
   };
   canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  /** Slides the planet across the screen (kept within reach so it can't be lost). */
+  function panBy(dx, dy) {
+    st.panBack = false;
+    st.pan.x = clamp(st.pan.x + dx, -st.w * 0.45, st.w * 0.45);
+    st.pan.y = clamp(st.pan.y - dy, -st.h * 0.45, st.h * 0.45);
+    setView();
+  }
   canvas.addEventListener("pointercancel", end);
   canvas.addEventListener(
     "wheel",
@@ -1240,7 +1278,16 @@ export async function createGlobe(canvas, opts) {
     }
 
     // hologram at the focus point
+    if (st.panBack && (st.pan.x || st.pan.y)) {
+      const k = Math.exp(-dt * 6);
+      st.pan.x = Math.abs(st.pan.x) < 0.5 ? 0 : st.pan.x * k;
+      st.pan.y = Math.abs(st.pan.y) < 0.5 ? 0 : st.pan.y * k;
+      setView();
+    } else st.panBack = false;
+    // side layout: the screen keeps its size on screen however far you zoom
+    holo.setComp(st.sideLayout ? clamp(st.cam.dist / 2.45, 0.45, 1.4) : 1);
     holo.update(dt, t, FOCUS_LAND, camera);
+    opts.onHoloRect?.(holo.screenRect(camera, st.w, st.h));
     landmarks.update(dt, t);
     updateSummon(dt, t);
     updateBeams(dt, t);

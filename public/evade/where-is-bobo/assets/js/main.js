@@ -9,7 +9,7 @@
  * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
  * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=6";
+import { sfx } from "./sfx.js?v=7";
 
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 15_000;
@@ -195,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=6");
+      const { createGlobe } = await import("./globe.js?v=7");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
@@ -223,6 +223,7 @@ async function boot() {
           }
         },
         onBeamImpact: () => sfx.impact(),
+        onHoloRect: dockCard,
       });
     } catch (e) {
       console.error(e);
@@ -385,8 +386,8 @@ function holoItem(m) {
     c.height = 960;
     const x = c.getContext("2d");
     const g = x.createLinearGradient(0, 0, 0, 960);
-    g.addColorStop(0, "#0b2a3a");
-    g.addColorStop(1, "#2a0b2a");
+    g.addColorStop(0, "#0d1116");
+    g.addColorStop(1, "#2a1a05");
     x.fillStyle = g;
     x.fillRect(0, 0, 540, 960);
     x.fillStyle = "rgba(255,255,255,0.05)";
@@ -394,13 +395,13 @@ function holoItem(m) {
     // a can, drawn: the Cola Run collectible
     x.save();
     x.translate(270, 400);
-    x.fillStyle = "#ff37ae";
+    x.fillStyle = "#f6c344";
     x.beginPath();
     x.roundRect(-70, -120, 140, 240, 26);
     x.fill();
     x.fillStyle = "#ffffff";
     x.fillRect(-70, -30, 140, 46);
-    x.fillStyle = "#19affe";
+    x.fillStyle = "#1d1300";
     x.font = "700 30px 'Space Grotesk', system-ui, sans-serif";
     x.textAlign = "center";
     x.fillText("COLA", 0, 4);
@@ -593,6 +594,26 @@ function renderCard() {
     b.addEventListener("click", () => setMedia(idx));
     strip.append(b);
   });
+  // the dossier: what the tracking network knows about this sighting
+  const fileNo = (m.id || p.key).replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase().padStart(6, "0");
+  $("cardFile").textContent = `SIGHTING FILE #${fileNo}`;
+  const coord = (v, pos, neg) => `${Math.abs(v).toFixed(3)}°${v >= 0 ? pos : neg}`;
+  const seen = new Date(m.seenAt);
+  const intel = [
+    ["Coordinates", `${coord(p.lat, "N", "S")} ${coord(p.lng, "E", "W")}`],
+    ["Logged", Number.isNaN(+seen) ? "—" : `${seen.toISOString().slice(0, 10)} · ${seen.toISOString().slice(11, 16)} UTC`],
+    ["Source", m.review || /game/i.test(m.title) ? "Cola Run · game clip" : m.kind === "video" ? "AR capture · video" : "AR capture · photo"],
+    ["Footage", m.kind === "video" ? (m.durationS ? `${dur(m.durationS)} · ${m.width && m.height ? (m.width < m.height ? "vertical" : "wide") : "video"}` : "video") : "still image"],
+    ["Signal", p.events ? `${fmtN(p.events)} ${p.events === 1 ? "scan" : "scans"} nearby` : "quiet"],
+    ["Status", m.review ? "Pending review" : "Verified sighting"],
+  ];
+  const dl = $("cardIntel");
+  dl.textContent = "";
+  for (const [k, v] of intel) {
+    const row = el("div", k === "Status" ? (m.review ? "is-pending" : "is-ok") : null);
+    row.append(el("dt", null, k), el("dd", null, v));
+    dl.append(row);
+  }
   // scans here
   const sc = $("cardScans");
   sc.hidden = !p.events;
@@ -728,6 +749,38 @@ $("viewer").addEventListener("close", () => {
 $("viewer").addEventListener("click", (e) => {
   if (e.target === $("viewer")) closeViewer();
 });
+
+/* ── the dossier docks beside the hologram (wide screens) ────────────────── */
+let docked = null;
+function dockCard(rect) {
+  const card = $("card");
+  const wide = !mobile && innerWidth >= 720 && innerWidth > innerHeight * 1.1;
+  if (!wide || !rect || !rect.ready || card.hidden) {
+    if (docked) {
+      docked = null;
+      card.classList.remove("is-docked");
+      card.style.transform = "";
+    }
+    return;
+  }
+  const r = card.getBoundingClientRect();
+  const w = r.width;
+  const h = r.height;
+  const gap = 22;
+  let x = rect.right + gap;
+  let side = "right";
+  if (x + w > innerWidth - 16) {
+    x = rect.left - gap - w;
+    side = "left";
+  }
+  const y = Math.max(76, Math.min(innerHeight - h - 16, rect.top + 6));
+  const key = `${Math.round(x)},${Math.round(y)},${side}`;
+  if (key === docked) return;
+  docked = key;
+  card.classList.add("is-docked");
+  card.dataset.side = side;
+  card.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+}
 
 /* ── layout → globe insets ───────────────────────────────────────────────── */
 function updateInsets() {

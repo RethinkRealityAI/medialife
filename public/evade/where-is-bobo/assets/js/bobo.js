@@ -28,7 +28,12 @@ export async function loadBobo({ loader, parent, anchor, height, reduced }) {
   inner.traverse((o) => {
     if (o.isMesh) {
       o.frustumCulled = false;
-      if (o.material) o.material.envMapIntensity = 0.9;
+      if (o.material) {
+        o.material.envMapIntensity = 0.45;
+        // the fur texture is a pale butter yellow that the globe's lights wash
+        // out to white: warm it back so Bobo reads as EVADE yellow
+        if (o.material.map) o.material.color.setRGB(1, 0.86, 0.6);
+      }
     }
   });
   const box = new THREE.Box3().setFromObject(inner);
