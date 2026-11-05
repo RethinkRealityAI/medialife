@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { capturePreflight, withCaptureCors } from "@/lib/bobo/captures.server";
 import { mediaNs } from "@/lib/media/store.server";
 import { putThumb } from "@/lib/media/uploads.server";
 
@@ -8,7 +9,10 @@ import { putThumb } from "@/lib/media/uploads.server";
 export const Route = createFileRoute("/api/media/uploads/$id/thumb")({
   server: {
     handlers: {
-      PUT: ({ request, params }) => putThumb(mediaNs(request), request, params.id),
+      // the game's record button uploads from another origin (captures.server.ts)
+      OPTIONS: ({ request }) => capturePreflight(request),
+      PUT: ({ request, params }) =>
+        withCaptureCors(request, putThumb(mediaNs(request), request, params.id)),
     },
   },
 });

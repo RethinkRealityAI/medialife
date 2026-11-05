@@ -36,5 +36,7 @@ Disallow: /overlay/
 # /shelf (quick links and published shelves) and the static page behind it.
 Disallow: /shelf
 Disallow: /merch-shelf/
+Disallow: /labs/
+Disallow: /evade/cola-run-lab/
 
 Sitemap: https://medialife.ai/sitemap.xml

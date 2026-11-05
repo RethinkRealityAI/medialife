@@ -354,3 +354,16 @@
   for = "/evade/where-is-bobo/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# ── Labs: three.js test versions of Mattercraft features (not linked) ───────
+[[headers]]
+  for = "/labs/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/evade/cola-run-lab/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    X-Robots-Tag = "noindex, nofollow"

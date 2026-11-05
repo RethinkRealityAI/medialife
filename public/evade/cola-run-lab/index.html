@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Cola Run recorder lab</title>
+<meta name="theme-color" content="#14161a">
+<link rel="stylesheet" href="./assets/lab.css?v=3">
+<script type="importmap">
+{"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
+</script>
+<script type="module" src="./assets/lab.js?v=3"></script>
+</head>
+<body>
+<!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with
+     the same id, so core CSS's #zcomponent-overlay > * {pointer-events:auto}
+     rule (reproduced in lab.css) is in force while we test the record button. -->
+<div id="stage">
+  <canvas id="c" aria-label="Cola Run test scene"></canvas>
+  <div id="zcomponent-overlay">
+    <!-- A rough copy of the game's own HUD so the button's placement can be judged -->
+    <div class="lab-hud" aria-hidden="true">
+      <a class="lab-logo">MEDIALIFE</a>
+      <div class="lab-score"><small>Cans</small><b id="score">0 / 6</b></div>
+      <div class="lab-time"><small>Time</small><b id="time">45.0</b></div>
+      <button class="lab-menu" type="button" tabindex="-1" title="Game menu (stand-in)"><i></i><i></i><i></i></button>
+      <button class="lab-sound" type="button" tabindex="-1" title="Sound (stand-in)">♪</button>
+    </div>
+    <div class="lab-stick" id="stick" aria-label="Joystick"><span></span></div>
+    <!-- lounge mode: emotes like the game's lounge bar -->
+    <div class="lab-loungeBar" id="loungeBar" hidden>
+      <div class="lab-emotes">
+        <button type="button" data-emote="Sleep">Sleep</button>
+        <button type="button" data-emote="Alert">Alert</button>
+        <button type="button" data-emote="Purr">Purr</button>
+      </div>
+      <button type="button" class="lab-loungeExit" id="loungeExit">Play Cola Run</button>
+    </div>
+
+    <div class="lab-intro" id="intro">
+      <div class="lab-card">
+        <div class="lab-kicker">Test lab</div>
+        <h1>Cola Run recorder</h1>
+        <p>A stand-in Cola Run scene for trying the record button before it goes into Mattercraft. Collect the cans with the joystick (or arrow keys / WASD), or just hang out in lounge mode. Tap the <span class="lab-reddot"></span> button to record (R on a keyboard), then send the clip.</p>
+        <label class="lab-check"><input type="checkbox" id="useCam"> Use my camera as the background (closer to AR)</label>
+        <button class="lab-play" id="play" type="button">Play</button>
+        <button class="lab-play lab-ghost" id="lounge" type="button">Lounge with Bobo</button>
+        <p class="lab-small">Clips you send from here go to <b id="endpointLabel"></b> as private, "Needs review" captures.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Test-only settings: everything here maps 1:1 to a property on the Mattercraft component -->
+<button class="lab-toggle" id="labToggle" type="button" aria-expanded="false" aria-controls="lab">Lab</button>
+<aside class="lab-panel" id="lab" hidden>
+  <h2>Recorder settings</h2>
+  <label>Send clips to <input id="o-endpoint" type="url" spellcheck="false"></label>
+  <label>Longest clip (s) <input id="o-max" type="number" min="5" max="60" value="30"></label>
+  <label>Button corner
+    <select id="o-corner">
+      <option value="topRight">Top right (under the menu)</option>
+      <option value="topLeft">Top left</option>
+      <option value="bottomRight">Bottom right</option>
+      <option value="bottomLeft">Bottom left</option>
+    </select>
+  </label>
+  <div class="lab-two">
+    <label>Nudge X <input id="o-dx" type="number" value="0"></label>
+    <label>Nudge Y <input id="o-dy" type="number" value="0"></label>
+  </div>
+  <label class="lab-check"><input type="checkbox" id="o-wm" checked> Badge and score on the video</label>
+  <label class="lab-check"><input type="checkbox" id="o-send" checked> Offer "Send to Where is Bobo?"</label>
+  <label class="lab-check"><input type="checkbox" id="o-audio" checked> Record game sound</label>
+  <div class="lab-row">
+    <button type="button" id="o-lounge">Lounge on / off</button>
+    <button type="button" id="o-hint">Show the tip again</button>
+    <button type="button" id="o-copy">Copy settings</button>
+  </div>
+  <h2>Log</h2>
+  <ol id="log" class="lab-log" aria-live="polite"></ol>
+</aside>
+</body>
+</html>

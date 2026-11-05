@@ -122,7 +122,7 @@ function rateOk(key: string, n: number, now: number): boolean {
   return b.n <= BOBO.ratePerMinute;
 }
 
-function clientIp(request: Request): string {
+export function clientIp(request: Request): string {
   return (
     request.headers.get("x-nf-client-connection-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
