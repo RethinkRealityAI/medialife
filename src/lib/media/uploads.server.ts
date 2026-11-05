@@ -13,6 +13,8 @@ import {
   formatBytes,
   imageSize,
   kindOf,
+  mediaPublicPath,
+  mediaThumbUrl,
   mediaView,
   resolveMediaMime,
   sniffMedia,
@@ -24,17 +26,21 @@ import {
 } from "./model";
 import { configuredMediaStorage, mediaStorage, type UploadPlan } from "./storage.server";
 import { isAdminRequest } from "@/lib/ar/auth.server";
+import { purgeCacheTags } from "@/lib/ar/cdn.server";
 import {
   captureKeyHash,
+  captureReviewOn,
+  captureViewHash,
   newCaptureKey,
+  viewKeyOk,
   webCaptureLocation,
   webCaptureOrigin,
   webCaptureRateOk,
 } from "@/lib/bobo/captures.server";
 import { hasIngestToken } from "@/lib/bobo/events.server";
 import { countryPlace, nearestPlace } from "@/lib/bobo/geo.server";
-import { cleanLocation, type MediaLocation } from "@/lib/bobo/location";
-import { BOBO } from "@/lib/bobo/model";
+import { cleanLocation, placeKey, type MediaLocation } from "@/lib/bobo/location";
+import { BOBO, type OwnClip } from "@/lib/bobo/model";
 import { newId, type MediaNamespace } from "./store.server";
 
 // Uploads and downloads for the Media Library: the Creator Hub's resumable
@@ -130,6 +136,10 @@ export type InitResult = {
   warning: string | null;
   /** Web captures only: send as x-capture-key on every later call for this upload. */
   captureKey?: string;
+  /** Web captures only: read-only key the player keeps to watch their clip on the globe. */
+  viewKey?: string;
+  /** Web captures only: true when the clip waits for the team's review before it's public. */
+  review?: boolean;
 };
 
 export type UploadStatus = {
@@ -259,6 +269,9 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
   const name = cleanName(d.name);
   const assetKind = kindOf(mime);
   const captureKey = web ? newCaptureKey() : undefined;
+  const viewKey = web ? newCaptureKey() : undefined;
+  // game clips wait for the team unless review is switched off (supervised events, demos)
+  const autoPublish = web && !captureReviewOn();
   const blank: MediaAsset = {
     id,
     name,
@@ -300,6 +313,7 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
           receivedAt: now,
           web: true,
           keyHash: await captureKeyHash(captureKey!),
+          viewHash: await captureViewHash(viewKey!),
         }
       : ingest
         ? { source: d.source || "ingest", receivedAt: now }
@@ -322,9 +336,15 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       purpose: ingest ? "ugc" : d.purpose === undefined ? undefined : d.purpose,
       aiGenerated: web ? false : d.aiGenerated,
       // captures stay private until the team reviews them
-      public: ingest ? false : d.public,
+      public: autoPublish ? true : ingest ? false : d.public,
       setTags: web
-        ? [...BOBO.captureTags, BOBO.webCaptureTag]
+        ? autoPublish
+          ? [
+              ...BOBO.captureTags.filter((t) => t !== BOBO.reviewTag),
+              BOBO.webCaptureTag,
+              BOBO.autoPublishedTag,
+            ]
+          : [...BOBO.captureTags, BOBO.webCaptureTag]
         : ingest
           ? [...BOBO.captureTags, ...(d.tags ?? [])]
           : d.tags,
@@ -345,7 +365,7 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       chunkSize: plan.mode === "chunks" ? plan.chunkSize : 0,
       chunks,
       warning: web ? null : bigFileWarning(d.size),
-      ...(captureKey ? { captureKey } : {}),
+      ...(captureKey ? { captureKey, viewKey, review: !autoPublish } : {}),
     } satisfies InitResult,
     201,
   );
@@ -438,6 +458,8 @@ export async function completeUpload(ns: MediaNamespace, request: Request, id: s
     completedAt: now,
     updatedAt: now,
   });
+  // a clip that lands on the globe shows up for everyone at the next poll, not in a minute
+  if (done.onGlobe && done.location) await purgeCacheTags([BOBO.feedCacheTag]);
   return json({ asset: mediaView(done) });
 }
 
@@ -606,3 +628,78 @@ export async function serveThumb(ns: MediaNamespace, request: Request, id: strin
 }
 
 export type { MediaAssetView };
+
+/* ---------------------------------------------------------------------------
+   The player's own clip (Where is Bobo?), with the view key from init
+   --------------------------------------------------------------------------- */
+
+/**
+ * GET /api/bobo/clips/:id?k=<viewKey>[&as=file|poster]
+ *
+ * The player who sent a game clip can watch it on the globe straight away,
+ * before the team has reviewed it. Without as=: JSON (OwnClip). as=file
+ * streams the clip (Range), as=poster its thumbnail. Wrong or expired key,
+ * or any other asset: 404, the same as a missing one. Never cached by a CDN.
+ */
+export async function serveOwnClip(ns: MediaNamespace, request: Request, id: string) {
+  const url = new URL(request.url);
+  const k = url.searchParams.get("k");
+  const a = /^[A-Za-z0-9]{6,60}$/.test(id) ? await getAsset(ns, id) : null;
+  if (!a || !a.complete || !a.location || !(await viewKeyOk(a, k)))
+    return json({ error: "not found" }, 404);
+  const as = url.searchParams.get("as");
+  const priv = { "cache-control": "private, no-store", "referrer-policy": "no-referrer" };
+  if (as === "file") {
+    const r = fileResponse(ns, a, {
+      download: false,
+      head: request.method.toUpperCase() === "HEAD",
+      range: request.headers.get("range"),
+      ifNoneMatch: request.headers.get("if-none-match"),
+      visibility: "private",
+    });
+    const headers = new Headers(r.headers);
+    for (const [h, v] of Object.entries(priv)) headers.set(h, v);
+    return new Response(r.body, { status: r.status, headers });
+  }
+  if (as === "poster") {
+    if (!a.thumb) return json({ error: "not found" }, 404);
+    const buf = await mediaStorage(ns, a.storage.kind).getObject(a.thumb.key);
+    if (!buf) return json({ error: "not found" }, 404);
+    return new Response(buf, {
+      headers: {
+        ...priv,
+        "content-type": a.thumb.mime,
+        "x-content-type-options": "nosniff",
+        "cross-origin-resource-policy": "same-origin",
+      },
+    });
+  }
+  const l = a.location;
+  const q = `k=${encodeURIComponent(k!)}`;
+  const base = `/api/bobo/clips/${a.id}?${q}`;
+  const clip: OwnClip = {
+    id: a.id,
+    kind: a.kind === "video" ? "video" : "image",
+    title: a.title,
+    description: a.description,
+    // once it's public the CDN copy is the better source
+    url: a.public ? mediaPublicPath(a) : `${base}&as=file`,
+    poster: a.thumb ? (a.public ? mediaThumbUrl(a) : `${base}&as=poster`) : null,
+    width: a.width,
+    height: a.height,
+    durationS: a.durationS,
+    seenAt: new Date(l.seenAt ?? a.createdAt).toISOString(),
+    place: l.place ?? "",
+    tags: [],
+    sample: false,
+    review: !a.public,
+    key: placeKey(l),
+    city: l.city,
+    region: l.region,
+    country: l.country,
+    countryCode: l.countryCode,
+    lat: l.lat,
+    lng: l.lng,
+  };
+  return json(clip, 200, priv);
+}

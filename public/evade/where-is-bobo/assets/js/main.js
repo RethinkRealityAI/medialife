@@ -1,14 +1,20 @@
 /**
  * Where is Bobo? · the page around the globe: loads the feed, builds the
  * place card, the sightings list, the live-scan ticker and the trip replay,
- * keeps the URL in sync (?at=<place>) and polls for new sightings.
+ * keeps the URL in sync (?at=<place>) and polls for new sightings. New
+ * clips beam down onto their city the moment they land.
  *
- * Data: GET /api/bobo/feed.json (src/lib/bobo/model.ts → BoboFeed).
+ * Data: GET /api/bobo/feed.json (src/lib/bobo/model.ts → BoboFeed), plus the
+ * visitor's own game clips: the record button links here with
+ * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
+ * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=4";
+import { sfx } from "./sfx.js?v=5";
 
 const FEED = "/api/bobo/feed.json";
-const POLL_MS = 45_000;
+const POLL_MS = 15_000;
+const MINE_KEY = "bobo-my-clips";
+const MINE_DAYS = 30;
 const GAME = "https://evade.medialife.ai";
 
 const $ = (id) => document.getElementById(id);
@@ -45,7 +51,7 @@ const EVENT_TEXT = {
   reward: "Reward unlocked",
   sighting: "Bobo spotted",
   share: "Bobo shared",
-  capture: "New AR capture",
+  capture: "New clip from the game",
   custom: "New activity",
 };
 const el = (tag, cls, text) => {
@@ -62,6 +68,103 @@ let current = null; // { key, i }
 let tour = null;
 const seenEvents = new Set();
 const seenMedia = new Set();
+const reviewMedia = new Set(); // ids that were "in review" at the last poll
+let pendingBeam = null; // beam this place when the camera gets there
+let lastInputAt = 0;
+addEventListener("pointerdown", () => (lastInputAt = performance.now()), { capture: true });
+addEventListener("keydown", () => (lastInputAt = performance.now()), { capture: true });
+
+/* ── your own clips (sent from the game on this phone) ──────────────────── */
+const okId = (v) => typeof v === "string" && /^[A-Za-z0-9]{6,60}$/.test(v);
+function readMine() {
+  try {
+    const v = JSON.parse(localStorage.getItem(MINE_KEY) || "[]");
+    return Array.isArray(v)
+      ? v.filter((x) => x && okId(x.id) && okId(x.k) && Date.now() - (x.at || 0) < MINE_DAYS * 864e5)
+      : [];
+  } catch {
+    return [];
+  }
+}
+function writeMine(list) {
+  try {
+    localStorage.setItem(MINE_KEY, JSON.stringify(list.slice(-12)));
+  } catch {
+    /* storage blocked: the clip still shows for this visit */
+  }
+}
+// "See it on the globe" from the game: ?clip=<id>#k=<view key>
+const linkClip = okId(new URLSearchParams(location.search).get("clip"))
+  ? new URLSearchParams(location.search).get("clip")
+  : null;
+const mineKeys = new Map(readMine().map((x) => [x.id, x.k]));
+{
+  const k = new URLSearchParams(location.hash.slice(1)).get("k");
+  if (linkClip && okId(k)) {
+    mineKeys.set(linkClip, k);
+    writeMine([...readMine().filter((x) => x.id !== linkClip), { id: linkClip, k, at: Date.now() }]);
+  }
+  if (k) {
+    // keep the key out of the address bar (and out of anything the visitor shares)
+    const u = new URL(location.href);
+    u.hash = "";
+    history.replaceState(null, "", u);
+  }
+}
+const mineClips = new Map(); // id → OwnClip
+async function fetchMine() {
+  const gone = [];
+  await Promise.all(
+    [...mineKeys].map(async ([id, k]) => {
+      // approved clips come with the public feed; only re-check the ones in review
+      if (mineClips.has(id) && !mineClips.get(id).review) return;
+      try {
+        const r = await fetch(`/api/bobo/clips/${id}?k=${encodeURIComponent(k)}`, { cache: "no-store" });
+        if (r.status === 404) gone.push(id);
+        else if (r.ok) mineClips.set(id, await r.json());
+      } catch {
+        /* offline: try again at the next poll */
+      }
+    }),
+  );
+  if (gone.length) {
+    for (const id of gone) {
+      mineKeys.delete(id);
+      mineClips.delete(id);
+    }
+    writeMine(readMine().filter((x) => !gone.includes(x.id)));
+  }
+}
+/** The feed with this visitor's own clips playable on their pins (and added if the feed hasn't caught up). */
+function mergeMine(f) {
+  if (!mineClips.size) return f;
+  const places = f.places.map((p) => ({ ...p, media: [...p.media] }));
+  for (const c of mineClips.values()) {
+    const { key, city, region, country, countryCode, lat, lng, ...media } = c;
+    const m = { ...media, mine: true };
+    let p = places.find((x) => x.key === key);
+    if (!p) {
+      p = { key, city, region, country, countryCode, lat, lng, media: [], events: 0, byType: {}, firstSeen: m.seenAt, lastSeen: m.seenAt };
+      places.push(p);
+    }
+    const i = p.media.findIndex((x) => x.id === m.id);
+    if (i < 0) p.media.push(m);
+    // still in review for everyone else: play the visitor's own copy; approved: the public one
+    else p.media[i] = p.media[i].review ? m : { ...p.media[i], mine: true };
+    p.media.sort((a, b) => Date.parse(b.seenAt) - Date.parse(a.seenAt));
+  }
+  const withMedia = places.filter((p) => p.media.length);
+  withMedia.sort((a, b) => Date.parse(b.media[0].seenAt) - Date.parse(a.media[0].seenAt));
+  const journey = [...f.journey];
+  for (const p of withMedia) if (!journey.includes(p.key)) journey.push(p.key);
+  return {
+    ...f,
+    places: [...withMedia, ...places.filter((p) => !p.media.length)],
+    journey,
+    countries: [...new Set([...f.countries, ...withMedia.map((p) => p.countryCode)])].sort(),
+    stats: { ...f.stats, places: withMedia.length },
+  };
+}
 
 const mediaPlaces = () => (feed ? feed.places.filter((p) => p.media.length) : []);
 const placeBy = (key) => feed?.places.find((p) => p.key === key) ?? null;
@@ -92,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=4");
+      const { createGlobe } = await import("./globe.js?v=5");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
@@ -110,11 +213,16 @@ async function boot() {
         onSummoned: summoned,
     onSummonEnd: () => document.body.classList.remove("is-summon"),
         onUserMove: () => closeCard({ keepGlobe: true }),
-        onArrive: () => {
+        onArrive: (key) => {
           sfx.arrive();
           const p = current && placeBy(current.key);
-          if (p) globe.showMedia(p.media[current.i]);
+          if (p) globe.showMedia(holoItem(p.media[current.i]));
+          if (pendingBeam && pendingBeam === key) {
+            pendingBeam = null;
+            beamIn(key);
+          }
         },
+        onBeamImpact: () => sfx.impact(),
       });
     } catch (e) {
       console.error(e);
@@ -125,22 +233,38 @@ async function boot() {
     $("fallback").hidden = false;
     $("globe").hidden = true;
   }
-  const f = await feedP;
+  const [f] = await Promise.all([feedP, fetchMine()]);
   applyFeed(f ?? emptyFeed(), true);
+  if (f) lastRaw = feedSig(f);
   updateInsets();
   document.documentElement.classList.add("is-ready");
 
-  // ?at=<key> opens a place; otherwise fly to the latest sighting after a beat
+  // the clip the visitor just sent from the game, a shared ?at=<place>, or else
+  // the latest sighting: the globe always opens on the newest clip
   const at = new URLSearchParams(location.search).get("at");
   const first = mediaPlaces()[0];
-  if (at && placeBy(at)?.media.length) setTimeout(() => select(at, { from: "link" }), reduced ? 0 : 1600);
-  else if (first && globe && !reduced)
+  const sent = linkClip && mediaPlaces().find((p) => p.media.some((m) => m.id === linkClip));
+  if (sent) {
+    pendingBeam = sent.key;
+    setTimeout(() => {
+      select(sent.key, { from: "link", i: sent.media.findIndex((m) => m.id === linkClip) });
+      if (sent.media.find((m) => m.id === linkClip)?.mine)
+        toast(sent.media.find((m) => m.id === linkClip).review ? "Here's your clip. It's on the globe for everyone once the EVADE team has checked it." : "Here's your clip, live on the globe.");
+    }, reduced ? 0 : 1400);
+  } else if (at && placeBy(at)?.media.length) setTimeout(() => select(at, { from: "link" }), reduced ? 0 : 1600);
+  else if (first && globe) {
+    // a clip that landed in the last half hour beams in as the camera arrives
+    if (Date.now() - Date.parse(first.media[0].seenAt) < 30 * 60_000) pendingBeam = first.key;
     setTimeout(() => {
       if (!current && !userTouched) select(first.key, { from: "auto" });
-    }, 3600);
+    }, reduced ? 600 : 3000);
+  }
   if (!globe) openList();
 
   setInterval(poll, POLL_MS);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) poll();
+  });
   startTicker();
 }
 
@@ -161,8 +285,9 @@ function emptyFeed() {
   };
 }
 
-function applyFeed(f, first = false) {
+function applyFeed(raw, first = false) {
   const before = feed;
+  const f = mergeMine(raw);
   feed = f;
   globe?.setFeed(f);
   renderStats(f.stats, first);
@@ -173,30 +298,129 @@ function applyFeed(f, first = false) {
   $("sub").textContent = hasMedia
     ? "Follow EVADE's cat around the world. Every pin is a real sighting."
     : "Bobo's packing his bags. The first sightings land here soon.";
-  // new sightings since the last poll
+  // new clips since the last poll beam down; approved ones light up again
   if (!first && before) {
-    const fresh = mediaPlaces().flatMap((p) => p.media.filter((m) => !seenMedia.has(m.id)).map((m) => [p, m]));
-    if (fresh.length) {
-      const [p] = fresh[0];
-      toast(`New sighting in ${p.city || p.country}`, "See it", () => select(p.key, { from: "toast" }));
-    }
-    for (const e of f.recent) {
-      const id = `${e.at}|${e.key}|${e.type}`;
-      if (!seenEvents.has(id) && e.key) {
-        globe?.ping(e.key);
-        queueTick(e, true);
-      }
-    }
+    const fresh = mediaPlaces()
+      .flatMap((p) => p.media.filter((m) => !seenMedia.has(m.id) || (reviewMedia.has(m.id) && !m.review)).map((m) => [p, m]))
+      .sort((a, b) => Date.parse(b[1].seenAt) - Date.parse(a[1].seenAt));
+    if (fresh.length) arrivals(fresh);
+    const news = f.recent.filter((e) => !seenEvents.has(eventId(e)));
+    if (news[0]) showTick(news[0], true);
+    for (const e of news.slice(1)) if (e.key) globe?.ping(e.key);
   }
-  for (const p of mediaPlaces()) for (const m of p.media) seenMedia.add(m.id);
-  for (const e of f.recent) seenEvents.add(`${e.at}|${e.key}|${e.type}`);
+  reviewMedia.clear();
+  for (const p of mediaPlaces())
+    for (const m of p.media) {
+      seenMedia.add(m.id);
+      if (m.review) reviewMedia.add(m.id);
+    }
+  for (const e of f.recent) seenEvents.add(eventId(e));
   if (current && !placeBy(current.key)?.media.length) closeCard();
 }
 
+const eventId = (e) => `${e.at}|${e.key}|${e.type}`;
+const feedSig = (f) => JSON.stringify([f.places, f.recent[0], [...mineClips.values()].map((c) => [c.id, c.review])]);
+
+let polling = false;
+let lastRaw = "";
 async function poll() {
-  if (document.hidden) return;
-  const f = await loadFeed();
-  if (f && f.generatedAt !== feed?.generatedAt) applyFeed(f);
+  if (document.hidden || polling) return;
+  polling = true;
+  try {
+    const [f] = await Promise.all([loadFeed(), mineKeys.size ? fetchMine() : null]);
+    if (!f) return;
+    // generatedAt changes every build: compare what's drawn instead
+    const sig = feedSig(f);
+    if (sig !== lastRaw) {
+      lastRaw = sig;
+      applyFeed(f);
+    }
+  } finally {
+    polling = false;
+  }
+}
+
+/** New clips just landed: beam them in, and fly there if nobody's busy with the globe. */
+function arrivals(fresh) {
+  const [p, m] = fresh[0];
+  const where = p.city || p.country;
+  const idle =
+    !current && !tour && !globe?.summoned && performance.now() - lastInputAt > 15_000 && (!mobile || $("sightings").hidden);
+  const approved = !m.review && reviewMedia.has(m.id);
+  const text = m.mine
+    ? approved
+      ? `Your clip from ${where} is live for everyone!`
+      : `Your clip just landed in ${where}`
+    : approved
+      ? `A new sighting is live in ${where}`
+      : `New clip just landed in ${where}`;
+  if (idle && globe) {
+    pendingBeam = p.key;
+    select(p.key, { from: "live", i: p.media.indexOf(m) });
+    toast(text);
+  } else {
+    // beam where it lands (the visitor can see it if that side faces them)
+    const keys = [...new Set(fresh.map(([x]) => x.key))].slice(0, 3);
+    keys.forEach((k, i) => setTimeout(() => beamIn(k), i * 700));
+    toast(text, "See it", () => {
+      pendingBeam = p.key;
+      select(p.key, { from: "toast", i: placeBy(p.key)?.media.findIndex((x) => x.id === m.id) ?? 0 });
+    });
+  }
+  track("live_clip", { place: p.key, review: !!m.review });
+}
+
+function beamIn(key) {
+  if (!globe?.beam(key)) return;
+  sfx.beam();
+}
+
+/** What the hologram shows: the clip, or for one in review, an "incoming" card. */
+let reviewArt = null;
+function holoItem(m) {
+  if (!m.review || m.mine) return m;
+  if (!reviewArt) {
+    const c = document.createElement("canvas");
+    c.width = 540;
+    c.height = 960;
+    const x = c.getContext("2d");
+    const g = x.createLinearGradient(0, 0, 0, 960);
+    g.addColorStop(0, "#0b2a3a");
+    g.addColorStop(1, "#2a0b2a");
+    x.fillStyle = g;
+    x.fillRect(0, 0, 540, 960);
+    x.fillStyle = "rgba(255,255,255,0.05)";
+    for (let y = 0; y < 960; y += 6) x.fillRect(0, y, 540, 2);
+    // a can, drawn: the Cola Run collectible
+    x.save();
+    x.translate(270, 400);
+    x.fillStyle = "#ff37ae";
+    x.beginPath();
+    x.roundRect(-70, -120, 140, 240, 26);
+    x.fill();
+    x.fillStyle = "#ffffff";
+    x.fillRect(-70, -30, 140, 46);
+    x.fillStyle = "#19affe";
+    x.font = "700 30px 'Space Grotesk', system-ui, sans-serif";
+    x.textAlign = "center";
+    x.fillText("COLA", 0, 4);
+    x.fillStyle = "rgba(255,255,255,0.35)";
+    x.fillRect(-46, -110, 16, 220);
+    x.restore();
+    x.textAlign = "center";
+    x.fillStyle = "#3fe6e0";
+    x.font = "600 26px 'JetBrains Mono', ui-monospace, monospace";
+    x.fillText("INCOMING CLIP", 270, 620);
+    x.fillStyle = "#ffffff";
+    x.font = "600 44px 'Space Grotesk', system-ui, sans-serif";
+    x.fillText("Fresh from", 270, 690);
+    x.fillText("Cola Run", 270, 744);
+    x.fillStyle = "#c9d1d8";
+    x.font = "500 26px 'Space Grotesk', system-ui, sans-serif";
+    x.fillText("Plays here once it's checked", 270, 810);
+    reviewArt = c.toDataURL("image/jpeg", 0.86);
+  }
+  return { ...m, kind: "image", url: reviewArt, width: 540, height: 960 };
 }
 
 /* ── stats ────────────────────────────────────────────────────────────────── */
@@ -246,6 +470,8 @@ function renderList() {
     const txt = el("span", "place-txt");
     const name = el("b", null, p.city || p.country);
     if (idx === 0) name.append(el("span", "place-now", "Now"));
+    if (p.media.some((m) => m.mine)) name.append(el("span", "place-tag is-mine", "Your clip"));
+    else if (p.media[0].review) name.append(el("span", "place-tag", "In review"));
     const sub = el("span", null, `${p.city ? `${p.country} · ` : ""}${ago(p.media[0].seenAt)}`);
     txt.append(name, sub);
     const n = el("span", "place-count", `${p.media.length}`);
@@ -306,7 +532,7 @@ function select(key, { from = "ui", i = 0 } = {}) {
   const p = placeBy(key);
   if (!p?.media.length) return;
   if (from !== "tour") stopTour();
-  if (from !== "auto" && from !== "link") sfx.select();
+  if (from !== "auto" && from !== "link" && from !== "live") sfx.select();
   if (current?.key !== key) sfx.whoosh(from === "tour" ? 1.1 : 0.8);
   globe?.endSummon();
   current = { key, i: Math.min(i, p.media.length - 1) };
@@ -317,7 +543,7 @@ function select(key, { from = "ui", i = 0 } = {}) {
   updateInsets();
   if (globe) {
     globe.focus(key);
-    globe.showMedia(p.media[current.i]);
+    globe.showMedia(holoItem(p.media[current.i]));
   }
   markListCurrent();
   const url = new URL(location.href);
@@ -337,9 +563,20 @@ function renderCard() {
   $("cardCity").textContent = p.city || p.country;
   $("cardCountry").textContent = [p.city ? p.region : "", p.city ? p.country : ""].filter(Boolean).join(", ") || "Somewhere in " + p.country;
   $("cardWhen").textContent = [m.place, ago(m.seenAt)].filter(Boolean).join(" · ");
+  const badge = $("cardBadge");
+  badge.hidden = !m.review && !m.mine;
+  badge.className = `card-badge${m.mine ? " is-mine" : ""}`;
+  badge.textContent = m.mine ? (m.review ? "Your clip · in review" : "Your clip") : "In review";
   $("cardTitle").textContent = m.title;
-  $("cardDesc").textContent = m.description;
-  $("cardDesc").hidden = !m.description;
+  const desc = m.review
+    ? m.mine
+      ? "Only you can watch this until the EVADE team has checked it. Then it plays here for everyone."
+      : "Just sent from the game. The EVADE team checks every clip, then it plays right here."
+    : m.description;
+  $("cardDesc").textContent = desc;
+  $("cardDesc").hidden = !desc;
+  // a clip in review has nothing to open, unless it's yours
+  $("watchBtn").hidden = !!m.review && !m.mine;
   $("watchBtn").querySelector("span").textContent = m.kind === "video" ? "Watch with sound" : "View photo";
   // strip
   const strip = $("cardStrip");
@@ -349,7 +586,7 @@ function renderCard() {
     const b = el("button", "thumb");
     b.type = "button";
     b.setAttribute("role", "listitem");
-    b.setAttribute("aria-label", `${x.title}${x.kind === "video" ? " (video)" : " (photo)"}`);
+    b.setAttribute("aria-label", `${x.title}${x.review ? " (in review)" : x.kind === "video" ? " (video)" : " (photo)"}`);
     b.setAttribute("aria-current", String(idx === current.i));
     b.append(thumbImg(x));
     if (x.kind === "video" && x.durationS) b.append(el("span", "dur", dur(x.durationS)));
@@ -361,7 +598,7 @@ function renderCard() {
   sc.hidden = !p.events;
   if (p.events) {
     sc.innerHTML = "";
-    sc.append(el("b", null, fmtN(p.events)), document.createTextNode(` keychain scans and plays here${p.lastSeen ? `, latest ${ago(p.lastSeen)}` : ""}.`));
+    sc.append(el("b", null, fmtN(p.events)), document.createTextNode(` ${p.events === 1 ? "keychain scan or play" : "keychain scans and plays"} here${p.lastSeen ? `, latest ${ago(p.lastSeen)}` : ""}.`));
   }
   // neighbours, in list order
   const list = mediaPlaces();
@@ -380,7 +617,7 @@ function setMedia(i) {
   const p = placeBy(current.key);
   current.i = i;
   renderCard();
-  globe?.showMedia(p.media[i]);
+  globe?.showMedia(holoItem(p.media[i]));
   globe?.glitch();
 }
 
@@ -561,35 +798,40 @@ function stopTour() {
 }
 
 /* ── live ticker ──────────────────────────────────────────────────────────── */
-const tickQueue = [];
-let tickIdx = 0;
-function queueTick(e, front = false) {
-  front ? tickQueue.unshift(e) : tickQueue.push(e);
-}
-function showTick(e) {
-  const t = $("ticker");
+// Shows the newest real event and stays put; a new one swaps in (with a ping
+// on the globe) when it actually happens. It never replays old events.
+let tickShown = null;
+function tickText(e) {
   const txt = $("tickerText");
   txt.textContent = "";
   txt.append(el("b", null, EVENT_TEXT[e.type] || "Activity"));
   txt.append(document.createTextNode(` in ${[e.city, e.country].filter(Boolean).join(", ") || "somewhere"} `));
   txt.append(el("span", "ago", `· ${ago(e.at)}`));
+}
+function showTick(e, fresh = false) {
+  const t = $("ticker");
+  tickShown = e;
+  tickText(e);
   t.hidden = false;
+  t.classList.toggle("is-new", fresh);
   t.classList.remove("is-swap");
   void t.offsetWidth;
   t.classList.add("is-swap");
-  if (e.key) globe?.ping(e.key);
-  if (userTouched) sfx.ping();
+  if (fresh) {
+    if (e.key) globe?.ping(e.key);
+    if (userTouched) sfx.ping();
+    clearTimeout(showTick.t);
+    showTick.t = setTimeout(() => t.classList.remove("is-new"), 6000);
+  }
 }
 function startTicker() {
-  // replays the latest real events so the globe feels alive; new ones jump the queue
-  const step = () => {
-    if (!document.hidden && feed?.recent.length) {
-      const e = tickQueue.shift() ?? feed.recent[tickIdx++ % Math.min(feed.recent.length, 12)];
-      showTick(e);
-    }
-    setTimeout(step, reduced ? 6000 : 3400);
-  };
-  setTimeout(step, 2400);
+  setTimeout(() => {
+    if (!tickShown && feed?.recent[0]) showTick(feed.recent[0]);
+  }, 2400);
+  // keep "· 3 minutes ago" honest
+  setInterval(() => {
+    if (tickShown && !document.hidden) tickText(tickShown);
+  }, 30_000);
 }
 
 /* ── Bobo talks ───────────────────────────────────────────────────────────── */

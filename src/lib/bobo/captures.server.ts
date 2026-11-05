@@ -3,6 +3,8 @@ import process from "node:process";
 import { namespaceFromRequest } from "@/lib/ar/store.server";
 import { newId, sha256Hex } from "@/lib/hub/store.server";
 
+import { GLOBE_KINDS, tagKey, type MediaAsset } from "@/lib/media/model";
+
 import { allowedOrigin, clientIp, ipGeo } from "./events.server";
 import { countryPlace, nearestPlace, placeByName } from "./geo.server";
 import { cleanLocation, type MediaLocation } from "./location";
@@ -25,8 +27,13 @@ import { BOBO } from "./model";
 //   - init returns a one-time captureKey; every later call for that upload
 //     (chunks, thumb, complete, cancel) must send it as x-capture-key, so
 //     nobody else can write into it. It only works for 24 hours.
+//   - init also returns a viewKey: read-only, it lets the player watch their
+//     own clip on the globe (GET /api/bobo/clips/<id>?k=…) while it waits for
+//     review. Everyone else sees an "in review" pin at the city, no clip.
 //
 // BOBO_WEB_CAPTURES=off turns the whole path off without a deploy of the game.
+// BOBO_CAPTURE_REVIEW=off publishes game clips straight to the globe (tagged
+// "Auto-published"): for a supervised event or a demo, not for everyday use.
 
 export const webCapturesEnabled = () =>
   (process.env.BOBO_WEB_CAPTURES ?? "").trim().toLowerCase() !== "off";
@@ -37,8 +44,42 @@ export function webCaptureOrigin(request: Request): string | null {
   return allowedOrigin(request, namespaceFromRequest(request));
 }
 
+/** False when BOBO_CAPTURE_REVIEW=off: game clips go public without review. */
+export const captureReviewOn = () =>
+  (process.env.BOBO_CAPTURE_REVIEW ?? "").trim().toLowerCase() !== "off";
+
 export const newCaptureKey = () => newId(18, false);
 export const captureKeyHash = (key: string) => sha256Hex(`bobo-capture|${key}`);
+export const captureViewHash = (key: string) => sha256Hex(`bobo-view|${key}`);
+
+const DAY = 86_400_000;
+
+/** A game clip on the globe that the team hasn't checked yet (shown as an "in review" pin). */
+export function awaitingReview(
+  a: Pick<
+    MediaAsset,
+    "complete" | "public" | "onGlobe" | "location" | "kind" | "tags" | "ingest" | "createdAt"
+  >,
+  now = Date.now(),
+): boolean {
+  return !!(
+    a.complete &&
+    !a.public &&
+    a.onGlobe &&
+    a.location &&
+    a.ingest &&
+    GLOBE_KINDS.includes(a.kind) &&
+    a.tags.some((t) => tagKey(t) === tagKey(BOBO.reviewTag)) &&
+    now - a.createdAt < BOBO.reviewPinDays * DAY
+  );
+}
+
+/** True when `key` is the view key the player got for this clip, and it hasn't expired. */
+export async function viewKeyOk(a: MediaAsset, key: string | null, now = Date.now()) {
+  if (!key || !/^[A-Za-z0-9]{12,64}$/.test(key) || !a.ingest?.viewHash) return false;
+  if (now - a.createdAt > BOBO.viewKeyDays * DAY) return false;
+  return (await captureViewHash(key)) === a.ingest.viewHash;
+}
 
 /* ── CORS for the upload routes ────────────────────────────────────────────── */
 

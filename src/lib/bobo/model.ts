@@ -46,6 +46,18 @@ export const BOBO = {
   webCaptureWindowMs: 10 * 60_000,
   /** Extra tag on captures that came straight from a player's browser. */
   webCaptureTag: "Web capture",
+  /** The tag the team removes (or "Approve for the globe" removes) once a clip is checked. */
+  reviewTag: "Needs review",
+  /** Tag on web captures published without review (BOBO_CAPTURE_REVIEW=off). */
+  autoPublishedTag: "Auto-published",
+  /** Game clips waiting for review show on the globe as "in review" pins for this long. */
+  reviewPinDays: 14,
+  /** How long a player's view key opens their own clip. */
+  viewKeyDays: 30,
+  /** In-review pins the feed carries at most. */
+  maxReviewPins: 30,
+  /** Netlify cache tag on the feed; purged when a clip lands or the team changes globe media. */
+  feedCacheTag: "bobo-feed",
 } as const;
 
 export const BOBO_EVENT_TYPES = [
@@ -86,6 +98,12 @@ export type FeedMedia = {
   place: string;
   tags: string[];
   sample: boolean;
+  /**
+   * A game clip the team hasn't checked yet: the pin shows, the clip doesn't.
+   * url and poster are empty; title is generic. The player who sent it can
+   * still watch it through /api/bobo/clips/<id> with their view key.
+   */
+  review?: boolean;
 };
 
 export type FeedPlace = {
@@ -122,6 +140,8 @@ export type BoboFeed = {
     countries: number;
     media: number;
     events: number;
+    /** Game clips on the globe waiting for the team's review (pins without a playable clip). */
+    review: number;
     /** Along the journey (media places in the order Bobo first visited them). */
     km: number;
   };
@@ -135,6 +155,17 @@ export type BoboFeed = {
   recent: FeedEvent[];
   /** True when every media item is sample data (previews). */
   sample: boolean;
+};
+
+/** GET /api/bobo/clips/<id>?k=<viewKey>: the player's own clip, before or after review. */
+export type OwnClip = FeedMedia & {
+  key: string;
+  city: string;
+  region: string;
+  country: string;
+  countryCode: string;
+  lat: number;
+  lng: number;
 };
 
 /** A stored event (src/lib/bobo/events.server.ts). */

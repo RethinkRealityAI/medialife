@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=2";
+import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");
@@ -366,7 +366,10 @@ const capture = new ColaCapture({
       log(
         `recorded ${p.seconds}s, ${(p.blob.size / 1048576).toFixed(1)} MB ${p.mime} ${p.width}x${p.height}`,
       );
-    else if (name === "sent") log(`sent: asset ${p.id}`, `/admin/media?asset=${p.id}`);
+    else if (name === "sent") {
+      log(`sent: asset ${p.id}${p.review ? " (in review)" : " (live)"}`, `/admin/media?asset=${p.id}`);
+      log("watch it on the globe", p.globeUrl);
+    }
     else if (name === "error") log(`error (${p.stage}): ${p.message}`);
     else log(name);
   },

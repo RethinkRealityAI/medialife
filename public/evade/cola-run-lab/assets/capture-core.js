@@ -283,6 +283,17 @@ async function api(url, init, signal, tries = 3) {
   }
   throw last instanceof Error ? last : new Error("Network error");
 }
+function globeLinkFor(globeUrl, sent) {
+  if (!sent) return globeUrl;
+  try {
+    const u = new URL(globeUrl, location.href);
+    u.searchParams.set("clip", sent.id);
+    u.hash = sent.viewKey ? `k=${sent.viewKey}` : "";
+    return u.toString();
+  } catch {
+    return globeUrl;
+  }
+}
 async function sendClip(clip, o) {
   const base = o.endpoint.replace(/\/+$/, "");
   const stamp = (/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/[T:]/g, "-");
@@ -360,7 +371,11 @@ async function sendClip(clip, o) {
       }
     })
   }).catch(() => void 0);
-  return { id: String(init.id) };
+  return {
+    id: String(init.id),
+    viewKey: typeof init.viewKey === "string" ? init.viewKey : null,
+    review: init.review !== false
+  };
 }
 async function saveClip(clip) {
   const name = `cola-run-${Date.now()}.${clip.ext}`;
@@ -728,8 +743,8 @@ class ColaCapture {
         <div class="crc-done" aria-live="polite">
           <div class="crc-check">${ICON_CHECK}</div>
           <h2 class="crc-title" style="margin:0 0 6px">Sent!</h2>
-          <p>The EVADE team will check it. Picked clips show up on the Where is Bobo? globe.</p>
-          <a class="crc-btn" data-a="globe" target="_blank" rel="noopener">${ICON_GLOBE}<span>See the globe</span></a>
+          <p class="crc-doneText">Your pin is beaming onto the Where is Bobo? globe. You can watch your clip there now; everyone else sees it once the EVADE team has checked it.</p>
+          <a class="crc-btn" data-a="globe" target="_blank" rel="noopener">${ICON_GLOBE}<span>See it on the globe</span></a>
           <div class="crc-row"><button class="crc-btn crc-ghost" type="button" data-a="close"><span>Back to the game</span></button></div>
         </div>
       </div>`;
@@ -850,9 +865,16 @@ class ColaCapture {
       });
       if (ac.signal.aborted) return;
       this.status = "sent";
+      this._layer.querySelector('[data-a="globe"]').href = globeLinkFor(
+        this._o.globeUrl,
+        r
+      );
+      const done = this._layer.querySelector(".crc-doneText");
+      if (done && !r.review)
+        done.textContent = "It's live on the Where is Bobo? globe. Go and find your pin.";
       this._layer.classList.add("crc-sent");
       this._layer.querySelector('.crc-done [data-a="close"]')?.focus();
-      this._emit("sent", r);
+      this._emit("sent", { ...r, globeUrl: globeLinkFor(this._o.globeUrl, r) });
     } catch (e) {
       if (e?.name === "AbortError" || ac.signal.aborted) return;
       this.status = "error";
@@ -883,6 +905,7 @@ export {
   ClipRecorder,
   ColaCapture,
   DEFAULT_SETTINGS,
+  globeLinkFor,
   pickMime,
   recordingSupported,
   saveClip,

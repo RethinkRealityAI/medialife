@@ -53,7 +53,7 @@ export interface CaptureEvents {
   recordStop: Clip;
   reviewOpen: Clip;
   reviewClose: void;
-  sent: { id: string };
+  sent: SentClip & { globeUrl: string };
   saved: void;
   error: { stage: "record" | "send"; message: string };
 }
@@ -448,11 +448,35 @@ async function api(url: string, init: RequestInit, signal?: AbortSignal, tries =
   throw last instanceof Error ? last : new Error("Network error");
 }
 
+/** What sendClip gets back: the clip's id, and the player's key to watch it on the globe. */
+export type SentClip = {
+  id: string;
+  /** Read-only: opens this clip on the globe before the team has reviewed it. */
+  viewKey: string | null;
+  /** True while it waits for review (everyone else sees an "in review" pin). */
+  review: boolean;
+};
+
+/** The globe link that flies to this clip and plays it for the player who sent it. */
+export function globeLinkFor(globeUrl: string, sent: SentClip | null): string {
+  if (!sent) return globeUrl;
+  try {
+    const u = new URL(globeUrl, location.href);
+    u.searchParams.set("clip", sent.id);
+    // the key rides in the fragment: never sent to a server or in a Referer
+    u.hash = sent.viewKey ? `k=${sent.viewKey}` : "";
+    return u.toString();
+  } catch {
+    return globeUrl;
+  }
+}
+
 /**
  * Upload a clip through the Media Library's chunked upload API as a web
- * capture. It lands private, tagged "Needs review", with the visitor's city.
+ * capture. It lands private, tagged "Needs review", with the visitor's city,
+ * and shows straight away as an "in review" pin on the globe.
  */
-export async function sendClip(clip: Clip, o: SendOptions): Promise<{ id: string }> {
+export async function sendClip(clip: Clip, o: SendOptions): Promise<SentClip> {
   const base = o.endpoint.replace(/\/+$/, "");
   const stamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-");
   const h = clip.hud;
@@ -534,7 +558,11 @@ export async function sendClip(clip: Clip, o: SendOptions): Promise<{ id: string
       },
     }),
   }).catch(() => undefined);
-  return { id: String(init.id) };
+  return {
+    id: String(init.id),
+    viewKey: typeof init.viewKey === "string" ? init.viewKey : null,
+    review: init.review !== false,
+  };
 }
 
 /** Share sheet (phones: "Save video") or a download. */
@@ -955,8 +983,8 @@ export class ColaCapture {
         <div class="crc-done" aria-live="polite">
           <div class="crc-check">${ICON_CHECK}</div>
           <h2 class="crc-title" style="margin:0 0 6px">Sent!</h2>
-          <p>The EVADE team will check it. Picked clips show up on the Where is Bobo? globe.</p>
-          <a class="crc-btn" data-a="globe" target="_blank" rel="noopener">${ICON_GLOBE}<span>See the globe</span></a>
+          <p class="crc-doneText">Your pin is beaming onto the Where is Bobo? globe. You can watch your clip there now; everyone else sees it once the EVADE team has checked it.</p>
+          <a class="crc-btn" data-a="globe" target="_blank" rel="noopener">${ICON_GLOBE}<span>See it on the globe</span></a>
           <div class="crc-row"><button class="crc-btn crc-ghost" type="button" data-a="close"><span>Back to the game</span></button></div>
         </div>
       </div>`;
@@ -1104,9 +1132,16 @@ export class ColaCapture {
       });
       if (ac.signal.aborted) return;
       this.status = "sent";
+      (this._layer.querySelector('[data-a="globe"]') as HTMLAnchorElement).href = globeLinkFor(
+        this._o.globeUrl,
+        r,
+      );
+      const done = this._layer.querySelector(".crc-doneText");
+      if (done && !r.review)
+        done.textContent = "It's live on the Where is Bobo? globe. Go and find your pin.";
       this._layer.classList.add("crc-sent");
       (this._layer.querySelector('.crc-done [data-a="close"]') as HTMLElement)?.focus();
-      this._emit("sent", r);
+      this._emit("sent", { ...r, globeUrl: globeLinkFor(this._o.globeUrl, r) });
     } catch (e: any) {
       if (e?.name === "AbortError" || ac.signal.aborted) return;
       this.status = "error";

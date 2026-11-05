@@ -163,5 +163,17 @@ export const sfx = {
     [1568, 2093, 2637].forEach((f, i) => tone({ f, type: "sine", t: 0.55 + i * 0.07, dur: 0.5, vol: 0.08 }));
     buzz([20, 60, 20, 60, 40]);
   },
+  /** A new clip beaming down from space: a falling shimmer, then an impact thump. */
+  beam() {
+    noise({ dur: 0.85, from: 3200, to: 700, vol: 0.16 });
+    [2637, 2093, 1568, 1319].forEach((f, i) => tone({ f, type: "sine", t: i * 0.11, dur: 0.22, vol: 0.06 }));
+  },
+  impact() {
+    tone({ f: 140, f2: 48, type: "sine", dur: 0.42, vol: 0.5 });
+    tone({ f: 660, type: "triangle", t: 0.04, dur: 0.12, vol: 0.2 });
+    tone({ f: 990, type: "triangle", t: 0.1, dur: 0.16, vol: 0.18 });
+    [1319, 1760, 2349].forEach((f, i) => tone({ f, type: "sine", t: 0.18 + i * 0.06, dur: 0.4, vol: 0.08 }));
+    buzz([30, 40, 16]);
+  },
   buzz,
 };

@@ -352,7 +352,7 @@ export class ColaRunRecorder extends Group {
   /** The review sheet closed. */
   public onReviewClose = new Event<[]>();
   /** A clip reached the globe's inbox. */
-  public onSent = new Event<[{ id: string }]>();
+  public onSent = new Event<[{ id: string; globeUrl: string }]>();
   /** A clip was saved or shared from the phone. */
   public onSaved = new Event<[]>();
 

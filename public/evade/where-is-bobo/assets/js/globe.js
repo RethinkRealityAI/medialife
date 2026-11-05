@@ -13,9 +13,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js?v=4";
-import { createHologram } from "./holo.js?v=4";
-import { createLandmarks } from "./landmarks.js?v=4";
+import { loadBobo } from "./bobo.js?v=5";
+import { createHologram } from "./holo.js?v=5";
+import { createLandmarks } from "./landmarks.js?v=5";
 
 const D2R = Math.PI / 180;
 const C = {
@@ -599,7 +599,8 @@ export async function createGlobe(canvas, opts) {
   const landmarks = createLandmarks(globe, { reduced });
   function showItem(item) {
     holo.show(item);
-    if (landmarks.show(item.place, LANDMARK, R_LAND - 0.004, landmarkSize, camera))
+    const city = (st.focus && hotspots.get(st.focus)?.place.city) || "";
+    if (landmarks.show(item.place, city, LANDMARK, R_LAND - 0.004, landmarkSize, camera))
       setTimeout(() => opts.onLandmark?.(), 120);
   }
 
@@ -707,7 +708,10 @@ export async function createGlobe(canvas, opts) {
     const group = new THREE.Group();
     group.position.copy(local).multiplyScalar(R_LAND);
     group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), local);
-    const color = isLatest ? C.gold : C.teal;
+    // in review: a clip the team hasn't checked (pink); yours plays for you
+    const mine = p.media.some((m) => m.mine);
+    const review = p.media.every((m) => m.review);
+    const color = isLatest ? C.gold : review ? C.pink : C.teal;
     const n = p.media.length;
     const h = 0.035 + Math.min(0.05, Math.log2(n + 1) * 0.014) + (isLatest ? 0.03 : 0);
     const stick = new THREE.Mesh(
@@ -771,11 +775,18 @@ export async function createGlobe(canvas, opts) {
     if (opts.labels) {
       label = document.createElement("button");
       label.type = "button";
-      label.className = `pin-label${isLatest ? " is-latest" : ""}`;
+      label.className = `pin-label${isLatest ? " is-latest" : ""}${review ? " is-review" : ""}`;
       label.tabIndex = -1;
       label.setAttribute("aria-hidden", "true");
       label.dataset.key = p.key;
-      label.innerHTML = `${isLatest ? '<span class="pin-now">Bobo is here</span>' : ""}<span class="pin-city"></span>`;
+      const chip = mine
+        ? '<span class="pin-now pin-mine">Your clip</span>'
+        : isLatest
+          ? `<span class="pin-now">${review ? "Just landed" : "Bobo is here"}</span>`
+          : review
+            ? '<span class="pin-now pin-review">In review</span>'
+            : "";
+      label.innerHTML = `${chip}<span class="pin-city"></span>`;
       label.querySelector(".pin-city").textContent = p.city || p.country;
       label.addEventListener("click", () => opts.onSelect(p.key));
       opts.labels.appendChild(label);
@@ -1179,6 +1190,16 @@ export async function createGlobe(canvas, opts) {
       h.ripple.material.uniforms.uTime.value += dt;
       const s = (h.isLatest ? 0.075 : 0.055) * (1 + 0.12 * Math.sin(t * 3 + h.top * 50));
       h.head.scale.setScalar(st.focus === h.place.key ? s * 1.5 : s);
+      // a pin that just beamed in waits underground, then springs up (easeOutBack)
+      if (h.grow !== undefined && h.grow < 1) {
+        const b = beams.find((x) => x.key === h.place.key && x.t >= 0);
+        if (b && b.t < IMPACT) h.group.scale.setScalar(1e-3);
+        else {
+          h.grow = Math.min(1, h.grow + dt / 0.6);
+          const g = h.grow - 1;
+          h.group.scale.setScalar(Math.max(1e-3, 1 + 3.2 * g * g * g + 2.2 * g * g));
+        }
+      }
     }
     for (const p of pings) {
       if (p.t >= 1) continue;
@@ -1192,6 +1213,7 @@ export async function createGlobe(canvas, opts) {
     holo.update(dt, t, FOCUS_LAND, camera);
     landmarks.update(dt, t);
     updateSummon(dt, t);
+    updateBeams(dt, t);
 
     renderer.render(scene, camera);
 
@@ -1264,6 +1286,176 @@ export async function createGlobe(canvas, opts) {
       placed.push([x, y]);
       h.label.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
       h.label.style.opacity = String(clamp((facing - 0.25) * 4, 0, 1));
+    }
+  }
+
+  /* ── beam-in: a new clip arriving from space ────────────────────────────── */
+  // A comet of light falls onto the city, hits the ground with a flash and a
+  // shockwave, sparks fly up, the pin springs out of the ground, and the beam
+  // lingers for a moment before it fades. Pooled: a few can land at once.
+  const beamColMat = () =>
+    new THREE.ShaderMaterial({
+      uniforms: {
+        uHead: { value: 1 },
+        uHold: { value: 0 },
+        uTime: { value: 0 },
+        uWide: { value: 0 },
+        uA: { value: C.gold },
+        uB: { value: C.pink },
+      },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv; varying float vF;
+        void main() {
+          vUv = uv;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          vF = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform float uHead; uniform float uHold; uniform float uTime; uniform float uWide;
+        uniform vec3 uA; uniform vec3 uB; varying vec2 vUv; varying float vF;
+        void main() {
+          float y = vUv.y;
+          float lit = step(uHead, y);
+          float trail = exp(-(y - uHead) * 3.2) * lit;
+          float head = smoothstep(0.07, 0.0, abs(y - uHead)) * (1.0 - uHold);
+          float hold = uHold * pow(1.0 - y, 0.9);
+          float bands = 0.72 + 0.28 * sin(y * 70.0 + uTime * 16.0);
+          float core = pow(vF, mix(2.6, 1.2, uWide));
+          float a = (trail * 0.8 + hold) * bands * core + head * core * 2.2;
+          vec3 col = mix(uA, uB, clamp(y * 1.4, 0.0, 1.0)) * (1.4 + head * 2.5);
+          gl_FragColor = vec4(col, a * mix(1.0, 0.35, uWide));
+          #include <colorspace_fragment>
+        }`,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
+    });
+  const shockFrag = /* glsl */ `
+    uniform float uR; uniform float uOpacity; uniform vec3 uColor; varying vec2 vUv;
+    void main() {
+      float r = length(vUv * 2.0 - 1.0);
+      if (r > 1.0) discard;
+      float ring = smoothstep(0.09, 0.0, abs(r - uR)) + smoothstep(0.35, 0.0, abs(r - uR)) * 0.35;
+      float fill = smoothstep(uR, 0.0, r) * 0.18;
+      gl_FragColor = vec4(uColor * 1.5, (ring + fill) * uOpacity);
+      #include <colorspace_fragment>
+    }`;
+  const BEAM_H = 1.5;
+  const SPARKS = mobile ? 26 : 44;
+  const beams = [];
+  for (let i = 0; i < 4; i++) {
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.012, BEAM_H, 16, 1, true).translate(0, BEAM_H / 2, 0), beamColMat());
+    const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, BEAM_H, 16, 1, true).translate(0, BEAM_H / 2, 0), beamColMat());
+    glow.material.uniforms.uWide.value = 1;
+    const shock = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.5, 0.5),
+      new THREE.ShaderMaterial({
+        uniforms: { uR: { value: 0 }, uOpacity: { value: 0 }, uColor: { value: C.gold } },
+        vertexShader: uvVert,
+        fragmentShader: shockFrag,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    shock.rotation.x = -Math.PI / 2;
+    shock.position.y = 0.004;
+    const flash = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: glowTex, color: C.gold.clone().lerp(new THREE.Color("#fff"), 0.4), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+    );
+    flash.position.y = 0.01;
+    const sp = new Float32Array(SPARKS * 3);
+    const sv = new Float32Array(SPARKS * 3);
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute("position", new THREE.BufferAttribute(sp, 3));
+    const sparks = new THREE.Points(
+      sg,
+      new THREE.PointsMaterial({ map: glowTex, color: 0xffe9a8, size: mobile ? 0.03 : 0.024, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
+    );
+    core.renderOrder = glow.renderOrder = 7;
+    shock.renderOrder = flash.renderOrder = sparks.renderOrder = 8;
+    g.add(glow, core, shock, flash, sparks);
+    g.visible = false;
+    globe.add(g);
+    beams.push({ g, core, glow, shock, flash, sparks, sp, sv, t: -1, key: null, hit: false });
+  }
+  const IMPACT = 0.85;
+  const BEAM_END = 3.4;
+  /** Beams a new clip onto `key`'s pin. Returns false when that place isn't on the globe. */
+  function beam(key) {
+    const p = feed?.places.find((x) => x.key === key);
+    if (!p) return false;
+    const b = beams.find((x) => x.t < 0) ?? beams.reduce((a, x) => (x.t > a.t ? x : a));
+    const local = toVec(p.lat, p.lng, 1);
+    b.g.position.copy(local).multiplyScalar(R_LAND);
+    b.g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), local);
+    b.g.visible = true;
+    b.t = reduced ? IMPACT : 0;
+    b.key = key;
+    b.hit = false;
+    b.sparks.visible = false;
+    const h = hotspots.get(key);
+    if (h) h.grow = reduced ? 1 : 0;
+    return true;
+  }
+  function updateBeams(dt, t) {
+    for (const b of beams) {
+      if (b.t < 0) continue;
+      b.t += dt;
+      const k = b.t;
+      const fall = clamp(k / IMPACT, 0, 1);
+      const head = 1 - fall * fall; // speeds up as it falls
+      const hold = k < IMPACT ? 0 : clamp(1 - (k - IMPACT - 1.0) / (BEAM_END - IMPACT - 1.0), 0, 1);
+      for (const m of [b.core, b.glow]) {
+        const u = m.material.uniforms;
+        u.uHead.value = head;
+        u.uHold.value = k < IMPACT ? 0 : hold;
+        u.uTime.value = t;
+      }
+      if (k >= IMPACT && !b.hit) {
+        b.hit = true;
+        b.sparks.visible = true;
+        const v = new THREE.Vector3();
+        for (let i = 0; i < SPARKS; i++) {
+          b.sp.set([0, 0.01, 0], i * 3);
+          const a = Math.random() * Math.PI * 2;
+          const r = 0.15 + Math.random() * 0.35;
+          v.set(Math.cos(a) * r, 0.35 + Math.random() * 0.75, Math.sin(a) * r).multiplyScalar(0.55);
+          b.sv.set([v.x, v.y, v.z], i * 3);
+        }
+        opts.onBeamImpact?.(b.key);
+      }
+      // shockwave and flash
+      const after = k - IMPACT;
+      if (after >= 0) {
+        const s = clamp(after / 1.1, 0, 1);
+        b.shock.material.uniforms.uR.value = 0.08 + (1 - Math.pow(1 - s, 3)) * 0.9;
+        b.shock.material.uniforms.uOpacity.value = (1 - s) * 1.2;
+        const f = clamp(after / 0.45, 0, 1);
+        b.flash.scale.setScalar(0.05 + Math.sin(f * Math.PI) * 0.32);
+        b.flash.material.opacity = 1 - f;
+        // sparks: up and out, then gravity pulls them back to the ground
+        const life = clamp(after / 1.6, 0, 1);
+        for (let i = 0; i < SPARKS; i++) {
+          const o = i * 3;
+          b.sv[o + 1] -= dt * 0.9;
+          b.sp[o] += b.sv[o] * dt;
+          b.sp[o + 1] = Math.max(0.004, b.sp[o + 1] + b.sv[o + 1] * dt);
+          b.sp[o + 2] += b.sv[o + 2] * dt;
+        }
+        b.sparks.geometry.attributes.position.needsUpdate = true;
+        b.sparks.material.opacity = 1 - life;
+      } else {
+        b.shock.material.uniforms.uOpacity.value = 0;
+        b.flash.material.opacity = 0;
+      }
+      if (k > BEAM_END) {
+        b.t = -1;
+        b.g.visible = false;
+      }
     }
   }
 
@@ -1478,6 +1670,7 @@ export async function createGlobe(canvas, opts) {
     showMedia,
     clearFocus,
     ping,
+    beam,
     glitch: () => holo.glitch(),
     get video() {
       return holo.video;

@@ -3,16 +3,47 @@ import type { ArNamespace } from "@/lib/ar/store.server";
 import { listAssets } from "@/lib/media/data.server";
 import { isOnGlobe, mediaPublicPath, mediaThumbUrl, type MediaAsset } from "@/lib/media/model";
 
+import { awaitingReview } from "./captures.server";
 import { readAggregate } from "./events.server";
 import { haversineKm, placeKey } from "./location";
-import type { BoboAggregate, BoboEventType, BoboFeed, FeedMedia, FeedPlace } from "./model";
+import {
+  BOBO,
+  type BoboAggregate,
+  type BoboEventType,
+  type BoboFeed,
+  type FeedMedia,
+  type FeedPlace,
+} from "./model";
 
 // GET /api/bobo/feed.json: everything the globe draws, public and cacheable.
 // Built from the Media Library (public + located + "on the globe") and the
 // AR event aggregate. Nothing private leaves: only public files' URLs, and
-// events as city-level counts.
+// events as city-level counts. Game clips still waiting for review show as
+// "in review" pins: city, time and length only, never the file or a poster.
 
 const iso = (ms: number) => new Date(ms).toISOString();
+
+const REVIEW_TITLE: Record<string, string> = { "cola-run": "New Cola Run clip" };
+
+/** A game clip waiting for review: enough for a pin, nothing that shows the clip. */
+function reviewMedia(a: MediaAsset): FeedMedia {
+  return {
+    id: a.id,
+    kind: a.kind === "video" ? "video" : "image",
+    title: REVIEW_TITLE[a.ingest?.source ?? ""] ?? "New clip from the game",
+    description: "",
+    url: "",
+    poster: null,
+    width: a.width,
+    height: a.height,
+    durationS: a.durationS,
+    seenAt: iso(a.location?.seenAt ?? a.createdAt),
+    place: "",
+    tags: [],
+    sample: false,
+    review: true,
+  };
+}
 
 function feedMedia(a: MediaAsset): FeedMedia {
   return {
@@ -35,8 +66,13 @@ function feedMedia(a: MediaAsset): FeedMedia {
 export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.now()): BoboFeed {
   const places = new Map<string, FeedPlace>();
   const seen = (m: FeedMedia) => Date.parse(m.seenAt);
-  for (const a of assets) {
-    if (!isOnGlobe(a) || !a.location) continue;
+  const inReview = assets
+    .filter((a) => awaitingReview(a, now))
+    .sort((x, y) => y.createdAt - x.createdAt)
+    .slice(0, BOBO.maxReviewPins);
+  const onGlobe = (a: MediaAsset) => isOnGlobe(a) || inReview.includes(a);
+  for (const a of [...assets.filter((x) => isOnGlobe(x)), ...inReview]) {
+    if (!a.location) continue;
     const l = a.location;
     const key = placeKey(l);
     let p = places.get(key);
@@ -57,12 +93,12 @@ export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.n
       };
       places.set(key, p);
     }
-    p.media.push(feedMedia(a));
+    p.media.push(a.public ? feedMedia(a) : reviewMedia(a));
   }
   // hotspots sit on the city: the average of its media's points
   for (const p of places.values()) {
     p.media.sort((x, y) => seen(y) - seen(x));
-    const locs = assets.filter((a) => isOnGlobe(a) && a.location && placeKey(a.location) === p.key);
+    const locs = assets.filter((a) => onGlobe(a) && a.location && placeKey(a.location) === p.key);
     if (locs.length > 1) {
       p.lat = +(locs.reduce((s, a) => s + a.location!.lat, 0) / locs.length).toFixed(4);
       p.lng = +(locs.reduce((s, a) => s + a.location!.lng, 0) / locs.length).toFixed(4);
@@ -108,7 +144,8 @@ export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.n
   for (let i = 1; i < journey.length; i++)
     km += haversineKm(places.get(journey[i - 1])!, places.get(journey[i])!);
 
-  const allMedia = withMedia.flatMap((p) => p.media);
+  const allMedia = withMedia.flatMap((p) => p.media).filter((m) => !m.review);
+  const reviewCount = withMedia.reduce((n, p) => n + p.media.filter((m) => m.review).length, 0);
   const countries = [...new Set([...places.values()].map((p) => p.countryCode))].sort();
   return {
     v: 1,
@@ -118,6 +155,7 @@ export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.n
       countries: countries.length,
       media: allMedia.length,
       events: agg.total,
+      review: reviewCount,
       km: Math.round(km),
     },
     places: [...withMedia, ...eventOnly],
@@ -140,9 +178,11 @@ export async function handleFeed(ns: ArNamespace, request: Request): Promise<Res
   const etag = `"${(await sha1(body)).slice(0, 20)}"`;
   const headers: Record<string, string> = {
     "content-type": "application/json; charset=utf-8",
-    // browsers revalidate quickly; Netlify's CDN serves a minute-old copy while it refreshes
-    "cache-control": "public, max-age=15, must-revalidate",
-    "netlify-cdn-cache-control": "public, s-maxage=60, stale-while-revalidate=600",
+    // browsers revalidate (the page polls with no-cache, so mostly 304s); the CDN keeps a
+    // copy for 15 s and is purged by tag the moment a clip lands or the team changes one
+    "cache-control": "public, max-age=10, must-revalidate",
+    "netlify-cdn-cache-control": "public, s-maxage=15, stale-while-revalidate=30",
+    "netlify-cache-tag": BOBO.feedCacheTag,
     "access-control-allow-origin": "*",
     etag,
   };

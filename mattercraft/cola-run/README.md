@@ -49,7 +49,7 @@ black. The button hides itself while a session runs (**Hide In WebXR**).
 Recording works in rounds and in lounge mode (the video gets a "Lounging with Bobo" badge there instead of the score; **Lounge Badge** changes it).
 
 `onRecordStart`, `onRecordStop` ({ seconds }), `onReviewOpen` (pause the round
-here if you want), `onReviewClose`, `onSent` ({ id }), `onSaved`.
+here if you want), `onReviewClose`, `onSent` ({ id, globeUrl }), `onSaved`.
 
 ## Where clips go
 
@@ -58,4 +58,10 @@ here if you want), `onReviewClose`, `onSent` ({ id }), `onSaved`.
 review*, *Web capture*, in the *Where is Bobo · AR captures* collection, with the
 player's city from their IP. A one-time key returned at the start of each
 upload is required for its chunks, so nobody else can write into it. The team
-reviews it in `/admin/media` and switches **Public** on to put it on the globe.
+reviews it in `/admin/media` (**Approve for the globe** in the clip's drawer).
+
+Meanwhile the globe shows an **In review** pin at the city, with a beam-in
+animation on every open globe. After sending, the sheet's **See it on the
+globe** button opens `globeUrl?clip=<id>#k=<viewKey>`: the globe flies to the
+pin and plays the player's own clip for them (nobody else can watch it until
+it's approved).

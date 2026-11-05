@@ -67,6 +67,7 @@ import {
   type MediaPurpose,
 } from "@/lib/media/model";
 import { downloadMediaFile } from "@/lib/media/upload-client";
+import { BOBO } from "@/lib/bobo/model";
 import { cn } from "@/lib/utils";
 
 import { GlobeLocationSection, globeDiff, globeFormOf, type GlobeForm } from "./globe-location";
@@ -206,6 +207,34 @@ function DrawerBody({
     }
   }
 
+  // Game clips from the record button land private, "Needs review" and on the globe as an
+  // "in review" pin. One tap checks them off: public on the globe, or kept off it.
+  const reviewTag = BOBO.reviewTag;
+  const inReview = !!a.ingest?.web && a.tags.some((t) => tagKey(t) === tagKey(reviewTag));
+  const [reviewing, setReviewing] = useState<"approve" | "reject" | null>(null);
+  async function review(approve: boolean) {
+    setReviewing(approve ? "approve" : "reject");
+    try {
+      const patch: MediaPatch = approve
+        ? { public: true, onGlobe: true, removeTags: [reviewTag], addTags: ["Approved"] }
+        : { onGlobe: false, removeTags: [reviewTag] };
+      const r = await adminUpdateMedia({ data: { ids: [a.id], patch } });
+      if (!r.ok) toast.error(r.error);
+      else {
+        await router.invalidate();
+        toast.success(
+          approve
+            ? "Approved: it's playing on the Where is Bobo? globe now"
+            : "Kept off the globe. The clip stays private in the library.",
+        );
+      }
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setReviewing(null);
+    }
+  }
+
   async function remove() {
     setDeleting(true);
     try {
@@ -271,6 +300,52 @@ function DrawerBody({
               </span>
             ) : null}
           </div>
+
+          {inReview ? (
+            <section
+              aria-labelledby="review-h"
+              className="space-y-3 rounded-xl border border-fuchsia-400/30 bg-fuchsia-400/[0.07] p-3"
+            >
+              <div>
+                <h3 id="review-h" className="text-sm font-semibold text-fuchsia-100">
+                  Game clip waiting for review
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-fuchsia-100/80">
+                  A player sent this from the game
+                  {a.location?.city ? ` in ${a.location.city}` : ""}. The globe shows an &ldquo;In
+                  review&rdquo; pin there; only the player can watch it. Check the clip (faces,
+                  anything you wouldn&rsquo;t put on EVADE&rsquo;s page), then:
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="min-h-11 sm:min-h-9"
+                  disabled={!!reviewing}
+                  onClick={() => void review(true)}
+                >
+                  {reviewing === "approve" ? (
+                    <Loader2 className="animate-spin" aria-hidden />
+                  ) : (
+                    <Globe aria-hidden />
+                  )}
+                  Approve for the globe
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11 sm:min-h-9"
+                  disabled={!!reviewing}
+                  onClick={() => void review(false)}
+                >
+                  {reviewing === "reject" ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                  Keep it off the globe
+                </Button>
+              </div>
+            </section>
+          ) : null}
 
           {a.clientPolicy ? (
             <div
