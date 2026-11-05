@@ -36,5 +36,14 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // Mattercraft components (not React): its use* functions are context
+    // lookups, and its zero-prop ConstructorProps convention is an empty interface.
+    files: ["mattercraft/**/*.ts"],
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+    },
+  },
   eslintPluginPrettier,
 );

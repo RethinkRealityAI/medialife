@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>MEDIALIFE Labs</title>
+<meta name="description" content="Browser test versions of MEDIALIFE's Mattercraft AR experiences.">
+<meta name="theme-color" content="#0f1114">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+  :root{--bg:#0f1114;--card:#171a1f;--line:rgba(255,255,255,.09);--text:#eef3f6;--muted:#97a2ad;--accent:#4fd6e8;color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.55 ui-sans-serif,-apple-system,"SF Pro Text",Inter,"Segoe UI",Roboto,sans-serif}
+  main{max-width:960px;margin:0 auto;padding:clamp(28px,6vw,64px) 16px 64px}
+  .kicker{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:8px 0 10px}
+  .lead{color:var(--muted);max-width:640px;margin:0 0 32px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+  .card img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center 30%;background:#000}
+  .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
+  .card h2{font-size:18px;margin:0}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(79,214,232,.1);color:#bdeff6}
+  .tag.warn{background:rgba(255,200,80,.1);color:#ffe2a3}
+  .actions{margin-top:auto;display:flex;gap:8px;padding-top:6px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;
+    background:var(--accent);color:#06141a;font-weight:800;text-decoration:none}
+  .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .src{font-size:12.5px;color:var(--muted)}
+  code{font-size:12.5px;color:#cfe9ee}
+  footer{margin-top:40px;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">MEDIALIFE Labs</div>
+  <h1>Test versions of our AR experiences</h1>
+  <p class="lead">Each lab is a plain three.js copy of a Mattercraft feature, running the same code the Mattercraft component uses, so it can be tried on any phone or laptop before it goes into the project. Not linked from the site and hidden from search.</p>
+
+  <div class="grid">
+    <article class="card">
+      <img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="Cola Run splash art with Bobo the cat" loading="lazy" width="540" height="967">
+      <div class="body">
+        <h2>Cola Run: record button</h2>
+        <p>Record a run or a lounge session with Bobo, watch it back, and send it to the Where is Bobo? globe or save it.</p>
+        <div class="tags">
+          <span class="tag">EVADE</span><span class="tag">Recording</span><span class="tag">Lounge mode</span>
+          <span class="tag warn">Sent clips go to this site's Media Library</span>
+        </div>
+        <p class="src">Mattercraft source: <code>mattercraft/cola-run/</code></p>
+        <div class="actions"><a class="btn" href="/evade/cola-run-lab/index.html">Open the lab</a></div>
+      </div>
+    </article>
+  </div>
+
+  <footer>Clips sent from a deploy preview stay in that preview's Media Library (private, "Needs review").</footer>
+</main>
+</body>
+</html>

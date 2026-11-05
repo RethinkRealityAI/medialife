@@ -27,7 +27,10 @@ import {
   type MediaPurpose,
   type MediaQuery,
   type MediaSort,
+  type MediaLocation,
+  isOnGlobe,
 } from "./model";
+import { locationLabel } from "@/lib/bobo/location";
 import type { MediaNamespace } from "./store.server";
 
 // The machine-readable catalogue: /api/media/index.json and /api/media/llms.txt.
@@ -77,6 +80,10 @@ export type CatalogRecord = {
   createdAt: string;
   updatedAt: string;
   sample: boolean;
+  /** Where it was filmed / photographed, or null. */
+  location: (Omit<MediaLocation, "seenAt"> & { label: string; seenAt: string | null }) | null;
+  /** Live on the public "Where is Bobo?" globe (public + located + switched on). */
+  onGlobe: boolean;
 };
 
 export type CatalogPage = {
@@ -185,6 +192,8 @@ export function parseCatalogQuery(params: URLSearchParams): {
       public: truthy(params.get("public")),
       aiGenerated: truthy(params.get("ai") ?? params.get("aiGenerated")),
       orientation,
+      located: truthy(params.get("located")),
+      onGlobe: truthy(params.get("globe") ?? params.get("onGlobe")),
       sort,
     },
     limit,
@@ -231,11 +240,19 @@ export function catalogRecord(a: MediaAsset, origin: string): CatalogRecord {
     createdAt: new Date(a.createdAt).toISOString(),
     updatedAt: new Date(a.updatedAt).toISOString(),
     sample: !!a.sample,
+    location: a.location
+      ? {
+          ...a.location,
+          label: locationLabel(a.location),
+          seenAt: a.location.seenAt ? new Date(a.location.seenAt).toISOString() : null,
+        }
+      : null,
+    onGlobe: isOnGlobe(a),
   };
 }
 
 const HOW_TO = [
-  "Filter with query parameters: q (words, all must match title/filename/tags/description/client/collection/notes), tags (comma list; all must match), type (video|image|audio|model|document|archive|font|data, or a MIME type), client, collection, purpose (marketing|gameplay|product-shot|logo-brand|ugc|3d-model|audio|doc|other), public (true|false), ai (true|false: AI-generated), orientation (landscape|portrait|square), sort (relevance|new|old|updated|title|size|duration), limit (≤ 5000), offset.",
+  "Filter with query parameters: q (words, all must match title/filename/tags/description/client/collection/notes), tags (comma list; all must match), type (video|image|audio|model|document|archive|font|data, or a MIME type), client, collection, purpose (marketing|gameplay|product-shot|logo-brand|ugc|3d-model|audio|doc|other), public (true|false), ai (true|false: AI-generated), orientation (landscape|portrait|square), located (true|false: has a location), globe (true|false: live on the Where is Bobo? globe), sort (relevance|new|old|updated|title|size|duration), limit (≤ 5000), offset.",
   "Use publicUrl (or embedHtml) on web pages; it needs no auth and is cacheable. Private files have publicUrl null: ask an admin to make them public, or fetch downloadUrl with the bearer token for development.",
   "Always respect rights, usageNotes and clientPolicy. If clientPolicy says no generative use (EVADE), never feed that file into image-to-image, image-to-video or image-to-3D generation.",
   "Use altText as the alt attribute. aiGenerated tells you whether the asset itself was made with AI.",
@@ -358,6 +375,10 @@ export function catalogMarkdown(page: CatalogPage): string {
     ].filter(Boolean);
     if (cls.length) out.push(`- ${cls.join(" · ")}`);
     if (r.tags.length) out.push(`- tags: ${r.tags.join(", ")}`);
+    if (r.location)
+      out.push(
+        `- location: ${r.location.label} (${r.location.lat}, ${r.location.lng})${r.location.seenAt ? ` · seen ${r.location.seenAt.slice(0, 10)}` : ""}${r.onGlobe ? " · on the Where is Bobo? globe" : ""}`,
+      );
     if (r.description) out.push(`- description / alt: ${md(r.description)}`);
     if (r.usageNotes) out.push(`- usage notes: ${md(r.usageNotes)}`);
     out.push(
