@@ -64,3 +64,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:h
 .lab-row button{flex:1;min-height:38px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}
 .lab-log{margin:0;padding-left:18px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#c2ccd4;max-height:180px;overflow:auto}
 .lab-log a{color:var(--accent)}
+.lab-ghost{margin-top:8px;background:rgba(255,255,255,.08)!important;color:var(--text)!important}
+.lab-hud.lab-lounging .lab-score,.lab-hud.lab-lounging .lab-time{display:none}
+.lab-loungeBar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-area-inset-bottom) + 170px);
+  display:flex;flex-direction:column;align-items:center;gap:10px}
+.lab-loungeBar[hidden]{display:none}
+.lab-emotes{display:flex;gap:10px}
+.lab-emotes button,.lab-loungeExit{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,77,180,.45);
+  background:var(--panel);color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.lab-loungeExit{border-color:rgba(var(--accentRgb),.5)}

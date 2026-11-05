@@ -199,11 +199,18 @@ class ClipRecorder {
       c.fillStyle = "rgba(12,14,18,.62)";
       roundRect(c, pad, pad, cw, ch, ch / 2);
       c.fill();
-      c.fillStyle = "#e8434f";
-      roundRect(c, pad + 18 * u, pad + 12 * u, 16 * u, 24 * u, 4 * u);
-      c.fill();
-      c.fillStyle = "rgba(255,255,255,.85)";
-      c.fillRect(pad + 18 * u, pad + 19 * u, 16 * u, 4 * u);
+      if (count) {
+        c.fillStyle = "#e8434f";
+        roundRect(c, pad + 18 * u, pad + 12 * u, 16 * u, 24 * u, 4 * u);
+        c.fill();
+        c.fillStyle = "rgba(255,255,255,.85)";
+        c.fillRect(pad + 18 * u, pad + 19 * u, 16 * u, 4 * u);
+      } else {
+        c.fillStyle = s.accent;
+        c.beginPath();
+        c.arc(pad + 26 * u, pad + ch / 2, 7 * u, 0, Math.PI * 2);
+        c.fill();
+      }
       c.fillStyle = "#fff";
       c.fillText(label, pad + 46 * u, pad + ch / 2 + 1 * u);
     }

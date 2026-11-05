@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex">
 <title>Cola Run recorder lab</title>
 <meta name="theme-color" content="#14161a">
-<link rel="stylesheet" href="./assets/lab.css?v=1">
+<link rel="stylesheet" href="./assets/lab.css?v=2">
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./assets/lab.js?v=1"></script>
+<script type="module" src="./assets/lab.js?v=2"></script>
 </head>
 <body>
 <!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with
@@ -28,14 +28,24 @@
       <button class="lab-sound" type="button" tabindex="-1" title="Sound (stand-in)">♪</button>
     </div>
     <div class="lab-stick" id="stick" aria-label="Joystick"><span></span></div>
+    <!-- lounge mode: emotes like the game's lounge bar -->
+    <div class="lab-loungeBar" id="loungeBar" hidden>
+      <div class="lab-emotes">
+        <button type="button" data-emote="Sleep">Sleep</button>
+        <button type="button" data-emote="Alert">Alert</button>
+        <button type="button" data-emote="Purr">Purr</button>
+      </div>
+      <button type="button" class="lab-loungeExit" id="loungeExit">Play Cola Run</button>
+    </div>
 
     <div class="lab-intro" id="intro">
       <div class="lab-card">
         <div class="lab-kicker">Test lab</div>
         <h1>Cola Run recorder</h1>
-        <p>A stand-in Cola Run scene for trying the record button before it goes into Mattercraft. Collect the cans with the joystick (or arrow keys / WASD), tap the <span class="lab-reddot"></span> button to record, then send the clip.</p>
+        <p>A stand-in Cola Run scene for trying the record button before it goes into Mattercraft. Collect the cans with the joystick (or arrow keys / WASD), or just hang out in lounge mode. Tap the <span class="lab-reddot"></span> button to record (R on a keyboard), then send the clip.</p>
         <label class="lab-check"><input type="checkbox" id="useCam"> Use my camera as the background (closer to AR)</label>
         <button class="lab-play" id="play" type="button">Play</button>
+        <button class="lab-play lab-ghost" id="lounge" type="button">Lounge with Bobo</button>
         <p class="lab-small">Clips you send from here go to <b id="endpointLabel"></b> as private, "Needs review" captures.</p>
       </div>
     </div>
@@ -64,6 +74,7 @@
   <label class="lab-check"><input type="checkbox" id="o-send" checked> Offer "Send to Where is Bobo?"</label>
   <label class="lab-check"><input type="checkbox" id="o-audio" checked> Record game sound</label>
   <div class="lab-row">
+    <button type="button" id="o-lounge">Lounge on / off</button>
     <button type="button" id="o-hint">Show the tip again</button>
     <button type="button" id="o-copy">Copy settings</button>
   </div>

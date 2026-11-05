@@ -46,6 +46,8 @@ black. The button hides itself while a session runs (**Hide In WebXR**).
 
 ## Events
 
+Recording works in rounds and in lounge mode (the video gets a "Lounging with Bobo" badge there instead of the score; **Lounge Badge** changes it).
+
 `onRecordStart`, `onRecordStop` ({ seconds }), `onReviewOpen` (pause the round
 here if you want), `onReviewClose`, `onSent` ({ id }), `onSaved`.
 

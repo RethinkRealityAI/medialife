@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=1";
+import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=2";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");
@@ -86,6 +86,8 @@ scene.add(player);
 let mixer = null;
 let runAct = null;
 let idleAct = null;
+const emoteActs = {};
+let emote = null;
 const cans = [];
 let canProto = null;
 let canClip = null;
@@ -105,6 +107,14 @@ async function loadModels() {
   idleAct?.play();
   runAct?.play();
   runAct && (runAct.weight = 0);
+  for (const n of ["Sleep", "Alert", "Purr"]) {
+    const c = clip(n);
+    if (!c) continue;
+    const a = mixer.clipAction(c);
+    a.weight = 0;
+    a.play();
+    emoteActs[n] = a;
+  }
   canProto = cola.scene;
   fit(canProto, 0.9);
   canClip = cola.animations[0] ?? null;
@@ -235,7 +245,46 @@ let done = false;
 const scoreEl = $("#score");
 const timeEl = $("#time");
 
+/* ── lounge mode: hang out with Bobo, no clock, no cans ── */
+let lounge = false;
+const hudEl = $(".lab-hud");
+const loungeBar = $("#loungeBar");
+function enterLounge() {
+  lounge = true;
+  playing = true;
+  done = true;
+  for (const c of cans) c.obj.visible = false;
+  hudEl.classList.add("lab-lounging");
+  loungeBar.hidden = false;
+  // what the component does on the game's onLoungeEnter
+  capture.setHud({ badge: "Lounging with Bobo" });
+  capture.showHint(qs.has("hint"));
+  log("lounge entered");
+}
+function exitLounge() {
+  lounge = false;
+  setEmote(null);
+  hudEl.classList.remove("lab-lounging");
+  loungeBar.hidden = true;
+  capture.setHud(null);
+  log("lounge exited");
+}
+function setEmote(name) {
+  emote = name && emoteActs[name] ? name : null;
+  if (emote) emoteActs[emote].reset();
+}
+for (const b of document.querySelectorAll("[data-emote]"))
+  b.addEventListener("click", () => {
+    setEmote(b.dataset.emote);
+    log(`emote ${b.dataset.emote}`);
+  });
+$("#loungeExit").addEventListener("click", () => {
+  exitLounge();
+  startRound();
+});
+
 function startRound() {
+  if (lounge) exitLounge();
   score = 0;
   timeLeft = ROUND;
   done = false;
@@ -375,6 +424,24 @@ $("#play").addEventListener("click", async () => {
   $("#intro").hidden = true;
   startRound();
 });
+$("#lounge").addEventListener("click", async () => {
+  audioStart();
+  capture.configure({ audioContext: ac });
+  if ($("#useCam").checked) await useCamera(true);
+  $("#intro").hidden = true;
+  enterLounge();
+});
+$("#o-lounge").addEventListener("click", () => {
+  $("#intro").hidden = true;
+  if (!ac) {
+    audioStart();
+    capture.configure({ audioContext: ac });
+  }
+  if (lounge) {
+    exitLounge();
+    startRound();
+  } else enterLounge();
+});
 
 /* ── loop ── */
 const clock = new THREE.Clock();
@@ -414,16 +481,19 @@ function step() {
         (1 - Math.exp(-12 * dt));
     }
     moving += ((mv.lengthSq() > 0.01 ? 1 : 0) - moving) * (1 - Math.exp(-10 * dt));
+    if (emote && moving > 0.5) setEmote(null); // walking off ends the pose
+    const em = emote ? 1 - moving : 0;
+    for (const [n, a] of Object.entries(emoteActs)) a.weight = n === emote ? em : 0;
     if (runAct && idleAct) {
       runAct.weight = moving;
-      idleAct.weight = 1 - moving;
+      idleAct.weight = (1 - moving) * (1 - em);
     }
     for (const c of cans) {
       if (c.taken) continue;
       if (player.position.distanceTo(tmp.set(c.obj.position.x, 0, c.obj.position.z)) < 1.3)
         collect(c);
     }
-    if (!done) {
+    if (!done && !lounge) {
       timeLeft = Math.max(0, timeLeft - dt);
       if (timeLeft === 0) {
         done = true;
@@ -462,5 +532,7 @@ window.__lab = {
   play: () => $("#play").click(),
   collectAll: () => cans.filter((c) => !c.taken).forEach(collect),
   status: () => capture.status,
-  state: () => ({ playing, score, timeLeft, done }),
+  state: () => ({ playing, score, timeLeft, done, lounge, emote }),
+  lounge: () => enterLounge(),
+  emote: (n) => setEmote(n),
 };

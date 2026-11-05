@@ -154,6 +154,18 @@ export class ColaRunRecorder extends Group {
    */
   public gameNode = new Observable<string | undefined>(undefined, () => this._bindGame());
 
+  /**
+   * Text drawn on the video while the player is in lounge mode (no score
+   * there). Leave empty for just the brand badge.
+   *
+   * @zui
+   * @zgroup Recording
+   * @zgrouppriority 300
+   * @zpriority 40
+   * @zdefault Lounging with Bobo
+   */
+  public loungeBadge = new Observable("Lounging with Bobo");
+
   /* ══ Button ══════════════════════════════════════════════════════════ */
 
   /**
@@ -478,13 +490,28 @@ export class ColaRunRecorder extends Group {
     };
     const target = () => Number(g.targetCount?.value) || undefined;
     const push = () => this._capture?.setHud({ ...this._hud });
-    on(g.onGameStart, () => {
-      this._hud = { score: 0, target: target() };
-      push();
+    const hint = () => {
       if (this.showHint.value && !this._hinted) {
         this._hinted = true;
         this._capture?.showHint();
       }
+    };
+    on(g.onGameStart, () => {
+      this._hud = { score: 0, target: target() };
+      push();
+      hint();
+    });
+    // Lounge mode is a hangout with Bobo, not a round: no score, its own badge.
+    // The button stays available the whole time (it never hides for lounge).
+    on(g.onLoungeEnter, () => {
+      const badge = this.loungeBadge.value.trim();
+      this._hud = badge ? { badge } : {};
+      push();
+      hint();
+    });
+    on(g.onLoungeExit, () => {
+      this._hud = {};
+      push();
     });
     on(g.onOrbCollected, (e: any) => {
       this._hud = {
