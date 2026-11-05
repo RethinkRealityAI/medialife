@@ -431,6 +431,93 @@ function niagaraFalls() {
   return g;
 }
 
+/** San Jose: the Winchester Mystery House (mustard walls, red trim, towers everywhere) under palms. */
+function winchesterHouse() {
+  const g = new THREE.Group();
+  const wall = toon("#e7b548");
+  const trim = toon("#b8402c");
+  const roof = toon("#6e2f2a");
+  const glass = toon("#7fd3e6");
+  const white = toon("#fff3dc");
+  const lawn = toon("#6fae4a");
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.82, 0.04, 40), lawn);
+  base.position.y = 0.02;
+  g.add(base);
+  g.add(box(0.5, 0.012, 0.36, toon("#d9cdb3"), 0, 0.045, 0.5)); // front path
+  // a hip roof: a 4-sided cone squashed to the floor plan
+  const hip = (w, d, h, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.71, h, 4), roof);
+    m.rotation.y = Math.PI / 4;
+    m.scale.set(w, 1, d);
+    m.position.set(x, y + h / 2, z);
+    return m;
+  };
+  // ground floor, upper floor, each with a red band and a row of windows
+  const floors = [
+    [0.04, 0.26, 0.92, 0.42],
+    [0.3, 0.22, 0.72, 0.36],
+  ];
+  for (const [y, h, w, d] of floors) {
+    g.add(box(w, h, d, wall, 0, y + h / 2, 0));
+    g.add(box(w + 0.02, 0.025, d + 0.02, trim, 0, y + h, 0));
+    const n = Math.round(w / 0.16);
+    for (let i = 0; i < n; i++) {
+      const x = -w / 2 + (w / n) * (i + 0.5);
+      g.add(box(0.06, h * 0.5, 0.01, white, x, y + h * 0.52, d / 2 + 0.004));
+      g.add(box(0.044, h * 0.4, 0.012, glass, x, y + h * 0.52, d / 2 + 0.006));
+    }
+  }
+  g.add(hip(0.8, 0.44, 0.2, 0, 0.545, 0));
+  // front gable over the porch, with columns
+  g.add(box(0.36, 0.02, 0.14, trim, 0, 0.3, 0.27));
+  for (const x of [-0.16, 0, 0.16]) g.add(box(0.02, 0.26, 0.02, white, x, 0.17, 0.33));
+  const gable = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.14, 3), roof);
+  gable.rotation.set(0, Math.PI, 0);
+  gable.scale.set(1, 1, 0.5);
+  gable.position.set(0, 0.38, 0.27);
+  g.add(gable);
+  // the towers that made it famous: a round turret, a square tower, a little cupola
+  const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.62, 10), wall);
+  turret.position.set(-0.46, 0.35, 0.08);
+  const tCap = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.34, 10), roof);
+  tCap.position.set(-0.46, 0.83, 0.08);
+  g.add(turret, tCap, box(0.24, 0.025, 0.24, trim, -0.46, 0.62, 0.08));
+  for (const y of [0.24, 0.48]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.112, 0.07, 10, 1, true, -0.5, 1), glass);
+    w.position.set(-0.46, y, 0.08);
+    g.add(w);
+  }
+  g.add(box(0.2, 0.5, 0.2, wall, 0.38, 0.55, -0.02), box(0.22, 0.025, 0.22, trim, 0.38, 0.8, -0.02));
+  g.add(box(0.07, 0.14, 0.01, glass, 0.38, 0.62, 0.085));
+  g.add(hip(0.3, 0.3, 0.26, 0.38, 0.81, -0.02));
+  g.add(box(0.1, 0.08, 0.1, wall, -0.05, 0.7, -0.05), hip(0.14, 0.14, 0.12, -0.05, 0.74, -0.05));
+  // a spire on each tower
+  for (const [x, y, z] of [[-0.46, 1.0, 0.08], [0.38, 1.07, -0.02]]) g.add(box(0.012, 0.08, 0.012, trim, x, y, z));
+  // palms (Circle of Palms), leaning out either side
+  const palm = (x, z, h, lean) => {
+    const p = new THREE.Group();
+    const trunk = toon("#9c7448");
+    for (let i = 0; i < 6; i++) {
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.03, h / 6, 7), trunk);
+      seg.position.set(Math.sin((i / 6) * 1.2) * lean, (h / 6) * (i + 0.5), 0);
+      p.add(seg);
+    }
+    const leaf = toon("#3f9e45");
+    for (let i = 0; i < 7; i++) {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), leaf);
+      f.scale.set(1, 0.14, 0.32);
+      const a = (i / 7) * Math.PI * 2;
+      f.position.set(Math.sin(1.2) * lean + Math.cos(a) * 0.12, h - 0.02 - (i % 2) * 0.02, Math.sin(a) * 0.12);
+      f.rotation.set(0, -a, (i % 2 ? -0.35 : -0.2));
+      p.add(f);
+    }
+    p.position.set(x, 0.04, z);
+    return p;
+  };
+  g.add(palm(-0.68, 0.32, 0.72, -0.08), palm(0.7, 0.28, 0.62, 0.07), palm(0.62, -0.34, 0.5, 0.05));
+  return outline(g);
+}
+
 /** Toronto: the CN Tower, with Niagara Falls just down the road. */
 function toronto() {
   const g = new THREE.Group();
@@ -458,6 +545,7 @@ const CATALOG = [
   { id: "toronto", re: null, city: /^toronto$/i, build: toronto },
   { id: "cn", re: /cn\s*tower/i, city: null, build: cnTower },
   { id: "niagara", re: /niagara/i, city: /^niagara(\s*falls)?$/i, build: niagaraFalls, wide: true },
+  { id: "san-jose", re: /winchester/i, city: /^san\s*jos[eé]$/i, build: winchesterHouse, wide: true },
   { id: "golden-gate", re: /golden\s*gate/i, city: /^san\s*francisco$/i, build: goldenGate, wide: true },
   { id: "eiffel", re: /eiffel/i, city: /^paris$/i, build: eiffelTower },
   { id: "big-ben", re: /big\s*ben|elizabeth\s*tower|westminster/i, city: /^london$/i, build: bigBen },
@@ -565,3 +653,4 @@ export function createLandmarks(globe, { reduced }) {
 
   return { show, hide, update, get active() { return !!current; } };
 }
+
