@@ -121,6 +121,7 @@ import { Route as ApiArAdminAssetsRouteImport } from './routes/api.ar.admin.asse
 import { Route as ApiArAssetIdRouteImport } from './routes/api.ar.asset.$id'
 import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-content.$demo'
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
+import { Route as ApiBoboClipsIdRouteImport } from './routes/api.bobo.clips.$id'
 import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
@@ -725,6 +726,11 @@ const ApiArProjectSlugRoute = ApiArProjectSlugRouteImport.update({
   path: '/api/ar/project/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBoboClipsIdRoute = ApiBoboClipsIdRouteImport.update({
+  id: '/api/bobo/clips/$id',
+  path: '/api/bobo/clips/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBoboDevSeedRoute = ApiBoboDevSeedRouteImport.update({
   id: '/api/bobo/dev/seed',
   path: '/api/bobo/dev/seed',
@@ -1047,6 +1053,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
@@ -1191,6 +1198,7 @@ export interface FileRoutesByTo {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
@@ -1344,6 +1352,7 @@ export interface FileRoutesById {
   '/api/ar/asset/$id': typeof ApiArAssetIdRoute
   '/api/ar/demo-content/$demo': typeof ApiArDemoContentDemoRoute
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
+  '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
@@ -1498,6 +1507,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
@@ -1642,6 +1652,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
@@ -1794,6 +1805,7 @@ export interface FileRouteTypes {
     | '/api/ar/asset/$id'
     | '/api/ar/demo-content/$demo'
     | '/api/ar/project/$slug'
+    | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
@@ -1890,6 +1902,7 @@ export interface RootRouteChildren {
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
+  ApiBoboClipsIdRoute: typeof ApiBoboClipsIdRoute
   ApiBoboDevSeedRoute: typeof ApiBoboDevSeedRoute
   ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
   ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
@@ -2692,6 +2705,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiArProjectSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bobo/clips/$id': {
+      id: '/api/bobo/clips/$id'
+      path: '/api/bobo/clips/$id'
+      fullPath: '/api/bobo/clips/$id'
+      preLoaderRoute: typeof ApiBoboClipsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bobo/dev/seed': {
       id: '/api/bobo/dev/seed'
       path: '/api/bobo/dev/seed'
@@ -3376,6 +3396,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
+  ApiBoboClipsIdRoute: ApiBoboClipsIdRoute,
   ApiBoboDevSeedRoute: ApiBoboDevSeedRoute,
   ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
   ApiHubDevSeedRoute: ApiHubDevSeedRoute,

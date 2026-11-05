@@ -1,3 +1,6 @@
+import { purgeCacheTags } from "@/lib/ar/cdn.server";
+import { BOBO } from "@/lib/bobo/model";
+
 import { mediaTokenConfigured } from "./auth.server";
 import { deleteAssets, getAsset, knownValues, listAssets, saveAssets } from "./data.server";
 import {
@@ -61,6 +64,9 @@ export async function updateMedia(
     results.push({ id, ok: true });
   }
   await saveAssets(ns, changed);
+  // the globe reads the library: make approvals and removals show at once
+  if (changed.some((x) => x.onGlobe || x.location || "onGlobe" in patch))
+    await purgeCacheTags([BOBO.feedCacheTag]);
   return { results, assets: changed.map(mediaView) };
 }
 
@@ -80,5 +86,6 @@ export async function deleteMedia(
     results.push({ id, ok: true });
   }
   await deleteAssets(ns, gone);
+  if (gone.some((x) => x.onGlobe && x.location)) await purgeCacheTags([BOBO.feedCacheTag]);
   return { results };
 }

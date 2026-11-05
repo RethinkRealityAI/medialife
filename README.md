@@ -842,6 +842,17 @@ visitor per 10 minutes, city from the visitor's IP (or coordinates rounded to
 plus a *Web capture* tag. `BOBO_WEB_CAPTURES=off` turns this path off.
 Code: `src/lib/bobo/captures.server.ts`.
 
+On the globe a clip shows straight away as an **In review** pin at its city
+(the feed carries city, time and length only, never the file). Init also
+returns a read-only `viewKey`; the record button's "See it on the globe" link
+(`/evade/where-is-bobo/?clip=<id>#k=<viewKey>`, key in the fragment) lets the
+player watch their own clip there through `GET /api/bobo/clips/<id>?k=…`
+(JSON, `as=file`, `as=poster`; 30 days). New clips beam in on every open
+globe within ~15 s: the page polls, and the feed's CDN copy (tag `bobo-feed`)
+is purged when a clip lands or the team changes globe media. The media
+drawer's **Approve for the globe** makes it public (and removes *Needs
+review*); **Keep it off the globe** hides the pin.
+
 ### Configuration (Netlify env vars)
 
 | Variable | What it does |
@@ -849,6 +860,7 @@ Code: `src/lib/bobo/captures.server.ts`.
 | `BOBO_INGEST_TOKEN` | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures. |
 | `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events (and upload record-button clips) without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. Add the published AR experience's origin here. |
 | `BOBO_WEB_CAPTURES` | `off` stops browsers uploading clips (events still work). Default: on. |
+| `BOBO_CAPTURE_REVIEW` | `off` publishes game clips straight to the globe without review (tagged *Auto-published*). For a supervised event or demo only; players are often under 18. Default: on. |
 
 Preview and dev deploys can load sample sightings (made-up places, using the other
 committed Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.

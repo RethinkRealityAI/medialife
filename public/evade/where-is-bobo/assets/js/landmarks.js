@@ -222,19 +222,176 @@ function liberty() {
   return outline(g);
 }
 
-/** Venue text → builder and its footprint (width in its own units, for scaling). */
+
+function cnTower() {
+  const g = new THREE.Group();
+  const concrete = toon("#e3ded5");
+  const shade = toon("#bdb6ab");
+  const pod = toon("#8d97a2");
+  const glass = toon("#5fd6ff", { emissive: "#1aa8ff", emissiveIntensity: 0.55 });
+  const red = toon("#e8452f");
+  // the Y-shaped base: three fins around a tapering core
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.065, 0.62, 12), concrete);
+  core.position.y = 0.31;
+  g.add(core);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
+    const fin = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.05, 0.5, 4), shade);
+    fin.scale.set(1, 1, 0.45);
+    fin.position.set(Math.cos(a) * 0.05, 0.25, Math.sin(a) * 0.05);
+    fin.rotation.y = -a;
+    g.add(fin);
+  }
+  // the main pod: a fat doughnut with a glowing window band and the glass floor
+  const lower = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.08, 0.05, 24), pod);
+  lower.position.y = 0.62;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.035, 24), glass);
+  band.position.y = 0.66;
+  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.13, 0.045, 24), pod);
+  upper.position.y = 0.7;
+  g.add(lower, band, upper);
+  // the shaft carries on to the SkyPod
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 0.14, 10), concrete);
+  shaft.position.y = 0.79;
+  const sky = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 16), glass);
+  sky.position.y = 0.87;
+  g.add(shaft, sky);
+  // antenna, red and white
+  for (let i = 0; i < 4; i++) {
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.006 - i * 0.001, 0.008 - i * 0.001, 0.035, 6), i % 2 ? concrete : red);
+    seg.position.y = 0.9 + i * 0.035;
+    seg.userData.noInk = true;
+    g.add(seg);
+  }
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), toon("#ff5a4a", { emissive: "#ff2a1a", emissiveIntensity: 1 }));
+  beacon.position.y = 1.04;
+  beacon.userData.noInk = true;
+  g.add(beacon);
+  return outline(g);
+}
+
+/** Moving water: a striped canvas texture that scrolls down. */
+function waterTexture() {
+  const c = document.createElement("canvas");
+  c.width = 64;
+  c.height = 128;
+  const x = c.getContext("2d");
+  const grad = x.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, "#7fe3ff");
+  grad.addColorStop(1, "#d8f7ff");
+  x.fillStyle = grad;
+  x.fillRect(0, 0, 64, 128);
+  x.fillStyle = "rgba(255,255,255,0.75)";
+  for (let i = 0; i < 26; i++) x.fillRect((i * 37) % 64, (i * 53) % 128, 2 + (i % 3), 18 + (i % 5) * 6);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(3, 1);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function niagaraFalls() {
+  const g = new THREE.Group();
+  const rock = toon("#6d8a4e");
+  const cliff = toon("#8a6d4f");
+  const river = toon("#4fc3e8");
+  const water = waterTexture();
+  // the Horseshoe: a curved cliff with water pouring over its lip
+  const R = 0.42;
+  const arc = Math.PI * 0.95;
+  // centred on the back (theta = PI is -z): the horseshoe opens towards the camera
+  const start = Math.PI - arc / 2;
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.34, 32, 1, true, start, arc), cliff);
+  wall.material = cliff.clone();
+  wall.material.side = THREE.DoubleSide;
+  wall.position.y = 0.17;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.16, R + 0.16, 0.06, 32, 1, false, start, arc), rock);
+  top.position.y = 0.34;
+  const curtain = new THREE.Mesh(
+    new THREE.CylinderGeometry(R - 0.012, R - 0.04, 0.33, 32, 1, true, start, arc),
+    new THREE.MeshBasicMaterial({ map: water, transparent: true, opacity: 0.94, side: THREE.DoubleSide }),
+  );
+  curtain.position.y = 0.17;
+  curtain.userData.noInk = true;
+  // the river below and the mist
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(R + 0.14, 32), river);
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.y = 0.005;
+  pool.userData.noInk = true;
+  g.add(wall, top, curtain, pool);
+  const mistMat = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.42, depthWrite: false });
+  const mist = [];
+  for (let i = 0; i < 7; i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.07 + (i % 3) * 0.025, 10, 8), mistMat);
+    const a = start + ((i + 0.5) / 7) * arc;
+    m.position.set(Math.sin(a) * (R - 0.12), 0.05 + (i % 2) * 0.04, Math.cos(a) * (R - 0.12));
+    m.userData.noInk = true;
+    m.userData.base = m.position.y;
+    mist.push(m);
+    g.add(m);
+  }
+  // and the rainbow, because there always is one
+  const rainbow = new THREE.Group();
+  ["#ff4d4d", "#ffa63d", "#ffe14d", "#57d977", "#4db8ff", "#9d6bff"].forEach((col, i) => {
+    const t = new THREE.Mesh(
+      new THREE.TorusGeometry(0.26 - i * 0.014, 0.0075, 6, 40, Math.PI),
+      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.62, depthWrite: false }),
+    );
+    t.userData.noInk = true;
+    rainbow.add(t);
+  });
+  // off to one side, in the spray, so the falls stay the star
+  rainbow.position.set(0.22, 0.02, 0.3);
+  rainbow.rotation.y = -0.35;
+  g.add(rainbow);
+  outline(g);
+  g.userData.tick = (time) => {
+    water.offset.y = (time * 0.9) % 1;
+    mist.forEach((m, i) => {
+      m.position.y = m.userData.base + Math.sin(time * 1.3 + i) * 0.015;
+      m.scale.setScalar(1 + Math.sin(time * 0.9 + i * 1.7) * 0.08);
+    });
+  };
+  return g;
+}
+
+/** Toronto: the CN Tower, with Niagara Falls (and its rainbow) just down the road. */
+function toronto() {
+  const g = new THREE.Group();
+  const tower = cnTower();
+  tower.position.x = -0.3;
+  const falls = niagaraFalls();
+  falls.scale.setScalar(0.7);
+  falls.position.set(0.3, 0, 0.08);
+  g.add(tower, falls);
+  g.userData.tick = (time) => falls.userData.tick?.(time);
+  return g;
+}
+
+/**
+ * Venue text (the Media Library's venue field) → builder; `city` is the
+ * fallback when a sighting has no famous venue, so every clip from Toronto
+ * gets the CN Tower and the Falls. `wide` scales it down to fit.
+ */
 const CATALOG = [
-  { re: /golden\s*gate/i, build: goldenGate, wide: true },
-  { re: /eiffel/i, build: eiffelTower },
-  { re: /big\s*ben|elizabeth\s*tower|westminster/i, build: bigBen },
-  { re: /tokyo\s*tower/i, build: tokyoTower },
-  { re: /opera\s*house/i, build: operaHouse, wide: true },
-  { re: /statue\s*of\s*liberty|liberty\s*island/i, build: liberty },
+  { id: "toronto", re: null, city: /^toronto$/i, build: toronto },
+  { id: "cn", re: /cn\s*tower/i, city: null, build: cnTower },
+  { id: "niagara", re: /niagara/i, city: /^niagara(\s*falls)?$/i, build: niagaraFalls, wide: true },
+  { id: "golden-gate", re: /golden\s*gate/i, city: /^san\s*francisco$/i, build: goldenGate, wide: true },
+  { id: "eiffel", re: /eiffel/i, city: /^paris$/i, build: eiffelTower },
+  { id: "big-ben", re: /big\s*ben|elizabeth\s*tower|westminster/i, city: /^london$/i, build: bigBen },
+  { id: "tokyo", re: /tokyo\s*tower/i, city: /^tokyo$/i, build: tokyoTower },
+  { id: "opera", re: /opera\s*house/i, city: /^sydney$/i, build: operaHouse, wide: true },
+  { id: "liberty", re: /statue\s*of\s*liberty|liberty\s*island/i, city: /^new\s*york(\s*city)?$/i, build: liberty },
 ];
 
-export function landmarkFor(place) {
-  if (!place) return null;
-  return CATALOG.find((c) => c.re.test(place)) ?? null;
+export function landmarkFor(place, city = "") {
+  if (place) {
+    const hit = CATALOG.find((c) => c.re?.test(place));
+    if (hit) return hit;
+  }
+  const c = (city || "").trim();
+  return c ? (CATALOG.find((x) => x.city?.test(c)) ?? null) : null;
 }
 
 /* ── the pop-up ───────────────────────────────────────────────────────────── */
@@ -251,12 +408,12 @@ export function createLandmarks(globe, { reduced }) {
   const m = new THREE.Matrix4();
 
   /**
-   * Shows the landmark for `place` standing at world direction `dir` (unit)
+   * Shows the landmark for `place` (or, failing that, `city`) standing at world direction `dir` (unit)
    * on a sphere of radius `r`, `size` tall, facing the camera.
    */
-  function show(place, dir, r, size, camera) {
-    const entry = landmarkFor(place);
-    const key = entry ? entry.re.source : null;
+  function show(place, city, dir, r, size, camera) {
+    const entry = landmarkFor(place, city);
+    const key = entry ? entry.id : null;
     if (current?.key === key) return false;
     hide();
     if (!entry) return false;
@@ -306,7 +463,9 @@ export function createLandmarks(globe, { reduced }) {
       const s = current.obj.userData.size * k;
       current.obj.scale.setScalar(s);
       // a gentle idle bob so it feels alive
-      current.obj.children[0].rotation.y = Math.sin(time * 0.6) * 0.05;
+      const inner = current.obj.children[0];
+      inner.rotation.y = Math.sin(time * 0.6) * 0.05;
+      inner.userData.tick?.(time);
     }
     for (let i = leaving.length - 1; i >= 0; i--) {
       const l = leaving[i];

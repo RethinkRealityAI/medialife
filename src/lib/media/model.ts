@@ -541,7 +541,15 @@ export type MediaAsset = {
    * straight from the game in a player's browser. Stays private until reviewed.
    * keyHash is the browser upload's one-time key (hashed); never sent to clients.
    */
-  ingest?: { source: string; receivedAt: number; web?: boolean; keyHash?: string } | null;
+  ingest?: {
+    source: string;
+    receivedAt: number;
+    web?: boolean;
+    /** Web captures: sha256 of the upload's capture key (writes, 24 h). */
+    keyHash?: string;
+    /** Web captures: sha256 of the player's view key (watch their own clip before review). */
+    viewHash?: string;
+  } | null;
 };
 
 /** What the admin page receives: the record without storage internals, plus URLs. */
