@@ -40,8 +40,10 @@ import {
   UGC,
   UGC_PLATFORM_LABELS,
   UGC_PLATFORMS,
+  UGC_TEE_SIZES,
   type ShippingAddress,
   type UgcPlatform,
+  type UgcTeeSize,
 } from "@/lib/ugc/model";
 import { cn } from "@/lib/utils";
 
@@ -563,6 +565,7 @@ function AddCreatorPanel({ campaigns }: { campaigns: PipelineCampaign[] }) {
   const [country, setCountry] = useState("");
   const [handles, setHandles] = useState<Partial<Record<UgcPlatform, string>>>({});
   const [phone, setPhone] = useState("");
+  const [teeSize, setTeeSize] = useState<UgcTeeSize | "">("");
   const [withAddress, setWithAddress] = useState(false);
   const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
   const [notes, setNotes] = useState("");
@@ -580,6 +583,7 @@ function AddCreatorPanel({ campaigns }: { campaigns: PipelineCampaign[] }) {
     setCountry("");
     setHandles({});
     setPhone("");
+    setTeeSize("");
     setWithAddress(false);
     setAddress(EMPTY_ADDRESS);
     setNotes("");
@@ -617,6 +621,7 @@ function AddCreatorPanel({ campaigns }: { campaigns: PipelineCampaign[] }) {
                 country: country || undefined,
                 handles: Object.fromEntries(Object.entries(handles).filter(([, v]) => v?.trim())),
                 phone: phone || undefined,
+                teeSize: teeSize || null,
                 address:
                   withAddress && address.line1.trim()
                     ? { ...address, name: address.name || name }
@@ -702,14 +707,34 @@ function AddCreatorPanel({ campaigns }: { campaigns: PipelineCampaign[] }) {
             ))}
           </div>
         </fieldset>
-        <Field label="Phone" htmlFor={`${uid}-phone`} optional>
-          <Input
-            id={`${uid}-phone`}
-            type="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Phone" htmlFor={`${uid}-phone`} optional>
+            <Input
+              id={`${uid}-phone`}
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </Field>
+          <Field label="Tee size" htmlFor={`${uid}-tee`} optional>
+            <Select
+              value={teeSize || "__none"}
+              onValueChange={(v) => setTeeSize(v === "__none" ? "" : (v as UgcTeeSize))}
+            >
+              <SelectTrigger id={`${uid}-tee`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">Not given</SelectItem>
+                {UGC_TEE_SIZES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
         <CheckRow id={`${uid}-addr`} checked={withAddress} onChange={setWithAddress}>
           Add a shipping address
         </CheckRow>

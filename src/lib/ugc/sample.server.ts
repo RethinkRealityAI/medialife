@@ -28,6 +28,7 @@ import { newCreatorFrom } from "./import.server";
 import {
   UGC,
   UGC_DEFAULT_DISCLOSURE,
+  UGC_TEE_SIZES,
   aspectOf,
   trackingUrlFor,
   type UgcAsset,
@@ -514,6 +515,7 @@ export async function seedUgcSample(ns: UgcNamespace, opts: { reset?: boolean } 
           Object.keys(s.handles).map((p, i) => [p, ["1K–10K", "10K–50K", "Under 1K"][i % 3]]),
         ),
         applicationNotes: s.notes ?? "",
+        teeSize: UGC_TEE_SIZES[k % UGC_TEE_SIZES.length],
         consent: { contact: true, at: created },
         source: {
           kind: "seed",

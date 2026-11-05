@@ -50,6 +50,7 @@ import {
   type UgcShipment,
   type UgcSubmissionStatus,
   type UgcSubmissionView,
+  type UgcTeeSize,
   type UgcTimelineStep,
 } from "./model";
 import type { UgcNamespace } from "./store.server";
@@ -405,6 +406,7 @@ export type ProfileInput = {
   name?: string;
   country?: string;
   handles?: Partial<Record<UgcPlatform, string>>;
+  teeSize?: UgcTeeSize | null;
   phone?: string;
   address?: ShippingAddress | null;
 };
@@ -418,6 +420,7 @@ export async function updateProfile(
   if (input.creatorName !== undefined) c.creatorName = input.creatorName.trim().slice(0, 80);
   if (input.name !== undefined) c.name = input.name.trim().slice(0, 120);
   if (input.country !== undefined) c.country = input.country.trim().slice(0, 80);
+  if (input.teeSize !== undefined) c.teeSize = input.teeSize;
   if (input.handles) {
     const handles = { ...c.handles };
     for (const p of UGC_PLATFORMS) {

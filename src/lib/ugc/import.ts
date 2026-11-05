@@ -5,13 +5,20 @@
  * and reads / writes CSV. Pure and client-safe, so the admin import page can
  * preview a CSV before sending it.
  */
-import { UGC_PLATFORMS, type ShippingAddress, type UgcPlatform, type UgcSource } from "./model";
+import {
+  UGC_PLATFORMS,
+  normaliseTeeSize,
+  type ShippingAddress,
+  type UgcPlatform,
+  type UgcSource,
+  type UgcTeeSize,
+} from "./model";
 
 /**
  * Every field the form sends, by its exact name. The quick intake form sends
  * contact-name, email, phone, platforms, <platform>_handle, creator_name (the
- * username they typed once), the address fields, notes (delivery notes) and
- * consent. country, main_platform and <platform>_audience came from the
+ * username they typed once), tee_size (S to 3XL), the address fields, notes
+ * (delivery notes) and consent. country, main_platform and <platform>_audience came from the
  * earlier, longer form and are still read so older sign-ups import the same.
  */
 export const UGC_FORM_FIELDS = [
@@ -23,6 +30,7 @@ export const UGC_FORM_FIELDS = [
   "platforms",
   "main_platform",
   ...UGC_PLATFORMS.flatMap((p) => [`${p}_handle`, `${p}_audience`]),
+  "tee_size",
   "ship_name",
   "address_line1",
   "address_line2",
@@ -82,6 +90,7 @@ export type MappedSignup = {
     handles: Partial<Record<UgcPlatform, string>>;
     audiences: Partial<Record<UgcPlatform, string>>;
     applicationNotes: string;
+    teeSize: UgcTeeSize | null;
     consent: { contact: boolean; at: number | null };
     source: UgcSource;
   };
@@ -174,6 +183,7 @@ export function mapSignup(
         handles,
         audiences,
         applicationNotes: clip(fields.notes, 2000),
+        teeSize: normaliseTeeSize(fields.tee_size),
         consent: { contact: consent, at: consent ? submittedAt : null },
         source: {
           kind: meta.kind,

@@ -471,6 +471,14 @@ function CreatorCell({ r }: { r: ShippingRow }) {
           {r.creatorName || r.name}
         </Link>
         {r.status === "paused" ? <UgcStatusPill status="paused" /> : null}
+        {r.teeSize ? (
+          <span
+            className="rounded-md border border-amber-300/30 bg-amber-300/10 px-1.5 py-0.5 text-[11px] font-semibold text-amber-200"
+            title="T-shirt size"
+          >
+            Tee {r.teeSize}
+          </span>
+        ) : null}
       </div>
       <div className="truncate text-xs text-muted-foreground">{r.email}</div>
       {r.campaignTitle ? (

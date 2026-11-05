@@ -448,6 +448,54 @@
           <!-- STEP 3 -->
           <fieldset class="step" data-step="2" id="step2" hidden>
             <legend><span class="mono">Step 3 of 4</span>Where we ship your merch</legend>
+            <div class="field field--tee">
+              <div class="tee-head">
+                <span class="tee-lbl" id="teeLbl">Your tee size</span>
+                <button type="button" class="tee-guide-btn" id="teeGuideBtn" aria-expanded="false" aria-controls="teeGuide">
+                  <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="6" width="16" height="8" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 6v3M10 6v4M14 6v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                  Size guide
+                </button>
+              </div>
+              <div class="tee-sizes" role="radiogroup" aria-labelledby="teeLbl">
+                <label class="tsz"><input type="radio" name="tee_size" value="S" required aria-describedby="e-tee" /><span>S</span></label>
+                <label class="tsz"><input type="radio" name="tee_size" value="M" required aria-describedby="e-tee" /><span>M</span></label>
+                <label class="tsz"><input type="radio" name="tee_size" value="L" required aria-describedby="e-tee" /><span>L</span></label>
+                <label class="tsz"><input type="radio" name="tee_size" value="XL" required aria-describedby="e-tee" /><span>XL</span></label>
+                <label class="tsz"><input type="radio" name="tee_size" value="2XL" required aria-describedby="e-tee" /><span>2XL</span></label>
+                <label class="tsz"><input type="radio" name="tee_size" value="3XL" required aria-describedby="e-tee" /><span>3XL</span></label>
+              </div>
+              <p class="err" id="e-tee"></p>
+              <div class="tee-guide" id="teeGuide" hidden>
+                <figure class="tee-art" aria-hidden="true">
+                  <svg viewBox="0 0 120 120">
+                    <path class="tee-body" d="M47 14 Q60 25 73 14 L95 21 L113 45 L99 53 L92 47 L92 110 L28 110 L28 47 L21 53 L7 45 L25 21 Z"/>
+                    <path class="tee-collar" d="M47 14 Q60 25 73 14"/>
+                    <g class="m m-l"><path d="M40 19 V107"/><circle cx="40" cy="19" r="2.2"/><circle cx="40" cy="107" r="2.2"/><text x="44" y="88">L</text></g>
+                    <g class="m m-w"><path d="M31 60 H89"/><circle cx="31" cy="60" r="2.2"/><circle cx="89" cy="60" r="2.2"/><text x="56" y="55">W</text></g>
+                    <g class="m m-s"><path d="M74 9 L115 38"/><circle cx="74" cy="9" r="2.2"/><circle cx="115" cy="38" r="2.2"/><text x="98" y="17">S</text></g>
+                  </svg>
+                </figure>
+                <div class="tee-tbl">
+                  <div class="tee-units" role="group" aria-label="Units">
+                    <button type="button" data-unit="in" aria-pressed="true">in</button>
+                    <button type="button" data-unit="cm" aria-pressed="false">cm</button>
+                  </div>
+                  <table>
+                    <caption class="sr-only">T-shirt measurements, laid flat</caption>
+                    <thead><tr><th scope="col">Size</th><th scope="col"><i class="k-w">W</i> Width</th><th scope="col"><i class="k-l">L</i> Length</th><th scope="col"><i class="k-s">S</i> Sleeve</th></tr></thead>
+                    <tbody>
+                      <tr data-size="S"><th scope="row">S</th><td data-in="18" data-cm="46">18</td><td data-in="28" data-cm="71">28</td><td data-in="16.5" data-cm="42">16.5</td></tr>
+                      <tr data-size="M"><th scope="row">M</th><td data-in="20" data-cm="51">20</td><td data-in="29" data-cm="74">29</td><td data-in="17" data-cm="43">17</td></tr>
+                      <tr data-size="L"><th scope="row">L</th><td data-in="22" data-cm="56">22</td><td data-in="30" data-cm="76">30</td><td data-in="18.5" data-cm="47">18.5</td></tr>
+                      <tr data-size="XL"><th scope="row">XL</th><td data-in="24" data-cm="61">24</td><td data-in="31" data-cm="79">31</td><td data-in="20" data-cm="51">20</td></tr>
+                      <tr data-size="2XL"><th scope="row">2XL</th><td data-in="26" data-cm="66">26</td><td data-in="32" data-cm="81">32</td><td data-in="21.5" data-cm="55">21.5</td></tr>
+                      <tr data-size="3XL"><th scope="row">3XL</th><td data-in="28" data-cm="71">28</td><td data-in="33" data-cm="84">33</td><td data-in="23" data-cm="58">23</td></tr>
+                    </tbody>
+                  </table>
+                  <p class="tee-note">Measured flat. Tap a size to pick it.</p>
+                </div>
+              </div>
+            </div>
             <div class="fields">
               <div class="field field--full">
                 <label for="f-ship">Ship to</label>

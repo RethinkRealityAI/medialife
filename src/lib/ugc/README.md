@@ -143,7 +143,7 @@ All in `model.ts` unless noted.
 
 - `UgcCreator` (admin) / `UgcCreatorView` (creator; no `source`, no `hubUserId`). Fields: `id,
   status, statusChangedAt, campaignIds, name` (person), `creatorName` (channel name), `email,
-  country, platforms, mainPlatform, handles, audiences, applicationNotes, consent, deletionRequest
+  country, platforms, mainPlatform, handles, audiences, applicationNotes, teeSize, consent, deletionRequest
   ({at, note} | null), createdAt, approvedAt, joinedAt, lastLoginAt, sample?`.
 - `UgcPii` (admin only; creators get their own phone/address via `getUgcProfile`): `phone,
   address: ShippingAddress | null, purgeAfter, purgedAt`. `ShippingAddress = { name, line1, line2,
@@ -250,7 +250,7 @@ Shipping
 | Function | Input | Output |
 | --- | --- | --- |
 | `adminUgcShipping` | `{ campaignId?, onlyUnshipped? }` | `ShippingRow[]`: `{ creatorId, name, creatorName, email, status, campaignId, campaignTitle, phone, address, shipment }` |
-| `adminExportUgcShippingCsv` | `{ campaignId?, onlyUnshipped? (default true) }` | `{ filename, csv, count, missingAddress: creatorId[] }`. Columns: `reference,name,address_line1,address_line2,city,region,postal_code,country,phone,email,items,creator_name,campaign,carrier,tracking,delivery_notes`. Save with `new Blob([csv], {type: "text/csv"})` + `saveBlob` from `@/lib/hub/download-client`. |
+| `adminExportUgcShippingCsv` | `{ campaignId?, onlyUnshipped? (default true) }` | `{ filename, csv, count, missingAddress: creatorId[] }`. Columns: `reference,name,address_line1,address_line2,city,region,postal_code,country,phone,email,items,tee_size,creator_name,campaign,carrier,tracking,delivery_notes`. Save with `new Blob([csv], {type: "text/csv"})` + `saveBlob` from `@/lib/hub/download-client`. |
 | `adminMarkUgcPacked` | `{ creatorIds[], campaignId? }` | `{ results }` |
 | `adminMarkUgcShipped` | `{ entries: {creatorId, carrier, tracking, url?}[], campaignId?, notify? }` | `{ results }`. Tracking URL derived for USPS/UPS/FedEx/DHL/Royal Mail/Canada Post/Evri unless `url`. Moves approved → shipped; emails the tracking link. |
 | `adminImportUgcTrackingCsv` | `{ csv ("email,carrier,tracking[,url]", header optional), campaignId?, notify? }` | `{ results: {creatorId, email, ok, error?}[] }` |

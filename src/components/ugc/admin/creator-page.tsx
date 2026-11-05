@@ -84,12 +84,14 @@ import {
   UGC_PLATFORMS,
   UGC_STATUS_LABELS,
   UGC_STATUSES,
+  UGC_TEE_SIZES,
   UGC_TRANSITIONS,
   canSignIn,
   formatBytes,
   type ShippingAddress,
   type UgcPlatform,
   type UgcStatus,
+  type UgcTeeSize,
 } from "@/lib/ugc/model";
 import { cn } from "@/lib/utils";
 
@@ -477,6 +479,7 @@ function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: Pipe
                 </a>,
               ],
               ["Country", c.country],
+              ["Tee size", c.teeSize ?? null],
               // the quick intake form doesn't ask for a main platform; older sign-ups may have one
               ...(c.mainPlatform
                 ? ([["Main platform", UGC_PLATFORM_LABELS[c.mainPlatform]]] as [string, string][])
@@ -848,6 +851,7 @@ function EditProfileDialog({
                     country: f.country,
                     handles: f.handles,
                     mainPlatform: f.mainPlatform || null,
+                    teeSize: f.teeSize || null,
                   },
                 }),
               "Profile saved",
@@ -889,6 +893,24 @@ function EditProfileDialog({
                 value={f.country}
                 onChange={(e) => set("country", e.target.value)}
               />
+            </Field>
+            <Field label="Tee size" htmlFor={`${uid}-tee`}>
+              <Select
+                value={f.teeSize || "__none"}
+                onValueChange={(v) => set("teeSize", v === "__none" ? "" : (v as UgcTeeSize))}
+              >
+                <SelectTrigger id={`${uid}-tee`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Not given</SelectItem>
+                  {UGC_TEE_SIZES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
           </div>
           <fieldset className="space-y-2.5">
@@ -950,6 +972,7 @@ const profileForm = (d: CreatorDetail) => ({
   country: d.creator.country,
   handles: { ...d.creator.handles } as Partial<Record<UgcPlatform, string>>,
   mainPlatform: (d.creator.mainPlatform ?? "") as UgcPlatform | "",
+  teeSize: (d.creator.teeSize ?? "") as UgcTeeSize | "",
 });
 
 const EMPTY_ADDRESS: ShippingAddress = {
