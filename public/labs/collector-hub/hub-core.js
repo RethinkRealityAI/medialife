@@ -450,7 +450,7 @@ const CSS = (
 /* hud */
 .mlh-hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--mlh-top,0px)) 14px 0;pointer-events:none!important;opacity:0;transform:translateY(-8px);transition:opacity .35s,transform .35s}
 .mlh-hud.on{opacity:1;transform:none}
-.mlh-hud>*{pointer-events:auto!important}
+.mlh-hud.on>*{pointer-events:auto!important}
 .mlh-title{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);text-align:left;min-height:44px}
 .mlh-title b{display:block;font-size:15px;line-height:1.2}
 .mlh-title small{display:block;color:var(--muted);font-size:12px;line-height:1.3}
@@ -462,7 +462,7 @@ const CSS = (
 .mlh-prompt p{margin:0;padding:9px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:14px;color:#dfe7ff;backdrop-filter:blur(8px)}
 .mlh-prompt .mlh-btn.pri{min-height:54px;padding:0 28px;border-radius:999px;font-size:17px;box-shadow:0 0 28px rgba(54,227,255,.4)}
 .mlh-skip{position:absolute;right:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 22px);pointer-events:auto!important}
-.mlh-mode{position:absolute;left:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 24px);display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 16px 6px 6px;border-radius:999px;border:1px solid rgba(54,227,255,.45);background:rgba(9,14,36,.88);color:#fff;font-weight:800;font-size:14.5px;box-shadow:0 0 22px rgba(54,227,255,.3);pointer-events:auto!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:mlh-pop .4s cubic-bezier(.2,1.6,.4,1)}
+.mlh-mode{position:absolute;left:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + var(--mlh-mode-bottom,78px));display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 16px 6px 6px;border-radius:999px;border:1px solid rgba(54,227,255,.45);background:rgba(9,14,36,.88);color:#fff;font-weight:800;font-size:14.5px;box-shadow:0 0 22px rgba(54,227,255,.3);pointer-events:auto!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:mlh-pop .4s cubic-bezier(.2,1.6,.4,1)}
 .mlh-mode i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--pink));color:#041824}
 .mlh-mode i svg{width:22px;height:22px}
 .mlh-mode small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.2}
@@ -2084,6 +2084,8 @@ class CollectorHub {
     ui.style.setProperty("pointer-events", "none", "important");
     if (this.opts.host === document.body) ui.style.position = "fixed";
     if (this.opts.hudOffset) ui.style.setProperty("--mlh-top", `${this.opts.hudOffset}px`);
+    if (this.opts.modeBottom != null)
+      ui.style.setProperty("--mlh-mode-bottom", `${this.opts.modeBottom}px`);
     ui.innerHTML = `
 <div class="mlh-hud" data-r="hud">
   <button type="button" class="mlh-title" data-r="title" aria-label="Your collection">
