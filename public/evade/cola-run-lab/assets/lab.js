@@ -1,0 +1,466 @@
+// Cola Run recorder lab: a stand-in Cola Run scene in plain three.js, wired
+// to the exact recorder the Mattercraft component uses (capture-core.js is
+// generated from mattercraft/cola-run/CaptureCore.ts). The renderer is set up
+// like Mattercraft's (alpha, no preserveDrawingBuffer) and the recorder is fed
+// right after each render, the way the component's useOnAfterRender does.
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=1";
+
+const $ = (s) => document.querySelector(s);
+const canvas = $("#c");
+const overlay = $("#zcomponent-overlay");
+const qs = new URLSearchParams(location.search);
+
+/* ── log ── */
+const logEl = $("#log");
+function log(msg, href) {
+  const li = document.createElement("li");
+  li.textContent = `${new Date().toLocaleTimeString()}  ${msg} `;
+  if (href) {
+    const a = document.createElement("a");
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "open";
+    li.appendChild(a);
+  }
+  logEl.prepend(li);
+  console.log("[lab]", msg);
+}
+
+/* ── renderer, like Mattercraft's ── */
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: true,
+  preserveDrawingBuffer: false,
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+
+function sky() {
+  const c = document.createElement("canvas");
+  c.width = 4;
+  c.height = 256;
+  const g = c.getContext("2d");
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, "#5fb7e8");
+  gr.addColorStop(0.55, "#bfe6f2");
+  gr.addColorStop(1, "#f4e6c8");
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 4, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const skyTex = sky();
+scene.background = skyTex;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7a6a55, 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+sun.position.set(4, 8, 3);
+scene.add(sun);
+
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(14, 64),
+  new THREE.MeshStandardMaterial({ color: 0x8fcf7a, roughness: 0.95 }),
+);
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+const ring = new THREE.Mesh(
+  new THREE.RingGeometry(13.6, 14, 96),
+  new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.7 }),
+);
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.01;
+scene.add(ring);
+
+/* ── models ── */
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+const player = new THREE.Group();
+scene.add(player);
+let mixer = null;
+let runAct = null;
+let idleAct = null;
+const cans = [];
+let canProto = null;
+let canClip = null;
+
+async function loadModels() {
+  const [bobo, cola] = await Promise.all([
+    loader.loadAsync("/roblox/activated-retail/models/catrun.glb"),
+    loader.loadAsync("/roblox/activated-retail/models/cola.glb"),
+  ]);
+  const b = bobo.scene;
+  fit(b, 1.1);
+  player.add(b);
+  mixer = new THREE.AnimationMixer(b);
+  const clip = (n) => bobo.animations.find((a) => a.name === n);
+  runAct = clip("Run") && mixer.clipAction(clip("Run"));
+  idleAct = clip("Idle") && mixer.clipAction(clip("Idle"));
+  idleAct?.play();
+  runAct?.play();
+  runAct && (runAct.weight = 0);
+  canProto = cola.scene;
+  fit(canProto, 0.9);
+  canClip = cola.animations[0] ?? null;
+}
+
+function fit(obj, height) {
+  const box = new THREE.Box3().setFromObject(obj);
+  const s = height / Math.max(1e-3, box.max.y - box.min.y);
+  obj.scale.setScalar(s);
+  const b2 = new THREE.Box3().setFromObject(obj);
+  obj.position.y -= b2.min.y;
+}
+
+const TARGET = 6;
+function layoutCans() {
+  for (const c of cans) scene.remove(c.obj);
+  cans.length = 0;
+  if (!canProto) return;
+  for (let i = 0; i < TARGET; i++) {
+    const a = (i / TARGET) * Math.PI * 2 + 0.4;
+    const r = 4.5 + (i % 2) * 3.5;
+    const obj = canProto.clone(true);
+    const holder = new THREE.Group();
+    holder.add(obj);
+    holder.position.set(Math.cos(a) * r, 0.25, Math.sin(a) * r);
+    scene.add(holder);
+    const m = canClip ? new THREE.AnimationMixer(obj) : null;
+    m?.clipAction(canClip).play();
+    cans.push({ obj: holder, mixer: m, taken: false });
+  }
+}
+
+/* ── audio: a small synth loop + a pickup ding through one master bus ── */
+let ac = null;
+let master = null;
+let musicTimer = 0;
+function audioStart() {
+  if (ac) return;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  master = ac.createGain();
+  master.gain.value = 0.5;
+  master.connect(ac.destination);
+  let step = 0;
+  let next = ac.currentTime + 0.05;
+  const bass = [55, 55, 65.4, 49];
+  const tick = () => {
+    while (next < ac.currentTime + 0.25) {
+      const beat = step % 8;
+      if (beat % 2 === 0) tone(bass[(step >> 3) % 4], next, 0.22, "triangle", 0.25);
+      if (beat % 2 === 1) noise(next, 0.04, 0.06);
+      if (beat === 4) tone(440, next, 0.08, "square", 0.05);
+      next += 0.1875;
+      step++;
+    }
+  };
+  tick();
+  musicTimer = setInterval(tick, 60);
+}
+function tone(f, t, d, type = "sine", v = 0.2) {
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = type;
+  o.frequency.value = f;
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(master);
+  o.start(t);
+  o.stop(t + d + 0.02);
+}
+let noiseBuf = null;
+function noise(t, d, v) {
+  if (!noiseBuf) {
+    noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.1, ac.sampleRate);
+    const ch = noiseBuf.getChannelData(0);
+    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+  }
+  const s = ac.createBufferSource();
+  const g = ac.createGain();
+  s.buffer = noiseBuf;
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  s.connect(g).connect(master);
+  s.start(t);
+}
+const ding = () => {
+  if (!ac) return;
+  const t = ac.currentTime;
+  tone(880, t, 0.12, "sine", 0.3);
+  tone(1320, t + 0.07, 0.18, "sine", 0.25);
+};
+
+/* ── camera background (optional) ── */
+let camStream = null;
+async function useCamera(on) {
+  if (!on) {
+    for (const t of camStream?.getTracks() ?? []) t.stop();
+    camStream = null;
+    scene.background = skyTex;
+    ground.visible = true;
+    return;
+  }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
+    const v = document.createElement("video");
+    v.playsInline = true;
+    v.muted = true;
+    v.srcObject = camStream;
+    await v.play();
+    const t = new THREE.VideoTexture(v);
+    t.colorSpace = THREE.SRGBColorSpace;
+    scene.background = t;
+    ground.visible = false;
+    log("camera on");
+  } catch (e) {
+    log(`camera unavailable (${e?.name || e})`);
+  }
+}
+
+/* ── game state ── */
+const ROUND = 45;
+let playing = false;
+let score = 0;
+let timeLeft = ROUND;
+let done = false;
+const scoreEl = $("#score");
+const timeEl = $("#time");
+
+function startRound() {
+  score = 0;
+  timeLeft = ROUND;
+  done = false;
+  playing = true;
+  player.position.set(0, 0, 0);
+  layoutCans();
+  scoreEl.textContent = `0 / ${TARGET}`;
+  capture.setHud({ score: 0, target: TARGET });
+  capture.showHint(qs.has("hint"));
+  log("round started");
+}
+
+function collect(c) {
+  c.taken = true;
+  c.obj.visible = false;
+  score++;
+  ding();
+  scoreEl.textContent = `${score} / ${TARGET}`;
+  const hud = { score, target: TARGET };
+  if (score >= TARGET) {
+    done = true;
+    hud.badge = "Run complete!";
+    log("run complete");
+  }
+  capture.setHud(hud);
+}
+
+/* ── input: keys + joystick ── */
+const keys = new Set();
+addEventListener("keydown", (e) => {
+  if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+  keys.add(e.key.toLowerCase());
+  if (e.key.toLowerCase() === "r" && playing) capture.toggle(); // handy on desktop
+});
+addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
+const stick = $("#stick");
+const knob = stick.querySelector("span");
+const stickV = new THREE.Vector2();
+let stickId = null;
+stick.addEventListener("pointerdown", (e) => {
+  stickId = e.pointerId;
+  stick.setPointerCapture(e.pointerId);
+  moveStick(e);
+});
+stick.addEventListener("pointermove", (e) => e.pointerId === stickId && moveStick(e));
+const endStick = (e) => {
+  if (e.pointerId !== stickId) return;
+  stickId = null;
+  stickV.set(0, 0);
+  knob.style.transform = "";
+};
+stick.addEventListener("pointerup", endStick);
+stick.addEventListener("pointercancel", endStick);
+function moveStick(e) {
+  const r = stick.getBoundingClientRect();
+  const x = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+  const y = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+  stickV.set(x, y);
+  if (stickV.length() > 1) stickV.normalize();
+  knob.style.transform = `translate(${stickV.x * 34}px,${stickV.y * 34}px)`;
+}
+
+/* ── the recorder (the thing under test) ── */
+const capture = new ColaCapture({
+  canvas,
+  host: overlay,
+  endpoint: qs.get("endpoint") || location.origin,
+  globeUrl: "/evade/where-is-bobo/",
+  source: "cola-run-lab",
+  audioContext: null, // set on Play (needs a tap first)
+  connectAudio: (dest) => {
+    if (!$("#o-audio").checked || !master) return () => undefined;
+    master.connect(dest);
+    return () => master.disconnect(dest);
+  },
+  isXR: () => false,
+  on: (name, p) => {
+    if (name === "recordStop")
+      log(
+        `recorded ${p.seconds}s, ${(p.blob.size / 1048576).toFixed(1)} MB ${p.mime} ${p.width}x${p.height}`,
+      );
+    else if (name === "sent") log(`sent: asset ${p.id}`, `/admin/media?asset=${p.id}`);
+    else if (name === "error") log(`error (${p.stage}): ${p.message}`);
+    else log(name);
+  },
+});
+
+/* ── settings panel ── */
+const endpointIn = $("#o-endpoint");
+endpointIn.value = qs.get("endpoint") || location.origin;
+$("#endpointLabel").textContent = endpointIn.value;
+const applySettings = () => {
+  const s = capture.settings;
+  s.maxSeconds = Math.round(Math.min(60, Math.max(5, Number($("#o-max").value) || 30)));
+  s.corner = $("#o-corner").value;
+  s.offsetX = Number($("#o-dx").value) || 0;
+  s.offsetY = Number($("#o-dy").value) || 0;
+  s.watermark = $("#o-wm").checked;
+  s.sendEnabled = $("#o-send").checked;
+  capture.configure({ endpoint: endpointIn.value.trim().replace(/\/+$/, "") || location.origin });
+  $("#endpointLabel").textContent = endpointIn.value;
+  capture.apply();
+};
+for (const el of document.querySelectorAll(".lab-panel input, .lab-panel select"))
+  el.addEventListener("change", applySettings);
+$("#o-hint").addEventListener("click", () => capture.showHint(true));
+$("#o-copy").addEventListener("click", async () => {
+  const s = capture.settings;
+  const out = {
+    maxSeconds: s.maxSeconds,
+    corner: s.corner,
+    offsetX: s.offsetX,
+    offsetY: s.offsetY,
+    watermark: s.watermark,
+    sendEnabled: s.sendEnabled,
+    recordGameAudio: $("#o-audio").checked,
+  };
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(out, null, 2));
+    log("settings copied");
+  } catch {
+    log(JSON.stringify(out));
+  }
+});
+const toggle = $("#labToggle");
+toggle.addEventListener("click", () => {
+  const p = $("#lab");
+  p.hidden = !p.hidden;
+  toggle.setAttribute("aria-expanded", String(!p.hidden));
+});
+
+$("#play").addEventListener("click", async () => {
+  audioStart();
+  // browsers only allow audio after a tap, so the recorder gets it now
+  capture.configure({ audioContext: ac });
+  if ($("#useCam").checked) await useCamera(true);
+  $("#intro").hidden = true;
+  startRound();
+});
+
+/* ── loop ── */
+const clock = new THREE.Clock();
+const tmp = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+function resize() {
+  const w = innerWidth;
+  const h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+let moving = 0;
+function step() {
+  const dt = Math.min(0.1, clock.getDelta());
+  if (playing) {
+    const mv = new THREE.Vector2(stickV.x, stickV.y);
+    if (keys.has("arrowleft") || keys.has("a")) mv.x -= 1;
+    if (keys.has("arrowright") || keys.has("d")) mv.x += 1;
+    if (keys.has("arrowup") || keys.has("w")) mv.y -= 1;
+    if (keys.has("arrowdown") || keys.has("s")) mv.y += 1;
+    if (mv.length() > 1) mv.normalize();
+    const speed = 5.2;
+    if (mv.lengthSq() > 0.01) {
+      player.position.x += mv.x * speed * dt;
+      player.position.z += mv.y * speed * dt;
+      const lim = 13.2;
+      const d = Math.hypot(player.position.x, player.position.z);
+      if (d > lim) player.position.multiplyScalar(lim / d);
+      const yaw = Math.atan2(mv.x, mv.y);
+      player.rotation.y +=
+        (((((yaw - player.rotation.y + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) -
+          Math.PI) *
+        (1 - Math.exp(-12 * dt));
+    }
+    moving += ((mv.lengthSq() > 0.01 ? 1 : 0) - moving) * (1 - Math.exp(-10 * dt));
+    if (runAct && idleAct) {
+      runAct.weight = moving;
+      idleAct.weight = 1 - moving;
+    }
+    for (const c of cans) {
+      if (c.taken) continue;
+      if (player.position.distanceTo(tmp.set(c.obj.position.x, 0, c.obj.position.z)) < 1.3)
+        collect(c);
+    }
+    if (!done) {
+      timeLeft = Math.max(0, timeLeft - dt);
+      if (timeLeft === 0) {
+        done = true;
+        capture.setHud({ score, target: TARGET, badge: "Time's up" });
+        log("time up");
+      }
+    }
+    timeEl.textContent = timeLeft.toFixed(1);
+  }
+  mixer?.update(dt);
+  for (const c of cans) c.mixer?.update(dt);
+  camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5));
+  camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
+  camera.lookAt(player.position.x, player.position.y + 0.8, player.position.z);
+
+  renderer.render(scene, camera);
+  // same moment as Mattercraft's onAfterRender
+  capture.frame();
+  requestAnimationFrame(step);
+}
+
+loadModels()
+  .then(() => {
+    layoutCans();
+    log("scene ready");
+    window.__lab.ready = true;
+  })
+  .catch((e) => log(`model load failed: ${e?.message || e}`));
+requestAnimationFrame(step);
+
+/* ── test hook ── */
+window.__lab = {
+  ready: false,
+  capture,
+  DEFAULT_SETTINGS,
+  play: () => $("#play").click(),
+  collectAll: () => cans.filter((c) => !c.taken).forEach(collect),
+  status: () => capture.status,
+  state: () => ({ playing, score, timeLeft, done }),
+};

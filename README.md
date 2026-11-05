@@ -828,12 +828,27 @@ chunk to `/api/media/uploads/<id>/chunks/<n>` (`chunkSize` from the reply) and `
 with *Show on the globe* already on: one Public switch in the drawer after review puts them
 live. The token can only touch uploads it started, for 24 hours.
 
+### Clips straight from the game (record button)
+
+The Cola Run record button (`mattercraft/cola-run/`, test lab at
+`/evade/cola-run-lab/`) uploads from the player's phone, where no secret can be
+kept, so the upload API also accepts an allowed browser **Origin**
+(`BOBO_INGEST_ORIGINS`, the site itself, localhost on dev) in place of the
+token, with tighter rules: videos and images only, 80 MB max, 8 uploads per
+visitor per 10 minutes, city from the visitor's IP (or coordinates rounded to
+~5 km), title and description only (everything else is fixed), and a one-time
+`captureKey` from init that every later call for that upload must send as
+`x-capture-key`. Clips land private and *Needs review* like token captures,
+plus a *Web capture* tag. `BOBO_WEB_CAPTURES=off` turns this path off.
+Code: `src/lib/bobo/captures.server.ts`.
+
 ### Configuration (Netlify env vars)
 
 | Variable | What it does |
 | --- | --- |
 | `BOBO_INGEST_TOKEN` | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures. |
-| `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. |
+| `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events (and upload record-button clips) without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. Add the published AR experience's origin here. |
+| `BOBO_WEB_CAPTURES` | `off` stops browsers uploading clips (events still work). Default: on. |
 
 Preview and dev deploys can load sample sightings (made-up places, using the other
 committed Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.

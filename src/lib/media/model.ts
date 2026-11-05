@@ -536,8 +536,12 @@ export type MediaAsset = {
   location?: MediaLocation | null;
   /** Show it on the public "Where is Bobo?" globe (also needs public + a location). */
   onGlobe?: boolean;
-  /** Set when the AR experience uploaded it through the ingest token (stays private until reviewed). */
-  ingest?: { source: string; receivedAt: number } | null;
+  /**
+   * Set when the AR experience uploaded it, through the ingest token or (web: true)
+   * straight from the game in a player's browser. Stays private until reviewed.
+   * keyHash is the browser upload's one-time key (hashed); never sent to clients.
+   */
+  ingest?: { source: string; receivedAt: number; web?: boolean; keyHash?: string } | null;
 };
 
 /** What the admin page receives: the record without storage internals, plus URLs. */
@@ -593,10 +597,14 @@ export function mediaView(a: MediaAsset): MediaAssetView {
     chunks: _chunks,
     thumb: _thumb,
     fingerprint: _fingerprint,
+    ingest,
     ...rest
   } = a;
   return {
     ...rest,
+    ingest: ingest
+      ? { source: ingest.source, receivedAt: ingest.receivedAt, web: !!ingest.web }
+      : null,
     aspect: aspectLabel(a.width, a.height),
     orientation: orientationOf(a.width, a.height),
     hasThumb: !!a.thumb,

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { capturePreflight, withCaptureCors } from "@/lib/bobo/captures.server";
 import { mediaNs } from "@/lib/media/store.server";
 import { putChunk } from "@/lib/media/uploads.server";
 
@@ -8,8 +9,10 @@ import { putChunk } from "@/lib/media/uploads.server";
 export const Route = createFileRoute("/api/media/uploads/$id/chunks/$n")({
   server: {
     handlers: {
+      // the game's record button uploads from another origin (captures.server.ts)
+      OPTIONS: ({ request }) => capturePreflight(request),
       PUT: ({ request, params }) =>
-        putChunk(mediaNs(request), request, params.id, Number(params.n)),
+        withCaptureCors(request, putChunk(mediaNs(request), request, params.id, Number(params.n))),
     },
   },
 });

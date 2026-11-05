@@ -8,8 +8,10 @@
  *      plays, rewards and sightings to POST /api/bobo/events. They show as a
  *      live layer (anonymous, city level).
  *
- * The AR experience can also upload captures with the ingest token through the
- * Media Library's upload API; those stay private until the team reviews them.
+ * The AR experience can also upload captures through the Media Library's upload
+ * API: with the ingest token (a server), or from an allowed browser Origin (the
+ * game's record button; see captures.server.ts). Both stay private until the
+ * team reviews them.
  *
  * Endpoints:
  *   GET  /api/bobo/feed.json   public, CDN-cached: everything the globe draws
@@ -37,6 +39,13 @@ export const BOBO = {
   recentEvents: 40,
   /** Largest upload the ingest token may start (video captures). */
   maxIngestBytes: 512 * 1024 * 1024,
+  /** Largest capture a player's browser may upload without the token (a 60 s clip is ~30 MB). */
+  maxWebCaptureBytes: 80 * 1024 * 1024,
+  /** Browser captures each visitor may start per window (best effort, per function instance). */
+  webCapturesPerWindow: 8,
+  webCaptureWindowMs: 10 * 60_000,
+  /** Extra tag on captures that came straight from a player's browser. */
+  webCaptureTag: "Web capture",
 } as const;
 
 export const BOBO_EVENT_TYPES = [

@@ -23,6 +23,14 @@ import {
   type MediaStorageRef,
 } from "./model";
 import { configuredMediaStorage, mediaStorage, type UploadPlan } from "./storage.server";
+import { isAdminRequest } from "@/lib/ar/auth.server";
+import {
+  captureKeyHash,
+  newCaptureKey,
+  webCaptureLocation,
+  webCaptureOrigin,
+  webCaptureRateOk,
+} from "@/lib/bobo/captures.server";
 import { hasIngestToken } from "@/lib/bobo/events.server";
 import { countryPlace, nearestPlace } from "@/lib/bobo/geo.server";
 import { cleanLocation, type MediaLocation } from "@/lib/bobo/location";
@@ -120,6 +128,8 @@ export type InitResult = {
   chunks: number;
   /** A gentle note for files over MEDIA.warnFileBytes. */
   warning: string | null;
+  /** Web captures only: send as x-capture-key on every later call for this upload. */
+  captureKey?: string;
 };
 
 export type UploadStatus = {
@@ -154,10 +164,16 @@ export const bigFileWarning = (size: number) =>
 // images and videos only, always private, tagged for review, and it can only
 // touch the uploads it started (the asset's `ingest` field), never edit or
 // delete anything else. The team makes a capture public in /admin/media.
-type Uploader = { kind: "admin" } | { kind: "ingest" };
+//
+// The game in a player's browser ("web"): an allowed Origin, no secret. Same
+// rules as the token plus a smaller size cap, a per-visitor limit, IP-level
+// location only, and a one-time key per upload (src/lib/bobo/captures.server.ts).
+type Uploader = { kind: "admin" } | { kind: "ingest" } | { kind: "web"; key: string };
 
 async function uploadGuard(request: Request): Promise<Uploader | Response> {
   if (hasIngestToken(request)) return { kind: "ingest" };
+  if (!(await isAdminRequest(request)) && webCaptureOrigin(request))
+    return { kind: "web", key: request.headers.get("x-capture-key")?.trim() ?? "" };
   const denied = await writeGuard(request);
   return denied ?? { kind: "admin" };
 }
@@ -197,7 +213,13 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
   const parsed = initSchema.safeParse(body);
   if (!parsed.success) return json({ error: parsed.error.issues[0]?.message ?? "invalid" }, 400);
   const d = parsed.data;
-  const ingest = who.kind === "ingest";
+  const web = who.kind === "web";
+  const ingest = who.kind === "ingest" || web;
+  if (web && d.size > BOBO.maxWebCaptureBytes)
+    return json(
+      { error: `Clips from the game can be up to ${formatBytes(BOBO.maxWebCaptureBytes)}.` },
+      413,
+    );
   if (ingest && d.size > BOBO.maxIngestBytes)
     return json({ error: `Captures can be up to ${formatBytes(BOBO.maxIngestBytes)}.` }, 413);
   if (d.size > MEDIA.maxFileBytes)
@@ -218,8 +240,14 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
     );
   if (ingest && !["video", "image"].includes(kindOf(mime)))
     return json({ error: "The AR experience can upload images and videos only." }, 415);
-  const location = await uploadLocation(d.location);
-  if (ingest && !location)
+  if (web && !(await webCaptureRateOk(request)))
+    return json({ error: "Too many clips in a row. Try again in a few minutes." }, 429, {
+      "retry-after": "600",
+    });
+  const location = web
+    ? await webCaptureLocation(request, d.location)
+    : await uploadLocation(d.location);
+  if (ingest && !web && !location)
     return json({ error: "location (lat, lng) is required for an AR capture" }, 400);
   const id = newId(10);
   const kind = configuredMediaStorage();
@@ -230,6 +258,7 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
   const now = Date.now();
   const name = cleanName(d.name);
   const assetKind = kindOf(mime);
+  const captureKey = web ? newCaptureKey() : undefined;
   const blank: MediaAsset = {
     id,
     name,
@@ -253,9 +282,11 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
     rights: "",
     aiGenerated: false,
     public: false,
-    uploader: ingest
-      ? `AR experience (${d.source || "ingest"})`
-      : cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
+    uploader: web
+      ? `Player, from the game (${d.source || "web"})`
+      : ingest
+        ? `AR experience (${d.source || "ingest"})`
+        : cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
     fingerprint: d.fingerprint ?? null,
     complete: false,
     createdAt: now,
@@ -263,7 +294,16 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
     completedAt: null,
     location,
     onGlobe: ingest ? true : !!d.onGlobe,
-    ingest: ingest ? { source: d.source || "ingest", receivedAt: now } : null,
+    ingest: web
+      ? {
+          source: d.source || "web",
+          receivedAt: now,
+          web: true,
+          keyHash: await captureKeyHash(captureKey!),
+        }
+      : ingest
+        ? { source: d.source || "ingest", receivedAt: now }
+        : null,
   };
   const known = knownValues(await listAssets(ns));
   const asset = applyMediaPatch(
@@ -271,15 +311,28 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
     {
       title: d.title,
       description: d.description,
-      usageNotes: d.usageNotes,
-      client: ingest ? d.client || "EVADE" : d.client,
-      collection: ingest ? d.collection || BOBO.captureCollection : d.collection,
+      // a player's browser only names its clip; everything else is fixed
+      usageNotes: web ? undefined : d.usageNotes,
+      client: web ? "EVADE" : ingest ? d.client || "EVADE" : d.client,
+      collection: web
+        ? BOBO.captureCollection
+        : ingest
+          ? d.collection || BOBO.captureCollection
+          : d.collection,
       purpose: ingest ? "ugc" : d.purpose === undefined ? undefined : d.purpose,
-      aiGenerated: d.aiGenerated,
+      aiGenerated: web ? false : d.aiGenerated,
       // captures stay private until the team reviews them
       public: ingest ? false : d.public,
-      setTags: ingest ? [...BOBO.captureTags, ...(d.tags ?? [])] : d.tags,
-      rights: ingest ? d.rights || "Player capture (AR experience)" : d.rights,
+      setTags: web
+        ? [...BOBO.captureTags, BOBO.webCaptureTag]
+        : ingest
+          ? [...BOBO.captureTags, ...(d.tags ?? [])]
+          : d.tags,
+      rights: web
+        ? "Player capture (recorded in the AR game)"
+        : ingest
+          ? d.rights || "Player capture (AR experience)"
+          : d.rights,
     },
     known,
     now,
@@ -291,7 +344,8 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       plan,
       chunkSize: plan.mode === "chunks" ? plan.chunkSize : 0,
       chunks,
-      warning: bigFileWarning(d.size),
+      warning: web ? null : bigFileWarning(d.size),
+      ...(captureKey ? { captureKey } : {}),
     } satisfies InitResult,
     201,
   );
@@ -307,7 +361,17 @@ async function writable(ns: MediaNamespace, request: Request, id: string) {
   const a = await getAsset(ns, id);
   if (!a) return json({ error: "not found" }, 404);
   // the ingest token only reaches its own captures, and only for a day
-  if (who.kind === "ingest" && (!a.ingest || Date.now() - a.createdAt > 86_400_000))
+  if (who.kind === "ingest" && (!a.ingest || a.ingest.web || Date.now() - a.createdAt > 86_400_000))
+    return json({ error: "not found" }, 404);
+  // a browser only reaches the one upload whose key it holds, for a day
+  if (
+    who.kind === "web" &&
+    (!a.ingest?.web ||
+      !a.ingest.keyHash ||
+      !who.key ||
+      (await captureKeyHash(who.key)) !== a.ingest.keyHash ||
+      Date.now() - a.createdAt > 86_400_000)
+  )
     return json({ error: "not found" }, 404);
   return a;
 }
