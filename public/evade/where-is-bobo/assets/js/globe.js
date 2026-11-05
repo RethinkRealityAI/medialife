@@ -13,9 +13,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js?v=7";
-import { createHologram } from "./holo.js?v=7";
-import { createLandmarks } from "./landmarks.js?v=7";
+import { loadBobo } from "./bobo.js?v=8";
+import { createHologram } from "./holo.js?v=8";
+import { createLandmarks } from "./landmarks.js?v=8";
 
 const D2R = Math.PI / 180;
 const C = {
@@ -676,7 +676,7 @@ export async function createGlobe(canvas, opts) {
     setFocusDir(st.h > st.w * 1.1);
     // big screens: a big screen (video about half the window's height)
     const sideLayout = st.w >= 720 && st.w > st.h * 1.1;
-    holo.setScale(sideLayout ? 1.7 : st.h > st.w * 1.1 ? 1 : 1.15);
+    holo.setScale(sideLayout ? 1.7 : st.h > st.w * 1.1 ? 1.5 : 1.15);
     holo.setSide(sideLayout ? 0.12 : 0);
     st.sideLayout = sideLayout;
     setView();

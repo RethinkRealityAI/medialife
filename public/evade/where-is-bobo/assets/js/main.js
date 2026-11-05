@@ -9,7 +9,7 @@
  * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
  * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=7";
+import { sfx } from "./sfx.js?v=8";
 
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 15_000;
@@ -195,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=7");
+      const { createGlobe } = await import("./globe.js?v=8");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
@@ -563,17 +563,18 @@ function renderCard() {
   fl.classList.toggle("is-code", !f);
   $("cardCity").textContent = p.city || p.country;
   $("cardCountry").textContent = [p.city ? p.region : "", p.city ? p.country : ""].filter(Boolean).join(", ") || "Somewhere in " + p.country;
-  $("cardWhen").textContent = [m.place, ago(m.seenAt)].filter(Boolean).join(" · ");
+  $("cardWhen").textContent = [m.credit ? `Spotted by ${m.credit}` : m.place, ago(m.seenAt)].filter(Boolean).join(" · ");
   const badge = $("cardBadge");
   badge.hidden = !m.review && !m.mine;
   badge.className = `card-badge${m.mine ? " is-mine" : ""}`;
   badge.textContent = m.mine ? (m.review ? "Your clip · in review" : "Your clip") : "In review";
   $("cardTitle").textContent = m.title;
+  // only clips in review get a line: it explains why there's nothing to watch yet
   const desc = m.review
     ? m.mine
-      ? "Only you can watch this until the EVADE team has checked it. Then it plays here for everyone."
-      : "Just sent from the game. The EVADE team checks every clip, then it plays right here."
-    : m.description;
+      ? "Only you can see this until the EVADE team checks it."
+      : "The EVADE team is checking this clip. It plays here soon."
+    : "";
   $("cardDesc").textContent = desc;
   $("cardDesc").hidden = !desc;
   // a clip in review has nothing to open, unless it's yours
@@ -597,30 +598,8 @@ function renderCard() {
   // the dossier: what the tracking network knows about this sighting
   const fileNo = (m.id || p.key).replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase().padStart(6, "0");
   $("cardFile").textContent = `SIGHTING FILE #${fileNo}`;
-  const coord = (v, pos, neg) => `${Math.abs(v).toFixed(3)}°${v >= 0 ? pos : neg}`;
-  const seen = new Date(m.seenAt);
-  const intel = [
-    ["Coordinates", `${coord(p.lat, "N", "S")} ${coord(p.lng, "E", "W")}`],
-    ["Logged", Number.isNaN(+seen) ? "—" : `${seen.toISOString().slice(0, 10)} · ${seen.toISOString().slice(11, 16)} UTC`],
-    ["Source", m.review || /game/i.test(m.title) ? "Cola Run · game clip" : m.kind === "video" ? "AR capture · video" : "AR capture · photo"],
-    ["Footage", m.kind === "video" ? (m.durationS ? `${dur(m.durationS)} · ${m.width && m.height ? (m.width < m.height ? "vertical" : "wide") : "video"}` : "video") : "still image"],
-    ["Signal", p.events ? `${fmtN(p.events)} ${p.events === 1 ? "scan" : "scans"} nearby` : "quiet"],
-    ["Status", m.review ? "Pending review" : "Verified sighting"],
-  ];
-  const dl = $("cardIntel");
-  dl.textContent = "";
-  for (const [k, v] of intel) {
-    const row = el("div", k === "Status" ? (m.review ? "is-pending" : "is-ok") : null);
-    row.append(el("dt", null, k), el("dd", null, v));
-    dl.append(row);
-  }
-  // scans here
-  const sc = $("cardScans");
-  sc.hidden = !p.events;
-  if (p.events) {
-    sc.innerHTML = "";
-    sc.append(el("b", null, fmtN(p.events)), document.createTextNode(` ${p.events === 1 ? "keychain scan or play" : "keychain scans and plays"} here${p.lastSeen ? `, latest ${ago(p.lastSeen)}` : ""}.`));
-  }
+  // the report stays minimal: who spotted him and when. The video is the story.
+  $("cardScans").hidden = true;
   // neighbours, in list order
   const list = mediaPlaces();
   const k = list.findIndex((x) => x.key === p.key);

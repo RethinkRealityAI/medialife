@@ -58,6 +58,7 @@ function feedMedia(a: MediaAsset): FeedMedia {
     durationS: a.durationS,
     seenAt: iso(a.location?.seenAt ?? a.createdAt),
     place: a.location?.place ?? "",
+    credit: a.location?.credit ?? "",
     tags: a.tags,
     sample: !!a.sample,
   };

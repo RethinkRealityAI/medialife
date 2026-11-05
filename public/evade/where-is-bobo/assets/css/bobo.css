@@ -657,3 +657,30 @@ img, video { display: block; max-width: 100%; }
   .card.is-docked .card-actions .btn-glass { width: 38px; padding: 0; justify-content: center; }
   .card.is-docked .card-actions .btn-glass span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 }
+
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* phones: the report is a slim strip (at most ~30% of the screen); the globe
+   and the video get the rest */
+@media (max-width: 719px) {
+  .card { max-height: 30dvh; border-radius: 18px 18px 0 0; }
+  .card-file { display: none; }
+  .card-grab { margin-top: 6px; width: 34px; }
+  .card-head { padding: 4px 10px 0 14px; gap: 10px; }
+  .card .flag { width: 34px; height: 34px; font-size: 18px; }
+  .card-where h2 { font-size: 17px; }
+  .card-where p { font-size: 12px; }
+  .card .icon-btn { width: 34px; height: 34px; }
+  .card-body { padding: 2px 14px 8px; }
+  .card-when { font-size: 12px; margin-top: 2px; }
+  .card-badge { margin: 4px 0 0; }
+  .card-strip { margin-top: 6px; }
+  .thumb { width: 38px; height: 50px; }
+  .card-desc { font-size: 12.5px; margin-top: 4px; }
+  .card-actions { margin-top: 8px; flex-wrap: nowrap; }
+  .card-actions .btn { min-height: 40px; font-size: 13.5px; }
+  .card-actions .btn-primary { flex: 1 1 0; }
+  .card-actions .btn-glass { flex: 0 0 auto; }
+  .card-nav .nav-btn { min-height: 36px; padding: 6px 14px; font-size: 12.5px; }
+  .has-card .tour-bar { bottom: calc(30dvh + 12px); }
+}

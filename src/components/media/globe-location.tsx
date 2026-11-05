@@ -134,6 +134,7 @@ export function GlobeLocationSection({
                 lat: hit.lat,
                 lng: hit.lng,
                 seenAt: loc?.seenAt ?? null,
+                ...(loc?.credit ? { credit: loc.credit } : {}),
               },
             })
           }
@@ -165,6 +166,20 @@ export function GlobeLocationSection({
               max={dayInput(Date.now())}
               onChange={(e) => set({ seenAt: fromDayInput(e.target.value) })}
               className={cn(tap, "bg-black/20 [color-scheme:dark]")}
+            />
+          </FieldRow>
+          <FieldRow
+            label="Spotted by"
+            htmlFor="bobo-credit"
+            hint="Optional, shown on the globe. A handle or first name, with their OK."
+          >
+            <Input
+              id="bobo-credit"
+              value={loc.credit ?? ""}
+              onChange={(e) => set({ credit: e.target.value })}
+              maxLength={LOCATION_LIMITS.credit}
+              placeholder="@bobofan"
+              className={cn(tap, "bg-black/20")}
             />
           </FieldRow>
         </div>
