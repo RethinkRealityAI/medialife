@@ -13,9 +13,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js?v=8";
-import { createHologram } from "./holo.js?v=8";
-import { createLandmarks } from "./landmarks.js?v=8";
+import { loadBobo } from "./bobo.js?v=9";
+import { createHologram } from "./holo.js?v=9";
+import { createLandmarks } from "./landmarks.js?v=9";
 
 const D2R = Math.PI / 180;
 const C = {
@@ -55,6 +55,12 @@ const FOCUS_LAND = FOCUS.clone().multiplyScalar(R_LAND);
 // horizon, so it rises like a skyline without covering either of them
 const LANDMARK = new THREE.Vector3(0.31, 1, -0.2).normalize();
 let landmarkSize = 0.42;
+/** Where Bobo stands when a place is open: just short of the beam, on his side of it. */
+function besideBeam() {
+  const ang = ANCHOR.angleTo(FOCUS);
+  const back = Math.min(1, 0.14 / Math.max(ang, 1e-3));
+  return new THREE.Vector3().copy(FOCUS).lerp(ANCHOR, back).normalize();
+}
 function setFocusDir(portrait) {
   landmarkSize = portrait ? 0.32 : 0.42;
   FOCUS.copy(portrait ? FOCUS_TALL : FOCUS_WIDE);
@@ -989,6 +995,7 @@ export async function createGlobe(canvas, opts) {
     holo.hide();
     landmarks.hide();
     bobo?.setMode("auto");
+    bobo?.walkTo(ANCHOR); // back to his lookout on top of the world
     st.lastInput = st.time;
     Object.assign(st.goal, overviewGoal());
     for (const x of hotspots.values()) x.label?.classList.remove("is-focus");
@@ -1201,10 +1208,15 @@ export async function createGlobe(canvas, opts) {
         if (tw.summon) summonArrived();
         if (tw.key && tw.key === st.focus) {
           st.arrived = true;
-          bobo?.react("Excited", t);
-          setTimeout(() => {
-            if (st.focus === tw.key) bobo?.setMode("watch");
-          }, 900);
+          // Bobo trots over to the beam, then celebrates the sighting
+          const key = tw.key;
+          bobo?.walkTo(besideBeam(), () => {
+            if (st.focus !== key) return;
+            bobo.react("Excited", st.time);
+            setTimeout(() => {
+              if (st.focus === key && !bobo.walking) bobo.setMode("watch");
+            }, 1600);
+          });
           if (st.pendingMedia) showItem(st.pendingMedia);
           st.pendingMedia = null;
           opts.onArrive?.(tw.key);

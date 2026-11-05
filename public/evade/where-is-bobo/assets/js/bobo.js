@@ -127,8 +127,55 @@ export async function loadBobo({ loader, parent, anchor, height, reduced }) {
    * Called every frame with the surface velocity under Bobo, in his local
    * tangent frame (x = right on screen, z = towards camera), in globe radii/s.
    */
+  // walking across the planet to a spot (world space, globe standing still)
+  const UP = new THREE.Vector3(0, 1, 0);
+  const radius = anchor.length();
+  const here = anchor.clone().normalize();
+  let walk = null; // { from, to, ang, t, done }
+  const _p = new THREE.Vector3();
+  const _n = new THREE.Vector3();
+  const _q = new THREE.Quaternion();
+  function slerpDir(a, b, ang, t, out) {
+    if (ang < 1e-4) return out.copy(b);
+    const s = Math.sin(ang);
+    return out
+      .copy(a)
+      .multiplyScalar(Math.sin((1 - t) * ang) / s)
+      .addScaledVector(b, Math.sin(t * ang) / s)
+      .normalize();
+  }
+  function stepWalk(dt) {
+    const w = walk;
+    const speed = 0.32; // radians per second at full stride
+    w.t = Math.min(1, w.t + (dt * speed) / Math.max(w.ang, 0.05));
+    // ease in and out so he sets off and pulls up like a cat, not a cursor
+    const e = w.t < 0.5 ? 2 * w.t * w.t : 1 - Math.pow(-2 * w.t + 2, 2) / 2;
+    slerpDir(w.from, w.to, w.ang, e, _n);
+    here.copy(_n);
+    stand.position.copy(_n).multiplyScalar(radius);
+    stand.quaternion.setFromUnitVectors(UP, _n);
+    // face the way he's going, in his own ground frame
+    _p.copy(w.to).sub(_n).applyQuaternion(_q.copy(stand.quaternion).invert());
+    if (Math.hypot(_p.x, _p.z) > 1e-4) st.face = Math.atan2(_p.x, _p.z);
+    const pace = Math.sin(Math.PI * e);
+    play(w.ang > 0.25 && pace > 0.35 ? "Run" : "Walk", 0.25);
+    if (st.curName === "Walk") st.cur?.setEffectiveTimeScale(1.2);
+    if (w.t >= 1) {
+      walk = null;
+      st.speed = 0;
+      w.done?.();
+    }
+  }
+
   function update(dt, surface, now) {
     st.t += dt;
+    if (walk) {
+      stepWalk(dt);
+      const dy = wrap(st.face - heading.rotation.y);
+      heading.rotation.y += dy * Math.min(1, dt * 8);
+      mixer.update(dt);
+      return;
+    }
     const sp = Math.hypot(surface.x, surface.z);
     st.speed += (sp - st.speed) * Math.min(1, dt * 6);
     // he walks against the ground's motion (it's a treadmill)
@@ -177,6 +224,25 @@ export async function loadBobo({ loader, parent, anchor, height, reduced }) {
     },
     faceCamera() {
       st.face = 0.25;
+    },
+    /** Walks across the planet to world direction `dir` (unit), then calls done. */
+    walkTo(dir, done) {
+      const to = dir.clone().normalize();
+      const ang = here.angleTo(to);
+      if (reduced || ang < 0.01) {
+        here.copy(to);
+        stand.position.copy(to).multiplyScalar(radius);
+        stand.quaternion.setFromUnitVectors(UP, to);
+        walk = null;
+        done?.();
+        return;
+      }
+      st.onceUntil = 0;
+      st.resting = null;
+      walk = { from: here.clone(), to, ang, t: 0, done };
+    },
+    get walking() {
+      return !!walk;
     },
   };
 }
