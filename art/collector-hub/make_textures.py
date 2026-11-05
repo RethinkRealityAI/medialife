@@ -94,3 +94,41 @@ cover(Image.open(A('public/evade/creators/assets/img/cola-run-splash.webp')).con
 cover(Image.open(A('public/roblox/portal/img/evade/bobo-reward.webp')).convert('RGB'), 600, 600).save(os.path.join(OUT, 'poster_bobo.png'))
 logo = Image.open(A('public/brand/evade-logo.webp')).convert('RGBA'); logo.save(os.path.join(OUT, 'sign_evade.png'))
 print('textures ->', OUT)
+
+# --- giant Eclipse can label (wraps 360 deg around the house; u = angle / 360) ---------------
+LW, LH = 4096, 1280
+lab = Image.new('RGB', (LW, LH), (159, 211, 245)); d = ImageDraw.Draw(lab, 'RGBA')
+for y in range(LH):  # blue top with a soft vertical gradient
+    t = y / LH; d.line([(0, y), (LW, y)], fill=(int(176 - 40 * t), int(222 - 30 * t), int(250 - 10 * t)))
+split = int(LH * 0.46)
+d.rectangle((0, split, LW, LH), fill=(155, 42, 78))
+for i in range(0, LW, 8):  # subtle vertical sheen stripes in the crimson
+    if (i // 8) % 9 == 0: d.rectangle((i, split, i + 20, LH), fill=(176, 64, 104, 90))
+rnd2 = random.Random(3)
+for _ in range(60):  # light-blue bubbles along the split
+    x = rnd2.randrange(LW); y = split + rnd2.randrange(-30, 90); r = rnd2.choice([14, 20, 28, 38])
+    d.ellipse((x - r, y - r, x + r, y + r), fill=(159, 211, 245))
+d.rectangle((0, LH - 26, LW, LH), fill=(200, 205, 215)); d.rectangle((0, 0, LW, 22), fill=(200, 205, 215))
+def eclipse_logo(cx, cy, r):
+    d.ellipse((cx - r - 8, cy - r - 8, cx + r + 8, cy + r + 8), fill=(120, 10, 50))
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(253, 244, 236))
+    o = int(r * 0.62); r2 = int(r * 0.72); d.ellipse((cx + o - r2, cy - int(r * 0.25) - r2, cx + o + r2, cy - int(r * 0.25) + r2), fill=(108, 0, 48))
+for u in (0.375, 0.875):  # back of the house + the far side
+    cx = int(LW * u); eclipse_logo(cx - 60, int(LH * 0.48), 190)
+    f = font(F_MED, 150); fs = ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf', 150)
+    y0 = int(LH * 0.70); d.text((cx - 330, y0 + 4), 'Σ', font=fs, fill=(253, 244, 236))  # Space Grotesk has no Σ
+    d.text((cx - 330 + int(fs.getlength('Σ')) + 6, y0), 'CLIPSE', font=f, fill=(253, 244, 236))
+lab.save(os.path.join(OUT, 'can_label.png'))
+
+# --- wood plank floor (planar UV across the disc) ---------------------------------------
+FW = 1024
+wood = Image.new('RGB', (FW, FW)); d = ImageDraw.Draw(wood)
+pw_ = FW // 12
+for i in range(12):
+    base = (176, 122, 79) if i % 2 else (150, 101, 65)
+    for x in range(i * pw_, (i + 1) * pw_):
+        n = rnd2.randrange(-6, 6); d.line([(x, 0), (x, FW)], fill=tuple(max(0, c + n) for c in base))
+    d.line([(i * pw_, 0), (i * pw_, FW)], fill=(70, 45, 30), width=3)
+    off = rnd2.randrange(0, FW); d.line([(i * pw_, off), ((i + 1) * pw_, off)], fill=(70, 45, 30), width=3)
+wood = wood.filter(ImageFilter.GaussianBlur(0.8)); wood.save(os.path.join(OUT, 'wood.png'))
+print('can label + wood ok')
