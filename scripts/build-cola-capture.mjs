@@ -6,6 +6,7 @@
  *     → public/evade/cola-run-lab/assets/capture-core.js
  *
  *   mattercraft/cola-run/OrbHuntGame.ts  (the real Mattercraft game, unchanged)
+ *   + mattercraft/cola-run/CollectorHubMode.ts (+ HubCore.ts: Bobo's Hideout)
  *     + mattercraft/lab-shim/zcomponent.ts (stands in for @zcomponent/*)
  *     → public/evade/cola-run-lab/assets/orb-hunt-game.js
  *
@@ -25,6 +26,11 @@ const zcomponentShim = {
   name: "zcomponent-shim",
   setup(b) {
     b.onResolve({ filter: /^@zcomponent\// }, () => ({ path: shim }));
+    // Mattercraft spells three's add-ons three/examples/jsm/…; the lab's importmap has three/addons/.
+    b.onResolve({ filter: /^three\/examples\/jsm\// }, (a) => ({
+      path: a.path.replace(/^three\/examples\/jsm\//, "three/addons/"),
+      external: true,
+    }));
     b.onResolve({ filter: /^three(\/.*)?$/ }, (a) => ({ path: a.path, external: true }));
   },
 };
@@ -42,6 +48,7 @@ const jobs = [
       stdin: {
         contents:
           'export { OrbHuntGame } from "./cola-run/OrbHuntGame";\n' +
+          'export { CollectorHubMode } from "./cola-run/CollectorHubMode";\n' +
           'export { LabContext } from "./lab-shim/zcomponent";\n',
         resolveDir: path.join(root, "mattercraft"),
         sourcefile: "lab-entry.ts",

@@ -77,72 +77,105 @@ it's approved).
 
 # Bobo's Hideout (Collector Hub mode)
 
-The MEDIALIFE Collector Hub as a Cola Run mode. A **Bobo's Hideout** button
-sits bottom left (in lounge mode and on menu screens, never mid-round). Tap it:
+The MEDIALIFE Collector Hub as the third Cola Run mode, next to the round and
+the lounge. It's in the game's own menus: **Visit Bobo's Hideout** sits under
+Start playing and Lounge with Bobo Cat on the opening card, and in the game
+menu next to the other mode rows. A small round icon (bottom left, over the
+sound button) opens it between rounds too; its label slides out the first time
+it appears and on hover.
 
-1. **First time:** an unlock form asks for the code on the fan's merch card
+1. **Placement first, same as the other modes.** Pick the hideout before the
+   scene is placed and the game shows Place; the room opens once you tap it.
+2. **First time:** an unlock form asks for the code on the fan's merch card
    (BOBO-XXXX-XXXX) and their email. The first email to use a code owns it for
    good; after that, code + email is their sign-in on any device. Scanning a
    product's QR (`…?hub=BOBO-XXXX-XXXX`) opens the form with the code filled in.
-2. A portal opens a few steps ahead of Bobo. **Walk Bobo into it** and his room
+3. A portal opens a few steps ahead of Bobo. **Walk Bobo into it** and his room
    builds in around him (wireframe first, then the surfaces).
-3. In the room: coloured hotspot dots mark what you can tap (Cola blue = apps,
+4. In the room: coloured hotspot dots mark what you can tap (Cola blue = apps,
    Cola red = play, EVADE yellow = collection, indigo = Bobo), and a short
    welcome tour runs on the first visit (replay it from **Room items**). The
-   computer boots **BOBO OS**, a desktop with app windows: Alerts, Where's
-   Bobo? (the globe), Leaderboard, Cola Run, Digital Collection, Shop, Me. The
-   Digital Collection is the EVADE vault (`medialife.ai/evade/vault/`): owned
-   pieces solid, the rest holographic wireframes.
-4. Alerts the team sends from **Admin → Collector Hub** reach every open room
+   computer opens **BOBO OS** as a window over the room (80% of the screen by
+   default, slightly see-through; tap the room around it to close it), with
+   Alerts, Where's Bobo? (the globe), Leaderboard, Cola Run, Digital
+   Collection (the EVADE vault), Shop and Me.
+5. **Moving the room:** the game's **Reset placement** button stays in the
+   room. Tap it and the room disappears at once; Place again (bigger, smaller,
+   somewhere else) and the room builds straight back in at the new spot and
+   size, no second walk through the portal.
+6. **Leaving:** the game menu's **Start Cola Run** or **Lounge with Bobo Cat**
+   (the room folds away and Bobo is back at once), the top bar's exit button
+   (Bobo walks out, then the lounge), or **Cola Run → Play / Record a run** on
+   the computer.
+7. Alerts the team sends from **Admin → Collector Hub** reach every open room
    within ~15 s: a pop-up on the in-room monitor and a hologram that beams out
    of the screen.
-5. **Cola Run → Play / Record a run** folds the room back into the portal, Bobo
-   walks out, and a round starts (recording too, if asked).
 
 | File | What it is |
 | --- | --- |
-| `CollectorHubMode.ts` | The Mattercraft component (button, portal, player, game hookup). |
+| `CollectorHubMode.ts` | The Mattercraft component (icon, portal, player, placement, game hookup). |
 | `HubCore.ts` | The hub itself: room, build-in, unlock form, BOBO OS, alerts, collection. No Mattercraft imports. |
+| `OrbHuntGame.ts` | The game, which now owns the hideout mode (intro button, menu row, placement, HUD). |
 
-`HubCore.ts` is also what the labs run (`/labs/collector-hub/` on its own,
-and the **Bobo's Hideout** button in `/evade/cola-run-lab/`), compiled to
-`/labs/collector-hub/hub-core.js` by `node scripts/build-hub-core.mjs`
-(`--check` confirms the copy matches).
+`HubCore.ts` runs in both labs: `/labs/collector-hub/` on its own (compiled to
+`hub-core.js` by `node scripts/build-hub-core.mjs`), and
+`/evade/cola-run-lab/`, which now runs the real `OrbHuntGame.ts` **and** the
+real `CollectorHubMode.ts` together through the lab shim
+(`node scripts/build-cola-capture.mjs`). Add `?place=1` to the Cola Run lab for
+the Place / Reset placement flow; its Lab panel has the BOBO OS settings and the
+scene size for the next Place.
 
 ## Add it to the project
 
-1. Copy `CollectorHubMode.ts` and `HubCore.ts` next to `OrbHuntGame.ts`
-   (update `ColaRunRecorder.ts` too: it gained `startRecording()`, used by
-   "Record a run").
+1. Copy `OrbHuntGame.ts`, `CollectorHubMode.ts` and `HubCore.ts` over the
+   copies in the Scripts folder (and `ColaRunRecorder.ts`, which has
+   `startRecording()` for "Record a run").
 2. Hierarchy → **+** → **CollectorHubMode**, as a sibling of the game (same
    parent, so it follows the game's placement).
 3. Leave **Game** and **Player Node** empty: it finds OrbHuntGame and uses the
-   game's own player.
+   game's own player. (If the console says it couldn't find the game, pick it
+   in **Game**.)
 4. For a test build, tick **Site → Show Test Code** to print `BOBO-TEST-CATS`
    under the form (it only works where the site allows it, see below).
 
-The **Bobo's Hideout** button sits bottom left, 78 px up so it clears the
-game's sound button, and only shows between rounds (lounge, menus, after
-placement; never while a round is playing or paused). The hub's top bar only
-takes taps while it is showing, so it never blocks the game's menu button.
+### Properties worth knowing
+
+| Group | Property | Default | What it does |
+| --- | --- | --- | --- |
+| Game | Show In Menus | on | "Visit Bobo's Hideout" on the opening card and in the menu (sets the game's **Bobo's Hideout → Hideout Enabled**). |
+| Game | Show Button | on | The small round icon between rounds. |
+| Game | Hide Game Ui | off | Hide the game's menu, sound and Reset placement buttons in the room. Leave off so placement and mode switching work in the room. |
+| Room | Room Scale / Portal Distance / Enter Radius | 1 / 3 / 0.7 | Size of the room relative to your Bobo, how far ahead the portal opens, how close he has to get. The room follows the placed scene's scale. |
+| BOBO OS | OS Size | 0.8 | Share of the screen the computer takes (0.5 to 1; 1 = full screen). |
+| BOBO OS | OS Opacity | 0.88 | How solid the computer is (1 = fully solid; lower shows more of the room through it). |
+| BOBO OS | OS Dim | 0.18 | How much the room around the computer is darkened. |
+
+On the game (**Bobo's Hideout** group): **Hideout Button Label** ("Visit
+Bobo's Hideout") and **Hideout Accent** (EVADE yellow: the menu and buttons turn
+yellow in the room, as they turn pink in the lounge). Game events:
+`onHideoutEnter`, `onHideoutExit`; methods `enterHideout()`, `exitHideout()`,
+`isInHideout`.
+
+The hideout's top bar keeps clear of the game's menu button (whichever top
+corner it's in), and sits under the game's dialogs, so the game menu opens over
+the room. Skip (during the build-in) is bottom centre, clear of Reset placement.
 
 The component never moves the camera (the welcome tour's cards still work; the
 labs fly their own camera to each stop). While Bobo is in his room the player is
 hidden and held at the portal (so the joystick can't wander off), and the
-game's HUD and the record button are hidden; both come back when he leaves.
-**Room → Room Size**, **Portal Distance** and **Enter Radius** are the knobs if
-the room is too big for a table-top AR scene.
+record button is hidden; both come back when he leaves.
 
 Events: `onPortal`, `onEnter`, `onRoomReady`, `onLeave`, `onUnlocked`
 ({ firstClaim, owned }), `onAlert` ({ title }). Methods: `open()`, `leave()`.
 
 **Verified:** type-checks against `@zcomponent/three@1.38.2` / three 0.164;
-the same core runs in both labs, tested headlessly end to end (unlock, wrong
-codes, portal walk-in, OS apps, live alert from the admin page, back to a
-round, phone size). **Not yet opened in the Mattercraft editor.** If a property
-doesn't show in the panel, swap `@zui` for `@zprop`; if the room doesn't load
-on the published experience, check the browser console for a CORS error on
-`room.glb`.
+the real game and the real hideout component run together in the Cola Run lab,
+tested headlessly end to end on desktop and phone sizes (intro → hideout,
+unlock, portal walk-in, BOBO OS window, game menu in the room, Reset placement
+→ Place bigger → room rebuilds, switching to the lounge and to a round).
+**Not yet opened in the Mattercraft editor.** If a property doesn't show in the
+panel, swap `@zui` for `@zprop`; if the room doesn't load on the published
+experience, check the browser console for a CORS error on `room.glb`.
 
 ## Site settings (Netlify)
 
