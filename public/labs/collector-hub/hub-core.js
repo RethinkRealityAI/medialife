@@ -69,6 +69,7 @@ const store = {
 const clamp01 = (t) => Math.min(1, Math.max(0, t));
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const smooth01 = (t) => t * t * (3 - 2 * t);
+const OPEN_YAW = Math.PI / 4;
 const backOut = (t) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 function srgb(tex) {
   const T = THREE;
@@ -976,6 +977,12 @@ class CollectorHub {
       uRoomInv: { value: new THREE.Matrix4() }
     });
     __publicField(this, "_maxDist", 6);
+    /** The room's bounds in room space, and its outer radius on the floor. */
+    __publicField(this, "_box", new THREE.Box3());
+    __publicField(this, "_radius", 1.9);
+    __publicField(this, "_buildSpeed", 1);
+    __publicField(this, "_ghostFrom", 0);
+    __publicField(this, "_warmed", false);
     /** Room height above uFloor: how far the materialise scan line travels. */
     __publicField(this, "_maxH", 3);
     __publicField(this, "_wireMat");
@@ -1182,36 +1189,139 @@ class CollectorHub {
     this._open(this._el.gate);
     return new Promise((res) => this._gateResolve = res);
   }
-  /** Only the portal: the room is waiting to be built. */
-  showPortal() {
-    if (!this._room) return;
+  get _portalOn() {
+    return this.opts.portal !== false;
+  }
+  get _ownBobo() {
+    return this.opts.ownBobo !== false;
+  }
+  /** Everything hidden, room visible: the start of every build. */
+  _arm(ghost) {
     this._closeAllLayers();
+    if (this._tourI >= 0) this._tourEnd(false);
+    this._el.spots.classList.add("off");
     this.root.visible = true;
     this._reveal.uSolid.value = -1;
     this._reveal.uWire.value = -1;
-    this._reveal.uGhost.value = 0;
+    this._reveal.uGhost.value = ghost;
     for (const w of this._wires) w.visible = true;
     if (this._bobo) this._bobo.visible = false;
     this._holoUniforms.uAlpha.value = 0;
     this._hideBeam(true);
-    this._portalT = 0;
-    this._setState("portal");
+    this._setShadows(false);
     this._hud(false);
+    this._el.skip.hidden = true;
     this._startPolling();
   }
-  /** Bobo goes through the portal and the room builds around him. */
+  /** Only the portal: the room is waiting to be built. (Without a portal: nothing yet.) */
+  showPortal() {
+    if (!this._room) return;
+    this._arm(0);
+    this._portalT = 0;
+    if (!this._portalOn) this._portalScale(0);
+    this._setState("portal");
+  }
+  /**
+   * The room as a faint wireframe, nothing solid: while the host moves it
+   * (AR re-placement: the outline follows the reticle with Bobo). enter()
+   * builds it back from there.
+   */
+  preview() {
+    if (!this._room) return;
+    this._arm(0.3);
+    this._portalScale(0);
+    this.prompt(null);
+    this._setState("preview");
+  }
+  /**
+   * Build the room. With the portal, Bobo goes through it and the room builds
+   * around him. Without it the wireframe races out from `origin` (a world
+   * point, normally the host's Bobo), then the room materialises floor to
+   * ceiling. quick: about twice as fast (a rebuild after moving the room).
+   */
   enter(opts = {}) {
     if (!this._room || this._state === "building" || this._state === "live") return;
-    if (this._state === "hidden") this.showPortal();
-    this._walkIn = opts.walk !== false;
+    this._ghostFrom = this._state === "preview" ? this._reveal.uGhost.value : 0;
+    if (this._state === "hidden" || this._state === "preview" || this._state === "leaving") {
+      this.showPortal();
+      if (this._ghostFrom) this._reveal.uGhost.value = this._ghostFrom;
+    }
+    if (opts.origin) this._setOrigin(opts.origin);
+    else if (this._portal) this._setOrigin(this._portal.getWorldPosition(this._t.v), 0.5);
+    this._walkIn = opts.walk !== false && this._portalOn && this._ownBobo;
+    this._buildSpeed = opts.quick ? 2 : 1;
     this._seqT = 0;
-    this._portalShut = false;
+    this._portalShut = !this._portalOn;
     if (this._bobo) this._bobo.visible = false;
     this.prompt(null);
     this._setState("building");
     this._el.skip.hidden = false;
     this._sfx("whoosh");
     if (this._reduceMotion) this.skip();
+  }
+  /** Where the wireframe draws out from (world point; lift in room units). */
+  _setOrigin(world, lift = 0.4) {
+    const room = this._room;
+    if (!room) return;
+    room.updateWorldMatrix(true, false);
+    const o = this._reveal.uOrigin.value.copy(world).applyMatrix4(this._t.m.copy(room.matrixWorld).invert());
+    o.y += lift;
+    let d = 0;
+    const b = this._box;
+    for (const x of [b.min.x, b.max.x])
+      for (const y of [b.min.y, b.max.y])
+        for (const z of [b.min.z, b.max.z]) d = Math.max(d, this._t.v2.set(x, y, z).distanceTo(o));
+    this._maxDist = d + 0.3;
+  }
+  /**
+   * Compile the room's shaders and upload its textures ahead of time, so the
+   * first build doesn't stall the frame (the "freeze, then the room pops in").
+   * Call once the model has loaded, while the room is still hidden; pass the
+   * scene it will render in, so the lights match. Safe to call more than once.
+   */
+  async warm(renderer, camera, scene) {
+    if (this._warmed || !this._room || !renderer || !camera || this._disposed) return;
+    this._warmed = true;
+    let target = scene ?? null;
+    for (let p = this.root; !target && p; p = p.parent)
+      if (p.isScene) target = p;
+    const flipped = [];
+    this.root.traverse((o) => {
+      if (!o.visible) {
+        flipped.push(o);
+        o.visible = true;
+      }
+    });
+    let done = Promise.resolve();
+    try {
+      if (typeof renderer.compileAsync === "function")
+        done = renderer.compileAsync(this.root, camera, target ?? this.root);
+      else renderer.compile?.(this.root, camera, target ?? this.root);
+    } catch (e) {
+      console.warn("[CollectorHub] shader warm-up skipped", e);
+    }
+    for (const o of flipped) o.visible = false;
+    await done.catch(() => void 0);
+    if (typeof renderer.initTexture !== "function") return;
+    const seen = /* @__PURE__ */ new Set();
+    this.root.traverse((o) => {
+      const mats = o.material ? Array.isArray(o.material) ? o.material : [o.material] : [];
+      for (const m of mats)
+        for (const k of Object.keys(m)) {
+          const t = m[k];
+          if (t && t.isTexture && !t.isRenderTargetTexture) seen.add(t);
+        }
+    });
+    for (const t of seen) {
+      if (this._disposed) return;
+      try {
+        renderer.initTexture(t);
+      } catch {
+      }
+      await new Promise(
+        (r) => typeof requestAnimationFrame === "function" ? requestAnimationFrame(() => r()) : setTimeout(r, 16)
+      );
+    }
   }
   /** Jump to the finished room. */
   skip() {
@@ -1227,6 +1337,7 @@ class CollectorHub {
     if (this._state !== "live" && this._state !== "building") {
       return Promise.resolve();
     }
+    if (opts.origin) this._setOrigin(opts.origin);
     this._leaveSpeed = opts.fast ? 3 : 1;
     if (opts.fast && this._bobo) this._bobo.visible = false;
     if (this._tourI >= 0) this._tourEnd(false);
@@ -1340,6 +1451,56 @@ class CollectorHub {
     const portalWorld = this._t.v2.copy(player).addScaledVector(dir, -distance);
     this.root.position.set(portalWorld.x - off.x, player.y - off.y, portalWorld.z - off.z);
     this.root.updateMatrixWorld(true);
+  }
+  /**
+   * Stand the room around `center` (Bobo's spot, in `parent`'s space) with its
+   * open side toward the camera, so the desk and the big screen face the
+   * viewer. The room joins `parent`: in AR that's the space the placed scene
+   * lives in, so the room is locked to the same anchor as Bobo and can't drift
+   * away from him.
+   *
+   * scale: room units → parent units (the smallest the room may be).
+   * wrapViewer: make room for the person holding the phone too. The room
+   * slides toward them (Bobo ends up in the back half, by his desk) and grows,
+   * up to maxScale, until both of them are inside it, so in AR it builds
+   * around the viewer. It stays centred on the line from the camera to Bobo,
+   * which is the middle of the screen at placement. Returns the scale used.
+   */
+  placeAround(o) {
+    const parent = o.parent ?? this.root.parent;
+    if (parent && this.root.parent !== parent) parent.add(this.root);
+    parent?.updateMatrixWorld(true);
+    const cam = parent ? parent.worldToLocal(o.cameraWorld.clone()) : o.cameraWorld.clone();
+    const dx = cam.x - o.center.x;
+    const dz = cam.z - o.center.z;
+    const d = Math.hypot(dx, dz);
+    const yaw = (d > 1e-6 ? Math.atan2(dx, dz) : 0) - OPEN_YAW;
+    const inner = this._radius * 0.92;
+    let s = Math.max(1e-4, o.scale);
+    let shift = 0;
+    if (o.wrapViewer && d > 1e-6) {
+      const CAM = 0.8;
+      const BOBO = 0.5;
+      if (d > inner * s * CAM) {
+        const want = d / (BOBO + CAM);
+        s = Math.max(s, Math.min(o.maxScale ?? s * 4, want / inner));
+        const R = inner * s;
+        shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
+      }
+    }
+    this.root.position.set(
+      o.center.x + (d > 1e-6 ? dx / d * shift : 0),
+      o.center.y,
+      o.center.z + (d > 1e-6 ? dz / d * shift : 0)
+    );
+    this.root.rotation.set(0, yaw, 0);
+    this.root.scale.setScalar(s);
+    this.root.updateMatrixWorld(true);
+    return s;
+  }
+  /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
+  floorRadius() {
+    return this._radius * 0.9 * this.root.scale.x;
   }
   /** Horizontal distance from a world point to the portal. */
   distanceToPortal(p) {
@@ -1539,6 +1700,10 @@ class CollectorHub {
             this._t.v.set(x, y, z).distanceTo(this._reveal.uOrigin.value)
           );
     this._maxDist += 0.3;
+    this._box.copy(box);
+    const wall = room.getObjectByName("Can_Wall");
+    const wb = wall ? new THREE.Box3().setFromObject(wall).applyMatrix4(roomInv) : box;
+    this._radius = Math.max(-wb.min.x, wb.max.x, -wb.min.z, wb.max.z, 0.5);
     this._reveal.uFloor.value = box.min.y;
     this._maxH = box.max.y - box.min.y + 0.15;
     if (this._swirl && this._swirl.geometry) {
@@ -1598,7 +1763,7 @@ class CollectorHub {
       }
       if (inSub(o, this._bobo)) {
         o.frustumCulled = false;
-        this._pickables.push(o);
+        if (this._ownBobo) this._pickables.push(o);
         return;
       }
       this._pickables.push(o);
@@ -1639,6 +1804,11 @@ class CollectorHub {
       this._boboHome.quat.copy(this._bobo.quaternion);
     }
     this._buildWalk(local);
+    if (!this._portalOn) {
+      for (const n of [this._portal, this._pad, ...stepNodes]) if (n) n.visible = false;
+      this._swirl = void 0;
+    }
+    if (!this._ownBobo && this._bobo) this._bobo.visible = false;
     this._applyOwnership();
     this._setShadows(false);
     this._buildSpots();
@@ -1980,6 +2150,7 @@ class CollectorHub {
   }
   /** The portal only exists until Bobo is home: it opens, he steps through, it closes. */
   _portalScale(s, steps = s) {
+    if (!this._portalOn) s = steps = 0;
     const on = s > 2e-3;
     this._steps.forEach((st, i) => {
       const k = clamp01(steps * this._steps.length - (this._steps.length - 1 - i));
@@ -1993,13 +2164,17 @@ class CollectorHub {
     }
   }
   _updateBuild(dt) {
-    this._seqT += dt;
+    this._seqT += dt * this._buildSpeed;
     const t = this._seqT;
     const WIRE0 = 0.4, WIRE_T = 2, SOLID0 = 2.7, SOLID_T = 3.2;
     const u = this._reveal;
     u.uWire.value = ease(clamp01((t - WIRE0) / WIRE_T)) * this._maxDist;
     u.uSolid.value = smooth01(clamp01((t - SOLID0) / SOLID_T)) * this._maxH;
-    u.uGhost.value = 0;
+    u.uGhost.value = this._ghostFrom * (1 - clamp01((t - WIRE0) / 0.6));
+    if (!this._ownBobo) {
+      if (t >= SOLID0 + SOLID_T + 0.25) this._finishBuild();
+      return;
+    }
     const bobo = this._bobo;
     const POP = this._walkIn ? 0.5 : 0.1;
     const WALK0 = POP + 0.4;
@@ -2046,14 +2221,14 @@ class CollectorHub {
     this._portalScale(0);
     this._portalShut = true;
     this._setShadows(true);
-    const bobo = this._bobo;
+    const bobo = this._ownBobo ? this._bobo : void 0;
     if (bobo) {
       bobo.visible = true;
       bobo.scale.setScalar(1);
       bobo.position.copy(this._boboHome.pos);
       bobo.quaternion.copy(this._boboHome.quat);
     }
-    this._play("Sit", 0.4);
+    if (bobo) this._play("Sit", 0.4);
     this._el.skip.hidden = true;
     this._setState("live");
     this._hud(true);
@@ -2083,7 +2258,7 @@ class CollectorHub {
     u.uGhost.value = 0;
     const open = clamp01(t / 0.7);
     this._portalScale(open < 1 ? backOut(open) : 1);
-    const bobo = this._bobo;
+    const bobo = this._ownBobo ? this._bobo : void 0;
     if (bobo && this._walk && bobo.visible) {
       if (this._current !== this._actions.Walk) this._play("Walk", 0.2);
       const w = 1 - clamp01(t / (DUR - 0.2));
@@ -2098,9 +2273,11 @@ class CollectorHub {
     if (this._bobo) this._bobo.visible = false;
     this._reveal.uSolid.value = -1;
     this._reveal.uWire.value = -1;
-    this._setState("portal");
-    this._portalT = 1;
-    this._portalScale(1);
+    if (this._portalOn) {
+      this._setState("portal");
+      this._portalT = 1;
+      this._portalScale(1);
+    } else this.hide();
     const r = this._leaveResolve;
     this._leaveResolve = void 0;
     r?.();
