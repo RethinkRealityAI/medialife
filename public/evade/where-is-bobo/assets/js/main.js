@@ -9,7 +9,7 @@
  * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
  * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=9";
+import { sfx } from "./sfx.js?v=10";
 
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 15_000;
@@ -195,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=9");
+      const { createGlobe } = await import("./globe.js?v=10");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
@@ -235,13 +235,14 @@ async function boot() {
     $("globe").hidden = true;
   }
   const [f] = await Promise.all([feedP, fetchMine()]);
+  updateInsets(); // frame first, so the opening turn knows where the planet sits
   applyFeed(f ?? emptyFeed(), true);
   if (f) lastRaw = feedSig(f);
   updateInsets();
   document.documentElement.classList.add("is-ready");
 
-  // the clip the visitor just sent from the game, a shared ?at=<place>, or else
-  // the latest sighting: the globe always opens on the newest clip
+  // the clip the visitor just sent from the game or a shared ?at=<place> opens
+  // that place; otherwise the hero shot, with the newest clip hovering over its pin
   const at = new URLSearchParams(location.search).get("at");
   const first = mediaPlaces()[0];
   const sent = linkClip && mediaPlaces().find((p) => p.media.some((m) => m.id === linkClip));
@@ -256,9 +257,14 @@ async function boot() {
   else if (first && globe) {
     // a clip that landed in the last half hour beams in as the camera arrives
     if (Date.now() - Date.parse(first.media[0].seenAt) < 30 * 60_000) pendingBeam = first.key;
-    setTimeout(() => {
-      if (!current && !userTouched) select(first.key, { from: "auto" });
-    }, reduced ? 600 : 3000);
+    // the page opens on the hero shot; the newest clip floats over its pin
+    setTimeout(refreshPreview, reduced ? 0 : 1600);
+    if (pendingBeam) setTimeout(() => {
+      if (pendingBeam === first.key) {
+        pendingBeam = null;
+        globe.beam(first.key);
+      }
+    }, reduced ? 0 : 2400);
   }
   if (!globe) openList();
 
@@ -284,6 +290,16 @@ function emptyFeed() {
     recent: [],
     sample: false,
   };
+}
+
+/** The hero shot: the newest clip floats over its pin (tap it to open the place). */
+let previewId = null;
+function refreshPreview() {
+  const p = mediaPlaces()[0];
+  const m = p?.media[0];
+  if (!globe || (m?.id ?? null) === previewId) return;
+  previewId = m?.id ?? null;
+  globe.preview(p?.key ?? null, m ? holoItem(m) : null);
 }
 
 function applyFeed(raw, first = false) {
@@ -317,6 +333,7 @@ function applyFeed(raw, first = false) {
     }
   for (const e of f.recent) seenEvents.add(eventId(e));
   if (current && !placeBy(current.key)?.media.length) closeCard();
+  if (!first) refreshPreview();
 }
 
 const eventId = (e) => `${e.at}|${e.key}|${e.type}`;

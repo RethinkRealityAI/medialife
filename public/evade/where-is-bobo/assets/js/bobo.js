@@ -215,6 +215,11 @@ export async function loadBobo({ loader, parent, anchor, height, reduced }) {
       st.mode = m;
       if (m === "watch") st.face = faceRight ? Math.PI / 2 - 0.6 : -Math.PI / 2 + 0.6;
     },
+    /** Turn to face a point (in the same space he stands in), e.g. the clip he's watching. */
+    faceToward(point) {
+      _p.copy(point).sub(stand.position).applyQuaternion(_q.copy(stand.quaternion).invert());
+      if (Math.hypot(_p.x, _p.z) > 1e-4) st.face = Math.atan2(_p.x, _p.z);
+    },
     /** A one-off reaction (tap, arrival). */
     react(name = "Excited", now = performance.now() / 1000) {
       if (!clips[name]) name = "Alert";
