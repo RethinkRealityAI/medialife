@@ -10,7 +10,7 @@
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./assets/lab.js?v=9"></script>
+<script type="module" src="./assets/lab.js?v=10"></script>
 </head>
 <body>
 <!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with
@@ -40,8 +40,10 @@
   <label>BOBO OS size <output></output><input id="o-osSize" type="range" min="0.5" max="1" step="0.01" value="0.8"></label>
   <label>BOBO OS solid <output></output><input id="o-osOpacity" type="range" min="0.4" max="1" step="0.01" value="0.88"></label>
   <label>Room dimmed behind it <output></output><input id="o-osDim" type="range" min="0" max="0.8" step="0.01" value="0.18"></label>
+  <label>Room scale (smallest) <output></output><input id="o-roomScale" type="range" min="0.5" max="4" step="0.05" value="1.3"></label>
+  <label>Max room scale (around you) <output></output><input id="o-maxRoomScale" type="range" min="1" max="12" step="0.1" value="3"></label>
   <label id="o-placeRow">Scene size on the next Place <output></output><input id="o-placeScale" type="range" min="0.4" max="2" step="0.05" value="1"></label>
-  <p class="lab-small" id="o-placeLink"><a href="?place=1">Try it with AR placement (Place, Reset placement)</a></p>
+  <p class="lab-small" id="o-placeLink"><a href="?place=1">Try it like AR: you're the phone (drag to look, scroll to step), with Place and Reset placement</a></p>
   <h2>Recorder settings</h2>
   <label>Send clips to <input id="o-endpoint" type="url" spellcheck="false"></label>
   <label>Longest clip (s) <input id="o-max" type="number" min="5" max="60" value="30"></label>

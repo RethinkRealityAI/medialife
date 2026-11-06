@@ -6,31 +6,35 @@
  * The game offers it on its opening card and in its menu ("Visit Bobo's
  * Hideout"), and a small round icon sits in the corner between rounds. The
  * first time, the fan unlocks their room with the code from their EVADE merch
- * card plus their email. Then a portal opens a few steps ahead of Bobo. Walk
- * Bobo into it and his room builds in around him: the BOBO OS computer
- * (alerts, Where's Bobo?, leaderboard, Cola Run), the collection wall, and live
- * alerts the EVADE team sends from medialife.ai.
+ * card plus their email. The moment the code is in, Bobo's room builds itself
+ * around him and around the person holding the phone: a glowing wireframe
+ * races out from Bobo, then the room materialises floor to ceiling. Inside:
+ * the BOBO OS computer (alerts, Where's Bobo?, leaderboard, Cola Run), the
+ * collection wall, and live alerts the EVADE team sends from medialife.ai.
  *
- * Placement is the game's, for all three modes: pick the hideout before the
- * scene is placed and the room opens once you tap Place. Reset placement while
- * in the room and it disappears at once; Place again and it builds straight
- * back in at the new spot and size (no second walk through the portal).
+ * ONE PLACEMENT FOR EVERYTHING
+ * The room stands where Bobo was placed: it joins the same AR anchor as Bobo
+ * (the Instant World Tracker the game's Place button drops), centred on his
+ * placed spot and on the same floor, so it can't drift away from him or float
+ * off to one side. The game's Bobo is Bobo in the room too (one Bobo, never
+ * two): the joystick walks him around his room.
+ * Reset placement in the room keeps you in the hideout: the room turns into a
+ * faint outline that moves with the reticle and Bobo; tap Place and it builds
+ * back in at the new spot.
  *
  * SETUP
  *  1. Copy these into the project's Scripts folder, replacing older copies:
  *       CollectorHubMode.ts   (this file)
  *       HubCore.ts            (the hub itself; shared with the browser labs)
- *       OrbHuntGame.ts        (the game, which now has the hideout mode)
- *  2. Hierarchy Panel → + → CollectorHubMode, as a sibling of the game (same
- *     parent, so it moves with the game's placement).
+ *       OrbHuntGame.ts        (the game, with the hideout mode)
+ *  2. Hierarchy Panel → + → CollectorHubMode. Anywhere works (the room moves
+ *     itself under Bobo's anchor when it opens); next to the game is tidiest.
  *  3. Leave "Game" empty (it finds OrbHuntGame) or point it at the game node.
- *  4. Ask the MEDIALIFE team to check the experience's origin can load
- *     https://medialife.ai/hub/evade/room.glb (it's served with CORS *).
+ *  4. Optional: Build Timeline / Room Timeline for Bobo's excited and settle
+ *     animations (the game's Lounge Character must be set for clean blending).
  *
- * The component never moves your camera. It hides the player while Bobo is
- * in his room and keeps him at the portal, so the joystick can't wander off.
- * The game's menu button, sound button and Reset placement stay on screen in
- * the room (the hideout's top bar makes room for the menu button).
+ * The component never moves your camera. The game's menu button, sound button
+ * and Reset placement stay on screen in the room.
  */
 import {
   ContextManager,
@@ -41,14 +45,23 @@ import {
   useOnBeforeRender,
   useOverlay,
 } from "@zcomponent/core";
+import { useRenderer } from "@zcomponent/three/lib/context";
 import { Group } from "@zcomponent/three/lib/components/Group";
-import { useCamera } from "@zcomponent/three/lib/scenecontext";
+import { useCamera, useScene } from "@zcomponent/three/lib/scenecontext";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { CollectorHub, type HubState } from "./HubCore";
 
 interface ConstructorProps {}
+
+/** How big the room gets. */
+export enum RoomFit {
+  /** Big enough that the person holding the phone stands inside it (AR). */
+  AroundViewer = "aroundViewer",
+  /** Sized to Bobo only (Room Size × Bobo-sized), wherever the viewer stands. */
+  MatchBobo = "matchBobo",
+}
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
@@ -58,6 +71,12 @@ const nextFrame = () =>
       ? requestAnimationFrame(() => r())
       : setTimeout(r, 16),
   );
+const idle = (fn: () => void, ms: number) =>
+  setTimeout(() => {
+    const ric = (globalThis as any).requestIdleCallback;
+    if (typeof ric === "function") ric(fn, { timeout: 2500 });
+    else fn();
+  }, ms);
 
 /**
  * Bobo's Hideout: the MEDIALIFE Collector Hub as a Cola Run mode.
@@ -82,8 +101,8 @@ export class CollectorHubMode extends Group {
   public gameNode = new Observable<string | undefined>(undefined);
 
   /**
-   * The character that walks into the portal. Leave empty to use the game's
-   * own Player Node.
+   * Bobo in the room. Leave empty to use the game's own Player Node (the
+   * joystick character), which is what you want: one Bobo in every mode.
    *
    * @zui
    * @zgroup Game
@@ -134,40 +153,79 @@ export class CollectorHubMode extends Group {
   /* ══ Room ════════════════════════════════════════════════════════════ */
 
   /**
-   * How far ahead of Bobo the portal opens, in Bobo heights (2 to 8).
+   * How big the room gets. Around Viewer (default) makes room for the person
+   * holding the phone: it slides toward them and grows (up to Max Room Scale)
+   * until they're standing inside it, so it builds around them in AR. Match
+   * Bobo sizes it to Bobo only (Room Scale).
    *
    * @zui
    * @zgroup Room
    * @zgrouppriority 200
    * @zpriority 100
-   * @zdefault 3
+   * @zdefault aroundViewer
    */
-  public portalDistance = new Observable(3);
+  public roomFit = new Observable<RoomFit>(RoomFit.AroundViewer);
 
   /**
-   * Room size. 1 = the room's Bobo is exactly as tall as your player (0.3 to 3).
-   * The room follows the placed scene, so placing the scene bigger or smaller
-   * (Reset placement, then Place) resizes the room too.
+   * The smallest the room ever is, in Bobo-sized rooms: 1 = the room's own
+   * Bobo would be exactly as tall as yours. Default 1.3 (30% roomier).
+   * Placing the scene bigger or smaller resizes the room with it. (0.5 to 4)
    *
    * @zui
    * @zgroup Room
    * @zgrouppriority 200
    * @zpriority 90
-   * @zdefault 1
+   * @zdefault 1.3
    */
-  public roomScale = new Observable(1);
+  public roomScale = new Observable(1.3);
 
   /**
-   * How close Bobo has to get to the portal to go through, in Bobo heights.
-   * Phones with a joystick want a little more than 0.5.
+   * With Around Viewer: the biggest the room may grow, in Bobo-sized rooms.
+   * Someone standing further away than that just walks in. (1 to 12)
+   *
+   * @zui
+   * @zgroup Room
+   * @zgrouppriority 200
+   * @zpriority 85
+   * @zdefault 3
+   */
+  public maxRoomScale = new Observable(3);
+
+  /**
+   * Keep Bobo inside his room: the joystick stops him at the wall.
    *
    * @zui
    * @zgroup Room
    * @zgrouppriority 200
    * @zpriority 80
-   * @zdefault 0.7
+   * @zdefault true
    */
-  public enterRadius = new Observable(0.7);
+  public keepBoboInside = new Observable(true);
+
+  /**
+   * Timeline or state played on Bobo when his room starts building (his
+   * excited animation suits it). Played like a lounge button: set the game's
+   * Lounge Character so it blends cleanly with the joystick.
+   *
+   * @zui
+   * @zgroup Room
+   * @zgrouppriority 200
+   * @zpriority 75
+   * @zvalues layerclipids
+   */
+  public buildTimeline = new Observable<string | undefined>(undefined);
+
+  /**
+   * Timeline or state played on Bobo once the room is finished (sitting
+   * down, a purr). Walking off with the joystick ends it.
+   *
+   * @zui
+   * @zgroup Room
+   * @zgrouppriority 200
+   * @zpriority 74
+   * @zvalues layerclipids
+   */
+  public roomTimeline = new Observable<string | undefined>(undefined);
 
   /**
    * Push the hideout's top bar down (px) if it collides with something else
@@ -275,13 +333,13 @@ export class CollectorHubMode extends Group {
 
   /* ══ Events ══════════════════════════════════════════════════════════ */
 
-  /** The portal opened. */
-  public onPortal = new Event<[]>();
-  /** Bobo walked through and the room started building. */
+  /** The room started building around Bobo (the code was accepted). */
   public onEnter = new Event<[]>();
   /** The room finished building. */
   public onRoomReady = new Event<[]>();
-  /** Bobo left and the room folded away. */
+  /** Reset placement in the room: it's an outline now, waiting for Place. */
+  public onRoomMoving = new Event<[]>();
+  /** The room folded away. */
   public onLeave = new Event<[]>();
   /** A fan unlocked their room (or added an item). */
   public onUnlocked = new Event<[{ firstClaim: boolean; owned: number }]>();
@@ -290,18 +348,20 @@ export class CollectorHubMode extends Group {
 
   private _hub: CollectorHub | null = null;
   private _camera?: THREE.Camera;
+  private _renderer: any = null;
+  private _scene: THREE.Object3D | null = null;
   private _game: any = null;
   private _player?: THREE.Object3D;
-  /** The portal or the room is up (or on its way). */
+  private _playerComp: any = null;
+  /** The room is opening or up (unlock form, building, live, leaving). */
   private _active = false;
-  /** Bumped whenever the room is torn down, so a fold in flight knows it lost. */
+  /** Bumped whenever the room is torn down, so anything in flight knows it lost. */
   private _seq = 0;
-  /** Reset placement happened inside the room: the next Place rebuilds it straight away. */
+  /** Reset placement happened in the room: the next Place rebuilds it straight away. */
   private _rebuild = false;
-  private _home = new THREE.Vector3();
+  /** Where Bobo stood when the scene was placed (his parent's space): the room's centre. */
+  private readonly _home = new THREE.Vector3();
   private _homeSet = false;
-  private _pin = new THREE.Vector3();
-  private _pinned = false;
   private _uiWas: boolean | undefined;
   private _offGame: (() => void)[] = [];
   private readonly _v = new THREE.Vector3();
@@ -318,6 +378,12 @@ export class CollectorHubMode extends Group {
     const cam = useCamera(contextManager);
     this._camera = cam.value;
     this.register(cam, (c) => (this._camera = c));
+    try {
+      this._renderer = useRenderer(contextManager);
+      this._scene = useScene(contextManager);
+    } catch {
+      /* no renderer context: the warm-up is skipped, nothing else changes */
+    }
 
     this.register(useOnBeforeRender(contextManager), (dt: number) => this._tick(dt * 0.001)); // dt is ms
 
@@ -341,12 +407,17 @@ export class CollectorHubMode extends Group {
         hubCode: qs.get("hub"),
         exitLabel: "Back to Cola Run",
         hudOffset: this.topOffset.value,
+        portal: false,
+        ownBobo: false,
         on: (name, p: any) => this._onHub(name, p),
       });
       this._bindGame();
       this._syncGameMenus();
       this._applyLook();
       this._syncButton();
+      // Load the room and compile its shaders while nobody's waiting for it,
+      // so the build starts the moment the code is in (no freeze).
+      idle(() => void this._prepare(), 1500);
       // Scanned a product's QR (…?hub=BOBO-XXXX-XXXX): straight to the hideout.
       if (qs.get("hub")) setTimeout(() => this.open(), 600);
     });
@@ -370,9 +441,23 @@ export class CollectorHubMode extends Group {
     } else void this._open();
   }
 
-  /** Bobo walks out, the room folds away, and the game goes back to the lounge. */
+  /** The room folds back into Bobo and the game goes back to the lounge. */
   public leave(then?: "play" | "record") {
     return this._leaveRoom(then ?? "exit");
+  }
+
+  /* ── getting ready ── */
+
+  private _prepared?: Promise<void>;
+  /** Load the model and warm its shaders and textures. Runs once. */
+  private _prepare() {
+    const hub = this._hub;
+    if (!hub) return Promise.resolve();
+    this._prepared ??= hub
+      .load()
+      .then(() => hub.warm(this._renderer, this._camera, this._scene))
+      .catch((e) => console.warn("[CollectorHubMode] room preload failed", e));
+    return this._prepared;
   }
 
   /* ── opening ── */
@@ -403,11 +488,12 @@ export class CollectorHubMode extends Group {
     this._syncButton();
     try {
       if (!hub.loaded) {
-        hub.prompt("Opening the portal…");
-        await hub.load();
+        hub.prompt("Getting Bobo's room ready…");
+        await this._prepare();
         hub.prompt(null);
       }
       if (seq !== this._seq) return;
+      if (!hub.loaded) throw new Error("the room model didn't load");
       // Coming back after a re-placement: they're already signed in.
       if (!(rebuild && hub.signedIn) && !(await hub.ensureAccess())) {
         if (seq === this._seq) this._cancelled();
@@ -415,30 +501,69 @@ export class CollectorHubMode extends Group {
       }
       if (seq !== this._seq) return;
       if (!this._stillWanted()) return this._close();
-      // Let the placement (a timeline in most projects) settle the scene first.
-      await nextFrame();
-      await nextFrame();
+      // The placement (a timeline in most projects) may still be moving the
+      // scene: wait until Bobo has stopped moving in the world.
+      await this._settle();
       if (seq !== this._seq || !this._stillWanted()) return this._close();
       const player = this._findPlayer();
       if (!player || !this._camera) {
         console.warn("[CollectorHubMode] no player node or camera; set Player Node");
         return this._close();
       }
-      const h = this._playerHeight(player);
+      this._placeRoom(player);
+      if (this.hideGameUi.value && this._game?.uiEnabled) {
+        this._uiWas = this._game.uiEnabled.value;
+        this._game.uiEnabled.value = false;
+      }
+      this._setRecorderVisible(false);
       player.getWorldPosition(this._v);
-      this._camera.getWorldPosition(this._v2);
-      const scale = (h / hub.boboHeight()) * clamp(this.roomScale.value, 0.3, 3);
-      hub.placeNear(this._v, this._v2, h * clamp(this.portalDistance.value, 2, 8), scale);
-      this._home.copy(player.position);
-      this._homeSet = true;
-      hub.showPortal();
-      this.onPortal.emit();
-      if (rebuild) this._goIn(player, false);
-      else hub.prompt("Walk Bobo into the portal");
+      hub.enter({ origin: this._v, quick: rebuild });
+      this._playCharacter(this.buildTimeline.value);
+      this.onEnter.emit();
     } catch (e) {
       console.error("[CollectorHubMode]", e);
       hub.prompt(null);
       if (seq === this._seq) this._close();
+    }
+  }
+
+  /**
+   * Stand the room on Bobo's placed spot, in his own space (the AR anchor),
+   * open side to the camera. Bobo is brought home first if he's wandered
+   * further than the room reaches.
+   */
+  private _placeRoom(player: THREE.Object3D) {
+    const hub = this._hub!;
+    const parent = player.parent;
+    const center = (this._homeSet ? this._home : player.position).clone();
+    const bobo = this._playerHeight(player) / (parent ? parent.getWorldScale(this._v).y || 1 : 1);
+    const unit = bobo / hub.boboHeight(); // a Bobo-sized room, in the parent's units
+    hub.placeAround({
+      parent,
+      center,
+      cameraWorld: this._camera!.getWorldPosition(this._v),
+      scale: unit * clamp(this.roomScale.value, 0.5, 4),
+      wrapViewer: this.roomFit.value !== RoomFit.MatchBobo,
+      maxScale: unit * clamp(this.maxRoomScale.value, 1, 12),
+    });
+    const c = hub.root.position;
+    const dx = player.position.x - c.x;
+    const dz = player.position.z - c.z;
+    if (Math.hypot(dx, dz) > hub.floorRadius() * 0.8)
+      this._setPlayerPos(center.x, player.position.y, center.z);
+  }
+
+  /** Up to half a second for the placement animation to put Bobo down. */
+  private async _settle() {
+    const p = this._findPlayer();
+    await nextFrame();
+    if (!p) return;
+    const last = p.getWorldPosition(new THREE.Vector3());
+    for (let i = 0; i < 30; i++) {
+      await nextFrame();
+      const now = p.getWorldPosition(this._v);
+      if (now.distanceTo(last) < 1e-4) return;
+      last.copy(now);
     }
   }
 
@@ -451,49 +576,28 @@ export class CollectorHubMode extends Group {
     else g.exitHideout?.();
   }
 
-  /** Through the portal: hide the player and build the room around him. */
-  private _goIn(player: THREE.Object3D, walk: boolean) {
-    const hub = this._hub;
-    if (!hub) return;
-    player.visible = false;
-    this._pin.copy(player.position);
-    this._pinned = true;
-    if (this.hideGameUi.value && this._game?.uiEnabled) {
-      this._uiWas = this._game.uiEnabled.value;
-      this._game.uiEnabled.value = false;
-    }
-    this._setRecorderVisible(false);
-    hub.enter({ walk });
-    this.onEnter.emit();
-  }
-
   /* ── closing ── */
 
   /**
-   * Bobo walks out and the room folds away.
-   *  exit:          walk-out, then the game goes to the lounge (or idle)
+   * The room folds back into Bobo.
+   *  exit:          then the game goes to the lounge (or idle)
    *  play / record: quick fold, then a round (and the recorder)
    *  game:          the game already changed mode (menu): quick fold, nothing else
    */
   private async _leaveRoom(then: "exit" | "play" | "record" | "game") {
     const hub = this._hub;
-    if (!hub || !this._active) return;
+    if (!hub || (!this._active && hub.state !== "preview")) return;
     const seq = ++this._seq;
-    const player = this._findPlayer();
+    this._rebuild = false;
     const inside = hub.state === "building" || hub.state === "live";
     if (inside) {
-      if (then === "exit") {
-        await hub.leave();
-        if (seq !== this._seq) return;
-        this._restorePlayer(player, true);
-      } else {
-        // A round (or another mode) is starting: Bobo is back at once.
-        this._restorePlayer(player, true);
-        await hub.leave({ fast: true });
-        if (seq !== this._seq) return;
-      }
-    } else this._restorePlayer(player, false);
+      const p = this._findPlayer();
+      const origin = p ? p.getWorldPosition(this._v) : undefined;
+      await hub.leave({ fast: then !== "exit", origin });
+      if (seq !== this._seq) return;
+    }
     hub.hide();
+    this._unpin();
     this._close();
     this.onLeave.emit();
     const g = this._game;
@@ -508,51 +612,36 @@ export class CollectorHubMode extends Group {
   }
 
   /**
-   * Reset placement: the scene is about to move, so the room goes at once (no
-   * animation) and Bobo is put back where he stood. Place again and _open
-   * rebuilds the room there.
+   * Reset placement. In the room: it becomes an outline that moves with the
+   * reticle and Bobo (it lives on the same anchor), and the next Place builds
+   * it back in there. Anywhere else (the unlock form): just stop.
    */
-  private _suspend() {
+  private _onReset() {
     const hub = this._hub;
-    if (!hub || !this._active) return;
-    ++this._seq;
-    this._rebuild = hub.state === "building" || hub.state === "live" || hub.state === "leaving";
-    hub.hide();
-    const player = this._findPlayer();
-    if (player) {
-      if (this._homeSet) player.position.copy(this._home);
-      player.visible = true;
+    if (!hub) return;
+    const s = hub.state;
+    if (s === "building" || s === "live" || s === "leaving" || s === "preview") {
+      ++this._seq;
+      this._rebuild = true;
+      this._homeSet = false; // the next Place sets Bobo's new spot
+      // The outline stays put on the anchor, so it travels with Bobo and the
+      // reticle; Place stands it back on Bobo's new spot.
+      hub.preview();
+      this._unpin();
+      this._active = false;
+      this._syncButton();
+      this.onRoomMoving.emit();
+      return;
     }
-    this._unpin();
-    this._close();
-  }
-
-  /** Show the player again, a step out of the portal towards the camera. */
-  private _restorePlayer(player: THREE.Object3D | undefined, outOfPortal: boolean) {
-    const hub = this._hub;
-    if (player && hub) {
-      if (outOfPortal) {
-        hub.portalPosition(this._v);
-        if (this._camera) {
-          this._camera.getWorldPosition(this._v2);
-          this._v2
-            .sub(this._v)
-            .setY(0)
-            .normalize()
-            .multiplyScalar(this._playerHeight(player) * 0.9);
-          this._v.add(this._v2);
-        }
-        if (player.parent) player.parent.worldToLocal(this._v);
-        if (this._pinned) this._v.y = this._pin.y; // same floor height as before
-        player.position.copy(this._v);
-      }
-      player.visible = true;
+    if (this._active) {
+      ++this._seq;
+      hub.hide();
+      this._unpin();
+      this._close();
     }
-    this._unpin();
   }
 
   private _unpin() {
-    this._pinned = false;
     this._restoreGameUi();
     this._setRecorderVisible(true);
   }
@@ -567,28 +656,54 @@ export class CollectorHubMode extends Group {
     if (name === "exit") void this._leaveRoom("exit");
     else if (name === "signedOut") void this._leaveRoom("exit");
     else if (name === "play") void this._leaveRoom(p.record ? "record" : "play");
-    else if (name === "portal") this._hub?.prompt("Walk Bobo into the portal");
     else if (name === "unlocked")
       this.onUnlocked.emit({ firstClaim: !!p.firstClaim, owned: p.me?.owned ?? 0 });
     else if (name === "alert") this.onAlert.emit({ title: p.title });
-    else if (name === "state" && (p as HubState) === "live") this.onRoomReady.emit();
+    else if (name === "state" && (p as HubState) === "live") {
+      this._playCharacter(this.roomTimeline.value);
+      this.onRoomReady.emit();
+    }
   }
 
   private _tick(dt: number) {
     const hub = this._hub;
     if (!hub) return;
     hub.update(dt);
-    if (!this._active) return;
-    const player = this._findPlayer();
-    if (!player) return;
-    if (hub.state === "portal" && player.visible) {
-      player.getWorldPosition(this._v);
-      const r = this._playerHeight(player) * clamp(this.enterRadius.value, 0.2, 2);
-      // Through the portal: the room's own Bobo takes over and walks home.
-      if (hub.distanceToPortal(this._v) < r) this._goIn(player, true);
-    }
-    // The joystick still drives the hidden player: keep him at the portal.
-    if (this._pinned) player.position.copy(this._pin);
+    if (!this.keepBoboInside.value) return;
+    const s = hub.state;
+    if (s !== "building" && s !== "live") return;
+    // The joystick keeps walking Bobo: stop him at the wall.
+    const p = this._findPlayer();
+    if (!p || p.parent !== hub.root.parent) return;
+    const c = hub.root.position;
+    const r = hub.floorRadius() * 0.82;
+    const dx = p.position.x - c.x;
+    const dz = p.position.z - c.z;
+    const d = Math.hypot(dx, dz);
+    if (d > r) this._setPlayerPos(c.x + (dx / d) * r, p.position.y, c.z + (dz / d) * r);
+  }
+
+  /**
+   * Move Bobo. Through his component's position when he has one: a joystick
+   * behaviour integrates position.value, so writing only the three.js
+   * object would be undone on its next frame.
+   */
+  private _setPlayerPos(x: number, y: number, z: number) {
+    const p = this._findPlayer();
+    if (!p) return;
+    const pos = this._playerComp?.position;
+    if (pos && Array.isArray(pos.value)) pos.value = [x, y, z];
+    p.position.set(x, y, z);
+  }
+
+  private _playCharacter(id?: string) {
+    if (!id) return;
+    const g = this._game;
+    if (g?.playCharacterClip) return g.playCharacterClip(id);
+    const clip = this.getZComponentInstance().animation?.layerClipByID?.get(id);
+    if (!clip) return;
+    clip.seek(0, { dontActivateLayer: true });
+    clip.play();
   }
 
   private _restoreGameUi() {
@@ -675,9 +790,9 @@ export class CollectorHubMode extends Group {
       );
       return;
     }
-    if (!g.enterHideout)
+    if (!g.enterHideout || !g.playCharacterClip)
       console.warn(
-        "[CollectorHubMode] this OrbHuntGame.ts has no hideout mode; copy in the new one " +
+        "[CollectorHubMode] this OrbHuntGame.ts is older than the hideout; copy in the new one " +
           "so the hideout shows in its menus and follows placement",
       );
     const on = (evt: any, fn: () => void) => {
@@ -709,10 +824,15 @@ export class CollectorHubMode extends Group {
     });
     on(g.onPlace, () => {
       sync();
-      this._maybeOpen();
+      // Bobo's spot on the newly placed floor is where his room will stand,
+      // whichever mode comes first. Read once the placement has settled.
+      void this._settle().then(() => {
+        this._rememberHome();
+        this._maybeOpen();
+      });
     });
     on(g.onResetPlacement, () => {
-      this._suspend();
+      this._onReset();
       sync();
     });
     // The game's corner settings decide where the hideout's buttons go.
@@ -730,19 +850,26 @@ export class CollectorHubMode extends Group {
       }
   }
 
+  private _rememberHome() {
+    const p = this._findPlayer();
+    if (!p) return;
+    this._home.copy(p.position);
+    this._homeSet = true;
+  }
+
   private _findPlayer(): THREE.Object3D | undefined {
     if (this._player?.parent) return this._player;
     const zc = this.getZComponentInstance();
     const id = this.playerNode.value || this._game?.playerNode?.value;
     const comp: any = id ? zc.resolveNodeID<any>(id) : null;
+    this._playerComp = comp;
     this._player = comp?.element;
     return this._player;
   }
 
   private _heights = new WeakMap<THREE.Object3D, number>();
+  /** Bobo's height in world units (measured once in his parent's space). */
   private _playerHeight(p: THREE.Object3D) {
-    // Measured once in the player's parent space, returned in world units: the
-    // placed scene's scale can change between placements.
     const ws = (p.parent ? p.parent.getWorldScale(this._v2).y : 1) || 1;
     let h = this._heights.get(p);
     if (!h) {

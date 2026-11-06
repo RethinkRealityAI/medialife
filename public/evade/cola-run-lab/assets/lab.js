@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=2";
+import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=3";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=2";
 
 const $ = (s) => document.querySelector(s);
@@ -80,6 +80,7 @@ const ground = new THREE.Mesh(
   new THREE.MeshStandardMaterial({ color: 0x8fcf7a, roughness: 0.95 }),
 );
 ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02; // just under the room's floor (no z-fighting)
 scene.add(ground);
 const ring = new THREE.Mesh(
   new THREE.RingGeometry(19.6, 20, 120),
@@ -253,6 +254,8 @@ const ctx = new LabContext({
   audioContext: ac,
   audioLayer: gameBus,
   loader,
+  renderer,
+  scene,
 });
 ctx.addNode("player", player);
 // The lounge timelines Bobo's buttons point at in Mattercraft.
@@ -270,7 +273,12 @@ game.pickupKind.value = "model";
 // AR placement: ?place=1 turns on the game's Place / Reset placement flow. Place
 // drops the scene at the size picked in the Lab panel (what a pinch or a
 // different floor distance does in AR), so a re-place really changes the room.
-game.placementEnabled.value = qs.has("place");
+// ?place=1 also switches the lab to an AR-style camera: you are the phone. It
+// stays where you stand (drag to look around, scroll or pinch to step closer),
+// and while placing, the scene follows the reticle in the middle of the screen,
+// the way Mattercraft's Instant World Tracker does.
+const AR = qs.has("place");
+game.placementEnabled.value = AR;
 let placeScale = Number(qs.get("scale")) || 1;
 ctx.addClip("lab-place", { play: () => anchor.scale.setScalar(placeScale) });
 ctx.addClip("lab-reset", { play: () => undefined });
@@ -350,7 +358,12 @@ mode.endpoint.value = qs.get("endpoint") || "";
 mode.modelUrl.value = "/hub/evade/room.glb";
 mode.globeUrl.value = "/evade/where-is-bobo/index.html";
 mode.showTestCode.value = qs.has("test");
-for (const k of ["onPortal", "onEnter", "onRoomReady", "onLeave", "onUnlocked", "onAlert"])
+// Around the viewer in the AR camera; Bobo-sized in the follow camera.
+mode.roomFit.value = AR ? "aroundViewer" : "matchBobo";
+// Bobo's excited animation as the room builds, a purr once it's done.
+mode.buildTimeline.value = "lounge-excited";
+mode.roomTimeline.value = "lounge-purr";
+for (const k of ["onEnter", "onRoomReady", "onRoomMoving", "onLeave", "onUnlocked", "onAlert"])
   mode[k].addListener(() => log(`hideout: ${k.replace(/^on/, "")}`));
 game.onHideoutEnter.addListener(() => {
   hud = { badge: "In Bobo's Hideout" };
@@ -368,7 +381,9 @@ ctx.constructed.then(() => {
   const orig = mode._onHub.bind(mode);
   mode._onHub = (name, p) => {
     orig(name, p);
-    if (name === "focus") {
+    if (name === "focus" && AR) {
+      phone.look = p ? p.target.clone() : null;
+    } else if (name === "focus") {
       resetOrbit();
       if (p) {
         const f = hub.focus();
@@ -401,17 +416,64 @@ const openHideout = () => {
   mode.open();
 };
 
-let wasHidden = false;
+let wasIn = false;
 function hubStep() {
-  // Bobo hidden = he's in his room: no joystick, no record button.
-  const hidden = !player.visible;
-  if (hidden !== wasHidden) {
-    wasHidden = hidden;
-    stick.hidden = hidden;
-    capture.setVisible(!hidden);
-    if (hidden) resetOrbit();
+  // In the room the record button steps aside (BOBO OS has its own Record);
+  // the joystick stays: it walks Bobo around his room.
+  const inside = inRoom();
+  if (inside !== wasIn) {
+    wasIn = inside;
+    capture.setVisible(!inside);
+    if (inside) resetOrbit();
   }
-  viewUi.show(!!hub && (hub.state === "building" || hub.state === "live"));
+  viewUi.show(AR || (!!hub && (hub.state === "building" || hub.state === "live")));
+}
+
+/* ── the AR-style camera (?place=1) ── */
+const PHONE_START = { x: 0, y: 3.2, z: 8.5, yaw: 0, pitch: -0.36 };
+const phone = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, look: null };
+const resetPhone = () => {
+  phone.pos.set(PHONE_START.x, PHONE_START.y, PHONE_START.z);
+  phone.yaw = PHONE_START.yaw;
+  phone.pitch = PHONE_START.pitch;
+  phone.look = null;
+};
+resetPhone();
+function stepPhone(dist) {
+  const f = tmp.set(-Math.sin(phone.yaw), 0, -Math.cos(phone.yaw));
+  phone.pos.addScaledVector(f, dist);
+  const r = Math.hypot(phone.pos.x, phone.pos.z);
+  if (r > 18) phone.pos.multiplyScalar(18 / r);
+  phone.pos.y = PHONE_START.y;
+}
+// Instant World Tracker stand-in: the reticle Mattercraft draws while placing.
+const reticle = new THREE.Mesh(
+  new THREE.RingGeometry(0.62, 0.8, 48),
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+  }),
+);
+reticle.rotation.x = -Math.PI / 2;
+reticle.position.y = 0.02;
+reticle.visible = false;
+scene.add(reticle);
+const ray = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hit = new THREE.Vector3();
+function followReticle(dt) {
+  const placing = AR && game.placementEnabled.value && !game.isPlaced;
+  reticle.visible = false;
+  if (!placing) return;
+  ray.setFromCamera({ x: 0, y: 0 }, camera);
+  if (!ray.ray.intersectPlane(groundPlane, hit)) return;
+  const d = hit.distanceTo(camera.position);
+  if (d < 1.5 || d > 22) return;
+  anchor.position.lerp(hit, 1 - Math.exp(-12 * dt));
+  reticle.position.set(anchor.position.x, 0.02, anchor.position.z);
+  reticle.visible = true;
 }
 
 // In the room: drag to look around, scroll or pinch to zoom, right-drag,
@@ -430,9 +492,9 @@ function panBy(dx, dy) {
 const pointers = new Map();
 let drag = null;
 let pinch = null;
-canvas.addEventListener("contextmenu", (e) => inRoom() && e.preventDefault());
+canvas.addEventListener("contextmenu", (e) => (AR || inRoom()) && e.preventDefault());
 canvas.addEventListener("pointerdown", (e) => {
-  if (!inRoom()) return;
+  if (!AR && !inRoom()) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
@@ -447,10 +509,10 @@ canvas.addEventListener("pointerdown", (e) => {
     drag = {
       x: e.clientX,
       y: e.clientY,
-      yaw: orbit.yaw,
-      pitch: orbit.pitch,
+      yaw: AR ? phone.yaw : orbit.yaw,
+      pitch: AR ? phone.pitch : orbit.pitch,
       id: e.pointerId,
-      pan: e.button === 2 || e.shiftKey,
+      pan: !AR && (e.button === 2 || e.shiftKey),
     };
 });
 addEventListener("pointermove", (e) => {
@@ -458,6 +520,11 @@ addEventListener("pointermove", (e) => {
   if (pinch && pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (AR) {
+      stepPhone((d - pinch.d) * 0.02);
+      pinch.d = d;
+      return;
+    }
     if (d > 10) setZoom(pinch.zoom * (pinch.d / d));
     const mx = (a.x + b.x) / 2,
       my = (a.y + b.y) / 2;
@@ -473,6 +540,12 @@ addEventListener("pointermove", (e) => {
     drag.y = e.clientY;
     return;
   }
+  if (AR) {
+    phone.look = null; // looking around yourself ends a tour's "look here"
+    phone.yaw = drag.yaw + (e.clientX - drag.x) * 0.005;
+    phone.pitch = Math.min(0.6, Math.max(-1.25, drag.pitch + (e.clientY - drag.y) * 0.004));
+    return;
+  }
   orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
   orbit.pitch = Math.min(1.1, Math.max(0.05, drag.pitch + (e.clientY - drag.y) * 0.004));
 });
@@ -486,6 +559,11 @@ addEventListener("pointercancel", endPointer);
 canvas.addEventListener(
   "wheel",
   (e) => {
+    if (AR) {
+      e.preventDefault();
+      stepPhone(-e.deltaY * 0.01);
+      return;
+    }
     if (!inRoom()) return;
     e.preventDefault();
     setZoom(orbit.zoom * Math.exp(e.deltaY * 0.0012));
@@ -493,8 +571,9 @@ canvas.addEventListener(
   { passive: false },
 );
 const viewUi = mountViewControls({
-  onZoom: (dir) => setZoom(orbit.zoom * (dir > 0 ? 0.85 : 1.18)),
-  onRecenter: resetOrbit,
+  onZoom: (dir) =>
+    AR ? stepPhone(dir > 0 ? 1.2 : -1.2) : setZoom(orbit.zoom * (dir > 0 ? 0.85 : 1.18)),
+  onRecenter: () => (AR ? resetPhone() : resetOrbit()),
 });
 
 /* ── settings panel ── */
@@ -547,6 +626,8 @@ for (const [id, prop] of [
   ["o-osSize", "osSize"],
   ["o-osOpacity", "osOpacity"],
   ["o-osDim", "osDim"],
+  ["o-roomScale", "roomScale"],
+  ["o-maxRoomScale", "maxRoomScale"],
 ]) {
   const el = $("#" + id);
   const out = el.parentElement.querySelector("output");
@@ -603,6 +684,8 @@ function step() {
     if (keys.has("arrowdown") || keys.has("s")) mv.y += 1;
     if (mv.length() > 1) mv.normalize();
     const speed = 5.2;
+    // In AR the joystick is camera-relative (as the EVADE joystick is).
+    if (AR) mv.rotateAround(new THREE.Vector2(), -phone.yaw);
     if (mv.lengthSq() > 0.01) {
       player.position.x += mv.x * speed * dt;
       player.position.z += mv.y * speed * dt;
@@ -627,6 +710,27 @@ function step() {
   mixer?.update(dt);
   ctx.step(dt); // triggers, then the game's and the hideout's onBeforeRender
   hubStep();
+  if (AR) {
+    // You are the phone: it stays where you stand.
+    if (phone.look) {
+      const to = tmp.copy(phone.look).sub(phone.pos);
+      const wantYaw = Math.atan2(-to.x, -to.z);
+      const wantPitch = Math.atan2(to.y, Math.hypot(to.x, to.z));
+      const k = 1 - Math.exp(-3 * dt);
+      let dy = wantYaw - phone.yaw;
+      dy = ((((dy + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+      phone.yaw += dy * k;
+      phone.pitch += (Math.max(-1.25, Math.min(0.6, wantPitch)) - phone.pitch) * k;
+    }
+    camera.position.copy(phone.pos);
+    camera.rotation.set(phone.pitch, phone.yaw, 0, "YXZ");
+    camera.updateMatrixWorld();
+    followReticle(dt);
+    renderer.render(scene, camera);
+    capture.frame();
+    requestAnimationFrame(step);
+    return;
+  }
   hubCam += ((inRoom() && hub.state !== "leaving" ? 1 : 0) - hubCam) * (1 - Math.exp(-2.5 * dt));
   const pw = player.getWorldPosition(pWorld);
   if (hubCam > 0.001 && hub) {
@@ -722,6 +826,9 @@ window.__lab = {
   },
   hideout: () => openHideout(),
   setPlaceScale: (v) => (placeScale = v),
+  phone,
+  resetPhone,
+  stepPhone,
   walkTo: (x, z) => player.position.set(x, 0, z),
   player,
   emote: (n) => setEmote(n),

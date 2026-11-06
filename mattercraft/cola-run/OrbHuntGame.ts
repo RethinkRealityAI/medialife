@@ -4256,6 +4256,13 @@ export class OrbHuntGame extends Group {
   public exitHideout() { this._exitHideout(); }
   /** True while Bobo's Hideout mode is open. */
   public get isInHideout() { return this._hideout; }
+  /**
+   * Play a character timeline (an emote) the way the lounge buttons do: it
+   * stops the last one cleanly first, and lets go the moment the joystick
+   * takes over. Bobo's Hideout uses it for his build-in and room animations.
+   * Needs Lounge Character set. @zui
+   */
+  public playCharacterClip(id?: string) { this._playLoungeClip(id); }
   /** True while the intro / how-to-play card is open. */
   public get isIntroOpen() { return !!this._introWrap?.classList.contains("on"); }
 
@@ -6382,7 +6389,7 @@ export class OrbHuntGame extends Group {
    * a fresh takeover, not ambience.
    */
   private _loungeWatchdog() {
-    if (!this._lounge || this._loungeClipId === undefined) return;
+    if ((!this._lounge && !this._hideout) || this._loungeClipId === undefined) return;
     if (!this.loungeCharacter.value) return;
     const models = this._loungeGltfs();
     const running = runningAnimKeys(models);
@@ -7766,6 +7773,9 @@ export class OrbHuntGame extends Group {
   private _exitHideout() {
     if (!this._hideout) return;
     this._hideout = false;
+    // Same as leaving the lounge: no hideout pose carries into the next mode.
+    this._resetLoungeAnimations();
+    this._loungeClipId = undefined;
     this._applyLoungeBoard();
     this._applyPortalVisibility();
     this._applyMode();
