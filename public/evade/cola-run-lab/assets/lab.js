@@ -1,13 +1,19 @@
-// Cola Run recorder lab: a stand-in Cola Run scene in plain three.js, wired
-// to the exact recorder the Mattercraft component uses (capture-core.js is
-// generated from mattercraft/cola-run/CaptureCore.ts). The renderer is set up
-// like Mattercraft's (alpha, no preserveDrawingBuffer) and the recorder is fed
-// right after each render, the way the component's useOnAfterRender does.
+// Cola Run lab: the real Cola Run game (OrbHuntGame.ts, the exact file that
+// goes into Mattercraft) running in plain three.js, so its menu, intro, HUD,
+// lounge bar and modals can be tried in a browser. orb-hunt-game.js is
+// generated from mattercraft/cola-run/OrbHuntGame.ts with a small stand-in for
+// @zcomponent/* (mattercraft/lab-shim/zcomponent.ts).
+//
+// The recorder is the same one the Mattercraft component uses (capture-core.js
+// is generated from mattercraft/cola-run/CaptureCore.ts). The renderer is set
+// up like Mattercraft's (alpha, no preserveDrawingBuffer) and the recorder is
+// fed right after each render, the way the component's useOnAfterRender does.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=7";
+import { OrbHuntGame, LabContext } from "./orb-hunt-game.js?v=1";
+import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=8";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=1";
 
 const $ = (s) => document.querySelector(s);
@@ -68,13 +74,13 @@ sun.position.set(4, 8, 3);
 scene.add(sun);
 
 const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(14, 64),
+  new THREE.CircleGeometry(20, 72),
   new THREE.MeshStandardMaterial({ color: 0x8fcf7a, roughness: 0.95 }),
 );
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 const ring = new THREE.Mesh(
-  new THREE.RingGeometry(13.6, 14, 96),
+  new THREE.RingGeometry(19.6, 20, 120),
   new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.7 }),
 );
 ring.rotation.x = -Math.PI / 2;
@@ -90,15 +96,11 @@ let runAct = null;
 let idleAct = null;
 const emoteActs = {};
 let emote = null;
-const cans = [];
-let canProto = null;
-let canClip = null;
+const BOBO_URL = "/roblox/activated-retail/models/catrun.glb?v=2";
+const COLA_URL = "/roblox/activated-retail/models/cola.glb?v=2";
 
 async function loadModels() {
-  const [bobo, cola] = await Promise.all([
-    loader.loadAsync("/roblox/activated-retail/models/catrun.glb"),
-    loader.loadAsync("/roblox/activated-retail/models/cola.glb"),
-  ]);
+  const bobo = await loader.loadAsync(BOBO_URL);
   const b = bobo.scene;
   fit(b, 1.1);
   player.add(b);
@@ -117,9 +119,12 @@ async function loadModels() {
     a.play();
     emoteActs[n] = a;
   }
-  canProto = cola.scene;
-  fit(canProto, 0.9);
-  canClip = cola.animations[0] ?? null;
+}
+
+/** Bobo's lounge poses: what the game's lounge timelines play in Mattercraft. */
+function setEmote(name) {
+  emote = name && emoteActs[name] ? name : null;
+  if (emote) emoteActs[emote].reset();
 }
 
 function fit(obj, height) {
@@ -130,83 +135,14 @@ function fit(obj, height) {
   obj.position.y -= b2.min.y;
 }
 
-const TARGET = 6;
-function layoutCans() {
-  for (const c of cans) scene.remove(c.obj);
-  cans.length = 0;
-  if (!canProto) return;
-  for (let i = 0; i < TARGET; i++) {
-    const a = (i / TARGET) * Math.PI * 2 + 0.4;
-    const r = 4.5 + (i % 2) * 3.5;
-    const obj = canProto.clone(true);
-    const holder = new THREE.Group();
-    holder.add(obj);
-    holder.position.set(Math.cos(a) * r, 0.25, Math.sin(a) * r);
-    scene.add(holder);
-    const m = canClip ? new THREE.AnimationMixer(obj) : null;
-    m?.clipAction(canClip).play();
-    cans.push({ obj: holder, mixer: m, taken: false });
-  }
-}
-
-/* ── audio: a small synth loop + a pickup ding through one master bus ── */
-let ac = null;
-let master = null;
-let musicTimer = 0;
-function audioStart() {
-  if (ac) return;
-  ac = new (window.AudioContext || window.webkitAudioContext)();
-  master = ac.createGain();
-  master.gain.value = 0.5;
-  master.connect(ac.destination);
-  let step = 0;
-  let next = ac.currentTime + 0.05;
-  const bass = [55, 55, 65.4, 49];
-  const tick = () => {
-    while (next < ac.currentTime + 0.25) {
-      const beat = step % 8;
-      if (beat % 2 === 0) tone(bass[(step >> 3) % 4], next, 0.22, "triangle", 0.25);
-      if (beat % 2 === 1) noise(next, 0.04, 0.06);
-      if (beat === 4) tone(440, next, 0.08, "square", 0.05);
-      next += 0.1875;
-      step++;
-    }
-  };
-  tick();
-  musicTimer = setInterval(tick, 60);
-}
-function tone(f, t, d, type = "sine", v = 0.2) {
-  const o = ac.createOscillator();
-  const g = ac.createGain();
-  o.type = type;
-  o.frequency.value = f;
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(g).connect(master);
-  o.start(t);
-  o.stop(t + d + 0.02);
-}
-let noiseBuf = null;
-function noise(t, d, v) {
-  if (!noiseBuf) {
-    noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.1, ac.sampleRate);
-    const ch = noiseBuf.getChannelData(0);
-    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-  }
-  const s = ac.createBufferSource();
-  const g = ac.createGain();
-  s.buffer = noiseBuf;
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  s.connect(g).connect(master);
-  s.start(t);
-}
-const ding = () => {
-  if (!ac) return;
-  const t = ac.currentTime;
-  tone(880, t, 0.12, "sine", 0.3);
-  tone(1320, t + 0.07, 0.18, "sine", 0.25);
-};
+/* ── audio: one context for the game and the recorder ──
+   Mattercraft resumes its shared AudioContext on the first tap; so does this. */
+const ac = new (window.AudioContext || window.webkitAudioContext)();
+const gameBus = ac.createGain(); // the game's audio layer
+gameBus.connect(ac.destination);
+const unlockAudio = () => ac.state === "suspended" && ac.resume().catch(() => undefined);
+addEventListener("pointerdown", unlockAudio, { capture: true });
+addEventListener("keydown", unlockAudio, { capture: true });
 
 /* ── camera background (optional) ── */
 let camStream = null;
@@ -238,90 +174,12 @@ async function useCamera(on) {
   }
 }
 
-/* ── game state ── */
-const ROUND = 45;
-let playing = false;
-let score = 0;
-let timeLeft = ROUND;
-let done = false;
-const scoreEl = $("#score");
-const timeEl = $("#time");
-
-/* ── lounge mode: hang out with Bobo, no clock, no cans ── */
-let lounge = false;
-const hudEl = $(".lab-hud");
-const loungeBar = $("#loungeBar");
-function enterLounge() {
-  lounge = true;
-  playing = true;
-  done = true;
-  for (const c of cans) c.obj.visible = false;
-  hudEl.classList.add("lab-lounging");
-  loungeBar.hidden = false;
-  // what the component does on the game's onLoungeEnter
-  capture.setHud({ badge: "Lounging with Bobo" });
-  capture.showHint(qs.has("hint"));
-  if (!hubOn) showModeButton(true);
-  log("lounge entered");
-}
-function exitLounge() {
-  lounge = false;
-  setEmote(null);
-  hudEl.classList.remove("lab-lounging");
-  loungeBar.hidden = true;
-  capture.setHud(null);
-  log("lounge exited");
-}
-function setEmote(name) {
-  emote = name && emoteActs[name] ? name : null;
-  if (emote) emoteActs[emote].reset();
-}
-for (const b of document.querySelectorAll("[data-emote]"))
-  b.addEventListener("click", () => {
-    setEmote(b.dataset.emote);
-    log(`emote ${b.dataset.emote}`);
-  });
-$("#loungeExit").addEventListener("click", () => {
-  exitLounge();
-  startRound();
-});
-
-function startRound() {
-  if (lounge) exitLounge();
-  score = 0;
-  timeLeft = ROUND;
-  done = false;
-  playing = true;
-  player.position.set(0, 0, 0);
-  layoutCans();
-  scoreEl.textContent = `0 / ${TARGET}`;
-  capture.setHud({ score: 0, target: TARGET });
-  capture.showHint(qs.has("hint"));
-  showModeButton(false);
-  log("round started");
-}
-
-function collect(c) {
-  c.taken = true;
-  c.obj.visible = false;
-  score++;
-  ding();
-  scoreEl.textContent = `${score} / ${TARGET}`;
-  const hud = { score, target: TARGET };
-  if (score >= TARGET) {
-    done = true;
-    hud.badge = "Run complete!";
-    log("run complete");
-  }
-  capture.setHud(hud);
-}
-
 /* ── input: keys + joystick ── */
 const keys = new Set();
 addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
   keys.add(e.key.toLowerCase());
-  if (e.key.toLowerCase() === "r" && playing) capture.toggle(); // handy on desktop
+  if (e.key.toLowerCase() === "r" && !inRoom()) capture.toggle(); // handy on desktop
 });
 addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 const stick = $("#stick");
@@ -358,11 +216,11 @@ const capture = new ColaCapture({
   endpoint: qs.get("endpoint") || location.origin,
   globeUrl: "/evade/where-is-bobo/",
   source: "cola-run-lab",
-  audioContext: null, // set on Play (needs a tap first)
+  audioContext: ac,
   connectAudio: (dest) => {
-    if (!$("#o-audio").checked || !master) return () => undefined;
-    master.connect(dest);
-    return () => master.disconnect(dest);
+    if (!$("#o-audio").checked) return () => undefined;
+    gameBus.connect(dest);
+    return () => gameBus.disconnect(dest);
   },
   isXR: () => false,
   on: (name, p) => {
@@ -379,6 +237,71 @@ const capture = new ColaCapture({
   },
 });
 
+
+/* ── the game: the real OrbHuntGame, in a stand-in Mattercraft context ── */
+const ctx = new LabContext({ overlay, camera, audioContext: ac, audioLayer: gameBus, loader });
+ctx.addNode("player", player);
+// The lounge timelines Bobo's buttons point at in Mattercraft.
+const EMOTE_FOR = { "lounge-sleep": "Sleep", "lounge-excited": "Alert", "lounge-purr": "Purr" };
+for (const [id, name] of Object.entries(EMOTE_FOR))
+  ctx.addClip(id, { play: () => setEmote(name), stop: () => emote === name && setEmote(null) });
+
+const game = new OrbHuntGame(ctx, { maxOrbs: 32, orbDetail: 32, pickupModel: COLA_URL });
+scene.add(game.element);
+// The settings the EVADE scene uses in Mattercraft; everything else stays at
+// the component's defaults, so the menu and copy are what players will see.
+game.playerNode.value = "player";
+game.pickupKind.value = "model";
+game.placementEnabled.value = qs.has("place"); // AR placement means nothing in a browser tab
+game.logoImage.value = "/brand/medialife-wordmark.webp";
+game.introImage.value = "/evade/cola-run-lab/assets/cola-run-intro.webp";
+game.lounge1Timeline.value = "lounge-sleep";
+game.lounge2Timeline.value = "lounge-excited";
+game.lounge3Timeline.value = "lounge-purr";
+
+// What ColaRunRecorder does with the game's events.
+let hud = {};
+const pushHud = () => capture.setHud({ ...hud });
+const hint = () => capture.showHint(qs.has("hint"));
+const target = () => Number(game.targetCount.value) || undefined;
+game.onGameStart.addListener(() => {
+  hud = { score: 0, target: target() };
+  pushHud();
+  hint();
+  showModeButton(false);
+  log("round started");
+});
+game.onLoungeEnter.addListener(() => {
+  hud = { badge: "Lounging with Bobo" };
+  pushHud();
+  hint();
+  if (!hubOn) showModeButton(true);
+  log("lounge entered");
+});
+game.onLoungeExit.addListener(() => {
+  hud = {};
+  pushHud();
+  setEmote(null);
+  showModeButton(false);
+  log("lounge exited");
+});
+game.onOrbCollected.addListener((e) => {
+  hud = { ...hud, score: Number(e?.score) || 0, target: Number(e?.target) || target() };
+  pushHud();
+});
+game.onTargetReached.addListener(() => {
+  hud = { ...hud, badge: "Run complete!" };
+  pushHud();
+  log("run complete");
+});
+game.onTimeUp.addListener(() => {
+  hud = { ...hud, badge: "Time's up" };
+  pushHud();
+  log("time up");
+});
+game.onLoungeAction.addListener((e) => log(`lounge: ${e.label}`));
+for (const n of ["onPortalOpen", "onRewardShown", "onRewardModalShown", "onClaimed", "onReplay", "onGameReset"])
+  game[n].addListener(() => log(n.replace(/^on/, "").replace(/[A-Z]/g, (c) => " " + c.toLowerCase()).trim()));
 
 /* ── Bobo's Hideout: the Collector Hub as a game mode ──
    Same core as the Mattercraft component (hub-core.js is generated from
@@ -435,15 +358,11 @@ function showModeButton(on) {
 
 async function openHideout() {
   if (hubOn) return;
-  if (!ac) {
-    audioStart();
-    capture.configure({ audioContext: ac });
-  }
-  $("#intro").hidden = true;
-  if (!lounge) enterLounge();
-  loungeBar.hidden = true;
-  showModeButton(false);
+  unlockAudio();
+  if (!game.isLounging) game.enterLounge();
   hubOn = true;
+  game.uiEnabled.value = false; // the hideout has its own UI
+  showModeButton(false);
   hub.prompt("Opening the portal…");
   try {
     await hub.load();
@@ -451,7 +370,7 @@ async function openHideout() {
     log(`hub load failed: ${e?.message || e}`);
     hub.prompt(null);
     hubOn = false;
-    loungeBar.hidden = false;
+    game.uiEnabled.value = true;
     showModeButton(true);
     return;
   }
@@ -459,7 +378,7 @@ async function openHideout() {
   const ok = await hub.ensureAccess();
   if (!ok) {
     hubOn = false;
-    loungeBar.hidden = false;
+    game.uiEnabled.value = true;
     showModeButton(true);
     return;
   }
@@ -482,7 +401,6 @@ function hubStep(dt) {
     // Through the portal: the room's Bobo takes over and walks home.
     player.visible = false;
     stick.hidden = true;
-    hudEl.hidden = true; // the room has its own top bar
     capture.setVisible(false);
     resetOrbit();
     hub.enter({ walk: true });
@@ -505,15 +423,13 @@ async function leaveHideout(then) {
   hubOn = false;
   hub.hide();
   stick.hidden = false;
-  hudEl.hidden = false;
+  game.uiEnabled.value = true;
   capture.setVisible(true);
   log("hideout: left");
   if (then === "play" || then === "record") {
-    startRound();
+    game.startGame();
     if (then === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 400);
-    showModeButton(false);
   } else {
-    loungeBar.hidden = false;
     showModeButton(true);
   }
 }
@@ -640,33 +556,10 @@ toggle.addEventListener("click", () => {
   toggle.setAttribute("aria-expanded", String(!p.hidden));
 });
 
-$("#play").addEventListener("click", async () => {
-  audioStart();
-  // browsers only allow audio after a tap, so the recorder gets it now
-  capture.configure({ audioContext: ac });
-  if ($("#useCam").checked) await useCamera(true);
-  $("#intro").hidden = true;
-  startRound();
-});
-$("#lounge").addEventListener("click", async () => {
-  audioStart();
-  capture.configure({ audioContext: ac });
-  if ($("#useCam").checked) await useCamera(true);
-  $("#intro").hidden = true;
-  enterLounge();
-});
-$("#hideout").addEventListener("click", () => openHideout());
-$("#o-lounge").addEventListener("click", () => {
-  $("#intro").hidden = true;
-  if (!ac) {
-    audioStart();
-    capture.configure({ audioContext: ac });
-  }
-  if (lounge) {
-    exitLounge();
-    startRound();
-  } else enterLounge();
-});
+$("#o-hideout").addEventListener("click", () => openHideout());
+$("#o-intro").addEventListener("click", () => game.showIntro());
+$("#useCam").addEventListener("change", (e) => useCamera(e.target.checked));
+$("#o-lounge").addEventListener("click", () => (game.isLounging ? game.startGame() : game.enterLounge()));
 
 /* ── loop ── */
 const clock = new THREE.Clock();
@@ -683,9 +576,10 @@ addEventListener("resize", resize);
 resize();
 
 let moving = 0;
+let lookY = 0.8;
 function step() {
   const dt = Math.min(0.1, clock.getDelta());
-  if (playing && !inRoom()) {
+  if (!inRoom()) {
     const mv = new THREE.Vector2(stickV.x, stickV.y);
     if (keys.has("arrowleft") || keys.has("a")) mv.x -= 1;
     if (keys.has("arrowright") || keys.has("d")) mv.x += 1;
@@ -696,7 +590,7 @@ function step() {
     if (mv.lengthSq() > 0.01) {
       player.position.x += mv.x * speed * dt;
       player.position.z += mv.y * speed * dt;
-      const lim = 13.2;
+      const lim = 19.2;
       const d = Math.hypot(player.position.x, player.position.z);
       if (d > lim) player.position.multiplyScalar(lim / d);
       const yaw = Math.atan2(mv.x, mv.y);
@@ -713,23 +607,9 @@ function step() {
       runAct.weight = moving;
       idleAct.weight = (1 - moving) * (1 - em);
     }
-    for (const c of cans) {
-      if (c.taken) continue;
-      if (player.position.distanceTo(tmp.set(c.obj.position.x, 0, c.obj.position.z)) < 1.3)
-        collect(c);
-    }
-    if (!done && !lounge) {
-      timeLeft = Math.max(0, timeLeft - dt);
-      if (timeLeft === 0) {
-        done = true;
-        capture.setHud({ score, target: TARGET, badge: "Time's up" });
-        log("time up");
-      }
-    }
-    timeEl.textContent = timeLeft.toFixed(1);
   }
   mixer?.update(dt);
-  for (const c of cans) c.mixer?.update(dt);
+  ctx.step(dt); // triggers, then the game's onBeforeRender
   hubStep(dt);
   if (hubCam > 0.001) {
     // In the hideout: orbit the room (drag to look around), blended from the follow cam.
@@ -747,7 +627,10 @@ function step() {
   } else {
     camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5));
     camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
-    hubLook.set(player.position.x, player.position.y + 0.8, player.position.z);
+    // While lounging, aim below Bobo so he sits above the game's lounge bar.
+    const wantY = game.isLounging ? (camera.aspect < 0.8 ? -1.6 : -1.1) : 0.8;
+    lookY += (wantY - lookY) * (1 - Math.exp(-4 * dt));
+    hubLook.set(player.position.x, player.position.y + lookY, player.position.z);
     camera.lookAt(hubLook);
   }
 
@@ -759,14 +642,19 @@ function step() {
 
 loadModels()
   .then(() => {
-    layoutCans();
+    // Deep links: ?mode=play|record|lounge|hideout (from the hideout's Cola Run app), ?hub=CODE (a product QR).
+    // A deep link skips the intro; a plain visit gets the game's own intro.
+    const mode = qs.get("mode") || (qs.get("hub") ? "hideout" : "");
+    game.showIntroOnLoad.value = !mode;
+    // Mattercraft finishes building the scene before the game binds its
+    // player and opens the intro; same order here.
+    ctx.markConstructed();
     log("scene ready");
     window.__lab.ready = true;
-    // Deep links: ?mode=play|record|hideout (from the hideout's Cola Run app), ?hub=CODE (a product QR).
-    const mode = qs.get("mode") || (qs.get("hub") ? "hideout" : "");
     if (mode === "hideout") openHideout();
+    else if (mode === "lounge") game.enterLounge();
     else if (mode === "play" || mode === "record") {
-      $("#play").click();
+      game.startGame();
       if (mode === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 600);
     }
   })
@@ -777,12 +665,15 @@ requestAnimationFrame(step);
 window.__lab = {
   ready: false,
   capture,
+  game,
+  ctx,
   DEFAULT_SETTINGS,
-  play: () => $("#play").click(),
-  collectAll: () => cans.filter((c) => !c.taken).forEach(collect),
+  play: () => game.startGame(),
+  // Collect every live can through the game's own pickup path.
+  collectAll: () => game._orbs.filter((o) => o.alive && o.active).forEach((o) => game._collect(o)),
   status: () => capture.status,
-  state: () => ({ playing, score, timeLeft, done, lounge, emote }),
-  lounge: () => enterLounge(),
+  state: () => ({ state: game._state, score: game._score, timeLeft: game._timeLeft, lounge: game.isLounging, emote }),
+  lounge: () => game.enterLounge(),
   hub,
   hideout: () => openHideout(),
   walkTo: (x, z) => player.position.set(x, 0, z),
