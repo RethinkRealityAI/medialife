@@ -380,6 +380,15 @@
   [headers.values]
     Content-Security-Policy = "frame-ancestors *"
 
+# The Digital Collection vault is embedded the same way (BOBO OS and the
+# hideout's collection shelf). Read-only; what it shows comes from its URL.
+[[headers]]
+  for = "/evade/vault/*"
+  [headers.values]
+    Content-Security-Policy = "frame-ancestors *"
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "public, max-age=0, must-revalidate"
+
 [[headers]]
   for = "/evade/cola-run-lab/*"
   [headers.values]

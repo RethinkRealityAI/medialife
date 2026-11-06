@@ -396,9 +396,12 @@ export class CollectorHubMode extends Group {
     const hub = this._hub;
     if (!hub) return;
     const g = this._game;
-    // Not in the middle of a timed round: lounge, menus, or before the first round.
-    const inRound = g && !g.isLounging && g._state === "playing";
-    hub.modeButton(this.showButton.value && !this._active && !inRound ? () => this.open() : null);
+    // Only between rounds: lounge, menus, before the first round. Never mid-round
+    // (playing or paused) and never before the AR scene has been placed.
+    const st: string | undefined = g?.gameState ?? g?._state;
+    const busy =
+      !!g && (st === "placing" || (!g.isLounging && (st === "playing" || st === "paused")));
+    hub.modeButton(this.showButton.value && !this._active && !busy ? () => this.open() : null);
   }
 
   /* ── finding things ── */
@@ -438,6 +441,10 @@ export class CollectorHubMode extends Group {
       g.onGameEnd,
       g.onTimeUp,
       g.onTargetReached,
+      g.onGameReset,
+      g.onPlace,
+      g.onResetPlacement,
+      g.onRewardModalDismissed,
     ])
       on(e);
   }

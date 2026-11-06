@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Digital Collection · EVADE</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Tilt+Neon&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/",
+          "qrcode": "/roblox/creators/vendor/qrcode/qrcode.esm.js"
+        }
+      }
+    </script>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #05080b;
+        color: #eee;
+        font-family: "Space Grotesk", system-ui, sans-serif;
+        overflow: hidden;
+      }
+      #dropStage {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!--
+      The EVADE Digital Collection: the creators page's drop display, as a fan's vault.
+      ?owned=keychain,hoodie  pieces they own (real); the rest show as holograms.
+      ?s=keychain:412          serial numbers for the owned pieces.
+      Embedded by the Collector Hub (Bobo's Hideout) in BOBO OS and the collection shelf.
+    -->
+    <div
+      id="dropStage"
+      class="drop-stage"
+      data-mode="vault"
+      aria-label="Your EVADE Digital Collection in 3D"
+    ></div>
+    <script>
+      (function () {
+        var q = new URLSearchParams(location.search);
+        var el = document.getElementById("dropStage");
+        var ok = /^[a-z,]*$/;
+        var owned = (q.get("owned") || "").toLowerCase();
+        el.dataset.owned = ok.test(owned) ? owned : "";
+        var s = q.get("s") || "";
+        el.dataset.serials = /^[a-z0-9:,]*$/i.test(s) ? s : "";
+      })();
+    </script>
+    <script type="module" src="/evade/creators/assets/js/stage.js"></script>
+  </body>
+</html>

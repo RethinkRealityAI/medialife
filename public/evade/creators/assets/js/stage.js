@@ -34,9 +34,56 @@ export const ITEMS = [
     meta: "Double-sided acrylic · QR on the back · silver clasp",
   },
   { id: "tee", status: "soon", short: "Tee", name: "Activated Tee", line: "Same tag, new unlocks" },
-  { id: "hoodie", status: "soon", short: "Hoodie", name: "Activated Hoodie", line: "Same tag, new unlocks" },
+  {
+    id: "hoodie",
+    status: "soon",
+    short: "Hoodie",
+    name: "Activated Hoodie",
+    line: "Same tag, new unlocks",
+  },
   { id: "cap", status: "soon", short: "Cap", name: "Activated Cap", line: "Same tag, new unlocks" },
-  { id: "deskmat", status: "soon", short: "Desk mat", name: "Activated Desk Mat", line: "Same tag, new unlocks" },
+  {
+    id: "deskmat",
+    status: "soon",
+    short: "Desk mat",
+    name: "Activated Desk Mat",
+    line: "Same tag, new unlocks",
+  },
+];
+
+/** The Digital Collection (vault mode): the same display, as a fan's owned set. */
+export const VAULT_ITEMS = [
+  {
+    id: "keychain",
+    short: "Charm set",
+    name: "Bobo × Eclipse charm set",
+    line: "Drop 01. Scan the back to play Cola Run.",
+    meta: "Double-sided acrylic · QR on the back · silver clasp",
+  },
+  {
+    id: "hoodie",
+    short: "Hoodie",
+    name: "Activated Hoodie",
+    line: "Activate one to bring it into your collection.",
+  },
+  {
+    id: "tee",
+    short: "Tee",
+    name: "Activated Tee",
+    line: "Activate one to bring it into your collection.",
+  },
+  {
+    id: "deskmat",
+    short: "Desk mat",
+    name: "Activated Desk Mat",
+    line: "Activate one to bring it into your collection.",
+  },
+  {
+    id: "mystery",
+    short: "Mystery",
+    name: "Mystery drop",
+    line: "Nobody knows yet. Keep an eye on your alerts.",
+  },
 ];
 
 const ICON = {
@@ -48,14 +95,19 @@ const ICON = {
   cap: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 15a7.5 7.5 0 0 1 15 0z"/><path d="M19.5 15c1.6 0 2.5.6 2.5 1.2s-2 1.3-5 1.3H4.5"/><path d="M12 7.5V6.3"/></svg>',
   deskmat:
     '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M15.5 10.2a1.6 1.6 0 1 1 0 3.2"/></svg>',
-  close:
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  mystery:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.4"/><path d="M12 17h.01"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   qr: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5h2.5v2.5M20.5 14.5v6h-6M17 20.5"/></svg>',
   paw: '<svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="15.5" rx="4.3" ry="3.6"/><circle cx="6.3" cy="10.2" r="1.8"/><circle cx="9.6" cy="6.6" r="1.8"/><circle cx="14.4" cy="6.6" r="1.8"/><circle cx="17.7" cy="10.2" r="1.8"/></svg>',
 };
 
 const esc = (s) =>
-  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  String(s).replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c],
+  );
 
 function hasWebGL() {
   try {
@@ -131,14 +183,61 @@ function overlayHTML(gameplayUrl) {
     </div>`;
 }
 
+function vaultOverlayHTML(owned, serials) {
+  const btn = (it) => {
+    const has = owned.has(it.id);
+    return `
+      <button type="button" class="ds-opt ${has ? "ds-opt-live" : "ds-opt-soon"}" data-id="${it.id}" aria-pressed="false"
+        aria-label="${esc(it.name)} — ${has ? "collected" : "locked"}">
+        <span class="ds-opt-icon">${ICON[it.id]}</span>
+        <span class="ds-opt-label">${esc(it.short)}</span>
+        ${has ? `<span class="ds-opt-tag"><span class="ds-dot"></span>${serials[it.id] ? "#" + esc(String(serials[it.id]).padStart(5, "0")) : "Owned"}</span>` : `<span class="ds-opt-lock">${ICON.lock}</span>`}
+      </button>`;
+  };
+  const mine = VAULT_ITEMS.filter((x) => owned.has(x.id));
+  const rest = VAULT_ITEMS.filter((x) => !owned.has(x.id));
+  return `
+    <div class="ds-ui">
+      <button type="button" class="ds-hint" hidden aria-label="Tap Bobo">${ICON.paw}<span>Tap Bobo</span></button>
+      <div class="ds-toast" role="status" aria-live="polite"></div>
+      <section class="ds-caption" aria-live="polite" aria-atomic="true" hidden>
+        <button type="button" class="ds-close" aria-label="Back to the collection">${ICON.close}</button>
+        <p class="ds-pill"></p>
+        <h3 class="ds-cap-name"></h3>
+        <p class="ds-cap-line"></p>
+        <p class="ds-cap-meta"></p>
+      </section>
+      <nav class="ds-bar" aria-label="Your collection">
+        ${mine.length ? `<div class="ds-group ds-group-live"><p class="ds-group-label">Collected</p><div class="ds-row">${mine.map(btn).join("")}</div></div>` : ""}
+        ${rest.length ? `<div class="ds-group ds-group-soon"><p class="ds-group-label">Locked <span>· holograms until you activate one</span></p><div class="ds-row">${rest.map(btn).join("")}</div></div>` : ""}
+      </nav>
+    </div>`;
+}
+
 function boot(el) {
   if (el.dataset.stageBooted) return;
   el.dataset.stageBooted = "1";
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const gameplayUrl = el.dataset.gameplayUrl || "";
+  const isVault = el.dataset.mode === "vault";
+  const owned = new Set(
+    (el.dataset.owned || "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean),
+  );
+  const serials = {};
+  for (const pair of (el.dataset.serials || "").split(",")) {
+    const [k, v] = pair.split(":");
+    if (k && v) serials[k] = v;
+  }
+  const LIST = isVault
+    ? VAULT_ITEMS.map((x) => ({ ...x, status: owned.has(x.id) ? "live" : "soon" }))
+    : ITEMS;
   el.classList.add("drop-stage");
   el.setAttribute("role", "region");
-  if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", "The drop: activated EVADE merch in 3D");
+  if (!el.getAttribute("aria-label"))
+    el.setAttribute("aria-label", "The drop: activated EVADE merch in 3D");
 
   if (!hasWebGL()) {
     el.classList.add("is-fallback");
@@ -146,7 +245,7 @@ function boot(el) {
     return;
   }
   ensureNeonFont();
-  el.innerHTML = `<canvas class="ds-canvas" aria-hidden="true"></canvas>${posterHTML(false)}${overlayHTML(gameplayUrl)}`;
+  el.innerHTML = `<canvas class="ds-canvas" aria-hidden="true"></canvas>${posterHTML(false)}${isVault ? vaultOverlayHTML(owned, serials) : overlayHTML(gameplayUrl)}`;
   const canvas = el.querySelector(".ds-canvas");
   const poster = el.querySelector(".ds-poster");
   const loaderBar = el.querySelector(".ds-loader");
@@ -159,6 +258,10 @@ function boot(el) {
   let stage = null;
   let current = null;
   let pendingSelect = null;
+  if (isVault) {
+    const f = new URLSearchParams(location.search).get("focus");
+    if (f && LIST.some((x) => x.id === f)) pendingSelect = f;
+  }
   let toastTimer = 0;
 
   const setProgress = (p) => {
@@ -175,7 +278,7 @@ function boot(el) {
   }
 
   function showCaption(id) {
-    const it = ITEMS.find((x) => x.id === id);
+    const it = LIST.find((x) => x.id === id);
     if (!it) {
       caption.hidden = true;
       el.classList.remove("is-focus");
@@ -184,7 +287,13 @@ function boot(el) {
     el.classList.add("is-focus");
     const pill = caption.querySelector(".ds-pill");
     pill.className = `ds-pill ${it.status === "live" ? "ds-pill-live" : "ds-pill-soon"}`;
-    pill.innerHTML = it.status === "live" ? '<span class="ds-dot"></span>Current drop · Live now' : "Design · Mock-up, coming soon";
+    pill.innerHTML = isVault
+      ? it.status === "live"
+        ? `<span class="ds-dot"></span>Collected${serials[it.id] ? " · #" + esc(String(serials[it.id]).padStart(5, "0")) : ""}`
+        : "Locked · hologram"
+      : it.status === "live"
+        ? '<span class="ds-dot"></span>Current drop · Live now'
+        : "Design · Mock-up, coming soon";
     caption.querySelector(".ds-cap-name").textContent = it.name;
     caption.querySelector(".ds-cap-line").textContent = it.line;
     const meta = caption.querySelector(".ds-cap-meta");
@@ -199,7 +308,7 @@ function boot(el) {
   }
 
   function select(id, { fromScene = false } = {}) {
-    if (id && !ITEMS.some((x) => x.id === id)) return;
+    if (id && !LIST.some((x) => x.id === id)) return;
     if (!id) return reset();
     if (!stage) {
       pendingSelect = id;
@@ -222,7 +331,8 @@ function boot(el) {
     opts.forEach((b) => b.setAttribute("aria-pressed", "false"));
     showCaption(null);
     fire("stage:select", { id: null });
-    if (caption.contains(document.activeElement)) opts.find((b) => b.dataset.id === prev)?.focus({ preventScroll: true });
+    if (caption.contains(document.activeElement))
+      opts.find((b) => b.dataset.id === prev)?.focus({ preventScroll: true });
   }
 
   opts.forEach((b) =>
@@ -248,12 +358,12 @@ function boot(el) {
   function onBobo() {
     tapped = true;
     hint.hidden = true;
-    toast("Bobo, hero of Cola Run");
+    toast(isVault ? "Bobo guards the vault" : "Bobo, hero of Cola Run");
     fire("stage:bobo", {});
   }
 
   window.EvadeStage = {
-    ids: ITEMS.map((x) => x.id),
+    ids: LIST.map((x) => x.id),
     select: (id) => select(id),
     reset: () => reset(),
   };
@@ -275,6 +385,7 @@ function boot(el) {
         el,
         reduced,
         keychainUrl: KEYCHAIN_GLB,
+        vault: isVault ? { owned } : null,
         onProgress: (p) => setProgress(0.25 + p * 0.75),
         onSelect: (id) => (id ? select(id, { fromScene: true }) : reset()),
         onBobo,
@@ -287,7 +398,7 @@ function boot(el) {
       poster.classList.add("out");
       setTimeout(() => poster.remove(), 900);
       visibility();
-      fire("stage:ready", { ids: ITEMS.map((x) => x.id) });
+      fire("stage:ready", { ids: LIST.map((x) => x.id) });
       if (pendingSelect) {
         const id = pendingSelect;
         pendingSelect = null;
@@ -326,5 +437,6 @@ function init() {
   const el = document.getElementById("dropStage");
   if (el) boot(el);
 }
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init, { once: true });
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", init, { once: true });
 else init();
