@@ -15,7 +15,7 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { CollectorHub } from "./hub-core.js?v=10";
+import { CollectorHub } from "./hub-core.js?v=11";
 import { mountViewControls } from "./view-controls.js?v=2";
 
 const params = new URLSearchParams(location.search);

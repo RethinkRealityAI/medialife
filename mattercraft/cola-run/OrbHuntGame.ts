@@ -4257,6 +4257,12 @@ export class OrbHuntGame extends Group {
   /** True while Bobo's Hideout mode is open. */
   public get isInHideout() { return this._hideout; }
   /**
+   * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
+   * checks it matches its own HubCore.ts).
+   */
+  public readonly hideoutVersion = "4";
+
+  /**
    * Play a character timeline (an emote) the way the lounge buttons do: it
    * stops the last one cleanly first, and lets go the moment the joystick
    * takes over. Bobo's Hideout uses it for his build-in and room animations.

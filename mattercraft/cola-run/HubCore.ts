@@ -179,11 +179,32 @@ export interface HubLook {
   zIndex?: number;
   /** Gap (px) under the mode button (see HubOptions.modeBottom). */
   modeBottom?: number;
+  /** Which corner the mode button sits in. Default bottomLeft. */
+  modeCorner?: "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+  /** In a top corner: gap (px) above the mode button. Default 78 (under a 54 px menu button). */
+  modeTop?: number;
+  /**
+   * CSS selector of other buttons the mode button should stack past when
+   * they share its corner (e.g. a record button). Measured when it appears.
+   */
+  modeAvoid?: string;
+  /**
+   * How bright the room is, 0.5 to 3. Default 1. Camera feeds in AR are
+   * bright, so a room that looks right on a dark page can look dim there.
+   */
+  brightness?: number;
   /** Show the top bar's Exit button. Default true (when exitLabel is set). */
   exitButton?: boolean;
   /** Push the top bar down this many px (same as HubOptions.hudOffset). */
   topOffset?: number;
 }
+
+/**
+ * Which Bobo's Hideout release these files are. CollectorHubMode.ts and
+ * OrbHuntGame.ts carry the same number, and the hideout warns on screen when
+ * a project mixes files from different releases.
+ */
+export const HIDEOUT_VERSION = "4";
 
 /* ══ Small helpers ══════════════════════════════════════════════════════ */
 
@@ -272,6 +293,7 @@ const smooth01 = (t: number) => t * t * (3 - 2 * t);
  * the desk and the big screen straight ahead of them.
  */
 const OPEN_YAW = Math.PI / 4;
+const UP = new THREE.Vector3(0, 1, 0);
 const backOut = (t: number) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 
 /** sRGB on a texture, on three before and after r152. */
@@ -711,6 +733,10 @@ const CSS = /* css */ `
 .mlh-mode.peek>span,.mlh-mode:focus-visible>span{opacity:1}
 @media (hover:hover){.mlh-mode:hover{max-width:280px;gap:10px;padding-right:16px}.mlh-mode:hover>span{opacity:1}}
 .mlh-mode:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mlh-mode.mlh-mode-t{bottom:auto;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + var(--mlh-mode-top,78px))}
+.mlh-mode.mlh-mode-r{left:auto;right:17px;flex-direction:row-reverse;text-align:right}
+.mlh-mode.mlh-mode-r.peek,.mlh-mode.mlh-mode-r:focus-visible{padding-right:3px;padding-left:16px}
+@media (hover:hover){.mlh-mode.mlh-mode-r:hover{padding-right:3px;padding-left:16px}}
 .mlh-toast{position:absolute;left:50%;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 74px + var(--mlh-top,0px));transform:translate(-50%,-8px);opacity:0;padding:10px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:700;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center;pointer-events:none!important}
 .mlh-toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -1272,9 +1298,15 @@ export class CollectorHub {
     hudInsetLeft: 0,
     zIndex: 2000100,
     modeBottom: 78,
+    modeCorner: "bottomLeft",
+    modeTop: 78,
+    modeAvoid: "",
+    brightness: 1,
     exitButton: true,
     topOffset: 0,
   };
+  /** The room's world scale and brightness the lights were last set for. */
+  private _lit = { scale: -1, brightness: -1 };
   private _leaveResolve?: () => void;
   private _portalT = 0;
   private _portalShut = false;
@@ -1297,6 +1329,9 @@ export class CollectorHub {
   private readonly _fizz: { o: THREE.Object3D; y: number; phase: number; amp: number }[] = [];
   private readonly _pickables: THREE.Object3D[] = [];
   private readonly _lights: THREE.Light[] = [];
+  /** Bobo's bed: kept Bobo-sized in a room scaled up for people. */
+  private _bed?: THREE.Object3D;
+  private _bedScale = 1;
 
   /* collection */
   private _holoMat?: THREE.ShaderMaterial;
@@ -1678,6 +1713,59 @@ export class CollectorHub {
       this._unlockAudio();
       onClick();
     };
+    this._placeMode();
+  }
+
+  /**
+   * Step the mode button past any modeAvoid button in its corner (stacked
+   * under it at the top, over it at the bottom), measured on screen so it
+   * follows that button's own nudges and safe areas.
+   */
+  /** Re-measure the mode button's spot (other buttons come and go). Cheap. */
+  layoutModeButton() {
+    if (this._el.mode && !this._el.mode.hidden) this._placeMode();
+  }
+
+  private _placeMode() {
+    const b = this._el.mode;
+    const ui = this._ui;
+    if (!b || !ui) return;
+    b.style.top = "";
+    b.style.bottom = "";
+    const sel = this._look.modeAvoid;
+    if (!sel || b.hidden || typeof document === "undefined") return;
+    const top = this._look.modeCorner.startsWith("top");
+    const host = ui.getBoundingClientRect();
+    const mine = b.getBoundingClientRect();
+    if (!mine.width) return;
+    const others = Array.from(document.querySelectorAll(sel))
+      .filter((el) => el !== b && !b.contains(el))
+      .map((el) => {
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        return cs.visibility === "hidden" || cs.display === "none" ? null : r;
+      })
+      .filter((r): r is DOMRect => !!r && r.width > 0 && r.height > 0)
+      .filter((r) => r.right > mine.left - 4 && r.left < mine.right + 4);
+    let lo = mine.top;
+    let hi = mine.bottom;
+    let moved = false;
+    for (let pass = 0; pass < 3; pass++)
+      for (const r of others) {
+        if (r.bottom + 10 <= lo || r.top - 10 >= hi) continue; // no overlap
+        const h = hi - lo;
+        if (top) {
+          lo = r.bottom + 10;
+          hi = lo + h;
+        } else {
+          hi = r.top - 10;
+          lo = hi - h;
+        }
+        moved = true;
+      }
+    if (!moved) return;
+    if (top) b.style.top = `${lo - host.top}px`;
+    else b.style.bottom = `${host.bottom - hi}px`;
   }
 
   /** Change the look and layout knobs (see HubLook) at any time. */
@@ -1692,6 +1780,13 @@ export class CollectorHub {
     if (look.hudInsetLeft !== undefined) L.hudInsetLeft = num(look.hudInsetLeft, 0, 400, 0);
     if (look.zIndex !== undefined) L.zIndex = Math.round(num(look.zIndex, 1, 2147483000, 2000100));
     if (look.modeBottom !== undefined) L.modeBottom = num(look.modeBottom, 0, 600, 78);
+    if (look.modeTop !== undefined) L.modeTop = num(look.modeTop, 0, 600, 78);
+    if (look.modeCorner !== undefined)
+      L.modeCorner = ["topLeft", "topRight", "bottomLeft", "bottomRight"].includes(look.modeCorner)
+        ? look.modeCorner
+        : "bottomLeft";
+    if (look.brightness !== undefined) L.brightness = num(look.brightness, 0.5, 3, 1);
+    if (look.modeAvoid !== undefined) L.modeAvoid = String(look.modeAvoid || "");
     if (look.exitButton !== undefined) L.exitButton = !!look.exitButton;
     if (look.topOffset !== undefined) L.topOffset = num(look.topOffset, 0, 400, 0);
     const ui = this._ui;
@@ -1702,6 +1797,14 @@ export class CollectorHub {
     ui.style.setProperty("--mlh-hud-r", `${L.hudInsetRight}px`);
     ui.style.setProperty("--mlh-hud-l", `${L.hudInsetLeft}px`);
     ui.style.setProperty("--mlh-mode-bottom", `${L.modeBottom}px`);
+    ui.style.setProperty("--mlh-mode-top", `${L.modeTop}px`);
+    const mode = this._el.mode;
+    if (mode) {
+      mode.classList.toggle("mlh-mode-t", L.modeCorner.startsWith("top"));
+      mode.classList.toggle("mlh-mode-r", L.modeCorner.endsWith("Right"));
+      this._placeMode();
+    }
+    this._applyLights();
     ui.style.zIndex = String(L.zIndex);
     ui.classList.toggle("mlh-hostmenu", L.hudInsetRight > 0 || L.hudInsetLeft > 0);
     ui.style.setProperty("--mlh-top", `${L.topOffset}px`);
@@ -1787,6 +1890,12 @@ export class CollectorHub {
     scale: number;
     wrapViewer?: boolean;
     maxScale?: number;
+    /**
+     * The scale at which the room's furniture would be Bobo-sized. With a
+     * bigger room, Bobo's bed stays his size and `center` (his spot) lands
+     * in it, on the rug.
+     */
+    boboScale?: number;
   }) {
     const parent = o.parent ?? this.root.parent;
     if (parent && this.root.parent !== parent) parent.add(this.root);
@@ -1797,29 +1906,80 @@ export class CollectorHub {
     const d = Math.hypot(dx, dz);
     const yaw = (d > 1e-6 ? Math.atan2(dx, dz) : 0) - OPEN_YAW;
     const inner = this._radius * 0.92; // the wall's inside, in room units
+    const max = Math.max(o.scale, o.maxScale ?? o.scale * 4);
     let s = Math.max(1e-4, o.scale);
-    let shift = 0; // how far the centre moves from Bobo toward the camera
-    if (o.wrapViewer && d > 1e-6) {
-      const CAM = 0.8; // the camera stands at most this far out (share of the radius)
-      const BOBO = 0.5; // Bobo at most this far back
-      if (d > inner * s * CAM) {
-        // Smallest radius with both inside: Bobo at BOBO·R behind the centre,
-        // the camera at CAM·R in front of it.
-        const want = d / (BOBO + CAM);
-        s = Math.max(s, Math.min(o.maxScale ?? s * 4, want / inner));
+    // Bobo's spot is his bed (on the rug), not the middle of the floor.
+    const home = new THREE.Vector3();
+    if (this._bed) home.set(this._bed.position.x, 0, this._bed.position.z);
+    home.applyAxisAngle(UP, yaw);
+    const pos = new THREE.Vector3();
+    const place = () => {
+      let shift = 0; // how far the centre moves from Bobo toward the camera
+      if (o.wrapViewer && d > 1e-6) {
+        const CAM = 0.8; // the camera stands at most this far out (share of the radius)
+        const BOBO = 0.5; // Bobo at most this far back
         const R = inner * s;
-        shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
+        if (d > R * CAM) shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
       }
+      pos.set(
+        o.center.x + (d > 1e-6 ? (dx / d) * shift : 0) - home.x * s,
+        o.center.y,
+        o.center.z + (d > 1e-6 ? (dz / d) * shift : 0) - home.z * s,
+      );
+      return Math.hypot(cam.x - pos.x, cam.z - pos.z) / (inner * s);
+    };
+    // Grow until the person holding the phone is inside (up to max).
+    let out = place();
+    for (let i = 0; o.wrapViewer && out > 0.8 && s < max && i < 40; i++) {
+      s = Math.min(max, s * 1.06);
+      out = place();
     }
-    this.root.position.set(
-      o.center.x + (d > 1e-6 ? (dx / d) * shift : 0),
-      o.center.y,
-      o.center.z + (d > 1e-6 ? (dz / d) * shift : 0),
-    );
+    this.root.position.copy(pos);
     this.root.rotation.set(0, yaw, 0);
     this.root.scale.setScalar(s);
+    if (this._bed)
+      this._bed.scale.setScalar(
+        this._bedScale * Math.min(1, Math.max(0.15, (o.boboScale ?? s) / s)),
+      );
     this.root.updateMatrixWorld(true);
+    this._applyLights();
     return s;
+  }
+
+  /**
+   * Keep the room equally lit at any size and apply the brightness knob.
+   * A point light's reach and falloff are in world units, not the room's,
+   * so a room scaled up 4x would otherwise be lit like a quarter-size one:
+   * reach grows with the scale and intensity with scale^decay.
+   */
+  private _applyLights() {
+    if (!this._room) return;
+    const ws = this.root.getWorldScale(this._t.v).x || 1;
+    const b = this._look.brightness;
+    if (Math.abs(ws - this._lit.scale) < 1e-3 * ws && b === this._lit.brightness) return;
+    const envChanged = b !== this._lit.brightness;
+    this._lit.scale = ws;
+    this._lit.brightness = b;
+    for (const l of this._lights) {
+      const base = l.userData.mlhBase as { intensity: number; distance: number } | undefined;
+      if (!base) continue;
+      const pl = l as THREE.PointLight;
+      if (pl.isPointLight) {
+        pl.distance = base.distance * ws;
+        pl.intensity = base.intensity * b * Math.pow(ws, pl.decay || 0);
+      } else l.intensity = base.intensity * b;
+    }
+    if (!envChanged) return;
+    // Reflections are most of what the metal and wood look like: lift them too.
+    const env = Math.min(2, 0.6 + 0.4 * b);
+    this._room.traverse((o: any) => {
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (!m || m.envMapIntensity === undefined) continue;
+        m.userData.mlhEnv ??= m.envMapIntensity;
+        m.envMapIntensity = m.userData.mlhEnv * env;
+      }
+    });
   }
 
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
@@ -1934,6 +2094,8 @@ export class CollectorHub {
     this._room.updateWorldMatrix(true, false);
     this._reveal.uRoomInv.value.copy(this._room.matrixWorld).invert();
 
+    // The host may rescale the placement while the room is up.
+    this._applyLights();
     if (this._state === "portal") this._updatePortal(dt);
     else if (this._state === "building") this._updateBuild(dt);
     else if (this._state === "leaving") this._updateLeave(dt);
@@ -2028,6 +2190,8 @@ export class CollectorHub {
     this._portal = room.getObjectByName("hub_portal");
     this._pad = room.getObjectByName("hub_spawn_pad");
     this._bobo = room.getObjectByName("hub_bobo");
+    this._bed = room.getObjectByName("hub_cat_bed") ?? undefined;
+    if (this._bed) this._bedScale = this._bed.scale.x || 1;
     this._swirl = room.getObjectByName("Portal_Swirl");
     this._orbitCans = room.getObjectByName("hub_orbit_cans");
     this._pullTab = room.getObjectByName("hub_pull_tab");
@@ -2155,9 +2319,13 @@ export class CollectorHub {
     if (this.opts.lights) {
       const add = (l: THREE.Light, p: THREE.Vector3) => {
         l.position.copy(p);
+        l.userData.mlhBase = { intensity: l.intensity, distance: (l as any).distance ?? 0 };
         room.add(l);
         this._lights.push(l);
       };
+      // A soft sky/floor fill, so the room never sits in the dark corner of
+      // a camera feed (the point lights only reach so far).
+      add(new THREE.HemisphereLight(0xfff3e4, 0x3a2c48, 0.85), new THREE.Vector3(0, 3, 0));
       add(new THREE.PointLight(0xffd7b0, 2.4, 6, 1.6), new THREE.Vector3(0, 1.4, 0.2));
       add(new THREE.PointLight(0x9fe9ff, 1.6, 5, 1.6), new THREE.Vector3(-0.6, 3.0, -0.6));
       add(

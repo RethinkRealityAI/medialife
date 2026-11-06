@@ -80,8 +80,8 @@ it's approved).
 The MEDIALIFE Collector Hub as the third Cola Run mode, next to the round and
 the lounge. It's in the game's own menus: **Visit Bobo's Hideout** sits under
 Start playing and Lounge with Bobo Cat on the opening card, and in the game
-menu next to the other mode rows. A small round icon (bottom left, over the
-sound button) opens it between rounds too; its label slides out the first time
+menu next to the other mode rows. A small round icon (top right, stacked under
+the menu and record buttons, clear of the joystick) opens it between rounds too; its label slides out the first time
 it appears and on hover.
 
 1. **One placement for everything.** Pick the hideout before the scene is
@@ -96,13 +96,14 @@ it appears and on hover.
    out from Bobo, past the viewer, then the room materialises floor to ceiling
    (about 6 s; Skip is bottom centre). Bobo plays **Build Timeline** (his
    excited animation) as it starts and **Room Timeline** once it's done.
-4. **Built around the viewer.** With **Room Fit = Around Viewer** (default) the
-   room slides toward the person holding the phone and grows (up to **Max Room
-   Scale**) until they're standing inside it, Bobo in the back half by his
-   things, the open side of the can behind the viewer. It's never smaller than
-   **Room Scale** (1.3 Bobo-sized rooms). The room's open side always faces the
-   camera, and it stays centred on the line from the camera to Bobo, which is
-   the middle of the screen at placement.
+4. **Built around the viewer, room scale.** The room is **Room Scale** (3)
+   Bobo-sized rooms: a walk-in space. With **Room Fit = Around Viewer**
+   (default) it also slides toward the person holding the phone and grows (up
+   to **Max Room Scale**, 8) until they're standing inside it. Its floor sits
+   under Bobo's feet, its open side faces the camera, and Bobo starts in his
+   bed on the rug (the bed stays Bobo-sized however big the room is). The
+   room's lights scale with it, so a big room is as bright as a small one, and
+   **Brightness** (1.6) lifts it for camera feeds.
 5. **One Bobo.** The game's own Bobo is Bobo in the room; the room's model Bobo
    is never shown. The joystick walks him around his room, and **Keep Bobo
    Inside** stops him at the wall.
@@ -183,11 +184,14 @@ the scene starts, while nobody is waiting on it.
 | Group | Property | Default | What it does |
 | --- | --- | --- | --- |
 | Game | Show In Menus | on | "Visit Bobo's Hideout" on the opening card and in the menu (sets the game's **Bobo's Hideout → Hideout Enabled**). |
+| Game | Version | v4 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
 | Game | Show Button | on | The small round icon between rounds. |
+| Game | Button Corner | Under Menu | Where the icon sits. Under Menu stacks it below the game's menu and record buttons. |
 | Game | Hide Game Ui | off | Hide the game's menu, sound and Reset placement buttons in the room. Leave off so placement and mode switching work in the room. |
 | Room | Room Fit | Around Viewer | Around Viewer: the room grows and slides until the viewer stands inside it. Match Bobo: sized to Bobo only. |
-| Room | Room Scale | 1.3 | Smallest room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
-| Room | Max Room Scale | 3 | With Around Viewer, the most it may grow. Someone standing further back just walks in. |
+| Room | Room Scale | 3 | Room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
+| Room | Max Room Scale | 8 | With Around Viewer, the most it may grow to fit the viewer in. Someone standing further back just walks in. |
+| Room | Brightness | 1.6 | 1 = the room as modelled; higher for bright camera feeds. |
 | Room | Keep Bobo Inside | on | The joystick stops Bobo at the wall. |
 | Room | Build Timeline / Room Timeline | none | Bobo's animations as the room starts building / once it's done. |
 | BOBO OS | OS Size | 0.8 | Share of the screen the computer takes (0.5 to 1; 1 = full screen). |

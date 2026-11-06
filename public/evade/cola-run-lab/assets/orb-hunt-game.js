@@ -3854,6 +3854,11 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     __publicField(this, "onHideoutExit", new Event());
     /** Fired when the intro / how-to-play card closes. @zui */
     __publicField(this, "onIntroClose", new Event());
+    /**
+     * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
+     * checks it matches its own HubCore.ts).
+     */
+    __publicField(this, "hideoutVersion", "4");
     /* ══ Internals ══════════════════════════════════════════════════════ */
     __publicField(this, "_zc", this.getZComponentInstance());
     /**
@@ -8032,6 +8037,7 @@ import { GLTFLoader as GLTFLoader2 } from "three/addons/loaders/GLTFLoader.js";
 
 // mattercraft/cola-run/HubCore.ts
 import * as THREE3 from "three";
+var HIDEOUT_VERSION = "4";
 var CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function formatCodeInput(v) {
@@ -8099,6 +8105,7 @@ var clamp01 = (t) => Math.min(1, Math.max(0, t));
 var ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 var smooth01 = (t) => t * t * (3 - 2 * t);
 var OPEN_YAW = Math.PI / 4;
+var UP = new THREE3.Vector3(0, 1, 0);
 var backOut = (t) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 function srgb(tex) {
   const T = THREE3;
@@ -8501,6 +8508,10 @@ var CSS = (
 .mlh-mode.peek>span,.mlh-mode:focus-visible>span{opacity:1}
 @media (hover:hover){.mlh-mode:hover{max-width:280px;gap:10px;padding-right:16px}.mlh-mode:hover>span{opacity:1}}
 .mlh-mode:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mlh-mode.mlh-mode-t{bottom:auto;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + var(--mlh-mode-top,78px))}
+.mlh-mode.mlh-mode-r{left:auto;right:17px;flex-direction:row-reverse;text-align:right}
+.mlh-mode.mlh-mode-r.peek,.mlh-mode.mlh-mode-r:focus-visible{padding-right:3px;padding-left:16px}
+@media (hover:hover){.mlh-mode.mlh-mode-r:hover{padding-right:3px;padding-left:16px}}
 .mlh-toast{position:absolute;left:50%;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 74px + var(--mlh-top,0px));transform:translate(-50%,-8px);opacity:0;padding:10px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:700;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center;pointer-events:none!important}
 .mlh-toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -9041,9 +9052,15 @@ var CollectorHub = class {
       hudInsetLeft: 0,
       zIndex: 2000100,
       modeBottom: 78,
+      modeCorner: "bottomLeft",
+      modeTop: 78,
+      modeAvoid: "",
+      brightness: 1,
       exitButton: true,
       topOffset: 0
     });
+    /** The room's world scale and brightness the lights were last set for. */
+    __publicField(this, "_lit", { scale: -1, brightness: -1 });
     __publicField(this, "_leaveResolve");
     __publicField(this, "_portalT", 0);
     __publicField(this, "_portalShut", false);
@@ -9067,6 +9084,9 @@ var CollectorHub = class {
     __publicField(this, "_fizz", []);
     __publicField(this, "_pickables", []);
     __publicField(this, "_lights", []);
+    /** Bobo's bed: kept Bobo-sized in a room scaled up for people. */
+    __publicField(this, "_bed");
+    __publicField(this, "_bedScale", 1);
     /* collection */
     __publicField(this, "_holoMat");
     __publicField(this, "_holoUniforms", {
@@ -9407,6 +9427,53 @@ var CollectorHub = class {
       this._unlockAudio();
       onClick();
     };
+    this._placeMode();
+  }
+  /**
+   * Step the mode button past any modeAvoid button in its corner (stacked
+   * under it at the top, over it at the bottom), measured on screen so it
+   * follows that button's own nudges and safe areas.
+   */
+  /** Re-measure the mode button's spot (other buttons come and go). Cheap. */
+  layoutModeButton() {
+    if (this._el.mode && !this._el.mode.hidden) this._placeMode();
+  }
+  _placeMode() {
+    const b = this._el.mode;
+    const ui = this._ui;
+    if (!b || !ui) return;
+    b.style.top = "";
+    b.style.bottom = "";
+    const sel = this._look.modeAvoid;
+    if (!sel || b.hidden || typeof document === "undefined") return;
+    const top = this._look.modeCorner.startsWith("top");
+    const host = ui.getBoundingClientRect();
+    const mine = b.getBoundingClientRect();
+    if (!mine.width) return;
+    const others = Array.from(document.querySelectorAll(sel)).filter((el) => el !== b && !b.contains(el)).map((el) => {
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return cs.visibility === "hidden" || cs.display === "none" ? null : r;
+    }).filter((r) => !!r && r.width > 0 && r.height > 0).filter((r) => r.right > mine.left - 4 && r.left < mine.right + 4);
+    let lo = mine.top;
+    let hi = mine.bottom;
+    let moved = false;
+    for (let pass = 0; pass < 3; pass++)
+      for (const r of others) {
+        if (r.bottom + 10 <= lo || r.top - 10 >= hi) continue;
+        const h = hi - lo;
+        if (top) {
+          lo = r.bottom + 10;
+          hi = lo + h;
+        } else {
+          hi = r.top - 10;
+          lo = hi - h;
+        }
+        moved = true;
+      }
+    if (!moved) return;
+    if (top) b.style.top = `${lo - host.top}px`;
+    else b.style.bottom = `${host.bottom - hi}px`;
   }
   /** Change the look and layout knobs (see HubLook) at any time. */
   configure(look) {
@@ -9419,6 +9486,11 @@ var CollectorHub = class {
     if (look.hudInsetLeft !== void 0) L.hudInsetLeft = num(look.hudInsetLeft, 0, 400, 0);
     if (look.zIndex !== void 0) L.zIndex = Math.round(num(look.zIndex, 1, 2147483e3, 2000100));
     if (look.modeBottom !== void 0) L.modeBottom = num(look.modeBottom, 0, 600, 78);
+    if (look.modeTop !== void 0) L.modeTop = num(look.modeTop, 0, 600, 78);
+    if (look.modeCorner !== void 0)
+      L.modeCorner = ["topLeft", "topRight", "bottomLeft", "bottomRight"].includes(look.modeCorner) ? look.modeCorner : "bottomLeft";
+    if (look.brightness !== void 0) L.brightness = num(look.brightness, 0.5, 3, 1);
+    if (look.modeAvoid !== void 0) L.modeAvoid = String(look.modeAvoid || "");
     if (look.exitButton !== void 0) L.exitButton = !!look.exitButton;
     if (look.topOffset !== void 0) L.topOffset = num(look.topOffset, 0, 400, 0);
     const ui = this._ui;
@@ -9429,6 +9501,14 @@ var CollectorHub = class {
     ui.style.setProperty("--mlh-hud-r", `${L.hudInsetRight}px`);
     ui.style.setProperty("--mlh-hud-l", `${L.hudInsetLeft}px`);
     ui.style.setProperty("--mlh-mode-bottom", `${L.modeBottom}px`);
+    ui.style.setProperty("--mlh-mode-top", `${L.modeTop}px`);
+    const mode = this._el.mode;
+    if (mode) {
+      mode.classList.toggle("mlh-mode-t", L.modeCorner.startsWith("top"));
+      mode.classList.toggle("mlh-mode-r", L.modeCorner.endsWith("Right"));
+      this._placeMode();
+    }
+    this._applyLights();
     ui.style.zIndex = String(L.zIndex);
     ui.classList.toggle("mlh-hostmenu", L.hudInsetRight > 0 || L.hudInsetLeft > 0);
     ui.style.setProperty("--mlh-top", `${L.topOffset}px`);
@@ -9505,27 +9585,77 @@ var CollectorHub = class {
     const d = Math.hypot(dx, dz);
     const yaw = (d > 1e-6 ? Math.atan2(dx, dz) : 0) - OPEN_YAW;
     const inner = this._radius * 0.92;
+    const max = Math.max(o.scale, o.maxScale ?? o.scale * 4);
     let s = Math.max(1e-4, o.scale);
-    let shift = 0;
-    if (o.wrapViewer && d > 1e-6) {
-      const CAM = 0.8;
-      const BOBO = 0.5;
-      if (d > inner * s * CAM) {
-        const want = d / (BOBO + CAM);
-        s = Math.max(s, Math.min(o.maxScale ?? s * 4, want / inner));
+    const home = new THREE3.Vector3();
+    if (this._bed) home.set(this._bed.position.x, 0, this._bed.position.z);
+    home.applyAxisAngle(UP, yaw);
+    const pos = new THREE3.Vector3();
+    const place = () => {
+      let shift = 0;
+      if (o.wrapViewer && d > 1e-6) {
+        const CAM = 0.8;
+        const BOBO = 0.5;
         const R = inner * s;
-        shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
+        if (d > R * CAM) shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
       }
+      pos.set(
+        o.center.x + (d > 1e-6 ? dx / d * shift : 0) - home.x * s,
+        o.center.y,
+        o.center.z + (d > 1e-6 ? dz / d * shift : 0) - home.z * s
+      );
+      return Math.hypot(cam.x - pos.x, cam.z - pos.z) / (inner * s);
+    };
+    let out = place();
+    for (let i = 0; o.wrapViewer && out > 0.8 && s < max && i < 40; i++) {
+      s = Math.min(max, s * 1.06);
+      out = place();
     }
-    this.root.position.set(
-      o.center.x + (d > 1e-6 ? dx / d * shift : 0),
-      o.center.y,
-      o.center.z + (d > 1e-6 ? dz / d * shift : 0)
-    );
+    this.root.position.copy(pos);
     this.root.rotation.set(0, yaw, 0);
     this.root.scale.setScalar(s);
+    if (this._bed)
+      this._bed.scale.setScalar(
+        this._bedScale * Math.min(1, Math.max(0.15, (o.boboScale ?? s) / s))
+      );
     this.root.updateMatrixWorld(true);
+    this._applyLights();
     return s;
+  }
+  /**
+   * Keep the room equally lit at any size and apply the brightness knob.
+   * A point light's reach and falloff are in world units, not the room's,
+   * so a room scaled up 4x would otherwise be lit like a quarter-size one:
+   * reach grows with the scale and intensity with scale^decay.
+   */
+  _applyLights() {
+    if (!this._room) return;
+    const ws = this.root.getWorldScale(this._t.v).x || 1;
+    const b = this._look.brightness;
+    if (Math.abs(ws - this._lit.scale) < 1e-3 * ws && b === this._lit.brightness) return;
+    const envChanged = b !== this._lit.brightness;
+    this._lit.scale = ws;
+    this._lit.brightness = b;
+    for (const l of this._lights) {
+      const base = l.userData.mlhBase;
+      if (!base) continue;
+      const pl = l;
+      if (pl.isPointLight) {
+        pl.distance = base.distance * ws;
+        pl.intensity = base.intensity * b * Math.pow(ws, pl.decay || 0);
+      } else l.intensity = base.intensity * b;
+    }
+    if (!envChanged) return;
+    const env = Math.min(2, 0.6 + 0.4 * b);
+    this._room.traverse((o) => {
+      var _a;
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (!m || m.envMapIntensity === void 0) continue;
+        (_a = m.userData).mlhEnv ?? (_a.mlhEnv = m.envMapIntensity);
+        m.envMapIntensity = m.userData.mlhEnv * env;
+      }
+    });
   }
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
   floorRadius() {
@@ -9629,6 +9759,7 @@ var CollectorHub = class {
     this._time += dt;
     this._room.updateWorldMatrix(true, false);
     this._reveal.uRoomInv.value.copy(this._room.matrixWorld).invert();
+    this._applyLights();
     if (this._state === "portal") this._updatePortal(dt);
     else if (this._state === "building") this._updateBuild(dt);
     else if (this._state === "leaving") this._updateLeave(dt);
@@ -9710,6 +9841,8 @@ var CollectorHub = class {
     this._portal = room.getObjectByName("hub_portal");
     this._pad = room.getObjectByName("hub_spawn_pad");
     this._bobo = room.getObjectByName("hub_bobo");
+    this._bed = room.getObjectByName("hub_cat_bed") ?? void 0;
+    if (this._bed) this._bedScale = this._bed.scale.x || 1;
     this._swirl = room.getObjectByName("Portal_Swirl");
     this._orbitCans = room.getObjectByName("hub_orbit_cans");
     this._pullTab = room.getObjectByName("hub_pull_tab");
@@ -9816,9 +9949,11 @@ var CollectorHub = class {
     if (this.opts.lights) {
       const add = (l, p) => {
         l.position.copy(p);
+        l.userData.mlhBase = { intensity: l.intensity, distance: l.distance ?? 0 };
         room.add(l);
         this._lights.push(l);
       };
+      add(new THREE3.HemisphereLight(16774116, 3812424, 0.85), new THREE3.Vector3(0, 3, 0));
       add(new THREE3.PointLight(16766896, 2.4, 6, 1.6), new THREE3.Vector3(0, 1.4, 0.2));
       add(new THREE3.PointLight(10480127, 1.6, 5, 1.6), new THREE3.Vector3(-0.6, 3, -0.6));
       add(
@@ -11915,6 +12050,7 @@ function CSS_escape(s) {
 }
 
 // mattercraft/cola-run/CollectorHubMode.ts
+var VERSION_LABEL = `v${HIDEOUT_VERSION} \xB7 2026-11-06`;
 var clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
 var nextFrame = () => new Promise(
   (r) => typeof requestAnimationFrame === "function" ? requestAnimationFrame(() => r()) : setTimeout(r, 16)
@@ -11929,6 +12065,22 @@ var CollectorHubMode = class extends Group2 {
     super(contextManager, constructorProps);
     this.constructorProps = constructorProps;
     /* ══ Game ════════════════════════════════════════════════════════════ */
+    /**
+     * Which Bobo's Hideout files this project has: v4 or later is the release
+     * with no portal. If this field isn't here, or the room still shows a
+     * portal, the project is still running older copies of the three files:
+     * replace CollectorHubMode.ts, HubCore.ts and OrbHuntGame.ts (same names,
+     * same folder) and reload the preview.
+     *
+     * @zui
+     * @zgroup Game
+     * @zgrouppriority 300
+     * @zpriority 110
+     * @zdefault v4 · 2026-11-06
+     */
+    __publicField(this, "version", new Observable(VERSION_LABEL, (v) => {
+      if (v !== VERSION_LABEL) this.version.value = VERSION_LABEL;
+    }));
     /**
      * Your Cola Run game node. Leave empty and the hideout finds the game itself.
      *
@@ -11974,6 +12126,21 @@ var CollectorHubMode = class extends Group2 {
      */
     __publicField(this, "showButton", new Observable(true, () => this._syncButton()));
     /**
+     * Where the icon sits. Under Menu (default) stacks it under the game's
+     * menu button and the record button, well away from a joystick in the
+     * bottom corners.
+     *
+     * @zui
+     * @zgroup Game
+     * @zgrouppriority 300
+     * @zpriority 78
+     * @zdefault underMenu
+     */
+    __publicField(this, "buttonCorner", new Observable(
+      "underMenu" /* UnderMenu */,
+      () => this._applyLook()
+    ));
+    /**
      * Hide the game's own buttons (menu, sound, Reset placement) while Bobo is
      * in his room. Off by default, so moving the room with Reset placement and
      * switching modes from the menu work in the room as everywhere else.
@@ -12000,28 +12167,41 @@ var CollectorHubMode = class extends Group2 {
      */
     __publicField(this, "roomFit", new Observable("aroundViewer" /* AroundViewer */));
     /**
-     * The smallest the room ever is, in Bobo-sized rooms: 1 = the room's own
-     * Bobo would be exactly as tall as yours. Default 1.3 (30% roomier).
-     * Placing the scene bigger or smaller resizes the room with it. (0.5 to 4)
+     * How big the room is, in Bobo-sized rooms: 1 = the room's own Bobo would
+     * be exactly as tall as yours. Default 3: a walk-in, room-scale space
+     * around Bobo that the person holding the phone stands inside. Placing
+     * the scene bigger or smaller resizes the room with it. (0.5 to 10)
      *
      * @zui
      * @zgroup Room
      * @zgrouppriority 200
      * @zpriority 90
-     * @zdefault 1.3
+     * @zdefault 3
      */
-    __publicField(this, "roomScale", new Observable(1.3));
+    __publicField(this, "roomScale", new Observable(3));
     /**
-     * With Around Viewer: the biggest the room may grow, in Bobo-sized rooms.
-     * Someone standing further away than that just walks in. (1 to 12)
+     * With Around Viewer: the biggest the room may grow to fit the viewer in
+     * too, in Bobo-sized rooms. Someone standing further away than that just
+     * walks in. Never smaller than Room Scale. (1 to 20)
      *
      * @zui
      * @zgroup Room
      * @zgrouppriority 200
      * @zpriority 85
-     * @zdefault 3
+     * @zdefault 8
      */
-    __publicField(this, "maxRoomScale", new Observable(3));
+    __publicField(this, "maxRoomScale", new Observable(8));
+    /**
+     * How bright the room is. Camera feeds are bright, so the default lifts it
+     * above its on-screen look: 1 is the room as modelled. (0.5 to 3)
+     *
+     * @zui
+     * @zgroup Room
+     * @zgrouppriority 200
+     * @zpriority 82
+     * @zdefault 1.6
+     */
+    __publicField(this, "brightness", new Observable(1.6, () => this._applyLook()));
     /**
      * Keep Bobo inside his room: the joystick stops him at the wall.
      *
@@ -12184,6 +12364,7 @@ var CollectorHubMode = class extends Group2 {
     __publicField(this, "_v2", new THREE4.Vector3());
     /* ── getting ready ── */
     __publicField(this, "_prepared");
+    __publicField(this, "_layoutT", 0);
     __publicField(this, "_heights", /* @__PURE__ */ new WeakMap());
     __publicField(this, "_recWas");
     __publicField(this, "_gone", false);
@@ -12322,15 +12503,18 @@ var CollectorHubMode = class extends Group2 {
     const hub = this._hub;
     const parent = player.parent;
     const center = (this._homeSet ? this._home : player.position).clone();
+    center.y = this._feetY(player, center.y);
     const bobo = this._playerHeight(player) / (parent ? parent.getWorldScale(this._v).y || 1 : 1);
     const unit = bobo / hub.boboHeight();
+    const size = clamp(this.roomScale.value, 0.5, 10);
     hub.placeAround({
       parent,
       center,
       cameraWorld: this._camera.getWorldPosition(this._v),
-      scale: unit * clamp(this.roomScale.value, 0.5, 4),
+      scale: unit * size,
       wrapViewer: this.roomFit.value !== "matchBobo" /* MatchBobo */,
-      maxScale: unit * clamp(this.maxRoomScale.value, 1, 12)
+      maxScale: unit * Math.max(size, clamp(this.maxRoomScale.value, 1, 20)),
+      boboScale: unit
     });
     const c = hub.root.position;
     const dx = player.position.x - c.x;
@@ -12444,6 +12628,10 @@ var CollectorHubMode = class extends Group2 {
     const hub = this._hub;
     if (!hub) return;
     hub.update(dt);
+    if ((this._layoutT += dt) > 0.4) {
+      this._layoutT = 0;
+      hub.layoutModeButton();
+    }
     if (!this.keepBoboInside.value) return;
     const s = hub.state;
     if (s !== "building" && s !== "live") return;
@@ -12490,7 +12678,8 @@ var CollectorHubMode = class extends Group2 {
     const st = g?.gameState ?? g?._state;
     const busy = !!g && (st === "placing" || !!g.isInHideout || !!g.isIntroOpen || // the card offers the hideout itself
     !g.isLounging && (st === "playing" || st === "paused"));
-    hub.modeButton(this.showButton.value && !this._active && !busy ? () => this.open() : null);
+    const show = this.showButton.value && !this._active && !busy;
+    hub.modeButton(show ? () => this.open() : null);
   }
   _syncGameMenus() {
     const g = this._game;
@@ -12515,10 +12704,30 @@ var CollectorHubMode = class extends Group2 {
       hudInsetLeft: gameUi && corner === "topLeft" ? 62 : 0,
       // Under the game's dialogs (its menu opens over the room), over its corner buttons.
       zIndex: Number.isFinite(z) && z > 200 ? z - 100 : 2000100,
-      // Stack the icon over the game's sound button when that's bottom left.
-      modeBottom: !g || soundOn && soundCorner === "bottomLeft" ? 74 : 16,
+      ...this._iconSpot(gameUi, corner, soundOn ? soundCorner : ""),
+      brightness: clamp(Number(this.brightness.value), 0.5, 3),
       topOffset: Number(this.topOffset.value) || 0
     });
+  }
+  /**
+   * Where the round icon goes. Under Menu: the game menu's corner, below the
+   * menu button and the record button. Other corners step past whatever of
+   * the game's own buttons share them, so the icon never sits on a joystick
+   * (bottom corners are left to it unless picked) or on another button.
+   */
+  _iconSpot(gameUi, menuCorner, soundCorner) {
+    const g = this._game;
+    const pick = this.buttonCorner.value;
+    const corner = pick === "underMenu" /* UnderMenu */ || !pick ? menuCorner || "topRight" : pick;
+    let gap = 14;
+    if (gameUi && menuCorner === corner) gap = 78;
+    const modeAvoid = ".crc-anchor";
+    if (corner.startsWith("bottom")) {
+      if (g && soundCorner === corner) gap = Math.max(gap, 74);
+      if (g && g.resetCorner?.value === corner) gap = Math.max(gap, 74);
+      return { modeCorner: corner, modeBottom: gap, modeAvoid };
+    }
+    return { modeCorner: corner, modeTop: gap, modeAvoid };
   }
   /* ── finding things ── */
   _bindGame() {
@@ -12547,6 +12756,11 @@ var CollectorHubMode = class extends Group2 {
         "[CollectorHubMode] couldn't find the Cola Run game; set Game to your OrbHuntGame node"
       );
       return;
+    }
+    if (g.hideoutVersion !== HIDEOUT_VERSION) {
+      const msg = "Bobo's Hideout files don't match: replace OrbHuntGame.ts, CollectorHubMode.ts and HubCore.ts with the same release";
+      console.warn("[CollectorHubMode] " + msg, { game: g.hideoutVersion, hub: HIDEOUT_VERSION });
+      setTimeout(() => this._hub?.toast(msg), 1500);
     }
     if (!g.enterHideout || !g.playCharacterClip)
       console.warn(
@@ -12592,6 +12806,7 @@ var CollectorHubMode = class extends Group2 {
     for (const o of [
       g.menuCorner,
       g.soundToggleCorner,
+      g.resetCorner,
       g.soundToggleEnabled,
       g.uiEnabled,
       g.modalLayer
@@ -12627,6 +12842,22 @@ var CollectorHubMode = class extends Group2 {
       this._heights.set(p, h);
     }
     return h * ws;
+  }
+  /**
+   * The height of Bobo's feet in his parent's space: the bottom of his
+   * bounds, under where he stands. Falls back to his position when the
+   * bounds are odd (nothing visible, or far from him).
+   */
+  _feetY(p, fallback) {
+    const parent = p.parent;
+    if (!parent) return fallback;
+    const b = new THREE4.Box3().setFromObject(p);
+    if (b.isEmpty()) return fallback;
+    p.getWorldPosition(this._v2);
+    this._v2.y = b.min.y;
+    const y = parent.worldToLocal(this._v2).y;
+    const h = this._playerHeight(p) / (parent.getWorldScale(this._v2).y || 1);
+    return Math.abs(y - fallback) <= h ? y : fallback;
   }
   _recorder() {
     const zc = this.getZComponentInstance();

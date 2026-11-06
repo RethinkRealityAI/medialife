@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=3";
+import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=4";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=2";
 
 const $ = (s) => document.querySelector(s);
@@ -70,8 +70,11 @@ function sky() {
 }
 const skyTex = sky();
 scene.background = skyTex;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x7a6a55, 2.2));
-const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+// ?lights=plain: a bare Mattercraft scene's lighting (one soft light), to
+// check the room is bright enough on its own over a camera feed.
+const PLAIN = new URLSearchParams(location.search).get("lights") === "plain";
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7a6a55, PLAIN ? 0.5 : 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, PLAIN ? 1 : 2.4);
 sun.position.set(4, 8, 3);
 scene.add(sun);
 
@@ -628,6 +631,7 @@ for (const [id, prop] of [
   ["o-osDim", "osDim"],
   ["o-roomScale", "roomScale"],
   ["o-maxRoomScale", "maxRoomScale"],
+  ["o-brightness", "brightness"],
 ]) {
   const el = $("#" + id);
   const out = el.parentElement.querySelector("output");
@@ -803,6 +807,7 @@ requestAnimationFrame(step);
 /* ── test hook ── */
 window.__lab = {
   ready: false,
+  THREE,
   capture,
   game,
   ctx,
