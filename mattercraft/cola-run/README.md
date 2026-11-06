@@ -79,10 +79,13 @@ sits bottom left (in lounge mode and on menu screens, never mid-round). Tap it:
    product's QR (`…?hub=BOBO-XXXX-XXXX`) opens the form with the code filled in.
 2. A portal opens a few steps ahead of Bobo. **Walk Bobo into it** and his room
    builds in around him (wireframe first, then the surfaces).
-3. In the room: tap anything. The computer boots **BOBO OS**, a desktop with app
-   windows: Alerts, Where's Bobo? (the globe), Leaderboard, Cola Run, Collection,
-   Shop, Me. The collection wall shows the keychain plus holographic slots for
-   the hoodie, tee, desk mat and a mystery drop.
+3. In the room: coloured hotspot dots mark what you can tap (Cola blue = apps,
+   Cola red = play, EVADE yellow = collection, indigo = Bobo), and a short
+   welcome tour runs on the first visit (replay it from **Room items**). The
+   computer boots **BOBO OS**, a desktop with app windows: Alerts, Where's
+   Bobo? (the globe), Leaderboard, Cola Run, Digital Collection, Shop, Me. The
+   Digital Collection is the EVADE vault (`medialife.ai/evade/vault/`): owned
+   pieces solid, the rest holographic wireframes.
 4. Alerts the team sends from **Admin → Collector Hub** reach every open room
    within ~15 s: a pop-up on the in-room monitor and a hologram that beams out
    of the screen.
@@ -111,7 +114,13 @@ and the **Bobo's Hideout** button in `/evade/cola-run-lab/`), compiled to
 4. For a test build, tick **Site → Show Test Code** to print `BOBO-TEST-CATS`
    under the form (it only works where the site allows it, see below).
 
-The component never moves the camera. While Bobo is in his room the player is
+The **Bobo's Hideout** button sits bottom left, 78 px up so it clears the
+game's sound button, and only shows between rounds (lounge, menus, after
+placement; never while a round is playing or paused). The hub's top bar only
+takes taps while it is showing, so it never blocks the game's menu button.
+
+The component never moves the camera (the welcome tour's cards still work; the
+labs fly their own camera to each stop). While Bobo is in his room the player is
 hidden and held at the portal (so the joystick can't wander off), and the
 game's HUD and the record button are hidden; both come back when he leaves.
 **Room → Room Size**, **Portal Distance** and **Enter Radius** are the knobs if
