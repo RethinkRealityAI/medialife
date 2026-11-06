@@ -7,20 +7,28 @@ const BASE = "/activated-merch/";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Prices and names as listed on shop.medialife.ai (USD), Nov 2026.
+// `side` is where the main print is. `tag` is where the NFC tag sits on that
+// piece (u: -1 left … 1 right, v: 0 hem … 1 top). Placements are illustrative
+// until confirmed per product; change them here and nowhere else.
+const HEM_L = { u: -0.42, v: 0.13, side: "back", where: "Lower back hem" };
+const HEM_R = { u: 0.42, v: 0.13, side: "back", where: "Lower back hem" };
+const NECK = { u: 0, v: 0.84, side: "back", where: "Back neck, under the collar" };
 const PRODUCTS = [
-  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", hang: true },
-  { key: "syndicate-tee", name: "Syndicate AR Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", hang: true },
-  { key: "trainwreck-tee", name: "Trainwreck AR Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", hang: true },
-  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie" },
-  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan" },
-  { key: "syndicate-ls", name: "Syndicate L/S Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee" },
-  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie" },
-  { key: "evade-charms", name: "EVADE Eclipse Charm Set", price: 14.99, type: "keychain", tags: ["QR", "Game"], handle: "bobo-eclipse-ar-keychain-set" },
-  { key: "sukeban-keychain", name: "Sukeban Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "sukeban-keychain" },
-  { key: "syndicate-keychain", name: "Syndicate Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "syndicate-keychain" },
-  { key: "ar-stickers", name: "AR Sticker 3 Pack", price: 15, type: "sticker", tags: ["NFC", "AR"], handle: "sukeban-ii-sticker-3-pack" },
+  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: HEM_L },
+  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: NECK },
+  { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: NECK },
+  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: HEM_R },
+  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: { u: 0.45, v: 0.12, side: "front", where: "Front hem, by the buttons" } },
+  { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: NECK },
+  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: HEM_R },
+  { key: "evade-charms", name: "EVADE Eclipse Charm Set", price: 14.99, type: "keychain", tags: ["QR", "Game"], handle: "bobo-eclipse-ar-keychain-set", orbit: "-25deg 85deg auto" },
+  { key: "sukeban-keychain", name: "Sukeban Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "sukeban-keychain", orbit: "-25deg 85deg auto" },
+  { key: "syndicate-keychain", name: "Syndicate Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "syndicate-keychain", orbit: "-25deg 85deg auto" },
+  { key: "ar-stickers", name: "AR Sticker 3 Pack", price: 15, type: "sticker", tags: ["NFC", "AR"], handle: "sukeban-ii-sticker-3-pack", orbit: "-25deg 85deg auto" },
 ];
-const HANG = PRODUCTS.filter((p) => p.hang);
+const APPAREL = PRODUCTS.filter((p) => p.type === "apparel");
+// Poster renders: back prints are shot from behind, the rest from the front.
+const orbitOf = (p) => p.orbit || (p.side === "back" ? "140deg 85deg auto" : "-29deg 85deg auto");
 
 const VIDEOS = [
   { n: 5, tag: "Anime NYC · Sukeban" },
@@ -39,8 +47,7 @@ const money = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 
 /* ------------------------------------------------------------ 3D stage */
 let stage = null;
-let specs = null;
-let currentKey = HANG[0].key;
+let current = 0;
 
 async function boot3D() {
   const canvas = $("#stage");
@@ -48,49 +55,75 @@ async function boot3D() {
     const gl = canvas.getContext("webgl2");
     if (!gl) throw new Error("no webgl2");
     const { Stage } = await import("./scene.js");
-    stage = new Stage(canvas, { reducedMotion: reduced });
-    specs = await fetch(BASE + "garments.json").then((r) => r.json());
-    await showPiece(currentKey, true);
-    document.body.classList.add("has-3d");
+    stage = new Stage(canvas, {
+      items: APPAREL.map((p) => ({ key: p.key, side: p.side, tag: p.tag })),
+      reducedMotion: reduced,
+      onChange: (i) => showPiece(i, { fromStage: true }),
+    });
+    if (location.search.includes("debug")) window.__stage = stage;
     requestAnimationFrame(loop);
+    await stage.start(current);
+    document.body.classList.add("has-3d");
   } catch (err) {
     console.warn("[activated] 3D unavailable:", err);
+    stage = null;
     canvas.remove();
     $("#fallback").hidden = false;
     $("#hint").hidden = true;
+    requestAnimationFrame(loop);
   }
 }
 
-async function showPiece(key, first = false) {
-  const p = PRODUCTS.find((x) => x.key === key);
-  currentKey = key;
+function showPiece(i, { fromStage = false } = {}) {
+  const p = APPAREL[i];
+  current = i;
   $("#piece-name").textContent = p.name;
   $("#piece-price").textContent = money(p.price);
   $("#piece-tags").textContent = p.tags.join(" + ");
+  $("#piece-count").textContent = `${String(i + 1).padStart(2, "0")} / ${String(APPAREL.length).padStart(2, "0")}`;
+  $("#dock-name").textContent = p.name;
   $("#shop-piece").href = SHOP + p.handle;
-  $("#fallback").src = `${BASE}p/${key}.webp`;
-  $("#fallback").alt = `${p.name}, back print`;
-  $$("#switcher button").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.key === key)));
-  if (stage && specs) {
-    const spec = specs.find((s) => s.key === key);
-    if (spec) await stage.show(spec);
-    if (!first) stage.poke(1.2);
-  }
+  $("#fallback").src = `${BASE}posters/${p.key}.webp`;
+  $("#fallback").alt = p.name;
+  $$(".tag-where").forEach((el) => (el.textContent = p.tag.where));
+  $$("#switcher button").forEach((b) => b.setAttribute("aria-checked", String(Number(b.dataset.i) === i)));
+  const sw = $("#switcher");
+  const on = sw.children[i];
+  if (on && sw.scrollWidth > sw.clientWidth) sw.scrollTo({ left: on.offsetLeft - sw.offsetLeft - (sw.clientWidth - on.offsetWidth) / 2, behavior: reduced ? "auto" : "smooth" });
+  const name = $("#dock-name");
+  name.classList.remove("swap");
+  void name.offsetWidth;
+  name.classList.add("swap");
+  if (!fromStage) stage?.goTo(i);
 }
 
 function buildSwitcher() {
   const sw = $("#switcher");
-  for (const p of HANG) {
+  APPAREL.forEach((p, i) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.role = "radio";
-    b.dataset.key = p.key;
-    b.setAttribute("aria-checked", String(p.key === currentKey));
-    b.textContent = p.name.split(" ")[0];
+    b.setAttribute("role", "radio");
+    b.dataset.i = String(i);
+    b.setAttribute("aria-checked", String(i === current));
     b.setAttribute("aria-label", p.name);
-    b.addEventListener("click", () => showPiece(p.key));
+    b.title = p.name;
+    b.innerHTML = `<img src="${BASE}posters/${p.key}.webp" alt="" width="40" height="40" decoding="async" />`;
+    b.addEventListener("click", () => showPiece(i));
     sw.append(b);
-  }
+  });
+  const step = (d) => {
+    if (stage) stage.go(d);
+    else showPiece((current + d + APPAREL.length) % APPAREL.length);
+  };
+  $("#piece-prev").addEventListener("click", () => step(-1));
+  $("#piece-next").addEventListener("click", () => step(1));
+  sw.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      step(e.key === "ArrowRight" ? 1 : -1);
+      setTimeout(() => $$("#switcher button")[current]?.focus(), 50);
+    }
+  });
 }
 
 /* ------------------------------------------------------- scroll state */
@@ -107,7 +140,6 @@ function measure() {
   };
 }
 
-let lastTech = -1;
 function scrollState() {
   const y = scrollY;
   const hero = clamp01(y / Math.max(1, geom.details - (innerWidth < 760 ? vh * 0.2 : 0)));
@@ -117,92 +149,119 @@ function scrollState() {
 }
 
 function updateDom({ hero, tech }) {
-  // Spec list slides in as the camera reaches the print.
   const specsIn = hero > 0.45;
   els.specs.forEach((li, i) => {
     if (specsIn && !li.classList.contains("in")) setTimeout(() => li.classList.add("in"), reduced ? 0 : i * 90);
     if (!specsIn && hero < 0.3) li.classList.remove("in");
   });
-  if (tech === lastTech && !stage) return;
-  lastTech = tech;
-  // Layer labels.
-  const anchors = stage && !els.mobile ? stage.layerAnchors() : null;
-  const tapping = tech > 0.6;
+  els.dock.classList.toggle("away", hero > 0.12);
+  // Tech labels: the placement note at the cut-away, then the three layers.
+  const anchors = stage && !els.mobile && tech > 0 && tech < 1 ? stage.anchors() : null;
+  // Labels are positioned inside the pinned panel; anchors are viewport px.
+  const pin = anchors ? els.techPin.getBoundingClientRect() : { left: 0, top: 0 };
+  const place = (el, x, y) => (el.style.transform = `translate(${Math.round(x - pin.left)}px, ${Math.round(y - pin.top)}px)`);
+  const note = els.tagNote;
+  const noteOn = tech > 0.12 && tech < 0.32;
+  note.classList.toggle("in", noteOn);
+  if (anchors && noteOn) {
+    const a = anchors[3];
+    const x = Math.min(a.x + 80, innerWidth - note.offsetWidth - 16);
+    const y = Math.min(Math.max(a.y - note.offsetHeight / 2, 80), innerHeight - note.offsetHeight - 60);
+    place(note, x, y);
+  }
   let hot = -1;
-  let floor = 70; // keep labels from overlapping each other (top → bottom)
-  els.layerLabels.forEach((li, i) => {
-    const on = tech > 0.26 + i * 0.07 && tech < 0.995;
+  let floor = 70;
+  const order = [0, 1, 2];
+  if (anchors) order.sort((i, j) => anchors[i].y - anchors[j].y);
+  const colX = anchors ? Math.max(anchors[0].x, anchors[1].x, anchors[2].x) + 56 : 0;
+  order.forEach((i) => {
+    const li = els.layerLabels[i];
+    const on = tech > 0.36 + i * 0.06 && tech < 0.995;
     li.classList.toggle("in", on);
-    if (on) hot = i;
+    if (on) hot = Math.max(hot, i);
     if (anchors) {
       const a = anchors[i];
       const h = li.offsetHeight;
-      const x = Math.min(a.x + 54, innerWidth - li.offsetWidth - 16);
+      const x = Math.min(colX, innerWidth - li.offsetWidth - 16);
+      li.style.setProperty("--lead", `${Math.max(14, Math.round(x - a.x))}px`);
       const y = Math.max(a.y - h / 2, floor);
       floor = y + h + 8;
-      li.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+      place(li, x, y);
     }
   });
-  if (tapping) hot = 2;
+  if (tech > 0.6) hot = 1;
   els.layerLabels.forEach((li, i) => li.classList.toggle("hot", i === hot));
   els.tap.classList.toggle("in", tech > 0.72);
-  els.tap.parentElement.parentElement.classList.toggle("tapping", tech > 0.7);
+  els.techPin.classList.toggle("tapping", tech > 0.7);
   els.techProgress.style.width = `${tech * 100}%`;
 }
 
+let wasOff = false;
 function loop() {
   const s = scrollState();
-  els.canvas.classList.toggle("off", s.off);
+  els.canvas?.classList.toggle("off", s.off);
   if (stage) {
     stage.update(s);
+    if (s.off && !wasOff) stage.settle();
     if (!s.off && !document.hidden) stage.frame();
   }
+  wasOff = s.off;
   updateDom(s);
   requestAnimationFrame(loop);
 }
 
 /* ------------------------------------------------------------ pointer */
 function wirePointer() {
-  const zone = $("#hero");
-  const details = $("#details");
-  let dragging = null;
+  const zones = [$("#hero"), $("#details")];
+  let active = null; // { id, zone }
   const ndc = (e) => ({ x: (e.clientX / innerWidth) * 2 - 1, y: -(e.clientY / innerHeight) * 2 + 1 });
-  const onMove = (e) => {
-    if (!stage) return;
-    const p = ndc(e);
-    if (e.pointerType === "mouse") stage.setPointer(p.x, p.y);
-    if (!dragging) return;
-    if (dragging.grab) stage.dragTo(p);
-    else {
-      const dx = e.clientX - dragging.x;
-      dragging.x = e.clientX;
-      stage.nudge(dx * 0.05);
-    }
+  const finish = () => {
+    if (!active) return;
+    active.zone.classList.remove("is-grabbing", "is-browsing");
+    active = null;
+    stage?.pointerUp();
   };
-  for (const z of [zone, details]) {
+  for (const z of zones) {
     z.addEventListener("pointerdown", (e) => {
-      if (!stage || e.target.closest("button, a")) return;
-      const grab = stage.grabAt(ndc(e));
-      dragging = { grab, x: e.clientX };
-      $("#hint").style.opacity = "0";
-      if (e.pointerType === "mouse") z.setPointerCapture(e.pointerId);
+      if (!stage || active || e.button > 0 || e.target.closest("button, a, input")) return;
+      const mode = stage.pointerDown(ndc(e), { canBrowse: z.id === "hero" });
+      if (!mode) return;
+      active = { id: e.pointerId, zone: z };
+      z.classList.add(mode === "grab" ? "is-grabbing" : "is-browsing");
+      try {
+        z.setPointerCapture(e.pointerId);
+      } catch {}
+      els.hint.classList.add("used");
     });
+    z.addEventListener("pointermove", (e) => {
+      if (!stage) return;
+      if (e.pointerType === "mouse") stage.setPointer(ndc(e).x, ndc(e).y);
+      if (active && e.pointerId === active.id) stage.pointerMove(ndc(e));
+    });
+    const end = (e) => {
+      if (active && e.pointerId === active.id) finish();
+    };
+    z.addEventListener("pointerup", end);
+    z.addEventListener("pointercancel", end);
+    z.addEventListener("lostpointercapture", end);
   }
-  addEventListener("pointermove", onMove, { passive: true });
-  const end = () => {
-    if (dragging?.grab) stage.release();
-    dragging = null;
-  };
-  addEventListener("pointerup", end);
-  addEventListener("pointercancel", end);
-  // Scrolling through the hero stirs the cloth a little.
+  // Belt and braces: a release anywhere ends the interaction.
+  addEventListener("pointerup", (e) => active && e.pointerId === active.id && finish());
+  addEventListener("pointercancel", (e) => active && e.pointerId === active.id && finish());
+  addEventListener("blur", () => {
+    finish();
+    stage?.settle();
+  });
+  // Scrolling stirs a breeze through the piece; it settles once you stop.
   let lastY = scrollY;
   addEventListener(
     "scroll",
     () => {
       const d = scrollY - lastY;
       lastY = scrollY;
-      if (stage?.current && Math.abs(d) > 2 && scrollY < geom.tech) stage.current.gust.z += Math.min(0.4, Math.abs(d) * 0.01);
+      if (!stage) return;
+      if (scrollY < geom.tech) stage.breeze(Math.min(2.2, Math.abs(d) * 0.05));
+      if (active && Math.abs(d) > 30) finish();
     },
     { passive: true },
   );
@@ -297,6 +356,8 @@ function wireLightbox() {
 }
 
 /* ------------------------------------------------------------- lineup */
+// Every card is a real 3D model. The poster render shows first; the
+// model-viewer script and each model load only as the section comes near.
 function buildLineup() {
   const ul = $("#cards");
   PRODUCTS.forEach((p, i) => {
@@ -312,29 +373,45 @@ function buildLineup() {
         <h3 class="card__name">${p.name}</h3>
         <span class="card__price">${money(p.price)}</span>
       </div>
-      <div class="card__stage"><img class="card__img" src="${BASE}p/${p.key}.webp" alt="${p.name}" loading="lazy" decoding="async" /></div>
+      <div class="card__stage">
+        <model-viewer
+          src="${BASE}models/${p.key}.glb"
+          alt="3D model of the ${p.name}. Drag to turn it."
+          loading="lazy"
+          reveal="auto"
+          camera-controls
+          disable-zoom
+          disable-pan
+          touch-action="pan-y"
+          interaction-prompt="none"
+          auto-rotate
+          auto-rotate-delay="1500"
+          rotation-per-second="14deg"
+          camera-orbit="${orbitOf(p)}"
+          field-of-view="28deg"
+          shadow-intensity="0.9"
+          shadow-softness="1"
+          exposure="1.05"
+          environment-image="neutral"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+        >
+          <img slot="poster" class="card__poster" src="${BASE}posters/${p.key}.webp" alt="${p.name}" loading="lazy" decoding="async" width="760" height="760" />
+          <button slot="ar-button" class="card__ar mono" type="button">View in your space</button>
+          <span class="card__spin mono" aria-hidden="true">3D · drag to turn</span>
+        </model-viewer>
+      </div>
       <div class="card__tags">${chips}</div>
       <div class="card__actions">
-        ${p.hang ? `<button type="button" data-hang="${p.key}">Hang it in 3D</button>` : ""}
+        ${p.type === "apparel" ? `<button type="button" data-hang="${APPAREL.indexOf(p)}">See it up close</button>` : ""}
         <a href="${SHOP + p.handle}" target="_blank" rel="noopener">Shop <span aria-hidden="true">↗</span></a>
       </div>`;
     ul.append(li);
-    const img = li.querySelector(".card__img");
-    const stageEl = li.querySelector(".card__stage");
-    if (!reduced) {
-      li.addEventListener("pointermove", (e) => {
-        const r = stageEl.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        img.style.transform = `rotateY(${x * 26}deg) rotateX(${-y * 16}deg) scale(1.04)`;
-      });
-      li.addEventListener("pointerleave", () => (img.style.transform = ""));
-    }
   });
   ul.addEventListener("click", (e) => {
     const b = e.target.closest("[data-hang]");
     if (!b) return;
-    showPiece(b.dataset.hang);
+    showPiece(Number(b.dataset.hang));
     scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" });
   });
   $$("#filters button").forEach((b) =>
@@ -344,6 +421,18 @@ function buildLineup() {
       $$("#cards .card").forEach((c) => (c.hidden = f !== "all" && c.dataset.type !== f));
     }),
   );
+  // Load the viewer itself only when the collection is about to be seen.
+  let loaded = false;
+  const io = new IntersectionObserver(
+    ([e]) => {
+      if (!e.isIntersecting || loaded) return;
+      loaded = true;
+      io.disconnect();
+      import(`${BASE}vendor/model-viewer.min.js`).catch((err) => console.warn("[activated] model-viewer failed", err));
+    },
+    { rootMargin: "900px 0px" },
+  );
+  io.observe(ul);
 }
 
 /* ----------------------------------------------------------- stickers */
@@ -383,12 +472,17 @@ function init() {
   els.canvas = $("#stage");
   els.details = $("#details");
   els.tech = $("#tech");
+  els.techPin = $(".tech__pin");
   els.specs = $$(".specs li");
   els.layerLabels = $$("#layer-labels li");
+  els.tagNote = $("#tag-note");
   els.tap = $("#tech-tap");
   els.techProgress = $("#tech-progress");
+  els.dock = $(".hero__dock");
+  els.hint = $("#hint");
   els.mobile = innerWidth < 760;
   buildSwitcher();
+  showPiece(0, { fromStage: true });
   buildReel();
   buildLineup();
   wireLightbox();
@@ -402,8 +496,6 @@ function init() {
     stage?.resize();
   });
   addEventListener("load", measure);
-  boot3D().then(() => {
-    if (!stage) requestAnimationFrame(loop);
-  });
+  boot3D();
 }
 init();

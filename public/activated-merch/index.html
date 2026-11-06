@@ -27,8 +27,10 @@
     <link rel="stylesheet" href="/activated-merch/style.css" />
     <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
     <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
-    <link rel="preload" as="fetch" href="/activated-merch/garments.json" crossorigin="anonymous" />
-    <link rel="preload" as="image" href="/activated-merch/g/sukeban-hoodie-back.webp" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/activated-merch/scene.js" />
+    <link rel="modulepreload" href="/activated-merch/softbody.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/jsm/loaders/GLTFLoader.js" />
+    <link rel="preload" as="fetch" href="/activated-merch/models/hero/sukeban-hoodie.glb" crossorigin="anonymous" />
     <script type="importmap">
       {
         "imports": {
@@ -66,6 +68,7 @@
         </div>
         <div class="hero__side hero__side--right">
           <p class="mono hero__piece" id="piece-meta">
+            <span class="hero__count" id="piece-count">01 / 07</span><br />
             <span id="piece-name">Sukeban AR Hoodie</span><br />
             <span id="piece-price">$90</span> · <span id="piece-tags">NFC + AR</span>
           </p>
@@ -75,10 +78,15 @@
           <h1 id="hero-title" class="display glitch" data-text="Merch that comes alive.">Merch that comes alive.</h1>
         </div>
         <div class="hero__dock">
-          <div class="switcher" role="radiogroup" aria-label="Choose a piece" id="switcher"></div>
-          <p class="hint mono" id="hint"><span class="hint__dot"></span>Drag the cloth</p>
+          <p class="dock__name mono" id="dock-name" aria-live="polite">Sukeban AR Hoodie</p>
+          <div class="dock__row">
+            <button class="dock__arrow" id="piece-prev" type="button" aria-label="Previous piece">←</button>
+            <div class="switcher" role="radiogroup" aria-label="Choose a piece" id="switcher"></div>
+            <button class="dock__arrow" id="piece-next" type="button" aria-label="Next piece">→</button>
+          </div>
+          <p class="hint mono" id="hint"><span class="hint__dot"></span><span class="hint__fine">Drag the piece to spin it</span><span class="hint__sep" aria-hidden="true">·</span><span>Swipe to browse</span></p>
         </div>
-        <img class="hero__fallback" id="fallback" src="/activated-merch/p/sukeban-hoodie.webp" alt="Sukeban AR Hoodie, back print" hidden />
+        <img class="hero__fallback" id="fallback" src="/activated-merch/posters/sukeban-hoodie.webp" alt="Sukeban AR Hoodie" hidden />
       </section>
 
       <!-- 02 DETAILS ---------------------------------------------------- -->
@@ -87,7 +95,7 @@
           <div class="details__copy">
             <h2 id="details-title" class="display">Details<br />matter.</h2>
             <p class="mono lead">
-              Heavyweight pieces made with the artists. Every one carries an NFC inlay and AR-ready artwork, so the garment
+              Heavyweight pieces made with the artists. Every one carries a small NFC tag and AR-ready artwork, so the garment
               itself is the key to the experience.
             </p>
             <a class="btn btn--frame" id="shop-piece" href="https://shop.medialife.ai/products/black-hoodie-sukeban" target="_blank" rel="noopener">
@@ -103,7 +111,7 @@
             <li>
               <span class="specs__n mono">02</span>
               <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a8 8 0 0 1 0 8M10 6a12 12 0 0 1 0 12M14 4a16 16 0 0 1 0 16" /></svg>
-              <div><h3>NFC in the label</h3><p>Tap a phone to the label and the experience opens in the browser. No app.</p></div>
+              <div><h3>A tag sewn in</h3><p>A small round NFC tag sits under one spot of the piece. Tap a phone there and the experience opens. No app.</p></div>
             </li>
             <li>
               <span class="specs__n mono">03</span>
@@ -130,22 +138,28 @@
           <div class="tech__copy">
             <h2 id="tech-title" class="display">Technology<br />sewn in.</h2>
             <p class="mono lead" id="tech-lead">
-              Four layers, one garment. Scroll to take it apart.
+              One small round tag, about the size of a coin, sits under a single spot of the piece. Not under the whole
+              print. Scroll to look inside.
             </p>
             <div class="tech__tap mono" id="tech-tap" aria-live="polite">
               <p class="tech__tap-title">Tap. It opens.</p>
               <p>
-                The phone reads the tag and the experience launches in the browser. On the screen: a real fan capture from
-                Anime NYC.
+                The phone powers the tag and reads it, and the experience launches in the browser. On the screen: a real fan
+                capture from Anime NYC.
               </p>
             </div>
           </div>
+          <div class="tag-note mono" id="tag-note">
+            <p class="tag-note__k">Tag spot on this piece</p>
+            <p class="tag-note__v tag-where">Lower back hem</p>
+            <p class="tag-note__s">Placement varies by product</p>
+          </div>
           <ol class="layers" id="layer-labels">
-            <li data-i="0"><span class="mono">01</span><div><h3>AR-ready print</h3><p>The artwork is the marker. Scan it and it moves.</p></div></li>
-            <li data-i="1"><span class="mono">02</span><div><h3>Heavyweight cotton</h3><p>The garment comes first. Washed, soft, built to last.</p></div></li>
-            <li data-i="2"><span class="mono">03</span><div><h3>NFC inlay</h3><p>A coil antenna and chip on thin film, sealed into the label.</p></div></li>
-            <li data-i="3"><span class="mono">04</span><div><h3>Woven label</h3><p>It says "Tap here", so fans know exactly where to touch.</p></div></li>
+            <li data-i="0"><span class="mono">01</span><div><h3>Outer fabric</h3><p>The garment as you wear it. Nothing shows from the outside.</p></div></li>
+            <li data-i="1"><span class="mono">02</span><div><h3>NFC tag</h3><p>About 25 mm across. A coil antenna and chip, no battery: the phone powers it.</p></div></li>
+            <li data-i="2"><span class="mono">03</span><div><h3>Backing patch</h3><p>Stitched in on the inside to hold the tag in place.</p></div></li>
           </ol>
+          <p class="tech__where mono" aria-hidden="true">Tag spot: <span class="tag-where">Lower back hem</span> · placement varies by product</p>
           <div class="progress mono" aria-hidden="true"><span id="tech-progress"></span></div>
         </div>
       </section>
@@ -241,7 +255,7 @@
       <!-- 08 CASE STUDY -------------------------------------------------- -->
       <section class="case" id="case" aria-labelledby="case-title">
         <div class="case__img">
-          <img src="/activated-merch/p/evade-charms.webp" alt="EVADE Eclipse activated charm set: Bobo the cat and the Eclipse can" loading="lazy" />
+          <img src="/activated-merch/posters/evade-charms.webp" alt="EVADE Eclipse activated charm set: Bobo the cat and the Eclipse can on a clasp" loading="lazy" width="760" height="760" />
         </div>
         <div class="case__copy">
           <p class="eyebrow mono">Case study · EVADE on Roblox</p>

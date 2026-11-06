@@ -100,89 +100,76 @@ export function cottonTexture(color = "#141a2e") {
   return t;
 }
 
-/** The NFC inlay: a clear PET film with a copper coil antenna and a chip. */
+/** The NFC tag: a ~25 mm round inlay, copper coil antenna around a chip. */
 export function nfcTexture() {
   const c = canvas(512);
   const g = c.getContext("2d");
-  roundedMask(g, 512, 512, 40);
+  g.beginPath();
+  g.arc(256, 256, 252, 0, Math.PI * 2);
   g.clip();
-  g.fillStyle = "rgba(160,190,255,0.16)";
+  const bg = g.createRadialGradient(256, 256, 20, 256, 256, 256);
+  bg.addColorStop(0, "#1b2340");
+  bg.addColorStop(1, "#0c1020");
+  g.fillStyle = bg;
   g.fillRect(0, 0, 512, 512);
-  // Coil: a rectangular spiral.
+  // Coil: a round spiral.
   g.strokeStyle = "#e39a52";
-  g.lineWidth = 7;
+  g.lineWidth = 6;
   g.shadowColor = "#ffb066";
-  g.shadowBlur = 12;
-  for (let i = 0; i < 6; i++) {
-    const m = 70 + i * 17;
-    g.beginPath();
-    g.roundRect(m, m, 512 - m * 2, 512 - m * 2, 36 - i * 4);
-    g.stroke();
+  g.shadowBlur = 10;
+  g.beginPath();
+  for (let a = 0; a < Math.PI * 2 * 7; a += 0.02) {
+    const r = 228 - (a / (Math.PI * 2)) * 15;
+    const x = 256 + Math.cos(a) * r;
+    const y = 256 + Math.sin(a) * r;
+    a === 0 ? g.moveTo(x, y) : g.lineTo(x, y);
   }
+  g.stroke();
   g.shadowBlur = 0;
   // Bridge from coil to chip.
-  g.lineWidth = 6;
+  g.lineWidth = 5;
   g.beginPath();
-  g.moveTo(256, 70);
-  g.lineTo(256, 230);
+  g.moveTo(256, 30);
+  g.lineTo(256, 226);
   g.stroke();
   // Chip.
-  g.fillStyle = "#0b0d14";
-  g.fillRect(226, 226, 60, 60);
+  g.fillStyle = "#05060a";
+  g.fillRect(222, 222, 68, 68);
   g.strokeStyle = "#8fd3ff";
-  g.lineWidth = 2;
-  g.strokeRect(226, 226, 60, 60);
+  g.lineWidth = 3;
+  g.strokeRect(222, 222, 68, 68);
   g.fillStyle = "#8fd3ff";
-  g.font = "bold 13px JetBrains Mono, monospace";
+  g.font = "bold 18px JetBrains Mono, monospace";
   g.textAlign = "center";
-  g.fillText("NFC", 256, 261);
-  g.fillStyle = "rgba(255,255,255,0.55)";
-  g.font = "11px JetBrains Mono, monospace";
-  g.fillText("ACTIVATED BY MEDIALIFE", 256, 486);
+  g.fillText("NFC", 256, 262);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;
 }
 
-/** Inner layer: soft backing with the woven "tap here" label. */
-export function labelTexture() {
+/** Inner backing patch: soft knit with a stitched edge, holds the tag in place. */
+export function patchTexture() {
   const c = canvas(512);
   const g = c.getContext("2d");
-  roundedMask(g, 512, 512, 40);
+  g.beginPath();
+  g.arc(256, 256, 252, 0, Math.PI * 2);
   g.clip();
-  g.fillStyle = "#0d0f17";
+  g.fillStyle = "#1a1d2a";
   g.fillRect(0, 0, 512, 512);
   const k = knitHeight(256, 8);
-  g.globalAlpha = 0.12;
+  g.globalAlpha = 0.16;
   g.globalCompositeOperation = "screen";
   for (let y = 0; y < 512; y += 256) for (let x = 0; x < 512; x += 256) g.drawImage(k, x, y);
   g.globalAlpha = 1;
   g.globalCompositeOperation = "source-over";
-  // Woven label.
-  g.fillStyle = "#e9e6dc";
-  g.fillRect(156, 196, 200, 120);
-  g.strokeStyle = "rgba(0,0,0,0.25)";
-  for (let y = 198; y < 316; y += 3) {
-    g.beginPath();
-    g.moveTo(156, y);
-    g.lineTo(356, y);
-    g.stroke();
-  }
-  g.fillStyle = "#111";
-  g.textAlign = "center";
-  g.font = "bold 20px JetBrains Mono, monospace";
-  g.fillText("TAP HERE", 256, 246);
-  g.font = "12px JetBrains Mono, monospace";
-  g.fillText("ACTIVATED BY MEDIALIFE", 256, 270);
-  // )) waves
-  g.strokeStyle = "#111";
-  g.lineWidth = 2.5;
-  for (let i = 0; i < 3; i++) {
-    g.beginPath();
-    g.arc(256, 300, 6 + i * 6, -Math.PI * 0.8, -Math.PI * 0.2);
-    g.stroke();
-  }
+  g.strokeStyle = "rgba(220,225,255,0.55)";
+  g.lineWidth = 5;
+  g.setLineDash([16, 12]);
+  g.beginPath();
+  g.arc(256, 256, 220, 0, Math.PI * 2);
+  g.stroke();
+  g.setLineDash([]);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
