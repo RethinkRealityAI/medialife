@@ -3,6 +3,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import * as THREE from "three";
+const HIDEOUT_VERSION = "4";
 const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function formatCodeInput(v) {
@@ -70,6 +71,7 @@ const clamp01 = (t) => Math.min(1, Math.max(0, t));
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 const smooth01 = (t) => t * t * (3 - 2 * t);
 const OPEN_YAW = Math.PI / 4;
+const UP = new THREE.Vector3(0, 1, 0);
 const backOut = (t) => 1 + 2.4 * Math.pow(t - 1, 3) + 1.4 * Math.pow(t - 1, 2);
 function srgb(tex) {
   const T = THREE;
@@ -472,6 +474,10 @@ const CSS = (
 .mlh-mode.peek>span,.mlh-mode:focus-visible>span{opacity:1}
 @media (hover:hover){.mlh-mode:hover{max-width:280px;gap:10px;padding-right:16px}.mlh-mode:hover>span{opacity:1}}
 .mlh-mode:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.mlh-mode.mlh-mode-t{bottom:auto;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + var(--mlh-mode-top,78px))}
+.mlh-mode.mlh-mode-r{left:auto;right:17px;flex-direction:row-reverse;text-align:right}
+.mlh-mode.mlh-mode-r.peek,.mlh-mode.mlh-mode-r:focus-visible{padding-right:3px;padding-left:16px}
+@media (hover:hover){.mlh-mode.mlh-mode-r:hover{padding-right:3px;padding-left:16px}}
 .mlh-toast{position:absolute;left:50%;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 74px + var(--mlh-top,0px));transform:translate(-50%,-8px);opacity:0;padding:10px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:700;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center;pointer-events:none!important}
 .mlh-toast.on{opacity:1;transform:translate(-50%,0)}
 
@@ -1012,9 +1018,15 @@ class CollectorHub {
       hudInsetLeft: 0,
       zIndex: 2000100,
       modeBottom: 78,
+      modeCorner: "bottomLeft",
+      modeTop: 78,
+      modeAvoid: "",
+      brightness: 1,
       exitButton: true,
       topOffset: 0
     });
+    /** The room's world scale and brightness the lights were last set for. */
+    __publicField(this, "_lit", { scale: -1, brightness: -1 });
     __publicField(this, "_leaveResolve");
     __publicField(this, "_portalT", 0);
     __publicField(this, "_portalShut", false);
@@ -1038,6 +1050,9 @@ class CollectorHub {
     __publicField(this, "_fizz", []);
     __publicField(this, "_pickables", []);
     __publicField(this, "_lights", []);
+    /** Bobo's bed: kept Bobo-sized in a room scaled up for people. */
+    __publicField(this, "_bed");
+    __publicField(this, "_bedScale", 1);
     /* collection */
     __publicField(this, "_holoMat");
     __publicField(this, "_holoUniforms", {
@@ -1378,6 +1393,53 @@ class CollectorHub {
       this._unlockAudio();
       onClick();
     };
+    this._placeMode();
+  }
+  /**
+   * Step the mode button past any modeAvoid button in its corner (stacked
+   * under it at the top, over it at the bottom), measured on screen so it
+   * follows that button's own nudges and safe areas.
+   */
+  /** Re-measure the mode button's spot (other buttons come and go). Cheap. */
+  layoutModeButton() {
+    if (this._el.mode && !this._el.mode.hidden) this._placeMode();
+  }
+  _placeMode() {
+    const b = this._el.mode;
+    const ui = this._ui;
+    if (!b || !ui) return;
+    b.style.top = "";
+    b.style.bottom = "";
+    const sel = this._look.modeAvoid;
+    if (!sel || b.hidden || typeof document === "undefined") return;
+    const top = this._look.modeCorner.startsWith("top");
+    const host = ui.getBoundingClientRect();
+    const mine = b.getBoundingClientRect();
+    if (!mine.width) return;
+    const others = Array.from(document.querySelectorAll(sel)).filter((el) => el !== b && !b.contains(el)).map((el) => {
+      const cs = getComputedStyle(el);
+      const r = el.getBoundingClientRect();
+      return cs.visibility === "hidden" || cs.display === "none" ? null : r;
+    }).filter((r) => !!r && r.width > 0 && r.height > 0).filter((r) => r.right > mine.left - 4 && r.left < mine.right + 4);
+    let lo = mine.top;
+    let hi = mine.bottom;
+    let moved = false;
+    for (let pass = 0; pass < 3; pass++)
+      for (const r of others) {
+        if (r.bottom + 10 <= lo || r.top - 10 >= hi) continue;
+        const h = hi - lo;
+        if (top) {
+          lo = r.bottom + 10;
+          hi = lo + h;
+        } else {
+          hi = r.top - 10;
+          lo = hi - h;
+        }
+        moved = true;
+      }
+    if (!moved) return;
+    if (top) b.style.top = `${lo - host.top}px`;
+    else b.style.bottom = `${host.bottom - hi}px`;
   }
   /** Change the look and layout knobs (see HubLook) at any time. */
   configure(look) {
@@ -1390,6 +1452,11 @@ class CollectorHub {
     if (look.hudInsetLeft !== void 0) L.hudInsetLeft = num(look.hudInsetLeft, 0, 400, 0);
     if (look.zIndex !== void 0) L.zIndex = Math.round(num(look.zIndex, 1, 2147483e3, 2000100));
     if (look.modeBottom !== void 0) L.modeBottom = num(look.modeBottom, 0, 600, 78);
+    if (look.modeTop !== void 0) L.modeTop = num(look.modeTop, 0, 600, 78);
+    if (look.modeCorner !== void 0)
+      L.modeCorner = ["topLeft", "topRight", "bottomLeft", "bottomRight"].includes(look.modeCorner) ? look.modeCorner : "bottomLeft";
+    if (look.brightness !== void 0) L.brightness = num(look.brightness, 0.5, 3, 1);
+    if (look.modeAvoid !== void 0) L.modeAvoid = String(look.modeAvoid || "");
     if (look.exitButton !== void 0) L.exitButton = !!look.exitButton;
     if (look.topOffset !== void 0) L.topOffset = num(look.topOffset, 0, 400, 0);
     const ui = this._ui;
@@ -1400,6 +1467,14 @@ class CollectorHub {
     ui.style.setProperty("--mlh-hud-r", `${L.hudInsetRight}px`);
     ui.style.setProperty("--mlh-hud-l", `${L.hudInsetLeft}px`);
     ui.style.setProperty("--mlh-mode-bottom", `${L.modeBottom}px`);
+    ui.style.setProperty("--mlh-mode-top", `${L.modeTop}px`);
+    const mode = this._el.mode;
+    if (mode) {
+      mode.classList.toggle("mlh-mode-t", L.modeCorner.startsWith("top"));
+      mode.classList.toggle("mlh-mode-r", L.modeCorner.endsWith("Right"));
+      this._placeMode();
+    }
+    this._applyLights();
     ui.style.zIndex = String(L.zIndex);
     ui.classList.toggle("mlh-hostmenu", L.hudInsetRight > 0 || L.hudInsetLeft > 0);
     ui.style.setProperty("--mlh-top", `${L.topOffset}px`);
@@ -1476,27 +1551,77 @@ class CollectorHub {
     const d = Math.hypot(dx, dz);
     const yaw = (d > 1e-6 ? Math.atan2(dx, dz) : 0) - OPEN_YAW;
     const inner = this._radius * 0.92;
+    const max = Math.max(o.scale, o.maxScale ?? o.scale * 4);
     let s = Math.max(1e-4, o.scale);
-    let shift = 0;
-    if (o.wrapViewer && d > 1e-6) {
-      const CAM = 0.8;
-      const BOBO = 0.5;
-      if (d > inner * s * CAM) {
-        const want = d / (BOBO + CAM);
-        s = Math.max(s, Math.min(o.maxScale ?? s * 4, want / inner));
+    const home = new THREE.Vector3();
+    if (this._bed) home.set(this._bed.position.x, 0, this._bed.position.z);
+    home.applyAxisAngle(UP, yaw);
+    const pos = new THREE.Vector3();
+    const place = () => {
+      let shift = 0;
+      if (o.wrapViewer && d > 1e-6) {
+        const CAM = 0.8;
+        const BOBO = 0.5;
         const R = inner * s;
-        shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
+        if (d > R * CAM) shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
       }
+      pos.set(
+        o.center.x + (d > 1e-6 ? dx / d * shift : 0) - home.x * s,
+        o.center.y,
+        o.center.z + (d > 1e-6 ? dz / d * shift : 0) - home.z * s
+      );
+      return Math.hypot(cam.x - pos.x, cam.z - pos.z) / (inner * s);
+    };
+    let out = place();
+    for (let i = 0; o.wrapViewer && out > 0.8 && s < max && i < 40; i++) {
+      s = Math.min(max, s * 1.06);
+      out = place();
     }
-    this.root.position.set(
-      o.center.x + (d > 1e-6 ? dx / d * shift : 0),
-      o.center.y,
-      o.center.z + (d > 1e-6 ? dz / d * shift : 0)
-    );
+    this.root.position.copy(pos);
     this.root.rotation.set(0, yaw, 0);
     this.root.scale.setScalar(s);
+    if (this._bed)
+      this._bed.scale.setScalar(
+        this._bedScale * Math.min(1, Math.max(0.15, (o.boboScale ?? s) / s))
+      );
     this.root.updateMatrixWorld(true);
+    this._applyLights();
     return s;
+  }
+  /**
+   * Keep the room equally lit at any size and apply the brightness knob.
+   * A point light's reach and falloff are in world units, not the room's,
+   * so a room scaled up 4x would otherwise be lit like a quarter-size one:
+   * reach grows with the scale and intensity with scale^decay.
+   */
+  _applyLights() {
+    if (!this._room) return;
+    const ws = this.root.getWorldScale(this._t.v).x || 1;
+    const b = this._look.brightness;
+    if (Math.abs(ws - this._lit.scale) < 1e-3 * ws && b === this._lit.brightness) return;
+    const envChanged = b !== this._lit.brightness;
+    this._lit.scale = ws;
+    this._lit.brightness = b;
+    for (const l of this._lights) {
+      const base = l.userData.mlhBase;
+      if (!base) continue;
+      const pl = l;
+      if (pl.isPointLight) {
+        pl.distance = base.distance * ws;
+        pl.intensity = base.intensity * b * Math.pow(ws, pl.decay || 0);
+      } else l.intensity = base.intensity * b;
+    }
+    if (!envChanged) return;
+    const env = Math.min(2, 0.6 + 0.4 * b);
+    this._room.traverse((o) => {
+      var _a;
+      if (!o.isMesh) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        if (!m || m.envMapIntensity === void 0) continue;
+        (_a = m.userData).mlhEnv ?? (_a.mlhEnv = m.envMapIntensity);
+        m.envMapIntensity = m.userData.mlhEnv * env;
+      }
+    });
   }
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
   floorRadius() {
@@ -1600,6 +1725,7 @@ class CollectorHub {
     this._time += dt;
     this._room.updateWorldMatrix(true, false);
     this._reveal.uRoomInv.value.copy(this._room.matrixWorld).invert();
+    this._applyLights();
     if (this._state === "portal") this._updatePortal(dt);
     else if (this._state === "building") this._updateBuild(dt);
     else if (this._state === "leaving") this._updateLeave(dt);
@@ -1681,6 +1807,8 @@ class CollectorHub {
     this._portal = room.getObjectByName("hub_portal");
     this._pad = room.getObjectByName("hub_spawn_pad");
     this._bobo = room.getObjectByName("hub_bobo");
+    this._bed = room.getObjectByName("hub_cat_bed") ?? void 0;
+    if (this._bed) this._bedScale = this._bed.scale.x || 1;
     this._swirl = room.getObjectByName("Portal_Swirl");
     this._orbitCans = room.getObjectByName("hub_orbit_cans");
     this._pullTab = room.getObjectByName("hub_pull_tab");
@@ -1787,9 +1915,11 @@ class CollectorHub {
     if (this.opts.lights) {
       const add = (l, p) => {
         l.position.copy(p);
+        l.userData.mlhBase = { intensity: l.intensity, distance: l.distance ?? 0 };
         room.add(l);
         this._lights.push(l);
       };
+      add(new THREE.HemisphereLight(16774116, 3812424, 0.85), new THREE.Vector3(0, 3, 0));
       add(new THREE.PointLight(16766896, 2.4, 6, 1.6), new THREE.Vector3(0, 1.4, 0.2));
       add(new THREE.PointLight(10480127, 1.6, 5, 1.6), new THREE.Vector3(-0.6, 3, -0.6));
       add(
@@ -3886,6 +4016,7 @@ function CSS_escape(s) {
 }
 export {
   CollectorHub,
+  HIDEOUT_VERSION,
   checkCode,
   formatCodeInput
 };

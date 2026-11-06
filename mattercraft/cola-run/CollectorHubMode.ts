@@ -27,6 +27,9 @@
  *       CollectorHubMode.ts   (this file)
  *       HubCore.ts            (the hub itself; shared with the browser labs)
  *       OrbHuntGame.ts        (the game, with the hideout mode)
+ *     Overwrite them where they are (same names, same folder) and delete any
+ *     second copy: the scene keeps using whichever file it was built with.
+ *     The node's Version field then reads v4 (or later).
  *  2. Hierarchy Panel → + → CollectorHubMode. Anywhere works (the room moves
  *     itself under Bobo's anchor when it opens); next to the game is tidiest.
  *  3. Leave "Game" empty (it finds OrbHuntGame) or point it at the game node.
@@ -51,9 +54,21 @@ import { useCamera, useScene } from "@zcomponent/three/lib/scenecontext";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { CollectorHub, type HubState } from "./HubCore";
+import { CollectorHub, HIDEOUT_VERSION, type HubState } from "./HubCore";
+
+const VERSION_LABEL = `v${HIDEOUT_VERSION} · 2026-11-06`;
 
 interface ConstructorProps {}
+
+/** Where the round "Bobo's Hideout" icon sits. */
+export enum ButtonCorner {
+  /** Stacked under the game's menu button (and the record button, if there is one). */
+  UnderMenu = "underMenu",
+  TopLeft = "topLeft",
+  TopRight = "topRight",
+  BottomLeft = "bottomLeft",
+  BottomRight = "bottomRight",
+}
 
 /** How big the room gets. */
 export enum RoomFit {
@@ -88,6 +103,23 @@ const idle = (fn: () => void, ms: number) =>
  */
 export class CollectorHubMode extends Group {
   /* ══ Game ════════════════════════════════════════════════════════════ */
+
+  /**
+   * Which Bobo's Hideout files this project has: v4 or later is the release
+   * with no portal. If this field isn't here, or the room still shows a
+   * portal, the project is still running older copies of the three files:
+   * replace CollectorHubMode.ts, HubCore.ts and OrbHuntGame.ts (same names,
+   * same folder) and reload the preview.
+   *
+   * @zui
+   * @zgroup Game
+   * @zgrouppriority 300
+   * @zpriority 110
+   * @zdefault v4 · 2026-11-06
+   */
+  public version = new Observable(VERSION_LABEL, (v) => {
+    if (v !== VERSION_LABEL) this.version.value = VERSION_LABEL; // read-only
+  });
 
   /**
    * Your Cola Run game node. Leave empty and the hideout finds the game itself.
@@ -138,6 +170,21 @@ export class CollectorHubMode extends Group {
   public showButton = new Observable(true, () => this._syncButton());
 
   /**
+   * Where the icon sits. Under Menu (default) stacks it under the game's
+   * menu button and the record button, well away from a joystick in the
+   * bottom corners.
+   *
+   * @zui
+   * @zgroup Game
+   * @zgrouppriority 300
+   * @zpriority 78
+   * @zdefault underMenu
+   */
+  public buttonCorner = new Observable<ButtonCorner>(ButtonCorner.UnderMenu, () =>
+    this._applyLook(),
+  );
+
+  /**
    * Hide the game's own buttons (menu, sound, Reset placement) while Bobo is
    * in his room. Off by default, so moving the room with Reset placement and
    * switching modes from the menu work in the room as everywhere else.
@@ -167,29 +214,43 @@ export class CollectorHubMode extends Group {
   public roomFit = new Observable<RoomFit>(RoomFit.AroundViewer);
 
   /**
-   * The smallest the room ever is, in Bobo-sized rooms: 1 = the room's own
-   * Bobo would be exactly as tall as yours. Default 1.3 (30% roomier).
-   * Placing the scene bigger or smaller resizes the room with it. (0.5 to 4)
+   * How big the room is, in Bobo-sized rooms: 1 = the room's own Bobo would
+   * be exactly as tall as yours. Default 3: a walk-in, room-scale space
+   * around Bobo that the person holding the phone stands inside. Placing
+   * the scene bigger or smaller resizes the room with it. (0.5 to 10)
    *
    * @zui
    * @zgroup Room
    * @zgrouppriority 200
    * @zpriority 90
-   * @zdefault 1.3
+   * @zdefault 3
    */
-  public roomScale = new Observable(1.3);
+  public roomScale = new Observable(3);
 
   /**
-   * With Around Viewer: the biggest the room may grow, in Bobo-sized rooms.
-   * Someone standing further away than that just walks in. (1 to 12)
+   * With Around Viewer: the biggest the room may grow to fit the viewer in
+   * too, in Bobo-sized rooms. Someone standing further away than that just
+   * walks in. Never smaller than Room Scale. (1 to 20)
    *
    * @zui
    * @zgroup Room
    * @zgrouppriority 200
    * @zpriority 85
-   * @zdefault 3
+   * @zdefault 8
    */
-  public maxRoomScale = new Observable(3);
+  public maxRoomScale = new Observable(8);
+
+  /**
+   * How bright the room is. Camera feeds are bright, so the default lifts it
+   * above its on-screen look: 1 is the room as modelled. (0.5 to 3)
+   *
+   * @zui
+   * @zgroup Room
+   * @zgrouppriority 200
+   * @zpriority 82
+   * @zdefault 1.6
+   */
+  public brightness = new Observable(1.6, () => this._applyLook());
 
   /**
    * Keep Bobo inside his room: the joystick stops him at the wall.
@@ -536,15 +597,19 @@ export class CollectorHubMode extends Group {
     const hub = this._hub!;
     const parent = player.parent;
     const center = (this._homeSet ? this._home : player.position).clone();
+    // The room's floor goes under Bobo's feet, whatever his pivot is.
+    center.y = this._feetY(player, center.y);
     const bobo = this._playerHeight(player) / (parent ? parent.getWorldScale(this._v).y || 1 : 1);
     const unit = bobo / hub.boboHeight(); // a Bobo-sized room, in the parent's units
+    const size = clamp(this.roomScale.value, 0.5, 10);
     hub.placeAround({
       parent,
       center,
       cameraWorld: this._camera!.getWorldPosition(this._v),
-      scale: unit * clamp(this.roomScale.value, 0.5, 4),
+      scale: unit * size,
       wrapViewer: this.roomFit.value !== RoomFit.MatchBobo,
-      maxScale: unit * clamp(this.maxRoomScale.value, 1, 12),
+      maxScale: unit * Math.max(size, clamp(this.maxRoomScale.value, 1, 20)),
+      boboScale: unit,
     });
     const c = hub.root.position;
     const dx = player.position.x - c.x;
@@ -665,10 +730,16 @@ export class CollectorHubMode extends Group {
     }
   }
 
+  private _layoutT = 0;
   private _tick(dt: number) {
     const hub = this._hub;
     if (!hub) return;
     hub.update(dt);
+    // The record button shows and hides with the game: keep the icon clear of it.
+    if ((this._layoutT += dt) > 0.4) {
+      this._layoutT = 0;
+      hub.layoutModeButton();
+    }
     if (!this.keepBoboInside.value) return;
     const s = hub.state;
     if (s !== "building" && s !== "live") return;
@@ -728,7 +799,8 @@ export class CollectorHubMode extends Group {
         !!g.isInHideout ||
         !!g.isIntroOpen || // the card offers the hideout itself
         (!g.isLounging && (st === "playing" || st === "paused")));
-    hub.modeButton(this.showButton.value && !this._active && !busy ? () => this.open() : null);
+    const show = this.showButton.value && !this._active && !busy;
+    hub.modeButton(show ? () => this.open() : null);
   }
 
   private _syncGameMenus() {
@@ -755,10 +827,33 @@ export class CollectorHubMode extends Group {
       hudInsetLeft: gameUi && corner === "topLeft" ? 62 : 0,
       // Under the game's dialogs (its menu opens over the room), over its corner buttons.
       zIndex: Number.isFinite(z) && z > 200 ? z - 100 : 2000100,
-      // Stack the icon over the game's sound button when that's bottom left.
-      modeBottom: !g || (soundOn && soundCorner === "bottomLeft") ? 74 : 16,
+      ...this._iconSpot(gameUi, corner, soundOn ? soundCorner : ""),
+      brightness: clamp(Number(this.brightness.value), 0.5, 3),
       topOffset: Number(this.topOffset.value) || 0,
     });
+  }
+
+  /**
+   * Where the round icon goes. Under Menu: the game menu's corner, below the
+   * menu button and the record button. Other corners step past whatever of
+   * the game's own buttons share them, so the icon never sits on a joystick
+   * (bottom corners are left to it unless picked) or on another button.
+   */
+  private _iconSpot(gameUi: boolean, menuCorner: string, soundCorner: string) {
+    const g = this._game;
+    const pick = this.buttonCorner.value;
+    const corner = (pick === ButtonCorner.UnderMenu || !pick ? menuCorner || "topRight" : pick) as
+      "topLeft" | "topRight" | "bottomLeft" | "bottomRight";
+    let gap = 14;
+    if (gameUi && menuCorner === corner) gap = 78; // under (or over) the 54 px menu button
+    // The record button (ColaRunRecorder) is measured on screen: it has nudges of its own.
+    const modeAvoid = ".crc-anchor";
+    if (corner.startsWith("bottom")) {
+      if (g && soundCorner === corner) gap = Math.max(gap, 74);
+      if (g && g.resetCorner?.value === corner) gap = Math.max(gap, 74);
+      return { modeCorner: corner, modeBottom: gap, modeAvoid };
+    }
+    return { modeCorner: corner, modeTop: gap, modeAvoid };
   }
 
   /* ── finding things ── */
@@ -789,6 +884,14 @@ export class CollectorHubMode extends Group {
         "[CollectorHubMode] couldn't find the Cola Run game; set Game to your OrbHuntGame node",
       );
       return;
+    }
+    if (g.hideoutVersion !== HIDEOUT_VERSION) {
+      const msg =
+        "Bobo's Hideout files don't match: replace OrbHuntGame.ts, CollectorHubMode.ts and " +
+        "HubCore.ts with the same release";
+      console.warn("[CollectorHubMode] " + msg, { game: g.hideoutVersion, hub: HIDEOUT_VERSION });
+      // Never ships like this, so say it where it'll be seen: in the preview.
+      setTimeout(() => this._hub?.toast(msg), 1500);
     }
     if (!g.enterHideout || !g.playCharacterClip)
       console.warn(
@@ -839,6 +942,7 @@ export class CollectorHubMode extends Group {
     for (const o of [
       g.menuCorner,
       g.soundToggleCorner,
+      g.resetCorner,
       g.soundToggleEnabled,
       g.uiEnabled,
       g.modalLayer,
@@ -878,6 +982,23 @@ export class CollectorHubMode extends Group {
       this._heights.set(p, h);
     }
     return h * ws;
+  }
+
+  /**
+   * The height of Bobo's feet in his parent's space: the bottom of his
+   * bounds, under where he stands. Falls back to his position when the
+   * bounds are odd (nothing visible, or far from him).
+   */
+  private _feetY(p: THREE.Object3D, fallback: number) {
+    const parent = p.parent;
+    if (!parent) return fallback;
+    const b = new THREE.Box3().setFromObject(p);
+    if (b.isEmpty()) return fallback;
+    p.getWorldPosition(this._v2);
+    this._v2.y = b.min.y;
+    const y = parent.worldToLocal(this._v2).y;
+    const h = this._playerHeight(p) / (parent.getWorldScale(this._v2).y || 1);
+    return Math.abs(y - fallback) <= h ? y : fallback;
   }
 
   private _recorder(): any {
