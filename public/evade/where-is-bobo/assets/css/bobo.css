@@ -1,13 +1,13 @@
 /* =========================================================================
    Where is Bobo? · EVADE × MEDIALIFE
    House style from /evade/creators (Space Grotesk + JetBrains Mono, deep
-   space background, cyan → magenta accents, EVADE gold, liquid glass).
+   space background, EVADE yellow highlights, liquid glass).
    The globe is a full-screen canvas; everything else floats over it.
    ========================================================================= */
 
 :root {
-  --primary: #19affe;
-  --accent: #ff37ae;
+  --primary: #f6c344;
+  --accent: #ffb020;
   --gold: #f6c344;
   --gold-2: #ffdf7a;
   --teal: #3fe6e0;
@@ -19,7 +19,7 @@
   --fg: #f4f6f8;
   --fg-2: #c9d1d8;
   --muted: #8d99a3;
-  --grad: linear-gradient(135deg, var(--primary), var(--accent));
+  --grad: linear-gradient(180deg, #ffe48a 0%, #f6c344 45%, #e0a21a 100%);
   --grad-gold: linear-gradient(180deg, #ffe48a 0%, #f6c344 45%, #e0a21a 100%);
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -65,8 +65,8 @@ img, video { display: block; max-width: 100%; }
 .sky {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(60% 50% at 50% 58%, rgba(25, 175, 254, 0.16), transparent 70%),
-    radial-gradient(40% 35% at 82% 18%, rgba(255, 55, 174, 0.12), transparent 70%),
+    radial-gradient(60% 50% at 50% 58%, rgba(246, 195, 68, 0.16), transparent 70%),
+    radial-gradient(40% 35% at 82% 18%, rgba(255, 176, 32, 0.12), transparent 70%),
     radial-gradient(45% 40% at 12% 85%, rgba(63, 230, 224, 0.1), transparent 70%),
     radial-gradient(120% 90% at 50% 50%, #06101a 0%, var(--bg) 70%);
 }
@@ -108,9 +108,9 @@ img, video { display: block; max-width: 100%; }
   color: #1a1200; background: var(--grad-gold);
   box-shadow: 0 0 16px rgba(246, 195, 68, 0.55);
 }
-.pin-now.pin-review { color: #fff; background: rgba(255, 55, 174, 0.85); box-shadow: 0 0 14px rgba(255, 55, 174, 0.5); }
+.pin-now.pin-review { color: #fff; background: rgba(255, 176, 32, 0.85); box-shadow: 0 0 14px rgba(255, 176, 32, 0.5); }
 .pin-now.pin-mine { color: #04161c; background: linear-gradient(135deg, #8ff7f2, var(--teal)); box-shadow: 0 0 16px rgba(63, 230, 224, 0.6); }
-.pin-label.is-review .pin-city { border-color: rgba(255, 55, 174, 0.5); }
+.pin-label.is-review .pin-city { border-color: rgba(255, 176, 32, 0.5); }
 
 /* ── top bar ──────────────────────────────────────────────────────────────── */
 .top {
@@ -144,10 +144,10 @@ img, video { display: block; max-width: 100%; }
 }
 .btn-gold:hover { box-shadow: 0 8px 32px rgba(246, 195, 68, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
 .btn-primary {
-  color: #fff; background: var(--grad);
-  box-shadow: 0 6px 24px rgba(25, 175, 254, 0.3);
+  color: #1d1300; background: var(--grad);
+  box-shadow: 0 6px 24px rgba(246, 195, 68, 0.3);
 }
-.btn-primary:hover { box-shadow: 0 8px 30px rgba(255, 55, 174, 0.35); }
+.btn-primary:hover { box-shadow: 0 8px 30px rgba(255, 176, 32, 0.35); }
 .btn-glass {
   color: var(--fg); background: rgba(255, 255, 255, 0.06); border-color: var(--line-2);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
@@ -179,9 +179,9 @@ img, video { display: block; max-width: 100%; }
 }
 .live-dot {
   width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(255, 55, 174, 0.7); animation: live 1.8s infinite;
+  box-shadow: 0 0 0 0 rgba(255, 176, 32, 0.7); animation: live 1.8s infinite;
 }
-@keyframes live { 70% { box-shadow: 0 0 0 9px rgba(255, 55, 174, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 55, 174, 0); } }
+@keyframes live { 70% { box-shadow: 0 0 0 9px rgba(255, 176, 32, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 176, 32, 0); } }
 .sample-pill {
   padding: 4px 8px; border-radius: 999px; letter-spacing: 0.06em;
   color: #ffe8a8; background: rgba(246, 195, 68, 0.14); border: 1px solid rgba(246, 195, 68, 0.35);
@@ -192,7 +192,7 @@ img, video { display: block; max-width: 100%; }
   text-shadow: 0 4px 40px rgba(0, 0, 0, 0.6);
 }
 .grad {
-  background: linear-gradient(100deg, var(--gold-2), var(--gold) 40%, #ff9a4a 70%, var(--accent));
+  background: linear-gradient(100deg, var(--gold-2), var(--gold) 55%, #ffb020);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   padding-right: 0.04em;
 }
@@ -262,7 +262,7 @@ img, video { display: block; max-width: 100%; }
 .card-scans {
   margin-top: 14px; padding: 10px 12px; border-radius: 14px;
   font-size: 13px; color: var(--fg-2);
-  background: rgba(255, 55, 174, 0.07); border: 1px solid rgba(255, 55, 174, 0.2);
+  background: rgba(255, 176, 32, 0.07); border: 1px solid rgba(255, 176, 32, 0.2);
 }
 .card-scans b { color: #ffd0ea; }
 .card-nav { display: flex; border-top: 1px solid var(--line); }
@@ -309,9 +309,9 @@ img, video { display: block; max-width: 100%; }
 .place-txt { flex: 1; min-width: 0; }
 .place-txt b { display: block; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .place-txt span { display: block; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.place-tag { padding: 3px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; font: 600 9.5px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: #ffd1ec; background: rgba(255, 55, 174, 0.2); }
+.place-tag { padding: 3px 6px; border-radius: 999px; margin-left: 6px; vertical-align: 2px; font: 600 9.5px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: #ffe7a8; background: rgba(255, 176, 32, 0.2); }
 .place-tag.is-mine { color: #04161c; background: var(--teal); }
-.card-badge { display: inline-block; margin: 0 0 8px; padding: 4px 9px; border-radius: 999px; font: 600 10.5px/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: #ffd1ec; background: rgba(255, 55, 174, 0.16); border: 1px solid rgba(255, 55, 174, 0.4); }
+.card-badge { display: inline-block; margin: 0 0 8px; padding: 4px 9px; border-radius: 999px; font: 600 10.5px/1.2 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: #ffe7a8; background: rgba(255, 176, 32, 0.16); border: 1px solid rgba(255, 176, 32, 0.4); }
 .card-badge.is-mine { color: #c8fffb; background: rgba(63, 230, 224, 0.14); border-color: rgba(63, 230, 224, 0.45); }
 .place-count { flex: none; font: 500 11px/1 var(--font-mono); color: var(--teal); }
 .place-now { color: #1a1200; background: var(--grad-gold); padding: 3px 6px; border-radius: 999px; font: 600 9.5px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; margin-left: 6px; vertical-align: 2px; }
@@ -339,7 +339,7 @@ img, video { display: block; max-width: 100%; }
 .ticker-text .ago { color: var(--muted); }
 .ticker.is-swap .ticker-text { animation: tick 0.5s var(--ease); }
 @keyframes tick { from { opacity: 0; transform: translateY(6px); } }
-.ticker.is-new { border-color: rgba(255, 55, 174, 0.55); box-shadow: 0 0 24px rgba(255, 55, 174, 0.35); }
+.ticker.is-new { border-color: rgba(255, 176, 32, 0.55); box-shadow: 0 0 24px rgba(255, 176, 32, 0.35); }
 .ticker.is-new .ticker-dot { animation: tickPulse 1s ease-in-out infinite; }
 @keyframes tickPulse { 50% { transform: scale(1.6); opacity: 0.6; } }
 @media (prefers-reduced-motion: reduce) { .ticker.is-new .ticker-dot { animation: none; } }
@@ -385,7 +385,7 @@ img, video { display: block; max-width: 100%; }
   animation: pop 0.35s var(--ease) both;
 }
 .toast:not(:has(button)) { padding-right: 16px; }
-.toast button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--grad); color: #fff; font-weight: 600; font-size: 12.5px; }
+.toast button { min-height: 34px; padding: 0 12px; border-radius: 999px; border: 0; background: var(--grad); color: #1d1300; font-weight: 600; font-size: 12.5px; }
 .loader {
   position: fixed; inset: 0; z-index: 50; display: grid; place-content: center; justify-items: center; gap: 18px;
   background: var(--bg); color: var(--muted);
@@ -538,4 +538,180 @@ img, video { display: block; max-width: 100%; }
   .summon-btn::before, .summon-ico::after { animation: none; }
   .card { animation: none !important; }
   .btn, .icon-btn, .thumb { transition-duration: 0.01s; }
+}
+
+/* ── the sighting dossier (spy-report card) ──────────────────────────────── */
+.card-file {
+  position: relative;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 18px 0; font: 600 10.5px/1 var(--font-mono); letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--gold);
+}
+.card-file .rec { width: 7px; height: 7px; border-radius: 50%; background: #ff4d3d; box-shadow: 0 0 10px #ff4d3d; animation: recBlink 1.2s steps(2) infinite; }
+@keyframes recBlink { 50% { opacity: 0.25; } }
+.card-file-r { margin-left: auto; color: var(--muted); letter-spacing: 0.1em; }
+.intel {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin-top: 14px;
+  border: 1px solid rgba(246, 195, 68, 0.22); border-radius: 10px; overflow: hidden;
+  background: rgba(246, 195, 68, 0.14);
+}
+.intel > div { padding: 8px 10px; background: rgba(6, 10, 14, 0.9); min-width: 0; }
+.intel dt { font: 500 9.5px/1.2 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.intel dd { margin-top: 3px; font: 500 12px/1.3 var(--font-mono); color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.intel .is-ok dd { color: #9dffb0; }
+.intel .is-pending dd { color: var(--gold-2); }
+.card-when { color: var(--gold); }
+.thumb[aria-current="true"] { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(246, 195, 68, 0.2); }
+.card::before { background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.card-scans b { color: var(--gold-2); }
+
+/* docked beside the hologram: a HUD panel tied to the video, not a floating sheet */
+.card.is-docked {
+  left: 0; top: 0; right: auto; width: 340px;
+  border-radius: 6px; animation: dockIn 0.45s var(--ease) both !important;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, rgba(10, 12, 8, 0.86), rgba(4, 6, 8, 0.92));
+  border: 1px solid rgba(246, 195, 68, 0.38);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 40px rgba(246, 195, 68, 0.12), 0 24px 80px rgba(0, 0, 0, 0.6);
+  overflow: visible;
+}
+@keyframes dockIn { from { opacity: 0; filter: blur(6px) brightness(1.8); } }
+.card.is-docked::after {
+  content: ""; position: absolute; top: 34px; width: 22px; height: 1px;
+  background: var(--gold); box-shadow: 0 0 8px var(--gold);
+}
+.card.is-docked[data-side="right"]::after { left: -23px; }
+.card.is-docked[data-side="left"]::after { right: -23px; }
+.card.is-docked .card-body { overflow-y: auto; max-height: calc(100dvh - 300px); }
+.card.is-docked .flag { border-radius: 4px; }
+.card.is-docked .btn { border-radius: 6px; }
+.card.is-docked .card-nav { border-top-color: rgba(246, 195, 68, 0.2); }
+/* corner brackets */
+.card.is-docked .card-file::before,
+.card.is-docked .card-file::after {
+  content: ""; position: absolute; width: 14px; height: 14px; border: 2px solid var(--gold); pointer-events: none;
+}
+.card.is-docked .card-file::before { left: -5px; top: -5px; border-right: 0; border-bottom: 0; }
+.card.is-docked .card-file::after { right: -5px; top: -5px; border-left: 0; border-bottom: 0; }
+@media (prefers-reduced-motion: reduce) { .card-file .rec { animation: none; } }
+
+/* ── big screens: one row of actions, larger type ────────────────────────── */
+@media (min-width: 720px) {
+  .hero { max-width: 640px; }
+  .hero-actions { flex-wrap: nowrap; }
+}
+@media (min-width: 1500px) {
+  .hero h1 { font-size: clamp(72px, 5.2vw, 104px); }
+  .sub { font-size: 18px; max-width: 38ch; }
+  .stats dd { font-size: 30px; }
+  .stats dt { font-size: 12px; }
+  .hero-actions .btn { min-height: 52px; padding: 0 22px; font-size: 16px; }
+  .eyebrow { font-size: 13px; }
+}
+
+/* while a sighting is open the scene is the focus: Bobo, the planet and the
+   video. The headline shrinks to a small label, the rest steps back and
+   returns when the card closes. */
+@media (min-width: 720px) {
+  .hero h1, .hero .sub, .hero .stats, .hero-actions { transition: opacity 0.35s ease, transform 0.35s ease, font-size 0.35s ease; }
+  body.has-card .hero h1 { font-size: 26px; margin-top: 8px; }
+  body.has-card .hero .sub, body.has-card .hero .stats, body.has-card .hero-actions {
+    opacity: 0; transform: translateY(-6px); pointer-events: none; visibility: hidden;
+    transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s 0.3s;
+  }
+}
+@media (min-width: 720px) and (max-height: 620px) {
+  body.has-card .hero h1 { font-size: 20px; }
+  body.has-card .hero .eyebrow { display: none; }
+}
+
+/* the docked report is compact: the video is the hero */
+.card.is-docked { width: 280px; }
+.card.is-docked .card-file { font-size: 9.5px; }
+.card.is-docked .card-head { padding: 12px 10px 4px 14px; gap: 10px; }
+.card.is-docked .card-where h2 { font-size: 18px; }
+.card.is-docked .card-where p { font-size: 12px; }
+.card.is-docked .icon-btn { width: 34px; height: 34px; }
+.card.is-docked .card-body { padding: 2px 14px 12px; }
+.card.is-docked .card-when { font-size: 11.5px; }
+.card.is-docked .card-strip { margin-top: 8px; }
+.card.is-docked .intel { margin-top: 10px; }
+.card.is-docked .card-title { margin-top: 10px; font-size: 15px; }
+.card.is-docked .card-desc { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card.is-docked .card-actions { margin-top: 10px; flex-wrap: nowrap; }
+.card.is-docked .card-actions .btn-glass { flex: 0 0 auto; }
+.card.is-docked .card-file-r { display: none; }
+@media (max-width: 1099px) { .card.is-docked { width: 250px; } }
+.card.is-docked .card-actions .btn { min-height: 38px; font-size: 13px; padding: 0 12px; }
+.card.is-docked .card-scans { display: none; }
+.card.is-docked .nav-btn { padding: 10px 14px; font-size: 12.5px; }
+.card.is-docked .intel > div { padding: 6px 8px; }
+.card.is-docked .intel dd { font-size: 11px; }
+@media (max-height: 620px) {
+  .card.is-docked .card-desc, .card.is-docked .card-title { display: none; }
+  .card.is-docked .card-body { max-height: calc(100dvh - 200px); }
+}
+@media (max-width: 1099px) {
+  .card.is-docked .card-actions .btn-primary { flex: 1 1 0; min-width: 0; }
+  .card.is-docked .card-actions .btn-glass { width: 38px; padding: 0; justify-content: center; }
+  .card.is-docked .card-actions .btn-glass span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+}
+
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* phones: the report is a slim strip (at most ~30% of the screen); the globe
+   and the video get the rest */
+@media (max-width: 719px) {
+  .card { max-height: 30dvh; border-radius: 18px 18px 0 0; }
+  .card-file { display: none; }
+  .card-grab { margin-top: 6px; width: 34px; }
+  .card-head { padding: 4px 10px 0 14px; gap: 10px; }
+  .card .flag { width: 34px; height: 34px; font-size: 18px; }
+  .card-where h2 { font-size: 17px; }
+  .card-where p { font-size: 12px; }
+  .card .icon-btn { width: 34px; height: 34px; }
+  .card-body { padding: 2px 14px 8px; }
+  .card-when { font-size: 12px; margin-top: 2px; }
+  .card-badge { margin: 4px 0 0; }
+  .card-strip { margin-top: 6px; }
+  .thumb { width: 38px; height: 50px; }
+  .card-desc { font-size: 12.5px; margin-top: 4px; }
+  .card-actions { margin-top: 8px; flex-wrap: nowrap; }
+  .card-actions .btn { min-height: 40px; font-size: 13.5px; }
+  .card-actions .btn-primary { flex: 1 1 0; }
+  .card-actions .btn-glass { flex: 0 0 auto; }
+  .card-nav .nav-btn { min-height: 36px; padding: 6px 14px; font-size: 12.5px; }
+  .has-card .tour-bar { bottom: calc(30dvh + 12px); }
+}
+
+/* the wall: every clip from one place at once (4 x 3 on big screens) */
+.viewer-media { position: relative; }
+.viewer-media.is-wall { display: block; overflow-y: auto; padding: 12px; background: #050607; }
+.wall { display: grid; width: 100%; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 720px) { .wall { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .wall:not([data-n="2"]):not([data-n="3"]) { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 720px) { .wall[data-n="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wall-tile {
+  position: relative; aspect-ratio: 9 / 16; max-height: 62dvh; width: 100%;
+  border-radius: 8px; overflow: hidden; background: #111; cursor: pointer;
+  border: 1px solid rgba(246, 195, 68, 0.28); padding: 0;
+  transition: transform 0.2s var(--ease), border-color 0.2s;
+}
+.wall-tile:hover, .wall-tile:focus-visible { border-color: var(--gold); transform: translateY(-2px); }
+.wall-tile video, .wall-tile img { width: 100%; height: 100%; object-fit: cover; display: block; max-height: none; }
+.wall-tile .dur { position: absolute; right: 6px; top: 6px; padding: 2px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.7); font: 500 11px/1.2 var(--font-mono); color: #fff; }
+.wall-when { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 6px; text-align: left; font: 500 11px/1.2 var(--font-mono); color: var(--gold-2); background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); }
+.wall-tile.is-review { cursor: default; display: grid; place-items: center; background: repeating-linear-gradient(135deg, #14110a 0 10px, #0d0b07 10px 20px); }
+.wall-tag { font: 600 11px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-2); }
+.wall-more { display: flex; margin: 14px auto 4px; }
+.wall-back { position: absolute; left: 12px; top: 12px; z-index: 2; min-height: 36px; padding: 0 14px; font-size: 13px; }
+.viewer:has(.is-wall) { width: min(1280px, 96vw); height: min(92dvh, 900px); }
+.viewer:has(.is-wall) .viewer-inner { height: 100%; }
+.wall-tile { aspect-ratio: 3 / 4; max-height: none; }
+@media (min-width: 720px) {
+  /* the whole 4 x 3 page fits without scrolling; tap a tile for the full clip */
+  .wall { grid-auto-rows: calc((min(92dvh, 900px) - 74px - 24px - 20px) / 3); }
+  .wall-tile { aspect-ratio: auto; height: 100%; }
+  .wall[data-n="2"], .wall[data-n="3"] { grid-auto-rows: calc(min(92dvh, 900px) - 74px - 24px); }
 }

@@ -13,15 +13,17 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-import { loadBobo } from "./bobo.js?v=5";
-import { createHologram } from "./holo.js?v=5";
-import { createLandmarks } from "./landmarks.js?v=5";
+import { loadBobo } from "./bobo.js?v=10";
+import { createHologram } from "./holo.js?v=10";
+import { createLandmarks } from "./landmarks.js?v=10";
 
 const D2R = Math.PI / 180;
 const C = {
   teal: new THREE.Color("#3fe6e0"),
-  blue: new THREE.Color("#19affe"),
-  pink: new THREE.Color("#ff37ae"),
+  // EVADE yellow is the highlight; amber / orange stand in where blue and pink were
+  blue: new THREE.Color("#ffb020"),
+  pink: new THREE.Color("#ff8a1f"),
+  sky: new THREE.Color("#19affe"),
   gold: new THREE.Color("#f6c344"),
   dot: new THREE.Color("#2b4d5e"),
 };
@@ -41,9 +43,11 @@ const clamp = THREE.MathUtils.clamp;
 // Bobo stands on the top edge of the planet (in profile against space); a
 // focused place is brought just to his right, where the beam goes up.
 const ANCHOR = new THREE.Vector3(0, 1, 0.22).normalize();
-const FOCUS_WIDE = new THREE.Vector3(0.52, 1, 0.3).normalize();
+// a focused place is turned to face the camera on the upper front of the
+// planet, so its continent is in full view (not edge-on at the rim)
+const FOCUS_WIDE = new THREE.Vector3(0.3, 0.82, 0.62).normalize();
 // phones: the beam stands closer to Bobo so both fit the narrow screen
-const FOCUS_TALL = new THREE.Vector3(0.4, 1, 0.34).normalize();
+const FOCUS_TALL = new THREE.Vector3(0.24, 0.84, 0.6).normalize();
 const FOCUS = FOCUS_WIDE.clone();
 /** Continents are raised this far above the ocean (globe radius 1). */
 const LAND_H = 0.03;
@@ -51,13 +55,21 @@ const R_LAND = 1 + LAND_H;
 const FOCUS_LAND = FOCUS.clone().multiplyScalar(R_LAND);
 // where a landmark pops up: between Bobo and the beam, just behind the
 // horizon, so it rises like a skyline without covering either of them
-const LANDMARK = new THREE.Vector3(0.31, 1, -0.2).normalize();
-let landmarkSize = 0.3;
+const LANDMARK = new THREE.Vector3();
+let landmarkSize = 0.42;
+/** Where Bobo stands when a place is open: just short of the beam, on his side of it. */
+function besideBeam() {
+  // just left of the pin, a touch up the slope, so he never stands in the beam
+  return new THREE.Vector3().copy(FOCUS).add(new THREE.Vector3(-0.17, 0.05, -0.02)).normalize();
+}
 function setFocusDir(portrait) {
-  landmarkSize = portrait ? 0.24 : 0.3;
+  landmarkSize = portrait ? 0.32 : 0.42;
   FOCUS.copy(portrait ? FOCUS_TALL : FOCUS_WIDE);
   FOCUS_LAND.copy(FOCUS).multiplyScalar(R_LAND);
+  // the landmark rises just behind the pin, up the slope, like a skyline
+  LANDMARK.copy(FOCUS).add(new THREE.Vector3(0.14, 0.22, -0.34)).normalize();
 }
+setFocusDir(false);
 /** Resting tilt: north pole towards the viewer, so the ground moves under Bobo as it spins. */
 const REST_PITCH = 0.62;
 
@@ -66,12 +78,17 @@ function orientFor(p, f, currentYaw = 0) {
   const A = Math.hypot(p.x, p.z);
   const alpha = Math.atan2(p.x, p.z);
   const s = A > 1e-4 ? clamp(f.x / A, -1, 1) : 0;
-  let yaw = Math.asin(s) - alpha;
-  yaw = currentYaw + wrap(yaw - currentYaw);
-  const zp = A * Math.cos(alpha + yaw);
-  const th1 = Math.atan2(p.y, zp);
-  const th2 = Math.atan2(f.y, f.z);
-  return { yaw, pitch: clamp(th1 - th2, -1.35, 1.35) };
+  // two yaws put p at f's x; keep whichever lands it closer to f
+  let best = null;
+  for (const y0 of [Math.asin(s) - alpha, Math.PI - Math.asin(s) - alpha]) {
+    const yaw = currentYaw + wrap(y0 - currentYaw);
+    const zp = A * Math.cos(alpha + yaw);
+    const pitch = clamp(Math.atan2(p.y, zp) - Math.atan2(f.y, f.z), -1.35, 1.35);
+    const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, 0));
+    const d = p.clone().normalize().applyQuaternion(q).dot(f);
+    if (!best || d > best.d) best = { yaw, pitch, d };
+  }
+  return { yaw: best.yaw, pitch: best.pitch };
 }
 
 /* ── shaders ──────────────────────────────────────────────────────────────── */
@@ -116,7 +133,7 @@ const bodyMat = () =>
 
 const atmoMat = () =>
   new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: C.blue.clone().lerp(C.teal, 0.4) } },
+    uniforms: { uColor: { value: C.sky.clone().lerp(C.teal, 0.4) } },
     vertexShader: /* glsl */ `
       varying vec3 vN; varying vec3 vV;
       void main() {
@@ -422,7 +439,7 @@ export async function createGlobe(canvas, opts) {
   });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.0;
   let maxPr = Math.min(window.devicePixelRatio || 1, mobile ? 1.75 : 2);
   let pr = maxPr;
   renderer.setPixelRatio(pr);
@@ -430,8 +447,9 @@ export async function createGlobe(canvas, opts) {
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-  scene.add(new THREE.HemisphereLight(0xbfefff, 0x1a1030, 1.2));
-  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  // softer, warmer light so Bobo's yellow fur reads as yellow, not blown-out white
+  scene.add(new THREE.HemisphereLight(0xdfeaff, 0x2a1c10, 0.8));
+  const key = new THREE.DirectionalLight(0xfff0d8, 1.15);
   key.position.set(1.5, 3, 2.5);
   scene.add(key);
 
@@ -586,7 +604,7 @@ export async function createGlobe(canvas, opts) {
   /* Bobo */
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   let bobo = null;
-  const BOBO_H = 0.24;
+  const BOBO_H = 0.3;
   loadBobo({ loader, parent: scene, anchor: ANCHOR.clone().multiplyScalar(R_LAND), height: BOBO_H, reduced })
     .then((b) => {
       bobo = b;
@@ -606,6 +624,8 @@ export async function createGlobe(canvas, opts) {
 
   /* ── state ──────────────────────────────────────────────────────────────── */
   const st = {
+    preview: null,
+    previewAfter: 0,
     yaw: -0.4,
     pitch: REST_PITCH,
     vYaw: 0,
@@ -622,6 +642,7 @@ export async function createGlobe(canvas, opts) {
     goal: { tx: 0, ty: 0.12, tz: 0, dist: 3.6, elev: 0.3, azim: 0 },
     zoom: 1,
     shift: { x: 0, y: 0 },
+    pan: { x: 0, y: 0 }, // right-drag / two-finger drag moves the planet on screen
     w: 1,
     h: 1,
     frameTimes: [],
@@ -631,21 +652,45 @@ export async function createGlobe(canvas, opts) {
 
   function overviewGoal() {
     const portrait = st.h > st.w * 1.1;
-    const dist = (portrait ? 5.6 : st.w < 900 ? 4.9 : 4.5) * st.zoom;
-    // leave headroom above the planet for Bobo
-    return { tx: 0, ty: portrait ? 0.22 : 0.24, tz: 0, dist, elev: 0.16, azim: 0 };
+    // The hero shot: Bobo big on the top of the planet with the newest pin beside
+    // him. Wide screens crop the bottom of the globe; scroll / pinch to zoom out.
+    if (portrait) return { tx: 0.12, ty: 0.86, tz: 0.18, dist: 3.9 * st.zoom, elev: 0.12, azim: 0.04 };
+    const narrow = st.w < 900;
+    return { tx: 0.06, ty: narrow ? 0.9 : 0.84, tz: 0.18, dist: (narrow ? 2.9 : 2.45) * st.zoom, elev: 0.13, azim: 0.05 };
   }
   function focusGoal() {
     const portrait = st.h > st.w * 1.1;
     // frame Bobo, the beam and the screen above them, the planet's curve below
+    if (st.sideLayout)
+      // the screen floats right of the pin and the report docks right of it:
+      // planet high in the frame, everything at Bobo's eye level
+      return { tx: st.w < 1100 ? 0.5 : st.w < 1700 ? 0.36 : 0.42, ty: 0.98, tz: 0.22, dist: 2.45 * clamp(st.zoom, 0.8, 1.6), elev: 0.12, azim: 0.06 };
     return {
-      tx: portrait ? 0.2 : 0.14,
+      tx: portrait ? 0.2 : st.w < 1700 ? 0.0 : 0.14,
       ty: portrait ? 1.36 : 1.22,
       tz: 0.22,
-      dist: (portrait ? 4.6 : 2.2) * clamp(st.zoom, 0.8, 1.3),
+      dist: (portrait ? 4.6 : 2.2) * clamp(st.zoom, 0.8, 1.6),
       elev: 0.12,
       azim: 0.06,
     };
+  }
+
+  /** The planet direction that shows at (fx, fy) of the screen once the hero shot settles. */
+  function heroDir(fx, fy) {
+    const g = overviewGoal();
+    const cam = camera.clone();
+    cam.position.set(
+      g.tx + Math.sin(g.azim) * Math.cos(g.elev) * g.dist,
+      g.ty + Math.sin(g.elev) * g.dist,
+      g.tz + Math.cos(g.azim) * Math.cos(g.elev) * g.dist,
+    );
+    cam.lookAt(g.tx, g.ty, g.tz);
+    cam.updateMatrixWorld();
+    const ray = new THREE.Ray();
+    ray.origin.copy(cam.position);
+    ray.direction.set(fx * 2 - 1, 1 - fy * 2, 0.5).unproject(cam).sub(cam.position).normalize();
+    const hit = ray.intersectSphere(new THREE.Sphere(new THREE.Vector3(), R_LAND), new THREE.Vector3());
+    return hit ? hit.normalize() : FOCUS.clone();
   }
 
   function applyCamera() {
@@ -664,17 +709,29 @@ export async function createGlobe(canvas, opts) {
     renderer.setSize(st.w, st.h, false);
     camera.aspect = st.w / st.h;
     setFocusDir(st.h > st.w * 1.1);
+    // big screens: a big screen (video about half the window's height)
+    const sideLayout = st.w >= 720 && st.w > st.h * 1.1;
+    holo.setScale(sideLayout ? 1.7 : st.h > st.w * 1.1 ? 1.5 : 1.15);
+    holo.setSide(sideLayout ? 0.12 : 0);
+    st.sideLayout = sideLayout;
+    const hero = document.getElementById("hero");
+    st.headRect = hero ? hero.getBoundingClientRect() : null;
     setView();
     if (!st.focus) Object.assign(st.goal, overviewGoal());
     else Object.assign(st.goal, focusGoal());
   }
   /** Moves the 3D centre by (x right, y up) pixels, so the globe sits in the space the UI leaves. */
   function setView() {
-    const { x, y } = st.shift;
-    if (x || y) {
-      const a = Math.abs(x);
-      const b = Math.abs(y);
-      camera.setViewOffset(st.w + 2 * a, st.h + 2 * b, a - x, b + y, st.w, st.h);
+    // insets (st.shift) frame the scene around the UI; panning (st.pan) slides
+    // the view without zooming it
+    const sx = st.shift.x;
+    const sy = st.shift.y;
+    const px = st.pan.x;
+    const py = st.pan.y;
+    if (sx || sy || px || py) {
+      const a = Math.abs(sx);
+      const b = Math.abs(sy);
+      camera.setViewOffset(st.w + 2 * a, st.h + 2 * b, a - sx - px, b + sy + py, st.w, st.h);
     } else camera.clearViewOffset();
     camera.updateProjectionMatrix();
   }
@@ -916,7 +973,12 @@ export async function createGlobe(canvas, opts) {
     paintLand(f, focusKey && hotspots.get(focusKey)?.place.countryCode);
     if (firstTime && latestKey) {
       // start with the latest sighting turned towards the camera
-      const o = orientFor(hotspots.get(latestKey).local, new THREE.Vector3(0.35, 0.25, 0.9).normalize(), st.yaw);
+      // (a touch upstream of centre, so the spin carries it across the frame)
+      // Phones see only the crown of the planet, so the pin starts up near the skyline.
+      const tall = st.h > st.w * 1.1;
+      const o = orientFor(hotspots.get(latestKey).local, tall ? heroDir(0.52, 0.84) : FOCUS, st.yaw);
+      o.yaw -= tall ? 0 : 0.12;
+
       st.yaw = o.yaw - 0.9;
       st.pitch = o.pitch;
       st.tween = { from: { yaw: st.yaw, pitch: st.pitch }, to: o, t: 0, dur: 2.6, key: null };
@@ -930,6 +992,7 @@ export async function createGlobe(canvas, opts) {
     if (!h) return false;
     st.focus = key;
     st.arrived = false;
+    st.panBack = true; // a sighting always frames itself: glide any pan back
     const to = orientFor(h.local, FOCUS, st.yaw);
     const ang = Math.hypot(wrap(to.yaw - st.yaw), to.pitch - st.pitch);
     st.tween = {
@@ -956,11 +1019,42 @@ export async function createGlobe(canvas, opts) {
       st.pendingMedia = item;
       return;
     }
-    holo.show(item);
+    showItem(item);
+  }
+
+  const previewAt = new THREE.Vector3();
+  /** The hero shot's floating clip: shown over `key`'s pin while nothing is open. */
+  // would a preview card standing on the pin fit on screen right now?
+  const fitV = new THREE.Vector3();
+  function previewFits() {
+    fitV.copy(previewAt).project(camera);
+    const x = (fitV.x * 0.5 + 0.5) * st.w;
+    const y = (-fitV.y * 0.5 + 0.5) * st.h;
+    const tall = st.h > st.w;
+    const cardH = st.h * (tall ? 0.26 : 0.4); // generous: the card plus its beam
+    const cardW = cardH * 0.6;
+    if (y - cardH < 70 || y > st.h - (tall ? 80 : 40)) return false;
+    if (x - cardW / 2 < 12 || x + cardW / 2 > st.w - 12) return false;
+    // keep clear of the headline block (top-left on wide screens, the top on phones)
+    const head = st.headRect;
+    if (head && x + cardW / 2 > head.left && x - cardW / 2 < head.right && y - cardH < head.bottom) return false;
+    return true;
+  }
+
+  function preview(key, item) {
+    st.preview = key && item ? { key, item } : null;
+    st.previewAfter = 0;
+    // the frame loop brings it in once its pin is somewhere it fits; a newer clip
+    // replaces one already up
+    if (!st.focus && holo.active) {
+      if (st.preview) holo.show(item);
+      else holo.hide();
+    }
   }
 
   function clearFocus() {
     if (!st.focus) return;
+    st.previewAfter = st.time + 0.8; // let the open clip fade before the preview returns
     st.focus = null;
     st.arrived = false;
     st.pendingMedia = null;
@@ -968,6 +1062,7 @@ export async function createGlobe(canvas, opts) {
     holo.hide();
     landmarks.hide();
     bobo?.setMode("auto");
+    bobo?.walkTo(ANCHOR); // back to his lookout on top of the world
     st.lastInput = st.time;
     Object.assign(st.goal, overviewGoal());
     for (const x of hotspots.values()) x.label?.classList.remove("is-focus");
@@ -997,8 +1092,18 @@ export async function createGlobe(canvas, opts) {
     const r = canvas.getBoundingClientRect();
     ndc.set(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
     ray.setFromCamera(ndc, camera);
-    const hits = ray.intersectObjects(hitList, false);
     const camDir = camera.position.clone().normalize();
+    // the hero shot's floating clip opens its place
+    if (!st.focus && st.preview && holo.active && ray.intersectObject(holo.panel, false).length)
+      return { key: st.preview.key };
+    // a beam that's still standing (or just landed) counts as its pin
+    for (const b of beams) {
+      if (b.t < 0 || !b.key || !hotspots.has(b.key)) continue;
+      if (!ray.intersectObject(b.hitCol, false).length) continue;
+      const world = hotspots.get(b.key).local.clone().applyQuaternion(globe.quaternion);
+      if (world.dot(camDir) > -0.1) return { key: b.key };
+    }
+    const hits = ray.intersectObjects(hitList, false);
     for (const h of hits) {
       if (h.object.userData.bobo) return { bobo: true };
       const k = h.object.userData.key;
@@ -1007,7 +1112,26 @@ export async function createGlobe(canvas, opts) {
       const world = hs.local.clone().applyQuaternion(globe.quaternion);
       if (world.dot(camDir) > 0.05) return { key: k };
     }
-    return null;
+    // forgiving taps: the nearest pin within a finger's reach of the tap
+    const px = x - r.left;
+    const py = y - r.top;
+    const reach = mobile ? 34 : 26;
+    let best = null;
+    let bestD = reach * reach;
+    const v = new THREE.Vector3();
+    for (const [k, hs] of hotspots) {
+      v.copy(hs.local).applyQuaternion(globe.quaternion);
+      if (v.dot(camDir) < 0.15) continue;
+      v.copy(hs.local).multiplyScalar(R_LAND + hs.top).applyQuaternion(globe.quaternion).project(camera);
+      const dx = (v.x * 0.5 + 0.5) * r.width - px;
+      const dy = (-v.y * 0.5 + 0.5) * r.height - py;
+      const d = dx * dx + dy * dy;
+      if (d < bestD) {
+        bestD = d;
+        best = k;
+      }
+    }
+    return best ? { key: best } : null;
   }
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -1015,12 +1139,15 @@ export async function createGlobe(canvas, opts) {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.size === 2) {
       const [a, b] = [...pointers.values()];
-      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom };
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: st.zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+      st.touched = true;
       down = null;
       return;
     }
     down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, lx: e.clientX, ly: e.clientY };
-    st.dragging = true;
+    down.pan = e.button === 2 || e.button === 1 || e.shiftKey;
+    st.dragging = !down.pan;
+    st.touched = true;
     st.vYaw = st.vPitch = 0;
   });
   canvas.addEventListener("pointermove", (e) => {
@@ -1028,8 +1155,13 @@ export async function createGlobe(canvas, opts) {
     if (pinch && pointers.size === 2) {
       const [a, b] = [...pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      st.zoom = clamp((pinch.zoom * pinch.d) / Math.max(1, d), 0.6, 1.35);
+      st.zoom = clamp((pinch.zoom * pinch.d) / Math.max(1, d), 0.75, 2.3);
       Object.assign(st.goal, st.focus ? focusGoal() : overviewGoal());
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      panBy(mx - pinch.mx, my - pinch.my);
+      pinch.mx = mx;
+      pinch.my = my;
       return;
     }
     if (!down) {
@@ -1045,6 +1177,11 @@ export async function createGlobe(canvas, opts) {
     down.lx = e.clientX;
     down.ly = e.clientY;
     down.moved += Math.abs(dx) + Math.abs(dy);
+    if (down.pan) {
+      panBy(dx, dy);
+      canvas.style.cursor = "move";
+      return;
+    }
     if (down.moved > 6) {
       if (st.summon && !st.tween) endSummon();
       if (st.focus) {
@@ -1069,7 +1206,7 @@ export async function createGlobe(canvas, opts) {
     pointers.delete(e.pointerId);
     if (pointers.size < 2) pinch = null;
     if (!down) return;
-    const tap = down.moved <= 6 && performance.now() - down.t < 600;
+    const tap = !down.pan && down.moved <= 6 && performance.now() - down.t < 600;
     down = null;
     st.dragging = false;
     canvas.style.cursor = "grab";
@@ -1084,12 +1221,20 @@ export async function createGlobe(canvas, opts) {
     }
   };
   canvas.addEventListener("pointerup", end);
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+  /** Slides the planet across the screen (kept within reach so it can't be lost). */
+  function panBy(dx, dy) {
+    st.panBack = false;
+    st.pan.x = clamp(st.pan.x + dx, -st.w * 0.45, st.w * 0.45);
+    st.pan.y = clamp(st.pan.y - dy, -st.h * 0.45, st.h * 0.45);
+    setView();
+  }
   canvas.addEventListener("pointercancel", end);
   canvas.addEventListener(
     "wheel",
     (e) => {
       e.preventDefault();
-      st.zoom = clamp(st.zoom * Math.exp(e.deltaY * 0.0012), 0.6, 1.35);
+      st.zoom = clamp(st.zoom * Math.exp(e.deltaY * 0.0012), 0.75, 2.3);
       Object.assign(st.goal, st.focus ? focusGoal() : overviewGoal());
     },
     { passive: false },
@@ -1133,10 +1278,19 @@ export async function createGlobe(canvas, opts) {
         if (tw.summon) summonArrived();
         if (tw.key && tw.key === st.focus) {
           st.arrived = true;
-          bobo?.react("Excited", t);
-          setTimeout(() => {
-            if (st.focus === tw.key) bobo?.setMode("watch");
-          }, 900);
+          // Bobo trots over to the beam, then celebrates the sighting
+          const key = tw.key;
+          bobo?.walkTo(besideBeam(), () => {
+            if (st.focus !== key) return;
+            bobo.react("Excited", st.time);
+            setTimeout(() => {
+              if (st.focus !== key || bobo.walking) return;
+              bobo.setMode("watch");
+              // settle down three-quarters on to the clip, so we see his face and what he's watching
+              const at = holo.topWorld(new THREE.Vector3());
+              bobo.faceToward(at.lerp(camera.position, 0.4));
+            }, 1600);
+          });
           if (st.pendingMedia) showItem(st.pendingMedia);
           st.pendingMedia = null;
           opts.onArrive?.(tw.key);
@@ -1148,14 +1302,31 @@ export async function createGlobe(canvas, opts) {
       st.pitch = clamp(st.pitch + st.vPitch * dt, -1.35, 1.35);
       st.vYaw *= Math.pow(0.04, dt);
       st.vPitch *= Math.pow(0.04, dt);
-      const idle = t - st.lastInput > 3.5 && !reduced;
+      const idle = !st.touched && t - st.lastInput > 3.5 && !reduced;
+      // ease right down while the newest clip is up over its pin, so people get
+      // time to watch it (and Bobo gets a breather) before the planet moves on
+      const linger = st.preview && (holo.active || st.time < 6) ? 0.15 : 1;
+      st.spinK = (st.spinK ?? 1) + (linger - (st.spinK ?? 1)) * Math.min(1, dt * 1.2);
       if (idle) {
-        st.yaw += dt * 0.07;
-        st.pitch += (REST_PITCH - st.pitch) * dt * 0.25;
+        st.yaw += dt * 0.07 * st.spinK;
+        st.pitch += (REST_PITCH - st.pitch) * dt * 0.25 * st.spinK ** 3;
       }
     }
     euler.set(st.pitch, st.yaw, 0);
     globe.quaternion.setFromEuler(euler);
+
+    // left alone on the hero shot, Bobo potters about his lookout: a short
+    // stroll, a sit, a stretch, a nap if nobody's around for a while
+    if (bobo && !st.focus && !st.summon && !st.tween && !bobo.walking && !reduced) {
+      st.nextWander ??= st.time + 7;
+      if (st.time > st.nextWander) {
+        const a = Math.random() * Math.PI * 2;
+        const r = (0.05 + Math.random() * 0.07) * (st.h > st.w ? 0.6 : 1); // phones show less ground
+        const to = ANCHOR.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r * 0.6)).normalize();
+        bobo.walkTo(to);
+        st.nextWander = st.time + 9 + Math.random() * 8;
+      }
+    } else st.nextWander = st.time + 6;
 
     // the ground's velocity under Bobo → walk / run / rest
     if (bobo) {
@@ -1210,7 +1381,37 @@ export async function createGlobe(canvas, opts) {
     }
 
     // hologram at the focus point
-    holo.update(dt, t, FOCUS_LAND, camera);
+    if (st.panBack && (st.pan.x || st.pan.y)) {
+      const k = Math.exp(-dt * 6);
+      st.pan.x = Math.abs(st.pan.x) < 0.5 ? 0 : st.pan.x * k;
+      st.pan.y = Math.abs(st.pan.y) < 0.5 ? 0 : st.pan.y * k;
+      setView();
+    } else st.panBack = false;
+    // side layout: the screen keeps its size on screen however far you zoom
+    // hero view: the newest clip floats over its own pin as the planet turns
+    const pv = !st.focus && st.preview ? hotspots.get(st.preview.key) : null;
+    if (pv) {
+      holo.setSide(0);
+      holo.setComp(st.h > st.w ? 0.36 : 0.42);
+      previewAt.copy(pv.local).multiplyScalar(R_LAND).applyQuaternion(globe.quaternion);
+      // it only shows while its pin sits in open sky on the near side, clear of the
+      // headline, and it bows out (rather than getting clipped) as the planet turns
+      const facing = previewAt.dot(camera.position) / (previewAt.length() * camera.position.length());
+      if (holo.active) {
+        const r = holo.screenRect(camera, st.w, st.h);
+        const off = r && (r.left < 4 || r.right > st.w - 4 || r.top < 60 || r.bottom > st.h - (st.h > st.w ? 60 : 4));
+        if (facing < 0.12 || off) {
+          holo.hide();
+          st.previewAfter = st.time + 1.2;
+        }
+      } else if (facing > 0.3 && !st.tween && st.time > st.previewAfter && previewFits()) holo.show(st.preview.item);
+      holo.update(dt, t, previewAt, camera);
+    } else {
+      holo.setSide(st.sideLayout ? 0.12 : 0);
+      holo.setComp(st.sideLayout ? clamp(st.cam.dist / 2.45, 0.45, 1.4) : 1);
+      holo.update(dt, t, FOCUS_LAND, camera);
+    }
+    opts.onHoloRect?.(holo.screenRect(camera, st.w, st.h));
     landmarks.update(dt, t);
     updateSummon(dt, t);
     updateBeams(dt, t);
@@ -1377,10 +1578,15 @@ export async function createGlobe(canvas, opts) {
     );
     core.renderOrder = glow.renderOrder = 7;
     shock.renderOrder = flash.renderOrder = sparks.renderOrder = 8;
-    g.add(glow, core, shock, flash, sparks);
+    // a fat invisible column so tapping anywhere on a fresh beam opens that clip
+    const hitCol = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.07, BEAM_H * 0.7, 8, 1).translate(0, BEAM_H * 0.35, 0),
+      new THREE.MeshBasicMaterial({ visible: false }),
+    );
+    g.add(glow, core, shock, flash, sparks, hitCol);
     g.visible = false;
     globe.add(g);
-    beams.push({ g, core, glow, shock, flash, sparks, sp, sv, t: -1, key: null, hit: false });
+    beams.push({ g, core, glow, shock, flash, sparks, sp, sv, hitCol, t: -1, key: null, hit: false });
   }
   const IMPACT = 0.85;
   const BEAM_END = 3.4;
@@ -1669,6 +1875,7 @@ export async function createGlobe(canvas, opts) {
     focus,
     showMedia,
     clearFocus,
+    preview,
     ping,
     beam,
     glitch: () => holo.glitch(),

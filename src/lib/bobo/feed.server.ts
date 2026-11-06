@@ -1,9 +1,10 @@
 import { ensureLaunchSightings } from "./launch.server";
 import type { ArNamespace } from "@/lib/ar/store.server";
-import { listAssets } from "@/lib/media/data.server";
+import { listAssets, saveAssets } from "@/lib/media/data.server";
+import { tagKey } from "@/lib/media/model";
 import { isOnGlobe, mediaPublicPath, mediaThumbUrl, type MediaAsset } from "@/lib/media/model";
 
-import { awaitingReview } from "./captures.server";
+import { awaitingReview, captureReviewOn } from "./captures.server";
 import { readAggregate } from "./events.server";
 import { haversineKm, placeKey } from "./location";
 import {
@@ -58,6 +59,7 @@ function feedMedia(a: MediaAsset): FeedMedia {
     durationS: a.durationS,
     seenAt: iso(a.location?.seenAt ?? a.createdAt),
     place: a.location?.place ?? "",
+    credit: a.location?.credit ?? "",
     tags: a.tags,
     sample: !!a.sample,
   };
@@ -168,8 +170,30 @@ export function buildFeed(assets: MediaAsset[], agg: BoboAggregate, now = Date.n
 
 export async function boboFeed(ns: ArNamespace): Promise<BoboFeed> {
   await ensureLaunchSightings(ns);
-  const [assets, agg] = await Promise.all([listAssets(ns), readAggregate(ns)]);
+  const [listed, agg] = await Promise.all([listAssets(ns), readAggregate(ns)]);
+  const assets = captureReviewOn() ? listed : await publishWaiting(ns, listed);
   return buildFeed(assets, agg);
+}
+
+/**
+ * Review off (BOBO_CAPTURE_REVIEW=off, for testing and supervised events):
+ * clips already waiting for review are published too, tagged "Auto-published"
+ * so the team can find them later. Turning review back on stops it.
+ */
+async function publishWaiting(ns: ArNamespace, assets: MediaAsset[]): Promise<MediaAsset[]> {
+  const now = Date.now();
+  const review = tagKey(BOBO.reviewTag);
+  const changed: MediaAsset[] = [];
+  const out = assets.map((a) => {
+    if (!awaitingReview(a, now)) return a;
+    const tags = a.tags.filter((t) => tagKey(t) !== review);
+    if (!tags.some((t) => tagKey(t) === tagKey(BOBO.autoPublishedTag))) tags.push(BOBO.autoPublishedTag);
+    const next = { ...a, public: true, tags, updatedAt: now };
+    changed.push(next);
+    return next;
+  });
+  if (changed.length) await saveAssets(ns, changed);
+  return out;
 }
 
 export async function handleFeed(ns: ArNamespace, request: Request): Promise<Response> {

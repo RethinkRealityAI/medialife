@@ -9,7 +9,7 @@
  * ?clip=<id>#k=<viewKey>, and GET /api/bobo/clips/<id>?k=… lets them watch it
  * while everyone else sees an "in review" pin.
  */
-import { sfx } from "./sfx.js?v=5";
+import { sfx } from "./sfx.js?v=10";
 
 const FEED = "/api/bobo/feed.json";
 const POLL_MS = 15_000;
@@ -195,7 +195,7 @@ async function boot() {
   const feedP = loadFeed();
   if (webglOk()) {
     try {
-      const { createGlobe } = await import("./globe.js?v=5");
+      const { createGlobe } = await import("./globe.js?v=10");
       globe = await createGlobe($("globe"), {
         labels: $("labels"),
         reduced,
@@ -223,6 +223,7 @@ async function boot() {
           }
         },
         onBeamImpact: () => sfx.impact(),
+        onHoloRect: dockCard,
       });
     } catch (e) {
       console.error(e);
@@ -234,13 +235,14 @@ async function boot() {
     $("globe").hidden = true;
   }
   const [f] = await Promise.all([feedP, fetchMine()]);
+  updateInsets(); // frame first, so the opening turn knows where the planet sits
   applyFeed(f ?? emptyFeed(), true);
   if (f) lastRaw = feedSig(f);
   updateInsets();
   document.documentElement.classList.add("is-ready");
 
-  // the clip the visitor just sent from the game, a shared ?at=<place>, or else
-  // the latest sighting: the globe always opens on the newest clip
+  // the clip the visitor just sent from the game or a shared ?at=<place> opens
+  // that place; otherwise the hero shot, with the newest clip hovering over its pin
   const at = new URLSearchParams(location.search).get("at");
   const first = mediaPlaces()[0];
   const sent = linkClip && mediaPlaces().find((p) => p.media.some((m) => m.id === linkClip));
@@ -255,9 +257,14 @@ async function boot() {
   else if (first && globe) {
     // a clip that landed in the last half hour beams in as the camera arrives
     if (Date.now() - Date.parse(first.media[0].seenAt) < 30 * 60_000) pendingBeam = first.key;
-    setTimeout(() => {
-      if (!current && !userTouched) select(first.key, { from: "auto" });
-    }, reduced ? 600 : 3000);
+    // the page opens on the hero shot; the newest clip floats over its pin
+    setTimeout(refreshPreview, reduced ? 0 : 1600);
+    if (pendingBeam) setTimeout(() => {
+      if (pendingBeam === first.key) {
+        pendingBeam = null;
+        globe.beam(first.key);
+      }
+    }, reduced ? 0 : 2400);
   }
   if (!globe) openList();
 
@@ -283,6 +290,16 @@ function emptyFeed() {
     recent: [],
     sample: false,
   };
+}
+
+/** The hero shot: the newest clip floats over its pin (tap it to open the place). */
+let previewId = null;
+function refreshPreview() {
+  const p = mediaPlaces()[0];
+  const m = p?.media[0];
+  if (!globe || (m?.id ?? null) === previewId) return;
+  previewId = m?.id ?? null;
+  globe.preview(p?.key ?? null, m ? holoItem(m) : null);
 }
 
 function applyFeed(raw, first = false) {
@@ -316,6 +333,7 @@ function applyFeed(raw, first = false) {
     }
   for (const e of f.recent) seenEvents.add(eventId(e));
   if (current && !placeBy(current.key)?.media.length) closeCard();
+  if (!first) refreshPreview();
 }
 
 const eventId = (e) => `${e.at}|${e.key}|${e.type}`;
@@ -385,8 +403,8 @@ function holoItem(m) {
     c.height = 960;
     const x = c.getContext("2d");
     const g = x.createLinearGradient(0, 0, 0, 960);
-    g.addColorStop(0, "#0b2a3a");
-    g.addColorStop(1, "#2a0b2a");
+    g.addColorStop(0, "#0d1116");
+    g.addColorStop(1, "#2a1a05");
     x.fillStyle = g;
     x.fillRect(0, 0, 540, 960);
     x.fillStyle = "rgba(255,255,255,0.05)";
@@ -394,13 +412,13 @@ function holoItem(m) {
     // a can, drawn: the Cola Run collectible
     x.save();
     x.translate(270, 400);
-    x.fillStyle = "#ff37ae";
+    x.fillStyle = "#f6c344";
     x.beginPath();
     x.roundRect(-70, -120, 140, 240, 26);
     x.fill();
     x.fillStyle = "#ffffff";
     x.fillRect(-70, -30, 140, 46);
-    x.fillStyle = "#19affe";
+    x.fillStyle = "#1d1300";
     x.font = "700 30px 'Space Grotesk', system-ui, sans-serif";
     x.textAlign = "center";
     x.fillText("COLA", 0, 4);
@@ -562,22 +580,29 @@ function renderCard() {
   fl.classList.toggle("is-code", !f);
   $("cardCity").textContent = p.city || p.country;
   $("cardCountry").textContent = [p.city ? p.region : "", p.city ? p.country : ""].filter(Boolean).join(", ") || "Somewhere in " + p.country;
-  $("cardWhen").textContent = [m.place, ago(m.seenAt)].filter(Boolean).join(" · ");
+  $("cardWhen").textContent = [m.credit ? `Spotted by ${m.credit}` : m.place, ago(m.seenAt)].filter(Boolean).join(" · ");
   const badge = $("cardBadge");
   badge.hidden = !m.review && !m.mine;
   badge.className = `card-badge${m.mine ? " is-mine" : ""}`;
   badge.textContent = m.mine ? (m.review ? "Your clip · in review" : "Your clip") : "In review";
   $("cardTitle").textContent = m.title;
+  // only clips in review get a line: it explains why there's nothing to watch yet
   const desc = m.review
     ? m.mine
-      ? "Only you can watch this until the EVADE team has checked it. Then it plays here for everyone."
-      : "Just sent from the game. The EVADE team checks every clip, then it plays right here."
-    : m.description;
+      ? "Only you can see this until the EVADE team checks it."
+      : "The EVADE team is checking this clip. It plays here soon."
+    : "";
   $("cardDesc").textContent = desc;
   $("cardDesc").hidden = !desc;
   // a clip in review has nothing to open, unless it's yours
-  $("watchBtn").hidden = !!m.review && !m.mine;
-  $("watchBtn").querySelector("span").textContent = m.kind === "video" ? "Watch with sound" : "View photo";
+  // several clips here: one button opens them all as a wall
+  const many = p.media.filter((x) => x.url).length > 1;
+  $("watchBtn").hidden = !many && !!m.review && !m.mine;
+  $("watchBtn").querySelector("span").textContent = many
+    ? `Watch all ${p.media.length}`
+    : m.kind === "video"
+      ? "Watch with sound"
+      : "View photo";
   // strip
   const strip = $("cardStrip");
   strip.textContent = "";
@@ -593,13 +618,11 @@ function renderCard() {
     b.addEventListener("click", () => setMedia(idx));
     strip.append(b);
   });
-  // scans here
-  const sc = $("cardScans");
-  sc.hidden = !p.events;
-  if (p.events) {
-    sc.innerHTML = "";
-    sc.append(el("b", null, fmtN(p.events)), document.createTextNode(` ${p.events === 1 ? "keychain scan or play" : "keychain scans and plays"} here${p.lastSeen ? `, latest ${ago(p.lastSeen)}` : ""}.`));
-  }
+  // the dossier: what the tracking network knows about this sighting
+  const fileNo = (m.id || p.key).replace(/[^a-z0-9]/gi, "").slice(-6).toUpperCase().padStart(6, "0");
+  $("cardFile").textContent = `SIGHTING FILE #${fileNo}`;
+  // the report stays minimal: who spotted him and when. The video is the story.
+  $("cardScans").hidden = true;
   // neighbours, in list order
   const list = mediaPlaces();
   const k = list.findIndex((x) => x.key === p.key);
@@ -641,7 +664,8 @@ $("cardClose").addEventListener("click", () => {
 $("watchBtn").addEventListener("click", () => {
   const p = placeBy(current.key);
   const m = p.media[current.i];
-  openViewer(m, p);
+  if (p.media.filter((x) => x.url).length > 1) openWall(p);
+  else openViewer(m, p);
 });
 
 $("shareBtn").addEventListener("click", async () => {
@@ -691,11 +715,18 @@ $("shareBtn").addEventListener("click", async () => {
 }
 
 /* ── viewer (full screen, with sound) ─────────────────────────────────────── */
-function openViewer(m, p) {
+function openViewer(m, p, back = null) {
   const v = $("viewer");
   $("viewerTitle").textContent = `${m.title} · ${p.city || p.country}`;
   const box = $("viewerMedia");
   box.textContent = "";
+  box.classList.remove("is-wall");
+  if (back) {
+    const b = el("button", "btn btn-glass wall-back", "← All clips");
+    b.type = "button";
+    b.addEventListener("click", back);
+    box.append(b);
+  }
   if (m.kind === "video") {
     const video = el("video");
     video.src = m.url;
@@ -711,11 +742,82 @@ function openViewer(m, p) {
     img.alt = m.description || m.title;
     box.append(img);
   }
-  v.showModal();
+  if (!v.open) v.showModal();
   track("media_open", { id: m.id, place: p.key });
 }
+/* every clip from one place as a wall (up to 4 x 3 at a time); tap one for sound */
+const WALL_PAGE = 12;
+let wallObs = null;
+function openWall(p, shown = WALL_PAGE) {
+  const v = $("viewer");
+  const box = $("viewerMedia");
+  $("viewerTitle").textContent = `${p.media.length} sightings in ${p.city || p.country}`;
+  box.textContent = "";
+  box.classList.add("is-wall");
+  wallObs?.disconnect();
+  // only clips on screen play: a dozen videos at once is a lot for a phone
+  wallObs = new IntersectionObserver(
+    (ents) => {
+      for (const e of ents) {
+        const vid = e.target.querySelector("video");
+        if (!vid) continue;
+        if (e.isIntersecting) vid.play().catch(() => {});
+        else vid.pause();
+      }
+    },
+    { root: box, threshold: 0.25 },
+  );
+  const grid = el("div", "wall");
+  grid.dataset.n = String(Math.min(p.media.length, WALL_PAGE));
+  p.media.slice(0, shown).forEach((m) => {
+    const tile = el("button", "wall-tile");
+    tile.type = "button";
+    if (!m.url) {
+      tile.disabled = true;
+      tile.classList.add("is-review");
+      tile.append(el("span", "wall-tag", "In review"));
+    } else if (m.kind === "video") {
+      const vid = el("video");
+      vid.src = m.url;
+      if (m.poster) vid.poster = m.poster;
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.preload = "metadata";
+      tile.append(vid);
+      if (m.durationS) tile.append(el("span", "dur", dur(m.durationS)));
+    } else {
+      const img = el("img");
+      img.src = m.url;
+      img.alt = m.description || m.title;
+      img.loading = "lazy";
+      tile.append(img);
+    }
+    tile.append(el("span", "wall-when", [m.credit ? m.credit : "", ago(m.seenAt)].filter(Boolean).join(" · ")));
+    tile.setAttribute("aria-label", `${m.title}, ${ago(m.seenAt)}${m.url ? "" : ", in review"}`);
+    tile.addEventListener("click", () => {
+      wallObs?.disconnect();
+      box.classList.remove("is-wall");
+      openViewer(m, p, () => openWall(p, shown));
+    });
+    grid.append(tile);
+    wallObs.observe(tile);
+  });
+  box.append(grid);
+  if (p.media.length > shown) {
+    const more = el("button", "btn btn-glass wall-more", `Show ${Math.min(WALL_PAGE, p.media.length - shown)} more`);
+    more.type = "button";
+    more.addEventListener("click", () => openWall(p, shown + WALL_PAGE));
+    box.append(more);
+  }
+  globe?.video?.pause();
+  if (!v.open) v.showModal();
+  track("media_wall", { place: p.key, n: p.media.length });
+}
+
 function closeViewer() {
   const v = $("viewer");
+  wallObs?.disconnect();
   $("viewerMedia").textContent = "";
   if (v.open) v.close();
   globe?.video?.play().catch(() => {});
@@ -728,6 +830,38 @@ $("viewer").addEventListener("close", () => {
 $("viewer").addEventListener("click", (e) => {
   if (e.target === $("viewer")) closeViewer();
 });
+
+/* ── the dossier docks beside the hologram (wide screens) ────────────────── */
+let docked = null;
+function dockCard(rect) {
+  const card = $("card");
+  const wide = !mobile && innerWidth >= 720 && innerWidth > innerHeight * 1.1;
+  if (!wide || !rect || !rect.ready || card.hidden) {
+    if (docked) {
+      docked = null;
+      card.classList.remove("is-docked");
+      card.style.transform = "";
+    }
+    return;
+  }
+  const r = card.getBoundingClientRect();
+  const w = r.width;
+  const h = r.height;
+  const gap = 22;
+  let x = rect.right + gap;
+  let side = "right";
+  if (x + w > innerWidth - 16) {
+    x = rect.left - gap - w;
+    side = "left";
+  }
+  const y = Math.max(76, Math.min(innerHeight - h - 16, rect.top + 6));
+  const key = `${Math.round(x)},${Math.round(y)},${side}`;
+  if (key === docked) return;
+  docked = key;
+  card.classList.add("is-docked");
+  card.dataset.side = side;
+  card.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+}
 
 /* ── layout → globe insets ───────────────────────────────────────────────── */
 function updateInsets() {

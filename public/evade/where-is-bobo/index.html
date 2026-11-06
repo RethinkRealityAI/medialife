@@ -29,14 +29,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet" />
 <link rel="preload" href="/evade/where-is-bobo/assets/data/globe.bin?v=4" as="fetch" crossorigin />
 <link rel="preload" href="/api/bobo/feed.json" as="fetch" crossorigin />
-<link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css?v=5" />
+<link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css?v=10" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
 <script src="/vendor/ar-kit/track.js" defer></script>
-<script type="module" src="/evade/where-is-bobo/assets/js/main.js?v=5"></script>
+<script type="module" src="/evade/where-is-bobo/assets/js/main.js?v=10"></script>
 </head>
 <body>
 <a class="skip-link" href="#sightings">Skip to the list of sightings</a>
@@ -109,6 +109,7 @@
   <!-- the selected place -->
   <aside class="card" id="card" aria-labelledby="cardCity" hidden>
     <div class="card-grab" aria-hidden="true"></div>
+    <div class="card-file" aria-hidden="true"><span class="rec"></span><span id="cardFile">SIGHTING FILE</span><span class="card-file-r">BOBO // TRACKED</span></div>
     <div class="card-head">
       <span class="flag" id="cardFlag" aria-hidden="true"></span>
       <div class="card-where">
@@ -123,7 +124,7 @@
       <p class="card-when" id="cardWhen"></p>
       <span class="card-badge" id="cardBadge" hidden></span>
       <div class="card-strip" id="cardStrip" role="list"></div>
-      <h3 class="card-title" id="cardTitle"></h3>
+      <h3 class="card-title visually-hidden" id="cardTitle"></h3>
       <p class="card-desc" id="cardDesc"></p>
       <div class="card-actions">
         <button type="button" class="btn btn-primary" id="watchBtn">
