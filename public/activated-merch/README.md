@@ -36,6 +36,9 @@ renders of the same GLBs. `models/evade-charms.glb` is the EVADE keychain re-exp
 * Scrolling adds a breeze that dies down; nothing stays in a deformed pose.
 * `tech` scroll 0→1: dive to the tag spot (0–0.24), cut-away opens, layers lift out
   (0.26–0.52), phone taps (0.58–0.76), video plays.
-* NFC tag spots are set per product in `main.js` (`tag: { u, v, side, where }`) and are
-  illustrative until confirmed.
+* Each piece has a flat round NFC disc embedded in the design: usually behind the character's
+  head in the print, sometimes under a front logo. Spots are set per product in `main.js`
+  (`tag: { u, v, side, where }`, helpers `head()` and `LOGO`).
+* Hero: the active piece is solid; the others stand off to the sides as holographic
+  silhouettes (`uHolo` in `softbody.js`) and materialise with a scan line when browsed to.
 * `?debug` exposes `window.__stage` for testing. No WebGL2 → the poster render is shown.

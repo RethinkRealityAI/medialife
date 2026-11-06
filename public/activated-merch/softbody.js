@@ -522,6 +522,10 @@ function patchMaterial(mat) {
     uLensColor: { value: new THREE.Color(0x7fd0ff) },
     uDim: { value: 1 },
     uFade: { value: 1 },
+    uHolo: { value: 0 },
+    uHoloScan: { value: 0 },
+    uTime: { value: 0 },
+    uHoloColor: { value: new THREE.Color(0x58b8ff) },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
@@ -533,7 +537,8 @@ function patchMaterial(mat) {
         "#include <common>",
         `#include <common>
 varying vec3 vWPos;
-uniform float uRevealY, uHide, uScan, uLensR, uLens, uDim, uFade;
+uniform float uRevealY, uHide, uScan, uLensR, uLens, uDim, uFade, uHolo, uHoloScan, uTime;
+uniform vec3 uHoloColor;
 float bayer4(vec2 p) {
   ivec2 q = ivec2(mod(p, 4.0));
   int i = q.x + q.y * 4;
@@ -560,7 +565,23 @@ float lines = step(0.82, fract(vWPos.y * 70.0)) * smoothstep(0.4, 0.0, yRel) * s
 float rim = uLens > 0.001 ? exp(-pow((lensD - lensR) / 0.007, 2.0)) * uLens : 0.0;
 totalEmissiveRadiance += uScanColor * (band * 3.0 + lines * 0.4) + uLensColor * rim * 2.2;`,
       )
-      .replace("#include <opaque_fragment>", "#include <opaque_fragment>\ngl_FragColor.rgb *= uDim;");
+      .replace(
+        "#include <opaque_fragment>",
+        `#include <opaque_fragment>
+// Hologram: the print's own light and dark, in cyan, with a rim and scan lines.
+float holo = uHolo;
+if (uHoloScan > 0.5) holo = yRel < 0.0 ? 1.0 : 0.0;
+if (holo > 0.001) {
+  float fr = 1.0 - abs(dot(normalize(normal), normalize(vViewPosition)));
+  float lum = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+  float lines = 0.72 + 0.28 * sin(vWPos.y * 190.0 - uTime * 5.0);
+  float flick = 0.92 + 0.08 * sin(uTime * 23.0 + vWPos.y * 9.0);
+  // Kept below 1 so tone mapping doesn't wash the cyan out to white.
+  vec3 h = uHoloColor * min(0.08 + pow(fr, 2.0) * 0.75 + lum * 0.85, 0.95) * lines * flick;
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, h, holo);
+}
+gl_FragColor.rgb *= uDim;`,
+      );
   };
   mat.customProgramCacheKey = () => "soft-garment";
   return u;

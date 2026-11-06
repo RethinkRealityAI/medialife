@@ -140,8 +140,10 @@ export class Stage {
         g.group.rotation.y = g.base;
         slot.group.add(g.group);
         slot.spot = g.surfaceSpot(slot.it.tag);
-        if (this.introDone) this._scan(slot, true, 0.9);
-        else g.uniforms.uFade.value = 0;
+        // Everything starts as a hologram; the piece at the front materialises.
+        g.uniforms.uHolo.value = 1;
+        g.uniforms.uFade.value = 0;
+        if (this.introDone && slot === this.current) this._scan(slot, "holo", 1.1);
         return slot;
       })
       .catch((err) => {
@@ -156,15 +158,21 @@ export class Stage {
   async start(i = 0) {
     this.pos = this.target = this.active = i;
     const slot = await this.ensure(i);
+    // The first piece arrives solid through the particle intro.
+    slot.g.uniforms.uHolo.value = 0;
     if (this.reduced) slot.g.uniforms.uFade.value = 1;
     else this._intro(slot);
-    const idle = window.requestIdleCallback || ((f) => setTimeout(f, 400));
-    const quiet = (p) => p.catch(() => {});
-    setTimeout(() => {
-      quiet(this.ensure(i + 1));
-      quiet(this.ensure(i - 1));
-      idle(() => this.slots.forEach((_, k) => quiet(this.ensure(k))), { timeout: 5000 });
-    }, this.reduced ? 0 : 1200);
+    // The rest load one at a time, nearest first, never while you are dragging,
+    // so the page stays responsive on phones.
+    const order = [1, -1, 2, -2, 3, -3].map((d) => i + d);
+    const next = () => {
+      if (!order.length) return;
+      if (this.drag) return setTimeout(next, 300);
+      this.ensure(order.shift())
+        .catch(() => {})
+        .then(() => setTimeout(next, 250));
+    };
+    setTimeout(next, this.reduced ? 0 : 1600);
     return slot;
   }
 
@@ -270,18 +278,21 @@ export class Stage {
       I.pts.material.dispose();
       this.intro = null;
       this.introDone = true;
-      this.slots.forEach((s) => {
-        if (s.g && s !== I.slot) this._scan(s, true, 0.9);
-      });
+      // Neighbours fade in as holograms on their own (see frame()).
     }
   }
 
-  /** A scan line sweeps the piece; with `hide` it appears as the line passes. */
-  _scan(slot, hide, dur = 0.85) {
-    if (this.reduced) return;
-    slot.reveal = { t0: this.t, dur, hide };
-    slot.g.uniforms.uHide.value = hide ? 1 : 0;
-    if (hide) slot.g.uniforms.uRevealY.value = 99;
+  /** A scan line sweeps the piece. mode: "hide" appears as the line passes, "holo" turns hologram → solid. */
+  _scan(slot, mode, dur = 0.85) {
+    const u = slot.g.uniforms;
+    if (this.reduced) {
+      u.uHolo.value = mode === "holo" ? 0 : u.uHolo.value;
+      return;
+    }
+    slot.reveal = { t0: this.t, dur, mode };
+    u.uHide.value = mode === "hide" ? 1 : 0;
+    u.uHoloScan.value = mode === "holo" ? 1 : 0;
+    u.uRevealY.value = 99;
   }
 
   _runScan(slot) {
@@ -296,6 +307,10 @@ export class Stage {
       u.uHide.value = 0;
       u.uScan.value = 0;
       u.uRevealY.value = -99;
+      if (R.mode === "holo") {
+        u.uHoloScan.value = 0;
+        u.uHolo.value = 0;
+      }
       slot.reveal = null;
     }
   }
@@ -397,7 +412,7 @@ export class Stage {
   pointerDown(ndc, { canBrowse = true } = {}) {
     if (this.state.tech > 0.02) return null;
     const g = this.current.g;
-    if (g && !this.intro) {
+    if (g && !(this.intro && !this.intro.shoved)) {
       this.camera.updateMatrixWorld();
       this.raycaster.setFromCamera(ndc, this.camera);
       const hit = this.raycaster.intersectObject(g.pick, false)[0];
@@ -527,7 +542,7 @@ export class Stage {
       this.ensure(nearest)
         .then(() => {
           if (this.current === slot && this.introDone) {
-            this._scan(slot, false, 0.8);
+            if (!slot.reveal) this._scan(slot, "holo", 1.0);
             slot.g.shove(dir * -0.9, 1.2);
           }
         })
@@ -553,29 +568,33 @@ export class Stage {
     const tap = ease(seg(tech, 0.58, 0.76));
     const after = seg(tech, 0.78, 1);
 
-    const R = m ? 2.6 : 3.1;
-    const step = m ? 0.66 : 0.56;
+    // The front piece in the middle; the others stand back and off to the sides.
+    const side = m ? 1.18 : 1.75;
+    const gap = m ? 0.7 : 1.0;
     const spread = 1 + h * 1.6;
     this.ring.position.set(m ? 0 : lerp(0.32, 0.1, h), lerp(m ? 0.42 : 0.02, m ? 0.12 : -0.02, h), 0);
     const cur = this.current;
     for (const s of this.slots) {
       const o = wrap(s.i - this.pos, this.n);
       const ao = Math.abs(o);
-      const a = o * step * spread;
-      s.group.position.set(Math.sin(a) * R, 0, (Math.cos(a) - 1) * R);
-      s.group.rotation.y = a * 0.85;
+      const near = Math.min(ao, 1);
+      const x = Math.sign(o) * (near * side + Math.max(0, ao - 1) * gap) * spread;
+      s.group.position.set(x, near * 0.08, -near * (m ? 1.5 : 1.7) - Math.max(0, ao - 1) * 1.1);
+      s.group.rotation.y = -Math.sign(o) * near * 0.38;
       const isActive = s === cur;
-      const fade = clamp01(1 - (ao - 0.5) * 0.55) * (1 - seg(hero, 0.05, 0.4));
-      s.group.visible = !!s.g && (isActive || (ao < 1.8 && fade > 0.02 && tech < 0.01 && s.g.uniforms.uFade.value > 0.02));
+      const fade = clamp01(1 - (ao - 0.5) * 0.45) * (1 - seg(hero, 0.05, 0.4));
+      const maxO = m ? 1.6 : 2.6;
+      s.group.visible = !!s.g && (isActive || (ao < maxO && fade > 0.02 && tech < 0.01 && s.g.uniforms.uFade.value > 0.02));
       if (!s.g) continue;
       const g = s.g;
+      g.uniforms.uTime.value = t;
       if (!(this.intro && this.intro.slot === s)) {
-        // Neighbours stand back in a pixel-dither fade, in keeping with the HUD.
-        const k = 1 - Math.exp(-dt * 8);
-        const lit = isActive ? 1 : lerp(0.7, 0.45, clamp01(ao - 0.5));
-        const vis = isActive ? 1 : this.introDone ? lerp(0.6, 0.12, clamp01(ao - 0.5)) * fade : 0;
-        g.uniforms.uDim.value = lerp(g.uniforms.uDim.value, lit, k);
+        // Side pieces are holographic silhouettes in a pixel-dither fade.
+        const k = 1 - Math.exp(-dt * 6);
+        const vis = isActive ? 1 : this.introDone ? lerp(0.85, 0.45, clamp01(ao - 1)) * fade : 0;
+        g.uniforms.uDim.value = lerp(g.uniforms.uDim.value, 1, k);
         g.uniforms.uFade.value = lerp(g.uniforms.uFade.value, vis, k);
+        if (s.reveal?.mode !== "holo") g.uniforms.uHolo.value = lerp(g.uniforms.uHolo.value, isActive ? 0 : 1, 1 - Math.exp(-dt * 5));
       }
       const idle = this.reduced ? 0 : Math.sin(t * 0.45 + s.i) * 0.16;
       g.pivot.rotation.y = isActive ? this.spin + idle * (1 - h) : idle * 0.5;
