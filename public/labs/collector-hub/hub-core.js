@@ -448,7 +448,7 @@ const CSS = (
 .mlh-kicker{font-size:11px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--cyan)}
 
 /* hud */
-.mlh-hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--mlh-top,0px)) 14px 0;pointer-events:none!important;opacity:0;transform:translateY(-8px);transition:opacity .35s,transform .35s}
+.mlh-hud{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--mlh-top,0px)) calc(14px + var(--mlh-hud-r,0px)) 0 calc(14px + var(--mlh-hud-l,0px));pointer-events:none!important;opacity:0;transform:translateY(-8px);transition:opacity .35s,transform .35s}
 .mlh-hud.on{opacity:1;transform:none}
 .mlh-hud.on>*{pointer-events:auto!important}
 .mlh-title{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 10px;border-radius:14px;border:1px solid var(--line);background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);text-align:left;min-height:44px}
@@ -461,11 +461,15 @@ const CSS = (
 .mlh-prompt.on .mlh-btn{pointer-events:auto!important}
 .mlh-prompt p{margin:0;padding:9px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:14px;color:#dfe7ff;backdrop-filter:blur(8px)}
 .mlh-prompt .mlh-btn.pri{min-height:54px;padding:0 28px;border-radius:999px;font-size:17px;box-shadow:0 0 28px rgba(54,227,255,.4)}
-.mlh-skip{position:absolute;right:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 22px);pointer-events:auto!important}
-.mlh-mode{position:absolute;left:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + var(--mlh-mode-bottom,78px));display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 16px 6px 6px;border-radius:999px;border:1px solid rgba(54,227,255,.45);background:rgba(9,14,36,.88);color:#fff;font-weight:800;font-size:14.5px;box-shadow:0 0 22px rgba(54,227,255,.3);pointer-events:auto!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:mlh-pop .4s cubic-bezier(.2,1.6,.4,1)}
-.mlh-mode i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--pink));color:#041824}
-.mlh-mode i svg{width:22px;height:22px}
-.mlh-mode small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);line-height:1.2}
+.mlh-skip{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 22px);pointer-events:auto!important;background:var(--panel);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.mlh-mode{position:absolute;left:14px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + var(--mlh-mode-bottom,78px));display:flex;align-items:center;gap:0;height:48px;max-width:48px;padding:3px;overflow:hidden;border-radius:999px;border:1px solid rgba(54,227,255,.42);background:rgba(9,14,36,.8);color:#fff;font-weight:800;font-size:13.5px;text-align:left;white-space:nowrap;box-shadow:0 0 16px rgba(54,227,255,.22);pointer-events:auto!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:mlh-pop .4s cubic-bezier(.2,1.6,.4,1);transition:max-width .4s cubic-bezier(.2,1,.3,1),gap .4s,padding .4s}
+.mlh-mode i{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--cyan),var(--pink));color:#041824}
+.mlh-mode i svg{width:21px;height:21px}
+.mlh-mode>span{opacity:0;transition:opacity .25s}
+.mlh-mode small{display:block;font-size:11px;font-weight:600;color:var(--muted);line-height:1.2}
+.mlh-mode.peek,.mlh-mode:focus-visible{max-width:280px;gap:10px;padding-right:16px}
+.mlh-mode.peek>span,.mlh-mode:focus-visible>span{opacity:1}
+@media (hover:hover){.mlh-mode:hover{max-width:280px;gap:10px;padding-right:16px}.mlh-mode:hover>span{opacity:1}}
 .mlh-mode:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .mlh-toast{position:absolute;left:50%;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 74px + var(--mlh-top,0px));transform:translate(-50%,-8px);opacity:0;padding:10px 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-weight:700;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px);text-align:center;pointer-events:none!important}
 .mlh-toast.on{opacity:1;transform:translate(-50%,0)}
@@ -546,14 +550,15 @@ const CSS = (
 
 /* BOBO OS v2: glass, depth and light */
 .mlh-defs{position:absolute;width:0;height:0;overflow:hidden}
-.mlh-os{padding:clamp(0px,3vw,28px)}
-.mlh-screen{position:relative;width:min(1240px,100%);height:min(780px,100%);border-radius:26px;overflow:hidden;isolation:isolate;background:#050817;
+.mlh-layer.mlh-os{padding:0;background:rgba(3,6,18,var(--mlh-os-dim,.18));backdrop-filter:none;-webkit-backdrop-filter:none;--mlh-os-st:0px;--mlh-os-sb:0px}
+.mlh-layer.mlh-os.full{--mlh-os-st:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--mlh-os-sb:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))}
+.mlh-screen{position:relative;width:min(1600px,calc(100% * var(--mlh-os-size,.8)));height:min(1000px,calc(100% * var(--mlh-os-size,.8)));border-radius:26px;overflow:hidden;isolation:isolate;background:rgba(5,8,23,calc(var(--mlh-os-alpha,.88) * .55));backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
   box-shadow:0 0 0 1px rgba(140,220,255,.25),0 0 0 8px #070b19,0 0 0 9px rgba(255,255,255,.08),0 0 60px rgba(54,227,255,.18),0 50px 120px rgba(0,0,0,.7);
   transform:perspective(1400px) rotateX(6deg) scale(.94);opacity:0;transition:transform .5s cubic-bezier(.2,1,.25,1),opacity .3s}
 .mlh-os.open .mlh-screen{transform:none;opacity:1}
 .mlh-screen::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:30;border-radius:inherit;
   background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 18%),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px);mix-blend-mode:screen}
-.mlh-wallp{position:absolute;inset:0;z-index:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 120%,#1a0b3a,#060a1d 55%,#03050f)}
+.mlh-wallp{position:absolute;inset:0;z-index:0;overflow:hidden;opacity:var(--mlh-os-alpha,.88);background:radial-gradient(120% 90% at 50% 120%,#1a0b3a,#060a1d 55%,#03050f)}
 .mlh-wallp i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.75;animation:mlh-drift 18s ease-in-out infinite alternate}
 .mlh-wallp .a1{width:55%;height:60%;left:-10%;top:-15%;background:radial-gradient(circle,#00d5ff 0%,rgba(0,213,255,0) 70%)}
 .mlh-wallp .a2{width:50%;height:55%;right:-12%;bottom:-10%;background:radial-gradient(circle,#ff3fa4 0%,rgba(255,63,164,0) 70%);animation-delay:-6s}
@@ -690,9 +695,20 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
 .mlh-kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:14px}
 .mlh-kv span{color:var(--muted)}
 
+@media (max-width:440px){
+  .mlh-actions{gap:6px}
+  .mlh-hud .mlh-icon{width:40px;height:40px;border-radius:11px}
+  .mlh-title{padding:6px 10px 6px 7px;gap:8px;min-height:40px}
+  .mlh-title b{font-size:14px;white-space:nowrap}
+  .mlh-title small{white-space:nowrap}
+  .mlh-ring{width:26px;height:26px}
+  /* The host's menu button sits in the top bar and offers the way out. */
+  .mlh-hostmenu [data-r=exit]{display:none!important}
+}
 @media (max-width:700px){
-  .mlh-os{padding:0}
-  .mlh-screen{border-radius:0;border:0;box-shadow:none;height:100%;width:100%}
+  /* Phones keep the width (the desktop needs it) and take OS Size as the height. */
+  .mlh-screen{width:max(calc(100% * var(--mlh-os-size,.8)),calc(100% - 24px));border-radius:20px;box-shadow:0 0 0 1px rgba(140,220,255,.25),0 30px 80px rgba(0,0,0,.6)}
+  .mlh-os.full .mlh-screen{border-radius:0;box-shadow:none}
   .mlh-icons{grid-template-columns:repeat(4,1fr);grid-auto-rows:108px;left:10px;right:10px;top:176px}
   .mlh-menubar .app{display:none}
   .mlh-menubar .tray{white-space:nowrap}
@@ -708,9 +724,9 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
   .mlh-win{left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0;min-width:0}
   .mlh-bar2{cursor:default;height:48px}
   .mlh-dot{width:18px;height:18px}
-  .mlh-menubar{left:0;right:0;top:0;border-radius:0;border-width:0 0 1px;padding-top:var(--safe-area-inset-top,env(safe-area-inset-top,0px));height:calc(44px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
-  .mlh-desk{top:calc(44px + var(--safe-area-inset-top,env(safe-area-inset-top,0px)))}
-  .mlh-dock{bottom:calc(10px + var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)));gap:6px;padding:6px}
+  .mlh-menubar{left:0;right:0;top:0;border-radius:0;border-width:0 0 1px;padding-top:var(--mlh-os-st);height:calc(44px + var(--mlh-os-st))}
+  .mlh-desk{top:calc(44px + var(--mlh-os-st))}
+  .mlh-dock{bottom:calc(10px + var(--mlh-os-sb));gap:6px;padding:6px}
   .mlh-dock{gap:7px;padding:8px}
   .mlh-dock .mlh-tile{width:40px;height:40px;border-radius:12px}
   .mlh-dock .mlh-tile::after{border-radius:10px 10px 40% 40%}
@@ -978,6 +994,20 @@ class CollectorHub {
     __publicField(this, "_walk");
     __publicField(this, "_seqT", 0);
     __publicField(this, "_walkIn", true);
+    __publicField(this, "_leaveSpeed", 1);
+    __publicField(this, "_peeked", false);
+    __publicField(this, "_peekTimer");
+    __publicField(this, "_look", {
+      osSize: 0.8,
+      osOpacity: 0.88,
+      osDim: 0.18,
+      hudInsetRight: 0,
+      hudInsetLeft: 0,
+      zIndex: 2000100,
+      modeBottom: 78,
+      exitButton: true,
+      topOffset: 0
+    });
     __publicField(this, "_leaveResolve");
     __publicField(this, "_portalT", 0);
     __publicField(this, "_portalShut", false);
@@ -1096,6 +1126,17 @@ class CollectorHub {
     }
     this._buildUI();
     this._bindTaps();
+    this.configure({
+      ...opts.modeBottom != null ? { modeBottom: opts.modeBottom } : {},
+      ...opts.hudOffset ? { topOffset: opts.hudOffset } : {},
+      ...opts.look
+    });
+    const os = this._el.os;
+    const osClick = (e) => {
+      if (e.target === os) this.closeOS();
+    };
+    os.addEventListener("click", osClick);
+    this._off.push(() => os.removeEventListener("click", osClick));
   }
   /* ── public API ───────────────────────────────────────────────────── */
   get state() {
@@ -1177,11 +1218,17 @@ class CollectorHub {
     if (!this._room) return;
     this._finishBuild();
   }
-  /** Bobo walks back out and the room folds away into the portal. */
-  leave() {
+  /**
+   * Bobo walks back out and the room folds away into the portal.
+   * fast: fold in about a second without the walk-out (the host shows its own
+   * player straight away, e.g. because a round is starting).
+   */
+  leave(opts = {}) {
     if (this._state !== "live" && this._state !== "building") {
       return Promise.resolve();
     }
+    this._leaveSpeed = opts.fast ? 3 : 1;
+    if (opts.fast && this._bobo) this._bobo.visible = false;
     if (this._tourI >= 0) this._tourEnd(false);
     this._closeAllLayers();
     this._hideBeam(false);
@@ -1193,21 +1240,66 @@ class CollectorHub {
     if (this._reduceMotion) this._finishLeave();
     return new Promise((res) => this._leaveResolve = res);
   }
-  /** The "Bobo's Hideout" mode button (bottom left). Pass null to hide it. */
+  /**
+   * The "Bobo's Hideout" mode button: a small round icon (bottom left) whose
+   * label slides out the first time it appears, and on hover or focus.
+   * Pass null to hide it.
+   */
   modeButton(onClick, label = "Bobo's Hideout", sub) {
     const b = this._el.mode;
+    const was = !b.hidden;
     b.hidden = !onClick;
-    if (!onClick) return;
+    if (!onClick) {
+      b.classList.remove("peek");
+      return;
+    }
     this._el.modeLabel.textContent = label;
     this._el.modeSub.textContent = sub ?? (this._token ? "Your room" : "Unlock with your code");
+    b.setAttribute("aria-label", label);
+    b.title = label;
+    if (!was && !this._peeked) {
+      this._peeked = true;
+      b.classList.add("peek");
+      clearTimeout(this._peekTimer);
+      this._peekTimer = setTimeout(() => b.classList.remove("peek"), 3600);
+    }
     b.onclick = () => {
       this._unlockAudio();
       onClick();
     };
   }
+  /** Change the look and layout knobs (see HubLook) at any time. */
+  configure(look) {
+    const L = this._look;
+    const num = (v, lo, hi, d) => typeof v === "number" && Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d;
+    if (look.osSize !== void 0) L.osSize = num(look.osSize, 0.5, 1, 0.8);
+    if (look.osOpacity !== void 0) L.osOpacity = num(look.osOpacity, 0.4, 1, 0.88);
+    if (look.osDim !== void 0) L.osDim = num(look.osDim, 0, 0.8, 0.18);
+    if (look.hudInsetRight !== void 0) L.hudInsetRight = num(look.hudInsetRight, 0, 400, 0);
+    if (look.hudInsetLeft !== void 0) L.hudInsetLeft = num(look.hudInsetLeft, 0, 400, 0);
+    if (look.zIndex !== void 0) L.zIndex = Math.round(num(look.zIndex, 1, 2147483e3, 2000100));
+    if (look.modeBottom !== void 0) L.modeBottom = num(look.modeBottom, 0, 600, 78);
+    if (look.exitButton !== void 0) L.exitButton = !!look.exitButton;
+    if (look.topOffset !== void 0) L.topOffset = num(look.topOffset, 0, 400, 0);
+    const ui = this._ui;
+    if (!ui) return;
+    ui.style.setProperty("--mlh-os-size", String(L.osSize));
+    ui.style.setProperty("--mlh-os-alpha", String(L.osOpacity));
+    ui.style.setProperty("--mlh-os-dim", String(L.osDim));
+    ui.style.setProperty("--mlh-hud-r", `${L.hudInsetRight}px`);
+    ui.style.setProperty("--mlh-hud-l", `${L.hudInsetLeft}px`);
+    ui.style.setProperty("--mlh-mode-bottom", `${L.modeBottom}px`);
+    ui.style.zIndex = String(L.zIndex);
+    ui.classList.toggle("mlh-hostmenu", L.hudInsetRight > 0 || L.hudInsetLeft > 0);
+    ui.style.setProperty("--mlh-top", `${L.topOffset}px`);
+    this._el.os?.classList.toggle("full", L.osSize >= 0.97);
+    if (this._el.exit) this._el.exit.hidden = !this.opts.exitLabel || !L.exitButton;
+  }
   /** Remove the room from view (no animation). */
   hide() {
+    if (this._tourI >= 0) this._tourEnd(false);
     this._closeAllLayers();
+    this._el.spots.classList.add("off");
     this.root.visible = false;
     this._hud(false);
     this.prompt(null);
@@ -1981,7 +2073,7 @@ class CollectorHub {
     }
   }
   _updateLeave(dt) {
-    this._seqT += dt;
+    this._seqT += dt * this._leaveSpeed;
     const t = this._seqT;
     const DUR = 3.2;
     const u = this._reveal;
@@ -1992,7 +2084,7 @@ class CollectorHub {
     const open = clamp01(t / 0.7);
     this._portalScale(open < 1 ? backOut(open) : 1);
     const bobo = this._bobo;
-    if (bobo && this._walk) {
+    if (bobo && this._walk && bobo.visible) {
       if (this._current !== this._actions.Walk) this._play("Walk", 0.2);
       const w = 1 - clamp01(t / (DUR - 0.2));
       this._walk.getPointAt(w, bobo.position);

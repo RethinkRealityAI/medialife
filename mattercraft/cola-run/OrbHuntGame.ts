@@ -4032,6 +4032,54 @@ export class OrbHuntGame extends Group {
    */
   public lounge4Timeline = new Observable<string | undefined>(undefined);
 
+  /* ══ Bobo's Hideout ═════════════════════════════════════════════════
+     A third mode next to the round and the lounge: the Collector Hub room
+     (CollectorHubMode.ts). The game owns the mode — the intro button, the
+     menu row, placement and the HUD — and the hideout component owns the
+     room. Without a CollectorHubMode in the scene nothing here shows.       */
+
+  /**
+   * Offer Bobo's Hideout on the intro card and in the menu. CollectorHubMode
+   * switches this on for you when it finds the game, so you only need it if
+   * you open the room from your own behaviours.
+   *
+   * @zui
+   * @zgroup Bobo's Hideout
+   * @zgrouppriority 153
+   * @zpriority 100
+   * @zdefault false
+   */
+  public hideoutEnabled = new Observable(false, () => {
+    this._syncIntro(); this._syncMenu();
+  });
+
+  /**
+   * Label on the intro button and the menu row that open the hideout.
+   *
+   * @zui
+   * @zgroup Bobo's Hideout
+   * @zgrouppriority 153
+   * @zpriority 90
+   * @zdefault Visit Bobo's Hideout
+   */
+  public hideoutButtonLabel = new Observable("Visit Bobo's Hideout",
+    () => { this._syncIntro(); this._syncMenu(); });
+
+  /**
+   * The interface colour while the hideout is open, and the colour of the
+   * buttons that lead there. EVADE yellow by default, so the three modes are
+   * three colours: the round, the lounge and the hideout.
+   *
+   * @zui
+   * @zgroup Bobo's Hideout
+   * @zgrouppriority 153
+   * @zpriority 80
+   * @ztype color-norm-rgb
+   * @zdefault [1, 0.77, 0.18]
+   */
+  public hideoutAccent = new Observable<[number, number, number]>([1, 0.77, 0.18],
+    () => this._applyMode());
+
   /* ══ Timelines ══════════════════════════════════════════════════════ */
 
   /**
@@ -4157,6 +4205,12 @@ export class OrbHuntGame extends Group {
   public onLoungeExit = new Event<[]>();
   /** Fired when a lounge action is tapped, with its 1-based slot and label. @zui */
   public onLoungeAction = new Event<[{ action: number; label: string }]>();
+  /** Fired when the player picks Bobo's Hideout (before placement, if it still needs placing). @zui */
+  public onHideoutEnter = new Event<[]>();
+  /** Fired when the player leaves Bobo's Hideout for the round or the lounge. @zui */
+  public onHideoutExit = new Event<[]>();
+  /** Fired when the intro / how-to-play card closes. @zui */
+  public onIntroClose = new Event<[]>();
 
   /* ══ Public API — call these from a behaviour or a Call Function track ══ */
 
@@ -4196,6 +4250,14 @@ export class OrbHuntGame extends Group {
   public exitLounge() { this._exitLounge(); }
   /** True while Lounge mode is open. */
   public get isLounging() { return this._lounge; }
+  /** Open Bobo's Hideout mode (placement first, if the scene isn't placed yet). @zui */
+  public enterHideout() { this._enterHideout(); }
+  /** Leave Bobo's Hideout mode without starting a round or the lounge. @zui */
+  public exitHideout() { this._exitHideout(); }
+  /** True while Bobo's Hideout mode is open. */
+  public get isInHideout() { return this._hideout; }
+  /** True while the intro / how-to-play card is open. */
+  public get isIntroOpen() { return !!this._introWrap?.classList.contains("on"); }
 
   /**
    * Log what the custom-pickup path actually did, in your scene.
@@ -4574,6 +4636,9 @@ export class OrbHuntGame extends Group {
   private _menuOpen = false;
   private _placed = false;
   private _lounge = false;
+  private _hideout = false;
+  /** Neither mode has a round: no orbs, no clock, no score. */
+  private get _noRound() { return this._lounge || this._hideout; }
   private _loungeWrap!: HTMLDivElement;
 
   private readonly _v1 = new THREE.Vector3();
@@ -5163,7 +5228,7 @@ export class OrbHuntGame extends Group {
      * board is empty. That's why a pickup could still be standing in the
      * lounge after a round.
      */
-    if (this._lounge) this._applyLoungeBoard();
+    if (this._noRound) this._applyLoungeBoard();
 
     if (clampedAny && !this._warnedReach) {
       this._warnedReach = true;
@@ -5242,19 +5307,20 @@ export class OrbHuntGame extends Group {
     o.active = true;              // a respawn must restore every flag _layout sets
     o.alive = true;
     o.burst = 0;
-    o.group.visible = !this._lounge;
+    o.group.visible = !this._noRound;
     // The collect burst inflates the beacon; only the burst's own completion
     // resets it, and respawning cancels the burst before it gets there.
     o.beacon.scale.setScalar(this.beaconSize.value);
     o.inner.scale.setScalar(this.orbSize.value);
     o.custom.scale.setScalar(1);
-    if (o.trigger) o.trigger.enabled.value = !this._lounge;
+    if (o.trigger) o.trigger.enabled.value = !this._noRound;
   }
 
   /* ── round flow ───────────────────────────────────────────────────── */
 
   private _start() {
     this._exitLounge();
+    this._exitHideout();
     this._newRoundSeed();
     this._portalHum(false);
     this._score = 0;
@@ -6439,7 +6505,7 @@ export class OrbHuntGame extends Group {
     const spin = this.pickupSpin.value;
 
     for (const o of this._orbs) {
-      if (!o.active || this._lounge) continue;
+      if (!o.active || this._noRound) continue;
 
       const wave = Math.sin((this._time + o.phase * 4) * Math.PI * 2 * 0.35);
       o.group.position.y = o.home.y + wave * bob;
@@ -6538,7 +6604,7 @@ export class OrbHuntGame extends Group {
   private _applyPortalVisibility() {
     // Nothing from the round survives into the lounge — including a portal
     // left standing open from the win the player just had.
-    const show = !this._lounge &&
+    const show = !this._noRound &&
       (this.portalVisibleFromStart.value || this._state === GameState.Won);
     this._portal.visible = show;
     if (this.portalVisibleFromStart.value && this._state !== GameState.Won) {
@@ -6620,6 +6686,7 @@ export class OrbHuntGame extends Group {
         <button class="ohg-btn ohg-ghost ohg-howclaim" data-a="howclaim" type="button"></button>
         <button class="ohg-btn ohg-lounge"  data-a="lounge"   type="button"></button>
         <button class="ohg-btn ohg-primary ohg-start" data-a="start" type="button"></button>
+        <button class="ohg-btn ohg-hideout" data-a="hideout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/></svg><span class="ohg-hideLbl"></span></button>
         <div class="ohg-div"></div>
         <div class="ohg-toggle" data-t="music"><span>Music</span><div class="ohg-sw"></div></div>
         <div class="ohg-toggle" data-t="sound"><span>Sound effects</span><div class="ohg-sw"></div></div>
@@ -6649,6 +6716,7 @@ export class OrbHuntGame extends Group {
           <div class="ohg-legend"></div>
           <button class="ohg-btn ohg-primary" data-a="introPlay"  type="button">Start playing</button>
           <button class="ohg-btn ohg-ghost"   data-a="introClose" type="button">Maybe later</button>
+          <button class="ohg-btn ohg-hideout" data-a="introHideout" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 9.8V20h13V9.8"/><path d="M10 20v-5.5h4V20"/></svg><span class="ohg-hideLbl"></span></button>
         </div>
       </div>`;
     this._introEl = this._introWrap.querySelector(".ohg-intro") as HTMLDivElement;
@@ -7004,6 +7072,8 @@ export class OrbHuntGame extends Group {
       // control people have to read before every press.
       case "lounge": this._enterLounge(); this._closeMenu(); break;
       case "start":  this.startGame(); this._closeMenu(); break;
+      case "hideout": this._closeMenu(); this._enterHideout(); break;
+      case "introHideout": this._closeIntro(); this._enterHideout(); break;
       case "howclaim": this._closeMenu(); this._openInstructions(); break;
       case "howto": this._closeMenu(); this._openIntro(); break;
       case "close": this._dismissMenu(); break;
@@ -7093,7 +7163,7 @@ export class OrbHuntGame extends Group {
     // Placing while lounging drops the scene into the room and stops there —
     // Start Round On Place is about starting the hunt, and the whole point of
     // the lounge is that nobody asked for the hunt.
-    if (this.startRoundOnPlace.value && !this._lounge) this._start();
+    if (this.startRoundOnPlace.value && !this._noRound) this._start();
     else this._setState(GameState.Idle);
   }
 
@@ -7115,8 +7185,10 @@ export class OrbHuntGame extends Group {
   }
 
   private _closeIntro() {
+    const was = this._introWrap.classList.contains("on");
     this._introWrap.classList.remove("on");
     this._applyPlacementUi();
+    if (was) this.onIntroClose.emit();
   }
 
   private static _cornerClass(c: MenuCorner) {
@@ -7139,7 +7211,8 @@ export class OrbHuntGame extends Group {
    * matched the stylesheet.
    */
   private _applyMode() {
-    const v = this._lounge ? this.loungeAccent.value : this.uiAccent.value;
+    const v = this._hideout ? this.hideoutAccent.value
+      : this._lounge ? this.loungeAccent.value : this.uiAccent.value;
     const rgb: [number, number, number] = [
       Math.round(Math.max(0, Math.min(1, v[0])) * 255),
       Math.round(Math.max(0, Math.min(1, v[1])) * 255),
@@ -7158,11 +7231,9 @@ export class OrbHuntGame extends Group {
        Math.round(c[1] + (255 - c[1]) * k),
        Math.round(c[2] + (255 - c[2]) * k)];
     const other = this._lounge ? this.uiAccent.value : this.loungeAccent.value;
-    const alt: [number, number, number] = [
-      Math.round(Math.max(0, Math.min(1, other[0])) * 255),
-      Math.round(Math.max(0, Math.min(1, other[1])) * 255),
-      Math.round(Math.max(0, Math.min(1, other[2])) * 255),
-    ];
+    const to255 = (c: [number, number, number]) =>
+      c.map(x => Math.round(Math.max(0, Math.min(1, x)) * 255)).join(",");
+    const alt = to255(other).split(",").map(Number);
 
     for (const el of this._modeLayers()) {
       if (!el) continue;
@@ -7174,6 +7245,11 @@ export class OrbHuntGame extends Group {
       // The row that switches modes wears the colour of the mode it leads TO,
       // so the button is a preview of where you're about to end up.
       st.setProperty("--ohg-altRgb", alt.join(","));
+      // Three modes means a row can't just wear "the other one": each mode
+      // row carries its own mode's colour, wherever it appears.
+      st.setProperty("--ohg-uiRgb", to255(this.uiAccent.value));
+      st.setProperty("--ohg-loungeRgb", to255(this.loungeAccent.value));
+      st.setProperty("--ohg-hideRgb", to255(this.hideoutAccent.value));
       // The Place pill is a light fill with dark text, so it needs a lighter
       // and a darker relative of the accent for its gradient — and a label
       // colour chosen by contrast rather than assumed, since an author is
@@ -7182,6 +7258,7 @@ export class OrbHuntGame extends Group {
       st.setProperty("--ohg-tintDeep", `rgb(${scale(rgb, 0.74).join(",")})`);
       st.setProperty("--ohg-onTint", bestTextOn(rgb));
       el.classList.toggle("ohg-loungeMode", this._lounge);
+      el.classList.toggle("ohg-hideoutMode", this._hideout);
     }
   }
 
@@ -7543,8 +7620,8 @@ export class OrbHuntGame extends Group {
     this._root.style.display = on ? "" : "none";
     // Lounge mode has no round, so a score of 0/8 and a frozen clock would be
     // furniture at best and a wrong signal at worst.
-    this._scoreWrap.style.display = hud && !this._lounge ? "" : "none";
-    this._timeWrap.style.display = hud && !this._lounge && this.timerEnabled.value ? "" : "none";
+    this._scoreWrap.style.display = hud && !this._noRound ? "" : "none";
+    this._timeWrap.style.display = hud && !this._noRound && this.timerEnabled.value ? "" : "none";
     // The score sits under the clock, so it has to know when there isn't one.
     this._applyHudStack();
     this._soundWrap.style.display = on && this.soundToggleEnabled.value ? "" : "none";
@@ -7552,7 +7629,8 @@ export class OrbHuntGame extends Group {
     // through the intro, the menu, the lounge and placement, and steps out
     // while a round is actually being played.
     const playing = this._state === GameState.Playing && !this._lounge;
-    const logoOn = on && !!this.logoImage.value.trim() &&
+    // The hideout has its own title bar where the logo would sit.
+    const logoOn = on && !!this.logoImage.value.trim() && !this._hideout &&
       (this.logoInGame.value || !playing);
     if (this._logoWrap) this._logoWrap.style.display = logoOn ? "" : "none";
     if (!on) {
@@ -7621,6 +7699,8 @@ export class OrbHuntGame extends Group {
 
   private _enterLounge() {
     if (this._lounge) return;
+    // One mode at a time: the lounge and the hideout both own the scene.
+    this._exitHideout();
     this._lounge = true;
     // No clock and no orbs on the board — this is a hangout, not a round.
     // _reset() clears the score, the timers, the reward layers and the
@@ -7653,6 +7733,47 @@ export class OrbHuntGame extends Group {
     this.onLoungeExit.emit();
   }
 
+/* ── Bobo's Hideout mode ───────────────────────────────────────────── */
+
+  /**
+   * The hideout is a mode like the lounge: no clock, no orbs, the HUD off.
+   * What stays on screen is what the player needs in any mode — the menu
+   * button, the sound toggle and Place / Reset placement — so moving the
+   * room works exactly the way moving the round does.
+   *
+   * The room itself belongs to CollectorHubMode, which listens for
+   * onHideoutEnter / onPlace / onResetPlacement / onHideoutExit.
+   */
+  private _enterHideout() {
+    if (this._hideout) return;
+    if (this._lounge) this._exitLounge();
+    this._hideout = true;
+    // Opened from a deep link or a behaviour while the intro is up.
+    this._closeIntro();
+    this._reset();
+    this._applyLoungeBoard();
+    this._applyPortalVisibility();
+    this._applyMode();
+    this._closeMenu();
+    this._closeTimeout();
+    if (this.placementEnabled.value && !this._placed) this._setState(GameState.Placing);
+    else this._setState(GameState.Idle);
+    this._applyUiVisibility();
+    this._syncMenu();
+    this.onHideoutEnter.emit();
+  }
+
+  private _exitHideout() {
+    if (!this._hideout) return;
+    this._hideout = false;
+    this._applyLoungeBoard();
+    this._applyPortalVisibility();
+    this._applyMode();
+    this._applyUiVisibility();
+    this._syncMenu();
+    this.onHideoutExit.emit();
+  }
+
   /**
    * Clear the orb board while lounging. Orbs can only be collected during a
    * round, so leaving them floating there is a false affordance — the player
@@ -7671,13 +7792,13 @@ export class OrbHuntGame extends Group {
     // placement turned off would never satisfy it and the rings would be
     // hidden for the whole experience. Same idiom as _applyPlacementUi.
     const settled = !this.placementEnabled.value || this._placed;
-    return this.beaconEnabled.value && !this._lounge &&
+    return this.beaconEnabled.value && !this._noRound &&
       this._state !== GameState.Placing && settled;
   }
 
   private _applyLoungeBoard() {
     for (const o of this._orbs) {
-      const show = o.active && !this._lounge;
+      const show = o.active && !this._noRound;
       o.group.visible = show;
       o.beacon.visible = show && this._beaconsAllowed();
       if (o.trigger) o.trigger.enabled.value = show;
@@ -7799,6 +7920,7 @@ export class OrbHuntGame extends Group {
     const hero = this._introWrap.querySelector<HTMLDivElement>(".ohg-hero");
     if (src) { this._introImg.src = src; if (hero) hero.style.display = ""; }
     else if (hero) hero.style.display = "none";
+    this._introEl?.classList.toggle("ohg-noHero", !src);
   }
 
   /** Escape prop text before it goes near innerHTML. */
@@ -7882,6 +8004,13 @@ export class OrbHuntGame extends Group {
       second.classList.toggle("ohg-lounge", lounge);
       second.style.display = label.trim() ? "" : "none";
     }
+    const hide = this._introWrap.querySelector<HTMLButtonElement>('[data-a="introHideout"]');
+    if (hide) {
+      const label = this.hideoutButtonLabel.value.trim();
+      (hide.querySelector(".ohg-hideLbl") as HTMLSpanElement).textContent = label;
+      hide.style.display = this.hideoutEnabled.value && label ? "" : "none";
+      this._introEl?.classList.toggle("ohg-three", this.hideoutEnabled.value && !!label);
+    }
     this._applyIntroImage();
   }
 
@@ -7912,7 +8041,7 @@ export class OrbHuntGame extends Group {
     const startBtn = this._menu.querySelector<HTMLButtonElement>(".ohg-start");
     if (startBtn) {
       startBtn.textContent = this.loungeExitLabel.value.trim() || "Start";
-      startBtn.style.display = this._lounge ? "" : "none";
+      startBtn.style.display = this._noRound ? "" : "none";
       // Placement gates the round, so starting one before the scene is down
       // would drop the board into thin air.
       startBtn.disabled = s === GameState.Placing;
@@ -7925,6 +8054,7 @@ export class OrbHuntGame extends Group {
      */
     const status =
       this._lounge ? "Lounging"
+      : this._hideout ? "In Bobo's Hideout"
       : s === GameState.Paused ? "Paused"
       : s === GameState.Won ? "Portal open"
       : s === GameState.Failed ? "Out of time"
@@ -7937,7 +8067,7 @@ export class OrbHuntGame extends Group {
     const restartBtn = this._menu.querySelector<HTMLButtonElement>('[data-a="restart"]');
     // Nothing to restart in the lounge, and it would silently drop the player
     // into a round they didn't ask for.
-    if (restartBtn) restartBtn.style.display = this._lounge ? "none" : "";
+    if (restartBtn) restartBtn.style.display = this._noRound ? "none" : "";
 
     const howClaim = this._menu.querySelector<HTMLButtonElement>(".ohg-howclaim");
     if (howClaim) {
@@ -7956,10 +8086,19 @@ export class OrbHuntGame extends Group {
       loungeBtn.textContent = this.loungeButtonLabel.value.trim() || "Lounge";
     }
 
+    const hideBtn = this._menu.querySelector<HTMLButtonElement>(".ohg-hideout");
+    if (hideBtn) {
+      const label = this.hideoutButtonLabel.value.trim() || "Bobo's Hideout";
+      (hideBtn.querySelector(".ohg-hideLbl") as HTMLSpanElement).textContent = label;
+      hideBtn.style.display = this.hideoutEnabled.value && !this._hideout ? "" : "none";
+    }
+
     const target = clampInt(this.targetCount.value, 1, 999);
     const noun = (this.scoreLabel.value.trim() || "orbs").toLowerCase();
     this._msgEl.textContent =
       this._lounge ? "Hanging out. No clock, nothing to collect."
+      : this._hideout && s === GameState.Placing ? "Tap Place, and Bobo's room opens where you put him."
+      : this._hideout ? "Bobo's room. Reset placement to move it, or pick another mode."
       : s === GameState.Placing ? "Tap Place to drop the game into your space."
       : s === GameState.Idle ? `Collect the ${noun} before the clock runs out.`
       : s === GameState.Paused ? `The clock is stopped. ${Math.max(0, target - this._score)} ${noun} left to find.`
@@ -8179,24 +8318,35 @@ export class OrbHuntGame extends Group {
    in hue. Sized here rather than on .ohg-btn so the menu's denser stack of
    rows is left alone. */
 .ohg-intro .ohg-btn.ohg-primary,
-.ohg-intro .ohg-btn.ohg-lounge{font-size:17px;font-weight:700;
+.ohg-intro .ohg-btn.ohg-lounge,
+.ohg-intro .ohg-btn.ohg-hideout{font-size:17px;font-weight:700;
   letter-spacing:.01em;padding:16px 20px;min-height:54px}
+/* Three choices: a little air between them so they read as three. */
+.ohg-intro .ohg-btn + .ohg-btn{margin-top:10px}
+/* No hero image: the body's lift into the image would clip the title. */
+.ohg-intro.ohg-noHero .ohg-introBody{margin-top:0;padding-top:26px}
 
 /* The mode-switch rows — Lounge from a round, Start from the lounge — share
    one treatment and wear --ohg-altRgb: the colour of the mode they lead to.
    Only one of them is ever on screen, so they can't clash, and the button
    previewing its destination is what makes the colour mean something. */
-.ohg-btn.ohg-lounge,.ohg-menu .ohg-btn.ohg-start{
-  background:rgba(var(--ohg-altRgb,255,92,180),.18);
-  border-color:rgba(var(--ohg-altRgb,255,92,180),.62);
+.ohg-btn.ohg-lounge,.ohg-menu .ohg-btn.ohg-start,.ohg-btn.ohg-hideout{
+  --ohg-rowRgb:var(--ohg-loungeRgb,var(--ohg-altRgb,255,92,180));
+  background:rgba(var(--ohg-rowRgb),.18);
+  border-color:rgba(var(--ohg-rowRgb),.62);
   color:#fff;
-  box-shadow:0 0 18px rgba(var(--ohg-altRgb,255,92,180),.34),
+  box-shadow:0 0 18px rgba(var(--ohg-rowRgb),.34),
              inset 0 1px 0 rgba(255,255,255,.14)}
+.ohg-menu .ohg-btn.ohg-start{--ohg-rowRgb:var(--ohg-uiRgb,var(--ohg-altRgb,79,214,232))}
+.ohg-btn.ohg-hideout{--ohg-rowRgb:var(--ohg-hideRgb,255,196,46);
+  display:flex;align-items:center;justify-content:center;gap:9px}
+.ohg-btn.ohg-hideout svg{width:18px;height:18px;flex:0 0 auto}
 .ohg-btn.ohg-lounge:hover:not(:disabled),
-.ohg-menu .ohg-btn.ohg-start:hover:not(:disabled){
-  background:rgba(var(--ohg-altRgb,255,92,180),.28);
-  border-color:rgba(var(--ohg-altRgb,255,92,180),.85);
-  box-shadow:0 0 26px rgba(var(--ohg-altRgb,255,92,180),.48),
+.ohg-menu .ohg-btn.ohg-start:hover:not(:disabled),
+.ohg-btn.ohg-hideout:hover:not(:disabled){
+  background:rgba(var(--ohg-rowRgb),.28);
+  border-color:rgba(var(--ohg-rowRgb),.85);
+  box-shadow:0 0 26px rgba(var(--ohg-rowRgb),.48),
              inset 0 1px 0 rgba(255,255,255,.18)}
 
 
@@ -8929,6 +9079,11 @@ export class OrbHuntGame extends Group {
   .ohg-hero{aspect-ratio:auto;height:120px}
   .ohg-introBody{margin-top:-18px}
   .ohg-legend{gap:9px}
+}
+/* Three mode buttons: a shorter hero on laptop-height screens, so all three
+   choices are on screen without scrolling the card. */
+@media (min-height:561px) and (max-height:940px){
+  .ohg-intro.ohg-three .ohg-hero{aspect-ratio:auto;height:clamp(130px,24vh,260px)}
 }
 `;
 

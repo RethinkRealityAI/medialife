@@ -2,19 +2,25 @@
 /**
  * CollectorHubMode.ts: Mattercraft custom ZComponent
  *
- * Bobo's Hideout as a Cola Run mode. A "Bobo's Hideout" button sits in the
- * corner; tap it and (the first time) the fan unlocks their room with the code
- * from their EVADE merch card plus their email. Then a portal opens a few
- * steps ahead of Bobo. Walk Bobo into it and his room builds in around him:
- * the BOBO OS computer (alerts, Where's Bobo?, leaderboard, Cola Run), the
- * collection wall, and live alerts the EVADE team sends from medialife.ai.
- * The computer's Cola Run app folds the room away and starts a round (or a
- * recorded round).
+ * Bobo's Hideout as the third Cola Run mode, next to the round and the lounge.
+ * The game offers it on its opening card and in its menu ("Visit Bobo's
+ * Hideout"), and a small round icon sits in the corner between rounds. The
+ * first time, the fan unlocks their room with the code from their EVADE merch
+ * card plus their email. Then a portal opens a few steps ahead of Bobo. Walk
+ * Bobo into it and his room builds in around him: the BOBO OS computer
+ * (alerts, Where's Bobo?, leaderboard, Cola Run), the collection wall, and live
+ * alerts the EVADE team sends from medialife.ai.
+ *
+ * Placement is the game's, for all three modes: pick the hideout before the
+ * scene is placed and the room opens once you tap Place. Reset placement while
+ * in the room and it disappears at once; Place again and it builds straight
+ * back in at the new spot and size (no second walk through the portal).
  *
  * SETUP
- *  1. Copy these into the project's Scripts folder (next to OrbHuntGame.ts):
+ *  1. Copy these into the project's Scripts folder, replacing older copies:
  *       CollectorHubMode.ts   (this file)
  *       HubCore.ts            (the hub itself; shared with the browser labs)
+ *       OrbHuntGame.ts        (the game, which now has the hideout mode)
  *  2. Hierarchy Panel → + → CollectorHubMode, as a sibling of the game (same
  *     parent, so it moves with the game's placement).
  *  3. Leave "Game" empty (it finds OrbHuntGame) or point it at the game node.
@@ -22,8 +28,9 @@
  *     https://medialife.ai/hub/evade/room.glb (it's served with CORS *).
  *
  * The component never moves your camera. It hides the player while Bobo is
- * in his room and keeps him at the portal, so the joystick can't wander off,
- * and switches the game's own HUD off while the room is open (back on after).
+ * in his room and keeps him at the portal, so the joystick can't wander off.
+ * The game's menu button, sound button and Reset placement stay on screen in
+ * the room (the hideout's top bar makes room for the menu button).
  */
 import {
   ContextManager,
@@ -45,6 +52,12 @@ interface ConstructorProps {}
 
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
+const nextFrame = () =>
+  new Promise<void>((r) =>
+    typeof requestAnimationFrame === "function"
+      ? requestAnimationFrame(() => r())
+      : setTimeout(r, 16),
+  );
 
 /**
  * Bobo's Hideout: the MEDIALIFE Collector Hub as a Cola Run mode.
@@ -81,8 +94,21 @@ export class CollectorHubMode extends Group {
   public playerNode = new Observable<string | undefined>(undefined);
 
   /**
-   * Show the "Bobo's Hideout" button while lounging and on the game's menu
-   * screens. Turn off to open the hideout from your own UI (call open()).
+   * Offer "Visit Bobo's Hideout" on the game's opening card and in its menu.
+   * (Sets the game's own Hideout Enabled for you.)
+   *
+   * @zui
+   * @zgroup Game
+   * @zgrouppriority 300
+   * @zpriority 85
+   * @zdefault true
+   */
+  public showInMenus = new Observable(true, () => this._syncGameMenus());
+
+  /**
+   * Show the small round hideout icon in the corner between rounds (lounge,
+   * menus, after a round). Turn off to rely on the menus, or open the room
+   * from your own UI (call open()).
    *
    * @zui
    * @zgroup Game
@@ -93,16 +119,17 @@ export class CollectorHubMode extends Group {
   public showButton = new Observable(true, () => this._syncButton());
 
   /**
-   * Hide the game's own HUD while the room is open (the room has its own top
-   * bar). It comes back when Bobo leaves.
+   * Hide the game's own buttons (menu, sound, Reset placement) while Bobo is
+   * in his room. Off by default, so moving the room with Reset placement and
+   * switching modes from the menu work in the room as everywhere else.
    *
    * @zui
    * @zgroup Game
    * @zgrouppriority 300
    * @zpriority 70
-   * @zdefault true
+   * @zdefault false
    */
-  public hideGameUi = new Observable(true);
+  public hideGameUi = new Observable(false, () => this._applyLook());
 
   /* ══ Room ════════════════════════════════════════════════════════════ */
 
@@ -119,6 +146,8 @@ export class CollectorHubMode extends Group {
 
   /**
    * Room size. 1 = the room's Bobo is exactly as tall as your player (0.3 to 3).
+   * The room follows the placed scene, so placing the scene bigger or smaller
+   * (Reset placement, then Place) resizes the room too.
    *
    * @zui
    * @zgroup Room
@@ -150,7 +179,48 @@ export class CollectorHubMode extends Group {
    * @zpriority 70
    * @zdefault 0
    */
-  public topOffset = new Observable(0);
+  public topOffset = new Observable(0, () => this._applyLook());
+
+  /* ══ BOBO OS ═════════════════════════════════════════════════════════ */
+
+  /**
+   * How much of the screen Bobo's computer takes. 0.8 = 80% of the screen,
+   * with the room still in view around it. 1 = full screen. (0.5 to 1)
+   *
+   * @zui
+   * @zgroup BOBO OS
+   * @zgrouppriority 150
+   * @zpriority 100
+   * @ztype proportion
+   * @zdefault 0.8
+   */
+  public osSize = new Observable(0.8, () => this._applyLook());
+
+  /**
+   * How solid the computer's screen is. 1 = fully solid; lower lets the room
+   * show through behind the desktop (windows stay readable). (0.4 to 1)
+   *
+   * @zui
+   * @zgroup BOBO OS
+   * @zgrouppriority 150
+   * @zpriority 90
+   * @ztype proportion
+   * @zdefault 0.88
+   */
+  public osOpacity = new Observable(0.88, () => this._applyLook());
+
+  /**
+   * How much the room around the computer is darkened while it's open.
+   * 0 = not at all. (0 to 0.8)
+   *
+   * @zui
+   * @zgroup BOBO OS
+   * @zgrouppriority 150
+   * @zpriority 80
+   * @ztype proportion
+   * @zdefault 0.18
+   */
+  public osDim = new Observable(0.18, () => this._applyLook());
 
   /* ══ Site ════════════════════════════════════════════════════════════ */
 
@@ -222,7 +292,14 @@ export class CollectorHubMode extends Group {
   private _camera?: THREE.Camera;
   private _game: any = null;
   private _player?: THREE.Object3D;
+  /** The portal or the room is up (or on its way). */
   private _active = false;
+  /** Bumped whenever the room is torn down, so a fold in flight knows it lost. */
+  private _seq = 0;
+  /** Reset placement happened inside the room: the next Place rebuilds it straight away. */
+  private _rebuild = false;
+  private _home = new THREE.Vector3();
+  private _homeSet = false;
   private _pin = new THREE.Vector3();
   private _pinned = false;
   private _uiWas: boolean | undefined;
@@ -242,47 +319,106 @@ export class CollectorHubMode extends Group {
     this._camera = cam.value;
     this.register(cam, (c) => (this._camera = c));
 
-    const qs = new URLSearchParams(location.search);
-    const loader = new GLTFLoader();
-    this._hub = new CollectorHub({
-      parent: this.element,
-      host: overlay.value,
-      canvas: useCanvas(contextManager),
-      getCamera: () => this._camera,
-      loader: { loadAsync: (url) => loader.loadAsync(url) as any },
-      api: this.endpoint.value,
-      modelUrl: this.modelUrl.value,
-      globeUrl: this.globeUrl.value,
-      testHint: this.showTestCode.value ? "BOBO-TEST-CATS" : null,
-      hubCode: qs.get("hub"),
-      exitLabel: "Back to Cola Run",
-      hudOffset: this.topOffset.value,
-      on: (name, p: any) => this._onHub(name, p),
-    });
-
     this.register(useOnBeforeRender(contextManager), (dt: number) => this._tick(dt * 0.001)); // dt is ms
 
+    // Built once the scene has finished constructing: the editor writes this
+    // node's properties (Endpoint, Model URL, …) after the constructor runs,
+    // so reading them here would always see the defaults.
     this.getZComponentInstance().constructed.then(() => {
+      if (this._gone) return;
+      const qs = new URLSearchParams(location.search);
+      const loader = new GLTFLoader();
+      this._hub = new CollectorHub({
+        parent: this.element,
+        host: overlay.value,
+        canvas: useCanvas(contextManager),
+        getCamera: () => this._camera,
+        loader: { loadAsync: (url) => loader.loadAsync(url) as any },
+        api: this.endpoint.value,
+        modelUrl: this.modelUrl.value,
+        globeUrl: this.globeUrl.value,
+        testHint: this.showTestCode.value ? "BOBO-TEST-CATS" : null,
+        hubCode: qs.get("hub"),
+        exitLabel: "Back to Cola Run",
+        hudOffset: this.topOffset.value,
+        on: (name, p: any) => this._onHub(name, p),
+      });
       this._bindGame();
+      this._syncGameMenus();
+      this._applyLook();
       this._syncButton();
-      // Scanned a product's QR (…?hub=BOBO-XXXX-XXXX): straight to the unlock form.
+      // Scanned a product's QR (…?hub=BOBO-XXXX-XXXX): straight to the hideout.
       if (qs.get("hub")) setTimeout(() => this.open(), 600);
     });
   }
 
-  /** Open the hideout: unlock if needed, then the portal ahead of Bobo. */
-  public async open() {
+  /** The hub itself (for hosts that drive their own camera, like the labs). */
+  public get hub() {
+    return this._hub;
+  }
+
+  /**
+   * Open the hideout. With the game in the scene this switches the game to
+   * its hideout mode (placement first if the scene isn't placed yet); the
+   * room opens from there.
+   */
+  public open() {
+    const g = this._game;
+    if (g?.enterHideout) {
+      if (g.isInHideout) this._maybeOpen();
+      else g.enterHideout();
+    } else void this._open();
+  }
+
+  /** Bobo walks out, the room folds away, and the game goes back to the lounge. */
+  public leave(then?: "play" | "record") {
+    return this._leaveRoom(then ?? "exit");
+  }
+
+  /* ── opening ── */
+
+  private _placedOk() {
+    const g = this._game;
+    return !g || !g.placementEnabled?.value || !!g.isPlaced;
+  }
+
+  /** Open the room if the game is in hideout mode and the scene is placed. */
+  private _maybeOpen() {
+    if (this._active || !this._game?.isInHideout || !this._placedOk()) return;
+    void this._open();
+  }
+
+  private _stillWanted() {
+    const g = this._game;
+    return (!g || !g.enterHideout || g.isInHideout) && this._placedOk();
+  }
+
+  private async _open() {
     const hub = this._hub;
     if (!hub || this._active) return;
     this._active = true;
+    const seq = ++this._seq;
+    const rebuild = this._rebuild;
+    this._rebuild = false;
     this._syncButton();
     try {
-      // A hangout, not a round: no clock, no orbs on the board.
-      if (this._game && !this._game.isLounging) this._game.enterLounge?.();
-      hub.prompt("Opening the portal…");
-      await hub.load();
-      hub.prompt(null);
-      if (!(await hub.ensureAccess())) return this._close();
+      if (!hub.loaded) {
+        hub.prompt("Opening the portal…");
+        await hub.load();
+        hub.prompt(null);
+      }
+      if (seq !== this._seq) return;
+      // Coming back after a re-placement: they're already signed in.
+      if (!(rebuild && hub.signedIn) && !(await hub.ensureAccess())) {
+        if (seq === this._seq) this._cancelled();
+        return;
+      }
+      if (seq !== this._seq) return;
+      if (!this._stillWanted()) return this._close();
+      // Let the placement (a timeline in most projects) settle the scene first.
+      await nextFrame();
+      await nextFrame();
+      if (seq !== this._seq || !this._stillWanted()) return this._close();
       const player = this._findPlayer();
       if (!player || !this._camera) {
         console.warn("[CollectorHubMode] no player node or camera; set Player Node");
@@ -293,50 +429,132 @@ export class CollectorHubMode extends Group {
       this._camera.getWorldPosition(this._v2);
       const scale = (h / hub.boboHeight()) * clamp(this.roomScale.value, 0.3, 3);
       hub.placeNear(this._v, this._v2, h * clamp(this.portalDistance.value, 2, 8), scale);
+      this._home.copy(player.position);
+      this._homeSet = true;
       hub.showPortal();
-      hub.prompt("Walk Bobo into the portal");
       this.onPortal.emit();
+      if (rebuild) this._goIn(player, false);
+      else hub.prompt("Walk Bobo into the portal");
     } catch (e) {
       console.error("[CollectorHubMode]", e);
       hub.prompt(null);
-      this._close();
+      if (seq === this._seq) this._close();
     }
   }
 
-  /** Bobo walks out and the room folds away. */
-  public async leave(then?: "play" | "record") {
+  /** They closed the unlock form: back to the lounge (or the game's idle state). */
+  private _cancelled() {
+    this._close();
+    const g = this._game;
+    if (!g?.isInHideout) return;
+    if (g.loungeEnabled?.value && g.enterLounge) g.enterLounge();
+    else g.exitHideout?.();
+  }
+
+  /** Through the portal: hide the player and build the room around him. */
+  private _goIn(player: THREE.Object3D, walk: boolean) {
+    const hub = this._hub;
+    if (!hub) return;
+    player.visible = false;
+    this._pin.copy(player.position);
+    this._pinned = true;
+    if (this.hideGameUi.value && this._game?.uiEnabled) {
+      this._uiWas = this._game.uiEnabled.value;
+      this._game.uiEnabled.value = false;
+    }
+    this._setRecorderVisible(false);
+    hub.enter({ walk });
+    this.onEnter.emit();
+  }
+
+  /* ── closing ── */
+
+  /**
+   * Bobo walks out and the room folds away.
+   *  exit:          walk-out, then the game goes to the lounge (or idle)
+   *  play / record: quick fold, then a round (and the recorder)
+   *  game:          the game already changed mode (menu): quick fold, nothing else
+   */
+  private async _leaveRoom(then: "exit" | "play" | "record" | "game") {
     const hub = this._hub;
     if (!hub || !this._active) return;
-    await hub.leave();
+    const seq = ++this._seq;
     const player = this._findPlayer();
-    if (player) {
-      // Back out of the portal, a step towards the camera.
-      hub.portalPosition(this._v);
-      if (this._camera) {
-        this._camera.getWorldPosition(this._v2);
-        this._v2
-          .sub(this._v)
-          .setY(0)
-          .normalize()
-          .multiplyScalar(this._playerHeight(player) * 0.9);
-        this._v.add(this._v2);
+    const inside = hub.state === "building" || hub.state === "live";
+    if (inside) {
+      if (then === "exit") {
+        await hub.leave();
+        if (seq !== this._seq) return;
+        this._restorePlayer(player, true);
+      } else {
+        // A round (or another mode) is starting: Bobo is back at once.
+        this._restorePlayer(player, true);
+        await hub.leave({ fast: true });
+        if (seq !== this._seq) return;
       }
-      if (player.parent) player.parent.worldToLocal(this._v);
-      if (this._pinned) this._v.y = this._pin.y; // same floor height as before
-      player.position.copy(this._v);
-      player.visible = true;
-    }
-    this._pinned = false;
-    this._restoreGameUi();
-    this._setRecorderVisible(true);
+    } else this._restorePlayer(player, false);
     hub.hide();
     this._close();
     this.onLeave.emit();
-    if (then && this._game) {
-      this._game.exitLounge?.();
-      this._game.startGame?.();
+    const g = this._game;
+    if (!g) return;
+    if (then === "play" || then === "record") {
+      g.startGame?.();
       if (then === "record") setTimeout(() => this._recorder()?.startRecording?.(), 500);
+    } else if (then === "exit" && g.isInHideout) {
+      if (g.loungeEnabled?.value && g.enterLounge) g.enterLounge();
+      else g.exitHideout?.();
     }
+  }
+
+  /**
+   * Reset placement: the scene is about to move, so the room goes at once (no
+   * animation) and Bobo is put back where he stood. Place again and _open
+   * rebuilds the room there.
+   */
+  private _suspend() {
+    const hub = this._hub;
+    if (!hub || !this._active) return;
+    ++this._seq;
+    this._rebuild = hub.state === "building" || hub.state === "live" || hub.state === "leaving";
+    hub.hide();
+    const player = this._findPlayer();
+    if (player) {
+      if (this._homeSet) player.position.copy(this._home);
+      player.visible = true;
+    }
+    this._unpin();
+    this._close();
+  }
+
+  /** Show the player again, a step out of the portal towards the camera. */
+  private _restorePlayer(player: THREE.Object3D | undefined, outOfPortal: boolean) {
+    const hub = this._hub;
+    if (player && hub) {
+      if (outOfPortal) {
+        hub.portalPosition(this._v);
+        if (this._camera) {
+          this._camera.getWorldPosition(this._v2);
+          this._v2
+            .sub(this._v)
+            .setY(0)
+            .normalize()
+            .multiplyScalar(this._playerHeight(player) * 0.9);
+          this._v.add(this._v2);
+        }
+        if (player.parent) player.parent.worldToLocal(this._v);
+        if (this._pinned) this._v.y = this._pin.y; // same floor height as before
+        player.position.copy(this._v);
+      }
+      player.visible = true;
+    }
+    this._unpin();
+  }
+
+  private _unpin() {
+    this._pinned = false;
+    this._restoreGameUi();
+    this._setRecorderVisible(true);
   }
 
   private _close() {
@@ -346,9 +564,9 @@ export class CollectorHubMode extends Group {
   }
 
   private _onHub(name: string, p: any) {
-    if (name === "exit") this.leave();
-    else if (name === "signedOut") this.leave();
-    else if (name === "play") this.leave(p.record ? "record" : "play");
+    if (name === "exit") void this._leaveRoom("exit");
+    else if (name === "signedOut") void this._leaveRoom("exit");
+    else if (name === "play") void this._leaveRoom(p.record ? "record" : "play");
     else if (name === "portal") this._hub?.prompt("Walk Bobo into the portal");
     else if (name === "unlocked")
       this.onUnlocked.emit({ firstClaim: !!p.firstClaim, owned: p.me?.owned ?? 0 });
@@ -366,19 +584,8 @@ export class CollectorHubMode extends Group {
     if (hub.state === "portal" && player.visible) {
       player.getWorldPosition(this._v);
       const r = this._playerHeight(player) * clamp(this.enterRadius.value, 0.2, 2);
-      if (hub.distanceToPortal(this._v) < r) {
-        // Through the portal: the room's own Bobo takes over and walks home.
-        player.visible = false;
-        this._pin.copy(player.position);
-        this._pinned = true;
-        if (this.hideGameUi.value && this._game?.uiEnabled) {
-          this._uiWas = this._game.uiEnabled.value;
-          this._game.uiEnabled.value = false;
-        }
-        this._setRecorderVisible(false);
-        hub.enter({ walk: true });
-        this.onEnter.emit();
-      }
+      // Through the portal: the room's own Bobo takes over and walks home.
+      if (hub.distanceToPortal(this._v) < r) this._goIn(player, true);
     }
     // The joystick still drives the hidden player: keep him at the portal.
     if (this._pinned) player.position.copy(this._pin);
@@ -390,18 +597,53 @@ export class CollectorHubMode extends Group {
     this._uiWas = undefined;
   }
 
-  /* ── the button ── */
+  /* ── the icon, the menus and the look ── */
 
   private _syncButton() {
     const hub = this._hub;
     if (!hub) return;
     const g = this._game;
     // Only between rounds: lounge, menus, before the first round. Never mid-round
-    // (playing or paused) and never before the AR scene has been placed.
+    // (playing or paused), never before the AR scene has been placed, and not
+    // while the hideout is already the mode.
     const st: string | undefined = g?.gameState ?? g?._state;
     const busy =
-      !!g && (st === "placing" || (!g.isLounging && (st === "playing" || st === "paused")));
+      !!g &&
+      (st === "placing" ||
+        !!g.isInHideout ||
+        !!g.isIntroOpen || // the card offers the hideout itself
+        (!g.isLounging && (st === "playing" || st === "paused")));
     hub.modeButton(this.showButton.value && !this._active && !busy ? () => this.open() : null);
+  }
+
+  private _syncGameMenus() {
+    const g = this._game;
+    if (g?.hideoutEnabled) g.hideoutEnabled.value = !!this.showInMenus.value;
+  }
+
+  /** Fit the hideout's UI around the game's: corner buttons, stacking, BOBO OS. */
+  private _applyLook() {
+    const hub = this._hub;
+    if (!hub) return;
+    const g = this._game;
+    const gameUi = !!g && g.uiEnabled?.value !== false && !this.hideGameUi.value;
+    const corner: string = g?.menuCorner?.value ?? "";
+    const soundCorner: string = g?.soundToggleCorner?.value ?? "";
+    const soundOn = !!g && g.soundToggleEnabled?.value !== false;
+    const z = Number(g?.modalLayer?.value);
+    hub.configure({
+      osSize: clamp(this.osSize.value, 0.5, 1),
+      osOpacity: clamp(this.osOpacity.value, 0.4, 1),
+      osDim: clamp(this.osDim.value, 0, 0.8),
+      // The game's menu button stays in its corner in the room: keep the top bar clear of it.
+      hudInsetRight: gameUi && corner === "topRight" ? 62 : 0,
+      hudInsetLeft: gameUi && corner === "topLeft" ? 62 : 0,
+      // Under the game's dialogs (its menu opens over the room), over its corner buttons.
+      zIndex: Number.isFinite(z) && z > 200 ? z - 100 : 2000100,
+      // Stack the icon over the game's sound button when that's bottom left.
+      modeBottom: !g || (soundOn && soundCorner === "bottomLeft") ? 74 : 16,
+      topOffset: Number(this.topOffset.value) || 0,
+    });
   }
 
   /* ── finding things ── */
@@ -427,13 +669,23 @@ export class CollectorHubMode extends Group {
       g = walk(zc);
     }
     this._game = g;
-    if (!g) return;
-    const on = (evt: any) => {
+    if (!g) {
+      console.warn(
+        "[CollectorHubMode] couldn't find the Cola Run game; set Game to your OrbHuntGame node",
+      );
+      return;
+    }
+    if (!g.enterHideout)
+      console.warn(
+        "[CollectorHubMode] this OrbHuntGame.ts has no hideout mode; copy in the new one " +
+          "so the hideout shows in its menus and follows placement",
+      );
+    const on = (evt: any, fn: () => void) => {
       if (!evt?.addListener) return;
-      const fn = () => setTimeout(() => this._syncButton());
       evt.addListener(fn);
       this._offGame.push(() => evt.removeListener?.(fn));
     };
+    const sync = () => setTimeout(() => this._syncButton());
     for (const e of [
       g.onGameStart,
       g.onLoungeEnter,
@@ -442,11 +694,40 @@ export class CollectorHubMode extends Group {
       g.onTimeUp,
       g.onTargetReached,
       g.onGameReset,
-      g.onPlace,
-      g.onResetPlacement,
       g.onRewardModalDismissed,
+      g.onIntroClose,
     ])
-      on(e);
+      on(e, sync);
+    // The game owns the mode and the placement; the room follows.
+    on(g.onHideoutEnter, () => {
+      sync();
+      this._maybeOpen();
+    });
+    on(g.onHideoutExit, () => {
+      sync();
+      void this._leaveRoom("game");
+    });
+    on(g.onPlace, () => {
+      sync();
+      this._maybeOpen();
+    });
+    on(g.onResetPlacement, () => {
+      this._suspend();
+      sync();
+    });
+    // The game's corner settings decide where the hideout's buttons go.
+    for (const o of [
+      g.menuCorner,
+      g.soundToggleCorner,
+      g.soundToggleEnabled,
+      g.uiEnabled,
+      g.modalLayer,
+    ])
+      if (o?.addListener) {
+        const fn = () => this._applyLook();
+        o.addListener(fn);
+        this._offGame.push(() => o.removeListener?.(fn));
+      }
   }
 
   private _findPlayer(): THREE.Object3D | undefined {
@@ -460,13 +741,16 @@ export class CollectorHubMode extends Group {
 
   private _heights = new WeakMap<THREE.Object3D, number>();
   private _playerHeight(p: THREE.Object3D) {
+    // Measured once in the player's parent space, returned in world units: the
+    // placed scene's scale can change between placements.
+    const ws = (p.parent ? p.parent.getWorldScale(this._v2).y : 1) || 1;
     let h = this._heights.get(p);
     if (!h) {
       const b = new THREE.Box3().setFromObject(p);
-      h = Math.max(0.05, b.max.y - b.min.y);
+      h = Math.max(0.05, b.max.y - b.min.y) / ws;
       this._heights.set(p, h);
     }
-    return h;
+    return h * ws;
   }
 
   private _recorder(): any {
@@ -490,7 +774,7 @@ export class CollectorHubMode extends Group {
     const r = this._recorder();
     if (!r?.buttonVisible) return;
     if (!v) {
-      this._recWas = r.buttonVisible.value;
+      if (this._recWas === undefined) this._recWas = r.buttonVisible.value;
       r.buttonVisible.value = false;
     } else if (this._recWas !== undefined) {
       r.buttonVisible.value = this._recWas;
@@ -498,7 +782,9 @@ export class CollectorHubMode extends Group {
     }
   }
 
+  private _gone = false;
   public dispose() {
+    this._gone = true;
     for (const off of this._offGame) off();
     this._offGame = [];
     this._restoreGameUi();
