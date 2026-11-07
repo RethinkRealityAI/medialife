@@ -25,12 +25,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/activated-merch/style.css" />
-    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
-    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
-    <link rel="modulepreload" href="/activated-merch/scene.js" />
-    <link rel="modulepreload" href="/activated-merch/softbody.js" />
-    <link rel="modulepreload" href="/roblox/creators/vendor/three/jsm/loaders/GLTFLoader.js" />
-    <link rel="preload" as="fetch" href="/activated-merch/models/hero/sukeban-hoodie.glb" crossorigin="anonymous" />
+    <!-- The import map must come before any module preload, or Chrome can't resolve "three". -->
     <script type="importmap">
       {
         "imports": {
@@ -39,6 +34,12 @@
         }
       }
     </script>
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
+    <link rel="modulepreload" href="/activated-merch/scene.js" />
+    <link rel="modulepreload" href="/activated-merch/softbody.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/jsm/loaders/GLTFLoader.js" />
+    <link rel="preload" as="fetch" href="/activated-merch/models/hero/sukeban-hoodie.glb" crossorigin="anonymous" />
   </head>
   <body>
     <a class="skip" href="#how">Skip to how it works</a>
