@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Activated Merch · MEDIALIFE</title>
+    <meta
+      name="description"
+      content="Merch that comes alive. Tap or scan the print and the character steps off the shirt. Activated apparel, keychains and stickers by MEDIALIFE."
+    />
+    <meta name="theme-color" content="#05060c" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MEDIALIFE" />
+    <meta property="og:title" content="Activated Merch · MEDIALIFE" />
+    <meta property="og:description" content="Tap it. Scan it. It comes alive. Activated apparel, keychains and stickers." />
+    <meta property="og:image" content="https://medialife.ai/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="https://medialife.ai/activated-merch/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/activated-merch/style.css" />
+    <!-- The import map must come before any module preload, or Chrome can't resolve "three". -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/"
+        }
+      }
+    </script>
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
+    <link rel="modulepreload" href="/activated-merch/scene.js" />
+    <link rel="modulepreload" href="/activated-merch/softbody.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/jsm/loaders/GLTFLoader.js" />
+    <link rel="preload" as="fetch" href="/activated-merch/models/hero/sukeban-hoodie.glb" crossorigin="anonymous" />
+  </head>
+  <body>
+    <a class="skip" href="#how">Skip to how it works</a>
+    <canvas id="stage" aria-hidden="true"></canvas>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="nav" id="nav">
+      <a class="nav__logo" href="/" aria-label="MEDIALIFE home">
+        <img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="132" height="22" />
+        <span class="nav__tag">Activated</span>
+      </a>
+      <nav class="nav__links" aria-label="Sections">
+        <a href="#how">How it works</a>
+        <a href="#tech">Technology</a>
+        <a href="#fans">Fans</a>
+        <a href="#lineup">Collections</a>
+        <a href="#partner">For IP holders</a>
+      </nav>
+      <a class="nav__shop" href="https://shop.medialife.ai" target="_blank" rel="noopener">Shop <span aria-hidden="true">[↗]</span></a>
+    </header>
+
+    <main>
+      <!-- 01 HERO ------------------------------------------------------- -->
+      <section class="hero" id="hero" aria-labelledby="hero-title">
+        <div class="hero__side hero__side--left bracket">
+          <p class="mono">Tap it.<br />Scan it.<br />It comes alive.</p>
+        </div>
+        <div class="hero__side hero__side--right">
+          <p class="mono hero__piece" id="piece-meta">
+            <span class="hero__count" id="piece-count">01 / 07</span><br />
+            <span id="piece-name">Sukeban AR Hoodie</span><br />
+            <span id="piece-price">$90</span> · <span id="piece-tags">NFC + AR</span><br />
+            <span class="hero__angle" id="piece-angle" aria-hidden="true"><i></i>ROT 000°</span>
+          </p>
+        </div>
+        <div class="hero__title">
+          <p class="eyebrow mono">MEDIALIFE · Activated merchandise</p>
+          <h1 id="hero-title" class="display glitch" data-text="Merch that comes alive.">Merch that comes alive.</h1>
+        </div>
+        <div class="hero__dock">
+          <p class="dock__name mono" id="dock-name" aria-live="polite">Sukeban AR Hoodie</p>
+          <div class="dock__row">
+            <button class="dock__arrow" id="piece-prev" type="button" aria-label="Previous piece">←</button>
+            <div class="switcher" role="radiogroup" aria-label="Choose a piece" id="switcher"></div>
+            <button class="dock__arrow" id="piece-next" type="button" aria-label="Next piece">→</button>
+          </div>
+          <p class="hint mono" id="hint"><span class="hint__dot"></span><span class="hint__fine">Drag the piece to spin it 360°</span><span class="hint__sep hint__wide" aria-hidden="true">·</span><span class="hint__wide">Double-tap to reset</span><span class="hint__sep" aria-hidden="true">·</span><span>Swipe to browse</span></p>
+        </div>
+        <img class="hero__fallback" id="fallback" src="/activated-merch/posters/sukeban-hoodie.webp" alt="Sukeban AR Hoodie" hidden />
+      </section>
+
+      <!-- 02 DETAILS ---------------------------------------------------- -->
+      <section class="details" id="details" aria-labelledby="details-title">
+        <div class="details__inner">
+          <div class="details__copy">
+            <h2 id="details-title" class="display">Details<br />matter.</h2>
+            <p class="mono lead">
+              Heavyweight pieces made with the artists. Every one has a small NFC disc embedded in the design and AR-ready artwork, so the garment
+              itself is the key to the experience.
+            </p>
+            <a class="btn btn--frame" id="shop-piece" href="https://shop.medialife.ai/products/black-hoodie-sukeban" target="_blank" rel="noopener">
+              Shop this piece <span aria-hidden="true">→</span>
+            </a>
+          </div>
+          <ol class="specs">
+            <li>
+              <span class="specs__n mono">01</span>
+              <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20 12 4l8 16M7.5 13h9" /></svg>
+              <div><h3>AR-ready artwork</h3><p>Point a camera at the print and the character steps off the shirt.</p></div>
+            </li>
+            <li>
+              <span class="specs__n mono">02</span>
+              <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a8 8 0 0 1 0 8M10 6a12 12 0 0 1 0 12M14 4a16 16 0 0 1 0 16" /></svg>
+              <div><h3>A tag in the design</h3><p>A small round NFC disc is embedded in the design itself, behind part of the print or under the logo. Tap a phone there and the experience opens. No app.</p></div>
+            </li>
+            <li>
+              <span class="specs__n mono">03</span>
+              <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+              <div><h3>One ID per piece</h3><p>Each tag is unique, so a tap proves you hold the real thing, not a photo of it.</p></div>
+            </li>
+            <li>
+              <span class="specs__n mono">04</span>
+              <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18" /></svg>
+              <div><h3>Unlocks that keep coming</h3><p>Owner-only drops, rewards and collector rooms long after the sale.</p></div>
+            </li>
+            <li>
+              <span class="specs__n mono">05</span>
+              <svg class="specs__icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 3 7l3 3 2-1v12h8V9l2 1 3-3-5-4c-1 2-2.5 3-4 3S9 5 8 3Z" /></svg>
+              <div><h3>Made to be worn</h3><p>Washed heavyweight cotton. The tech sits inside the seam, not on show.</p></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 03 TECH (pinned, scroll-driven) -------------------------------- -->
+      <section class="tech" id="tech" aria-labelledby="tech-title">
+        <div class="tech__pin">
+          <div class="tech__copy">
+            <h2 id="tech-title" class="display">Technology<br />built in.</h2>
+            <p class="mono lead" id="tech-lead">
+              A flat round NFC disc, about the size of a coin, is embedded in the design at one spot: behind part of
+              the print or under the logo. Not under the whole print. Scroll to look inside.
+            </p>
+            <div class="tech__tap mono" id="tech-tap" aria-live="polite">
+              <p class="tech__tap-title">Tap. It opens.</p>
+              <p>
+                The phone powers the tag and reads it, and the experience launches in the browser. On the screen: a real fan
+                capture from Anime NYC.
+              </p>
+            </div>
+          </div>
+          <div class="tag-note mono" id="tag-note">
+            <p class="tag-note__k">Tag spot on this piece</p>
+            <p class="tag-note__v tag-where">Behind the character's head</p>
+            <p class="tag-note__s">Placement varies by product</p>
+          </div>
+          <ol class="layers" id="layer-labels">
+            <li data-i="0"><span class="mono">01</span><div><h3>The print</h3><p>The design you see. The disc sits right behind it and nothing shows from the outside.</p></div></li>
+            <li data-i="1"><span class="mono">02</span><div><h3>NFC disc</h3><p>About 25 mm across. A coil antenna and chip, no battery: the phone powers it.</p></div></li>
+            <li data-i="2"><span class="mono">03</span><div><h3>Backing</h3><p>Holds the disc in place on the inside.</p></div></li>
+          </ol>
+          <p class="tech__where mono" aria-hidden="true">Tag spot: <span class="tag-where">Behind the character's head</span> · placement varies by product</p>
+          <div class="progress mono" aria-hidden="true"><span id="tech-progress"></span></div>
+        </div>
+      </section>
+
+      <!-- 04 HOW IT WORKS ------------------------------------------------ -->
+      <section class="how" id="how" aria-labelledby="how-title">
+        <header class="sec-head">
+          <h2 id="how-title" class="display">How it<br />works.</h2>
+          <p class="mono">Three steps for the fan. One dashboard for the brand.</p>
+        </header>
+        <ol class="steps">
+          <li class="step">
+            <div class="step__art step__art--tap" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
+            <span class="mono step__n">01</span>
+            <h3>Tap or scan</h3>
+            <p>Tap the print with a phone, or scan it or the QR. Nothing to download.</p>
+          </li>
+          <li class="step">
+            <div class="step__art step__art--alive" aria-hidden="true"><b></b><i></i></div>
+            <span class="mono step__n">02</span>
+            <h3>It comes alive</h3>
+            <p>The character appears in AR, a video plays or a game opens, made for that world.</p>
+          </li>
+          <li class="step">
+            <div class="step__art step__art--keep" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+            <span class="mono step__n">03</span>
+            <h3>It keeps giving</h3>
+            <p>Owners unlock drops, rewards and a collector room that grows with every piece they own.</p>
+          </li>
+        </ol>
+        <div class="brandbar">
+          <span class="mono">For the IP holder</span>
+          <p>Every tap and scan is counted by product, place and time, so a merch drop finally reports like a campaign.</p>
+        </div>
+      </section>
+
+      <!-- 05 FANS -------------------------------------------------------- -->
+      <section class="fans" id="fans" aria-labelledby="fans-title">
+        <header class="sec-head">
+          <h2 id="fans-title" class="display">For fans.<br /><span class="ember">By fans.</span></h2>
+          <p class="mono">Real captures from conventions and streets. Not renders.</p>
+        </header>
+        <div class="reel" id="reel">
+          <button class="reel__btn reel__btn--prev" type="button" aria-label="Previous video">←</button>
+          <div class="reel__track" id="reel-track" aria-roledescription="carousel" aria-label="Fan reaction videos"></div>
+          <button class="reel__btn reel__btn--next" type="button" aria-label="Next video">→</button>
+        </div>
+        <dl class="stats">
+          <div><dt class="mono">captures uploaded</dt><dd>6,200+</dd></div>
+          <div><dt class="mono">global activations</dt><dd>48</dd></div>
+          <div><dt class="mono">avg. dwell</dt><dd>120s</dd></div>
+          <div><dt class="mono">shared with others</dt><dd>50%</dd></div>
+        </dl>
+        <p class="fans__more mono"><a href="/fan-reactions">More fan reactions →</a></p>
+      </section>
+
+      <!-- 06 LINEUP ------------------------------------------------------ -->
+      <section class="lineup" id="lineup" aria-labelledby="lineup-title">
+        <header class="sec-head sec-head--row">
+          <h2 id="lineup-title" class="display">Collections.</h2>
+          <div class="filters" role="tablist" aria-label="Filter products" id="filters">
+            <button role="tab" aria-selected="true" data-f="all">All</button>
+            <button role="tab" aria-selected="false" data-f="apparel">Apparel</button>
+            <button role="tab" aria-selected="false" data-f="keychain">Keychains</button>
+            <button role="tab" aria-selected="false" data-f="sticker">Stickers</button>
+          </div>
+        </header>
+        <ul class="cards" id="cards"></ul>
+      </section>
+
+      <!-- 07 STICKERS ---------------------------------------------------- -->
+      <section class="stickers" id="stickers" aria-labelledby="stickers-title">
+        <div class="stickers__art" id="sticker-art">
+          <div class="sticker3d" id="sticker3d">
+            <img src="/activated-merch/p/ar-stickers.webp" alt="AR Sticker 3 Pack: Ride or Die, Sukeban and Trainwreck stickers" loading="lazy" width="892" height="900" />
+            <span class="sticker3d__foil" aria-hidden="true"></span>
+          </div>
+          <div class="nfc-waves" aria-hidden="true"><i></i><i></i><i></i></div>
+        </div>
+        <div class="stickers__copy">
+          <p class="eyebrow mono">AR Sticker 3 Pack · $15</p>
+          <h2 id="stickers-title" class="display">Stickers that<br />come alive.</h2>
+          <p class="mono lead">Tap your phone to a sticker and its animation launches. No app, no setup.</p>
+          <ul class="ticks mono">
+            <li>3 stickers per pack</li>
+            <li>NFC tap activation</li>
+            <li>Weatherproof vinyl</li>
+          </ul>
+          <a class="btn btn--frame" href="https://shop.medialife.ai/products/sukeban-ii-sticker-3-pack" target="_blank" rel="noopener">Get the pack <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+
+      <!-- 08 CASE STUDY -------------------------------------------------- -->
+      <section class="case" id="case" aria-labelledby="case-title">
+        <div class="case__img">
+          <img src="/activated-merch/posters/evade-charms.webp" alt="EVADE Eclipse activated charm set: Bobo the cat and the Eclipse can on a clasp" loading="lazy" width="760" height="760" />
+        </div>
+        <div class="case__copy">
+          <p class="eyebrow mono">Case study · EVADE on Roblox</p>
+          <h2 id="case-title" class="display">From game<br />to keyring.</h2>
+          <p class="mono lead">
+            The Eclipse charm set brings Bobo and the Eclipse can off the screen. The QR on the back of the can opens Cola
+            Run, a mini game starring Bobo, right in the browser.
+          </p>
+          <a class="btn btn--frame" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" target="_blank" rel="noopener">See the set <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+
+      <!-- 09 PARTNER CTA ------------------------------------------------- -->
+      <section class="partner" id="partner" aria-labelledby="partner-title">
+        <p class="eyebrow mono">For IP holders, creators and game studios</p>
+        <h2 id="partner-title" class="display glitch" data-text="Activate your world.">Activate your world.</h2>
+        <p class="mono lead">
+          We design, make and activate the merch, build the experience, and report every tap. You bring the world fans
+          already love.
+        </p>
+        <div class="partner__ctas">
+          <a class="btn btn--ember" href="/contact">Start a programme</a>
+          <a class="btn btn--frame" href="https://shop.medialife.ai" target="_blank" rel="noopener">Shop the drops <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot mono">
+      <span>© MEDIALIFE™</span>
+      <a href="/">medialife.ai</a>
+      <a href="https://shop.medialife.ai" target="_blank" rel="noopener">shop.medialife.ai</a>
+    </footer>
+
+    <dialog class="lightbox" id="lightbox" aria-label="Fan video">
+      <button class="lightbox__close" type="button" aria-label="Close">×</button>
+      <video playsinline controls muted loop></video>
+    </dialog>
+
+    <script type="module" src="/activated-merch/main.js"></script>
+  </body>
+</html>
