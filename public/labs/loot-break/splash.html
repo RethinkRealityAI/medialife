@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<!-- GENERATED from mattercraft/loot-break/index.src.html by scripts/build-loot-break.mjs. Edit the .src.html, not this file. -->
+<html lang="en">
+	<head>
+		<meta name="robots" content="noindex" />
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>LOOT BREAK · TBH: Task Bar Hero</title>
+		<meta name="description" content="A 60-second lunch-break raid on your desk. Activated by MEDIALIFE." />
+		<meta name="theme-color" content="#120d1f" />
+		<!-- Lab stand-in for index.ts: in Mattercraft, initialize() enables
+		     #launchButton once the scene has loaded and hides the splash on tap. -->
+		<script>
+			addEventListener('DOMContentLoaded', function () {
+				var b = document.getElementById('launchButton');
+				var q = new URLSearchParams(location.search);
+				if (!q.has('loading')) setTimeout(function () { b.disabled = false; }, 1800);
+				b.addEventListener('click', function () {
+					document.body.classList.add('zcomponent-launched');
+					setTimeout(function () { location.href = './index.html'; }, 450);
+				});
+			});
+		</script>
+
+		<!-- The splash is drawn in code (CSS + the game's own pixel sprites), so it
+		     paints on the first frame with no image to download. Only the two
+		     pixel fonts come from the network; until they arrive the system
+		     monospace stands in, and nothing jumps because every size is fixed. -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Silkscreen:wght@400;700&display=swap" />
+
+
+		<style>
+			html, body {
+				padding: 0;
+				margin: 0;
+				height: 100%;
+				width: 100%;
+				background: #120d1f;
+				font-family: 'Pixelify Sans', ui-monospace, monospace;
+				touch-action: pan-x pan-y;
+				/* Pull-to-refresh mid-session loses the camera and the round. */
+				overscroll-behavior: none;
+				-webkit-user-select: none;
+				user-select: none;
+				-webkit-touch-callout: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			/* ══ splash ══════════════════════════════════════════════════════ */
+			.splash {
+				--px: 4px;               /* one sprite pixel, set by the script */
+				--bar: 52px;             /* taskbar height */
+				--safe-b: env(safe-area-inset-bottom, 0px);
+				--safe-t: env(safe-area-inset-top, 0px);
+				--gold: #ffd35a;
+				--gold2: #b8781c;
+				--ink: #16121d;
+				--red: #c92f3c;
+				--red2: #6e121c;
+				position: fixed;
+				inset: 0;
+				z-index: 2000;
+				overflow: hidden;
+				color: #f4efe2;
+				font-variant-ligatures: none;
+				background:
+					radial-gradient(120% 70% at 50% 108%, #6a2fb0 0%, rgba(106, 47, 176, 0) 60%),
+					radial-gradient(90% 60% at 85% 0%, #1d3f7a 0%, rgba(29, 63, 122, 0) 70%),
+					linear-gradient(#0d0a1a, #1a1033 55%, #2a1650);
+			}
+			/* faint pixel grid, like a zoomed-in desktop */
+			.splash::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				background:
+					repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px),
+					repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px);
+				mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
+				-webkit-mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
+				pointer-events: none;
+			}
+			.zcomponent-launched .splash {
+				animation: splashOut .45s ease-in forwards;
+				pointer-events: none;
+			}
+			@keyframes splashOut {
+				to { opacity: 0; transform: scale(1.04); visibility: hidden; }
+			}
+
+			.boot {
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: 50%;
+				height: 2px;
+				background: #fff;
+				box-shadow: 0 0 24px 6px rgba(160, 120, 255, .9);
+				transform-origin: center;
+				opacity: 0;
+				pointer-events: none;
+				z-index: 5;
+			}
+
+			.stars i {
+				position: absolute;
+				width: var(--px);
+				height: var(--px);
+				background: #fff;
+				opacity: 0;
+				animation: twinkle 3s steps(3) infinite;
+			}
+			@keyframes twinkle {
+				0%, 100% { opacity: 0; }
+				50% { opacity: .8; }
+			}
+
+			.layout {
+				position: absolute;
+				inset: 0;
+				bottom: calc(var(--bar) + var(--safe-b));
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between;
+				padding: calc(var(--safe-t) + 4vh) 20px 3vh;
+				box-sizing: border-box;
+				text-align: center;
+			}
+
+			/* ── logo ── */
+			.logo { position: relative; opacity: 0; }
+			.logo .eyebrow {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				letter-spacing: .14em;
+				color: #cfc4ff;
+				margin-bottom: 10px;
+			}
+			.logo .eyebrow b { color: #fff; font-weight: 700; }
+			.logo .eyebrow .dot { width: 4px; height: 4px; background: #7d6bd0; }
+			.wordmark {
+				display: block;
+				font-family: 'Silkscreen', monospace;
+				font-weight: 700;
+				line-height: .92;
+				letter-spacing: .02em;
+				font-size: clamp(40px, min(15.5vw, 9.6vh), 92px);
+				color: var(--gold);
+				text-shadow:
+					0 4px 0 var(--gold2),
+					0 8px 0 var(--ink),
+					4px 8px 0 var(--ink),
+					-4px 8px 0 var(--ink),
+					4px 0 0 var(--ink),
+					-4px 0 0 var(--ink),
+					0 -4px 0 var(--ink),
+					0 14px 24px rgba(0, 0, 0, .55);
+			}
+			.wordmark span { display: inline-block; }
+			.wordmark .w2 { color: #fff3d0; }
+			.ribbon {
+				display: inline-block;
+				margin-top: 14px;
+				padding: 7px 26px 8px;
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: .12em;
+				color: #ffe3a0;
+				background: linear-gradient(#d83a47, #8c1823);
+				clip-path: polygon(0 50%, 12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%);
+				text-shadow: 0 2px 0 #3d0710;
+				filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5));
+			}
+
+			/* ── stage: the chest and the party ── */
+			.stage {
+				position: relative;
+				flex: 1;
+				width: 100%;
+				max-width: 520px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				min-height: calc(var(--px) * 34);
+				padding-bottom: calc(var(--px) * 7); /* room for the rarity name under the chest */
+				box-sizing: border-box;
+			}
+			.floor {
+				position: relative;
+				display: flex;
+				align-items: flex-end;
+				justify-content: center;
+				gap: 0;
+			}
+			.floor::after {
+				/* soft pool of light the party stands in */
+				content: "";
+				position: absolute;
+				left: -12%;
+				right: -12%;
+				bottom: calc(var(--px) * -3);
+				height: calc(var(--px) * 6);
+				background: radial-gradient(closest-side, rgba(255, 210, 120, .35), transparent);
+				z-index: -1;
+				opacity: 0;
+				transition: opacity .6s;
+			}
+			.splash.is-ready .floor::after { opacity: 1; }
+			.spr {
+				display: block;
+				width: calc(var(--px) * 16);
+				height: calc(var(--px) * 16);
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+			}
+			.hero { position: relative; will-change: transform; }
+			/* pairs overlap a little, like a party standing close */
+			.hero + .hero { margin-left: calc(var(--px) * -3); z-index: 1; }
+			.hero .spr { filter: drop-shadow(0 var(--px) 0 rgba(0, 0, 0, .35)); }
+			.hero.flip .spr { transform: scaleX(-1); }
+			.splash.is-ready .hero .spr { animation: idle 1.1s steps(2) infinite; }
+			.splash.is-ready .hero:nth-child(2) .spr { animation-delay: -.3s; }
+			.splash.is-ready .hero:nth-child(4) .spr { animation-delay: -.55s; }
+			.splash.is-ready .hero:nth-child(5) .spr { animation-delay: -.8s; }
+			@keyframes idle {
+				50% { translate: 0 calc(var(--px) * -1); }
+			}
+
+			.chest-wrap {
+				position: relative;
+				margin: 0 calc(var(--px) * 1);
+				width: calc(var(--px) * 20);
+				height: calc(var(--px) * 20);
+				display: grid;
+				place-items: end center;
+			}
+			.chest-wrap .spr {
+				width: calc(var(--px) * 20);
+				height: calc(var(--px) * 20);
+				position: relative;
+				z-index: 2;
+				opacity: 0;
+			}
+			.rays {
+				position: absolute;
+				left: 50%;
+				top: 55%;
+				width: calc(var(--px) * 90);
+				height: calc(var(--px) * 90);
+				margin: calc(var(--px) * -45) 0 0 calc(var(--px) * -45);
+				border-radius: 50%;
+				background: repeating-conic-gradient(from 0deg, var(--ray, #ffd35a) 0 7deg, transparent 7deg 22deg);
+				mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
+				-webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
+				opacity: 0;
+				z-index: 0;
+				transition: --ray .6s;
+			}
+			.splash.is-ready .rays { animation: spin 14s linear infinite; }
+			@keyframes spin { to { transform: rotate(360deg); } }
+			.glow {
+				position: absolute;
+				left: 50%;
+				top: 60%;
+				width: calc(var(--px) * 36);
+				height: calc(var(--px) * 36);
+				margin: calc(var(--px) * -18) 0 0 calc(var(--px) * -18);
+				border-radius: 50%;
+				background: radial-gradient(closest-side, var(--ray, #ffd35a), transparent);
+				opacity: 0;
+				z-index: 1;
+				filter: blur(4px);
+			}
+			.tier {
+				position: absolute;
+				left: 50%;
+				top: calc(100% + var(--px) * 4);
+				transform: translateX(-50%);
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: .16em;
+				white-space: nowrap;
+				color: var(--ray, #ffd35a);
+				text-shadow: 0 2px 0 var(--ink), 0 0 12px var(--ray, #ffd35a);
+				opacity: 0;
+				z-index: 3;
+			}
+			.coin {
+				position: absolute;
+				left: 50%;
+				top: 40%;
+				width: calc(var(--px) * 8);
+				height: calc(var(--px) * 8);
+				margin-left: calc(var(--px) * -4);
+				image-rendering: pixelated;
+				z-index: 3;
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			/* ── copy and the launch button ── */
+			.cta {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 12px;
+				width: 100%;
+				max-width: 380px;
+				opacity: 0;
+			}
+			.tagline {
+				margin: 0;
+				font-size: 17px;
+				line-height: 1.35;
+				color: #e9e2f5;
+				text-wrap: balance;
+			}
+			.tagline b { color: var(--gold); font-weight: 700; }
+
+			#launchButton {
+				position: relative;
+				width: 100%;
+				min-height: 60px;
+				padding: 0 24px;
+				border: 0;
+				border-radius: 12px;
+				font: 700 21px 'Pixelify Sans', ui-monospace, monospace;
+				letter-spacing: .02em;
+				color: #fff3d6;
+				background: linear-gradient(#e14552, #a5202d);
+				box-shadow:
+					inset 0 0 0 3px var(--ink),
+					inset 0 0 0 5px #ff8e93,
+					0 5px 0 var(--red2),
+					0 5px 0 3px var(--ink),
+					0 14px 30px rgba(201, 47, 60, .45);
+				text-shadow: 0 2px 0 #5a0d16;
+				cursor: pointer;
+				transition: transform .12s, filter .2s;
+				animation: breathe 2.2s ease-in-out infinite;
+				-webkit-appearance: none;
+				appearance: none;
+			}
+			#launchButton:active { transform: translateY(3px); }
+			#launchButton:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+			@keyframes breathe {
+				50% { filter: brightness(1.12); }
+			}
+			/* Still downloading: Mattercraft keeps the button disabled until the
+			   scene is ready. Show a pixel loading bar instead of a dead button. */
+			#launchButton:disabled {
+				color: transparent;
+				text-shadow: none;
+				cursor: default;
+				animation: none;
+				background: #221a30;
+				box-shadow: inset 0 0 0 3px var(--ink), inset 0 0 0 5px #4b3f5c, 0 5px 0 3px var(--ink);
+			}
+			#launchButton:disabled::before {
+				content: "";
+				position: absolute;
+				left: 14px;
+				right: 14px;
+				top: 50%;
+				height: 12px;
+				margin-top: -6px;
+				background:
+					repeating-linear-gradient(90deg, #ffd35a 0 10px, transparent 10px 14px) 0 0 / 28px 100%;
+				mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+				-webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+				animation: march .6s steps(4) infinite;
+				opacity: .9;
+			}
+			#launchButton:disabled::after {
+				content: "Loading the loot…";
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: calc(100% + 12px);
+				font: 500 13px 'Pixelify Sans', ui-monospace, monospace;
+				color: #a99cc0;
+			}
+			@keyframes march { to { background-position: 28px 0; } }
+
+			.hint {
+				margin: 0;
+				font-size: 13px;
+				line-height: 1.4;
+				color: #a99cc0;
+				transition: opacity .3s;
+			}
+			#launchButton:disabled ~ .hint { opacity: 0; }
+			.made {
+				font-family: 'Silkscreen', monospace;
+				font-size: 10px;
+				letter-spacing: .18em;
+				color: #7f7396;
+				margin-top: 2px;
+			}
+
+			/* ── the taskbar ── */
+			.taskbar {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				height: calc(var(--bar) + var(--safe-b));
+				padding-bottom: var(--safe-b);
+				box-sizing: border-box;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				padding-left: 10px;
+				padding-right: 12px;
+				background: rgba(18, 14, 28, .86);
+				-webkit-backdrop-filter: blur(14px) saturate(1.4);
+				backdrop-filter: blur(14px) saturate(1.4);
+				border-top: 1px solid rgba(255, 255, 255, .1);
+				transform: translateY(110%);
+				z-index: 4;
+			}
+			.tb-start, .tb-app {
+				position: relative;
+				width: 38px;
+				height: 38px;
+				border-radius: 8px;
+				display: grid;
+				place-items: center;
+				flex: none;
+			}
+			.tb-start i {
+				display: grid;
+				grid-template-columns: 8px 8px;
+				gap: 2px;
+			}
+			.tb-start i b { width: 8px; height: 8px; background: #6fb6ff; display: block; }
+			.tb-search {
+				flex: 0 1 150px;
+				height: 30px;
+				border-radius: 15px;
+				background: rgba(255, 255, 255, .08);
+				display: flex;
+				align-items: center;
+				padding: 0 12px;
+				font-size: 12px;
+				color: #9a90ad;
+				min-width: 0;
+				overflow: hidden;
+				white-space: nowrap;
+			}
+			.tb-app { background: rgba(255, 255, 255, .1); }
+			.tb-app::after {
+				content: "";
+				position: absolute;
+				left: 12px;
+				right: 12px;
+				bottom: 2px;
+				height: 3px;
+				border-radius: 2px;
+				background: #6fb6ff;
+			}
+			.tb-app canvas { width: 26px; height: 26px; image-rendering: pixelated; }
+			.tb-app.ping { animation: ping .5s steps(2) 4; }
+			@keyframes ping { 50% { background: rgba(255, 211, 90, .5); } }
+			.tb-tray {
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-size: 12px;
+				color: #d9d2e6;
+				text-align: right;
+				line-height: 1.15;
+				flex: none;
+			}
+			.tb-tray .ico { width: 14px; height: 10px; border: 2px solid #b9b0c9; border-radius: 2px; box-sizing: border-box; position: relative; }
+			.tb-tray .ico::after { content: ""; position: absolute; left: 1px; top: 1px; bottom: 1px; width: 60%; background: #7ee08a; }
+			.tb-clock b { display: block; font: 700 13px 'Silkscreen', monospace; color: #fff; }
+			.tb-clock.flip b { animation: flip .5s steps(2) 3; }
+			@keyframes flip { 50% { color: var(--gold); } }
+
+			/* Party walking along the top edge of the taskbar (before they jump). */
+			.lane {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: calc(var(--bar) + var(--safe-b) - 2px);
+				height: calc(var(--px) * 16);
+				z-index: 4;
+				pointer-events: none;
+			}
+			.slime {
+				position: absolute;
+				left: 0;
+				bottom: 0;
+				opacity: 0;
+			}
+			.slime .spr { width: calc(var(--px) * 12); height: calc(var(--px) * 12); }
+
+			/* Windows-style toast above the tray */
+			.toast {
+				position: absolute;
+				right: 10px;
+				bottom: calc(var(--bar) + var(--safe-b) + var(--px) * 18);
+				width: min(300px, calc(100% - 20px));
+				box-sizing: border-box;
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				padding: 12px 14px;
+				border-radius: 10px;
+				background: rgba(30, 24, 44, .94);
+				border: 1px solid rgba(255, 255, 255, .12);
+				box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+				text-align: left;
+				opacity: 0;
+				z-index: 6;
+				pointer-events: none;
+			}
+			.toast canvas { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+			.toast small { display: block; font-size: 11px; color: #a99cc0; }
+			.toast span { display: block; font-size: 14px; color: #fff; line-height: 1.3; }
+
+			.skip {
+				position: absolute;
+				right: 12px;
+				top: calc(var(--safe-t) + 10px);
+				min-height: 32px;
+				padding: 0 12px;
+				border: 1px solid rgba(255, 255, 255, .16);
+				border-radius: 16px;
+				background: rgba(0, 0, 0, .25);
+				color: #cfc4ff;
+				font: 500 12px 'Pixelify Sans', ui-monospace, monospace;
+				z-index: 7;
+				cursor: pointer;
+			}
+			.splash.is-ready .skip { display: none; }
+
+			/* Short screens (landscape phones, small laptops): tighten up. */
+			@media (max-height: 720px) {
+				.ribbon { margin-top: 8px; }
+				.cta { gap: 8px; }
+				#launchButton { min-height: 54px; }
+			}
+			/* Landscape phones: keep the logo, the party and the button. */
+			@media (max-height: 460px) {
+				.tagline, .hint, .made, .logo .eyebrow { display: none; }
+				.wordmark { font-size: 15vh; }
+				.cta { max-width: 320px; }
+				.splash { --bar: 40px; }
+				.layout { padding-bottom: 8px; }
+				.stage { min-height: 0; padding-bottom: calc(var(--px) * 6); }
+				.tb-start, .tb-app { width: 32px; height: 32px; }
+				#launchButton { min-height: 46px !important; font-size: 18px; }
+			}
+			@media (max-height: 640px) {
+				.layout { padding-top: calc(var(--safe-t) + 2vh); }
+				.ribbon { display: none; }
+				.tagline { font-size: 15px; }
+				.logo .eyebrow { margin-bottom: 4px; }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="splash" id="splash">
+			<div class="boot" aria-hidden="true"></div>
+			<div class="stars" aria-hidden="true"></div>
+
+			<div class="layout">
+				<header class="logo">
+					<div class="eyebrow"><b>TBH</b><span class="dot"></span>TASK BAR HERO</div>
+					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
+					<div class="ribbon">A 60-SECOND DESK RAID</div>
+				</header>
+
+				<div class="stage" aria-hidden="true">
+					<div class="floor">
+						<div class="hero" data-s="priest"></div>
+						<div class="hero" data-s="sorcerer"></div>
+						<div class="chest-wrap">
+							<div class="rays"></div>
+							<div class="glow"></div>
+							<div class="tier">COMMON</div>
+						</div>
+						<div class="hero flip" data-s="ranger"></div>
+						<div class="hero flip" data-s="knight"></div>
+					</div>
+				</div>
+
+				<div class="cta">
+					<p class="tagline">Your party leaves the taskbar for lunch. <b>You are the cursor.</b> Tap monsters, grab the loot, open the chest.</p>
+					<button id="launchButton" disabled>Start lunch break</button>
+					<p class="hint">You'll be asked for the camera. Point it at your desk.</p>
+					<div class="made">ACTIVATED BY MEDIALIFE</div>
+				</div>
+			</div>
+
+			<div class="lane" aria-hidden="true">
+				<div class="slime" data-s="slime"></div>
+			</div>
+
+			<div class="toast" role="status" aria-live="polite">
+				<canvas data-s="chest" width="16" height="16"></canvas>
+				<div><small>TBH: Task Bar Hero · now</small><span>Lunch break! Your party just left the taskbar to hunt for loot.</span></div>
+			</div>
+
+			<nav class="taskbar" aria-hidden="true">
+				<div class="tb-start"><i><b></b><b></b><b></b><b></b></i></div>
+				<div class="tb-search">Search for loot</div>
+				<div class="tb-app"><canvas data-s="knight" width="16" height="16"></canvas></div>
+				<div class="tb-tray">
+					<span class="ico"></span>
+					<div class="tb-clock"><b>11:59</b>AM</div>
+				</div>
+			</nav>
+
+			<button class="skip" type="button">Skip intro</button>
+		</div>
+
+		<script>
+		/* LOOT BREAK splash. Plays once (about 4 s), tap anywhere or Skip to jump
+		   to the end. Respects reduced motion. The sprites are the same pixel
+		   grids the game draws, copied from LootBreakGame.ts. */
+		(function () {
+			var ART = {"PAL":{"k":"#16121d","w":"#f4f1e8","s":"#cfd4dc","S":"#7f8996","r":"#d23b45","R":"#7d1c2a","g":"#f5c447","G":"#a8731b","f":"#f7cfa6","y":"#f8d56b","e":"#58a63e","E":"#2e6330","b":"#91603a","B":"#5b3a22","p":"#8a57d6","P":"#4a2a85","n":"#f28fae","N":"#b9506f","c":"#63c6ff","C":"#2b6fc4","o":"#ece6d2","O":"#a8a18c","x":"#ff3b3b","l":"#82e66d","L":"#3a9b3a","v":"#6a4590","V":"#2f1d47","d":"#3a3f4b","D":"#23262f"},"SPRITES":{"knight":["......rrr.......",".....rRrr.......","....kkkkkk......","...kssssssk.....","..ksssssssSk....","..ksskkkkkSk....","..ksssssssSk....","..kSssssSSSk.k..",".rRkkSSSSkkk.kw.","rRRksgsgssk..kw.","rRRkssssssk.kkw.",".RRksggggsk.kgk.","..Rkssssssk..k..","...kSSkkSSk.....","...kSk..kSk.....","..kkkk.kkkk....."],"ranger":[".....kkkkk......","....kyyyyyk.....","...kyyyyyyyk..k.","..kyyEEEEEyyk.kB",".kkyEfffffEyk.kB","kfkyfkfffkfyk..k",".k.yfffffffyk..k","...kyfffffyk...k","...kkEEEEEkk..kB","..kEeeeeeeEk.kBk","..kEebbbbeEkkkk.","..kEeeeeeeEk....","...kEeeeeEk.....","...kbbkkbbk.....","...kBk..kBk.....","..kkkk.kkkk....."],"sorcerer":["......kk........",".....kPpk.......","....kPppk.......","...kPpppk.......","...kPppgpk......","..kPpppppPk.....","kkkkkkkkkkkkk...","..kPfffffPk.....","..kPfkffkfPk.cc.","..kPfffffPk.kcck","...kkpppkk...kk.","..kPpppppPk.kbk.","..kpPpgpPpkkbk..","..kpppppppkkk...","...kPPkPPk......","..kkkk.kkkk....."],"priest":[".....kkkkk......","...kkwwwwwkk..g.","..kwwwwwwwwwk.g.","..kwnnnnnnnwkggg","..knnfffffnnk.g.","..knfkfffkfnk.k.","..knfffffffnk.k.","..knnfffffnnk.k.","..kNnkkkkknNk.k.","..kwwwwgwwwwk.k.",".kwwwwgggwwwwkk.",".kwwwwwgwwwwwk..",".kwwwwwwwwwwwk..","..kwwwwwwwwwk...","...kOkkkkkOk....","...kkk...kkk...."],"slime":["................","................","................","................","................","......kkkk......","....kkllllkk....","...kllwwlllLk...","..kllwllllllLk..","..kllkllllkllk..",".klllkllllklllk.",".kllllllllllLLk.",".kLlllkkkllllLk.","..kLLLLLLLLLLk..","...kkkkkkkkkk...","................"],"chest":["................","................","...kkkkkkkkkk...","..kbbbbbbbbbbk..",".kbggggggggggbk.",".kbbbbbbbbbbbbk.",".kkkkkkkkkkkkkk.",".kbbbbbggbbbbbk.",".kgbbbbgGbbbbgk.",".kgbbbbbbbbbbgk.",".kgbbbbbbbbbbgk.",".kBBBBBBBBBBBBk.",".kkkkkkkkkkkkkk.","................","................","................"],"chestOpen":["..kkkkkkkkkkkk..",".kbbbbbbbbbbbbk.",".kbggggggggggbk.",".kkkkkkkkkkkkkk.","..kwwwwwwwwwwk..",".kgggggggggggggk",".kkkkkkkkkkkkkk.",".kbbbbbggbbbbbk.",".kgbbbbgGbbbbgk.",".kgbbbbbbbbbbgk.",".kgbbbbbbbbbbgk.",".kBBBBBBBBBBBBk.",".kkkkkkkkkkkkkk.","................","................","................"],"coin":["..kkkk..",".kggggk.","kggwgGGk","kggwgGGk","kgggggGk","kgggGGGk",".kGGGGk.","..kkkk.."]}};
+			var TIERS = [
+				['COMMON', '#c9ced6'], ['UNCOMMON', '#6fdc5a'], ['RARE', '#4aa8ff'], ['LEGENDARY', '#ffc53d'],
+				['IMMORTAL', '#ff4d4d'], ['ARCANA', '#ff5ad1'], ['BEYOND', '#33e6e6'], ['CELESTIAL', '#f3e3a0'],
+				['DIVINE', '#ffffff'], ['COSMIC', '#c79bff']
+			];
+			var root = document.getElementById('splash');
+			var $ = function (s, el) { return (el || root).querySelector(s); };
+			var $$ = function (s, el) { return Array.prototype.slice.call((el || root).querySelectorAll(s)); };
+
+			function paint(cv, name) {
+				var rows = ART.SPRITES[name];
+				if (!rows) return cv;
+				cv.width = rows[0].length;
+				cv.height = rows.length;
+				var g = cv.getContext('2d');
+				g.clearRect(0, 0, cv.width, cv.height);
+				for (var y = 0; y < rows.length; y++)
+					for (var x = 0; x < rows[y].length; x++) {
+						var c = ART.PAL[rows[y][x]];
+						if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); }
+					}
+				return cv;
+			}
+			function sprite(name) {
+				var cv = document.createElement('canvas');
+				cv.className = 'spr';
+				return paint(cv, name);
+			}
+
+			$$('[data-s]').forEach(function (el) {
+				if (el.tagName === 'CANVAS') paint(el, el.getAttribute('data-s'));
+				else el.appendChild(sprite(el.getAttribute('data-s')));
+			});
+			var chest = sprite('chest');
+			$('.chest-wrap').appendChild(chest);
+
+			// One sprite pixel: as big as the screen allows, always a whole number.
+			function size() {
+				var w = innerWidth, h = innerHeight;
+				// the party row is about 80 sprite pixels wide
+				var px = Math.max(3, Math.min(7, Math.floor(Math.min((w - 28) / 82, h / 190))));
+				root.style.setProperty('--px', px + 'px');
+			}
+			size();
+			addEventListener('resize', size);
+
+			// Stars
+			var stars = $('.stars');
+			for (var i = 0; i < 26; i++) {
+				var s = document.createElement('i');
+				s.style.left = (Math.random() * 100).toFixed(1) + '%';
+				s.style.top = (Math.random() * 62).toFixed(1) + '%';
+				s.style.animationDelay = (-Math.random() * 3).toFixed(2) + 's';
+				s.style.animationDuration = (2 + Math.random() * 3).toFixed(2) + 's';
+				stars.appendChild(s);
+			}
+
+			var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+			var anims = [];
+			var timers = [];
+			var done = false;
+			function A(el, frames, opts) {
+				if (!el || !el.animate) return null;
+				if (!opts.fill) opts.fill = 'both';
+				var a = el.animate(frames, opts);
+				anims.push(a);
+				return a;
+			}
+			function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+
+			var heroes = $$('.hero');
+			var lane = $('.lane');
+			var clock = $('.tb-clock');
+			var app = $('.tb-app');
+			var toast = $('.toast');
+			var tierEl = $('.tier');
+
+			// Where each hero starts: walking along the taskbar from the left.
+			// FLIP: measure the final spot on the stage, start from the lane.
+			function laneOffsets() {
+				var lr = lane.getBoundingClientRect();
+				var px = parseFloat(getComputedStyle(root).getPropertyValue('--px')) || 4;
+				var order = ['knight', 'ranger', 'sorcerer', 'priest']; // marching order, leader first
+				return heroes.map(function (h) {
+					var r = h.getBoundingClientRect();
+					var idx = order.indexOf(h.getAttribute('data-s'));
+					var x = lr.left + innerWidth * 0.46 - idx * px * 17;
+					var y = lr.bottom - px * 16;
+					return { dx: x - r.left, dy: y - r.top };
+				});
+			}
+
+			function play() {
+				var off = laneOffsets();
+				var flipNow = function (h) { return h.classList.contains('flip'); };
+
+				// 0: boot line
+				A($('.boot'), [
+					{ opacity: 1, transform: 'scaleX(0)' },
+					{ opacity: 1, transform: 'scaleX(1)', offset: .55 },
+					{ opacity: 0, transform: 'scaleX(1) scaleY(30)' }
+				], { duration: 600, easing: 'ease-out' });
+				A(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 150, fill: 'backwards' });
+
+				// 0.45 s: taskbar slides up
+				A($('.taskbar'), [{ transform: 'translateY(110%)' }, { transform: 'none' }],
+					{ duration: 420, delay: 450, easing: 'cubic-bezier(.2,1.2,.4,1)' });
+
+				// 0.9 s: the party marches in along the taskbar (facing right)
+				heroes.forEach(function (h, i) {
+					var o = off[i];
+					var spr = h.querySelector('.spr');
+					var start = 'translate(' + (o.dx - innerWidth * 0.6) + 'px,' + o.dy + 'px)';
+					var mid = 'translate(' + o.dx + 'px,' + o.dy + 'px)';
+					// face right while walking; the two on the right turn round when they land
+					if (flipNow(h)) A(spr, [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: .99 }, { transform: 'scaleX(-1)' }], { duration: 2580 + i * 90 });
+					A(h, [{ transform: start }, { transform: mid }], { duration: 1100, delay: 700, easing: 'linear' });
+					A(spr, [{ translate: '0 0' }, { translate: '0 calc(var(--px) * -2)' }, { translate: '0 0' }],
+						{ duration: 260, delay: 700, iterations: 5, easing: 'steps(2)', fill: 'none' });
+				});
+				var slime = $('.slime');
+				A(slime, [
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.62 + 'px,0)' },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.72 + 'px,calc(var(--px) * -6))', offset: .25 },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.8 + 'px,0)', offset: .5 },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.9 + 'px,calc(var(--px) * -6))', offset: .75 },
+					{ opacity: 1, transform: 'translate(' + (innerWidth + 60) + 'px,0)' }
+				], { duration: 1400, delay: 700, easing: 'linear', fill: 'forwards' });
+
+				// 2.1 s: noon. Clock flips, app pings, toast pops.
+				at(reduce ? 0 : 1700, function () {
+					clock.innerHTML = '<b>12:00</b>PM';
+					clock.classList.add('flip');
+					app.classList.add('ping');
+				});
+				A(toast, [
+					{ opacity: 0, transform: 'translateX(30px)' },
+					{ opacity: 1, transform: 'none', offset: .15 },
+					{ opacity: 1, transform: 'none', offset: .8 },
+					{ opacity: 0, transform: 'translateY(8px)' }
+				], { duration: 1400, delay: 1700, easing: 'ease-out' });
+
+				// 2.5 s: they jump off the taskbar onto the stage
+				heroes.forEach(function (h, i) {
+					var o = off[i];
+					A(h, [
+						{ transform: 'translate(' + o.dx + 'px,' + o.dy + 'px)' },
+						{ transform: 'translate(' + o.dx * 0.45 + 'px,' + (Math.min(o.dy, 0) - innerHeight * 0.12) + 'px)', offset: .45 },
+						{ transform: 'translate(0,0)', offset: .85 },
+						{ transform: 'translate(0,calc(var(--px) * -2))', offset: .92 },
+						{ transform: 'translate(0,0)' }
+					], { duration: 620, delay: 2050 + i * 90, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' });
+				});
+
+				// 3.0 s: the chest drops in, the logo slams
+				A(chest, [
+					{ opacity: 1, transform: 'translateY(-60vh)' },
+					{ opacity: 1, transform: 'translateY(0) scale(1.15,.8)', offset: .7 },
+					{ opacity: 1, transform: 'translateY(calc(var(--px) * -3)) scale(.95,1.05)', offset: .85 },
+					{ opacity: 1, transform: 'none' }
+				], { duration: 520, delay: 2500, easing: 'cubic-bezier(.5,0,.75,0)' });
+				A($('.layout'), [
+					{ transform: 'none' }, { transform: 'translate(-4px,3px)' }, { transform: 'translate(4px,-2px)' },
+					{ transform: 'translate(-2px,1px)' }, { transform: 'none' }
+				], { duration: 260, delay: 2870, fill: 'none' });
+				A($('.logo'), [
+					{ opacity: 0, transform: 'scale(2.2)', filter: 'blur(6px)' },
+					{ opacity: 1, transform: 'scale(.94)', filter: 'blur(0)', offset: .7 },
+					{ opacity: 1, transform: 'none' }
+				], { duration: 420, delay: 2600, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
+				A($('.rays'), [{ opacity: 0, scale: .3 }, { opacity: .55, scale: 1 }], { duration: 600, delay: 2900, easing: 'ease-out' });
+				A($('.glow'), [{ opacity: 0 }, { opacity: .8 }], { duration: 500, delay: 2900 });
+				A(tierEl, [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: 3050 });
+
+				// coins burst out of the chest
+				for (var c = 0; c < 9; c++) {
+					var coin = paint(document.createElement('canvas'), 'coin');
+					coin.className = 'coin';
+					$('.chest-wrap').appendChild(coin);
+					var ang = -Math.PI / 2 + (c - 4) * 0.32;
+					var dist = 60 + Math.random() * 50;
+					var tx = Math.cos(ang) * dist, ty = Math.sin(ang) * dist;
+					A(coin, [
+						{ opacity: 1, transform: 'translate(0,0) scale(.6)' },
+						{ opacity: 1, transform: 'translate(' + tx + 'px,' + ty + 'px) scale(1)', offset: .45 },
+						{ opacity: 0, transform: 'translate(' + tx * 1.3 + 'px,' + (ty + 90) + 'px) scale(.8)' }
+					], { duration: 900, delay: 2930 + c * 25, easing: 'cubic-bezier(.2,.8,.4,1)', fill: 'forwards' });
+				}
+
+				// 3.6 s: the call to action rises
+				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 450, delay: 3150, easing: 'cubic-bezier(.2,1,.4,1)' });
+
+				at(reduce ? 0 : 3250, ready);
+			}
+
+			// The chest cycles through TBH's rarities, slowly, once the intro ends.
+			var ti = 0;
+			function cycle() {
+				ti = (ti + 1) % TIERS.length;
+				root.style.setProperty('--ray', TIERS[ti][1]);
+				tierEl.textContent = TIERS[ti][0];
+				tierEl.animate && tierEl.animate([{ transform: 'translateX(-50%) scale(1.25)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 250 });
+			}
+			function ready() {
+				if (done) return;
+				done = true;
+				root.classList.add('is-ready');
+				paint(chest, 'chestOpen');
+				timers.push(setInterval(cycle, reduce ? 2600 : 1200));
+			}
+			function skip() {
+				if (done) return;
+				timers.forEach(clearTimeout);
+				timers = [];
+				anims.forEach(function (a) { try { a.finish(); } catch (e) {} });
+				clock.innerHTML = '<b>12:00</b>PM';
+				ready();
+			}
+
+			// Tap anywhere (except the button) to skip the intro.
+			root.addEventListener('pointerdown', function (e) {
+				if (e.target && e.target.id === 'launchButton') return;
+				skip();
+			});
+			$('.skip').addEventListener('click', skip);
+
+			function start() {
+				play();
+				if (reduce) skip();
+			}
+			// Let the fonts arrive (max 600 ms) so the logo slams in its real face.
+			if (document.fonts && document.fonts.load) {
+				var go = false;
+				var kick = function () { if (!go) { go = true; start(); } };
+				Promise.all([
+					document.fonts.load('700 40px Silkscreen'),
+					document.fonts.load('700 20px "Pixelify Sans"')
+				]).then(kick, kick);
+				setTimeout(kick, 600);
+			} else start();
+		})();
+		</script>
+
+	</body>
+</html>

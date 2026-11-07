@@ -10,6 +10,49 @@ assets to upload.
 (bundled by `node scripts/build-loot-break.mjs`, with
 `mattercraft/lab-shim/zcomponent.ts` standing in for Mattercraft).
 
+## Files
+
+| File | Goes where in Mattercraft |
+|---|---|
+| `LootBreakGame.ts` | `src/`, as a component |
+| `index.html` | replaces the project's `index.html` (the splash screen) |
+| `index.ts` | replaces the project's `index.ts` (launch + analytics) |
+
+`index.html` is **generated**: edit `index.src.html` and run
+`node scripts/build-loot-break.mjs`. The build copies the game's pixel sprites
+into the splash so the two never drift.
+
+## The splash screen (index.html)
+
+About 4 seconds, drawn entirely in code (no images to download), so it paints
+on the first frame:
+
+1. The screen boots and a desktop taskbar slides up, clock at 11:59.
+2. The party marches along the taskbar while a slime hops ahead.
+3. The clock flips to 12:00 PM, the TBH taskbar icon pings and a Windows-style
+   notification says the party has gone on a loot break.
+4. The heroes jump off the taskbar, the chest drops in, the LOOT BREAK logo
+   slams down with a screen shake and coins burst out.
+5. The tagline and **Start lunch break** button rise. While Mattercraft is
+   still downloading the scene, the button shows a pixel loading bar.
+   Afterwards the chest slowly cycles through TBH's ten rarities.
+
+Tapping anywhere (or **Skip intro**) jumps to the end. Reduced-motion users
+get the end state straight away. It fits portrait phones down to iPhone SE
+size, landscape phones and desktop.
+
+Preview: `/labs/loot-break/splash.html` (the lab's copy uses a fake loader
+that enables the button after 1.8 s; add `?loading=1` to keep it loading).
+
+## Analytics (index.ts)
+
+Same GA property and event names as the other MEDIALIFE activations, with
+`experience: 'tbh_lootbreak'`: `activate_click`, `camera_granted`,
+`camera_denied`, `game_start`, `boss_reached`, `game_complete` (score, tier,
+seconds) and one `session_summary` per visit. `index.ts` imports
+`./Scene.zcomp`; if the project's scene file has another name, change that
+import.
+
 ## How a round plays
 
 1. The intro card explains the round. **Start lunch break** runs 3, 2, 1, GO.
@@ -24,7 +67,8 @@ assets to upload.
 
 ## Install in Mattercraft
 
-1. Copy `LootBreakGame.ts` into the project's `src/` folder.
+1. Copy `LootBreakGame.ts` into the project's `src/` folder, and replace the
+   project's `index.html` and `index.ts` with the ones here.
 2. Add a **LootBreakGame** node under the tracked content (an Instant
    Tracking Group or a World Tracker's anchor). It needs nothing else in the
    scene.
