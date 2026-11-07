@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>LOOT BREAK lab</title>
+<meta name="theme-color" content="#120f18">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="./assets/lab.css?v=1">
+<!-- The import map must come before any modulepreload or module script. -->
+<script type="importmap">
+{"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
+</script>
+<script type="module" src="./assets/lab.js?v=1"></script>
+</head>
+<body>
+<!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with the
+     same id. The game (the real LootBreakGame.ts) puts its UI in the overlay,
+     exactly as it does in Mattercraft. -->
+<div id="stage">
+  <canvas id="c" aria-label="LOOT BREAK test scene"></canvas>
+  <div id="zcomponent-overlay"></div>
+</div>
+
+<button class="lab-toggle" id="labToggle" type="button" aria-expanded="false" aria-controls="lab">Lab</button>
+<aside class="lab-panel" id="lab" hidden>
+  <h2>LOOT BREAK test lab</h2>
+  <p>This page runs the real Mattercraft game file (LootBreakGame.ts) with plain three.js standing in for the AR scene. In AR the lane sits on the desk where the player taps. Drag empty space to look around, pinch or scroll to zoom.</p>
+  <label class="lab-check"><input type="checkbox" id="useCam"> Use my camera as the background (closer to AR)</label>
+  <h3>Round</h3>
+  <label>Round length (s) <output></output><input id="o-roundSeconds" type="range" min="20" max="120" step="5" value="60"></label>
+  <label>Boss arrives at <output></output><input id="o-bossAt" type="range" min="0.3" max="0.95" step="0.05" value="0.75"></label>
+  <label>Difficulty <output></output><input id="o-difficulty" type="range" min="0" max="1" step="0.05" value="0.5"></label>
+  <label>Rarity score scale <output></output><input id="o-tierScale" type="range" min="0.5" max="2" step="0.05" value="1"></label>
+  <h3>Look</h3>
+  <label>Scene scale <output></output><input id="o-sceneScale" type="range" min="0.5" max="2" step="0.05" value="1"></label>
+  <label class="lab-check"><input type="checkbox" id="o-showTaskbar" checked> Taskbar on the front of the lane</label>
+  <label class="lab-check"><input type="checkbox" id="o-faceCamera" checked> Sprites turn to face the camera</label>
+  <label class="lab-check"><input type="checkbox" id="o-sound" checked> Sound</label>
+  <h3>Test</h3>
+  <div class="lab-row">
+    <button type="button" id="b-start">Start round</button>
+    <button type="button" id="b-boss">Skip to boss</button>
+    <button type="button" id="b-end">End round</button>
+    <button type="button" id="b-intro">Show intro</button>
+  </div>
+  <label class="lab-check"><input type="checkbox" id="b-bot"> Auto-play (a bot taps for you)</label>
+  <p class="lab-small" id="state" aria-live="polite"></p>
+  <p class="lab-small">Every setting here maps 1:1 to a property on the LootBreakGame component in Mattercraft.</p>
+</aside>
+</body>
+</html>
