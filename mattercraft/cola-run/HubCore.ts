@@ -197,6 +197,43 @@ export interface HubLook {
   exitButton?: boolean;
   /** Push the top bar down this many px (same as HubOptions.hudOffset). */
   topOffset?: number;
+  /**
+   * Which side the host's joystick is on. The home dock (BOBO OS button and
+   * Bobo's moves) sits in the other bottom corner. Default left.
+   */
+  joystickSide?: "left" | "right";
+  /** Mode colours for the home screen (CSS colours), matching the host's menus. */
+  accents?: { play?: string; lounge?: string; room?: string };
+}
+
+/**
+ * BOBO OS as the home screen of a host app (the Cola Run game): one button
+ * opens a sheet with every mode, app and setting, and Bobo's moves sit
+ * behind one action button. The host says what is going on and does the
+ * actual work; the hub only draws it. See CollectorHub.setHome.
+ */
+export interface HubHome {
+  /** Where the host is now. */
+  mode(): "play" | "paused" | "lounge" | "room" | "placing" | "idle";
+  /** One line under the title: "Paused · 3 of 6 cans", "Hanging out with Bobo". */
+  status(): string;
+  /** Bobo's moves for the action button (empty: no button). */
+  moves(): { id: string; label: string; svg: string }[];
+  move(id: string): void;
+  /** Whether the moves button belongs on screen right now. */
+  movesReady(): boolean;
+  go(to: "play" | "resume" | "restart" | "lounge" | "room"): void;
+  howTo(): void;
+  /** Move the scene (reset placement). */
+  replace(): void;
+  /** The host's join / claim call to action, or null for none. */
+  join(): { label: string } | null;
+  doJoin(): void;
+  audio(): { music: boolean; sound: boolean };
+  setAudio(kind: "music" | "sound", on: boolean): void;
+  /** The sheet opened / closed (pause and resume a round here). */
+  opened?(): void;
+  closed?(): void;
 }
 
 /**
@@ -204,7 +241,7 @@ export interface HubLook {
  * OrbHuntGame.ts carry the same number, and the hideout warns on screen when
  * a project mixes files from different releases.
  */
-export const HIDEOUT_VERSION = "4";
+export const HIDEOUT_VERSION = "5";
 
 /* ══ Small helpers ══════════════════════════════════════════════════════ */
 
@@ -305,6 +342,17 @@ function srgb(tex: THREE.Texture) {
 
 /* ══ Icons (24×24, stroke) ══════════════════════════════════════════════ */
 
+/** "#4fd6e8" / "rgb(79,214,232)" → "79,214,232" (for rgba() with any alpha), or null. */
+function rgbTriplet(c: string): string | null {
+  const h = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c.trim());
+  if (h) {
+    const x = h[1].length === 3 ? [...h[1]].map((d) => d + d).join("") : h[1];
+    return [0, 2, 4].map((i) => parseInt(x.slice(i, i + 2), 16)).join(",");
+  }
+  const m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(c.trim());
+  return m ? `${m[1]},${m[2]},${m[3]}` : null;
+}
+
 const svg = (d: string) =>
   `<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICON = {
@@ -339,6 +387,18 @@ const ICON = {
   wifi: svg(
     '<path d="M2 8.8a15 15 0 0 1 20 0M5 12.3a10 10 0 0 1 14 0M8.5 15.8a5 5 0 0 1 7 0"/><path d="M12 19.5h.01"/>',
   ),
+  paw: '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><g fill="currentColor"><ellipse cx="7.4" cy="10.2" rx="1.9" ry="2.4"/><ellipse cx="12" cy="8.7" rx="1.95" ry="2.5"/><ellipse cx="16.6" cy="10.2" rx="1.9" ry="2.4"/><path d="M12 12.8c3.1 0 5.4 2.1 5.4 4.5 0 2-1.8 3.1-3.8 3.1h-3.2c-2 0-3.8-1.1-3.8-3.1 0-2.4 2.3-4.5 5.4-4.5z"/></g></svg>',
+  music: svg(
+    '<path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
+  ),
+  sound: svg(
+    '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>',
+  ),
+  move: svg('<path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01"/><path d="M20.5 3.5V9h-5.5"/>'),
+  help: svg(
+    '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8"/><path d="M12 17.2h.01"/>',
+  ),
+  play: svg('<path d="M8 5.5 18.5 12 8 18.5z"/>'),
   external: svg(
     '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
   ),
@@ -1039,6 +1099,84 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
 .mlh-tour-dots i{width:6px;height:6px;border-radius:99px;background:rgba(255,255,255,.22);transition:width .25s,background .25s}
 .mlh-tour-dots i.on{width:18px;background:linear-gradient(90deg,var(--cyan),var(--pink))}
 @media (max-width:520px){.mlh-tour{padding:14px 14px 12px}.mlh-tour h3{font-size:17px}.mlh-tour p{font-size:14px}.mlh-tour-dots{display:none}.mlh-tour-row .mlh-btn{flex:1}.mlh-spot span{display:none}.mlh-spot.focus span{display:block}}
+/* ── Home: BOBO OS as the game's home screen (setHome) ──────────────────
+   Same materials as the game's own menu (dark glass, hairline accent, white
+   labels) so it reads as one product; each mode keeps the game's colour. */
+.mlh{--hp:79,214,232;--hl:255,92,181;--hr:255,196,46;--ha:var(--hp)}
+.mlh.mlh-m-lounge{--ha:var(--hl)}
+.mlh.mlh-m-room{--ha:var(--hr)}
+.mlh.mlh-homed [data-r="pc"],.mlh.mlh-homed [data-r="exit"]{display:none}
+.mlh-hdock{position:absolute;right:16px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 18px);display:flex;align-items:flex-end;gap:14px;pointer-events:none!important}
+.mlh-hdock.l{right:auto;left:16px;flex-direction:row-reverse}
+.mlh-hdock>button{pointer-events:auto!important}
+.mlh-homeb{position:relative;width:58px;height:58px;padding:0;border-radius:18px;display:grid;place-items:center;border:1px solid rgba(var(--ha),.42);background:rgba(20,22,26,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 18px rgba(var(--ha),.18);transition:transform .18s,border-color .18s,box-shadow .18s}
+.mlh-homeb::before{content:"";position:absolute;inset:10px;border-radius:50%;background:radial-gradient(circle at 36% 32%,#f2fbff 0%,rgb(var(--ha)) 38%,rgba(var(--ha),.4) 74%,transparent 100%);filter:blur(7px);opacity:.55;animation:mlh-hpulse 2.6s ease-in-out infinite}
+.mlh-homeb svg{position:relative;width:32px;height:32px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.4))}
+.mlh-homeb:hover,.mlh-homeb.on{transform:scale(1.05);border-color:rgb(var(--ha));box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 22px rgba(var(--ha),.35)}
+.mlh-homeb .mlh-badge{top:-5px;right:-5px}
+@keyframes mlh-hpulse{0%,100%{transform:scale(1);opacity:.45}50%{transform:scale(1.14);opacity:.7}}
+.mlh-act{position:relative;width:58px;height:58px;padding:0;border-radius:50%;display:grid;place-items:center;border:0;color:#fff;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.35),transparent 55%),linear-gradient(145deg,rgb(var(--ha)),rgba(var(--ha),.55));box-shadow:0 8px 24px rgba(0,0,0,.35),0 0 0 3px rgba(20,22,26,.55),0 0 22px rgba(var(--ha),.45);transition:transform .2s cubic-bezier(.2,1.4,.4,1),box-shadow .2s}
+.mlh-act svg{width:28px;height:28px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35));transition:transform .25s,opacity .2s}
+.mlh-act .x{position:absolute;opacity:0;transform:rotate(-90deg) scale(.6)}
+.mlh-act[aria-expanded="true"]{transform:scale(.92)}
+.mlh-act[aria-expanded="true"] .p{opacity:0;transform:rotate(90deg) scale(.6)}
+.mlh-act[aria-expanded="true"] .x{opacity:1;transform:none}
+.mlh-act:focus-visible,.mlh-homeb:focus-visible,.mlh-fan button:focus-visible,.mlh-hs button:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.mlh-fan{position:absolute;width:0;height:0;pointer-events:none!important}
+.mlh-fan .it{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;gap:4px;width:76px;margin:-26px 0 0 -38px;transform:translate(0,0) scale(.3);opacity:0;visibility:hidden;transition:transform .32s cubic-bezier(.2,1.5,.4,1),opacity .2s,visibility 0s .32s}
+.mlh-fan.open .it{transform:translate(var(--x),var(--y)) scale(1);opacity:1;visibility:visible;transition-delay:calc(var(--i) * 35ms),calc(var(--i) * 35ms),0s}
+.mlh-fan.open .it button{pointer-events:auto!important}
+.mlh-fan button{width:52px;height:52px;padding:0;border-radius:50%;display:grid;place-items:center;color:#fff;border:1px solid rgba(var(--ha),.5);background:rgba(20,22,26,.9);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 18px rgba(0,0,0,.4)}
+.mlh-fan button:hover,.mlh-fan button:active{border-color:rgb(var(--ha));background:rgba(var(--ha),.25)}
+.mlh-fan button svg{width:24px;height:24px}
+.mlh-fan .it span{max-width:76px;padding:2px 8px;border-radius:999px;background:rgba(10,12,16,.72);font-size:11.5px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+html.mlh-modal .crc-anchor,html.mlh-modal .mlh-hdock{visibility:hidden}
+html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--crc-dy,0px))}
+.mlh.mlh-docked .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 92px)}
+.mlh-layer.mlh-home{align-items:end;padding:0 8px calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 8px);background:rgba(3,6,12,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.mlh-hs{position:relative;width:min(440px,100%);max-height:calc(100% - var(--safe-area-inset-top,env(safe-area-inset-top,0px)) - 20px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:8px 16px 16px;border-radius:26px;color:#e8ecf2;border:1px solid rgba(var(--ha),.24);background:radial-gradient(120% 50% at 50% -12%,rgba(var(--ha),.17),transparent 62%),rgba(18,20,24,.975);box-shadow:0 26px 80px rgba(0,0,0,.72);transform:translateY(24px);transition:transform .32s cubic-bezier(.2,1,.3,1)}
+.mlh-home.open .mlh-hs{transform:none}
+.mlh-hs::before{content:"";position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgb(var(--ha)),transparent);opacity:.85}
+.mlh-hs-grab{width:40px;height:5px;margin:0 auto 6px;border-radius:99px;background:rgba(255,255,255,.22);touch-action:none}
+.mlh-hs-head{display:flex;align-items:center;gap:12px;padding:4px 0 12px;touch-action:none}
+.mlh-hs-head .mk{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)}
+.mlh-hs-head .mk svg{width:28px;height:28px}
+.mlh-hs-head .t{flex:1;min-width:0}
+.mlh-hs-head b{display:block;font-size:19px;font-weight:800;letter-spacing:.02em;line-height:1.2}
+.mlh-hs-head b i{font-style:normal;background:linear-gradient(90deg,var(--cyan),var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+.mlh-hs-head small{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:#98a2b1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mlh-hs-head small::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:rgb(var(--ha));box-shadow:0 0 8px rgb(var(--ha))}
+.mlh-hs-x{flex:none;width:44px;height:44px;border-radius:13px;border:1px solid #2a2f38;background:#1b1e24;display:grid;place-items:center}
+.mlh-hs-x svg{width:20px;height:20px}
+.mlh-hs-resume{display:flex;gap:8px;margin:0 0 12px}
+.mlh-hs-resume button{flex:1;min-height:52px;border-radius:14px;border:1px solid rgba(var(--hp),.5);background:rgba(var(--hp),.2);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px}
+.mlh-hs-resume button+button{flex:0 0 auto;padding:0 18px;border-color:#2a2f38;background:#1b1e24;font-size:14px}
+.mlh-hs-resume svg{width:18px;height:18px}
+.mlh-hs-modes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mlh-hs-modes button{position:relative;--c:var(--hp);display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:104px;padding:12px 10px 10px;border-radius:16px;text-align:left;border:1px solid rgba(var(--c),.3);background:linear-gradient(160deg,rgba(var(--c),.16),rgba(var(--c),.04) 70%),#17191e;transition:transform .15s,border-color .15s,background .15s}
+.mlh-hs-modes button:active{transform:scale(.97)}
+.mlh-hs-modes button[data-go="lounge"]{--c:var(--hl)}
+.mlh-hs-modes button[data-go="room"]{--c:var(--hr)}
+.mlh-hs-modes i{display:grid;place-items:center;width:36px;height:36px;margin-bottom:auto;border-radius:11px;color:#101215;background:rgb(var(--c));box-shadow:0 0 14px rgba(var(--c),.45)}
+.mlh-hs-modes i svg{width:20px;height:20px}
+.mlh-hs-modes b{margin-top:10px;font-size:14.5px;line-height:1.2}
+.mlh-hs-modes small{font-size:11.5px;line-height:1.3;color:#98a2b1}
+.mlh-hs-modes button.cur{border-color:rgb(var(--c));box-shadow:0 0 0 1px rgb(var(--c)) inset,0 0 18px rgba(var(--c),.22)}
+.mlh-hs-modes button.cur::after{content:"Now";position:absolute;top:10px;right:10px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#101215;background:rgb(var(--c))}
+.mlh-hs-h{margin:16px 2px 8px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7d8696}
+.mlh-hs-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}
+.mlh-hs-apps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 6px;border:0;border-radius:14px;background:none;font-size:12.5px;font-weight:600;color:#dfe5ee;line-height:1.25;text-align:center}
+.mlh-hs-apps button:active{background:rgba(255,255,255,.06)}
+.mlh-hs-apps .mlh-tile{width:54px;height:54px}
+.mlh-hs-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mlh-hs-quick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:8px 4px;border-radius:14px;border:1px solid #2a2f38;background:#1b1e24;font-size:11.5px;font-weight:600;color:#c9d1dc;line-height:1.2}
+.mlh-hs-quick svg{width:22px;height:22px}
+.mlh-hs-quick button[aria-pressed="true"]{color:#fff;border-color:rgba(var(--hp),.55);background:rgba(var(--hp),.16)}
+.mlh-hs-quick button[aria-pressed="false"] svg{opacity:.45}
+.mlh-hs-join{position:relative;width:100%;min-height:54px;margin-top:14px;border-radius:14px;border:1px solid rgba(var(--hp),.55);overflow:hidden;font-size:16px;font-weight:700;letter-spacing:.01em;background:linear-gradient(180deg,rgba(var(--hp),.42),rgba(var(--hp),.22));box-shadow:0 0 22px rgba(var(--hp),.22);display:flex;align-items:center;justify-content:center;gap:8px}
+.mlh-hs-join svg{width:17px;height:17px;opacity:.85}
+@media (min-width:700px) and (min-height:560px){.mlh-layer.mlh-home{align-items:center}}
+@media (max-height:640px){.mlh-hs-modes button{min-height:88px}.mlh-hs-quick button{min-height:62px}.mlh-hs-h{margin-top:12px}}
 @media (prefers-reduced-motion:reduce){
   .mlh *{animation:none!important;transition:none!important}
 }
@@ -1304,6 +1442,8 @@ export class CollectorHub {
     brightness: 1,
     exitButton: true,
     topOffset: 0,
+    joystickSide: "left",
+    accents: {},
   };
   /** The room's world scale and brightness the lights were last set for. */
   private _lit = { scale: -1, brightness: -1 };
@@ -1329,6 +1469,8 @@ export class CollectorHub {
   private readonly _fizz: { o: THREE.Object3D; y: number; phase: number; amp: number }[] = [];
   private readonly _pickables: THREE.Object3D[] = [];
   private readonly _lights: THREE.Light[] = [];
+  /** Height of the loft's floor in room units (for sizing the room to the viewer). */
+  private _loftY = 0;
   /** Bobo's bed: kept Bobo-sized in a room scaled up for people. */
   private _bed?: THREE.Object3D;
   private _bedScale = 1;
@@ -1421,6 +1563,11 @@ export class CollectorHub {
   private _spotFrame = 0;
   private _tourI = -1;
   private _afterTour: (() => void) | null = null;
+  /* home screen (setHome) */
+  private _home: HubHome | null = null;
+  private _fanOpen = false;
+  private _dockKey = "";
+  private _homeMode = "";
 
   constructor(opts: HubOptions) {
     this.opts = { lights: true, room: "evade", exitLabel: "Exit", ...opts };
@@ -1579,7 +1726,9 @@ export class CollectorHub {
     this._setState("building");
     this._el.skip.hidden = false;
     this._sfx("whoosh");
-    if (this._reduceMotion) this.skip();
+    // Reduce Motion: the same build, quicker and calmer (no racing lines), not
+    // a room that pops in. It's a reveal in place, with no camera movement.
+    if (this._reduceMotion) this._buildSpeed = Math.max(this._buildSpeed, 2.2);
   }
 
   /** Where the wireframe draws out from (world point; lift in room units). */
@@ -1682,8 +1831,12 @@ export class CollectorHub {
     this._hud(false);
     this._setShadows(false);
     this._setState("leaving");
+    // The resolver first: with Reduce Motion the leave finishes right here,
+    // and a promise made after that would never resolve (the room would stay
+    // "leaving" and Play from the room would never start the round).
+    const done = new Promise<void>((res) => (this._leaveResolve = res));
     if (this._reduceMotion) this._finishLeave();
-    return new Promise((res) => (this._leaveResolve = res));
+    return done;
   }
 
   /**
@@ -1789,8 +1942,21 @@ export class CollectorHub {
     if (look.modeAvoid !== undefined) L.modeAvoid = String(look.modeAvoid || "");
     if (look.exitButton !== undefined) L.exitButton = !!look.exitButton;
     if (look.topOffset !== undefined) L.topOffset = num(look.topOffset, 0, 400, 0);
+    if (look.joystickSide !== undefined)
+      L.joystickSide = look.joystickSide === "right" ? "right" : "left";
+    if (look.accents) L.accents = { ...L.accents, ...look.accents };
     const ui = this._ui;
     if (!ui) return;
+    for (const [k, v] of [
+      ["--hp", L.accents.play],
+      ["--hl", L.accents.lounge],
+      ["--hr", L.accents.room],
+    ] as const) {
+      const rgb = v && rgbTriplet(v);
+      if (rgb) ui.style.setProperty(k, rgb);
+    }
+    this._el.hdock?.classList.toggle("l", L.joystickSide === "right");
+    this._dockKey = "";
     ui.style.setProperty("--mlh-os-size", String(L.osSize));
     ui.style.setProperty("--mlh-os-alpha", String(L.osOpacity));
     ui.style.setProperty("--mlh-os-dim", String(L.osDim));
@@ -1815,6 +1981,7 @@ export class CollectorHub {
   /** Remove the room from view (no animation). */
   hide() {
     if (this._tourI >= 0) this._tourEnd(false);
+    this._fanToggle(false);
     this._closeAllLayers();
     // The dots are only refreshed while the room is visible: switch them off here.
     this._el.spots.classList.add("off");
@@ -1896,6 +2063,22 @@ export class CollectorHub {
      * in it, on the rug.
      */
     boboScale?: number;
+    /**
+     * Where the viewer ends up, as a share of the radius from the middle:
+     * 0.8 well inside, 1 at the open edge. The room grows (up to maxScale)
+     * if they're further out, and is pushed back if they're further in, so
+     * both floors are in view. Default 0.8. See lastPush.
+     */
+    viewerSpot?: number;
+    /**
+     * Size the room to the person instead: the loft's floor sits at this
+     * share of their eye height above the room's floor (0.85 = just under
+     * eye level, so they see into the loft and the ground floor at once).
+     * `scale` is then only the smallest it may be. `drop` (parent units) is
+     * how far the room will sink below `center`.
+     */
+    eyeLevel?: number;
+    drop?: number;
   }) {
     const parent = o.parent ?? this.root.parent;
     if (parent && this.root.parent !== parent) parent.add(this.root);
@@ -1908,15 +2091,20 @@ export class CollectorHub {
     const inner = this._radius * 0.92; // the wall's inside, in room units
     const max = Math.max(o.scale, o.maxScale ?? o.scale * 4);
     let s = Math.max(1e-4, o.scale);
+    if (o.eyeLevel && this._loftY > 0) {
+      const eye = cam.y - o.center.y + (o.drop ?? 0);
+      if (eye > 1e-3) s = Math.min(max, Math.max(s, (eye * o.eyeLevel) / this._loftY));
+    }
     // Bobo's spot is his bed (on the rug), not the middle of the floor.
     const home = new THREE.Vector3();
     if (this._bed) home.set(this._bed.position.x, 0, this._bed.position.z);
     home.applyAxisAngle(UP, yaw);
     const pos = new THREE.Vector3();
+    const spot = Math.min(1.1, Math.max(0.3, o.viewerSpot ?? 0.8));
     const place = () => {
       let shift = 0; // how far the centre moves from Bobo toward the camera
       if (o.wrapViewer && d > 1e-6) {
-        const CAM = 0.8; // the camera stands at most this far out (share of the radius)
+        const CAM = spot; // the camera stands at most this far out (share of the radius)
         const BOBO = 0.5; // Bobo at most this far back
         const R = inner * s;
         if (d > R * CAM) shift = Math.min(BOBO * R, Math.max(0, d - CAM * R));
@@ -1928,11 +2116,32 @@ export class CollectorHub {
       );
       return Math.hypot(cam.x - pos.x, cam.z - pos.z) / (inner * s);
     };
-    // Grow until the person holding the phone is inside (up to max).
+    // Grow until the person holding the phone is inside (up to max). Sized
+    // to the person (eyeLevel), the size is already right: the room slides
+    // to them instead, so it never balloons past their eye line.
+    const sized = !!(o.eyeLevel && this._loftY > 0);
     let out = place();
-    for (let i = 0; o.wrapViewer && out > 0.8 && s < max && i < 40; i++) {
+    for (let i = 0; o.wrapViewer && !sized && out > spot && s < max && i < 40; i++) {
       s = Math.min(max, s * 1.06);
       out = place();
+    }
+    // Standing deeper in than that: push the room back, away from the camera
+    // (or, sized to the person and standing further out, bring it to them).
+    this.lastPush.set(0, 0, 0);
+    if (o.wrapViewer && (out < spot || (sized && out > spot))) {
+      let vx = pos.x - cam.x;
+      let vz = pos.z - cam.z;
+      let len = Math.hypot(vx, vz);
+      if (len < 1e-6 && d > 1e-6) {
+        vx = -dx;
+        vz = -dz;
+        len = d;
+      }
+      if (len > 1e-6) {
+        const extra = Math.max(-2 * inner * s, (spot - out) * inner * s);
+        this.lastPush.set((vx / len) * extra, 0, (vz / len) * extra);
+        pos.add(this.lastPush);
+      }
     }
     this.root.position.copy(pos);
     this.root.rotation.set(0, yaw, 0);
@@ -1982,6 +2191,9 @@ export class CollectorHub {
     });
   }
 
+  /** How far the last placeAround pushed the room back from Bobo's spot (parent units). */
+  readonly lastPush = new THREE.Vector3();
+
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
   floorRadius() {
     return this._radius * 0.9 * this.root.scale.x;
@@ -2030,8 +2242,273 @@ export class CollectorHub {
     this._toastTimer = setTimeout(() => t.classList.remove("on"), 2400);
   }
 
+  /* ── Home screen: BOBO OS as the host's home (see HubHome) ───────────── */
+
+  /**
+   * Make BOBO OS the host's home screen (null: back to a plain hideout).
+   * The hub then draws one home button and Bobo's moves button in the
+   * bottom corner away from the joystick; the host's own menu, sound and
+   * reset buttons should step aside (they're all in the sheet).
+   */
+  setHome(home: HubHome | null) {
+    this._home = home;
+    this._ui?.classList.toggle("mlh-homed", !!home);
+    // Hosts' floating buttons (the record button) take the top corner the menu button left.
+    document.documentElement.classList.toggle("mlh-homed", !!home);
+    if (!home) {
+      this.closeHome(true);
+      this._fanToggle(false);
+    }
+    this._dockKey = "";
+    this.syncHome();
+  }
+
+  get homeOpen() {
+    return !!this._el.home?.classList.contains("open");
+  }
+
+  /**
+   * Bring the dock in line with the host (cheap: call it whenever the host
+   * changes mode, or a few times a second).
+   */
+  syncHome() {
+    this._syncModal();
+    const h = this._home;
+    const dock = this._el.hdock;
+    if (!dock) return;
+    const mode = h ? h.mode() : "";
+    const moves = h && h.movesReady() && this._tourI < 0 ? h.moves() : [];
+    const show = !!h && this._tourI < 0 && !this._el.gate.classList.contains("open");
+    const key = `${show}|${mode}|${moves.map((m) => m.id + m.label).join(",")}`;
+    if (key === this._dockKey) return;
+    this._dockKey = key;
+    if (mode !== this._homeMode) {
+      this._homeMode = mode;
+      this._ui.classList.toggle("mlh-m-lounge", mode === "lounge");
+      this._ui.classList.toggle("mlh-m-room", mode === "room");
+    }
+    dock.hidden = !show;
+    this._ui.classList.toggle("mlh-docked", show);
+    this._el.act.hidden = !moves.length;
+    if (!moves.length) this._fanToggle(false);
+    this._renderFan(moves);
+    if (this.homeOpen) this._renderHome();
+  }
+
+  openHome() {
+    const h = this._home;
+    if (!h) return;
+    this._fanToggle(false);
+    this.closeOS();
+    if (this.homeOpen) return this._renderHome();
+    this._closeLayer(this._el.sheet);
+    this._closeLayer(this._el.col);
+    this._renderHome();
+    this._open(this._el.home);
+    this._el.homeb.classList.add("on");
+    this._el.homeb.setAttribute("aria-expanded", "true");
+    this._sfx("click");
+    h.opened?.();
+  }
+
+  /** quiet: closing on the way to something else (no closed() call, no focus return). */
+  closeHome(quiet = false) {
+    const el = this._el.home;
+    if (!el?.classList.contains("open")) return;
+    el.classList.remove("open");
+    this._syncModal();
+    this._el.homeb.classList.remove("on");
+    this._el.homeb.setAttribute("aria-expanded", "false");
+    if (quiet) return;
+    (this._lastFocus as HTMLElement | null)?.focus?.({ preventScroll: true });
+    this._home?.closed?.();
+  }
+
+  private _renderFan(moves: { id: string; label: string; svg: string }[]) {
+    const fan = this._el.fan;
+    const n = moves.length;
+    // A quarter-circle up and away from the corner, so it never reaches the joystick side.
+    const left = this._look.joystickSide === "right";
+    // From up-and-over the home button round to the side, far enough apart
+    // that each label clears its neighbour, and short of the joystick.
+    const R = n > 3 ? 128 : 112;
+    const a0 = n > 2 ? 62 : 80;
+    const a1 = n > 2 ? 158 : 140;
+    fan.innerHTML = moves
+      .map((m, i) => {
+        const deg = n > 1 ? a0 + ((a1 - a0) * i) / (n - 1) : 90;
+        const r = (deg * Math.PI) / 180;
+        const x = Math.round(Math.cos(r) * R * (left ? -1 : 1));
+        const y = Math.round(-Math.sin(r) * R);
+        return `<div class="it" style="--x:${x}px;--y:${y}px;--i:${i}"><button type="button" role="menuitem" data-mv="${esc(m.id)}" aria-label="${esc(m.label)}" tabindex="-1">${m.svg}</button><span aria-hidden="true">${esc(m.label)}</span></div>`;
+      })
+      .join("");
+    for (const b of fan.querySelectorAll<HTMLButtonElement>("[data-mv]"))
+      b.addEventListener("click", () => {
+        this._fanToggle(false, true);
+        this._sfx("click");
+        this._home?.move(b.dataset.mv!);
+      });
+    this._placeFan();
+  }
+
+  /** The fan is centred on the moves button. */
+  private _placeFan() {
+    const fan = this._el.fan;
+    const act = this._el.act;
+    if (act.hidden) return;
+    fan.style.left = `${act.offsetLeft + act.offsetWidth / 2}px`;
+    fan.style.top = `${act.offsetTop + act.offsetHeight / 2}px`;
+  }
+
+  private _fanToggle(open = !this._fanOpen, focusBack = false) {
+    if (!this._el.fan) return;
+    if (open && (!this._home || this._el.act.hidden)) open = false;
+    if (open === this._fanOpen) return;
+    this._fanOpen = open;
+    this._placeFan();
+    this._el.fan.classList.toggle("open", open);
+    this._el.act.setAttribute("aria-expanded", String(open));
+    this._el.act.setAttribute("aria-label", open ? "Close Bobo's moves" : "Bobo's moves");
+    const items = this._el.fan.querySelectorAll<HTMLButtonElement>("[data-mv]");
+    items.forEach((b) => (b.tabIndex = open ? 0 : -1));
+    if (open) {
+      this._sfx("click");
+      setTimeout(() => items[0]?.focus({ preventScroll: true }), 60);
+    } else if (focusBack) this._el.act.focus({ preventScroll: true });
+  }
+
+  private _renderHome() {
+    const h = this._home;
+    const box = this._el.hs;
+    if (!h || !box) return;
+    const mode = h.mode();
+    const au = h.audio();
+    const join = h.join();
+    const inRound = mode === "play" || mode === "paused";
+    const modes: {
+      go: "play" | "lounge" | "room";
+      name: string;
+      sub: string;
+      icon: string;
+      cur: boolean;
+    }[] = [
+      {
+        go: "play",
+        name: "Cola Run",
+        sub: inRound ? "Your round" : "Grab the cans",
+        icon: ICON.play,
+        cur: inRound,
+      },
+      {
+        go: "lounge",
+        name: "Lounge",
+        sub: "Hang out with Bobo",
+        icon: ICON.paw,
+        cur: mode === "lounge",
+      },
+      { go: "room", name: "My Room", sub: "Bobo's Hideout", icon: ICON.home, cur: mode === "room" },
+    ];
+    const apps = APPS.filter((a) => a.id !== "colarun");
+    box.innerHTML = `
+<div class="mlh-hs-grab" aria-hidden="true"></div>
+<div class="mlh-hs-head">
+  <span class="mk">${OS_MARK}</span>
+  <div class="t"><b>BOBO <i>OS</i></b><small>${esc(h.status())}</small></div>
+  <button type="button" class="mlh-hs-x" data-hx aria-label="Close BOBO OS">${ICON.close}</button>
+</div>
+${
+  mode === "paused"
+    ? `<div class="mlh-hs-resume"><button type="button" data-go="resume">${ICON.play}Resume round</button><button type="button" data-go="restart">Restart</button></div>`
+    : ""
+}
+<div class="mlh-hs-modes" role="group" aria-label="Modes">${modes
+      .map(
+        (m) =>
+          `<button type="button" data-go="${m.go}" class="${m.cur ? "cur" : ""}"${m.cur ? ' aria-current="true"' : ""}><i>${m.icon}</i><b>${m.name}</b><small>${m.sub}</small></button>`,
+      )
+      .join("")}</div>
+<div class="mlh-hs-h" id="mlh-hs-apps">Apps</div>
+<div class="mlh-hs-apps" role="group" aria-labelledby="mlh-hs-apps">${apps
+      .map(
+        (a) =>
+          `<button type="button" data-app="${a.id}">${tileFor(a, a.id === "alerts")}<span>${esc(a.name)}</span></button>`,
+      )
+      .join("")}</div>
+<div class="mlh-hs-h" id="mlh-hs-q">Settings</div>
+<div class="mlh-hs-quick" role="group" aria-labelledby="mlh-hs-q">
+  <button type="button" data-q="music" aria-pressed="${au.music}">${ICON.music}Music</button>
+  <button type="button" data-q="sound" aria-pressed="${au.sound}">${ICON.sound}Sound</button>
+  <button type="button" data-q="move">${ICON.move}Move scene</button>
+  <button type="button" data-q="help">${ICON.help}How to play</button>
+</div>
+${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.label)}${ICON.external}</button>` : ""}`;
+    this._renderTray();
+    const go = (fn: () => void) => () => {
+      this.closeHome(true);
+      fn();
+      this.syncHome();
+    };
+    box.querySelector("[data-hx]")!.addEventListener("click", () => this.closeHome());
+    for (const b of box.querySelectorAll<HTMLButtonElement>("[data-go]")) {
+      const to = b.dataset.go as "play" | "resume" | "restart" | "lounge" | "room";
+      b.addEventListener(
+        "click",
+        (to === "play" && inRound) ||
+          (to === "lounge" && mode === "lounge") ||
+          (to === "room" && mode === "room")
+          ? () => this.closeHome()
+          : go(() => h.go(to)),
+      );
+    }
+    for (const b of box.querySelectorAll<HTMLButtonElement>("[data-app]"))
+      b.addEventListener("click", () => this.openOS(b.dataset.app as AppId));
+    for (const b of box.querySelectorAll<HTMLButtonElement>("[data-q]"))
+      b.addEventListener("click", () => {
+        const q = b.dataset.q!;
+        if (q === "music" || q === "sound") {
+          const on = b.getAttribute("aria-pressed") !== "true";
+          h.setAudio(q, on);
+          b.setAttribute("aria-pressed", String(on));
+          this._sfx("click");
+        } else if (q === "move") go(() => h.replace())();
+        else if (q === "help") go(() => h.howTo())();
+        else if (q === "join") h.doJoin();
+      });
+    // Drag the sheet down by its top to close it.
+    const head = box.querySelector<HTMLElement>(".mlh-hs-head")!;
+    const grab = box.querySelector<HTMLElement>(".mlh-hs-grab")!;
+    let y0 = -1;
+    const down = (e: PointerEvent) => {
+      if ((e.target as HTMLElement).closest("button")) return;
+      y0 = e.clientY;
+      box.style.transition = "none";
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    };
+    const move = (e: PointerEvent) => {
+      if (y0 < 0) return;
+      box.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`;
+    };
+    const up = (e: PointerEvent) => {
+      if (y0 < 0) return;
+      const dy = e.clientY - y0;
+      y0 = -1;
+      box.style.transition = "";
+      box.style.transform = "";
+      if (dy > 70) this.closeHome();
+    };
+    for (const el of [head, grab]) {
+      el.addEventListener("pointerdown", down);
+      el.addEventListener("pointermove", move);
+      el.addEventListener("pointerup", up);
+      el.addEventListener("pointercancel", up);
+    }
+  }
+
   openOS(app?: AppId) {
-    if (this._state !== "live") return;
+    // In the room; or anywhere once BOBO OS is the host's home screen.
+    if (this._state !== "live" && !(this._home && this._token)) return;
+    this.closeHome(true);
     this._hideBeam(false);
     this._closeLayer(this._el.sheet);
     this._closeLayer(this._el.col);
@@ -2040,6 +2517,7 @@ export class CollectorHub {
     if (first) {
       this._lastFocus = document.activeElement;
       os.classList.add("open");
+      this._syncModal();
       this._sfx("boot");
       this._emit("osOpen", undefined);
       const boot = this._el.boot;
@@ -2064,6 +2542,7 @@ export class CollectorHub {
     const os = this._el.os;
     if (!os.classList.contains("open")) return;
     os.classList.remove("open");
+    this._syncModal();
     for (const id of [...this._wins.keys()]) this._closeApp(id, true);
     this._emit("osClose", undefined);
     (this._lastFocus as HTMLElement | null)?.focus?.({ preventScroll: true });
@@ -2155,6 +2634,7 @@ export class CollectorHub {
     this._disposed = true;
     this._stopPolling();
     for (const off of this._off) off();
+    document.documentElement.classList.remove("mlh-modal", "mlh-homed");
     this._gateResolve?.(false);
     this._leaveResolve?.();
     this.root.parent?.remove(this.root);
@@ -2191,6 +2671,12 @@ export class CollectorHub {
     this._pad = room.getObjectByName("hub_spawn_pad");
     this._bobo = room.getObjectByName("hub_bobo");
     this._bed = room.getObjectByName("hub_cat_bed") ?? undefined;
+    const loft = room.getObjectByName("Loft_Floor");
+    if (loft) {
+      room.updateMatrixWorld(true);
+      const lb = new THREE.Box3().setFromObject(loft);
+      this._loftY = lb.isEmpty() ? 1.85 : room.worldToLocal(new THREE.Vector3(0, lb.max.y, 0)).y;
+    } else this._loftY = 1.85;
     if (this._bed) this._bedScale = this._bed.scale.x || 1;
     this._swirl = room.getObjectByName("Portal_Swirl");
     this._orbitCans = room.getObjectByName("hub_orbit_cans");
@@ -2948,7 +3434,7 @@ export class CollectorHub {
     if (this.opts.hudOffset) ui.style.setProperty("--mlh-top", `${this.opts.hudOffset}px`);
     if (this.opts.modeBottom != null)
       ui.style.setProperty("--mlh-mode-bottom", `${this.opts.modeBottom}px`);
-    ui.innerHTML = `
+    ui.innerHTML = `${DEFS}
 <div class="mlh-hud" data-r="hud">
   <button type="button" class="mlh-title" data-r="title" aria-label="Your collection">
     <svg class="mlh-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="4"/><circle data-r="ring" cx="18" cy="18" r="15" fill="none" stroke="url(#mlhg)" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="94.2" transform="rotate(-90 18 18)"/><defs><linearGradient id="mlhg"><stop offset="0" stop-color="#36e3ff"/><stop offset="1" stop-color="#ff4fa3"/></linearGradient></defs></svg>
@@ -2999,8 +3485,16 @@ export class CollectorHub {
   </div>
 </div>
 
+<!-- over the room's dots and the tour; under the computer -->
+<div class="mlh-hdock" data-r="hdock" hidden>
+  <div class="mlh-fan" data-r="fan" role="menu" aria-label="Bobo's moves"></div>
+  <button type="button" class="mlh-act" data-r="act" aria-haspopup="menu" aria-expanded="false" aria-label="Bobo's moves" title="Bobo's moves"><span class="p">${ICON.paw}</span><span class="x">${ICON.close}</span></button>
+  <button type="button" class="mlh-homeb" data-r="homeb" aria-haspopup="dialog" aria-label="Open BOBO OS" title="BOBO OS">${OS_MARK}<span class="mlh-badge" data-r="homeBadge" hidden></span></button>
+</div>
+<div class="mlh-layer mlh-home" data-r="home" role="dialog" aria-modal="true" aria-label="BOBO OS">
+  <div class="mlh-hs" data-r="hs"></div>
+</div>
 <div class="mlh-layer mlh-os" data-r="os" role="dialog" aria-modal="true" aria-label="Bobo's computer">
-  ${DEFS}
   <div class="mlh-screen" data-r="screen">
     <div class="mlh-wallp" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i><div class="floor"></div><div class="mlh-wall">ΣVADΣ</div></div>
     <div class="mlh-menubar">
@@ -3056,6 +3550,19 @@ export class CollectorHub {
     on(this._el.tourBack, "click", () => this._tourGo(this._tourI - 1));
     on(this._el.tourSkip, "click", () => this._tourEnd(true));
     on(this._el.bell, "click", () => this._openApp("alerts"));
+    on(this._el.homeb, "click", () => (this.homeOpen ? this.closeHome() : this.openHome()));
+    on(this._el.act, "click", () => this._fanToggle());
+    on(this._el.home, "click", (e: Event) => e.target === this._el.home && this.closeHome());
+    // Any tap elsewhere folds the moves away. Capture, never cancelled, so
+    // the same touch still reaches the joystick or the AR view.
+    const away = (e: Event) => {
+      if (!this._fanOpen) return;
+      const t = e.target as Node | null;
+      if (t && (this._el.fan.contains(t) || this._el.act.contains(t))) return;
+      this._fanToggle(false);
+    };
+    document.addEventListener("pointerdown", away, true);
+    this._off.push(() => document.removeEventListener("pointerdown", away, true));
     on(this._el.power, "click", () => this.closeOS());
     on(this._el.os, "click", (e: Event) => e.target === this._el.os && this.closeOS());
     on(
@@ -3082,6 +3589,8 @@ export class CollectorHub {
         return;
       }
       if (e.key !== "Escape") return;
+      if (this._fanOpen) return this._fanToggle(false, true);
+      if (this.homeOpen && !this._el.os.classList.contains("open")) return this.closeHome();
       if (this._el.os.classList.contains("open")) {
         if (this._focused) this._closeApp(this._focused);
         else this.closeOS();
@@ -3115,9 +3624,21 @@ export class CollectorHub {
     }
   }
 
+  /**
+   * While a hub dialog is open, a host's floating buttons (the record
+   * button) step out of the way instead of sitting on its close button.
+   */
+  private _syncModal() {
+    const open = ["gate", "sheet", "col", "os", "home"].some((k) =>
+      this._el[k]?.classList.contains("open"),
+    );
+    document.documentElement.classList.toggle("mlh-modal", open);
+  }
+
   private _open(layer: HTMLElement) {
     this._lastFocus = document.activeElement;
     layer.classList.add("open");
+    this._syncModal();
     const f = layer.querySelector<HTMLElement>("input,button.mlh-btn.pri,button");
     setTimeout(() => f?.focus({ preventScroll: true }), 50);
   }
@@ -3125,6 +3646,7 @@ export class CollectorHub {
     if (!layer.classList.contains("open")) return;
     if (layer === this._el.gate) return this._cancelGate();
     layer.classList.remove("open");
+    this._syncModal();
     (this._lastFocus as HTMLElement | null)?.focus?.({ preventScroll: true });
   }
   private _closeAllLayers() {
@@ -3451,6 +3973,7 @@ export class CollectorHub {
     const go = card.querySelector<HTMLButtonElement>("[data-go]")!;
     go.addEventListener("click", () => {
       this._el.gate.classList.remove("open");
+      this._syncModal();
       const r = this._gateResolve;
       this._gateResolve = undefined;
       r?.(true);
@@ -3463,6 +3986,7 @@ export class CollectorHub {
 
   private _cancelGate() {
     this._el.gate.classList.remove("open");
+    this._syncModal();
     const r = this._gateResolve;
     this._gateResolve = undefined;
     r?.(false);
@@ -3841,6 +4365,11 @@ export class CollectorHub {
     const bb = this._el.bellBadge;
     bb.textContent = String(n);
     bb.hidden = !n;
+    const hb = this._el.homeBadge;
+    if (hb) {
+      hb.textContent = String(n);
+      hb.hidden = !n;
+    }
     for (const b of this._ui.querySelectorAll<HTMLElement>("[data-badge]")) {
       b.textContent = String(n);
       b.hidden = !n;

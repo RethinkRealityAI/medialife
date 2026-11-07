@@ -84,6 +84,26 @@ menu next to the other mode rows. A small round icon (top right, stacked under
 the menu and record buttons, clear of the joystick) opens it between rounds too; its label slides out the first time
 it appears and on hover.
 
+**v5: BOBO OS becomes the home screen.** Once a phone has unlocked the
+hideout (**Home Screen = After Activation**, the default), the whole game runs
+from BOBO OS:
+
+- **One home button** in the bottom corner away from the joystick (Joystick
+  Side = Auto finds the EVADE JoystickController on screen). It opens a sheet
+  in the game menu's own colours: **Cola Run / Lounge / My Room** (the current
+  one marked), the apps (Alerts, Where's Bobo?, Leaderboard, Digital
+  Collection, Shop, Me), **Music**, **Sound**, **Move scene** (Reset
+  placement), **How to play** and **Join EVADE**. Opening it mid-round pauses
+  the round, with Resume and Restart at the top; closing it resumes.
+- **One action button** next to it for Bobo's moves (the game's lounge
+  actions) in the lounge and the room: tap it and the moves fan out in a
+  quarter circle, up and away from the joystick. Tap a move, the button
+  again, or anywhere else to close.
+- The game's menu button, intro card, sound toggle, Reset button, lounge row
+  and the round hideout icon step aside; the record button moves up into the
+  top corner. Activated fans land straight in **Start In** (My Room) instead
+  of the intro card. Fans who haven't activated keep today's UI.
+
 1. **One placement for everything.** Pick the hideout before the scene is
    placed and the game shows Place; the room opens once you tap it. Placed
    already (lounge, after a round)? The room stands on the spot where Bobo was
@@ -96,10 +116,14 @@ it appears and on hover.
    out from Bobo, past the viewer, then the room materialises floor to ceiling
    (about 6 s; Skip is bottom centre). Bobo plays **Build Timeline** (his
    excited animation) as it starts and **Room Timeline** once it's done.
-4. **Built around the viewer, room scale.** The room is **Room Scale** (3)
-   Bobo-sized rooms: a walk-in space. With **Room Fit = Around Viewer**
-   (default) it also slides toward the person holding the phone and grows (up
-   to **Max Room Scale**, 8) until they're standing inside it. Its floor sits
+4. **Sized so you see both floors.** With **Room Fit = Both Floors**
+   (default since v5) the room is sized to the person holding the phone: the
+   loft floor sits just under their eye line (**Eye Level**, 0.85), they stand
+   at its open edge (**Viewer Spot**, 1.05), and it sits a little below Bobo's
+   floor (**Room Drop**, half a Bobo). It glides back and down into place as it
+   builds, Bobo riding along in his bed. **Around Viewer** is the v4 walk-in
+   room (Room Scale 2.7 Bobo-sized rooms, growing up to Max Room Scale 7.2 so
+   you stand inside it). Its floor sits
    under Bobo's feet, its open side faces the camera, and Bobo starts in his
    bed on the rug (the bed stays Bobo-sized however big the room is). The
    room's lights scale with it, so a big room is as bright as a small one, and
@@ -184,19 +208,31 @@ the scene starts, while nobody is waiting on it.
 | Group | Property | Default | What it does |
 | --- | --- | --- | --- |
 | Game | Show In Menus | on | "Visit Bobo's Hideout" on the opening card and in the menu (sets the game's **Bobo's Hideout → Hideout Enabled**). |
-| Game | Version | v4 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
+| Game | Version | v5 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
 | Game | Show Button | on | The small round icon between rounds. |
 | Game | Button Corner | Under Menu | Where the icon sits. Under Menu stacks it below the game's menu and record buttons. |
 | Game | Hide Game Ui | off | Hide the game's menu, sound and Reset placement buttons in the room. Leave off so placement and mode switching work in the room. |
-| Room | Room Fit | Around Viewer | Around Viewer: the room grows and slides until the viewer stands inside it. Match Bobo: sized to Bobo only. |
-| Room | Room Scale | 3 | Room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
-| Room | Max Room Scale | 8 | With Around Viewer, the most it may grow to fit the viewer in. Someone standing further back just walks in. |
+| Home (BOBO OS) | Home Screen | After Activation | When BOBO OS becomes the whole game's home screen: After Activation, Always (handy for testing), or Off (v4 behaviour). |
+| Home (BOBO OS) | Start In | My Room | Where an activated fan lands: My Room, Lounge or Cola Run. |
+| Home (BOBO OS) | Joystick Side | Auto | The home and moves buttons take the other bottom corner. Auto finds the JoystickController (bottom right if none). |
+| Room | Room Fit | Both Floors | Both Floors: sized to the viewer's eye line so both floors show. Around Viewer: grows until the viewer stands inside. Match Bobo: Bobo-sized only. |
+| Room | Room Scale | 2.7 | Room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
+| Room | Max Room Scale | 7.2 | The most the room may grow (Around Viewer, Both Floors). |
+| Room | Viewer Spot | 1.05 | Where the viewer ends up: 0 the middle, 1 the open edge. The room slides to put them there. |
+| Room | Room Drop | 0.5 | How far below Bobo's floor the room settles, in Bobo heights. |
+| Room | Eye Level | 0.85 | Both Floors: the loft floor's height as a share of the viewer's eye height. |
 | Room | Brightness | 1.6 | 1 = the room as modelled; higher for bright camera feeds. |
 | Room | Keep Bobo Inside | on | The joystick stops Bobo at the wall. |
 | Room | Build Timeline / Room Timeline | none | Bobo's animations as the room starts building / once it's done. |
 | BOBO OS | OS Size | 0.8 | Share of the screen the computer takes (0.5 to 1; 1 = full screen). |
 | BOBO OS | OS Opacity | 0.88 | How solid the computer is (1 = fully solid; lower shows more of the room through it). |
 | BOBO OS | OS Dim | 0.18 | How much the room around the computer is darkened. |
+
+On the game (**Game Placement** group, v5): **Placement Anchor**, optional.
+Point it at a Zappar **World Tracker** User Placement Anchor Group (steadier,
+plane-based tracking) or the Instant World Tracker, and Place / Reset placement
+switch its Placement Mode themselves (no timeline keyframes needed); with a
+World Tracker anchor, Place waits until the reticle is on a real floor.
 
 On the game (**Bobo's Hideout** group): **Hideout Button Label** ("Visit
 Bobo's Hideout") and **Hideout Accent** (EVADE yellow: the menu and buttons turn
@@ -211,7 +247,12 @@ Record a run) and comes back when you leave or move the room.
 
 Events: `onEnter` (the room started building), `onRoomReady`, `onRoomMoving`
 (Reset placement in the room), `onLeave`, `onUnlocked` ({ firstClaim, owned }),
-`onAlert` ({ title }). Methods: `open()`, `leave()`.
+`onAlert` ({ title }), `onBoboMove` ({ move }). Methods: `open()`, `leave()`.
+
+A four-times-a-second check keeps the room in step with the game even if an
+event is missed (a timeline that places the scene without the Place button,
+events out of order, a failed open): hideout + placed builds the room, Reset
+turns it into the outline, and leaving the mode folds it away.
 
 **Verified:** type-checks against `@zcomponent/three@1.38.2` / three 0.164
 (and `@zcomponent/zappar-three@4.3.4` was read for how the Instant World Tracker
