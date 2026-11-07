@@ -77,63 +77,194 @@ it's approved).
 
 # Bobo's Hideout (Collector Hub mode)
 
-The MEDIALIFE Collector Hub as a Cola Run mode. A **Bobo's Hideout** button
-sits bottom left (in lounge mode and on menu screens, never mid-round). Tap it:
+The MEDIALIFE Collector Hub as the third Cola Run mode, next to the round and
+the lounge. It's in the game's own menus: **Visit Bobo's Hideout** sits under
+Start playing and Lounge with Bobo Cat on the opening card, and in the game
+menu next to the other mode rows. A small round icon (top right, stacked under
+the menu and record buttons, clear of the joystick) opens it between rounds too; its label slides out the first time
+it appears and on hover.
 
-1. **First time:** an unlock form asks for the code on the fan's merch card
+**v5: BOBO OS becomes the home screen.** Once a phone has unlocked the
+hideout (**Home Screen = After Activation**, the default), the whole game runs
+from BOBO OS:
+
+- **One home button** in the bottom corner away from the joystick (Joystick
+  Side = Auto finds the EVADE JoystickController on screen). It opens a sheet
+  in the game menu's own colours: **Cola Run / Lounge / My Room** (the current
+  one marked), the apps (Alerts, Where's Bobo?, Leaderboard, Digital
+  Collection, Shop, Me), **Music**, **Sound**, **Move scene** (Reset
+  placement), **How to play** and **Join EVADE**. Opening it mid-round pauses
+  the round, with Resume and Restart at the top; closing it resumes.
+- **One action button** next to it for Bobo's moves (the game's lounge
+  actions) in the lounge and the room: tap it and the moves fan out in a
+  quarter circle, up and away from the joystick. Tap a move, the button
+  again, or anywhere else to close.
+- The game's menu button, intro card, sound toggle, Reset button, lounge row
+  and the round hideout icon step aside; the record button moves up into the
+  top corner. Activated fans land straight in **Start In** (My Room) instead
+  of the intro card. Fans who haven't activated keep today's UI.
+
+1. **One placement for everything.** Pick the hideout before the scene is
+   placed and the game shows Place; the room opens once you tap it. Placed
+   already (lounge, after a round)? The room stands on the spot where Bobo was
+   placed, on the same floor.
+2. **First time:** an unlock form asks for the code on the fan's merch card
    (BOBO-XXXX-XXXX) and their email. The first email to use a code owns it for
    good; after that, code + email is their sign-in on any device. Scanning a
    product's QR (`…?hub=BOBO-XXXX-XXXX`) opens the form with the code filled in.
-2. A portal opens a few steps ahead of Bobo. **Walk Bobo into it** and his room
-   builds in around him (wireframe first, then the surfaces).
-3. In the room: tap anything. The computer boots **BOBO OS**, a desktop with app
-   windows: Alerts, Where's Bobo? (the globe), Leaderboard, Cola Run, Collection,
-   Shop, Me. The collection wall shows the keychain plus holographic slots for
-   the hoodie, tee, desk mat and a mystery drop.
-4. Alerts the team sends from **Admin → Collector Hub** reach every open room
+3. **The code goes in, the room builds.** No portal: a glowing wireframe races
+   out from Bobo, past the viewer, then the room materialises floor to ceiling
+   (about 6 s; Skip is bottom centre). Bobo plays **Build Timeline** (his
+   excited animation) as it starts and **Room Timeline** once it's done.
+4. **Sized so you see both floors.** With **Room Fit = Both Floors**
+   (default since v5) the room is sized to the person holding the phone: the
+   loft floor sits just under their eye line (**Eye Level**, 0.85), they stand
+   at its open edge (**Viewer Spot**, 1.05), and it sits a little below Bobo's
+   floor (**Room Drop**, half a Bobo). It glides back and down into place as it
+   builds, Bobo riding along in his bed. **Around Viewer** is the v4 walk-in
+   room (Room Scale 2.7 Bobo-sized rooms, growing up to Max Room Scale 7.2 so
+   you stand inside it). Its floor sits
+   under Bobo's feet, its open side faces the camera, and Bobo starts in his
+   bed on the rug (the bed stays Bobo-sized however big the room is). The
+   room's lights scale with it, so a big room is as bright as a small one, and
+   **Brightness** (1.6) lifts it for camera feeds.
+5. **One Bobo.** The game's own Bobo is Bobo in the room; the room's model Bobo
+   is never shown. The joystick walks him around his room, and **Keep Bobo
+   Inside** stops him at the wall.
+6. In the room: coloured hotspot dots mark what you can tap (Cola blue = apps,
+   Cola red = play, EVADE yellow = collection, indigo = Bobo), and a short
+   welcome tour runs on the first visit (replay it from **Room items**). The
+   computer (up on the loft) opens **BOBO OS** as a window over the room (80% of
+   the screen by default, slightly see-through; tap the room around it to close
+   it), with Alerts, Where's Bobo? (the globe), Leaderboard, Cola Run, Digital
+   Collection (the EVADE vault), Shop and Me.
+7. **Moving the room:** the game's **Reset placement** button stays in the
+   room, and you stay in the hideout. The room turns into a faint outline that
+   travels with the reticle and Bobo; tap **Place** and it builds back in (twice
+   as fast) on Bobo's new spot. Placing the scene bigger or smaller resizes it.
+8. **Leaving:** the game menu's **Start Cola Run** or **Lounge with Bobo Cat**
+   (the room folds back into Bobo in about a second), the top bar's exit button
+   (a slower fold, then the lounge), or **Cola Run → Play / Record a run** on
+   the computer.
+9. Alerts the team sends from **Admin → Collector Hub** reach every open room
    within ~15 s: a pop-up on the in-room monitor and a hologram that beams out
    of the screen.
-5. **Cola Run → Play / Record a run** folds the room back into the portal, Bobo
-   walks out, and a round starts (recording too, if asked).
 
 | File | What it is |
 | --- | --- |
-| `CollectorHubMode.ts` | The Mattercraft component (button, portal, player, game hookup). |
+| `CollectorHubMode.ts` | The Mattercraft component (icon, room placement on Bobo's anchor, game hookup, Bobo's timelines). |
 | `HubCore.ts` | The hub itself: room, build-in, unlock form, BOBO OS, alerts, collection. No Mattercraft imports. |
+| `OrbHuntGame.ts` | The game, which owns the hideout mode (intro button, menu row, placement, HUD) and `playCharacterClip()`. |
 
-`HubCore.ts` is also what the labs run (`/labs/collector-hub/` on its own,
-and the **Bobo's Hideout** button in `/evade/cola-run-lab/`), compiled to
-`/labs/collector-hub/hub-core.js` by `node scripts/build-hub-core.mjs`
-(`--check` confirms the copy matches).
+`HubCore.ts` runs in both labs: `/labs/collector-hub/` on its own (compiled to
+`hub-core.js` by `node scripts/build-hub-core.mjs`; that lab keeps the portal
+and the room's own Bobo), and `/evade/cola-run-lab/`, which runs the real
+`OrbHuntGame.ts` **and** the real `CollectorHubMode.ts` together through the lab
+shim (`node scripts/build-cola-capture.mjs`). **Add `?place=1` to the Cola Run
+lab to test it the way AR works:** you are the phone (drag to look around,
+scroll or pinch to step forward and back), the scene follows a reticle in the
+middle of the screen until you tap Place, like Mattercraft's Instant World
+Tracker, and Reset placement puts it back on the reticle. The Lab panel has the
+BOBO OS and room-size settings and the scene size for the next Place.
+
+## How it stays put in AR
+
+Mattercraft's **Instant World Tracker** rewrites its own transform every frame
+from the tracking anchor (and follows the reticle while its Placement Mode is
+on). Anything that should stay on the floor has to be **inside** it. When the
+room opens, CollectorHubMode moves the room into **Bobo's parent**, the same
+space the game's player walks in, so it rides the same anchor as Bobo. It
+doesn't matter where the CollectorHubMode node itself sits in the Hierarchy.
+The game's Place / Reset placement timelines should switch the tracker's
+**Placement Mode** off and on, as they do now.
+
+Bobo is moved through his component's **position** property (when he's kept
+inside the room or brought back to his spot), because the EVADE joystick
+behaviour integrates `position.value` each frame and would undo a write to the
+three.js object alone.
+
+The first open never stalls: the room model loads and its shaders compile
+(`renderer.compileAsync`) and textures upload (one per frame) about 1.5 s after
+the scene starts, while nobody is waiting on it.
 
 ## Add it to the project
 
-1. Copy `CollectorHubMode.ts` and `HubCore.ts` next to `OrbHuntGame.ts`
-   (update `ColaRunRecorder.ts` too: it gained `startRecording()`, used by
-   "Record a run").
-2. Hierarchy → **+** → **CollectorHubMode**, as a sibling of the game (same
-   parent, so it follows the game's placement).
+1. Copy `OrbHuntGame.ts`, `CollectorHubMode.ts` and `HubCore.ts` over the
+   copies in the Scripts folder (and `ColaRunRecorder.ts`, which has
+   `startRecording()` for "Record a run").
+2. Hierarchy → **+** → **CollectorHubMode** (anywhere; next to the game is
+   tidiest).
 3. Leave **Game** and **Player Node** empty: it finds OrbHuntGame and uses the
-   game's own player.
-4. For a test build, tick **Site → Show Test Code** to print `BOBO-TEST-CATS`
+   game's own player. (If the console says it couldn't find the game, pick it
+   in **Game**.)
+4. Optional: **Room → Build Timeline** = Bobo's excited animation, **Room
+   Timeline** = a settle (purr). Set the game's **Lounge Character** so they
+   blend cleanly with the joystick, as the lounge buttons do.
+5. For a test build, tick **Site → Show Test Code** to print `BOBO-TEST-CATS`
    under the form (it only works where the site allows it, see below).
 
-The component never moves the camera. While Bobo is in his room the player is
-hidden and held at the portal (so the joystick can't wander off), and the
-game's HUD and the record button are hidden; both come back when he leaves.
-**Room → Room Size**, **Portal Distance** and **Enter Radius** are the knobs if
-the room is too big for a table-top AR scene.
+### Properties worth knowing
 
-Events: `onPortal`, `onEnter`, `onRoomReady`, `onLeave`, `onUnlocked`
-({ firstClaim, owned }), `onAlert` ({ title }). Methods: `open()`, `leave()`.
+| Group | Property | Default | What it does |
+| --- | --- | --- | --- |
+| Game | Show In Menus | on | "Visit Bobo's Hideout" on the opening card and in the menu (sets the game's **Bobo's Hideout → Hideout Enabled**). |
+| Game | Version | v5 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
+| Game | Show Button | on | The small round icon between rounds. |
+| Game | Button Corner | Under Menu | Where the icon sits. Under Menu stacks it below the game's menu and record buttons. |
+| Game | Hide Game Ui | off | Hide the game's menu, sound and Reset placement buttons in the room. Leave off so placement and mode switching work in the room. |
+| Home (BOBO OS) | Home Screen | After Activation | When BOBO OS becomes the whole game's home screen: After Activation, Always (handy for testing), or Off (v4 behaviour). |
+| Home (BOBO OS) | Start In | My Room | Where an activated fan lands: My Room, Lounge or Cola Run. |
+| Home (BOBO OS) | Joystick Side | Auto | The home and moves buttons take the other bottom corner. Auto finds the JoystickController (bottom right if none). |
+| Room | Room Fit | Both Floors | Both Floors: sized to the viewer's eye line so both floors show. Around Viewer: grows until the viewer stands inside. Match Bobo: Bobo-sized only. |
+| Room | Room Scale | 2.7 | Room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
+| Room | Max Room Scale | 7.2 | The most the room may grow (Around Viewer, Both Floors). |
+| Room | Viewer Spot | 1.05 | Where the viewer ends up: 0 the middle, 1 the open edge. The room slides to put them there. |
+| Room | Room Drop | 0.5 | How far below Bobo's floor the room settles, in Bobo heights. |
+| Room | Eye Level | 0.85 | Both Floors: the loft floor's height as a share of the viewer's eye height. |
+| Room | Brightness | 1.6 | 1 = the room as modelled; higher for bright camera feeds. |
+| Room | Keep Bobo Inside | on | The joystick stops Bobo at the wall. |
+| Room | Build Timeline / Room Timeline | none | Bobo's animations as the room starts building / once it's done. |
+| BOBO OS | OS Size | 0.8 | Share of the screen the computer takes (0.5 to 1; 1 = full screen). |
+| BOBO OS | OS Opacity | 0.88 | How solid the computer is (1 = fully solid; lower shows more of the room through it). |
+| BOBO OS | OS Dim | 0.18 | How much the room around the computer is darkened. |
 
-**Verified:** type-checks against `@zcomponent/three@1.38.2` / three 0.164;
-the same core runs in both labs, tested headlessly end to end (unlock, wrong
-codes, portal walk-in, OS apps, live alert from the admin page, back to a
-round, phone size). **Not yet opened in the Mattercraft editor.** If a property
-doesn't show in the panel, swap `@zui` for `@zprop`; if the room doesn't load
-on the published experience, check the browser console for a CORS error on
-`room.glb`.
+On the game (**Game Placement** group, v5): **Placement Anchor**, optional.
+Point it at a Zappar **World Tracker** User Placement Anchor Group (steadier,
+plane-based tracking) or the Instant World Tracker, and Place / Reset placement
+switch its Placement Mode themselves (no timeline keyframes needed); with a
+World Tracker anchor, Place waits until the reticle is on a real floor.
+
+On the game (**Bobo's Hideout** group): **Hideout Button Label** ("Visit
+Bobo's Hideout") and **Hideout Accent** (EVADE yellow: the menu and buttons turn
+yellow in the room, as they turn pink in the lounge). Game events:
+`onHideoutEnter`, `onHideoutExit`; methods `enterHideout()`, `exitHideout()`,
+`isInHideout`, `playCharacterClip(id)`.
+
+The hideout's top bar keeps clear of the game's menu button (whichever top
+corner it's in), and sits under the game's dialogs, so the game menu opens over
+the room. The record button steps aside in the room (BOBO OS has its own
+Record a run) and comes back when you leave or move the room.
+
+Events: `onEnter` (the room started building), `onRoomReady`, `onRoomMoving`
+(Reset placement in the room), `onLeave`, `onUnlocked` ({ firstClaim, owned }),
+`onAlert` ({ title }), `onBoboMove` ({ move }). Methods: `open()`, `leave()`.
+
+A four-times-a-second check keeps the room in step with the game even if an
+event is missed (a timeline that places the scene without the Place button,
+events out of order, a failed open): hideout + placed builds the room, Reset
+turns it into the outline, and leaving the mode folds it away.
+
+**Verified:** type-checks against `@zcomponent/three@1.38.2` / three 0.164
+(and `@zcomponent/zappar-three@4.3.4` was read for how the Instant World Tracker
+places its anchor); the real game and the real hideout component run together
+in the Cola Run lab's AR-style camera, tested headlessly end to end on desktop
+and phone sizes (intro → hideout, Place on the reticle, unlock, build around
+the viewer, one Bobo walking in the room and stopped at the wall, Reset
+placement → outline follows the reticle → Place → quick rebuild, BOBO OS,
+switching to the lounge). **Not yet opened in the Mattercraft editor.** If a
+property doesn't show in the panel, swap `@zui` for `@zprop`; if the room
+doesn't load on the published experience, check the browser console for a CORS
+error on `room.glb`.
 
 ## Site settings (Netlify)
 

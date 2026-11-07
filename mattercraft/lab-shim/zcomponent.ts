@@ -1,7 +1,8 @@
 /**
  * A small stand-in for the parts of @zcomponent/core and @zcomponent/three
- * that OrbHuntGame.ts uses, so the real game file can run in the browser test
- * lab (/evade/cola-run-lab/) without the Mattercraft runtime.
+ * that OrbHuntGame.ts and CollectorHubMode.ts use, so the real component files
+ * can run in the browser test lab (/evade/cola-run-lab/) without the
+ * Mattercraft runtime.
  *
  * It is NOT a Mattercraft runtime. It covers exactly what the game touches,
  * and copies Mattercraft's behaviour where the game depends on it:
@@ -165,6 +166,11 @@ export interface LabContextOptions {
   /** Where the game's sound goes (the recorder taps this too). */
   audioLayer: AudioNode;
   loader?: GLTFLoader;
+  /** The WebGL canvas (useCanvas). */
+  canvas?: HTMLElement;
+  /** The renderer and scene (useRenderer / useScene). */
+  renderer?: unknown;
+  scene?: THREE.Object3D;
 }
 
 export class LabContext {
@@ -173,6 +179,9 @@ export class LabContext {
   readonly audioContext: AudioContext;
   readonly audioLayer: AudioNode;
   readonly loader: GLTFLoader;
+  readonly canvas: HTMLElement;
+  readonly renderer: unknown;
+  readonly scene: THREE.Object3D | null;
   readonly beforeRender = new Event<[number]>();
   readonly nodes = new Map<string, { element: THREE.Object3D; children: unknown[] }>();
   readonly layerClipByID = new Map<string, LayerClip>();
@@ -186,11 +195,18 @@ export class LabContext {
     this.audioContext = o.audioContext;
     this.audioLayer = o.audioLayer;
     this.loader = o.loader ?? new GLTFLoader();
+    this.canvas = o.canvas ?? document.createElement("canvas");
+    this.renderer = o.renderer ?? null;
+    this.scene = o.scene ?? null;
   }
 
   /** Make a plain three.js object pickable by node id (e.g. Player Node). */
   addNode(id: string, element: THREE.Object3D, children: unknown[] = []) {
     this.nodes.set(id, { element, children });
+  }
+  /** Make a component pickable by node id (what resolveNodeID returns in Mattercraft). */
+  addComponent(id: string, comp: { element: THREE.Object3D; children?: unknown[] }) {
+    this.nodes.set(id, comp as { element: THREE.Object3D; children: unknown[] });
   }
   /** Offer a timeline by id (what a Timeline/State dropdown would hold). */
   addClip(id: string, clip: LabClip) {
@@ -260,6 +276,11 @@ export const useOverlay = (cm: LabContext) => cm.overlay;
 export const useOnBeforeRender = (cm: LabContext) => cm.beforeRender;
 export const useCamera = (cm: LabContext) => cm.camera;
 export const useAudioContext = (cm: LabContext) => cm.audioContext;
+export const useCanvas = (cm: LabContext) => cm.canvas;
+export const useRenderer = (cm: LabContext) => cm.renderer;
+export const useScene = (cm: LabContext) => cm.scene;
+/** The lab is always "runtime": there is no editor viewport. */
+export const isDesignTime = (_cm: LabContext) => false;
 export const AudioContextContext = { name: "AudioContextContext" };
 
 /* ── components ───────────────────────────────────────────────────────── */

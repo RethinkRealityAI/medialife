@@ -6,11 +6,11 @@
 <meta name="robots" content="noindex">
 <title>Cola Run lab</title>
 <meta name="theme-color" content="#14161a">
-<link rel="stylesheet" href="./assets/lab.css?v=5">
+<link rel="stylesheet" href="./assets/lab.css?v=8">
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./assets/lab.js?v=7"></script>
+<script type="module" src="./assets/lab.js?v=14"></script>
 </head>
 <body>
 <!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with
@@ -35,6 +35,19 @@
     <button type="button" id="o-hideout">Open Bobo's Hideout</button>
     <button type="button" id="o-intro">Show the intro again</button>
   </div>
+  <h2>Bobo's Hideout</h2>
+  <p class="lab-small">The same settings as the BOBO OS group on CollectorHubMode in Mattercraft.</p>
+  <label>BOBO OS size <output></output><input id="o-osSize" type="range" min="0.5" max="1" step="0.01" value="0.8"></label>
+  <label>BOBO OS solid <output></output><input id="o-osOpacity" type="range" min="0.4" max="1" step="0.01" value="0.88"></label>
+  <label>Room dimmed behind it <output></output><input id="o-osDim" type="range" min="0" max="0.8" step="0.01" value="0.18"></label>
+  <label>Room scale <output></output><input id="o-roomScale" type="range" min="0.5" max="10" step="0.1" value="2.7"></label>
+  <label>Max room scale (around you) <output></output><input id="o-maxRoomScale" type="range" min="1" max="20" step="0.1" value="7.2"></label>
+  <label>Where you stand (0 middle, 1 open edge) <output></output><input id="o-viewerSpot" type="range" min="0.3" max="1.1" step="0.01" value="1.05"></label>
+  <label>Room drop (Bobo heights) <output></output><input id="o-roomDrop" type="range" min="0" max="3" step="0.05" value="0.5"></label>
+  <label>Loft at eye level × <output></output><input id="o-eyeLevel" type="range" min="0.3" max="1.5" step="0.01" value="0.85"></label>
+  <label>Room brightness <output></output><input id="o-brightness" type="range" min="0.5" max="3" step="0.05" value="1.6"></label>
+  <label id="o-placeRow">Scene size on the next Place <output></output><input id="o-placeScale" type="range" min="0.4" max="2" step="0.05" value="1"></label>
+  <p class="lab-small" id="o-placeLink"><a href="?place=1">Try it like AR: you're the phone (drag to look, scroll to step), with Place and Reset placement</a></p>
   <h2>Recorder settings</h2>
   <label>Send clips to <input id="o-endpoint" type="url" spellcheck="false"></label>
   <label>Longest clip (s) <input id="o-max" type="number" min="5" max="60" value="30"></label>
