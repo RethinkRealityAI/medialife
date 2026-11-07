@@ -526,12 +526,22 @@ function patchMaterial(mat) {
     uHoloScan: { value: 0 },
     uTime: { value: 0 },
     uHoloColor: { value: new THREE.Color(0x58b8ff) },
+    uKnitScale: { value: 26 },
   };
   mat.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, u);
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vWPos;")
+      .replace("#include <common>", "#include <common>\nvarying vec3 vWPos;\nvarying vec2 vKnitUv;\nuniform float uKnitScale;")
+      .replace("#include <begin_vertex>", "#include <begin_vertex>\n// Knit weave from the rest pose, so it keeps one size across UV islands.\nvKnitUv = position.xy * uKnitScale;")
       .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    if (mat.normalMap) {
+      for (const name of ["uv_pars_fragment", "normal_fragment_begin", "normal_fragment_maps"]) {
+        shader.fragmentShader = shader.fragmentShader.replace(
+          `#include <${name}>`,
+          THREE.ShaderChunk[name].replaceAll("vNormalMapUv", "vKnitUv"),
+        );
+      }
+    }
     shader.fragmentShader = shader.fragmentShader
       .replace(
         "#include <common>",

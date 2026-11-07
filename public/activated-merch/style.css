@@ -578,3 +578,11 @@ model-viewer:not(:defined) { display: block; }
 .card__ar:hover { background: #fff; color: #000; }
 .card__spin { position: absolute; left: 8px; bottom: 8px; font-size: 9px; color: var(--muted); pointer-events: none; transition: opacity 0.3s; }
 .card:hover .card__spin { opacity: 0; }
+
+/* ======================================================= phase 4: free spin */
+.hero__angle { display: none; align-items: center; gap: 8px; margin-top: 6px; color: var(--cyan); font-size: 10px; letter-spacing: 0.14em; font-variant-numeric: tabular-nums; }
+.has-3d .hero__angle { display: inline-flex; }
+.hero__angle i { position: relative; width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 50%; opacity: 0.8; }
+.hero__angle i::after { content: ""; position: absolute; left: 50%; top: 1px; width: 1px; height: 5px; background: currentColor; transform-origin: 50% 5px; transform: translateX(-50%) rotate(var(--a, 0deg)); }
+.hint__wide { display: none; }
+@media (min-width: 760px) { .hint__wide { display: inline; } }

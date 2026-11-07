@@ -183,7 +183,16 @@ function scrollState() {
   return { hero, tech, off };
 }
 
+let lastAngle = -1;
 function updateDom({ hero, tech }) {
+  if (stage && els.angle) {
+    const a = stage.angle;
+    if (a !== lastAngle) {
+      els.angle.lastChild.textContent = `ROT ${String(a).padStart(3, "0")}°`;
+      els.angle.style.setProperty("--a", `${a}deg`);
+      lastAngle = a;
+    }
+  }
   const specsIn = hero > 0.45;
   els.specs.forEach((li, i) => {
     if (specsIn && !li.classList.contains("in")) setTimeout(() => li.classList.add("in"), reduced ? 0 : i * 90);
@@ -268,11 +277,18 @@ function wirePointer() {
     active = null;
     stage?.pointerUp();
   };
+  let lastTap = { t: 0, x: 0, y: 0 };
   for (const z of zones) {
     z.addEventListener("pointerdown", (e) => {
       if (!stage || active || e.button > 0 || e.target.closest("button, a, input")) return;
       const mode = stage.pointerDown(ndc(e), { canBrowse: z.id === "hero" });
       if (!mode) return;
+      // Double-tap (or double-click) on the piece turns it back to the front.
+      if (mode === "grab") {
+        const now = performance.now();
+        if (now - lastTap.t < 330 && Math.hypot(e.clientX - lastTap.x, e.clientY - lastTap.y) < 30) stage.resetSpin();
+        lastTap = { t: now, x: e.clientX, y: e.clientY };
+      }
       active = { id: e.pointerId, zone: z };
       z.classList.add(mode === "grab" ? "is-grabbing" : "is-browsing");
       try {
@@ -527,6 +543,7 @@ function init() {
   els.techProgress = $("#tech-progress");
   els.dock = $(".hero__dock");
   els.hint = $("#hint");
+  els.angle = $("#piece-angle");
   els.mobile = innerWidth < 760;
   buildSwitcher();
   showPiece(0, { fromStage: true });

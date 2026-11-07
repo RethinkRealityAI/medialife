@@ -28,6 +28,8 @@ const TAG_D = 0.07; // a ~25 mm tag on a ~70 cm garment
 const Z = new THREE.Vector3(0, 0, 1);
 const UP = new THREE.Vector3(0, 1, 0);
 
+const TAU = Math.PI * 2;
+
 export class Stage {
   /**
    * @param {HTMLCanvasElement} canvasEl
@@ -418,7 +420,15 @@ export class Stage {
       const hit = this.raycaster.intersectObject(g.pick, false)[0];
       if (hit) {
         g.grab(g.pick.worldToLocal(hit.point.clone()));
-        this.drag = { mode: "grab", depth: hit.point.clone().project(this.camera).z, spin0: this.spin, x0: ndc.x };
+        this.drag = {
+          mode: "grab",
+          depth: hit.point.clone().project(this.camera).z,
+          spin0: this.spin,
+          x0: ndc.x,
+          lastX: ndc.x,
+          lastT: performance.now(),
+          w: 0,
+        };
         return "grab";
       }
     }
@@ -433,8 +443,16 @@ export class Stage {
     if (d.mode === "grab") {
       const g = this.current.g;
       if (!g) return;
-      // Sideways drag spins the piece; the grabbed spot also follows the finger.
-      this.spinTarget = d.spin0 + (ndc.x - d.x0) * (this.mobile ? 2.6 : 3.4);
+      // Sideways drag spins the piece (freely, all the way round); the grabbed
+      // spot also follows the finger.
+      const sens = this.mobile ? 2.6 : 3.4;
+      if (Math.abs(ndc.x - d.x0) > 0.01) this.homing = false;
+      this.spinTarget = d.spin0 + (ndc.x - d.x0) * sens;
+      const now = performance.now();
+      const dtm = Math.max(1, now - d.lastT);
+      d.w = lerp(d.w, (((ndc.x - d.lastX) * sens) / dtm) * 1000, 0.5);
+      d.lastX = ndc.x;
+      d.lastT = now;
       const w = new THREE.Vector3(ndc.x, ndc.y, d.depth).unproject(this.camera);
       g.pull(g.pick.worldToLocal(w));
     } else {
@@ -453,14 +471,26 @@ export class Stage {
     this.drag = null;
     if (!d) return;
     if (d.mode === "grab") {
+      // The cloth springs back; the rotation keeps its momentum and stays put.
       this.current.g?.release();
-      this.spinTarget = 0; // always come home
+      const recent = performance.now() - d.lastT < 90;
+      this.spinVel = recent ? THREE.MathUtils.clamp(d.w, -14, 14) : 0;
     } else {
       const base = Math.round(d.pos0);
       let t = Math.round(this.pos - d.vx * 0.22);
       t = Math.max(base - 2, Math.min(base + 2, t));
       this.target = t;
     }
+  }
+
+  /** Turn the piece back to its front view, the short way round. */
+  resetSpin() {
+    this.homing = true;
+  }
+
+  /** The piece's turn in degrees, 0–359. */
+  get angle() {
+    return Math.round((((this.spin * 180) / Math.PI) % 360) + 360) % 360;
   }
 
   /** Drop any interaction so everything springs back (e.g. scrolling away). */
@@ -535,8 +565,13 @@ export class Stage {
     if (nearest !== this.active) {
       this.current.g?.release();
       if (this.drag?.mode === "grab") this.drag = null;
+      // The piece leaving the front keeps its angle and eases round to face us.
+      const prev = this.slots[mod(this.active, this.n)];
+      prev.spin = this.spin;
       this.active = nearest;
-      this.spin = this.spinTarget = this.spinVel = 0;
+      this.spin = this.current.spin || 0;
+      this.spinTarget = this.spin;
+      this.spinVel = 0;
       const slot = this.current;
       const dir = Math.sign(this.target - this.pos) || 1;
       this.ensure(nearest)
@@ -552,12 +587,34 @@ export class Stage {
       this.onChange(mod(nearest, this.n));
     }
 
-    // --- spin spring: snaps home after release ------------------------------
+    // --- spin ------------------------------------------------------------------
+    // Grabbing: follow the finger. Released: free 360° spin that glides to a
+    // stop and stays there. Scrolling on: turn the print back to the camera by
+    // the shortest way, since the next sections look at it.
     const grabbing = this.drag?.mode === "grab";
-    const ks = grabbing ? 260 : 38;
-    const zs = grabbing ? 1 : 0.5;
-    this.spinVel += (ks * (this.spinTarget - this.spin) - 2 * Math.sqrt(ks) * zs * this.spinVel) * dt;
+    const facePrint = hero > 0.03 || tech > 0 || this.homing;
+    if (grabbing) {
+      const ks = 260;
+      this.spinVel += (ks * (this.spinTarget - this.spin) - 2 * Math.sqrt(ks) * this.spinVel) * dt;
+    } else if (facePrint) {
+      const home = Math.round(this.spin / TAU) * TAU;
+      const ks = 30;
+      this.spinVel += (ks * (home - this.spin) - 2 * Math.sqrt(ks) * this.spinVel) * dt;
+      if (this.homing && Math.abs(home - this.spin) < 0.002 && Math.abs(this.spinVel) < 0.01) {
+        this.homing = false;
+        this.spin = this.spinTarget = home;
+      }
+    } else {
+      this.spinVel *= Math.exp(-dt * 1.7);
+      if (Math.abs(this.spinVel) < 0.002) this.spinVel = 0;
+    }
     this.spin += this.spinVel * dt;
+    for (const s of this.slots) {
+      if (s === this.current || !s.spin) continue;
+      const home = Math.round(s.spin / TAU) * TAU;
+      s.spin = lerp(s.spin, home, 1 - Math.exp(-dt * 3));
+      if (Math.abs(s.spin - home) < 0.001) s.spin = 0;
+    }
     this.wind *= Math.exp(-dt * 1.6);
 
     // --- choreography --------------------------------------------------------
@@ -597,7 +654,7 @@ export class Stage {
         if (s.reveal?.mode !== "holo") g.uniforms.uHolo.value = lerp(g.uniforms.uHolo.value, isActive ? 0 : 1, 1 - Math.exp(-dt * 5));
       }
       const idle = this.reduced ? 0 : Math.sin(t * 0.45 + s.i) * 0.16;
-      g.pivot.rotation.y = isActive ? this.spin + idle * (1 - h) : idle * 0.5;
+      g.pivot.rotation.y = isActive ? this.spin + idle * (1 - h) : (s.spin || 0) + idle * 0.5;
       g.group.rotation.y = g.base + (isActive ? lerp(0, -0.42, h) : 0);
       g.omega = isActive ? THREE.MathUtils.clamp(this.spinVel, -7, 7) * 0.5 : 0;
       g.wind = isActive && !this.reduced ? 0.35 + this.wind : 0;
