@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=4";
+import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=6";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=2";
 
 const $ = (s) => document.querySelector(s);
@@ -361,8 +361,14 @@ mode.endpoint.value = qs.get("endpoint") || "";
 mode.modelUrl.value = "/hub/evade/room.glb";
 mode.globeUrl.value = "/evade/where-is-bobo/index.html";
 mode.showTestCode.value = qs.has("test");
+// BOBO OS as home: ?home=always to try it without a code (default: after activation).
+if (qs.get("home")) mode.homeScreen.value = qs.get("home");
+// The lab's stick registers the way the EVADE JoystickController does, so the
+// hideout's Joystick Side (Auto) finds it. ?stick=left moves it to the left.
+if (qs.get("stick") === "left") document.getElementById("stick")?.classList.add("left");
+(window.__mattercraftJoysticks ||= []).push({ joystickContainer: document.getElementById("stick") });
 // Around the viewer in the AR camera; Bobo-sized in the follow camera.
-mode.roomFit.value = AR ? "aroundViewer" : "matchBobo";
+mode.roomFit.value = AR ? "bothFloors" : "matchBobo";
 // Bobo's excited animation as the room builds, a purr once it's done.
 mode.buildTimeline.value = "lounge-excited";
 mode.roomTimeline.value = "lounge-purr";
@@ -632,6 +638,9 @@ for (const [id, prop] of [
   ["o-roomScale", "roomScale"],
   ["o-maxRoomScale", "maxRoomScale"],
   ["o-brightness", "brightness"],
+  ["o-viewerSpot", "viewerSpot"],
+  ["o-roomDrop", "roomDrop"],
+  ["o-eyeLevel", "eyeLevel"],
 ]) {
   const el = $("#" + id);
   const out = el.parentElement.querySelector("output");

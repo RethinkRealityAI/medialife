@@ -37,6 +37,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);overflow:h
 /* Bottom right, where Mattercraft's JoystickController puts it by default */
 .lab-stick{position:absolute;right:calc(var(--safe-area-inset-right) + 18px);bottom:calc(var(--safe-area-inset-bottom) + 60px);width:120px;height:120px;
   border-radius:50%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);touch-action:none}
+.lab-stick.left{right:auto;left:calc(var(--safe-area-inset-left, 0px) + 18px)}
 .lab-stick span{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;
   background:rgba(var(--accentRgb),.85);box-shadow:0 0 18px rgba(var(--accentRgb),.5)}
 

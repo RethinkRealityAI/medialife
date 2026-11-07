@@ -1582,6 +1582,27 @@ export class OrbHuntGame extends Group {
   public startRoundOnPlace = new Observable(true);
 
   /**
+   * The AR anchor that Place and Reset placement move, driven directly (no
+   * timeline needed). Pick a World Tracker's User Placement Anchor Group for
+   * the steadiest tracking (it finds real floors and holds room-sized content
+   * still), or an Instant World Tracker. Leave empty to keep driving
+   * placement with Place / Reset Timeline as before.
+   *
+   * With a User Placement Anchor Group, turn off its own Show Place Button
+   * and Show Restart Placement Button: the game's buttons do that job, and
+   * Place waits until the camera is pointing at a floor it has found.
+   *
+   * @zui
+   * @zgroup Game Placement
+   * @zgrouppriority 195
+   * @zpriority 85
+   * @zvalues nodeids three/Object3D/**
+   */
+  public placementAnchor = new Observable<string | undefined>(undefined, () =>
+    this._bindPlacementAnchor(),
+  );
+
+  /**
    * Timeline or state played when the player taps Place. This is where your
    * existing placement animation goes.
    *
@@ -4260,7 +4281,47 @@ export class OrbHuntGame extends Group {
    * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
    * checks it matches its own HubCore.ts).
    */
-  public readonly hideoutVersion = "4";
+  public readonly hideoutVersion = "5";
+
+  /**
+   * BOBO OS as the game's home screen (CollectorHubMode, once a fan has
+   * activated Bobo's Hideout). The game's own menu button, intro card,
+   * sound toggle, reset button and lounge row step aside: the home sheet
+   * has all of it, and Bobo's moves sit behind one action button. Call with
+   * null to give the game its own UI back.
+   */
+  public setShell(shell: { openHome(): void } | null) {
+    this._shell = shell;
+    if (shell) {
+      this._closeMenu();
+      // The intro card is the first-visit welcome: an activated fan skips it.
+      if (this.isIntroOpen) {
+        this._closeIntro();
+        this._afterIntroDismissed();
+      }
+    }
+    this._applyUiVisibility();
+  }
+
+  public get hasShell() { return !!this._shell; }
+
+  /** Bobo's moves (the lounge actions) for an action button of the host's own. */
+  public get loungeMoves() {
+    return this._loungeSlots()
+      .filter(a => a.label.trim() || a.icon !== LoungeIcon.None)
+      .map(a => ({ id: String(a.n), label: a.label.trim() || `Move ${a.n}`, svg: this._loungeSvg(a.icon) }));
+  }
+
+  public loungeMove(id: string) { this._loungeAction(Number(id)); }
+
+  /** For the home sheet's status line. */
+  public get roundStatus() {
+    const target = clampInt(this.targetCount.value, 1, 999);
+    return { score: this._score, target, left: Math.max(0, target - this._score), time: this.timeRemaining };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/member-ordering -- grouped with setShell
+  private _shell: { openHome(): void } | null = null;
 
   /**
    * Play a character timeline (an emote) the way the lounge buttons do: it
@@ -4788,7 +4849,7 @@ export class OrbHuntGame extends Group {
     this._zc.constructed.then(() => {
       this._bindPlayer();
       this._applyMusicSource();
-      if (this.showIntroOnLoad.value && this.uiEnabled.value) this._openIntro();
+      if (this.showIntroOnLoad.value && this.uiEnabled.value && !this._shell) this._openIntro();
       else this._afterIntroDismissed();
       if (this.autoStart.value) this._start();
     });
@@ -6433,7 +6494,13 @@ export class OrbHuntGame extends Group {
 
   /* ── frame ────────────────────────────────────────────────────────── */
 
+  private _anchorBound = false;
   private _tick(dt: number) {
+    // Nodes resolve once the scene has finished building: bind the anchor on the first frame.
+    if (!this._anchorBound) {
+      this._anchorBound = true;
+      if (this.placementAnchor.value) this._bindPlacementAnchor();
+    }
     this._time += dt;
     this._orbU.uTime.value = this._time;
     this._beaconU.uTime.value = this._time;
@@ -7109,6 +7176,12 @@ export class OrbHuntGame extends Group {
   }
 
   private _openMenu() {
+    if (this._shell) {
+      // BOBO OS is the menu now: same pause, its sheet instead of this one.
+      if (this._state === GameState.Playing) this.pauseGame();
+      this._shell.openHome();
+      return;
+    }
     this._menuOpen = true;
     this._menuWrap.classList.add("on");
     this._iconBtn.classList.add("on");
@@ -7169,7 +7242,9 @@ export class OrbHuntGame extends Group {
 
   private _place() {
     if (this._placed) return;
+    if (this._anchorComp?.placementValid?.value === false) return; // no floor under the reticle yet
     this._placed = true;
+    this._driveAnchor();
     this._playClip(this.placeTimeline.value);
     this.onPlace.emit();
     this._applyPlacementUi();
@@ -7180,10 +7255,60 @@ export class OrbHuntGame extends Group {
     else this._setState(GameState.Idle);
   }
 
+  /* ── the AR anchor Place / Reset drive (Placement Anchor) ── */
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zappar anchors, duck-typed
+  private _anchorComp: any = null;
+  private _anchorOff: (() => void) | null = null;
+
+  private _bindPlacementAnchor() {
+    this._anchorOff?.();
+    this._anchorOff = null;
+    const id = this.placementAnchor.value;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zappar anchors, duck-typed
+    let comp: any = null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Zappar anchors, duck-typed
+      comp = id ? this._zc.resolveNodeID<any>(id) : null;
+    } catch {
+      comp = null;
+    }
+    this._anchorComp = comp?.placementMode?.value !== undefined ? comp : null;
+    if (id && !this._anchorComp)
+      console.warn("[OrbHuntGame] Placement Anchor has no placement mode; pick an Instant World Tracker or a User Placement Anchor Group");
+    // A World Tracker anchor knows when it's pointing at a real floor: Place waits for that.
+    const valid = this._anchorComp?.placementValid;
+    if (valid?.addListener) {
+      const fn = () => this._syncPlaceReady();
+      valid.addListener(fn);
+      this._anchorOff = () => valid.removeListener?.(fn);
+    }
+    this._driveAnchor();
+    this._syncPlaceReady();
+  }
+
+  /** Placing: the anchor follows the floor in front of the camera. Placed: it holds still. */
+  private _driveAnchor() {
+    const pm = this._anchorComp?.placementMode;
+    if (!pm || !this.placementEnabled.value) return;
+    const want = !this._placed;
+    if (pm.value !== want) pm.value = want;
+  }
+
+  private _syncPlaceReady() {
+    const btn = this._placeWrap?.querySelector<HTMLButtonElement>(".ohg-place");
+    if (!btn) return;
+    const valid = this._anchorComp?.placementValid;
+    const ok = !valid || valid.value !== false;
+    btn.disabled = !ok;
+    btn.classList.toggle("ohg-placeWait", !ok);
+  }
+
   private _resetPlacement() {
     this._playClip(this.resetTimeline.value);
     this.onResetPlacement.emit();
     this._placed = false;
+    this._driveAnchor();
     // The world has moved under the player's feet, so the board goes with it.
     this._reset();
     this._setState(GameState.Placing);
@@ -7630,14 +7755,15 @@ export class OrbHuntGame extends Group {
     if (!this._scoreWrap) return;
     const on = this.uiEnabled.value;
     const hud = on && this.hudPosition.value !== HudPosition.Hidden;
-    this._root.style.display = on ? "" : "none";
+    // With BOBO OS as home, its own button replaces the menu button.
+    this._root.style.display = on && !this._shell ? "" : "none";
     // Lounge mode has no round, so a score of 0/8 and a frozen clock would be
     // furniture at best and a wrong signal at worst.
     this._scoreWrap.style.display = hud && !this._noRound ? "" : "none";
     this._timeWrap.style.display = hud && !this._noRound && this.timerEnabled.value ? "" : "none";
     // The score sits under the clock, so it has to know when there isn't one.
     this._applyHudStack();
-    this._soundWrap.style.display = on && this.soundToggleEnabled.value ? "" : "none";
+    this._soundWrap.style.display = on && this.soundToggleEnabled.value && !this._shell ? "" : "none";
     // Logo In Game off means "brand the moments, not the playfield": it shows
     // through the intro, the menu, the lounge and placement, and steps out
     // while a round is actually being played.
@@ -7664,10 +7790,11 @@ export class OrbHuntGame extends Group {
     const on = this.uiEnabled.value && this.placementEnabled.value;
     const placing = on && !this._placed && !this._introWrap.classList.contains("on");
     this._placeWrap.style.display = placing ? "" : "none";
-    this._resetWrap.style.display = on && this._placed ? "" : "none";
+    // BOBO OS has Move scene in its sheet: one fewer button over the view.
+    this._resetWrap.style.display = on && this._placed && !this._shell ? "" : "none";
     // The lounge row waits for placement for the same reason Place does:
     // asking Bobo to nap before the scene exists in the room is meaningless.
-    const loungeReady = this.uiEnabled.value && this._lounge &&
+    const loungeReady = this.uiEnabled.value && this._lounge && !this._shell &&
       !this._introWrap.classList.contains("on") &&
       (!this.placementEnabled.value || this._placed);
     this._loungeWrap.style.display = loungeReady ? "" : "none";
@@ -7685,7 +7812,10 @@ export class OrbHuntGame extends Group {
       const main = hint.querySelector<HTMLSpanElement>(".ohg-hintMain");
       const tip = hint.querySelector<HTMLSpanElement>(".ohg-hintTip");
       const mainTxt = this.placeHintText.value;
-      const tipTxt = this.placeHintTip.value;
+      // With BOBO OS as home, Reset placement lives in its sheet (Move scene).
+      const tipTxt = this._shell && this.placeHintTip.value.trim()
+        ? "Lose tracking later? Open BOBO OS and tap Move scene."
+        : this.placeHintTip.value;
       if (main) {
         main.textContent = mainTxt;
         main.style.display = mainTxt.trim() ? "" : "none";
@@ -7698,8 +7828,9 @@ export class OrbHuntGame extends Group {
       // take the other's card away with it.
       hint.style.display =
         this.showPlaceHint.value && (mainTxt.trim() || tipTxt.trim()) ? "" : "none";
-      hint.style.setProperty(
-        "--ohg-hintLift", `${Math.max(0, Math.round(this.placeHintLift.value))}px`);
+      // BOBO OS: lift the card clear of a joystick in a bottom corner (and its dock).
+      const lift = Math.max(0, Math.round(this.placeHintLift.value)) + (this._shell ? 56 : 0);
+      hint.style.setProperty("--ohg-hintLift", `${lift}px`);
     }
     const rl = this._resetWrap.querySelector<HTMLSpanElement>(".ohg-roundLbl");
     if (rl) {
@@ -8530,6 +8661,8 @@ export class OrbHuntGame extends Group {
 .ohg-place:hover{transform:scale(1.04)}
 .ohg-place:active{transform:scale(.97)}
 .ohg-place svg{width:19px;height:19px}
+/* A World Tracker anchor hasn't found a floor under the reticle yet. */
+.ohg-place.ohg-placeWait,.ohg-place:disabled{opacity:.5;filter:saturate(.4);animation:none;cursor:default;transform:none}
 @keyframes ohgPlacePulse{0%,100%{box-shadow:0 0 22px 3px rgba(var(--ohg-accentRgb),.4),0 6px 22px rgba(0,0,0,.45)}
   50%{box-shadow:0 0 34px 7px rgba(var(--ohg-accentRgb),.6),0 6px 22px rgba(0,0,0,.45)}}
 
@@ -9106,6 +9239,8 @@ export class OrbHuntGame extends Group {
   /* ── teardown ─────────────────────────────────────────────────────── */
 
   public dispose() {
+    this._anchorOff?.();
+    this._anchorOff = null;
     window.removeEventListener("resize", this._onResize);
     window.removeEventListener("keydown", this._onKeyDown);
     this._hudRO?.disconnect();
