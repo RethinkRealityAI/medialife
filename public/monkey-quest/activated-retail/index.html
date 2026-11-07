@@ -23,6 +23,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 
+<!-- The import map must come before any module preload or module script, or Chrome can fail to resolve "three". -->
+<script type="importmap">
+{"imports":{"three":"/vendor/three@0.170.0/three.module.min.js","three/addons/":"/vendor/three@0.170.0/jsm/"}}
+</script>
 <link rel="modulepreload" href="/vendor/three@0.170.0/three.module.min.js">
 <link rel="preload" as="fetch" href="display.glb" crossorigin>
 <!-- ar-kit (/vendor/ar-kit): track.js runs first and in sync, so the password gate can resolve personal
@@ -1508,9 +1512,6 @@ body.ar-presenting :is(.topbar,.cta-btn,.dock-wrap,#hotspots,.hint,#tour,#dash,#
   </div>
 </div>
 
-<script type="importmap">
-{"imports":{"three":"/vendor/three@0.170.0/three.module.min.js","three/addons/":"/vendor/three@0.170.0/jsm/"}}
-</script>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
