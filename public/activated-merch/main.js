@@ -66,13 +66,47 @@ async function boot3D() {
     await stage.start(current);
     document.body.classList.add("has-3d");
   } catch (err) {
-    console.warn("[activated] 3D unavailable:", err);
-    stage = null;
-    canvas.remove();
-    $("#fallback").hidden = false;
-    $("#hint").hidden = true;
+    fallBack(err);
     requestAnimationFrame(loop);
   }
+}
+
+/** The 3D stage can't run here: show the still image and say so. */
+function fallBack(err) {
+  report("3D unavailable", err);
+  stage = null;
+  if (window.__stage) window.__stage = null;
+  $("#stage")?.remove();
+  document.body.classList.remove("has-3d");
+  $("#fallback").hidden = false;
+  $("#hint").textContent = "3D view isn't available in this browser, so you're seeing a still image.";
+}
+
+/* Errors: logged, and listed on screen with ?debug so a phone can show them. */
+const debugOn = location.search.includes("debug");
+function report(where, err) {
+  const msg = `${where}: ${err?.message || err}`;
+  console.warn("[activated]", msg, err);
+  if (!debugOn) return;
+  let box = $("#debug-box");
+  if (!box) {
+    box = document.createElement("pre");
+    box.id = "debug-box";
+    box.style.cssText =
+      "position:fixed;left:8px;right:8px;bottom:8px;z-index:9999;max-height:40vh;overflow:auto;margin:0;padding:10px;font:11px/1.4 monospace;white-space:pre-wrap;background:rgba(0,0,0,.85);color:#7df;border:1px solid #7df";
+    document.body.appendChild(box);
+  }
+  box.textContent += msg + "\n";
+}
+if (debugOn) {
+  addEventListener("error", (e) => report("error", e.error || e.message));
+  addEventListener("unhandledrejection", (e) => report("promise", e.reason));
+  addEventListener("load", () => {
+    const c = document.createElement("canvas").getContext("webgl2");
+    const ext = c?.getExtension("WEBGL_debug_renderer_info");
+    const gpu = c ? (ext ? c.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "webgl2 ok") : "NO webgl2";
+    report("info", `${navigator.userAgent} | ${gpu} | dpr ${devicePixelRatio} | ${innerWidth}x${innerHeight}`);
+  });
 }
 
 function showPiece(i, { fromStage = false } = {}) {
@@ -198,17 +232,29 @@ function updateDom({ hero, tech }) {
 }
 
 let wasOff = false;
+let stageErrors = 0;
 function loop() {
+  // Schedule first, so one bad frame can never freeze the page.
+  requestAnimationFrame(loop);
   const s = scrollState();
   els.canvas?.classList.toggle("off", s.off);
   if (stage) {
-    stage.update(s);
-    if (s.off && !wasOff) stage.settle();
-    if (!s.off && !document.hidden) stage.frame();
+    try {
+      stage.update(s);
+      if (s.off && !wasOff) stage.settle();
+      if (!s.off && !document.hidden) stage.frame();
+      stageErrors = 0;
+    } catch (err) {
+      report("frame", err);
+      if (++stageErrors > 5) fallBack(err);
+    }
   }
   wasOff = s.off;
-  updateDom(s);
-  requestAnimationFrame(loop);
+  try {
+    updateDom(s);
+  } catch (err) {
+    report("dom", err);
+  }
 }
 
 /* ------------------------------------------------------------ pointer */

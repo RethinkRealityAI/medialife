@@ -339,7 +339,7 @@ section { position: relative; padding: 0 var(--gut); }
   width: 54px;
   height: 90px;
   transform: translateX(-50%);
-  background: url("/activated-merch/p/sukeban-keychain.webp") center 72% / 260% auto no-repeat;
+  background: url("/activated-merch/posters/sukeban-keychain.webp") center 45% / 170% auto no-repeat;
   clip-path: inset(0 0 0 0 round 6px);
   animation: rise 2.6s infinite ease-out;
 }

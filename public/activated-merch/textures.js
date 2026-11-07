@@ -76,7 +76,15 @@ export function knitNormal(repeat = 26) {
 
 function roundedMask(g, w, h, r) {
   g.beginPath();
-  g.roundRect(0, 0, w, h, r);
+  if (g.roundRect) g.roundRect(0, 0, w, h, r);
+  else {
+    // Safari before 16 has no roundRect.
+    g.moveTo(r, 0);
+    g.arcTo(w, 0, w, h, r);
+    g.arcTo(w, h, 0, h, r);
+    g.arcTo(0, h, 0, 0, r);
+    g.arcTo(0, 0, w, 0, r);
+  }
   g.closePath();
 }
 
