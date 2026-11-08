@@ -338,7 +338,10 @@ section { position: relative; padding: 0 var(--gut); }
 .has-3d .ar { height: 520vh; margin-top: -100vh; padding: 0; background: none; z-index: 2; }
 .has-3d .ar__pin { position: sticky; top: 0; height: 100svh; display: block; overflow: hidden; pointer-events: none; }
 .has-3d .ar__pin a, .has-3d .ar__pin button { pointer-events: auto; }
-.has-3d .ar__copy { position: absolute; left: var(--gut); top: 50%; transform: translateY(-50%); width: min(36%, 460px); z-index: 2; opacity: var(--copy, 0); }
+/* On wide screens the copy and the phone share a centred column (AR_MAX_W in arlayout.js). */
+.has-3d .ar { --col: min(100vw, 1320px); --col-left: calc((100vw - var(--col)) / 2); }
+.has-3d .ar__copy { position: absolute; left: calc(var(--col-left) + var(--gut)); top: 50%; transform: translateY(-50%); width: min(calc(var(--col) * 0.38), 460px); z-index: 2; opacity: var(--copy, 0); }
+.has-3d .ar__copy .display { font-size: clamp(36px, 3.9vw, 54px); }
 .has-3d .ar__steps li { opacity: 0.32; }
 .has-3d .ar__steps li.on { opacity: 1; border-color: var(--cyan); background: linear-gradient(90deg, rgba(63, 182, 255, 0.1), transparent); }
 .has-3d .ar__steps li.done { opacity: 0.6; }
@@ -406,24 +409,60 @@ section { position: relative; padding: 0 var(--gut); }
 .has-3d .arphone__prompt.in { opacity: 1; }
 @keyframes arPulse { 50% { opacity: 0.25; } }
 .has-3d .arphone__badge { display: block; position: absolute; right: 6%; top: 7%; width: 30%; z-index: 3; opacity: 0; transition: opacity 0.4s; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5)); }
+/* The hub button: styled after the piece's print (colours from PRODUCTS[].ar.cta).
+   Glossy black like the jacket, the print's off-white rim and red-orange lettering. */
 .has-3d .arphone__cta {
-  display: block;
+  --cta-accent: #e0553b;
+  --cta-ink: #f6f0e6;
+  --cta-glow: #4a787e;
+  --cta-petal: #f4b6c2;
   position: absolute;
   left: 50%;
-  bottom: 5.5%;
-  transform: translate(-50%, 10px);
-  z-index: 3;
-  padding: 11px 20px;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #1f7fc4, #c4206f);
-  color: #fff;
-  font-size: 11px;
+  bottom: 5%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 12px;
+  border-radius: 14px;
+  border: 2px solid var(--cta-ink);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0) 46%),
+    linear-gradient(160deg, #26262c, #08080a 70%);
+  box-shadow: 0 0 0 3px var(--cta-accent), 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 34px color-mix(in srgb, var(--cta-accent) 45%, transparent);
+  color: var(--cta-ink);
+  text-decoration: none;
   white-space: nowrap;
+  overflow: hidden;
   opacity: 0;
-  transition: opacity 0.4s, transform 0.4s;
+  visibility: hidden;
+  transform: translate(-50%, 140%) rotate(-2deg);
+  transition: transform 0.7s cubic-bezier(0.2, 1.4, 0.35, 1), opacity 0.35s, visibility 0s linear 0.7s;
 }
+.has-3d .arphone__cta::after {
+  /* a light sweep across the gloss */
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: ctaShine 3.2s 0.9s infinite;
+  pointer-events: none;
+}
+@keyframes ctaShine { 0%, 55% { transform: translateX(-120%); } 85%, 100% { transform: translateX(120%); } }
+.has-3d .arphone__petal { flex: none; width: 26px; height: 26px; fill: var(--cta-petal); filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cta-petal) 70%, transparent)); animation: ctaPetal 6s linear infinite; }
+@keyframes ctaPetal { to { transform: rotate(360deg); } }
+.has-3d .arphone__cta-txt { display: grid; line-height: 1; gap: 4px; }
+.has-3d .arphone__cta small { font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: color-mix(in srgb, var(--cta-glow) 55%, #fff); }
+.has-3d .arphone__cta strong { font-family: var(--display); font-size: clamp(17px, 1.5vw, 22px); text-transform: uppercase; letter-spacing: 0.02em; color: var(--cta-accent); text-shadow: 1px 1px 0 var(--cta-ink), -1px 1px 0 var(--cta-ink), 0 2px 0 #000; }
+.has-3d .arphone__cta b { font-size: 18px; color: var(--cta-ink); transition: transform 0.25s; }
+.has-3d .arphone__cta:hover b, .has-3d .arphone__cta:focus-visible b { transform: translateX(4px); }
+.has-3d .arphone__cta:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; }
 .has-3d .arphone.live .arphone__badge { opacity: 1; }
-.has-3d .arphone.live .arphone__cta { opacity: 1; transform: translate(-50%, 0); }
+.has-3d .arphone.cta .arphone__cta { opacity: 1; visibility: visible; transform: translate(-50%, 0) rotate(-2deg); transition: transform 0.7s cubic-bezier(0.2, 1.4, 0.35, 1), opacity 0.35s, visibility 0s; }
+@media (prefers-reduced-motion: reduce) {
+  .has-3d .arphone__cta::after, .has-3d .arphone__petal { animation: none; }
+}
 .has-3d .ar__brackets { display: block; position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: var(--brk, 0); }
 .has-3d .ar__brackets i { position: absolute; left: 0; top: 0; width: 26px; height: 26px; border: 0 solid #fff; filter: drop-shadow(0 0 6px rgba(63, 182, 255, 0.9)); will-change: transform; }
 .has-3d .ar__brackets i:nth-child(1) { border-width: 3px 0 0 3px; margin: -2px 0 0 -2px; }
@@ -431,19 +470,23 @@ section { position: relative; padding: 0 var(--gut); }
 .has-3d .ar__brackets i:nth-child(3) { border-width: 0 3px 3px 0; margin: -24px 0 0 -24px; }
 .has-3d .ar__brackets i:nth-child(4) { border-width: 0 0 3px 3px; margin: -24px 0 0 -2px; }
 .has-3d .ar__brackets.lock i { border-color: #4dff9a; filter: drop-shadow(0 0 10px rgba(77, 255, 154, 0.9)); }
-.has-3d .ar__brand { position: absolute; left: var(--gut); right: var(--gut); bottom: 28px; z-index: 2; margin: 0; opacity: var(--brand, 0); transform: translateY(calc((1 - var(--brand, 0)) * 14px)); }
+.has-3d .ar__brand { position: absolute; left: calc(var(--col-left) + var(--gut)); right: calc(var(--col-left) + var(--gut)); bottom: 28px; z-index: 2; margin: 0; opacity: var(--brand, 0); transform: translateY(calc((1 - var(--brand, 0)) * 14px)); }
 @media (max-width: 760px) {
   .ar__pin { grid-template-columns: 1fr; }
-  .has-3d .ar__copy { left: 0; right: 0; top: 0; bottom: 0; transform: none; width: auto; display: flex; flex-direction: column; justify-content: space-between; gap: 0; padding: 76px 0 0; }
-  .has-3d .ar__copy .display { padding: 0 var(--gut); font-size: 34px; opacity: var(--title, 1); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
-  .has-3d .ar__steps { padding: 70px var(--gut) 24px; background: linear-gradient(rgba(5, 6, 12, 0), rgba(5, 6, 12, 0.9) 45%); }
-  .has-3d .ar__shown { padding: 0 var(--gut) 16px; background: rgba(5, 6, 12, 0.9); }
+  /* On phones the captions sit at the top, over the hood, so the print and the AR stay clear.
+     The title holds that spot while the phone grows, then the active step takes it. */
+  .has-3d .ar__copy { left: 0; right: 0; top: 0; bottom: auto; transform: none; width: auto; display: grid; align-content: start; gap: 0; padding: 0; }
+  .has-3d .ar__copy > * { grid-area: 1 / 1; }
+  .has-3d .ar__copy .display { padding: 72px var(--gut) 0; font-size: 34px; opacity: var(--title, 1); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+
+  .has-3d .ar__steps { padding: 66px var(--gut) 36px; background: linear-gradient(rgba(5, 6, 12, 0.94) 60%, rgba(5, 6, 12, 0)); opacity: calc(1 - var(--title, 1)); }
+  .has-3d .ar__shown { grid-area: 2 / 1; padding: 0 var(--gut); margin-top: -28px; opacity: calc(1 - var(--title, 1)); }
   .has-3d .ar__steps li { display: none; border: 0; padding: 0; background: none !important; }
   .has-3d .ar__steps li.on { display: grid; }
   .has-3d .ar__steps p { font-size: 14px; }
   .has-3d .ar__brand { display: none; }
-  .has-3d .arphone__prompt { bottom: 30%; }
-  .has-3d .arphone__cta { bottom: 22%; }
+  .has-3d .arphone__prompt { bottom: 12%; }
+  .has-3d .arphone__cta { bottom: 6%; }
 }
 @media (prefers-reduced-motion: reduce) { .has-3d .arphone__prompt i { animation: none; } }
 .brandbar { margin-top: 16px; border: 1px solid var(--line); padding: 18px 22px; display: flex; gap: 24px; align-items: baseline; background: rgba(10, 12, 22, 0.8); }

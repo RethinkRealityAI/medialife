@@ -10,6 +10,13 @@ const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 /** Screen aspect of the phone (w / h), shared by the 3D and DOM phones. */
 export const SCREEN_ASPECT = 0.38 / 0.82;
 
+/** On wide screens the section lays out inside a centred column this wide (px). */
+export const AR_MAX_W = 1320;
+const column = (W) => {
+  const w = Math.min(W, AR_MAX_W);
+  return { left: (W - w) / 2, w };
+};
+
 /**
  * Where the phone's screen sits when the tech section hands over to this one
  * (viewport px). The 3D phone flies to exactly this rect, the DOM phone starts
@@ -17,9 +24,10 @@ export const SCREEN_ASPECT = 0.38 / 0.82;
  */
 export function handoffRect(W, H) {
   const mobile = W < 760;
-  const h = Math.min(H * (mobile ? 0.56 : 0.62), (W * (mobile ? 0.62 : 0.4)) / SCREEN_ASPECT);
+  const col = column(W);
+  const h = Math.min(H * (mobile ? 0.56 : 0.62), (col.w * (mobile ? 0.62 : 0.4)) / SCREEN_ASPECT);
   const w = h * SCREEN_ASPECT;
-  const cx = mobile ? W * 0.5 : W * 0.64;
+  const cx = mobile ? W * 0.5 : col.left + col.w * 0.64;
   const cy = H * (mobile ? 0.5 : 0.52);
   return { x: cx - w / 2, y: cy - h / 2, w, h };
 }
@@ -27,9 +35,10 @@ export function handoffRect(W, H) {
 /** The phone's screen once it fills the view. On phones it becomes the viewport. */
 export function fullRect(W, H) {
   if (W < 760) return { x: 0, y: 0, w: W, h: H };
-  const h = Math.min(H * 0.9, (W * 0.5) / SCREEN_ASPECT);
+  const col = column(W);
+  const h = Math.min(H * 0.9, (col.w * 0.5) / SCREEN_ASPECT);
   const w = h * SCREEN_ASPECT;
-  const cx = W * 0.64;
+  const cx = col.left + col.w * 0.64;
   return { x: cx - w / 2, y: (H - h) / 2, w, h };
 }
 

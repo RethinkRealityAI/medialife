@@ -248,7 +248,7 @@ const CHROMA_VERT = /* glsl */ `
 const CHROMA_FRAG = /* glsl */ `
   uniform sampler2D tex;
   uniform vec3 keyColor, bg;
-  uniform float gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
+  uniform float uKey, uFeather, gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
   varying vec2 vUv;
   vec2 RGBtoUV(vec3 rgb) {
     return vec2(
@@ -259,8 +259,8 @@ const CHROMA_FRAG = /* glsl */ `
     vec4 rgba = texture2D(tex, vUv);
     float chromaDist = distance(RGBtoUV(rgba.rgb), RGBtoUV(keyColor));
     float baseMask = chromaDist - similarity;
-    float a = pow(clamp(baseMask / smoothness, 0., 1.), 1.5);
-    float spillVal = pow(clamp(baseMask / spill, 0., 1.), 1.5);
+    float a = mix(1.0, pow(clamp(baseMask / smoothness, 0., 1.), 1.5), uKey);
+    float spillVal = mix(1.0, pow(clamp(baseMask / spill, 0., 1.), 1.5), uKey);
     float desat = clamp(rgba.r * 0.2126 + rgba.g * 0.7152 + rgba.b * 0.0722, 0., 1.);
     rgba.rgb = mix(vec3(desat), rgba.rgb, spillVal);
     // Scan-line reveal, top to bottom, with a bright edge.
@@ -273,7 +273,11 @@ const CHROMA_FRAG = /* glsl */ `
     // Anti-aliased outer edge, so the panel's border stays crisp but clean.
     vec2 e = min(vUv, 1.0 - vUv) / fwidth(vUv);
     float rim = clamp(min(e.x, e.y), 0.0, 1.0);
-    float alpha = max(shown, line * 0.9) * rim;
+    // The background can fade out towards the edges (prints with no panel
+    // behind the character); the character itself always stays solid.
+    vec2 ed = min(vUv, 1.0 - vUv);
+    float bgA = uFeather > 0.0 ? smoothstep(0.0, uFeather, min(ed.x, ed.y * 0.75)) : 1.0;
+    float alpha = max(shown * max(a, bgA), line * 0.9) * rim;
     gl_FragColor = vec4(col, alpha * uOpacity);
   }`;
 
@@ -371,7 +375,11 @@ export class ARView {
     const back = item.side === "back";
     const bb = g.bounds;
     const [tl, tr, br, bl] = ar.rect; // surface (u, v) of the image target's corners
-    const NX = 11;
+    // Where the video sits, in target units (0..1 = the image target). Most
+    // cover the target exactly; some (landscape scenes) run past its sides.
+    const [fx0, fy0, fx1, fy1] = ar.frame || [0, 0, 1, 1];
+    const wide = fx1 - fx0 > 1.2;
+    const NX = wide ? 25 : 11;
     const NY = 14;
     const pos = new Float32Array(NX * NY * 3);
     const uv = new Float32Array(NX * NY * 2);
@@ -380,29 +388,54 @@ export class ARView {
     const inv = g.pick.matrixWorld.clone().invert();
     const toWorld = (p) => p.clone().applyMatrix4(g.pick.matrixWorld);
     const dirW = new THREE.Vector3(0, 0, back ? 1 : -1).transformDirection(g.pick.matrixWorld);
+    // A point on the cloth at target coords (s, t), or null off the garment.
+    const onCloth = (s, t) => {
+      // Bilinear (extrapolating past the target) in surface coords.
+      const su = lerp(lerp(tl[0], tr[0], s), lerp(bl[0], br[0], s), t);
+      const sv = lerp(lerp(tl[1], tr[1], s), lerp(bl[1], br[1], s), t);
+      const lx = lerp(bb.min.x, bb.max.x, (su + 1) / 2);
+      const ly = lerp(bb.min.y, bb.max.y, sv);
+      const from = new THREE.Vector3(lx, ly, back ? bb.min.z - 0.5 : bb.max.z + 0.5);
+      rc.set(toWorld(from), dirW);
+      const hit = rc.intersectObject(g.pick, false)[0];
+      const p = hit ? hit.point.applyMatrix4(inv) : new THREE.Vector3(lx, ly, NaN);
+      // Lift off the cloth a touch so it never z-fights.
+      p.z += back ? -0.006 : 0.006;
+      return p;
+    };
+    const pts = [];
     for (let j = 0; j < NY; j++) {
-      const t = j / (NY - 1);
+      const t = lerp(fy0, fy1, j / (NY - 1));
       for (let i = 0; i < NX; i++) {
-        const s = i / (NX - 1);
-        // Bilinear in surface coords between the four target corners.
-        const su = lerp(lerp(tl[0], tr[0], s), lerp(bl[0], br[0], s), t);
-        const sv = lerp(lerp(tl[1], tr[1], s), lerp(bl[1], br[1], s), t);
-        const lx = lerp(bb.min.x, bb.max.x, (su + 1) / 2);
-        const ly = lerp(bb.min.y, bb.max.y, sv);
-        const from = new THREE.Vector3(lx, ly, back ? bb.min.z - 0.5 : bb.max.z + 0.5);
-        rc.set(toWorld(from), dirW);
-        const hit = rc.intersectObject(g.pick, false)[0];
-        const p = hit ? hit.point.applyMatrix4(inv) : new THREE.Vector3(lx, ly, back ? bb.min.z : bb.max.z);
-        // Lift off the cloth a touch so it never z-fights.
-        p.z += back ? -0.006 : 0.006;
-        const k = (j * NX + i) * 3;
-        pos[k] = p.x;
-        pos[k + 1] = p.y;
-        pos[k + 2] = p.z;
-        uv[(j * NX + i) * 2] = s;
-        uv[(j * NX + i) * 2 + 1] = 1 - t;
+        const s = lerp(fx0, fx1, i / (NX - 1));
+        pts.push(onCloth(s, t));
+        uv[(j * NX + i) * 2] = i / (NX - 1);
+        uv[(j * NX + i) * 2 + 1] = 1 - j / (NY - 1);
       }
     }
+    // Off the garment, the video carries on flat from the nearest cloth in its row.
+    const zs = pts.map((p) => p.z).filter((z) => !Number.isNaN(z)).sort((a, b) => a - b);
+    const zMid = zs.length ? zs[zs.length >> 1] : back ? bb.min.z : bb.max.z;
+    for (let j = 0; j < NY; j++) {
+      for (let i = 0; i < NX; i++) {
+        const p = pts[j * NX + i];
+        if (!Number.isNaN(p.z)) continue;
+        let z = zMid;
+        for (let d = 1; d < NX; d++) {
+          const l = pts[j * NX + i - d];
+          const r = pts[j * NX + i + d];
+          if (i - d >= 0 && l && !Number.isNaN(l.z) && !l.flat) { z = l.z; break; }
+          if (i + d < NX && r && !Number.isNaN(r.z) && !r.flat) { z = r.z; break; }
+        }
+        p.z = z;
+        p.flat = true;
+      }
+    }
+    pts.forEach((p, n) => {
+      pos[n * 3] = p.x;
+      pos[n * 3 + 1] = p.y;
+      pos[n * 3 + 2] = p.z;
+    });
     const idx = [];
     for (let j = 0; j < NY - 1; j++)
       for (let i = 0; i < NX - 1; i++) {
@@ -422,7 +455,14 @@ export class ARView {
     video.setAttribute("playsinline", "");
     video.preload = "auto";
     video.crossOrigin = "anonymous";
+    if (this.video) {
+      // Let go of the previous piece's video.
+      this.video.pause();
+      this.video.removeAttribute("src");
+      this.video.load();
+    }
     this.video = video;
+    this.warmed = false;
     const vt = new THREE.VideoTexture(video);
     vt.colorSpace = THREE.NoColorSpace; // key in the video's own values, like 8th Wall
     const poster = ar.poster ? new THREE.TextureLoader().load(BASE + ar.poster) : vt;
@@ -433,8 +473,10 @@ export class ARView {
         // Raw (display) values: the video texture isn't linearised either, so
         // the key has to be compared in the same space. Converting it to
         // linear made dark and grey pixels key out and the print show through.
-        keyColor: { value: new THREE.Color().setHex(ar.key ?? 0x008102, THREE.NoColorSpace) },
+        keyColor: { value: new THREE.Color().setHex(ar.key ?? 0x00ff00, THREE.NoColorSpace) },
         bg: { value: new THREE.Color().setHex(ar.bg ?? 0x4a787e, THREE.NoColorSpace) },
+        uKey: { value: ar.key == null ? 0 : 1 },
+        uFeather: { value: ar.feather ?? 0 },
         gain: { value: ar.gain ?? 0.94 },
         similarity: { value: 0.159 },
         smoothness: { value: 0.082 },
@@ -461,12 +503,21 @@ export class ARView {
     this.sheet = sheet;
 
     // Corners and centre (pivot-local) for the brackets and the camera.
-    const P = (i, j) => new THREE.Vector3(pos[(j * NX + i) * 3], pos[(j * NX + i) * 3 + 1], pos[(j * NX + i) * 3 + 2]);
-    this.localCorners = [P(0, 0), P(NX - 1, 0), P(NX - 1, NY - 1), P(0, NY - 1)];
-    this.localCentre = P((NX - 1) / 2, (NY - 1) / 2);
+    // The target itself (not the video frame): what the brackets lock onto and the camera frames.
+    const T = (s, t) => {
+      const p = onCloth(s, t);
+      if (Number.isNaN(p.z)) p.z = zMid;
+      return p;
+    };
+    this.localCorners = [T(0, 0), T(1, 0), T(1, 1), T(0, 1)];
+    this.localCentre = T(0.5, 0.5);
     this.printH = this.localCorners[0].distanceTo(this.localCorners[3]);
 
-    this._petals(g);
+    if (this.petals) {
+      this.petals.removeFromParent();
+      this.petals = null;
+    }
+    if (ar.petals) this._petals(g);
   }
 
   /** Blossom petals that drift out of the print towards the phone. */
@@ -581,10 +632,12 @@ export class ARView {
       v.pause();
       if (ph.reveal === 0) v.currentTime = 0;
     }
-    const pu = this.petals.material.uniforms;
-    pu.uT.value = t;
-    pu.uA.value = this.reduced ? 0 : seg(p, 0.52, 0.6) * (1 - ph.out * 0.6);
-    pu.uH.value = H * cam.zoom * (rect.h / H) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)));
+    const pu = this.petals?.material.uniforms;
+    if (pu) {
+      pu.uT.value = t;
+      pu.uA.value = this.reduced ? 0 : seg(p, 0.52, 0.6) * (1 - ph.out * 0.6);
+      pu.uH.value = H * cam.zoom * (rect.h / H) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)));
+    }
 
     this.renderer.render(this.scene, cam);
 

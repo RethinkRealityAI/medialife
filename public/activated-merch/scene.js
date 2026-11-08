@@ -15,7 +15,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { SoftGarment } from "./softbody.js";
-import { cottonTexture, nfcTexture, patchTexture, strokesTexture } from "./textures.js";
+import { cottonTexture, nfcTexture, patchTexture } from "./textures.js";
 import { ARView, Splash } from "./ar.js";
 import { handoffRect } from "./arlayout.js";
 
@@ -120,10 +120,12 @@ export class Stage {
   }
 
   _backdrop() {
-    const mat = new THREE.MeshBasicMaterial({ map: strokesTexture(), transparent: true, depthWrite: false, opacity: 0.5 });
-    this.strokes = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6), mat);
-    this.strokes.position.set(0, -0.1, -1.8);
-    this.scene.add(this.strokes);
+    // A soft halo behind the piece (over the page's grid): a quiet glow and one
+    // thin orbit ring, instead of busy strokes.
+    const mat = new THREE.MeshBasicMaterial({ map: haloTexture(), transparent: true, depthWrite: false, opacity: 0.5, blending: THREE.AdditiveBlending, toneMapped: false });
+    this.halo = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), mat);
+    this.halo.position.set(0, 0, -1.8);
+    this.scene.add(this.halo);
     const n = 260;
     const pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
@@ -543,6 +545,12 @@ export class Stage {
     }
     v.copy(this.lensWorld);
     out.push(proj());
+    // The phone's right edge, for "Tap activation".
+    if (this.phone.visible) {
+      v.set(0.21, 0.12, 0.03);
+      this.phone.localToWorld(v);
+      out.push(proj());
+    } else out.push(null);
     return out;
   }
 
@@ -677,9 +685,9 @@ export class Stage {
     }
     this._runIntro();
 
-    this.strokes.material.opacity = 0.5 * (1 - h * 0.6) * (1 - dive);
-    this.strokes.position.x = this.pointer.x * -0.08;
-    this.strokes.rotation.z = Math.sin(t * 0.1) * 0.02;
+    this.halo.material.opacity = (0.5 + Math.sin(t * 0.6) * 0.06) * (1 - h * 0.6) * (1 - dive);
+    this.halo.position.x = this.pointer.x * -0.08;
+    this.halo.rotation.z = t * 0.03;
     this.dust.rotation.y = t * 0.02;
     this.dust.position.y = -tech * 0.6;
 
@@ -795,6 +803,37 @@ export class Stage {
 }
 
 const _v = new THREE.Vector3();
+
+function haloTexture() {
+  const N = 512;
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const x = c.getContext("2d");
+  const h = N / 2;
+  // Glow: cool blue at the heart, a hint of pink at the rim, gone by the edge.
+  const g = x.createRadialGradient(h, h, 0, h, h, h);
+  g.addColorStop(0, "rgba(63,120,255,0.32)");
+  g.addColorStop(0.45, "rgba(63,120,255,0.12)");
+  g.addColorStop(0.75, "rgba(255,61,154,0.05)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = g;
+  x.fillRect(0, 0, N, N);
+  // One thin ring, broken into a few arcs so it reads as a HUD orbit.
+  x.lineWidth = 1.5;
+  x.strokeStyle = "rgba(150,190,255,0.35)";
+  for (let a = 0; a < 4; a++) {
+    x.beginPath();
+    x.arc(h, h, h * 0.78, a * (Math.PI / 2) + 0.12, (a + 1) * (Math.PI / 2) - 0.12);
+    x.stroke();
+  }
+  x.strokeStyle = "rgba(150,190,255,0.12)";
+  x.beginPath();
+  x.arc(h, h, h * 0.9, 0, Math.PI * 2);
+  x.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 function radialTexture() {
   const c = document.createElement("canvas");

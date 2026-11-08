@@ -16,31 +16,48 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const HEAD = "Behind the character's head";
 const head = (u, v, side = "back") => ({ u, v, side, where: HEAD });
 // const LOGO = { u: 0.26, v: 0.62, side: "front", where: "Under the front logo" };
-// `ar` is the piece's real AR experience (from its 8th Wall project): the
-// green-screen animation and the surface (u, v) of the image target's corners
-// (top-left, top-right, bottom-right, bottom-left), found by matching the
-// target image to the baked print. Pieces without it show the Sukeban hoodie
-// in "How it works" for now.
-const SUKEBAN_AR = {
-  video: "media/ar/sukeban-hoodie.mp4",
-  poster: "media/ar/sukeban-hoodie.webp",
-  key: 0x008102,
-  bg: 0x4a787e, // the print's teal, replaces the green screen
-  rect: [
-    [0.3806, 0.668],
-    [-0.4178, 0.6702],
-    [-0.4145, 0.1977],
-    [0.3799, 0.1985],
-  ],
+// `ar` is the piece's real AR experience, from its 8th Wall project: the
+// animation, how it is keyed, and the surface (u, v) of the image target's
+// corners on this garment (top-left, top-right, bottom-right, bottom-left),
+// found by matching the 8th Wall target image to the baked print.
+// - key: the green-screen colour, or null for a video that plays as it is.
+// - bg: the colour the green turns into, so the video covers the print solidly.
+// - frame: where the video sits in target units, when it is not the target.
+// - feather: fade the background at its edges (prints with no panel behind).
+// - cta: colours of the hub button on the phone, taken from the print.
+const AR_DESIGNS = {
+  sukeban: {
+    video: "media/ar/sukeban-hoodie.mp4",
+    poster: "media/ar/sukeban-hoodie.webp",
+    key: 0x008102,
+    petals: true,
+    cta: { accent: "#e0553b", ink: "#f6f0e6", glow: "#4a787e", petal: "#f4b6c2" },
+  },
+  syndicate: {
+    video: "media/ar/syndicate.mp4",
+    poster: "media/ar/syndicate.webp",
+    key: 0x30c23a,
+    cta: { accent: "#d8343f", ink: "#f4f1ea", glow: "#c9c9c9", petal: "#f4f1ea" },
+  },
+  trainwreck: {
+    // A landscape scene, played as it is: the height of the target and centred,
+    // so it runs past the print on both sides (as in the 8th Wall project).
+    video: "media/ar/trainwreck.mp4",
+    poster: "media/ar/trainwreck.webp",
+    key: null,
+    frame: [-0.709, -0.01, 1.709, 1.01],
+    cta: { accent: "#f08a3c", ink: "#fbf0dc", glow: "#7fb2e5", petal: "#ffd27a" },
+  },
 };
+const arOf = (design, extra) => ({ ...AR_DESIGNS[design], ...extra });
 const PRODUCTS = [
-  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: SUKEBAN_AR },
-  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72) },
-  { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61) },
-  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52) },
-  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: head(0.06, 0.7) },
-  { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: head(-0.02, 0.61, "front") },
-  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57) },
+  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: arOf("sukeban", { bg: 0x4a787e, rect: [[0.3806, 0.668], [-0.4178, 0.6702], [-0.4145, 0.1977], [0.3799, 0.1985]] }) },
+  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72), ar: arOf("syndicate", { bg: 0xa83346, rect: [[0.3317, 0.9093], [-0.3589, 0.9051], [-0.3586, 0.3015], [0.3148, 0.2995]] }) },
+  { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61), ar: arOf("trainwreck", { rect: [[0.3812, 0.8089], [-0.389, 0.8077], [-0.3928, 0.1935], [0.3805, 0.1934]] }) },
+  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52), ar: arOf("trainwreck", { rect: [[0.3647, 0.6552], [-0.3658, 0.6553], [-0.3643, 0.2624], [0.3642, 0.2619]] }) },
+  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: head(0.06, 0.7), ar: arOf("sukeban", { bg: 0x5f7374, rect: [[0.399, 0.8395], [-0.4349, 0.8398], [-0.4351, 0.2394], [0.3995, 0.2402]] }) },
+  { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: head(-0.02, 0.61, "front"), ar: arOf("syndicate", { bg: 0x1c212a, feather: 0.12, rect: [[-0.5182, 0.7971], [0.4251, 0.7976], [0.4258, 0.0459], [-0.5201, 0.0461]] }) },
+  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57), ar: arOf("syndicate", { bg: 0xa23437, rect: [[0.381, 0.7242], [-0.3925, 0.7246], [-0.3925, 0.2319], [0.3818, 0.2345]] }) },
   { key: "evade-charms", name: "EVADE Eclipse Charm Set", price: 14.99, type: "keychain", tags: ["QR", "Game"], handle: "bobo-eclipse-ar-keychain-set", orbit: "-25deg 85deg auto" },
   { key: "sukeban-keychain", name: "Sukeban Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "sukeban-keychain", orbit: "-25deg 85deg auto" },
   { key: "syndicate-keychain", name: "Syndicate Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "syndicate-keychain", orbit: "-25deg 85deg auto" },
@@ -161,6 +178,11 @@ function showPiece(i, { fromStage = false } = {}) {
   if (shown) {
     shown.hidden = arPiece === p;
     $("#ar-shown-name").textContent = arPiece.name;
+  }
+  const cta = $("#ar-cta");
+  if (cta) {
+    cta.href = SHOP + arPiece.handle;
+    for (const [k, v] of Object.entries(arPiece.ar.cta || {})) cta.style.setProperty(`--cta-${k}`, v);
   }
 }
 
@@ -288,12 +310,15 @@ function updateAr({ ar, arRect: r }) {
   // Hold the splash until the camera view is ready to take over.
   st.setProperty("--splash", String(stage.arView.ready ? 1 - ph.cam : 1));
   els.arPhone.classList.toggle("live", ph.reveal > 0.6 && ph.out < 0.6);
+  // The hub button slides up once the animation is playing.
+  els.arPhone.classList.toggle("cta", ar > 0.6 && ph.out < 0.6);
   // Copy column and steps.
   // The copy comes in once the veil has covered the tech section underneath.
   els.arPin.style.setProperty("--copy", String(seg(ar, 0.05, 0.1)));
-  els.arPin.style.setProperty("--title", String(mobile ? 1 - seg(ar, 0.2, 0.3) : 1));
+  els.arPin.style.setProperty("--title", String(mobile ? 1 - seg(ar, 0.12, 0.2) : 1));
   els.arPin.style.setProperty("--brand", String(seg(ar, 0.9, 0.97)));
-  const step = ar < 0.2 ? 0 : ar < 0.46 ? 1 : ar < 0.88 ? 2 : 3;
+  // Tapping is covered by the Technology section, so this one starts at Point.
+  const step = ar < 0.46 ? 0 : ar < 0.88 ? 1 : 2;
   els.arSteps.forEach((li, i) => {
     li.classList.toggle("on", i === step);
     li.classList.toggle("done", i < step);
@@ -365,25 +390,28 @@ function updateDom({ hero, tech, ar, arRect: r }) {
   }
   let hot = -1;
   let floor = 70;
-  const order = [0, 1, 2];
+  // Print and disc point at their layers; "Tap activation" at the phone once it arrives.
+  const order = [0, 1];
+  const anchorOf = (i) => (anchors ? (i === 2 ? anchors[4] : anchors[i]) : null);
   if (anchors) order.sort((i, j) => anchors[i].y - anchors[j].y);
-  const colX = anchors ? Math.max(anchors[0].x, anchors[1].x, anchors[2].x) + 56 : 0;
+  order.push(2); // always listed last, below the layers
+  const colX = anchors ? Math.max(anchors[0].x, anchors[1].x) + 56 : 0;
   order.forEach((i) => {
     const li = els.layerLabels[i];
-    const on = tech > 0.36 + i * 0.06 && tech < 0.995;
+    const on = i === 2 ? tech > 0.66 && tech < 0.995 && (!anchors || !!anchors[4]) : tech > 0.36 + i * 0.06 && tech < 0.995;
     li.classList.toggle("in", on);
     if (on) hot = Math.max(hot, i);
-    if (anchors) {
-      const a = anchors[i];
+    const a = anchorOf(i);
+    if (a) {
       const h = li.offsetHeight;
-      const x = Math.min(colX, innerWidth - li.offsetWidth - 16);
+      const x = Math.min(i === 2 ? a.x + 56 : colX, innerWidth - li.offsetWidth - 16);
       li.style.setProperty("--lead", `${Math.max(14, Math.round(x - a.x))}px`);
       const y = Math.max(a.y - h / 2, floor);
       floor = y + h + 8;
       place(li, x, y);
     }
   });
-  if (tech > 0.6) hot = 1;
+  if (tech > 0.6) hot = tech > 0.66 ? 2 : 1;
   els.layerLabels.forEach((li, i) => li.classList.toggle("hot", i === hot));
   els.tap.classList.toggle("in", tech > 0.72 && !(ar > 0.04));
   els.techPin.classList.toggle("tapping", tech > 0.7);
@@ -515,8 +543,11 @@ function buildReel() {
       c.classList.toggle("is-center", ad === 0);
       c.tabIndex = ad === 0 ? 0 : -1;
       const vid = c.querySelector("video");
-      if (ad === 0 && reelVisible && !reduced) {
+      // Fan videos play by themselves (muted) as soon as the reel is on screen:
+      // the front one always, its neighbours too unless reduced motion is on.
+      if (reelVisible && (ad === 0 || (ad === 1 && !reduced))) {
         if (!vid.src) vid.src = c.dataset.src;
+        vid.muted = true;
         vid.play().catch(() => {});
       } else vid.pause();
     });
@@ -529,7 +560,7 @@ function buildReel() {
   new IntersectionObserver(([e]) => {
     reelVisible = e.isIntersecting;
     layout();
-  }).observe(track);
+  }, { rootMargin: "200px 0px" }).observe(track);
   $(".reel__btn--prev").addEventListener("click", () => go(center - 1));
   $(".reel__btn--next").addEventListener("click", () => go(center + 1));
   track.addEventListener("keydown", (e) => {

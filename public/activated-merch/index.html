@@ -142,8 +142,7 @@
           <div class="tech__copy">
             <h2 id="tech-title" class="display">Technology<br />built in.</h2>
             <p class="mono lead" id="tech-lead">
-              A flat round NFC disc, about the size of a coin, is embedded in the design at one spot: behind part of
-              the print or under the logo. Not under the whole print. Scroll to look inside.
+              A flat, coin-sized NFC disc sits behind the print, embedded in the design. Scroll to look inside.
             </p>
             <div class="tech__tap mono" id="tech-tap" aria-live="polite">
               <p class="tech__tap-title">Tap. It opens.</p>
@@ -159,9 +158,9 @@
             <p class="tag-note__s">Placement varies by product</p>
           </div>
           <ol class="layers" id="layer-labels">
-            <li data-i="0"><span class="mono">01</span><div><h3>The print</h3><p>The design you see. The disc sits right behind it and nothing shows from the outside.</p></div></li>
-            <li data-i="1"><span class="mono">02</span><div><h3>NFC disc</h3><p>About 25 mm across. A coil antenna and chip, no battery: the phone powers it.</p></div></li>
-            <li data-i="2"><span class="mono">03</span><div><h3>Backing</h3><p>Holds the disc in place on the inside.</p></div></li>
+            <li data-i="0"><span class="mono">01</span><div><h3>Print</h3></div></li>
+            <li data-i="1"><span class="mono">02</span><div><h3>NFC disc</h3></div></li>
+            <li data-i="2"><span class="mono">03</span><div><h3>Tap activation</h3></div></li>
           </ol>
           <p class="tech__where mono" aria-hidden="true">Tag spot: <span class="tag-where">Behind the character's head</span> · placement varies by product</p>
           <div class="progress mono" aria-hidden="true"><span id="tech-progress"></span></div>
@@ -174,24 +173,27 @@
       <section class="ar" id="how" aria-labelledby="how-title">
         <div class="ar__pin">
           <div class="ar__copy">
-            <h2 id="how-title" class="display">How it<br />works.</h2>
+            <h2 id="how-title" class="display">Activated<br />experience.</h2>
             <ol class="ar__steps" id="ar-steps">
-              <li data-i="0"><span class="mono">01</span><div><h3>Tap</h3><p>Tap the print with a phone, or scan its QR. The experience opens in the browser. Nothing to download.</p></div></li>
-              <li data-i="1"><span class="mono">02</span><div><h3>Point</h3><p>Point the camera at the design. It finds the print in a second.</p></div></li>
-              <li data-i="2"><span class="mono">03</span><div><h3>It comes alive</h3><p>The character moves on the print, in AR, made for that world.</p></div></li>
-              <li data-i="3"><span class="mono">04</span><div><h3>It keeps giving</h3><p>Owners unlock drops, rewards and a collector room that grows with every piece they own.</p></div></li>
+              <li data-i="0"><span class="mono">01</span><div><h3>Point</h3><p>Point the camera at the design. It finds the print in a second.</p></div></li>
+              <li data-i="1"><span class="mono">02</span><div><h3>It comes alive</h3><p>The character moves on the print, in AR, made for that world.</p></div></li>
+              <li data-i="2"><span class="mono">03</span><div><h3>It keeps giving</h3><p>Owners unlock drops, rewards and a collector room that grows with every piece they own.</p></div></li>
             </ol>
             <p class="ar__shown mono" id="ar-shown" hidden>Shown on the <span id="ar-shown-name">Sukeban AR Hoodie</span></p>
           </div>
-          <div class="arphone" id="arphone" aria-hidden="true">
+          <div class="arphone" id="arphone">
             <div class="arphone__screen" id="arphone-screen">
               <img class="arphone__still" src="/activated-merch/media/fan-05.webp" alt="" loading="lazy" decoding="async" />
-              <div class="arphone__grain"></div>
-              <p class="arphone__prompt mono" id="ar-prompt"><i></i><span>Point at the design</span></p>
+              <div class="arphone__grain" aria-hidden="true"></div>
+              <p class="arphone__prompt mono" id="ar-prompt" aria-hidden="true"><i></i><span>Point at the design</span></p>
               <img class="arphone__badge" src="/activated-merch/media/ar/activated-by.webp" alt="" />
-              <span class="arphone__cta mono">Shop the design <b>→</b></span>
+              <a class="arphone__cta" id="ar-cta" href="https://shop.medialife.ai/products/black-hoodie-sukeban" target="_blank" rel="noopener">
+                <svg class="arphone__petal" viewBox="0 0 24 24" aria-hidden="true"><path transform="rotate(0 12 12)" d="M12 12C9.2 9.6 8.4 5.6 10.4 3l1.6 1.5L13.6 3c2 2.6 1.2 6.6-1.6 9z"/><path transform="rotate(72 12 12)" d="M12 12C9.2 9.6 8.4 5.6 10.4 3l1.6 1.5L13.6 3c2 2.6 1.2 6.6-1.6 9z"/><path transform="rotate(144 12 12)" d="M12 12C9.2 9.6 8.4 5.6 10.4 3l1.6 1.5L13.6 3c2 2.6 1.2 6.6-1.6 9z"/><path transform="rotate(216 12 12)" d="M12 12C9.2 9.6 8.4 5.6 10.4 3l1.6 1.5L13.6 3c2 2.6 1.2 6.6-1.6 9z"/><path transform="rotate(288 12 12)" d="M12 12C9.2 9.6 8.4 5.6 10.4 3l1.6 1.5L13.6 3c2 2.6 1.2 6.6-1.6 9z"/><circle cx="12" cy="12" r="1.6" fill="var(--cta-accent)"/></svg>
+                <span class="arphone__cta-txt"><small>Unlock your</small><strong>Activated Hub</strong></span>
+                <b aria-hidden="true">→</b>
+              </a>
             </div>
-            <span class="arphone__island"></span>
+            <span class="arphone__island" aria-hidden="true"></span>
           </div>
           <div class="ar__brackets" id="ar-brackets" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
           <div class="brandbar ar__brand">
