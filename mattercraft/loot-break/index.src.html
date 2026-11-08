@@ -150,6 +150,39 @@
 			}
 			.logo .eyebrow b { color: #fff; font-weight: 700; }
 			.logo .eyebrow .dot { width: 4px; height: 4px; background: #7d6bd0; }
+			/* TBH logo + "Hero Merch Exclusive", a pixel-framed lockup at the top. */
+			.brandbar {
+				display: inline-flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 12px;
+			}
+			.tbh-logo {
+				display: block;
+				width: 90px;
+				height: auto;
+				aspect-ratio: 360 / 204;
+				border-radius: 0;
+				box-shadow:
+					0 0 0 2px var(--ink),
+					0 0 0 4px var(--gold2),
+					0 0 0 6px var(--ink),
+					0 6px 0 4px var(--ink);
+			}
+			.brandbar .excl {
+				font-family: 'Silkscreen', monospace;
+				font-weight: 700;
+				font-size: 13px;
+				line-height: 1.25;
+				letter-spacing: .12em;
+				text-transform: uppercase;
+				text-align: left;
+				color: var(--gold);
+				text-shadow: 0 2px 0 var(--ink);
+				padding-left: 12px;
+				border-left: 2px solid rgba(207, 196, 255, .28);
+				white-space: nowrap;
+			}
 			.wordmark {
 				display: block;
 				font-family: 'Silkscreen', monospace;
@@ -560,6 +593,18 @@
 			/* Landscape phones: keep the logo, the party and the button. */
 			@media (max-height: 460px) {
 				.tagline, .hint, .made, .logo .eyebrow { display: none; }
+				/* Landscape: the lockup moves beside the wordmark so the stage keeps its height. */
+				.logo .brandbar {
+					position: absolute;
+					right: 100%;
+					top: 4px;
+					margin: 0 28px 0 0;
+					flex-direction: column;
+					align-items: flex-end;
+					gap: 8px;
+				}
+				.logo .tbh-logo { width: 84px; }
+				.logo .brandbar .excl { font-size: 10px; padding-left: 0; border-left: 0; text-align: right; }
 				.wordmark { font-size: 15vh; }
 				.cta { max-width: 320px; }
 				.splash { --bar: 40px; }
@@ -573,6 +618,8 @@
 				.ribbon { display: none; }
 				.tagline { font-size: 15px; }
 				.logo .eyebrow { margin-bottom: 4px; }
+				.brandbar { margin-bottom: 6px; }
+				.tbh-logo { width: 72px; }
 			}
 		</style>
 	</head>
@@ -583,7 +630,10 @@
 
 			<div class="layout">
 				<header class="logo">
-					<div class="eyebrow"><b>TBH</b><span class="dot"></span>TASK BAR HERO</div>
+					<div class="brandbar">
+						<img class="tbh-logo" src="__TBH_LOGO__" alt="TBH: Task Bar Hero" width="90" height="51" />
+						<span class="excl">Hero Merch<br />Exclusive</span>
+					</div>
 					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
 					<div class="ribbon">A 60-SECOND DESK RAID</div>
 				</header>

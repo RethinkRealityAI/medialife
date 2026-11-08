@@ -692,6 +692,75 @@ function pixelCanvas(rows, mode = "color") {
   });
   return c;
 }
+var RETICLE = { w: 124, h: 60, fps: 8 };
+function drawReticle(c, step) {
+  const W = c.width;
+  const H = c.height;
+  const g = c.getContext("2d");
+  g.clearRect(0, 0, W, H);
+  const m = 2;
+  const arm = 12;
+  const t = 2;
+  g.fillStyle = "rgba(111,216,255,0.16)";
+  for (let y = m + t + 1; y < H - m - t - 1; y++)
+    for (let x = m + t + 1; x < W - m - t - 1; x++) if ((x + y) % 2 === 0) g.fillRect(x, y, 1, 1);
+  const layers = { white: /* @__PURE__ */ new Set(), cyan: /* @__PURE__ */ new Set(), gold: /* @__PURE__ */ new Set() };
+  const put = (layer, x, y) => {
+    if (x >= 0 && y >= 0 && x < W && y < H) layers[layer].add(y * W + x);
+  };
+  for (const [cx2, sx] of [[m, 1], [W - 1 - m, -1]])
+    for (const [cy2, sy] of [[m, 1], [H - 1 - m, -1]])
+      for (let i = 0; i < arm; i++)
+        for (let k = 0; k < t; k++) {
+          put("white", cx2 + sx * i, cy2 + sy * k);
+          put("white", cx2 + sx * k, cy2 + sy * i);
+        }
+  const dash = (i) => ((i + step) % 6 + 6) % 6 < 3;
+  const cx = Math.floor(W / 2);
+  const cy = Math.floor(H / 2);
+  const gap = 7;
+  for (let x = m + arm + 2; x < W - m - arm - 2; x++) {
+    if (Math.abs(x - cx) < gap) continue;
+    if (dash(-x)) put("cyan", x, m);
+    if (dash(x)) put("cyan", x, H - 1 - m);
+  }
+  for (let y = m + arm + 2; y < H - m - arm - 2; y++) {
+    if (Math.abs(y - cy) < gap) continue;
+    if (dash(y)) put("cyan", m, y);
+    if (dash(-y)) put("cyan", W - 1 - m, y);
+  }
+  const bob = step % 4 < 2 ? 0 : 1;
+  for (let i = 0; i < 4; i++)
+    for (let k = -i; k <= i; k++) {
+      put("gold", cx + k, m + 4 - i + bob);
+      put("gold", cx + k, H - 1 - m - 4 + i - bob);
+      put("gold", m + 4 - i + bob, cy + k);
+      put("gold", W - 1 - m - 4 + i - bob, cy + k);
+    }
+  const all = /* @__PURE__ */ new Set();
+  for (const l of Object.values(layers)) for (const v of l) all.add(v);
+  g.fillStyle = "rgba(22,18,29,0.85)";
+  for (const v of all) {
+    const x = v % W;
+    const y = (v - x) / W;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H || all.has(ny * W + nx)) continue;
+        g.clearRect(nx, ny, 1, 1);
+        g.fillRect(nx, ny, 1, 1);
+      }
+  }
+  const colours = { cyan: "#6fd8ff", white: "#ffffff", gold: "#ffc53d" };
+  for (const [l, set] of Object.entries(layers)) {
+    g.fillStyle = colours[l];
+    for (const v of set) {
+      const x = v % W;
+      g.fillRect(x, (v - x) / W, 1, 1);
+    }
+  }
+}
 function nearestTex(c) {
   const t = new THREE2.CanvasTexture(c);
   t.magFilter = THREE2.NearestFilter;
@@ -1224,6 +1293,9 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
         if (id) this.fireUlt(id);
       }
     });
+    __publicField(this, "_padCanvas");
+    __publicField(this, "_padTex");
+    __publicField(this, "_padStep", -1);
     __publicField(this, "_placePad");
     __publicField(this, "_bannerT", 0);
     __publicField(this, "_toastT", 0);
@@ -1630,43 +1702,19 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     pool.position.y = -height + 1e-3;
     this._world.add(pool);
     const pc = document.createElement("canvas");
-    pc.width = 256;
-    pc.height = 96;
-    const pg = pc.getContext("2d");
-    pg.strokeStyle = "#ffffff";
-    pg.lineWidth = 6;
-    pg.lineCap = "square";
-    const L = 30;
-    const m = 6;
-    const W = pc.width - m;
-    const H = pc.height - m;
-    pg.beginPath();
-    pg.moveTo(m, m + L);
-    pg.lineTo(m, m);
-    pg.lineTo(m + L, m);
-    pg.moveTo(W - L, m);
-    pg.lineTo(W, m);
-    pg.lineTo(W, m + L);
-    pg.moveTo(W, H - L);
-    pg.lineTo(W, H);
-    pg.lineTo(W - L, H);
-    pg.moveTo(m + L, H);
-    pg.lineTo(m, H);
-    pg.lineTo(m, H - L);
-    pg.stroke();
-    pg.setLineDash([10, 12]);
-    pg.lineWidth = 3;
-    pg.globalAlpha = 0.6;
-    pg.strokeRect(m, m, W - m, H - m);
-    const padTex = this._track(new THREE2.CanvasTexture(pc));
+    pc.width = RETICLE.w;
+    pc.height = RETICLE.h;
+    const padTex = this._track(nearestTex(pc));
+    this._padCanvas = pc;
+    this._padTex = padTex;
+    drawReticle(pc, 0);
     this._placePad = new THREE2.Mesh(
-      this._track(new THREE2.PlaneGeometry(len * 1.12, depth * 2.4)),
-      this._track(
-        new THREE2.MeshBasicMaterial({ map: padTex, color: 10479871, transparent: true, depthWrite: false, toneMapped: false })
-      )
+      this._track(new THREE2.PlaneGeometry(len * 1.12, depth * 3.6)),
+      this._track(new THREE2.MeshBasicMaterial({ map: padTex, transparent: true, depthWrite: false, toneMapped: false }))
     );
     this._placePad.rotation.x = -Math.PI / 2;
     this._placePad.position.y = -height + 2e-3;
+    this._placePad.renderOrder = -1;
     this._placePad.visible = false;
     this._world.add(this._placePad);
   }
@@ -2826,8 +2874,14 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       this._groundTex.offset.x += dt * 0.08;
     }
     this._placePad.visible = this._phase === "placing";
-    if (this._placePad.visible)
-      this._placePad.material.opacity = 0.65 + Math.sin(now * 5) * 0.3;
+    if (this._placePad.visible) {
+      const step = Math.floor(now * RETICLE.fps);
+      if (step !== this._padStep) {
+        this._padStep = step;
+        drawReticle(this._padCanvas, step);
+        this._padTex.needsUpdate = true;
+      }
+    }
     switch (this._phase) {
       case "countdown":
         this._tickCountdown(dt);

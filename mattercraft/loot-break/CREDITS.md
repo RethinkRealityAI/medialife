@@ -53,6 +53,13 @@ Fonts and are licensed under the SIL Open Font License 1.1.
 
 ## TBH: Task Bar Hero art
 
-None of TBH's own art is used. Their sprite sheets will replace these sprites
+The splash screen's "Hero Merch Exclusive" lockup shows TBH's logo, cropped
+(unaltered) from the official main capsule on the game's Steam store page
+(Steam app 3678970, fetched 2026-11-08 through Steam's public store API). The
+source image and the crop are in [art/tbh/](art/tbh/). It's a stand-in until
+TBH sends its logo as SVG or transparent PNG; swap
+`art/tbh/tbh-logo-steam-capsule.jpg` and rebuild.
+
+No other TBH art is used. Their sprite sheets will replace these sprites
 once the studio sends them. The first hand-drawn concept sprites (not from
 any pack, and not TBH's) are archived in [archive/](archive/).

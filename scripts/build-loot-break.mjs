@@ -67,7 +67,12 @@ const keep = ["knight", "ranger", "sorcerer", "priest", "slime", "chest", "chest
 const artJson = JSON.stringify({ PAL: art.PAL, SPRITES: Object.fromEntries(keep.map((k) => [k, art.SPRITES[k]])) });
 const splashSrc = await readFile(path.join(root, "mattercraft/loot-break/index.src.html"), "utf8");
 const banner = "<!-- GENERATED from mattercraft/loot-break/index.src.html by scripts/build-loot-break.mjs. Edit the .src.html, not this file. -->\n";
-const withArt = splashSrc.replace("__SPRITES__", artJson);
+// TBH logo: a crop of the official Steam capsule (art/tbh/), inlined so the
+// splash stays one file. Swap the JPG for TBH's own logo file when it arrives.
+const logo = await readFile(path.join(root, "mattercraft/loot-break/art/tbh/tbh-logo-steam-capsule.jpg"));
+const withArt = splashSrc
+  .replace("__SPRITES__", artJson)
+  .replace("__TBH_LOGO__", `data:image/jpeg;base64,${logo.toString("base64")}`);
 const mcHtml = withArt.replace("<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + banner);
 const LAB_BOOT = `<!-- Lab stand-in for index.ts: in Mattercraft, initialize() enables
 		     #launchButton once the scene has loaded and hides the splash on tap. -->

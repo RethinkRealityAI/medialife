@@ -556,6 +556,91 @@ function pixelCanvas(rows: string[], mode: "color" | "white" = "color") {
   return c;
 }
 
+/** Placement reticle canvas size, in pixels, and its animation rate. */
+const RETICLE = { w: 124, h: 60, fps: 8 };
+
+/**
+ * Draws the placement reticle in the sprites' pixel style: a dithered landing
+ * zone, white stepped corner brackets, marching cyan dashes along the edges and
+ * gold chevrons that bob inward, all with a 1 px dark outline so it stays
+ * readable on light and dark desks. The lane covers the middle, so everything
+ * that matters sits around its edges.
+ */
+function drawReticle(c: HTMLCanvasElement, step: number) {
+  const W = c.width;
+  const H = c.height;
+  const g = c.getContext("2d")!;
+  g.clearRect(0, 0, W, H);
+  const m = 2; // inset, leaves room for the outline
+  const arm = 12;
+  const t = 2; // bracket thickness
+  // dithered landing zone (no outline: it's the "shadow" the lane drops into)
+  g.fillStyle = "rgba(111,216,255,0.16)";
+  for (let y = m + t + 1; y < H - m - t - 1; y++)
+    for (let x = m + t + 1; x < W - m - t - 1; x++) if ((x + y) % 2 === 0) g.fillRect(x, y, 1, 1);
+
+  const layers: Record<string, Set<number>> = { white: new Set(), cyan: new Set(), gold: new Set() };
+  const put = (layer: string, x: number, y: number) => {
+    if (x >= 0 && y >= 0 && x < W && y < H) layers[layer].add(y * W + x);
+  };
+  // corner brackets
+  for (const [cx, sx] of [[m, 1], [W - 1 - m, -1]] as const)
+    for (const [cy, sy] of [[m, 1], [H - 1 - m, -1]] as const)
+      for (let i = 0; i < arm; i++)
+        for (let k = 0; k < t; k++) {
+          put("white", cx + sx * i, cy + sy * k);
+          put("white", cx + sx * k, cy + sy * i);
+        }
+  // marching dashes between the brackets, running clockwise
+  const dash = (i: number) => (((i + step) % 6) + 6) % 6 < 3;
+  const cx = Math.floor(W / 2);
+  const cy = Math.floor(H / 2);
+  const gap = 7; // keep clear of the chevrons
+  for (let x = m + arm + 2; x < W - m - arm - 2; x++) {
+    if (Math.abs(x - cx) < gap) continue;
+    if (dash(-x)) put("cyan", x, m);
+    if (dash(x)) put("cyan", x, H - 1 - m);
+  }
+  for (let y = m + arm + 2; y < H - m - arm - 2; y++) {
+    if (Math.abs(y - cy) < gap) continue;
+    if (dash(y)) put("cyan", m, y);
+    if (dash(-y)) put("cyan", W - 1 - m, y);
+  }
+  // gold chevrons on each edge, pointing in and bobbing one pixel
+  const bob = step % 4 < 2 ? 0 : 1;
+  for (let i = 0; i < 4; i++)
+    for (let k = -i; k <= i; k++) {
+      put("gold", cx + k, m + 4 - i + bob); // top, points down
+      put("gold", cx + k, H - 1 - m - 4 + i - bob); // bottom, points up
+      put("gold", m + 4 - i + bob, cy + k); // left, points right
+      put("gold", W - 1 - m - 4 + i - bob, cy + k); // right, points left
+    }
+  // 1 px dark outline around everything, then the colours on top
+  const all = new Set<number>();
+  for (const l of Object.values(layers)) for (const v of l) all.add(v);
+  g.fillStyle = "rgba(22,18,29,0.85)";
+  for (const v of all) {
+    const x = v % W;
+    const y = (v - x) / W;
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= W || ny >= H || all.has(ny * W + nx)) continue;
+        g.clearRect(nx, ny, 1, 1);
+        g.fillRect(nx, ny, 1, 1);
+      }
+  }
+  const colours: Record<string, string> = { cyan: "#6fd8ff", white: "#ffffff", gold: "#ffc53d" };
+  for (const [l, set] of Object.entries(layers)) {
+    g.fillStyle = colours[l];
+    for (const v of set) {
+      const x = v % W;
+      g.fillRect(x, (v - x) / W, 1, 1);
+    }
+  }
+}
+
 function nearestTex(c: HTMLCanvasElement) {
   const t = new THREE.CanvasTexture(c);
   t.magFilter = THREE.NearestFilter;
@@ -1678,41 +1763,30 @@ export class LootBreakGame extends Group {
     pool.position.y = -height + 0.001;
     this._world.add(pool);
 
-    // Placement pad: corner brackets on the desk where the lane will land,
-    // shown while the player is choosing the spot.
+    // Placement reticle: a pixel-art target on the desk where the lane will
+    // land, shown only while the player is choosing the spot. Drawn on a tiny
+    // canvas (about 9 mm per pixel) with nearest filtering, so it reads as the
+    // same chunky pixels as the sprites, and animated in frame steps.
     const pc = document.createElement("canvas");
-    pc.width = 256;
-    pc.height = 96;
-    const pg = pc.getContext("2d")!;
-    pg.strokeStyle = "#ffffff";
-    pg.lineWidth = 6;
-    pg.lineCap = "square";
-    const L = 30;
-    const m = 6;
-    const W = pc.width - m;
-    const H = pc.height - m;
-    pg.beginPath();
-    pg.moveTo(m, m + L); pg.lineTo(m, m); pg.lineTo(m + L, m);
-    pg.moveTo(W - L, m); pg.lineTo(W, m); pg.lineTo(W, m + L);
-    pg.moveTo(W, H - L); pg.lineTo(W, H); pg.lineTo(W - L, H);
-    pg.moveTo(m + L, H); pg.lineTo(m, H); pg.lineTo(m, H - L);
-    pg.stroke();
-    pg.setLineDash([10, 12]);
-    pg.lineWidth = 3;
-    pg.globalAlpha = 0.6;
-    pg.strokeRect(m, m, W - m, H - m);
-    const padTex = this._track(new THREE.CanvasTexture(pc));
+    pc.width = RETICLE.w;
+    pc.height = RETICLE.h;
+    const padTex = this._track(nearestTex(pc));
+    this._padCanvas = pc;
+    this._padTex = padTex;
+    drawReticle(pc, 0);
     this._placePad = new THREE.Mesh(
-      this._track(new THREE.PlaneGeometry(len * 1.12, depth * 2.4)),
-      this._track(
-        new THREE.MeshBasicMaterial({ map: padTex, color: 0x9fe8ff, transparent: true, depthWrite: false, toneMapped: false }),
-      ),
+      this._track(new THREE.PlaneGeometry(len * 1.12, depth * 3.6)),
+      this._track(new THREE.MeshBasicMaterial({ map: padTex, transparent: true, depthWrite: false, toneMapped: false })),
     );
     this._placePad.rotation.x = -Math.PI / 2;
     this._placePad.position.y = -height + 0.002;
+    this._placePad.renderOrder = -1;
     this._placePad.visible = false;
     this._world.add(this._placePad);
   }
+  private _padCanvas!: HTMLCanvasElement;
+  private _padTex!: THREE.Texture;
+  private _padStep = -1;
   private _placePad!: THREE.Mesh;
 
   private _drawTaskbar(clock: string) {
@@ -2984,8 +3058,15 @@ export class LootBreakGame extends Group {
       this._groundTex.offset.x += dt * 0.08;
     }
     this._placePad.visible = this._phase === "placing";
-    if (this._placePad.visible)
-      (this._placePad.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(now * 5) * 0.3;
+    if (this._placePad.visible) {
+      // Pixel games animate in steps, not smooth tweens: 8 frames a second.
+      const step = Math.floor(now * RETICLE.fps);
+      if (step !== this._padStep) {
+        this._padStep = step;
+        drawReticle(this._padCanvas, step);
+        this._padTex.needsUpdate = true;
+      }
+    }
 
     switch (this._phase) {
       case "countdown":
