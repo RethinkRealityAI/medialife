@@ -137,8 +137,9 @@ The rewards are run from the MEDIALIFE site
   the strip shows how far they are from the next reward, so there's always a
   reason to play again.
 - **Bonus quest.** The results card only asks "Want an extra 10% off?"; the
-  next screen explains it. Follow every account listed in the admin, then share a
-  story card (a 1080x1920 image of their result, made on the phone) for an
+  next screen explains it. Follow every account listed in the admin (by
+  default MEDIALIFE and Snowday on Instagram, and join Task Bar Hero's Discord;
+  the game words each step from the link), then share a story card (a 1080x1920 image of their result, made on the phone) for an
   extra code (default 10 %). Follows can't be checked through any API, so the
   code is issued straight away, marked "Check follows" in the admin, and the
   team looks at the Instagram handle before the order ships. The quest only

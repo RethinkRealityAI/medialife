@@ -5,10 +5,11 @@
 //                  discount code (5 / 10 / 15 % by default). One score code per
 //                  email: beating a higher reward later upgrades it (the old
 //                  code is voided), so the code is worth replaying for.
-//   Bonus quest    Follow the listed accounts and share the result to a story
-//                  for an extra code (10 % by default). Follows can't be checked
-//                  through any API, so the code is issued straight away and
-//                  marked "to verify": the team checks the handle before
+//   Bonus quest    Follow the listed accounts (Instagram, or join a Discord) and
+//                  share the result to a story for an extra code (10 % by
+//                  default). Follows can't be checked through any API, so the
+//                  code is issued straight away and marked "to verify": the team
+//                  checks the Instagram handle / Discord username before
 //                  honouring it.
 //
 // Codes are random (crypto), stored server-side and bound to the email that
@@ -39,6 +40,19 @@ export const MAX_TICKET_AGE_MS = 3 * 60 * 60 * 1000;
 
 export type RewardRule = { tier: number; percent: number };
 export type FollowAccount = { label: string; url: string };
+export type FollowPlatform = "instagram" | "discord" | "other";
+
+/** Which app a follow link opens, from its URL. */
+export function platformOf(url: string): FollowPlatform {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    if (h === "instagram.com" || h.endsWith(".instagram.com")) return "instagram";
+    if (h === "discord.gg" || h === "discord.com" || h.endsWith(".discord.com")) return "discord";
+  } catch {
+    /* not a URL */
+  }
+  return "other";
+}
 
 export type LootSettings = {
   active: boolean;
@@ -71,10 +85,11 @@ export const DEFAULT_SETTINGS: LootSettings = {
   questPercent: 10,
   follow: [
     { label: "MEDIALIFE", url: "https://www.instagram.com/medialife.ai" },
-    { label: "Task Bar Hero", url: "" },
-    { label: "Snowday", url: "" },
+    // TBH's official server (invite from its Steam page); its fans live on Discord.
+    { label: "Task Bar Hero", url: "https://discord.gg/8XFeyNYs3Y" },
+    { label: "Snowday", url: "https://www.instagram.com/snowdaymediainc" },
   ],
-  storyTags: "@medialife.ai",
+  storyTags: "@medialife.ai @snowdaymediainc",
   shopUrl: "",
   shopLabel: "Shop the drop",
   prefix: "TBH",
@@ -99,8 +114,9 @@ export type LootCode = {
   /** Score codes: the round that earned it. */
   tier?: number;
   score?: number;
-  /** Quest codes: the Instagram handle to check, and whether the team checked it. */
+  /** Quest codes: the Instagram handle and Discord username to check, and whether the team checked them. */
   handle?: string;
+  discord?: string;
   verified?: boolean;
   redeemedAt?: string;
   /** A score code replaced by a better one. */
@@ -144,9 +160,12 @@ export type ClaimResult =
 
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 export const HANDLE_RE = /^@?[A-Za-z0-9._]{1,30}$/;
+/** Discord usernames (2-32 of a-z 0-9 . _), or a legacy name#1234. */
+export const DISCORD_RE = /^@?(?:[A-Za-z0-9._]{2,32}|[^@#:\s][^@#:]{0,30}[^@#:\s]#\d{4})$/;
 
 export const normalizeEmail = (e: string) => e.trim().toLowerCase();
 export const normalizeHandle = (h: string) => `@${h.trim().replace(/^@+/, "").toLowerCase()}`;
+export const normalizeDiscord = (d: string) => d.trim().replace(/^@+/, "").toLowerCase();
 /** Codes are typed back by people: ignore case, spaces and dashes. */
 export const normalizeCode = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, "");
 

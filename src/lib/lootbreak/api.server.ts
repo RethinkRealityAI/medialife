@@ -5,6 +5,7 @@ import { sendNotice } from "@/lib/hub/mail.server";
 
 import {
   EMAIL_RE,
+  DISCORD_RE,
   HANDLE_RE,
   LADDER,
   MAX_PLAUSIBLE_SCORE,
@@ -12,7 +13,9 @@ import {
   MAX_TICKET_AGE_MS,
   MIN_ROUND_MS,
   normalizeEmail,
+  normalizeDiscord,
   normalizeHandle,
+  platformOf,
   publicCode,
   publicConfig,
   questReady,
@@ -87,6 +90,7 @@ type ClaimBody = {
   email?: unknown;
   consent?: unknown;
   handle?: unknown;
+  discord?: unknown;
   steps?: unknown;
 };
 
@@ -130,9 +134,13 @@ export async function handleClaim(ns: ArNamespace, request: Request): Promise<Re
   /* ── bonus quest ── */
   if (kind === "quest") {
     if (!questReady(settings)) return fail("inactive", "The bonus quest isn't on right now.", 403);
+    const platforms = new Set(settings.follow.map((f) => platformOf(f.url)));
     const handle = String(body.handle ?? "").trim();
-    if (!HANDLE_RE.test(handle))
+    const discord = String(body.discord ?? "").trim();
+    if (platforms.has("instagram") && !HANDLE_RE.test(handle))
       return fail("bad-request", "Add your Instagram handle, like @yourname.", 400);
+    if (platforms.has("discord") && !DISCORD_RE.test(discord))
+      return fail("bad-request", "Add your Discord username.", 400);
     const steps = Array.isArray(body.steps) ? body.steps : [];
     if (steps.length < settings.follow.length + 1 || !steps.every((s) => s === true))
       return fail("bad-request", "Finish every step first.", 400);
@@ -158,7 +166,8 @@ export async function handleClaim(ns: ArNamespace, request: Request): Promise<Re
       status: "active",
       createdAt: now.toISOString(),
       expiresAt,
-      handle: normalizeHandle(handle),
+      handle: HANDLE_RE.test(handle) ? normalizeHandle(handle) : undefined,
+      discord: DISCORD_RE.test(discord) ? normalizeDiscord(discord) : undefined,
       verified: false,
     };
     await putCode(ns, c);

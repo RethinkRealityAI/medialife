@@ -3234,6 +3234,21 @@ function lsSet(k, v) {
 var esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 var EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 var HANDLE_OK = /^@?[A-Za-z0-9._]{1,30}$/;
+var DISCORD_OK = /^@?(?:[A-Za-z0-9._]{2,32}|[^@#:\s][^@#:]{0,30}[^@#:\s]#\d{4})$/;
+function rwPlatform(url) {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, "");
+    if (h === "instagram.com" || h.endsWith(".instagram.com")) return "instagram";
+    if (h === "discord.gg" || h === "discord.com" || h.endsWith(".discord.com")) return "discord";
+  } catch {
+  }
+  return "other";
+}
+var RW_STEP = {
+  instagram: (l) => `Follow <b>${l}</b> on Instagram`,
+  discord: (l) => `Join <b>${l}</b> on Discord`,
+  other: (l) => `Follow <b>${l}</b>`
+};
 var isLive = (c) => !!c && c.status === "active" && Date.parse(c.expiresAt) > Date.now();
 var dateLabel = (iso) => new Date(iso).toLocaleDateString(void 0, { day: "numeric", month: "short", year: "numeric" });
 function rwRewardFor(rules, tier) {
@@ -3471,30 +3486,37 @@ var LootRewards = class {
       const q = cfg.quest;
       const steps = this._steps();
       const n = q.follow.length + 1;
+      const plats = new Set(q.follow.map((f) => rwPlatform(f.url)));
+      const ig = plats.has("instagram");
+      const dc = plats.has("discord");
+      const who = [ig ? "follows" : "", dc ? "Discord" : ""].filter(Boolean).join(" and ") || "follows";
       this._body.innerHTML = `
         <div class="lb-ribbon"><span>BONUS QUEST</span></div>
         <p class="lb-rw-big">+${q.percent}% OFF</p>
-        <p class="lb-rw-p">Follow our ${q.follow.length} accounts and share your loot to your story. That unlocks an extra ${q.percent}% off your next order.</p>
+        <p class="lb-rw-p">Do all ${n} steps to unlock an extra ${q.percent}% off your next order.</p>
         <ol class="lb-rw-steps">
           ${q.follow.map(
         (f, i) => `
             <li><button type="button" class="lb-rw-step${steps[i] ? " is-done" : ""}" data-act="follow" data-i="${i}">
-              <i aria-hidden="true">${steps[i] ? "\u2713" : i + 1}</i><span>Follow <b>${esc(f.label)}</b></span><em aria-hidden="true">\u2197</em>
+              <i aria-hidden="true">${steps[i] ? "\u2713" : i + 1}</i><span>${RW_STEP[rwPlatform(f.url)](esc(f.label))}</span><em aria-hidden="true">\u2197</em>
             </button></li>`
       ).join("")}
           <li><button type="button" class="lb-rw-step${steps[n - 1] ? " is-done" : ""}" data-act="story">
-            <i aria-hidden="true">${steps[n - 1] ? "\u2713" : n}</i><span>Share your loot to your story${q.storyTags ? `<small>Tag ${esc(q.storyTags)}</small>` : ""}</span><em aria-hidden="true">\u2197</em>
+            <i aria-hidden="true">${steps[n - 1] ? "\u2713" : n}</i><span>Share your loot to your Instagram story${q.storyTags ? `<small>Tag ${esc(q.storyTags)}</small>` : ""}</span><em aria-hidden="true">\u2197</em>
           </button></li>
         </ol>
         <form class="lb-rw-form" data-form="quest" novalidate>
-          <label class="lb-rw-lbl" for="lbRwIg">Your Instagram</label>
-          <input class="lb-rw-in" id="lbRwIg" name="handle" type="text" autocomplete="username" autocapitalize="off"
-            spellcheck="false" maxlength="31" placeholder="@yourname" required>
+          ${ig ? `<label class="lb-rw-lbl" for="lbRwIg">Your Instagram</label>
+          <input class="lb-rw-in" id="lbRwIg" name="handle" type="text" autocomplete="off" autocapitalize="off"
+            spellcheck="false" maxlength="31" placeholder="@yourname" required>` : ""}
+          ${dc ? `<label class="lb-rw-lbl" for="lbRwDc">Your Discord username</label>
+          <input class="lb-rw-in" id="lbRwDc" name="discord" type="text" autocomplete="off" autocapitalize="off"
+            spellcheck="false" maxlength="37" placeholder="yourname" required>` : ""}
           ${emailField("lbRwQEmail")}
           ${consent}
           ${err}
           <button class="lb-btn lb-btn-go lb-rw-submit" type="submit">Unlock bonus</button>
-          <p class="lb-rw-note">We check your follows and story before your order ships, so use your real handle.</p>
+          <p class="lb-rw-note">We check your ${who} before your order ships, so use your real username${ig && dc ? "s" : ""}.</p>
         </form>
         <button class="lb-rw-link" type="button" data-act="back">Back</button>
         ${terms}`;
@@ -3600,16 +3622,20 @@ var LootRewards = class {
     const fd = new FormData(f);
     const email = String(fd.get("email") ?? "").trim().toLowerCase();
     const handle = String(fd.get("handle") ?? "").trim();
+    const discord = String(fd.get("discord") ?? "").trim();
+    const needIg = !!f.elements.namedItem("handle");
+    const needDc = !!f.elements.namedItem("discord");
     const consent = !!f.elements.namedItem("consent")?.checked;
     const steps = this._steps();
     if (steps.some((x) => !x)) return this._err("Finish every step first.");
-    if (!HANDLE_OK.test(handle)) return this._err("Add your Instagram handle, like @yourname.");
+    if (needIg && !HANDLE_OK.test(handle)) return this._err("Add your Instagram handle, like @yourname.");
+    if (needDc && !DISCORD_OK.test(discord)) return this._err("Add your Discord username.");
     if (!EMAIL_OK.test(email)) return this._err("Check your email address.");
     this._err("");
     this._setBusy(true, "Unlocking\u2026");
     try {
       const ticket = await this._ticket ?? null;
-      const r = await this._post("claim", { kind: "quest", ticket, email, handle, consent, steps });
+      const r = await this._post("claim", { kind: "quest", ticket, email, handle, discord, consent, steps });
       if (r.ok && r.code) {
         if (!r.existing) this.host.emit("quest_claim", r.code.percent);
         this._gotCode(r.code, r.message ?? "", email);

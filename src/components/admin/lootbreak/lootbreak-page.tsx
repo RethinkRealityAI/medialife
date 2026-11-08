@@ -112,8 +112,8 @@ function useCodeAction() {
         unredeem: `${c.code} is live again`,
         void: `${c.code} cancelled`,
         reactivate: `${c.code} is live again`,
-        verify: `${c.handle} verified`,
-        unverify: `${c.handle} back to "check follows"`,
+        verify: `${c.code}: follows checked`,
+        unverify: `${c.code} back to "check follows"`,
       };
       toast.success(done[v.action]);
       void qc.invalidateQueries({ queryKey: QK });
@@ -332,6 +332,15 @@ function CodeSummary({ c }: { c: AdminCode }) {
             </dd>
           </>
         ) : null}
+        {c.discord ? (
+          <>
+            <dt className="text-muted-foreground">Discord</dt>
+            <dd className="flex items-center gap-1">
+              <span className="truncate">{c.discord}</span>
+              <CopyButton text={c.discord} label="Copy Discord username" />
+            </dd>
+          </>
+        ) : null}
         <dt className="text-muted-foreground">Made</dt>
         <dd>
           {fmtDate(c.createdAt)} · {c.expired ? "expired" : "expires"} {fmtDate(c.expiresAt)}
@@ -450,7 +459,8 @@ function CodesPanel({ codes, total, shown }: { codes: AdminCode[]; total: number
         (!s ||
           c.code.toLowerCase().replace(/-/g, "").includes(s) ||
           c.email.includes(s) ||
-          (c.handle ?? "").includes(s)),
+          (c.handle ?? "").includes(s) ||
+          (c.discord ?? "").includes(s)),
     );
   }, [codes, filter, search]);
 
@@ -479,6 +489,7 @@ function CodesPanel({ codes, total, shown }: { codes: AdminCode[]; total: number
             "rarity",
             "score",
             "instagram",
+            "discord",
             "verified",
             "created",
             "expires",
@@ -495,6 +506,7 @@ function CodesPanel({ codes, total, shown }: { codes: AdminCode[]; total: number
             c.kind === "score" ? LADDER[c.tier ?? 0]?.name : "",
             c.score,
             c.handle,
+            c.discord,
             c.kind === "quest" ? c.verified : "",
             c.createdAt,
             c.expiresAt,
@@ -579,7 +591,7 @@ function CodesPanel({ codes, total, shown }: { codes: AdminCode[]; total: number
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search code, email or @handle"
+          placeholder="Search code, email, @handle or Discord"
           aria-label="Search codes"
           className="ml-auto h-8 w-full text-sm sm:w-64"
         />
@@ -610,15 +622,21 @@ function CodesPanel({ codes, total, shown }: { codes: AdminCode[]; total: number
                     {c.percent}% ·{" "}
                     {c.kind === "quest" ? (
                       <>
-                        Bonus quest ·{" "}
-                        <a
-                          href={igUrl(c.handle)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sky-300 hover:underline"
-                        >
-                          {c.handle}
-                        </a>
+                        Bonus quest
+                        {c.handle ? (
+                          <>
+                            {" · "}
+                            <a
+                              href={igUrl(c.handle)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sky-300 hover:underline"
+                            >
+                              {c.handle}
+                            </a>
+                          </>
+                        ) : null}
+                        {c.discord ? ` · Discord ${c.discord}` : ""}
                       </>
                     ) : (
                       `${LADDER[c.tier ?? 0]?.name} · ${(c.score ?? 0).toLocaleString()} pts`
@@ -840,7 +858,7 @@ function SettingsPanel({ settings }: { settings: LootSettings }) {
                 <Input
                   value={f.url}
                   aria-label={`${f.label || `Account ${i + 1}`} link`}
-                  placeholder="https://www.instagram.com/…"
+                  placeholder="Instagram or Discord invite link"
                   className={cn(!f.url && "border-amber-300/40")}
                   onChange={(e) =>
                     set(
