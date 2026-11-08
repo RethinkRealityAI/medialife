@@ -50,7 +50,10 @@ Same GA property and event names as the other MEDIALIFE activations, with
 `experience: 'tbh_lootbreak'`: `activate_click`, `camera_granted`,
 `camera_denied`, `scene_placed`, `placement_reset`, `game_start`, `boss_reached`, `game_complete` (score, tier,
 seconds, outcome wiped/survived, boss slain/escaped, ults, weak_hits,
-cursed_hits, accuracy, best_combo, badges) and one `session_summary` per visit.
+cursed_hits, accuracy, best_combo, badges), `reward` (action: offer, claim,
+upgrade, quest_step_N, quest_claim, save, shop; percent) and one
+`session_summary` per visit (with `codes` claimed). No email or code is sent
+to GA.
 Those round fields are there to tune difficulty from real players. `index.ts` imports
 `./Scene.zcomp`; if the project's scene file has another name, change that
 import.
@@ -118,6 +121,41 @@ can still mute with the speaker button. Turn it off to follow the switch.
 8. One-line coach tips appear the first time each thing matters (tap the
    monsters, cursed slimes, the weak spot, ULT ready, party in danger).
 
+## Rewards (discount codes and the bonus quest)
+
+The results card has a rewards strip, run from the MEDIALIFE site
+(**Admin > LOOT BREAK**, `/admin/lootbreak`). Nothing to set up in Mattercraft:
+`rewardsApi` already points at https://medialife.ai.
+
+- **Score codes.** Reaching a rarity on the reward ladder unlocks a code
+  (default Immortal 5 %, Beyond 10 %, Celestial 15 %). The player taps Claim,
+  enters their email (and can tick "email me new drops", unticked by default)
+  and gets a code like `TBH10-7KQM-X3PF`. One score code per email: a better
+  round later upgrades it and the old code stops working. Below the ladder,
+  the strip shows how far they are from the next reward, so there's always a
+  reason to play again.
+- **Bonus quest.** Follow every account listed in the admin, then share a
+  story card (a 1080x1920 image of their result, made on the phone) for an
+  extra code (default 10 %). Follows can't be checked through any API, so the
+  code is issued straight away, marked "Check follows" in the admin, and the
+  team looks at the Instagram handle before the order ships. The quest only
+  shows once every account has a link in the admin.
+- **The coupon.** Copy the code, or Save coupon: a 1080x1350 image goes to the
+  share sheet (Save to Photos) or downloads. Codes are also kept on the phone
+  (`localStorage`) and, when `RESEND_API_KEY` is set on Netlify, emailed.
+
+Why codes can't be faked or shared: codes are random, made and stored on the
+server and tied to the claiming email. In the admin, **Check a code** shows
+whether a code exists, who it belongs to and whether it's been used; Mark used
+once it's applied. A round has to bring a signed ticket that the game asks
+for when the round starts, can't be claimed twice, and has to have lasted long
+enough for its score. The score itself still comes from the phone, so someone
+who scripts the API can claim the top code for an email they own; that's why
+it's one code per email, small percentages, and checked at checkout.
+
+Rewards use the standard rarity thresholds. If you change `tierScale`, the
+rarity on screen moves but the reward still needs the standard score.
+
 ## Install in Mattercraft
 
 1. Copy `LootBreakGame.ts` into the project's `src/` folder, and replace the
@@ -130,9 +168,10 @@ can still mute with the speaker button. Turn it off to follow the switch.
    `redeemUrl`.
 
 Nothing else needs wiring. For timelines or analytics, the component emits
-**onRoundStart**, **onBoss**, **onRoundEnd(score, tierName)**, **onPlace** and **onResetPlacement**, and exposes
-**score**, **tierIndex**, **ultReady** and **roundStats** as values you can read,
-and **fireUlt(hero)** to fire an ultimate from a timeline.
+**onRoundStart**, **onBoss**, **onRoundEnd(score, tierName)**, **onPlace**, **onResetPlacement** and
+**onReward(action, percent)**, and exposes **score**, **tierIndex**, **ultReady**, **roundStats** and
+**rewardState** as values you can read, **fireUlt(hero)** to fire an ultimate and **openRewards(view)**
+to open the player's codes from a timeline.
 
 ## Properties
 
@@ -154,6 +193,8 @@ and **fireUlt(hero)** to fire an ultimate from a timeline.
 | Placement | `placementGroup` | empty | The Instant World Tracker or anchor group to drive. Empty = the one the game sits in. |
 | Placement | `placeHint`, `placeButtonLabel`, `replaceButtonLabel` | | Placement copy. |
 | Placement | `placeTimeline`, `resetTimeline` | | Timelines played on Place and Re-place. |
+| Rewards | `rewardsEnabled` | on | Discount codes and the bonus quest. Off hides them. |
+| Rewards | `rewardsApi` | https://medialife.ai | The site that makes and checks codes. A deploy preview's address tests against that preview's codes. |
 
 ## Rarity thresholds
 
@@ -187,6 +228,14 @@ All combat numbers sit in one `TUNE` table at the top of `LootBreakGame.ts`.
   results card with badges, with no console errors.
 - Placement tested against a stand-in Instant World Tracker (as parent and as
   a sibling elsewhere in the scene) and with no tracker at all.
+- Rewards: the API was hit with forged, reused, too-old and too-fast tickets,
+  mismatched rarities, upgrades and downgrades, and refused each one
+  correctly. In the lab, a full round → Claim → email → coupon → Save, and
+  the bonus quest (3 follows + story image → handle → code) ran on 390x844,
+  375x667 and 844x390, and the admin page checked, verified and exported
+  the codes. With the rewards server unreachable, the strip simply doesn't
+  show. The share sheet itself (Save to Photos, Instagram story) needs a real
+  phone; headless Chrome takes the download fallback.
 - Sound unlock and `playOnSilent` are written to Safari's documented rules but
   **not yet heard on a real iPhone**.
 - **Not yet opened in the Mattercraft editor.** If a property doesn't show in
@@ -196,9 +245,10 @@ All combat numbers sit in one `TUNE` table at the top of `LootBreakGame.ts`.
 
 - Fonts (Pixelify Sans, Silkscreen) load from Google Fonts. Without a network
   connection the UI falls back to the system monospace font.
-- The score saves the player's best on the device (`localStorage`). Nothing
-  is sent to a server yet. A reward that has to be account-bound (as planned
-  for TBH) needs a server-side claim, which isn't built.
+- The score saves the player's best on the device (`localStorage`). Only a
+  reward claim sends anything to a server (the score, the rarity, the email
+  and, for the quest, the Instagram handle).
 - Test hooks for scripts: `window.__lootBreak` has `startRound()`,
   `endRound()`, `skip(seconds)`, `tapFront()`, `tapWeakPoint()`,
-  `tapCursed()`, `fireUlt(id)`, `collectAllLoot()` and `debugState`.
+  `tapCursed()`, `fireUlt(id)`, `collectAllLoot()`, `openRewards(view)`,
+  `rewardState` and `debugState`. The lab's `?rewards=0` turns rewards off.

@@ -24,6 +24,7 @@ import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminCollectorRouteImport } from './routes/admin.collector'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminLootbreakRouteImport } from './routes/admin.lootbreak'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMedialifeRouteImport } from './routes/admin.medialife'
 import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
@@ -85,6 +86,9 @@ import { Route as ApiGiveawayDiscordRouteImport } from './routes/api.giveaway.di
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
+import { Route as ApiLootbreakClaimRouteImport } from './routes/api.lootbreak.claim'
+import { Route as ApiLootbreakConfigRouteImport } from './routes/api.lootbreak.config'
+import { Route as ApiLootbreakRoundRouteImport } from './routes/api.lootbreak.round'
 import { Route as ApiMediaIndexDotjsonRouteImport } from './routes/api.media.index[.]json'
 import { Route as ApiMediaLlmsDottxtRouteImport } from './routes/api.media.llms[.]txt'
 import { Route as ApiMediaUploadsRouteImport } from './routes/api.media.uploads'
@@ -262,6 +266,11 @@ const AdminDemosRoute = AdminDemosRouteImport.update({
 const AdminLinksRoute = AdminLinksRouteImport.update({
   id: '/links',
   path: '/links',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLootbreakRoute = AdminLootbreakRouteImport.update({
+  id: '/lootbreak',
+  path: '/lootbreak',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMediaRoute = AdminMediaRouteImport.update({
@@ -570,6 +579,21 @@ const ApiHubOrdersRoute = ApiHubOrdersRouteImport.update({
 const ApiHubShelfAssetsRoute = ApiHubShelfAssetsRouteImport.update({
   id: '/api/hub/shelf-assets',
   path: '/api/hub/shelf-assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLootbreakClaimRoute = ApiLootbreakClaimRouteImport.update({
+  id: '/api/lootbreak/claim',
+  path: '/api/lootbreak/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLootbreakConfigRoute = ApiLootbreakConfigRouteImport.update({
+  id: '/api/lootbreak/config',
+  path: '/api/lootbreak/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLootbreakRoundRoute = ApiLootbreakRoundRouteImport.update({
+  id: '/api/lootbreak/round',
+  path: '/api/lootbreak/round',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMediaIndexDotjsonRoute = ApiMediaIndexDotjsonRouteImport.update({
@@ -1132,6 +1156,7 @@ export interface FileRoutesByFullPath {
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
@@ -1188,6 +1213,9 @@ export interface FileRoutesByFullPath {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
@@ -1311,6 +1339,7 @@ export interface FileRoutesByTo {
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/spray': typeof AdminSprayRoute
@@ -1361,6 +1390,9 @@ export interface FileRoutesByTo {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
@@ -1487,6 +1519,7 @@ export interface FileRoutesById {
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
@@ -1543,6 +1576,9 @@ export interface FileRoutesById {
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
@@ -1670,6 +1706,7 @@ export interface FileRouteTypes {
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
@@ -1726,6 +1763,9 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
@@ -1849,6 +1889,7 @@ export interface FileRouteTypes {
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/spray'
@@ -1899,6 +1940,9 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
@@ -2024,6 +2068,7 @@ export interface FileRouteTypes {
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
@@ -2080,6 +2125,9 @@ export interface FileRouteTypes {
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
@@ -2241,6 +2289,9 @@ export interface RootRouteChildren {
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
+  ApiLootbreakClaimRoute: typeof ApiLootbreakClaimRoute
+  ApiLootbreakConfigRoute: typeof ApiLootbreakConfigRoute
+  ApiLootbreakRoundRoute: typeof ApiLootbreakRoundRoute
   ApiMediaIndexDotjsonRoute: typeof ApiMediaIndexDotjsonRoute
   ApiMediaLlmsDottxtRoute: typeof ApiMediaLlmsDottxtRoute
   ApiMediaUploadsRoute: typeof ApiMediaUploadsRouteWithChildren
@@ -2383,6 +2434,13 @@ declare module '@tanstack/react-router' {
       path: '/links'
       fullPath: '/admin/links'
       preLoaderRoute: typeof AdminLinksRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/lootbreak': {
+      id: '/admin/lootbreak'
+      path: '/lootbreak'
+      fullPath: '/admin/lootbreak'
+      preLoaderRoute: typeof AdminLootbreakRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/media': {
@@ -2810,6 +2868,27 @@ declare module '@tanstack/react-router' {
       path: '/api/hub/shelf-assets'
       fullPath: '/api/hub/shelf-assets'
       preLoaderRoute: typeof ApiHubShelfAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lootbreak/claim': {
+      id: '/api/lootbreak/claim'
+      path: '/api/lootbreak/claim'
+      fullPath: '/api/lootbreak/claim'
+      preLoaderRoute: typeof ApiLootbreakClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lootbreak/config': {
+      id: '/api/lootbreak/config'
+      path: '/api/lootbreak/config'
+      fullPath: '/api/lootbreak/config'
+      preLoaderRoute: typeof ApiLootbreakConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lootbreak/round': {
+      id: '/api/lootbreak/round'
+      path: '/api/lootbreak/round'
+      fullPath: '/api/lootbreak/round'
+      preLoaderRoute: typeof ApiLootbreakRoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/media/index.json': {
@@ -3594,6 +3673,7 @@ interface AdminRouteChildren {
   AdminCollectorRoute: typeof AdminCollectorRoute
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
+  AdminLootbreakRoute: typeof AdminLootbreakRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminMedialifeRoute: typeof AdminMedialifeRoute
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
@@ -3616,6 +3696,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCollectorRoute: AdminCollectorRoute,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
+  AdminLootbreakRoute: AdminLootbreakRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminMedialifeRoute: AdminMedialifeRoute,
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
@@ -4038,6 +4119,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
+  ApiLootbreakClaimRoute: ApiLootbreakClaimRoute,
+  ApiLootbreakConfigRoute: ApiLootbreakConfigRoute,
+  ApiLootbreakRoundRoute: ApiLootbreakRoundRoute,
   ApiMediaIndexDotjsonRoute: ApiMediaIndexDotjsonRoute,
   ApiMediaLlmsDottxtRoute: ApiMediaLlmsDottxtRoute,
   ApiMediaUploadsRoute: ApiMediaUploadsRouteWithChildren,

@@ -941,6 +941,32 @@ export class LootBreakGame extends Group {
    */
   public resetTimeline = new Observable<string | undefined>(undefined);
 
+  /* ── Rewards ─────────────────────────────────────────────────────────── */
+
+  /**
+   * Discount codes for high rarities and the bonus quest (follow + share for
+   * an extra code). The offer, codes and quest accounts are run from the
+   * MEDIALIFE admin (Admin > LOOT BREAK). Off hides all of it.
+   *
+   * @zui
+   * @zgroup Rewards
+   * @zgrouppriority 75
+   * @zpriority 10
+   * @zdefault true
+   */
+  public rewardsEnabled = new Observable(true, () => this._rewards?.load());
+
+  /**
+   * The site that makes and checks the codes. Keep https://medialife.ai for
+   * the live game; a deploy-preview address tests against that preview's codes.
+   *
+   * @zui
+   * @zgroup Rewards
+   * @zpriority 9
+   * @zdefault https://medialife.ai
+   */
+  public rewardsApi = new Observable("https://medialife.ai", () => this._rewards?.load());
+
   /* ── Read-only state and events (for timelines, other components) ───── */
 
   /** The current score. */
@@ -957,6 +983,11 @@ export class LootBreakGame extends Group {
   public onPlace = new Event<[]>();
   /** Fires when the player taps Re-place. */
   public onResetPlacement = new Event<[]>();
+  /**
+   * Fires on reward moments: action ("offer", "claim", "upgrade", "quest_claim",
+   * "quest_step_N", "save", "shop") and the percent off (0 when there isn't one).
+   */
+  public onReward = new Event<[string, number]>();
 
   /* ── internals ───────────────────────────────────────────────────────── */
 
@@ -1032,6 +1063,7 @@ export class LootBreakGame extends Group {
   private _weakTex!: THREE.Texture;
 
   private readonly _sfx: Sfx;
+  private _rewards: LootRewards | null = null;
   private readonly _cam: Observable<THREE.Camera> | { value: THREE.Camera };
 
   // DOM
@@ -1081,6 +1113,18 @@ export class LootBreakGame extends Group {
     this._buildHeroes();
 
     this._ui = this._buildUI();
+    this._rewards = new LootRewards({
+      ui: this._ui,
+      strip: this._el.rw,
+      api: () => this.rewardsApi.value,
+      enabled: () => !!this.rewardsEnabled.value,
+      title: () => this.title.value,
+      shareUrl: () => this.shareUrl.value || location.href,
+      show: (sc) => this._show(sc),
+      again: () => this.startRound(),
+      emit: (a, p) => this.onReward.emit(a, p),
+    });
+    this._rewards.load();
     this.register(useOverlay(contextManager), (ov: HTMLElement) => {
       if (ov && this._ui.parentElement !== ov) ov.appendChild(this._ui);
       this._overlayParent = ov;
@@ -1264,6 +1308,22 @@ export class LootBreakGame extends Group {
       minHp: Math.round(this._minHp),
       badges: this._badges.join(","),
     };
+  }
+
+  /** Rewards as the player sees them: whether they're on, the offer on screen, and the codes saved on this phone. */
+  public get rewardState() {
+    const r = this._rewards;
+    return {
+      ready: !!r?.ready,
+      offer: r?.ready ? (this._el.rw.querySelector("[data-act=claim]") ? "claim" : "none") : "off",
+      quest: !!r?.cfg?.quest,
+      codes: r?.codes ?? {},
+    };
+  }
+
+  /** Open the rewards screen: "codes" (saved codes), "claim" (the offer on the results card) or "quest". */
+  public openRewards(view: "claim" | "codes" | "quest" = "codes") {
+    return !!this._rewards?.open(view);
   }
 
   /** Test hook: collect every loot drop on the lane. */
@@ -1695,6 +1755,7 @@ export class LootBreakGame extends Group {
           <p class="lb-kicker" data-k="titleRes">LOOT BREAK</p>
           <div class="lb-tier" data-k="tier">COMMON</div>
           <div class="lb-scoreline"><b data-k="final">0</b><span data-k="bestLine"></span></div>
+          <div class="lb-reward" data-k="rw" hidden></div>
           <ol class="lb-ladder" data-k="ladder"></ol>
           <ul class="lb-badges" data-k="badges" aria-label="Bonuses"></ul>
           <div class="lb-stats">
@@ -1783,14 +1844,16 @@ export class LootBreakGame extends Group {
     }
   }
 
-  private _show(screen: "intro" | "place" | "hud" | "results" | "none") {
+  private _show(screen: "intro" | "place" | "hud" | "results" | "reward" | "none") {
     this._ui.querySelectorAll<HTMLElement>("[data-screen]").forEach((el) => {
-      const on = el.dataset.screen === screen || (screen === "results" && el.dataset.screen === "hud");
+      const on =
+        el.dataset.screen === screen ||
+        ((screen === "results" || screen === "reward") && el.dataset.screen === "hud");
       el.hidden = !on;
     });
     this._syncPlacementUi();
-    this._ui.classList.toggle("lb-modal", screen === "intro" || screen === "results");
-    this._ui.classList.toggle("lb-resulting", screen === "results");
+    this._ui.classList.toggle("lb-modal", screen === "intro" || screen === "results" || screen === "reward");
+    this._ui.classList.toggle("lb-resulting", screen === "results" || screen === "reward");
   }
 
   private _bannerT = 0;
@@ -2259,6 +2322,7 @@ export class LootBreakGame extends Group {
       li.classList.toggle("is-top", i === ti);
     });
     this._syncText();
+    this._rewards?.onResults(s, ti);
     this._show("results");
     this.onRoundEnd.emit(s, tier.name);
   }
@@ -2811,6 +2875,7 @@ export class LootBreakGame extends Group {
     if (this._phaseT >= 3 * 0.75 + 0.35) {
       this._phase = "playing";
       this._el.count.className = "lb-count";
+      this._rewards?.onRoundStart();
       this.onRoundStart.emit();
     }
   }
@@ -3364,6 +3429,815 @@ function LootBootPX() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   Rewards: discount codes for high rarities, and the bonus quest
+   ══════════════════════════════════════════════════════════════════════════ */
+// The codes live on the MEDIALIFE site (Admin > LOOT BREAK), which this talks
+// to over /api/lootbreak/*:
+//   GET  config  what to offer (reward ladder, bonus quest, shop link, terms)
+//   POST round   a signed ticket, asked for as each round starts
+//   POST claim   ticket + score + email → a one-time code bound to that email
+// Codes are made and checked server-side, so a code that isn't in the admin
+// list, or arrives with another email, is fake or shared. Nothing here can
+// make a valid code on its own.
+
+interface RwRule {
+  tier: number;
+  percent: number;
+}
+interface RwConfig {
+  active: boolean;
+  rewards: RwRule[];
+  quest: null | { percent: number; follow: { label: string; url: string }[]; storyTags: string };
+  shopUrl: string;
+  shopLabel: string;
+  expiryDays: number;
+  terms: string;
+}
+interface RwCode {
+  code: string;
+  kind: "score" | "quest";
+  percent: number;
+  status: string;
+  expiresAt: string;
+  email: string;
+  verified?: boolean;
+}
+interface RwClaim {
+  ok: boolean;
+  code?: RwCode;
+  message?: string;
+  error?: string;
+  upgraded?: boolean;
+  existing?: boolean;
+}
+interface RwHost {
+  ui: HTMLElement;
+  strip: HTMLElement;
+  api(): string;
+  enabled(): boolean;
+  title(): string;
+  shareUrl(): string;
+  show(screen: "results" | "reward"): void;
+  again(): void;
+  emit(action: string, percent: number): void;
+}
+
+const RW_LS = { email: "lootbreak.email", codes: "lootbreak.codes", steps: "lootbreak.questSteps" };
+function lsGet<T>(k: string): T | null {
+  try {
+    return JSON.parse(localStorage.getItem(k) || "null") as T | null;
+  } catch {
+    return null;
+  }
+}
+function lsSet(k: string, v: unknown) {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch {
+    /* private mode: the code is still on screen and in the saved image */
+  }
+}
+const esc = (s: string) =>
+  String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const HANDLE_OK = /^@?[A-Za-z0-9._]{1,30}$/;
+const isLive = (c?: RwCode | null) => !!c && c.status === "active" && Date.parse(c.expiresAt) > Date.now();
+const dateLabel = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+/** The best rule a rarity reaches (same rule as the server). */
+function rwRewardFor(rules: RwRule[], tier: number): RwRule | null {
+  let best: RwRule | null = null;
+  for (const r of rules) if (tier >= r.tier && (!best || r.percent > best.percent)) best = r;
+  return best;
+}
+/** The rarity a score reaches on the standard ladder (what the server checks). */
+function rwRawTier(score: number) {
+  let t = 0;
+  for (let i = 0; i < TIERS.length; i++) if (score >= TIERS[i].at) t = i;
+  return t;
+}
+
+class LootRewards {
+  cfg: RwConfig | null = null;
+  private _ticket: Promise<string | null> | null = null;
+  private _last = { score: 0, tier: 0 };
+  private _offer: RwRule | null = null;
+  private _msg = "";
+  private _busy = false;
+  private _loadT: ReturnType<typeof setTimeout> | null = null;
+  private readonly _card: HTMLElement;
+  private readonly _body: HTMLElement;
+
+  constructor(private readonly host: RwHost) {
+    this._card = document.createElement("div");
+    this._card.className = "lb-card lb-rw";
+    this._card.dataset.screen = "reward";
+    this._card.hidden = true;
+    this._card.innerHTML = `<div class="lb-frame" role="dialog" aria-modal="true" aria-label="Rewards"><div data-rw="body"></div></div>`;
+    this._body = this._card.querySelector<HTMLElement>("[data-rw=body]")!;
+    host.ui.insertBefore(this._card, host.ui.querySelector(".lb-cursor"));
+    this._card.addEventListener("click", (e) => this._onClick(e));
+    this._card.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const f = e.target as HTMLFormElement;
+      void (f.dataset.form === "quest" ? this._claimQuest(f) : this._claimScore(f));
+    });
+    this._card.addEventListener("input", (e) => {
+      if ((e.target as HTMLElement).closest("[data-form=quest]")) this._syncQuestSubmit();
+    });
+    host.strip.addEventListener("click", (e) => this._onClick(e));
+  }
+
+  /* ── public, called by the game ── */
+
+  /** (Re)load the campaign. Coalesced, so props set right after construction win. */
+  load() {
+    if (this._loadT) clearTimeout(this._loadT);
+    this._loadT = setTimeout(() => void this._load(), 0);
+  }
+
+  get ready() {
+    return !!this.cfg?.active && this.host.enabled();
+  }
+
+  get codes(): { score?: RwCode; quest?: RwCode } {
+    return lsGet(RW_LS.codes) ?? {};
+  }
+
+  /** A round started: ask for its ticket now, so the claim can prove it was played. */
+  onRoundStart() {
+    this._ticket = null;
+    if (!this.ready) return;
+    this._ticket = this._post<{ ok: boolean; ticket?: string }>("round", {})
+      .then((r) => r.ticket ?? null)
+      .catch(() => null);
+  }
+
+  /** The chest opened: fill the rewards strip on the results card. */
+  onResults(score: number, tier: number) {
+    this._last = { score, tier: Math.min(tier, rwRawTier(score)) };
+    this._msg = "";
+    this._renderStrip(true);
+  }
+
+  /** Test hook / timelines: open the rewards screen on a view. */
+  open(view: "claim" | "codes" | "quest") {
+    if (!this.ready) return false;
+    if (view === "claim" && !this._offer) return false;
+    if (view === "quest" && !this.cfg?.quest) return false;
+    this._render(view);
+    this.host.show("reward");
+    return true;
+  }
+
+  /* ── network ── */
+
+  private async _load() {
+    if (!this.host.enabled()) {
+      this.cfg = null;
+      this._renderStrip();
+      return;
+    }
+    try {
+      const r = await fetch(`${this._base()}/api/lootbreak/config`, { mode: "cors" });
+      this.cfg = r.ok ? ((await r.json()) as RwConfig) : null;
+    } catch {
+      this.cfg = null; // offline or blocked: the game plays on without rewards
+    }
+    this._renderStrip();
+  }
+
+  private _base() {
+    return (this.host.api() || "https://medialife.ai").replace(/\/+$/, "");
+  }
+
+  private async _post<T>(path: string, body: unknown): Promise<T> {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 12000);
+    try {
+      const r = await fetch(`${this._base()}/api/lootbreak/${path}`, {
+        method: "POST",
+        mode: "cors",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctl.signal,
+      });
+      return (await r.json()) as T;
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  /* ── the strip on the results card ── */
+
+  private _renderStrip(fresh = false) {
+    const s = this.host.strip;
+    if (!this.ready || !this.cfg!.rewards.length) {
+      s.hidden = true;
+      this._offer = null;
+      return;
+    }
+    const cfg = this.cfg!;
+    const { score, tier } = this._last;
+    const codes = this.codes;
+    const held = isLive(codes.score) ? codes.score!.percent : 0;
+    const reward = rwRewardFor(cfg.rewards, tier);
+    const best = Math.max(held, reward?.percent ?? 0);
+    const next = [...cfg.rewards].sort((a, b) => a.tier - b.tier).find((r) => r.tier > tier && r.percent > best);
+    this._offer = reward && reward.percent > held ? reward : null;
+    const hasCodes = isLive(codes.score) || isLive(codes.quest);
+
+    let main: string;
+    if (this._offer) {
+      main = `
+        <div class="lb-rw-row is-win">
+          <i class="lb-rw-ico" aria-hidden="true"></i>
+          <div class="lb-rw-txt"><b>${this._offer.percent}% OFF UNLOCKED</b><span>${
+            held ? `Upgrades your ${held}% code` : `${esc(TIERS[tier].name)} pays out. Claim it!`
+          }</span></div>
+          <button class="lb-btn lb-btn-gold" type="button" data-act="claim">Claim</button>
+        </div>`;
+    } else if (held) {
+      main = `
+        <div class="lb-rw-row">
+          <i class="lb-rw-ico is-held" aria-hidden="true"></i>
+          <div class="lb-rw-txt"><b>YOUR ${held}% CODE IS SAFE</b><span>${
+            next ? `Reach ${esc(TIERS[next.tier].name)} for ${next.percent}% off` : "You hold the top reward"
+          }</span></div>
+          <button class="lb-btn lb-btn-sm" type="button" data-act="codes">My code</button>
+        </div>`;
+    } else {
+      const goal = next ?? cfg.rewards[0];
+      const at = TIERS[goal.tier].at;
+      const p = clamp(score / at, 0, 1);
+      main = `
+        <div class="lb-rw-row">
+          <i class="lb-rw-ico is-locked" aria-hidden="true"></i>
+          <div class="lb-rw-txt"><b>REACH ${esc(TIERS[goal.tier].name.toUpperCase())}</b><span>for ${
+            goal.percent
+          }% off TBH merch · ${fmt(Math.max(0, at - score))} to go</span>
+            <span class="lb-rw-prog" aria-hidden="true"><i style="width:${(p * 100).toFixed(1)}%;--c:${TIERS[goal.tier].color}"></i></span></div>
+          ${hasCodes ? `<button class="lb-btn lb-btn-sm" type="button" data-act="codes">My codes</button>` : ""}
+        </div>`;
+    }
+    const q = cfg.quest;
+    const quest =
+      q && !isLive(codes.quest)
+        ? `<button class="lb-rw-quest" type="button" data-act="quest"><b>+${q.percent}% BONUS</b> Follow us + share your loot<span aria-hidden="true">▸</span></button>`
+        : "";
+    s.innerHTML = main + quest;
+    s.hidden = false;
+    if (fresh && this._offer) this.host.emit("offer", this._offer.percent);
+  }
+
+  /* ── the rewards screen ── */
+
+  private _onClick(e: MouseEvent) {
+    const b = (e.target as HTMLElement).closest<HTMLElement>("[data-act]");
+    if (!b || this._busy) return;
+    const act = b.dataset.act!;
+    if (act === "claim" || act === "codes" || act === "quest") {
+      this.open(act);
+    } else if (act === "back") {
+      this._renderStrip();
+      this.host.show("results");
+    } else if (act === "again") {
+      this.host.again();
+    } else if (act === "copy") {
+      void this._copy(b);
+    } else if (act === "save") {
+      const c = this.codes[b.dataset.kind as "score" | "quest"];
+      if (c) void this._saveCoupon(c, b);
+    } else if (act === "shop") {
+      this.host.emit("shop", 0);
+    } else if (act === "follow") {
+      const i = Number(b.dataset.i);
+      const f = this.cfg?.quest?.follow[i];
+      if (!f) return;
+      window.open(f.url, "_blank", "noopener");
+      this._markStep(i);
+    } else if (act === "story") {
+      void this._shareStory(b);
+    }
+  }
+
+  private _render(view: "claim" | "codes" | "quest") {
+    const cfg = this.cfg!;
+    const email = lsGet<string>(RW_LS.email) ?? "";
+    const terms = cfg.terms ? `<p class="lb-rw-terms">${esc(cfg.terms)}</p>` : "";
+    const err = `<p class="lb-rw-err" data-rw="err" role="alert"></p>`;
+    const consent = `<label class="lb-rw-check"><input type="checkbox" name="consent"><span>Email me new TBH drops and rewards. Unsubscribe anytime.</span></label>`;
+    const emailField = (id: string) => `
+      <label class="lb-rw-lbl" for="${id}">Your email</label>
+      <input class="lb-rw-in" id="${id}" name="email" type="email" inputmode="email" autocomplete="email"
+        autocapitalize="off" spellcheck="false" maxlength="200" placeholder="you@email.com" value="${esc(email)}" required>`;
+
+    if (view === "claim") {
+      const o = this._offer!;
+      const held = isLive(this.codes.score) ? this.codes.score!.percent : 0;
+      this._body.innerHTML = `
+        <div class="lb-ribbon"><span>${o.percent}% OFF</span></div>
+        <p class="lb-rw-big" style="color:${TIERS[this._last.tier].color}">${held ? "UPGRADE!" : "UNLOCKED!"}</p>
+        <p class="lb-rw-p">${
+          held
+            ? `Swap your ${held}% code for ${o.percent}% off. Your old code stops working.`
+            : "Your code is made just for you and only works with your email, so nobody else can use it."
+        }</p>
+        <form class="lb-rw-form" data-form="score" novalidate>
+          ${emailField("lbRwEmail")}
+          ${consent}
+          ${err}
+          <button class="lb-btn lb-btn-go lb-rw-submit" type="submit">Get my code</button>
+        </form>
+        <button class="lb-rw-link" type="button" data-act="back">Not now</button>
+        ${terms}`;
+    } else if (view === "codes") {
+      const codes = this.codes;
+      const list = (["score", "quest"] as const).map((k) => codes[k]).filter((c): c is RwCode => !!c);
+      const q = cfg.quest;
+      this._body.innerHTML = `
+        <div class="lb-ribbon"><span>YOUR LOOT</span></div>
+        ${this._msg ? `<p class="lb-rw-msg">${esc(this._msg)}</p>` : ""}
+        ${list.map((c) => this._couponHtml(c)).join("")}
+        ${
+          cfg.shopUrl
+            ? `<a class="lb-btn lb-btn-go lb-rw-wide" href="${esc(cfg.shopUrl)}" target="_blank" rel="noopener" data-act="shop">${esc(
+                cfg.shopLabel || "Shop the drop",
+              )}</a>`
+            : ""
+        }
+        ${
+          q && !isLive(codes.quest)
+            ? `<button class="lb-rw-quest" type="button" data-act="quest"><b>+${q.percent}% BONUS</b> Follow us + share your loot<span aria-hidden="true">▸</span></button>`
+            : ""
+        }
+        <div class="lb-actions lb-rw-acts">
+          <button class="lb-btn" type="button" data-act="back">Back</button>
+          <button class="lb-btn lb-btn-go" type="button" data-act="again">Play again</button>
+        </div>
+        ${terms}`;
+    } else {
+      const q = cfg.quest!;
+      const steps = this._steps();
+      const n = q.follow.length + 1;
+      this._body.innerHTML = `
+        <div class="lb-ribbon"><span>BONUS QUEST</span></div>
+        <p class="lb-rw-big">+${q.percent}% OFF</p>
+        <p class="lb-rw-p">Do all ${n} for an extra code on your next order.</p>
+        <ol class="lb-rw-steps">
+          ${q.follow
+            .map(
+              (f, i) => `
+            <li><button type="button" class="lb-rw-step${steps[i] ? " is-done" : ""}" data-act="follow" data-i="${i}">
+              <i aria-hidden="true">${steps[i] ? "✓" : i + 1}</i><span>Follow <b>${esc(f.label)}</b></span><em aria-hidden="true">↗</em>
+            </button></li>`,
+            )
+            .join("")}
+          <li><button type="button" class="lb-rw-step${steps[n - 1] ? " is-done" : ""}" data-act="story">
+            <i aria-hidden="true">${steps[n - 1] ? "✓" : n}</i><span>Share your loot to your story${
+              q.storyTags ? `<small>Tag ${esc(q.storyTags)}</small>` : ""
+            }</span><em aria-hidden="true">↗</em>
+          </button></li>
+        </ol>
+        <form class="lb-rw-form" data-form="quest" novalidate>
+          <label class="lb-rw-lbl" for="lbRwIg">Your Instagram</label>
+          <input class="lb-rw-in" id="lbRwIg" name="handle" type="text" autocomplete="username" autocapitalize="off"
+            spellcheck="false" maxlength="31" placeholder="@yourname" required>
+          ${emailField("lbRwQEmail")}
+          ${consent}
+          ${err}
+          <button class="lb-btn lb-btn-go lb-rw-submit" type="submit">Unlock bonus</button>
+          <p class="lb-rw-note">We check your follows and story before your order ships, so use your real handle.</p>
+        </form>
+        <button class="lb-rw-link" type="button" data-act="back">Back</button>
+        ${terms}`;
+      this._syncQuestSubmit();
+    }
+    this._card.querySelector<HTMLElement>(".lb-frame")!.scrollTop = 0;
+  }
+
+  private _couponHtml(c: RwCode) {
+    const live = isLive(c);
+    const status =
+      c.status === "redeemed"
+        ? "Used"
+        : c.status === "void"
+          ? "No longer valid"
+          : !live
+            ? "Expired"
+            : c.kind === "quest" && !c.verified
+              ? "Checking your follows"
+              : "";
+    return `
+      <div class="lb-coupon${live ? "" : " is-dead"}" style="--c:${c.kind === "quest" ? "#c79bff" : "#ffc53d"}">
+        <div class="lb-coupon-top"><b>${c.percent}% OFF</b><span>${c.kind === "quest" ? "BONUS QUEST" : "TBH MERCH"}</span></div>
+        <div class="lb-coupon-code" aria-label="Code ${esc(c.code.split("").join(" "))}">${esc(c.code)}</div>
+        <p class="lb-coupon-meta">Only works with ${esc(c.email)} · Use by ${esc(dateLabel(c.expiresAt))}</p>
+        ${status ? `<p class="lb-coupon-status">${esc(status)}</p>` : ""}
+        ${
+          live
+            ? `<div class="lb-coupon-acts">
+          <button class="lb-btn lb-btn-sm" type="button" data-act="copy" data-code="${esc(c.code)}">Copy code</button>
+          <button class="lb-btn lb-btn-sm" type="button" data-act="save" data-kind="${c.kind}">Save coupon</button>
+        </div>`
+            : ""
+        }
+      </div>`;
+  }
+
+  private _err(text: string) {
+    const e = this._card.querySelector<HTMLElement>("[data-rw=err]");
+    if (e) e.textContent = text;
+  }
+
+  private _setBusy(on: boolean, label?: string) {
+    this._busy = on;
+    const b = this._card.querySelector<HTMLButtonElement>(".lb-rw-submit");
+    if (!b) return;
+    b.disabled = on;
+    if (label) b.textContent = label;
+    b.classList.toggle("is-busy", on);
+  }
+
+  /** Save what the server sent back and show it. */
+  private _gotCode(c: RwCode, msg: string, email: string) {
+    const codes = this.codes;
+    codes[c.kind] = c;
+    lsSet(RW_LS.codes, codes);
+    lsSet(RW_LS.email, email);
+    this._msg = msg;
+    this._render("codes");
+  }
+
+  private async _claimScore(f: HTMLFormElement) {
+    const email = String(new FormData(f).get("email") ?? "").trim().toLowerCase();
+    const consent = !!(f.elements.namedItem("consent") as HTMLInputElement | null)?.checked;
+    if (!EMAIL_OK.test(email)) return this._err("Check your email address.");
+    if (!this._offer) return;
+    this._err("");
+    this._setBusy(true, "Unlocking…");
+    try {
+      const ticket = (await this._ticket) ?? null;
+      const r = await this._post<RwClaim>("claim", {
+        kind: "score",
+        ticket,
+        tier: this._last.tier,
+        score: Math.round(this._last.score),
+        email,
+        consent,
+      });
+      if (r.code && (r.ok || r.error === "already-claimed")) {
+        if (r.ok) this.host.emit(r.upgraded ? "upgrade" : "claim", r.code.percent);
+        this._gotCode(r.code, r.message ?? "", email);
+      } else {
+        this._setBusy(false, "Get my code");
+        this._err(r.message || "Something went wrong. Try again.");
+      }
+    } catch {
+      this._setBusy(false, "Get my code");
+      this._err("Can't reach the rewards right now. Check your connection and try again.");
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  /* ── bonus quest ── */
+
+  private _steps(): boolean[] {
+    const n = (this.cfg?.quest?.follow.length ?? 0) + 1;
+    const s = lsGet<boolean[]>(RW_LS.steps) ?? [];
+    return Array.from({ length: n }, (_, i) => !!s[i]);
+  }
+
+  private _markStep(i: number) {
+    const s = this._steps();
+    if (s[i]) return;
+    s[i] = true;
+    lsSet(RW_LS.steps, s);
+    const b = this._card.querySelectorAll<HTMLElement>(".lb-rw-step")[i];
+    if (b) {
+      b.classList.add("is-done");
+      b.querySelector("i")!.textContent = "✓";
+    }
+    this.host.emit(`quest_step_${i + 1}`, 0);
+    this._syncQuestSubmit();
+  }
+
+  private _syncQuestSubmit() {
+    const f = this._card.querySelector<HTMLFormElement>("[data-form=quest]");
+    const b = f?.querySelector<HTMLButtonElement>(".lb-rw-submit");
+    if (!f || !b || this._busy) return;
+    const left = this._steps().filter((x) => !x).length;
+    b.disabled = left > 0;
+    b.textContent = left > 0 ? `${left} step${left > 1 ? "s" : ""} to go` : "Unlock bonus";
+  }
+
+  private async _claimQuest(f: HTMLFormElement) {
+    const fd = new FormData(f);
+    const email = String(fd.get("email") ?? "").trim().toLowerCase();
+    const handle = String(fd.get("handle") ?? "").trim();
+    const consent = !!(f.elements.namedItem("consent") as HTMLInputElement | null)?.checked;
+    const steps = this._steps();
+    if (steps.some((x) => !x)) return this._err("Finish every step first.");
+    if (!HANDLE_OK.test(handle)) return this._err("Add your Instagram handle, like @yourname.");
+    if (!EMAIL_OK.test(email)) return this._err("Check your email address.");
+    this._err("");
+    this._setBusy(true, "Unlocking…");
+    try {
+      // The quest is offered on the results card, so this round's ticket covers it.
+      const ticket = (await this._ticket) ?? null;
+      const r = await this._post<RwClaim>("claim", { kind: "quest", ticket, email, handle, consent, steps });
+      if (r.ok && r.code) {
+        if (!r.existing) this.host.emit("quest_claim", r.code.percent);
+        this._gotCode(r.code, r.message ?? "", email);
+      } else {
+        this._setBusy(false);
+        this._syncQuestSubmit();
+        this._err(r.message || "Something went wrong. Try again.");
+      }
+    } catch {
+      this._setBusy(false);
+      this._syncQuestSubmit();
+      this._err("Can't reach the rewards right now. Check your connection and try again.");
+    } finally {
+      this._busy = false;
+    }
+  }
+
+  /* ── copy, save and share ── */
+
+  private async _copy(b: HTMLElement) {
+    const code = b.dataset.code ?? "";
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(code);
+      ok = true;
+    } catch {
+      ok = false;
+    }
+    b.textContent = ok ? "Copied!" : code;
+    setTimeout(() => (b.textContent = "Copy code"), 1800);
+  }
+
+  /** Share a PNG (the phone's share sheet saves it to Photos or posts it), else download it. */
+  private async _sharePng(canvas: HTMLCanvasElement, name: string, title: string): Promise<"shared" | "saved" | "cancelled"> {
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+    if (!blob) return "cancelled";
+    const file = new File([blob], name, { type: "image/png" });
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (nav.share && nav.canShare?.({ files: [file] })) {
+      try {
+        await nav.share({ files: [file], title });
+        return "shared";
+      } catch (e) {
+        if ((e as Error)?.name === "AbortError") return "cancelled";
+        // not allowed here (e.g. an iframe): fall back to a download
+      }
+    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    return "saved";
+  }
+
+  private async _saveCoupon(c: RwCode, b: HTMLElement) {
+    b.textContent = "…";
+    const canvas = await drawCoupon(c, this.cfg, this.host.title());
+    const r = await this._sharePng(canvas, `${c.code}.png`, `${c.percent}% off: ${c.code}`);
+    b.textContent = r === "saved" ? "Saved!" : r === "shared" ? "Done!" : "Save coupon";
+    if (r !== "cancelled") this.host.emit("save", c.percent);
+    setTimeout(() => (b.textContent = "Save coupon"), 1800);
+  }
+
+  private async _shareStory(b: HTMLElement) {
+    const q = this.cfg?.quest;
+    if (!q) return;
+    const n = q.follow.length;
+    const label = b.querySelector("span");
+    const prev = label?.innerHTML ?? "";
+    if (label) label.textContent = "Making your story…";
+    const canvas = await drawStory(this._last.score, this._last.tier, q.storyTags, this.host.title(), this.host.shareUrl());
+    const r = await this._sharePng(canvas, "lootbreak-story.png", "My LOOT BREAK loot");
+    if (label) label.innerHTML = prev;
+    if (r === "cancelled") return;
+    this._markStep(n);
+    if (r === "saved") {
+      const small = b.querySelector("small");
+      if (small) small.textContent = `Saved. Post it to your story and tag ${q.storyTags || "us"}.`;
+    }
+  }
+}
+
+/* ── images: the saved coupon and the story card ── */
+
+async function canvasFonts() {
+  try {
+    await Promise.all([
+      document.fonts.load('700 64px "Silkscreen"'),
+      document.fonts.load('500 32px "Pixelify Sans"'),
+    ]);
+  } catch {
+    /* system fonts are fine */
+  }
+}
+const PX_FONT = '"Silkscreen", ui-monospace, monospace';
+const BODY_FONT = '"Pixelify Sans", system-ui, sans-serif';
+
+function frame(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  ctx.beginPath();
+  if (typeof ctx.roundRect === "function") ctx.roundRect(x, y, w, h, r);
+  else ctx.rect(x, y, w, h);
+}
+function fitText(ctx: CanvasRenderingContext2D, text: string, max: number, size: number, font: string, weight = 700) {
+  let s = size;
+  do ctx.font = `${weight} ${s}px ${font}`;
+  while (ctx.measureText(text).width > max && (s -= 4) > 16);
+}
+
+async function drawCoupon(c: RwCode, cfg: RwConfig | null, title: string) {
+  await canvasFonts();
+  const W = 1080;
+  const H = 1350;
+  const cv = document.createElement("canvas");
+  cv.width = W;
+  cv.height = H;
+  const x = cv.getContext("2d")!;
+  const accent = c.kind === "quest" ? "#c79bff" : "#ffc53d";
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#2b2531");
+  g.addColorStop(1, "#120f16");
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  // pixel border
+  x.fillStyle = "#0b090e";
+  x.fillRect(40, 40, W - 80, H - 80);
+  x.fillStyle = "#55495f";
+  x.fillRect(52, 52, W - 104, H - 104);
+  x.fillStyle = "#1d1922";
+  x.fillRect(64, 64, W - 128, H - 128);
+  x.textAlign = "center";
+  x.fillStyle = "#a99fb4";
+  x.font = `700 34px ${PX_FONT}`;
+  x.fillText((title || "LOOT BREAK").toUpperCase(), W / 2, 170);
+  // ticket
+  frame(x, 120, 230, W - 240, 640, 28);
+  x.fillStyle = accent;
+  x.fill();
+  x.fillStyle = "#16121d";
+  x.font = `700 170px ${PX_FONT}`;
+  x.fillText(`${c.percent}% OFF`, W / 2, 440);
+  x.font = `700 40px ${PX_FONT}`;
+  x.fillText(c.kind === "quest" ? "BONUS QUEST REWARD" : "TBH MERCH", W / 2, 510);
+  // perforation
+  x.setLineDash([18, 16]);
+  x.lineWidth = 6;
+  x.strokeStyle = "rgba(22,18,29,.45)";
+  x.beginPath();
+  x.moveTo(160, 570);
+  x.lineTo(W - 160, 570);
+  x.stroke();
+  x.setLineDash([]);
+  frame(x, 170, 620, W - 340, 170, 18);
+  x.fillStyle = "#16121d";
+  x.fill();
+  x.fillStyle = "#fff";
+  fitText(x, c.code, W - 400, 96, PX_FONT);
+  x.fillText(c.code, W / 2, 738);
+  x.fillStyle = "#f4efe2";
+  x.font = `500 40px ${BODY_FONT}`;
+  x.fillText(`Only works with ${c.email}`, W / 2, 960);
+  x.fillText(`Use by ${dateLabel(c.expiresAt)}`, W / 2, 1015);
+  if (c.kind === "quest" && !c.verified) {
+    x.fillStyle = "#d9c7ff";
+    x.font = `500 32px ${BODY_FONT}`;
+    x.fillText("We check your follows and story before your order ships.", W / 2, 1070);
+  }
+  if (cfg?.terms) {
+    x.fillStyle = "#8d8496";
+    x.font = `500 28px ${BODY_FONT}`;
+    wrap(x, cfg.terms, W / 2, 1140, W - 240, 36);
+  }
+  if (cfg?.shopUrl) {
+    x.fillStyle = accent;
+    x.font = `700 30px ${PX_FONT}`;
+    x.fillText(cfg.shopUrl.replace(/^https:\/\/(www\.)?/, "").replace(/\/$/, ""), W / 2, 1240);
+  }
+  return cv;
+}
+
+function wrap(x: CanvasRenderingContext2D, text: string, cx: number, y: number, max: number, lh: number) {
+  const words = text.split(/\s+/);
+  let line = "";
+  for (const w of words) {
+    const t = line ? `${line} ${w}` : w;
+    if (x.measureText(t).width > max && line) {
+      x.fillText(line, cx, y);
+      y += lh;
+      line = w;
+    } else line = t;
+  }
+  if (line) x.fillText(line, cx, y);
+}
+
+async function drawStory(score: number, tierIdx: number, tags: string, title: string, url: string) {
+  await canvasFonts();
+  const W = 1080;
+  const H = 1920;
+  const cv = document.createElement("canvas");
+  cv.width = W;
+  cv.height = H;
+  const x = cv.getContext("2d")!;
+  const tier = TIERS[tierIdx];
+  const g = x.createRadialGradient(W / 2, 820, 60, W / 2, 820, 1100);
+  g.addColorStop(0, "#3a2d48");
+  g.addColorStop(1, "#0d0b11");
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  // light rays behind the chest
+  x.save();
+  x.translate(W / 2, 820);
+  x.globalAlpha = 0.16;
+  x.fillStyle = tier.glow;
+  for (let i = 0; i < 12; i++) {
+    x.rotate(Math.PI / 6);
+    x.beginPath();
+    x.moveTo(0, 0);
+    x.lineTo(-70, -900);
+    x.lineTo(70, -900);
+    x.fill();
+  }
+  x.restore();
+  x.textAlign = "center";
+  // ribbon
+  x.fillStyle = "#b3242f";
+  x.beginPath();
+  x.moveTo(190, 300);
+  x.lineTo(230, 240);
+  x.lineTo(W - 230, 240);
+  x.lineTo(W - 190, 300);
+  x.lineTo(W - 230, 360);
+  x.lineTo(230, 360);
+  x.closePath();
+  x.fill();
+  x.fillStyle = "#ffd979";
+  fitText(x, (title || "LOOT BREAK").toUpperCase(), W - 520, 64, PX_FONT);
+  x.fillText((title || "LOOT BREAK").toUpperCase(), W / 2, 325);
+  x.fillStyle = "#cfc6da";
+  x.font = `700 46px ${PX_FONT}`;
+  x.fillText("I PULLED", W / 2, 560);
+  // chest
+  try {
+    const chest = pixelCanvas(SPRITES.chestOpen);
+    x.imageSmoothingEnabled = false;
+    const s = 300 / Math.max(chest.width, chest.height);
+    x.drawImage(chest, W / 2 - (chest.width * s) / 2, 920 - chest.height * s, chest.width * s, chest.height * s);
+  } catch {
+    /* no sprite, no problem */
+  }
+  x.shadowColor = tier.glow;
+  x.shadowBlur = 40;
+  x.fillStyle = tier.color;
+  fitText(x, tier.name.toUpperCase(), W - 140, 150, PX_FONT);
+  x.fillText(tier.name.toUpperCase(), W / 2, 1110);
+  x.shadowBlur = 0;
+  x.fillStyle = "#ffe08a";
+  x.font = `700 84px ${PX_FONT}`;
+  x.fillText(fmt(score), W / 2, 1240);
+  x.fillStyle = "#a99fb4";
+  x.font = `700 34px ${PX_FONT}`;
+  x.fillText("POINTS", W / 2, 1295);
+  x.fillStyle = "#f4efe2";
+  x.font = `500 52px ${BODY_FONT}`;
+  x.fillText("Beat my lunch break.", W / 2, 1450);
+  if (tags) {
+    x.fillStyle = "#c79bff";
+    fitText(x, tags, W - 160, 48, PX_FONT);
+    x.fillText(tags, W / 2, 1560);
+  }
+  const host = (() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return "";
+    }
+  })();
+  if (host) {
+    x.fillStyle = "#8d8496";
+    x.font = `700 32px ${PX_FONT}`;
+    x.fillText(`PLAY AT ${host.toUpperCase()}`, W / 2, 1680);
+  }
+  x.fillStyle = "#7f768a";
+  x.font = `700 26px ${PX_FONT}`;
+  x.fillText("ACTIVATED BY MEDIALIFE", W / 2, 1790);
+  return cv;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    Fonts and CSS (scoped under .lb-root; Mattercraft's overlay rules apply)
    ══════════════════════════════════════════════════════════════════════════ */
 
@@ -3556,6 +4430,78 @@ const CSS = `
 @keyframes lbReady{50%{transform:translateY(-2px)}}
 @keyframes lbNudge{50%{transform:translate(-50%,-3px)}}
 @media (max-height:500px){.lb-ultbtn{height:38px}.lb-ultbtn span{display:none}.lb-ults{bottom:calc(var(--bot) + 64px)}.lb-coach{bottom:calc(var(--bot) + 110px)}}
+
+/* rewards */
+.lb-reward{margin:0 0 10px;display:grid;gap:6px;text-align:left}
+.lb-rw-row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:10px;background:#1d1922;box-shadow:inset 0 0 0 1px #3c3444}
+.lb-rw-row.is-win{background:linear-gradient(#3a2c10,#251c0b);box-shadow:inset 0 0 0 2px #f5c447,0 0 18px rgba(245,196,71,.35);animation:lbGlow 1.4s ease-in-out infinite}
+.lb-rw-ico{flex:0 0 30px;height:30px;border-radius:6px;position:relative;background:#3a3242;box-shadow:inset 0 0 0 2px #55495f}
+.lb-rw-ico::after{content:"%";position:absolute;inset:0;display:grid;place-items:center;font-family:'Silkscreen',monospace;font-weight:700;font-size:16px;color:#ffe08a}
+.is-win .lb-rw-ico{background:#f5c447;box-shadow:inset 0 0 0 2px #fff0b0}
+.is-win .lb-rw-ico::after{color:#2a1608}
+.lb-rw-ico.is-locked::after{content:"?";color:#8d8496}
+.lb-rw-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lb-rw-txt b{font-family:'Silkscreen',monospace;font-size:13px;letter-spacing:.03em;color:#fff}
+.is-win .lb-rw-txt b{color:#ffe08a}
+.lb-rw-txt span{font-size:12.5px;line-height:1.25;color:#bdb4c8}
+.lb-rw-prog{display:block;height:6px;margin-top:3px;border-radius:3px;background:#0e0c12;box-shadow:inset 0 0 0 1px #3c3444;overflow:hidden}
+.lb-rw-prog i{display:block;height:100%;background:var(--c)}
+.lb-btn-sm{min-height:40px;padding:0 12px;font-size:12px;flex:none}
+.lb-btn-gold{flex:none;min-height:42px;padding:0 16px;font-size:14px;background:linear-gradient(#ffd25a,#c7861b);box-shadow:inset 0 0 0 2px #fff0b0,0 4px 0 #5a3a0a;color:#2a1608}
+.lb-rw-quest{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:10px;border:2px dashed #8a57d6;background:rgba(138,87,214,.12);
+  color:#e9d8ff;font-family:'Pixelify Sans',sans-serif;font-size:13.5px;text-align:left;cursor:pointer;touch-action:manipulation}
+.lb-rw-quest b{font-family:'Silkscreen',monospace;font-size:12px;color:#c79bff;white-space:nowrap}
+.lb-rw-quest span{margin-left:auto;color:#c79bff}
+.lb-rw-quest:focus-visible,.lb-rw-step:focus-visible,.lb-rw-link:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lb-rw{align-items:center}
+.lb-rw .lb-frame{text-align:center}
+.lb-rw-big{margin:4px 0 2px;font-family:'Silkscreen',monospace;font-weight:700;font-size:clamp(30px,9vw,40px);letter-spacing:.03em;color:#ffe08a;text-shadow:0 3px 0 #1a0d0f}
+.lb-rw-p{margin:0 0 12px;font-size:14.5px;line-height:1.35;color:#d8d0e2}
+.lb-rw-form{display:grid;gap:6px;text-align:left;margin-top:4px}
+.lb-rw-lbl{font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.06em;color:#a99fb4;margin-top:4px}
+.lb-rw-in{width:100%;min-height:48px;padding:0 12px;border-radius:9px;border:2px solid #0c0a10;background:#100d14;color:#fff;box-shadow:inset 0 0 0 2px #3c3444;
+  font-family:'Pixelify Sans',system-ui,sans-serif !important;font-size:17px;-webkit-user-select:text;user-select:text;pointer-events:auto;outline:none}
+.lb-rw-in:focus{box-shadow:inset 0 0 0 2px #f5c447}
+.lb-rw-in::placeholder{color:#6d6477}
+.lb-rw-check{display:flex;align-items:flex-start;gap:10px;margin:6px 0 2px;font-size:13px;line-height:1.35;color:#cfc6da;cursor:pointer;pointer-events:auto}
+.lb-rw-check input{flex:none;width:22px;height:22px;margin:0;accent-color:#f5c447;pointer-events:auto}
+.lb-rw-err{min-height:1.2em;margin:2px 0;font-size:13px;color:#ff9a9a}
+.lb-rw-err:empty{min-height:0;margin:0}
+.lb-rw-submit{width:100%;font-size:16px;margin-top:4px}
+.lb-rw-submit:disabled{filter:grayscale(.6) brightness(.8);cursor:default}
+.lb-rw-submit.is-busy{animation:lbBlink .8s ease-in-out infinite}
+.lb-rw-link{display:block;margin:10px auto 0;min-height:40px;padding:0 14px;border:0;background:none;color:#a99fb4;font-family:'Silkscreen',monospace;font-size:12px;
+  letter-spacing:.06em;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.lb-rw-terms{margin:10px 0 0;font-size:11.5px;line-height:1.35;color:#7f768a}
+.lb-rw-note{margin:4px 0 0;font-size:12px;line-height:1.35;color:#a99fb4;text-align:center}
+.lb-rw-msg{margin:4px 0 10px;font-size:14px;color:#9dffb0}
+.lb-rw-wide{width:100%;margin-top:4px}
+.lb-rw-acts{margin-top:10px}
+.lb-rw .lb-rw-quest{margin-top:8px}
+.lb-coupon{position:relative;margin:0 0 10px;padding:12px 12px 12px;border-radius:12px;background:var(--c);color:#16121d;text-align:center;
+  box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.lb-coupon::before,.lb-coupon::after{content:"";position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:#1f1a25}
+.lb-coupon::before{left:-9px}.lb-coupon::after{right:-9px}
+.lb-coupon.is-dead{filter:grayscale(1) brightness(.7)}
+.lb-coupon-top{display:flex;align-items:baseline;justify-content:center;gap:10px}
+.lb-coupon-top b{font-family:'Silkscreen',monospace;font-size:28px}
+.lb-coupon-top span{font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.1em}
+.lb-coupon-code{margin:8px 0 6px;padding:12px 4px;border-radius:8px;background:#16121d;color:#fff;font-family:'Silkscreen',monospace;font-weight:700;
+  font-size:clamp(14px,4.6vw,21px);letter-spacing:.02em;white-space:nowrap;-webkit-user-select:all;user-select:all;pointer-events:auto}
+.lb-coupon-meta{margin:0;font-size:12px;line-height:1.35}
+.lb-coupon-status{margin:4px 0 0;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.04em}
+.lb-coupon-acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.lb-coupon-acts .lb-btn{background:linear-gradient(#2c2633,#16131b);box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45);color:#fff}
+.lb-rw-steps{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:6px}
+.lb-rw-step{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 12px 6px 8px;border-radius:10px;border:2px solid #0c0a10;background:#1d1922;
+  box-shadow:inset 0 0 0 1px #3c3444;color:#f4efe2;font-family:'Pixelify Sans',sans-serif;font-size:14.5px;text-align:left;cursor:pointer;touch-action:manipulation}
+.lb-rw-step i{flex:0 0 28px;height:28px;display:grid;place-items:center;border-radius:6px;background:#3a3242;font-family:'Silkscreen',monospace;font-style:normal;font-size:13px;color:#cfc6da}
+.lb-rw-step span{flex:1;min-width:0}
+.lb-rw-step small{display:block;font-size:12px;color:#a99fb4}
+.lb-rw-step em{font-style:normal;color:#8d8496}
+.lb-rw-step.is-done{box-shadow:inset 0 0 0 2px #6fdc5a;background:#16241a}
+.lb-rw-step.is-done i{background:#6fdc5a;color:#16121d}
+@keyframes lbGlow{50%{box-shadow:inset 0 0 0 2px #fff0b0,0 0 26px rgba(245,196,71,.55)}}
 
 @keyframes lbPunch{0%{opacity:1;transform:scale(1.5)}100%{opacity:1;transform:scale(1)}}
 @keyframes lbBanner{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}

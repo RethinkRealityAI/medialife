@@ -105,6 +105,11 @@ scene.add(game.element);
 const q0 = new URLSearchParams(location.search);
 const placer = { placementMode: new Observable(true), children: [game] };
 if (q0.get("place") !== "0") game.parent = placer;
+// Rewards talk to this site's own /api/lootbreak (deploy previews use their
+// own codes). ?rewards=0 turns them off; ?rewards=https://… points elsewhere.
+const rw = q0.get("rewards");
+if (rw === "0") game.rewardsEnabled.value = false;
+else game.rewardsApi.value = rw && rw.startsWith("https://") ? rw : location.origin;
 ctx.markConstructed();
 
 /* ── camera ── */

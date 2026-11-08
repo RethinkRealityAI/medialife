@@ -66,7 +66,7 @@ function on(evt: any, fn: (...a: any[]) => void) {
 const r: any = result;
 const game = componentTree(r?.rootInstance ?? r).find((n) => n?.onRoundEnd && n?.onBoss && n?.onRoundStart);
 
-const session = { rounds: 0, best: 0, bestTier: "", bosses: 0, placed: 0, resets: 0, wipes: 0 };
+const session = { rounds: 0, best: 0, bestTier: "", bosses: 0, placed: 0, resets: 0, wipes: 0, codes: 0 };
 if (game) {
     // Placement is the first thing that can go wrong in AR: someone who never
     // places never plays, and without this they vanish from the funnel.
@@ -108,6 +108,12 @@ if (game) {
             badges: Array.isArray(st.badges) ? st.badges.join(",") || "none" : undefined,
         });
     });
+    // Rewards funnel: offer shown → claimed (or upgraded) → coupon saved → shop
+    // tapped, and the bonus quest step by step. Never sends the email or code.
+    on(game.onReward, (action: string, percent: number) => {
+        if (action === "claim" || action === "upgrade" || action === "quest_claim") session.codes++;
+        track("reward", { action, percent: percent || undefined, attempt: session.rounds });
+    });
 } else {
     track("bind_failure", { component: "LootBreakGame" });
 }
@@ -125,6 +131,7 @@ const summarise = () => {
         placed: session.placed,
         resets: session.resets,
         wipes: session.wipes,
+        codes: session.codes,
         furthest: session.rounds ? (session.bosses ? "boss" : "played") : session.placed ? "placed" : "landed",
     });
 };

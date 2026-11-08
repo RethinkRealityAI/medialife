@@ -27,6 +27,7 @@ import {
   Users,
   type LucideIcon,
   Gem,
+  Swords,
 } from "lucide-react";
 
 import { toneText, type Tone } from "@/components/admin/kit";
@@ -105,6 +106,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/admin/spray", label: "Spray Bobo", short: "Spray", icon: SprayCan, tone: "amber" },
       // Spray Studio is its own app (spray-studio/ built to public/spray/); same admin sign-in.
       { to: "/spray/", label: "Spray Studio", icon: Palette, tone: "violet", app: true },
+      { to: "/admin/lootbreak", label: "LOOT BREAK", short: "Loot", icon: Swords, tone: "amber" },
     ],
   },
   {
