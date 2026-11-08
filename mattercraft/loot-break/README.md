@@ -55,37 +55,40 @@ import.
 
 ## Placement (Place and Re-place buttons)
 
-The game has its own Place and Re-place buttons, the same idea as EVADE's,
-and drives Zappar's **User Placement Anchor Group** directly:
+Works like EVADE: **no round starts until the player taps Place.** There is no
+surface detection step; the player points the phone wherever they want the lane
+and taps Place.
 
-1. Put the LootBreakGame node **inside** the User Placement Anchor Group
-   (the instant world tracking template already has one). The game finds it
-   by itself; `placementGroup` lets you pick a different one.
-2. That's it. The game turns off the group's built-in Place and Restart
-   buttons (`showPlaceButton`, `showRestartPlacementButton`) when it starts,
-   so the template's buttons disappear without editing the group.
+1. Put the LootBreakGame node **inside** the Instant World Tracker (the instant
+   world tracking template already has one). A User Placement Anchor Group
+   works too. The game finds the tracker above it, or else the first one in the
+   scene; `placementGroup` lets you pick one.
+2. Remove (or hide) the template's own Place and Reset buttons. If a User
+   Placement Anchor Group is used, the game hides its built-in buttons itself.
 
 How it plays:
 
-- **Intro card → Start lunch break → placing.** The lane follows the phone,
-  a reticle sits in the middle of the screen and the card says
-  "Looking for a flat surface…". **Place on desk** stays disabled until
-  Zappar reports a valid surface (`placementValid`) and tracking is ready.
-- **Place on desk** sets the group's `placementMode` to false (exactly what
-  Zappar's own button does), plays `placeTimeline`, fires `onPlace`, and the
-  3-2-1 countdown starts.
+- **Intro card → Start lunch break → placing.** The tracker's
+  `placementMode` is on, so the lane follows the phone, with corner brackets
+  on the desk under it. **Place on desk** is always enabled.
+- **Place on desk** sets `placementMode` to false (the lane locks where it
+  is), plays `placeTimeline`, fires `onPlace`, then the 3-2-1 countdown starts.
 - **Re-place** (top right, under the speaker, during a round) drops the round
-  (no score, no chest), calls the group's own restart (so its Restart
-  Placement Mode setting, "reset" or "place", still applies), plays
-  `resetTimeline`, fires `onResetPlacement` and goes back to placing. After
-  placing, a fresh round starts.
+  (no score, no chest), turns `placementMode` back on (on an anchor group, its
+  own restart, so its Restart Placement Mode still applies), plays
+  `resetTimeline`, fires `onResetPlacement` and goes back to placing.
 - **Play again** goes straight to the countdown while the lane is placed.
-- If something else moves the lane (for example the group's long-press to
-  move), the game follows: it drops into placing and starts a new round when
-  the lane is put down.
-- Taps during placing never count as hits.
-- With no placement group (or `placementEnabled` off) the game skips this
-  step and the template's buttons stay as they are.
+- If something else changes `placementMode` (a template button left in, or the
+  anchor group's long-press move), the game follows it.
+- If no tracker is found, Place still gates the round and the console says so;
+  wire `placeTimeline` / `resetTimeline` to move the content yourself.
+
+## Sound on iPhone
+
+iOS only starts web audio inside a real tap, so the game unlocks it on the
+first tap (Start, Place, or any touch). `playOnSilent` (on by default) lets the
+sound play with the iPhone's silent switch on, as games usually do; players
+can still mute with the speaker button. Turn it off to follow the switch.
 
 ## How a round plays
 
@@ -103,9 +106,8 @@ How it plays:
 
 1. Copy `LootBreakGame.ts` into the project's `src/` folder, and replace the
    project's `index.html` and `index.ts` with the ones here.
-2. Add a **LootBreakGame** node under the tracked content (an Instant
-   Tracking Group or a World Tracker's anchor). It needs nothing else in the
-   scene.
+2. Add a **LootBreakGame** node inside the Instant World Tracker and remove
+   the template's own place buttons. It needs nothing else in the scene.
 3. The lane is 1 unit long and about 0.045 units tall. If it looks too large or
    too small on a desk, change `sceneScale` in the Look group.
 4. Fill in `shareUrl` (the drop's landing page) and, if there's a reward,
@@ -130,8 +132,9 @@ Nothing else needs wiring. For timelines or analytics, the component emits
 | Screens | `title`, `subtitle`, `footer` | | Text on the cards. |
 | Screens | `shareUrl`, `redeemUrl`, `redeemLabel` | | Buttons on the results card. Redeem only shows when a link is set. |
 | Screens | `sound` | on | The synthesised sound effects. |
+| Screens | `playOnSilent` | on | iPhone: play even with the silent switch on (speaker button still mutes). |
 | Placement | `placementEnabled` | on | Use the game's Place and Re-place buttons. |
-| Placement | `placementGroup` | empty | The User Placement Anchor Group to drive. Empty = the one the game sits in. |
+| Placement | `placementGroup` | empty | The Instant World Tracker or anchor group to drive. Empty = the one the game sits in. |
 | Placement | `placeHint`, `placeButtonLabel`, `replaceButtonLabel` | | Placement copy. |
 | Placement | `placeTimeline`, `resetTimeline` | | Timelines played on Place and Re-place. |
 

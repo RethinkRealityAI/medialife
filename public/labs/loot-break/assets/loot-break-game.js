@@ -550,10 +550,42 @@ function store(key, v) {
   }
 }
 var Sfx = class {
-  constructor(ctx, out) {
+  constructor(ctx) {
     this.ctx = ctx;
-    this.out = out;
     __publicField(this, "muted", false);
+    /** Let sound play through the iPhone's silent switch (Safari 16.4+). */
+    __publicField(this, "ignoreSilentSwitch", true);
+    __publicField(this, "out", null);
+    __publicField(this, "_unlocked", false);
+    this.out = ctx?.destination ?? null;
+  }
+  /**
+   * iOS only starts Web Audio from inside a real tap (touchend / click, not
+   * touchstart), and keeps it silent on the silent switch unless the page
+   * asks for playback audio. Called from every tap; cheap once running.
+   */
+  unlock() {
+    try {
+      if (!this.ctx) {
+        const AC = window.AudioContext ?? window.webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        this.out = this.ctx.destination;
+      }
+      const session = navigator.audioSession;
+      if (session && this.ignoreSilentSwitch && session.type !== "playback") session.type = "playback";
+      const ctx = this.ctx;
+      if (ctx.state !== "running") void ctx.resume().catch(() => void 0);
+      if (!this._unlocked) {
+        const b = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = b;
+        src.connect(ctx.destination);
+        src.start(0);
+        this._unlocked = true;
+      }
+    } catch {
+    }
   }
   _ok() {
     return !this.muted && this.ctx && this.out && this.ctx.state === "running";
@@ -777,13 +809,25 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
      * @zdefault true
      */
     __publicField(this, "sound", new Observable(true, (v) => this._setMuted(!v)));
+    /**
+     * On iPhone, play the sound even with the silent switch on (Safari 16.4+).
+     * Players can still mute with the speaker button. Off follows the switch.
+     *
+     * @zui
+     * @zgroup Screens
+     * @zpriority 2
+     * @zdefault true
+     */
+    __publicField(this, "playOnSilent", new Observable(true, (v) => {
+      if (this._sfx) this._sfx.ignoreSilentSwitch = !!v;
+    }));
     /* ── Placement ─────────────────────────────────────────────────────── */
     /**
-     * Use the game's own Place and Re-place buttons instead of the ones that
-     * come with Zappar's placement group. The game finds the User Placement
-     * Anchor Group it sits inside, hides that group's built-in buttons, and
-     * walks the player through placing the lane before every first round.
-     * Turn off to let the template's buttons handle placement as before.
+     * The game's own Place and Re-place buttons. No round starts until the
+     * player taps Place, like EVADE. The game drives the Instant World Tracker
+     * (or User Placement Anchor Group) it sits inside: placementMode on while
+     * placing, off on Place. Remove or hide the template's own place buttons.
+     * Turn off only if something else handles placement and starts rounds.
      *
      * @zui
      * @zgroup Placement
@@ -793,8 +837,9 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
      */
     __publicField(this, "placementEnabled", new Observable(true, () => this._bindPlacement()));
     /**
-     * The User Placement Anchor Group to drive. Leave empty and the game uses
-     * the one it sits inside, which is the usual setup.
+     * The Instant World Tracker (or User Placement Anchor Group) to drive.
+     * Leave empty and the game uses the one it sits inside, else the first one
+     * in the scene.
      *
      * @zui
      * @zgroup Placement
@@ -808,10 +853,10 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
      * @zui
      * @zgroup Placement
      * @zpriority 8
-     * @zdefault Point your phone at your desk and move it slowly until the lane sits flat.
+     * @zdefault Point your phone where you want the lane, then tap Place.
      */
     __publicField(this, "placeHint", new Observable(
-      "Point your phone at your desk and move it slowly until the lane sits flat.",
+      "Point your phone where you want the lane, then tap Place.",
       () => this._syncPlacementUi()
     ));
     /**
@@ -864,7 +909,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     __publicField(this, "onRoundEnd", new Event());
     /** Fires when the player confirms placement with the Place button. */
     __publicField(this, "onPlace", new Event());
-    /** Fires when the player taps Re-place (or placement restarts some other way). */
+    /** Fires when the player taps Re-place. */
     __publicField(this, "onResetPlacement", new Event());
     /* ── internals ───────────────────────────────────────────────────────── */
     __publicField(this, "_scaleRoot", new THREE2.Group());
@@ -916,9 +961,13 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     __publicField(this, "_el", {});
     __publicField(this, "_overlayParent", null);
     __publicField(this, "_onPointer", (e) => this._handlePointer(e));
+    __publicField(this, "_onUnlock", () => {
+      if (!this._sfx.muted) this._sfx.unlock();
+    });
     __publicField(this, "_onKey", (e) => {
       if (e.key === " " && this._phase === "playing") this._tapNearest();
     });
+    __publicField(this, "_placePad");
     __publicField(this, "_bannerT", 0);
     __publicField(this, "_toastT", 0);
     __publicField(this, "_v", new THREE2.Vector3());
@@ -939,16 +988,12 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._shake.add(this._world);
     this._cam = useCamera(contextManager);
     let ctx = null;
-    let out = null;
     try {
-      ctx = useAudioContext(contextManager);
-      out = contextManager.get(AudioContextContext).getLayer(
-        void 0
-      ) ?? ctx.destination;
+      ctx = useAudioContext(contextManager) ?? null;
     } catch {
-      out = ctx?.destination ?? null;
+      ctx = null;
     }
-    this._sfx = new Sfx(ctx, out);
+    this._sfx = new Sfx(ctx);
     this._buildTextures();
     this._buildLane();
     this._buildPortal();
@@ -960,6 +1005,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     });
     window.addEventListener("pointerdown", this._onPointer, { capture: true });
     window.addEventListener("keydown", this._onKey);
+    for (const t of _LootBreakGame.UNLOCK_EVENTS) window.addEventListener(t, this._onUnlock, { capture: true });
     this.register(useOnBeforeRender(contextManager), (dt) => this._tick(Math.min(dt * 1e-3, 0.1)));
     this._syncText();
     this._renderHud();
@@ -995,7 +1041,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
   }
   /** True once the lane has been placed (always true when there's nothing to place). */
   get isPlaced() {
-    return this._placed || !this._pg || !this.placementEnabled.value;
+    return this._placed || !this.placementEnabled.value;
   }
   /** Confirm placement where the lane is now and start the countdown. */
   place() {
@@ -1197,6 +1243,46 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     pool.rotation.x = -Math.PI / 2;
     pool.position.y = -height + 1e-3;
     this._world.add(pool);
+    const pc = document.createElement("canvas");
+    pc.width = 256;
+    pc.height = 96;
+    const pg = pc.getContext("2d");
+    pg.strokeStyle = "#ffffff";
+    pg.lineWidth = 6;
+    pg.lineCap = "square";
+    const L = 30;
+    const m = 6;
+    const W = pc.width - m;
+    const H = pc.height - m;
+    pg.beginPath();
+    pg.moveTo(m, m + L);
+    pg.lineTo(m, m);
+    pg.lineTo(m + L, m);
+    pg.moveTo(W - L, m);
+    pg.lineTo(W, m);
+    pg.lineTo(W, m + L);
+    pg.moveTo(W, H - L);
+    pg.lineTo(W, H);
+    pg.lineTo(W - L, H);
+    pg.moveTo(m + L, H);
+    pg.lineTo(m, H);
+    pg.lineTo(m, H - L);
+    pg.stroke();
+    pg.setLineDash([10, 12]);
+    pg.lineWidth = 3;
+    pg.globalAlpha = 0.6;
+    pg.strokeRect(m, m, W - m, H - m);
+    const padTex = this._track(new THREE2.CanvasTexture(pc));
+    this._placePad = new THREE2.Mesh(
+      this._track(new THREE2.PlaneGeometry(len * 1.12, depth * 2.4)),
+      this._track(
+        new THREE2.MeshBasicMaterial({ map: padTex, color: 10479871, transparent: true, depthWrite: false, toneMapped: false })
+      )
+    );
+    this._placePad.rotation.x = -Math.PI / 2;
+    this._placePad.position.y = -height + 2e-3;
+    this._placePad.visible = false;
+    this._world.add(this._placePad);
   }
   _drawTaskbar(clock) {
     if (clock === this._lastClock) return;
@@ -1334,10 +1420,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       </div>
 
       <div class="lb-place" data-screen="place" hidden>
-        <div class="lb-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="lb-placebox">
           <p class="lb-placehint" data-k="placeHint"></p>
-          <p class="lb-placestatus" data-k="placeStatus" aria-live="polite"></p>
           <button class="lb-btn lb-btn-go lb-btn-place" type="button" data-k="placeBtn"><span data-k="placeLbl">Place on desk</span></button>
         </div>
       </div>
@@ -1416,6 +1500,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
   }
   _setMuted(m) {
     this._sfx.muted = m;
+    if (!m) this._sfx?.unlock();
     if (this._el.mute) {
       this._el.mute.classList.toggle("is-off", m);
       this._el.mute.setAttribute("aria-label", m ? "Turn sound on" : "Mute sound");
@@ -1966,6 +2051,9 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     if (this._phase === "playing" || this._phase === "countdown" || this._phase === "idle") {
       this._groundTex.offset.x += dt * 0.08;
     }
+    this._placePad.visible = this._phase === "placing";
+    if (this._placePad.visible)
+      this._placePad.material.opacity = 0.65 + Math.sin(now * 5) * 0.3;
     switch (this._phase) {
       case "countdown":
         this._tickCountdown(dt);
@@ -2274,13 +2362,15 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     }
   }
   /* ══ placement ════════════════════════════════════════════════════════ */
+  /** Every first round waits for Place, whether or not a tracker was found (like EVADE). */
   _needsPlacement() {
-    return this.placementEnabled.value && !!this._pg && !this._placed;
+    return this.placementEnabled.value && !this._placed;
   }
   /**
-   * Find the Zappar User Placement Anchor Group (the picked node, else the
-   * nearest one above this component) and take over its buttons.
-   * Duck-typed, so the game doesn't depend on the Zappar package to build.
+   * Find the tracker that places the lane: the picked node, else the nearest
+   * Instant World Tracker or User Placement Anchor Group above this
+   * component, else the first one anywhere in the scene. Duck-typed on
+   * placementMode, so the game doesn't depend on the Zappar package to build.
    */
   _bindPlacement() {
     for (const u of this._pgUnsub) u();
@@ -2301,15 +2391,21 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       const c = this.getZComponentInstance().resolveNodeID(id);
       if (isPlacementGroup(c)) found = c;
     }
+    let top = this;
     if (!found) {
       for (let p = this.parent; p; p = p.parent) {
+        top = p;
         if (isPlacementGroup(p)) {
           found = p;
           break;
         }
       }
     }
+    if (!found) found = findPlacementGroup(top);
     if (!found) {
+      console.warn(
+        "[LootBreakGame] No Instant World Tracker or placement group found. Place still gates the round; use placeTimeline / resetTimeline to move the content, or set placementGroup."
+      );
       this._syncPlacementUi();
       return;
     }
@@ -2320,17 +2416,11 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     const onMode = (placing) => {
       if (this._pgWriting) return;
       if (placing && this._placed) this._resetPlacement(false);
-      else if (!placing && this._phase === "placing") this._place(false);
+      else if (!placing && this._phase === "placing") this._place();
     };
-    const onSignal = () => this._syncPlacementUi();
     found.placementMode.addListener(onMode);
-    found.placementValid.addListener(onSignal);
-    found.ready?.addListener(onSignal);
-    this._pgUnsub.push(
-      () => found.placementMode.removeListener(onMode),
-      () => found.placementValid.removeListener(onSignal),
-      () => found.ready?.removeListener(onSignal)
-    );
+    this._pgUnsub.push(() => found.placementMode.removeListener(onMode));
+    if (this._phase === "placing" || this._phase === "idle") this._setPlacementMode(true);
     this._syncPlacementUi();
   }
   _setPlacementMode(on) {
@@ -2348,17 +2438,9 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._setPlacementMode(true);
     this._show("place");
   }
-  /** Can the player place right now? (tracking ready and pointing at a surface) */
-  _canPlace() {
-    const g = this._pg;
-    if (!g) return true;
-    const ready = g.ready ? !!g.ready.value : true;
-    return ready && !!g.placementValid.value;
-  }
-  _place(fromButton = true) {
+  _place() {
     if (this._phase !== "placing") return;
-    if (fromButton && !this._canPlace()) return;
-    if (fromButton) this._setPlacementMode(false);
+    this._setPlacementMode(false);
     this._placed = true;
     this._sfx.coin();
     this._playClip(this.placeTimeline.value);
@@ -2370,9 +2452,9 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
    * the lane is moving under the player, so the round can't fairly continue.
    */
   _resetPlacement(fromButton) {
-    if (!this._pg || !this.placementEnabled.value) return;
+    if (!this.placementEnabled.value) return;
     if (this._phase === "placing") return;
-    if (fromButton) {
+    if (fromButton && this._pg) {
       const restart = this._pg._restartPlacement;
       this._pgWriting = true;
       try {
@@ -2412,14 +2494,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     el.replaceLbl.textContent = lbl;
     el.replaceLbl.hidden = !lbl;
     el.replace.setAttribute("aria-label", lbl || "Re-place the game");
-    const can = this._canPlace();
-    const ready = !this._pg?.ready || !!this._pg.ready.value;
-    el.placeBtn.disabled = !can;
-    el.placeStatus.textContent = !ready ? "Starting the camera tracking\u2026" : can ? "Surface found. Tap to place." : "Looking for a flat surface\u2026";
-    el.placeStatus.classList.toggle("is-ok", can);
-    this._ui.classList.toggle("lb-can-place", can);
     const hud = this._ui.querySelector('[data-screen="hud"]');
-    el.replace.hidden = !(this._pg && this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
+    el.replace.hidden = !(this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
   }
   /* ══ cleanup ══════════════════════════════════════════════════════════ */
   dispose() {
@@ -2427,6 +2503,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._pgUnsub = [];
     window.removeEventListener("pointerdown", this._onPointer, { capture: true });
     window.removeEventListener("keydown", this._onKey);
+    for (const t of _LootBreakGame.UNLOCK_EVENTS)
+      window.removeEventListener(t, this._onUnlock, { capture: true });
     this._ui.remove();
     for (const d of this._disposables) d.dispose();
     _LootBreakGame._sparkGeo?.dispose();
@@ -2438,6 +2516,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     return super.dispose();
   }
 };
+/** Events iOS counts as a user gesture for starting audio. */
+__publicField(_LootBreakGame, "UNLOCK_EVENTS", ["touchend", "pointerup", "click", "keydown"]);
 /* ══ build: lane, portal, heroes ══════════════════════════════════════ */
 __publicField(_LootBreakGame, "LANE", { len: 1, depth: 0.15, height: 0.045 });
 __publicField(_LootBreakGame, "PX", 58e-4);
@@ -2452,7 +2532,21 @@ __publicField(_LootBreakGame, "_shotGeo", null);
 var LootBreakGame = _LootBreakGame;
 function isPlacementGroup(x) {
   const g = x;
-  return !!g && typeof g === "object" && !!g.placementMode && typeof g.placementMode.addListener === "function" && !!g.placementValid;
+  if (!g || typeof g !== "object" || !g.placementMode) return false;
+  const pm = g.placementMode;
+  return typeof pm.addListener === "function" && typeof pm.value === "boolean";
+}
+function findPlacementGroup(root) {
+  const seen = /* @__PURE__ */ new Set();
+  const stack = [root];
+  while (stack.length) {
+    const c = stack.pop();
+    if (!c || typeof c !== "object" || seen.has(c)) continue;
+    seen.add(c);
+    if (c !== root && isPlacementGroup(c)) return c;
+    if (Array.isArray(c.children)) for (let i = c.children.length - 1; i >= 0; i--) stack.push(c.children[i]);
+  }
+  return null;
 }
 function LootBootPX() {
   return 58e-4;
@@ -2512,26 +2606,11 @@ var CSS = `
 .lb-replace svg{width:20px;height:20px}
 .lb-replace span{position:absolute;top:calc(100% + 4px);right:-6px;white-space:nowrap;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;color:#f4efe2;text-shadow:0 1px 0 #16121d,0 0 6px #16121d}
 .lb-place{position:absolute;inset:0;pointer-events:none}
-.lb-reticle{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;opacity:.85;transition:transform .25s}
-.lb-reticle i{position:absolute;width:26px;height:26px;border:4px solid #fff;filter:drop-shadow(0 2px 0 rgba(0,0,0,.5))}
-.lb-reticle i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}
-.lb-reticle i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
-.lb-reticle i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}
-.lb-reticle i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
-.lb-root:not(.lb-can-place) .lb-reticle{animation:lbSeek 1.4s ease-in-out infinite}
-.lb-root.lb-can-place .lb-reticle i{border-color:#7cf08a}
-.lb-root.lb-can-place .lb-reticle{transform:scale(.85)}
-@keyframes lbSeek{50%{transform:scale(1.12);opacity:.5}}
-.lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + 18px);transform:translateX(-50%);width:min(calc(100% - 24px),400px);
+.lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + max(32px, 9vh));transform:translateX(-50%);width:min(calc(100% - 24px),400px);
   padding:14px 14px 16px;border-radius:14px;text-align:center;pointer-events:auto;
   background:linear-gradient(rgba(43,37,49,.94),rgba(24,20,29,.94));border:3px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
-.lb-placehint{margin:0 0 6px;font-size:15px;line-height:1.35;color:#f4efe2}
-.lb-placestatus{margin:0 0 12px;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.04em;color:#ffcf6a}
-.lb-placestatus::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;vertical-align:1px;background:currentColor;animation:lbBlink .8s steps(2) infinite}
-.lb-placestatus.is-ok{color:#7cf08a}
-.lb-placestatus.is-ok::before{animation:none}
+.lb-placehint{margin:0 0 12px;font-size:15px;line-height:1.35;color:#f4efe2}
 .lb-btn-place{width:100%;font-size:17px}
-.lb-btn-place:disabled{filter:grayscale(.85) brightness(.75);cursor:default;box-shadow:inset 0 0 0 2px #6c5e74,0 4px 0 #1a1420}
 .lb-iconbtn.is-off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:#ffe7b5;transform:rotate(-40deg)}
 
 .lb-combo{position:absolute;right:14px;top:calc(var(--top) + 168px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;

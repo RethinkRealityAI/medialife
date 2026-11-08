@@ -21,10 +21,7 @@
  * @zcomponent/*).
  */
 import { ContextManager, Event, Observable, useOnBeforeRender, useOverlay } from "@zcomponent/core";
-import {
-  AudioContextContext,
-  useAudioContext,
-} from "@zcomponent/core/lib/contexts/audiocontextcontext";
+import { useAudioContext } from "@zcomponent/core/lib/contexts/audiocontextcontext";
 import { Group } from "@zcomponent/three/lib/components/Group";
 import { useCamera } from "@zcomponent/three/lib/scenecontext";
 import * as THREE from "three";
@@ -408,10 +405,43 @@ function store(key: string, v?: number): number {
 
 class Sfx {
   muted = false;
-  constructor(
-    private readonly ctx: AudioContext | null,
-    private readonly out: AudioNode | null,
-  ) {}
+  /** Let sound play through the iPhone's silent switch (Safari 16.4+). */
+  ignoreSilentSwitch = true;
+  private out: AudioNode | null = null;
+  private _unlocked = false;
+  constructor(private ctx: AudioContext | null) {
+    this.out = ctx?.destination ?? null;
+  }
+  /**
+   * iOS only starts Web Audio from inside a real tap (touchend / click, not
+   * touchstart), and keeps it silent on the silent switch unless the page
+   * asks for playback audio. Called from every tap; cheap once running.
+   */
+  unlock() {
+    try {
+      if (!this.ctx) {
+        const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AC) return;
+        this.ctx = new AC();
+        this.out = this.ctx.destination;
+      }
+      const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+      if (session && this.ignoreSilentSwitch && session.type !== "playback") session.type = "playback";
+      const ctx = this.ctx;
+      if (ctx.state !== "running") void ctx.resume().catch(() => undefined);
+      if (!this._unlocked) {
+        // A one-sample silent buffer started inside the gesture wakes iOS's output.
+        const b = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = b;
+        src.connect(ctx.destination);
+        src.start(0);
+        this._unlocked = true;
+      }
+    } catch {
+      /* sound is optional */
+    }
+  }
   private _ok() {
     return !this.muted && this.ctx && this.out && this.ctx.state === "running";
   }
@@ -733,14 +763,27 @@ export class LootBreakGame extends Group {
    */
   public sound = new Observable(true, (v) => this._setMuted(!v));
 
+  /**
+   * On iPhone, play the sound even with the silent switch on (Safari 16.4+).
+   * Players can still mute with the speaker button. Off follows the switch.
+   *
+   * @zui
+   * @zgroup Screens
+   * @zpriority 2
+   * @zdefault true
+   */
+  public playOnSilent = new Observable(true, (v) => {
+    if (this._sfx) this._sfx.ignoreSilentSwitch = !!v;
+  });
+
   /* ── Placement ─────────────────────────────────────────────────────── */
 
   /**
-   * Use the game's own Place and Re-place buttons instead of the ones that
-   * come with Zappar's placement group. The game finds the User Placement
-   * Anchor Group it sits inside, hides that group's built-in buttons, and
-   * walks the player through placing the lane before every first round.
-   * Turn off to let the template's buttons handle placement as before.
+   * The game's own Place and Re-place buttons. No round starts until the
+   * player taps Place, like EVADE. The game drives the Instant World Tracker
+   * (or User Placement Anchor Group) it sits inside: placementMode on while
+   * placing, off on Place. Remove or hide the template's own place buttons.
+   * Turn off only if something else handles placement and starts rounds.
    *
    * @zui
    * @zgroup Placement
@@ -751,8 +794,9 @@ export class LootBreakGame extends Group {
   public placementEnabled = new Observable(true, () => this._bindPlacement());
 
   /**
-   * The User Placement Anchor Group to drive. Leave empty and the game uses
-   * the one it sits inside, which is the usual setup.
+   * The Instant World Tracker (or User Placement Anchor Group) to drive.
+   * Leave empty and the game uses the one it sits inside, else the first one
+   * in the scene.
    *
    * @zui
    * @zgroup Placement
@@ -767,10 +811,10 @@ export class LootBreakGame extends Group {
    * @zui
    * @zgroup Placement
    * @zpriority 8
-   * @zdefault Point your phone at your desk and move it slowly until the lane sits flat.
+   * @zdefault Point your phone where you want the lane, then tap Place.
    */
   public placeHint = new Observable(
-    "Point your phone at your desk and move it slowly until the lane sits flat.",
+    "Point your phone where you want the lane, then tap Place.",
     () => this._syncPlacementUi(),
   );
 
@@ -829,7 +873,7 @@ export class LootBreakGame extends Group {
   public onRoundEnd = new Event<[number, string]>();
   /** Fires when the player confirms placement with the Place button. */
   public onPlace = new Event<[]>();
-  /** Fires when the player taps Re-place (or placement restarts some other way). */
+  /** Fires when the player taps Re-place. */
   public onResetPlacement = new Event<[]>();
 
   /* ── internals ───────────────────────────────────────────────────────── */
@@ -885,6 +929,11 @@ export class LootBreakGame extends Group {
   private readonly _el: Record<string, HTMLElement> = {};
   private _overlayParent: HTMLElement | null = null;
   private readonly _onPointer = (e: PointerEvent) => this._handlePointer(e);
+  /** Events iOS counts as a user gesture for starting audio. */
+  private static readonly UNLOCK_EVENTS = ["touchend", "pointerup", "click", "keydown"] as const;
+  private readonly _onUnlock = () => {
+    if (!this._sfx.muted) this._sfx.unlock();
+  };
   private readonly _onKey = (e: KeyboardEvent) => {
     if (e.key === " " && this._phase === "playing") this._tapNearest();
   };
@@ -897,18 +946,16 @@ export class LootBreakGame extends Group {
 
     this._cam = useCamera(contextManager) as unknown as { value: THREE.Camera };
 
+    // Share Mattercraft's AudioContext (iOS caps how many a page may open) and
+    // play straight to the speakers. If there isn't one, Sfx makes its own on
+    // the first tap.
     let ctx: AudioContext | null = null;
-    let out: AudioNode | null = null;
     try {
-      ctx = useAudioContext(contextManager) as unknown as AudioContext;
-      out =
-        (contextManager.get(AudioContextContext) as unknown as { getLayer(x?: unknown): AudioNode }).getLayer(
-          undefined,
-        ) ?? ctx.destination;
+      ctx = (useAudioContext(contextManager) as unknown as AudioContext) ?? null;
     } catch {
-      out = ctx?.destination ?? null;
+      ctx = null;
     }
-    this._sfx = new Sfx(ctx, out);
+    this._sfx = new Sfx(ctx);
 
     this._buildTextures();
     this._buildLane();
@@ -923,6 +970,7 @@ export class LootBreakGame extends Group {
 
     window.addEventListener("pointerdown", this._onPointer, { capture: true });
     window.addEventListener("keydown", this._onKey);
+    for (const t of LootBreakGame.UNLOCK_EVENTS) window.addEventListener(t, this._onUnlock, { capture: true });
 
     this.register(useOnBeforeRender(contextManager), (dt: number) => this._tick(Math.min(dt * 0.001, 0.1)));
 
@@ -970,7 +1018,7 @@ export class LootBreakGame extends Group {
 
   /** True once the lane has been placed (always true when there's nothing to place). */
   public get isPlaced() {
-    return this._placed || !this._pg || !this.placementEnabled.value;
+    return this._placed || !this.placementEnabled.value;
   }
 
   /** Confirm placement where the lane is now and start the countdown. */
@@ -1206,7 +1254,43 @@ export class LootBreakGame extends Group {
     pool.rotation.x = -Math.PI / 2;
     pool.position.y = -height + 0.001;
     this._world.add(pool);
+
+    // Placement pad: corner brackets on the desk where the lane will land,
+    // shown while the player is choosing the spot.
+    const pc = document.createElement("canvas");
+    pc.width = 256;
+    pc.height = 96;
+    const pg = pc.getContext("2d")!;
+    pg.strokeStyle = "#ffffff";
+    pg.lineWidth = 6;
+    pg.lineCap = "square";
+    const L = 30;
+    const m = 6;
+    const W = pc.width - m;
+    const H = pc.height - m;
+    pg.beginPath();
+    pg.moveTo(m, m + L); pg.lineTo(m, m); pg.lineTo(m + L, m);
+    pg.moveTo(W - L, m); pg.lineTo(W, m); pg.lineTo(W, m + L);
+    pg.moveTo(W, H - L); pg.lineTo(W, H); pg.lineTo(W - L, H);
+    pg.moveTo(m + L, H); pg.lineTo(m, H); pg.lineTo(m, H - L);
+    pg.stroke();
+    pg.setLineDash([10, 12]);
+    pg.lineWidth = 3;
+    pg.globalAlpha = 0.6;
+    pg.strokeRect(m, m, W - m, H - m);
+    const padTex = this._track(new THREE.CanvasTexture(pc));
+    this._placePad = new THREE.Mesh(
+      this._track(new THREE.PlaneGeometry(len * 1.12, depth * 2.4)),
+      this._track(
+        new THREE.MeshBasicMaterial({ map: padTex, color: 0x9fe8ff, transparent: true, depthWrite: false, toneMapped: false }),
+      ),
+    );
+    this._placePad.rotation.x = -Math.PI / 2;
+    this._placePad.position.y = -height + 0.002;
+    this._placePad.visible = false;
+    this._world.add(this._placePad);
   }
+  private _placePad!: THREE.Mesh;
 
   private _drawTaskbar(clock: string) {
     if (clock === this._lastClock) return;
@@ -1351,10 +1435,8 @@ export class LootBreakGame extends Group {
       </div>
 
       <div class="lb-place" data-screen="place" hidden>
-        <div class="lb-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <div class="lb-placebox">
           <p class="lb-placehint" data-k="placeHint"></p>
-          <p class="lb-placestatus" data-k="placeStatus" aria-live="polite"></p>
           <button class="lb-btn lb-btn-go lb-btn-place" type="button" data-k="placeBtn"><span data-k="placeLbl">Place on desk</span></button>
         </div>
       </div>
@@ -1437,6 +1519,7 @@ export class LootBreakGame extends Group {
 
   private _setMuted(m: boolean) {
     this._sfx.muted = m;
+    if (!m) this._sfx?.unlock();
     if (this._el.mute) {
       this._el.mute.classList.toggle("is-off", m);
       this._el.mute.setAttribute("aria-label", m ? "Turn sound on" : "Mute sound");
@@ -2059,6 +2142,9 @@ export class LootBreakGame extends Group {
     if (this._phase === "playing" || this._phase === "countdown" || this._phase === "idle") {
       this._groundTex.offset.x += dt * 0.08;
     }
+    this._placePad.visible = this._phase === "placing";
+    if (this._placePad.visible)
+      (this._placePad.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(now * 5) * 0.3;
 
     switch (this._phase) {
       case "countdown":
@@ -2402,14 +2488,16 @@ export class LootBreakGame extends Group {
 
   /* ══ placement ════════════════════════════════════════════════════════ */
 
+  /** Every first round waits for Place, whether or not a tracker was found (like EVADE). */
   private _needsPlacement() {
-    return this.placementEnabled.value && !!this._pg && !this._placed;
+    return this.placementEnabled.value && !this._placed;
   }
 
   /**
-   * Find the Zappar User Placement Anchor Group (the picked node, else the
-   * nearest one above this component) and take over its buttons.
-   * Duck-typed, so the game doesn't depend on the Zappar package to build.
+   * Find the tracker that places the lane: the picked node, else the nearest
+   * Instant World Tracker or User Placement Anchor Group above this
+   * component, else the first one anywhere in the scene. Duck-typed on
+   * placementMode, so the game doesn't depend on the Zappar package to build.
    */
   private _bindPlacement() {
     for (const u of this._pgUnsub) u();
@@ -2432,15 +2520,22 @@ export class LootBreakGame extends Group {
       const c = this.getZComponentInstance().resolveNodeID(id) as unknown;
       if (isPlacementGroup(c)) found = c;
     }
+    let top: unknown = this;
     if (!found) {
       for (let p = (this as unknown as { parent?: unknown }).parent; p; p = (p as { parent?: unknown }).parent) {
+        top = p;
         if (isPlacementGroup(p)) {
           found = p;
           break;
         }
       }
     }
+    if (!found) found = findPlacementGroup(top);
     if (!found) {
+      console.warn(
+        "[LootBreakGame] No Instant World Tracker or placement group found. Place still gates the round; " +
+          "use placeTimeline / resetTimeline to move the content, or set placementGroup.",
+      );
       this._syncPlacementUi();
       return;
     }
@@ -2453,21 +2548,19 @@ export class LootBreakGame extends Group {
     // on the first plane still needs the player to choose the spot.
     this._placed = false;
 
+    // Something else changed placement (a template button left in the scene,
+    // the anchor group's long-press move): follow it so the game and the
+    // lane never disagree.
     const onMode = (placing: boolean) => {
       if (this._pgWriting) return;
-      // Changed by something else: a long-press move, or another button.
       if (placing && this._placed) this._resetPlacement(false);
-      else if (!placing && this._phase === "placing") this._place(false);
+      else if (!placing && this._phase === "placing") this._place();
     };
-    const onSignal = () => this._syncPlacementUi();
     found.placementMode.addListener(onMode);
-    found.placementValid.addListener(onSignal);
-    found.ready?.addListener(onSignal);
-    this._pgUnsub.push(
-      () => found!.placementMode.removeListener(onMode),
-      () => found!.placementValid.removeListener(onSignal),
-      () => found!.ready?.removeListener(onSignal),
-    );
+    this._pgUnsub.push(() => found!.placementMode.removeListener(onMode));
+    // Instant World Trackers start in placement mode; keep the lane following
+    // the phone until the player places it.
+    if (this._phase === "placing" || this._phase === "idle") this._setPlacementMode(true);
     this._syncPlacementUi();
   }
 
@@ -2488,18 +2581,9 @@ export class LootBreakGame extends Group {
     this._show("place");
   }
 
-  /** Can the player place right now? (tracking ready and pointing at a surface) */
-  private _canPlace() {
-    const g = this._pg;
-    if (!g) return true;
-    const ready = g.ready ? !!g.ready.value : true;
-    return ready && !!g.placementValid.value;
-  }
-
-  private _place(fromButton = true) {
+  private _place() {
     if (this._phase !== "placing") return;
-    if (fromButton && !this._canPlace()) return;
-    if (fromButton) this._setPlacementMode(false);
+    this._setPlacementMode(false);
     this._placed = true;
     this._sfx.coin();
     this._playClip(this.placeTimeline.value);
@@ -2512,9 +2596,9 @@ export class LootBreakGame extends Group {
    * the lane is moving under the player, so the round can't fairly continue.
    */
   private _resetPlacement(fromButton: boolean) {
-    if (!this._pg || !this.placementEnabled.value) return;
+    if (!this.placementEnabled.value) return;
     if (this._phase === "placing") return;
-    if (fromButton) {
+    if (fromButton && this._pg) {
       // Same as Zappar's own restart button: honours the group's Restart
       // Placement Mode ("reset" re-scans the world, "place" just lifts the lane).
       const restart = (this._pg as { _restartPlacement?: () => void })._restartPlacement;
@@ -2563,20 +2647,9 @@ export class LootBreakGame extends Group {
     el.replaceLbl.hidden = !lbl;
     el.replace.setAttribute("aria-label", lbl || "Re-place the game");
 
-    const can = this._canPlace();
-    const ready = !this._pg?.ready || !!this._pg.ready.value;
-    (el.placeBtn as HTMLButtonElement).disabled = !can;
-    el.placeStatus.textContent = !ready
-      ? "Starting the camera tracking…"
-      : can
-        ? "Surface found. Tap to place."
-        : "Looking for a flat surface…";
-    el.placeStatus.classList.toggle("is-ok", can);
-    this._ui.classList.toggle("lb-can-place", can);
-
-    // Re-place sits next to mute while the HUD is up and there's a group to drive.
+    // Re-place sits under mute while the HUD is up.
     const hud = this._ui.querySelector<HTMLElement>('[data-screen="hud"]');
-    el.replace.hidden = !(this._pg && this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
+    el.replace.hidden = !(this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
   }
 
   /* ══ cleanup ══════════════════════════════════════════════════════════ */
@@ -2586,6 +2659,8 @@ export class LootBreakGame extends Group {
     this._pgUnsub = [];
     window.removeEventListener("pointerdown", this._onPointer, { capture: true } as EventListenerOptions);
     window.removeEventListener("keydown", this._onKey);
+    for (const t of LootBreakGame.UNLOCK_EVENTS)
+      window.removeEventListener(t, this._onUnlock, { capture: true } as EventListenerOptions);
     this._ui.remove();
     for (const d of this._disposables) d.dispose();
     LootBreakGame._sparkGeo?.dispose();
@@ -2598,23 +2673,34 @@ export class LootBreakGame extends Group {
   }
 }
 
-/** The bits of Zappar's UserPlacementAnchorGroup the game uses (duck-typed). */
+/**
+ * The bits of Zappar's placement components the game uses (duck-typed): the
+ * Instant World Tracker has placementMode only; the User Placement Anchor
+ * Group adds its own Place / Restart buttons, which the game hides.
+ */
 interface PlacementGroup {
   placementMode: Observable<boolean>;
-  placementValid: Observable<boolean>;
-  ready?: Observable<boolean>;
   showPlaceButton?: Observable<boolean>;
   showRestartPlacementButton?: Observable<boolean>;
 }
 function isPlacementGroup(x: unknown): x is PlacementGroup {
   const g = x as Partial<PlacementGroup> | null;
-  return (
-    !!g &&
-    typeof g === "object" &&
-    !!g.placementMode &&
-    typeof (g.placementMode as { addListener?: unknown }).addListener === "function" &&
-    !!g.placementValid
-  );
+  if (!g || typeof g !== "object" || !g.placementMode) return false;
+  const pm = g.placementMode as { addListener?: unknown; value?: unknown };
+  return typeof pm.addListener === "function" && typeof pm.value === "boolean";
+}
+/** First placement component anywhere under root (Component.children). */
+function findPlacementGroup(root: unknown): PlacementGroup | null {
+  const seen = new Set<unknown>();
+  const stack = [root];
+  while (stack.length) {
+    const c = stack.pop() as { children?: unknown[] } | null;
+    if (!c || typeof c !== "object" || seen.has(c)) continue;
+    seen.add(c);
+    if (c !== root && isPlacementGroup(c)) return c;
+    if (Array.isArray(c.children)) for (let i = c.children.length - 1; i >= 0; i--) stack.push(c.children[i]);
+  }
+  return null;
 }
 
 /** Sprite pixel size in world units (kept as a function so it can be tuned in one place). */
@@ -2683,26 +2769,11 @@ const CSS = `
 .lb-replace svg{width:20px;height:20px}
 .lb-replace span{position:absolute;top:calc(100% + 4px);right:-6px;white-space:nowrap;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;color:#f4efe2;text-shadow:0 1px 0 #16121d,0 0 6px #16121d}
 .lb-place{position:absolute;inset:0;pointer-events:none}
-.lb-reticle{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;opacity:.85;transition:transform .25s}
-.lb-reticle i{position:absolute;width:26px;height:26px;border:4px solid #fff;filter:drop-shadow(0 2px 0 rgba(0,0,0,.5))}
-.lb-reticle i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}
-.lb-reticle i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
-.lb-reticle i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}
-.lb-reticle i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
-.lb-root:not(.lb-can-place) .lb-reticle{animation:lbSeek 1.4s ease-in-out infinite}
-.lb-root.lb-can-place .lb-reticle i{border-color:#7cf08a}
-.lb-root.lb-can-place .lb-reticle{transform:scale(.85)}
-@keyframes lbSeek{50%{transform:scale(1.12);opacity:.5}}
-.lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + 18px);transform:translateX(-50%);width:min(calc(100% - 24px),400px);
+.lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + max(32px, 9vh));transform:translateX(-50%);width:min(calc(100% - 24px),400px);
   padding:14px 14px 16px;border-radius:14px;text-align:center;pointer-events:auto;
   background:linear-gradient(rgba(43,37,49,.94),rgba(24,20,29,.94));border:3px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
-.lb-placehint{margin:0 0 6px;font-size:15px;line-height:1.35;color:#f4efe2}
-.lb-placestatus{margin:0 0 12px;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.04em;color:#ffcf6a}
-.lb-placestatus::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;vertical-align:1px;background:currentColor;animation:lbBlink .8s steps(2) infinite}
-.lb-placestatus.is-ok{color:#7cf08a}
-.lb-placestatus.is-ok::before{animation:none}
+.lb-placehint{margin:0 0 12px;font-size:15px;line-height:1.35;color:#f4efe2}
 .lb-btn-place{width:100%;font-size:17px}
-.lb-btn-place:disabled{filter:grayscale(.85) brightness(.75);cursor:default;box-shadow:inset 0 0 0 2px #6c5e74,0 4px 0 #1a1420}
 .lb-iconbtn.is-off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:#ffe7b5;transform:rotate(-40deg)}
 
 .lb-combo{position:absolute;right:14px;top:calc(var(--top) + 168px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;

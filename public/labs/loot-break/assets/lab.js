@@ -98,26 +98,12 @@ const ctx = new LabContext({
 const game = new LootBreakGame(ctx, {});
 scene.add(game.element);
 
-/* ── a stand-in for Zappar's User Placement Anchor Group ──
-   Same observables the real one has. In AR the tracker decides when the
-   phone is pointing at a surface; here it "finds" one after a second,
-   unless "No surface found" is ticked in the Lab panel. ?place=0 turns
-   placement off (as if the game sat outside a placement group). */
+/* ── a stand-in for Zappar's Instant World Tracker ──
+   Like the real one it only has placementMode, which starts on: the lane
+   follows the phone until the player taps Place. ?place=0 leaves the game
+   outside any tracker (Place still gates the round, as in EVADE). */
 const q0 = new URLSearchParams(location.search);
-const surface = { blocked: false, t: 0 };
-const placer = {
-  placementMode: new Observable(false),
-  placementValid: new Observable(false),
-  ready: new Observable(true),
-  showPlaceButton: new Observable(true),
-  showRestartPlacementButton: new Observable(true),
-  restartPlacementMode: new Observable("place"),
-  _restartPlacement() { this.placementMode.value = true; },
-};
-placer.placementMode.addListener((on) => {
-  surface.t = 0;
-  if (on) placer.placementValid.value = false;
-});
+const placer = { placementMode: new Observable(true), children: [game] };
 if (q0.get("place") !== "0") game.parent = placer;
 ctx.markConstructed();
 
@@ -199,7 +185,6 @@ $("#b-boss").addEventListener("click", () => {
   game.skip(Math.max(0, game.bossAt.value * game.roundSeconds.value - s.t + 0.05));
 });
 $("#b-replace").addEventListener("click", () => game.resetPlacement());
-$("#b-nosurface").addEventListener("change", (e) => (surface.blocked = e.target.checked));
 let bot = false;
 $("#b-bot").addEventListener("change", (e) => (bot = e.target.checked));
 // URL switches for scripted tests: ?bot=1 auto-plays, ?start=1 skips the intro.
@@ -218,7 +203,7 @@ function frame(now) {
   // While a round runs, a drag would fight the taps: only zoom then.
   controls.enableRotate = st.phase !== "playing";
   controls.update();
-  if (bot && st.phase === "placing" && placer.placementValid.value) game.place();
+  if (bot && st.phase === "placing") game.place();
   if (bot && st.phase === "playing") {
     botT -= dt;
     if (botT <= 0) {
@@ -228,10 +213,7 @@ function frame(now) {
     }
   }
   // Placement simulation: the lane hovers while placing and settles when placed.
-  if (placer.placementMode.value) {
-    surface.t += dt;
-    const valid = !surface.blocked && surface.t > 1.1;
-    if (placer.placementValid.value !== valid) placer.placementValid.value = valid;
+  if (placer.placementMode.value && game.parent === placer) {
     game.element.position.y = 0.04 + Math.sin(now / 300) * 0.006;
   } else {
     game.element.position.y += (0 - game.element.position.y) * Math.min(1, dt * 10);
