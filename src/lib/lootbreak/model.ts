@@ -19,15 +19,15 @@
 /** TBH's rarity ladder, same thresholds as TIERS in mattercraft/loot-break/LootBreakGame.ts. */
 export const LADDER = [
   { name: "Common", at: 0 },
-  { name: "Uncommon", at: 6000 },
-  { name: "Rare", at: 11000 },
-  { name: "Legendary", at: 16000 },
-  { name: "Immortal", at: 21000 },
-  { name: "Arcana", at: 25000 },
-  { name: "Beyond", at: 28500 },
-  { name: "Celestial", at: 32000 },
-  { name: "Divine", at: 35500 },
-  { name: "Cosmic", at: 39000 },
+  { name: "Uncommon", at: 5500 },
+  { name: "Rare", at: 10000 },
+  { name: "Legendary", at: 14500 },
+  { name: "Immortal", at: 19000 },
+  { name: "Arcana", at: 22500 },
+  { name: "Beyond", at: 25500 },
+  { name: "Celestial", at: 28500 },
+  { name: "Divine", at: 31500 },
+  { name: "Cosmic", at: 35000 },
 ] as const;
 
 /** No real round scores more than this; anything above is refused. */

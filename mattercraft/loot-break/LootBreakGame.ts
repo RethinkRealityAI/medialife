@@ -47,24 +47,26 @@ interface Tier {
 
 /**
  * TBH's own ten loot rarities, low to high.
- * Tuned with bots over 60 s rounds at difficulty 0.5 (median scores): no taps
- * is wiped and lands Common (2.6k), a few taps Common/Uncommon (6.5k), a casual
- * player Rare to Legendary (15k), an engaged one Immortal (22k), mashing lands
- * Legendary (20k), a near-perfect player Arcana to Beyond (27k). Celestial and
- * up need weak spots, loot and well-timed ultimates; Cosmic sits just above
- * the best bot run. Use Tier Scale on the component to tune without editing.
+ * Retuned with bots over 60 s rounds at difficulty 0.5 after the faster
+ * monsters and portal shield (2026-11-08; median scores): no taps is wiped
+ * around 12:33 and lands Common (1.5k), a casual player Uncommon to
+ * Legendary (15k), an engaged one Legendary/Immortal (20k), a fast accurate
+ * player Immortal (23k), a near-perfect one Immortal to Beyond (25k).
+ * Celestial and up need weak spots, loot and well-timed ultimates; Cosmic
+ * sits above the best bot run. Use Tier Scale on the component to tune
+ * without editing. Keep src/lib/lootbreak/model.ts LADDER in step.
  */
 export const TIERS: Tier[] = [
   { name: "Common", at: 0, color: "#c9ced6", glow: "#ffffff" },
-  { name: "Uncommon", at: 6000, color: "#6fdc5a", glow: "#a8ff8f" },
-  { name: "Rare", at: 11000, color: "#4aa8ff", glow: "#9fd3ff" },
-  { name: "Legendary", at: 16000, color: "#ffc53d", glow: "#ffe28a" },
-  { name: "Immortal", at: 21000, color: "#ff4d4d", glow: "#ff9a8a" },
-  { name: "Arcana", at: 25000, color: "#ff5ad1", glow: "#ffa6ea" },
-  { name: "Beyond", at: 28500, color: "#33e6e6", glow: "#a6fbfb" },
-  { name: "Celestial", at: 32000, color: "#f3e3a0", glow: "#fff6cf" },
-  { name: "Divine", at: 35500, color: "#ffffff", glow: "#fff8e8" },
-  { name: "Cosmic", at: 39000, color: "#c79bff", glow: "#e9d8ff" },
+  { name: "Uncommon", at: 5500, color: "#6fdc5a", glow: "#a8ff8f" },
+  { name: "Rare", at: 10000, color: "#4aa8ff", glow: "#9fd3ff" },
+  { name: "Legendary", at: 14500, color: "#ffc53d", glow: "#ffe28a" },
+  { name: "Immortal", at: 19000, color: "#ff4d4d", glow: "#ff9a8a" },
+  { name: "Arcana", at: 22500, color: "#ff5ad1", glow: "#ffa6ea" },
+  { name: "Beyond", at: 25500, color: "#33e6e6", glow: "#a6fbfb" },
+  { name: "Celestial", at: 28500, color: "#f3e3a0", glow: "#fff6cf" },
+  { name: "Divine", at: 31500, color: "#ffffff", glow: "#fff8e8" },
+  { name: "Cosmic", at: 35000, color: "#c79bff", glow: "#e9d8ff" },
 ];
 
 const PAL: Record<string, string> = {
@@ -469,12 +471,12 @@ const LOOT: LootDef[] = [
 
 type MonsterKind = "slime" | "bat" | "brute" | "cursed" | "boss";
 const MONSTER_STATS: Record<MonsterKind, { hp: number; speed: number; dps: number; score: number; px: number }> = {
-  slime: { hp: 4, speed: 0.07, dps: 3.2, score: 100, px: 1 },
-  bat: { hp: 3, speed: 0.12, dps: 2.4, score: 120, px: 1 },
-  brute: { hp: 6, speed: 0.085, dps: 4.5, score: 160, px: 1 },
+  slime: { hp: 4, speed: 0.16, dps: 2.6, score: 100, px: 1 },
+  bat: { hp: 3, speed: 0.26, dps: 2, score: 120, px: 1 },
+  brute: { hp: 6, speed: 0.13, dps: 3.6, score: 160, px: 1 },
   /** Tapping it curses the player (combo and party HP). Leave it to the heroes. */
-  cursed: { hp: 3, speed: 0.08, dps: 2, score: 60, px: 1 },
-  boss: { hp: 65, speed: 0.045, dps: 11, score: 3000, px: 1.9 },
+  cursed: { hp: 3, speed: 0.17, dps: 2, score: 60, px: 1 },
+  boss: { hp: 65, speed: 0.055, dps: 11, score: 3000, px: 1.9 },
 };
 
 /**
@@ -487,7 +489,7 @@ const TUNE = {
   /** Party HP the priest heals per cast (only when the party is hurt). */
   priestHeal: 2,
   /** Monster damage grows by this share over the round (1 = double by 12:59). */
-  pressureRamp: 0.9,
+  pressureRamp: 0.55,
   /** The boss shrugs off most party damage: heroes deal this share to it. */
   bossPartyDmg: 0.25,
   /** Weak spot: damage, seconds visible (at difficulty 0), seconds hidden. */
@@ -502,6 +504,22 @@ const TUNE = {
   cursedChance: 0.13,
   /** Ultimate meter: charge per player hit (times the combo multiplier). */
   ultPerHit: 1.7,
+  /**
+   * Portal shield: monsters can't be hit until they're this far out of the
+   * portal (lane units; the lane is 0.53 long), so camping the portal doesn't
+   * work. A tap on a shielded monster is a miss. They also burst out faster.
+   */
+  shieldZone: 0.14,
+  portalBurst: 1.6,
+  /** Seconds a player's hit holds a monster in place (was 0.4: tapping one could hold it forever). */
+  hitStun: 0.22,
+  /** ...and only once every this many seconds, so the monster keeps fighting between taps. */
+  stunEvery: 0.6,
+  /** Chance that a spawn comes as a wave of 2 or 3, and the gap between them (s). */
+  waveChance: 0.35,
+  waveGap: 0.28,
+  /** The gap after a wave is this many normal gaps. */
+  waveRest: 1.6,
   ultPerWeak: 6,
   ultPerLoot: 4,
 };
@@ -831,6 +849,10 @@ interface Monster extends Actor {
   hpFill: THREE.Mesh;
   /** Cursed slimes glow purple so they read as "don't touch". */
   aura?: THREE.Mesh;
+  /** Still inside the portal's shield: player taps bounce off. */
+  shielded?: boolean;
+  /** Seconds before a player's hit can stun it again, so it can't be held in place forever. */
+  stunCd?: number;
 }
 
 interface Hero extends Actor {
@@ -1242,6 +1264,7 @@ export class LootBreakGame extends Group {
   private _t = 0; // seconds into the round
   private _phaseT = 0;
   private _spawnT = 0;
+  private _waveLeft = 0;
   private _bossSpawned = false;
   private _partyHp = 100;
   private _combo = 0;
@@ -1493,6 +1516,15 @@ export class LootBreakGame extends Group {
   /** Test hook: jump the clock forward (seconds). */
   public skip(seconds: number) {
     if (this._phase === "playing") this._t = Math.min(this._roundLen() - 0.01, this._t + seconds);
+  }
+
+  /** Test hook: hit the monster nearest the portal, as a player camping the portal would. */
+  public tapPortal() {
+    const m = this._monsters
+      .filter((x) => !x.dead && !x.shielded && x.kind !== "cursed" && x.kind !== "boss")
+      .sort((a, b) => b.x - a.x)[0];
+    if (m) this._hitMonster(m, "player");
+    return !!m;
   }
 
   /** Test hook: hit the monster nearest the front, as if tapped. */
@@ -1783,7 +1815,36 @@ export class LootBreakGame extends Group {
     this._placePad.renderOrder = -1;
     this._placePad.visible = false;
     this._world.add(this._placePad);
+
+    // Portal rim: a dashed purple pixel line across the lane where the
+    // portal's shield ends. Monsters past it can be hit.
+    const rc = document.createElement("canvas");
+    rc.width = 2;
+    rc.height = 16;
+    const rg = rc.getContext("2d")!;
+    for (let y = 0; y < rc.height; y++) {
+      if (y % 4 >= 2) continue;
+      rg.fillStyle = "#c9a6ff";
+      rg.fillRect(0, y, 2, 1);
+    }
+    const rim = new THREE.Mesh(
+      this._track(new THREE.PlaneGeometry(0.008, depth * 0.92)),
+      this._track(
+        new THREE.MeshBasicMaterial({
+          map: this._track(nearestTex(rc)),
+          transparent: true,
+          opacity: 0.85,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      ),
+    );
+    rim.rotation.x = -Math.PI / 2;
+    rim.position.set(LootBreakGame.X_PORTAL - TUNE.shieldZone, 0.0015, 0);
+    this._world.add(rim);
+    this._rim = rim;
   }
+  private _rim!: THREE.Mesh;
   private _padCanvas!: HTMLCanvasElement;
   private _padTex!: THREE.Texture;
   private _padStep = -1;
@@ -2325,6 +2386,7 @@ export class LootBreakGame extends Group {
     for (const h of this._heroes) h.root.visible = true;
     this._t = 0;
     this._spawnT = 0.6;
+    this._waveLeft = 0;
     this._bossSpawned = false;
     this._partyHp = 100;
     this._combo = 0;
@@ -2636,6 +2698,10 @@ export class LootBreakGame extends Group {
   private _hitMonster(m: Monster, src: HitSrc, dmg = 1) {
     if (m.dead) return;
     const byPlayer = src === "player";
+    if (byPlayer && m.shielded) {
+      this._deflect(m);
+      return;
+    }
     if (byPlayer && m.kind === "cursed") {
       this._curse(m);
       return;
@@ -2649,8 +2715,12 @@ export class LootBreakGame extends Group {
       this._comboT = 1.0;
       this._bestCombo = Math.max(this._bestCombo, this._combo);
       dmg += this._combo >= 25 ? 2 : this._combo >= 10 ? 1 : 0;
-      m.stun = Math.max(m.stun, m.kind === "boss" ? 0.12 : 0.4);
-      m.x = Math.min(LootBreakGame.X_PORTAL - 0.02, m.x + (m.kind === "boss" ? 0.002 : 0.012));
+      if (!((m.stunCd ?? 0) > 0)) {
+        m.stun = Math.max(m.stun, m.kind === "boss" ? 0.12 : TUNE.hitStun);
+        m.stunCd = TUNE.stunEvery;
+      }
+      // knock it back a little, but never back into the portal's shield
+      m.x = Math.min(LootBreakGame.X_PORTAL - TUNE.shieldZone - 0.005, m.x + (m.kind === "boss" ? 0.002 : 0.008));
       this._addScore(10 * this._comboMult());
       this._chargeUlt(TUNE.ultPerHit * this._comboMult());
       this._sfx.hit(this._combo);
@@ -2673,6 +2743,19 @@ export class LootBreakGame extends Group {
         0.35,
       );
     if (m.hp <= 0) this._kill(m, true);
+  }
+
+  /** A tap on a monster still inside the portal's shield: it bounces off and counts as a miss. */
+  private _deflect(m: Monster) {
+    const wp = new THREE.Vector3();
+    m.body.getWorldPosition(wp);
+    wp.y += m.h * 0.7 * this._scaleRoot.scale.y * this._worldScale();
+    this._floater("BLOCKED", wp, "is-block");
+    for (let i = 0; i < 4; i++)
+      this._spark(new THREE.Vector3(m.x, m.h * 0.55 + (m.kind === "bat" ? 0.05 : 0), m.root.position.z + 0.01), "#b48cff", 0.2, 0.3);
+    this._sfx.tone(520, 0.05, "square", 0.03, -200);
+    this._coach("shield", "Monsters are shielded inside the portal. Hit them out on the lane!", 3.5);
+    this._miss();
   }
 
   private _renderCombo() {
@@ -3135,8 +3218,17 @@ export class LootBreakGame extends Group {
       let kind: MonsterKind = f < 0.15 ? "slime" : r < 0.4 ? "slime" : r < 0.7 ? "brute" : "bat";
       if (f >= 0.2 && this._rand() < TUNE.cursedChance) kind = "cursed";
       this._spawn(kind);
-      const base = 1.5 - f * 0.75; // faster as lunch runs out
-      this._spawnT = base * (1.25 - d * 0.5) * (bossAlive ? 1.6 : 1) * (0.75 + this._rand() * 0.5);
+      const base = 1.75 - f * 0.9; // faster as lunch runs out
+      const gap = base * (1.25 - d * 0.5) * (bossAlive ? 1.6 : 1) * (0.75 + this._rand() * 0.5);
+      if (this._waveLeft > 0) {
+        // the rest of a wave pours out right behind; a longer breather after it
+        this._waveLeft--;
+        this._spawnT = this._waveLeft > 0 ? TUNE.waveGap : gap * TUNE.waveRest;
+      } else {
+        // after the opening, some spawns come as a wave of 2 or 3
+        if (f >= 0.1 && !bossAlive && this._rand() < TUNE.waveChance) this._waveLeft = this._rand() < 0.6 ? 1 : 2;
+        this._spawnT = this._waveLeft > 0 ? TUNE.waveGap : gap;
+      }
     }
 
     if (this._jamT > 0) {
@@ -3232,14 +3324,44 @@ export class LootBreakGame extends Group {
 
   private _tickMonsters(dt: number, now: number) {
     // walk, queue behind each other, stop at the engage line
+    // Only monsters that reach the fight queue up; one held back by the
+    // player's taps out on the lane gets overtaken, so the rest keep coming.
     const live = this._monsters.filter((m) => !m.dead).sort((a, b) => a.x - b.x);
     let limit = LootBreakGame.X_ENGAGE;
+    const shieldEdge = LootBreakGame.X_PORTAL - TUNE.shieldZone;
+    const step = Math.floor(now * 8);
     for (const m of live) {
       const st = MONSTER_STATS[m.kind];
       if (m.root.scale.x < 1) m.root.scale.setScalar(Math.min(1, m.root.scale.x + dt * 5));
+      const shielded = m.kind !== "boss" && m.x > shieldEdge;
+      if ((m.stunCd ?? 0) > 0) m.stunCd = (m.stunCd ?? 0) - dt;
       if (m.stun > 0) m.stun -= dt;
-      else if (this._phase === "playing") m.x = Math.max(limit, m.x - st.speed * dt);
-      limit = m.x + (m.kind === "boss" ? 0.1 : 0.055);
+      else if (this._phase === "playing") {
+        const v = st.speed * (shielded ? TUNE.portalBurst : 1);
+        m.x = Math.max(m.kind === "bat" ? LootBreakGame.X_ENGAGE : limit, m.x - v * dt);
+      }
+      // bats fly over the line and go straight for the party
+      const queued = m.kind !== "bat" && m.x <= limit + 0.002;
+      if (queued) limit = m.x + (m.kind === "boss" ? 0.1 : 0.055);
+      if (shielded !== !!m.shielded) {
+        m.shielded = shielded;
+        if (!shielded) {
+          m.mat.color.setHex(0xffffff);
+          m.mat.map = m.tex;
+          m.mat.needsUpdate = true;
+        }
+      }
+      // Shielded monsters phase between their sprite and a portal-purple
+      // silhouette, in pixel-style steps, so they read as "can't hit yet".
+      if (shielded && m.flash <= 0) {
+        const ghost = step % 2 === 0;
+        const map = ghost ? m.white : m.tex;
+        if (m.mat.map !== map) {
+          m.mat.map = map;
+          m.mat.needsUpdate = true;
+        }
+        m.mat.color.setHex(ghost ? 0xa77bff : 0xffffff);
+      }
       m.root.position.x = m.x;
       const atFront = m.x <= LootBreakGame.X_ENGAGE + 0.005;
       const wob = m.stun > 0 ? Math.sin(now * 60) * 0.004 : 0;
@@ -3274,7 +3396,7 @@ export class LootBreakGame extends Group {
         a.mat.map = a.white;
         a.mat.needsUpdate = true;
       }
-    } else if (a.mat.map === a.white && !(a as Monster).dead) {
+    } else if (a.mat.map === a.white && !(a as Monster).dead && !(a as Monster).shielded) {
       a.mat.map = a.tex;
       a.mat.needsUpdate = true;
     }
@@ -3354,7 +3476,10 @@ export class LootBreakGame extends Group {
       f.life += dt;
       const s = this._toScreen(f.pos, rect.width, rect.height);
       const k = f.life / f.max;
-      f.el.style.transform = `translate(${s.x}px, ${s.y - k * 46}px) translate(-50%,-50%) scale(${k < 0.15 ? 0.6 + k * 3 : 1})`;
+      // keep wide labels (BLOCKED) on screen when the portal sits near an edge
+      const half = f.el.offsetWidth / 2 + 6;
+      const x = rect.width > half * 2 ? clamp(s.x, half, rect.width - half) : s.x;
+      f.el.style.transform = `translate(${x}px, ${s.y - k * 46}px) translate(-50%,-50%) scale(${k < 0.15 ? 0.6 + k * 3 : 1})`;
       f.el.style.opacity = String(k > 0.7 ? (1 - k) / 0.3 : 1);
       if (f.life >= f.max) {
         f.el.remove();
@@ -4611,6 +4736,7 @@ const CSS = `
 .lb-floaters{position:absolute;inset:0;overflow:hidden}
 .lb-float{position:absolute;left:0;top:0;font-family:'Silkscreen',monospace;font-weight:700;font-size:16px;color:#fff;text-shadow:0 2px 0 #16121d;white-space:nowrap}
 .lb-float.is-crit{color:#ffcf4a;font-size:20px}
+.lb-float.is-block{color:#c9a6ff;font-size:13px;letter-spacing:.08em}
 .lb-float.is-pts{color:#ffe08a;font-size:18px}
 .lb-float.is-loot{color:#9fd3ff;font-size:20px}
 

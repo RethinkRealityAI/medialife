@@ -106,23 +106,33 @@ can still mute with the speaker button. Turn it off to follow the switch.
 ## How a round plays
 
 1. The intro card explains the round. **Start lunch break** → place → 3, 2, 1, GO.
-2. **The party can't win alone.** Heroes auto-attack, but monsters push harder
-   as lunch runs out: a player who never taps is wiped (around 12:50). The
-   player is the cursor: tapping a monster hits and stuns it and builds a
-   combo (10 hits = 1.5x points, up to 3x).
-3. **Misses count.** A tap on nothing breaks the combo; three misses in quick
+2. **The party can't win alone.** Heroes auto-attack, but monsters rush the
+   lane (about 3 seconds from the portal to the party) and push harder as lunch
+   runs out: a player who never taps is wiped (around 12:33). The player is the
+   cursor: tapping a monster hits it, briefly stuns it and builds a combo
+   (10 hits = 1.5x points, up to 3x). A monster can only be stunned about
+   every 0.6 s, so tapping can't hold one in place forever.
+3. **The portal shields its monsters.** They burst out of the portal fast and
+   can't be hit until they cross the dashed purple line on the lane (they
+   flicker purple until then). A tap on a shielded monster is **BLOCKED** and
+   counts as a miss, so camping the portal doesn't work.
+4. **Waves and flyers.** Some monsters come in waves of 2 or 3, and a monster
+   held back on the lane gets overtaken by the ones behind it. Bats fly over
+   the line straight at the party. So the player has to choose: chase the
+   front, cut monsters off mid-lane, or let one through for the heroes.
+5. **Misses count.** A tap on nothing breaks the combo; three misses in quick
    succession **jam the cursor** for about a second, so mashing doesn't pay.
-4. **Cursed slimes** (purple, glowing, from about 12:12): tapping one bursts it,
+6. **Cursed slimes** (purple, glowing, from about 12:12): tapping one bursts it,
    breaks the combo and costs the party 10 HP. Leave them to the heroes.
-5. **Ultimates.** Hits charge the ULT meter (faster on a combo). When it's full
+7. **Ultimates.** Hits charge the ULT meter (faster on a combo). When it's full
    the four hero buttons light up; tap one (or the hero on the lane, or keys
    1-4): **Shield** (no damage for 6 s), **Volley** (14 arrows, good on the
    boss), **Meteor** (hits every monster) or **Heal** (+50 HP).
-6. **The boss** steps out at 12:45 and shrugs off most party damage (25%). A
+8. **The boss** steps out at 12:45 and shrugs off most party damage (25%). A
    glowing **weak spot** appears on it for about a second at a time: tapping it
    deals big damage and stuns it. If the boss is still standing at 12:59 it
    **escapes and the chest drops one rarity**.
-7. At 12:59 bonuses are added (**Boss slain** +1,500, **Iron party** +1,000 for
+9. At 12:59 bonuses are added (**Boss slain** +1,500, **Iron party** +1,000 for
    never dropping below half HP, **Combo x30** +1,000), then the chest opens on
    one of TBH's ten rarities. The results card shows the badges, earned or
    not, so players know what to go for next time.
@@ -214,19 +224,21 @@ Tuned with bots over 60-second rounds at difficulty 0.5 (16 rounds each). Bots
 aim better than thumbs, so real scores run a little lower; use `tierScale` to
 shift the whole ladder.
 
+Retuned 2026-11-08 after faster monsters and the portal shield (12 bot rounds each):
+
 | Player | Median score | Lands on |
 |---|---|---|
-| No taps at all | 2,600 (always wiped) | Common |
-| A few taps | 6,500 (half wiped) | Common / Uncommon |
-| Casual | about 15,000 | Rare to Legendary |
+| No taps at all | 1,700 (always wiped, around 12:31) | Common |
+| Casual (2.5 taps a second, some misses) | 16,000 (wiped 1 in 6) | Uncommon to Legendary |
 | Engaged | 22,000 | Immortal |
-| Mashing the screen | 20,700 | Legendary |
-| Near perfect | 27,000 | Arcana / Beyond |
-| Master (every weak spot, every loot, smart ultimates) | 28,000 (best 38,900) | Arcana to Divine |
+| Fast and accurate, front first | 23,000 | Immortal / Arcana |
+| Fast and accurate, cutting monsters off at the portal line | 24,900 | Immortal to Beyond |
+| Master (every weak spot, every loot, smart ultimates) | 24,300 (best 28,400) | Arcana / Beyond |
 
-Thresholds: Uncommon 6,000 · Rare 11,000 · Legendary 16,000 · Immortal 21,000 ·
-Arcana 25,000 · Beyond 28,500 · Celestial 32,000 · Divine 35,500 · Cosmic 39,000
-(just above the best master run).
+Thresholds: Uncommon 5,500 · Rare 10,000 · Legendary 14,500 · Immortal 19,000 ·
+Arcana 22,500 · Beyond 25,500 · Celestial 28,500 · Divine 31,500 · Cosmic 35,000
+(above the best bot run). The rewards server checks claims against the same
+ladder (`src/lib/lootbreak/model.ts`), so change both together.
 
 All combat numbers sit in one `TUNE` table at the top of `LootBreakGame.ts`.
 
