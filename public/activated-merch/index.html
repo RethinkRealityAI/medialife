@@ -38,6 +38,8 @@
     <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
     <link rel="modulepreload" href="/activated-merch/scene.js" />
     <link rel="modulepreload" href="/activated-merch/softbody.js" />
+    <link rel="modulepreload" href="/activated-merch/ar.js" />
+    <link rel="modulepreload" href="/activated-merch/arlayout.js" />
     <link rel="modulepreload" href="/roblox/creators/vendor/three/jsm/loaders/GLTFLoader.js" />
     <link rel="preload" as="fetch" href="/activated-merch/models/hero/sukeban-hoodie.glb" crossorigin="anonymous" />
   </head>
@@ -146,8 +148,8 @@
             <div class="tech__tap mono" id="tech-tap" aria-live="polite">
               <p class="tech__tap-title">Tap. It opens.</p>
               <p>
-                The phone powers the tag and reads it, and the experience launches in the browser. On the screen: a real fan
-                capture from Anime NYC.
+                The phone powers the tag and reads it, and the experience launches in the browser. No app, no
+                download.
               </p>
             </div>
           </div>
@@ -166,35 +168,36 @@
         </div>
       </section>
 
-      <!-- 04 HOW IT WORKS ------------------------------------------------ -->
-      <section class="how" id="how" aria-labelledby="how-title">
-        <header class="sec-head">
-          <h2 id="how-title" class="display">How it<br />works.</h2>
-          <p class="mono">Three steps for the fan. One dashboard for the brand.</p>
-        </header>
-        <ol class="steps">
-          <li class="step">
-            <div class="step__art step__art--tap" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
-            <span class="mono step__n">01</span>
-            <h3>Tap or scan</h3>
-            <p>Tap the print with a phone, or scan it or the QR. Nothing to download.</p>
-          </li>
-          <li class="step">
-            <div class="step__art step__art--alive" aria-hidden="true"><b></b><i></i></div>
-            <span class="mono step__n">02</span>
-            <h3>It comes alive</h3>
-            <p>The character appears in AR, a video plays or a game opens, made for that world.</p>
-          </li>
-          <li class="step">
-            <div class="step__art step__art--keep" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-            <span class="mono step__n">03</span>
-            <h3>It keeps giving</h3>
-            <p>Owners unlock drops, rewards and a collector room that grows with every piece they own.</p>
-          </li>
-        </ol>
-        <div class="brandbar">
-          <span class="mono">For the IP holder</span>
-          <p>Every tap and scan is counted by product, place and time, so a merch drop finally reports like a campaign.</p>
+      <!-- 04 HOW IT WORKS (pinned, scroll-driven) -----------------------
+           The phone that tapped the tag grows to fill the view, its camera
+           finds the print, and the piece's real AR animation plays on it. -->
+      <section class="ar" id="how" aria-labelledby="how-title">
+        <div class="ar__pin">
+          <div class="ar__copy">
+            <h2 id="how-title" class="display">How it<br />works.</h2>
+            <ol class="ar__steps" id="ar-steps">
+              <li data-i="0"><span class="mono">01</span><div><h3>Tap</h3><p>Tap the print with a phone, or scan its QR. The experience opens in the browser. Nothing to download.</p></div></li>
+              <li data-i="1"><span class="mono">02</span><div><h3>Point</h3><p>Point the camera at the design. It finds the print in a second.</p></div></li>
+              <li data-i="2"><span class="mono">03</span><div><h3>It comes alive</h3><p>The character moves on the print, in AR, made for that world.</p></div></li>
+              <li data-i="3"><span class="mono">04</span><div><h3>It keeps giving</h3><p>Owners unlock drops, rewards and a collector room that grows with every piece they own.</p></div></li>
+            </ol>
+            <p class="ar__shown mono" id="ar-shown" hidden>Shown on the <span id="ar-shown-name">Sukeban AR Hoodie</span></p>
+          </div>
+          <div class="arphone" id="arphone" aria-hidden="true">
+            <div class="arphone__screen" id="arphone-screen">
+              <img class="arphone__still" src="/activated-merch/media/fan-05.webp" alt="" loading="lazy" decoding="async" />
+              <div class="arphone__grain"></div>
+              <p class="arphone__prompt mono" id="ar-prompt"><i></i><span>Point at the design</span></p>
+              <img class="arphone__badge" src="/activated-merch/media/ar/activated-by.webp" alt="" />
+              <span class="arphone__cta mono">Shop the design <b>→</b></span>
+            </div>
+            <span class="arphone__island"></span>
+          </div>
+          <div class="ar__brackets" id="ar-brackets" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+          <div class="brandbar ar__brand">
+            <span class="mono">For the IP holder</span>
+            <p>Every tap and scan is counted by product, place and time, so a merch drop finally reports like a campaign.</p>
+          </div>
         </div>
       </section>
 

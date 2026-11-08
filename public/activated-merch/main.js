@@ -2,6 +2,8 @@
  * Activated Merch landing page: DOM wiring, scroll choreography, the fan
  * reel and the product lineup. The 3D stage lives in scene.js.
  */
+import { handoffRect, fullRect, arPhases } from "./arlayout.js";
+
 const SHOP = "https://shop.medialife.ai/products/";
 const BASE = "/activated-merch/";
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -14,8 +16,24 @@ const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const HEAD = "Behind the character's head";
 const head = (u, v, side = "back") => ({ u, v, side, where: HEAD });
 // const LOGO = { u: 0.26, v: 0.62, side: "front", where: "Under the front logo" };
+// `ar` is the piece's real AR experience (from its 8th Wall project): the
+// green-screen animation and the surface (u, v) of the image target's corners
+// (top-left, top-right, bottom-right, bottom-left), found by matching the
+// target image to the baked print. Pieces without it show the Sukeban hoodie
+// in "How it works" for now.
+const SUKEBAN_AR = {
+  video: "media/ar/sukeban-hoodie.mp4",
+  poster: "media/ar/sukeban-hoodie.webp",
+  key: 0x008102,
+  rect: [
+    [0.3806, 0.668],
+    [-0.4178, 0.6702],
+    [-0.4145, 0.1977],
+    [0.3799, 0.1985],
+  ],
+};
 const PRODUCTS = [
-  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53) },
+  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: SUKEBAN_AR },
   { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72) },
   { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61) },
   { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52) },
@@ -44,6 +62,7 @@ const VIDEOS = [
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const seg = (v, a, b) => clamp01((v - a) / (b - a));
 const money = (v) => `$${Number.isInteger(v) ? v : v.toFixed(2)}`;
 
 /* ------------------------------------------------------------ 3D stage */
@@ -62,9 +81,13 @@ async function boot3D() {
       onChange: (i) => showPiece(i, { fromStage: true }),
     });
     if (location.search.includes("debug")) window.__stage = stage;
+    showPiece(current, { fromStage: true });
+    $("#arphone-screen").prepend(stage.splash.canvas);
     requestAnimationFrame(loop);
     await stage.start(current);
     document.body.classList.add("has-3d");
+    // The "How it works" section becomes a tall pinned sequence with 3D.
+    measure();
   } catch (err) {
     fallBack(err);
     requestAnimationFrame(loop);
@@ -130,6 +153,14 @@ function showPiece(i, { fromStage = false } = {}) {
   void name.offsetWidth;
   name.classList.add("swap");
   if (!fromStage) stage?.goTo(i);
+  // "How it works" plays this piece's AR, or the Sukeban hoodie's until it has its own.
+  const arPiece = p.ar ? p : APPAREL.find((q) => q.ar);
+  stage?.setArItem(arPiece);
+  const shown = $("#ar-shown");
+  if (shown) {
+    shown.hidden = arPiece === p;
+    $("#ar-shown-name").textContent = arPiece.name;
+  }
 }
 
 function buildSwitcher() {
@@ -172,6 +203,8 @@ function measure() {
     details: top(els.details),
     tech: top(els.tech),
     techH: els.tech.offsetHeight,
+    ar: top(els.ar),
+    arH: els.ar.offsetHeight,
   };
 }
 
@@ -179,12 +212,112 @@ function scrollState() {
   const y = scrollY;
   const hero = clamp01(y / Math.max(1, geom.details - (innerWidth < 760 ? vh * 0.2 : 0)));
   const tech = clamp01((y - geom.tech) / Math.max(1, geom.techH - vh));
-  const off = y > geom.tech + geom.techH - vh * 0.55;
-  return { hero, tech, off };
+  // The AR section overlaps the tech section's last screen, so it picks up
+  // exactly where the tech section leaves off.
+  const ar = stage ? clamp01((y - geom.ar) / Math.max(1, geom.arH - vh)) : 0;
+  const off = stage ? y > geom.ar + geom.arH - vh * 0.55 : y > geom.tech + geom.techH - vh * 0.55;
+  return { hero, tech, ar, off, arRect: arRect(ar) };
+}
+
+/** The phone's screen rect (viewport px) at AR progress p. */
+function arRect(p) {
+  if (!stage || p <= 0) return null;
+  const W = innerWidth;
+  const H = innerHeight;
+  const ph = arPhases(p);
+  const a = handoffRect(W, H);
+  const b = fullRect(W, H);
+  const k = ph.grow;
+  // Slides down a touch on its way, then settles back as it fills the view.
+  const dip = Math.sin(k * Math.PI) * H * 0.05;
+  const r = { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k + dip, w: a.w + (b.w - a.w) * k, h: a.h + (b.h - a.h) * k };
+  if (ph.out > 0 && W >= 760) {
+    // Pull back a little at the end, so the next section can come in.
+    const s = 1 - ph.out * 0.12;
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+    r.w *= s;
+    r.h *= s;
+    r.x = cx - r.w / 2;
+    r.y = cy - r.h / 2;
+  }
+  return r;
+}
+
+function updateAr({ ar, arRect: r }) {
+  if (!els.arPhone || !stage) return;
+  const on = ar > 0 && !!r;
+  els.arPhone.classList.toggle("on", on);
+  if (!on) {
+    els.arPin.style.setProperty("--copy", "0");
+    els.arPin.style.setProperty("--brand", "0");
+    els.brackets.style.setProperty("--brk", "0");
+    return;
+  }
+  const W = innerWidth;
+  const ph = arPhases(ar);
+  const mobile = W < 760;
+  const st = els.arPhone.style;
+  st.transform = `translate(${r.x}px, ${r.y}px)`;
+  st.width = `${r.w}px`;
+  st.height = `${r.h}px`;
+  // Bezel and corner radius scale with the phone; on phones they melt into the edges.
+  const melt = mobile ? ph.grow : 0;
+  const bz = Math.max(4, r.w * 0.052) * (1 - melt);
+  st.setProperty("--bz", `${bz}px`);
+  st.setProperty("--rad", `${r.w * 0.09 * (1 - melt)}px`);
+  st.setProperty("--island", String(1 - melt));
+  st.setProperty("--veil", String(Math.min(1, ar / 0.05)));
+  // Hold the splash until the camera view is ready to take over.
+  st.setProperty("--splash", String(stage.arView.ready ? 1 - ph.cam : 1));
+  els.arPhone.classList.toggle("live", ph.reveal > 0.6 && ph.out < 0.6);
+  // Copy column and steps.
+  // The copy comes in once the veil has covered the tech section underneath.
+  els.arPin.style.setProperty("--copy", String(seg(ar, 0.05, 0.1)));
+  els.arPin.style.setProperty("--title", String(mobile ? 1 - seg(ar, 0.2, 0.3) : 1));
+  els.arPin.style.setProperty("--brand", String(seg(ar, 0.9, 0.97)));
+  const step = ar < 0.2 ? 0 : ar < 0.46 ? 1 : ar < 0.88 ? 2 : 3;
+  els.arSteps.forEach((li, i) => {
+    li.classList.toggle("on", i === step);
+    li.classList.toggle("done", i < step);
+  });
+  // Prompt: hunting, then found.
+  const prompt = els.arPrompt;
+  prompt.classList.toggle("in", ph.cam > 0.6 && ph.reveal < 0.4);
+  const found = ph.lock > 0.5;
+  if (prompt.classList.contains("found") !== found) {
+    prompt.classList.toggle("found", found);
+    prompt.lastChild.textContent = found ? "Design found" : "Point at the design";
+  }
+  // Brackets: from the screen's corners in to the print's, then they lock.
+  const c = stage.arCorners;
+  const brk = els.brackets;
+  const bOn = c && ph.cam > 0.5 && ph.reveal < 1;
+  brk.style.setProperty("--brk", bOn ? String(Math.min(1, (ph.cam - 0.5) * 2) * (1 - ph.reveal)) : "0");
+  brk.classList.toggle("lock", found);
+  if (bOn) {
+    const inset = Math.min(r.w, r.h) * 0.14;
+    const sc = [
+      [r.x + inset, r.y + inset * 1.6],
+      [r.x + r.w - inset, r.y + inset * 1.6],
+      [r.x + r.w - inset, r.y + r.h - inset * 2.6],
+      [r.x + inset, r.y + r.h - inset * 2.6],
+    ];
+    const k = ph.find;
+    const pulse = found ? 1 + Math.sin(Math.min(1, ph.lock) * Math.PI) * 0.04 : 1;
+    const mx = (c[0].x + c[1].x + c[2].x + c[3].x) / 4;
+    const my = (c[0].y + c[1].y + c[2].y + c[3].y) / 4;
+    els.bracketEls.forEach((el, i) => {
+      const x = sc[i][0] + (c[i].x - sc[i][0]) * k;
+      const y = sc[i][1] + (c[i].y - sc[i][1]) * k;
+      el.style.transform = `translate(${mx + (x - mx) * pulse}px, ${my + (y - my) * pulse}px)`;
+    });
+  }
 }
 
 let lastAngle = -1;
-function updateDom({ hero, tech }) {
+function updateDom({ hero, tech, ar, arRect: r }) {
+  updateAr({ ar, arRect: r });
   if (stage && els.angle) {
     const a = stage.angle;
     if (a !== lastAngle) {
@@ -235,7 +368,7 @@ function updateDom({ hero, tech }) {
   });
   if (tech > 0.6) hot = 1;
   els.layerLabels.forEach((li, i) => li.classList.toggle("hot", i === hot));
-  els.tap.classList.toggle("in", tech > 0.72);
+  els.tap.classList.toggle("in", tech > 0.72 && !(ar > 0.04));
   els.techPin.classList.toggle("tapping", tech > 0.7);
   els.techProgress.style.width = `${tech * 100}%`;
 }
@@ -516,7 +649,7 @@ function wireSticker() {
 
 /* ------------------------------------------------------------ reveals */
 function wireReveals() {
-  $$(".step, .brandbar, .stickers__copy, .case, .partner > *").forEach((el) => el.classList.add("rv"));
+  $$(".stickers__copy, .case, .partner > *").forEach((el) => el.classList.add("rv"));
   const io = new IntersectionObserver(
     (entries) =>
       entries.forEach((e) => {
@@ -544,6 +677,13 @@ function init() {
   els.dock = $(".hero__dock");
   els.hint = $("#hint");
   els.angle = $("#piece-angle");
+  els.ar = $("#how");
+  els.arPin = $(".ar__pin");
+  els.arPhone = $("#arphone");
+  els.arSteps = $$("#ar-steps li");
+  els.arPrompt = $("#ar-prompt");
+  els.brackets = $("#ar-brackets");
+  els.bracketEls = $$("#ar-brackets i");
   els.mobile = innerWidth < 760;
   buildSwitcher();
   showPiece(0, { fromStage: true });

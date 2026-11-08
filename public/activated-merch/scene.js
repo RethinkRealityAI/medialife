@@ -5,7 +5,9 @@
  *             buttons to browse. The first piece materialises from particles.
  *   details → the camera moves in on the print
  *   tech    → the camera dives to the piece's NFC tag spot, a cut-away opens,
- *             the small round tag and its patches lift out, and a phone taps it
+ *             the small round tag and its patches lift out, and a phone taps it;
+ *             its screen boots the MEDIALIFE splash and it rises to hand over
+ *   ar      → (ar.js) the phone's camera view: the print, with its AR animation
  * main.js feeds it scroll progress and pointer input; it owns nothing in the
  * DOM except the label anchors it reports back.
  */
@@ -14,6 +16,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { SoftGarment } from "./softbody.js";
 import { cottonTexture, nfcTexture, patchTexture, strokesTexture } from "./textures.js";
+import { ARView, Splash } from "./ar.js";
+import { handoffRect } from "./arlayout.js";
 
 const BASE = "/activated-merch/";
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -74,7 +78,7 @@ export class Stage {
     this.wind = 0;
     this.pointer = new THREE.Vector2();
     this.pointerTarget = new THREE.Vector2();
-    this.state = { hero: 0, tech: 0 };
+    this.state = { hero: 0, tech: 0, ar: 0, arRect: null };
     this.clock = new THREE.Clock();
     this.t = 0;
     this.raycaster = new THREE.Raycaster();
@@ -84,8 +88,15 @@ export class Stage {
     this._lights();
     this._backdrop();
     this._stack();
+    this.splash = new Splash();
     this._phone();
+    this.arView = new ARView(this.renderer, { reduced: this.reduced });
     this.resize();
+  }
+
+  /** The piece whose AR plays in the "How it works" section. */
+  setArItem(item) {
+    this.arItem = item;
   }
 
   _lights() {
@@ -373,23 +384,11 @@ export class Stage {
       new THREE.MeshPhysicalMaterial({ color: 0x0b0c12, metalness: 0.6, roughness: 0.25, clearcoat: 1 }),
     );
     phone.add(body);
-    const video = document.createElement("video");
-    video.src = BASE + "media/fan-05.mp4";
-    video.muted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.preload = "none";
-    video.crossOrigin = "anonymous";
-    this.phoneVideo = video;
-    const vt = new THREE.VideoTexture(video);
-    vt.colorSpace = THREE.SRGBColorSpace;
-    const poster = new THREE.TextureLoader().load(BASE + "media/fan-05.webp");
-    poster.colorSpace = THREE.SRGBColorSpace;
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.82), new THREE.MeshBasicMaterial({ map: poster, color: 0x222222, toneMapped: false }));
-    video.addEventListener("playing", () => {
-      screen.material.map = vt;
-      screen.material.needsUpdate = true;
-    });
+    // The screen boots the splash of our AR experience (same canvas as the DOM phone).
+    const screen = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.38, 0.82),
+      new THREE.MeshBasicMaterial({ map: this.splash.getTexture(), color: 0x222222, toneMapped: false }),
+    );
     screen.position.z = 0.032;
     phone.add(screen);
     this.phoneScreen = screen;
@@ -551,9 +550,23 @@ export class Stage {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     this.t += dt;
     const t = this.t;
-    const { hero, tech } = this.state;
+    const { hero, tech, ar } = this.state;
     const m = this.mobile;
     this.pointer.lerp(this.pointerTarget, 0.06);
+
+    // Splash on the phone: boots at the tap, restarts if you scroll back above it.
+    if (tech > 0.66 || ar > 0) this.splash.tick(t);
+    else if (tech < 0.6) this.splash.reset();
+    // Get the AR piece ready while the visitor is still in the tech section.
+    if (tech > 0.25 && this.arItem && this.arView.item !== this.arItem) this.arView.load(this.arItem).catch((e) => console.warn("[activated] ar", e));
+    if (tech > 0.6) this.arView.warm();
+    // Past the hand-over the phone's camera view is all that is on screen.
+    this.arCorners = null;
+    if (ar > 0.1 && this.arView.ready && this.state.arRect) {
+      this.arCorners = this.arView.frame(dt, t, ar, this.state.arRect);
+      return;
+    }
+    this.arView.pause();
 
     // --- carousel spring ---------------------------------------------------
     if (this.drag?.mode !== "browse") {
@@ -733,28 +746,49 @@ export class Stage {
     }
     this.camera.lookAt(this.lookAt);
 
-    // --- phone tap -------------------------------------------------------------
+    // --- phone tap, then the hand-over ---------------------------------------
+    // The phone comes in big, taps the tag, its screen boots the splash, then it
+    // rises to face us at the rect where the "How it works" phone takes over.
     const ph = this.phone;
-    ph.visible = !!inTech && tap > 0.001;
+    ph.visible = !!inTech && tap > 0.001 && ar <= 0;
     if (ph.visible) {
       const { sn, right } = this.phoneFrame;
       const tagW = this.tag.getWorldPosition(new THREE.Vector3());
+      const sc = m ? 0.3 : 0.34;
       const hover = tagW
         .clone()
-        .addScaledVector(sn, 0.09 + Math.sin(t * 2) * 0.005)
-        .addScaledVector(UP, m ? 0.07 : 0.08)
-        .addScaledVector(right, m ? 0.03 : 0.1);
+        .addScaledVector(sn, 0.1 + Math.sin(t * 2) * 0.005)
+        .addScaledVector(UP, m ? 0.1 : 0.12)
+        .addScaledVector(right, m ? 0.04 : 0.14);
       const from = hover.clone().addScaledVector(right, 0.9).addScaledVector(UP, 0.6).addScaledVector(sn, 0.3);
       ph.position.lerpVectors(from, hover, tap);
       ph.quaternion.setFromUnitVectors(Z, sn);
       ph.rotateX(-0.9);
       ph.rotateY(0.25 + (1 - tap) * 0.5);
-      ph.scale.setScalar(m ? 0.2 : 0.22);
-      const lit = seg(tech, 0.7, 0.8);
+      ph.scale.setScalar(sc);
+      const lit = seg(tech, 0.66, 0.74);
       this.phoneScreen.material.color.setScalar(lerp(0.13, 1, lit));
-      if (lit > 0 && this.phoneVideo.paused) this.phoneVideo.play().catch(() => {});
-      if (lit === 0 && !this.phoneVideo.paused) this.phoneVideo.pause();
-    } else if (!this.phoneVideo.paused) this.phoneVideo.pause();
+      const rise = ease(seg(tech, 0.84, 1));
+      if (rise > 0) {
+        // Face the camera, screen exactly on the hand-over rect.
+        this.camera.updateMatrixWorld();
+        const W = window.innerWidth;
+        const H = window.innerHeight;
+        const r = handoffRect(W, H);
+        const screenH = 0.82 * sc;
+        const fovR = THREE.MathUtils.degToRad(this.camera.fov);
+        const d = (screenH * H) / (2 * Math.tan(fovR / 2) * r.h);
+        const ndc = new THREE.Vector3(((r.x + r.w / 2) / W) * 2 - 1, -((r.y + r.h / 2) / H) * 2 + 1, 0.5).unproject(this.camera);
+        const camPos = this.camera.position;
+        const dir = ndc.sub(camPos).normalize();
+        const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
+        const target = camPos.clone().addScaledVector(dir, d / dir.dot(fwd));
+        // The screen sits 0.032 in front of the body's centre.
+        target.addScaledVector(fwd, 0.032 * sc);
+        ph.position.lerp(target, rise);
+        ph.quaternion.slerp(this.camera.quaternion, rise);
+      }
+    }
 
     this.renderer.render(this.scene, this.camera);
   }
