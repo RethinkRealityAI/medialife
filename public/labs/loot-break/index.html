@@ -12,7 +12,7 @@
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>
-<script type="module" src="./assets/lab.js?v=1"></script>
+<script type="module" src="./assets/lab.js?v=2"></script>
 </head>
 <body>
 <!-- Stand-in for the Mattercraft page: a WebGL canvas plus an overlay div with the
@@ -46,6 +46,11 @@
     <button type="button" id="b-intro">Show intro</button>
     <a href="./splash.html" class="lab-link">Splash screen</a>
   </div>
+  <h3>Placement</h3>
+  <p class="lab-small">Stands in for Zappar's placement group: it finds a surface a second after placing starts.</p>
+  <label class="lab-check"><input type="checkbox" id="b-nosurface"> No surface found (keeps Place disabled)</label>
+  <div class="lab-row"><button type="button" id="b-replace">Re-place</button></div>
+  <h3>Bot</h3>
   <label class="lab-check"><input type="checkbox" id="b-bot"> Auto-play (a bot taps for you)</label>
   <p class="lab-small" id="state" aria-live="polite"></p>
   <p class="lab-small">Every setting here maps 1:1 to a property on the LootBreakGame component in Mattercraft.</p>

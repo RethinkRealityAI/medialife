@@ -66,8 +66,18 @@ function on(evt: any, fn: (...a: any[]) => void) {
 const r: any = result;
 const game = componentTree(r?.rootInstance ?? r).find((n) => n?.onRoundEnd && n?.onBoss && n?.onRoundStart);
 
-const session = { rounds: 0, best: 0, bestTier: "", bosses: 0 };
+const session = { rounds: 0, best: 0, bestTier: "", bosses: 0, placed: 0, resets: 0 };
 if (game) {
+    // Placement is the first thing that can go wrong in AR: someone who never
+    // places never plays, and without this they vanish from the funnel.
+    on(game.onPlace, () => {
+        session.placed++;
+        track("scene_placed", { seconds: seconds(PAGE_START), attempt: session.placed });
+    });
+    on(game.onResetPlacement, () => {
+        session.resets++;
+        track("placement_reset", { count: session.resets });
+    });
     let roundStart = 0;
     on(game.onRoundStart, () => {
         session.rounds++;
@@ -101,7 +111,9 @@ const summarise = () => {
         best_score: session.best,
         best_tier: session.bestTier || undefined,
         seconds: seconds(PAGE_START),
-        furthest: session.rounds ? (session.bosses ? "boss" : "played") : "landed",
+        placed: session.placed,
+        resets: session.resets,
+        furthest: session.rounds ? (session.bosses ? "boss" : "played") : session.placed ? "placed" : "landed",
     });
 };
 addEventListener("pagehide", summarise);

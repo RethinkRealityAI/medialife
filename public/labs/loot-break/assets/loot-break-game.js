@@ -777,6 +777,80 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
      * @zdefault true
      */
     __publicField(this, "sound", new Observable(true, (v) => this._setMuted(!v)));
+    /* ── Placement ─────────────────────────────────────────────────────── */
+    /**
+     * Use the game's own Place and Re-place buttons instead of the ones that
+     * come with Zappar's placement group. The game finds the User Placement
+     * Anchor Group it sits inside, hides that group's built-in buttons, and
+     * walks the player through placing the lane before every first round.
+     * Turn off to let the template's buttons handle placement as before.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zgrouppriority 85
+     * @zpriority 10
+     * @zdefault true
+     */
+    __publicField(this, "placementEnabled", new Observable(true, () => this._bindPlacement()));
+    /**
+     * The User Placement Anchor Group to drive. Leave empty and the game uses
+     * the one it sits inside, which is the usual setup.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 9
+     * @zvalues nodeids three/Object3D/Group/**
+     */
+    __publicField(this, "placementGroup", new Observable(void 0, () => this._bindPlacement()));
+    /**
+     * What the player is told while finding a surface.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 8
+     * @zdefault Point your phone at your desk and move it slowly until the lane sits flat.
+     */
+    __publicField(this, "placeHint", new Observable(
+      "Point your phone at your desk and move it slowly until the lane sits flat.",
+      () => this._syncPlacementUi()
+    ));
+    /**
+     * Label on the Place button.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 7
+     * @zdefault Place on desk
+     */
+    __publicField(this, "placeButtonLabel", new Observable("Place on desk", () => this._syncPlacementUi()));
+    /**
+     * Caption under the Re-place button (shown during a round, top right).
+     * Blank hides the caption, not the button.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 6
+     * @zdefault Re-place
+     */
+    __publicField(this, "replaceButtonLabel", new Observable("Re-place", () => this._syncPlacementUi()));
+    /**
+     * Timeline or state played when the player taps Place.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 5
+     * @zvalues layerclipids
+     */
+    __publicField(this, "placeTimeline", new Observable(void 0));
+    /**
+     * Timeline or state played when the player taps Re-place.
+     *
+     * @zui
+     * @zgroup Placement
+     * @zpriority 4
+     * @zvalues layerclipids
+     */
+    __publicField(this, "resetTimeline", new Observable(void 0));
     /* ── Read-only state and events (for timelines, other components) ───── */
     /** The current score. */
     __publicField(this, "score", new Observable(0));
@@ -788,6 +862,10 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     __publicField(this, "onBoss", new Event());
     /** Fires when the chest has opened: score and rarity name. */
     __publicField(this, "onRoundEnd", new Event());
+    /** Fires when the player confirms placement with the Place button. */
+    __publicField(this, "onPlace", new Event());
+    /** Fires when the player taps Re-place (or placement restarts some other way). */
+    __publicField(this, "onResetPlacement", new Event());
     /* ── internals ───────────────────────────────────────────────────────── */
     __publicField(this, "_scaleRoot", new THREE2.Group());
     __publicField(this, "_shake", new THREE2.Group());
@@ -846,6 +924,13 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     __publicField(this, "_v", new THREE2.Vector3());
     __publicField(this, "_cursorT", 0);
     __publicField(this, "_countdownShown", -1);
+    /* placement state */
+    __publicField(this, "_placed", false);
+    /** The Zappar User Placement Anchor Group we drive, if there is one. */
+    __publicField(this, "_pg", null);
+    __publicField(this, "_pgUnsub", []);
+    /** True while we are the ones changing the group's placementMode. */
+    __publicField(this, "_pgWriting", false);
     __publicField(this, "_hurtT", 0);
     __publicField(this, "_camLocal", new THREE2.Vector3());
     __publicField(this, "_inv", new THREE2.Matrix4());
@@ -880,6 +965,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._renderHud();
     if (this.showIntroOnLoad.value) this.showIntro();
     window.__lootBreak = this;
+    this.getZComponentInstance().constructed.then(() => this._bindPlacement()).catch(() => void 0);
   }
   /* ══ public API ═══════════════════════════════════════════════════════ */
   /** Show the intro card (title, how to play, Start). */
@@ -887,8 +973,16 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._phase = "idle";
     this._show("intro");
   }
-  /** Start a round now (runs the 3-2-1 countdown first). */
+  /**
+   * Start a round. If the lane hasn't been placed yet, the player places it
+   * first and the countdown starts straight after.
+   */
   startRound() {
+    if (this._needsPlacement()) {
+      this._reset();
+      this._enterPlacing();
+      return;
+    }
     this._reset();
     this._phase = "countdown";
     this._phaseT = 0;
@@ -898,6 +992,18 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
   /** End the current round now and open the chest. */
   endRound() {
     if (this._phase === "playing") this._finish(false);
+  }
+  /** True once the lane has been placed (always true when there's nothing to place). */
+  get isPlaced() {
+    return this._placed || !this._pg || !this.placementEnabled.value;
+  }
+  /** Confirm placement where the lane is now and start the countdown. */
+  place() {
+    this._place();
+  }
+  /** Lift the lane back up so the player can put it somewhere else. Ends a round in progress. */
+  resetPlacement() {
+    this._resetPlacement(true);
   }
   /** Test hook: jump the clock forward (seconds). */
   skip(seconds) {
@@ -911,6 +1017,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
   get debugState() {
     return {
       phase: this._phase,
+      placed: this.isPlaced,
       t: this._t,
       score: this.score.value,
       tier: TIERS[this.tierIndex.value].name,
@@ -1212,6 +1319,10 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
         </div>
         <div class="lb-party" aria-label="Party health"><span>PARTY</span><div class="lb-bar"><i data-k="hp"></i></div></div>
         <button class="lb-iconbtn lb-mute" type="button" data-k="mute" aria-label="Mute sound">\u266A</button>
+        <button class="lb-iconbtn lb-replace" type="button" data-k="replace" aria-label="Re-place the game" hidden>
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" stroke-width="2"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+          <span data-k="replaceLbl">Re-place</span>
+        </button>
         <div class="lb-combo" data-k="combo" aria-live="polite"></div>
         <div class="lb-banner" data-k="banner"></div>
         <div class="lb-count" data-k="count"></div>
@@ -1219,6 +1330,15 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
         <div class="lb-meter">
           <div class="lb-meter-label"><span data-k="tierNow">COMMON</span><span class="lb-arrow">\u25B8</span><span data-k="tierNext">UNCOMMON</span></div>
           <div class="lb-meter-bar"><i data-k="meter"></i></div>
+        </div>
+      </div>
+
+      <div class="lb-place" data-screen="place" hidden>
+        <div class="lb-reticle" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+        <div class="lb-placebox">
+          <p class="lb-placehint" data-k="placeHint"></p>
+          <p class="lb-placestatus" data-k="placeStatus" aria-live="polite"></p>
+          <button class="lb-btn lb-btn-go lb-btn-place" type="button" data-k="placeBtn"><span data-k="placeLbl">Place on desk</span></button>
         </div>
       </div>
 
@@ -1273,6 +1393,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     this._el.again.addEventListener("click", () => this.startRound());
     this._el.share.addEventListener("click", () => void this._share());
     this._el.mute.addEventListener("click", () => this._setMuted(!this._sfx.muted));
+    this._el.placeBtn.addEventListener("click", () => this._place());
+    this._el.replace.addEventListener("click", () => this._resetPlacement(true));
     return ui;
   }
   _syncText() {
@@ -1304,6 +1426,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       const on = el.dataset.screen === screen || screen === "results" && el.dataset.screen === "hud";
       el.hidden = !on;
     });
+    this._syncPlacementUi();
     this._ui.classList.toggle("lb-modal", screen === "intro" || screen === "results");
     this._ui.classList.toggle("lb-resulting", screen === "results");
   }
@@ -2150,8 +2273,158 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       o.rotation.y = clamp(yaw, -1.2, 1.2);
     }
   }
+  /* ══ placement ════════════════════════════════════════════════════════ */
+  _needsPlacement() {
+    return this.placementEnabled.value && !!this._pg && !this._placed;
+  }
+  /**
+   * Find the Zappar User Placement Anchor Group (the picked node, else the
+   * nearest one above this component) and take over its buttons.
+   * Duck-typed, so the game doesn't depend on the Zappar package to build.
+   */
+  _bindPlacement() {
+    for (const u of this._pgUnsub) u();
+    this._pgUnsub = [];
+    const prev = this._pg;
+    this._pg = null;
+    if (prev) {
+      if (prev.showPlaceButton) prev.showPlaceButton.value = true;
+      if (prev.showRestartPlacementButton) prev.showRestartPlacementButton.value = true;
+    }
+    if (!this.placementEnabled.value) {
+      this._syncPlacementUi();
+      return;
+    }
+    let found = null;
+    const id = this.placementGroup.value;
+    if (id) {
+      const c = this.getZComponentInstance().resolveNodeID(id);
+      if (isPlacementGroup(c)) found = c;
+    }
+    if (!found) {
+      for (let p = this.parent; p; p = p.parent) {
+        if (isPlacementGroup(p)) {
+          found = p;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      this._syncPlacementUi();
+      return;
+    }
+    this._pg = found;
+    if (found.showPlaceButton) found.showPlaceButton.value = false;
+    if (found.showRestartPlacementButton) found.showRestartPlacementButton.value = false;
+    this._placed = false;
+    const onMode = (placing) => {
+      if (this._pgWriting) return;
+      if (placing && this._placed) this._resetPlacement(false);
+      else if (!placing && this._phase === "placing") this._place(false);
+    };
+    const onSignal = () => this._syncPlacementUi();
+    found.placementMode.addListener(onMode);
+    found.placementValid.addListener(onSignal);
+    found.ready?.addListener(onSignal);
+    this._pgUnsub.push(
+      () => found.placementMode.removeListener(onMode),
+      () => found.placementValid.removeListener(onSignal),
+      () => found.ready?.removeListener(onSignal)
+    );
+    this._syncPlacementUi();
+  }
+  _setPlacementMode(on) {
+    if (!this._pg) return;
+    this._pgWriting = true;
+    try {
+      this._pg.placementMode.value = on;
+    } finally {
+      this._pgWriting = false;
+    }
+  }
+  _enterPlacing() {
+    this._phase = "placing";
+    this._phaseT = 0;
+    this._setPlacementMode(true);
+    this._show("place");
+  }
+  /** Can the player place right now? (tracking ready and pointing at a surface) */
+  _canPlace() {
+    const g = this._pg;
+    if (!g) return true;
+    const ready = g.ready ? !!g.ready.value : true;
+    return ready && !!g.placementValid.value;
+  }
+  _place(fromButton = true) {
+    if (this._phase !== "placing") return;
+    if (fromButton && !this._canPlace()) return;
+    if (fromButton) this._setPlacementMode(false);
+    this._placed = true;
+    this._sfx.coin();
+    this._playClip(this.placeTimeline.value);
+    this.onPlace.emit();
+    this.startRound();
+  }
+  /**
+   * Back to placing. A round in progress is dropped (no score, no chest):
+   * the lane is moving under the player, so the round can't fairly continue.
+   */
+  _resetPlacement(fromButton) {
+    if (!this._pg || !this.placementEnabled.value) return;
+    if (this._phase === "placing") return;
+    if (fromButton) {
+      const restart = this._pg._restartPlacement;
+      this._pgWriting = true;
+      try {
+        if (typeof restart === "function") restart.call(this._pg);
+        else this._pg.placementMode.value = true;
+      } finally {
+        this._pgWriting = false;
+      }
+    }
+    this._placed = false;
+    this._playClip(this.resetTimeline.value);
+    this.onResetPlacement.emit();
+    const wasModal = this._phase === "idle";
+    this._reset();
+    if (wasModal && !this._ui.querySelector('[data-screen="intro"]').hidden) {
+      this._phase = "idle";
+      return;
+    }
+    this._enterPlacing();
+  }
+  _playClip(id) {
+    if (!id) return;
+    try {
+      const clip = this.getZComponentInstance().animation?.layerClipByID?.get(id);
+      if (!clip) return;
+      clip.seek(0, { dontActivateLayer: true });
+      clip.play();
+    } catch {
+    }
+  }
+  _syncPlacementUi() {
+    const el = this._el;
+    if (!el.placeBtn) return;
+    el.placeHint.textContent = this.placeHint.value;
+    el.placeLbl.textContent = this.placeButtonLabel.value;
+    const lbl = this.replaceButtonLabel.value.trim();
+    el.replaceLbl.textContent = lbl;
+    el.replaceLbl.hidden = !lbl;
+    el.replace.setAttribute("aria-label", lbl || "Re-place the game");
+    const can = this._canPlace();
+    const ready = !this._pg?.ready || !!this._pg.ready.value;
+    el.placeBtn.disabled = !can;
+    el.placeStatus.textContent = !ready ? "Starting the camera tracking\u2026" : can ? "Surface found. Tap to place." : "Looking for a flat surface\u2026";
+    el.placeStatus.classList.toggle("is-ok", can);
+    this._ui.classList.toggle("lb-can-place", can);
+    const hud = this._ui.querySelector('[data-screen="hud"]');
+    el.replace.hidden = !(this._pg && this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
+  }
   /* ══ cleanup ══════════════════════════════════════════════════════════ */
   dispose() {
+    for (const u of this._pgUnsub) u();
+    this._pgUnsub = [];
     window.removeEventListener("pointerdown", this._onPointer, { capture: true });
     window.removeEventListener("keydown", this._onKey);
     this._ui.remove();
@@ -2177,6 +2450,10 @@ __publicField(_LootBreakGame, "X_PORTAL", 0.47);
 __publicField(_LootBreakGame, "_sparkGeo", null);
 __publicField(_LootBreakGame, "_shotGeo", null);
 var LootBreakGame = _LootBreakGame;
+function isPlacementGroup(x) {
+  const g = x;
+  return !!g && typeof g === "object" && !!g.placementMode && typeof g.placementMode.addListener === "function" && !!g.placementValid;
+}
 function LootBootPX() {
   return 58e-4;
 }
@@ -2230,9 +2507,34 @@ var CSS = `
 .lb-iconbtn{position:absolute;right:10px;top:calc(var(--top) + 52px);width:44px;height:44px;border-radius:10px;border:2px solid #0c0a10;
   background:linear-gradient(#a3622f,#6b3a16);box-shadow:inset 0 0 0 2px #d79a52,0 3px 0 rgba(0,0,0,.45);color:#ffe7b5;font-size:18px;cursor:pointer}
 .lb-iconbtn.is-off{filter:grayscale(1) brightness(.7)}
+.lb-replace{top:calc(var(--top) + 104px);display:flex;align-items:center;justify-content:center;padding:0}
+.lb-replace[hidden]{display:none}
+.lb-replace svg{width:20px;height:20px}
+.lb-replace span{position:absolute;top:calc(100% + 4px);right:-6px;white-space:nowrap;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;color:#f4efe2;text-shadow:0 1px 0 #16121d,0 0 6px #16121d}
+.lb-place{position:absolute;inset:0;pointer-events:none}
+.lb-reticle{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;opacity:.85;transition:transform .25s}
+.lb-reticle i{position:absolute;width:26px;height:26px;border:4px solid #fff;filter:drop-shadow(0 2px 0 rgba(0,0,0,.5))}
+.lb-reticle i:nth-child(1){left:0;top:0;border-right:0;border-bottom:0}
+.lb-reticle i:nth-child(2){right:0;top:0;border-left:0;border-bottom:0}
+.lb-reticle i:nth-child(3){left:0;bottom:0;border-right:0;border-top:0}
+.lb-reticle i:nth-child(4){right:0;bottom:0;border-left:0;border-top:0}
+.lb-root:not(.lb-can-place) .lb-reticle{animation:lbSeek 1.4s ease-in-out infinite}
+.lb-root.lb-can-place .lb-reticle i{border-color:#7cf08a}
+.lb-root.lb-can-place .lb-reticle{transform:scale(.85)}
+@keyframes lbSeek{50%{transform:scale(1.12);opacity:.5}}
+.lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + 18px);transform:translateX(-50%);width:min(calc(100% - 24px),400px);
+  padding:14px 14px 16px;border-radius:14px;text-align:center;pointer-events:auto;
+  background:linear-gradient(rgba(43,37,49,.94),rgba(24,20,29,.94));border:3px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
+.lb-placehint{margin:0 0 6px;font-size:15px;line-height:1.35;color:#f4efe2}
+.lb-placestatus{margin:0 0 12px;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.04em;color:#ffcf6a}
+.lb-placestatus::before{content:"";display:inline-block;width:8px;height:8px;margin-right:8px;vertical-align:1px;background:currentColor;animation:lbBlink .8s steps(2) infinite}
+.lb-placestatus.is-ok{color:#7cf08a}
+.lb-placestatus.is-ok::before{animation:none}
+.lb-btn-place{width:100%;font-size:17px}
+.lb-btn-place:disabled{filter:grayscale(.85) brightness(.75);cursor:default;box-shadow:inset 0 0 0 2px #6c5e74,0 4px 0 #1a1420}
 .lb-iconbtn.is-off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:#ffe7b5;transform:rotate(-40deg)}
 
-.lb-combo{position:absolute;right:14px;top:calc(var(--top) + 108px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;
+.lb-combo{position:absolute;right:14px;top:calc(var(--top) + 168px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;
   text-shadow:0 3px 0 #16121d,0 0 14px rgba(255,200,80,.6);opacity:0;transform:scale(.6);transform-origin:right center}
 .lb-combo small{display:block;font-size:12px;letter-spacing:.2em;color:#ffd979}
 .lb-combo em{display:block;font-style:normal;font-size:12px;color:#ffe08a}
@@ -2332,5 +2634,6 @@ var CSS = `
 export {
   LabContext,
   LootBreakGame,
+  Observable,
   TIERS
 };

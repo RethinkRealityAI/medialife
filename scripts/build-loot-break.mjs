@@ -40,7 +40,7 @@ const r = await build({
   stdin: {
     contents:
       'export { LootBreakGame, TIERS } from "./loot-break/LootBreakGame";\n' +
-      'export { LabContext } from "./lab-shim/zcomponent";\n',
+      'export { LabContext, Observable } from "./lab-shim/zcomponent";\n',
     resolveDir: path.join(root, "mattercraft"),
     sourcefile: "lab-entry.ts",
     loader: "ts",

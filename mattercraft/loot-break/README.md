@@ -48,10 +48,44 @@ that enables the button after 1.8 s; add `?loading=1` to keep it loading).
 
 Same GA property and event names as the other MEDIALIFE activations, with
 `experience: 'tbh_lootbreak'`: `activate_click`, `camera_granted`,
-`camera_denied`, `game_start`, `boss_reached`, `game_complete` (score, tier,
+`camera_denied`, `scene_placed`, `placement_reset`, `game_start`, `boss_reached`, `game_complete` (score, tier,
 seconds) and one `session_summary` per visit. `index.ts` imports
 `./Scene.zcomp`; if the project's scene file has another name, change that
 import.
+
+## Placement (Place and Re-place buttons)
+
+The game has its own Place and Re-place buttons, the same idea as EVADE's,
+and drives Zappar's **User Placement Anchor Group** directly:
+
+1. Put the LootBreakGame node **inside** the User Placement Anchor Group
+   (the instant world tracking template already has one). The game finds it
+   by itself; `placementGroup` lets you pick a different one.
+2. That's it. The game turns off the group's built-in Place and Restart
+   buttons (`showPlaceButton`, `showRestartPlacementButton`) when it starts,
+   so the template's buttons disappear without editing the group.
+
+How it plays:
+
+- **Intro card → Start lunch break → placing.** The lane follows the phone,
+  a reticle sits in the middle of the screen and the card says
+  "Looking for a flat surface…". **Place on desk** stays disabled until
+  Zappar reports a valid surface (`placementValid`) and tracking is ready.
+- **Place on desk** sets the group's `placementMode` to false (exactly what
+  Zappar's own button does), plays `placeTimeline`, fires `onPlace`, and the
+  3-2-1 countdown starts.
+- **Re-place** (top right, under the speaker, during a round) drops the round
+  (no score, no chest), calls the group's own restart (so its Restart
+  Placement Mode setting, "reset" or "place", still applies), plays
+  `resetTimeline`, fires `onResetPlacement` and goes back to placing. After
+  placing, a fresh round starts.
+- **Play again** goes straight to the countdown while the lane is placed.
+- If something else moves the lane (for example the group's long-press to
+  move), the game follows: it drops into placing and starts a new round when
+  the lane is put down.
+- Taps during placing never count as hits.
+- With no placement group (or `placementEnabled` off) the game skips this
+  step and the template's buttons stay as they are.
 
 ## How a round plays
 
@@ -78,7 +112,7 @@ import.
    `redeemUrl`.
 
 Nothing else needs wiring. For timelines or analytics, the component emits
-**onRoundStart**, **onBoss** and **onRoundEnd(score, tierName)**, and exposes
+**onRoundStart**, **onBoss**, **onRoundEnd(score, tierName)**, **onPlace** and **onResetPlacement**, and exposes
 **score** and **tierIndex** as values you can read.
 
 ## Properties
@@ -96,6 +130,10 @@ Nothing else needs wiring. For timelines or analytics, the component emits
 | Screens | `title`, `subtitle`, `footer` | | Text on the cards. |
 | Screens | `shareUrl`, `redeemUrl`, `redeemLabel` | | Buttons on the results card. Redeem only shows when a link is set. |
 | Screens | `sound` | on | The synthesised sound effects. |
+| Placement | `placementEnabled` | on | Use the game's Place and Re-place buttons. |
+| Placement | `placementGroup` | empty | The User Placement Anchor Group to drive. Empty = the one the game sits in. |
+| Placement | `placeHint`, `placeButtonLabel`, `replaceButtonLabel` | | Placement copy. |
+| Placement | `placeTimeline`, `resetTimeline` | | Timelines played on Place and Re-place. |
 
 ## Rarity thresholds
 

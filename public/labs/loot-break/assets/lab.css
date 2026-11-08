@@ -6,8 +6,8 @@ html,body{margin:0;height:100%;background:#120f18;overflow:hidden;font:14px/1.45
 /* Mattercraft core CSS, reproduced so the lab catches the same tap-swallowing bug. */
 #zcomponent-overlay > *{pointer-events:auto}
 video.lab-bg{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
-.lab-toggle{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 104px);z-index:20;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(18,15,24,.82);color:#fff;font:600 13px system-ui;cursor:pointer}
-.lab-panel{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 152px);z-index:20;width:min(340px,calc(100vw - 20px));max-height:min(70vh,640px);overflow:auto;padding:14px 16px;border-radius:14px;background:rgba(18,15,24,.94);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.lab-toggle{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 84px);z-index:20;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(18,15,24,.82);color:#fff;font:600 13px system-ui;cursor:pointer}
+.lab-panel{position:fixed;left:10px;top:calc(env(safe-area-inset-top,0px) + 132px);z-index:20;width:min(340px,calc(100vw - 20px));max-height:min(70vh,640px);overflow:auto;padding:14px 16px;border-radius:14px;background:rgba(18,15,24,.94);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .lab-panel h2{margin:0 0 6px;font-size:15px}
 .lab-panel h3{margin:14px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#a9a1b8}
 .lab-panel p{margin:0 0 8px;color:#c4bfcd}
