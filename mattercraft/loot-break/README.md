@@ -22,6 +22,14 @@ assets to upload.
 `node scripts/build-loot-break.mjs`. The build copies the game's pixel sprites
 into the splash so the two never drift.
 
+## Art
+
+The pixel sprites are Kenney's **Tiny Dungeon** pack (CC0, public domain), a
+generic stand-in until TBH sends its own sprite sheets. Source, licence and the
+tile used for each sprite are in [CREDITS.md](CREDITS.md). The first hand-drawn
+concept sprites are archived in [archive/](archive/) with screenshots of the
+splash and gameplay, in case we want them back.
+
 ## The splash screen (index.html)
 
 About 4 seconds, drawn entirely in code (no images to download), so it paints
