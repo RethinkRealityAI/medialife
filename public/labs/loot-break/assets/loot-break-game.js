@@ -1708,14 +1708,21 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
           <p class="lb-kicker" data-k="titleRes">LOOT BREAK</p>
           <div class="lb-tier" data-k="tier">COMMON</div>
           <div class="lb-scoreline"><b data-k="final">0</b><span data-k="bestLine"></span></div>
-          <div class="lb-reward" data-k="rw" hidden></div>
-          <ol class="lb-ladder" data-k="ladder"></ol>
-          <ul class="lb-badges" data-k="badges" aria-label="Bonuses"></ul>
-          <div class="lb-stats">
-            <div><b data-k="sKills">0</b><span>Monsters</span></div>
-            <div><b data-k="sCombo">0</b><span>Best combo</span></div>
-            <div><b data-k="sLoot">0</b><span>Loot found</span></div>
-          </div>
+          <ol class="lb-ladder" data-k="ladder" aria-label="Rarity ladder"></ol>
+          <p class="lb-ladder-cap" data-k="ladderCap"></p>
+          <section class="lb-sec" data-k="rwSec" hidden>
+            <h3 class="lb-sec-h">Rewards</h3>
+            <div class="lb-reward" data-k="rw" hidden></div>
+          </section>
+          <section class="lb-sec lb-sec-round">
+            <h3 class="lb-sec-h">Your round</h3>
+            <div class="lb-stats">
+              <div><b data-k="sKills">0</b><span>Monsters</span></div>
+              <div><b data-k="sCombo">0</b><span>Best combo</span></div>
+              <div><b data-k="sLoot">0</b><span>Loot found</span></div>
+            </div>
+            <ul class="lb-badges" data-k="badges" aria-label="Bonuses"></ul>
+          </section>
           <div class="lb-actions">
             <button class="lb-btn" type="button" data-k="share">Share</button>
             <button class="lb-btn lb-btn-go" type="button" data-k="again">Play again</button>
@@ -1732,6 +1739,7 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
     for (let i = TIERS.length - 1; i >= 0; i--) {
       const li = document.createElement("li");
       li.textContent = TIERS[i].name;
+      li.title = TIERS[i].name;
       li.style.setProperty("--c", TIERS[i].color);
       li.dataset.i = String(i);
       ladder.appendChild(li);
@@ -2204,6 +2212,8 @@ var _LootBreakGame = class _LootBreakGame extends Group2 {
       li.classList.toggle("is-got", i <= ti);
       li.classList.toggle("is-top", i === ti);
     });
+    const nextTier = TIERS[ti + 1];
+    this._el.ladderCap.textContent = nextTier ? `Rarity ${ti + 1} of ${TIERS.length} \xB7 Next: ${nextTier.name} at ${fmt(nextTier.at * this.tierScale.value)}` : `Rarity ${TIERS.length} of ${TIERS.length} \xB7 The top of the ladder`;
     this._syncText();
     this._rewards?.onResults(s, ti);
     this._show("results");
@@ -3336,8 +3346,10 @@ var LootRewards = class {
   /* ── the strip on the results card ── */
   _renderStrip(fresh = false) {
     const s = this.host.strip;
+    const sec = s.parentElement;
     if (!this.ready || !this.cfg.rewards.length) {
       s.hidden = true;
+      if (sec) sec.hidden = true;
       this._offer = null;
       return;
     }
@@ -3378,9 +3390,10 @@ var LootRewards = class {
         </div>`;
     }
     const q = cfg.quest;
-    const quest = q && !isLive(codes.quest) ? `<button class="lb-rw-quest" type="button" data-act="quest"><b>+${q.percent}% BONUS</b> Follow us + share your loot<span aria-hidden="true">\u25B8</span></button>` : "";
+    const quest = q && !isLive(codes.quest) ? `<button class="lb-rw-quest" type="button" data-act="quest">Want an extra ${q.percent}% off?<span aria-hidden="true">\u25B8</span></button>` : "";
     s.innerHTML = main + quest;
     s.hidden = false;
+    if (sec) sec.hidden = false;
     if (fresh && this._offer) this.host.emit("offer", this._offer.percent);
   }
   /* ── the rewards screen ── */
@@ -3448,7 +3461,7 @@ var LootRewards = class {
         ${cfg.shopUrl ? `<a class="lb-btn lb-btn-go lb-rw-wide" href="${esc(cfg.shopUrl)}" target="_blank" rel="noopener" data-act="shop">${esc(
         cfg.shopLabel || "Shop the drop"
       )}</a>` : ""}
-        ${q && !isLive(codes.quest) ? `<button class="lb-rw-quest" type="button" data-act="quest"><b>+${q.percent}% BONUS</b> Follow us + share your loot<span aria-hidden="true">\u25B8</span></button>` : ""}
+        ${q && !isLive(codes.quest) ? `<button class="lb-rw-quest" type="button" data-act="quest">Want an extra ${q.percent}% off?<span aria-hidden="true">\u25B8</span></button>` : ""}
         <div class="lb-actions lb-rw-acts">
           <button class="lb-btn" type="button" data-act="back">Back</button>
           <button class="lb-btn lb-btn-go" type="button" data-act="again">Play again</button>
@@ -3461,7 +3474,7 @@ var LootRewards = class {
       this._body.innerHTML = `
         <div class="lb-ribbon"><span>BONUS QUEST</span></div>
         <p class="lb-rw-big">+${q.percent}% OFF</p>
-        <p class="lb-rw-p">Do all ${n} for an extra code on your next order.</p>
+        <p class="lb-rw-p">Follow our ${q.follow.length} accounts and share your loot to your story. That unlocks an extra ${q.percent}% off your next order.</p>
         <ol class="lb-rw-steps">
           ${q.follow.map(
         (f, i) => `
@@ -3995,17 +4008,20 @@ var CSS = `
 .lb-intro .lb-btn-go{width:100%;font-size:17px}
 .lb-best{margin:10px 0 0;font-size:13px;color:#a99fb4;min-height:1em}
 .lb-kicker{margin:0;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.24em;color:#a99fb4}
-.lb-tier{margin:2px 0 2px;font-family:'Silkscreen',monospace;font-weight:700;font-size:clamp(34px,10vw,46px);letter-spacing:.03em;line-height:1.1}
+.lb-tier{margin:2px 0 0;font-family:'Silkscreen',monospace;font-weight:700;font-size:clamp(34px,10vw,46px);letter-spacing:.03em;line-height:1.1}
 .lb-tier.is-cosmic{background:linear-gradient(90deg,#c79bff,#33e6e6,#ff5ad1,#ffc53d,#c79bff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;animation:lbHue 3s linear infinite}
-.lb-scoreline{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:10px}
+.lb-scoreline{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:8px}
 .lb-scoreline b{font-family:'Silkscreen',monospace;font-size:24px;color:#ffe08a}
 .lb-scoreline span{font-size:13px;color:#a99fb4}
-.lb-ladder{list-style:none;margin:0 auto 12px;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:5px 6px;max-width:330px;direction:rtl}
-.lb-ladder li{direction:ltr;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:5px 6px;border-radius:5px;
-  background:#1d1922;color:#5d5566;box-shadow:inset 0 0 0 1px #2e2836}
-.lb-ladder li.is-got{color:#16121d;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
-.lb-ladder li.is-top{outline:2px solid #fff;box-shadow:0 0 14px var(--c);animation:lbPulse 1.2s ease-in-out infinite}
-.lb-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.lb-ladder{list-style:none;margin:2px auto 4px;padding:0;display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:300px;direction:rtl}
+.lb-ladder li{height:10px;border-radius:2px;font-size:0;color:transparent;overflow:hidden;background:#1d1922;box-shadow:inset 0 0 0 1px #2e2836}
+.lb-ladder li.is-got{background:var(--c);box-shadow:none}
+.lb-ladder li.is-top{outline:2px solid #fff;outline-offset:1px;box-shadow:0 0 10px var(--c);animation:lbPulse 1.2s ease-in-out infinite}
+.lb-ladder-cap{margin:0 0 12px;font-size:12px;color:#a99fb4}
+.lb-sec{margin:0 0 12px;padding-top:10px;border-top:1px solid #2e2836;text-align:left}
+.lb-sec-h{margin:0 0 8px;font-family:'Silkscreen',monospace;font-weight:400;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#7f768a}
+.lb-sec .lb-reward{margin:0}
+.lb-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;text-align:center}
 .lb-stats div{padding:6px 4px;border-radius:8px;background:#1d1922;box-shadow:inset 0 0 0 1px #2e2836}
 .lb-stats b{display:block;font-family:'Silkscreen',monospace;font-size:17px;color:#fff}
 .lb-stats span{font-size:11.5px;color:#a99fb4}
@@ -4041,7 +4057,7 @@ var CSS = `
 .lb-float.is-heal{color:#9dffb0;font-size:18px}
 .lb-float.is-curse{color:#d08bff;font-size:17px}
 .lb-float.is-weak{color:#ff5a5a;font-size:24px;text-shadow:0 2px 0 #16121d,0 0 12px rgba(255,200,80,.9)}
-.lb-badges{list-style:none;margin:0 0 10px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lb-badges{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;text-align:center}
 .lb-badges li{padding:5px 4px;border-radius:8px;background:#1d1922;box-shadow:inset 0 0 0 1px #2e2836;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.3;color:#6d6477}
 .lb-badges li b{display:block;font-size:10px;font-weight:400}
 .lb-badges li.is-got{background:#2c2410;box-shadow:inset 0 0 0 1px #f5c447;color:#ffe08a}
@@ -4070,10 +4086,10 @@ var CSS = `
 .lb-rw-prog i{display:block;height:100%;background:var(--c)}
 .lb-btn-sm{min-height:40px;padding:0 12px;font-size:12px;flex:none}
 .lb-btn-gold{flex:none;min-height:42px;padding:0 16px;font-size:14px;background:linear-gradient(#ffd25a,#c7861b);box-shadow:inset 0 0 0 2px #fff0b0,0 4px 0 #5a3a0a;color:#2a1608}
-.lb-rw-quest{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 12px;border-radius:10px;border:2px dashed #8a57d6;background:rgba(138,87,214,.12);
-  color:#e9d8ff;font-family:'Pixelify Sans',sans-serif;font-size:13.5px;text-align:left;cursor:pointer;touch-action:manipulation}
-.lb-rw-quest b{font-family:'Silkscreen',monospace;font-size:12px;color:#c79bff;white-space:nowrap}
-.lb-rw-quest span{margin-left:auto;color:#c79bff}
+.lb-rw-quest{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px;padding:6px 14px;border-radius:10px;
+  border:2px solid #8a57d6;background:linear-gradient(rgba(138,87,214,.28),rgba(138,87,214,.12));color:#efe4ff;font-family:'Silkscreen',monospace;font-size:13px;
+  letter-spacing:.02em;text-align:left;cursor:pointer;touch-action:manipulation}
+.lb-rw-quest span{color:#c79bff;font-size:16px}
 .lb-rw-quest:focus-visible,.lb-rw-step:focus-visible,.lb-rw-link:focus-visible{outline:3px solid #fff;outline-offset:2px}
 .lb-rw{align-items:center}
 .lb-rw .lb-frame{text-align:center}
@@ -4135,7 +4151,7 @@ var CSS = `
 @keyframes lbPulse{50%{box-shadow:0 0 22px var(--c)}}
 @keyframes lbHue{to{background-position:200% 0}}
 @media (prefers-reduced-motion:reduce){.lb-root *{animation-duration:.01ms !important;animation-iteration-count:1 !important}}
-@media (max-height:600px){.lb-how li{font-size:13px}.lb-frame{padding-top:26px}.lb-ladder li{padding:3px 6px}}
+@media (max-height:600px){.lb-how li{font-size:13px}.lb-frame{padding-top:26px}}
 `;
 export {
   LabContext,

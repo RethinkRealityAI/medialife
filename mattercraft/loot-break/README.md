@@ -123,7 +123,9 @@ can still mute with the speaker button. Turn it off to follow the switch.
 
 ## Rewards (discount codes and the bonus quest)
 
-The results card has a rewards strip, run from the MEDIALIFE site
+The results card has three parts: the result (rarity, score and a rarity bar
+with the next threshold), **Rewards**, and **Your round** (stats and badges).
+The rewards are run from the MEDIALIFE site
 (**Admin > LOOT BREAK**, `/admin/lootbreak`). Nothing to set up in Mattercraft:
 `rewardsApi` already points at https://medialife.ai.
 
@@ -134,7 +136,8 @@ The results card has a rewards strip, run from the MEDIALIFE site
   round later upgrades it and the old code stops working. Below the ladder,
   the strip shows how far they are from the next reward, so there's always a
   reason to play again.
-- **Bonus quest.** Follow every account listed in the admin, then share a
+- **Bonus quest.** The results card only asks "Want an extra 10% off?"; the
+  next screen explains it. Follow every account listed in the admin, then share a
   story card (a 1080x1920 image of their result, made on the phone) for an
   extra code (default 10 %). Follows can't be checked through any API, so the
   code is issued straight away, marked "Check follows" in the admin, and the
