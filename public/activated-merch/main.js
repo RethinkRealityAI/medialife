@@ -25,6 +25,7 @@ const SUKEBAN_AR = {
   video: "media/ar/sukeban-hoodie.mp4",
   poster: "media/ar/sukeban-hoodie.webp",
   key: 0x008102,
+  bg: 0x4a787e, // the print's teal, replaces the green screen
   rect: [
     [0.3806, 0.668],
     [-0.4178, 0.6702],
@@ -208,8 +209,24 @@ function measure() {
   };
 }
 
-function scrollState() {
+// The 3D and the AR walkthrough follow an eased copy of the scroll position,
+// so wheel notches and trackpad jitter turn into one smooth glide.
+let sy = null;
+let syT = 0;
+function smoothScrollY(now) {
   const y = scrollY;
+  const dt = Math.min(0.05, Math.max(0, (now - syT) / 1000));
+  syT = now;
+  // Big jumps (nav links, reloads mid-page) land straight away.
+  if (sy === null || reduced || Math.abs(y - sy) > vh * 2.5) sy = y;
+  else {
+    sy += (y - sy) * (1 - Math.exp(-dt * 9));
+    if (Math.abs(y - sy) < 0.3) sy = y;
+  }
+  return sy;
+}
+
+function scrollState(y = scrollY) {
   const hero = clamp01(y / Math.max(1, geom.details - (innerWidth < 760 ? vh * 0.2 : 0)));
   const tech = clamp01((y - geom.tech) / Math.max(1, geom.techH - vh));
   // The AR section overlaps the tech section's last screen, so it picks up
@@ -378,7 +395,7 @@ let stageErrors = 0;
 function loop() {
   // Schedule first, so one bad frame can never freeze the page.
   requestAnimationFrame(loop);
-  const s = scrollState();
+  const s = scrollState(smoothScrollY(performance.now()));
   els.canvas?.classList.toggle("off", s.off);
   if (stage) {
     try {

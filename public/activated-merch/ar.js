@@ -240,12 +240,15 @@ const CHROMA_VERT = /* glsl */ `
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }`;
 
-// The same keyer the 8th Wall experiences use (Mugen87's green-screen shader),
-// plus a scan-line reveal from the top.
+// The whole video sits opaque over the print, like the 8th Wall experiences:
+// the green is swapped for the print's own background colour (with the same
+// keyer the 8th Wall projects use, Mugen87's green-screen shader), so the
+// character comes alive in place and the original print never shows through.
+// Plus a scan-line reveal from the top.
 const CHROMA_FRAG = /* glsl */ `
   uniform sampler2D tex;
-  uniform vec3 keyColor;
-  uniform float similarity, smoothness, spill, uReveal, uOpacity, uTime;
+  uniform vec3 keyColor, bg;
+  uniform float gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
   varying vec2 vUv;
   vec2 RGBtoUV(vec3 rgb) {
     return vec2(
@@ -265,8 +268,12 @@ const CHROMA_FRAG = /* glsl */ `
     float edge = uReveal * 1.08 - 0.04;
     float shown = 1.0 - smoothstep(edge - 0.015, edge, y);
     float line = smoothstep(0.03, 0.0, abs(y - edge)) * step(uReveal, 0.999);
-    vec3 col = rgba.rgb + vec3(0.35, 0.85, 1.0) * line * 1.4;
-    float alpha = max(a * shown, line * 0.9);
+    vec3 col = rgba.rgb;
+    col = mix(bg, col * gain, a) + vec3(0.35, 0.85, 1.0) * line * 1.4;
+    // Anti-aliased outer edge, so the panel's border stays crisp but clean.
+    vec2 e = min(vUv, 1.0 - vUv) / fwidth(vUv);
+    float rim = clamp(min(e.x, e.y), 0.0, 1.0);
+    float alpha = max(shown, line * 0.9) * rim;
     gl_FragColor = vec4(col, alpha * uOpacity);
   }`;
 
@@ -423,7 +430,12 @@ export class ARView {
     const mat = new THREE.ShaderMaterial({
       uniforms: {
         tex: { value: poster },
-        keyColor: { value: new THREE.Color(ar.key ?? 0x008102) },
+        // Raw (display) values: the video texture isn't linearised either, so
+        // the key has to be compared in the same space. Converting it to
+        // linear made dark and grey pixels key out and the print show through.
+        keyColor: { value: new THREE.Color().setHex(ar.key ?? 0x008102, THREE.NoColorSpace) },
+        bg: { value: new THREE.Color().setHex(ar.bg ?? 0x4a787e, THREE.NoColorSpace) },
+        gain: { value: ar.gain ?? 0.94 },
         similarity: { value: 0.159 },
         smoothness: { value: 0.082 },
         spill: { value: 0.214 },
