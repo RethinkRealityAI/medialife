@@ -2,11 +2,14 @@
  * LOOT BREAK — a 60-second WebAR "lunch break raid" for TBH: Task Bar Hero.
  *
  * A glowing pixel taskbar lands on your desk. The hero party (Knight, Ranger,
- * Sorcerer, Priest) fights on its own, like the idle game; monsters pour out of
- * a portal at the far end. You are the cursor: tap monsters to hit and stun
- * them, chain taps into combos, tap dropped loot before it vanishes. At 12:45
- * the boss arrives. At 12:59 a chest opens on TBH's rarity ladder, from Common
- * to Cosmic, based on your score.
+ * Sorcerer, Priest) fights on its own, like the idle game, but can't survive
+ * alone; monsters pour out of a portal at the far end. You are the cursor: tap
+ * monsters to hit and stun them, chain taps into combos (misses break them,
+ * mashing jams the cursor), tap dropped loot, and leave purple cursed slimes
+ * alone. Combos charge an ultimate meter: pick a hero to fire Shield, Volley,
+ * Meteor or Heal. At 12:45 the boss arrives; it shrugs off the party, so hit
+ * its glowing weak spot. At 12:59 a chest opens on TBH's rarity ladder, from
+ * Common to Cosmic (one rarity lower if the boss escaped), plus bonus badges.
  *
  * Everything is drawn by the component itself (pixel sprites, lane, portal,
  * sound), so it needs no assets. Put it under your placement / World Tracker
@@ -42,23 +45,24 @@ interface Tier {
 
 /**
  * TBH's own ten loot rarities, low to high.
- * Tuned with a perfect-aim bot over 60 s rounds at difficulty 0.5: no taps lands
- * Common, a casual player Rare to Legendary, a good one Immortal to Arcana, a
- * near-perfect run Beyond to Divine. Cosmic needs a near-perfect run with every
- * loot drop. Real thumbs miss more than the bot, so real scores run lower:
- * use Tier Scale on the component to tune without editing this table.
+ * Tuned with bots over 60 s rounds at difficulty 0.5 (median scores): no taps
+ * is wiped and lands Common (2.6k), a few taps Common/Uncommon (6.5k), a casual
+ * player Rare to Legendary (15k), an engaged one Immortal (22k), mashing lands
+ * Legendary (20k), a near-perfect player Arcana to Beyond (27k). Celestial and
+ * up need weak spots, loot and well-timed ultimates; Cosmic sits just above
+ * the best bot run. Use Tier Scale on the component to tune without editing.
  */
 export const TIERS: Tier[] = [
   { name: "Common", at: 0, color: "#c9ced6", glow: "#ffffff" },
-  { name: "Uncommon", at: 5500, color: "#6fdc5a", glow: "#a8ff8f" },
-  { name: "Rare", at: 9000, color: "#4aa8ff", glow: "#9fd3ff" },
-  { name: "Legendary", at: 13000, color: "#ffc53d", glow: "#ffe28a" },
-  { name: "Immortal", at: 18000, color: "#ff4d4d", glow: "#ff9a8a" },
-  { name: "Arcana", at: 23000, color: "#ff5ad1", glow: "#ffa6ea" },
-  { name: "Beyond", at: 28000, color: "#33e6e6", glow: "#a6fbfb" },
+  { name: "Uncommon", at: 6000, color: "#6fdc5a", glow: "#a8ff8f" },
+  { name: "Rare", at: 11000, color: "#4aa8ff", glow: "#9fd3ff" },
+  { name: "Legendary", at: 16000, color: "#ffc53d", glow: "#ffe28a" },
+  { name: "Immortal", at: 21000, color: "#ff4d4d", glow: "#ff9a8a" },
+  { name: "Arcana", at: 25000, color: "#ff5ad1", glow: "#ffa6ea" },
+  { name: "Beyond", at: 28500, color: "#33e6e6", glow: "#a6fbfb" },
   { name: "Celestial", at: 32000, color: "#f3e3a0", glow: "#fff6cf" },
-  { name: "Divine", at: 36500, color: "#ffffff", glow: "#fff8e8" },
-  { name: "Cosmic", at: 41000, color: "#c79bff", glow: "#e9d8ff" },
+  { name: "Divine", at: 35500, color: "#ffffff", glow: "#fff8e8" },
+  { name: "Cosmic", at: 39000, color: "#c79bff", glow: "#e9d8ff" },
 ];
 
 const PAL: Record<string, string> = {
@@ -324,13 +328,68 @@ const LOOT: LootDef[] = [
   { name: "Cosmic Core", icon: "gem", tier: 9, weight: 0.3 },
 ];
 
-type MonsterKind = "slime" | "bat" | "skeleton" | "boss";
+/** The cursed slime: the slime's sprite in purple, with a red glint. */
+SPRITES.cursed = SPRITES.slime.map((r) => r.replace(/l/g, "p").replace(/L/g, "V").replace(/w/g, "x"));
+
+type MonsterKind = "slime" | "bat" | "skeleton" | "cursed" | "boss";
 const MONSTER_STATS: Record<MonsterKind, { hp: number; speed: number; dps: number; score: number; px: number }> = {
   slime: { hp: 4, speed: 0.07, dps: 3.2, score: 100, px: 1 },
   bat: { hp: 3, speed: 0.12, dps: 2.4, score: 120, px: 1 },
   skeleton: { hp: 6, speed: 0.085, dps: 4.5, score: 160, px: 1 },
-  boss: { hp: 70, speed: 0.045, dps: 11, score: 3000, px: 1.9 },
+  /** Tapping it curses the player (combo and party HP). Leave it to the heroes. */
+  cursed: { hp: 3, speed: 0.08, dps: 2, score: 60, px: 1 },
+  boss: { hp: 65, speed: 0.045, dps: 11, score: 3000, px: 1.9 },
 };
+
+/**
+ * Combat tuning. The party alone can't survive a round: an idle player is
+ * wiped around 12:30, so the player's taps decide the outcome.
+ */
+const TUNE = {
+  /** Seconds between each hero's automatic attacks. */
+  heroCd: { knight: 1.4, ranger: 1.8, sorcerer: 2.9, priest: 2.8 },
+  /** Party HP the priest heals per cast (only when the party is hurt). */
+  priestHeal: 2,
+  /** Monster damage grows by this share over the round (1 = double by 12:59). */
+  pressureRamp: 0.9,
+  /** The boss shrugs off most party damage: heroes deal this share to it. */
+  bossPartyDmg: 0.25,
+  /** Weak spot: damage, seconds visible (at difficulty 0), seconds hidden. */
+  weakDmg: 6,
+  weakOn: 1.5,
+  weakOff: 0.55,
+  /** Cursed slime: party HP lost when tapped. Spawn chance after 12:12. */
+  curseHp: 10,
+  /** Three misses inside this many seconds jam the cursor for jamSecs. */
+  jamWindow: 1.2,
+  jamSecs: 0.9,
+  cursedChance: 0.13,
+  /** Ultimate meter: charge per player hit (times the combo multiplier). */
+  ultPerHit: 1.7,
+  ultPerWeak: 6,
+  ultPerLoot: 4,
+};
+
+type HeroId = "knight" | "ranger" | "sorcerer" | "priest";
+const ULTS: Record<HeroId, { name: string; label: string; key: string }> = {
+  knight: { name: "SHIELD WALL", label: "Shield", key: "1" },
+  ranger: { name: "ARROW VOLLEY", label: "Volley", key: "2" },
+  sorcerer: { name: "METEOR", label: "Meteor", key: "3" },
+  priest: { name: "SANCTUARY", label: "Heal", key: "4" },
+};
+const ULT_HELP: Record<HeroId, string> = {
+  knight: "Knight: the party takes no damage for 6 seconds",
+  ranger: "Ranger: a volley of 14 arrows, strong against the boss",
+  sorcerer: "Sorcerer: a meteor that hits every monster on the lane",
+  priest: "Priest: heals the party by half",
+};
+
+/** End-of-round bonuses. Added before the chest opens, so they count for the rarity. */
+const BADGES = [
+  { id: "boss", name: "Boss slain", pts: 1500 },
+  { id: "iron", name: "Iron party", pts: 1000, hint: "Party above half" },
+  { id: "combo", name: "Combo x30", pts: 1000 },
+] as const;
 
 /* ══════════════════════════════════════════════════════════════════════════
    Small helpers
@@ -499,6 +558,23 @@ class Sfx {
   hurt() {
     this.tone(140, 0.08, "square", 0.04, -60);
   }
+  ult() {
+    [392, 523, 659, 784, 1047].forEach((f, i) => this.tone(f, 0.12, "square", 0.06, 0, i * 0.045));
+    this.noise(0.25, 0.05, 0.2);
+  }
+  crit() {
+    this.tone(1175, 0.06, "square", 0.07);
+    this.tone(1568, 0.14, "square", 0.06, -400, 0.05);
+    this.noise(0.08, 0.08);
+  }
+  curse() {
+    this.tone(220, 0.25, "sawtooth", 0.07, -150);
+    this.tone(233, 0.3, "sawtooth", 0.05, -160, 0.05);
+  }
+  boom() {
+    this.noise(0.5, 0.14);
+    this.tone(90, 0.5, "triangle", 0.12, -60);
+  }
   chest(tier: number) {
     const base = [523, 659, 784, 1047, 1319, 1568];
     const n = 3 + Math.min(3, Math.floor(tier / 3));
@@ -532,10 +608,12 @@ interface Monster extends Actor {
   bob: number;
   hpBar: THREE.Mesh;
   hpFill: THREE.Mesh;
+  /** Cursed slimes glow purple so they read as "don't touch". */
+  aura?: THREE.Mesh;
 }
 
 interface Hero extends Actor {
-  id: "knight" | "ranger" | "sorcerer" | "priest";
+  id: HeroId;
   x: number;
   cd: number;
   lunge: number;
@@ -549,7 +627,11 @@ interface Shot {
   dur: number;
   dmg: number;
   splash: boolean;
+  src: HitSrc;
 }
+
+/** Who dealt a hit: the player's tap, a hero's auto-attack, or an ultimate. */
+type HitSrc = "player" | "hero" | "ult";
 
 interface Drop {
   mesh: THREE.Mesh;
@@ -912,6 +994,9 @@ export class LootBreakGame extends Group {
   private _partyHp = 100;
   private _combo = 0;
   private _misses = 0;
+  /** Recent miss times; three quick misses jam the cursor briefly (anti-mashing). */
+  private _missAt: number[] = [];
+  private _jamT = 0;
   private _comboT = 0;
   private _bestCombo = 0;
   private _kills = 0;
@@ -920,6 +1005,31 @@ export class LootBreakGame extends Group {
   private _rand = rng(1);
   private _lastClock = "";
   private _resultTier = 0;
+
+  /* skill layer: ultimates, the boss's weak spot, cursed slimes, badges */
+  private _ult = 0; // 0..100
+  private _ultsUsed = 0;
+  private _shieldT = 0;
+  private _shieldMesh: THREE.Mesh | null = null;
+  private _volleyLeft = 0;
+  private _volleyT = 0;
+  private _meteor: { mesh: THREE.Mesh; glow: THREE.Mesh; t: number; x: number } | null = null;
+  private _weak: { boss: Monster; mesh: THREE.Mesh; on: boolean; t: number } | null = null;
+  private _weakHits = 0;
+  private _cursedHits = 0;
+  private _playerHits = 0;
+  private _minHp = 100;
+  private _bossOutcome: "none" | "slain" | "escaped" = "none";
+  private _badges: string[] = [];
+  private _bonus = 0;
+  private _wiped = false;
+  private _scoreTier = 0; // the rarity the score reached, before a boss escape
+  private _coachKey = "";
+  private _coachT = 0;
+  /** Coach tips already shown this session, so each one appears once. */
+  private readonly _coached = new Set<string>();
+  private _weakHitting = false;
+  private _weakTex!: THREE.Texture;
 
   private readonly _sfx: Sfx;
   private readonly _cam: Observable<THREE.Camera> | { value: THREE.Camera };
@@ -935,7 +1045,15 @@ export class LootBreakGame extends Group {
     if (!this._sfx.muted) this._sfx.unlock();
   };
   private readonly _onKey = (e: KeyboardEvent) => {
-    if (e.key === " " && this._phase === "playing") this._tapNearest();
+    if (this._phase !== "playing") return;
+    // Space taps (the weak spot first), 1-4 fire the ultimates.
+    if (e.key === " ") {
+      if (!this.tapWeakPoint()) this._tapNearest();
+      e.preventDefault();
+    } else {
+      const id = (Object.keys(ULTS) as HeroId[]).find((k) => ULTS[k].key === e.key);
+      if (id) this.fireUlt(id);
+    }
   };
 
   constructor(contextManager: ContextManager, constructorProps: ConstructorProps) {
@@ -1031,6 +1149,82 @@ export class LootBreakGame extends Group {
     this._resetPlacement(true);
   }
 
+  /** True when the ultimate meter is full and a hero's move can be fired. */
+  public get ultReady() {
+    return this._ult >= 100;
+  }
+
+  /**
+   * Fire a hero's ultimate (needs a full meter, during a round):
+   * knight = Shield Wall, ranger = Arrow Volley, sorcerer = Meteor, priest = Sanctuary.
+   */
+  public fireUlt(id: HeroId) {
+    if (this._phase !== "playing" || this._ult < 100 || !ULTS[id]) return false;
+    this._ult = 0;
+    this._ultsUsed++;
+    const hero = this._heroes.find((h) => h.id === id)!;
+    hero.flash = 0.25;
+    hero.lunge = 1;
+    this._banner(ULTS[id].name, "is-ult");
+    this._el.banner.style.color = "";
+    this._sfx.ult();
+    for (let i = 0; i < 14; i++) this._spark(new THREE.Vector3(hero.x, hero.h * 0.6, 0.02), "#ffe28a", 0.35, 0.7);
+    if (id === "knight") {
+      this._shieldT = 6;
+    } else if (id === "ranger") {
+      this._volleyLeft = 14;
+      this._volleyT = 0;
+    } else if (id === "sorcerer") {
+      this._castMeteor();
+    } else {
+      const before = this._partyHp;
+      this._partyHp = Math.min(100, this._partyHp + 50);
+      for (const k of this._heroes)
+        for (let i = 0; i < 6; i++) this._spark(new THREE.Vector3(k.x, k.h * 0.8, 0.02), "#9dffb0", 0.25, 0.8);
+      const wp = new THREE.Vector3();
+      hero.body.getWorldPosition(wp);
+      wp.y += hero.h * this._scaleRoot.scale.y * this._worldScale();
+      this._floater(`+${Math.round(this._partyHp - before)} HP`, wp, "is-heal");
+    }
+    this._renderUlt();
+    this._coachDone("ult");
+    return true;
+  }
+
+  /** What happened in the last (or current) round, for analytics and timelines. */
+  public get roundStats() {
+    const taps = this._playerHits + this._misses + this._cursedHits;
+    return {
+      score: this.score.value,
+      tier: TIERS[this._resultTier].name,
+      wiped: this._wiped,
+      boss: this._bossOutcome,
+      ults: this._ultsUsed,
+      weakHits: this._weakHits,
+      cursedHits: this._cursedHits,
+      accuracy: taps ? Math.round((this._playerHits / taps) * 100) : 0,
+      bestCombo: this._bestCombo,
+      kills: this._kills,
+      badges: this._badges.slice(),
+      bonus: this._bonus,
+      minHp: Math.round(this._minHp),
+    };
+  }
+
+  /** Test hook: tap the boss's weak spot if it is showing. */
+  public tapWeakPoint() {
+    if (this._phase !== "playing" || !this._weak?.on) return false;
+    this._hitWeak();
+    return true;
+  }
+
+  /** Test hook: tap the front cursed slime, as a careless player would. */
+  public tapCursed() {
+    const c = this._monsters.filter((m) => !m.dead && m.kind === "cursed").sort((a, b) => a.x - b.x)[0];
+    if (c) this._hitMonster(c, "player");
+    return !!c;
+  }
+
   /** Test hook: jump the clock forward (seconds). */
   public skip(seconds: number) {
     if (this._phase === "playing") this._t = Math.min(this._roundLen() - 0.01, this._t + seconds);
@@ -1056,6 +1250,19 @@ export class LootBreakGame extends Group {
       misses: this._misses,
       kills: this._kills,
       loot: this._drops.length,
+      ult: Math.round(this._ult),
+      shield: this._shieldT > 0,
+      weakOn: !!this._weak?.on,
+      boss: this._bossOutcome,
+      bossAlive: this._monsters.some((m) => m.kind === "boss" && !m.dead),
+      bossHp: this._monsters.find((m) => m.kind === "boss" && !m.dead)?.hp ?? 0,
+      cursedFront: this._frontMonster()?.kind === "cursed",
+      cursed: this._monsters.filter((m) => !m.dead && m.kind === "cursed").length,
+      weakHits: this._weakHits,
+      cursedHits: this._cursedHits,
+      ults: this._ultsUsed,
+      minHp: Math.round(this._minHp),
+      badges: this._badges.join(","),
     };
   }
 
@@ -1103,6 +1310,26 @@ export class LootBreakGame extends Group {
     this._glowTex = new THREE.CanvasTexture(c2);
     this._disposables.push(this._shadowTex, this._glowTex);
     this._chestOpenTex = this._sprite("chestOpen").tex;
+    // boss weak spot: a pixel target
+    this._weakTex = this._track(
+      nearestTex(
+        pixelCanvas([
+          "....kkkkk....",
+          "..kkxxxxxkk..",
+          ".kxxgggggxxk.",
+          ".kxgg...ggxk.",
+          "kxgg..w..ggxk",
+          "kxg..www..gxk",
+          "kxg.wwwww.gxk",
+          "kxg..www..gxk",
+          "kxgg..w..ggxk",
+          ".kxgg...ggxk.",
+          ".kxxgggggxxk.",
+          "..kkxxxxxkk..",
+          "....kkkkk....",
+        ]),
+      ),
+    );
   }
 
   private _track<T extends { dispose(): void }>(x: T) {
@@ -1428,6 +1655,11 @@ export class LootBreakGame extends Group {
         <div class="lb-banner" data-k="banner"></div>
         <div class="lb-count" data-k="count"></div>
         <div class="lb-toast" data-k="toast"></div>
+        <div class="lb-coach" data-k="coach" aria-live="polite"></div>
+        <div class="lb-ults" data-k="ults" role="group" aria-label="Hero ultimates">
+          <p class="lb-ults-lbl" data-k="ultLbl">ULT <b data-k="ultPct">0%</b></p>
+          <div class="lb-ultbtns" data-k="ultBtns"></div>
+        </div>
         <div class="lb-meter">
           <div class="lb-meter-label"><span data-k="tierNow">COMMON</span><span class="lb-arrow">▸</span><span data-k="tierNext">UNCOMMON</span></div>
           <div class="lb-meter-bar"><i data-k="meter"></i></div>
@@ -1446,9 +1678,10 @@ export class LootBreakGame extends Group {
           <div class="lb-ribbon"><span data-k="title">LOOT BREAK</span></div>
           <p class="lb-sub" data-k="subtitle"></p>
           <ul class="lb-how">
-            <li><i class="lb-ico lb-ico-party"></i><span>Your party fights on its own, like in TBH.</span></li>
-            <li><i class="lb-ico lb-ico-cursor"></i><span><b>You are the cursor.</b> Tap monsters to hit them. Keep hitting to build a combo; a miss breaks it.</span></li>
-            <li><i class="lb-ico lb-ico-loot"></i><span>Tap dropped loot before it vanishes. The boss shows up at 12:45.</span></li>
+            <li><i class="lb-ico lb-ico-party"></i><span>Your party fights on its own, but <b>it can't win without you</b>.</span></li>
+            <li><i class="lb-ico lb-ico-cursor"></i><span><b>You are the cursor.</b> Tap monsters and loot. A miss breaks your combo.</span></li>
+            <li><i class="lb-ico lb-ico-ult"></i><span>Combos charge <b>ultimates</b>. When the bar is full, pick a hero.</span></li>
+            <li><i class="lb-ico lb-ico-boss"></i><span>Hit the boss's glowing <b>weak spot</b>. Never tap <b class="lb-purple">purple slimes</b>.</span></li>
             <li><i class="lb-ico lb-ico-chest"></i><span>At 12:59 your chest opens: Common all the way to <b class="lb-cosmic">Cosmic</b>.</span></li>
           </ul>
           <button class="lb-btn lb-btn-go" type="button" data-k="start">Start lunch break</button>
@@ -1463,6 +1696,7 @@ export class LootBreakGame extends Group {
           <div class="lb-tier" data-k="tier">COMMON</div>
           <div class="lb-scoreline"><b data-k="final">0</b><span data-k="bestLine"></span></div>
           <ol class="lb-ladder" data-k="ladder"></ol>
+          <ul class="lb-badges" data-k="badges" aria-label="Bonuses"></ul>
           <div class="lb-stats">
             <div><b data-k="sKills">0</b><span>Monsters</span></div>
             <div><b data-k="sCombo">0</b><span>Best combo</span></div>
@@ -1488,6 +1722,29 @@ export class LootBreakGame extends Group {
       li.style.setProperty("--c", TIERS[i].color);
       li.dataset.i = String(i);
       ladder.appendChild(li);
+    }
+
+    // One button per hero ultimate, with the hero's own sprite as the icon.
+    for (const id of Object.keys(ULTS) as HeroId[]) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "lb-ultbtn";
+      b.dataset.ult = id;
+      b.disabled = true;
+      b.setAttribute("aria-label", ULT_HELP[id]);
+      b.title = ULT_HELP[id];
+      const img = document.createElement("img");
+      img.alt = "";
+      try {
+        img.src = pixelCanvas(SPRITES[id]).toDataURL();
+      } catch {
+        /* a canvas that can't export just leaves the label */
+      }
+      const lbl = document.createElement("span");
+      lbl.textContent = ULTS[id].label;
+      b.append(img, lbl);
+      b.addEventListener("click", () => this.fireUlt(id));
+      this._el.ultBtns.appendChild(b);
     }
 
     this._el.start.addEventListener("click", () => this.startRound());
@@ -1639,6 +1896,7 @@ export class LootBreakGame extends Group {
 
   private _tapAt(px: number, py: number, w: number, h: number) {
     this._cursorAt(px, py);
+    if (this._jamT > 0) return; // jammed: mashing doesn't land
     const reach = Math.max(56, Math.min(w, h) * 0.12);
     const wp = new THREE.Vector3();
     // loot first
@@ -1653,6 +1911,15 @@ export class LootBreakGame extends Group {
       this._collect(best.drop);
       return;
     }
+    // the boss's weak spot beats a plain hit on the boss
+    if (this._weak?.on) {
+      this._weak.mesh.getWorldPosition(wp);
+      const s = this._toScreen(wp, w, h);
+      if (s.front && Math.hypot(s.x - px, s.y - py) < reach * 0.85) {
+        this._hitWeak();
+        return;
+      }
+    }
     for (const m of this._monsters) {
       if (m.dead) continue;
       m.body.getWorldPosition(wp);
@@ -1661,8 +1928,22 @@ export class LootBreakGame extends Group {
       const dist = Math.hypot(s.x - px, s.y - py);
       if (s.front && dist < reach * (m.kind === "boss" ? 2 : 1) && dist < best.d) best = { d: dist, mon: m };
     }
-    if (best.mon) this._hitMonster(best.mon, true);
-    else this._miss();
+    if (best.mon) {
+      this._hitMonster(best.mon, "player");
+      return;
+    }
+    // A tap on a hero fires its ultimate when the meter is full, and is
+    // never a miss (it isn't a swing at a monster).
+    for (const hero of this._heroes) {
+      hero.body.getWorldPosition(wp);
+      wp.y += hero.h * 0.5 * this._scaleRoot.scale.y * this._worldScale();
+      const s = this._toScreen(wp, w, h);
+      if (s.front && Math.hypot(s.x - px, s.y - py) < reach * 0.8) {
+        if (this.ultReady) this.fireUlt(hero.id);
+        return;
+      }
+    }
+    this._miss();
   }
 
   /** A tap that hits nothing breaks the combo, so spamming the screen doesn't pay. */
@@ -1670,6 +1951,23 @@ export class LootBreakGame extends Group {
     this._sfx.tone(220, 0.04, "triangle", 0.03);
     if (this._phase !== "playing") return;
     this._misses++;
+    this._missAt = this._missAt.filter((t) => this._t - t < TUNE.jamWindow);
+    this._missAt.push(this._t);
+    if (this._missAt.length >= 3) {
+      this._missAt = [];
+      this._jamT = TUNE.jamSecs;
+      this._combo = 0;
+      this._comboT = 0;
+      this._el.cursor.classList.add("is-jam");
+      const c = this._el.combo;
+      c.innerHTML = `<small>CURSOR</small>JAMMED`;
+      c.className = "lb-combo";
+      void c.offsetWidth;
+      c.className = "lb-combo is-miss";
+      this._sfx.tone(160, 0.2, "square", 0.05, -60);
+      this._coach("jam", "Too many misses jam the cursor. Aim for the monsters!", 3);
+      return;
+    }
     if (this._combo >= 3) {
       this._combo = 0;
       this._comboT = 0;
@@ -1688,10 +1986,11 @@ export class LootBreakGame extends Group {
   }
 
   private _tapNearest() {
+    // Keyboard and test bot: the boss first, else the front monster, never a cursed slime.
     const front = this._monsters
-      .filter((m) => !m.dead)
+      .filter((m) => !m.dead && m.kind !== "cursed")
       .sort((a, b) => (a.kind === "boss" ? -1 : 0) - (b.kind === "boss" ? -1 : 0) || a.x - b.x)[0];
-    if (front) this._hitMonster(front, true);
+    if (front) this._hitMonster(front, "player");
     return !!front;
   }
 
@@ -1751,9 +2050,31 @@ export class LootBreakGame extends Group {
     this._comboT = 0;
     this._bestCombo = 0;
     this._misses = 0;
+    this._missAt = [];
+    this._jamT = 0;
+    this._el.cursor.classList.remove("is-jam");
     this._kills = 0;
     this._lootFound = 0;
     this._resultTier = 0;
+    this._scoreTier = 0;
+    this._ult = 0;
+    this._ultsUsed = 0;
+    this._shieldT = 0;
+    if (this._shieldMesh) this._shieldMesh.visible = false;
+    this._volleyLeft = 0;
+    this._clearMeteor();
+    this._weak = null;
+    this._weakHits = 0;
+    this._cursedHits = 0;
+    this._playerHits = 0;
+    this._minHp = 100;
+    this._bossOutcome = "none";
+    this._badges = [];
+    this._bonus = 0;
+    this._wiped = false;
+    this._hideCoach();
+    this._ui.classList.remove("lb-danger", "lb-hurt");
+    this._renderUlt();
     this._rand = rng((Date.now() & 0xffff) + 11);
     this.score.value = 0;
     this.tierIndex.value = 0;
@@ -1783,9 +2104,27 @@ export class LootBreakGame extends Group {
   private _finish(wiped: boolean) {
     this._phase = "ending";
     this._phaseT = 0;
-    this._resultTier = this._tierFor(this.score.value);
-    this._banner(wiped ? "PARTY DOWN!" : "LUNCH IS OVER!", "is-end");
-    this._el.banner.style.color = "";
+    this._wiped = wiped;
+    const bossAlive = this._monsters.some((m) => m.kind === "boss" && !m.dead);
+    if (bossAlive && !wiped) this._bossOutcome = "escaped";
+    // End-of-round bonuses, before the rarity is decided.
+    this._badges = [];
+    if (this._bossOutcome === "slain") this._badges.push("boss");
+    if (!wiped && this._minHp >= 50) this._badges.push("iron");
+    if (this._bestCombo >= 30) this._badges.push("combo");
+    this._bonus = BADGES.filter((b) => this._badges.includes(b.id)).reduce((a, b) => a + b.pts, 0);
+    if (this._bonus) this._addScore(this._bonus);
+    this._scoreTier = this._tierFor(this.score.value);
+    // A boss left standing at 12:59 runs off with some of the loot: one rarity lower.
+    this._resultTier = this._bossOutcome === "escaped" ? Math.max(0, this._scoreTier - 1) : this._scoreTier;
+    this._banner(wiped ? "PARTY DOWN!" : this._bossOutcome === "escaped" ? "BOSS ESCAPED!" : "LUNCH IS OVER!", "is-end");
+    this._el.banner.style.color = this._bossOutcome === "escaped" ? "#ff8a8a" : "";
+    this._shieldT = 0;
+    if (this._shieldMesh) this._shieldMesh.visible = false;
+    this._volleyLeft = 0;
+    this._clearMeteor();
+    this._hideCoach();
+    this._ui.classList.remove("lb-danger");
     for (const m of this._monsters) if (!m.dead) this._kill(m, false);
     for (const d of this._drops) {
       d.mesh.removeFromParent();
@@ -1899,6 +2238,21 @@ export class LootBreakGame extends Group {
     this._el.sKills.textContent = String(this._kills);
     this._el.sCombo.textContent = `x${this._bestCombo}`;
     this._el.sLoot.textContent = String(this._lootFound);
+    const ul = this._el.badges;
+    ul.innerHTML = "";
+    const hints: Record<string, string> = { boss: "Kill the boss", iron: "Party above half", combo: "Reach x30" };
+    for (const b of BADGES) {
+      const li = document.createElement("li");
+      if (b.id === "boss" && this._bossOutcome === "escaped") {
+        li.className = "is-bad";
+        li.innerHTML = `Boss escaped<b>-1 rarity</b>`;
+      } else {
+        const got = this._badges.includes(b.id);
+        li.className = got ? "is-got" : "";
+        li.innerHTML = `${b.name}<b>${got ? `+${fmt(b.pts)}` : hints[b.id]}</b>`;
+      }
+      ul.appendChild(li);
+    }
     this._el.ladder.querySelectorAll<HTMLElement>("li").forEach((li) => {
       const i = Number(li.dataset.i);
       li.classList.toggle("is-got", i <= ti);
@@ -1950,6 +2304,26 @@ export class LootBreakGame extends Group {
       hpFill: fill,
     };
     if (kind === "bat") m.body.position.y = 0.05;
+    if (kind === "cursed") {
+      const aura = new THREE.Mesh(
+        this._track(new THREE.PlaneGeometry(a.h * 1.5, a.h * 1.2)),
+        this._track(
+          new THREE.MeshBasicMaterial({
+            map: this._glowTex,
+            color: 0xa64dff,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        ),
+      );
+      aura.position.set(0, a.h * 0.35, -0.003);
+      a.body.add(aura);
+      m.aura = aura;
+      if (!this._coached.has("cursed")) this._coach("cursed", "Purple slimes are cursed. Don't tap them!", 3.5);
+    }
     m.root.scale.setScalar(0.01);
     this._monsters.push(m);
     if (kind === "boss") {
@@ -1959,13 +2333,32 @@ export class LootBreakGame extends Group {
       this._sfx.boss();
       this._shakeAmt = 0.01;
       this.onBoss.emit();
+      const weak = new THREE.Mesh(
+        this._track(new THREE.PlaneGeometry(0.05, 0.05)),
+        this._track(
+          new THREE.MeshBasicMaterial({ map: this._weakTex, transparent: true, alphaTest: 0.5, depthTest: false, toneMapped: false }),
+        ),
+      );
+      weak.renderOrder = 12;
+      weak.visible = false;
+      m.body.add(weak);
+      this._weak = { boss: m, mesh: weak, on: false, t: 1.2 };
     }
     return m;
   }
 
-  private _hitMonster(m: Monster, byPlayer: boolean, dmg = 1) {
+  private _hitMonster(m: Monster, src: HitSrc, dmg = 1) {
     if (m.dead) return;
+    const byPlayer = src === "player";
+    if (byPlayer && m.kind === "cursed") {
+      this._curse(m);
+      return;
+    }
+    // The boss shrugs off most of the party's auto-attacks: it's the player's fight.
+    if (src === "hero" && m.kind === "boss") dmg *= TUNE.bossPartyDmg;
     if (byPlayer) {
+      this._playerHits++;
+      this._coachDone("tap");
       this._combo = this._comboT > 0 ? this._combo + 1 : 1;
       this._comboT = 1.0;
       this._bestCombo = Math.max(this._bestCombo, this._combo);
@@ -1973,12 +2366,13 @@ export class LootBreakGame extends Group {
       m.stun = Math.max(m.stun, m.kind === "boss" ? 0.12 : 0.4);
       m.x = Math.min(LootBreakGame.X_PORTAL - 0.02, m.x + (m.kind === "boss" ? 0.002 : 0.012));
       this._addScore(10 * this._comboMult());
+      this._chargeUlt(TUNE.ultPerHit * this._comboMult());
       this._sfx.hit(this._combo);
       this._renderCombo();
       const wp = new THREE.Vector3();
       m.body.getWorldPosition(wp);
       wp.y += m.h * 0.7 * this._scaleRoot.scale.y * this._worldScale();
-      this._floater(dmg > 1 ? `-${dmg}!` : `-${dmg}`, wp, dmg > 1 ? "is-crit" : "");
+      if (!this._weakHitting) this._floater(dmg > 1 ? `-${dmg}!` : `-${dmg}`, wp, dmg > 1 ? "is-crit" : "");
       if (m.kind === "boss") this._shakeAmt = Math.max(this._shakeAmt, 0.003);
     }
     m.hp -= dmg;
@@ -2012,7 +2406,12 @@ export class LootBreakGame extends Group {
     m.dead = true;
     m.dying = 0.35;
     m.hpBar.visible = false;
+    if (this._weak?.boss === m) {
+      this._weak.mesh.visible = false;
+      this._weak = null;
+    }
     if (!scored) return;
+    if (m.kind === "boss") this._bossOutcome = "slain";
     this._kills++;
     const st = MONSTER_STATS[m.kind];
     const pts = st.score * this._comboMult();
@@ -2031,7 +2430,237 @@ export class LootBreakGame extends Group {
       this._el.banner.style.color = "#ffc53d";
       this._dropLoot(m.x, true);
       this._dropLoot(m.x - 0.05, true);
-    } else if (this._rand() < 0.2) this._dropLoot(m.x, false);
+    } else if (m.kind !== "cursed" && this._rand() < 0.2) this._dropLoot(m.x, false);
+  }
+
+  /* ══ skill layer ══════════════════════════════════════════════════════ */
+
+  /** The player tapped a cursed slime: it bursts, the combo breaks and the party is hurt. */
+  private _curse(m: Monster) {
+    this._cursedHits++;
+    this._combo = 0;
+    this._comboT = 0;
+    this._partyHp -= TUNE.curseHp;
+    const c = this._el.combo;
+    c.innerHTML = `<small>COMBO</small>CURSED`;
+    c.className = "lb-combo";
+    void c.offsetWidth;
+    c.className = "lb-combo is-miss";
+    const wp = new THREE.Vector3();
+    m.body.getWorldPosition(wp);
+    wp.y += m.h * this._scaleRoot.scale.y * this._worldScale();
+    this._floater(`CURSED -${TUNE.curseHp} HP`, wp, "is-curse");
+    for (let i = 0; i < 16; i++)
+      this._spark(new THREE.Vector3(m.x, m.h * 0.4, m.root.position.z + 0.01), i % 2 ? "#a64dff" : "#ff3b3b", 0.4, 0.7);
+    for (const h of this._heroes) h.flash = 0.1;
+    this._sfx.curse();
+    this._shakeAmt = Math.max(this._shakeAmt, 0.006);
+    this._flashUi("lb-hurt");
+    this._kill(m, false);
+  }
+
+  /** A tap on the boss's weak spot: big damage, a stun, and ultimate charge. */
+  private _hitWeak() {
+    const w = this._weak;
+    if (!w || !w.on) return;
+    const boss = w.boss;
+    const wp = new THREE.Vector3();
+    w.mesh.getWorldPosition(wp);
+    w.on = false;
+    w.mesh.visible = false;
+    w.t = TUNE.weakOff;
+    this._weakHits++;
+    this._coachDone("weak");
+    this._weakHitting = true;
+    this._hitMonster(boss, "player", TUNE.weakDmg);
+    this._weakHitting = false;
+    const total = TUNE.weakDmg + (this._combo >= 25 ? 2 : this._combo >= 10 ? 1 : 0);
+    boss.stun = Math.max(boss.stun, 0.6);
+    this._addScore(50 * this._comboMult());
+    this._chargeUlt(TUNE.ultPerWeak);
+    this._floater(`CRIT -${total}`, wp, "is-weak");
+    this._sfx.crit();
+    this._shakeAmt = Math.max(this._shakeAmt, 0.006);
+    const local = this._world.worldToLocal(wp.clone());
+    for (let i = 0; i < 14; i++) this._spark(local, i % 2 ? "#ffe08a" : "#ff3b3b", 0.45, 0.6);
+  }
+
+  private _chargeUlt(n: number) {
+    if (this._phase !== "playing" || this._ult >= 100) return;
+    this._ult = Math.min(100, this._ult + n);
+    if (this._ult >= 100) {
+      this._sfx.beep(true);
+      this._coach("ult", "ULT READY! Pick a hero below.");
+    }
+    this._renderUlt();
+  }
+
+  private _renderUlt() {
+    const el = this._el.ults;
+    if (!el) return;
+    const ready = this._ult >= 100;
+    el.style.setProperty("--ult", String(this._ult / 100));
+    el.classList.toggle("is-ready", ready);
+    this._el.ultPct.textContent = ready ? "READY" : `${Math.floor(this._ult)}%`;
+    this._el.ultBtns.querySelectorAll<HTMLButtonElement>("button").forEach((b) => (b.disabled = !ready));
+  }
+
+  private _castMeteor() {
+    const live = this._monsters.filter((m) => !m.dead);
+    const x = live.length ? clamp(live.reduce((a, m) => a + m.x, 0) / live.length, -0.02, 0.4) : 0.15;
+    const glow = new THREE.Mesh(
+      this._track(new THREE.PlaneGeometry(0.16, 0.16)),
+      this._track(
+        new THREE.MeshBasicMaterial({
+          map: this._glowTex,
+          color: 0xff7b2e,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      ),
+    );
+    const mesh = new THREE.Mesh(
+      this._track(new THREE.PlaneGeometry(0.045, 0.045)),
+      this._track(new THREE.MeshBasicMaterial({ color: 0xffe08a, toneMapped: false })),
+    );
+    mesh.rotation.z = Math.PI / 4;
+    glow.position.set(x, 0.6, 0.02);
+    mesh.position.set(x, 0.6, 0.021);
+    this._world.add(glow, mesh);
+    this._billboards.push(glow);
+    this._meteor = { mesh, glow, t: 0.55, x };
+  }
+
+  private _clearMeteor() {
+    if (!this._meteor) return;
+    const { mesh, glow } = this._meteor;
+    mesh.removeFromParent();
+    glow.removeFromParent();
+    const i = this._billboards.indexOf(glow);
+    if (i >= 0) this._billboards.splice(i, 1);
+    this._meteor = null;
+  }
+
+  /** Ultimates in flight, the boss's weak spot. Runs while a round is playing. */
+  private _tickSkill(dt: number) {
+    const now = performance.now() * 0.001;
+    // Shield Wall
+    if (this._shieldT > 0) {
+      this._shieldT -= dt;
+      if (!this._shieldMesh) {
+        this._shieldMesh = new THREE.Mesh(
+          this._track(new THREE.PlaneGeometry(0.42, 0.2)),
+          this._track(
+            new THREE.MeshBasicMaterial({
+              map: this._glowTex,
+              color: 0x63c6ff,
+              transparent: true,
+              blending: THREE.AdditiveBlending,
+              depthWrite: false,
+              toneMapped: false,
+            }),
+          ),
+        );
+        this._shieldMesh.position.set(LootBreakGame.X_FRONT - 0.13, 0.07, 0.03);
+        this._world.add(this._shieldMesh);
+        this._billboards.push(this._shieldMesh);
+      }
+      const fade = clamp(this._shieldT, 0, 1);
+      (this._shieldMesh.material as THREE.MeshBasicMaterial).opacity = (0.55 + Math.sin(now * 8) * 0.15) * fade;
+    }
+    if (this._shieldMesh) this._shieldMesh.visible = this._shieldT > 0;
+
+    // Arrow Volley
+    if (this._volleyLeft > 0) {
+      this._volleyT -= dt;
+      if (this._volleyT <= 0) {
+        const targets = this._monsters.filter((m) => !m.dead && m.kind !== "cursed");
+        if (targets.length) {
+          const boss = targets.find((m) => m.kind === "boss");
+          const to = boss && this._rand() < 0.6 ? boss : targets[Math.floor(this._rand() * targets.length)];
+          const ranger = this._heroes.find((h) => h.id === "ranger")!;
+          ranger.lunge = 0.6;
+          this._shoot(ranger, to, 2, "#ffe28a", false, "ult");
+          this._sfx.tone(900, 0.04, "square", 0.03);
+          this._volleyLeft--;
+        }
+        this._volleyT = 0.09;
+      }
+    }
+
+    // Meteor
+    if (this._meteor) {
+      const me = this._meteor;
+      me.t -= dt;
+      const k = clamp(1 - me.t / 0.55, 0, 1);
+      const y = 0.6 - k * k * 0.56;
+      me.mesh.position.y = y;
+      me.glow.position.y = y;
+      me.mesh.rotation.z += dt * 12;
+      if (me.t <= 0) {
+        const at = new THREE.Vector3(me.x, 0.03, 0.02);
+        this._clearMeteor();
+        this._sfx.boom();
+        this._shakeAmt = 0.016;
+        for (let i = 0; i < 40; i++) this._spark(at, i % 3 ? "#ff7b2e" : "#ffe08a", 0.7, 0.9);
+        for (const m of this._monsters.slice()) {
+          if (m.dead) continue;
+          if (m.kind === "cursed") this._kill(m, true);
+          else this._hitMonster(m, "ult", m.kind === "boss" ? 10 : 8);
+        }
+      }
+    }
+
+    // Boss weak spot: shows up at a random place on the boss, then hides again.
+    const w = this._weak;
+    if (w && !w.boss.dead && w.boss.root.scale.x >= 1) {
+      w.t -= dt;
+      if (w.on) {
+        w.mesh.scale.setScalar(1 + Math.sin(now * 14) * 0.14);
+        if (w.t <= 0) {
+          w.on = false;
+          w.mesh.visible = false;
+          w.t = TUNE.weakOff * (0.8 + this._rand() * 0.5);
+        }
+      } else if (w.t <= 0) {
+        const size = w.boss.h;
+        w.on = true;
+        w.mesh.visible = true;
+        w.t = TUNE.weakOn * (1 - this.difficulty.value * 0.35);
+        w.mesh.position.set((this._rand() - 0.5) * size * 0.55, size * (0.3 + this._rand() * 0.5), 0.004);
+        this._coach("weak", "Tap the glowing weak spot!", 5);
+      }
+    }
+  }
+
+  /* coach tips: one line above the ultimate buttons, each shown once a session */
+  private _coach(key: string, text: string, secs = 0) {
+    if (this._coached.has(key)) return;
+    this._coached.add(key);
+    this._coachKey = key;
+    this._coachT = secs;
+    const c = this._el.coach;
+    c.textContent = text;
+    c.className = "lb-coach";
+    void c.offsetWidth;
+    c.className = "lb-coach is-on";
+  }
+  private _coachDone(key: string) {
+    this._coached.add(key);
+    if (this._coachKey === key) this._hideCoach();
+  }
+  private _hideCoach() {
+    this._coachKey = "";
+    this._coachT = 0;
+    if (this._el.coach) this._el.coach.className = "lb-coach";
+  }
+  private _flashUi(cls: string) {
+    this._ui.classList.remove(cls);
+    void this._ui.offsetWidth;
+    this._ui.classList.add(cls);
+    setTimeout(() => this._ui.classList.remove(cls), 450);
   }
 
   private _pickLoot(boss: boolean) {
@@ -2104,7 +2733,7 @@ export class LootBreakGame extends Group {
   }
   private static _sparkGeo: THREE.PlaneGeometry | null = null;
 
-  private _shoot(from: Hero, to: Monster, dmg: number, color: string, splash: boolean) {
+  private _shoot(from: Hero, to: Monster, dmg: number, color: string, splash: boolean, src: HitSrc = "hero") {
     const m = new THREE.Mesh(
       LootBreakGame._shotGeo ?? (LootBreakGame._shotGeo = new THREE.PlaneGeometry(0.018, 0.008)),
       this._track(
@@ -2115,7 +2744,7 @@ export class LootBreakGame extends Group {
     m.position.copy(p);
     this._world.add(m);
     const dist = Math.abs(to.x - from.x);
-    this._shots.push({ mesh: m, from: p, to, t: 0, dur: 0.12 + dist * 0.6, dmg, splash });
+    this._shots.push({ mesh: m, from: p, to, t: 0, dur: 0.12 + dist * 0.6, dmg, splash, src });
   }
   private static _shotGeo: THREE.PlaneGeometry | null = null;
 
@@ -2209,10 +2838,16 @@ export class LootBreakGame extends Group {
     const alive = this._monsters.filter((m) => !m.dead).length;
     if (this._spawnT <= 0 && alive < 9) {
       const r = this._rand();
-      const kind: MonsterKind = f < 0.15 ? "slime" : r < 0.4 ? "slime" : r < 0.7 ? "skeleton" : "bat";
+      let kind: MonsterKind = f < 0.15 ? "slime" : r < 0.4 ? "slime" : r < 0.7 ? "skeleton" : "bat";
+      if (f >= 0.2 && this._rand() < TUNE.cursedChance) kind = "cursed";
       this._spawn(kind);
       const base = 1.5 - f * 0.75; // faster as lunch runs out
       this._spawnT = base * (1.25 - d * 0.5) * (bossAlive ? 1.6 : 1) * (0.75 + this._rand() * 0.5);
+    }
+
+    if (this._jamT > 0) {
+      this._jamT -= dt;
+      if (this._jamT <= 0) this._el.cursor.classList.remove("is-jam");
     }
 
     // combo timer
@@ -2230,9 +2865,9 @@ export class LootBreakGame extends Group {
       h.cd -= dt;
       if (h.cd > 0) continue;
       if (h.id === "priest") {
-        h.cd = 1.6;
+        h.cd = TUNE.heroCd.priest;
         if (this._partyHp < 100) {
-          this._partyHp = Math.min(100, this._partyHp + 4);
+          this._partyHp = Math.min(100, this._partyHp + TUNE.priestHeal);
           h.flash = 0.12;
           for (const k of this._heroes)
             this._spark(new THREE.Vector3(k.x, k.h * 0.8, 0.02), "#9dffb0", 0.18, 0.5);
@@ -2245,15 +2880,15 @@ export class LootBreakGame extends Group {
       }
       if (h.id === "knight") {
         if (front.x - h.x < 0.12) {
-          h.cd = 0.85;
+          h.cd = TUNE.heroCd.knight;
           h.lunge = 1;
-          this._hitMonster(front, false, 1);
+          this._hitMonster(front, "hero", 1);
         } else h.cd = 0.15;
       } else if (h.id === "ranger") {
-        h.cd = 1.05;
+        h.cd = TUNE.heroCd.ranger;
         this._shoot(h, front, 1, "#e9d38a", false);
       } else {
-        h.cd = 1.7;
+        h.cd = TUNE.heroCd.sorcerer;
         this._shoot(h, front, 2, "#ff8a3d", true);
       }
     }
@@ -2262,8 +2897,16 @@ export class LootBreakGame extends Group {
     let dps = 0;
     for (const m of this._monsters)
       if (!m.dead && m.stun <= 0 && m.x <= LootBreakGame.X_ENGAGE + 0.005) dps += MONSTER_STATS[m.kind].dps;
-    if (dps > 0) {
-      this._partyHp -= dps * dt * (0.8 + d * 0.4);
+    if (dps > 0 && this._shieldT > 0) {
+      // Shield Wall: hits glance off
+      this._hurtT -= dt;
+      if (this._hurtT <= 0) {
+        this._hurtT = 0.3;
+        this._spark(new THREE.Vector3(LootBreakGame.X_ENGAGE - 0.02, 0.05, 0.03), "#9fd3ff", 0.3, 0.4);
+      }
+    } else if (dps > 0) {
+      // Monsters push harder as lunch runs out.
+      this._partyHp -= dps * dt * (0.8 + d * 0.4) * (1 + f * TUNE.pressureRamp);
       this._hurtT -= dt;
       if (this._hurtT <= 0) {
         this._hurtT = 0.45;
@@ -2271,6 +2914,13 @@ export class LootBreakGame extends Group {
         this._sfx.hurt();
       }
     }
+
+    this._tickSkill(dt);
+    this._minHp = Math.min(this._minHp, this._partyHp);
+    const danger = this._partyHp < 35;
+    this._ui.classList.toggle("lb-danger", danger);
+    if (danger) this._coach("danger", this._ult >= 100 ? "Party in danger! Heal or shield them." : "Party in danger! Hit the front monsters.", 3);
+    if (this._t > 2.5 && this._playerHits === 0) this._coach("tap", "Tap the monsters to help your party!");
 
     this._renderHud();
     if (this._partyHp <= 0) {
@@ -2300,9 +2950,10 @@ export class LootBreakGame extends Group {
       const atFront = m.x <= LootBreakGame.X_ENGAGE + 0.005;
       const wob = m.stun > 0 ? Math.sin(now * 60) * 0.004 : 0;
       if (m.kind === "bat") m.body.position.y = 0.05 + Math.sin(now * 6 + m.bob) * 0.012;
-      else if (m.kind === "slime") m.body.scale.set(1 + Math.sin(now * 8 + m.bob) * 0.08, 1 - Math.sin(now * 8 + m.bob) * 0.08, 1);
+      else if (m.kind === "slime" || m.kind === "cursed") m.body.scale.set(1 + Math.sin(now * 8 + m.bob) * 0.08, 1 - Math.sin(now * 8 + m.bob) * 0.08, 1);
       else m.body.position.y = Math.abs(Math.sin(now * 6 + m.bob)) * 0.004;
       m.body.position.x = wob + (atFront ? Math.sin(now * 9 + m.bob) * 0.006 : 0);
+      if (m.aura) (m.aura.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(now * 6 + m.bob) * 0.3;
       this._applyFlash(m, dt);
     }
     // dying: pop and fade
@@ -2351,10 +3002,10 @@ export class LootBreakGame extends Group {
       if (k >= 1) {
         s.mesh.removeFromParent();
         this._shots.splice(i, 1);
-        if (!s.to.dead) this._hitMonster(s.to, false, s.dmg);
+        if (!s.to.dead) this._hitMonster(s.to, s.src, s.dmg);
         if (s.splash) {
           const next = this._monsters.find((m) => !m.dead && m !== s.to && Math.abs(m.x - s.to.x) < 0.08);
-          if (next) this._hitMonster(next, false, 1);
+          if (next) this._hitMonster(next, s.src, 1);
         }
       }
     }
@@ -2462,6 +3113,10 @@ export class LootBreakGame extends Group {
     if (this._toastT > 0) {
       this._toastT -= dt;
       if (this._toastT <= 0) this._el.toast.classList.remove("is-on");
+    }
+    if (this._coachT > 0) {
+      this._coachT -= dt;
+      if (this._coachT <= 0) this._hideCoach();
     }
     if (this._cursorT > 0) {
       this._cursorT -= dt;
@@ -2810,6 +3465,7 @@ const CSS = `
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 16' shape-rendering='crispEdges'%3E%3Cpath d='M0 0h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1H7v1h1v2H7v1H6v-2H5v-1H4v1H3v1H1v1H0z' fill='%2316121d'/%3E%3Cpath d='M1 2h1v1h1v1h1v1h1v1h1v1h1v1h1v1h1v1H6v1h1v2H6v-2H5v-1H4v1H3v1H1z' fill='%23fff'/%3E%3C/svg%3E") no-repeat center/contain;
   image-rendering:pixelated;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4))}
 .lb-cursor.is-click{animation:lbClick .7s ease-out forwards}
+.lb-cursor.is-jam{filter:drop-shadow(0 2px 0 rgba(0,0,0,.4)) sepia(1) saturate(6) hue-rotate(-50deg)}
 .lb-floaters{position:absolute;inset:0;overflow:hidden}
 .lb-float{position:absolute;left:0;top:0;font-family:'Silkscreen',monospace;font-weight:700;font-size:16px;color:#fff;text-shadow:0 2px 0 #16121d;white-space:nowrap}
 .lb-float.is-crit{color:#ffcf4a;font-size:20px}
@@ -2860,6 +3516,46 @@ const CSS = `
 .lb-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}
 .lb-btn-redeem{width:100%;margin-top:8px;background:linear-gradient(#3a7bd5,#1d4f9a);box-shadow:inset 0 0 0 2px #8fc2ff,0 4px 0 #0d2850;color:#eaf4ff}
 .lb-foot{margin:12px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#7f768a}
+
+.lb-coach{position:absolute;left:50%;bottom:calc(var(--bot) + 140px);transform:translate(-50%,8px);opacity:0;width:max-content;max-width:calc(100% - 24px);
+  padding:8px 14px;border-radius:10px;background:rgba(14,12,18,.92);border:2px solid #ffd979;color:#fff3c9;font-family:'Silkscreen',monospace;font-size:12px;
+  letter-spacing:.03em;line-height:1.3;text-align:center;transition:opacity .2s,transform .2s}
+.lb-coach.is-on{opacity:1;transform:translate(-50%,0);animation:lbNudge 1.2s ease-in-out infinite}
+.lb-ults{position:absolute;left:50%;bottom:calc(var(--bot) + 76px);transform:translateX(-50%);width:min(92%,420px);display:flex;align-items:center;gap:8px;--ult:0}
+.lb-ults-lbl{margin:0;flex:0 0 48px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.3;color:#cdd3dc;text-align:center;text-shadow:0 1px 0 #16121d}
+.lb-ults-lbl b{display:block;font-size:12px;color:#ffe08a}
+.lb-ultbtns{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lb-ultbtn{position:relative;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:9px;
+  border:2px solid #0c0a10;overflow:hidden;cursor:pointer;color:#cfc6da;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.03em;
+  background:#1d1922;box-shadow:inset 0 0 0 2px #3c3444,0 3px 0 rgba(0,0,0,.45);touch-action:manipulation}
+.lb-ultbtn::before{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--ult) * 100%);background:linear-gradient(#6b4bc0,#33205f);transition:height .2s}
+.lb-ultbtn img{position:relative;width:26px;height:26px;image-rendering:pixelated}
+.lb-ultbtn span{position:relative}
+.lb-ultbtn:disabled{cursor:default}
+.lb-ultbtn:disabled img{filter:grayscale(.5) brightness(.85)}
+.lb-ultbtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lb-ults.is-ready .lb-ultbtn{background:linear-gradient(#ffd25a,#c7861b);color:#2a1608;box-shadow:inset 0 0 0 2px #fff0b0,0 3px 0 #5a3a0a,0 0 14px rgba(255,200,80,.7);animation:lbReady .8s ease-in-out infinite}
+.lb-ults.is-ready .lb-ultbtn::before{display:none}
+.lb-ults.is-ready .lb-ults-lbl b{color:#fff;animation:lbBlink .6s steps(2) infinite}
+.lb-resulting .lb-ults,.lb-resulting .lb-coach{display:none}
+.lb-root.lb-danger::after,.lb-root.lb-hurt::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 70px 12px rgba(255,40,40,.5)}
+.lb-root.lb-danger::after{animation:lbBlink .9s ease-in-out infinite}
+.lb-root.lb-hurt::after{box-shadow:inset 0 0 90px 20px rgba(166,77,255,.6)}
+.lb-banner.is-ult{color:#ffe08a;text-shadow:0 4px 0 #3d2a08,0 0 26px rgba(255,200,80,.8)}
+.lb-float.is-heal{color:#9dffb0;font-size:18px}
+.lb-float.is-curse{color:#d08bff;font-size:17px}
+.lb-float.is-weak{color:#ff5a5a;font-size:24px;text-shadow:0 2px 0 #16121d,0 0 12px rgba(255,200,80,.9)}
+.lb-badges{list-style:none;margin:0 0 10px;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.lb-badges li{padding:5px 4px;border-radius:8px;background:#1d1922;box-shadow:inset 0 0 0 1px #2e2836;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.3;color:#6d6477}
+.lb-badges li b{display:block;font-size:10px;font-weight:400}
+.lb-badges li.is-got{background:#2c2410;box-shadow:inset 0 0 0 1px #f5c447;color:#ffe08a}
+.lb-badges li.is-bad{background:#2a0f14;box-shadow:inset 0 0 0 1px #ff5a5a;color:#ff9a9a}
+.lb-ico-ult::after{background:linear-gradient(#ffd25a,#c7861b);clip-path:polygon(60% 0,15% 58%,45% 58%,35% 100%,85% 40%,55% 40%)}
+.lb-ico-boss::after{border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#f5c447 22% 40%,#ff3b3b 44% 62%,transparent 66%)}
+.lb-purple{color:#c79bff !important}
+@keyframes lbReady{50%{transform:translateY(-2px)}}
+@keyframes lbNudge{50%{transform:translate(-50%,-3px)}}
+@media (max-height:500px){.lb-ultbtn{height:38px}.lb-ultbtn span{display:none}.lb-ults{bottom:calc(var(--bot) + 64px)}.lb-coach{bottom:calc(var(--bot) + 110px)}}
 
 @keyframes lbPunch{0%{opacity:1;transform:scale(1.5)}100%{opacity:1;transform:scale(1)}}
 @keyframes lbBanner{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}

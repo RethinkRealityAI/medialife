@@ -209,7 +209,8 @@ function frame(now) {
     if (botT <= 0) {
       botT = 0.16 + Math.random() * 0.08; // about 5 taps a second, a quick human
       game.collectAllLoot();
-      game.tapFront();
+      if (!game.tapWeakPoint()) game.tapFront();
+      if (game.ultReady) game.fireUlt(st.partyHp < 50 ? "priest" : st.bossAlive ? "ranger" : "sorcerer");
     }
   }
   // Placement simulation: the lane hovers while placing and settles when placed.

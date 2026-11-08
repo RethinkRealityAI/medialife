@@ -49,7 +49,9 @@ that enables the button after 1.8 s; add `?loading=1` to keep it loading).
 Same GA property and event names as the other MEDIALIFE activations, with
 `experience: 'tbh_lootbreak'`: `activate_click`, `camera_granted`,
 `camera_denied`, `scene_placed`, `placement_reset`, `game_start`, `boss_reached`, `game_complete` (score, tier,
-seconds) and one `session_summary` per visit. `index.ts` imports
+seconds, outcome wiped/survived, boss slain/escaped, ults, weak_hits,
+cursed_hits, accuracy, best_combo, badges) and one `session_summary` per visit.
+Those round fields are there to tune difficulty from real players. `index.ts` imports
 `./Scene.zcomp`; if the project's scene file has another name, change that
 import.
 
@@ -92,15 +94,29 @@ can still mute with the speaker button. Turn it off to follow the switch.
 
 ## How a round plays
 
-1. The intro card explains the round. **Start lunch break** runs 3, 2, 1, GO.
-2. The party walks the lane and fights on its own. The player is the cursor:
-   tapping a monster hits it, stuns it and builds a combo (10 hits = 1.5x points,
-   up to 3x). A tap that hits nothing breaks the combo, so spamming doesn't pay.
-3. Monsters sometimes drop loot. Tapping it before it fades adds points.
-4. The boss steps out of the portal at 12:45 (75% of the round).
-5. At 12:59 the chest opens on one of TBH's ten rarities, from Common to
-   Cosmic, and the results card offers Share, Play again and an optional Redeem
-   link.
+1. The intro card explains the round. **Start lunch break** → place → 3, 2, 1, GO.
+2. **The party can't win alone.** Heroes auto-attack, but monsters push harder
+   as lunch runs out: a player who never taps is wiped (around 12:50). The
+   player is the cursor: tapping a monster hits and stuns it and builds a
+   combo (10 hits = 1.5x points, up to 3x).
+3. **Misses count.** A tap on nothing breaks the combo; three misses in quick
+   succession **jam the cursor** for about a second, so mashing doesn't pay.
+4. **Cursed slimes** (purple, glowing, from about 12:12): tapping one bursts it,
+   breaks the combo and costs the party 10 HP. Leave them to the heroes.
+5. **Ultimates.** Hits charge the ULT meter (faster on a combo). When it's full
+   the four hero buttons light up; tap one (or the hero on the lane, or keys
+   1-4): **Shield** (no damage for 6 s), **Volley** (14 arrows, good on the
+   boss), **Meteor** (hits every monster) or **Heal** (+50 HP).
+6. **The boss** steps out at 12:45 and shrugs off most party damage (25%). A
+   glowing **weak spot** appears on it for about a second at a time: tapping it
+   deals big damage and stuns it. If the boss is still standing at 12:59 it
+   **escapes and the chest drops one rarity**.
+7. At 12:59 bonuses are added (**Boss slain** +1,500, **Iron party** +1,000 for
+   never dropping below half HP, **Combo x30** +1,000), then the chest opens on
+   one of TBH's ten rarities. The results card shows the badges, earned or
+   not, so players know what to go for next time.
+8. One-line coach tips appear the first time each thing matters (tap the
+   monsters, cursed slimes, the weak spot, ULT ready, party in danger).
 
 ## Install in Mattercraft
 
@@ -115,7 +131,8 @@ can still mute with the speaker button. Turn it off to follow the switch.
 
 Nothing else needs wiring. For timelines or analytics, the component emits
 **onRoundStart**, **onBoss**, **onRoundEnd(score, tierName)**, **onPlace** and **onResetPlacement**, and exposes
-**score** and **tierIndex** as values you can read.
+**score**, **tierIndex**, **ultReady** and **roundStats** as values you can read,
+and **fireUlt(hero)** to fire an ultimate from a timeline.
 
 ## Properties
 
@@ -140,27 +157,38 @@ Nothing else needs wiring. For timelines or analytics, the component emits
 
 ## Rarity thresholds
 
-Tuned with a perfect-aim bot over 60-second rounds at difficulty 0.5. Real
-players miss more than the bot, so real scores run a little lower.
+Tuned with bots over 60-second rounds at difficulty 0.5 (16 rounds each). Bots
+aim better than thumbs, so real scores run a little lower; use `tierScale` to
+shift the whole ladder.
 
-| Player | Bot score (median) | Lands on |
+| Player | Median score | Lands on |
 |---|---|---|
-| No taps at all | 4,500 | Common |
-| A few taps | 6,700 | Uncommon |
-| Casual | 14,300 | Legendary |
-| Engaged | 19,000 | Immortal |
-| Spamming the screen | 17,400 | Legendary |
-| Near perfect | 28,700 | Beyond (best runs reach Divine) |
+| No taps at all | 2,600 (always wiped) | Common |
+| A few taps | 6,500 (half wiped) | Common / Uncommon |
+| Casual | about 15,000 | Rare to Legendary |
+| Engaged | 22,000 | Immortal |
+| Mashing the screen | 20,700 | Legendary |
+| Near perfect | 27,000 | Arcana / Beyond |
+| Master (every weak spot, every loot, smart ultimates) | 28,000 (best 38,900) | Arcana to Divine |
 
-Cosmic needs 41,000 points: a near-perfect run that picks up every loot drop.
+Thresholds: Uncommon 6,000 · Rare 11,000 · Legendary 16,000 · Immortal 21,000 ·
+Arcana 25,000 · Beyond 28,500 · Celestial 32,000 · Divine 35,500 · Cosmic 39,000
+(just above the best master run).
+
+All combat numbers sit in one `TUNE` table at the top of `LootBreakGame.ts`.
 
 ## What's verified
 
 - Type-checks against `@zcomponent/core@1.29.1`, `@zcomponent/three@1.38.2`
   and `three@0.164.0`.
-- Played headlessly in the lab on phone (390x844) and desktop sizes: intro,
-  countdown, real taps on monsters, the boss, the chest and the results card,
-  with no console errors.
+- Played headlessly in the lab on phone (390x844), iPhone SE (375x667) and
+  landscape (844x390): intro, placing, countdown, real taps on monsters, a real
+  tap on an ultimate button and on the boss's weak spot, the chest and the
+  results card with badges, with no console errors.
+- Placement tested against a stand-in Instant World Tracker (as parent and as
+  a sibling elsewhere in the scene) and with no tracker at all.
+- Sound unlock and `playOnSilent` are written to Safari's documented rules but
+  **not yet heard on a real iPhone**.
 - **Not yet opened in the Mattercraft editor.** If a property doesn't show in
   the panel, swap `@zui` for `@zprop` on that property.
 
@@ -172,5 +200,5 @@ Cosmic needs 41,000 points: a near-perfect run that picks up every loot drop.
   is sent to a server yet. A reward that has to be account-bound (as planned
   for TBH) needs a server-side claim, which isn't built.
 - Test hooks for scripts: `window.__lootBreak` has `startRound()`,
-  `endRound()`, `skip(seconds)`, `tapFront()`, `collectAllLoot()` and
-  `debugState`.
+  `endRound()`, `skip(seconds)`, `tapFront()`, `tapWeakPoint()`,
+  `tapCursed()`, `fireUlt(id)`, `collectAllLoot()` and `debugState`.

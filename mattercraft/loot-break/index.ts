@@ -66,7 +66,7 @@ function on(evt: any, fn: (...a: any[]) => void) {
 const r: any = result;
 const game = componentTree(r?.rootInstance ?? r).find((n) => n?.onRoundEnd && n?.onBoss && n?.onRoundStart);
 
-const session = { rounds: 0, best: 0, bestTier: "", bosses: 0, placed: 0, resets: 0 };
+const session = { rounds: 0, best: 0, bestTier: "", bosses: 0, placed: 0, resets: 0, wipes: 0 };
 if (game) {
     // Placement is the first thing that can go wrong in AR: someone who never
     // places never plays, and without this they vanish from the funnel.
@@ -90,11 +90,22 @@ if (game) {
     });
     on(game.onRoundEnd, (score: number, tier: string) => {
         if (score > session.best) { session.best = score; session.bestTier = tier; }
+        // How the round went, to tune difficulty from real players.
+        const st = game.roundStats ?? {};
+        if (st.wiped) session.wipes++;
         track("game_complete", {
             attempt: session.rounds,
             score,
             tier,
             seconds: roundStart ? seconds(roundStart) : undefined,
+            outcome: st.wiped ? "wiped" : "survived",
+            boss: st.boss,
+            ults: st.ults,
+            weak_hits: st.weakHits,
+            cursed_hits: st.cursedHits,
+            accuracy: st.accuracy,
+            best_combo: st.bestCombo,
+            badges: Array.isArray(st.badges) ? st.badges.join(",") || "none" : undefined,
         });
     });
 } else {
@@ -113,6 +124,7 @@ const summarise = () => {
         seconds: seconds(PAGE_START),
         placed: session.placed,
         resets: session.resets,
+        wipes: session.wipes,
         furthest: session.rounds ? (session.bosses ? "boss" : "played") : session.placed ? "placed" : "landed",
     });
 };
