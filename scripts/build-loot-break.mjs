@@ -70,9 +70,13 @@ const banner = "<!-- GENERATED from mattercraft/loot-break/index.src.html by scr
 // TBH logo: a crop of the official Steam capsule (art/tbh/), inlined so the
 // splash stays one file. Swap the JPG for TBH's own logo file when it arrives.
 const logo = await readFile(path.join(root, "mattercraft/loot-break/art/tbh/tbh-logo-steam-capsule.jpg"));
+// "Activated by MEDIALIFE" badge: the brand-kit badge (public/email/), reduced
+// to 128 colours so it adds ~12 KB to the splash.
+const badge = await readFile(path.join(root, "mattercraft/loot-break/art/medialife/activated-by-medialife.png"));
 const withArt = splashSrc
   .replace("__SPRITES__", artJson)
-  .replace("__TBH_LOGO__", `data:image/jpeg;base64,${logo.toString("base64")}`);
+  .replace("__TBH_LOGO__", `data:image/jpeg;base64,${logo.toString("base64")}`)
+  .replace("__ML_BADGE__", `data:image/png;base64,${badge.toString("base64")}`);
 const mcHtml = withArt.replace("<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + banner);
 const LAB_BOOT = `<!-- Lab stand-in for index.ts: in Mattercraft, initialize() enables
 		     #launchButton once the scene has loaded and hides the splash on tap. -->

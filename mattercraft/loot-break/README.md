@@ -32,22 +32,28 @@ splash and gameplay, in case we want them back.
 
 ## The splash screen (index.html)
 
-About 4 seconds, drawn entirely in code (no images to download), so it paints
-on the first frame:
+About 4 seconds, drawn in code apart from two small inlined images (the TBH
+logo and the MEDIALIFE badge), so it paints on the first frame:
 
-1. The screen boots and a desktop taskbar slides up, clock at 11:59.
-2. The party marches along the taskbar while a slime hops ahead.
-3. The clock flips to 12:00 PM, the TBH taskbar icon pings and a Windows-style
-   notification says the party has gone on a loot break.
-4. The heroes jump off the taskbar, the chest drops in, the LOOT BREAK logo
-   slams down with a screen shake and coins burst out.
-5. The tagline and **Start lunch break** button rise. While Mattercraft is
+1. The screen boots and a desktop taskbar slides up. The clock flips to
+   12:00 PM, the TBH taskbar icon pings and a Windows-style notification says
+   the party has gone on a loot break.
+2. **LOOT** crashes in letter by letter and cracks the screen. **BREAK** lands
+   harder: a big shake, a white flash, glass shards, and pixel cracks spread
+   across the screen.
+3. The party crashes down onto the stage one by one (shake and dust on each
+   landing), then the chest slams down and coins burst out.
+4. The TBH lockup ("Merch Exclusive") and the ribbon settle in, the cracks dim,
+   the **Start lunch break** button rises and the **Activated by MEDIALIFE**
+   badge stamps down under it (beside it in landscape). While Mattercraft is
    still downloading the scene, the button shows a pixel loading bar.
    Afterwards the chest slowly cycles through TBH's ten rarities.
 
 Tapping anywhere (or **Skip intro**) jumps to the end. Reduced-motion users
-get the end state straight away. It fits portrait phones down to iPhone SE
-size, landscape phones and desktop.
+get the end state straight away, with no shake or flash. On short screens the
+script drops the ribbon, then the camera hint, then the story line, until the
+badge clears the taskbar. Checked at 320x568, 360x640, 375x667, 390x844,
+430x932, 667x375 and 844x390.
 
 Preview: `/labs/loot-break/splash.html` (the lab's copy uses a fake loader
 that enables the button after 1.8 s; add `?loading=1` to keep it loading).

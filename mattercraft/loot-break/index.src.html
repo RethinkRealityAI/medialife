@@ -136,8 +136,44 @@
 				text-align: center;
 			}
 
+			/* Everything that shakes. Hidden until the intro starts, so nothing
+			   flashes in its final spot while the fonts load. */
+			.quake { position: absolute; inset: 0; visibility: hidden; }
+			.splash.go .quake { visibility: visible; }
+
+			/* Pixel cracks in the "glass", drawn by the script at a low
+			   resolution and scaled up without smoothing. Under the call to
+			   action, so the button never looks broken. */
+			.cracks {
+				position: absolute;
+				inset: 0;
+				width: 100%;
+				height: 100%;
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+				pointer-events: none;
+				z-index: 3;
+			}
+			.flash {
+				position: absolute;
+				inset: 0;
+				background: #fff;
+				opacity: 0;
+				pointer-events: none;
+				z-index: 8;
+			}
+			.bit {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: var(--s, 6px);
+				height: var(--s, 6px);
+				pointer-events: none;
+				z-index: 6;
+			}
+
 			/* ── logo ── */
-			.logo { position: relative; opacity: 0; }
+			.logo { position: relative; }
 			.logo .eyebrow {
 				display: inline-flex;
 				align-items: center;
@@ -202,6 +238,7 @@
 					0 14px 24px rgba(0, 0, 0, .55);
 			}
 			.wordmark span { display: inline-block; }
+			.wordmark .ch { display: inline-block; font-style: normal; transform-origin: 50% 90%; }
 			.wordmark .w2 { color: #fff3d0; }
 			.ribbon {
 				display: inline-block;
@@ -259,7 +296,7 @@
 				image-rendering: pixelated;
 				image-rendering: crisp-edges;
 			}
-			.hero { position: relative; will-change: transform; }
+			.hero { position: relative; will-change: transform; transform-origin: 50% 100%; }
 			/* pairs overlap a little, like a party standing close */
 			.hero + .hero { margin-left: calc(var(--px) * -3); z-index: 1; }
 			.hero .spr { filter: drop-shadow(0 var(--px) 0 rgba(0, 0, 0, .35)); }
@@ -354,6 +391,8 @@
 				width: 100%;
 				max-width: 380px;
 				opacity: 0;
+				position: relative;
+				z-index: 4;
 			}
 			.tagline {
 				margin: 0;
@@ -437,13 +476,28 @@
 				transition: opacity .3s;
 			}
 			#launchButton:disabled ~ .hint { opacity: 0; }
+			/* "Activated by MEDIALIFE": the brand-kit badge, big enough to read
+			   at a glance, with a slow purple glow once the intro ends. */
 			.made {
-				font-family: 'Silkscreen', monospace;
-				font-size: 10px;
-				letter-spacing: .18em;
-				color: #7f7396;
-				margin-top: 2px;
+				display: block;
+				width: clamp(210px, 66vw, 270px);
+				height: auto;
+				aspect-ratio: 600 / 160;
+				margin-top: 4px;
+				filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45));
 			}
+			.splash.is-ready .made { animation: mlGlow 2.6s ease-in-out infinite; }
+			@keyframes mlGlow {
+				0%, 100% { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 0 rgba(176, 108, 255, 0)); }
+				50% { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 14px rgba(176, 108, 255, .75)); }
+			}
+			/* Small screens: the script drops these, in this order, until the
+			   badge clears the taskbar (fit1 ribbon, fit2 camera hint, fit3 story). */
+			.fit1 .ribbon, .fit2 .hint, .fit3 .tagline { display: none; }
+			.fit2 .tagline { font-size: 15px; }
+			.fit2 .made { width: 200px; }
+			/* Safety net if the browser can't run the intro animations. */
+			.splash.is-ready :is(.brandbar, .ribbon, .ch, .cta, .made) { opacity: 1; }
 
 			/* ── the taskbar ── */
 			.taskbar {
@@ -589,10 +643,14 @@
 				.ribbon { margin-top: 8px; }
 				.cta { gap: 8px; }
 				#launchButton { min-height: 54px; }
+				.made { width: clamp(200px, 60vw, 240px); }
 			}
 			/* Landscape phones: keep the logo, the party and the button. */
 			@media (max-height: 460px) {
-				.tagline, .hint, .made, .logo .eyebrow { display: none; }
+				.tagline, .hint, .logo .eyebrow { display: none; }
+				/* Landscape: the badge sits beside the button. */
+				.cta { flex-direction: row; max-width: 560px !important; gap: 16px; }
+				.made { width: 170px !important; margin: 0; flex: none; }
 				/* Landscape: the lockup moves beside the wordmark so the stage keeps its height. */
 				.logo .brandbar {
 					position: absolute;
@@ -606,7 +664,7 @@
 				.logo .tbh-logo { width: 84px; }
 				.logo .brandbar .excl { font-size: 10px; padding-left: 0; border-left: 0; text-align: right; }
 				.wordmark { font-size: 15vh; }
-				.cta { max-width: 320px; }
+				#launchButton { flex: 1; }
 				.splash { --bar: 40px; }
 				.layout { padding-bottom: 8px; }
 				.stage { min-height: 0; padding-bottom: calc(var(--px) * 6); }
@@ -620,11 +678,13 @@
 				.logo .eyebrow { margin-bottom: 4px; }
 				.brandbar { margin-bottom: 6px; }
 				.tbh-logo { width: 72px; }
+				.made { width: 190px; margin-top: 0; }
 			}
 		</style>
 	</head>
 	<body>
 		<div class="splash" id="splash">
+			<div class="quake">
 			<div class="boot" aria-hidden="true"></div>
 			<div class="stars" aria-hidden="true"></div>
 
@@ -632,11 +692,13 @@
 				<header class="logo">
 					<div class="brandbar">
 						<img class="tbh-logo" src="__TBH_LOGO__" alt="TBH: Task Bar Hero" width="90" height="51" />
-						<span class="excl">Hero Merch<br />Exclusive</span>
+						<span class="excl">Merch<br />Exclusive</span>
 					</div>
 					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
 					<div class="ribbon">A 60-SECOND DESK RAID</div>
 				</header>
+
+				<canvas class="cracks" aria-hidden="true"></canvas>
 
 				<div class="stage" aria-hidden="true">
 					<div class="floor">
@@ -656,7 +718,7 @@
 					<p class="tagline">Your party leaves the taskbar for lunch. <b>You are the cursor.</b> Tap monsters, grab the loot, open the chest.</p>
 					<button id="launchButton" disabled>Start lunch break</button>
 					<p class="hint">You'll be asked for the camera. Point it at your desk.</p>
-					<div class="made">ACTIVATED BY MEDIALIFE</div>
+					<img class="made" src="__ML_BADGE__" alt="Activated by MEDIALIFE" width="600" height="160" />
 				</div>
 			</div>
 
@@ -678,7 +740,9 @@
 					<div class="tb-clock"><b>11:59</b>AM</div>
 				</div>
 			</nav>
+			</div>
 
+			<div class="flash" aria-hidden="true"></div>
 			<button class="skip" type="button">Skip intro</button>
 		</div>
 
@@ -730,6 +794,17 @@
 				// the party row is about 80 sprite pixels wide
 				var px = Math.max(3, Math.min(7, Math.floor(Math.min((w - 28) / 82, h / 190))));
 				root.style.setProperty('--px', px + 'px');
+				fit();
+			}
+			// Drop optional lines until everything fits above the taskbar.
+			function fit() {
+				var layout = $('.layout'), cta = $('.cta');
+				if (!layout || !cta) return;
+				root.classList.remove('fit1', 'fit2', 'fit3');
+				var pad = parseFloat(getComputedStyle(layout).paddingBottom) || 0;
+				for (var n = 1; n <= 3 && cta.offsetTop + cta.offsetHeight > layout.clientHeight - pad + 1; n++) {
+					root.classList.add('fit' + n);
+				}
 			}
 			size();
 			addEventListener('resize', size);
@@ -759,57 +834,199 @@
 			function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
 
 			var heroes = $$('.hero');
-			var lane = $('.lane');
 			var clock = $('.tb-clock');
 			var app = $('.tb-app');
 			var toast = $('.toast');
 			var tierEl = $('.tier');
+			var quake = $('.quake');
+			var crackCv = $('.cracks');
+			var flash = $('.flash');
+			var badge = $('.made');
 
-			// Where each hero starts: walking along the taskbar from the left.
-			// FLIP: measure the final spot on the stage, start from the lane.
-			function laneOffsets() {
-				var lr = lane.getBoundingClientRect();
-				var px = parseFloat(getComputedStyle(root).getPropertyValue('--px')) || 4;
-				var order = ['knight', 'ranger', 'sorcerer', 'priest']; // marching order, leader first
-				return heroes.map(function (h) {
-					var r = h.getBoundingClientRect();
-					var idx = order.indexOf(h.getAttribute('data-s'));
-					var x = lr.left + innerWidth * 0.46 - idx * px * 17;
-					var y = lr.bottom - px * 16;
-					return { dx: x - r.left, dy: y - r.top };
+			// Split the title into letters so each one can crash in on its own.
+			// (The h1 keeps aria-label="LOOT BREAK" for screen readers.)
+			$$('.wordmark > span').forEach(function (w) {
+				var t = w.textContent;
+				w.textContent = '';
+				for (var k = 0; k < t.length; k++) {
+					var ch = document.createElement('i');
+					ch.className = 'ch';
+					ch.textContent = t[k];
+					w.appendChild(ch);
+				}
+			});
+
+			// ── impact effects ──────────────────────────────────────────────
+			// Screen shake: offsets in whole pixels that die away, stepped like
+			// a sprite. It moves the whole splash, so the phone screen itself
+			// seems to take the hit.
+			function shake(delay, amp, dur, tilt) {
+				if (reduce) return;
+				var f = [], n = Math.max(4, Math.round(dur / 45));
+				for (var k = 0; k <= n; k++) {
+					var d = 1 - k / n, a = amp * d * d, last = k === n;
+					var x = last ? 0 : Math.round((Math.random() * 2 - 1) * a / 2) * 2;
+					var y = last ? 0 : Math.round((Math.random() * 2 - 1) * a / 2) * 2;
+					var r = last ? 0 : (Math.random() * 2 - 1) * (tilt || 0) * d;
+					f.push({ transform: 'translate(' + x + 'px,' + y + 'px) rotate(' + r.toFixed(2) + 'deg)' });
+				}
+				A(quake, f, { duration: dur, delay: delay, easing: 'steps(' + (n + 1) + ', jump-none)', fill: 'none' });
+			}
+			// Pixel bits (glass shards, dust) that burst out and fall.
+			function bits(delay, x, y, n, colors, spread, size) {
+				if (reduce) return;
+				for (var k = 0; k < n; k++) {
+					var b = document.createElement('i');
+					b.className = 'bit';
+					b.style.setProperty('--s', Math.round(size * (0.7 + Math.random() * 0.6)) + 'px');
+					b.style.background = colors[k % colors.length];
+					b.style.opacity = '0';
+					quake.appendChild(b);
+					var ang = Math.random() * Math.PI * 2;
+					var v = spread * (0.4 + Math.random() * 0.6);
+					var tx = Math.cos(ang) * v, ty = Math.sin(ang) * v * 0.7 - spread * 0.3;
+					var a = A(b, [
+						{ opacity: 1, transform: 'translate(' + x + 'px,' + y + 'px)' },
+						{ opacity: 1, transform: 'translate(' + (x + tx) + 'px,' + (y + ty) + 'px) rotate(' + Math.round(Math.random() * 180) + 'deg)', offset: .45 },
+						{ opacity: 0, transform: 'translate(' + (x + tx * 1.25) + 'px,' + (y + ty + spread) + 'px) rotate(' + Math.round(Math.random() * 360) + 'deg)' }
+					], { duration: 600 + Math.random() * 300, delay: delay, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' });
+					if (a) a.onfinish = (function (el) { return function () { el.remove(); }; })(b);
+				}
+			}
+
+			// Cracks in the screen, drawn at a third of the resolution so every
+			// crack is made of chunky pixels like the sprites. Each crack is
+			// seeded, so a resize or rotation redraws the same ones.
+			var CR = 3, cracks = [], crackRaf = 0;
+			function rng(seed) {
+				return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+			}
+			function crackPixels(c, W, H) {
+				var R = rng(c.seed), pts = [];
+				var cx = c.fx * W, cy = c.fy * H, maxL = Math.hypot(W, H) * c.size;
+				function line(x0, y0, x1, y1) {
+					x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
+					var dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy;
+					for (var g = 0; g < 4000; g++) {
+						pts.push([x0, y0, Math.hypot(x0 - cx, y0 - cy)]);
+						if (x0 === x1 && y0 === y1) break;
+						var e2 = 2 * e;
+						if (e2 >= dy) { e += dy; x0 += sx; }
+						if (e2 <= dx) { e += dx; y0 += sy; }
+					}
+				}
+				function ray(x, y, ang, len, depth) {
+					var gone = 0;
+					while (gone < len) {
+						var step = 4 + R() * 8;
+						ang += (R() - 0.5) * 0.7;
+						var nx = x + Math.cos(ang) * step, ny = y + Math.sin(ang) * step;
+						line(x, y, nx, ny);
+						x = nx; y = ny; gone += step;
+						if (depth < 2 && R() < 0.12) ray(x, y, ang + (R() < 0.5 ? -1 : 1) * (0.5 + R() * 0.6), (len - gone) * (0.35 + R() * 0.3), depth + 1);
+					}
+				}
+				var ring = [], rr = 3 + c.size * 26;
+				for (var k = 0; k < c.rays; k++) {
+					var ang = (k / c.rays) * Math.PI * 2 + (R() - 0.5) * 0.5;
+					ray(cx, cy, ang, maxL * (0.45 + R() * 0.55), 0);
+					var q = rr * (0.8 + R() * 0.5);
+					ring.push([cx + Math.cos(ang) * q, cy + Math.sin(ang) * q]);
+				}
+				for (var j = 0; j < ring.length; j++) {
+					if (R() < 0.8) line(ring[j][0], ring[j][1], ring[(j + 1) % ring.length][0], ring[(j + 1) % ring.length][1]);
+				}
+				pts.sort(function (p, q) { return p[2] - q[2]; });
+				return pts;
+			}
+			function crackSize() {
+				var r = crackCv.getBoundingClientRect();
+				var W = Math.max(1, Math.ceil(r.width / CR)), H = Math.max(1, Math.ceil(r.height / CR));
+				if (crackCv.width !== W || crackCv.height !== H) { crackCv.width = W; crackCv.height = H; return true; }
+				return false;
+			}
+			function plot(g, p) {
+				// a white core with a dark edge drawn behind it, like cracked glass
+				g.globalCompositeOperation = 'destination-over';
+				g.fillStyle = 'rgba(22,18,29,.85)';
+				g.fillRect(p[0] + 1, p[1] + 1, 1, 1);
+				g.globalCompositeOperation = 'source-over';
+				g.fillStyle = p[2] < 6 ? '#ffffff' : 'rgba(226,240,255,.95)';
+				g.fillRect(p[0], p[1], 1, 1);
+			}
+			function drawCracks(full) {
+				var g = crackCv.getContext('2d');
+				if (crackSize() || full) {
+					g.clearRect(0, 0, crackCv.width, crackCv.height);
+					cracks.forEach(function (c) { c.pts = null; c.drawn = 0; });
+				}
+				var now = performance.now(), busy = false;
+				cracks.forEach(function (c) {
+					if (now < c.t0) { busy = true; return; }
+					if (!c.pts) c.pts = crackPixels(c, crackCv.width, crackCv.height);
+					var maxD = c.pts.length ? c.pts[c.pts.length - 1][2] : 0;
+					var reach = c.done ? Infinity : maxD * Math.min(1, (now - c.t0) / c.dur);
+					while (c.drawn < c.pts.length && c.pts[c.drawn][2] <= reach) plot(g, c.pts[c.drawn++]);
+					if (c.drawn < c.pts.length) busy = true;
 				});
+				crackRaf = busy ? requestAnimationFrame(function () { drawCracks(false); }) : 0;
+			}
+			// Crack the screen at a point (an element's centre), `delay` ms from now.
+			function crack(delay, el, size, rays, dy) {
+				var r = crackCv.getBoundingClientRect(), e = el.getBoundingClientRect();
+				cracks.push({
+					fx: (e.left + e.width / 2 - r.left) / r.width,
+					fy: (e.top + e.height * (0.5 + (dy || 0)) - r.top) / r.height,
+					size: size, rays: rays, seed: 1 + Math.floor(Math.random() * 2e9),
+					t0: performance.now() + delay, dur: 120 + size * 380, pts: null, drawn: 0, done: false
+				});
+				if (!crackRaf) crackRaf = requestAnimationFrame(function () { drawCracks(false); });
+			}
+			addEventListener('resize', function () { if (cracks.length) drawCracks(true); });
+
+			function centre(el) {
+				var r = el.getBoundingClientRect();
+				return { x: r.left + r.width / 2, y: r.top + r.height / 2, b: r.bottom };
+			}
+
+			// A letter (or the badge) crashes in from off screen, squashes, settles.
+			function slam(el, delay, dur, from) {
+				A(el, [
+					{ opacity: 0, transform: from, easing: 'cubic-bezier(.55,0,1,.45)' },
+					{ opacity: 1, transform: 'translate(0,0) rotate(0deg) scale(1.2,.76)', offset: .72, easing: 'ease-out' },
+					{ opacity: 1, transform: 'translate(0,-8%) scale(.94,1.08)', offset: .86 },
+					{ opacity: 1, transform: 'none' }
+				], { duration: dur, delay: delay });
+				return delay + dur * 0.72; // the moment of impact
 			}
 
 			function play() {
-				var off = laneOffsets();
-				var flipNow = function (h) { return h.classList.contains('flip'); };
+				root.classList.add('go');
+				var px = parseFloat(getComputedStyle(root).getPropertyValue('--px')) || 4;
+				var w1 = $('.wordmark .w1'), w2 = $('.wordmark .w2');
+				var hit, k;
 
-				// 0: boot line
+				// 0: boot line, the taskbar slides up, the clock hits noon
 				A($('.boot'), [
 					{ opacity: 1, transform: 'scaleX(0)' },
 					{ opacity: 1, transform: 'scaleX(1)', offset: .55 },
 					{ opacity: 0, transform: 'scaleX(1) scaleY(30)' }
 				], { duration: 600, easing: 'ease-out' });
-				A(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 700, delay: 150, fill: 'backwards' });
-
-				// 0.45 s: taskbar slides up
+				A(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 100, fill: 'backwards' });
 				A($('.taskbar'), [{ transform: 'translateY(110%)' }, { transform: 'none' }],
-					{ duration: 420, delay: 450, easing: 'cubic-bezier(.2,1.2,.4,1)' });
-
-				// 0.9 s: the party marches in along the taskbar (facing right)
-				heroes.forEach(function (h, i) {
-					var o = off[i];
-					var spr = h.querySelector('.spr');
-					var start = 'translate(' + (o.dx - innerWidth * 0.6) + 'px,' + o.dy + 'px)';
-					var mid = 'translate(' + o.dx + 'px,' + o.dy + 'px)';
-					// face right while walking; the two on the right turn round when they land
-					if (flipNow(h)) A(spr, [{ transform: 'scaleX(1)' }, { transform: 'scaleX(1)', offset: .99 }, { transform: 'scaleX(-1)' }], { duration: 2580 + i * 90 });
-					A(h, [{ transform: start }, { transform: mid }], { duration: 1100, delay: 700, easing: 'linear' });
-					A(spr, [{ translate: '0 0' }, { translate: '0 calc(var(--px) * -2)' }, { translate: '0 0' }],
-						{ duration: 260, delay: 700, iterations: 5, easing: 'steps(2)', fill: 'none' });
+					{ duration: 420, delay: 300, easing: 'cubic-bezier(.2,1.2,.4,1)' });
+				at(reduce ? 0 : 500, function () {
+					clock.innerHTML = '<b>12:00</b>PM';
+					clock.classList.add('flip');
+					app.classList.add('ping');
 				});
-				var slime = $('.slime');
-				A(slime, [
+				A(toast, [
+					{ opacity: 0, transform: 'translateX(30px)' },
+					{ opacity: 1, transform: 'none', offset: .12 },
+					{ opacity: 1, transform: 'none', offset: .85 },
+					{ opacity: 0, transform: 'translateY(8px)' }
+				], { duration: 1500, delay: 500, easing: 'ease-out' });
+				A($('.slime'), [
 					{ opacity: 1, transform: 'translate(' + innerWidth * 0.62 + 'px,0)' },
 					{ opacity: 1, transform: 'translate(' + innerWidth * 0.72 + 'px,calc(var(--px) * -6))', offset: .25 },
 					{ opacity: 1, transform: 'translate(' + innerWidth * 0.8 + 'px,0)', offset: .5 },
@@ -817,52 +1034,58 @@
 					{ opacity: 1, transform: 'translate(' + (innerWidth + 60) + 'px,0)' }
 				], { duration: 1400, delay: 700, easing: 'linear', fill: 'forwards' });
 
-				// 2.1 s: noon. Clock flips, app pings, toast pops.
-				at(reduce ? 0 : 1700, function () {
-					clock.innerHTML = '<b>12:00</b>PM';
-					clock.classList.add('flip');
-					app.classList.add('ping');
-				});
-				A(toast, [
-					{ opacity: 0, transform: 'translateX(30px)' },
-					{ opacity: 1, transform: 'none', offset: .15 },
-					{ opacity: 1, transform: 'none', offset: .8 },
-					{ opacity: 0, transform: 'translateY(8px)' }
-				], { duration: 1400, delay: 1700, easing: 'ease-out' });
+				// 0.7 s: LOOT crashes in letter by letter; the last one cracks the screen
+				var c1 = $$('.ch', w1), c2 = $$('.ch', w2);
+				function from(i, n, big) {
+					var side = i < n / 2 ? -1 : 1;
+					return 'translate(' + side * (14 + Math.random() * 22) + 'vw,-60vh) rotate(' + side * (18 + Math.random() * 30) + 'deg) scale(' + big + ')';
+				}
+				for (k = 0; k < c1.length; k++) {
+					hit = slam(c1[k], 700 + k * 70, 340, from(k, c1.length, 2.4));
+					shake(hit, k === c1.length - 1 ? 9 : 4, k === c1.length - 1 ? 320 : 130, k === c1.length - 1 ? 0.6 : 0);
+				}
+				crack(hit, w1, 0.16, 5, 0.1);
 
-				// 2.5 s: they jump off the taskbar onto the stage
-				heroes.forEach(function (h, i) {
-					var o = off[i];
+				// 1.35 s: BREAK lands harder. Big shake, a flash, the screen cracks wide
+				for (k = 0; k < c2.length; k++) {
+					hit = slam(c2[k], 1350 + k * 75, 360, from(k, c2.length, 3));
+					if (k < c2.length - 1) shake(hit, 5, 140, 0);
+				}
+				shake(hit, 20, 620, 1.6);
+				crack(hit, w2, 0.62, 9, 0.15);
+				if (!reduce) A(flash, [{ opacity: 0 }, { opacity: .8, offset: .12 }, { opacity: 0 }], { duration: 280, delay: hit, fill: 'none' });
+				var bc = centre(w2);
+				bits(hit, bc.x, bc.y, 20, ['#ffffff', '#cfeaff', '#8fc8ff', '#6fb6ff'], 140, px * 1.5);
+
+				// 2.15 s: the party crashes down onto the stage, one after another
+				var order = ['sorcerer', 'knight', 'priest', 'ranger'];
+				heroes.forEach(function (h) {
+					var i = order.indexOf(h.getAttribute('data-s'));
+					var r = h.getBoundingClientRect();
+					var d = 2150 + i * 110, dur = 420;
 					A(h, [
-						{ transform: 'translate(' + o.dx + 'px,' + o.dy + 'px)' },
-						{ transform: 'translate(' + o.dx * 0.45 + 'px,' + (Math.min(o.dy, 0) - innerHeight * 0.12) + 'px)', offset: .45 },
-						{ transform: 'translate(0,0)', offset: .85 },
-						{ transform: 'translate(0,calc(var(--px) * -2))', offset: .92 },
-						{ transform: 'translate(0,0)' }
-					], { duration: 620, delay: 2050 + i * 90, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'forwards' });
+						{ transform: 'translateY(' + -Math.round(r.bottom + 40) + 'px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+						{ transform: 'translateY(0) scale(1.25,.7)', offset: .75, easing: 'ease-out' },
+						{ transform: 'translateY(calc(var(--px) * -2)) scale(.9,1.1)', offset: .88 },
+						{ transform: 'none' }
+					], { duration: dur, delay: d });
+					var land = d + dur * 0.75;
+					shake(land, 7, 200, 0.4);
+					bits(land, r.left + r.width / 2, r.bottom - px, 7, ['#d8c8aa', '#9c8b74', '#efe4cd'], 30, px);
 				});
 
-				// 3.0 s: the chest drops in, the logo slams
+				// 2.75 s: the chest slams down last. Coins, rays, the rarity
+				var chestHit = 2750 + 480 * 0.7;
 				A(chest, [
-					{ opacity: 1, transform: 'translateY(-60vh)' },
-					{ opacity: 1, transform: 'translateY(0) scale(1.15,.8)', offset: .7 },
+					{ opacity: 1, transform: 'translateY(-70vh)', easing: 'cubic-bezier(.5,0,.75,0)' },
+					{ opacity: 1, transform: 'translateY(0) scale(1.2,.75)', offset: .7 },
 					{ opacity: 1, transform: 'translateY(calc(var(--px) * -3)) scale(.95,1.05)', offset: .85 },
 					{ opacity: 1, transform: 'none' }
-				], { duration: 520, delay: 2500, easing: 'cubic-bezier(.5,0,.75,0)' });
-				A($('.layout'), [
-					{ transform: 'none' }, { transform: 'translate(-4px,3px)' }, { transform: 'translate(4px,-2px)' },
-					{ transform: 'translate(-2px,1px)' }, { transform: 'none' }
-				], { duration: 260, delay: 2870, fill: 'none' });
-				A($('.logo'), [
-					{ opacity: 0, transform: 'scale(2.2)', filter: 'blur(6px)' },
-					{ opacity: 1, transform: 'scale(.94)', filter: 'blur(0)', offset: .7 },
-					{ opacity: 1, transform: 'none' }
-				], { duration: 420, delay: 2600, easing: 'cubic-bezier(.2,.9,.3,1.2)' });
-				A($('.rays'), [{ opacity: 0, scale: .3 }, { opacity: .55, scale: 1 }], { duration: 600, delay: 2900, easing: 'ease-out' });
-				A($('.glow'), [{ opacity: 0 }, { opacity: .8 }], { duration: 500, delay: 2900 });
-				A(tierEl, [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: 3050 });
-
-				// coins burst out of the chest
+				], { duration: 480, delay: 2750 });
+				shake(chestHit, 11, 340, 0.8);
+				A($('.rays'), [{ opacity: 0, scale: .3 }, { opacity: .55, scale: 1 }], { duration: 600, delay: chestHit, easing: 'ease-out' });
+				A($('.glow'), [{ opacity: 0 }, { opacity: .8 }], { duration: 500, delay: chestHit });
+				A(tierEl, [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: chestHit + 150 });
 				for (var c = 0; c < 9; c++) {
 					var coin = paint(document.createElement('canvas'), 'coin');
 					coin.className = 'coin';
@@ -874,14 +1097,24 @@
 						{ opacity: 1, transform: 'translate(0,0) scale(.6)' },
 						{ opacity: 1, transform: 'translate(' + tx + 'px,' + ty + 'px) scale(1)', offset: .45 },
 						{ opacity: 0, transform: 'translate(' + tx * 1.3 + 'px,' + (ty + 90) + 'px) scale(.8)' }
-					], { duration: 900, delay: 2930 + c * 25, easing: 'cubic-bezier(.2,.8,.4,1)', fill: 'forwards' });
+					], { duration: 900, delay: chestHit + c * 25, easing: 'cubic-bezier(.2,.8,.4,1)', fill: 'forwards' });
 				}
 
-				// 3.6 s: the call to action rises
-				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
-					{ duration: 450, delay: 3150, easing: 'cubic-bezier(.2,1,.4,1)' });
+				// 3.1 s: the TBH lockup and ribbon settle in; the cracks dim so the
+				// copy stays readable
+				A($('.brandbar'), [{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 380, delay: 3100, easing: 'cubic-bezier(.2,1,.4,1)' });
+				A($('.ribbon'), [{ opacity: 0, transform: 'scaleX(.2)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 320, delay: 3150, easing: 'cubic-bezier(.2,1.3,.4,1)' });
+				A(crackCv, [{ opacity: 1 }, { opacity: .22 }], { duration: 900, delay: 3000, easing: 'ease-in-out' });
 
-				at(reduce ? 0 : 3250, ready);
+				// 3.3 s: the call to action rises, and the MEDIALIFE badge stamps down
+				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 420, delay: 3300, easing: 'cubic-bezier(.2,1,.4,1)' });
+				hit = slam(badge, 3550, 380, 'scale(2) rotate(-8deg)');
+				shake(hit, 5, 180, 0);
+
+				at(reduce ? 0 : 3950, ready);
 			}
 
 			// The chest cycles through TBH's rarities, slowly, once the intro ends.
@@ -899,12 +1132,17 @@
 				paint(chest, 'chestOpen');
 				timers.push(setInterval(cycle, reduce ? 2600 : 1200));
 			}
+			var started = false, wantSkip = false;
 			function skip() {
 				if (done) return;
+				if (!started) { wantSkip = true; return; } // tapped before the intro began
 				timers.forEach(clearTimeout);
 				timers = [];
 				anims.forEach(function (a) { try { a.finish(); } catch (e) {} });
 				clock.innerHTML = '<b>12:00</b>PM';
+				// Skipped (or reduced motion): the cracks appear at once, already dim.
+				cracks.forEach(function (c) { c.t0 = 0; c.done = true; });
+				if (cracks.length) drawCracks(false);
 				ready();
 			}
 
@@ -916,8 +1154,10 @@
 			$('.skip').addEventListener('click', skip);
 
 			function start() {
+				started = true;
+				fit(); // the real fonts may have changed the line breaks
 				play();
-				if (reduce) skip();
+				if (reduce || wantSkip) skip();
 			}
 			// Let the fonts arrive (max 600 ms) so the logo slams in its real face.
 			if (document.fonts && document.fonts.load) {

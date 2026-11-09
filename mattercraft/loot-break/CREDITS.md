@@ -51,9 +51,15 @@ The lane, portal, effects, UI and sounds are drawn or synthesised by the
 component's own code. The fonts, Pixelify Sans and Silkscreen, load from Google
 Fonts and are licensed under the SIL Open Font License 1.1.
 
+## MEDIALIFE badge
+
+The splash's "Activated by MEDIALIFE" badge is MEDIALIFE's own brand-kit badge
+(`public/email/activated-by-medialife.png`), reduced to 128 colours in
+[art/medialife/](art/medialife/) and inlined by the build.
+
 ## TBH: Task Bar Hero art
 
-The splash screen's "Hero Merch Exclusive" lockup shows TBH's logo, cropped
+The splash screen's "Merch Exclusive" lockup shows TBH's logo, cropped
 (unaltered) from the official main capsule on the game's Steam store page
 (Steam app 3678970, fetched 2026-11-08 through Steam's public store API). The
 source image and the crop are in [art/tbh/](art/tbh/). It's a stand-in until
