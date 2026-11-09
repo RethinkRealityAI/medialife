@@ -534,7 +534,9 @@ function patchMaterial(mat) {
       .replace("#include <common>", "#include <common>\nvarying vec3 vWPos;\nvarying vec2 vKnitUv;\nuniform float uKnitScale;")
       .replace("#include <begin_vertex>", "#include <begin_vertex>\n// Knit weave from the rest pose, so it keeps one size across UV islands.\nvKnitUv = position.xy * uKnitScale;")
       .replace("#include <project_vertex>", "#include <project_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
-    if (mat.normalMap) {
+    // Older models carry a tiling knit normal (planar, from the rest pose); models
+    // with a normal map baked from a high-poly source keep their own UVs.
+    if (mat.normalMap && !mat.userData.bakedNormal) {
       for (const name of ["uv_pars_fragment", "normal_fragment_begin", "normal_fragment_maps"]) {
         shader.fragmentShader = shader.fragmentShader.replace(
           `#include <${name}>`,

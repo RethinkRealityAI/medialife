@@ -26,7 +26,16 @@ MEDIALIFE's own lineup photos (2026-10-09, commit 27d4a60). Everything after tha
 Blender 4.2 with no generative tools: re-UV (no overlaps, 2.5× texel density on the print panels)
 → object-space position/normal and AO bakes → the shop's full-resolution print photos composited
 onto the new UVs by 3D position → Principled BSDF with knit normal and sheen → GLB. The page
-code makes them soft at runtime (`softbody.js`). Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
+code makes them soft at runtime (`softbody.js`).
+
+The two pullover hoodies (Sukeban, Trainwreck) use a higher-fidelity Meshy hoodie Dapo supplied
+(2026-11-09, 1.3M faces): decimated to 40k faces, re-UV'd, and the full-detail folds, seams and
+ribbing baked into a 2048 tangent-space normal map (material extra `bakedNormal`, so `softbody.js`
+keeps the mesh UVs for it). Meshy's guessed back print is erased and the real print laid on, with the
+print area's normal map flattened. Matte cotton: roughness 0.96 (print 0.86), no sheen, low specular.
+Hero GLBs are meshopt-compressed (~1 MB); `scene.js` and `ar.js` set the meshopt decoder.
+Collection-card copies are simplified to ~29k faces and only quantized (model-viewer has no local
+meshopt decoder). Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
 keychain model; the sticker pack is a contour-extruded vinyl sheet. Posters are Cycles
 renders of the same GLBs. `models/evade-charms.glb` is the EVADE keychain re-exported
 (its original has NaN bounds in model-viewer) with transmission removed for broad support.

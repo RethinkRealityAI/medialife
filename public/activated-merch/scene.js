@@ -14,6 +14,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { SoftGarment } from "./softbody.js";
 import { cottonTexture, nfcTexture, patchTexture } from "./textures.js";
 import { ARView, Splash } from "./ar.js";
@@ -58,6 +59,7 @@ export class Stage {
     this.lookAt = new THREE.Vector3();
 
     this.loader = new GLTFLoader();
+    this.loader.setMeshoptDecoder(MeshoptDecoder); // the hoodies ship meshopt-compressed
     this.ring = new THREE.Group();
     this.scene.add(this.ring);
     this.slots = items.map((it, i) => {

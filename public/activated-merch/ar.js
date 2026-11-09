@@ -16,6 +16,7 @@
  */
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { SoftGarment } from "./softbody.js";
 
 const BASE = "/activated-merch/";
@@ -314,6 +315,7 @@ export class ARView {
     this.scene.environment = null;
     this.camera = new THREE.PerspectiveCamera(42, SCREEN_ASPECT, 0.05, 30);
     this.loader = new GLTFLoader();
+    this.loader.setMeshoptDecoder(MeshoptDecoder);
     this.item = null;
     this.ready = false;
     this.loading = null;
