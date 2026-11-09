@@ -234,9 +234,12 @@ export class Splash {
 
 /* ============================================================== AR view */
 const CHROMA_VERT = /* glsl */ `
+  attribute vec2 tuv;
   varying vec2 vUv;
+  varying vec2 vT;
   void main() {
     vUv = uv;
+    vT = tuv;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }`;
 
@@ -249,8 +252,10 @@ const CHROMA_FRAG = /* glsl */ `
   uniform sampler2D tex;
   uniform sampler2D panelTex;
   uniform vec3 keyColor, bg, panelMed;
+  uniform vec4 panelMap, panelRect, clipRect;
   uniform float uMode, uKey, uFeather, gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
   varying vec2 vUv;
+  varying vec2 vT;
   vec2 RGBtoUV(vec3 rgb) {
     return vec2(
       rgb.r * -0.169 + rgb.g * -0.331 + rgb.b * 0.5 + 0.5,
@@ -270,11 +275,17 @@ const CHROMA_FRAG = /* glsl */ `
     float shown = 1.0 - smoothstep(edge - 0.015, edge, y);
     float line = smoothstep(0.03, 0.0, abs(y - edge)) * step(uReveal, 0.999);
     vec3 col = rgba.rgb;
-    // What sits behind the character: a flat colour (mode 0), nothing at all
-    // (mode 1, the print shows around her), or the print's own panel, cut to
-    // its real shape and toned to the garment (mode 2).
-    vec4 panel = texture2D(panelTex, vUv);
-    vec3 fill = uMode > 1.5 ? panel.rgb * bg / panelMed : bg;
+    // What sits behind the character: a flat colour over the whole video
+    // (mode 0), nothing (mode 1), the print's own panel texture cut to its
+    // real shape and toned to the garment (mode 2), or the printed panel's
+    // rectangle in its flat colour (mode 3). Panels are placed in target
+    // coords (vT), so they land on the printed panel whatever the video does.
+    vec2 pt = vT * panelMap.xy + panelMap.zw;
+    vec4 panel = texture2D(panelTex, vec2(pt.x, 1.0 - pt.y));
+    panel.a *= step(0.0, pt.x) * step(pt.x, 1.0) * step(0.0, pt.y) * step(pt.y, 1.0);
+    vec2 fw = fwidth(vT);
+    vec2 pr = smoothstep(panelRect.xy - fw, panelRect.xy + fw, vT) * (1.0 - smoothstep(panelRect.zw - fw, panelRect.zw + fw, vT));
+    vec3 fill = uMode > 1.5 && uMode < 2.5 ? panel.rgb * bg / panelMed : bg;
     col = mix(fill, col * gain, a) + vec3(0.35, 0.85, 1.0) * line * 1.4;
     // Anti-aliased outer edge, so the panel's border stays crisp but clean.
     vec2 e = min(vUv, 1.0 - vUv) / fwidth(vUv);
@@ -283,8 +294,11 @@ const CHROMA_FRAG = /* glsl */ `
     // behind the character); the character itself always stays solid.
     vec2 ed = min(vUv, 1.0 - vUv);
     float bgA = uFeather > 0.0 ? smoothstep(0.0, uFeather, min(ed.x, ed.y * 0.75)) : 1.0;
-    bgA = uMode > 1.5 ? panel.a : uMode > 0.5 ? 0.0 : bgA;
+    bgA = uMode > 2.5 ? pr.x * pr.y : uMode > 1.5 ? panel.a : uMode > 0.5 ? 0.0 : bgA;
     float alpha = max(shown * max(a, bgA), line * 0.9) * rim;
+    // Some prints are a crop of the art: keep the video to the printed area.
+    vec2 cr = smoothstep(clipRect.xy - fw * 2.0, clipRect.xy + fw * 2.0, vT) * (1.0 - smoothstep(clipRect.zw - fw * 2.0, clipRect.zw + fw * 2.0, vT));
+    alpha *= cr.x * cr.y;
     gl_FragColor = vec4(col, alpha * uOpacity);
   }`;
 
@@ -382,14 +396,17 @@ export class ARView {
     const back = item.side === "back";
     const bb = g.bounds;
     const [tl, tr, br, bl] = ar.rect; // surface (u, v) of the image target's corners
-    // Where the video sits, in target units (0..1 = the image target). Most
-    // cover the target exactly; some (landscape scenes) run past its sides.
+    // Where the video's corners sit, in target units (0..1 = the image target),
+    // measured by matching each video to its print: TL, TR, BR, BL.
     const [fx0, fy0, fx1, fy1] = ar.frame || [0, 0, 1, 1];
-    const wide = fx1 - fx0 > 1.2;
+    const quad = ar.quad || [[fx0, fy0], [fx1, fy0], [fx1, fy1], [fx0, fy1]];
+    const atQuad = (a, b) => [0, 1].map((k) => lerp(lerp(quad[0][k], quad[1][k], a), lerp(quad[3][k], quad[2][k], a), b));
+    const wide = quad[1][0] - quad[0][0] > 1.2;
     const NX = wide ? 25 : 11;
     const NY = 14;
     const pos = new Float32Array(NX * NY * 3);
     const uv = new Float32Array(NX * NY * 2);
+    const tuv = new Float32Array(NX * NY * 2); // target coords, for the print's own panel
     const rc = new THREE.Raycaster();
     g.group.updateMatrixWorld(true);
     const inv = g.pick.matrixWorld.clone().invert();
@@ -412,10 +429,11 @@ export class ARView {
     };
     const pts = [];
     for (let j = 0; j < NY; j++) {
-      const t = lerp(fy0, fy1, j / (NY - 1));
       for (let i = 0; i < NX; i++) {
-        const s = lerp(fx0, fx1, i / (NX - 1));
+        const [s, t] = atQuad(i / (NX - 1), j / (NY - 1));
         pts.push(onCloth(s, t));
+        tuv[(j * NX + i) * 2] = s;
+        tuv[(j * NX + i) * 2 + 1] = t;
         uv[(j * NX + i) * 2] = i / (NX - 1);
         uv[(j * NX + i) * 2 + 1] = 1 - j / (NY - 1);
       }
@@ -452,6 +470,7 @@ export class ARView {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    geo.setAttribute("tuv", new THREE.BufferAttribute(tuv, 2));
     geo.setIndex(idx);
 
     const video = document.createElement("video");
@@ -483,7 +502,10 @@ export class ARView {
         keyColor: { value: new THREE.Color().setHex(ar.key ?? 0x00ff00, THREE.NoColorSpace) },
         bg: { value: new THREE.Color().setHex(ar.bg ?? 0x4a787e, THREE.NoColorSpace) },
         uKey: { value: ar.key == null ? 0 : 1 },
-        uMode: { value: { clear: 1, panel: 2 }[ar.bgMode] ?? 0 },
+        uMode: { value: { clear: 1, panel: 2, rect: 3 }[ar.bgMode] ?? 0 },
+        panelMap: { value: new THREE.Vector4(...(ar.panelMap || [1, 1, 0, 0])) },
+        panelRect: { value: new THREE.Vector4(...(ar.panelRect || [0, 0, 1, 1])) },
+        clipRect: { value: new THREE.Vector4(...(ar.clip || [-9, -9, 9, 9])) },
         panelTex: { value: ar.panel ? new THREE.TextureLoader().load(BASE + ar.panel) : poster },
         panelMed: { value: new THREE.Color().setHex(ar.panelMed ?? 0xffffff, THREE.NoColorSpace) },
         uFeather: { value: ar.feather ?? 0 },

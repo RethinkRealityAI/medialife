@@ -21,15 +21,25 @@ const head = (u, v, side = "back") => ({ u, v, side, where: HEAD });
 // corners on this garment (top-left, top-right, bottom-right, bottom-left),
 // found by matching the 8th Wall target image to the baked print.
 // - key: the green-screen colour, or null for a video that plays as it is.
-// - bg: the colour the green turns into, so the video covers the print solidly.
-// - frame: where the video sits in target units, when it is not the target.
+// - quad: where the video's corners (TL, TR, BR, BL) sit in target units,
+//   measured by matching the video to its print (SIFT), so the animated
+//   character lands exactly on the printed one.
+// - bg: the garment's rendered colour of the printed background.
+// - bgMode "panel": behind the character, the print's own distressed panel
+//   (panel texture in target space, panelMap = scale/offset onto this
+//   garment's printed panel), toned from panelMed to bg. Outside the panel
+//   the garment shows. "rect": the printed panel's rectangle (panelRect, in
+//   target units) in its flat colour bg. Default: bg over the whole video.
 // - feather: fade the background at its edges (prints with no panel behind).
-// - cta: colours of the hub button on the phone, taken from the print.
+// - cta: colours of the Buy now button on the phone, taken from the print;
+//   its look follows the design (data-theme).
 const AR_DESIGNS = {
   sukeban: {
     video: "media/ar/sukeban-hoodie.mp4",
     poster: "media/ar/sukeban-hoodie.webp",
     key: 0x008102,
+    quad: [[0.0341, 0.0443], [0.9323, 0.0352], [0.9461, 0.9326], [0.0479, 0.9418]],
+    bgMode: "rect",
     petals: true,
     cta: { accent: "#e0553b", ink: "#f6f0e6", glow: "#4a787e", petal: "#f4b6c2" },
   },
@@ -37,39 +47,32 @@ const AR_DESIGNS = {
     video: "media/ar/syndicate.mp4",
     poster: "media/ar/syndicate.webp",
     key: 0x30c23a,
-    cta: { accent: "#d8343f", ink: "#f4f1ea", glow: "#c9c9c9", petal: "#f4f1ea" },
+    // The video draws her about 10% smaller than the print; this scales it back.
+    quad: [[-0.05, -0.0075], [1.0491, -0.0072], [1.0499, 1.0246], [-0.0493, 1.0243]],
+    bgMode: "panel",
+    panel: "media/ar/syndicate-panel.webp",
+    panelMed: 0xb1494b,
+    cta: { accent: "#a83346", ink: "#f4f1ea", glow: "#f4f1ea", petal: "#0b0b0b" },
   },
   trainwreck: {
-    // A landscape scene, played as it is: the height of the target and centred,
-    // so it runs past the print on both sides (as in the 8th Wall project).
+    // The 8th Wall video is the portrait print stretched to 16:9; the quad
+    // squeezes it back onto the print, where it lines up exactly.
     video: "media/ar/trainwreck.mp4",
     poster: "media/ar/trainwreck.webp",
     key: null,
-    frame: [-0.709, -0.01, 1.709, 1.01],
-    cta: { accent: "#f08a3c", ink: "#fbf0dc", glow: "#7fb2e5", petal: "#ffd27a" },
+    quad: [[0.0101, 0.0109], [0.9881, 0.0114], [0.9894, 0.9894], [0.0114, 0.9889]],
+    cta: { accent: "#e9773a", ink: "#fbf0dc", glow: "#7fb2e5", petal: "#2a1a14" },
   },
 };
-const arOf = (design, extra) => ({ ...AR_DESIGNS[design], ...extra });
-// Syndicate background options, to compare on the preview with ?arbg=…
-//   flat  (default) the green becomes one flat red over the whole print
-//   clear the character only; the printed panel shows around her
-//   panel the print's own distressed panel, cut to its real shape
-//   hf    the print itself re-animated, so the panel is the print's panel
-const SYN_BG = {
-  clear: { bgMode: "clear" },
-  panel: { bgMode: "panel", panel: "media/ar/syndicate-panel.webp", panelMed: 0xb1494b },
-  // Re-animated from the print in Higgsfield (Seedance 2.5, start = end frame
-  // so it loops). Its frame sits about 1% off the print; `frame` lines it up.
-  hf: { video: "media/ar/syndicate-hf.mp4", poster: "media/ar/syndicate-hf.webp", key: 0x3cc143, bgMode: "clear", frame: [0.0086, 0.0022, 1.0197, 1.02] },
-}[new URLSearchParams(location.search).get("arbg")] || {};
+const arOf = (design, extra) => ({ design, ...AR_DESIGNS[design], ...extra });
 const PRODUCTS = [
-  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: arOf("sukeban", { bg: 0x4a787e, rect: [[0.3806, 0.668], [-0.4178, 0.6702], [-0.4145, 0.1977], [0.3799, 0.1985]] }) },
-  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72), ar: arOf("syndicate", { ...SYN_BG, bg: 0xa83346, rect: [[0.3317, 0.9093], [-0.3589, 0.9051], [-0.3586, 0.3015], [0.3148, 0.2995]] }) },
-  { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61), ar: arOf("trainwreck", { rect: [[0.3812, 0.8089], [-0.389, 0.8077], [-0.3928, 0.1935], [0.3805, 0.1934]] }) },
-  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52), ar: arOf("trainwreck", { rect: [[0.3647, 0.6552], [-0.3658, 0.6553], [-0.3643, 0.2624], [0.3642, 0.2619]] }) },
-  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: head(0.06, 0.7), ar: arOf("sukeban", { bg: 0x5f7374, rect: [[0.399, 0.8395], [-0.4349, 0.8398], [-0.4351, 0.2394], [0.3995, 0.2402]] }) },
-  { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: head(-0.02, 0.61, "front"), ar: arOf("syndicate", { bg: 0x1c212a, feather: 0.12, rect: [[-0.5182, 0.7971], [0.4251, 0.7976], [0.4258, 0.0459], [-0.5201, 0.0461]] }) },
-  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57), ar: arOf("syndicate", { ...SYN_BG, bg: 0xa23437, rect: [[0.381, 0.7242], [-0.3925, 0.7246], [-0.3925, 0.2319], [0.3818, 0.2345]] }) },
+  { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: arOf("sukeban", { bg: 0x4a7075, panelRect: [0.0211, 0.0075, 0.9478, 0.9567], rect: [[0.381, 0.6681], [-0.4177, 0.6702], [-0.4138, 0.1981], [0.3798, 0.1985]] }) },
+  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72), ar: arOf("syndicate", { bg: 0x7d1e31, panelMap: [1.009, 1, -0.0373, 0], rect: [[0.3362, 0.9047], [-0.355, 0.894], [-0.3562, 0.2929], [0.3147, 0.2872]] }) },
+  { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61), ar: arOf("trainwreck", { clip: [-1, -1, 2, 0.764], rect: [[0.3811, 0.8089], [-0.3886, 0.8075], [-0.3922, 0.1939], [0.3798, 0.1937]] }) },
+  { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52), ar: arOf("trainwreck", { rect: [[0.3641, 0.6548], [-0.3645, 0.6552], [-0.3668, 0.2608], [0.3641, 0.2612]] }) },
+  { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: head(0.06, 0.7), ar: arOf("sukeban", { bg: 0x4a585b, panelRect: [0.0278, 0.0075, 0.9267, 0.9483], rect: [[0.3982, 0.8389], [-0.4344, 0.8401], [-0.4354, 0.2393], [0.3993, 0.2398]] }) },
+  { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: head(-0.02, 0.61, "front"), ar: arOf("syndicate", { bgMode: null, bg: 0x1c212a, feather: 0.12, rect: [[-0.5195, 0.7981], [0.4257, 0.7986], [0.4255, 0.0462], [-0.5193, 0.0467]] }) },
+  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57), ar: arOf("syndicate", { bg: 0x7a272c, rect: [[0.3814, 0.7246], [-0.3915, 0.7243], [-0.3916, 0.2326], [0.3821, 0.2336]] }) },
   { key: "evade-charms", name: "EVADE Eclipse Charm Set", price: 14.99, type: "keychain", tags: ["QR", "Game"], handle: "bobo-eclipse-ar-keychain-set", orbit: "-25deg 85deg auto" },
   { key: "sukeban-keychain", name: "Sukeban Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "sukeban-keychain", orbit: "-25deg 85deg auto" },
   { key: "syndicate-keychain", name: "Syndicate Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "syndicate-keychain", orbit: "-25deg 85deg auto" },
@@ -194,6 +197,9 @@ function showPiece(i, { fromStage = false } = {}) {
   const cta = $("#ar-cta");
   if (cta) {
     cta.href = SHOP + arPiece.handle;
+    cta.dataset.theme = arPiece.ar.design;
+    cta.setAttribute("aria-label", `Buy the ${arPiece.name}, ${money(arPiece.price)}`);
+    $("#ar-cta-sub").textContent = `${arPiece.short || arPiece.name} · ${money(arPiece.price)}`;
     for (const [k, v] of Object.entries(arPiece.ar.cta || {})) cta.style.setProperty(`--cta-${k}`, v);
   }
 }

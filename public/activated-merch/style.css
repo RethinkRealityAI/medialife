@@ -458,6 +458,42 @@ section { position: relative; padding: 0 var(--gut); }
 .has-3d .arphone__cta b { font-size: 18px; color: var(--cta-ink); transition: transform 0.25s; }
 .has-3d .arphone__cta:hover b, .has-3d .arphone__cta:focus-visible b { transform: translateX(4px); }
 .has-3d .arphone__cta:focus-visible { outline: 3px solid var(--cyan); outline-offset: 4px; }
+/* Buy now, per design. Sukeban (default above): glossy black jacket, sakura.
+   Syndicate: the print's own distressed red panel, black manga ink and a hanko
+   seal with the first kanji of 暴走族. Trainwreck: the sunset through the
+   train window, with a ticket. */
+.has-3d .arphone__mark { flex: none; display: grid; place-items: center; width: 28px; height: 28px; }
+.has-3d .arphone__mark > * { grid-area: 1 / 1; }
+.has-3d .arphone__cta:not([data-theme="sukeban"]) .mark-sukeban,
+.has-3d .arphone__cta:not([data-theme="syndicate"]) .mark-syndicate,
+.has-3d .arphone__cta:not([data-theme="trainwreck"]) .mark-trainwreck { display: none; }
+.has-3d .arphone__seal { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 4px; background: #0b0b0b; color: #f4f1ea; font: 700 18px/1 "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif; transform: rotate(-4deg); box-shadow: inset 0 0 0 2px #f4f1ea, inset 0 0 0 3px #0b0b0b; }
+.has-3d .arphone__ticket { width: 26px; height: 26px; fill: #fbf0dc; stroke: #2a1a14; stroke-width: 1.6; stroke-linejoin: round; }
+.has-3d .arphone__cta[data-theme="syndicate"] {
+  border-color: #0b0b0b;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 45%),
+    url(media/ar/syndicate-panel.webp) 42% 62% / 260% auto,
+    var(--cta-accent);
+  box-shadow: 0 0 0 3px var(--cta-ink), 0 0 0 5px #0b0b0b, 0 10px 28px rgba(0, 0, 0, 0.55);
+  color: #0b0b0b;
+}
+.has-3d .arphone__cta[data-theme="syndicate"] small { color: #f4f1ea; text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6); }
+.has-3d .arphone__cta[data-theme="syndicate"] strong { color: #0b0b0b; text-shadow: 1px 1px 0 #f4f1ea, -1px -1px 0 rgba(244, 241, 234, 0.35); }
+.has-3d .arphone__cta[data-theme="syndicate"] b { color: #0b0b0b; }
+.has-3d .arphone__cta[data-theme="trainwreck"] {
+  border-color: #2a1a14;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, #8cc0ea 0%, #f6c98d 46%, #e9773a 78%, #9a4a2c 100%);
+  box-shadow: 0 0 0 3px var(--cta-ink), 0 0 0 5px #2a1a14, 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 30px rgba(233, 119, 58, 0.45);
+  color: #2a1a14;
+}
+.has-3d .arphone__cta[data-theme="trainwreck"] small { color: #2a1a14; }
+.has-3d .arphone__cta[data-theme="trainwreck"] strong { color: #2a1a14; text-shadow: 1px 1px 0 #fbf0dc; }
+.has-3d .arphone__cta[data-theme="trainwreck"] b { color: #2a1a14; }
 .has-3d .arphone.live .arphone__badge { opacity: 1; }
 .has-3d .arphone.cta .arphone__cta { opacity: 1; visibility: visible; transform: translate(-50%, 0) rotate(-2deg); transition: transform 0.7s cubic-bezier(0.2, 1.4, 0.35, 1), opacity 0.35s, visibility 0s; }
 @media (prefers-reduced-motion: reduce) {
