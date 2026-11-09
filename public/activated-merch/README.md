@@ -33,7 +33,14 @@ The two pullover hoodies (Sukeban, Trainwreck) use a higher-fidelity Meshy hoodi
 ribbing baked into a 2048 tangent-space normal map (material extra `bakedNormal`, so `softbody.js`
 keeps the mesh UVs for it). Meshy's guessed back print is erased and the real print laid on, with the
 print area's normal map flattened. Matte cotton: roughness 0.96 (print 0.86), no sheen, low specular.
-Hero GLBs are meshopt-compressed (~1 MB); `scene.js` and `ar.js` set the meshopt decoder.
+The rest of the apparel (2026-11-09, same pipeline) comes from new Meshy multi-image jobs on the
+shop photos: Syndicate tee, Trainwreck tee, Syndicate L/S and the Sukeban cardigan. Where Meshy
+sculpted the artwork into the mesh as relief (L/S, cardigan, Trainwreck tee), it was re-run on
+print-free copies of the photos, so the geometry is plain cloth and the prints are laid on flat.
+The L/S takes its whole front and back (sleeve prints included) projected from the shop photos.
+Tees are thickened 2x front-to-back (Meshy flat-lays are paper thin). The zip hoodie is the
+pullover hoodie base with a painted zip, washed grey, since its only photo is the back.
+Hero GLBs are meshopt-compressed (~0.4-1.7 MB); `scene.js` and `ar.js` set the meshopt decoder.
 Collection-card copies are simplified to ~29k faces and only quantized (model-viewer has no local
 meshopt decoder). Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
 keychain model; the sticker pack is a contour-extruded vinyl sheet. Posters are Cycles
