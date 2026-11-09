@@ -32,25 +32,26 @@ splash and gameplay, in case we want them back.
 
 ## The splash screen (index.html)
 
-About 4 seconds, drawn in code apart from two small inlined images (the TBH
-logo and the MEDIALIFE badge), so it paints on the first frame:
+About 4 seconds, drawn in code apart from two small images that sit next to
+index.html (in Mattercraft, upload both to the project root with these exact
+names): `tbh-logo-steam-capsule.jpg` and `activated-by-medialife.png`.
 
 1. The screen boots and a desktop taskbar slides up. The clock flips to
    12:00 PM, the TBH taskbar icon pings and a Windows-style notification says
    the party has gone on a loot break.
-2. **LOOT** crashes in letter by letter and cracks the screen. **BREAK** lands
-   harder: a big shake, a white flash, glass shards, and pixel cracks spread
-   across the screen.
-3. The party crashes down onto the stage one by one (shake and dust on each
-   landing), then the chest slams down and coins burst out.
-4. The TBH lockup ("Merch Exclusive") and the ribbon settle in, the cracks dim,
-   the **Start lunch break** button rises and the **Activated by MEDIALIFE**
+2. **LOOT** crashes in letter by letter with a small shake, then **BREAK**
+   lands a little harder.
+3. The party crashes down onto the stage one by one (a small shake and dust on
+   each landing), then the chest slams down and coins burst out.
+4. The TBH lockup ("Merch Exclusive") and the ribbon settle in, the
+   **Start lunch break** button rises and the **Activated by MEDIALIFE**
    badge stamps down under it (beside it in landscape). While Mattercraft is
    still downloading the scene, the button shows a pixel loading bar.
    Afterwards the chest slowly cycles through TBH's ten rarities.
 
 Tapping anywhere (or **Skip intro**) jumps to the end. Reduced-motion users
-get the end state straight away, with no shake or flash. On short screens the
+(iPhone: Settings > Accessibility > Motion > Reduce Motion) get the end
+state straight away, with no animation. On short screens the
 script drops the ribbon, then the camera hint, then the story line, until the
 badge clears the taskbar. Checked at 320x568, 360x640, 375x667, 390x844,
 430x932, 667x375 and 844x390.

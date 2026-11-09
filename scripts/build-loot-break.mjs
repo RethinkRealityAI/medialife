@@ -64,19 +64,28 @@ const artEnd = gameSrc.indexOf("\n};", gameSrc.indexOf("const SPRITES")) + 3;
 const { code: artJs } = await transform(gameSrc.slice(artStart, artEnd), { loader: "ts" });
 const art = new Function(`${artJs}; return { PAL, SPRITES };`)();
 const keep = ["knight", "ranger", "sorcerer", "priest", "slime", "chest", "chestOpen", "coin"];
-const artJson = JSON.stringify({ PAL: art.PAL, SPRITES: Object.fromEntries(keep.map((k) => [k, art.SPRITES[k]])) });
+// One line per sprite, so no line is long enough to trip up an editor.
+const artJson = `{\n\t\t\t\t"PAL": ${JSON.stringify(art.PAL)},\n\t\t\t\t"SPRITES": {\n${keep
+  .map((k) => `\t\t\t\t\t${JSON.stringify(k)}: ${JSON.stringify(art.SPRITES[k])}`)
+  .join(",\n")}\n\t\t\t\t}\n\t\t\t}`;
 const splashSrc = await readFile(path.join(root, "mattercraft/loot-break/index.src.html"), "utf8");
 const banner = "<!-- GENERATED from mattercraft/loot-break/index.src.html by scripts/build-loot-break.mjs. Edit the .src.html, not this file. -->\n";
-// TBH logo: a crop of the official Steam capsule (art/tbh/), inlined so the
-// splash stays one file. Swap the JPG for TBH's own logo file when it arrives.
-const logo = await readFile(path.join(root, "mattercraft/loot-break/art/tbh/tbh-logo-steam-capsule.jpg"));
-// "Activated by MEDIALIFE" badge: the brand-kit badge (public/email/), reduced
-// to 128 colours so it adds ~12 KB to the splash.
-const badge = await readFile(path.join(root, "mattercraft/loot-break/art/medialife/activated-by-medialife.png"));
+// The two splash images are separate files, referenced next to index.html
+// (Mattercraft: upload both to the project root, keeping these names). Earlier
+// builds inlined them as data URIs, but a 30 KB line broke when pasted into
+// the Mattercraft editor.
+// - TBH logo: a crop of the official Steam capsule (art/tbh/). Swap the JPG
+//   for TBH's own logo file when it arrives.
+// - "Activated by MEDIALIFE": the brand-kit badge (public/email/), reduced to
+//   128 colours (9 KB).
+const IMAGES = {
+  "tbh-logo-steam-capsule.jpg": "mattercraft/loot-break/art/tbh/tbh-logo-steam-capsule.jpg",
+  "activated-by-medialife.png": "mattercraft/loot-break/art/medialife/activated-by-medialife.png",
+};
 const withArt = splashSrc
   .replace("__SPRITES__", artJson)
-  .replace("__TBH_LOGO__", `data:image/jpeg;base64,${logo.toString("base64")}`)
-  .replace("__ML_BADGE__", `data:image/png;base64,${badge.toString("base64")}`);
+  .replace("__TBH_LOGO__", "./tbh-logo-steam-capsule.jpg")
+  .replace("__ML_BADGE__", "./activated-by-medialife.png");
 const mcHtml = withArt.replace("<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + banner);
 const LAB_BOOT = `<!-- Lab stand-in for index.ts: in Mattercraft, initialize() enables
 		     #launchButton once the scene has loaded and hides the splash on tap. -->
@@ -102,13 +111,20 @@ const outputs = [
   [out, code],
   [path.join(root, "mattercraft/loot-break/index.html"), mcClean],
   [path.join(root, "public/labs/loot-break/splash.html"), labHtml],
+  // the lab serves the same images beside splash.html
+  ...(await Promise.all(
+    Object.entries(IMAGES).map(async ([name, src]) => [
+      path.join(root, "public/labs/loot-break", name),
+      await readFile(path.join(root, src)),
+    ]),
+  )),
 ];
 
 if (process.argv.includes("--check")) {
   let stale = false;
   for (const [file, text] of outputs) {
-    const have = await readFile(file, "utf8").catch(() => "");
-    if (have !== text) {
+    const have = await readFile(file).catch(() => Buffer.alloc(0));
+    if (!have.equals(Buffer.isBuffer(text) ? text : Buffer.from(text))) {
       console.error(`${path.relative(root, file)} is stale: run node scripts/build-loot-break.mjs`);
       stale = true;
     } else console.log(`${path.relative(root, file)} is up to date`);

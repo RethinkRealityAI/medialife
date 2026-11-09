@@ -141,27 +141,6 @@
 			.quake { position: absolute; inset: 0; visibility: hidden; }
 			.splash.go .quake { visibility: visible; }
 
-			/* Pixel cracks in the "glass", drawn by the script at a low
-			   resolution and scaled up without smoothing. Under the call to
-			   action, so the button never looks broken. */
-			.cracks {
-				position: absolute;
-				inset: 0;
-				width: 100%;
-				height: 100%;
-				image-rendering: pixelated;
-				image-rendering: crisp-edges;
-				pointer-events: none;
-				z-index: 3;
-			}
-			.flash {
-				position: absolute;
-				inset: 0;
-				background: #fff;
-				opacity: 0;
-				pointer-events: none;
-				z-index: 8;
-			}
 			.bit {
 				position: absolute;
 				left: 0;
@@ -691,14 +670,12 @@
 			<div class="layout">
 				<header class="logo">
 					<div class="brandbar">
-						<img class="tbh-logo" src="__TBH_LOGO__" alt="TBH: Task Bar Hero" width="90" height="51" />
+						<img class="tbh-logo" src="__TBH_LOGO__" alt="TBH: Task Bar Hero" width="90" height="51" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
 						<span class="excl">Merch<br />Exclusive</span>
 					</div>
 					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
 					<div class="ribbon">A 60-SECOND DESK RAID</div>
 				</header>
-
-				<canvas class="cracks" aria-hidden="true"></canvas>
 
 				<div class="stage" aria-hidden="true">
 					<div class="floor">
@@ -718,7 +695,7 @@
 					<p class="tagline">Your party leaves the taskbar for lunch. <b>You are the cursor.</b> Tap monsters, grab the loot, open the chest.</p>
 					<button id="launchButton" disabled>Start lunch break</button>
 					<p class="hint">You'll be asked for the camera. Point it at your desk.</p>
-					<img class="made" src="__ML_BADGE__" alt="Activated by MEDIALIFE" width="600" height="160" />
+					<img class="made" src="__ML_BADGE__" alt="Activated by MEDIALIFE" width="600" height="160" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
 				</div>
 			</div>
 
@@ -742,7 +719,6 @@
 			</nav>
 			</div>
 
-			<div class="flash" aria-hidden="true"></div>
 			<button class="skip" type="button">Skip intro</button>
 		</div>
 
@@ -827,9 +803,14 @@
 			function A(el, frames, opts) {
 				if (!el || !el.animate) return null;
 				if (!opts.fill) opts.fill = 'both';
-				var a = el.animate(frames, opts);
-				anims.push(a);
-				return a;
+				// One animation a browser can't run must never stop the rest.
+				try {
+					var a = el.animate(frames, opts);
+					anims.push(a);
+					return a;
+				} catch (e) {
+					return null;
+				}
 			}
 			function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
 
@@ -839,8 +820,6 @@
 			var toast = $('.toast');
 			var tierEl = $('.tier');
 			var quake = $('.quake');
-			var crackCv = $('.cracks');
-			var flash = $('.flash');
 			var badge = $('.made');
 
 			// Split the title into letters so each one can crash in on its own.
@@ -857,9 +836,8 @@
 			});
 
 			// ── impact effects ──────────────────────────────────────────────
-			// Screen shake: offsets in whole pixels that die away, stepped like
-			// a sprite. It moves the whole splash, so the phone screen itself
-			// seems to take the hit.
+			// Screen shake: small offsets in whole pixels that die away. It moves
+			// the whole splash, so the page itself seems to take the hit.
 			function shake(delay, amp, dur, tilt) {
 				if (reduce) return;
 				var f = [], n = Math.max(4, Math.round(dur / 45));
@@ -870,9 +848,9 @@
 					var r = last ? 0 : (Math.random() * 2 - 1) * (tilt || 0) * d;
 					f.push({ transform: 'translate(' + x + 'px,' + y + 'px) rotate(' + r.toFixed(2) + 'deg)' });
 				}
-				A(quake, f, { duration: dur, delay: delay, easing: 'steps(' + (n + 1) + ', jump-none)', fill: 'none' });
+				A(quake, f, { duration: dur, delay: delay, easing: 'linear', fill: 'none' });
 			}
-			// Pixel bits (glass shards, dust) that burst out and fall.
+			// Pixel dust that puffs out where a hero lands.
 			function bits(delay, x, y, n, colors, spread, size) {
 				if (reduce) return;
 				for (var k = 0; k < n; k++) {
@@ -894,100 +872,6 @@
 				}
 			}
 
-			// Cracks in the screen, drawn at a third of the resolution so every
-			// crack is made of chunky pixels like the sprites. Each crack is
-			// seeded, so a resize or rotation redraws the same ones.
-			var CR = 3, cracks = [], crackRaf = 0;
-			function rng(seed) {
-				return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-			}
-			function crackPixels(c, W, H) {
-				var R = rng(c.seed), pts = [];
-				var cx = c.fx * W, cy = c.fy * H, maxL = Math.hypot(W, H) * c.size;
-				function line(x0, y0, x1, y1) {
-					x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
-					var dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, e = dx + dy;
-					for (var g = 0; g < 4000; g++) {
-						pts.push([x0, y0, Math.hypot(x0 - cx, y0 - cy)]);
-						if (x0 === x1 && y0 === y1) break;
-						var e2 = 2 * e;
-						if (e2 >= dy) { e += dy; x0 += sx; }
-						if (e2 <= dx) { e += dx; y0 += sy; }
-					}
-				}
-				function ray(x, y, ang, len, depth) {
-					var gone = 0;
-					while (gone < len) {
-						var step = 4 + R() * 8;
-						ang += (R() - 0.5) * 0.7;
-						var nx = x + Math.cos(ang) * step, ny = y + Math.sin(ang) * step;
-						line(x, y, nx, ny);
-						x = nx; y = ny; gone += step;
-						if (depth < 2 && R() < 0.12) ray(x, y, ang + (R() < 0.5 ? -1 : 1) * (0.5 + R() * 0.6), (len - gone) * (0.35 + R() * 0.3), depth + 1);
-					}
-				}
-				var ring = [], rr = 3 + c.size * 26;
-				for (var k = 0; k < c.rays; k++) {
-					var ang = (k / c.rays) * Math.PI * 2 + (R() - 0.5) * 0.5;
-					ray(cx, cy, ang, maxL * (0.45 + R() * 0.55), 0);
-					var q = rr * (0.8 + R() * 0.5);
-					ring.push([cx + Math.cos(ang) * q, cy + Math.sin(ang) * q]);
-				}
-				for (var j = 0; j < ring.length; j++) {
-					if (R() < 0.8) line(ring[j][0], ring[j][1], ring[(j + 1) % ring.length][0], ring[(j + 1) % ring.length][1]);
-				}
-				pts.sort(function (p, q) { return p[2] - q[2]; });
-				return pts;
-			}
-			function crackSize() {
-				var r = crackCv.getBoundingClientRect();
-				var W = Math.max(1, Math.ceil(r.width / CR)), H = Math.max(1, Math.ceil(r.height / CR));
-				if (crackCv.width !== W || crackCv.height !== H) { crackCv.width = W; crackCv.height = H; return true; }
-				return false;
-			}
-			function plot(g, p) {
-				// a white core with a dark edge drawn behind it, like cracked glass
-				g.globalCompositeOperation = 'destination-over';
-				g.fillStyle = 'rgba(22,18,29,.85)';
-				g.fillRect(p[0] + 1, p[1] + 1, 1, 1);
-				g.globalCompositeOperation = 'source-over';
-				g.fillStyle = p[2] < 6 ? '#ffffff' : 'rgba(226,240,255,.95)';
-				g.fillRect(p[0], p[1], 1, 1);
-			}
-			function drawCracks(full) {
-				var g = crackCv.getContext('2d');
-				if (crackSize() || full) {
-					g.clearRect(0, 0, crackCv.width, crackCv.height);
-					cracks.forEach(function (c) { c.pts = null; c.drawn = 0; });
-				}
-				var now = performance.now(), busy = false;
-				cracks.forEach(function (c) {
-					if (now < c.t0) { busy = true; return; }
-					if (!c.pts) c.pts = crackPixels(c, crackCv.width, crackCv.height);
-					var maxD = c.pts.length ? c.pts[c.pts.length - 1][2] : 0;
-					var reach = c.done ? Infinity : maxD * Math.min(1, (now - c.t0) / c.dur);
-					while (c.drawn < c.pts.length && c.pts[c.drawn][2] <= reach) plot(g, c.pts[c.drawn++]);
-					if (c.drawn < c.pts.length) busy = true;
-				});
-				crackRaf = busy ? requestAnimationFrame(function () { drawCracks(false); }) : 0;
-			}
-			// Crack the screen at a point (an element's centre), `delay` ms from now.
-			function crack(delay, el, size, rays, dy) {
-				var r = crackCv.getBoundingClientRect(), e = el.getBoundingClientRect();
-				cracks.push({
-					fx: (e.left + e.width / 2 - r.left) / r.width,
-					fy: (e.top + e.height * (0.5 + (dy || 0)) - r.top) / r.height,
-					size: size, rays: rays, seed: 1 + Math.floor(Math.random() * 2e9),
-					t0: performance.now() + delay, dur: 120 + size * 380, pts: null, drawn: 0, done: false
-				});
-				if (!crackRaf) crackRaf = requestAnimationFrame(function () { drawCracks(false); });
-			}
-			addEventListener('resize', function () { if (cracks.length) drawCracks(true); });
-
-			function centre(el) {
-				var r = el.getBoundingClientRect();
-				return { x: r.left + r.width / 2, y: r.top + r.height / 2, b: r.bottom };
-			}
 
 			// A letter (or the badge) crashes in from off screen, squashes, settles.
 			function slam(el, delay, dur, from) {
@@ -1034,7 +918,7 @@
 					{ opacity: 1, transform: 'translate(' + (innerWidth + 60) + 'px,0)' }
 				], { duration: 1400, delay: 700, easing: 'linear', fill: 'forwards' });
 
-				// 0.7 s: LOOT crashes in letter by letter; the last one cracks the screen
+				// 0.7 s: LOOT crashes in letter by letter
 				var c1 = $$('.ch', w1), c2 = $$('.ch', w2);
 				function from(i, n, big) {
 					var side = i < n / 2 ? -1 : 1;
@@ -1042,20 +926,15 @@
 				}
 				for (k = 0; k < c1.length; k++) {
 					hit = slam(c1[k], 700 + k * 70, 340, from(k, c1.length, 2.4));
-					shake(hit, k === c1.length - 1 ? 9 : 4, k === c1.length - 1 ? 320 : 130, k === c1.length - 1 ? 0.6 : 0);
+					shake(hit, k === c1.length - 1 ? 6 : 2, k === c1.length - 1 ? 260 : 110, 0);
 				}
-				crack(hit, w1, 0.16, 5, 0.1);
 
-				// 1.35 s: BREAK lands harder. Big shake, a flash, the screen cracks wide
+				// 1.35 s: BREAK lands harder, with the biggest shake
 				for (k = 0; k < c2.length; k++) {
 					hit = slam(c2[k], 1350 + k * 75, 360, from(k, c2.length, 3));
-					if (k < c2.length - 1) shake(hit, 5, 140, 0);
+					if (k < c2.length - 1) shake(hit, 3, 120, 0);
 				}
-				shake(hit, 20, 620, 1.6);
-				crack(hit, w2, 0.62, 9, 0.15);
-				if (!reduce) A(flash, [{ opacity: 0 }, { opacity: .8, offset: .12 }, { opacity: 0 }], { duration: 280, delay: hit, fill: 'none' });
-				var bc = centre(w2);
-				bits(hit, bc.x, bc.y, 20, ['#ffffff', '#cfeaff', '#8fc8ff', '#6fb6ff'], 140, px * 1.5);
+				shake(hit, 10, 420, 0.5);
 
 				// 2.15 s: the party crashes down onto the stage, one after another
 				var order = ['sorcerer', 'knight', 'priest', 'ranger'];
@@ -1070,7 +949,7 @@
 						{ transform: 'none' }
 					], { duration: dur, delay: d });
 					var land = d + dur * 0.75;
-					shake(land, 7, 200, 0.4);
+					shake(land, 3, 160, 0);
 					bits(land, r.left + r.width / 2, r.bottom - px, 7, ['#d8c8aa', '#9c8b74', '#efe4cd'], 30, px);
 				});
 
@@ -1082,7 +961,7 @@
 					{ opacity: 1, transform: 'translateY(calc(var(--px) * -3)) scale(.95,1.05)', offset: .85 },
 					{ opacity: 1, transform: 'none' }
 				], { duration: 480, delay: 2750 });
-				shake(chestHit, 11, 340, 0.8);
+				shake(chestHit, 6, 280, 0.3);
 				A($('.rays'), [{ opacity: 0, scale: .3 }, { opacity: .55, scale: 1 }], { duration: 600, delay: chestHit, easing: 'ease-out' });
 				A($('.glow'), [{ opacity: 0 }, { opacity: .8 }], { duration: 500, delay: chestHit });
 				A(tierEl, [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: chestHit + 150 });
@@ -1100,19 +979,17 @@
 					], { duration: 900, delay: chestHit + c * 25, easing: 'cubic-bezier(.2,.8,.4,1)', fill: 'forwards' });
 				}
 
-				// 3.1 s: the TBH lockup and ribbon settle in; the cracks dim so the
-				// copy stays readable
+				// 3.1 s: the TBH lockup and ribbon settle in
 				A($('.brandbar'), [{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }],
 					{ duration: 380, delay: 3100, easing: 'cubic-bezier(.2,1,.4,1)' });
 				A($('.ribbon'), [{ opacity: 0, transform: 'scaleX(.2)' }, { opacity: 1, transform: 'none' }],
 					{ duration: 320, delay: 3150, easing: 'cubic-bezier(.2,1.3,.4,1)' });
-				A(crackCv, [{ opacity: 1 }, { opacity: .22 }], { duration: 900, delay: 3000, easing: 'ease-in-out' });
 
 				// 3.3 s: the call to action rises, and the MEDIALIFE badge stamps down
 				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
 					{ duration: 420, delay: 3300, easing: 'cubic-bezier(.2,1,.4,1)' });
 				hit = slam(badge, 3550, 380, 'scale(2) rotate(-8deg)');
-				shake(hit, 5, 180, 0);
+				shake(hit, 3, 150, 0);
 
 				at(reduce ? 0 : 3950, ready);
 			}
@@ -1140,9 +1017,6 @@
 				timers = [];
 				anims.forEach(function (a) { try { a.finish(); } catch (e) {} });
 				clock.innerHTML = '<b>12:00</b>PM';
-				// Skipped (or reduced motion): the cracks appear at once, already dim.
-				cracks.forEach(function (c) { c.t0 = 0; c.done = true; });
-				if (cracks.length) drawCracks(false);
 				ready();
 			}
 
