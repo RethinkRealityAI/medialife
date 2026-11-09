@@ -20,10 +20,13 @@ three.js r180 from `/roblox/creators/vendor/three/` via an importmap.
 
 ## How the 3D assets were made
 
-Blender 4.2, scripted (no generative or image-to-3D tools):
-garment base meshes → object-space position/normal bakes → the shop's print photos
-composited onto the baked UVs by 3D position → Principled BSDF with knit normal and sheen →
-GLB. Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
+Garment base meshes: the tee, hoodie and long-sleeve from `/merch-shelf/models/`, which were
+reconstructed with Meshy multi-view image-to-3D from blank front/back references derived from
+MEDIALIFE's own lineup photos (2026-10-09, commit 27d4a60). Everything after that is scripted
+Blender 4.2 with no generative tools: re-UV (no overlaps, 2.5× texel density on the print panels)
+→ object-space position/normal and AO bakes → the shop's full-resolution print photos composited
+onto the new UVs by 3D position → Principled BSDF with knit normal and sheen → GLB. The page
+code makes them soft at runtime (`softbody.js`). Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
 keychain model; the sticker pack is a contour-extruded vinyl sheet. Posters are Cycles
 renders of the same GLBs. `models/evade-charms.glb` is the EVADE keychain re-exported
 (its original has NaN bounds in model-viewer) with transmission removed for broad support.
