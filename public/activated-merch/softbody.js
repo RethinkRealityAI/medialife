@@ -40,9 +40,20 @@ export class SoftGarment {
     this.bounds = geo.boundingBox.clone();
 
     const mat = src.material.clone();
-    mat.side = THREE.DoubleSide;
+    // Outside faces only; the inside is drawn by a second pass (below) set a
+    // hair further back, so where a thin panel briefly folds through the other
+    // while the cloth moves, the outside still wins and no dark inside shows.
+    mat.side = THREE.FrontSide;
     this.material = mat;
     this.uniforms = patchMaterial(mat);
+    const inner = mat.clone();
+    inner.side = THREE.BackSide;
+    inner.polygonOffset = true;
+    inner.polygonOffsetFactor = 1;
+    inner.polygonOffsetUnits = 300;
+    inner.onBeforeCompile = mat.onBeforeCompile;
+    inner.customProgramCacheKey = () => "soft-garment-inner";
+    this.innerMaterial = inner;
 
     this.group = new THREE.Group();
     this.pivot = new THREE.Group(); // user spin lives here
@@ -60,6 +71,11 @@ export class SoftGarment {
     mesh.bind(new THREE.Skeleton(bones, inv), new THREE.Matrix4());
     this.mesh = mesh;
     this.pivot.add(mesh);
+    const innerMesh = new THREE.SkinnedMesh(geo, inner);
+    innerMesh.frustumCulled = false;
+    innerMesh.bind(mesh.skeleton, new THREE.Matrix4());
+    this.innerMesh = innerMesh;
+    this.pivot.add(innerMesh);
     // Rest-pose twin for picking (raycasting a skinned mesh is slow).
     this.pick = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false }));
     this.pivot.add(this.pick);
@@ -441,6 +457,7 @@ export class SoftGarment {
   dispose() {
     this.geometry.dispose();
     this.material.dispose();
+    this.innerMaterial.dispose();
   }
 }
 

@@ -40,6 +40,15 @@ print-free copies of the photos, so the geometry is plain cloth and the prints a
 The L/S takes its whole front and back (sleeve prints included) projected from the shop photos.
 Tees are thickened 2x front-to-back (Meshy flat-lays are paper thin). The zip hoodie is the
 pullover hoodie base with a painted zip, washed grey, since its only photo is the back.
+The Syndicate tee was later regenerated from a single front photo on white (the multi-image runs came
+out either block-like or paper flat), which gives real body volume and open sleeves. The zip
+hoodie's shop mock-up hides the top of the artwork under the hood, so that strip is rebuilt from
+the clean AR layers (`media/ar/syndicate-panel.webp` + `syndicate.webp`).
+Garments draw their outside and inside in two passes (`softbody.js`): the inside sits slightly
+further back in depth, so a thin panel folding through the other while the cloth moves never
+shows a dark patch over the print.
+Titles use Archivo Condensed Black (wdth 62.5), the closest free match to the MEDIALIFE wordmark;
+Pixelify Sans stays on small HUD labels.
 Hero GLBs are meshopt-compressed (~0.4-1.7 MB); `scene.js` and `ar.js` set the meshopt decoder.
 Collection-card copies are simplified to ~29k faces and only quantized (model-viewer has no local
 meshopt decoder). Keychains are contour-extruded acrylic plaques with the hardware from the EVADE
