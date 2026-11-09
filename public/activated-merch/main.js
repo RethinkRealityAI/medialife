@@ -50,14 +50,26 @@ const AR_DESIGNS = {
   },
 };
 const arOf = (design, extra) => ({ ...AR_DESIGNS[design], ...extra });
+// Syndicate background options, to compare on the preview with ?arbg=…
+//   flat  (default) the green becomes one flat red over the whole print
+//   clear the character only; the printed panel shows around her
+//   panel the print's own distressed panel, cut to its real shape
+//   hf    the print itself re-animated, so the panel is the print's panel
+const SYN_BG = {
+  clear: { bgMode: "clear" },
+  panel: { bgMode: "panel", panel: "media/ar/syndicate-panel.webp", panelMed: 0xb1494b },
+  // Re-animated from the print in Higgsfield (Seedance 2.5, start = end frame
+  // so it loops). Its frame sits about 1% off the print; `frame` lines it up.
+  hf: { video: "media/ar/syndicate-hf.mp4", poster: "media/ar/syndicate-hf.webp", key: 0x3cc143, bgMode: "clear", frame: [0.0086, 0.0022, 1.0197, 1.02] },
+}[new URLSearchParams(location.search).get("arbg")] || {};
 const PRODUCTS = [
   { key: "sukeban-hoodie", name: "Sukeban AR Hoodie", short: "Sukeban Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "black-hoodie-sukeban", side: "back", tag: head(0.06, 0.53), ar: arOf("sukeban", { bg: 0x4a787e, rect: [[0.3806, 0.668], [-0.4178, 0.6702], [-0.4145, 0.1977], [0.3799, 0.1985]] }) },
-  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72), ar: arOf("syndicate", { bg: 0xa83346, rect: [[0.3317, 0.9093], [-0.3589, 0.9051], [-0.3586, 0.3015], [0.3148, 0.2995]] }) },
+  { key: "syndicate-tee", name: "Syndicate AR Tee", short: "Syndicate Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-ar-tee", side: "back", tag: head(0.02, 0.72), ar: arOf("syndicate", { ...SYN_BG, bg: 0xa83346, rect: [[0.3317, 0.9093], [-0.3589, 0.9051], [-0.3586, 0.3015], [0.3148, 0.2995]] }) },
   { key: "trainwreck-tee", name: "Trainwreck AR Tee", short: "Trainwreck Tee", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-classic-tee", side: "back", tag: head(0.12, 0.61), ar: arOf("trainwreck", { rect: [[0.3812, 0.8089], [-0.389, 0.8077], [-0.3928, 0.1935], [0.3805, 0.1934]] }) },
   { key: "trainwreck-hoodie", name: "Trainwreck AR Hoodie", short: "Trainwreck Hoodie", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "unisex-hoodie", side: "back", tag: head(0.12, 0.52), ar: arOf("trainwreck", { rect: [[0.3647, 0.6552], [-0.3658, 0.6553], [-0.3643, 0.2624], [0.3642, 0.2619]] }) },
   { key: "sukeban-cardigan", name: "Sukeban AR Corduroy Cardigan", short: "Sukeban Cardigan", price: 120, type: "apparel", tags: ["NFC", "AR"], handle: "sukeban-ar-corduroy-cardigan", side: "back", tag: head(0.06, 0.7), ar: arOf("sukeban", { bg: 0x5f7374, rect: [[0.399, 0.8395], [-0.4349, 0.8398], [-0.4351, 0.2394], [0.3995, 0.2402]] }) },
   { key: "syndicate-ls", name: "Syndicate L/S Tee", short: "Syndicate L/S", price: 75, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-l-s-tee", side: "front", tag: head(-0.02, 0.61, "front"), ar: arOf("syndicate", { bg: 0x1c212a, feather: 0.12, rect: [[-0.5182, 0.7971], [0.4251, 0.7976], [0.4258, 0.0459], [-0.5201, 0.0461]] }) },
-  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57), ar: arOf("syndicate", { bg: 0xa23437, rect: [[0.381, 0.7242], [-0.3925, 0.7246], [-0.3925, 0.2319], [0.3818, 0.2345]] }) },
+  { key: "syndicate-zip", name: "Syndicate Zip Hoodie", short: "Syndicate Zip", price: 90, type: "apparel", tags: ["NFC", "AR"], handle: "syndicate-zip-hoodie", side: "back", tag: head(-0.1, 0.57), ar: arOf("syndicate", { ...SYN_BG, bg: 0xa23437, rect: [[0.381, 0.7242], [-0.3925, 0.7246], [-0.3925, 0.2319], [0.3818, 0.2345]] }) },
   { key: "evade-charms", name: "EVADE Eclipse Charm Set", price: 14.99, type: "keychain", tags: ["QR", "Game"], handle: "bobo-eclipse-ar-keychain-set", orbit: "-25deg 85deg auto" },
   { key: "sukeban-keychain", name: "Sukeban Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "sukeban-keychain", orbit: "-25deg 85deg auto" },
   { key: "syndicate-keychain", name: "Syndicate Keychain", price: 14.99, type: "keychain", tags: ["QR"], handle: "syndicate-keychain", orbit: "-25deg 85deg auto" },
@@ -697,7 +709,7 @@ function wireSticker() {
 
 /* ------------------------------------------------------------ reveals */
 function wireReveals() {
-  $$(".stickers__copy, .case, .partner > *").forEach((el) => el.classList.add("rv"));
+  $$(".stickers__copy, .launch__card, .partner > *").forEach((el) => el.classList.add("rv"));
   const io = new IntersectionObserver(
     (entries) =>
       entries.forEach((e) => {

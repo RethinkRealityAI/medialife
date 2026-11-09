@@ -247,8 +247,9 @@ const CHROMA_VERT = /* glsl */ `
 // Plus a scan-line reveal from the top.
 const CHROMA_FRAG = /* glsl */ `
   uniform sampler2D tex;
-  uniform vec3 keyColor, bg;
-  uniform float uKey, uFeather, gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
+  uniform sampler2D panelTex;
+  uniform vec3 keyColor, bg, panelMed;
+  uniform float uMode, uKey, uFeather, gain, similarity, smoothness, spill, uReveal, uOpacity, uTime;
   varying vec2 vUv;
   vec2 RGBtoUV(vec3 rgb) {
     return vec2(
@@ -269,7 +270,12 @@ const CHROMA_FRAG = /* glsl */ `
     float shown = 1.0 - smoothstep(edge - 0.015, edge, y);
     float line = smoothstep(0.03, 0.0, abs(y - edge)) * step(uReveal, 0.999);
     vec3 col = rgba.rgb;
-    col = mix(bg, col * gain, a) + vec3(0.35, 0.85, 1.0) * line * 1.4;
+    // What sits behind the character: a flat colour (mode 0), nothing at all
+    // (mode 1, the print shows around her), or the print's own panel, cut to
+    // its real shape and toned to the garment (mode 2).
+    vec4 panel = texture2D(panelTex, vUv);
+    vec3 fill = uMode > 1.5 ? panel.rgb * bg / panelMed : bg;
+    col = mix(fill, col * gain, a) + vec3(0.35, 0.85, 1.0) * line * 1.4;
     // Anti-aliased outer edge, so the panel's border stays crisp but clean.
     vec2 e = min(vUv, 1.0 - vUv) / fwidth(vUv);
     float rim = clamp(min(e.x, e.y), 0.0, 1.0);
@@ -277,6 +283,7 @@ const CHROMA_FRAG = /* glsl */ `
     // behind the character); the character itself always stays solid.
     vec2 ed = min(vUv, 1.0 - vUv);
     float bgA = uFeather > 0.0 ? smoothstep(0.0, uFeather, min(ed.x, ed.y * 0.75)) : 1.0;
+    bgA = uMode > 1.5 ? panel.a : uMode > 0.5 ? 0.0 : bgA;
     float alpha = max(shown * max(a, bgA), line * 0.9) * rim;
     gl_FragColor = vec4(col, alpha * uOpacity);
   }`;
@@ -476,6 +483,9 @@ export class ARView {
         keyColor: { value: new THREE.Color().setHex(ar.key ?? 0x00ff00, THREE.NoColorSpace) },
         bg: { value: new THREE.Color().setHex(ar.bg ?? 0x4a787e, THREE.NoColorSpace) },
         uKey: { value: ar.key == null ? 0 : 1 },
+        uMode: { value: { clear: 1, panel: 2 }[ar.bgMode] ?? 0 },
+        panelTex: { value: ar.panel ? new THREE.TextureLoader().load(BASE + ar.panel) : poster },
+        panelMed: { value: new THREE.Color().setHex(ar.panelMed ?? 0xffffff, THREE.NoColorSpace) },
         uFeather: { value: ar.feather ?? 0 },
         gain: { value: ar.gain ?? 0.94 },
         similarity: { value: 0.159 },

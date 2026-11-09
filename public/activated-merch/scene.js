@@ -434,7 +434,7 @@ export class Stage {
       }
     }
     if (!canBrowse || this.state.hero > 0.2) return null;
-    this.drag = { mode: "browse", pos0: this.pos, x0: ndc.x, lastX: ndc.x, lastT: performance.now(), vx: 0 };
+    this.drag = { mode: "browse", pos0: this.pos, x0: ndc.x, y0: ndc.y, t0: performance.now(), lastX: ndc.x, lastT: performance.now(), vx: 0 };
     return "browse";
   }
 
@@ -476,12 +476,30 @@ export class Stage {
       this.current.g?.release();
       const recent = performance.now() - d.lastT < 90;
       this.spinVel = recent ? THREE.MathUtils.clamp(d.w, -14, 14) : 0;
+    } else if (Math.abs(d.lastX - d.x0) < 0.012 && performance.now() - d.t0 < 450 && this._tapSide(d.x0, d.y0)) {
+      // A tap on one of the holograms brings that piece to the front.
     } else {
       const base = Math.round(d.pos0);
       let t = Math.round(this.pos - d.vx * 0.22);
       t = Math.max(base - 2, Math.min(base + 2, t));
       this.target = t;
     }
+  }
+
+  /** If (x, y) lands on a side piece, go to it. */
+  _tapSide(x, y) {
+    this.camera.updateMatrixWorld();
+    this.raycaster.setFromCamera(new THREE.Vector2(x, y), this.camera);
+    let best = null;
+    for (const slot of this.slots) {
+      if (slot === this.current || !slot.g || !slot.group.visible) continue;
+      slot.group.updateMatrixWorld(true);
+      const hit = this.raycaster.intersectObject(slot.g.pick, false)[0];
+      if (hit && (!best || hit.distance < best.d)) best = { slot, d: hit.distance };
+    }
+    if (!best) return false;
+    this.goTo(this.slots.indexOf(best.slot));
+    return true;
   }
 
   /** Turn the piece back to its front view, the short way round. */
