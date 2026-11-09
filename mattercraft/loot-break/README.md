@@ -30,6 +30,13 @@ tile used for each sprite are in [CREDITS.md](CREDITS.md). The first hand-drawn
 concept sprites are archived in [archive/](archive/) with screenshots of the
 splash and gameplay, in case we want them back.
 
+## Loading screen GIF
+
+`art/loading-screen.gif` (576x576, 32 frames, ~175 KB, loops) is the splash's
+party and open chest with a turning gold light burst, no text or logos. It's
+drawn from the same sprites by `scripts/loot-break-loading-gif.py`; run it
+again after the sprites change.
+
 ## The splash screen (index.html)
 
 About 4 seconds, drawn in code apart from two small images that sit next to
