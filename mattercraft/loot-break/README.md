@@ -34,7 +34,7 @@ splash and gameplay, in case we want them back.
 
 About 4 seconds, drawn in code apart from two small images that sit next to
 index.html (in Mattercraft, upload both to the project root with these exact
-names): `tbh-logo-steam-capsule.jpg` and `activated-by-medialife.png`.
+names): `tbh-logo.webp` and `activated-by-medialife.webp`.
 
 1. The screen boots and a desktop taskbar slides up. The clock flips to
    12:00 PM, the TBH taskbar icon pings and a Windows-style notification says
@@ -50,8 +50,11 @@ names): `tbh-logo-steam-capsule.jpg` and `activated-by-medialife.png`.
    Afterwards the chest slowly cycles through TBH's ten rarities.
 
 Tapping anywhere (or **Skip intro**) jumps to the end. Reduced-motion users
-(iPhone: Settings > Accessibility > Motion > Reduce Motion) get the end
-state straight away, with no animation. On short screens the
+(iPhone: Settings > Accessibility > Motion > Reduce Motion; Android: Remove
+animations) get a calm version: the same sequence, but things fade and pop in
+place instead of flying in, and nothing shakes. Add `?motion=full` to the URL
+to force the full intro, or `?diag` to show what the phone reports (reduced
+motion, animation support, whether the intro was skipped). On short screens the
 script drops the ribbon, then the camera hint, then the story line, until the
 badge clears the taskbar. Checked at 320x568, 360x640, 375x667, 390x844,
 430x932, 667x375 and 844x390.

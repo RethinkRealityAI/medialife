@@ -13,6 +13,10 @@
 		     paints on the first frame with no image to download. Only the two
 		     pixel fonts come from the network; until they arrive the system
 		     monospace stands in, and nothing jumps because every size is fixed. -->
+		<!-- The two splash images: start downloading them now so they're ready
+		     before the intro reaches them. -->
+		<link rel="preload" as="image" href="./tbh-logo.webp" type="image/webp" />
+		<link rel="preload" as="image" href="./activated-by-medialife.webp" type="image/webp" />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Silkscreen:wght@400;700&display=swap" />
@@ -667,7 +671,7 @@
 			<div class="layout">
 				<header class="logo">
 					<div class="brandbar">
-						<img class="tbh-logo" src="./tbh-logo-steam-capsule.jpg" alt="TBH: Task Bar Hero" width="90" height="51" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
+						<img class="tbh-logo" src="./tbh-logo.webp" alt="TBH: Task Bar Hero" width="90" height="51" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
 						<span class="excl">Merch<br />Exclusive</span>
 					</div>
 					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
@@ -692,7 +696,7 @@
 					<p class="tagline">Your party leaves the taskbar for lunch. <b>You are the cursor.</b> Tap monsters, grab the loot, open the chest.</p>
 					<button id="launchButton" disabled>Start lunch break</button>
 					<p class="hint">You'll be asked for the camera. Point it at your desk.</p>
-					<img class="made" src="./activated-by-medialife.png" alt="Activated by MEDIALIFE" width="600" height="160" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
+					<img class="made" src="./activated-by-medialife.webp" alt="Activated by MEDIALIFE" width="600" height="160" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
 				</div>
 			</div>
 
@@ -805,7 +809,14 @@
 				stars.appendChild(s);
 			}
 
-			var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+			// Phones with "Reduce Motion" (iPhone) or "Remove animations" (Android)
+			// switched on get a calm version of the intro: the same order and
+			// timing, but things fade and pop in place instead of flying in, and
+			// nothing shakes. ?motion=full forces the full intro for testing.
+			var query = location.search;
+			var forceMotion = /[?&]motion=full\b/.test(query);
+			var reduce = !forceMotion && !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+			var diag = { reduce: reduce, waapi: !!(document.body.animate), made: 0, failed: [], startedAt: null, waitedForVisible: false };
 			var anims = [];
 			var timers = [];
 			var done = false;
@@ -816,8 +827,10 @@
 				try {
 					var a = el.animate(frames, opts);
 					anims.push(a);
+					diag.made++;
 					return a;
 				} catch (e) {
+					if (diag.failed.length < 3) diag.failed.push(String(e && e.message || e));
 					return null;
 				}
 			}
@@ -908,7 +921,7 @@
 				A(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 100, fill: 'backwards' });
 				A($('.taskbar'), [{ transform: 'translateY(110%)' }, { transform: 'none' }],
 					{ duration: 420, delay: 300, easing: 'cubic-bezier(.2,1.2,.4,1)' });
-				at(reduce ? 0 : 500, function () {
+				at(500, function () {
 					clock.innerHTML = '<b>12:00</b>PM';
 					clock.classList.add('flip');
 					app.classList.add('ping');
@@ -931,6 +944,7 @@
 				var c1 = $$('.ch', w1), c2 = $$('.ch', w2);
 				function from(i, n, big) {
 					var side = i < n / 2 ? -1 : 1;
+					if (reduce) return 'scale(' + (big > 2.5 ? 1.5 : 1.35) + ')';
 					return 'translate(' + side * (14 + Math.random() * 22) + 'vw,-60vh) rotate(' + side * (18 + Math.random() * 30) + 'deg) scale(' + big + ')';
 				}
 				for (k = 0; k < c1.length; k++) {
@@ -952,8 +966,8 @@
 					var r = h.getBoundingClientRect();
 					var d = 2150 + i * 110, dur = 420;
 					A(h, [
-						{ transform: 'translateY(' + -Math.round(r.bottom + 40) + 'px)', easing: 'cubic-bezier(.5,0,1,.6)' },
-						{ transform: 'translateY(0) scale(1.25,.7)', offset: .75, easing: 'ease-out' },
+						{ opacity: reduce ? 0 : 1, transform: 'translateY(' + (reduce ? -14 : -Math.round(r.bottom + 40)) + 'px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+						{ opacity: 1, transform: 'translateY(0) scale(1.25,.7)', offset: .75, easing: 'ease-out' },
 						{ transform: 'translateY(calc(var(--px) * -2)) scale(.9,1.1)', offset: .88 },
 						{ transform: 'none' }
 					], { duration: dur, delay: d });
@@ -965,7 +979,7 @@
 				// 2.75 s: the chest slams down last. Coins, rays, the rarity
 				var chestHit = 2750 + 480 * 0.7;
 				A(chest, [
-					{ opacity: 1, transform: 'translateY(-70vh)', easing: 'cubic-bezier(.5,0,.75,0)' },
+					{ opacity: reduce ? 0 : 1, transform: reduce ? 'translateY(-14px)' : 'translateY(-70vh)', easing: 'cubic-bezier(.5,0,.75,0)' },
 					{ opacity: 1, transform: 'translateY(0) scale(1.2,.75)', offset: .7 },
 					{ opacity: 1, transform: 'translateY(calc(var(--px) * -3)) scale(.95,1.05)', offset: .85 },
 					{ opacity: 1, transform: 'none' }
@@ -997,10 +1011,10 @@
 				// 3.3 s: the call to action rises, and the MEDIALIFE badge stamps down
 				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
 					{ duration: 420, delay: 3300, easing: 'cubic-bezier(.2,1,.4,1)' });
-				hit = slam(badge, 3550, 380, 'scale(2) rotate(-8deg)');
+				hit = slam(badge, 3550, 380, reduce ? 'scale(1.3)' : 'scale(2) rotate(-8deg)');
 				shake(hit, 3, 150, 0);
 
-				at(reduce ? 0 : 3950, ready);
+				at(3950, ready);
 			}
 
 			// The chest cycles through TBH's rarities, slowly, once the intro ends.
@@ -1037,10 +1051,39 @@
 			$('.skip').addEventListener('click', skip);
 
 			function start() {
+				if (started) return;
+				// Loaded in a background tab: wait until the page is on screen,
+				// so the intro isn't over before anyone sees it.
+				if (document.visibilityState === 'hidden') {
+					diag.waitedForVisible = true;
+					document.addEventListener('visibilitychange', function once() {
+						if (document.visibilityState === 'hidden') return;
+						document.removeEventListener('visibilitychange', once);
+						start();
+					});
+					return;
+				}
 				started = true;
+				diag.startedAt = Math.round(performance.now());
 				fit(); // the real fonts may have changed the line breaks
 				play();
-				if (reduce || wantSkip) skip();
+				if (wantSkip) skip();
+				if (/[?&]diag\b/.test(query)) setTimeout(showDiag, 300);
+			}
+			// ?diag: a small readout of what this phone reports, for debugging.
+			function showDiag() {
+				var d = document.createElement('pre');
+				d.style.cssText = 'position:fixed;left:8px;top:8px;z-index:3000;max-width:calc(100% - 16px);margin:0;padding:8px 10px;font:11px/1.35 ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.82);border-radius:6px;white-space:pre-wrap;pointer-events:none';
+				d.textContent = [
+					'reduce motion: ' + diag.reduce + (forceMotion ? ' (forced off)' : ''),
+					'animate(): ' + diag.waapi,
+					'animations made: ' + diag.made + ', failed: ' + diag.failed.length + (diag.failed.length ? ' (' + diag.failed.join('; ') + ')' : ''),
+					'intro started at: ' + diag.startedAt + ' ms' + (diag.waitedForVisible ? ' (waited for tab)' : ''),
+					'skipped: ' + done,
+					'in iframe: ' + (window.self !== window.top),
+					navigator.userAgent
+				].join('\n');
+				document.body.appendChild(d);
 			}
 			// Let the fonts arrive (max 600 ms) so the logo slams in its real face.
 			if (document.fonts && document.fonts.load) {

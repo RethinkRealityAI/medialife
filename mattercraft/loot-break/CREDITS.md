@@ -54,7 +54,7 @@ Fonts and are licensed under the SIL Open Font License 1.1.
 ## MEDIALIFE badge
 
 The splash's "Activated by MEDIALIFE" badge is MEDIALIFE's own brand-kit badge
-(`public/email/activated-by-medialife.png`), reduced to 128 colours in
+(`public/email/activated-by-medialife.png`), saved as WebP in
 [art/medialife/](art/medialife/). The build copies it next to the splash.
 
 ## TBH: Task Bar Hero art
@@ -64,8 +64,8 @@ The splash screen's "Merch Exclusive" lockup shows TBH's logo, cropped
 (Steam app 3678970, fetched 2026-11-08 through Steam's public store API). The
 source image and the crop are in [art/tbh/](art/tbh/). It's a stand-in until
 TBH sends its logo as SVG or transparent PNG; swap
-`art/tbh/tbh-logo-steam-capsule.jpg` (and the copy in the Mattercraft project
-root) and rebuild.
+`art/tbh/tbh-logo.webp` (360x204 WebP of the same crop, the file the splash
+uses; also in the Mattercraft project root) and rebuild.
 
 No other TBH art is used. Their sprite sheets will replace these sprites
 once the studio sends them. The first hand-drawn concept sprites (not from

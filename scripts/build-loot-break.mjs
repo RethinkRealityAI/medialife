@@ -74,18 +74,18 @@ const banner = "<!-- GENERATED from mattercraft/loot-break/index.src.html by scr
 // (Mattercraft: upload both to the project root, keeping these names). Earlier
 // builds inlined them as data URIs, but a 30 KB line broke when pasted into
 // the Mattercraft editor.
-// - TBH logo: a crop of the official Steam capsule (art/tbh/). Swap the JPG
-//   for TBH's own logo file when it arrives.
-// - "Activated by MEDIALIFE": the brand-kit badge (public/email/), reduced to
-//   128 colours (9 KB).
+// Both are WebP (12 KB and 10 KB):
+// - TBH logo: a crop of the official Steam capsule (art/tbh/). Swap it for
+//   TBH's own logo file when it arrives.
+// - "Activated by MEDIALIFE": the brand-kit badge (public/email/).
 const IMAGES = {
-  "tbh-logo-steam-capsule.jpg": "mattercraft/loot-break/art/tbh/tbh-logo-steam-capsule.jpg",
-  "activated-by-medialife.png": "mattercraft/loot-break/art/medialife/activated-by-medialife.png",
+  "tbh-logo.webp": "mattercraft/loot-break/art/tbh/tbh-logo.webp",
+  "activated-by-medialife.webp": "mattercraft/loot-break/art/medialife/activated-by-medialife.webp",
 };
 const withArt = splashSrc
   .replace("__SPRITES__", artJson)
-  .replace("__TBH_LOGO__", "./tbh-logo-steam-capsule.jpg")
-  .replace("__ML_BADGE__", "./activated-by-medialife.png");
+  .replaceAll("__TBH_LOGO__", "./tbh-logo.webp")
+  .replaceAll("__ML_BADGE__", "./activated-by-medialife.webp");
 const mcHtml = withArt.replace("<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + banner);
 const LAB_BOOT = `<!-- Lab stand-in for index.ts: in Mattercraft, initialize() enables
 		     #launchButton once the scene has loaded and hides the splash on tap. -->
