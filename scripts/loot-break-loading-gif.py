@@ -13,7 +13,9 @@ ART = json.loads(_splash[_a:_splash.index(';', _splash.index('			}', _a))])
 OUT = sys.argv[1]
 N = int(os.environ.get('N', 32))          # frames per loop
 SCALE = int(os.environ.get('SCALE', 6))   # display px per sprite px
-W = H = int(os.environ.get('SIZE', 96))   # canvas in sprite px (576 x 576 out)
+# Canvas in sprite px: 90 x 160 at 6x = 540 x 960, a 9:16 phone screen.
+W = int(os.environ.get('W', 90))
+H = int(os.environ.get('H', 160))
 FRAME_MS = int(os.environ.get('MS', 90))
 
 
@@ -88,12 +90,12 @@ for i, (n, _) in enumerate(HEROES):
         x += 16
 ROW_W = x
 X0 = (W - ROW_W) // 2
-FLOOR = int(H * .64)          # feet line
+FLOOR = int(H * .5) + 8       # feet line: the party sits in the middle
 CX = X0 + xs[2] + 8           # chest centre
 CY = FLOOR - 7
 
 rnd = random.Random(7)
-STARS = [(rnd.randrange(W), rnd.randrange(int(H * .58)), rnd.random()) for _ in range(22)]
+STARS = [(rnd.randrange(W), rnd.randrange(int(H * .62)), rnd.random()) for _ in range(34)]
 SPARKS = [(rnd.uniform(-14, 14), rnd.random(), rnd.choice([1, 1, 2])) for _ in range(7)]
 
 
@@ -182,9 +184,9 @@ frames = [frame(f) for f in range(N)]
 # Crop to a square around the action, then scale up with hard pixels.
 big = [fr.resize((W * SCALE, H * SCALE), Image.NEAREST) for fr in frames]
 # One shared palette from a few frames, no dithering (flat pixel art).
-sample = Image.new('RGB', (W, H * 4))
+sample = Image.new('RGB', (W * 4, H))
 for k in range(4):
-    sample.paste(frames[k * N // 4], (0, H * k))
+    sample.paste(frames[k * N // 4], (W * k, 0))
 pal = sample.quantize(colors=int(os.environ.get('COLORS', 96)), method=Image.MEDIANCUT, dither=Image.NONE)
 q = [b.quantize(palette=pal, dither=Image.NONE) for b in big]
 q[0].save(OUT, save_all=True, append_images=q[1:], duration=FRAME_MS, loop=0, optimize=True, disposal=1)

@@ -32,7 +32,7 @@ splash and gameplay, in case we want them back.
 
 ## Loading screen GIF
 
-`art/loading-screen.gif` (576x576, 32 frames, ~175 KB, loops) is the splash's
+`art/loading-screen.gif` (540x960, 9:16 for phones, 32 frames, ~180 KB, loops) is the splash's
 party and open chest with a turning gold light burst, no text or logos. It's
 drawn from the same sprites by `scripts/loot-break-loading-gif.py`; run it
 again after the sprites change.
