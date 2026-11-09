@@ -219,6 +219,10 @@ var Component = class {
     const cm = this.contextManager;
     return {
       constructed: cm.constructed,
+      // Every component the lab registered, so a walk of the tree finds them (as in Mattercraft).
+      get children() {
+        return [...cm.nodes.values()];
+      },
       resolveNodeID: (id) => cm.nodes.get(id),
       animation: { layerClipByID: cm.layerClipByID }
     };
@@ -1302,6 +1306,19 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zdefault 45
      */
     __publicField(this, "roundTime", new Observable(45));
+    /**
+     * A 3-2-1 before each round starts, so nobody loses seconds while the
+     * scene changes over (Bobo's Hideout folds away during it). The clock
+     * starts on GO. 0 turns it off.
+     *
+     * @zui
+     * @zgroup Game Round
+     * @zgrouppriority 180
+     * @zpriority 75
+     * @ztype time-seconds
+     * @zdefault 3
+     */
+    __publicField(this, "countdown", new Observable(3));
     /**
      * How much time is left when the warning cue starts.
      *
@@ -3879,9 +3896,25 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
      * checks it matches its own HubCore.ts).
      */
-    __publicField(this, "hideoutVersion", "5");
+    __publicField(this, "hideoutVersion", "6");
     // eslint-disable-next-line @typescript-eslint/member-ordering -- grouped with setShell
     __publicField(this, "_shell", null);
+    // eslint-disable-next-line @typescript-eslint/member-ordering -- the countdown's state
+    __publicField(this, "_cdLeft", -1);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_cdHeld", false);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_cdShown", -1);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_cdGoAt", -1);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_cdSeeded", false);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_cdWrap");
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_earned", false);
+    // eslint-disable-next-line @typescript-eslint/member-ordering
+    __publicField(this, "_roundAfterPlace", false);
     /* ══ Internals ══════════════════════════════════════════════════════ */
     __publicField(this, "_zc", this.getZComponentInstance());
     /**
@@ -4214,21 +4247,23 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       this._applyMusicSource();
       if (this.showIntroOnLoad.value && this.uiEnabled.value && !this._shell) this._openIntro();
       else this._afterIntroDismissed();
-      if (this.autoStart.value) this._start();
+      if (this.autoStart.value) this._beginRound();
     });
     this.register(useOnBeforeRender(contextManager), (dt) => this._tick(dt * 1e-3));
   }
   /* ══ Public API — call these from a behaviour or a Call Function track ══ */
   /** Start (or restart) a round. @zui */
   startGame() {
-    this._start();
+    this._beginRound();
   }
   /** Pause a running round. @zui */
   pauseGame() {
+    if (this._cdLeft > 0) this._cdHeld = true;
     if (this._state === "playing" /* Playing */) this._setState("paused" /* Paused */);
   }
   /** Resume a paused round. @zui */
   resumeGame() {
+    this._cdHeld = false;
     if (this._state === "paused" /* Paused */) this._setState("playing" /* Playing */);
   }
   /** Reset the board to idle without starting. @zui */
@@ -4331,6 +4366,25 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   get roundStatus() {
     const target = clampInt(this.targetCount.value, 1, 999);
     return { score: this._score, target, left: Math.max(0, target - this._score), time: this.timeRemaining };
+  }
+  /** True during the 3-2-1 before a round (see Countdown). */
+  get isCountingDown() {
+    return this._cdLeft > 0;
+  }
+  /** True while a menu is holding the countdown. */
+  get isCountdownHeld() {
+    return this._cdLeft > 0 && this._cdHeld;
+  }
+  /**
+   * True once this device has won the digital exclusive (remembered), so a
+   * home screen can always lead back to How to claim.
+   */
+  get rewardEarned() {
+    try {
+      return localStorage.getItem("ohg-reward-earned") === "1";
+    } catch {
+      return this._earned;
+    }
   }
   /**
    * Play a character timeline (an emote) the way the lounge buttons do: it
@@ -4910,7 +4964,11 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   _start() {
     this._exitLounge();
     this._exitHideout();
-    this._newRoundSeed();
+    if (this._cdSeeded) this._rng = mulberry32(this._roundSeed ^ 2654435769);
+    else this._newRoundSeed();
+    this._cdSeeded = false;
+    this._cdLeft = -1;
+    this._cdHeld = false;
     this._portalHum(false);
     this._score = 0;
     this._streak = 0;
@@ -4932,6 +4990,94 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._closeMenu();
     this._playClip(this.startTimeline.value);
     this.onGameStart.emit();
+  }
+  /**
+   * Start a round the way a player sees it: the mode changes at once (the
+   * lounge or the hideout makes way), a 3-2-1 plays over the board, and the
+   * clock starts on GO. Without a countdown (or UI) it's _start() directly.
+   */
+  _beginRound() {
+    this._roundAfterPlace = false;
+    if (this.placementEnabled.value && !this._placed) {
+      this._cancelCountdown();
+      this._exitLounge();
+      this._exitHideout();
+      this._closeIntro();
+      this._closeMenu();
+      this._reset();
+      this._roundAfterPlace = true;
+      return;
+    }
+    const secs = clampInt(this.countdown.value, 0, 10);
+    if (secs <= 0 || !this.uiEnabled.value || !this._cdWrap) {
+      this._cancelCountdown();
+      this._start();
+      return;
+    }
+    this._exitLounge();
+    this._exitHideout();
+    this._closeIntro();
+    this._closeMenu();
+    this._closeRewardModal(false);
+    this._newRoundSeed();
+    this._reset();
+    this._cdSeeded = true;
+    this._cdLeft = secs;
+    this._cdHeld = false;
+    this._cdShown = -1;
+    this._cdGoAt = -1;
+    this._syncCountdown(false);
+    this._cdWrap.classList.add("on");
+    this._applyUiVisibility();
+  }
+  /** Stop a countdown that hasn't reached GO (another mode took over). */
+  _cancelCountdown() {
+    this._roundAfterPlace = false;
+    this._cdLeft = -1;
+    this._cdHeld = false;
+    this._cdGoAt = -1;
+    this._cdSeeded = false;
+    this._cdWrap?.classList.remove("on");
+  }
+  _syncCountdown(go) {
+    const el = this._cdWrap;
+    if (!el) return;
+    const n = go ? 0 : Math.max(1, Math.ceil(this._cdLeft));
+    if (n === this._cdShown) return;
+    this._cdShown = n;
+    const num = el.querySelector(".ohg-cdNum");
+    num.textContent = go ? "GO!" : String(n);
+    el.classList.toggle("ohg-cdGo", go);
+    num.classList.remove("ohg-cdPop");
+    void num.offsetWidth;
+    num.classList.add("ohg-cdPop");
+    el.querySelector(".ohg-cdTitle").textContent = this.menuTitle.value.trim() || "Cola Run";
+    const target = clampInt(this.targetCount.value, 1, 999);
+    const what = (this.scoreLabel.value.trim() || "cans").toLowerCase();
+    el.querySelector(".ohg-cdSub").textContent = this.timerEnabled.value ? `Grab ${target} ${what} in ${Math.round(this.roundTime.value)} seconds` : `Grab ${target} ${what}`;
+    if (go)
+      this._play(
+        this._sfxCollect,
+        this.constructorProps.collectSound,
+        () => this._audio?.collect(4, this.collectPitchStep.value),
+        1.3
+      );
+    else this._play(this._sfxWarn, this.constructorProps.warningSound, () => this._audio?.warn());
+  }
+  /** Once a frame: run the countdown down; GO starts the round. */
+  _stepCountdown(dt) {
+    if (this._cdLeft > 0 && !this._cdHeld) {
+      this._cdLeft -= dt;
+      if (this._cdLeft <= 0) {
+        this._syncCountdown(true);
+        this._cdGoAt = this._time + 0.75;
+        this._start();
+      } else this._syncCountdown(false);
+    }
+    if (this._cdGoAt > 0 && this._time >= this._cdGoAt) {
+      this._cdGoAt = -1;
+      this._cdWrap?.classList.remove("on");
+    }
   }
   /**
    * Roll the seed the next layout will use.
@@ -4985,6 +5131,13 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   }
   _win() {
     this._setState("won" /* Won */);
+    if (this.rewardEnabled.value) {
+      this._earned = true;
+      try {
+        localStorage.setItem("ohg-reward-earned", "1");
+      } catch {
+      }
+    }
     this._play(this._sfxWin, this.constructorProps.winSound, () => this._audio?.win());
     this._portalHum(true);
     if (this.portalHumSeconds.value > 0) {
@@ -5775,6 +5928,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._beaconU.uTime.value = this._time;
     this._portalU.uTime.value = this._time;
     this._audio?.musicTick();
+    this._stepCountdown(dt);
     this._loungeWatchdog();
     if (this._state === "playing" /* Playing */ && this.timerEnabled.value) {
       this._timeLeft -= dt;
@@ -5937,7 +6091,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._root.innerHTML = `<button class="ohg-icon" type="button" aria-label="Open game menu"><span class="ohg-orb" aria-hidden="true"></span><span class="ohg-bars" aria-hidden="true"><i></i><i></i><i></i></span></button>`;
     this._iconBtn = this._root.querySelector(".ohg-icon");
     this._iconBtn.addEventListener("click", () => {
-      this._menuOpen ? this._closeMenu() : this._openMenu();
+      this._menuOpen ? this._dismissMenu() : this._openMenu();
     });
     this._scoreWrap = document.createElement("div");
     this._scoreWrap.innerHTML = `
@@ -6036,6 +6190,16 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
         </span>
       </div>`;
     this._rwWord = this._rewardWrap.querySelector(".ohg-rwWord");
+    this._cdWrap = document.createElement("div");
+    this._cdWrap.className = "ohg-cdLayer";
+    this._cdWrap.setAttribute("role", "status");
+    this._cdWrap.setAttribute("aria-live", "assertive");
+    this._cdWrap.innerHTML = `
+      <div class="ohg-cd">
+        <div class="ohg-cdTitle"></div>
+        <div class="ohg-cdNum"></div>
+        <div class="ohg-cdSub"></div>
+      </div>`;
     this._rwBadge = this._rewardWrap.querySelector(".ohg-rwBadge");
     this._rwModalWrap = document.createElement("div");
     this._rwModalWrap.className = "ohg-layer";
@@ -6232,6 +6396,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       overlay.appendChild(this._soundWrap);
       overlay.appendChild(this._loungeWrap);
       overlay.appendChild(this._rewardWrap);
+      if (this._cdWrap) overlay.appendChild(this._cdWrap);
       overlay.appendChild(this._rwModalWrap);
       overlay.appendChild(this._toWrap);
       overlay.appendChild(this._insWrap);
@@ -6358,6 +6523,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   }
   /** Hand the round back after a panel that paused it goes away. */
   _resumeIfPaused() {
+    this._cdHeld = false;
     if (this._state === "paused" /* Paused */) this.resumeGame();
   }
   /** HUD captions. Separate from the values, which change every frame. */
@@ -6385,7 +6551,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._playClip(this.placeTimeline.value);
     this.onPlace.emit();
     this._applyPlacementUi();
-    if (this.startRoundOnPlace.value && !this._noRound) this._start();
+    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound) this._beginRound();
     else this._setState("idle" /* Idle */);
   }
   _bindPlacementAnchor() {
@@ -6426,6 +6592,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     btn.classList.toggle("ohg-placeWait", !ok);
   }
   _resetPlacement() {
+    this._cancelCountdown();
     this._playClip(this.resetTimeline.value);
     this.onResetPlacement.emit();
     this._placed = false;
@@ -6518,7 +6685,8 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       this._insWrap,
       this._menuWrap,
       this._introWrap,
-      this._lightWrap
+      this._lightWrap,
+      this._cdWrap
     ];
   }
   /**
@@ -6548,6 +6716,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     put(this._soundWrap, 30);
     put(this._loungeWrap, 40);
     put(this._rewardWrap, 50);
+    put(this._cdWrap, 50);
     for (const el of [
       this._rwModalWrap,
       this._toWrap,
@@ -6828,6 +6997,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   /* ── lounge mode ───────────────────────────────────────────────────── */
   _enterLounge() {
     if (this._lounge) return;
+    this._cancelCountdown();
     this._exitHideout();
     this._lounge = true;
     this._reset();
@@ -6865,6 +7035,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
    */
   _enterHideout() {
     if (this._hideout) return;
+    this._cancelCountdown();
     if (this._lounge) this._exitLounge();
     this._hideout = true;
     this._closeIntro();
@@ -7179,8 +7350,26 @@ __publicField(_OrbHuntGame, "_CSS", `
 /* Scoped box-sizing reset. This CSS is injected into the host page, which may
    not have a global reset \u2014 without this, padding is added on top of the
    modal's max-height and a short landscape viewport overflows. */
-.ohg-root,.ohg-anchor,.ohg-layer,.ohg-rwLayer,
-.ohg-root *,.ohg-anchor *,.ohg-layer *,.ohg-rwLayer *{box-sizing:border-box}
+.ohg-root,.ohg-anchor,.ohg-layer,.ohg-rwLayer,.ohg-cdLayer,
+.ohg-root *,.ohg-anchor *,.ohg-layer *,.ohg-rwLayer *,.ohg-cdLayer *{box-sizing:border-box}
+/* ---- 3-2-1 before a round (pointer-transparent: the joystick stays live) ---- */
+.ohg-cdLayer{--ohg-accent:#4fd6e8;--ohg-accentRgb:79,214,232;position:absolute;left:0;top:0;width:100%;height:100%;
+  display:grid;place-items:center;pointer-events:none!important;opacity:0;visibility:hidden;
+  transition:opacity .3s,visibility 0s .3s;
+  background:radial-gradient(ellipse at 50% 45%,rgba(6,9,14,.55) 0%,rgba(6,9,14,.22) 45%,transparent 75%);
+  font:500 13px/1.4 ui-sans-serif,-apple-system,"SF Pro Text",Inter,Segoe UI,Roboto,sans-serif}
+.ohg-cdLayer *{pointer-events:none!important}
+.ohg-cdLayer.on{opacity:1;visibility:visible;transition:opacity .2s}
+.ohg-cd{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;margin-top:-6vh;text-align:center;color:#fff}
+.ohg-cdTitle{font-size:13px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;color:var(--ohg-accent);
+  text-shadow:0 1px 10px rgba(0,0,0,.6)}
+.ohg-cdNum{font-size:120px;line-height:1.05;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  color:#fff;text-shadow:0 0 28px rgba(var(--ohg-accentRgb),.75),0 6px 26px rgba(0,0,0,.45)}
+.ohg-cdGo .ohg-cdNum{font-size:92px;color:var(--ohg-accent);text-shadow:0 0 30px rgba(var(--ohg-accentRgb),.9),0 6px 26px rgba(0,0,0,.45)}
+.ohg-cdSub{font-size:15px;font-weight:700;color:#eef8fb;max-width:300px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
+.ohg-cdPop{animation:ohgCdPop .9s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes ohgCdPop{0%{transform:scale(1.7);opacity:0}22%{transform:scale(1);opacity:1}100%{transform:scale(.96);opacity:1}}
+@media (prefers-reduced-motion:reduce){.ohg-cdPop{animation:none}}
 .ohg-root,.ohg-anchor{--ohg-accent:#4fd6e8;--ohg-accentRgb:79,214,232;padding:14px;
   font:500 13px/1.4 ui-sans-serif,-apple-system,"SF Pro Text",Inter,Segoe UI,Roboto,sans-serif}
 /* Overrides #zcomponent-overlay > * { pointer-events:auto } from core CSS \u2014
@@ -8149,7 +8338,7 @@ import { GLTFLoader as GLTFLoader2 } from "three/addons/loaders/GLTFLoader.js";
 
 // mattercraft/cola-run/HubCore.ts
 import * as THREE3 from "three";
-var HIDEOUT_VERSION = "5";
+var HIDEOUT_VERSION = "6";
 var CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function formatCodeInput(v) {
@@ -8278,6 +8467,16 @@ var ICON = {
     '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8"/><path d="M12 17.2h.01"/>'
   ),
   play: svg('<path d="M8 5.5 18.5 12 8 18.5z"/>'),
+  pause: svg('<path d="M9 5.5v13M15 5.5v13"/>'),
+  resize: svg('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
+  minus: svg('<path d="M5 12h14"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  ccw: svg('<path d="M3.5 12a8.5 8.5 0 1 0 2.49-6.01"/><path d="M3.5 3.5V9H9"/>'),
+  cw: svg('<path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01"/><path d="M20.5 3.5V9H15"/>'),
+  trophy: svg(
+    '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 13v4M8.5 20.5h7M9.5 17h5"/>'
+  ),
+  chev: svg('<path d="m9 6 6 6-6 6"/>'),
   external: svg(
     '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'
   )
@@ -8978,7 +9177,53 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
 .mlh-fan button:hover,.mlh-fan button:active{border-color:rgb(var(--ha));background:rgba(var(--ha),.25)}
 .mlh-fan button svg{width:24px;height:24px}
 .mlh-fan .it span{max-width:76px;padding:2px 8px;border-radius:999px;background:rgba(10,12,16,.72);font-size:11.5px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-html.mlh-modal .crc-anchor,html.mlh-modal .mlh-hdock{visibility:hidden}
+html.mlh-modal .crc-anchor,html.mlh-modal .mlh-hdock,html.mlh-modal .mlh-mtop{visibility:hidden}
+/* The BOBO OS button in the top right: the usual home of a game's menu and pause. */
+.mlh-mtop{position:absolute;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--mlh-top,0px));right:calc(var(--safe-area-inset-right,env(safe-area-inset-right,0px)) + 14px);pointer-events:none!important}
+.mlh-mtop>button{pointer-events:auto!important}
+.mlh-mtop .mlh-homeb{width:52px;height:52px;border-radius:16px}
+.mlh-mtop .mlh-homeb svg{width:30px;height:30px}
+.mlh-homeb .pz{display:none;position:relative;color:#fff}
+.mlh-homeb .pz svg{width:24px;height:24px;stroke-width:2.6}
+.mlh-homeb.pzm>svg{display:none}
+.mlh-homeb.pzm .pz{display:grid;place-items:center}
+.mlh-homeb.pzm .mlh-badge{display:none!important}
+.mlh-homeb.pzm::before{opacity:.28;animation:none}
+/* Adjust room: above the joystick, so the room stays in view and nothing covers the stick. */
+html.mlh-adjusting .crc-anchor,html.mlh-adjusting .mlh-hdock,html.mlh-adjusting .mlh-mtop{visibility:hidden}
+.mlh-adj{position:absolute;left:12px;right:12px;margin:0 auto;max-width:420px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + var(--mlh-stick-clear,0px) + 12px);padding:12px 14px 10px;border-radius:22px;color:#e8ecf2;pointer-events:auto!important;border:1px solid rgba(var(--hr),.35);background:radial-gradient(120% 60% at 50% -20%,rgba(var(--hr),.16),transparent 60%),rgba(18,20,24,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 18px 50px rgba(0,0,0,.55);opacity:0;transform:translateY(14px);transition:opacity .25s,transform .3s cubic-bezier(.2,1,.3,1)}
+.mlh-adj.open{opacity:1;transform:none}
+.mlh-adj[hidden]{display:none}
+.mlh-adj-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mlh-adj-h .ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:#101215;background:rgb(var(--hr));box-shadow:0 0 14px rgba(var(--hr),.45)}
+.mlh-adj-h .ic svg{width:18px;height:18px}
+.mlh-adj-h b{flex:1;font-size:16px;font-weight:800}
+.mlh-adj-done{min-height:40px;padding:0 18px;border-radius:999px;border:0;font-weight:800;font-size:14.5px;color:#101215;background:rgb(var(--hr));box-shadow:0 0 16px rgba(var(--hr),.4)}
+.mlh-adj-row{display:flex;align-items:center;gap:8px;min-height:50px}
+.mlh-adj-row .lbl{width:38px;flex:none;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#98a2b1}
+.mlh-adj-b{flex:none;width:44px;height:44px;padding:0;border-radius:14px;display:grid;place-items:center;color:#fff;border:1px solid #2f343e;background:#1d2027}
+.mlh-adj-b:active{background:rgba(var(--hr),.22);border-color:rgba(var(--hr),.6)}
+.mlh-adj-b svg{width:20px;height:20px}
+.mlh-adj-b.w{flex:1;width:auto}
+.mlh-adj-row input[type=range]{flex:1;min-width:0;height:44px;margin:0;background:none;accent-color:rgb(var(--hr));touch-action:none}
+.mlh-adj-row output{width:46px;flex:none;text-align:right;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.mlh-adj-reset{flex:none;min-height:44px;padding:0 14px;border-radius:14px;border:1px solid #2f343e;background:none;font-size:13.5px;font-weight:700;color:#c9d1dc}
+.mlh-adj-tip{margin:4px 2px 0;font-size:12px;line-height:1.35;color:#8d97a6;text-align:center}
+.mlh-adj button:focus-visible,.mlh-adj input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* The game's reward banner clears the joystick and the record button. */
+/* Over the joystick, never under it: the room's hint and the game's place hint. */
+html.mlh-homed .mlh .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + max(22px,var(--mlh-stick-clear,0px) + 12px))}
+html.mlh-homed .mlh.mlh-docked .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + max(92px,var(--mlh-stick-clear,0px) + 12px))}
+html.mlh-homed .ohg-hint{margin-bottom:max(var(--ohg-hintLift,18px),calc(var(--mlh-stick-clear,0px) - 66px - var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))))}
+html.mlh-homed .ohg-rwBadge{bottom:calc(var(--safe-area-inset-bottom,0px) + max(104px,var(--mlh-stick-clear,0px) + 16px))}
+/* A reward still to claim, at the top of the sheet. */
+.mlh-hs-reward{width:100%;display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:10px 12px;min-height:60px;border-radius:16px;text-align:left;border:1px solid rgba(var(--hr),.5);background:linear-gradient(110deg,rgba(var(--hr),.22),rgba(var(--hp),.1)),#17191e;box-shadow:0 0 20px rgba(var(--hr),.16)}
+.mlh-hs-reward i{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#101215;background:rgb(var(--hr))}
+.mlh-hs-reward i svg{width:22px;height:22px}
+.mlh-hs-reward span{flex:1;min-width:0}
+.mlh-hs-reward b{display:block;font-size:14.5px;line-height:1.25}
+.mlh-hs-reward small{display:block;font-size:12.5px;color:#c4ccd6}
+.mlh-hs-reward>svg{flex:none;width:18px;height:18px;opacity:.7}
 html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--crc-dy,0px))}
 .mlh.mlh-docked .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 92px)}
 .mlh-layer.mlh-home{align-items:end;padding:0 8px calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 8px);background:rgba(3,6,12,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
@@ -9016,7 +9261,7 @@ html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var
 .mlh-hs-apps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 6px;border:0;border-radius:14px;background:none;font-size:12.5px;font-weight:600;color:#dfe5ee;line-height:1.25;text-align:center}
 .mlh-hs-apps button:active{background:rgba(255,255,255,.06)}
 .mlh-hs-apps .mlh-tile{width:54px;height:54px}
-.mlh-hs-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mlh-hs-quick{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
 .mlh-hs-quick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:8px 4px;border-radius:14px;border:1px solid #2a2f38;background:#1b1e24;font-size:11.5px;font-weight:600;color:#c9d1dc;line-height:1.2}
 .mlh-hs-quick svg{width:22px;height:22px}
 .mlh-hs-quick button[aria-pressed="true"]{color:#fff;border-color:rgba(var(--hp),.55);background:rgba(var(--hp),.16)}
@@ -9270,6 +9515,8 @@ var CollectorHub = class {
       exitButton: true,
       topOffset: 0,
       joystickSide: "left",
+      menuSpot: "top",
+      stickClear: 0,
       accents: {}
     });
     /** The room's world scale and brightness the lights were last set for. */
@@ -9379,11 +9626,14 @@ var CollectorHub = class {
     __publicField(this, "_afterTour", null);
     /* home screen (setHome) */
     __publicField(this, "_home", null);
+    __publicField(this, "_fitter", null);
+    __publicField(this, "_adjusting", false);
     __publicField(this, "_fanOpen", false);
     __publicField(this, "_dockKey", "");
     __publicField(this, "_homeMode", "");
     /** How far the last placeAround pushed the room back from Bobo's spot (parent units). */
     __publicField(this, "lastPush", new THREE3.Vector3());
+    __publicField(this, "_floorPlane", new THREE3.Plane());
     __publicField(this, "_solidCache", {});
     __publicField(this, "_ray", new THREE3.Raycaster());
     __publicField(this, "_ndc", new THREE3.Vector2());
@@ -9719,8 +9969,17 @@ var CollectorHub = class {
     if (look.joystickSide !== void 0)
       L.joystickSide = look.joystickSide === "right" ? "right" : "left";
     if (look.accents) L.accents = { ...L.accents, ...look.accents };
+    if (look.menuSpot !== void 0) L.menuSpot = look.menuSpot === "dock" ? "dock" : "top";
+    if (look.stickClear !== void 0) L.stickClear = num(look.stickClear, 0, 600, 0);
     const ui = this._ui;
     if (!ui) return;
+    document.documentElement.style.setProperty(
+      "--mlh-stick-clear",
+      `${Math.round(L.stickClear)}px`
+    );
+    const hb = this._el.homeb;
+    const holder = L.menuSpot === "dock" ? this._el.hdock : this._el.mtop;
+    if (hb && holder && hb.parentElement !== holder) holder.appendChild(hb);
     for (const [k, v] of [
       ["--hp", L.accents.play],
       ["--hl", L.accents.lounge],
@@ -9753,6 +10012,7 @@ var CollectorHub = class {
   }
   /** Remove the room from view (no animation). */
   hide() {
+    this.endAdjust();
     if (this._tourI >= 0) this._tourEnd(false);
     this._fanToggle(false);
     this._closeAllLayers();
@@ -9916,6 +10176,15 @@ var CollectorHub = class {
       }
     });
   }
+  /**
+   * Keep Bobo's bed his size at the room's current scale (boboScale: the
+   * scale at which the furniture is Bobo-sized, as in placeAround).
+   */
+  fitBed(boboScale) {
+    if (!this._bed) return;
+    const s = this.root.scale.x || 1;
+    this._bed.scale.setScalar(this._bedScale * Math.min(1, Math.max(0.15, boboScale / s)));
+  }
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
   floorRadius() {
     return this._radius * 0.9 * this.root.scale.x;
@@ -9990,9 +10259,11 @@ var CollectorHub = class {
     const dock = this._el.hdock;
     if (!dock) return;
     const mode = h ? h.mode() : "";
+    if (this._adjusting && (mode !== "room" || this._state !== "live")) this.endAdjust();
     const moves = h && h.movesReady() && this._tourI < 0 ? h.moves() : [];
-    const show = !!h && this._tourI < 0 && !this._el.gate.classList.contains("open");
-    const key = `${show}|${mode}|${moves.map((m) => m.id + m.label).join(",")}`;
+    const show = !!h && this._tourI < 0 && !this._el.gate.classList.contains("open") && !this._adjusting;
+    const top = this._look.menuSpot !== "dock";
+    const key = `${show}|${mode}|${top}|${moves.map((m) => m.id + m.label).join(",")}`;
     if (key === this._dockKey) return;
     this._dockKey = key;
     if (mode !== this._homeMode) {
@@ -10000,8 +10271,15 @@ var CollectorHub = class {
       this._ui.classList.toggle("mlh-m-lounge", mode === "lounge");
       this._ui.classList.toggle("mlh-m-room", mode === "room");
     }
-    dock.hidden = !show;
-    this._ui.classList.toggle("mlh-docked", show);
+    const dockOn = show && (!top || moves.length > 0);
+    dock.hidden = !dockOn;
+    if (this._el.mtop) this._el.mtop.hidden = !(show && top);
+    this._ui.classList.toggle("mlh-docked", dockOn);
+    const hb = this._el.homeb;
+    const pz = mode === "play";
+    hb.classList.toggle("pzm", pz);
+    hb.setAttribute("aria-label", pz ? "Pause the round and open BOBO OS" : "Open BOBO OS");
+    hb.title = pz ? "Pause" : "BOBO OS";
     this._el.act.hidden = !moves.length;
     if (!moves.length) this._fanToggle(false);
     this._renderFan(moves);
@@ -10034,17 +10312,117 @@ var CollectorHub = class {
     this._lastFocus?.focus?.({ preventScroll: true });
     this._home?.closed?.();
   }
+  /* ── Adjust room: resize, turn and move it (see RoomFitter) ───────── */
+  /** Let the fan resize, turn and move the room (null: they can't). */
+  setFitter(f) {
+    this._fitter = f;
+    if (!f) this.endAdjust();
+  }
+  get adjusting() {
+    return this._adjusting;
+  }
+  /** Open the Adjust room panel (room built and on screen only). */
+  startAdjust() {
+    if (!this._fitter || this._state !== "live" || this._adjusting) return;
+    this.closeHome(true);
+    this._fanToggle(false);
+    this._closeAllLayers();
+    if (this._tourI >= 0) this._tourEnd(false);
+    this.prompt(null);
+    this._adjusting = true;
+    const el = this._el.adj;
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add("open"));
+    this._ui.classList.add("mlh-adjusting");
+    document.documentElement.classList.add("mlh-adjusting");
+    this._hud(false);
+    this._syncAdj();
+    this._dockKey = "";
+    this.syncHome();
+    this._sfx("click");
+    setTimeout(() => this._el.adjDone?.focus({ preventScroll: true }), 60);
+    this._emit("adjust", { on: true });
+  }
+  endAdjust() {
+    if (!this._adjusting) return;
+    this._adjusting = false;
+    const el = this._el.adj;
+    el.classList.remove("open");
+    el.hidden = true;
+    this._ui.classList.remove("mlh-adjusting");
+    document.documentElement.classList.remove("mlh-adjusting");
+    if (this._state === "live") this._hud(true);
+    this._dockKey = "";
+    this.syncHome();
+    this._emit("adjust", { on: false });
+  }
+  /** The panel shows what the room is now. */
+  _syncAdj() {
+    const f = this._fitter;
+    if (!f || !this._el.adj) return;
+    const { size } = f.get();
+    const [lo, hi] = f.range();
+    const t = Math.log(size / lo) / Math.log(hi / lo);
+    const input = this._el.adjSize;
+    if (document.activeElement !== input)
+      input.value = String(Math.round(Math.min(1, Math.max(0, t)) * 1e3));
+    this._el.adjPct.textContent = `${Math.round(size * 100)}%`;
+  }
+  _bindAdjust() {
+    const el = this._el.adj;
+    if (!el) return;
+    const f = () => this._fitter;
+    const sizeFrom = (v) => {
+      const fit = f();
+      if (!fit) return 1;
+      const [lo, hi] = fit.range();
+      return lo * Math.pow(hi / lo, v / 1e3);
+    };
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-adj]");
+      const fit = f();
+      if (!b || !fit) return;
+      const k = fit.get().size;
+      const a = b.dataset.adj;
+      if (a === "smaller") fit.setSize(k / 1.1);
+      else if (a === "bigger") fit.setSize(k * 1.1);
+      else if (a === "ccw") fit.turn(Math.PI / 12);
+      else if (a === "cw") fit.turn(-Math.PI / 12);
+      else if (a === "reset") fit.reset();
+      this._sfx("click");
+      this._syncAdj();
+    });
+    const input = this._el.adjSize;
+    input.addEventListener("input", () => {
+      f()?.setSize(sizeFrom(Number(input.value)));
+      this._el.adjPct.textContent = `${Math.round((f()?.get().size ?? 1) * 100)}%`;
+    });
+    input.addEventListener("change", () => this._syncAdj());
+    this._el.adjDone.addEventListener("click", () => this.endAdjust());
+  }
+  /** Where a screen point meets the room's floor (world), or null. */
+  _floorHit(x, y, out) {
+    const cam = this.opts.getCamera();
+    if (!cam) return null;
+    const r = this.opts.canvas.getBoundingClientRect();
+    this._ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this._ray.setFromCamera(this._ndc, cam);
+    const floorY = this.root.getWorldPosition(this._t.v2).y;
+    this._floorPlane.set(UP, -floorY);
+    return this._ray.ray.intersectPlane(this._floorPlane, out);
+  }
   _renderFan(moves) {
     const fan = this._el.fan;
     const n = moves.length;
     const left = this._look.joystickSide === "right";
-    const R = n > 3 ? 128 : 112;
-    const a0 = n > 2 ? 62 : 80;
-    const a1 = n > 2 ? 158 : 140;
+    const corner = this._look.menuSpot !== "dock";
+    const R = corner ? n > 3 ? 185 : 150 : n > 3 ? 128 : 112;
+    const a0 = corner ? n > 3 ? 50 : n > 2 ? 52 : 60 : n > 2 ? 62 : 80;
+    const a1 = corner ? n > 2 ? 96 : 92 : n > 2 ? 158 : 140;
     fan.innerHTML = moves.map((m, i) => {
       const deg = n > 1 ? a0 + (a1 - a0) * i / (n - 1) : 90;
       const r = deg * Math.PI / 180;
-      const x = Math.round(Math.cos(r) * R * (left ? -1 : 1));
+      const x = Math.round(Math.cos(r) * R * (left !== corner ? -1 : 1));
       const y = Math.round(-Math.sin(r) * R);
       return `<div class="it" style="--x:${x}px;--y:${y}px;--i:${i}"><button type="button" role="menuitem" data-mv="${esc(m.id)}" aria-label="${esc(m.label)}" tabindex="-1">${m.svg}</button><span aria-hidden="true">${esc(m.label)}</span></div>`;
     }).join("");
@@ -10087,6 +10465,8 @@ var CollectorHub = class {
     const mode = h.mode();
     const au = h.audio();
     const join = h.join();
+    const reward = h.reward?.() ?? null;
+    const canFit = !!this._fitter && mode === "room" && this._state === "live";
     const inRound = mode === "play" || mode === "paused";
     const modes = [
       {
@@ -10113,7 +10493,7 @@ var CollectorHub = class {
   <div class="t"><b>BOBO <i>OS</i></b><small>${esc(h.status())}</small></div>
   <button type="button" class="mlh-hs-x" data-hx aria-label="Close BOBO OS">${ICON.close}</button>
 </div>
-${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go="resume">${ICON.play}Resume round</button><button type="button" data-go="restart">Restart</button></div>` : ""}
+${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go="resume">${ICON.play}Resume round</button><button type="button" data-go="restart">Restart</button></div>` : ""}${reward ? `<button type="button" class="mlh-hs-reward" data-q="reward"><i>${ICON.trophy}</i><span><b>${esc(reward.title)}</b><small>${esc(reward.sub)}</small></span>${ICON.chev}</button>` : ""}
 <div class="mlh-hs-modes" role="group" aria-label="Modes">${modes.map(
       (m) => `<button type="button" data-go="${m.go}" class="${m.cur ? "cur" : ""}"${m.cur ? ' aria-current="true"' : ""}><i>${m.icon}</i><b>${m.name}</b><small>${m.sub}</small></button>`
     ).join("")}</div>
@@ -10125,6 +10505,7 @@ ${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go=
 <div class="mlh-hs-quick" role="group" aria-labelledby="mlh-hs-q">
   <button type="button" data-q="music" aria-pressed="${au.music}">${ICON.music}Music</button>
   <button type="button" data-q="sound" aria-pressed="${au.sound}">${ICON.sound}Sound</button>
+  ${canFit ? `<button type="button" data-q="fit">${ICON.resize}Resize room</button>` : ""}
   <button type="button" data-q="move">${ICON.move}Move scene</button>
   <button type="button" data-q="help">${ICON.help}How to play</button>
 </div>
@@ -10154,6 +10535,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
           b.setAttribute("aria-pressed", String(on));
           this._sfx("click");
         } else if (q === "move") go(() => h.replace())();
+        else if (q === "fit") this.startAdjust();
+        else if (q === "reward") go(() => h.doReward?.())();
         else if (q === "help") go(() => h.howTo())();
         else if (q === "join") h.doJoin();
       });
@@ -10298,7 +10681,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     this._disposed = true;
     this._stopPolling();
     for (const off of this._off) off();
-    document.documentElement.classList.remove("mlh-modal", "mlh-homed");
+    document.documentElement.classList.remove("mlh-modal", "mlh-homed", "mlh-adjusting");
+    document.documentElement.style.removeProperty("--mlh-stick-clear");
     this._gateResolve?.(false);
     this._leaveResolve?.();
     this.root.parent?.remove(this.root);
@@ -11066,10 +11450,17 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
 </div>
 
 <!-- over the room's dots and the tour; under the computer -->
+<div class="mlh-mtop" data-r="mtop" hidden></div>
 <div class="mlh-hdock" data-r="hdock" hidden>
   <div class="mlh-fan" data-r="fan" role="menu" aria-label="Bobo's moves"></div>
   <button type="button" class="mlh-act" data-r="act" aria-haspopup="menu" aria-expanded="false" aria-label="Bobo's moves" title="Bobo's moves"><span class="p">${ICON.paw}</span><span class="x">${ICON.close}</span></button>
-  <button type="button" class="mlh-homeb" data-r="homeb" aria-haspopup="dialog" aria-label="Open BOBO OS" title="BOBO OS">${OS_MARK}<span class="mlh-badge" data-r="homeBadge" hidden></span></button>
+  <button type="button" class="mlh-homeb" data-r="homeb" aria-haspopup="dialog" aria-label="Open BOBO OS" title="BOBO OS">${OS_MARK}<span class="pz" aria-hidden="true">${ICON.pause}</span><span class="mlh-badge" data-r="homeBadge" hidden></span></button>
+</div>
+<div class="mlh-adj" data-r="adj" role="dialog" aria-labelledby="mlh-adj-t" hidden>
+  <div class="mlh-adj-h"><span class="ic">${ICON.resize}</span><b id="mlh-adj-t">Adjust your room</b><button type="button" class="mlh-adj-done" data-r="adjDone">Done</button></div>
+  <div class="mlh-adj-row"><span class="lbl">Size</span><button type="button" class="mlh-adj-b" data-adj="smaller" aria-label="Smaller">${ICON.minus}</button><input type="range" min="0" max="1000" step="1" data-r="adjSize" aria-label="Room size"><button type="button" class="mlh-adj-b" data-adj="bigger" aria-label="Bigger">${ICON.plus}</button><output data-r="adjPct">100%</output></div>
+  <div class="mlh-adj-row"><span class="lbl">Turn</span><button type="button" class="mlh-adj-b w" data-adj="ccw" aria-label="Turn anticlockwise">${ICON.ccw}</button><button type="button" class="mlh-adj-b w" data-adj="cw" aria-label="Turn clockwise">${ICON.cw}</button><button type="button" class="mlh-adj-reset" data-adj="reset">Reset</button></div>
+  <p class="mlh-adj-tip">Drag the room to move it. Pinch to resize, twist to turn.</p>
 </div>
 <div class="mlh-layer mlh-home" data-r="home" role="dialog" aria-modal="true" aria-label="BOBO OS">
   <div class="mlh-hs" data-r="hs"></div>
@@ -11130,6 +11521,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     on(this._el.bell, "click", () => this._openApp("alerts"));
     on(this._el.homeb, "click", () => this.homeOpen ? this.closeHome() : this.openHome());
     on(this._el.act, "click", () => this._fanToggle());
+    this._bindAdjust();
     on(this._el.home, "click", (e) => e.target === this._el.home && this.closeHome());
     const away = (e) => {
       if (!this._fanOpen) return;
@@ -11165,6 +11557,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
         return;
       }
       if (e.key !== "Escape") return;
+      if (this._adjusting) return this.endAdjust();
       if (this._fanOpen) return this._fanToggle(false, true);
       if (this.homeOpen && !this._el.os.classList.contains("open")) return this.closeHome();
       if (this._el.os.classList.contains("open")) {
@@ -11246,7 +11639,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   _showHint() {
     clearTimeout(this._hintTimer);
     this.prompt(
-      this._spots.length ? "Tap a glowing dot, or anything in the room." : "Tap anything in the room. Tap the computer for BOBO OS."
+      this._spots.length ? this._fitter ? "Tap a glowing dot to explore. Pinch to resize the room, twist to turn it." : "Tap a glowing dot, or anything in the room." : "Tap anything in the room. Tap the computer for BOBO OS."
     );
     this._hintTimer = setTimeout(() => this._state === "live" && this.prompt(null), 5500);
   }
@@ -11276,7 +11669,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   }
   _layerOpen() {
     const e = this._el;
-    return e.os.classList.contains("open") || e.col.classList.contains("open") || e.sheet.classList.contains("open") || e.gate.classList.contains("open");
+    return this._adjusting || e.os.classList.contains("open") || e.col.classList.contains("open") || e.sheet.classList.contains("open") || e.gate.classList.contains("open");
   }
   _updateSpots() {
     const cam = this.opts.getCamera();
@@ -11529,10 +11922,63 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   _bindTaps() {
     const c = this.opts.canvas;
     let down = null;
-    const pd = (e) => {
-      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+    const pts = /* @__PURE__ */ new Map();
+    let pinch = null;
+    let drag = null;
+    const two = () => {
+      const [a, b] = [...pts.values()];
+      return { d: Math.hypot(b.x - a.x, b.y - a.y), a: Math.atan2(b.y - a.y, b.x - a.x) };
     };
+    const canFit = () => !!this._fitter && this._state === "live" && this.root.visible;
+    const pd = (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+      if (pts.size === 2 && canFit() && (this._adjusting || !this._layerOpen())) {
+        down = null;
+        drag = null;
+        const g = two();
+        pinch = { d0: Math.max(10, g.d), k0: this._fitter.get().size, a: g.a };
+      } else if (pts.size === 1 && this._adjusting && this._fitter) {
+        drag = this._floorHit(e.clientX, e.clientY, new THREE3.Vector3());
+      }
+    };
+    const gmove = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const fit = this._fitter;
+      if (!fit) return;
+      if (pinch && pts.size >= 2) {
+        const g = two();
+        fit.setSize(pinch.k0 * g.d / pinch.d0);
+        let da = g.a - pinch.a;
+        if (da > Math.PI) da -= 2 * Math.PI;
+        if (da < -Math.PI) da += 2 * Math.PI;
+        pinch.a = g.a;
+        if (Math.abs(da) > 1e-4) fit.turn(-da);
+        if (this._adjusting) this._syncAdj();
+      } else if (drag && pts.size === 1) {
+        const hit = this._floorHit(e.clientX, e.clientY, new THREE3.Vector3());
+        if (hit) {
+          fit.move(drag, hit);
+          drag = hit;
+        }
+      }
+    };
+    const gup = (e) => {
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (!pts.size) drag = null;
+    };
+    c.addEventListener("pointermove", gmove);
+    c.addEventListener("pointerup", gup);
+    c.addEventListener("pointercancel", gup);
+    this._off.push(() => {
+      c.removeEventListener("pointermove", gmove);
+      c.removeEventListener("pointerup", gup);
+      c.removeEventListener("pointercancel", gup);
+    });
     const pu = (e) => {
+      if (this._adjusting) return;
       if (!down || e.pointerId !== down.id || !this.root.visible) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       const quick = performance.now() - down.t < 450;
@@ -12585,9 +13031,13 @@ function CSS_escape(s) {
 }
 
 // mattercraft/cola-run/CollectorHubMode.ts
-var VERSION_LABEL = `v${HIDEOUT_VERSION} \xB7 2026-11-07`;
+var VERSION_LABEL = `v${HIDEOUT_VERSION} \xB7 2026-11-09`;
 var clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
 var smooth = (t) => t * t * (3 - 2 * t);
+var UP2 = new THREE4.Vector3(0, 1, 0);
+var FIT_KEY = "mlh-room-fit";
+var FIT_MIN = 0.5;
+var FIT_MAX = 1.6;
 var nextFrame = () => new Promise(
   (r) => typeof requestAnimationFrame === "function" ? requestAnimationFrame(() => r()) : setTimeout(r, 16)
 );
@@ -12732,7 +13182,54 @@ var CollectorHubMode = class extends Group2 {
      * @zdefault auto
      */
     __publicField(this, "joystickSide", new Observable("auto" /* Auto */, () => this._applyLook()));
+    /**
+     * Where the BOBO OS button sits. Top Right (default) is where a game's
+     * menu and pause button usually are: out of the thumbs' way mid-round,
+     * and it turns into the pause button while a round is on. The sheet it
+     * opens comes up from the bottom, in reach of a thumb. Bottom Corner puts
+     * it next to Bobo's moves, away from the joystick.
+     *
+     * @zui
+     * @zgroup Home (BOBO OS)
+     * @zgrouppriority 250
+     * @zpriority 75
+     * @zdefault top
+     */
+    __publicField(this, "menuButton", new Observable(
+      "top" /* TopRight */,
+      () => this._applyLook()
+    ));
+    /**
+     * Where the record button (ColaRunRecorder) goes with BOBO OS as home.
+     * Bottom Centre (default): a camera-style shutter in the thumb's reach,
+     * clear of the joystick. It steps aside while the scene is being placed
+     * (Place sits there) and in the room. Recorder Setting keeps the
+     * recorder's own Corner.
+     *
+     * @zui
+     * @zgroup Home (BOBO OS)
+     * @zgrouppriority 250
+     * @zpriority 70
+     * @zdefault bottomCenter
+     */
+    __publicField(this, "recordButton", new Observable("bottomCenter" /* BottomCentre */));
     /* ══ Room ════════════════════════════════════════════════════════════ */
+    /**
+     * Let fans resize, turn and move their room: pinch and twist with two
+     * fingers in the room, or Resize room in BOBO OS for a one-handed panel
+     * (drag the room to move it there). Their choice is remembered on the
+     * phone and comes back every time the room builds.
+     *
+     * @zui
+     * @zgroup Room
+     * @zgrouppriority 200
+     * @zpriority 110
+     * @zdefault true
+     */
+    __publicField(this, "allowAdjust", new Observable(
+      true,
+      (v) => this._hub?.setFitter(v ? this._makeFitter() : null)
+    ));
     /**
      * How big the room gets.
      *  - Both Floors (default): sized to the person holding the phone. The
@@ -12987,6 +13484,13 @@ var CollectorHubMode = class extends Group2 {
     __publicField(this, "_v2", new THREE4.Vector3());
     /* ── getting ready ── */
     __publicField(this, "_prepared");
+    /* ── the fan's own size, turn and spot (Adjust room) ── */
+    __publicField(this, "_fit", { k: 1, r: 0, ox: 0, oz: 0 });
+    __publicField(this, "_baseYaw", 0);
+    __publicField(this, "_baseScale", 1);
+    __publicField(this, "_boboUnit", 1);
+    __publicField(this, "_pivot", new THREE4.Vector3());
+    __publicField(this, "_v3", new THREE4.Vector3());
     /* ── closing ── */
     /**
      * The room folds back into Bobo.
@@ -12995,6 +13499,8 @@ var CollectorHubMode = class extends Group2 {
      *  game:          the game already changed mode (menu): quick fold, nothing else
      */
     __publicField(this, "_leavingNow", false);
+    /** The Adjust room panel opened or closed: the joystick steps aside meanwhile. */
+    __publicField(this, "_stickWas", []);
     __publicField(this, "_layoutT", 0);
     /* The room's settle-back glide (push back + drop), shared with Bobo. */
     __publicField(this, "_glide", new THREE4.Vector3());
@@ -13002,10 +13508,13 @@ var CollectorHubMode = class extends Group2 {
     __publicField(this, "_glideK", 0);
     __publicField(this, "_glideTo", 0);
     __publicField(this, "_groundY", 0);
+    __publicField(this, "_homeT", -1);
+    __publicField(this, "_homeFrom", new THREE4.Vector3());
     __publicField(this, "_failedAt", -1e9);
     __publicField(this, "_fails", 0);
     /* ── BOBO OS as the game's home screen ── */
     __publicField(this, "_layoutKey", "");
+    __publicField(this, "_recCornerWas");
     __publicField(this, "_shellOn", false);
     __publicField(this, "_pausedByHome", false);
     __publicField(this, "_startedHome", false);
@@ -13044,6 +13553,8 @@ var CollectorHubMode = class extends Group2 {
         ownBobo: false,
         on: (name, p) => this._onHub(name, p)
       });
+      this._loadFit();
+      if (this.allowAdjust.value) this._hub.setFitter(this._makeFitter());
       this._bindGame();
       this._syncShell();
       this._syncGameMenus();
@@ -13173,15 +13684,114 @@ var CollectorHubMode = class extends Group2 {
     this._groundY = player.position.y;
     this._glide.set(hub.lastPush.x, -drop, hub.lastPush.z);
     this._glideBase.copy(hub.root.position).sub(this._glide);
-    hub.root.position.copy(this._glideBase);
-    hub.root.updateMatrixWorld(true);
+    this._baseYaw = hub.root.rotation.y;
+    this._baseScale = hub.root.scale.x || 1;
+    this._pivot.copy(hub.root.position);
+    this._boboUnit = unit;
     this._glideK = 0;
     this._glideTo = 1;
+    this._poseRoom();
+    const spot = this._xf(this._v2.copy(center), this._v2);
     const c = hub.root.position;
     const dx = player.position.x - c.x;
     const dz = player.position.z - c.z;
-    if (Math.hypot(dx, dz) > hub.floorRadius() * 0.8)
-      this._setPlayerPos(center.x, player.position.y, center.z);
+    if (this._fit.ox || this._fit.oz || Math.hypot(dx, dz) > hub.floorRadius() * 0.8)
+      this._setPlayerPos(spot.x, player.position.y, spot.z);
+  }
+  /** A point of the fitted room (parent space) where the fan's adjustments put it. */
+  _xf(v, out) {
+    const f = this._fit;
+    const p = this._pivot;
+    const o = this._v3.set(f.ox, 0, f.oz).multiplyScalar(this._baseScale);
+    o.applyAxisAngle(UP2, this._baseYaw);
+    return out.copy(v).sub(p).multiplyScalar(f.k).applyAxisAngle(UP2, f.r).add(p).add(o);
+  }
+  /** Where the room's root is at glide k (0 = where it starts building, 1 = settled). */
+  _roomAt(k, out) {
+    return this._xf(out.copy(this._glideBase).addScaledVector(this._glide, k), out);
+  }
+  /** Put the room where the glide and the fan's adjustments say. */
+  _poseRoom() {
+    const hub = this._hub;
+    if (!hub) return;
+    this._roomAt(smooth(this._glideK), hub.root.position);
+    hub.root.rotation.set(0, this._baseYaw + this._fit.r, 0);
+    hub.root.scale.setScalar(this._baseScale * this._fit.k);
+    hub.fitBed(this._boboUnit);
+    hub.root.updateMatrixWorld(true);
+  }
+  _loadFit() {
+    try {
+      const j = JSON.parse(localStorage.getItem(FIT_KEY) || "null");
+      if (!j) return;
+      this._fit.k = clamp(Number(j.k) || 1, FIT_MIN, FIT_MAX);
+      this._fit.r = Number(j.r) || 0;
+      this._fit.ox = clamp(Number(j.ox) || 0, -20, 20);
+      this._fit.oz = clamp(Number(j.oz) || 0, -20, 20);
+    } catch {
+    }
+  }
+  _saveFit() {
+    try {
+      localStorage.setItem(FIT_KEY, JSON.stringify(this._fit));
+    } catch {
+    }
+  }
+  /**
+   * Change the fan's adjustments. While the room is up it moves at once and
+   * Bobo goes with it (he keeps his spot in the room, on its floor).
+   */
+  _changeFit(p) {
+    const hub = this._hub;
+    if (!hub) return;
+    const up = hub.state !== "hidden" && hub.root.visible;
+    const player = up ? this._findPlayer() : void 0;
+    const carry = !!player && player.parent === hub.root.parent;
+    let local = null;
+    const y0 = hub.root.position.y;
+    if (carry) {
+      hub.root.updateMatrixWorld(true);
+      local = hub.root.worldToLocal(player.getWorldPosition(new THREE4.Vector3()));
+    }
+    Object.assign(this._fit, p);
+    this._saveFit();
+    if (!up) return;
+    this._poseRoom();
+    if (carry && local) {
+      const w = hub.root.localToWorld(local);
+      const q = player.parent.worldToLocal(w);
+      this._setPlayerPos(q.x, player.position.y + (hub.root.position.y - y0), q.z);
+    }
+  }
+  _makeFitter() {
+    return {
+      get: () => ({ size: this._fit.k, turn: this._fit.r }),
+      range: () => [FIT_MIN, FIT_MAX],
+      setSize: (k) => this._changeFit({ k: clamp(k, FIT_MIN, FIT_MAX) }),
+      turn: (rad) => {
+        let r = this._fit.r + rad;
+        r = Math.atan2(Math.sin(r), Math.cos(r));
+        this._changeFit({ r });
+      },
+      move: (from, to) => {
+        const hub = this._hub;
+        const parent = hub?.root.parent;
+        if (!hub || !parent) return;
+        const a = parent.worldToLocal(from.clone());
+        const b = parent.worldToLocal(to.clone());
+        const d = b.sub(a).applyAxisAngle(UP2, -this._baseYaw).divideScalar(this._baseScale);
+        let ox = this._fit.ox + d.x;
+        let oz = this._fit.oz + d.z;
+        const lim = hub.floorRadius() / (this._baseScale * this._fit.k || 1) * 0.85;
+        const len = Math.hypot(ox, oz);
+        if (len > lim) {
+          ox *= lim / len;
+          oz *= lim / len;
+        }
+        this._changeFit({ ox, oz });
+      },
+      reset: () => this._changeFit({ k: 1, r: 0, ox: 0, oz: 0 })
+    };
   }
   /** Up to half a second for the placement animation to put Bobo down. */
   async _settle() {
@@ -13220,6 +13830,7 @@ var CollectorHubMode = class extends Group2 {
     const seq = ++this._seq;
     this._rebuild = false;
     this._glideTo = 0;
+    this._walkHome();
     const inside = hub.state === "building" || hub.state === "live";
     if (inside) {
       const p = this._findPlayer();
@@ -13284,13 +13895,9 @@ var CollectorHubMode = class extends Group2 {
     else if (name === "signedOut") {
       void this._leaveRoom("exit");
       this._syncShell();
-    } else if (name === "play") {
-      if (this._hub?.state === "hidden") {
-        this._pausedByHome = false;
-        this._game?.startGame?.();
-        if (p.record) setTimeout(() => this._recorder()?.startRecording?.(), 500);
-      } else void this._leaveRoom(p.record ? "record" : "play");
-    } else if (name === "osClose") this._resumeAfterHome();
+    } else if (name === "play") this._startRound(!!p.record);
+    else if (name === "adjust") this._onAdjust(!!p.on);
+    else if (name === "osClose") this._resumeAfterHome();
     else if (name === "unlocked") {
       this.onUnlocked.emit({ firstClaim: !!p.firstClaim, owned: p.me?.owned ?? 0 });
       this._syncShell();
@@ -13300,17 +13907,55 @@ var CollectorHubMode = class extends Group2 {
       this.onRoomReady.emit();
     }
   }
+  /**
+   * Start a Cola Run round from anywhere. The game changes mode at once and
+   * counts down, and the room (if it's up) folds away during the count.
+   * Games without the countdown: the room folds first, then the round.
+   */
+  _startRound(record) {
+    const g = this._game;
+    if (!g) return;
+    this._pausedByHome = false;
+    const counts = g.countdown !== void 0;
+    if (counts || this._hub?.state === "hidden") {
+      g.startGame?.();
+      this._syncButton();
+      if (record) setTimeout(() => this._recorder()?.startRecording?.(), counts ? 150 : 500);
+    } else void this._leaveRoom(record ? "record" : "play");
+  }
+  _onAdjust(on) {
+    if (on) {
+      this._stickWas = [];
+      for (const j of globalThis.__mattercraftJoysticks ?? []) {
+        const el = j?.joystickContainer;
+        const obs = typeof j?.visible?.value === "boolean" ? j.visible : void 0;
+        if (obs?.value === false) continue;
+        this._stickWas.push({ j, v: obs?.value, el, vis: el?.style.visibility ?? "" });
+        if (obs) obs.value = false;
+        if (el) el.style.visibility = "hidden";
+      }
+    } else {
+      for (const { j, v, el, vis } of this._stickWas) {
+        if (typeof v === "boolean") j.visible.value = v;
+        if (el) el.style.visibility = vis;
+      }
+      this._stickWas = [];
+    }
+    this._applyLook();
+  }
   _tick(dt) {
     const hub = this._hub;
     if (!hub) return;
     this._stepGlide(dt);
+    this._stepHome(dt);
     hub.update(dt);
     if ((this._layoutT += dt) > 0.25) {
       this._layoutT = 0;
       hub.layoutModeButton();
       this._reconcile();
-      if (this._shellOn && this._stickSide() + this._recCorner() !== this._layoutKey)
-        this._applyLook();
+      if (this._lookKey() !== this._layoutKey) this._applyLook();
+      this._syncRecorder();
+      this._syncButton();
       hub.syncHome();
     }
     if (!this.keepBoboInside.value) return;
@@ -13339,15 +13984,39 @@ var CollectorHubMode = class extends Group2 {
     const d = to - from;
     if (!hub || Math.abs(d) < 1e-6) return;
     const p = this._findPlayer();
-    const fwd = d > 0 ? d : 0;
+    const a = this._roomAt(from, new THREE4.Vector3());
+    const b = this._roomAt(to, new THREE4.Vector3());
+    const zero = this._roomAt(0, new THREE4.Vector3());
     if (p && p.parent === hub.root.parent)
       this._setPlayerPos(
-        p.position.x + this._glide.x * fwd,
-        this._groundY + this._glide.y * to,
-        p.position.z + this._glide.z * fwd
+        p.position.x + (d > 0 ? b.x - a.x : 0),
+        this._groundY + (b.y - zero.y),
+        p.position.z + (d > 0 ? b.z - a.z : 0)
       );
-    if (hub.state !== "hidden")
-      hub.root.position.copy(this._glideBase).addScaledVector(this._glide, smooth(this._glideK));
+    if (hub.state !== "hidden") this._poseRoom();
+  }
+  /** Glide Bobo back to where he was placed (the room may have taken him a long way). */
+  _walkHome() {
+    const p = this._findPlayer();
+    const hub = this._hub;
+    if (!p || !hub || !this._homeSet || p.parent !== hub.root.parent) return;
+    if (Math.hypot(p.position.x - this._home.x, p.position.z - this._home.z) < 1e-3) return;
+    this._homeFrom.copy(p.position);
+    this._homeT = 0;
+  }
+  _stepHome(dt) {
+    if (this._homeT < 0) return;
+    const p = this._findPlayer();
+    if (!p) {
+      this._homeT = -1;
+      return;
+    }
+    this._homeT = Math.min(1, this._homeT + dt / 0.8);
+    const k = smooth(this._homeT);
+    const f = this._homeFrom;
+    const h = this._home;
+    this._setPlayerPos(f.x + (h.x - f.x) * k, p.position.y, f.z + (h.z - f.z) * k);
+    if (this._homeT >= 1) this._homeT = -1;
   }
   /** Put Bobo straight back where the glide started (before re-placing). */
   _snapGlide() {
@@ -13417,6 +14086,7 @@ var CollectorHubMode = class extends Group2 {
     const g = this._game;
     const st = g?.gameState ?? g?._state;
     const busy = !!g && (st === "placing" || !!g.isInHideout || !!g.isIntroOpen || // the card offers the hideout itself
+    !!g.isCountingDown || // a round is about to start
     !g.isLounging && (st === "playing" || st === "paused"));
     const show = this.showButton.value && !this._active && !busy && !this._shellOn;
     hub.modeButton(show ? () => this.open() : null);
@@ -13424,6 +14094,47 @@ var CollectorHubMode = class extends Group2 {
   _syncGameMenus() {
     const g = this._game;
     if (g?.hideoutEnabled) g.hideoutEnabled.value = !!this.showInMenus.value;
+  }
+  /** What the layout depends on that can change under us (the joystick, the record button). */
+  _lookKey() {
+    return `${this._stickSide()}${this._recCorner()}${this._stickClear()}`;
+  }
+  /** How much of the bottom of the screen the joystick takes (px), 0 with none showing. */
+  _stickClear() {
+    if (typeof document === "undefined") return 0;
+    let clear = 0;
+    for (const j of globalThis.__mattercraftJoysticks ?? []) {
+      const el = j?.joystickContainer;
+      if (!el?.isConnected || j?.visible?.value === false) continue;
+      if (getComputedStyle(el).visibility === "hidden") continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      clear = Math.max(clear, innerHeight - r.top);
+    }
+    return Math.round(clamp(clear, 0, 400) / 4) * 4;
+  }
+  /**
+   * The record button with BOBO OS as home: a shutter at the bottom centre
+   * (Record Button), and out of the way while the scene is being placed
+   * (Place sits there) and while the room is up (it's for runs).
+   */
+  _syncRecorder() {
+    const r = this._recorder();
+    if (!r) return;
+    const bc = this._shellOn && this.recordButton.value === "bottomCenter" /* BottomCentre */;
+    if (r.corner) {
+      if (bc) {
+        if (this._recCornerWas === void 0) this._recCornerWas = r.corner.value;
+        if (r.corner.value !== "bottomCenter") r.corner.value = "bottomCenter";
+      } else if (this._recCornerWas !== void 0) {
+        r.corner.value = this._recCornerWas;
+        this._recCornerWas = void 0;
+      }
+    }
+    const hub = this._hub;
+    const roomUp = this._active || !!hub && hub.state !== "hidden";
+    const placing = this._game?.gameState === "placing";
+    this._setRecorderVisible(!(roomUp || bc && placing));
   }
   /** The record button's corner (ColaRunRecorder), when BOBO OS is home and it's in a top one. */
   _recCorner() {
@@ -13439,6 +14150,7 @@ var CollectorHubMode = class extends Group2 {
     for (const j of list ?? []) {
       const el = j?.joystickContainer;
       if (!el?.isConnected || j?.visible?.value === false) continue;
+      if (getComputedStyle(el).visibility === "hidden") continue;
       const r = el.getBoundingClientRect();
       if (!r.width) continue;
       return r.left + r.width / 2 > innerWidth * 0.6 ? "right" : "left";
@@ -13454,10 +14166,15 @@ var CollectorHubMode = class extends Group2 {
     const want = !!g?.setShell && (pick === "always" /* Always */ || pick !== "off" /* Off */ && hub.signedIn);
     if (want === this._shellOn) return;
     this._shellOn = want;
+    if (!want && this._pausedByHome) {
+      this._pausedByHome = false;
+      if (g && (g.gameState === "paused" || g.isCountdownHeld)) setTimeout(() => g.showMenu?.(), 0);
+    }
     hub.setHome(want ? this._homeHost() : null);
     g?.setShell?.(want ? { openHome: () => hub.openHome() } : null);
     this._applyLook();
     this._syncButton();
+    this._syncRecorder();
     if (want && !this._startedHome && g && !g.isInHideout && !g.isLounging) {
       const st = g.gameState;
       if (st !== "playing" && st !== "paused") {
@@ -13475,7 +14192,7 @@ var CollectorHubMode = class extends Group2 {
     if (!this._pausedByHome || !hub || !g) return;
     if (hub.homeOpen || g.isIntroOpen) return;
     this._pausedByHome = false;
-    if (g.gameState === "paused") g.resumeGame?.();
+    if (g.gameState === "paused" || g.isCountdownHeld) g.resumeGame?.();
   }
   _homeHost() {
     const game = () => this._game;
@@ -13484,6 +14201,7 @@ var CollectorHubMode = class extends Group2 {
       if (!g) return "idle";
       if (g.isInHideout) return "room";
       if (g.isLounging) return "lounge";
+      if (g.isCountingDown) return g.isCountdownHeld ? "paused" : "play";
       const st = g.gameState;
       if (st === "playing") return "play";
       if (st === "paused") return "paused";
@@ -13515,7 +14233,7 @@ var CollectorHubMode = class extends Group2 {
           case "placing":
             return "Point at the floor, then tap Place";
           default:
-            return "Ready when you are";
+            return g?.gameState === "won" ? "Round won \xB7 your reward is waiting" : "Ready when you are";
         }
       },
       moves: () => game()?.loungeMoves ?? [],
@@ -13537,10 +14255,8 @@ var CollectorHubMode = class extends Group2 {
         this._pausedByHome = false;
         if (to === "resume") g.resumeGame?.();
         else if (to === "restart") g.startGame?.();
-        else if (to === "play") {
-          if (g.isInHideout) void this.leave("play");
-          else g.startGame?.();
-        } else if (to === "lounge") g.enterLounge?.();
+        else if (to === "play") this._startRound(false);
+        else if (to === "lounge") g.enterLounge?.();
         else if (to === "room") this.open();
       },
       howTo: () => game()?.showIntro?.(),
@@ -13553,6 +14269,18 @@ var CollectorHubMode = class extends Group2 {
         return g && g.claimEnabled?.value !== false ? { label: String(g.claimLabel?.value || "Join EVADE") } : null;
       },
       doJoin: () => game()?.claim?.(),
+      reward: () => {
+        const g = game();
+        if (!g?.rewardEarned || g.rewardEnabled?.value === false) return null;
+        return {
+          title: String(g.rewardModalTitle?.value || "Your reward"),
+          sub: `${String(g.instructionsMenuLabel?.value || "How to claim")} \xB7 your code is inside`
+        };
+      },
+      doReward: () => {
+        this._pausedByHome = false;
+        game()?.showInstructions?.();
+      },
       audio: () => ({
         music: game()?.musicEnabled?.value !== false,
         sound: game()?.soundEnabled?.value !== false
@@ -13565,8 +14293,9 @@ var CollectorHubMode = class extends Group2 {
       opened: () => {
         const g = game();
         const st = g?.gameState;
-        if (st === "playing") g.pauseGame?.();
-        if (st === "playing" || st === "paused") this._pausedByHome = true;
+        const counting = !!g?.isCountingDown;
+        if (st === "playing" || counting) g.pauseGame?.();
+        if (st === "playing" || st === "paused" || counting) this._pausedByHome = true;
       },
       closed: () => this._resumeAfterHome()
     };
@@ -13582,15 +14311,18 @@ var CollectorHubMode = class extends Group2 {
     const soundCorner = g?.soundToggleCorner?.value ?? "";
     const soundOn = !!g && g.soundToggleEnabled?.value !== false;
     const z = Number(g?.modalLayer?.value);
-    this._layoutKey = this._stickSide() + this._recCorner();
+    this._layoutKey = this._lookKey();
+    const menuTop = this._shellOn && this.menuButton.value !== "dock" /* BottomCorner */;
     hub.configure({
       osSize: clamp(this.osSize.value, 0.5, 1),
       osOpacity: clamp(this.osOpacity.value, 0.4, 1),
       osDim: clamp(this.osDim.value, 0, 0.8),
       // The game's menu button stays in its corner in the room: keep the top bar clear of it.
       // With BOBO OS as home the record button moves up into that corner instead.
-      hudInsetRight: gameUi && corner === "topRight" ? 62 : this._recCorner() === "tr" ? 58 : 0,
+      hudInsetRight: gameUi && corner === "topRight" ? 62 : menuTop ? 66 : this._recCorner() === "tr" ? 58 : 0,
       hudInsetLeft: gameUi && corner === "topLeft" ? 62 : this._recCorner() === "tl" ? 58 : 0,
+      menuSpot: menuTop || !this._shellOn ? "top" : "dock",
+      stickClear: this._stickClear(),
       // Under the game's dialogs (its menu opens over the room), over its corner buttons.
       zIndex: Number.isFinite(z) && z > 200 ? z - 100 : 2000100,
       ...this._iconSpot(gameUi, corner, soundOn ? soundCorner : ""),
@@ -13683,6 +14415,7 @@ var CollectorHubMode = class extends Group2 {
       g.onIntroClose
     ])
       on(e, sync);
+    on(g.onIntroClose, () => this._resumeAfterHome());
     on(g.onHideoutEnter, () => {
       sync();
       this._maybeOpen();
@@ -13791,6 +14524,7 @@ var CollectorHubMode = class extends Group2 {
     this._restoreGameUi();
     this._hub?.dispose();
     this._hub = null;
+    if (this._stickWas.length) this._onAdjust(false);
     return super.dispose();
   }
 };

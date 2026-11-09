@@ -3,7 +3,7 @@ var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 import * as THREE from "three";
-const HIDEOUT_VERSION = "5";
+const HIDEOUT_VERSION = "6";
 const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function formatCodeInput(v) {
@@ -132,6 +132,16 @@ const ICON = {
     '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.8"/><path d="M12 17.2h.01"/>'
   ),
   play: svg('<path d="M8 5.5 18.5 12 8 18.5z"/>'),
+  pause: svg('<path d="M9 5.5v13M15 5.5v13"/>'),
+  resize: svg('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>'),
+  minus: svg('<path d="M5 12h14"/>'),
+  plus: svg('<path d="M12 5v14M5 12h14"/>'),
+  ccw: svg('<path d="M3.5 12a8.5 8.5 0 1 0 2.49-6.01"/><path d="M3.5 3.5V9H9"/>'),
+  cw: svg('<path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01"/><path d="M20.5 3.5V9H15"/>'),
+  trophy: svg(
+    '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H4.5v1.5A3.5 3.5 0 0 0 8 11M16 6h3.5v1.5A3.5 3.5 0 0 1 16 11"/><path d="M12 13v4M8.5 20.5h7M9.5 17h5"/>'
+  ),
+  chev: svg('<path d="m9 6 6 6-6 6"/>'),
   external: svg(
     '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'
   )
@@ -832,7 +842,53 @@ button.mlh-wg:hover{transform:translateY(-2px);border-color:rgba(93,242,255,.45)
 .mlh-fan button:hover,.mlh-fan button:active{border-color:rgb(var(--ha));background:rgba(var(--ha),.25)}
 .mlh-fan button svg{width:24px;height:24px}
 .mlh-fan .it span{max-width:76px;padding:2px 8px;border-radius:999px;background:rgba(10,12,16,.72);font-size:11.5px;font-weight:700;line-height:1.35;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.5)}
-html.mlh-modal .crc-anchor,html.mlh-modal .mlh-hdock{visibility:hidden}
+html.mlh-modal .crc-anchor,html.mlh-modal .mlh-hdock,html.mlh-modal .mlh-mtop{visibility:hidden}
+/* The BOBO OS button in the top right: the usual home of a game's menu and pause. */
+.mlh-mtop{position:absolute;top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--mlh-top,0px));right:calc(var(--safe-area-inset-right,env(safe-area-inset-right,0px)) + 14px);pointer-events:none!important}
+.mlh-mtop>button{pointer-events:auto!important}
+.mlh-mtop .mlh-homeb{width:52px;height:52px;border-radius:16px}
+.mlh-mtop .mlh-homeb svg{width:30px;height:30px}
+.mlh-homeb .pz{display:none;position:relative;color:#fff}
+.mlh-homeb .pz svg{width:24px;height:24px;stroke-width:2.6}
+.mlh-homeb.pzm>svg{display:none}
+.mlh-homeb.pzm .pz{display:grid;place-items:center}
+.mlh-homeb.pzm .mlh-badge{display:none!important}
+.mlh-homeb.pzm::before{opacity:.28;animation:none}
+/* Adjust room: above the joystick, so the room stays in view and nothing covers the stick. */
+html.mlh-adjusting .crc-anchor,html.mlh-adjusting .mlh-hdock,html.mlh-adjusting .mlh-mtop{visibility:hidden}
+.mlh-adj{position:absolute;left:12px;right:12px;margin:0 auto;max-width:420px;bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + var(--mlh-stick-clear,0px) + 12px);padding:12px 14px 10px;border-radius:22px;color:#e8ecf2;pointer-events:auto!important;border:1px solid rgba(var(--hr),.35);background:radial-gradient(120% 60% at 50% -20%,rgba(var(--hr),.16),transparent 60%),rgba(18,20,24,.94);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 18px 50px rgba(0,0,0,.55);opacity:0;transform:translateY(14px);transition:opacity .25s,transform .3s cubic-bezier(.2,1,.3,1)}
+.mlh-adj.open{opacity:1;transform:none}
+.mlh-adj[hidden]{display:none}
+.mlh-adj-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mlh-adj-h .ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;color:#101215;background:rgb(var(--hr));box-shadow:0 0 14px rgba(var(--hr),.45)}
+.mlh-adj-h .ic svg{width:18px;height:18px}
+.mlh-adj-h b{flex:1;font-size:16px;font-weight:800}
+.mlh-adj-done{min-height:40px;padding:0 18px;border-radius:999px;border:0;font-weight:800;font-size:14.5px;color:#101215;background:rgb(var(--hr));box-shadow:0 0 16px rgba(var(--hr),.4)}
+.mlh-adj-row{display:flex;align-items:center;gap:8px;min-height:50px}
+.mlh-adj-row .lbl{width:38px;flex:none;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#98a2b1}
+.mlh-adj-b{flex:none;width:44px;height:44px;padding:0;border-radius:14px;display:grid;place-items:center;color:#fff;border:1px solid #2f343e;background:#1d2027}
+.mlh-adj-b:active{background:rgba(var(--hr),.22);border-color:rgba(var(--hr),.6)}
+.mlh-adj-b svg{width:20px;height:20px}
+.mlh-adj-b.w{flex:1;width:auto}
+.mlh-adj-row input[type=range]{flex:1;min-width:0;height:44px;margin:0;background:none;accent-color:rgb(var(--hr));touch-action:none}
+.mlh-adj-row output{width:46px;flex:none;text-align:right;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+.mlh-adj-reset{flex:none;min-height:44px;padding:0 14px;border-radius:14px;border:1px solid #2f343e;background:none;font-size:13.5px;font-weight:700;color:#c9d1dc}
+.mlh-adj-tip{margin:4px 2px 0;font-size:12px;line-height:1.35;color:#8d97a6;text-align:center}
+.mlh-adj button:focus-visible,.mlh-adj input:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* The game's reward banner clears the joystick and the record button. */
+/* Over the joystick, never under it: the room's hint and the game's place hint. */
+html.mlh-homed .mlh .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + max(22px,var(--mlh-stick-clear,0px) + 12px))}
+html.mlh-homed .mlh.mlh-docked .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + max(92px,var(--mlh-stick-clear,0px) + 12px))}
+html.mlh-homed .ohg-hint{margin-bottom:max(var(--ohg-hintLift,18px),calc(var(--mlh-stick-clear,0px) - 66px - var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px))))}
+html.mlh-homed .ohg-rwBadge{bottom:calc(var(--safe-area-inset-bottom,0px) + max(104px,var(--mlh-stick-clear,0px) + 16px))}
+/* A reward still to claim, at the top of the sheet. */
+.mlh-hs-reward{width:100%;display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:10px 12px;min-height:60px;border-radius:16px;text-align:left;border:1px solid rgba(var(--hr),.5);background:linear-gradient(110deg,rgba(var(--hr),.22),rgba(var(--hp),.1)),#17191e;box-shadow:0 0 20px rgba(var(--hr),.16)}
+.mlh-hs-reward i{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#101215;background:rgb(var(--hr))}
+.mlh-hs-reward i svg{width:22px;height:22px}
+.mlh-hs-reward span{flex:1;min-width:0}
+.mlh-hs-reward b{display:block;font-size:14.5px;line-height:1.25}
+.mlh-hs-reward small{display:block;font-size:12.5px;color:#c4ccd6}
+.mlh-hs-reward>svg{flex:none;width:18px;height:18px;opacity:.7}
 html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var(--safe-area-inset-top,env(safe-area-inset-top,0px)) + 12px + var(--crc-dy,0px))}
 .mlh.mlh-docked .mlh-prompt{bottom:calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 92px)}
 .mlh-layer.mlh-home{align-items:end;padding:0 8px calc(var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px)) + 8px);background:rgba(3,6,12,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
@@ -870,7 +926,7 @@ html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var
 .mlh-hs-apps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 6px;border:0;border-radius:14px;background:none;font-size:12.5px;font-weight:600;color:#dfe5ee;line-height:1.25;text-align:center}
 .mlh-hs-apps button:active{background:rgba(255,255,255,.06)}
 .mlh-hs-apps .mlh-tile{width:54px;height:54px}
-.mlh-hs-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mlh-hs-quick{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}
 .mlh-hs-quick button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:72px;padding:8px 4px;border-radius:14px;border:1px solid #2a2f38;background:#1b1e24;font-size:11.5px;font-weight:600;color:#c9d1dc;line-height:1.2}
 .mlh-hs-quick svg{width:22px;height:22px}
 .mlh-hs-quick button[aria-pressed="true"]{color:#fff;border-color:rgba(var(--hp),.55);background:rgba(var(--hp),.16)}
@@ -1124,6 +1180,8 @@ class CollectorHub {
       exitButton: true,
       topOffset: 0,
       joystickSide: "left",
+      menuSpot: "top",
+      stickClear: 0,
       accents: {}
     });
     /** The room's world scale and brightness the lights were last set for. */
@@ -1233,11 +1291,14 @@ class CollectorHub {
     __publicField(this, "_afterTour", null);
     /* home screen (setHome) */
     __publicField(this, "_home", null);
+    __publicField(this, "_fitter", null);
+    __publicField(this, "_adjusting", false);
     __publicField(this, "_fanOpen", false);
     __publicField(this, "_dockKey", "");
     __publicField(this, "_homeMode", "");
     /** How far the last placeAround pushed the room back from Bobo's spot (parent units). */
     __publicField(this, "lastPush", new THREE.Vector3());
+    __publicField(this, "_floorPlane", new THREE.Plane());
     __publicField(this, "_solidCache", {});
     __publicField(this, "_ray", new THREE.Raycaster());
     __publicField(this, "_ndc", new THREE.Vector2());
@@ -1573,8 +1634,17 @@ class CollectorHub {
     if (look.joystickSide !== void 0)
       L.joystickSide = look.joystickSide === "right" ? "right" : "left";
     if (look.accents) L.accents = { ...L.accents, ...look.accents };
+    if (look.menuSpot !== void 0) L.menuSpot = look.menuSpot === "dock" ? "dock" : "top";
+    if (look.stickClear !== void 0) L.stickClear = num(look.stickClear, 0, 600, 0);
     const ui = this._ui;
     if (!ui) return;
+    document.documentElement.style.setProperty(
+      "--mlh-stick-clear",
+      `${Math.round(L.stickClear)}px`
+    );
+    const hb = this._el.homeb;
+    const holder = L.menuSpot === "dock" ? this._el.hdock : this._el.mtop;
+    if (hb && holder && hb.parentElement !== holder) holder.appendChild(hb);
     for (const [k, v] of [
       ["--hp", L.accents.play],
       ["--hl", L.accents.lounge],
@@ -1607,6 +1677,7 @@ class CollectorHub {
   }
   /** Remove the room from view (no animation). */
   hide() {
+    this.endAdjust();
     if (this._tourI >= 0) this._tourEnd(false);
     this._fanToggle(false);
     this._closeAllLayers();
@@ -1770,6 +1841,15 @@ class CollectorHub {
       }
     });
   }
+  /**
+   * Keep Bobo's bed his size at the room's current scale (boboScale: the
+   * scale at which the furniture is Bobo-sized, as in placeAround).
+   */
+  fitBed(boboScale) {
+    if (!this._bed) return;
+    const s = this.root.scale.x || 1;
+    this._bed.scale.setScalar(this._bedScale * Math.min(1, Math.max(0.15, boboScale / s)));
+  }
   /** The room's inner floor radius, in the room parent's units (for keeping Bobo inside). */
   floorRadius() {
     return this._radius * 0.9 * this.root.scale.x;
@@ -1844,9 +1924,11 @@ class CollectorHub {
     const dock = this._el.hdock;
     if (!dock) return;
     const mode = h ? h.mode() : "";
+    if (this._adjusting && (mode !== "room" || this._state !== "live")) this.endAdjust();
     const moves = h && h.movesReady() && this._tourI < 0 ? h.moves() : [];
-    const show = !!h && this._tourI < 0 && !this._el.gate.classList.contains("open");
-    const key = `${show}|${mode}|${moves.map((m) => m.id + m.label).join(",")}`;
+    const show = !!h && this._tourI < 0 && !this._el.gate.classList.contains("open") && !this._adjusting;
+    const top = this._look.menuSpot !== "dock";
+    const key = `${show}|${mode}|${top}|${moves.map((m) => m.id + m.label).join(",")}`;
     if (key === this._dockKey) return;
     this._dockKey = key;
     if (mode !== this._homeMode) {
@@ -1854,8 +1936,15 @@ class CollectorHub {
       this._ui.classList.toggle("mlh-m-lounge", mode === "lounge");
       this._ui.classList.toggle("mlh-m-room", mode === "room");
     }
-    dock.hidden = !show;
-    this._ui.classList.toggle("mlh-docked", show);
+    const dockOn = show && (!top || moves.length > 0);
+    dock.hidden = !dockOn;
+    if (this._el.mtop) this._el.mtop.hidden = !(show && top);
+    this._ui.classList.toggle("mlh-docked", dockOn);
+    const hb = this._el.homeb;
+    const pz = mode === "play";
+    hb.classList.toggle("pzm", pz);
+    hb.setAttribute("aria-label", pz ? "Pause the round and open BOBO OS" : "Open BOBO OS");
+    hb.title = pz ? "Pause" : "BOBO OS";
     this._el.act.hidden = !moves.length;
     if (!moves.length) this._fanToggle(false);
     this._renderFan(moves);
@@ -1888,17 +1977,117 @@ class CollectorHub {
     this._lastFocus?.focus?.({ preventScroll: true });
     this._home?.closed?.();
   }
+  /* ── Adjust room: resize, turn and move it (see RoomFitter) ───────── */
+  /** Let the fan resize, turn and move the room (null: they can't). */
+  setFitter(f) {
+    this._fitter = f;
+    if (!f) this.endAdjust();
+  }
+  get adjusting() {
+    return this._adjusting;
+  }
+  /** Open the Adjust room panel (room built and on screen only). */
+  startAdjust() {
+    if (!this._fitter || this._state !== "live" || this._adjusting) return;
+    this.closeHome(true);
+    this._fanToggle(false);
+    this._closeAllLayers();
+    if (this._tourI >= 0) this._tourEnd(false);
+    this.prompt(null);
+    this._adjusting = true;
+    const el = this._el.adj;
+    el.hidden = false;
+    requestAnimationFrame(() => el.classList.add("open"));
+    this._ui.classList.add("mlh-adjusting");
+    document.documentElement.classList.add("mlh-adjusting");
+    this._hud(false);
+    this._syncAdj();
+    this._dockKey = "";
+    this.syncHome();
+    this._sfx("click");
+    setTimeout(() => this._el.adjDone?.focus({ preventScroll: true }), 60);
+    this._emit("adjust", { on: true });
+  }
+  endAdjust() {
+    if (!this._adjusting) return;
+    this._adjusting = false;
+    const el = this._el.adj;
+    el.classList.remove("open");
+    el.hidden = true;
+    this._ui.classList.remove("mlh-adjusting");
+    document.documentElement.classList.remove("mlh-adjusting");
+    if (this._state === "live") this._hud(true);
+    this._dockKey = "";
+    this.syncHome();
+    this._emit("adjust", { on: false });
+  }
+  /** The panel shows what the room is now. */
+  _syncAdj() {
+    const f = this._fitter;
+    if (!f || !this._el.adj) return;
+    const { size } = f.get();
+    const [lo, hi] = f.range();
+    const t = Math.log(size / lo) / Math.log(hi / lo);
+    const input = this._el.adjSize;
+    if (document.activeElement !== input)
+      input.value = String(Math.round(Math.min(1, Math.max(0, t)) * 1e3));
+    this._el.adjPct.textContent = `${Math.round(size * 100)}%`;
+  }
+  _bindAdjust() {
+    const el = this._el.adj;
+    if (!el) return;
+    const f = () => this._fitter;
+    const sizeFrom = (v) => {
+      const fit = f();
+      if (!fit) return 1;
+      const [lo, hi] = fit.range();
+      return lo * Math.pow(hi / lo, v / 1e3);
+    };
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-adj]");
+      const fit = f();
+      if (!b || !fit) return;
+      const k = fit.get().size;
+      const a = b.dataset.adj;
+      if (a === "smaller") fit.setSize(k / 1.1);
+      else if (a === "bigger") fit.setSize(k * 1.1);
+      else if (a === "ccw") fit.turn(Math.PI / 12);
+      else if (a === "cw") fit.turn(-Math.PI / 12);
+      else if (a === "reset") fit.reset();
+      this._sfx("click");
+      this._syncAdj();
+    });
+    const input = this._el.adjSize;
+    input.addEventListener("input", () => {
+      f()?.setSize(sizeFrom(Number(input.value)));
+      this._el.adjPct.textContent = `${Math.round((f()?.get().size ?? 1) * 100)}%`;
+    });
+    input.addEventListener("change", () => this._syncAdj());
+    this._el.adjDone.addEventListener("click", () => this.endAdjust());
+  }
+  /** Where a screen point meets the room's floor (world), or null. */
+  _floorHit(x, y, out) {
+    const cam = this.opts.getCamera();
+    if (!cam) return null;
+    const r = this.opts.canvas.getBoundingClientRect();
+    this._ndc.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+    this._ray.setFromCamera(this._ndc, cam);
+    const floorY = this.root.getWorldPosition(this._t.v2).y;
+    this._floorPlane.set(UP, -floorY);
+    return this._ray.ray.intersectPlane(this._floorPlane, out);
+  }
   _renderFan(moves) {
     const fan = this._el.fan;
     const n = moves.length;
     const left = this._look.joystickSide === "right";
-    const R = n > 3 ? 128 : 112;
-    const a0 = n > 2 ? 62 : 80;
-    const a1 = n > 2 ? 158 : 140;
+    const corner = this._look.menuSpot !== "dock";
+    const R = corner ? n > 3 ? 185 : 150 : n > 3 ? 128 : 112;
+    const a0 = corner ? n > 3 ? 50 : n > 2 ? 52 : 60 : n > 2 ? 62 : 80;
+    const a1 = corner ? n > 2 ? 96 : 92 : n > 2 ? 158 : 140;
     fan.innerHTML = moves.map((m, i) => {
       const deg = n > 1 ? a0 + (a1 - a0) * i / (n - 1) : 90;
       const r = deg * Math.PI / 180;
-      const x = Math.round(Math.cos(r) * R * (left ? -1 : 1));
+      const x = Math.round(Math.cos(r) * R * (left !== corner ? -1 : 1));
       const y = Math.round(-Math.sin(r) * R);
       return `<div class="it" style="--x:${x}px;--y:${y}px;--i:${i}"><button type="button" role="menuitem" data-mv="${esc(m.id)}" aria-label="${esc(m.label)}" tabindex="-1">${m.svg}</button><span aria-hidden="true">${esc(m.label)}</span></div>`;
     }).join("");
@@ -1941,6 +2130,8 @@ class CollectorHub {
     const mode = h.mode();
     const au = h.audio();
     const join = h.join();
+    const reward = h.reward?.() ?? null;
+    const canFit = !!this._fitter && mode === "room" && this._state === "live";
     const inRound = mode === "play" || mode === "paused";
     const modes = [
       {
@@ -1967,7 +2158,7 @@ class CollectorHub {
   <div class="t"><b>BOBO <i>OS</i></b><small>${esc(h.status())}</small></div>
   <button type="button" class="mlh-hs-x" data-hx aria-label="Close BOBO OS">${ICON.close}</button>
 </div>
-${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go="resume">${ICON.play}Resume round</button><button type="button" data-go="restart">Restart</button></div>` : ""}
+${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go="resume">${ICON.play}Resume round</button><button type="button" data-go="restart">Restart</button></div>` : ""}${reward ? `<button type="button" class="mlh-hs-reward" data-q="reward"><i>${ICON.trophy}</i><span><b>${esc(reward.title)}</b><small>${esc(reward.sub)}</small></span>${ICON.chev}</button>` : ""}
 <div class="mlh-hs-modes" role="group" aria-label="Modes">${modes.map(
       (m) => `<button type="button" data-go="${m.go}" class="${m.cur ? "cur" : ""}"${m.cur ? ' aria-current="true"' : ""}><i>${m.icon}</i><b>${m.name}</b><small>${m.sub}</small></button>`
     ).join("")}</div>
@@ -1979,6 +2170,7 @@ ${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go=
 <div class="mlh-hs-quick" role="group" aria-labelledby="mlh-hs-q">
   <button type="button" data-q="music" aria-pressed="${au.music}">${ICON.music}Music</button>
   <button type="button" data-q="sound" aria-pressed="${au.sound}">${ICON.sound}Sound</button>
+  ${canFit ? `<button type="button" data-q="fit">${ICON.resize}Resize room</button>` : ""}
   <button type="button" data-q="move">${ICON.move}Move scene</button>
   <button type="button" data-q="help">${ICON.help}How to play</button>
 </div>
@@ -2008,6 +2200,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
           b.setAttribute("aria-pressed", String(on));
           this._sfx("click");
         } else if (q === "move") go(() => h.replace())();
+        else if (q === "fit") this.startAdjust();
+        else if (q === "reward") go(() => h.doReward?.())();
         else if (q === "help") go(() => h.howTo())();
         else if (q === "join") h.doJoin();
       });
@@ -2152,7 +2346,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     this._disposed = true;
     this._stopPolling();
     for (const off of this._off) off();
-    document.documentElement.classList.remove("mlh-modal", "mlh-homed");
+    document.documentElement.classList.remove("mlh-modal", "mlh-homed", "mlh-adjusting");
+    document.documentElement.style.removeProperty("--mlh-stick-clear");
     this._gateResolve?.(false);
     this._leaveResolve?.();
     this.root.parent?.remove(this.root);
@@ -2920,10 +3115,17 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
 </div>
 
 <!-- over the room's dots and the tour; under the computer -->
+<div class="mlh-mtop" data-r="mtop" hidden></div>
 <div class="mlh-hdock" data-r="hdock" hidden>
   <div class="mlh-fan" data-r="fan" role="menu" aria-label="Bobo's moves"></div>
   <button type="button" class="mlh-act" data-r="act" aria-haspopup="menu" aria-expanded="false" aria-label="Bobo's moves" title="Bobo's moves"><span class="p">${ICON.paw}</span><span class="x">${ICON.close}</span></button>
-  <button type="button" class="mlh-homeb" data-r="homeb" aria-haspopup="dialog" aria-label="Open BOBO OS" title="BOBO OS">${OS_MARK}<span class="mlh-badge" data-r="homeBadge" hidden></span></button>
+  <button type="button" class="mlh-homeb" data-r="homeb" aria-haspopup="dialog" aria-label="Open BOBO OS" title="BOBO OS">${OS_MARK}<span class="pz" aria-hidden="true">${ICON.pause}</span><span class="mlh-badge" data-r="homeBadge" hidden></span></button>
+</div>
+<div class="mlh-adj" data-r="adj" role="dialog" aria-labelledby="mlh-adj-t" hidden>
+  <div class="mlh-adj-h"><span class="ic">${ICON.resize}</span><b id="mlh-adj-t">Adjust your room</b><button type="button" class="mlh-adj-done" data-r="adjDone">Done</button></div>
+  <div class="mlh-adj-row"><span class="lbl">Size</span><button type="button" class="mlh-adj-b" data-adj="smaller" aria-label="Smaller">${ICON.minus}</button><input type="range" min="0" max="1000" step="1" data-r="adjSize" aria-label="Room size"><button type="button" class="mlh-adj-b" data-adj="bigger" aria-label="Bigger">${ICON.plus}</button><output data-r="adjPct">100%</output></div>
+  <div class="mlh-adj-row"><span class="lbl">Turn</span><button type="button" class="mlh-adj-b w" data-adj="ccw" aria-label="Turn anticlockwise">${ICON.ccw}</button><button type="button" class="mlh-adj-b w" data-adj="cw" aria-label="Turn clockwise">${ICON.cw}</button><button type="button" class="mlh-adj-reset" data-adj="reset">Reset</button></div>
+  <p class="mlh-adj-tip">Drag the room to move it. Pinch to resize, twist to turn.</p>
 </div>
 <div class="mlh-layer mlh-home" data-r="home" role="dialog" aria-modal="true" aria-label="BOBO OS">
   <div class="mlh-hs" data-r="hs"></div>
@@ -2984,6 +3186,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     on(this._el.bell, "click", () => this._openApp("alerts"));
     on(this._el.homeb, "click", () => this.homeOpen ? this.closeHome() : this.openHome());
     on(this._el.act, "click", () => this._fanToggle());
+    this._bindAdjust();
     on(this._el.home, "click", (e) => e.target === this._el.home && this.closeHome());
     const away = (e) => {
       if (!this._fanOpen) return;
@@ -3019,6 +3222,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
         return;
       }
       if (e.key !== "Escape") return;
+      if (this._adjusting) return this.endAdjust();
       if (this._fanOpen) return this._fanToggle(false, true);
       if (this.homeOpen && !this._el.os.classList.contains("open")) return this.closeHome();
       if (this._el.os.classList.contains("open")) {
@@ -3100,7 +3304,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   _showHint() {
     clearTimeout(this._hintTimer);
     this.prompt(
-      this._spots.length ? "Tap a glowing dot, or anything in the room." : "Tap anything in the room. Tap the computer for BOBO OS."
+      this._spots.length ? this._fitter ? "Tap a glowing dot to explore. Pinch to resize the room, twist to turn it." : "Tap a glowing dot, or anything in the room." : "Tap anything in the room. Tap the computer for BOBO OS."
     );
     this._hintTimer = setTimeout(() => this._state === "live" && this.prompt(null), 5500);
   }
@@ -3130,7 +3334,7 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   }
   _layerOpen() {
     const e = this._el;
-    return e.os.classList.contains("open") || e.col.classList.contains("open") || e.sheet.classList.contains("open") || e.gate.classList.contains("open");
+    return this._adjusting || e.os.classList.contains("open") || e.col.classList.contains("open") || e.sheet.classList.contains("open") || e.gate.classList.contains("open");
   }
   _updateSpots() {
     const cam = this.opts.getCamera();
@@ -3383,10 +3587,63 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   _bindTaps() {
     const c = this.opts.canvas;
     let down = null;
-    const pd = (e) => {
-      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+    const pts = /* @__PURE__ */ new Map();
+    let pinch = null;
+    let drag = null;
+    const two = () => {
+      const [a, b] = [...pts.values()];
+      return { d: Math.hypot(b.x - a.x, b.y - a.y), a: Math.atan2(b.y - a.y, b.x - a.x) };
     };
+    const canFit = () => !!this._fitter && this._state === "live" && this.root.visible;
+    const pd = (e) => {
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId };
+      if (pts.size === 2 && canFit() && (this._adjusting || !this._layerOpen())) {
+        down = null;
+        drag = null;
+        const g = two();
+        pinch = { d0: Math.max(10, g.d), k0: this._fitter.get().size, a: g.a };
+      } else if (pts.size === 1 && this._adjusting && this._fitter) {
+        drag = this._floorHit(e.clientX, e.clientY, new THREE.Vector3());
+      }
+    };
+    const gmove = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const fit = this._fitter;
+      if (!fit) return;
+      if (pinch && pts.size >= 2) {
+        const g = two();
+        fit.setSize(pinch.k0 * g.d / pinch.d0);
+        let da = g.a - pinch.a;
+        if (da > Math.PI) da -= 2 * Math.PI;
+        if (da < -Math.PI) da += 2 * Math.PI;
+        pinch.a = g.a;
+        if (Math.abs(da) > 1e-4) fit.turn(-da);
+        if (this._adjusting) this._syncAdj();
+      } else if (drag && pts.size === 1) {
+        const hit = this._floorHit(e.clientX, e.clientY, new THREE.Vector3());
+        if (hit) {
+          fit.move(drag, hit);
+          drag = hit;
+        }
+      }
+    };
+    const gup = (e) => {
+      pts.delete(e.pointerId);
+      if (pts.size < 2) pinch = null;
+      if (!pts.size) drag = null;
+    };
+    c.addEventListener("pointermove", gmove);
+    c.addEventListener("pointerup", gup);
+    c.addEventListener("pointercancel", gup);
+    this._off.push(() => {
+      c.removeEventListener("pointermove", gmove);
+      c.removeEventListener("pointerup", gup);
+      c.removeEventListener("pointercancel", gup);
+    });
     const pu = (e) => {
+      if (this._adjusting) return;
       if (!down || e.pointerId !== down.id || !this.root.visible) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       const quick = performance.now() - down.t < 450;

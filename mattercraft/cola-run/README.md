@@ -104,6 +104,35 @@ from BOBO OS:
   top corner. Activated fans land straight in **Start In** (My Room) instead
   of the intro card. Fans who haven't activated keep today's UI.
 
+**v6: one mode at a time, one-handed controls, and a room you can fit.**
+
+- **Modes never overlap.** Starting Cola Run from anywhere (BOBO OS, the room,
+  the lounge) runs a **3-2-1 countdown** (the game's new **Countdown**
+  property, 3 s; 0 turns it off). The room folds away and Bobo walks back to
+  his spot during the count, so the round always starts on an empty floor.
+  Not placed yet? Cola Run waits for Place, then counts down.
+- **Menu at top right** (**Menu Button = Top Right**, the default). It is the
+  BOBO OS button between rounds and turns into a **pause** button during a
+  round or countdown, as in most mobile games: tap it and the round stops and
+  the sheet opens with Resume and Restart; close it and the round carries on.
+  **Bottom Corner** puts it back next to the moves button (v5).
+- **Record is a bottom-centre shutter** (**Record Button = Bottom Centre**,
+  the default) under your thumb whichever hand holds the phone, with the
+  joystick in one bottom corner and Bobo's moves in the other. It steps aside
+  in the room and while placing. **Recorder Setting** leaves it wherever the
+  ColaRunRecorder's own Corner puts it.
+- **Adjust room** (**Allow Adjust**, on): in the room, pinch to resize and
+  twist to turn at any time, or open BOBO OS → **Resize room** for the panel:
+  drag the room to move it, a size slider (50% to 160%) with − / +, turn
+  buttons and **Reset**. The room grows and turns about its own middle, can't
+  be dragged further than your placed spot staying inside it, and the joystick
+  hides while the panel is open. The fit is remembered on the phone.
+- **The reward stays reachable.** After a win, BOBO OS says "Round won · your
+  reward is waiting" and shows a card at the top that opens **How to claim**
+  (the code steps), every time it opens.
+- Hints (the place hint, the room hint, the win badge) sit above the joystick,
+  never under it.
+
 1. **One placement for everything.** Pick the hideout before the scene is
    placed and the game shows Place; the room opens once you tap it. Placed
    already (lounge, after a round)? The room stands on the spot where Bobo was
@@ -208,13 +237,16 @@ the scene starts, while nobody is waiting on it.
 | Group | Property | Default | What it does |
 | --- | --- | --- | --- |
 | Game | Show In Menus | on | "Visit Bobo's Hideout" on the opening card and in the menu (sets the game's **Bobo's Hideout → Hideout Enabled**). |
-| Game | Version | v5 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
+| Game | Version | v6 | Read-only: which release of the hideout files the project has. The preview warns on screen if the three files are from different releases. |
 | Game | Show Button | on | The small round icon between rounds. |
 | Game | Button Corner | Under Menu | Where the icon sits. Under Menu stacks it below the game's menu and record buttons. |
 | Game | Hide Game Ui | off | Hide the game's menu, sound and Reset placement buttons in the room. Leave off so placement and mode switching work in the room. |
 | Home (BOBO OS) | Home Screen | After Activation | When BOBO OS becomes the whole game's home screen: After Activation, Always (handy for testing), or Off (v4 behaviour). |
 | Home (BOBO OS) | Start In | My Room | Where an activated fan lands: My Room, Lounge or Cola Run. |
 | Home (BOBO OS) | Joystick Side | Auto | The home and moves buttons take the other bottom corner. Auto finds the JoystickController (bottom right if none). |
+| Home (BOBO OS) | Menu Button | Top Right | Top Right: BOBO OS top right, a pause button during a round. Bottom Corner: next to the moves button (v5). |
+| Home (BOBO OS) | Record Button | Bottom Centre | Bottom Centre: a shutter under the thumb. Recorder Setting: the ColaRunRecorder's own Corner. |
+| Room | Allow Adjust | on | Pinch / twist the room and the Resize room panel (move, size 50% to 160%, turn, reset). |
 | Room | Room Fit | Both Floors | Both Floors: sized to the viewer's eye line so both floors show. Around Viewer: grows until the viewer stands inside. Match Bobo: Bobo-sized only. |
 | Room | Room Scale | 2.7 | Room size, in Bobo-sized rooms (1 = the room's own Bobo would be as tall as yours). Follows the placed scene's scale. |
 | Room | Max Room Scale | 7.2 | The most the room may grow (Around Viewer, Both Floors). |

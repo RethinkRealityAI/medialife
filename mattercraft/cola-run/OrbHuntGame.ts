@@ -1515,6 +1515,20 @@ export class OrbHuntGame extends Group {
   public roundTime = new Observable(45);
 
   /**
+   * A 3-2-1 before each round starts, so nobody loses seconds while the
+   * scene changes over (Bobo's Hideout folds away during it). The clock
+   * starts on GO. 0 turns it off.
+   *
+   * @zui
+   * @zgroup Game Round
+   * @zgrouppriority 180
+   * @zpriority 75
+   * @ztype time-seconds
+   * @zdefault 3
+   */
+  public countdown = new Observable(3);
+
+  /**
    * How much time is left when the warning cue starts.
    *
    * @zui
@@ -4236,11 +4250,17 @@ export class OrbHuntGame extends Group {
   /* ══ Public API — call these from a behaviour or a Call Function track ══ */
 
   /** Start (or restart) a round. @zui */
-  public startGame() { this._start(); }
+  public startGame() { this._beginRound(); }
   /** Pause a running round. @zui */
-  public pauseGame() { if (this._state === GameState.Playing) this._setState(GameState.Paused); }
+  public pauseGame() {
+    if (this._cdLeft > 0) this._cdHeld = true; // the countdown waits too
+    if (this._state === GameState.Playing) this._setState(GameState.Paused);
+  }
   /** Resume a paused round. @zui */
-  public resumeGame() { if (this._state === GameState.Paused) this._setState(GameState.Playing); }
+  public resumeGame() {
+    this._cdHeld = false;
+    if (this._state === GameState.Paused) this._setState(GameState.Playing);
+  }
   /** Reset the board to idle without starting. @zui */
   public resetGame() { this._reset(); }
   /** Open the how-to-play modal. @zui */
@@ -4281,7 +4301,7 @@ export class OrbHuntGame extends Group {
    * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
    * checks it matches its own HubCore.ts).
    */
-  public readonly hideoutVersion = "5";
+  public readonly hideoutVersion = "6";
 
   /**
    * BOBO OS as the game's home screen (CollectorHubMode, once a fan has
@@ -4322,6 +4342,36 @@ export class OrbHuntGame extends Group {
 
   // eslint-disable-next-line @typescript-eslint/member-ordering -- grouped with setShell
   private _shell: { openHome(): void } | null = null;
+
+  /** True during the 3-2-1 before a round (see Countdown). */
+  public get isCountingDown() { return this._cdLeft > 0; }
+  /** True while a menu is holding the countdown. */
+  public get isCountdownHeld() { return this._cdLeft > 0 && this._cdHeld; }
+
+  /**
+   * True once this device has won the digital exclusive (remembered), so a
+   * home screen can always lead back to How to claim.
+   */
+  public get rewardEarned() {
+    try { return localStorage.getItem("ohg-reward-earned") === "1"; } catch { return this._earned; }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/member-ordering -- the countdown's state
+  private _cdLeft = -1;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _cdHeld = false;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _cdShown = -1;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _cdGoAt = -1;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _cdSeeded = false;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _cdWrap?: HTMLDivElement;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _earned = false;
+  // eslint-disable-next-line @typescript-eslint/member-ordering
+  private _roundAfterPlace = false;
 
   /**
    * Play a character timeline (an emote) the way the lounge buttons do: it
@@ -4851,7 +4901,7 @@ export class OrbHuntGame extends Group {
       this._applyMusicSource();
       if (this.showIntroOnLoad.value && this.uiEnabled.value && !this._shell) this._openIntro();
       else this._afterIntroDismissed();
-      if (this.autoStart.value) this._start();
+      if (this.autoStart.value) this._beginRound();
     });
 
     // dt arrives in milliseconds.
@@ -5395,7 +5445,13 @@ export class OrbHuntGame extends Group {
   private _start() {
     this._exitLounge();
     this._exitHideout();
-    this._newRoundSeed();
+    // After a countdown the board is already laid out for this seed: lay the
+    // same one again rather than moving every can as the clock starts.
+    if (this._cdSeeded) this._rng = mulberry32(this._roundSeed ^ 0x9e3779b9);
+    else this._newRoundSeed();
+    this._cdSeeded = false;
+    this._cdLeft = -1;
+    this._cdHeld = false;
     this._portalHum(false);
     this._score = 0;
     this._streak = 0;
@@ -5419,6 +5475,98 @@ export class OrbHuntGame extends Group {
     this._closeMenu();
     this._playClip(this.startTimeline.value);
     this.onGameStart.emit();
+  }
+
+  /**
+   * Start a round the way a player sees it: the mode changes at once (the
+   * lounge or the hideout makes way), a 3-2-1 plays over the board, and the
+   * clock starts on GO. Without a countdown (or UI) it's _start() directly.
+   */
+  private _beginRound() {
+    this._roundAfterPlace = false;
+    // Not placed yet: get the mode ready and start once they tap Place.
+    if (this.placementEnabled.value && !this._placed) {
+      this._cancelCountdown();
+      this._exitLounge();
+      this._exitHideout();
+      this._closeIntro();
+      this._closeMenu();
+      this._reset();
+      this._roundAfterPlace = true;
+      return;
+    }
+    const secs = clampInt(this.countdown.value, 0, 10);
+    if (secs <= 0 || !this.uiEnabled.value || !this._cdWrap) {
+      this._cancelCountdown();
+      this._start();
+      return;
+    }
+    this._exitLounge();
+    this._exitHideout();
+    this._closeIntro();
+    this._closeMenu();
+    this._closeRewardModal(false);
+    this._newRoundSeed();
+    this._reset(); // the board for this seed, the clock full, Idle
+    this._cdSeeded = true;
+    this._cdLeft = secs;
+    this._cdHeld = false;
+    this._cdShown = -1;
+    this._cdGoAt = -1;
+    this._syncCountdown(false);
+    this._cdWrap.classList.add("on");
+    this._applyUiVisibility();
+  }
+
+  /** Stop a countdown that hasn't reached GO (another mode took over). */
+  private _cancelCountdown() {
+    this._roundAfterPlace = false;
+    this._cdLeft = -1;
+    this._cdHeld = false;
+    this._cdGoAt = -1;
+    this._cdSeeded = false;
+    this._cdWrap?.classList.remove("on");
+  }
+
+  private _syncCountdown(go: boolean) {
+    const el = this._cdWrap;
+    if (!el) return;
+    const n = go ? 0 : Math.max(1, Math.ceil(this._cdLeft));
+    if (n === this._cdShown) return;
+    this._cdShown = n;
+    const num = el.querySelector(".ohg-cdNum") as HTMLElement;
+    num.textContent = go ? "GO!" : String(n);
+    el.classList.toggle("ohg-cdGo", go);
+    num.classList.remove("ohg-cdPop");
+    void num.offsetWidth; // restart the pop
+    num.classList.add("ohg-cdPop");
+    (el.querySelector(".ohg-cdTitle") as HTMLElement).textContent =
+      this.menuTitle.value.trim() || "Cola Run";
+    const target = clampInt(this.targetCount.value, 1, 999);
+    const what = (this.scoreLabel.value.trim() || "cans").toLowerCase();
+    (el.querySelector(".ohg-cdSub") as HTMLElement).textContent = this.timerEnabled.value
+      ? `Grab ${target} ${what} in ${Math.round(this.roundTime.value)} seconds`
+      : `Grab ${target} ${what}`;
+    if (go)
+      this._play(this._sfxCollect, this.constructorProps.collectSound,
+                 () => this._audio?.collect(4, this.collectPitchStep.value), 1.3);
+    else this._play(this._sfxWarn, this.constructorProps.warningSound, () => this._audio?.warn());
+  }
+
+  /** Once a frame: run the countdown down; GO starts the round. */
+  private _stepCountdown(dt: number) {
+    if (this._cdLeft > 0 && !this._cdHeld) {
+      this._cdLeft -= dt;
+      if (this._cdLeft <= 0) {
+        this._syncCountdown(true);
+        this._cdGoAt = this._time + 0.75;
+        this._start();
+      } else this._syncCountdown(false);
+    }
+    if (this._cdGoAt > 0 && this._time >= this._cdGoAt) {
+      this._cdGoAt = -1;
+      this._cdWrap?.classList.remove("on");
+    }
   }
 
   /**
@@ -5482,6 +5630,10 @@ export class OrbHuntGame extends Group {
 
   private _win() {
     this._setState(GameState.Won);
+    if (this.rewardEnabled.value) {
+      this._earned = true;
+      try { localStorage.setItem("ohg-reward-earned", "1"); } catch { /* private mode */ }
+    }
     this._play(this._sfxWin, this.constructorProps.winSound, () => this._audio?.win());
     this._portalHum(true);
     if (this.portalHumSeconds.value > 0) {
@@ -6506,6 +6658,7 @@ export class OrbHuntGame extends Group {
     this._beaconU.uTime.value = this._time;
     this._portalU.uTime.value = this._time;
     this._audio?.musicTick();
+    this._stepCountdown(dt);
 
     // Cheap when disarmed (three early-outs), and the lounge has no orbs to
     // update, so the per-frame budget is there when it does run.
@@ -6718,7 +6871,8 @@ export class OrbHuntGame extends Group {
       `<span class="ohg-bars" aria-hidden="true"><i></i><i></i><i></i></span></button>`;
     this._iconBtn = this._root.querySelector(".ohg-icon") as HTMLButtonElement;
     this._iconBtn.addEventListener("click", () => {
-      this._menuOpen ? this._closeMenu() : this._openMenu();
+      // Closing it from its own button is dismissing it: the round carries on.
+      this._menuOpen ? this._dismissMenu() : this._openMenu();
     });
 
     /* ---- score (top-left) ---- */
@@ -6834,6 +6988,20 @@ export class OrbHuntGame extends Group {
         </span>
       </div>`;
     this._rwWord = this._rewardWrap.querySelector(".ohg-rwWord") as HTMLDivElement;
+
+    /* ---- 3-2-1 before a round ----
+       Decorative and pointer-transparent like the celebration: the joystick
+       stays live under it so Bobo can line up while it counts. */
+    this._cdWrap = document.createElement("div");
+    this._cdWrap.className = "ohg-cdLayer";
+    this._cdWrap.setAttribute("role", "status");
+    this._cdWrap.setAttribute("aria-live", "assertive");
+    this._cdWrap.innerHTML = `
+      <div class="ohg-cd">
+        <div class="ohg-cdTitle"></div>
+        <div class="ohg-cdNum"></div>
+        <div class="ohg-cdSub"></div>
+      </div>`;
     this._rwBadge = this._rewardWrap.querySelector(".ohg-rwBadge") as HTMLDivElement;
 
     /* ---- reward modal ----
@@ -7114,6 +7282,7 @@ export class OrbHuntGame extends Group {
       overlay.appendChild(this._soundWrap);
       overlay.appendChild(this._loungeWrap);
       overlay.appendChild(this._rewardWrap);
+      if (this._cdWrap) overlay.appendChild(this._cdWrap);
       overlay.appendChild(this._rwModalWrap);
       overlay.appendChild(this._toWrap);
       overlay.appendChild(this._insWrap);
@@ -7217,6 +7386,7 @@ export class OrbHuntGame extends Group {
 
   /** Hand the round back after a panel that paused it goes away. */
   private _resumeIfPaused() {
+    this._cdHeld = false;
     if (this._state === GameState.Paused) this.resumeGame();
   }
 
@@ -7251,7 +7421,7 @@ export class OrbHuntGame extends Group {
     // Placing while lounging drops the scene into the room and stops there —
     // Start Round On Place is about starting the hunt, and the whole point of
     // the lounge is that nobody asked for the hunt.
-    if (this.startRoundOnPlace.value && !this._noRound) this._start();
+    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound) this._beginRound();
     else this._setState(GameState.Idle);
   }
 
@@ -7305,6 +7475,7 @@ export class OrbHuntGame extends Group {
   }
 
   private _resetPlacement() {
+    this._cancelCountdown();
     this._playClip(this.resetTimeline.value);
     this.onResetPlacement.emit();
     this._placed = false;
@@ -7405,7 +7576,7 @@ export class OrbHuntGame extends Group {
     return [this._root, this._scoreWrap, this._timeWrap, this._placeWrap,
             this._resetWrap, this._soundWrap, this._loungeWrap, this._logoWrap,
             this._rewardWrap, this._rwModalWrap, this._toWrap, this._insWrap,
-            this._menuWrap, this._introWrap, this._lightWrap];
+            this._menuWrap, this._introWrap, this._lightWrap, this._cdWrap];
   }
 
   /**
@@ -7438,6 +7609,7 @@ export class OrbHuntGame extends Group {
     put(this._loungeWrap, 40);
     // The celebration passes over the HUD but under anything you can press.
     put(this._rewardWrap, 50);
+    put(this._cdWrap, 50);
     for (const el of [this._rwModalWrap, this._toWrap, this._insWrap,
                       this._menuWrap, this._introWrap]) put(el, modal);
     // The viewer opens FROM a dialog, so it has to clear the one it came from.
@@ -7843,6 +8015,7 @@ export class OrbHuntGame extends Group {
 
   private _enterLounge() {
     if (this._lounge) return;
+    this._cancelCountdown();
     // One mode at a time: the lounge and the hideout both own the scene.
     this._exitHideout();
     this._lounge = true;
@@ -7890,6 +8063,7 @@ export class OrbHuntGame extends Group {
    */
   private _enterHideout() {
     if (this._hideout) return;
+    this._cancelCountdown();
     if (this._lounge) this._exitLounge();
     this._hideout = true;
     // Opened from a deep link or a behaviour while the intro is up.
@@ -8273,8 +8447,26 @@ export class OrbHuntGame extends Group {
 /* Scoped box-sizing reset. This CSS is injected into the host page, which may
    not have a global reset — without this, padding is added on top of the
    modal's max-height and a short landscape viewport overflows. */
-.ohg-root,.ohg-anchor,.ohg-layer,.ohg-rwLayer,
-.ohg-root *,.ohg-anchor *,.ohg-layer *,.ohg-rwLayer *{box-sizing:border-box}
+.ohg-root,.ohg-anchor,.ohg-layer,.ohg-rwLayer,.ohg-cdLayer,
+.ohg-root *,.ohg-anchor *,.ohg-layer *,.ohg-rwLayer *,.ohg-cdLayer *{box-sizing:border-box}
+/* ---- 3-2-1 before a round (pointer-transparent: the joystick stays live) ---- */
+.ohg-cdLayer{--ohg-accent:#4fd6e8;--ohg-accentRgb:79,214,232;position:absolute;left:0;top:0;width:100%;height:100%;
+  display:grid;place-items:center;pointer-events:none!important;opacity:0;visibility:hidden;
+  transition:opacity .3s,visibility 0s .3s;
+  background:radial-gradient(ellipse at 50% 45%,rgba(6,9,14,.55) 0%,rgba(6,9,14,.22) 45%,transparent 75%);
+  font:500 13px/1.4 ui-sans-serif,-apple-system,"SF Pro Text",Inter,Segoe UI,Roboto,sans-serif}
+.ohg-cdLayer *{pointer-events:none!important}
+.ohg-cdLayer.on{opacity:1;visibility:visible;transition:opacity .2s}
+.ohg-cd{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;margin-top:-6vh;text-align:center;color:#fff}
+.ohg-cdTitle{font-size:13px;font-weight:800;letter-spacing:.26em;text-transform:uppercase;color:var(--ohg-accent);
+  text-shadow:0 1px 10px rgba(0,0,0,.6)}
+.ohg-cdNum{font-size:120px;line-height:1.05;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+  color:#fff;text-shadow:0 0 28px rgba(var(--ohg-accentRgb),.75),0 6px 26px rgba(0,0,0,.45)}
+.ohg-cdGo .ohg-cdNum{font-size:92px;color:var(--ohg-accent);text-shadow:0 0 30px rgba(var(--ohg-accentRgb),.9),0 6px 26px rgba(0,0,0,.45)}
+.ohg-cdSub{font-size:15px;font-weight:700;color:#eef8fb;max-width:300px;text-shadow:0 1px 10px rgba(0,0,0,.7)}
+.ohg-cdPop{animation:ohgCdPop .9s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes ohgCdPop{0%{transform:scale(1.7);opacity:0}22%{transform:scale(1);opacity:1}100%{transform:scale(.96);opacity:1}}
+@media (prefers-reduced-motion:reduce){.ohg-cdPop{animation:none}}
 .ohg-root,.ohg-anchor{--ohg-accent:#4fd6e8;--ohg-accentRgb:79,214,232;padding:14px;
   font:500 13px/1.4 ui-sans-serif,-apple-system,"SF Pro Text",Inter,Segoe UI,Roboto,sans-serif}
 /* Overrides #zcomponent-overlay > * { pointer-events:auto } from core CSS —

@@ -14,8 +14,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=6";
+import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=4";
+import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=7";
 import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=2";
 
 const $ = (s) => document.querySelector(s);
@@ -354,6 +354,32 @@ for (const n of [
    Reset placement removes it, Place again rebuilds it at the new size. The
    lab only adds what Mattercraft's AR camera would give you: a camera to look
    around the room with (the component never moves the camera). */
+// What ColaRunRecorder looks like to Bobo's Hideout (it finds it in the scene,
+// moves it to the bottom centre with BOBO OS as home and hides it in the room).
+const lobs = (v, fn) => ({
+  _v: v,
+  get value() {
+    return this._v;
+  },
+  set value(x) {
+    this._v = x;
+    fn(x);
+  },
+  addListener() {},
+  removeListener() {},
+});
+ctx.addComponent("recorder", {
+  element: new THREE.Group(),
+  children: [],
+  onRecordStart: { addListener() {}, removeListener() {} },
+  buttonVisible: lobs(true, (v) => capture.setVisible(v)),
+  corner: lobs(capture.settings.corner, (v) => {
+    capture.settings.corner = v;
+    $("#o-corner").value = v;
+    capture.apply();
+  }),
+  startRecording: () => capture.status === "idle" && capture.toggle(),
+});
 const mode = new CollectorHubMode(ctx, {});
 anchor.add(mode.element);
 mode.gameNode.value = "game"; // what picking the game in the Game dropdown does
@@ -429,10 +455,10 @@ let wasIn = false;
 function hubStep() {
   // In the room the record button steps aside (BOBO OS has its own Record);
   // the joystick stays: it walks Bobo around his room.
+  // (The record button steps aside in the room on its own: CollectorHubMode does it.)
   const inside = inRoom();
   if (inside !== wasIn) {
     wasIn = inside;
-    capture.setVisible(!inside);
     if (inside) resetOrbit();
   }
   viewUi.show(AR || (!!hub && (hub.state === "building" || hub.state === "live")));
@@ -504,7 +530,14 @@ let pinch = null;
 canvas.addEventListener("contextmenu", (e) => (AR || inRoom()) && e.preventDefault());
 canvas.addEventListener("pointerdown", (e) => {
   if (!AR && !inRoom()) return;
+  // Adjusting the room: its drags and pinches belong to the room, not the camera.
+  if (hub?.adjusting) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2 && hub?.state === "live" && mode.allowAdjust.value) {
+    pinch = null; // two fingers in the built room resize and turn it
+    drag = null;
+    return;
+  }
   if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     pinch = {

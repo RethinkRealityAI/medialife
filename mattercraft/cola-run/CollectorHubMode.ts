@@ -54,9 +54,15 @@ import { useCamera, useScene } from "@zcomponent/three/lib/scenecontext";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-import { CollectorHub, HIDEOUT_VERSION, type HubHome, type HubState } from "./HubCore";
+import {
+  CollectorHub,
+  HIDEOUT_VERSION,
+  type HubHome,
+  type HubState,
+  type RoomFitter,
+} from "./HubCore";
 
-const VERSION_LABEL = `v${HIDEOUT_VERSION} · 2026-11-07`;
+const VERSION_LABEL = `v${HIDEOUT_VERSION} · 2026-11-09`;
 
 interface ConstructorProps {}
 
@@ -101,6 +107,16 @@ export enum StartIn {
   ColaRun = "colaRun",
 }
 
+export enum MenuButtonSpot {
+  TopRight = "top",
+  BottomCorner = "dock",
+}
+
+export enum RecordButtonSpot {
+  BottomCentre = "bottomCenter",
+  RecorderSetting = "recorder",
+}
+
 export enum JoystickSide {
   /** Find the EVADE JoystickController on screen (bottom right if there isn't one). */
   Auto = "auto",
@@ -111,6 +127,17 @@ export enum JoystickSide {
 const clamp = (v: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, Number.isFinite(v) ? v : lo));
 const smooth = (t: number) => t * t * (3 - 2 * t);
+const UP = new THREE.Vector3(0, 1, 0);
+/** The fan's own size, turn and spot for their room, on top of the fitted one. */
+interface Fit {
+  k: number;
+  r: number;
+  ox: number;
+  oz: number;
+}
+const FIT_KEY = "mlh-room-fit";
+const FIT_MIN = 0.5;
+const FIT_MAX = 1.6;
 const nextFrame = () =>
   new Promise<void>((r) =>
     typeof requestAnimationFrame === "function"
@@ -275,7 +302,55 @@ export class CollectorHubMode extends Group {
    */
   public joystickSide = new Observable<JoystickSide>(JoystickSide.Auto, () => this._applyLook());
 
+  /**
+   * Where the BOBO OS button sits. Top Right (default) is where a game's
+   * menu and pause button usually are: out of the thumbs' way mid-round,
+   * and it turns into the pause button while a round is on. The sheet it
+   * opens comes up from the bottom, in reach of a thumb. Bottom Corner puts
+   * it next to Bobo's moves, away from the joystick.
+   *
+   * @zui
+   * @zgroup Home (BOBO OS)
+   * @zgrouppriority 250
+   * @zpriority 75
+   * @zdefault top
+   */
+  public menuButton = new Observable<MenuButtonSpot>(MenuButtonSpot.TopRight, () =>
+    this._applyLook(),
+  );
+
+  /**
+   * Where the record button (ColaRunRecorder) goes with BOBO OS as home.
+   * Bottom Centre (default): a camera-style shutter in the thumb's reach,
+   * clear of the joystick. It steps aside while the scene is being placed
+   * (Place sits there) and in the room. Recorder Setting keeps the
+   * recorder's own Corner.
+   *
+   * @zui
+   * @zgroup Home (BOBO OS)
+   * @zgrouppriority 250
+   * @zpriority 70
+   * @zdefault bottomCenter
+   */
+  public recordButton = new Observable<RecordButtonSpot>(RecordButtonSpot.BottomCentre);
+
   /* ══ Room ════════════════════════════════════════════════════════════ */
+
+  /**
+   * Let fans resize, turn and move their room: pinch and twist with two
+   * fingers in the room, or Resize room in BOBO OS for a one-handed panel
+   * (drag the room to move it there). Their choice is remembered on the
+   * phone and comes back every time the room builds.
+   *
+   * @zui
+   * @zgroup Room
+   * @zgrouppriority 200
+   * @zpriority 110
+   * @zdefault true
+   */
+  public allowAdjust = new Observable(true, (v) =>
+    this._hub?.setFitter(v ? this._makeFitter() : null),
+  );
 
   /**
    * How big the room gets.
@@ -596,6 +671,8 @@ export class CollectorHubMode extends Group {
         ownBobo: false,
         on: (name, p: any) => this._onHub(name, p),
       });
+      this._loadFit();
+      if (this.allowAdjust.value) this._hub.setFitter(this._makeFitter());
       this._bindGame();
       this._syncShell();
       this._syncGameMenus();
@@ -751,15 +828,140 @@ export class CollectorHubMode extends Group {
     this._groundY = player.position.y;
     this._glide.set(hub.lastPush.x, -drop, hub.lastPush.z);
     this._glideBase.copy(hub.root.position).sub(this._glide);
-    hub.root.position.copy(this._glideBase);
-    hub.root.updateMatrixWorld(true);
+    // The fitted pose; the fan's own size, turn and spot go on top (Adjust room).
+    this._baseYaw = hub.root.rotation.y;
+    this._baseScale = hub.root.scale.x || 1;
+    // Size and turn go about the room's own middle, so it grows and spins
+    // where it stands (the fitted room is pushed back from Bobo's spot to
+    // wrap the viewer, so his spot would swing the whole room away).
+    this._pivot.copy(hub.root.position);
+    this._boboUnit = unit;
     this._glideK = 0;
     this._glideTo = 1;
+    this._poseRoom();
+    // Bobo starts on his spot in the room (it moves with the room when the fan has moved it).
+    const spot = this._xf(this._v2.copy(center), this._v2);
     const c = hub.root.position;
     const dx = player.position.x - c.x;
     const dz = player.position.z - c.z;
-    if (Math.hypot(dx, dz) > hub.floorRadius() * 0.8)
-      this._setPlayerPos(center.x, player.position.y, center.z);
+    if (this._fit.ox || this._fit.oz || Math.hypot(dx, dz) > hub.floorRadius() * 0.8)
+      this._setPlayerPos(spot.x, player.position.y, spot.z);
+  }
+
+  /* ── the fan's own size, turn and spot (Adjust room) ── */
+
+  private readonly _fit: Fit = { k: 1, r: 0, ox: 0, oz: 0 };
+  private _baseYaw = 0;
+  private _baseScale = 1;
+  private _boboUnit = 1;
+  private readonly _pivot = new THREE.Vector3();
+  private readonly _v3 = new THREE.Vector3();
+
+  /** A point of the fitted room (parent space) where the fan's adjustments put it. */
+  private _xf(v: THREE.Vector3, out: THREE.Vector3) {
+    const f = this._fit;
+    const p = this._pivot;
+    const o = this._v3.set(f.ox, 0, f.oz).multiplyScalar(this._baseScale);
+    o.applyAxisAngle(UP, this._baseYaw);
+    return out.copy(v).sub(p).multiplyScalar(f.k).applyAxisAngle(UP, f.r).add(p).add(o);
+  }
+
+  /** Where the room's root is at glide k (0 = where it starts building, 1 = settled). */
+  private _roomAt(k: number, out: THREE.Vector3) {
+    return this._xf(out.copy(this._glideBase).addScaledVector(this._glide, k), out);
+  }
+
+  /** Put the room where the glide and the fan's adjustments say. */
+  private _poseRoom() {
+    const hub = this._hub;
+    if (!hub) return;
+    this._roomAt(smooth(this._glideK), hub.root.position);
+    hub.root.rotation.set(0, this._baseYaw + this._fit.r, 0);
+    hub.root.scale.setScalar(this._baseScale * this._fit.k);
+    hub.fitBed(this._boboUnit);
+    hub.root.updateMatrixWorld(true);
+  }
+
+  private _loadFit() {
+    try {
+      const j = JSON.parse(localStorage.getItem(FIT_KEY) || "null");
+      if (!j) return;
+      this._fit.k = clamp(Number(j.k) || 1, FIT_MIN, FIT_MAX);
+      this._fit.r = Number(j.r) || 0;
+      this._fit.ox = clamp(Number(j.ox) || 0, -20, 20);
+      this._fit.oz = clamp(Number(j.oz) || 0, -20, 20);
+    } catch {
+      /* private mode, or nothing saved */
+    }
+  }
+
+  private _saveFit() {
+    try {
+      localStorage.setItem(FIT_KEY, JSON.stringify(this._fit));
+    } catch {
+      /* private mode: it lasts for this visit */
+    }
+  }
+
+  /**
+   * Change the fan's adjustments. While the room is up it moves at once and
+   * Bobo goes with it (he keeps his spot in the room, on its floor).
+   */
+  private _changeFit(p: Partial<Fit>) {
+    const hub = this._hub;
+    if (!hub) return;
+    const up = hub.state !== "hidden" && hub.root.visible;
+    const player = up ? this._findPlayer() : undefined;
+    const carry = !!player && player.parent === hub.root.parent;
+    let local: THREE.Vector3 | null = null;
+    const y0 = hub.root.position.y;
+    if (carry) {
+      hub.root.updateMatrixWorld(true);
+      local = hub.root.worldToLocal(player!.getWorldPosition(new THREE.Vector3()));
+    }
+    Object.assign(this._fit, p);
+    this._saveFit();
+    if (!up) return;
+    this._poseRoom();
+    if (carry && local) {
+      const w = hub.root.localToWorld(local);
+      const q = player!.parent!.worldToLocal(w);
+      this._setPlayerPos(q.x, player!.position.y + (hub.root.position.y - y0), q.z);
+    }
+  }
+
+  private _makeFitter(): RoomFitter {
+    return {
+      get: () => ({ size: this._fit.k, turn: this._fit.r }),
+      range: () => [FIT_MIN, FIT_MAX],
+      setSize: (k) => this._changeFit({ k: clamp(k, FIT_MIN, FIT_MAX) }),
+      turn: (rad) => {
+        let r = this._fit.r + rad;
+        r = Math.atan2(Math.sin(r), Math.cos(r));
+        this._changeFit({ r });
+      },
+      move: (from, to) => {
+        const hub = this._hub;
+        const parent = hub?.root.parent;
+        if (!hub || !parent) return;
+        const a = parent.worldToLocal(from.clone());
+        const b = parent.worldToLocal(to.clone());
+        // Into the fitted room's own frame and units.
+        const d = b.sub(a).applyAxisAngle(UP, -this._baseYaw).divideScalar(this._baseScale);
+        let ox = this._fit.ox + d.x;
+        let oz = this._fit.oz + d.z;
+        // The spot you placed on stays inside the room, so it can't be
+        // dragged off somewhere you'd have to go looking for it.
+        const lim = (hub.floorRadius() / (this._baseScale * this._fit.k || 1)) * 0.85;
+        const len = Math.hypot(ox, oz);
+        if (len > lim) {
+          ox *= lim / len;
+          oz *= lim / len;
+        }
+        this._changeFit({ ox, oz });
+      },
+      reset: () => this._changeFit({ k: 1, r: 0, ox: 0, oz: 0 }),
+    };
   }
 
   /** Up to half a second for the placement animation to put Bobo down. */
@@ -813,6 +1015,7 @@ export class CollectorHubMode extends Group {
     const seq = ++this._seq;
     this._rebuild = false;
     this._glideTo = 0; // Bobo steps back up onto the real floor as the room folds
+    this._walkHome(); // …and back to the spot he was placed on, where the round and the lounge are
     const inside = hub.state === "building" || hub.state === "live";
     if (inside) {
       const p = this._findPlayer();
@@ -884,14 +1087,9 @@ export class CollectorHubMode extends Group {
     else if (name === "signedOut") {
       void this._leaveRoom("exit");
       this._syncShell();
-    } else if (name === "play") {
-      // From BOBO OS outside the room there's nothing to fold: just play.
-      if (this._hub?.state === "hidden") {
-        this._pausedByHome = false;
-        this._game?.startGame?.();
-        if (p.record) setTimeout(() => this._recorder()?.startRecording?.(), 500);
-      } else void this._leaveRoom(p.record ? "record" : "play");
-    } else if (name === "osClose") this._resumeAfterHome();
+    } else if (name === "play") this._startRound(!!p.record);
+    else if (name === "adjust") this._onAdjust(!!p.on);
+    else if (name === "osClose") this._resumeAfterHome();
     else if (name === "unlocked") {
       this.onUnlocked.emit({ firstClaim: !!p.firstClaim, owned: p.me?.owned ?? 0 });
       this._syncShell();
@@ -902,11 +1100,54 @@ export class CollectorHubMode extends Group {
     }
   }
 
+  /**
+   * Start a Cola Run round from anywhere. The game changes mode at once and
+   * counts down, and the room (if it's up) folds away during the count.
+   * Games without the countdown: the room folds first, then the round.
+   */
+  private _startRound(record: boolean) {
+    const g = this._game;
+    if (!g) return;
+    this._pausedByHome = false;
+    const counts = g.countdown !== undefined;
+    if (counts || this._hub?.state === "hidden") {
+      g.startGame?.();
+      this._syncButton();
+      if (record) setTimeout(() => this._recorder()?.startRecording?.(), counts ? 150 : 500);
+    } else void this._leaveRoom(record ? "record" : "play");
+  }
+
+  /** The Adjust room panel opened or closed: the joystick steps aside meanwhile. */
+  private _stickWas: { j: any; v: boolean | undefined; el?: HTMLElement; vis: string }[] = [];
+  private _onAdjust(on: boolean) {
+    if (on) {
+      this._stickWas = [];
+      for (const j of ((globalThis as any).__mattercraftJoysticks as any[] | undefined) ?? []) {
+        const el = j?.joystickContainer as HTMLElement | undefined;
+        const obs = typeof j?.visible?.value === "boolean" ? j.visible : undefined;
+        if (obs?.value === false) continue;
+        // Its own switch where it has one, and the element as well: a stick
+        // under a finger that's dragging the room would steal the drag.
+        this._stickWas.push({ j, v: obs?.value, el, vis: el?.style.visibility ?? "" });
+        if (obs) obs.value = false;
+        if (el) el.style.visibility = "hidden";
+      }
+    } else {
+      for (const { j, v, el, vis } of this._stickWas) {
+        if (typeof v === "boolean") j.visible.value = v;
+        if (el) el.style.visibility = vis;
+      }
+      this._stickWas = [];
+    }
+    this._applyLook();
+  }
+
   private _layoutT = 0;
   private _tick(dt: number) {
     const hub = this._hub;
     if (!hub) return;
     this._stepGlide(dt);
+    this._stepHome(dt);
     hub.update(dt);
     // The record button shows and hides with the game: keep the icon clear of it.
     // And make sure the room matches the game's mode (see _reconcile).
@@ -914,8 +1155,9 @@ export class CollectorHubMode extends Group {
       this._layoutT = 0;
       hub.layoutModeButton();
       this._reconcile();
-      if (this._shellOn && this._stickSide() + this._recCorner() !== this._layoutKey)
-        this._applyLook();
+      if (this._lookKey() !== this._layoutKey) this._applyLook();
+      this._syncRecorder();
+      this._syncButton(); // the countdown has no event of its own
       hub.syncHome();
     }
     if (!this.keepBoboInside.value) return;
@@ -958,15 +1200,43 @@ export class CollectorHubMode extends Group {
     // Settling in, Bobo rides along with the room. Coming back up, he stays
     // wherever he's walked to and only rises to the real floor.
     const p = this._findPlayer();
-    const fwd = d > 0 ? d : 0;
+    const a = this._roomAt(from, new THREE.Vector3());
+    const b = this._roomAt(to, new THREE.Vector3());
+    const zero = this._roomAt(0, new THREE.Vector3());
     if (p && p.parent === hub.root.parent)
       this._setPlayerPos(
-        p.position.x + this._glide.x * fwd,
-        this._groundY + this._glide.y * to,
-        p.position.z + this._glide.z * fwd,
+        p.position.x + (d > 0 ? b.x - a.x : 0),
+        this._groundY + (b.y - zero.y),
+        p.position.z + (d > 0 ? b.z - a.z : 0),
       );
-    if (hub.state !== "hidden")
-      hub.root.position.copy(this._glideBase).addScaledVector(this._glide, smooth(this._glideK));
+    if (hub.state !== "hidden") this._poseRoom();
+  }
+
+  private _homeT = -1;
+  private readonly _homeFrom = new THREE.Vector3();
+  /** Glide Bobo back to where he was placed (the room may have taken him a long way). */
+  private _walkHome() {
+    const p = this._findPlayer();
+    const hub = this._hub;
+    if (!p || !hub || !this._homeSet || p.parent !== hub.root.parent) return;
+    if (Math.hypot(p.position.x - this._home.x, p.position.z - this._home.z) < 1e-3) return;
+    this._homeFrom.copy(p.position);
+    this._homeT = 0;
+  }
+
+  private _stepHome(dt: number) {
+    if (this._homeT < 0) return;
+    const p = this._findPlayer();
+    if (!p) {
+      this._homeT = -1;
+      return;
+    }
+    this._homeT = Math.min(1, this._homeT + dt / 0.8);
+    const k = smooth(this._homeT);
+    const f = this._homeFrom;
+    const h = this._home;
+    this._setPlayerPos(f.x + (h.x - f.x) * k, p.position.y, f.z + (h.z - f.z) * k);
+    if (this._homeT >= 1) this._homeT = -1;
   }
 
   /** Put Bobo straight back where the glide started (before re-placing). */
@@ -1055,6 +1325,7 @@ export class CollectorHubMode extends Group {
       (st === "placing" ||
         !!g.isInHideout ||
         !!g.isIntroOpen || // the card offers the hideout itself
+        !!g.isCountingDown || // a round is about to start
         (!g.isLounging && (st === "playing" || st === "paused")));
     // BOBO OS as home has My Room in its sheet: no separate icon.
     const show = this.showButton.value && !this._active && !busy && !this._shellOn;
@@ -1069,6 +1340,49 @@ export class CollectorHubMode extends Group {
   /* ── BOBO OS as the game's home screen ── */
 
   private _layoutKey = "";
+  /** What the layout depends on that can change under us (the joystick, the record button). */
+  private _lookKey() {
+    return `${this._stickSide()}${this._recCorner()}${this._stickClear()}`;
+  }
+  /** How much of the bottom of the screen the joystick takes (px), 0 with none showing. */
+  private _stickClear() {
+    if (typeof document === "undefined") return 0;
+    let clear = 0;
+    for (const j of ((globalThis as any).__mattercraftJoysticks as any[] | undefined) ?? []) {
+      const el = j?.joystickContainer as HTMLElement | undefined;
+      if (!el?.isConnected || j?.visible?.value === false) continue;
+      if (getComputedStyle(el).visibility === "hidden") continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      clear = Math.max(clear, innerHeight - r.top);
+    }
+    return Math.round(clamp(clear, 0, 400) / 4) * 4;
+  }
+
+  private _recCornerWas: string | undefined;
+  /**
+   * The record button with BOBO OS as home: a shutter at the bottom centre
+   * (Record Button), and out of the way while the scene is being placed
+   * (Place sits there) and while the room is up (it's for runs).
+   */
+  private _syncRecorder() {
+    const r = this._recorder();
+    if (!r) return;
+    const bc = this._shellOn && this.recordButton.value === RecordButtonSpot.BottomCentre;
+    if (r.corner) {
+      if (bc) {
+        if (this._recCornerWas === undefined) this._recCornerWas = r.corner.value;
+        if (r.corner.value !== "bottomCenter") r.corner.value = "bottomCenter";
+      } else if (this._recCornerWas !== undefined) {
+        r.corner.value = this._recCornerWas;
+        this._recCornerWas = undefined;
+      }
+    }
+    const hub = this._hub;
+    const roomUp = this._active || (!!hub && hub.state !== "hidden");
+    const placing = this._game?.gameState === "placing";
+    this._setRecorderVisible(!(roomUp || (bc && placing)));
+  }
   /** The record button's corner (ColaRunRecorder), when BOBO OS is home and it's in a top one. */
   private _recCorner(): "tr" | "tl" | "" {
     if (!this._shellOn || typeof document === "undefined") return "";
@@ -1084,6 +1398,7 @@ export class CollectorHubMode extends Group {
     for (const j of list ?? []) {
       const el = j?.joystickContainer as HTMLElement | undefined;
       if (!el?.isConnected || j?.visible?.value === false) continue;
+      if (getComputedStyle(el).visibility === "hidden") continue;
       const r = el.getBoundingClientRect();
       if (!r.width) continue;
       // Bottom centre counts as left: the dock takes the right-hand corner.
@@ -1106,10 +1421,16 @@ export class CollectorHubMode extends Group {
       !!g?.setShell && (pick === HomeScreen.Always || (pick !== HomeScreen.Off && hub.signedIn));
     if (want === this._shellOn) return;
     this._shellOn = want;
+    // Signed out with a round paused under BOBO OS: the game's own menu takes over (its close resumes).
+    if (!want && this._pausedByHome) {
+      this._pausedByHome = false;
+      if (g && (g.gameState === "paused" || g.isCountdownHeld)) setTimeout(() => g.showMenu?.(), 0);
+    }
     hub.setHome(want ? this._homeHost() : null);
     g?.setShell?.(want ? { openHome: () => hub.openHome() } : null);
     this._applyLook();
     this._syncButton();
+    this._syncRecorder(); // back to its own corner at once on sign-out
     // An activated fan opening the experience lands in their spot (once).
     if (want && !this._startedHome && g && !g.isInHideout && !g.isLounging) {
       const st: string | undefined = g.gameState;
@@ -1129,7 +1450,7 @@ export class CollectorHubMode extends Group {
     if (!this._pausedByHome || !hub || !g) return;
     if (hub.homeOpen || g.isIntroOpen) return;
     this._pausedByHome = false;
-    if (g.gameState === "paused") g.resumeGame?.();
+    if (g.gameState === "paused" || g.isCountdownHeld) g.resumeGame?.();
   }
 
   private _homeHost(): HubHome {
@@ -1139,6 +1460,7 @@ export class CollectorHubMode extends Group {
       if (!g) return "idle";
       if (g.isInHideout) return "room";
       if (g.isLounging) return "lounge";
+      if (g.isCountingDown) return g.isCountdownHeld ? "paused" : "play";
       const st: string | undefined = g.gameState;
       if (st === "playing") return "play";
       if (st === "paused") return "paused";
@@ -1172,7 +1494,9 @@ export class CollectorHubMode extends Group {
           case "placing":
             return "Point at the floor, then tap Place";
           default:
-            return "Ready when you are";
+            return g?.gameState === "won"
+              ? "Round won · your reward is waiting"
+              : "Ready when you are";
         }
       },
       moves: () => game()?.loungeMoves ?? [],
@@ -1194,10 +1518,8 @@ export class CollectorHubMode extends Group {
         this._pausedByHome = false;
         if (to === "resume") g.resumeGame?.();
         else if (to === "restart") g.startGame?.();
-        else if (to === "play") {
-          if (g.isInHideout) void this.leave("play");
-          else g.startGame?.();
-        } else if (to === "lounge") g.enterLounge?.();
+        else if (to === "play") this._startRound(false);
+        else if (to === "lounge") g.enterLounge?.();
         else if (to === "room") this.open();
       },
       howTo: () => game()?.showIntro?.(),
@@ -1212,6 +1534,18 @@ export class CollectorHubMode extends Group {
           : null;
       },
       doJoin: () => game()?.claim?.(),
+      reward: () => {
+        const g = game();
+        if (!g?.rewardEarned || g.rewardEnabled?.value === false) return null;
+        return {
+          title: String(g.rewardModalTitle?.value || "Your reward"),
+          sub: `${String(g.instructionsMenuLabel?.value || "How to claim")} · your code is inside`,
+        };
+      },
+      doReward: () => {
+        this._pausedByHome = false;
+        game()?.showInstructions?.();
+      },
       audio: () => ({
         music: game()?.musicEnabled?.value !== false,
         sound: game()?.soundEnabled?.value !== false,
@@ -1224,8 +1558,9 @@ export class CollectorHubMode extends Group {
       opened: () => {
         const g = game();
         const st: string | undefined = g?.gameState;
-        if (st === "playing") g.pauseGame?.();
-        if (st === "playing" || st === "paused") this._pausedByHome = true;
+        const counting = !!g?.isCountingDown;
+        if (st === "playing" || counting) g.pauseGame?.();
+        if (st === "playing" || st === "paused" || counting) this._pausedByHome = true;
       },
       closed: () => this._resumeAfterHome(),
     };
@@ -1249,15 +1584,19 @@ export class CollectorHubMode extends Group {
     const soundCorner: string = g?.soundToggleCorner?.value ?? "";
     const soundOn = !!g && g.soundToggleEnabled?.value !== false;
     const z = Number(g?.modalLayer?.value);
-    this._layoutKey = this._stickSide() + this._recCorner();
+    this._layoutKey = this._lookKey();
+    const menuTop = this._shellOn && this.menuButton.value !== MenuButtonSpot.BottomCorner;
     hub.configure({
       osSize: clamp(this.osSize.value, 0.5, 1),
       osOpacity: clamp(this.osOpacity.value, 0.4, 1),
       osDim: clamp(this.osDim.value, 0, 0.8),
       // The game's menu button stays in its corner in the room: keep the top bar clear of it.
       // With BOBO OS as home the record button moves up into that corner instead.
-      hudInsetRight: gameUi && corner === "topRight" ? 62 : this._recCorner() === "tr" ? 58 : 0,
+      hudInsetRight:
+        gameUi && corner === "topRight" ? 62 : menuTop ? 66 : this._recCorner() === "tr" ? 58 : 0,
       hudInsetLeft: gameUi && corner === "topLeft" ? 62 : this._recCorner() === "tl" ? 58 : 0,
+      menuSpot: menuTop || !this._shellOn ? "top" : "dock",
+      stickClear: this._stickClear(),
       // Under the game's dialogs (its menu opens over the room), over its corner buttons.
       zIndex: Number.isFinite(z) && z > 200 ? z - 100 : 2000100,
       ...this._iconSpot(gameUi, corner, soundOn ? soundCorner : ""),
@@ -1360,6 +1699,8 @@ export class CollectorHubMode extends Group {
       g.onIntroClose,
     ])
       on(e, sync);
+    // How to play opened from BOBO OS mid-round: closing it hands the round back.
+    on(g.onIntroClose, () => this._resumeAfterHome());
     // The game owns the mode and the placement; the room follows.
     on(g.onHideoutEnter, () => {
       sync();
@@ -1482,6 +1823,8 @@ export class CollectorHubMode extends Group {
     this._restoreGameUi();
     this._hub?.dispose();
     this._hub = null;
+    // Mid-adjust when the scene went: give the joysticks back.
+    if (this._stickWas.length) this._onAdjust(false);
     return super.dispose();
   }
 }

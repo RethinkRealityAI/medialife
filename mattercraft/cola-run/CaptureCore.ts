@@ -26,7 +26,7 @@
 
 export type CaptureStatus = "idle" | "recording" | "review" | "sending" | "sent" | "error";
 
-export type CaptureCorner = "topRight" | "topLeft" | "bottomRight" | "bottomLeft";
+export type CaptureCorner = "topRight" | "topLeft" | "bottomRight" | "bottomLeft" | "bottomCenter";
 
 /** What the game tells the recorder, drawn onto the video and sent with the clip. */
 export interface HudInfo {
@@ -639,6 +639,18 @@ const CSS = `
 .crc-anchor.crc-tl{top:calc(var(--safe-area-inset-top,0px) + 78px + var(--crc-dy,0px));left:calc(var(--safe-area-inset-left,0px) + 19px + var(--crc-dx,0px))}
 .crc-anchor.crc-br{bottom:calc(var(--safe-area-inset-bottom,0px) + 78px + var(--crc-dy,0px));right:calc(var(--safe-area-inset-right,0px) + 19px + var(--crc-dx,0px));flex-direction:column-reverse}
 .crc-anchor.crc-bl{bottom:calc(var(--safe-area-inset-bottom,0px) + 78px + var(--crc-dy,0px));left:calc(var(--safe-area-inset-left,0px) + 19px + var(--crc-dx,0px));flex-direction:column-reverse}
+/* Bottom centre: a camera-style shutter in the thumb's reach (BOBO OS as home). */
+.crc-anchor.crc-bc{left:50%;bottom:calc(var(--safe-area-inset-bottom,0px) + 18px + var(--crc-dy,0px));width:68px;
+  transform:translateX(calc(-50% + var(--crc-dx,0px)));flex-direction:column-reverse;gap:8px}
+.crc-bc .crc-rec{width:68px;height:68px;border:3px solid rgba(255,255,255,.92);background:rgba(12,14,18,.38);
+  box-shadow:0 6px 22px rgba(0,0,0,.35)}
+.crc-bc .crc-dot{width:50px;height:50px;box-shadow:inset 0 -3px 8px rgba(0,0,0,.18),0 0 14px rgba(255,77,94,.45)}
+.crc-bc.crc-on .crc-dot{width:26px;height:26px;border-radius:7px}
+.crc-bc .crc-ring{inset:-6px;width:74px;height:74px}
+.crc-bc .crc-ring circle{stroke-width:2.4}
+.crc-bc .crc-hint{top:auto;bottom:80px;left:50%;right:auto;transform:translate(-50%,4px);text-align:center;max-width:min(172px,46vw)}
+.crc-bc .crc-hint.crc-show{transform:translate(-50%,0)}
+.crc-bc .crc-hint::before{top:auto;bottom:-6px;left:calc(50% - 5px);transform:rotate(225deg)}
 .crc-anchor.crc-hidden{display:none}
 .crc-rec{pointer-events:auto!important;position:relative;width:44px;height:44px;border-radius:50%;padding:0;cursor:pointer;
   display:grid;place-items:center;border:1px solid rgba(255,255,255,.18);background:rgba(20,22,26,.78);
@@ -806,6 +818,7 @@ export class ColaCapture {
       topLeft: "crc-tl",
       bottomRight: "crc-br",
       bottomLeft: "crc-bl",
+      bottomCenter: "crc-bc",
     }[s.corner];
     this._anchor.className = `crc-anchor ${cls}`;
     for (const el of [this._anchor, this._layer]) {
