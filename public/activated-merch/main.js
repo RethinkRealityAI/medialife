@@ -308,6 +308,7 @@ function updateAr({ ar, arRect: r }) {
   if (!on) {
     els.arPin.style.setProperty("--copy", "0");
     els.arPin.style.setProperty("--brand", "0");
+    els.arPin.style.setProperty("--more", "0");
     els.brackets.style.setProperty("--brk", "0");
     return;
   }
@@ -335,6 +336,8 @@ function updateAr({ ar, arRect: r }) {
   els.arPin.style.setProperty("--copy", String(seg(ar, 0.05, 0.1)));
   els.arPin.style.setProperty("--title", String(mobile ? 1 - seg(ar, 0.12, 0.2) : 1));
   els.arPin.style.setProperty("--brand", String(seg(ar, 0.9, 0.97)));
+  // Phones: "keep scrolling" while the camera hunts for the print, gone before Buy now shows.
+  els.arPin.style.setProperty("--more", String(mobile ? seg(ar, 0.14, 0.2) * (1 - seg(ar, 0.52, 0.58)) : 0));
   // Tapping is covered by the Technology section, so this one starts at Point.
   const step = ar < 0.46 ? 0 : ar < 0.88 ? 1 : 2;
   els.arSteps.forEach((li, i) => {
