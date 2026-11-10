@@ -25,7 +25,8 @@ function track(name, props) {
 }
 function initTracking() {
   try {
-    window.ARTrack?.init({ demo: "evade-creators" });
+    // The launch page (/evade/) shares this script; it names itself on <body data-demo>.
+    window.ARTrack?.init({ demo: document.body.dataset.demo || "evade-creators" });
   } catch {
     /* ignore */
   }
@@ -72,17 +73,22 @@ $$(".rv").forEach((el) => revealIO.observe(el));
     heroOut = !e.isIntersecting;
     sync();
   }).observe(hero);
-  new IntersectionObserver(
-    ([e]) => {
-      joinIn = e.isIntersecting;
-      sync();
-    },
-    { rootMargin: "0px 0px -20% 0px" },
-  ).observe(join);
+  if (join)
+    new IntersectionObserver(
+      ([e]) => {
+        joinIn = e.isIntersecting;
+        sync();
+      },
+      { rootMargin: "0px 0px -20% 0px" },
+    ).observe(join);
   cta.addEventListener("click", () => track("cta_click", { where: "mobile_bar" }));
 })();
 $$('a[href="#join"]').forEach((a) =>
   a.addEventListener("click", () => track("cta_click", { where: a.closest("section, header")?.id || "nav" })),
+);
+
+document.querySelectorAll("a[data-track]").forEach((a) =>
+  a.addEventListener("click", () => track("cta_click", { where: a.dataset.track })),
 );
 
 /* ---------------------------------------------------------------- qr codes */
@@ -328,7 +334,8 @@ const COUNTRIES =
   "Argentina|Australia|Austria|Bahrain|Belgium|Bolivia|Brazil|Bulgaria|Canada|Chile|China|Colombia|Costa Rica|Croatia|Cyprus|Czechia|Denmark|Dominican Republic|Ecuador|Egypt|El Salvador|Estonia|Finland|France|Germany|Ghana|Greece|Guatemala|Honduras|Hong Kong|Hungary|Iceland|India|Indonesia|Ireland|Israel|Italy|Jamaica|Japan|Jordan|Kenya|Kuwait|Latvia|Lithuania|Luxembourg|Malaysia|Malta|Mexico|Morocco|Netherlands|New Zealand|Nigeria|Norway|Oman|Pakistan|Panama|Paraguay|Peru|Philippines|Poland|Portugal|Puerto Rico|Qatar|Romania|Saudi Arabia|Serbia|Singapore|Slovakia|Slovenia|South Africa|South Korea|Spain|Sri Lanka|Sweden|Switzerland|Taiwan|Thailand|Trinidad and Tobago|Turkey|Ukraine|United Arab Emirates|United Kingdom|United States|Uruguay|Vietnam".split(
     "|",
   );
-$("#countryList").innerHTML = COUNTRIES.map((c) => `<option value="${c}"></option>`).join("");
+const countryList = $("#countryList");
+if (countryList) countryList.innerHTML = COUNTRIES.map((c) => `<option value="${c}"></option>`).join("");
 function localeCountry() {
   try {
     const region = new Intl.Locale(navigator.language || "").maximize().region;

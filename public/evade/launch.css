@@ -1,0 +1,87 @@
+/* EVADE launch page (/evade/): the creators page's look, plus the "Get yours"
+   cards that stand in for the creator sign-up form. */
+
+.get-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+@media (min-width: 860px) {
+  .get-grid { grid-template-columns: 1.5fr 1fr; grid-template-rows: 1fr 1fr; }
+  .get-card--shop { grid-row: span 2; }
+}
+
+.get-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: clamp(22px, 3vw, 32px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  isolation: isolate;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transition: transform 0.5s var(--ease), border-color 0.4s, box-shadow 0.5s var(--ease);
+}
+.get-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 90% at 100% 0%, var(--glow, rgba(63, 230, 224, 0.16)), transparent 60%);
+  opacity: 0.8;
+  transition: opacity 0.4s;
+}
+.get-card:hover { transform: translateY(-4px); border-color: rgba(255, 255, 255, 0.24); box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9); }
+.get-card:hover::before { opacity: 1; }
+.get-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.get-card h3 { margin: 0; font-size: clamp(20px, 2.2vw, 26px); letter-spacing: -0.01em; }
+.get-card p { margin: 0; color: var(--fg-2); font-size: 15px; max-width: 34ch; }
+.gc-tag { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--teal); }
+.gc-link { display: inline-flex; align-items: center; gap: 8px; margin-top: 6px; font-weight: 600; color: var(--fg); }
+.gc-link .ic, .get-card .btn .ic { width: 16px; height: 16px; transition: transform 0.3s var(--ease); }
+.get-card:hover .gc-link .ic, .get-card:hover .btn .ic { transform: translateX(3px); }
+
+.get-card--shop { --glow: rgba(246, 195, 68, 0.22); grid-template-columns: 1fr; align-content: stretch; }
+.get-card--shop .gc-tag { color: var(--gold); }
+.get-card--shop .btn { justify-self: start; margin-top: 10px; }
+.get-card--globe { --glow: rgba(25, 175, 254, 0.2); }
+.get-card--crew { --glow: rgba(255, 55, 174, 0.18); }
+
+/* The two charms, hanging together and swaying a little. */
+.gc-art {
+  position: relative;
+  width: min(100%, 340px);
+  aspect-ratio: 4 / 3;
+  justify-self: center;
+  margin-bottom: 4px;
+}
+.gc-art img {
+  position: absolute;
+  height: auto;
+  filter: drop-shadow(0 24px 30px rgba(0, 0, 0, 0.55));
+  transform-origin: 50% 0;
+  animation: gc-sway 6s ease-in-out infinite;
+}
+.gc-bobo { width: 58%; left: 4%; top: 0; rotate: -6deg; }
+.gc-can { width: 40%; left: 54%; top: 18%; rotate: 8deg; animation-delay: -2.4s !important; }
+@keyframes gc-sway { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+.get-card--shop:hover .gc-art img { animation-duration: 2.4s; }
+
+@media (min-width: 860px) {
+  .get-card--shop { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 28px; }
+  .gc-art { margin: 0; aspect-ratio: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-art img { animation: none; }
+  .get-card { transition: none; }
+}
+.gc-copy { display: grid; gap: 10px; justify-items: start; }

@@ -29,9 +29,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/merch-shelf/app.css" />
-    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
-    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
     <link rel="preload" as="fetch" href="/merch-shelf/default.json" crossorigin="anonymous" />
+    <!-- The import map must come before any module preload or module script, or Chrome can fail to resolve "three". -->
     <script type="importmap">
       {
         "imports": {
@@ -41,6 +40,8 @@
         }
       }
     </script>
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.module.js" />
+    <link rel="modulepreload" href="/roblox/creators/vendor/three/build/three.core.js" />
     <script src="/vendor/ar-kit/track.js"></script>
     <script type="module" src="/merch-shelf/main.js"></script>
   </head>

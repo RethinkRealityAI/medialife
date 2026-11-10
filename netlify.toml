@@ -34,6 +34,17 @@
   to = "/email/signature.html?who=dapo"
   status = 301
 
+# Activated merchandise landing page (static, public/activated-merch/).
+[[redirects]]
+  from = "/activated"
+  to = "/activated-merch/"
+  status = 301
+
+[[headers]]
+  for = "/activated-merch/media/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
 # "Where is Bobo?" (EVADE's live globe) is easy to say out loud and print on
 # packaging, so the short paths resolve to it.
 [[redirects]]
