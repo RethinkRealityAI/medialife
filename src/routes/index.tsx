@@ -1,35 +1,44 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SHOP_URL } from "@/components/site/Nav";
-import { TiltCard } from "@/components/site/TiltCard";
 import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
 import { CAPABILITIES, TOUCHPOINTS, PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
-import { liveCampaigns, comingSoonCampaigns } from "@/lib/campaigns";
+import { liveCampaigns } from "@/lib/campaigns";
+import { Hero } from "@/components/home/Hero";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "MEDIALIFE | Immersive Format Production Studio" },
+      { title: "MEDIALIFE | Immersive products & experiences that come alive" },
       {
         name: "description",
         content:
-          "MEDIALIFE produces physical-to-digital immersive formats, ACTIVATED MERCHANDISE™, ACTIVATED APPAREL™, app-free AR, gaming integrations, and location-based entertainment for entertainment and gaming IP.",
+          "MEDIALIFE makes immersive products and experiences for entertainment and gaming IP: ACTIVATED MERCHANDISE™ and ACTIVATED APPAREL™, activated print, retail, live events and browser games that open with a tap or scan. No app.",
       },
-      { property: "og:title", content: "MEDIALIFE | Immersive Format Production Studio" },
+      { property: "og:title", content: "MEDIALIFE | Everything we touch comes alive" },
       {
         property: "og:description",
         content:
-          "We turn fandom touchpoints into immersive media. Format innovation, produced end to end.",
+          "Immersive products and experiences for entertainment and gaming IP. Merch, print, retail, live events and games that open with a tap or scan.",
       },
     ],
     links: [
       { rel: "canonical", href: "https://medialife.ai/" },
-      ...FAN_GIFS.map((href) => ({
-        rel: "preload" as const,
-        as: "image" as const,
-        href,
-        fetchpriority: "high" as const,
-      })),
+      // The hero poster is the first paint (the WebGL stage fades in over it).
+      {
+        rel: "preload",
+        as: "image",
+        href: "/home/hero-poster-wide.webp",
+        media: "(min-aspect-ratio: 1/1)",
+        fetchpriority: "high",
+      },
+      {
+        rel: "preload",
+        as: "image",
+        href: "/home/hero-poster-tall.webp",
+        media: "(max-aspect-ratio: 1/1)",
+        fetchpriority: "high",
+      },
       { rel: "preconnect", href: "https://framerusercontent.com", crossorigin: "anonymous" },
       { rel: "dns-prefetch", href: "https://framerusercontent.com" },
     ],
@@ -81,249 +90,423 @@ const CONVENTION_LOGOS = [
 ];
 
 const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
+const SECTION = "relative px-5 sm:px-8 lg:px-16";
+const H2 = "display text-[clamp(40px,6vw,88px)]";
+
+/**
+ * Everything MEDIALIFE makes, as one grid. Each tile is a real destination on
+ * the site, so the homepage doubles as the map of it.
+ */
+const FORMATS: {
+  kind: string;
+  title: string;
+  line: string;
+  href: string;
+  external?: boolean;
+  img: string;
+  imgAlt: string;
+  fit?: "cover" | "contain";
+  span: string;
+}[] = [
+  {
+    kind: "Activated Merchandise™ · Apparel™",
+    title: "Merch that comes alive",
+    line: "Apparel, keychains and stickers with an NFC tag in the design and AR in the print.",
+    href: "/activated-merch/",
+    img: "/activated-merch/posters/syndicate-tee.webp",
+    imgAlt: "The Syndicate AR tee, an activated MEDIALIFE garment",
+    fit: "contain",
+    span: "lg:col-span-7 lg:row-span-2",
+  },
+  {
+    kind: "Activated Print™",
+    title: "Posters and magazines that play",
+    line: "Scan the print and the story starts in the browser.",
+    href: "/live",
+    img: "/live/one-piece-poster.webp",
+    imgAlt: "The activated ONE PIECE poster with its scan-to-begin code",
+    span: "lg:col-span-5",
+  },
+  {
+    kind: "Activated retail",
+    title: "A fixture where every product opens",
+    line: "For stores, pop-ups and convention floors.",
+    href: "/activated-retail",
+    img: "/medialife/activated-retail/page/showcase-poster-sm.webp",
+    imgAlt: "The MEDIALIFE activated retail fixture",
+    span: "lg:col-span-5",
+  },
+  {
+    kind: "Games",
+    title: "Merch that unlocks a game",
+    line: "Cola Run opens straight from the EVADE keychain.",
+    href: "/evade/",
+    img: "/evade/creators/assets/img/cola-run-splash-sm.webp",
+    imgAlt: "Cola Run, the browser game unlocked by the EVADE keychain",
+    span: "lg:col-span-4",
+  },
+  {
+    kind: "Live events + conventions",
+    title: "Fans, in the wild",
+    line: "Anime Expo, SDCC, Anime NYC and more.",
+    href: "/fan-reactions",
+    img: "/activated-merch/media/fan-02.webp",
+    imgAlt: "A fan trying an activated experience at a convention",
+    span: "lg:col-span-4",
+  },
+  {
+    kind: "Creators + partners",
+    title: "Hubs that run the program",
+    line: "Creators and IP partners track drops, content and sales.",
+    href: "/creator-hub",
+    img: "/activated-merch/posters/sukeban-hoodie.webp",
+    imgAlt: "The Sukeban AR hoodie, a creator collaboration",
+    fit: "contain",
+    span: "lg:col-span-4",
+  },
+];
 
 function Home() {
   const live = liveCampaigns();
-  const soon = comingSoonCampaigns();
   const lead = live[0];
-  const evade = soon.find((c) => c.slug === "evade");
 
   return (
     <>
-      {/* ───────────────────────── HERO ───────────────────────── */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 grid-bg opacity-60" />
-        <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-px w-[80%] bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
+      <Hero />
 
-        <div className="relative w-full px-8 lg:px-16 pt-16 pb-16">
-          <div className="flex items-center gap-3 mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-accent animate-pulse-glow" />
-            Immersive Format Production Studio
+      {/* ───────────────────────── WHAT WE MAKE ───────────────────────── */}
+      <section
+        id="work"
+        aria-labelledby="work-title"
+        className={`${SECTION} scroll-mt-20 py-20 lg:py-28`}
+      >
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p className={EYEBROW}>What we make</p>
+            <h2 id="work-title" className={`${H2} mt-4`}>
+              Immersive products.
+              <br />
+              <span className="text-primary">Living experiences.</span>
+            </h2>
           </div>
-
-          <h1 className="mt-8 text-[1.875rem] md:text-[2.95rem] lg:text-[3.75rem] font-medium tracking-tight text-balance leading-[0.95]">
-            We turn fandom touchpoints
-            <br />
-            into <span className="ember-text">immersive media</span>.
-          </h1>
-
-          <p className="mt-8 max-w-2xl text-lg text-muted-foreground">
-            MEDIALIFE develops and produces app-free immersive formats for entertainment and gaming
-            IP across merchandise, retail, print, location-based entertainment, conventions, live
-            events, and gaming environments.
+          <p className="max-w-sm text-muted-foreground">
+            One studio for the physical piece, the experience it opens, and the numbers behind it.
           </p>
-          <p className="mt-4 max-w-2xl text-muted-foreground">
-            Physical production, digital experience, commerce, and measurement — built as one
-            format.
-          </p>
+        </div>
 
-          <div className="mt-10 flex flex-wrap items-center gap-3">
-            <Link
-              to="/contact"
-              className="group btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-            >
-              Activate Your IP
-              <span className="transition-transform group-hover:translate-x-1">→</span>
-            </Link>
+        <ul className="mt-12 grid gap-4 lg:grid-cols-12 lg:auto-rows-[260px]">
+          {FORMATS.map((f) => (
+            <li key={f.title} className={`${f.span} min-h-[320px] lg:min-h-[260px]`}>
+              <a
+                href={f.href}
+                className="lg-card group flex h-full overflow-hidden rounded-[28px] transition-transform duration-300 hover:-translate-y-0.5"
+              >
+                <div className="relative flex w-full flex-col justify-end p-6 sm:p-7">
+                  <img
+                    src={f.img}
+                    alt={f.imgAlt}
+                    loading="lazy"
+                    decoding="async"
+                    className={`absolute inset-0 h-full w-full transition-transform duration-700 group-hover:scale-[1.04] ${
+                      f.fit === "contain"
+                        ? "object-contain object-right-top p-4 opacity-95"
+                        : "object-cover opacity-80"
+                    }`}
+                  />
+                  {/* Solid scrim panel (no gradient) so the copy always reads. */}
+                  <div className="lg-chip relative flex max-w-[26rem] items-end justify-between gap-4 rounded-2xl p-4">
+                    <div>
+                      <p className="mono text-[10px] uppercase tracking-[0.2em] text-primary">
+                        {f.kind}
+                      </p>
+                      <h3 className="mt-1.5 text-lg sm:text-xl font-medium leading-snug text-white">
+                        {f.title}
+                      </h3>
+                      <p className="mt-1 text-[13px] leading-snug text-white/70">{f.line}</p>
+                    </div>
+                    <span
+                      aria-hidden
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-white transition-transform group-hover:translate-x-0.5"
+                    >
+                      →
+                    </span>
+                  </div>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ──────────────────── FEATURED · ACTIVATED MERCH ──────────────────── */}
+      <section
+        aria-labelledby="merch-title"
+        id="merch"
+        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
+      >
+        <div className="lg-card overflow-hidden rounded-[36px]">
+          <div className="grid items-center gap-10 p-6 sm:p-10 lg:grid-cols-12 lg:p-14">
+            <div className="lg:col-span-5">
+              <p className={EYEBROW}>Activated Merchandise™</p>
+              <h2 id="merch-title" className={`${H2} mt-4`}>
+                Tap it. Scan it.
+                <br />
+                <span className="text-primary">It comes alive.</span>
+              </h2>
+              <p className="mt-6 max-w-md text-muted-foreground">
+                A small NFC disc sits in the design and the print is the AR target. Tap a phone or
+                point a camera, and the character steps off the shirt.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="/activated-merch/"
+                  className="group btn-pill btn-solid px-6 py-3.5 text-sm font-medium"
+                >
+                  See it in 3D
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </a>
+                <a
+                  href={SHOP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
+                >
+                  Shop <span aria-hidden>↗</span>
+                  <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
+                </a>
+              </div>
+            </div>
             <a
-              href={SHOP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-pill btn-ember-outline px-7 py-4 mono text-xs uppercase tracking-[0.2em]"
+              href="/activated-merch/"
+              className="group relative grid grid-cols-3 gap-3 lg:col-span-7"
+              aria-label="Open the Activated Merch collection"
             >
-              Shop Activated Merch
-              <span aria-hidden>↗</span>
-              <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
+              {[
+                ["sukeban-hoodie", "Sukeban AR hoodie"],
+                ["syndicate-tee", "Syndicate AR tee"],
+                ["trainwreck-hoodie", "Trainwreck AR hoodie"],
+              ].map(([k, n], i) => (
+                <figure
+                  key={k}
+                  className={`relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03] ${i === 1 ? "-translate-y-4" : "translate-y-4"}`}
+                >
+                  <img
+                    src={`/activated-merch/posters/${k}.webp`}
+                    alt={n}
+                    width={760}
+                    height={760}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-[3/4] w-full object-contain p-2 transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <figcaption className="absolute inset-x-2 bottom-2 rounded-full bg-black/60 px-3 py-1 text-center mono text-[9px] uppercase tracking-[0.16em] text-white/80 backdrop-blur">
+                    {n}
+                  </figcaption>
+                </figure>
+              ))}
             </a>
           </div>
         </div>
       </section>
 
-      {/* ─────────────────────── 01 · LIVE NOW ─────────────────────── */}
+      {/* ───────────────────── FEATURED · EVADE LAUNCH ───────────────────── */}
+      <section
+        aria-labelledby="evade-title"
+        id="evade"
+        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
+      >
+        <div className="lg-card overflow-hidden rounded-[36px] border-[#f5c84b]/25">
+          <div className="grid items-center gap-10 p-6 sm:p-10 lg:grid-cols-12 lg:p-14">
+            <div className="relative order-2 lg:order-1 lg:col-span-6">
+              <div className="relative mx-auto aspect-[5/4] max-w-[560px]">
+                <img
+                  src="/evade/creators/assets/img/cola-run-splash-sm.webp"
+                  alt="Cola Run, the browser game the keychain unlocks"
+                  width={540}
+                  height={967}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute left-[6%] top-0 h-full w-auto -rotate-6 rounded-[28px] border border-white/15 object-cover shadow-2xl"
+                />
+                <img
+                  src="/activated-merch/posters/evade-charms.webp"
+                  alt="The EVADE × Bobo keychain: Bobo the cat and the Eclipse can"
+                  width={760}
+                  height={760}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute right-0 bottom-0 w-[66%] drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)]"
+                />
+              </div>
+            </div>
+            <div className="order-1 lg:order-2 lg:col-span-6">
+              <p className="inline-flex items-center gap-2 rounded-full border border-[#f5c84b]/40 bg-[#f5c84b]/10 px-3 py-1 mono text-[10px] uppercase tracking-[0.2em] text-[#f5c84b]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#f5c84b]" aria-hidden />
+                New partner launch · EVADE
+              </p>
+              <h2 id="evade-title" className={`${H2} mt-5`}>
+                Bobo, off
+                <br />
+                the screen.
+              </h2>
+              <p className="mt-6 max-w-md text-muted-foreground">
+                EVADE's Bobo and Eclipse can, on one keychain. Scan it and Cola Run opens in the
+                browser. Then follow Bobo around the world.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="/evade/"
+                  className="group btn-pill px-6 py-3.5 text-sm font-semibold text-[#1a1300] bg-[#f5c84b] hover:bg-[#ffd765] shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_10px_30px_-10px_rgba(245,200,75,0.7)]"
+                >
+                  See the launch
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </a>
+                <a
+                  href="/evade/where-is-bobo/"
+                  className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
+                >
+                  Where is Bobo?
+                </a>
+              </div>
+              <a
+                href="/evade/creators/"
+                className="mt-6 inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"
+              >
+                Creators: join the EVADE program <span aria-hidden>→</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────────────── LIVE NOW ─────────────────────────── */}
       {lead && (
         <section
           id="live-now"
-          className="scroll-mt-20 relative border-b border-border overflow-hidden"
+          aria-labelledby="live-title"
+          className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
         >
-          <div className="absolute inset-0 grid-bg opacity-40" />
-          <div
-            className="pointer-events-none absolute -right-40 top-1/2 -translate-y-1/2 h-[640px] w-[640px] rounded-full blur-3xl opacity-20"
-            style={{ background: "var(--gradient-ember)" }}
-            aria-hidden
-          />
-
-          <div className="relative w-full px-8 lg:px-16 py-20">
-            <div className="flex justify-end">
-              <Link
-                to="/live"
-                className="mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1"
-              >
-                All campaigns →
-              </Link>
-            </div>
-
-            {/* items-start so the headline lines up with the top of the poster */}
-            <div className="mt-6 grid lg:grid-cols-12 gap-10 items-start border border-border bg-background/40 backdrop-blur p-8 lg:p-12">
-              <div className="lg:col-span-7">
-                <div className="flex flex-wrap items-center gap-4">
-                  <span className="mono text-[10px] uppercase tracking-[0.2em] text-accent inline-flex items-center gap-2">
-                    <span className="animate-pulse-glow" aria-hidden>
-                      ●
-                    </span>
-                    {lead.statusLabel}
-                  </span>
-                  <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {lead.kicker}
-                  </span>
-                </div>
-
-                {/* Split on the IP name so it can carry the brand gradient
-                    without hard-coding the headline. */}
-                <h3 className="mt-6 text-3xl md:text-4xl font-medium tracking-tight text-balance leading-[1.05]">
-                  {lead.headline.startsWith(lead.name) ? (
-                    <>
-                      <span className="ember-text">{lead.name}</span>
-                      {lead.headline.slice(lead.name.length)}
-                    </>
-                  ) : (
-                    lead.headline
-                  )}
-                </h3>
-
-                {lead.body.map((p) => (
-                  <p key={p} className="mt-5 max-w-xl text-muted-foreground">
-                    {p}
-                  </p>
-                ))}
-
-                <div className="mt-9 flex flex-wrap items-center gap-5">
-                  {lead.cta && (
-                    <a
-                      href={lead.cta.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-                    >
-                      {lead.cta.label}
-                      <span aria-hidden className="transition-transform group-hover:translate-x-1">
-                        ↗
-                      </span>
-                    </a>
-                  )}
-                  {lead.secondary && (
-                    <Link
-                      to={lead.secondary.href}
-                      className="group/ip mono text-[11px] uppercase tracking-[0.2em] inline-flex items-center gap-2 border-b border-transparent hover:border-primary pb-1 transition-colors"
-                    >
-                      <span className="ember-shine font-medium">{lead.secondary.label}</span>
-                      <span
-                        aria-hidden
-                        className="text-primary transition-transform group-hover/ip:translate-x-1"
-                      >
-                        →
-                      </span>
-                    </Link>
-                  )}
-                </div>
+          <div className="lg-card grid items-center gap-10 overflow-hidden rounded-[36px] p-6 sm:p-10 lg:grid-cols-12 lg:p-14">
+            <div className="lg:col-span-7">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="lg-chip inline-flex items-center gap-2 rounded-full px-3 py-1 mono text-[10px] uppercase tracking-[0.2em] text-white">
+                  <span
+                    className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-glow"
+                    aria-hidden
+                  />
+                  {lead.statusLabel}
+                </span>
+                <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {lead.kicker}
+                </span>
               </div>
-
-              {/* Type-led campaign plate. Swap for key art by setting `image` in
-                  src/lib/campaigns.ts once assets clear approval. */}
-              <div className="lg:col-span-5">
-                {lead.image?.large ? (
-                  <PosterViewer
-                    src={lead.image.src}
-                    large={lead.image.large}
-                    alt={lead.image.alt}
-                    caption={lead.image.caption}
-                  />
-                ) : lead.image ? (
-                  <img
-                    src={lead.image.src}
-                    alt={lead.image.alt}
-                    loading="lazy"
-                    className="w-full"
-                  />
+              <h2 id="live-title" className={`${H2} mt-6`}>
+                {lead.headline.startsWith(lead.name) ? (
+                  <>
+                    <span className="text-primary">{lead.name}</span>
+                    {lead.headline.slice(lead.name.length)}
+                  </>
                 ) : (
-                  <div className="relative border border-border bg-surface overflow-hidden aspect-[4/3] grid place-items-center scan-line">
-                    <div className="absolute inset-0 grid-bg-sm opacity-40" />
-                    <div className="relative text-center px-6">
-                      <div className="mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                        Scan to begin
-                      </div>
-                      <div className="mt-4 text-3xl md:text-4xl font-medium tracking-tight ember-text">
-                        {lead.name}
-                      </div>
-                      <div className="mt-4 mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                        No app required
-                      </div>
-                    </div>
-                  </div>
+                  lead.headline
                 )}
-                <dl className="mt-4 grid grid-cols-3 gap-px bg-border border border-border">
-                  {lead.facts.map((f) => (
-                    <div key={f.k} className="bg-background p-3">
-                      <dt className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                        {f.k}
-                      </dt>
-                      <dd className="mt-1 text-xs">{f.v}</dd>
-                    </div>
-                  ))}
-                </dl>
+              </h2>
+              <p className="mt-6 max-w-xl text-muted-foreground">{lead.body[0]}</p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                {lead.cta && (
+                  <a
+                    href={lead.cta.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group btn-pill btn-solid px-6 py-3.5 text-sm font-medium"
+                  >
+                    {lead.cta.label}
+                    <span aria-hidden>↗</span>
+                    <span className="sr-only">(opens in a new tab)</span>
+                  </a>
+                )}
+                <Link to="/live" className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium">
+                  All campaigns
+                </Link>
               </div>
+              <dl className="mt-10 grid max-w-xl grid-cols-3 gap-3">
+                {lead.facts.map((f) => (
+                  <div key={f.k} className="lg-chip rounded-2xl p-3">
+                    <dt className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                      {f.k}
+                    </dt>
+                    <dd className="mt-1 text-xs text-white">{f.v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+            <div className="lg:col-span-5">
+              {lead.image?.large ? (
+                <PosterViewer
+                  src={lead.image.src}
+                  large={lead.image.large}
+                  alt={lead.image.alt}
+                  caption={lead.image.caption}
+                />
+              ) : lead.image ? (
+                <img src={lead.image.src} alt={lead.image.alt} loading="lazy" className="w-full" />
+              ) : null}
             </div>
           </div>
         </section>
       )}
 
-      {/* ─────────────────── 02 · FAN REACTIONS ─────────────────── */}
-      <section id="fan-reactions" className="scroll-mt-20 border-b border-border overflow-hidden">
-        <div className="px-8 lg:px-16 pt-16">
-          <div className={EYEBROW}>/ 02 — Fan Reactions</div>
-          <h2 className="mt-4 text-4xl md:text-5xl font-medium tracking-tight text-balance">
-            Fans don't just see it — <span className="ember-text">they experience it.</span>
+      {/* ─────────────────────────── FAN REACTIONS ─────────────────────────── */}
+      <section
+        id="fan-reactions"
+        aria-labelledby="fans-title"
+        className="scroll-mt-20 overflow-hidden pb-20 lg:pb-28"
+      >
+        <div className={SECTION}>
+          <p className={EYEBROW}>Fan reactions</p>
+          <h2 id="fans-title" className={`${H2} mt-4`}>
+            Fans don't just see it.
+            <br />
+            <span className="text-primary">They play it.</span>
           </h2>
         </div>
 
-        <div className="mt-10 mb-4 px-8 lg:px-16 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-          Captured in the wild · Fan uploads from Anime Expo, SDCC &amp; Anime NYC
-        </div>
         <div
-          className="flex gap-4 animate-marquee"
+          className="mt-10 flex gap-4 animate-marquee motion-reduce:animate-none"
           style={{ width: "max-content", willChange: "transform" }}
         >
           {[...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS].map((src, i) => (
             <div
               key={i}
-              className="relative h-[280px] w-[160px] flex-shrink-0 overflow-hidden border border-border bg-secondary"
+              aria-hidden={i >= FAN_GIFS.length}
+              className="relative h-[280px] w-[160px] flex-shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-secondary"
             >
               <img
                 src={src}
-                alt="Fan AR reaction"
-                loading="eager"
+                alt={
+                  i < FAN_GIFS.length ? "A fan using a MEDIALIFE AR experience at a convention" : ""
+                }
+                loading="lazy"
                 decoding="async"
-                fetchPriority={i < 6 ? ("high" as const) : ("auto" as const)}
                 width={160}
                 height={280}
                 className="h-full w-full object-cover"
               />
-              <div className="absolute top-2 left-2 mono text-[9px] uppercase tracking-widest bg-background/80 backdrop-blur px-2 py-0.5">
-                / Rec {((i % 9) + 1).toString().padStart(2, "0")}
-              </div>
             </div>
           ))}
         </div>
 
-        {/* Performance band */}
-        <div className="w-full px-8 lg:px-16 py-16">
-          <div className={EYEBROW}>Selected live deployment performance</div>
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-px bg-border border border-border">
+        <div className={`${SECTION} mt-14`}>
+          <p className={EYEBROW}>Selected live deployment performance</p>
+          <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
             {PERFORMANCE.map((s) => (
-              <div key={s.l} className="bg-background p-6 hover:bg-secondary transition-colors">
+              <div key={s.l} className="lg-card rounded-3xl p-5 sm:p-6">
                 <CountUp
                   value={s.v}
-                  className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
+                  className="block display text-[clamp(30px,3.6vw,48px)] text-primary"
                 />
                 <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
               </div>
@@ -335,226 +518,159 @@ function Home() {
         </div>
       </section>
 
-      {/* ─────────────── 03 · PRODUCTION CAPABILITIES ─────────────── */}
-      <section id="capabilities" className="scroll-mt-20 border-b border-border">
-        <div className="w-full px-8 lg:px-16 py-24">
-          <div className="grid md:grid-cols-12 gap-12">
-            <div className="md:col-span-4">
-              <div className={EYEBROW}>/ 03 — Production Capabilities</div>
-              <h2 className="mt-6 text-4xl md:text-5xl font-medium tracking-tight text-balance">
-                Format innovation, <span className="ember-text">produced end to end.</span>
-              </h2>
-              <p className="mt-6 text-muted-foreground">
-                We design and deploy immersive formats that connect physical products, media, and
-                places to digital experiences — from concept and production through distribution,
-                commerce, and measurement.
-              </p>
-
-              {/* Physical touchpoint strip */}
-              <ul className="mt-10 flex flex-wrap gap-2">
-                {TOUCHPOINTS.map((t) => (
-                  <li
-                    key={t}
-                    className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border px-3 py-2"
+      {/* ──────────────────────── CAPABILITIES ──────────────────────── */}
+      <section
+        id="capabilities"
+        aria-labelledby="cap-title"
+        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
+      >
+        <div className="grid gap-10 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <p className={EYEBROW}>Production capabilities</p>
+            <h2 id="cap-title" className={`${H2} mt-4`}>
+              Produced
+              <br />
+              <span className="text-primary">end to end.</span>
+            </h2>
+            <ul className="mt-8 flex flex-wrap gap-2">
+              {TOUCHPOINTS.map((t) => (
+                <li
+                  key={t}
+                  className="lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.16em] text-white/75"
+                >
+                  {t}
+                </li>
+              ))}
+            </ul>
+            <Link
+              to="/technology"
+              className="mt-8 inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+            >
+              See the technology stack <span aria-hidden>→</span>
+            </Link>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2 lg:col-span-8">
+            {CAPABILITIES.map((c) => (
+              <li key={c.num} className="lg-card rounded-3xl p-6">
+                <div className="flex items-center justify-between">
+                  <span className="mono text-[10px] text-muted-foreground">/{c.num}</span>
+                  <span
+                    aria-hidden
+                    className="grid h-8 w-8 place-items-center rounded-full border border-white/15 text-sm text-primary"
                   >
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
+                    {c.glyph}
+                  </span>
+                </div>
+                <h3 className="mt-6 text-lg font-medium">{c.name}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{c.body}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
 
-            <div className="md:col-span-8 grid sm:grid-cols-2 gap-px bg-border border border-border">
-              {CAPABILITIES.map((c) => (
-                <div key={c.num} className="bg-background p-8 hover:bg-secondary transition group">
-                  <div className="flex items-start justify-between">
-                    <div className={EYEBROW}>/{c.num}</div>
-                    <div className="h-6 w-6 border border-border rounded-full grid place-items-center text-xs group-hover:bg-primary group-hover:text-primary-foreground group-hover:border-primary transition">
-                      {c.glyph}
-                    </div>
+      {/* ──────────────────────── SELECTED PROOF ──────────────────────── */}
+      <section aria-labelledby="proof-title" className={`${SECTION} pb-20 lg:pb-28`}>
+        <p className={EYEBROW}>Selected proof</p>
+        <div className="mt-6 grid gap-4 lg:grid-cols-12">
+          <div className="lg-card rounded-[32px] p-6 sm:p-10 lg:col-span-7">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Netflix / Sakamoto Days
+            </p>
+            <h2
+              id="proof-title"
+              className="mt-4 text-2xl md:text-3xl font-medium tracking-tight text-balance"
+            >
+              Physical media, turned into an app-free fandom experience.
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Activated magazines, stickers, posters and life-sized displays across 150+ comic and
+              manga retailers and three major North American conventions.
+            </p>
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {[
+                ["150+", "comic & manga retailers"],
+                ["3", "major conventions"],
+                ["Platinum", "Pinnacle Award 2025"],
+              ].map(([v, l]) => (
+                <div key={l} className="lg-chip rounded-2xl p-4">
+                  <CountUp value={v} className="block display text-3xl text-primary" />
+                  <div className="mt-2 mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    {l}
                   </div>
-                  <h3 className="mt-8 text-xl font-medium">{c.name}</h3>
-                  <p className="mt-3 text-sm text-muted-foreground">{c.body}</p>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ──────────── ACTIVATED RETAIL PROGRAM (teaser → /activated-retail) ──────────── */}
-      <section className="border-b border-border relative overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-30" />
-        <div className="relative w-full px-8 lg:px-16 py-16 grid gap-10 lg:grid-cols-12 lg:items-center">
-          <div className="lg:col-span-5">
-            <div className={EYEBROW}>/ Activated Retail Program</div>
-            <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-              Get your merch activated, and we'll build{" "}
-              <span className="ember-text">the fixture.</span>
-            </h2>
-            <p className="mt-5 text-muted-foreground">
-              A branded display where every product opens a digital experience. For stores, pop-ups
-              and convention floors. Explore it in 3D, or put your own IP on it.
+            <p className="mt-8 mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Interactions per activated retail unit
             </p>
-            <Link
-              to="/activated-retail"
-              className="group mt-8 inline-flex btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-            >
-              Explore the program
-              <span className="transition-transform group-hover:translate-x-1" aria-hidden>
-                →
-              </span>
-            </Link>
-          </div>
-          <Link
-            to="/activated-retail"
-            className="lg:col-span-7 group block border border-border overflow-hidden"
-          >
-            <img
-              src="/medialife/activated-retail/page/showcase-poster.webp"
-              alt="The MEDIALIFE activated-retail fixture: lit towers, a video wall, a stocked merch bay and a digital totem"
-              loading="lazy"
-              className="w-full transition-transform duration-700 group-hover:scale-[1.03]"
-            />
-          </Link>
-        </div>
-      </section>
-
-      {/* ──────────────── SELECTED PROOF + AWARD ──────────────── */}
-      <section className="border-b border-border bg-surface">
-        <div className="w-full px-8 lg:px-16 py-20">
-          <div className={EYEBROW}>/ Selected proof</div>
-
-          <div className="mt-10 grid lg:grid-cols-12 gap-10">
-            {/* Netflix / Sakamoto Days */}
-            <div className="lg:col-span-7 border border-border bg-background p-8 lg:p-10">
-              <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                Netflix / Sakamoto Days
-              </div>
-              <h3 className="mt-5 text-2xl md:text-3xl font-medium tracking-tight text-balance">
-                Physical media, turned into an app-free immersive fandom experience.
-              </h3>
-              <p className="mt-5 text-muted-foreground">
-                Activated magazines, stickers, posters, and life-sized retail displays distributed
-                across 150+ comic and manga retailers and three major North American conventions —
-                Anime Expo, San Diego Comic-Con and Anime NYC.
-              </p>
-
-              <div className="mt-8 grid sm:grid-cols-3 gap-px bg-border border border-border">
-                {[
-                  ["150+", "comic & manga retailers"],
-                  ["3", "major conventions"],
-                  ["Platinum", "Pinnacle Award 2025"],
-                ].map(([v, l]) => (
-                  <div key={l} className="bg-background p-4">
-                    <CountUp value={v} className="block text-2xl font-medium ember-text" />
-                    <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground mt-2">
-                      {l}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Named retail units — real locations, real counts */}
-              <div className="mt-8">
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Interactions per activated retail unit
-                </div>
-                <ul className="mt-4 space-y-px bg-border border border-border">
-                  {RETAIL_UNITS.map((r) => (
-                    <li
-                      key={r.name}
-                      className="bg-background px-4 py-3 flex items-baseline justify-between gap-4"
-                    >
-                      <span className="text-sm">
-                        {r.name}
-                        <span className="mono text-[10px] uppercase tracking-widest text-muted-foreground ml-2">
-                          {r.city}
-                        </span>
-                      </span>
-                      <CountUp
-                        value={r.v}
-                        className="text-lg font-medium ember-text tabular-nums shrink-0"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <a
-                href="https://medialife-live-ar-media--04pmr63.gamma.site/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group/ip mt-8 mono text-[11px] uppercase tracking-[0.2em] inline-flex items-center gap-2 border-b border-transparent hover:border-primary pb-1 transition-colors"
-              >
-                <span className="ember-shine font-medium">See the full AR media case study</span>
-                <span
-                  aria-hidden
-                  className="text-primary transition-transform group-hover/ip:translate-x-1"
+            <ul className="mt-3 grid gap-2">
+              {RETAIL_UNITS.map((r) => (
+                <li
+                  key={r.name}
+                  className="lg-chip flex items-baseline justify-between gap-4 rounded-2xl px-4 py-3"
                 >
-                  ↗
-                </span>
-              </a>
+                  <span className="text-sm">
+                    {r.name}
+                    <span className="ml-2 mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {r.city}
+                    </span>
+                  </span>
+                  <CountUp
+                    value={r.v}
+                    className="shrink-0 text-lg font-medium tabular-nums text-primary"
+                  />
+                </li>
+              ))}
+            </ul>
+            <a
+              href="https://medialife-live-ar-media--04pmr63.gamma.site/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-8 inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+            >
+              Read the full AR media case study <span aria-hidden>↗</span>
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
+          </div>
+
+          <div className="lg-card rounded-[32px] p-6 sm:p-10 lg:col-span-5">
+            <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              Award · {AWARD.year}
+            </p>
+            <p className="mt-4 display text-[clamp(34px,4vw,56px)] text-primary">
+              {AWARD.tier} {AWARD.name}
+            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{AWARD.category}</p>
+            <div className="mt-6 overflow-hidden rounded-2xl">
+              <PosterViewer
+                src="/live/pinnacle-winners.webp"
+                large="/live/pinnacle-winners-large.webp"
+                alt="2025 Pinnacle Awards winners, Marketing & Communications — Activated by MEDIALIFE listed alongside EA, Hyundai, Toshiba and ZEISS"
+                caption="Official 2025 winners list · MEDIALIFE highlighted"
+              />
             </div>
-
-            <div className="lg:col-span-5 flex flex-col gap-10">
-              {/* Award — with the official winners list as proof */}
-              <div className="border border-border bg-background p-8 relative overflow-hidden">
-                <div
-                  className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full blur-3xl opacity-25"
-                  style={{ background: "var(--gradient-ember)" }}
-                  aria-hidden
-                />
-                <div className="relative">
-                  <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Award · {AWARD.year}
-                  </div>
-                  <div className="mt-4 text-2xl md:text-3xl font-medium tracking-tight ember-text">
-                    {AWARD.tier} {AWARD.name}
-                  </div>
-                  <div className="mt-2 text-sm text-muted-foreground">{AWARD.category}</div>
-
-                  <div className="mt-6">
-                    <PosterViewer
-                      src="/live/pinnacle-winners.webp"
-                      large="/live/pinnacle-winners-large.webp"
-                      alt="2025 Pinnacle Awards winners, Marketing & Communications — Activated by MEDIALIFE listed alongside EA, Hyundai, Toshiba and ZEISS"
-                      caption="Official 2025 winners list · MEDIALIFE highlighted"
-                    />
-                  </div>
-
-                  <a
-                    href={AWARD.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-6 inline-flex mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1 hover:opacity-80 transition-opacity"
-                  >
-                    Verify on the Pinnacle Awards site ↗
-                  </a>
-                </div>
-              </div>
-
-              {/* Animebae */}
-              <div className="border border-border bg-background p-8">
-                <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Animebae / Activated Apparel™
-                </div>
-                <p className="mt-5 text-sm text-muted-foreground">
-                  Activated apparel and fandom merchandise distributed directly into anime
-                  convention audiences, using physical products as interactive media surfaces.
-                </p>
-              </div>
-            </div>
+            <a
+              href={AWARD.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+            >
+              Verify on the Pinnacle Awards site <span aria-hidden>↗</span>
+              <span className="sr-only">(opens in a new tab)</span>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* ──────────────── YOU CAN FIND US AT ──────────────── */}
-      <section className="border-b border-border bg-surface py-12 overflow-hidden">
-        <div className="px-8 lg:px-16 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-8">
-          You can find us at
-        </div>
+      {/* ──────────────────────── YOU CAN FIND US AT ──────────────────────── */}
+      <section
+        aria-label="Conventions we attend"
+        className="overflow-hidden border-y border-white/10 py-12"
+      >
+        <p className={`${SECTION} ${EYEBROW} mb-8`}>You can find us at</p>
         <div
-          className="flex gap-16 items-center animate-marquee-slow"
+          className="flex items-center gap-16 animate-marquee-slow motion-reduce:animate-none"
           style={{ width: "max-content" }}
         >
           {[...CONVENTION_LOGOS, ...CONVENTION_LOGOS, ...CONVENTION_LOGOS, ...CONVENTION_LOGOS].map(
@@ -565,250 +681,39 @@ function Home() {
                 alt={i < CONVENTION_LOGOS.length ? l.name : ""}
                 aria-hidden={i >= CONVENTION_LOGOS.length}
                 loading="lazy"
-                className="h-12 w-auto opacity-50 hover:opacity-100 transition grayscale hover:grayscale-0"
+                className="h-12 w-auto opacity-50 grayscale transition hover:opacity-100 hover:grayscale-0"
               />
             ),
           )}
         </div>
       </section>
 
-      {/* ───────────────────────── 04 · MERCH ───────────────────────── */}
-      <section id="merch" className="scroll-mt-20 relative border-b border-border overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div
-          className="pointer-events-none absolute -left-40 top-1/2 -translate-y-1/2 h-[720px] w-[720px] rounded-full blur-3xl opacity-25"
-          style={{ background: "var(--gradient-ember)" }}
-          aria-hidden
-        />
-
-        <div className="relative mx-auto w-full px-8 lg:px-16 py-16 grid lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Product */}
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <TiltCard className="mx-auto w-full max-w-[400px]">
-              <div className="relative w-full animate-drift">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[-30px] h-10 w-[60%] rounded-[50%] blur-2xl opacity-50"
-                  style={{ background: "oklch(0.68 0.26 350 / 60%)" }}
-                />
-                <div
-                  className="relative will-change-transform transition-transform duration-200 ease-out"
-                  style={{
-                    transform:
-                      "perspective(900px) rotateX(var(--tilt-x)) rotateY(calc(var(--tilt-y) + var(--scroll-lean))) translateY(var(--scroll-shift))",
-                  }}
-                >
-                  <img
-                    src="/merch/keychain-cutout.webp"
-                    alt="Activated acrylic keychain set in development with Evade"
-                    width={632}
-                    height={820}
-                    loading="lazy"
-                    className="w-full select-none"
-                    style={{ filter: "drop-shadow(0 28px 56px oklch(0.68 0.26 350 / 38%))" }}
-                  />
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 transition-opacity duration-300"
-                    style={{
-                      opacity: "calc(var(--glare) * 0.5)",
-                      background:
-                        "radial-gradient(340px circle at var(--point-x) var(--point-y), oklch(1 0 0 / 26%), transparent 62%)",
-                      mixBlendMode: "screen",
-                    }}
-                  />
-                </div>
-              </div>
-            </TiltCard>
-
-            <div className="mt-7 grid grid-cols-2 gap-3 max-w-[400px] mx-auto">
-              <figure className="relative overflow-hidden border border-border bg-white">
-                <img
-                  src="/merch/keychain-qr.webp"
-                  alt="Front and reverse of an activated can charm — the back carries a QR activation code"
-                  width={900}
-                  height={633}
-                  loading="lazy"
-                  className="w-full aspect-[4/3] object-contain"
-                />
-                <figcaption className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
-                  QR activation layer
-                </figcaption>
-              </figure>
-              <figure className="relative overflow-hidden border border-border bg-white">
-                <img
-                  src="/merch/keychain-hand.webp"
-                  alt="Activated acrylic charms held in one hand, showing their scale"
-                  width={900}
-                  height={982}
-                  loading="lazy"
-                  className="w-full aspect-[4/3] object-contain"
-                />
-                <figcaption className="absolute bottom-0 inset-x-0 bg-background/90 backdrop-blur mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground px-2 py-1.5 truncate">
-                  Double-sided acrylic
-                </figcaption>
-              </figure>
-            </div>
-          </div>
-
-          {/* Copy */}
-          <div className="lg:col-span-7 order-1 lg:order-2">
-            <div className={EYEBROW}>/ 04 — Merch</div>
-
-            <h2 className="mt-4 text-4xl md:text-5xl font-medium tracking-tight text-balance leading-[0.95]">
-              <span className="ember-text">Activated Merchandise™</span>
-            </h2>
-
-            <p className="mt-6 max-w-xl text-base md:text-lg text-muted-foreground">
-              Physical merchandise can become a media format. MEDIALIFE develops merchandise that
-              connects apparel, collectibles, and physical fandom objects to immersive experiences.
-            </p>
-
-            <ul className="mt-8 flex flex-wrap gap-2 max-w-xl">
-              {[
-                "Activated Apparel™",
-                "Keychains / collectibles",
-                "Stickers",
-                "Print / magazines",
-                "Accessories",
-              ].map((t) => (
-                <li
-                  key={t}
-                  className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border px-3 py-2"
-                >
-                  {t}
-                </li>
-              ))}
-            </ul>
-
-            {/* Evade — in development. Status and claims are constrained; see
-                src/lib/campaigns.ts before editing this copy. */}
-            {evade && (
-              <div className="mt-10 border border-border bg-background/50 backdrop-blur p-6 max-w-xl">
-                <span className="mono text-[10px] uppercase tracking-[0.2em] text-primary border border-primary/50 px-2 py-1 inline-block">
-                  {evade.statusLabel}
-                </span>
-
-                {/* Co-brand lockup. Both marks are the partners' official
-                    artwork, set at matching cap height with the × as a neutral
-                    connector — the standard collaboration form, and it keeps
-                    neither brand subordinate to the other. The whole lockup is
-                    one accessible name so a screen reader reads it as
-                    "MEDIALIFE x EVADE", not as two orphaned images. */}
-                <div
-                  className="mt-5 flex items-center gap-4 sm:gap-5"
-                  role="img"
-                  aria-label={`MEDIALIFE x EVADE — ${evade.kicker}`}
-                >
-                  <img
-                    src="/brand/medialife-wordmark.webp"
-                    alt=""
-                    width={420}
-                    height={70}
-                    className="h-4 sm:h-5 w-auto"
-                  />
-                  <span aria-hidden className="text-lg text-muted-foreground/60 leading-none">
-                    ×
-                  </span>
-                  <img
-                    src="/brand/evade-logo.webp"
-                    alt=""
-                    width={600}
-                    height={158}
-                    loading="lazy"
-                    className="h-7 sm:h-9 w-auto"
-                  />
-                </div>
-
-                <div className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {evade.kicker}
-                </div>
-                <p className="mt-4 text-sm text-muted-foreground">{evade.body[0]}</p>
-                {evade.note && (
-                  <p className="mt-3 mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70 leading-relaxed">
-                    {evade.note}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="mt-8 flex flex-wrap items-center gap-5">
-              <a
-                href={SHOP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-              >
-                Shop Activated Merch
-                <span aria-hidden className="transition-transform group-hover:translate-x-1">
-                  ↗
-                </span>
-              </a>
-              <Link
-                to="/contact"
-                className="group/ip mono text-[11px] uppercase tracking-[0.2em] inline-flex items-center gap-2 border-b border-transparent hover:border-primary pb-1 transition-colors"
-              >
-                <span className="ember-shine font-medium">Build a merch program</span>
-                <span
-                  aria-hidden
-                  className="text-primary transition-transform group-hover/ip:translate-x-1"
-                >
-                  →
-                </span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ───────────────────────── MANIFESTO ───────────────────────── */}
-      <section className="relative border-b border-border overflow-hidden">
-        <div className="absolute inset-0 grid-bg-sm opacity-30" />
-        <div className="relative w-full px-8 lg:px-16 py-24 grid md:grid-cols-2 gap-16">
-          <div>
-            <div className="mono text-[10px] uppercase tracking-[0.25em] text-primary">
-              / Manifesto
-            </div>
-            <h2 className="mt-6 text-4xl md:text-6xl font-medium tracking-tight text-balance">
-              We play at the edge of <span className="ember-text">new format innovation</span>.
-            </h2>
-          </div>
-          <div className="space-y-8 text-lg text-muted-foreground">
-            <p>
-              Audiences move fluidly between physical places, products, games, and digital worlds.
-            </p>
-            <p>
-              Media formats should do the same. MEDIALIFE connects physical distribution to
-              immersive experience, participation, commerce, and measurable engagement.
-            </p>
-            <p className="text-foreground">
-              The physical world is the distribution channel. We deploy the immersive layer.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ───────────────────────── 05 · CONTACT ───────────────────────── */}
-      <section id="contact" className="scroll-mt-20 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-        <div className="relative w-full px-8 lg:px-16 py-24 text-center">
-          <div className={EYEBROW}>/ 05 — Contact</div>
-          <h2 className="mt-6 text-4xl md:text-6xl font-medium tracking-tight text-balance">
-            Build a format <span className="ember-text">with us</span>.
-          </h2>
-          <p className="mt-6 mx-auto max-w-xl text-muted-foreground">
-            Entertainment, gaming, retail, live events, location-based entertainment, and licensed
-            IP.
-          </p>
-          <div className="mt-10 flex justify-center">
-            <Link
-              to="/contact"
-              className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-            >
-              Activate your IP
-              <span className="transition-transform group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
+      {/* ─────────────────────────── CONTACT ─────────────────────────── */}
+      <section
+        id="contact"
+        aria-labelledby="contact-title"
+        className={`${SECTION} scroll-mt-20 py-24 lg:py-32 text-center`}
+      >
+        <p className={EYEBROW}>Bring your IP</p>
+        <h2
+          id="contact-title"
+          className="display mx-auto mt-5 max-w-5xl text-[clamp(48px,8vw,128px)]"
+        >
+          Let's make yours <span className="text-primary">come alive.</span>
+        </h2>
+        <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
+          Entertainment, gaming, retail, live events and licensed IP.
+        </p>
+        <div className="mt-10 flex flex-wrap justify-center gap-3">
+          <Link to="/contact" className="group btn-pill btn-solid px-7 py-4 text-sm font-medium">
+            Activate your IP
+            <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+              →
+            </span>
+          </Link>
+          <Link to="/case-studies" className="btn-pill btn-glass px-7 py-4 text-sm font-medium">
+            Case studies
+          </Link>
         </div>
       </section>
     </>

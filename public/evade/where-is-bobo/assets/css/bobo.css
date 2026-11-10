@@ -19,7 +19,7 @@
   --fg: #f4f6f8;
   --fg-2: #c9d1d8;
   --muted: #8d99a3;
-  --grad: linear-gradient(135deg, var(--primary), var(--accent));
+  --grad: var(--primary); /* solid: no multi-colour gradients (2026-11-10) */
   --grad-gold: linear-gradient(180deg, #ffe48a 0%, #f6c344 45%, #e0a21a 100%);
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -109,7 +109,7 @@ img, video { display: block; max-width: 100%; }
   box-shadow: 0 0 16px rgba(246, 195, 68, 0.55);
 }
 .pin-now.pin-review { color: #fff; background: rgba(255, 55, 174, 0.85); box-shadow: 0 0 14px rgba(255, 55, 174, 0.5); }
-.pin-now.pin-mine { color: #04161c; background: linear-gradient(135deg, #8ff7f2, var(--teal)); box-shadow: 0 0 16px rgba(63, 230, 224, 0.6); }
+.pin-now.pin-mine { color: #04161c; background: var(--teal); box-shadow: 0 0 16px rgba(63, 230, 224, 0.6); }
 .pin-label.is-review .pin-city { border-color: rgba(255, 55, 174, 0.5); }
 
 /* ── top bar ──────────────────────────────────────────────────────────────── */
@@ -192,7 +192,7 @@ img, video { display: block; max-width: 100%; }
   text-shadow: 0 4px 40px rgba(0, 0, 0, 0.6);
 }
 .grad {
-  background: linear-gradient(100deg, var(--gold-2), var(--gold) 40%, #ff9a4a 70%, var(--accent));
+  background: var(--gold);
   -webkit-background-clip: text; background-clip: text; color: transparent;
   padding-right: 0.04em;
 }

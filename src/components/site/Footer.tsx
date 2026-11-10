@@ -3,22 +3,19 @@ import { SHOP_URL } from "./Nav";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-background relative overflow-hidden">
-      <div className="grid-bg absolute inset-0 opacity-40" />
+    <footer className="border-t border-white/10 bg-background relative overflow-hidden">
+      <div className="grid-bg absolute inset-0 opacity-30" />
       <div className="relative mx-auto max-w-[1400px] px-6 py-20">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <h2 className="text-4xl md:text-6xl font-medium tracking-tight text-balance">
-              Fandom touchpoints, <span className="ember-text">activated</span>.
+            <h2 className="display text-5xl md:text-7xl">
+              Fandom, <span className="text-primary">activated.</span>
             </h2>
             <p className="mt-6 text-muted-foreground max-w-md">
-              Immersive format production for entertainment and gaming IP — merchandise, retail,
-              print, live events and location-based entertainment.
+              Immersive products and experiences for entertainment and gaming IP: merch, print,
+              retail, live events and games.
             </p>
-            <Link
-              to="/contact"
-              className="mt-8 inline-flex items-center gap-3 mono text-xs uppercase tracking-[0.2em] border border-primary text-primary px-5 py-3 hover:bg-primary hover:text-primary-foreground transition"
-            >
+            <Link to="/contact" className="mt-8 btn-pill btn-solid px-6 py-3.5 text-sm font-medium">
               Activate your IP <span aria-hidden>→</span>
             </Link>
           </div>
@@ -27,6 +24,9 @@ export function Footer() {
             <FCol
               title="Platform"
               items={[
+                ["Activated Merch", "/activated-merch/"],
+                ["EVADE × Bobo", "/evade/"],
+                ["Where is Bobo?", "/evade/where-is-bobo/"],
                 ["Live Now", "/live"],
                 ["Fan Reactions", "/#fan-reactions"],
                 ["Production Capabilities", "/#capabilities"],
@@ -80,7 +80,9 @@ function FCol({ title, items }: { title: string; items: [string, string][] }) {
           // Three link kinds: off-site (new tab + marker), same-page anchor
           // (plain <a>, no new tab), and in-app route (<Link>).
           const external = to.startsWith("http");
-          const anchor = to.startsWith("/#");
+          // Static pages (served from public/, e.g. /activated-merch/) aren't
+          // app routes, so they get a plain link too.
+          const anchor = to.startsWith("/#") || (to.length > 1 && to.endsWith("/"));
           return (
             <li key={label}>
               {external || anchor ? (

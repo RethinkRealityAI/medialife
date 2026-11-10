@@ -116,7 +116,7 @@ export function JourneyFunnel({
             </span>
             <span aria-hidden className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]">
               <span
-                className="block h-full rounded-full bg-gradient-to-r from-[var(--partner-2)] to-[var(--partner)]"
+                className="block h-full rounded-full bg-[var(--partner)]"
                 style={{ width: `${(counts[s.id] / max) * 100}%` }}
               />
             </span>

@@ -877,11 +877,6 @@ function FinalCta() {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="absolute inset-0 grid-bg opacity-40" />
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-25"
-        style={{ background: "var(--gradient-ember)" }}
-        aria-hidden
-      />
       <div className={`relative ${WRAP} py-24 text-center`}>
         <h2 className="mx-auto max-w-4xl text-4xl md:text-6xl font-medium tracking-tight text-balance">
           Get your merch activated, and we'll build <span className="ember-text">this.</span>

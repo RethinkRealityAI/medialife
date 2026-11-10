@@ -6,6 +6,7 @@ export type TechStack = {
   category: string;
   summary: string;
   hero: string;
+  /** Solid colour (no gradients site-wide); white text on it clears WCAG AA. */
   accent: string;
   glyph: string;
   capabilities: { t: string; d: string }[];
@@ -24,7 +25,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "A WebGL/WebGPU runtime — powered by 8th Wall, MindAR and a proprietary scene graph — that opens immersive AR straight from a QR scan, NFC tap, or link. No app store, no install, sub-3-second time-to-experience.",
     hero: "QR → Camera → AR scene, in under 3 seconds.",
-    accent: "linear-gradient(135deg,#00d4ff,#0066ff)",
+    accent: "#1f6fd1",
     glyph: "◉",
     capabilities: [
       {
@@ -72,7 +73,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "When experiences demand cinematic fidelity — LiDAR-grade occlusion, depth-aware lighting, and persistent room-scale anchors — we ship native iOS (ARKit) and Android (ARCore) modules embedded directly into brand and partner apps.",
     hero: "Cinematic-grade AR with LiDAR occlusion and persistent anchors.",
-    accent: "linear-gradient(135deg,#a855f7,#ec4899)",
+    accent: "#7c3aed",
     glyph: "◆",
     capabilities: [
       {
@@ -114,7 +115,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "We design, ship and operate brand lenses across Snapchat, Instagram, Facebook and TikTok — built for virality, equipped with measurement, and engineered to convert organic reach into owned fan data.",
     hero: "Designed for the For You page. Measured like media.",
-    accent: "linear-gradient(135deg,#fbbf24,#f97316)",
+    accent: "#b45309",
     glyph: "✦",
     capabilities: [
       {
@@ -159,7 +160,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "Our computer-vision pipeline — built on TensorFlow Lite, MediaPipe and custom PyTorch models — powers brand-specific object recognition, IP-trained classifiers, face/hand/pose tracking and real-time scene understanding on commodity devices.",
     hero: "IP-trained models that see what your brand is, in real time.",
-    accent: "linear-gradient(135deg,#10b981,#06b6d4)",
+    accent: "#047857",
     glyph: "◈",
     capabilities: [
       {
@@ -201,7 +202,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "We integrate frontier generative models — diffusion, voice, LLM, and multimodal — into AR activations so every fan walks away with a one-of-one artefact: a portrait, a track, a comic panel, a message from their favourite character.",
     hero: "Every fan gets a one-of-one moment. Owned by them. Branded by you.",
-    accent: "linear-gradient(135deg,#ec4899,#8b5cf6)",
+    accent: "#be185d",
     glyph: "✺",
     capabilities: [
       {
@@ -237,7 +238,7 @@ export const TECH_STACKS: TechStack[] = [
     summary:
       "Geo-anchored VPS, room-scale persistence and shared multi-user sessions — so a brand activation lives in a venue, evolves across days, and can be returned to by every fan who experienced it.",
     hero: "Brand worlds that persist. Multiplayer. Geo-locked. Owned.",
-    accent: "linear-gradient(135deg,#3b82f6,#06b6d4)",
+    accent: "#0369a1",
     glyph: "⬢",
     capabilities: [
       {

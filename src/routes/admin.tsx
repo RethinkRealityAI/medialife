@@ -82,7 +82,13 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
       { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
-      { to: "/admin/collector", label: "Collector Hub", short: "Collector", icon: Gem, tone: "sky" },
+      {
+        to: "/admin/collector",
+        label: "Collector Hub",
+        short: "Collector",
+        icon: Gem,
+        tone: "sky",
+      },
     ],
   },
   {
@@ -134,7 +140,7 @@ function AdminLayout() {
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-[image:var(--gradient-ember)] transition-[opacity,transform] duration-500 motion-reduce:transition-none",
+          "pointer-events-none fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-primary transition-[opacity,transform] duration-500 motion-reduce:transition-none",
           loading ? "scale-x-75 opacity-100" : "scale-x-100 opacity-0",
         )}
       />

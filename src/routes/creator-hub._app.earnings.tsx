@@ -487,7 +487,7 @@ function Breakdown({ d }: { d: Data }) {
                 </div>
                 <div className="mt-1 h-1.5 rounded-full bg-white/[0.06]" aria-hidden>
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-[var(--partner-2)] to-[var(--partner)]"
+                    className="h-full rounded-full bg-[var(--partner)]"
                     style={{ width: `${(c.units / cMax) * 100}%` }}
                   />
                 </div>

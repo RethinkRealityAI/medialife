@@ -69,14 +69,16 @@
 
   --grid-line: oklch(1 0 0 / 6%);
   --grid-line-strong: oklch(1 0 0 / 12%);
-  --gradient-radial: radial-gradient(ellipse at top, oklch(0.3 0.18 240 / 30%), transparent 60%);
-  --gradient-ember: linear-gradient(135deg, oklch(0.72 0.16 240), oklch(0.68 0.26 350));
-  /* Button fill only. Same hues and chroma as --gradient-ember, dropped in
-     lightness to the exact point where WHITE text still clears WCAG AA 4.5:1
-     (cyan 0.556, magenta 0.595 — measured, not eyeballed). The bright
-     --gradient-ember is still what glows around the button, so it reads as the
-     same colour while the label stays legible. */
-  --gradient-ember-btn: linear-gradient(135deg, oklch(0.556 0.16 240), oklch(0.595 0.26 350));
+  /* No brand gradients anywhere (Dapo, 2026-11-10): the logo colours are used
+     as SOLID highlights only. These old token names stay so older pages keep
+     working, but they now resolve to solid colour (or nothing). */
+  --gradient-radial: none;
+  --gradient-ember: oklch(0.72 0.16 240);
+  /* Solid button fill: MEDIALIFE blue dropped to where WHITE text clears
+     WCAG AA 4.5:1 (oklch L 0.556 measured 4.61:1). */
+  --gradient-ember-btn: oklch(0.556 0.16 240);
+  --btn-blue: oklch(0.556 0.16 240);
+  --btn-blue-hover: oklch(0.6 0.16 240);
   --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
 
   /* Hub surfaces (src/components/partner/ui.tsx) take these accents. The
@@ -177,19 +179,27 @@
     background-size: 32px 32px;
   }
 
+  /* Highlight words: solid MEDIALIFE blue. (Was gradient text.) */
   .ember-text {
-    background: var(--gradient-ember);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--primary);
   }
 
-  /* ---- Pill buttons in the brand gradient ----
-     Labels are white. White on the FULL-brightness --gradient-ember measures
-     only 2.44:1 / 3.35:1, so button fills use --gradient-ember-btn instead —
-     same hues and chroma, lightness dropped to where white clears WCAG AA
-     (4.61:1 and 4.57:1 measured). The full-brightness gradient still supplies
-     the glow, so the button reads as the same colour. */
+  /* Display titles: Archivo Condensed Black, the closest free match to the
+     MEDIALIFE wordmark (same as /activated-merch/). */
+  .display {
+    font-family: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 900;
+    font-stretch: 62.5%;
+    font-variation-settings: "wdth" 62.5;
+    text-transform: uppercase;
+    line-height: 0.9;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  /* ---- Pill buttons ----
+     Solid MEDIALIFE blue with a liquid-glass top light (no gradients). White
+     on --btn-blue measures 4.61:1, so labels clear WCAG AA. */
   .btn-pill {
     display: inline-flex;
     align-items: center;
@@ -198,75 +208,59 @@
     transition:
       transform 0.2s ease,
       box-shadow 0.3s ease,
+      background-color 0.2s ease,
       opacity 0.2s ease;
   }
 
-  .btn-ember {
-    background: var(--gradient-ember-btn);
+  .btn-ember,
+  .btn-solid {
+    background: var(--btn-blue);
     color: #fff;
-    box-shadow: 0 4px 24px -8px var(--glow);
-  }
-  .btn-ember:hover {
     box-shadow:
-      0 0 26px -4px var(--glow),
-      0 6px 30px -6px var(--glow);
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+      0 8px 24px -10px oklch(0.72 0.16 240 / 70%);
+  }
+  .btn-ember:hover,
+  .btn-solid:hover {
+    background: var(--btn-blue-hover);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+      0 10px 30px -8px oklch(0.72 0.16 240 / 80%);
     transform: translateY(-1px);
   }
-  .btn-ember:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 3px;
-  }
-
-  /* Gradient border via two backgrounds: solid fill clipped to the padding
-     box, gradient clipped to the border box. Survives border-radius, which
-     border-image does not. */
-  .btn-ember-outline {
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background:
-      linear-gradient(var(--background), var(--background)) padding-box,
-      var(--gradient-ember) border-box;
-    color: var(--foreground);
-  }
-  .btn-ember-outline:hover {
-    box-shadow: 0 0 24px -6px var(--glow);
-    transform: translateY(-1px);
-  }
+  .btn-ember:focus-visible,
+  .btn-solid:focus-visible,
+  .btn-glass:focus-visible,
   .btn-ember-outline:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 3px;
   }
 
-  /* Single-layer gradient carrying both the brand colours and the highlight
-     band, slid via background-position. Do NOT reintroduce a second background
-     layer with background-blend-mode here: Chromium stops honouring
-     background-clip: text and the element paints as a solid gradient BAR with
-     invisible glyphs. */
-  .ember-shine {
-    background: linear-gradient(
-      100deg,
-      oklch(0.72 0.16 240) 0%,
-      oklch(0.7 0.2 300) 28%,
-      oklch(0.97 0.04 320) 44%,
-      oklch(0.7 0.22 330) 60%,
-      oklch(0.68 0.26 350) 100%
-    );
-    background-size: 260% 100%;
-    background-position: 100% 0;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: ember-shine 5s ease-in-out infinite;
+  /* Clear glass pill (secondary action). */
+  .btn-ember-outline,
+  .btn-glass {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.07);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 6px 20px -10px rgba(0, 0, 0, 0.6);
   }
-  @keyframes ember-shine {
-    0%,
-    10% {
-      background-position: 100% 0;
-    }
-    60%,
-    100% {
-      background-position: 0 0;
-    }
+  .btn-ember-outline:hover,
+  .btn-glass:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.26);
+    transform: translateY(-1px);
+  }
+
+  /* Highlighted inline link text. Was an animated gradient shine; now solid
+     blue (kept as a class so existing pages pick it up). */
+  .ember-shine {
+    color: var(--primary);
   }
 
   /* Slow idle float for the floating product shot. */
@@ -286,18 +280,14 @@
   @media (prefers-reduced-motion: reduce) {
     .btn-pill,
     .btn-ember:hover,
+    .btn-solid:hover,
+    .btn-glass:hover,
     .btn-ember-outline:hover {
       transition: none;
       transform: none;
     }
-    .ember-shine,
     .animate-drift {
       animation: none;
-    }
-    .ember-shine {
-      background: var(--gradient-ember);
-      -webkit-background-clip: text;
-      background-clip: text;
     }
   }
 
@@ -305,26 +295,28 @@
     position: relative;
     overflow: hidden;
   }
+  /* A thin solid scan line (was a gradient band). */
   .scan-line::after {
     content: "";
     position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      oklch(0.78 0.16 200 / 8%) 50%,
-      transparent 100%
-    );
+    inset: 0 0 auto;
+    height: 1px;
+    background: oklch(0.72 0.16 240 / 35%);
     animation: scan 6s linear infinite;
     pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scan-line::after {
+      display: none;
+    }
   }
 
   @keyframes scan {
     0% {
-      transform: translateY(-100%);
+      top: 0;
     }
     100% {
-      transform: translateY(100%);
+      top: 100%;
     }
   }
 
@@ -385,4 +377,37 @@
 @utility glass-pill {
   background: var(--lg-pill-on);
   box-shadow: var(--lg-pill-shadow);
+}
+
+/* ---- Liquid glass, homepage + site chrome ----
+   lg-card: a pane of dark glass over the page. lg-chip: a small clear pill.
+   Both keep text at full contrast: the tint alone (without blur) is dark
+   enough for white and muted text to clear AA over any of our backgrounds. */
+@utility lg-card {
+  position: relative;
+  background: rgba(14, 16, 28, 0.62);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 24px 60px -24px rgba(0, 0, 0, 0.7);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: rgba(14, 16, 28, 0.94);
+  }
+}
+@utility lg-chip {
+  background: rgba(20, 22, 36, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: rgba(20, 22, 36, 0.94);
+  }
 }

@@ -26,26 +26,37 @@ export const SHOP_URL = "https://shop.medialife.ai/";
  * xl and 2xl the /0X numbers hide and long labels use `short`, so it never
  * overflows.
  */
-type NavItem = { label: string; num: string; short?: string } & (
+type NavItem = { label: string; num: string; short?: string; isNew?: boolean } & (
   | { kind: "anchor"; hash: string }
+  | { kind: "static"; href: string }
   | { kind: "route"; to: string }
   | { kind: "external"; href: string }
 );
 
+// 2026-11-10 homepage redesign: Activated Merch and the EVADE launch get nav
+// slots (both are static pages in public/); Fan Reactions stays a homepage
+// section and a footer link.
 const NAV: NavItem[] = [
-  { kind: "route", to: "/live", label: "Live Now", num: "01" },
-  { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "02" },
+  {
+    kind: "static",
+    href: "/activated-merch/",
+    label: "Activated Merch",
+    short: "Merch",
+    num: "01",
+  },
+  { kind: "static", href: "/evade/", label: "EVADE", num: "02", isNew: true },
+  { kind: "route", to: "/live", label: "Live Now", num: "03" },
   {
     kind: "anchor",
     hash: "capabilities",
     label: "Production Capabilities",
     short: "Capabilities",
-    num: "03",
+    num: "04",
   },
-  { kind: "route", to: "/activated-retail", label: "Retail Program", num: "04" },
-  { kind: "route", to: "/creator-hub", label: "Creator Hub", num: "05" },
-  { kind: "route", to: "/case-studies", label: "Case Studies", num: "06" },
-  { kind: "external", href: SHOP_URL, label: "Merch", num: "07" },
+  { kind: "route", to: "/activated-retail", label: "Retail Program", short: "Retail", num: "05" },
+  { kind: "route", to: "/creator-hub", label: "Creator Hub", num: "06" },
+  { kind: "route", to: "/case-studies", label: "Case Studies", num: "07" },
+  { kind: "external", href: SHOP_URL, label: "Shop", num: "08" },
 ];
 
 const itemCls =
@@ -88,19 +99,13 @@ export function Nav() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#05060c]/70 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)]">
       <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-10 gap-4">
         <Link to="/" className="flex items-center gap-2 group shrink-0">
           <div className="relative h-6 w-6 shrink-0">
-            <div
-              className="absolute inset-0 rounded-full opacity-70 blur-sm group-hover:opacity-100 transition"
-              style={{ background: "var(--gradient-ember)" }}
-            />
+            <div className="absolute inset-0 rounded-full bg-primary/50 opacity-70 blur-sm group-hover:opacity-100 transition" />
             <div className="absolute inset-1 rounded-full border border-primary" />
-            <div
-              className="absolute inset-2 rounded-full"
-              style={{ background: "var(--gradient-ember)" }}
-            />
+            <div className="absolute inset-2 rounded-full bg-primary" />
           </div>
           {/* 28px, not smaller: the lockup is two lines, and the "ACTIVATED BY"
               rule is only 27% of its height. Below this it stops being legible
@@ -124,6 +129,26 @@ export function Nav() {
                     {isCapabilities && <span className="ml-2 text-[10px] opacity-60">▾</span>}
                   </a>
                 </div>
+              );
+            }
+            if (item.kind === "static") {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={itemCls}
+                  onMouseEnter={() => setMegaOpen(false)}
+                >
+                  <span className={numCls}>/{item.num}</span>
+                  <DeskLabel item={item} />
+                  {item.isNew && (
+                    <span
+                      className="ml-1.5 h-1.5 w-1.5 rounded-full bg-[#f5c84b]"
+                      aria-label="(new)"
+                      role="img"
+                    />
+                  )}
+                </a>
               );
             }
             if (item.kind === "external") {
@@ -161,10 +186,7 @@ export function Nav() {
         </nav>
 
         <div className="hidden xl:flex items-center gap-2 shrink-0">
-          <Link
-            to="/contact"
-            className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-6 py-3"
-          >
+          <Link to="/contact" className="btn-pill btn-solid text-sm font-medium px-5 py-2.5">
             Activate your IP
             <span aria-hidden>→</span>
           </Link>
@@ -226,7 +248,7 @@ export function Nav() {
                         <div className="mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
                           /{s.num} · {s.category}
                         </div>
-                        <h4 className="mt-1 text-sm font-medium truncate group-hover:ember-text transition-colors">
+                        <h4 className="mt-1 text-sm font-medium truncate group-hover:text-primary transition-colors">
                           {s.name}
                         </h4>
                         <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
@@ -249,7 +271,7 @@ export function Nav() {
                   style={{ background: featured.accent }}
                 />
                 <div className="absolute inset-0 grid-bg opacity-30" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                <div className="absolute inset-0 bg-background/55" />
                 <div className="relative h-full min-h-[260px] p-6 flex flex-col justify-between">
                   <div className="flex items-start justify-between">
                     <div className="text-5xl text-white drop-shadow-lg">{featured.glyph}</div>
@@ -293,6 +315,26 @@ export function Nav() {
                     onClick={() => setOpen(false)}
                   >
                     <span>{item.label}</span>
+                    <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                  </a>
+                );
+              }
+              if (item.kind === "static") {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={row}
+                    onClick={() => setOpen(false)}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {item.label}
+                      {item.isNew && (
+                        <span className="rounded-full bg-[#f5c84b] px-1.5 py-0.5 mono text-[9px] uppercase tracking-wider text-[#1a1300]">
+                          New
+                        </span>
+                      )}
+                    </span>
                     <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
                   </a>
                 );
@@ -346,7 +388,7 @@ export function Nav() {
             <div className="p-6">
               <Link
                 to="/contact"
-                className="btn-pill btn-ember w-full justify-center mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3.5"
+                className="btn-pill btn-solid w-full justify-center text-sm font-medium px-7 py-3.5"
                 onClick={() => setOpen(false)}
               >
                 Activate your IP

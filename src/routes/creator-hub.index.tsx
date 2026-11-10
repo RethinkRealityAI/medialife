@@ -158,11 +158,6 @@ function HubPreview() {
   return (
     <figure className="relative">
       <div
-        className="pointer-events-none absolute -inset-6 rounded-[40px] opacity-30 blur-3xl"
-        style={{ background: "var(--gradient-ember)" }}
-        aria-hidden
-      />
-      <div
         className="relative border border-border bg-background/90 shadow-2xl backdrop-blur-xl"
         aria-hidden
       >
@@ -736,11 +731,6 @@ function FinalCta({ join }: { join: string }) {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="absolute inset-0 grid-bg opacity-40" />
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-25"
-        style={{ background: "var(--gradient-ember)" }}
-        aria-hidden
-      />
       <div className={`relative ${WRAP} py-24 text-center`}>
         <h2 className="mx-auto max-w-4xl text-4xl md:text-6xl font-medium tracking-tight text-balance">
           Make merch your fans can <span className="ember-text">experience.</span>

@@ -92,8 +92,10 @@ export const CAMPAIGNS: Campaign[] = [
     ],
     secondary: { label: "Get notified", href: "/contact" },
     image: {
-      src: "/merch/keychain-cutout.webp",
-      alt: "BOBO and ΣCLIPSE acrylic keychain set from the MediaLife.AI × EVADE program",
+      // The current keychain: Bobo the cat + the Eclipse can (the old
+      // avatar-style /merch/keychain-cutout.webp is outdated).
+      src: "/activated-merch/posters/evade-charms.webp",
+      alt: "Bobo the cat and ΣCLIPSE can acrylic keychain from the MEDIALIFE × EVADE program",
     },
     note: "Platform-specific commerce features and digital benefits are subject to applicable approvals.",
   },
