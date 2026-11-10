@@ -403,6 +403,25 @@ section { position: relative; padding: 0 var(--gut); }
   pointer-events: none;
 }
 .ar__more { display: none; }
+/* "Augmented reality" pill over the section title: AR brackets lock onto a
+   turning cube while a scan line sweeps the pill. Solid MEDIALIFE blue. */
+.ar-pill {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; margin: 0 0 18px; padding: 7px 15px 7px 8px;
+  border-radius: 99px; overflow: hidden; isolation: isolate;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: #dff3ff;
+  background: rgba(63, 182, 255, 0.1); border: 1px solid rgba(63, 182, 255, 0.55);
+  box-shadow: 0 0 22px rgba(63, 182, 255, 0.25), inset 0 0 12px rgba(63, 182, 255, 0.12);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.ar-pill__icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(63, 182, 255, 0.18); }
+.ar-pill__icon svg { width: 18px; height: 18px; fill: none; stroke: var(--cyan); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; overflow: visible; filter: drop-shadow(0 0 4px rgba(63, 182, 255, 0.8)); }
+.ar-pill__brk { transform-origin: 12px 12px; animation: ar-lock 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.ar-pill__cube { transform-origin: 12px 12px; animation: ar-cube 2.6s ease-in-out infinite; }
+.ar-pill__scan { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; z-index: -1; background: var(--cyan); box-shadow: 0 0 12px 3px rgba(63, 182, 255, 0.55); opacity: 0; animation: ar-scan 2.6s linear infinite; }
+@keyframes ar-lock { 0%, 15% { transform: scale(1.35); opacity: 0.3; } 45%, 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.35); opacity: 0.3; } }
+@keyframes ar-cube { 0%, 40% { transform: scale(0.85); opacity: 0.55; } 55%, 85% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.85); opacity: 0.55; } }
+@keyframes ar-scan { 0% { left: 0; opacity: 0; } 8% { opacity: 0.9; } 40% { left: 100%; opacity: 0.9; } 41%, 100% { left: 100%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ar-pill__brk, .ar-pill__cube { animation-duration: 5s; } .ar-pill__scan { animation-duration: 6s; } }
 @keyframes more-bob { 0%, 100% { transform: translateY(-2px); } 50% { transform: translateY(3px); } }
 @media (prefers-reduced-motion: reduce) { .ar__more i { animation: none; } }
 .has-3d .arphone__prompt {
@@ -534,7 +553,9 @@ section { position: relative; padding: 0 var(--gut); }
      The title holds that spot while the phone grows, then the active step takes it. */
   .has-3d .ar__copy { left: 0; right: 0; top: 0; bottom: auto; transform: none; width: auto; display: grid; align-content: start; gap: 0; padding: 0; }
   .has-3d .ar__copy > * { grid-area: 1 / 1; }
-  .has-3d .ar__copy .display { padding: 72px var(--gut) 0; font-size: 40px; opacity: var(--title, 1); text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+  .has-3d .ar__head { padding: 72px var(--gut) 0; opacity: var(--title, 1); }
+  .has-3d .ar__copy .display { font-size: 40px; text-shadow: 0 2px 16px rgba(0, 0, 0, 0.7); }
+  .ar-pill { margin-bottom: 14px; }
 
   .has-3d .ar__steps { padding: 66px var(--gut) 36px; background: linear-gradient(rgba(5, 6, 12, 0.94) 60%, rgba(5, 6, 12, 0)); opacity: calc(1 - var(--title, 1)); }
   .has-3d .ar__shown { grid-area: 2 / 1; padding: 0 var(--gut); margin-top: -28px; opacity: calc(1 - var(--title, 1)); }
