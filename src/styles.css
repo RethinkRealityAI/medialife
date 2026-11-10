@@ -73,6 +73,9 @@
      as SOLID highlights only. These old token names stay so older pages keep
      working, but they now resolve to solid colour (or nothing). */
   --gradient-radial: none;
+  /* The ONE place a brand gradient stays: the logo's circle mark (and the
+     favicon). Everywhere else the logo colours are solid highlights. */
+  --gradient-logo: linear-gradient(135deg, #19affe, #ff2fae);
   --gradient-ember: oklch(0.72 0.16 240);
   /* Solid button fill: MEDIALIFE blue dropped to where WHITE text clears
      WCAG AA 4.5:1 (oklch L 0.556 measured 4.61:1). */
@@ -409,5 +412,88 @@
     0 8px 24px -12px rgba(0, 0, 0, 0.7);
   @supports not (backdrop-filter: blur(1px)) {
     background: rgba(20, 22, 36, 0.94);
+  }
+}
+
+/* ---- Homepage motion (src/components/home/Reveal.tsx) ----
+   Blocks below the fold fade up as they arrive; icon strokes inside them
+   (.draw, with pathLength="1") draw in. Reduced motion never hides anything. */
+[data-reveal] {
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--d, 0ms);
+}
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.draw [pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+[data-reveal="pending"] .draw [pathLength] {
+  stroke-dashoffset: 1;
+}
+[data-reveal="in"] .draw [pathLength] {
+  animation: draw-in 1.3s cubic-bezier(0.6, 0, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 150ms);
+}
+@keyframes draw-in {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A gentle loop on part of an icon (waves, sparkles) once it has drawn. */
+[data-reveal="in"] .icon-pulse {
+  animation: icon-pulse 2.4s ease-in-out 1.5s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes icon-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+/* The program loop (Buy, Tap, Play, Collect, Next drop): a light travels along it. */
+.loop-step {
+  animation: loop-step 5s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 1s);
+}
+@keyframes loop-step {
+  0%,
+  30%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.75);
+  }
+  10%,
+  20% {
+    border-color: var(--c);
+    color: #fff;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  [data-reveal] .draw [pathLength] {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .icon-pulse,
+  .loop-step {
+    animation: none !important;
   }
 }

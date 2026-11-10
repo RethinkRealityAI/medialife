@@ -103,9 +103,15 @@ export function Nav() {
       <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-10 gap-4">
         <Link to="/" className="flex items-center gap-2 group shrink-0">
           <div className="relative h-6 w-6 shrink-0">
-            <div className="absolute inset-0 rounded-full bg-primary/50 opacity-70 blur-sm group-hover:opacity-100 transition" />
+            <div
+              className="absolute inset-0 rounded-full opacity-70 blur-sm group-hover:opacity-100 transition"
+              style={{ background: "var(--gradient-logo)" }}
+            />
             <div className="absolute inset-1 rounded-full border border-primary" />
-            <div className="absolute inset-2 rounded-full bg-primary" />
+            <div
+              className="absolute inset-2 rounded-full"
+              style={{ background: "var(--gradient-logo)" }}
+            />
           </div>
           {/* 28px, not smaller: the lockup is two lines, and the "ACTIVATED BY"
               rule is only 27% of its height. Below this it stops being legible
