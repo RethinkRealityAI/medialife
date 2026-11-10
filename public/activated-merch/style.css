@@ -106,7 +106,17 @@ a { color: inherit; }
   95% { transform: translate(3px, -1px); opacity: 0.8; }
   97% { transform: translate(-1px, 0); opacity: 0.6; }
 }
-@media (prefers-reduced-motion: reduce) { .glitch::before, .glitch::after { display: none; } }
+/* Reduced motion (Android sets it with battery saver or "Remove animations"):
+   keep the split, glitch rarely and small, no rapid flicker. */
+@keyframes gl-calm {
+  0%, 94%, 99%, 100% { transform: translate(0, 0); opacity: 0; }
+  95% { transform: translate(-2px, 1px); opacity: 0.75; }
+  97% { transform: translate(2px, 0); opacity: 0.6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glitch::before { animation: gl-calm 9s infinite steps(1); }
+  .glitch::after { animation: gl-calm 11s infinite steps(1) reverse; }
+}
 
 /* ---------- nav */
 .nav {

@@ -70,3 +70,13 @@ renders of the same GLBs. `models/evade-charms.glb` is the EVADE keychain re-exp
 * Hero: the active piece is solid; the others stand off to the sides as holographic
   silhouettes (`uHolo` in `softbody.js`) and materialise with a scan line when browsed to.
 * `?debug` exposes `window.__stage` for testing. No WebGL2 → the poster render is shown.
+
+## Reduced motion
+
+Android Chrome reports `prefers-reduced-motion: reduce` when battery saver or
+"Remove animations" is on (iOS rarely does), so the page softens effects under
+that setting instead of removing them: the hero particles settle in from close
+by without the swirl, the title glitch fires every 9 to 11 seconds with smaller
+offsets, and the scan lines still run. Idle sway, cloth wind, smooth scrolling
+and the AR camera sway stay off. `?debug` shows "reduced motion ON/off" in the
+info line, to check a phone.
