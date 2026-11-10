@@ -24,6 +24,7 @@ export function Hero() {
   const barRef = useRef<HTMLSpanElement>(null);
   const ctaRef = useRef<HTMLAnchorElement>(null);
   const hotRef = useRef<HTMLDivElement>(null);
+  const sideRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const stageRef = useRef<ArStage | null>(null);
   const dragId = useRef<number | null>(null);
   const [ready, setReady] = useState(false);
@@ -38,6 +39,7 @@ export function Hero() {
   const [touch, setTouch] = useState(false);
   const [spot, setSpot] = useState(0);
   const [steered, setSteered] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const slide = HERO_SLIDES[index];
   const cta = (slide.spots[spot] ?? slide.spots[0]).cta;
   const magenta = slide.accent === "magenta";
@@ -77,6 +79,7 @@ export function Hero() {
               setReward(false);
             },
             onSpot: (k) => setSpot(k),
+            onBlocked: (b) => setBlocked(b),
             // a click on a live design (mouse): its button
             onActivate: () => ctaRef.current?.click(),
             onHotspot: (h) => {
@@ -113,6 +116,20 @@ export function Hero() {
               el.style.top = `${r.y}px`;
               el.style.width = `${r.w}px`;
               el.style.height = `${r.h}px`;
+            },
+            onSides: (rs) => {
+              sideRefs.current.forEach((el, k) => {
+                if (!el) return;
+                const r = rs[k];
+                if (!r) {
+                  el.style.visibility = "hidden";
+                  return;
+                }
+                el.style.visibility = "visible";
+                el.style.transform = `translate3d(${r.x}px, ${r.y}px, 0)`;
+                el.style.width = `${r.w}px`;
+                el.style.height = `${r.h}px`;
+              });
             },
             onProgress: (p) => {
               if (barRef.current) barRef.current.style.transform = `scaleX(${p})`;
@@ -185,7 +202,9 @@ export function Hero() {
       ? "Scanning…"
       : track === "search" && !held
         ? `${touch ? "Drag" : "Move"} the phone over ${slide.aim}`
-        : null;
+        : alive && blocked
+          ? `${touch ? "Tap" : "Click"} to play`
+          : null;
   // "Activated by MEDIALIFE", top right of the phone, once it's on a design
   const badge = (track === "lock" || alive) && !(game && alive);
 
@@ -254,6 +273,7 @@ export function Hero() {
           e.currentTarget.setPointerCapture(e.pointerId);
           dragId.current = e.pointerId;
           const p = rel(e);
+          stageRef.current?.gesture();
           stageRef.current?.grab(p.x, p.y);
           setHeld(true);
           setMoved(true);
@@ -399,6 +419,38 @@ export function Hero() {
           </div>
         )}
       </div>
+
+      {/* The other pieces, as holograms in a column on the right (drawn by the
+          stage): click one to bring it up. Wide screens only; the tabs do the
+          same everywhere. */}
+      {[1, 2].map((d, k) => {
+        const i = (index + d) % HERO_SLIDES.length;
+        const s = HERO_SLIDES[i];
+        if (HERO_SLIDES.length <= d) return null;
+        return (
+          <button
+            key={k}
+            ref={(el) => {
+              sideRefs.current[k] = el;
+            }}
+            type="button"
+            aria-label={`Show ${s.tab}: ${s.spots.map((x) => x.cta.sub).join(", ")}`}
+            onClick={() => stageRef.current?.go(i)}
+            onPointerEnter={() => stageRef.current?.setSideHover(k)}
+            onPointerLeave={() => stageRef.current?.setSideHover(-1)}
+            onFocus={() => stageRef.current?.setSideHover(k)}
+            onBlur={() => stageRef.current?.setSideHover(-1)}
+            className="group absolute left-0 top-0 z-[6] cursor-pointer rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            style={{ visibility: "hidden" }}
+          >
+            <span
+              className={`lg-chip absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium text-white/75 transition-colors group-hover:text-white ${s.accent === "magenta" ? "group-hover:bg-accent" : "group-hover:bg-[var(--btn-blue)]"}`}
+            >
+              {s.tab}
+            </span>
+          </button>
+        );
+      })}
 
       {/* Stage controls: the pieces, point the phone, pause. */}
       <div

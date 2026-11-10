@@ -62,13 +62,22 @@ export type ArEvents = {
   onReward?: () => void;
   /** Each frame: how far the tour is through the current design (0..1). */
   onProgress?: (p: number) => void;
+  /**
+   * Each frame: the other pieces' holograms on the page (CSS px, relative to
+   * the canvas), in order: the next piece, then the one after. null: hidden.
+   */
+  onSides?: (r: (SideRect | null)[]) => void;
+  /** The browser refused to play the live design's video: a click plays it. */
+  onBlocked?: (blocked: boolean) => void;
 };
+export type SideRect = { slide: number; x: number; y: number; w: number; h: number };
 
 /* Layers: what each pass draws. */
 const L_PIECE = 0; // the pieces: hologram (main) + colour (phone)
 const L_AR = 1; // AR videos: phone only
 const L_POP = 2; // pop-outs: both, in colour
 const L_PHONE = 3; // the phone: main only
+const L_SIDE = 4; // the other pieces, as holograms beside the stage: main only
 
 const Z_PIECE = -1.2;
 const Z_BACK = -3.2;
@@ -143,6 +152,12 @@ type Spot = {
   videoTex: THREE.VideoTexture | null;
   /** The video is actually showing frames (seconds since, or -1) */
   playT: number;
+  /** A play() call is in flight */
+  pending: boolean;
+  /** The browser refused to play it (autoplay off): the still shows until a click */
+  blocked: boolean;
+  /** Next time to retry play() while it should be playing */
+  retryT: number;
 };
 
 type Slide = {
@@ -162,6 +177,8 @@ type Slide = {
   hotspot: THREE.Group | null;
   /** What stands behind a pop-out (Bobo's Hideout) */
   hub: THREE.Group | null;
+  /** A copy of the piece, shown as a hologram beside the stage when another piece is up */
+  side: THREE.Group | null;
 };
 
 type Px = { x: number; y: number };
@@ -177,6 +194,8 @@ type Layout = {
   phoneH: number;
   pop: Px;
   popR: number;
+  /** The other pieces, as clickable holograms in a column on the right (wide screens) */
+  side: { x0: number; pts: Px[]; h: number; w: number } | null;
 };
 
 export class ArStage {
@@ -188,6 +207,15 @@ export class ArStage {
   private post: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
   private postScene = new THREE.Scene();
   private postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  /** The side holograms: drawn in colour here, then turned into holograms on the page */
+  private rtSide: THREE.WebGLRenderTarget;
+  private sidePost: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial>;
+  private sideScene = new THREE.Scene();
+  private sideFade = 0;
+  private sideHover = -1;
+  private sideSent = false;
+  private unblocked = false;
+  private blockedSent = false;
   private phone: THREE.Group;
   private screenMat: THREE.ShaderMaterial;
   private scanLine: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
@@ -271,6 +299,7 @@ export class ArStage {
   private speed = typeof location !== "undefined" && /fast/.test(location.search) ? 8 : 1;
   private tmpV = new THREE.Vector3();
   private tmpV2 = new THREE.Vector3();
+  private tmpV3 = new THREE.Vector3();
   private tmpBox = new THREE.Box3();
   private tmpBox2 = new THREE.Box3();
 
@@ -312,6 +341,10 @@ export class ArStage {
     });
     this.post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), colourMaterial());
     this.postScene.add(this.post);
+    this.rtSide = new THREE.WebGLRenderTarget(2, 2, { type: THREE.HalfFloatType });
+    this.sidePost = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), holoMaterial());
+    this.sidePost.material.uniforms.tScene.value = this.rtSide.texture;
+    this.sideScene.add(this.sidePost);
 
     this.screenMat = screenMaterial(this.rtPhone.texture);
     this.phone = buildPhone(this.screenMat);
@@ -360,10 +393,14 @@ export class ArStage {
           video: null,
           videoTex: null,
           playT: -1,
+          pending: false,
+          blocked: false,
+          retryT: 0,
         })),
         pop: null,
         hotspot: null,
         hub: null,
+        side: null,
       };
     });
     this.cur = this.next = Math.max(0, Math.min(defs.length - 1, opts.start ?? 0));
@@ -379,7 +416,7 @@ export class ArStage {
     window.addEventListener("pointermove", this.onMouse, { passive: true });
     document.documentElement.addEventListener("pointerleave", this.onMouseOut);
 
-    this.ensure(this.cur).then(() => this.ensure((this.cur + 1) % this.slides.length));
+    this.ensure(this.cur).then(() => this.ensureAll());
     if (location.search.includes("debug")) (window as unknown as { __ar: ArStage }).__ar = this;
   }
 
@@ -402,11 +439,31 @@ export class ArStage {
     this.ensure(i);
     if (!this.running) this.renderOnce();
   }
+  /** The rest of the pieces, one after another (the side holograms show them all). */
+  private async ensureAll() {
+    for (let k = 1; k < this.slides.length; k++)
+      await this.ensure((this.cur + k) % this.slides.length);
+  }
   nextSlide() {
     this.go((this.phase === "out" ? this.next : this.cur) + 1);
   }
   prevSlide() {
     this.go((this.phase === "out" ? this.next : this.cur) - 1);
+  }
+  /** A user gesture (a press): a video the browser refused can play now. True if one was waiting. */
+  gesture() {
+    let any = false;
+    for (const sp of this.slides[this.cur].spots)
+      if (sp.blocked && sp.video) {
+        sp.blocked = false;
+        any = true;
+        this.tryPlay(sp);
+      }
+    return any;
+  }
+  /** A side hologram is hovered (0: the top one, 1: the bottom one; -1: none). */
+  setSideHover(k: number) {
+    this.sideHover = k;
   }
   setPaused(p: boolean) {
     this.paused = p;
@@ -499,8 +556,11 @@ export class ArStage {
         y: Math.min(hi, Math.max(lo, y)),
       };
     }
+    // not over the side column: the other pieces stay in view, ready to click
+    const sd = this.lay.side;
+    const xMax = sd ? sd.x0 - pw * 0.56 : this.w - pw * 0.35;
     return {
-      x: Math.min(this.w - pw * 0.35, Math.max(st.x + pw * 0.3, x)),
+      x: Math.min(xMax, Math.max(st.x + pw * 0.3, x)),
       // the bottom of the phone (its button, the joystick) stays clear of the tabs
       y: Math.min(st.y + st.h - TABS_H - ph * 0.46, Math.max(ph * 0.3, y)),
     };
@@ -556,9 +616,10 @@ export class ArStage {
         const obj = g.scene;
         const maxAniso = this.renderer.capabilities.getMaxAnisotropy();
         obj.traverse((o) => {
-          const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+          const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined;
           if (m && "map" in m && m.map) m.map.anisotropy = Math.min(8, maxAniso);
           if (m) m.side = THREE.DoubleSide;
+          if (m) calmAcrylic(m);
         });
         if (this.disposed) return;
         fitted = fit(obj, 1);
@@ -635,6 +696,7 @@ export class ArStage {
         );
         hs.scale.setScalar((s.box.max.y - s.box.min.y) * 0.075);
         setLayer(hs, L_PIECE);
+        hs.userData.noSide = true;
         s.inner.add(hs);
         sp.bracket = hs.getObjectByName("target") ?? hs;
         s.hotspot = hs;
@@ -651,6 +713,7 @@ export class ArStage {
             this.dwellT = Math.max(this.dwellT, GAME_MAX_T - GAME_AFTER_REWARD_T);
             this.events.onReward?.();
           },
+          !!pop.hub,
         );
         game.stage = this;
         s.pop = game;
@@ -683,6 +746,7 @@ export class ArStage {
           .then((g) => !this.disposed && d.setModel(g))
           .catch((e) => console.warn("[ar] display", e));
       }
+      s.side = this.sideOf(s);
       s.loaded = true;
       if (!this.running) this.renderOnce();
     } catch (err) {
@@ -716,6 +780,7 @@ export class ArStage {
   }
   private addOverlay(sp: Spot, mesh: THREE.Mesh, mat: THREE.MeshBasicMaterial) {
     mesh.visible = false;
+    mesh.userData.noSide = true;
     mesh.renderOrder = 5;
     sp.overlay = mesh;
     sp.mat = mat;
@@ -734,6 +799,9 @@ export class ArStage {
     this.bufH = buf.y;
     this.rtMain.setSize(buf.x, buf.y);
     this.rtPhone.setSize(buf.x, buf.y);
+    this.rtSide.setSize(buf.x, buf.y);
+    this.sidePost.material.uniforms.uRes.value.set(buf.x, buf.y);
+    this.sidePost.material.uniforms.uDpr.value = this.dpr;
     this.camera.aspect = this.w / this.h;
     this.camera.updateProjectionMatrix();
     this.post.material.uniforms.uRes.value.set(buf.x, buf.y);
@@ -766,13 +834,29 @@ export class ArStage {
       const x0 = Math.max(w * 0.36, Math.min(c ? c.x + c.w + 28 : w * 0.45, w * 0.58));
       const st = { x: x0, y: h * 0.06, w: Math.max(240, right - x0), h: h * 0.86 };
       const cy = st.y + st.h / 2;
-      const piece = { x: st.x + st.w * 0.6, y: cy };
+      // a column on the right for the other pieces (holograms), when there's room
+      const sideOn = this.slides.length > 1 && st.w > 520;
+      const colW = sideOn ? Math.min(220, st.w * 0.19) : 0;
+      const main = st.w - colW;
+      const piece = { x: st.x + main * (sideOn ? 0.56 : 0.6), y: cy };
       const phoneH = Math.min(st.h * 0.8, (st.w * 0.42) / ratio);
+      const sideH = Math.min(st.h * 0.27, colW * 1.25);
       return {
+        side: sideOn
+          ? {
+              x0: st.x + main,
+              w: colW,
+              h: sideH,
+              pts: [
+                { x: st.x + main + colW * 0.5, y: cy - st.h * 0.19 },
+                { x: st.x + main + colW * 0.5, y: cy + st.h * 0.15 },
+              ],
+            }
+          : null,
         stage: st,
         piece,
         pieceH: st.h * 0.82,
-        pieceW: st.w * 0.6,
+        pieceW: main * (sideOn ? 0.66 : 0.6),
         back: { x: piece.x, y: cy - st.h * 0.3 },
         phone: { x: st.x + phoneH * ratio * 0.55, y: cy + st.h * 0.03 },
         phoneH,
@@ -789,6 +873,7 @@ export class ArStage {
     const piece = { x: cx + st.w * 0.17, y: cy };
     const phoneH = Math.min(use * 0.94, (st.w * 0.36) / ratio);
     return {
+      side: null,
       stage: st,
       piece,
       pieceH: use * 0.9,
@@ -845,7 +930,9 @@ export class ArStage {
     const y = e.clientY - r.top;
     const st = this.lay.stage;
     const inside = x >= 0 && y >= 0 && x <= this.w && y <= this.h;
-    const onStage = inside && (this.tall ? y <= st.y + st.h + 30 : x >= st.x - 30);
+    const sd = this.lay.side;
+    const onStage =
+      inside && (this.tall ? y <= st.y + st.h + 30 : x >= st.x - 30 && (!sd || x < sd.x0));
     // over the hero's buttons (tabs, copy, the phone's own UI): leave the phone be
     const el = document.elementFromPoint(e.clientX, e.clientY);
     const onUi =
@@ -868,6 +955,8 @@ export class ArStage {
   };
   private onDown = (e: PointerEvent) => {
     this.tap = { x: e.clientX, y: e.clientY, id: e.pointerId, touch: e.pointerType !== "mouse" };
+    // a refused video can play now (this is a user gesture); that click only plays it
+    this.unblocked = this.gesture();
   };
   /** A live design with a button, under the mouse-held phone: a click opens it. */
   private clickable() {
@@ -878,6 +967,7 @@ export class ArStage {
     this.tap = null;
     if (!s || s.id !== e.pointerId) return;
     if (!s.touch) {
+      if (this.unblocked) return;
       if (Math.hypot(e.clientX - s.x, e.clientY - s.y) < 8 && this.clickable())
         this.events.onActivate?.(this.spotI);
       return;
@@ -928,7 +1018,8 @@ export class ArStage {
     // shows again); anything else keeps following the mouse, smoothly
     if (this.mouseOver && s.def.pop?.kind === "bobo") this.locked = true;
     const sp = s.spots[this.spotI];
-    if (sp?.def.video && !this.reduced) this.playVideo(sp);
+    // the visitor brought it alive, so it plays (with reduced motion too: no tour runs then)
+    if (sp?.def.video) this.playVideo(sp);
   }
 
   private leaveAlive() {
@@ -937,6 +1028,71 @@ export class ArStage {
       sp.playT = -1;
       if (sp.overlay) sp.overlay.visible = false;
     }
+    if (this.blockedSent) {
+      this.blockedSent = false;
+      this.events.onBlocked?.(false);
+    }
+  }
+
+  /** A copy of a piece for the side column: no video, no hotspot, no build wipe. */
+  private sideOf(s: Slide) {
+    const c = s.inner.clone(true);
+    const drop: THREE.Object3D[] = [];
+    c.traverse((o) => o.userData.noSide && drop.push(o));
+    drop.forEach((o) => o.removeFromParent());
+    c.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      const one = (x: THREE.Material) => {
+        const n = x.clone();
+        n.clippingPlanes = null;
+        return n;
+      };
+      m.material = Array.isArray(m.material) ? m.material.map(one) : one(m.material);
+    });
+    // spin about the piece's own middle
+    c.position.sub(s.box.getCenter(new THREE.Vector3()));
+    const g = new THREE.Group();
+    g.add(c);
+    setLayer(g, L_SIDE);
+    g.visible = false;
+    this.scene.add(g);
+    return g;
+  }
+
+  /** Play a design's video, or keep trying (a browser may refuse or interrupt play()). */
+  private tryPlay(sp: Spot) {
+    const v = sp.video;
+    if (!v || !v.paused || sp.pending || sp.blocked) return;
+    sp.pending = true;
+    v.play()
+      .then(() => {
+        sp.pending = false;
+      })
+      .catch((e: DOMException) => {
+        sp.pending = false;
+        // interrupted (moved off and back on quickly): just try again next frame.
+        // Refused (autoplay off, battery saver): show the still until a click.
+        if (e?.name !== "NotAllowedError") return;
+        sp.blocked = true;
+        const v0 = sp.def.video;
+        if (!v0) return;
+        const show = (t: THREE.Texture) => {
+          if (sp.mat && sp.blocked) {
+            sp.mat.map = t;
+            sp.mat.needsUpdate = true;
+          }
+          if (sp.playT < 0) sp.playT = 0;
+        };
+        if (sp.still) show(sp.still);
+        else
+          this.tex(v0.still)
+            .then((t) => {
+              sp.still = t;
+              show(t);
+            })
+            .catch(() => {});
+      });
   }
 
   private playVideo(sp: Spot) {
@@ -964,29 +1120,23 @@ export class ArStage {
       sp.mat.map = vt;
       sp.mat.needsUpdate = true;
       v.addEventListener("playing", () => {
+        // frames are coming: the video, not the still
+        sp.blocked = false;
+        if (sp.mat && sp.mat.map !== vt) {
+          sp.mat.map = vt;
+          sp.mat.needsUpdate = true;
+        }
         if (sp.playT < 0) sp.playT = 0;
       });
     }
     sp.playT = -1;
+    sp.retryT = 0;
     try {
       sp.video.currentTime = 0;
     } catch {
       /* not seekable yet */
     }
-    sp.video.play().catch(() => {
-      /* autoplay refused (low power mode): show the still instead */
-      if (!sp.still)
-        this.tex(v0.still)
-          .then((t) => {
-            sp.still = t;
-            if (sp.mat) {
-              sp.mat.map = t;
-              sp.mat.needsUpdate = true;
-            }
-            sp.playT = 0;
-          })
-          .catch(() => {});
-    });
+    this.tryPlay(sp);
   }
 
   /** A design's place on the page (CSS px). */
@@ -1016,17 +1166,19 @@ export class ArStage {
       const r = this.spotRect(s, k);
       if (!r) continue;
       const keep = this.phase === "alive" && k === this.spotI;
-      let hit: boolean;
+      const m = this.scr.w * (keep ? 0.3 : 0.04);
+      let hit = x > r.x0 - m && x < r.x1 + m && y > r.y0 - m && y < r.y1 + m;
       if (s.spots[k].def.hotspot) {
         // an NFC tag: anywhere in the middle of the screen will do (it sits
-        // low on the keychain, where the phone can't always centre on it)
-        const cx = (r.x0 + r.x1) / 2;
-        const cy = (r.y0 + r.y1) / 2;
+        // low on the keychain, where the phone can't always centre on it).
+        // Once the game is up, the whole board counts too (the rect above).
+        const tag = s.hotspot ? this.toPx(s.hotspot.getWorldPosition(this.tmpV3)) : null;
         const f = keep ? 0.6 : 0.36;
-        hit = Math.abs(cx - x) < this.scr.w * f && Math.abs(cy - y) < this.scr.h * (f + 0.06);
-      } else {
-        const m = this.scr.w * (keep ? 0.3 : 0.04);
-        hit = x > r.x0 - m && x < r.x1 + m && y > r.y0 - m && y < r.y1 + m;
+        const near =
+          !!tag &&
+          Math.abs(tag.x - x) < this.scr.w * f &&
+          Math.abs(tag.y - y) < this.scr.h * (f + 0.06);
+        hit = keep ? hit || near : near;
       }
       if (hit) {
         const a = (r.x1 - r.x0) * (r.y1 - r.y0) * (keep ? 0.6 : 1);
@@ -1064,7 +1216,7 @@ export class ArStage {
       this.spotI = 0;
       this.tourSpot = 0;
       if (s.pop instanceof BoboGame) s.pop.reset();
-      this.ensure(this.cur).then(() => this.ensure((this.cur + 1) % this.slides.length));
+      this.ensure(this.cur).then(() => this.ensureAll());
       this.events.onSlide?.(this.cur);
     }
     if (this.phase === "in") {
@@ -1234,7 +1386,22 @@ export class ArStage {
       // AR: the design's video, on the design, wiping in from the top once it plays
       s.spots.forEach((sp, k) => {
         if (!sp.overlay) return;
-        const on = this.phase === "alive" && k === this.spotI && (R || sp.playT >= 0);
+        const want = this.phase === "alive" && k === this.spotI;
+        const v = sp.video;
+        if (want && v) {
+          // keep it playing (a browser can pause or interrupt it), and push
+          // every frame to the GPU even where the frame callback doesn't fire
+          if (v.paused && !sp.pending && !sp.blocked && this.t >= sp.retryT) {
+            sp.retryT = this.t + 0.4;
+            this.tryPlay(sp);
+          }
+          if (!v.paused && v.readyState >= 2 && sp.videoTex) sp.videoTex.needsUpdate = true;
+        }
+        if (want && sp.blocked !== this.blockedSent) {
+          this.blockedSent = sp.blocked;
+          this.events.onBlocked?.(sp.blocked);
+        }
+        const on = want && (R || sp.playT >= 0);
         if (on && sp.playT >= 0) sp.playT += dt;
         sp.overlay.visible = on;
         if (!on) return;
@@ -1245,7 +1412,7 @@ export class ArStage {
       });
     }
 
-    // --- Bobo's Hideout: rises behind the game, and turns as the phone moves
+    // --- Bobo's Hideout: rises behind the game, then stays put
     for (const o of this.slides) {
       const hub = o.hub;
       if (!hub) continue;
@@ -1260,9 +1427,8 @@ export class ArStage {
       hub.position.copy(at);
       hub.position.y -= (1 - Math.min(1, grow)) * 0.6;
       hub.scale.setScalar(Math.max(1e-3, L.pieceH * this.wpp(Z_BACK) * 0.95 * grow));
-      const lean = clampAbs((this.ph.x - L.piece.x) / Math.max(1, L.stage.w), 0.6);
-      const yaw = -0.55 + lean * 1.5 + (R ? 0 : Math.sin(t * 0.25) * 0.12);
-      hub.rotation.set(0.14, dt === 0 || R ? yaw : damp(hub.rotation.y, yaw, 3, dt), 0);
+      // just the model, standing still: nothing about it follows the phone
+      hub.rotation.set(0.14, -0.55, 0);
     }
 
     // --- pop-outs: out of the piece, onto a board in front of it
@@ -1292,13 +1458,67 @@ export class ArStage {
       p.update(dt, t, live);
     }
 
+    // --- the other pieces, as holograms in the side column: click one to bring it up
+    {
+      const sd = L.side;
+      const n = this.slides.length;
+      const want =
+        sd && (this.phase === "wait" || this.phase === "alive") && this.popGrow < 0.05 ? 1 : 0;
+      this.sideFade = R || dt === 0 ? want : damp(this.sideFade, want, want ? 3 : 8, dt);
+      for (const o of this.slides) if (o.side) o.side.visible = false;
+      const out: (SideRect | null)[] = [];
+      if (sd && this.sideFade > 0.01) {
+        const wz = this.wpp(Z_PIECE);
+        for (let k = 0; k < Math.min(2, n - 1); k++) {
+          const idx = (this.cur + 1 + k) % n;
+          const o = this.slides[idx];
+          const g = o.side;
+          const pt = sd.pts[k];
+          if (!g || !o.loaded) {
+            out.push(null);
+            continue;
+          }
+          g.visible = true;
+          const bw = o.box.max.x - o.box.min.x;
+          const bh = o.box.max.y - o.box.min.y;
+          const hov = this.sideHover === k ? 1 : 0;
+          const sc =
+            Math.min((sd.h * wz) / bh, (sd.w * 0.86 * wz) / bw) *
+            (0.9 + 0.1 * this.sideFade) *
+            (1 + hov * 0.06);
+          g.scale.setScalar(sc);
+          const at = this.toWorld(pt, Z_PIECE, this.tmpV);
+          g.position.set(at.x, at.y + (R ? 0 : Math.sin(t * 0.9 + k * 1.7) * 0.015), Z_PIECE);
+          // a slow turn to and fro (a full spin would show thin pieces edge-on)
+          g.rotation.set(0, R ? -0.3 : Math.sin(t * 0.5 + k * 1.3) * 0.6, 0);
+          out.push({ slide: idx, x: pt.x - sd.w / 2, y: pt.y - sd.h / 2, w: sd.w, h: sd.h });
+        }
+        const u2 = this.sidePost.material.uniforms;
+        u2.uTime.value = R ? 0 : t;
+        u2.uFade.value = this.sideFade;
+        u2.uTintA.value.copy(accentVec(this.slides[(this.cur + 1) % n].def.accent));
+        u2.uTintB.value.copy(accentVec(this.slides[(this.cur + 2) % n].def.accent));
+        u2.uSplit.value = (this.h - (sd.pts[0].y + sd.pts[1].y) / 2) * (this.bufH / this.h);
+        u2.uHover.value.set(this.sideHover === 0 ? 1 : 0, this.sideHover === 1 ? 1 : 0);
+      }
+      if (out.length) {
+        this.sideSent = true;
+        this.events.onSides?.(out);
+      } else if (this.sideSent) {
+        this.sideSent = false;
+        this.events.onSides?.([]);
+      }
+    }
+
     // --- the phone: follows the mouse, the hand, or the tour
     const follow = this.mouseIn && !this.locked && !this.dragging;
     if (follow) {
       // right under the pointer; at the edges it gives a little rather than stopping dead
       const c = this.clampPhone(this.mouse.x, this.mouse.y);
+      const sd = L.side;
+      const pw = L.phoneH * (PH_W / PH_H);
       this.phGoal = {
-        x: c.x + (this.mouse.x - c.x) * 0.45,
+        x: Math.min(sd ? sd.x0 - pw * 0.56 : 1e9, c.x + (this.mouse.x - c.x) * 0.45),
         y: c.y + (this.mouse.y - c.y) * 0.45,
       };
     }
@@ -1473,7 +1693,18 @@ export class ArStage {
     rd.setRenderTarget(null);
     pu.tScene.value = this.rtMain.texture;
     rd.render(this.postScene, this.postCam);
-    // 3. the phone, on top
+    // 3. the other pieces, as holograms, added over the page
+    if (L.side && this.sideFade > 0.01) {
+      this.camera.layers.set(L_SIDE);
+      rd.setRenderTarget(this.rtSide);
+      rd.clear();
+      rd.render(this.scene, this.camera);
+      rd.setRenderTarget(null);
+      rd.autoClear = false;
+      rd.render(this.sideScene, this.postCam);
+      rd.autoClear = true;
+    }
+    // 4. the phone, on top
     rd.autoClear = false;
     rd.clearDepth();
     this.camera.layers.set(L_PHONE);
@@ -1523,7 +1754,9 @@ export class ArStage {
     });
     this.rtMain.dispose();
     this.rtPhone.dispose();
+    this.rtSide.dispose();
     this.post.material.dispose();
+    this.sidePost.material.dispose();
     this.renderer.dispose();
   }
 }
@@ -1531,13 +1764,30 @@ export class ArStage {
 /* =================================================================== pop-outs */
 
 /** A tilted round board: what pop-outs stand on. Unit radius. */
-function board(accent: number) {
+function board(accent: number, plain = false) {
   const g = new THREE.Group();
   const size = 512;
   const cv = document.createElement("canvas");
   cv.width = cv.height = size;
   const x = cv.getContext("2d")!;
   const c = size / 2;
+  if (plain) {
+    const gr = x.createRadialGradient(c, c, 0, c, c, c);
+    gr.addColorStop(0, "rgba(4,5,12,0.42)");
+    gr.addColorStop(0.7, "rgba(4,5,12,0.2)");
+    gr.addColorStop(1, "rgba(4,5,12,0)");
+    x.fillStyle = gr;
+    x.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const disc = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 64),
+      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
+    );
+    disc.rotation.x = -Math.PI / 2;
+    g.add(disc);
+    return g;
+  }
   x.fillStyle = "rgba(8,10,22,0.82)";
   x.beginPath();
   x.arc(c, c, c - 2, 0, Math.PI * 2);
@@ -1611,8 +1861,10 @@ class BoboGame implements Pop {
     private accent: number,
     private onScore: (n: number) => void,
     private onDone: () => void,
+    /** The hideout is the floor: no arena rings, just a soft patch of shadow */
+    plain = false,
   ) {
-    this.boardG = board(accent);
+    this.boardG = board(accent, plain);
     this.boardG.rotation.x = 0.5;
     this.root.add(this.boardG);
     this.shadow = new THREE.Mesh(
@@ -2165,6 +2417,88 @@ function colourMaterial() {
 }
 
 /* =================================================================== helpers */
+
+/**
+ * The side holograms: the colour render of the other pieces, turned into a
+ * scan-lined hologram in their accent (the top one and the bottom one can
+ * differ) and added over the page. Same look as the round-4 hologram.
+ */
+function holoMaterial() {
+  return new THREE.ShaderMaterial({
+    depthTest: false,
+    depthWrite: false,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      tScene: { value: null as THREE.Texture | null },
+      uRes: { value: new THREE.Vector2(1, 1) },
+      uTime: { value: 0 },
+      uDpr: { value: 1 },
+      uFade: { value: 0 },
+      uSplit: { value: 0 },
+      uTintA: { value: BLUE.clone() },
+      uTintB: { value: MAGENTA.clone() },
+      uHover: { value: new THREE.Vector2() },
+    },
+    vertexShader: /* glsl */ `
+      void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      precision highp float;
+      uniform sampler2D tScene;
+      uniform vec2 uRes, uHover;
+      uniform float uTime, uDpr, uFade, uSplit;
+      uniform vec3 uTintA, uTintB;
+      vec3 aces(vec3 x) {
+        const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
+        return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+      }
+      vec4 scene(vec2 px) { return texture2D(tScene, px / uRes); }
+      float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+      void main() {
+        vec2 px = gl_FragCoord.xy;
+        vec4 s = scene(px);
+        float o = 1.25 * uDpr;
+        vec4 n1 = scene(px + vec2(o, 0.0)), n2 = scene(px - vec2(o, 0.0));
+        vec4 n3 = scene(px + vec2(0.0, o)), n4 = scene(px - vec2(0.0, o));
+        float sil = abs(n1.a - n2.a) + abs(n3.a - n4.a);
+        float a = max(clamp(s.a, 0.0, 1.0), sil * 0.5);
+        if (a < 0.002) discard;
+        float L = lum(aces(s.rgb * 1.1));
+        float e = abs(lum(aces(n1.rgb)) - lum(aces(n2.rgb))) + abs(lum(aces(n3.rgb)) - lum(aces(n4.rgb)));
+        bool top = px.y > uSplit;
+        vec3 tint = top ? uTintA : uTintB;
+        float hv = top ? uHover.x : uHover.y;
+        float scan = 0.72 + 0.28 * sin((px.y / uDpr) * 2.1 - uTime * 3.0);
+        float flick = 0.94 + 0.06 * sin(uTime * 13.0 + px.y * 0.01);
+        vec3 holo = tint * (0.14 + pow(L, 0.8) * 0.9 + e * 1.8 + sil * 0.9) * scan * flick;
+        gl_FragColor = vec4(holo * a * uFade * (0.85 + hv * 0.55), 1.0);
+      }
+    `,
+  });
+}
+
+/**
+ * The acrylic keychain, as it really looks: the clear acrylic over the print
+ * barely reflects (it was a white haze over the artwork), and the print itself
+ * is matte, so the artwork shows at full quality.
+ */
+function calmAcrylic(m: THREE.MeshPhysicalMaterial) {
+  const n = m.name ?? "";
+  if (/^Acrylic_Clear/.test(n)) {
+    m.opacity = Math.min(m.opacity, 0.05);
+    m.envMapIntensity = 0.15;
+    if ("specularIntensity" in m) m.specularIntensity = 0.25;
+    m.roughness = Math.max(m.roughness, 0.25);
+    m.depthWrite = false;
+  } else if (/^Acrylic_Polished_Edge/.test(n)) {
+    m.envMapIntensity = 0.45;
+    if ("clearcoat" in m) m.clearcoat = Math.min(m.clearcoat, 0.3);
+  } else if (/^Charm_.*_Print/.test(n)) {
+    m.roughness = 0.75;
+    m.envMapIntensity = 0.3;
+  }
+}
 
 function setLayer(o: THREE.Object3D, layer: number) {
   o.traverse((c) => c.layers.set(layer));

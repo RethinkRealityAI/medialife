@@ -114,6 +114,13 @@ joystick, reward card).
   pointer off the phone picks it up again. Touch: drag the phone, or tap where it should
   go; swipe sideways to change piece. The Scan button in the tab bar points the phone at
   the next design.
+- The other pieces stand in a column on the right as scan-lined holograms (blue or
+  magenta, like the side pieces on `/activated-merch/`); click one to bring it up. Wide
+  layouts only; the tabs do the same everywhere. The phone never covers that column.
+- Videos: the stage keeps calling `play()` while a design is live (a quick move off and
+  back interrupts it), pushes every frame to the GPU, and plays with reduced motion too
+  (the visitor brought it alive). If the browser refuses autoplay, the still shows with a
+  "Click to play" hint and the next click or tap plays it.
 - A piece can hold several designs ("spots"). Print has two: the ONE PIECE x Den of Geek
   poster and a Sakamoto Days sticker; each has its own video and button.
 - Each design's button is styled after its own print (`.ar-cta--<theme>` in
@@ -122,11 +129,14 @@ joystick, reward card).
   (yellow, Claim).
 - Nobody touching it: the phone glides over each design, plays it, then the tour moves
   on. Any mouse over the stage, drag, tap or joystick input pauses the tour.
+- The acrylic keychain is toned down in code (`calmAcrylic`): the clear acrylic over
+  the print barely reflects and the print is matte, so the artwork reads cleanly.
 - Game (the EVADE Bobo keychain): a pulsing NFC hotspot on the keychain, labelled "NFC
   enabled · Tap here to activate" (Dapo's wording; `hotspot` in `hero-slides.ts`). Phone
   over it: the keychain makes way for Bobo's Hideout (`public/home/ar/hub-lite.glb`, the
-  Collector Hub room run through gltf-transform: meshopt, 512 px WebP, simplified, about
-  0.9 MB; it turns as the phone moves), Bobo and 3 cola cans pop out, and the phone shows
+  Collector Hub room without the portal, steps, spawn-pad rings, orbiting cans, fizz and
+  its own Bobo, run through gltf-transform: meshopt, 512 px WebP, simplified, about
+  0.6 MB; it stands still), Bobo and 3 cola cans pop out onto a plain shadow (no arena rings), and the phone shows
   the game's own UI: the EVADE Cola Run logo (`public/home/ar/cola-run-logo.webp`), the
   score and Activated by MEDIALIFE. The joystick (or arrow keys / WASD) steers Bobo, cans
   disappear when collected, and after 3 a "Digital reward unlocked" card with Claim
