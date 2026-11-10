@@ -518,3 +518,175 @@
     animation: none;
   }
 }
+
+/* The button on the hero's phone, styled after each design's own print (the
+   same construction as /activated-merch/'s Buy now). */
+.ar-cta {
+  --cta-ink: #f6f0e6;
+  --cta-accent: #19afff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.62em 1.1em 0.62em 0.75em;
+  border-radius: 14px;
+  border: 2px solid var(--cta-ink);
+  background: linear-gradient(160deg, #26262c, #08080a 70%);
+  box-shadow:
+    0 0 0 3px var(--cta-accent),
+    0 10px 28px rgba(0, 0, 0, 0.55);
+  color: var(--cta-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-decoration: none;
+  rotate: -2deg;
+}
+.ar-cta::after {
+  /* a light sweep across the gloss */
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: ar-cta-shine 3.2s 0.9s infinite;
+  pointer-events: none;
+}
+@keyframes ar-cta-shine {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.ar-cta__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+}
+.ar-cta__mark svg {
+  width: 100%;
+  height: 100%;
+}
+.ar-cta__txt {
+  display: grid;
+  gap: 0.3em;
+  line-height: 1;
+  min-width: 0;
+}
+.ar-cta small {
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-cta strong {
+  font-family: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800;
+  font-size: 1.45em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--cta-accent);
+}
+.ar-cta b {
+  font-size: 1.25em;
+  transition: transform 0.25s;
+}
+.ar-cta:hover b,
+.ar-cta:focus-visible b {
+  transform: translateX(4px);
+}
+.ar-cta:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+/* Trainwreck: the sunset through the train window, with a ticket. */
+.ar-cta--trainwreck {
+  border-color: #2a1a14;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, #8cc0ea 0%, #f6c98d 46%, #e9773a 78%, #9a4a2c 100%);
+  box-shadow:
+    0 0 0 3px #f6f0e6,
+    0 0 0 5px #2a1a14,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(233, 119, 58, 0.45);
+  color: #2a1a14;
+}
+.ar-cta--trainwreck strong {
+  color: #2a1a14;
+  text-shadow: 1px 1px 0 #fbf0dc;
+}
+.ar-cta--trainwreck .ar-cta__mark svg {
+  fill: #fbf0dc;
+  stroke: #2a1a14;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+/* ONE PIECE x Den of Geek: the poster's cream paper and red masthead, inked. */
+.ar-cta--onepiece {
+  border-color: #141414;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 45%), #f1e7d2;
+  box-shadow:
+    0 0 0 3px #d8322b,
+    0 0 0 5px #141414,
+    0 10px 28px rgba(0, 0, 0, 0.55);
+  color: #141414;
+}
+.ar-cta--onepiece strong {
+  color: #d8322b;
+  text-shadow: 1px 1px 0 #141414;
+}
+/* Sakamoto Days: the sticker's crimson panels, black ink and white specs. */
+.ar-cta--sakamoto {
+  border-color: #0b0b0b;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(160deg, #c22a4c, #7c1430 75%);
+  box-shadow:
+    0 0 0 3px #f4eef0,
+    0 0 0 5px #0b0b0b,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(194, 42, 76, 0.45);
+  color: #f4eef0;
+}
+.ar-cta--sakamoto strong {
+  color: #f4eef0;
+  text-shadow:
+    1px 1px 0 #0b0b0b,
+    -1px 1px 0 #0b0b0b;
+}
+/* EVADE: can yellow and black. */
+.ar-cta--evade {
+  border-color: #0b0b0b;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 45%), #ffd21f;
+  box-shadow:
+    0 0 0 3px #0b0b0b,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(255, 210, 31, 0.35);
+  color: #0b0b0b;
+}
+.ar-cta--evade strong {
+  color: #0b0b0b;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar-cta::after {
+    animation: none;
+  }
+}

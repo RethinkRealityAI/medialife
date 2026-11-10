@@ -96,17 +96,32 @@ to `public/sitemap.xml`** — the sitemap is static and does not generate itself
 
 The hero simulates pointing a real phone at a product (image-target AR, like
 `/activated-merch/`). Code: `src/components/home/ar-stage.ts` (plain three.js, lazy
-loaded), `hero-slides.ts` (the pieces) and `Hero.tsx` (copy, tabs, and the DOM layer
-laid over the phone's screen: drag handle, hints, the piece's button, joystick, reward card).
+loaded), `hero-slides.ts` (the pieces, their designs and buttons) and `Hero.tsx` (copy,
+tabs, and the DOM layer laid over the phone's screen: hints, the design's button,
+joystick, reward card).
 
-- The visitor drags the phone (or taps where it should go, or presses the Scan button
-  in the tab bar). A piece only comes alive while the phone is over it; move it away and
-  the experience stops.
-- Nobody touching it: the phone glides over the piece by itself, plays it, then the tour
-  moves on. Any drag, tap or joystick input pauses the tour for 10 s.
-- Apparel and Print play the design's AR video on the phone. Game (the EVADE charms):
-  Bobo and 3 cola cans pop out, the joystick on the phone steers Bobo, cans disappear when
-  collected, and after 3 a "Digital reward unlocked" card with Claim (links to `/evade/`).
+- Pass-through: the phone's screen is a window onto the same scene in colour, drawn from
+  the page's own camera and sampled at the screen's own pixels, so the real tee or poster
+  lines up exactly with its hologram around the phone. A design's AR video plays on the
+  piece itself (on the cloth for garments) and is only visible through the phone.
+- Mouse: the phone follows the pointer over the stage (the cursor is hidden while it
+  does). When a design comes alive the phone holds still so its button (or the joystick)
+  can be clicked; moving the pointer off the phone picks it up again. Touch: drag the
+  phone, or tap where it should go; swipe sideways to change piece. The Scan button in the
+  tab bar points the phone at the next design.
+- A piece can hold several designs ("spots"). Print has two: the ONE PIECE x Den of Geek
+  poster and a Sakamoto Days sticker; each has its own video and button.
+- Each design's button is styled after its own print (`.ar-cta--<theme>` in
+  `src/styles.css`): Trainwreck (sunset ticket, Buy now, Shopify), ONE PIECE (poster
+  cream and red, case study), Sakamoto Days (crimson and black, case study), EVADE
+  (yellow, Claim).
+- Nobody touching it: the phone glides over each design, plays it, then the tour moves
+  on. Any mouse over the stage, drag, tap or joystick input pauses the tour.
+- Game (the EVADE charms): Bobo and 3 cola cans pop out, the joystick on the phone (or
+  the arrow keys / WASD) steers Bobo, cans disappear when collected, and after 3 a
+  "Digital reward unlocked" card with Claim (links to `/evade/`).
+- Videos: `public/home/ar/one-piece.mp4` and `sakamoto.mp4` are H.264, CRF 31, no audio,
+  faststart (about 0.8 MB and 0.6 MB). Re-encode new ones the same way.
 - Reduced motion: no tour and no video (stills); the phone moves only when the visitor
   moves it, and snaps instead of gliding.
 - Debug: `?debug` exposes `window.__ar`, `?fast` speeds up the clock (headless capture),
