@@ -22,6 +22,8 @@ export function Hero() {
   const screenRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
+  const ctaRef = useRef<HTMLAnchorElement>(null);
+  const hotRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<ArStage | null>(null);
   const dragId = useRef<number | null>(null);
   const [ready, setReady] = useState(false);
@@ -35,6 +37,7 @@ export function Hero() {
   const [scrW, setScrW] = useState(180);
   const [touch, setTouch] = useState(false);
   const [spot, setSpot] = useState(0);
+  const [steered, setSteered] = useState(false);
   const slide = HERO_SLIDES[index];
   const cta = (slide.spots[spot] ?? slide.spots[0]).cta;
   const magenta = slide.accent === "magenta";
@@ -51,7 +54,14 @@ export function Hero() {
     let ro: ResizeObserver | null = null;
     let unlisten = () => {};
     let lastW = 0;
-    const start = Number(new URLSearchParams(location.search).get("slide") ?? 0) || 0;
+    const start = Math.max(
+      0,
+      Math.min(
+        HERO_SLIDES.length - 1,
+        Number(new URLSearchParams(location.search).get("slide") ?? 0) || 0,
+      ),
+    );
+    setIndex(start);
 
     import("./ar-stage")
       .then(({ ArStage }) => {
@@ -67,6 +77,21 @@ export function Hero() {
               setReward(false);
             },
             onSpot: (k) => setSpot(k),
+            // a click on a live design (mouse): its button
+            onActivate: () => ctaRef.current?.click(),
+            onHotspot: (h) => {
+              const el = hotRef.current;
+              if (!el) return;
+              if (!h) {
+                el.style.opacity = "0";
+                return;
+              }
+              const w = canvasRef.current?.clientWidth ?? 0;
+              el.dataset.flip = h.x + h.r + 220 > w ? "1" : "";
+              el.style.setProperty("--r", `${h.r}px`);
+              el.style.transform = `translate3d(${h.x}px, ${h.y}px, 0)`;
+              el.style.opacity = h.covered ? "0" : "1";
+            },
             onTrack: (t) => setTrack(t),
             onScore: (n) => setScore(n),
             onReward: () => setReward(true),
@@ -139,6 +164,7 @@ export function Hero() {
 
   const onStick = useCallback((x: number, y: number, active: boolean) => {
     stageRef.current?.setStick(x, y, active);
+    if (active) setSteered(true);
   }, []);
 
   /** A pointer position, relative to the canvas. */
@@ -160,6 +186,8 @@ export function Hero() {
       : track === "search" && !held
         ? `${touch ? "Drag" : "Move"} the phone over ${slide.aim}`
         : null;
+  // "Activated by MEDIALIFE", top right of the phone, once it's on a design
+  const badge = (track === "lock" || alive) && !(game && alive);
 
   return (
     <section
@@ -185,6 +213,34 @@ export function Hero() {
         aria-hidden
         className={`absolute inset-0 h-full w-full touch-pan-y transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
       />
+
+      {/* The NFC hotspot's label, beside the tag on the piece (ar-stage.ts draws the tag). */}
+      {slide.spots.some((x) => x.hotspot) && (
+        <div
+          ref={hotRef}
+          aria-hidden
+          className="nfc-label pointer-events-none absolute left-0 top-0 z-[5] transition-opacity duration-300"
+          style={{ opacity: 0 }}
+        >
+          {slide.spots.map(
+            (x) =>
+              x.hotspot && (
+                <div
+                  key={x.aim}
+                  className="nfc-label__box lg-chip rounded-2xl px-3 py-2 text-white"
+                >
+                  <span className="mono flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.2em] text-white/70">
+                    <span className={`h-1.5 w-1.5 rounded-full ${accentBg} animate-pulse-glow`} />
+                    {x.hotspot.label}
+                  </span>
+                  <strong className="mt-0.5 block whitespace-nowrap text-[14px] font-semibold leading-tight">
+                    {x.hotspot.sub}
+                  </strong>
+                </div>
+              ),
+          )}
+        </div>
+      )}
 
       {/* The phone's screen: drag it to point the phone. It also holds the
           phone's own UI, like a real AR experience would. */}
@@ -228,43 +284,83 @@ export function Hero() {
           </p>
         )}
 
-        {/* the design's own button, once it's alive */}
+        {/* "Activated by MEDIALIFE", once the phone is on a design */}
+        <img
+          src="/activated-merch/media/ar/activated-by.webp"
+          alt=""
+          width={360}
+          height={142}
+          className={`pointer-events-none absolute right-[7%] top-[6.5%] w-[30%] drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] transition-opacity duration-500 ${badge ? "opacity-95" : "opacity-0"}`}
+        />
+
+        {/* the design's own button, once it's alive. With a mouse the phone
+            follows the pointer, so a click anywhere on the live design opens it
+            (ar-stage.ts onActivate); the button itself is just what to click. */}
         {!game && (
           <div
             className={`absolute inset-x-0 bottom-[7%] flex justify-center transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.2,1.4,0.35,1)] ${alive ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-[40%] opacity-0"}`}
           >
             <ArCta
               key={cta.theme}
+              ref={ctaRef}
               cta={cta}
               tabIndex={alive ? 0 : -1}
               onPointerDown={stopDrag}
-              className="pointer-events-auto"
+              className={touch ? "pointer-events-auto" : "pointer-events-none"}
               style={{ maxWidth: Math.max(scrW * 0.94, 150), fontSize: `${Math.max(10, fs)}px` }}
             />
           </div>
         )}
 
-        {/* the game: score up top, the stick at the bottom */}
+        {/* the game, like the real thing: its title up top with the score,
+            "Activated by MEDIALIFE" at the bottom, the stick between */}
+        {game && alive && (
+          <div className="pointer-events-none absolute inset-0 animate-fade-in">
+            <div className="absolute inset-x-0 top-0 h-[30%] rounded-t-[inherit] bg-gradient-to-b from-black/60 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 h-[34%] bg-gradient-to-t from-black/60 to-transparent" />
+            <img
+              src="/home/ar/cola-run-logo.webp"
+              alt="EVADE Cola Run"
+              width={480}
+              height={216}
+              className="absolute left-1/2 top-[8%] w-[56%] -translate-x-1/2 drop-shadow-[0_3px_8px_rgba(0,0,0,0.6)]"
+            />
+            {!reward && (
+              <p
+                className="absolute left-1/2 top-[22.5%] -translate-x-1/2 whitespace-nowrap rounded-full border border-[#ffd21f]/50 bg-black/65 px-[0.9em] py-[0.35em] font-semibold text-[#ffd21f] tabular-nums"
+                aria-live="polite"
+              >
+                Cans {score}/{CANS}
+              </p>
+            )}
+            <img
+              src="/activated-merch/media/ar/activated-by.webp"
+              alt="Activated by MEDIALIFE"
+              width={360}
+              height={142}
+              className="absolute bottom-[3.2%] left-1/2 w-[26%] -translate-x-1/2 opacity-90"
+            />
+          </div>
+        )}
         {game && alive && !reward && (
-          <>
-            <p
-              className="pointer-events-none absolute left-1/2 top-[11%] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-[0.9em] py-[0.4em] font-semibold text-white backdrop-blur-sm tabular-nums"
-              aria-live="polite"
-            >
-              Cans {score}/{CANS}
-            </p>
-            <div
-              className="pointer-events-auto absolute bottom-[5%] left-1/2 -translate-x-1/2"
-              onPointerDown={stopDrag}
-            >
+          <div
+            className="pointer-events-auto absolute bottom-[10%] left-1/2 flex -translate-x-1/2 flex-col items-center"
+            onPointerDown={stopDrag}
+          >
+            {!steered && (
+              <span className="mb-[0.6em] whitespace-nowrap rounded-full bg-black/65 px-[0.8em] py-[0.3em] text-[0.9em] font-medium text-white">
+                {touch ? "Drag to move Bobo" : "Drag the stick to move Bobo"}
+              </span>
+            )}
+            <span className={`relative rounded-full ${steered ? "" : "stick-pulse"}`}>
               <Joystick
                 onMove={onStick}
                 accent={magenta ? "accent" : "primary"}
                 size={stick}
                 globalKeys
               />
-            </div>
-          </>
+            </span>
+          </div>
         )}
 
         {/* the reward */}
@@ -438,7 +534,7 @@ export function Hero() {
                 : alive && !game
                   ? touch
                     ? "Tap the button on the phone, or drag it to another design"
-                    : "Click the button on the phone, or move off it to pick it up"
+                    : `Click to ${cta.label.toLowerCase()}, or move to another design`
                   : `${touch ? "Drag" : "Move"} the phone over ${slide.aim} to bring it alive`}
             </p>
           )}
@@ -489,11 +585,7 @@ function CtaMark({ theme }: { theme: HeroCta["theme"] }) {
 }
 
 /** A design's button: styled after its own print (.ar-cta in styles.css). */
-function ArCta({
-  cta,
-  className = "",
-  ...rest
-}: { cta: HeroCta } & React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+function ArCta({ cta, className = "", ...rest }: { cta: HeroCta } & React.ComponentProps<"a">) {
   return (
     <a
       href={cta.href}

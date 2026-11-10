@@ -11,8 +11,10 @@
  * between them.
  *
  * - Video spots: the design's own AR animation plays on it.
- * - "bobo": Bobo and the cola cans pop out of the EVADE charms. The joystick on
- *   the phone steers Bobo; three cans, then a "Digital reward unlocked" card.
+ * - "bobo": the EVADE Bobo keychain shows an NFC hotspot; the phone over it
+ *   starts EVADE Cola Run: Bobo and the cola cans pop out, with Bobo's Hideout
+ *   (a lightweight copy of the Collector Hub room) behind. The joystick on the
+ *   phone steers Bobo; three cans, then a "Digital reward unlocked" card.
  * - "display": a mini EVADE retail fixture pops out of the sign. Not in the hero
  *   for now: see RETAIL_SLIDE below and the README ("Homepage hero").
  *
@@ -63,6 +65,11 @@ export type HeroSpot = {
   cta: HeroCta;
   video?: HeroVideo;
   card?: HeroCard;
+  /**
+   * An NFC hotspot on the piece: the phone has to be over it to start. u, v:
+   * where on the piece (0..1 from its left / top).
+   */
+  hotspot?: { u: number; v: number; label: string; sub: string };
 };
 
 export type HeroSlide = {
@@ -80,7 +87,15 @@ export type HeroSlide = {
   spots: HeroSpot[];
   /** Something that pops out of the piece into the room */
   pop?:
-    { kind: "bobo"; bobo: string; anims: string; can: string } | { kind: "display"; src: string };
+    | {
+        kind: "bobo";
+        bobo: string;
+        anims: string;
+        can: string;
+        /** Bobo's Hideout, behind the game (a lightweight copy of the Collector Hub room) */
+        hub?: string;
+      }
+    | { kind: "display"; src: string };
 };
 
 export const HERO_SLIDES: HeroSlide[] = [
@@ -166,15 +181,16 @@ export const HERO_SLIDES: HeroSlide[] = [
   {
     key: "game",
     tab: "Game",
-    aim: "the charms",
+    aim: "the NFC tag",
     accent: "blue",
     describe:
-      "The EVADE Bobo charms: point the phone at them and Bobo pops out. Collect three cans to unlock a digital reward.",
+      "The EVADE Bobo keychain: point the phone at its NFC tag and the EVADE Cola Run game pops out, with Bobo's Hideout behind it. Collect three cans to unlock a digital reward.",
     target: { kind: "glb", src: "/activated-merch/models/evade-charms.glb" },
     spots: [
       {
-        aim: "the charms",
+        aim: "the NFC tag",
         cta: { sub: "EVADE × Bobo", label: "Claim", href: "/evade/", theme: "evade" },
+        hotspot: { u: 0.39, v: 0.8, label: "NFC enabled", sub: "Tap here to activate" },
       },
     ],
     pop: {
@@ -182,6 +198,7 @@ export const HERO_SLIDES: HeroSlide[] = [
       bobo: "/roblox/activated-retail/models/catbobo.glb",
       anims: "/roblox/activated-retail/models/catrun.glb",
       can: "/roblox/activated-retail/models/cola.glb",
+      hub: "/home/ar/hub-lite.glb",
     },
   },
 ];

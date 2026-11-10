@@ -48,10 +48,14 @@ export type ArEvents = {
   onSpot?: (spot: number) => void;
   /** Each frame: the phone's screen on the page (CSS px centre and size, roll). */
   onPhone?: (r: PhoneRect) => void;
+  /** Mouse click on a live design: open its button (the spot's CTA). */
+  onActivate?: (spot: number) => void;
   /** The phone follows the mouse (true), or holds still on a live design (false). */
   onFollow?: (following: boolean) => void;
   /** On resize: the stage area (CSS px, relative to the canvas). */
   onLayout?: (r: { x: number; y: number; w: number; h: number }) => void;
+  /** Each frame while it shows: the NFC hotspot on the page (CSS px), and whether the phone covers it. */
+  onHotspot?: (h: { x: number; y: number; r: number; covered: boolean } | null) => void;
   /** Bobo collected a can (0 when the game resets). */
   onScore?: (n: number) => void;
   /** All the cans are collected: the digital reward unlocks. */
@@ -154,6 +158,10 @@ type Slide = {
   clip: THREE.Plane;
   spots: Spot[];
   pop: Pop | null;
+  /** The NFC hotspot, if the piece has one */
+  hotspot: THREE.Group | null;
+  /** What stands behind a pop-out (Bobo's Hideout) */
+  hub: THREE.Group | null;
 };
 
 type Px = { x: number; y: number };
@@ -223,6 +231,10 @@ export class ArStage {
   private popT = 0;
   private popGrow = 0;
   private popOffT = 9;
+  /** The game: how long the mouse-held phone has been still (it settles after a moment) */
+  private settleT = 0;
+  private clothU = { uClothT: { value: 0 } };
+  private hotSent = false;
   private tint = BLUE.clone();
   private readyFired = false;
   private introT = 0;
@@ -247,6 +259,7 @@ export class ArStage {
   /** The phone holds still on a live design (until the mouse leaves it) */
   private locked = false;
   private following: boolean | null = null;
+  private cursor = "";
   /** The phone's screen on the page, last frame */
   private scr: PhoneRect = { x: 0, y: 0, w: 0, h: 0, angle: 0 };
   private tap: { x: number; y: number; id: number; touch: boolean } | null = null;
@@ -297,7 +310,7 @@ export class ArStage {
       type: THREE.HalfFloatType,
       samples: this.mobile ? 2 : 4,
     });
-    this.post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), holoMaterial());
+    this.post = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), colourMaterial());
     this.postScene.add(this.post);
 
     this.screenMat = screenMaterial(this.rtPhone.texture);
@@ -349,6 +362,8 @@ export class ArStage {
           playT: -1,
         })),
         pop: null,
+        hotspot: null,
+        hub: null,
       };
     });
     this.cur = this.next = Math.max(0, Math.min(defs.length - 1, opts.start ?? 0));
@@ -561,6 +576,8 @@ export class ArStage {
           );
           cloth.add(mesh);
           this.addOverlay(sp, mesh, mat);
+          // the cloth moves a little, as if worn in a breeze; the video moves with it
+          clothWave(cloth, [cloth.material as THREE.Material, mat], this.clothU);
         } else if (sp) sp.bracket = fitted;
       } else {
         // printed cards, one per design, laid out as a little composition
@@ -606,6 +623,23 @@ export class ArStage {
       s.group.updateMatrixWorld(true);
       s.box.setFromObject(s.inner);
 
+      // an NFC hotspot on the piece: point the phone at it to start
+      s.spots.forEach((sp) => {
+        const h = sp.def.hotspot;
+        if (!h) return;
+        const hs = hotspot(accentHex(def.accent));
+        hs.position.set(
+          lerp(s.box.min.x, s.box.max.x, h.u),
+          lerp(s.box.max.y, s.box.min.y, h.v),
+          s.box.max.z + 0.01,
+        );
+        hs.scale.setScalar((s.box.max.y - s.box.min.y) * 0.075);
+        setLayer(hs, L_PIECE);
+        s.inner.add(hs);
+        sp.bracket = hs.getObjectByName("target") ?? hs;
+        s.hotspot = hs;
+      });
+
       // what pops out
       const pop = def.pop;
       if (pop?.kind === "bobo") {
@@ -627,6 +661,20 @@ export class ArStage {
               !this.disposed && game.setModels(b, [...a.animations, ...b.animations], c),
           )
           .catch((e) => console.warn("[ar] bobo", e));
+        // Bobo's Hideout, behind the game
+        if (pop.hub)
+          this.gltf(pop.hub)
+            .then((g) => {
+              if (this.disposed) return;
+              const room = fit(g.scene, 1);
+              const hub = new THREE.Group();
+              hub.add(room);
+              hub.visible = false;
+              setLayer(hub, L_POP);
+              this.scene.add(hub);
+              s.hub = hub;
+            })
+            .catch((e) => console.warn("[ar] hub", e));
       } else if (pop?.kind === "display") {
         const d = new DisplayPop(accentHex(def.accent));
         s.pop = d;
@@ -650,6 +698,11 @@ export class ArStage {
       side: THREE.DoubleSide,
       clippingPlanes: [s.clip, sp.reveal],
       toneMapped: false,
+      // always over the print it sits on: no fighting the cloth or the card for depth
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -8,
     });
     if (this.reduced && sp.def.video)
       this.tex(sp.def.video.still)
@@ -663,6 +716,7 @@ export class ArStage {
   }
   private addOverlay(sp: Spot, mesh: THREE.Mesh, mat: THREE.MeshBasicMaterial) {
     mesh.visible = false;
+    mesh.renderOrder = 5;
     sp.overlay = mesh;
     sp.mat = mat;
     sp.bracket = mesh;
@@ -815,10 +869,19 @@ export class ArStage {
   private onDown = (e: PointerEvent) => {
     this.tap = { x: e.clientX, y: e.clientY, id: e.pointerId, touch: e.pointerType !== "mouse" };
   };
+  /** A live design with a button, under the mouse-held phone: a click opens it. */
+  private clickable() {
+    return this.phase === "alive" && !this.slides[this.cur].def.pop && this.following === true;
+  }
   private onUp = (e: PointerEvent) => {
     const s = this.tap;
     this.tap = null;
-    if (!s || s.id !== e.pointerId || !s.touch) return;
+    if (!s || s.id !== e.pointerId) return;
+    if (!s.touch) {
+      if (Math.hypot(e.clientX - s.x, e.clientY - s.y) < 8 && this.clickable())
+        this.events.onActivate?.(this.spotI);
+      return;
+    }
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
     if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) {
@@ -861,8 +924,9 @@ export class ArStage {
     this.firstGuide = false;
     // the tour carries on from the design the visitor is on
     this.tourSpot = this.spotI;
-    // with the mouse, the phone holds still on a live design
-    if (this.mouseIn) this.locked = true;
+    // the game: the phone settles so the joystick can be used (the cursor
+    // shows again); anything else keeps following the mouse, smoothly
+    if (this.mouseOver && s.def.pop?.kind === "bobo") this.locked = true;
     const sp = s.spots[this.spotI];
     if (sp?.def.video && !this.reduced) this.playVideo(sp);
   }
@@ -888,6 +952,11 @@ export class ArStage {
       v.crossOrigin = "anonymous";
       v.setAttribute("playsinline", "");
       v.setAttribute("muted", "");
+      v.setAttribute("aria-hidden", "true");
+      // in the document (invisible): some browsers throttle videos that aren't
+      v.style.cssText =
+        "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1";
+      document.body.appendChild(v);
       sp.video = v;
       const vt = new THREE.VideoTexture(v);
       vt.colorSpace = THREE.SRGBColorSpace;
@@ -947,8 +1016,19 @@ export class ArStage {
       const r = this.spotRect(s, k);
       if (!r) continue;
       const keep = this.phase === "alive" && k === this.spotI;
-      const m = this.scr.w * (keep ? 0.3 : 0.04);
-      if (x > r.x0 - m && x < r.x1 + m && y > r.y0 - m && y < r.y1 + m) {
+      let hit: boolean;
+      if (s.spots[k].def.hotspot) {
+        // an NFC tag: anywhere in the middle of the screen will do (it sits
+        // low on the keychain, where the phone can't always centre on it)
+        const cx = (r.x0 + r.x1) / 2;
+        const cy = (r.y0 + r.y1) / 2;
+        const f = keep ? 0.6 : 0.36;
+        hit = Math.abs(cx - x) < this.scr.w * f && Math.abs(cy - y) < this.scr.h * (f + 0.06);
+      } else {
+        const m = this.scr.w * (keep ? 0.3 : 0.04);
+        hit = x > r.x0 - m && x < r.x1 + m && y > r.y0 - m && y < r.y1 + m;
+      }
+      if (hit) {
         const a = (r.x1 - r.x0) * (r.y1 - r.y0) * (keep ? 0.6 : 1);
         if (a < bestA) {
           bestA = a;
@@ -1085,6 +1165,18 @@ export class ArStage {
     const popE = ease(this.popAmt);
     if (this.phase === "alive") this.popT += dt;
 
+    // the game, mouse in hand: once the phone is held still for a moment it
+    // settles, the cursor shows, and the joystick on it can be used
+    const game = s.def.pop?.kind === "bobo";
+    if (game && this.phase === "alive" && this.mouseIn && !this.locked && !this.dragging) {
+      const still = Math.hypot(this.phVel.x, this.phVel.y) < 90;
+      this.settleT = still ? this.settleT + dt : 0;
+      if (this.settleT > 0.45) this.locked = true;
+    } else this.settleT = 0;
+
+    // the cloth breathes
+    if (!R) this.clothU.uClothT.value = t;
+
     // --- intro: the phone rises into place
     this.introT += dt;
     const intro = R ? 1 : ease(clamp01((this.introT - 0.15) / 1.1));
@@ -1119,7 +1211,8 @@ export class ArStage {
         lerp(base.y, back.y, popE) + bob,
         pz,
       );
-      const scale = sz * lerp(1, 0.5, popE);
+      // with a hideout behind the game, the piece makes way for it entirely
+      const scale = sz * lerp(1, s.def.pop?.kind === "bobo" && s.def.pop.hub ? 0.001 : 0.5, popE);
       g.scale.setScalar(scale);
       // a gentle sway (less while a video plays, so it reads like a real print)
       const still = this.phase === "alive" ? 0.45 : 1;
@@ -1152,6 +1245,26 @@ export class ArStage {
       });
     }
 
+    // --- Bobo's Hideout: rises behind the game, and turns as the phone moves
+    for (const o of this.slides) {
+      const hub = o.hub;
+      if (!hub) continue;
+      const grow = o === s ? this.popGrow : 0;
+      hub.visible = grow > 0.001;
+      if (!hub.visible) continue;
+      const at = this.toWorld(
+        { x: L.piece.x + L.stage.w * 0.06, y: L.piece.y - L.stage.h * 0.02 },
+        Z_BACK,
+        this.tmpV,
+      );
+      hub.position.copy(at);
+      hub.position.y -= (1 - Math.min(1, grow)) * 0.6;
+      hub.scale.setScalar(Math.max(1e-3, L.pieceH * this.wpp(Z_BACK) * 0.95 * grow));
+      const lean = clampAbs((this.ph.x - L.piece.x) / Math.max(1, L.stage.w), 0.6);
+      const yaw = -0.55 + lean * 1.5 + (R ? 0 : Math.sin(t * 0.25) * 0.12);
+      hub.rotation.set(0.14, dt === 0 || R ? yaw : damp(hub.rotation.y, yaw, 3, dt), 0);
+    }
+
     // --- pop-outs: out of the piece, onto a board in front of it
     for (const o of this.slides) {
       const p = o.pop;
@@ -1181,17 +1294,29 @@ export class ArStage {
 
     // --- the phone: follows the mouse, the hand, or the tour
     const follow = this.mouseIn && !this.locked && !this.dragging;
-    if (follow) this.phGoal = this.clampPhone(this.mouse.x, this.mouse.y);
+    if (follow) {
+      // right under the pointer; at the edges it gives a little rather than stopping dead
+      const c = this.clampPhone(this.mouse.x, this.mouse.y);
+      this.phGoal = {
+        x: c.x + (this.mouse.x - c.x) * 0.45,
+        y: c.y + (this.mouse.y - c.y) * 0.45,
+      };
+    }
     if (follow !== this.following) {
       this.following = follow;
-      this.canvas.style.cursor = follow ? "none" : "";
       this.events.onFollow?.(follow);
+    }
+    // the phone is the cursor; over a live design it's a hand: click to open its button
+    const cur = follow ? (this.clickable() ? "pointer" : "none") : "";
+    if (cur !== this.cursor) {
+      this.cursor = cur;
+      this.canvas.style.cursor = cur;
     }
     if (dt === 0 || R) {
       this.ph = { ...this.phGoal };
       this.phVel = { x: 0, y: 0 };
     } else {
-      const k = this.dragging ? 30 : follow ? 16 : this.guiding ? 3.6 : 9;
+      const k = this.dragging ? 30 : follow ? 26 : this.guiding ? 3.6 : 9;
       const nx = damp(this.ph.x, this.phGoal.x, k, dt);
       const ny = damp(this.ph.y, this.phGoal.y, k, dt);
       this.phVel.x = damp(this.phVel.x, (nx - this.ph.x) / dt, 12, dt);
@@ -1235,6 +1360,38 @@ export class ArStage {
       };
       this.scr = sr;
       this.events.onPhone?.(sr);
+    }
+
+    // the NFC hotspot: pulses until the phone brings the piece alive
+    {
+      const hs = s.hotspot;
+      const show =
+        !!hs && s.loaded && (this.phase === "wait" || (this.phase === "in" && build > 0.9));
+      if (hs) {
+        hs.visible = this.phase !== "alive" && this.popGrow < 0.05;
+        const ring = hs.getObjectByName("pulse") as THREE.Mesh | undefined;
+        if (ring) {
+          const k = R ? 0.5 : (t * 0.9) % 1;
+          ring.scale.setScalar(1 + k * 1.6);
+          (ring.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.9;
+        }
+      }
+      if (show && hs) {
+        hs.getWorldPosition(this.tmpV);
+        const c = this.toPx(this.tmpV);
+        const r0 = this.spotRect(s, 0);
+        const r = r0 ? (r0.x1 - r0.x0) / 2 : 12;
+        const S2 = this.scr;
+        const covered =
+          c.x > S2.x - S2.w / 2 - 230 &&
+          c.x < S2.x + S2.w / 2 + 10 &&
+          Math.abs(c.y - S2.y) < S2.h / 2 + 20;
+        this.events.onHotspot?.({ x: c.x, y: c.y, r, covered });
+        this.hotSent = true;
+      } else if (this.hotSent) {
+        this.hotSent = false;
+        this.events.onHotspot?.(null);
+      }
     }
 
     // brackets, in page px (y up, as the shader sees them): searching inside
@@ -1281,8 +1438,6 @@ export class ArStage {
 
     // --- hologram tint
     const pu = this.post.material.uniforms;
-    pu.uTint.value.copy(this.tint);
-    pu.uTime.value = R ? 0 : t;
 
     // --- draw
     const rd = this.renderer;
@@ -1309,19 +1464,19 @@ export class ArStage {
         rd.render(this.scene, this.camera);
       }
     }
-    // 2. the hologram
+    // 2. the page view: the same world (without the AR), in colour
     this.camera.layers.set(L_PIECE);
+    this.camera.layers.enable(L_POP);
     rd.setRenderTarget(this.rtMain);
     rd.clear();
     rd.render(this.scene, this.camera);
     rd.setRenderTarget(null);
     pu.tScene.value = this.rtMain.texture;
     rd.render(this.postScene, this.postCam);
-    // 3. the phone and what popped out, in colour, on top
+    // 3. the phone, on top
     rd.autoClear = false;
     rd.clearDepth();
-    this.camera.layers.set(L_POP);
-    this.camera.layers.enable(L_PHONE);
+    this.camera.layers.set(L_PHONE);
     rd.render(this.scene, this.camera);
     rd.autoClear = true;
 
@@ -1348,6 +1503,7 @@ export class ArStage {
           sp.video.pause();
           sp.video.removeAttribute("src");
           sp.video.load();
+          sp.video.remove();
         }
         sp.videoTex?.dispose();
         sp.still?.dispose();
@@ -1804,11 +1960,7 @@ function screenMaterial(feed: THREE.Texture) {
       uniform vec3 uAccent;
       varying vec2 vUv;
 
-      const vec3 BG = vec3(0.034, 0.038, 0.062);
-      vec3 aces(vec3 x) {
-        const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
-        return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
-      }
+      ${LOOK}
       float sdBox(vec2 p, vec2 b, float r) {
         vec2 q = abs(p) - b + r;
         return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
@@ -1822,14 +1974,11 @@ function screenMaterial(feed: THREE.Texture) {
       void main() {
         vec2 P = gl_FragCoord.xy / uDpr;
         vec4 f = texture2D(tFeed, gl_FragCoord.xy / uRes);
-        // the room, as the camera sees it: the same grid as around the phone
-        vec2 g = mod(P, 6.0);
-        float line = step(g.x, 1.0) + step(g.y, 1.0);
-        vec3 room = BG + vec3(0.04, 0.045, 0.075) * min(line, 1.0);
-        vec3 col = mix(room, pow(aces(f.rgb * 1.15), vec3(1.0 / 2.2)), clamp(f.a, 0.0, 1.0));
-        // a light camera vignette
+        // exactly what is behind the phone (same look as the page), plus the AR
+        vec3 col = look(f, P);
+        // a faint camera vignette, so it still reads as a screen
         vec2 c = vUv - 0.5;
-        col *= 1.0 - 0.22 * pow(length(c * vec2(1.0, 0.8)) * 1.4, 2.4);
+        col *= 1.0 - 0.12 * pow(length(c * vec2(1.0, 0.8)) * 1.4, 2.4);
 
         // AR brackets: searching (a pulsing frame), then locking onto the design
         float pulse = 6.0 * sin(uTime * 4.0);
@@ -1866,18 +2015,137 @@ function screenMaterial(feed: THREE.Texture) {
   });
 }
 
-/* =================================================================== hologram */
+/* =================================================================== hotspot + cloth */
 
-function holoMaterial() {
+/** An NFC hotspot: a glowing disc with a ring that pulses out. Unit radius. */
+function hotspot(accent: number) {
+  const g = new THREE.Group();
+  const col = new THREE.Color(accent);
+  const mat = (o: number) =>
+    new THREE.MeshBasicMaterial({
+      color: col.clone().multiplyScalar(1.6),
+      transparent: true,
+      opacity: o,
+      depthWrite: false,
+      depthTest: false,
+      toneMapped: false,
+    });
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.42, 48), mat(0.9));
+  const core = new THREE.Mesh(
+    new THREE.CircleGeometry(0.2, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, toneMapped: false }),
+  );
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.72, 64), mat(0.95));
+  const pulse = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.7, 64), mat(0.8));
+  pulse.name = "pulse";
+  // what the phone has to be over: a little wider than the disc
+  const target = new THREE.Mesh(
+    new THREE.PlaneGeometry(2.4, 2.4),
+    new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }),
+  );
+  target.name = "target";
+  for (const [m, o] of [
+    [target, 0],
+    [disc, 1],
+    [ring, 2],
+    [pulse, 3],
+    [core, 4],
+  ] as const) {
+    m.renderOrder = 20 + o;
+    g.add(m);
+  }
+  return g;
+}
+
+/**
+ * A gentle breeze on a garment, in the cloth's own space, applied the same way
+ * to the cloth and to the AR video laid on it, so the video stays glued to the print.
+ */
+function clothWave(cloth: THREE.Mesh, mats: THREE.Material[], u: { uClothT: { value: number } }) {
+  const geo = cloth.geometry;
+  geo.computeBoundingBox();
+  const bb = geo.boundingBox!;
+  const w = bb.max.x - bb.min.x;
+  const h = bb.max.y - bb.min.y;
+  const uniforms = {
+    ...u,
+    uClothY: { value: new THREE.Vector2(bb.min.y, bb.max.y) },
+    uClothK: { value: new THREE.Vector2((Math.PI * 2 * 1.1) / w, (Math.PI * 2 * 0.8) / h) },
+    uClothA: { value: h * 0.012 },
+  };
+  for (const m of mats) {
+    m.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, uniforms);
+      sh.vertexShader = sh.vertexShader
+        .replace(
+          "#include <common>",
+          `#include <common>
+          uniform float uClothT, uClothA;
+          uniform vec2 uClothY, uClothK;`,
+        )
+        .replace(
+          "#include <begin_vertex>",
+          `#include <begin_vertex>
+          {
+            float hem = clamp((uClothY.y - position.y) / (uClothY.y - uClothY.x), 0.0, 1.0);
+            float wv = sin(position.x * uClothK.x + uClothT * 1.6) * 0.6
+              + sin(position.y * uClothK.y - uClothT * 1.15 + position.x * uClothK.x * 0.4) * 0.4;
+            transformed.z += uClothA * wv * (0.25 + hem * hem);
+          }`,
+        );
+    };
+    m.customProgramCacheKey = () => "clothwave";
+    m.needsUpdate = true;
+  }
+}
+
+/* =================================================================== the look */
+
+/**
+ * How the scene reaches the page, shared by the page view and the phone's
+ * screen so they match to the pixel: the dark room with its fine grid, and a
+ * product-friendly tone curve (Khronos PBR Neutral: prints and videos keep
+ * their true colours, only highlights roll off).
+ */
+const LOOK = /* glsl */ `
+  const vec3 BG = vec3(0.020, 0.024, 0.047);
+  vec3 room(vec2 P) {
+    vec2 g = mod(P, 6.0);
+    float line = step(g.x, 1.0) + step(g.y, 1.0);
+    return BG + vec3(0.028, 0.032, 0.056) * min(line, 1.0);
+  }
+  vec3 neutral(vec3 c) {
+    const float start = 0.76;
+    const float desat = 0.15;
+    float x = min(c.r, min(c.g, c.b));
+    float off = x < 0.08 ? x - 6.25 * x * x : 0.04;
+    c -= off;
+    float peak = max(c.r, max(c.g, c.b));
+    if (peak < start) return c;
+    const float d = 1.0 - start;
+    float np = 1.0 - d * d / (peak + d - start);
+    c *= np / peak;
+    float g = 1.0 - 1.0 / (desat * (peak - np) + 1.0);
+    return mix(c, vec3(np), g);
+  }
+  vec3 toSrgb(vec3 c) {
+    c = clamp(c, 0.0, 1.0);
+    return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+  }
+  vec3 look(vec4 s, vec2 P) {
+    return mix(room(P), toSrgb(neutral(s.rgb)), clamp(s.a, 0.0, 1.0));
+  }
+`;
+
+/** The page view: the scene in colour over the room. */
+function colourMaterial() {
   return new THREE.ShaderMaterial({
     depthTest: false,
     depthWrite: false,
     uniforms: {
       tScene: { value: null as THREE.Texture | null },
       uRes: { value: new THREE.Vector2(1, 1) },
-      uTime: { value: 0 },
       uDpr: { value: 1 },
-      uTint: { value: BLUE.clone() },
     },
     vertexShader: /* glsl */ `
       void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
@@ -1886,37 +2154,11 @@ function holoMaterial() {
       precision highp float;
       uniform sampler2D tScene;
       uniform vec2 uRes;
-      uniform float uTime, uDpr;
-      uniform vec3 uTint;
-
-      const vec3 BG = vec3(0.020, 0.024, 0.047);
-      vec3 aces(vec3 x) {
-        const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
-        return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
-      }
-      vec3 room(vec2 px) {
-        vec2 g = mod(px / uDpr, 6.0);
-        float line = step(g.x, 1.0) + step(g.y, 1.0);
-        return BG + vec3(0.035, 0.04, 0.07) * min(line, 1.0);
-      }
-      vec4 scene(vec2 px) { return texture2D(tScene, px / uRes); }
-      float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
-
+      uniform float uDpr;
+      ${LOOK}
       void main() {
-        vec2 px = gl_FragCoord.xy;
-        vec4 s = scene(px);
-        vec3 lit = aces(s.rgb * 1.1);
-        float L = lum(lit);
-        float o = 1.25 * uDpr;
-        vec4 n1 = scene(px + vec2(o, 0.0)), n2 = scene(px - vec2(o, 0.0));
-        vec4 n3 = scene(px + vec2(0.0, o)), n4 = scene(px - vec2(0.0, o));
-        float e = abs(lum(aces(n1.rgb)) - lum(aces(n2.rgb))) + abs(lum(aces(n3.rgb)) - lum(aces(n4.rgb)));
-        float sil = abs(n1.a - n2.a) + abs(n3.a - n4.a);
-        float scan = 0.72 + 0.28 * sin((px.y / uDpr) * 2.1 - uTime * 3.0);
-        vec3 holo = uTint * (0.14 + pow(L, 0.8) * 0.9 + e * 1.8 + sil * 0.9) * scan;
-        float flick = 0.94 + 0.06 * sin(uTime * 13.0 + px.y * 0.01);
-        vec3 col = mix(room(px), room(px) + holo * flick, clamp(s.a, 0.0, 1.0));
-        gl_FragColor = vec4(col, 1.0);
+        vec4 s = texture2D(tScene, gl_FragCoord.xy / uRes);
+        gl_FragColor = vec4(look(s, gl_FragCoord.xy / uDpr), 1.0);
       }
     `,
   });

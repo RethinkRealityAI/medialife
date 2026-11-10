@@ -513,8 +513,45 @@
     transform: none;
   }
 }
+/* Hero: the game's screen UI fades in */
+.animate-fade-in {
+  animation: hero-fade-in 0.5s ease-out both;
+}
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Hero: the joystick pulses until it's first used, so mouse users find it */
+.stick-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 0 rgba(255, 210, 31, 0.75);
+  animation: stick-pulse 1.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes stick-pulse {
+  to {
+    box-shadow: 0 0 0 16px rgba(255, 210, 31, 0);
+  }
+}
+/* Hero: the NFC hotspot's label sits beside the tag (flips left near the edge) */
+.nfc-label__box {
+  position: absolute;
+  top: 0;
+  left: calc(var(--r, 12px) + 12px);
+  transform: translateY(-50%);
+}
+.nfc-label[data-flip="1"] .nfc-label__box {
+  left: auto;
+  right: calc(var(--r, 12px) + 12px);
+}
 @media (prefers-reduced-motion: reduce) {
-  .reward-pop {
+  .reward-pop,
+  .animate-fade-in,
+  .stick-pulse::after {
     animation: none;
   }
 }
@@ -586,7 +623,7 @@
 .ar-cta small {
   font-family: var(--font-mono);
   font-size: 0.72em;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;

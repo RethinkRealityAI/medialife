@@ -22,10 +22,10 @@ npm run build
 
 Nitro's `netlify` preset emits:
 
-| Artifact | Path |
-| --- | --- |
-| Static assets (publish dir) | `dist/` |
-| SSR function | `.netlify/functions-internal/server/` |
+| Artifact                    | Path                                  |
+| --------------------------- | ------------------------------------- |
+| Static assets (publish dir) | `dist/`                               |
+| SSR function                | `.netlify/functions-internal/server/` |
 
 `NITRO_PRESET=netlify` is pinned in `netlify.toml`. Without it the Lovable Vite
 config defaults Nitro to the **Cloudflare** target and the deploy silently produces
@@ -100,15 +100,20 @@ loaded), `hero-slides.ts` (the pieces, their designs and buttons) and `Hero.tsx`
 tabs, and the DOM layer laid over the phone's screen: hints, the design's button,
 joystick, reward card).
 
-- Pass-through: the phone's screen is a window onto the same scene in colour, drawn from
-  the page's own camera and sampled at the screen's own pixels, so the real tee or poster
-  lines up exactly with its hologram around the phone. A design's AR video plays on the
-  piece itself (on the cloth for garments) and is only visible through the phone.
-- Mouse: the phone follows the pointer over the stage (the cursor is hidden while it
-  does). When a design comes alive the phone holds still so its button (or the joystick)
-  can be clicked; moving the pointer off the phone picks it up again. Touch: drag the
-  phone, or tap where it should go; swipe sideways to change piece. The Scan button in the
-  tab bar points the phone at the next design.
+- Pass-through: the pieces are shown as the real products in full colour (no hologram),
+  and the phone's screen is a window onto the same scene, drawn from the page's own camera
+  and sampled at the screen's own pixels, so it lines up exactly with the piece around the
+  phone. Page and screen share one look (`LOOK` in `ar-stage.ts`: PBR Neutral tone
+  mapping). A design's AR video plays on the piece itself (on the cloth for garments,
+  which gently moves) and is only visible through the phone. "Activated by MEDIALIFE"
+  shows at the top right of the phone while it is on a design.
+- Mouse: the phone follows the pointer smoothly over the stage and never sticks; over a
+  live design the cursor becomes a hand and a click anywhere opens that design's button
+  (`onActivate`). In the game the phone settles once the pointer holds still, the cursor
+  shows again and the joystick pulses with a "Drag the stick" hint until used; moving the
+  pointer off the phone picks it up again. Touch: drag the phone, or tap where it should
+  go; swipe sideways to change piece. The Scan button in the tab bar points the phone at
+  the next design.
 - A piece can hold several designs ("spots"). Print has two: the ONE PIECE x Den of Geek
   poster and a Sakamoto Days sticker; each has its own video and button.
 - Each design's button is styled after its own print (`.ar-cta--<theme>` in
@@ -117,9 +122,15 @@ joystick, reward card).
   (yellow, Claim).
 - Nobody touching it: the phone glides over each design, plays it, then the tour moves
   on. Any mouse over the stage, drag, tap or joystick input pauses the tour.
-- Game (the EVADE charms): Bobo and 3 cola cans pop out, the joystick on the phone (or
-  the arrow keys / WASD) steers Bobo, cans disappear when collected, and after 3 a
-  "Digital reward unlocked" card with Claim (links to `/evade/`).
+- Game (the EVADE Bobo keychain): a pulsing NFC hotspot on the keychain, labelled "NFC
+  enabled · Tap here to activate" (Dapo's wording; `hotspot` in `hero-slides.ts`). Phone
+  over it: the keychain makes way for Bobo's Hideout (`public/home/ar/hub-lite.glb`, the
+  Collector Hub room run through gltf-transform: meshopt, 512 px WebP, simplified, about
+  0.9 MB; it turns as the phone moves), Bobo and 3 cola cans pop out, and the phone shows
+  the game's own UI: the EVADE Cola Run logo (`public/home/ar/cola-run-logo.webp`), the
+  score and Activated by MEDIALIFE. The joystick (or arrow keys / WASD) steers Bobo, cans
+  disappear when collected, and after 3 a "Digital reward unlocked" card with Claim
+  (links to `/evade/`).
 - Videos: `public/home/ar/one-piece.mp4` and `sakamoto.mp4` are H.264, CRF 31, no audio,
   faststart (about 0.8 MB and 0.6 MB). Re-encode new ones the same way.
 - Reduced motion: no tour and no video (stills); the phone moves only when the visitor
@@ -156,14 +167,14 @@ deliberately **not** linked from the site or the sitemap: each card carries a
 `Disallow` line in `robots.txt`. They are reached by scanning the printed or
 on-screen QR code.
 
-| Path | What it is |
-| --- | --- |
-| `team/<slug>.json` | Member data — the single source of truth |
-| `team/<slug>/` | Source images (`portrait.webp`, `avatar.jpg`) |
-| `scripts/build-cards.mjs` | Generator (QR codes, vCard, page, host config) |
-| `scripts/templates/card.html` | Page template |
-| `public/card/` | Shared `card.css`, `card.js`, brand assets (served at `/card/`) |
-| `public/<slug>/` | Generated output — committed, deployed as-is |
+| Path                          | What it is                                                      |
+| ----------------------------- | --------------------------------------------------------------- |
+| `team/<slug>.json`            | Member data — the single source of truth                        |
+| `team/<slug>/`                | Source images (`portrait.webp`, `avatar.jpg`)                   |
+| `scripts/build-cards.mjs`     | Generator (QR codes, vCard, page, host config)                  |
+| `scripts/templates/card.html` | Page template                                                   |
+| `public/card/`                | Shared `card.css`, `card.js`, brand assets (served at `/card/`) |
+| `public/<slug>/`              | Generated output — committed, deployed as-is                    |
 
 ### Adding a team member
 
@@ -543,15 +554,15 @@ experience it unlocks, its triggers (QR, NFC, activation link) and launch collat
 the orders and earnings it brings in. Built for general creators; the Roblox portal under
 `/roblox/portal` stays as it is.
 
-| URL | What it is |
-| --- | --- |
-| `/creator-hub` | Public landing page (in the sitemap). `?invite=<code>` carries an agency invite through to sign-up |
-| `/creator-hub/join`, `/sign-in`, `/forgot-password`, `/reset-password`, `/verify-email`, `/terms` | Accounts |
-| `/creator-hub/onboarding` | The application (intake): profile, channels, Discord and contacts, products, review |
-| `/creator-hub/dashboard`, `/products`, `/products/:id`, `/artwork`, `/experiences`, `/launch-kit`, `/earnings`, `/account` | The creator dashboard |
-| `/admin/creators`, `/admin/creators/:id` | The team side: applications, terms, products and stages, proofs, experiences, files, orders, payouts, invite links |
-| `/creator-hub/live`, `/overlay/<token>` | Live Drop: the stream overlay and its setup page (below) |
-| `/go/<code>` | The activation link a product's QR encodes and its NFC tag opens. Counts the scan, then redirects to the experience |
+| URL                                                                                                                        | What it is                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `/creator-hub`                                                                                                             | Public landing page (in the sitemap). `?invite=<code>` carries an agency invite through to sign-up                  |
+| `/creator-hub/join`, `/sign-in`, `/forgot-password`, `/reset-password`, `/verify-email`, `/terms`                          | Accounts                                                                                                            |
+| `/creator-hub/onboarding`                                                                                                  | The application (intake): profile, channels, Discord and contacts, products, review                                 |
+| `/creator-hub/dashboard`, `/products`, `/products/:id`, `/artwork`, `/experiences`, `/launch-kit`, `/earnings`, `/account` | The creator dashboard                                                                                               |
+| `/admin/creators`, `/admin/creators/:id`                                                                                   | The team side: applications, terms, products and stages, proofs, experiences, files, orders, payouts, invite links  |
+| `/creator-hub/live`, `/overlay/<token>`                                                                                    | Live Drop: the stream overlay and its setup page (below)                                                            |
+| `/go/<code>`                                                                                                               | The activation link a product's QR encodes and its NFC tag opens. Counts the scan, then redirects to the experience |
 
 Everything under `/creator-hub/` except the landing page, and `/go/`, is `noindex`
 (`src/server.ts`, `public/robots.txt`).
@@ -610,15 +621,15 @@ checked by magic bytes, and served with `nosniff` and a sandbox CSP.
 
 ### Configuration (Netlify env vars)
 
-| Variable | Needed for |
-| --- | --- |
-| `HUB_SESSION_SECRET` | Signing creator sessions (≥16 chars; falls back to `AR_SESSION_SECRET`). **Production refuses sign-in without one.** |
-| `RESEND_API_KEY`, `HUB_EMAIL_FROM` | Verification, password-reset and notification emails. Verify the sender domain in Resend. Without it, previews and localhost show the link on screen instead; production tells the creator to contact support |
-| `HUB_TEAM_EMAIL` | Where new applications and proof decisions are announced |
-| `SHOPIFY_WEBHOOK_SECRET` | The Shopify order webhook (below) |
-| `HUB_INGEST_KEY` | `POST /api/hub/orders` for other channels (≥24 chars) |
-| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | "Continue with Discord". Register `<origin>/api/hub/auth/discord/callback` as a redirect URL for each environment |
-| `AR_ADMIN_PASSWORD` | The existing shared password for `/admin`, which now includes Creators |
+| Variable                                     | Needed for                                                                                                                                                                                                    |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `HUB_SESSION_SECRET`                         | Signing creator sessions (≥16 chars; falls back to `AR_SESSION_SECRET`). **Production refuses sign-in without one.**                                                                                          |
+| `RESEND_API_KEY`, `HUB_EMAIL_FROM`           | Verification, password-reset and notification emails. Verify the sender domain in Resend. Without it, previews and localhost show the link on screen instead; production tells the creator to contact support |
+| `HUB_TEAM_EMAIL`                             | Where new applications and proof decisions are announced                                                                                                                                                      |
+| `SHOPIFY_WEBHOOK_SECRET`                     | The Shopify order webhook (below)                                                                                                                                                                             |
+| `HUB_INGEST_KEY`                             | `POST /api/hub/orders` for other channels (≥24 chars)                                                                                                                                                         |
+| `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET` | "Continue with Discord". Register `<origin>/api/hub/auth/discord/callback` as a redirect URL for each environment                                                                                             |
+| `AR_ADMIN_PASSWORD`                          | The existing shared password for `/admin`, which now includes Creators                                                                                                                                        |
 
 ### Shopify
 
@@ -703,8 +714,8 @@ a 1080p web export.
   notes, rights), filters (client, collection, purpose, visibility, AI-generated,
   orientation, tags), sort, grid or list. Multi-select (shift-click for a range) gives bulk
   tag add/remove, move (client / collection), public / private, AI flag and delete (with a
-  confirm). The detail drawer has the preview, every field, *Copy URL*, *Copy embed* and
-  *Download*. 3D previews use the vendored three.js viewer (`/hub-viewer/`); USDZ is
+  confirm). The detail drawer has the preview, every field, _Copy URL_, _Copy embed_ and
+  _Download_. 3D previews use the vendored three.js viewer (`/hub-viewer/`); USDZ is
   download-only.
 - **Private by default.** Private files are served from `/api/media/files/<id>`, which needs
   the admin session or the API token. Switching **Public** on gives a stable, cacheable,
@@ -726,11 +737,11 @@ Tests: `npm run test:media` (also part of `npm run test:hub`).
 
 ### Configuration (Netlify env vars)
 
-| Variable | What it does |
-| --- | --- |
-| `AR_ADMIN_PASSWORD` | The `/admin` password; the session cookie covers the whole library. |
-| `MEDIA_API_TOKEN` | Read-only bearer token for agents, 24+ random characters (`openssl rand -hex 24`). Unset means only a signed-in admin can read the catalogue. It can never upload, edit or delete: writes answer 403. |
-| `MEDIA_STORAGE` | `blobs` (default). `r2` is reserved for the future adapter. |
+| Variable            | What it does                                                                                                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AR_ADMIN_PASSWORD` | The `/admin` password; the session cookie covers the whole library.                                                                                                                                   |
+| `MEDIA_API_TOKEN`   | Read-only bearer token for agents, 24+ random characters (`openssl rand -hex 24`). Unset means only a signed-in admin can read the catalogue. It can never upload, edit or delete: writes answer 403. |
+| `MEDIA_STORAGE`     | `blobs` (default). `r2` is reserved for the future adapter.                                                                                                                                           |
 
 ### Querying it from an agent
 
@@ -748,18 +759,18 @@ bearer token they answer 401.
 
 Both take the same filters:
 
-| Param | Meaning |
-| --- | --- |
-| `q` | Words, all of which must appear (title, file name, tags, description, client, collection, notes, rights). |
-| `tags` | A comma list (or repeat `tag=`). Every tag must be on the file. |
-| `type` | `video`, `image`, `audio`, `model` (or `3d`), `document` (or `pdf`), `archive` (or `zip`), `font`, `data`, or a MIME type. |
-| `client` / `property` | Exact client or property, case-insensitive. |
-| `collection` | Exact collection, case-insensitive. |
-| `purpose` | `marketing`, `gameplay`, `product-shot`, `logo-brand`, `ugc`, `3d-model`, `audio`, `doc`, `other`. |
-| `public` / `ai` | `true` or `false`. |
-| `orientation` | `landscape`, `portrait` or `square`. |
-| `sort` | `relevance`, `new`, `old`, `updated`, `title`, `size`, `duration`. |
-| `limit` / `offset` | Paging: 500 a page by default, up to 5000. |
+| Param                 | Meaning                                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `q`                   | Words, all of which must appear (title, file name, tags, description, client, collection, notes, rights).                  |
+| `tags`                | A comma list (or repeat `tag=`). Every tag must be on the file.                                                            |
+| `type`                | `video`, `image`, `audio`, `model` (or `3d`), `document` (or `pdf`), `archive` (or `zip`), `font`, `data`, or a MIME type. |
+| `client` / `property` | Exact client or property, case-insensitive.                                                                                |
+| `collection`          | Exact collection, case-insensitive.                                                                                        |
+| `purpose`             | `marketing`, `gameplay`, `product-shot`, `logo-brand`, `ugc`, `3d-model`, `audio`, `doc`, `other`.                         |
+| `public` / `ai`       | `true` or `false`.                                                                                                         |
+| `orientation`         | `landscape`, `portrait` or `square`.                                                                                       |
+| `sort`                | `relevance`, `new`, `old`, `updated`, `title`, `size`, `duration`.                                                         |
+| `limit` / `offset`    | Paging: 500 a page by default, up to 5000.                                                                                 |
 
 ```sh
 # Every EVADE gameplay video, as JSON
@@ -823,8 +834,8 @@ only: it doesn't add a pin (a real keychain scan does).
 
 **Where the pins come from.** Any Media Library video or image that has a location, the
 **Public** link on and **Show on the globe** switched on. Set all three in the file drawer
-(*Where was this?*: city search, optional venue, date seen). The library filter *Where is
-Bobo?* lists what's on the globe, tagged, or untagged. Unpublishing a file takes it off the
+(_Where was this?_: city search, optional venue, date seen). The library filter _Where is
+Bobo?_ lists what's on the globe, tagged, or untagged. Unpublishing a file takes it off the
 globe within a minute or so (the feed's CDN cache).
 
 **3D stack.** Vanilla three.js (the vendored r180 under `/roblox/creators/vendor/three/`),
@@ -844,13 +855,13 @@ geo lookup, preview sample), `src/routes/api.bobo.*`, the drawer section in
 
 Everything the game sends shows up on the next feed refresh (the page polls every 45 s).
 
-| Endpoint | Who | What |
-| --- | --- | --- |
-| `GET /api/bobo/feed.json` | Anyone (CORS `*`) | Places with their media, the journey order, recent events, totals. Cached 15 s in browsers, 60 s at the edge. |
-| `POST /api/bobo/events` | Game server (bearer token) or the game in a browser (allowed `Origin`) | One event `{type, …}` or `{events: [...]}` (max 50). |
-| `POST /api/media/uploads` + chunks + `complete` | Game server (bearer token) | A player capture (video or image) into the Media Library. |
-| `GET /api/bobo/places?q=` | Admin or bearer token | City search (the drawer's picker). |
-| `GET /api/bobo/near` | The page | The visitor's approximate city for "Bring Bobo to me" (never cached or stored). |
+| Endpoint                                        | Who                                                                    | What                                                                                                          |
+| ----------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `GET /api/bobo/feed.json`                       | Anyone (CORS `*`)                                                      | Places with their media, the journey order, recent events, totals. Cached 15 s in browsers, 60 s at the edge. |
+| `POST /api/bobo/events`                         | Game server (bearer token) or the game in a browser (allowed `Origin`) | One event `{type, …}` or `{events: [...]}` (max 50).                                                          |
+| `POST /api/media/uploads` + chunks + `complete` | Game server (bearer token)                                             | A player capture (video or image) into the Media Library.                                                     |
+| `GET /api/bobo/places?q=`                       | Admin or bearer token                                                  | City search (the drawer's picker).                                                                            |
+| `GET /api/bobo/near`                            | The page                                                               | The visitor's approximate city for "Bring Bobo to me" (never cached or stored).                               |
 
 Event fields: `type` (`scan`, `play`, `reward`, `sighting`, `share`, `capture`, `custom`),
 `at` (ISO or ms, clamped to the last 7 days), `lat`/`lng` or `city`+`countryCode`,
@@ -869,8 +880,8 @@ Captures: `POST /api/media/uploads` with the bearer token and `{name, size, mime
 location: {lat, lng, place?, seenAt?}, source, title?, description?}`, then `PUT` each
 chunk to `/api/media/uploads/<id>/chunks/<n>` (`chunkSize` from the reply) and `POST
 /api/media/uploads/<id>/complete`. Ingested files are images or videos ≤ 512 MB, land
-**private** in collection *Where is Bobo · AR captures* tagged `AR capture`, `Needs review`,
-with *Show on the globe* already on: one Public switch in the drawer after review puts them
+**private** in collection _Where is Bobo · AR captures_ tagged `AR capture`, `Needs review`,
+with _Show on the globe_ already on: one Public switch in the drawer after review puts them
 live. The token can only touch uploads it started, for 24 hours.
 
 ### Clips straight from the game (record button)
@@ -883,8 +894,8 @@ token, with tighter rules: videos and images only, 80 MB max, 8 uploads per
 visitor per 10 minutes, city from the visitor's IP (or coordinates rounded to
 ~5 km), title and description only (everything else is fixed), and a one-time
 `captureKey` from init that every later call for that upload must send as
-`x-capture-key`. Clips land private and *Needs review* like token captures,
-plus a *Web capture* tag. `BOBO_WEB_CAPTURES=off` turns this path off.
+`x-capture-key`. Clips land private and _Needs review_ like token captures,
+plus a _Web capture_ tag. `BOBO_WEB_CAPTURES=off` turns this path off.
 Code: `src/lib/bobo/captures.server.ts`.
 
 On the globe a clip shows straight away as an **In review** pin at its city
@@ -895,17 +906,17 @@ player watch their own clip there through `GET /api/bobo/clips/<id>?k=…`
 (JSON, `as=file`, `as=poster`; 30 days). New clips beam in on every open
 globe within ~15 s: the page polls, and the feed's CDN copy (tag `bobo-feed`)
 is purged when a clip lands or the team changes globe media. The media
-drawer's **Approve for the globe** makes it public (and removes *Needs
-review*); **Keep it off the globe** hides the pin.
+drawer's **Approve for the globe** makes it public (and removes _Needs
+review_); **Keep it off the globe** hides the pin.
 
 ### Configuration (Netlify env vars)
 
-| Variable | What it does |
-| --- | --- |
-| `BOBO_INGEST_TOKEN` | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures. |
+| Variable              | What it does                                                                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BOBO_INGEST_TOKEN`   | Bearer token for the AR game's server, 24+ random characters (`openssl rand -hex 24`). Unset: only allowed browser origins can post events, and nothing can upload captures.                                        |
 | `BOBO_INGEST_ORIGINS` | Comma list of browser origins allowed to post events (and upload record-button clips) without the token. Default: `https://evade.medialife.ai,https://medialife.ai`. Add the published AR experience's origin here. |
-| `BOBO_WEB_CAPTURES` | `off` stops browsers uploading clips (events still work). Default: on. |
-| `BOBO_CAPTURE_REVIEW` | `off` publishes game clips straight to the globe without review (tagged *Auto-published*). For a supervised event or demo only; players are often under 18. Default: on. |
+| `BOBO_WEB_CAPTURES`   | `off` stops browsers uploading clips (events still work). Default: on.                                                                                                                                              |
+| `BOBO_CAPTURE_REVIEW` | `off` publishes game clips straight to the globe without review (tagged _Auto-published_). For a supervised event or demo only; players are often under 18. Default: on.                                            |
 
 Preview and dev deploys can load sample sightings (made-up places, using the other
 committed Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production refuses it.
