@@ -657,7 +657,7 @@ export class ARView {
 
     // The animation: scans on at the lock, then plays.
     const m = this.sheet.material.uniforms;
-    m.uReveal.value = this.reduced ? (ph.reveal > 0 ? 1 : 0) : easeOut(ph.reveal);
+    m.uReveal.value = easeOut(ph.reveal);
     m.uTime.value = t;
     const v = this.video;
     if (ph.reveal > 0 && p < 0.995) {
@@ -669,7 +669,7 @@ export class ARView {
     const pu = this.petals?.material.uniforms;
     if (pu) {
       pu.uT.value = t;
-      pu.uA.value = this.reduced ? 0 : seg(p, 0.52, 0.6) * (1 - ph.out * 0.6);
+      pu.uA.value = seg(p, 0.52, 0.6) * (1 - ph.out * 0.6) * (this.reduced ? 0.6 : 1);
       pu.uH.value = H * cam.zoom * (rect.h / H) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)));
     }
 
