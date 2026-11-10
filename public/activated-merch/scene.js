@@ -84,14 +84,10 @@ export class Stage {
     this.clock = new THREE.Clock();
     this.t = 0;
     this.raycaster = new THREE.Raycaster();
-<<<<<<< HEAD
     // Reduced motion (Android turns this on with battery saver or "Remove
     // animations") keeps the brand moments in a calmer form rather than
     // dropping them: the intro still materialises, just without the swirl.
     this.introDone = false;
-=======
-    this.introDone = this.reduced;
->>>>>>> origin/claude/project-thread-l5qzrs
     this.lensWorld = new THREE.Vector3();
 
     this._lights();
@@ -184,12 +180,7 @@ export class Stage {
     const slot = await this.ensure(i);
     // The first piece arrives solid through the particle intro.
     slot.g.uniforms.uHolo.value = 0;
-<<<<<<< HEAD
     this._intro(slot);
-=======
-    if (this.reduced) slot.g.uniforms.uFade.value = 1;
-    else this._intro(slot);
->>>>>>> origin/claude/project-thread-l5qzrs
     // The rest load one at a time, nearest first, never while you are dragging,
     // so the page stays responsive on phones.
     const order = [1, -1, 2, -2, 3, -3].map((d) => i + d);
@@ -200,21 +191,14 @@ export class Stage {
         .catch(() => {})
         .then(() => setTimeout(next, 250));
     };
-<<<<<<< HEAD
     setTimeout(next, 1600);
-=======
-    setTimeout(next, this.reduced ? 0 : 1600);
->>>>>>> origin/claude/project-thread-l5qzrs
     return slot;
   }
 
   /* ---------------------------------------------------- materialise */
   _intro(slot) {
     const g = slot.g;
-<<<<<<< HEAD
     const calm = this.reduced;
-=======
->>>>>>> origin/claude/project-thread-l5qzrs
     const count = this.mobile ? 6000 : 12000;
     const { P, C } = g.samplePoints(count);
     const start = new Float32Array(count * 3);
@@ -223,7 +207,6 @@ export class Stage {
     const bb = g.bounds;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
-<<<<<<< HEAD
       if (calm) {
         // Calm: dust settles onto the piece from just around it.
         const r = 0.12 + Math.random() * 0.3;
@@ -236,12 +219,6 @@ export class Stage {
         start[i * 3 + 1] = (Math.random() - 0.5) * 3.2 + Math.sin(a) * 0.4;
         start[i * 3 + 2] = Math.sin(a) * r * 0.7;
       }
-=======
-      const r = 1.6 + Math.random() * 2.2;
-      start[i * 3] = Math.cos(a) * r;
-      start[i * 3 + 1] = (Math.random() - 0.5) * 3.2 + Math.sin(a) * 0.4;
-      start[i * 3 + 2] = Math.sin(a) * r * 0.7;
->>>>>>> origin/claude/project-thread-l5qzrs
       const yT = (bb.max.y - P[i * 3 + 1]) / (bb.max.y - bb.min.y);
       delay[i] = yT * 0.45 + Math.random() * 0.35;
       rnd[i] = Math.random();
@@ -261,34 +238,20 @@ export class Stage {
         uRevealY: { value: 99 },
         uSize: { value: this.mobile ? 12 : 14 },
         uPR: { value: this.renderer.getPixelRatio() },
-<<<<<<< HEAD
         uSwirl: { value: calm ? 0 : 1 },
       },
       vertexShader: /* glsl */ `
         attribute vec3 aStart; attribute vec3 aColor; attribute float aDelay; attribute float aRnd;
         uniform float uT, uRevealY, uSize, uPR, uSwirl;
-=======
-      },
-      vertexShader: /* glsl */ `
-        attribute vec3 aStart; attribute vec3 aColor; attribute float aDelay; attribute float aRnd;
-        uniform float uT, uRevealY, uSize, uPR;
->>>>>>> origin/claude/project-thread-l5qzrs
         varying vec3 vColor; varying float vA;
         void main() {
           float k = clamp((uT - aDelay) / 1.15, 0.0, 1.0);
           float e = 1.0 - pow(1.0 - k, 3.0);
           vec3 p = mix(aStart, position, e);
-<<<<<<< HEAD
           float ang = (1.0 - e) * (2.6 + aRnd * 1.5) * uSwirl;
           float c = cos(ang), s = sin(ang);
           p.xz = mat2(c, -s, s, c) * p.xz;
           p.y += (1.0 - e) * sin(uT * 3.0 + aRnd * 20.0) * 0.08 * uSwirl;
-=======
-          float ang = (1.0 - e) * (2.6 + aRnd * 1.5);
-          float c = cos(ang), s = sin(ang);
-          p.xz = mat2(c, -s, s, c) * p.xz;
-          p.y += (1.0 - e) * sin(uT * 3.0 + aRnd * 20.0) * 0.08;
->>>>>>> origin/claude/project-thread-l5qzrs
           vec4 wp = modelMatrix * vec4(p, 1.0);
           vec4 mv = viewMatrix * wp;
           gl_Position = projectionMatrix * mv;
@@ -336,11 +299,7 @@ export class Stage {
       I.shoved = true;
       g.uniforms.uHide.value = 0;
       g.uniforms.uRevealY.value = -99;
-<<<<<<< HEAD
       g.shove(0, this.reduced ? 0.5 : 1.4);
-=======
-      g.shove(0, 1.4);
->>>>>>> origin/claude/project-thread-l5qzrs
     }
     if (e > I.dur) {
       I.pts.removeFromParent();
@@ -355,13 +314,6 @@ export class Stage {
   /** A scan line sweeps the piece. mode: "hide" appears as the line passes, "holo" turns hologram → solid. */
   _scan(slot, mode, dur = 0.85) {
     const u = slot.g.uniforms;
-<<<<<<< HEAD
-=======
-    if (this.reduced) {
-      u.uHolo.value = mode === "holo" ? 0 : u.uHolo.value;
-      return;
-    }
->>>>>>> origin/claude/project-thread-l5qzrs
     slot.reveal = { t0: this.t, dur, mode };
     u.uHide.value = mode === "hide" ? 1 : 0;
     u.uHoloScan.value = mode === "holo" ? 1 : 0;

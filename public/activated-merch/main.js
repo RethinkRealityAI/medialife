@@ -161,11 +161,7 @@ if (debugOn) {
     const c = document.createElement("canvas").getContext("webgl2");
     const ext = c?.getExtension("WEBGL_debug_renderer_info");
     const gpu = c ? (ext ? c.getParameter(ext.UNMASKED_RENDERER_WEBGL) : "webgl2 ok") : "NO webgl2";
-<<<<<<< HEAD
     report("info", `${navigator.userAgent} | ${gpu} | dpr ${devicePixelRatio} | ${innerWidth}x${innerHeight} | reduced motion ${reduced ? "ON" : "off"}`);
-=======
-    report("info", `${navigator.userAgent} | ${gpu} | dpr ${devicePixelRatio} | ${innerWidth}x${innerHeight}`);
->>>>>>> origin/claude/project-thread-l5qzrs
   });
 }
 
