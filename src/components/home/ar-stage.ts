@@ -53,7 +53,7 @@ export type ArEvents = {
   /** The phone follows the mouse (true), or holds still on a live design (false). */
   onFollow?: (following: boolean) => void;
   /** On resize: the stage area (CSS px, relative to the canvas). */
-  onLayout?: (r: { x: number; y: number; w: number; h: number }) => void;
+  onLayout?: (r: { x: number; y: number; w: number; h: number }, tall: boolean) => void;
   /** Each frame while it shows: the NFC hotspot on the page (CSS px), and whether the phone covers it. */
   onHotspot?: (h: { x: number; y: number; r: number; covered: boolean } | null) => void;
   /** Bobo collected a can (0 when the game resets). */
@@ -89,6 +89,8 @@ const FOV = 30;
 const MAX_W = 1480;
 /** Room left under the stage for the tabs (CSS px). */
 const TABS_H = 50;
+/** Phones: room above the stage for the piece's title (Hero.tsx) */
+const TITLE_H = 92;
 
 /* Phone proportions (a modern 6.1" phone, in its own units). */
 const PH_W = 0.71;
@@ -179,6 +181,8 @@ type Slide = {
   hub: THREE.Group | null;
   /** A copy of the piece, shown as a hologram beside the stage when another piece is up */
   side: THREE.Group | null;
+  /** A soft accent glow behind the piece, so dark pieces (the black tee) read on the dark page */
+  glow: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | null;
 };
 
 type Px = { x: number; y: number };
@@ -401,6 +405,7 @@ export class ArStage {
         hotspot: null,
         hub: null,
         side: null,
+        glow: null,
       };
     });
     this.cur = this.next = Math.max(0, Math.min(defs.length - 1, opts.start ?? 0));
@@ -747,6 +752,15 @@ export class ArStage {
           .catch((e) => console.warn("[ar] display", e));
       }
       s.side = this.sideOf(s);
+      if (def.glow) {
+        const gl = glowPlane(def.accent);
+        const ctr = s.box.getCenter(new THREE.Vector3());
+        gl.position.set(ctr.x, ctr.y, s.box.min.z - 0.05);
+        gl.scale.set((s.box.max.x - s.box.min.x) * 1.9, (s.box.max.y - s.box.min.y) * 1.5, 1);
+        gl.layers.set(L_PIECE);
+        s.group.add(gl);
+        s.glow = gl;
+      }
       s.loaded = true;
       if (!this.running) this.renderOnce();
     } catch (err) {
@@ -820,7 +834,7 @@ export class ArStage {
     } else {
       this.phGoal = this.clampPhone(this.phGoal.x, this.phGoal.y);
     }
-    this.events.onLayout?.(this.lay.stage);
+    this.events.onLayout?.(this.lay.stage, this.tall);
     if (!this.running) this.renderOnce();
   }
 
@@ -864,25 +878,26 @@ export class ArStage {
         popR: Math.min(st.w * 0.3, st.h * 0.42),
       };
     }
-    // stage above the text
-    const bottom = c ? Math.max(h * 0.36, c.y - 56) : h * 0.5;
-    const st = { x: 0, y: h * 0.02, w, h: bottom - h * 0.02 };
+    // stage above the text, under the piece's title
+    const bottom = c ? Math.max(h * 0.4, c.y - 48) : h * 0.55;
+    const top = h * 0.01 + TITLE_H;
+    const st = { x: 0, y: top, w, h: bottom - top };
     const use = st.h - TABS_H;
     const cx = st.x + st.w / 2;
     const cy = st.y + use / 2;
-    const piece = { x: cx + st.w * 0.17, y: cy };
-    const phoneH = Math.min(use * 0.94, (st.w * 0.36) / ratio);
+    const piece = { x: cx + st.w * 0.15, y: cy };
+    const phoneH = Math.min(use * 0.94, (st.w * 0.41) / ratio);
     return {
       side: null,
       stage: st,
       piece,
       pieceH: use * 0.9,
-      pieceW: st.w * 0.56,
+      pieceW: st.w * 0.64,
       back: { x: piece.x, y: cy - use * 0.3 },
       phone: { x: st.x + phoneH * ratio * 0.6, y: cy },
       phoneH,
       pop: { x: cx + st.w * 0.07, y: cy + st.h * 0.1 },
-      popR: Math.min(st.w * 0.36, st.h * 0.42),
+      popR: Math.min(st.w * 0.38, st.h * 0.42),
     };
   }
 
@@ -1366,6 +1381,7 @@ export class ArStage {
       // with a hideout behind the game, the piece makes way for it entirely
       const scale = sz * lerp(1, s.def.pop?.kind === "bobo" && s.def.pop.hub ? 0.001 : 0.5, popE);
       g.scale.setScalar(scale);
+      if (s.glow) s.glow.material.uniforms.uAmt.value = (s.def.glow ?? 0) * build * (1 - popE);
       // a gentle sway (less while a video plays, so it reads like a real print)
       const still = this.phase === "alive" ? 0.45 : 1;
       const sway = R ? 0 : Math.sin(t * 0.45) * (s.def.target.kind === "glb" ? 0.16 : 0.07) * still;
@@ -2417,6 +2433,37 @@ function colourMaterial() {
 }
 
 /* =================================================================== helpers */
+
+/** A soft radial glow in the piece's accent, drawn first, straight into the colour render. */
+function glowPlane(accent: "blue" | "magenta") {
+  const a = accentVec(accent);
+  // display values to linear (the render target holds linear light)
+  const lin = new THREE.Vector3(a.x ** 2.2, a.y ** 2.2, a.z ** 2.2);
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.ShaderMaterial({
+      depthWrite: false,
+      blending: THREE.NoBlending,
+      uniforms: { uCol: { value: lin }, uAmt: { value: 0 } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }
+      `,
+      fragmentShader: /* glsl */ `
+        varying vec2 vUv;
+        uniform vec3 uCol;
+        uniform float uAmt;
+        void main() {
+          float r = length((vUv - 0.5) * 2.0);
+          float a = uAmt * 0.42 * pow(smoothstep(1.0, 0.0, r), 1.5);
+          gl_FragColor = vec4(uCol * 0.9, a);
+        }
+      `,
+    }),
+  );
+  m.renderOrder = -10;
+  return m;
+}
 
 /**
  * The side holograms: the colour render of the other pieces, turned into a

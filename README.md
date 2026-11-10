@@ -121,6 +121,11 @@ joystick, reward card).
   back interrupts it), pushes every frame to the GPU, and plays with reduced motion too
   (the visitor brought it alive). If the browser refuses autoplay, the still shows with a
   "Click to play" hint and the next click or tap plays it.
+- Phones (portrait): the hero is a little taller, and the piece's title sits over the
+  stage (`title` and `detail` in `hero-slides.ts`): Activated apparel, Immersive
+  marketing, Immersive merchandising.
+- A soft glow in the piece's accent sits behind it (`glow` in `hero-slides.ts`), so the
+  black tee reads on the dark page.
 - A piece can hold several designs ("spots"). Print has two: the ONE PIECE x Den of Geek
   poster and a Sakamoto Days sticker; each has its own video and button.
 - Each design's button is styled after its own print (`.ar-cta--<theme>` in

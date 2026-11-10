@@ -80,6 +80,11 @@ export type HeroSlide = {
   aim: string;
   /** Hologram and highlight colour, alternating blue / magenta */
   accent: "blue" | "magenta";
+  /** On phones, the title over the stage (what this kind of piece is) and one line on it */
+  title: string;
+  detail: string;
+  /** A soft glow in the accent behind the piece (0..1), so it reads on the dark page */
+  glow?: number;
   /** One sentence for screen readers when the slide changes */
   describe: string;
   /** The piece: a 3D model, or printed cards (one per spot) */
@@ -104,6 +109,9 @@ export const HERO_SLIDES: HeroSlide[] = [
     tab: "Apparel",
     aim: "the tee",
     accent: "blue",
+    title: "Activated apparel",
+    detail: "Point a phone at the print and the artwork plays.",
+    glow: 1,
     describe: "An activated tee: point a phone at the print and the artwork animates.",
     target: { kind: "glb", src: "/activated-merch/models/trainwreck-tee.glb", rotY: Math.PI },
     spots: [
@@ -142,6 +150,9 @@ export const HERO_SLIDES: HeroSlide[] = [
     tab: "Print",
     aim: "a print",
     accent: "magenta",
+    title: "Immersive marketing",
+    detail: "Netflix posters and stickers that come alive when scanned.",
+    glow: 0.45,
     describe:
       "Activated print for Netflix: the ONE PIECE Den of Geek poster and a Sakamoto Days sticker. Point the phone at either and it animates.",
     target: { kind: "cards" },
@@ -183,6 +194,9 @@ export const HERO_SLIDES: HeroSlide[] = [
     tab: "Game",
     aim: "the NFC tag",
     accent: "blue",
+    title: "Immersive merchandising",
+    detail: "Tap the keychain to play Cola Run and unlock a reward.",
+    glow: 0.55,
     describe:
       "The EVADE Bobo keychain: point the phone at its NFC tag and the EVADE Cola Run game pops out, with Bobo's Hideout behind it. Collect three cans to unlock a digital reward.",
     target: { kind: "glb", src: "/activated-merch/models/evade-charms.glb" },
@@ -214,6 +228,8 @@ export const RETAIL_SLIDE: HeroSlide = {
   tab: "Retail",
   aim: "the sign",
   accent: "magenta",
+  title: "Activated retail",
+  detail: "Scan the sign and a mini EVADE display pops out.",
   describe: "An EVADE in-store sign: scanned, a mini EVADE retail display pops out.",
   target: { kind: "cards" },
   spots: [

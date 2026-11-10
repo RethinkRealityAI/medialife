@@ -40,6 +40,8 @@ export function Hero() {
   const [spot, setSpot] = useState(0);
   const [steered, setSteered] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  /** Phones and portrait screens: the stage sits above the copy, under the piece's title */
+  const [tall, setTall] = useState<boolean | null>(null);
   const slide = HERO_SLIDES[index];
   const cta = (slide.spots[spot] ?? slide.spots[0]).cta;
   const magenta = slide.accent === "magenta";
@@ -109,7 +111,8 @@ export function Hero() {
                 setScrW(r.w);
               }
             },
-            onLayout: (r) => {
+            onLayout: (r, isTall) => {
+              setTall(isTall);
               const el = overlayRef.current;
               if (!el) return;
               el.style.left = `${r.x}px`;
@@ -214,7 +217,7 @@ export function Hero() {
       id="top"
       aria-labelledby="hero-title"
       aria-roledescription="carousel"
-      className="hero relative isolate h-[calc(100svh-4rem)] min-h-[620px] max-h-[1100px] overflow-hidden border-b border-white/10 bg-[#05060c]"
+      className="hero relative isolate h-[calc(100svh-4rem+96px)] min-h-[760px] max-h-[1100px] overflow-hidden lg:h-[calc(100svh-4rem)] lg:min-h-[620px] border-b border-white/10 bg-[#05060c]"
     >
       {/* Poster: what you see before WebGL (and if it never comes). */}
       <picture>
@@ -232,6 +235,25 @@ export function Hero() {
         aria-hidden
         className={`absolute inset-0 h-full w-full touch-pan-y transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
       />
+
+      {/* Phones: what this kind of piece is, over the stage */}
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 z-20 px-5 pt-3 sm:px-8 ${tall === null ? "lg:hidden" : tall ? "" : "hidden"}`}
+      >
+        <div key={slide.key} className="animate-fade-in">
+          <p className="mono flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-white/55">
+            <span className={`h-1.5 w-1.5 rounded-full ${accentBg}`} aria-hidden />
+            {String(index + 1).padStart(2, "0")} / {String(HERO_SLIDES.length).padStart(2, "0")}
+            <span aria-hidden>·</span>
+            {slide.tab}
+          </p>
+          <p className="display mt-1.5 text-[clamp(28px,8vw,44px)] leading-[0.95] text-white">
+            {slide.title.split(" ")[0]}{" "}
+            <span className={accentText}>{slide.title.split(" ").slice(1).join(" ")}</span>
+          </p>
+          <p className="mt-1.5 text-[13px] leading-snug text-white/65">{slide.detail}</p>
+        </div>
+      </div>
 
       {/* The NFC hotspot's label, beside the tag on the piece (ar-stage.ts draws the tag). */}
       {slide.spots.some((x) => x.hotspot) && (
