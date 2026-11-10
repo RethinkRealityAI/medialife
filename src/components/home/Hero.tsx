@@ -1,30 +1,41 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ArStage } from "./ar-stage";
-import { HERO_SLIDES } from "./hero-slides";
+import type { ArStage, Track } from "./ar-stage";
+
+import { CANS, HERO_SLIDES } from "./hero-slides";
 
 /**
- * Homepage hero: a phone points at one MEDIALIFE piece at a time and it comes
- * alive (see ar-stage.ts). The WebGL stage is imported on mount, so SSR and the
- * first paint are just the copy over a static poster. The canvas fades in once
- * the first piece has loaded; if WebGL fails the poster simply stays.
+ * Homepage hero: the visitor points a phone at one MEDIALIFE piece at a time
+ * and it comes alive (see ar-stage.ts). The phone is draggable through a DOM
+ * layer laid over its screen; that layer also carries the phone's UI: hints,
+ * the piece's button, the game's joystick and score, and the reward card.
+ *
+ * The WebGL stage is imported on mount, so SSR and the first paint are just
+ * the copy over a static poster. The canvas fades in once the first piece has
+ * loaded; if WebGL fails the poster simply stays.
  */
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const copyRef = useRef<HTMLDivElement>(null);
-  const chipRef = useRef<HTMLAnchorElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLSpanElement>(null);
   const stageRef = useRef<ArStage | null>(null);
+  const dragId = useRef<number | null>(null);
   const [ready, setReady] = useState(false);
   const [index, setIndex] = useState(0);
-  const [alive, setAlive] = useState(false);
+  const [track, setTrack] = useState<Track>("build");
   const [paused, setPaused] = useState(false);
   const [score, setScore] = useState(0);
+  const [reward, setReward] = useState(false);
+  const [held, setHeld] = useState(false);
+  const [moved, setMoved] = useState(false);
+  const [scrW, setScrW] = useState(180);
   const [touch, setTouch] = useState(false);
   const slide = HERO_SLIDES[index];
   const magenta = slide.accent === "magenta";
+  const alive = track === "alive";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,6 +47,7 @@ export function Hero() {
     let io: IntersectionObserver | null = null;
     let ro: ResizeObserver | null = null;
     let unlisten = () => {};
+    let lastW = 0;
     const start = Number(new URLSearchParams(location.search).get("slide") ?? 0) || 0;
 
     import("./ar-stage")
@@ -48,16 +60,21 @@ export function Hero() {
             onReady: () => setReady(true),
             onSlide: (i) => {
               setIndex(i);
-              setAlive(false);
+              setReward(false);
             },
-            onAlive: (_i, a) => setAlive(a),
+            onTrack: (t) => setTrack(t),
             onScore: (n) => setScore(n),
-            onPhone: (x, y, ang, w) => {
-              const el = chipRef.current;
+            onReward: () => setReward(true),
+            onPhone: (r) => {
+              const el = screenRef.current;
               if (!el) return;
-              el.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) rotate(${ang}rad)`;
-              el.style.maxWidth = `${Math.max(132, w * 0.92)}px`;
-              el.style.fontSize = `${Math.min(13, Math.max(10, w * 0.062))}px`;
+              el.style.width = `${r.w}px`;
+              el.style.height = `${r.h}px`;
+              el.style.transform = `translate3d(${r.x - r.w / 2}px, ${r.y - r.h / 2}px, 0) rotate(${r.angle}rad)`;
+              if (Math.abs(r.w - lastW) > 2) {
+                lastW = r.w;
+                setScrW(r.w);
+              }
             },
             onLayout: (r) => {
               const el = overlayRef.current;
@@ -119,8 +136,25 @@ export function Hero() {
     stageRef.current?.setStick(x, y, active);
   }, []);
 
+  /** A pointer position, relative to the canvas. */
+  const rel = (e: React.PointerEvent) => {
+    const r = canvasRef.current!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  const stopDrag = (e: React.PointerEvent) => e.stopPropagation();
+
   const game = slide.ar.kind === "bobo";
   const accentText = magenta ? "text-accent" : "text-primary";
+  const accentBg = magenta ? "bg-accent" : "bg-[var(--btn-blue)]";
+  // the phone's UI scales with its screen
+  const fs = Math.min(13, Math.max(9, scrW * 0.062));
+  const stick = Math.round(Math.min(104, Math.max(60, scrW * 0.44)));
+  const hint =
+    track === "lock"
+      ? "Scanning…"
+      : track === "search" && !held
+        ? `${touch ? "Drag" : "Drag"} me over ${slide.aim}`
+        : null;
 
   return (
     <section
@@ -147,39 +181,128 @@ export function Hero() {
         className={`absolute inset-0 h-full w-full touch-pan-y transition-opacity duration-700 ${ready ? "opacity-100" : "opacity-0"}`}
       />
 
-      {/* The phone's button: what the piece is, and where to see more. Every
-          one of these destinations is also linked in the sections below. */}
-      <a
-        ref={chipRef}
-        href={slide.href}
-        aria-hidden
-        tabIndex={-1}
-        className={`absolute left-0 top-0 z-10 inline-flex items-center justify-center gap-1.5 truncate rounded-full px-[1.1em] py-[0.7em] font-semibold text-white shadow-[0_6px_20px_rgba(0,0,0,0.35)] transition-opacity duration-300 ${magenta ? "bg-accent" : "bg-[var(--btn-blue)]"} ${alive && ready ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      {/* The phone's screen: drag it to point the phone. It also holds the
+          phone's own UI, like a real AR experience would. */}
+      <div
+        ref={screenRef}
+        aria-hidden={!(game && (alive || reward))}
+        className={`absolute left-0 top-0 z-10 origin-center touch-none select-none rounded-[14%/7%] transition-opacity duration-500 ${held ? "cursor-grabbing" : "cursor-grab"} ${ready ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        style={{ width: 0, height: 0, fontSize: `${fs}px` }}
+        onPointerDown={(e) => {
+          if (e.button !== 0 || dragId.current !== null) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          dragId.current = e.pointerId;
+          const p = rel(e);
+          stageRef.current?.grab(p.x, p.y);
+          setHeld(true);
+          setMoved(true);
+        }}
+        onPointerMove={(e) => {
+          if (dragId.current !== e.pointerId) return;
+          const p = rel(e);
+          stageRef.current?.drag(p.x, p.y);
+        }}
+        onPointerUp={(e) => {
+          if (dragId.current !== e.pointerId) return;
+          dragId.current = null;
+          stageRef.current?.release();
+          setHeld(false);
+        }}
+        onPointerCancel={() => {
+          dragId.current = null;
+          stageRef.current?.release();
+          setHeld(false);
+        }}
       >
-        <span className="truncate">{slide.cta}</span>
-        <span aria-hidden>→</span>
-      </a>
+        {/* hints: what to do, then "scanning" while it locks on */}
+        {hint && (
+          <p
+            className={`pointer-events-none absolute inset-x-[8%] top-[14%] mx-auto w-fit rounded-full bg-black/55 px-[0.9em] py-[0.45em] text-center font-medium leading-tight text-white backdrop-blur-sm transition-opacity ${moved && track === "search" ? "opacity-70" : "opacity-100"}`}
+          >
+            {hint}
+          </p>
+        )}
 
-      {/* Stage controls: the carousel tabs, and the joystick on the game. */}
+        {/* the piece's button, once it's alive */}
+        {!game && (
+          <a
+            href={slide.href}
+            tabIndex={-1}
+            onPointerDown={stopDrag}
+            style={{ maxWidth: Math.max(scrW * 0.92, 132) }}
+            className={`absolute bottom-[6%] left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full px-[1.1em] py-[0.7em] font-semibold text-white shadow-[0_6px_20px_rgba(0,0,0,0.35)] transition-opacity duration-300 ${accentBg} ${alive ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          >
+            <span className="truncate">{slide.cta}</span>
+            <span aria-hidden>→</span>
+          </a>
+        )}
+
+        {/* the game: score up top, the stick at the bottom */}
+        {game && alive && !reward && (
+          <>
+            <p
+              className="pointer-events-none absolute left-1/2 top-[11%] -translate-x-1/2 whitespace-nowrap rounded-full bg-black/55 px-[0.9em] py-[0.4em] font-semibold text-white backdrop-blur-sm tabular-nums"
+              aria-live="polite"
+            >
+              Cans {score}/{CANS}
+            </p>
+            <div
+              className="absolute bottom-[5%] left-1/2 -translate-x-1/2"
+              onPointerDown={stopDrag}
+            >
+              <Joystick onMove={onStick} accent={magenta ? "accent" : "primary"} size={stick} />
+            </div>
+          </>
+        )}
+
+        {/* the reward */}
+        {game && reward && (
+          <div
+            role="dialog"
+            aria-label="Digital reward unlocked"
+            onPointerDown={stopDrag}
+            className="reward-pop absolute left-1/2 top-1/2 w-[max(86%,190px)] -translate-x-1/2 -translate-y-1/2 cursor-default rounded-[1.4em] border border-white/15 bg-[#0b0d18]/90 p-[1.1em] text-center text-white shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-md"
+            style={{ fontSize: `${Math.max(11, fs)}px` }}
+          >
+            <div
+              className={`mx-auto grid h-[3em] w-[3em] place-items-center rounded-full ${accentBg}`}
+              aria-hidden
+            >
+              <svg
+                width="55%"
+                height="55%"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z" />
+              </svg>
+            </div>
+            <p className="mono mt-[0.8em] text-[0.75em] uppercase tracking-[0.2em] text-white/60">
+              {CANS}/{CANS} cans collected
+            </p>
+            <p className="display mt-[0.3em] text-[1.6em] leading-[0.95]">
+              Digital reward unlocked
+            </p>
+            <a
+              href={slide.href}
+              className={`mt-[1em] inline-flex w-full items-center justify-center gap-1.5 rounded-full py-[0.75em] font-semibold text-white ${accentBg} hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80`}
+            >
+              Claim <span aria-hidden>→</span>
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Stage controls: the pieces, point the phone, pause. */}
       <div
         ref={overlayRef}
         className="pointer-events-none absolute z-20"
         style={{ left: 0, top: 0 }}
       >
-        {game && alive && (
-          <div className="pointer-events-auto absolute bottom-16 left-3 sm:left-6 flex items-end gap-3">
-            <Joystick onMove={onStick} accent={magenta ? "accent" : "primary"} />
-            <div className="lg-chip rounded-2xl px-3 py-2">
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-white/60">Cans</p>
-              <p
-                className="display text-2xl leading-none text-white tabular-nums"
-                aria-live="polite"
-              >
-                {score}
-              </p>
-            </div>
-          </div>
-        )}
         <div className="pointer-events-auto absolute inset-x-0 -bottom-1 flex justify-center px-3">
           <div
             role="group"
@@ -210,10 +333,36 @@ export function Hero() {
                 </button>
               );
             })}
+            <span className="mx-0.5 h-5 w-px bg-white/15" aria-hidden />
+            <button
+              type="button"
+              onClick={() => {
+                stageRef.current?.pointAtPiece();
+                setMoved(true);
+              }}
+              aria-label={`Point the phone at ${slide.aim}`}
+              title={`Point the phone at ${slide.aim}`}
+              className="grid h-8 w-8 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+            >
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden
+              >
+                <path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
             <button
               type="button"
               onClick={() => setPaused((p) => !p)}
-              aria-label={paused ? "Play the slideshow" : "Pause the slideshow"}
+              aria-label={paused ? "Play the tour" : "Pause the tour"}
+              title={paused ? "Play the tour" : "Pause the tour"}
               className="grid h-8 w-8 place-items-center rounded-full text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
             >
               {paused ? (
@@ -231,6 +380,9 @@ export function Hero() {
       </div>
       <p className="sr-only" aria-live={paused ? "polite" : "off"}>
         {slide.describe}
+      </p>
+      <p className="sr-only" aria-live="polite">
+        {reward ? "Digital reward unlocked. Claim it on the phone." : ""}
       </p>
 
       {/* Copy: bottom-left on wide screens, bottom on phones. */}
@@ -264,13 +416,15 @@ export function Hero() {
               See it in action
             </a>
           </div>
-          {game && alive && (
+          {ready && (
             <p className="mt-5 hidden sm:flex items-center gap-2 mono text-[10px] uppercase tracking-[0.2em] text-white/55">
               <span
-                className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse-glow"
+                className={`h-1.5 w-1.5 rounded-full ${magenta ? "bg-accent" : "bg-primary"} animate-pulse-glow`}
                 aria-hidden
               />
-              {touch ? "Use the stick to collect cans" : "Drag the stick or use the arrow keys"}
+              {game && alive && !reward
+                ? "Steer Bobo with the stick on the phone, or the arrow keys"
+                : `Drag the phone over ${slide.aim} to bring it alive`}
             </p>
           )}
         </div>
@@ -286,15 +440,17 @@ export function Hero() {
 function Joystick({
   onMove,
   accent,
+  size = 104,
 }: {
   onMove: (x: number, y: number, active: boolean) => void;
   accent: "primary" | "accent";
+  size?: number;
 }) {
   const baseRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
   const keys = useRef(new Set<string>());
   const drag = useRef<number | null>(null);
-  const R = 34;
+  const R = size * 0.33;
 
   const set = useCallback(
     (x: number, y: number, active: boolean) => {
@@ -302,7 +458,7 @@ function Joystick({
       if (k) k.style.transform = `translate(${x * R}px, ${-y * R}px)`;
       onMove(x, y, active);
     },
-    [onMove],
+    [onMove, R],
   );
 
   const fromPointer = (e: React.PointerEvent) => {
@@ -348,7 +504,8 @@ function Joystick({
       role="application"
       tabIndex={0}
       aria-label="Move Bobo: drag, or use the arrow keys"
-      className="lg-chip relative grid h-[104px] w-[104px] touch-none select-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+      className="lg-chip relative grid touch-none select-none place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+      style={{ width: size, height: size }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         drag.current = e.pointerId;
@@ -383,7 +540,8 @@ function Joystick({
     >
       <div
         ref={knobRef}
-        className={`h-11 w-11 rounded-full ${accent === "accent" ? "bg-accent" : "bg-[var(--btn-blue)]"} shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(0,0,0,0.45)] transition-transform duration-75`}
+        style={{ width: size * 0.42, height: size * 0.42 }}
+        className={`rounded-full ${accent === "accent" ? "bg-accent" : "bg-[var(--btn-blue)]"} shadow-[inset_0_1px_0_rgba(255,255,255,0.35),0_6px_18px_rgba(0,0,0,0.45)] transition-transform duration-75`}
       />
     </div>
   );

@@ -497,3 +497,24 @@
     animation: none !important;
   }
 }
+
+/* Hero: the reward card pops up on the phone (Tailwind's translate-* use the
+   separate `translate` property, so this transform doesn't fight them) */
+.reward-pop {
+  animation: reward-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes reward-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reward-pop {
+    animation: none;
+  }
+}

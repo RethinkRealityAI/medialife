@@ -2,11 +2,14 @@
  * The homepage hero: "Point. It comes alive."
  *
  * One real MEDIALIFE piece at a time floats in a dark room as a hologram
- * (blue or magenta, alternating). A realistic phone points at it, and its
- * screen is a live camera feed of the scene: brackets find the design, lock,
- * and the design comes alive on the phone, exactly like image-target AR.
- * Some pieces go further and pop out into the room in 3D (Bobo and a cola can
- * you can steer, a mini EVADE retail display).
+ * (blue or magenta, alternating). The visitor holds a realistic phone: drag it
+ * (or tap where it should go) and its screen is a live camera feed of whatever
+ * is behind it. Only when it is over the piece do the brackets find the design,
+ * lock, and the design comes alive on the phone, exactly like image-target AR;
+ * move it away and the experience stops. Nobody touching it? The phone shows
+ * them once, then the tour moves on. The EVADE charms go further: Bobo and three
+ * cola cans pop out, the joystick on the phone steers Bobo, and three cans
+ * unlock a digital reward.
  *
  * Rendering, per frame:
  *  1. the phone's camera renders the scene in colour (pieces, AR overlays,
@@ -23,7 +26,10 @@ import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
-import type { HeroSlide } from "./hero-slides";
+import { CANS, type HeroSlide } from "./hero-slides";
+
+export type Track = "build" | "search" | "lock" | "alive";
+export type PhoneRect = { x: number; y: number; w: number; h: number; angle: number };
 
 export type ArEvents = {
   /** First frame with the first piece drawn. */
@@ -32,12 +38,16 @@ export type ArEvents = {
   onSlide?: (index: number) => void;
   /** The current slide's AR came alive (true) or is leaving (false). */
   onAlive?: (index: number, alive: boolean) => void;
-  /** Each frame: the bottom-centre of the phone screen (CSS px), its roll and width. */
-  onPhone?: (x: number, y: number, angle: number, width: number) => void;
+  /** Tracking, for the hints on the phone: building, searching, locking on, alive. */
+  onTrack?: (t: Track) => void;
+  /** Each frame: the phone's screen on the page (CSS px centre and size, roll). */
+  onPhone?: (r: PhoneRect) => void;
   /** On resize: the stage area (CSS px, relative to the canvas). */
   onLayout?: (r: { x: number; y: number; w: number; h: number }) => void;
-  /** Bobo collected a can. */
+  /** Bobo collected a can (0 when the game resets). */
   onScore?: (n: number) => void;
+  /** All the cans are collected: the digital reward unlocks. */
+  onReward?: () => void;
   /** Each frame: how far the current slide is towards auto-advancing (0..1). */
   onProgress?: (p: number) => void;
 };
@@ -65,6 +75,9 @@ const BEZEL = 0.024;
 const IN_T = 0.8;
 const SCAN_T = 1.1;
 const OUT_T = 0.5;
+/** The game on the auto tour: at most this long, or a few seconds after the reward */
+const GAME_MAX_T = 30;
+const GAME_AFTER_REWARD_T = 4;
 
 const BLUE = new THREE.Vector3(0.098, 0.686, 0.996); // #19AFFE, display values
 const MAGENTA = new THREE.Vector3(1.0, 0.184, 0.682); // #FF2FAE
@@ -73,6 +86,7 @@ const accentHex = (a: HeroSlide["accent"]) => (a === "magenta" ? 0xff2fae : 0x19
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const clampAbs = (v: number, m: number) => Math.max(-m, Math.min(m, v));
 const damp = (a: number, b: number, k: number, dt: number) => lerp(a, b, 1 - Math.exp(-k * dt));
 const ease = (t: number) => {
   t = clamp01(t);
@@ -126,10 +140,9 @@ type Layout = {
   pieceH: number;
   pieceW: number;
   back: Px;
+  /** Where the phone rests, beside the piece */
   phone: Px;
   phoneH: number;
-  popPhone: Px;
-  popPhoneH: number;
   pop: Px;
   popR: number;
 };
@@ -166,23 +179,39 @@ export class ArStage {
   // carousel
   private cur = 0;
   private next = 0;
-  private phase: "in" | "scan" | "alive" | "out" = "in";
+  private phase: "in" | "wait" | "alive" | "out" = "in";
   private pt = 0;
   private outFrom = 1;
   private paused = false;
-  private holdUntil = 0;
+  /** 0..1 while the phone is over the piece and locking on */
+  private scanAmt = 0;
+  /** How long the phone has been off the piece while it is alive */
+  private offT = 0;
+  /** Seconds alive that count towards auto-advancing (only while nobody is playing) */
+  private dwellT = 0;
   private popAmt = 0;
   private popT = 0;
   private popGrow = 0;
+  private popOffT = 9;
   private tint = BLUE.clone();
   private readyFired = false;
   private introT = 0;
+  private firstGuide = true;
+  private track: Track | null = null;
 
-  // input
-  private pointer = new THREE.Vector2();
-  private pointerAim = new THREE.Vector2();
-  private pointerOn = false;
-  private swipe: { x: number; y: number; id: number } | null = null;
+  // the phone, where the visitor holds it (CSS px on the canvas)
+  private ph = { x: 0, y: 0 };
+  private phGoal = { x: 0, y: 0 };
+  private phVel = { x: 0, y: 0 };
+  private phSet = false;
+  private dragging = false;
+  private dragOff = { x: 0, y: 0 };
+  private manualUntil = -1;
+  private guiding = false;
+  private over = false;
+  /** The phone's screen on the page, last frame */
+  private scr = { x: 0, y: 0, w: 0, h: 0 };
+  private tap: { x: number; y: number; id: number; touch: boolean } | null = null;
   readonly stick = { x: 0, y: 0, active: false, at: -99 };
 
   private reduced: boolean;
@@ -192,6 +221,7 @@ export class ArStage {
   private tmpV = new THREE.Vector3();
   private tmpV2 = new THREE.Vector3();
   private tmpBox = new THREE.Box3();
+  private tmpBox2 = new THREE.Box3();
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -287,8 +317,6 @@ export class ArStage {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(canvas);
 
-    canvas.addEventListener("pointermove", this.onMove);
-    canvas.addEventListener("pointerleave", this.onLeave);
     canvas.addEventListener("pointerdown", this.onDown);
     canvas.addEventListener("pointerup", this.onUp);
     canvas.addEventListener("pointercancel", this.onCancel);
@@ -302,6 +330,7 @@ export class ArStage {
     const n = this.slides.length;
     i = ((i % n) + n) % n;
     if (i === this.cur && this.phase !== "out") return;
+    this.home();
     if (this.phase === "out") {
       this.next = i;
       return;
@@ -330,8 +359,36 @@ export class ArStage {
     this.stick.active = active;
     if (active) {
       this.stick.at = this.t;
-      this.holdUntil = this.t + 6;
+      this.handsOn();
     }
+  }
+  /** The visitor picked the phone up at (x, y), CSS px on the canvas. */
+  grab(x: number, y: number) {
+    this.dragging = true;
+    this.dragOff = { x: this.ph.x - x, y: this.ph.y - y };
+    this.handsOn();
+  }
+  /** ...and moved it. */
+  drag(x: number, y: number) {
+    if (!this.dragging) return;
+    this.phGoal = this.clampPhone(x + this.dragOff.x, y + this.dragOff.y);
+    this.handsOn();
+  }
+  /** ...and let go. It stays where it was left. */
+  release() {
+    this.dragging = false;
+    this.handsOn();
+  }
+  /** Point the phone at the current piece (the Scan button, Enter on the phone). */
+  pointAtPiece() {
+    const c = this.targetCentre();
+    if (c) this.phGoal = this.clampPhone(c.x, c.y);
+    this.handsOn();
+  }
+  /** Move the phone by (dx, dy) CSS px (arrow keys on the phone). */
+  nudge(dx: number, dy: number) {
+    this.phGoal = this.clampPhone(this.phGoal.x + dx, this.phGoal.y + dy);
+    this.handsOn();
   }
   /** Where the hero copy sits (CSS px, relative to the canvas), so the stage avoids it. */
   setCopyRect(r: { x: number; y: number; w: number; h: number } | null) {
@@ -358,6 +415,23 @@ export class ArStage {
   }
   private renderOnce() {
     this.frame(0);
+  }
+
+  /** Someone is using the phone or the stick: no auto tour for a while. */
+  private handsOn() {
+    this.manualUntil = this.t + 10;
+  }
+  /** Send the phone back to where it rests, beside the piece. */
+  private home() {
+    if (!this.dragging && this.lay) this.phGoal = { ...this.lay.phone };
+  }
+  private clampPhone(x: number, y: number) {
+    const ph = this.lay.phoneH;
+    const pw = ph * (PH_W / PH_H);
+    return {
+      x: Math.min(this.w - pw * 0.4, Math.max(pw * 0.4, x)),
+      y: Math.min(this.h - ph * 0.3, Math.max(ph * 0.3, y)),
+    };
   }
 
   /* ------------------------------------------------------------ setup */
@@ -471,9 +545,17 @@ export class ArStage {
           s.bracket = mesh;
         }
       } else if (ar.kind === "bobo") {
-        const game = new BoboGame(accentHex(def.accent), (n) => this.events.onScore?.(n));
+        const game = new BoboGame(
+          accentHex(def.accent),
+          (n) => this.events.onScore?.(n),
+          () => {
+            // linger on the reward for a moment, then the tour can move on
+            this.dwellT = Math.max(this.dwellT, GAME_MAX_T - GAME_AFTER_REWARD_T);
+            this.events.onReward?.();
+          },
+        );
         game.stage = this;
-        game.auto = !this.reduced;
+        game.auto = false;
         s.pop = game;
         this.scene.add(game.root);
         Promise.all([this.gltf(ar.bobo), this.gltf(ar.anims), this.gltf(ar.can)])
@@ -519,6 +601,16 @@ export class ArStage {
     this.rtPhone.setSize(Math.max(64, Math.round(scrW * k)), Math.max(128, Math.round(scrH * k)));
     this.phoneCam.aspect = scrW / scrH;
     this.screenMat.uniforms.uAspect.value = scrW / scrH;
+    // the phone: at rest the first time; afterwards kept on the page
+    if (!this.phSet) {
+      this.ph = { ...this.lay.phone };
+      this.phGoal = { ...this.lay.phone };
+      this.phSet = true;
+    } else if (this.phase !== "alive" && !this.dragging && this.t >= this.manualUntil) {
+      this.phGoal = { ...this.lay.phone };
+    } else {
+      this.phGoal = this.clampPhone(this.phGoal.x, this.phGoal.y);
+    }
     this.events.onLayout?.(this.lay.stage);
     if (!this.running) this.renderOnce();
   }
@@ -527,24 +619,22 @@ export class ArStage {
     const { w, h } = this;
     const c = this.copyRect;
     if (!this.tall) {
-      // text on the left, stage on the right
+      // text on the left, stage on the right; the phone rests left of the piece
       const x0 = Math.min(w * 0.5, Math.max(w * 0.4, c ? c.x + c.w * 0.86 : w * 0.44));
       const st = { x: x0, y: h * 0.05, w: w - x0, h: h * 0.83 };
       const cx = st.x + st.w / 2;
       const cy = st.y + st.h / 2;
-      const phoneH = Math.min(st.h * 0.6, st.w * 0.62);
+      const piece = { x: cx + st.w * 0.12, y: cy - st.h * 0.02 };
       return {
         stage: st,
-        piece: { x: cx + st.w * 0.1, y: cy - st.h * 0.02 },
+        piece,
         pieceH: st.h * 0.84,
-        pieceW: st.w * 0.58,
-        back: { x: cx + st.w * 0.06, y: cy - st.h * 0.26 },
-        phone: { x: cx - st.w * 0.2, y: cy + st.h * 0.1 },
-        phoneH,
-        popPhone: { x: cx + st.w * 0.36, y: cy + st.h * 0.2 },
-        popPhoneH: phoneH * 0.66,
-        pop: { x: cx - st.w * 0.04, y: cy + st.h * 0.1 },
-        popR: Math.min(st.w * 0.27, st.h * 0.4),
+        pieceW: st.w * 0.56,
+        back: { x: piece.x, y: cy - st.h * 0.3 },
+        phone: { x: cx - st.w * 0.3, y: cy + st.h * 0.08 },
+        phoneH: Math.min(st.h * 0.58, st.w * 0.6),
+        pop: { x: piece.x, y: cy + st.h * 0.1 },
+        popR: Math.min(st.w * 0.28, st.h * 0.42),
       };
     }
     // stage above the text
@@ -552,19 +642,17 @@ export class ArStage {
     const st = { x: 0, y: h * 0.02, w, h: bottom - h * 0.02 };
     const cx = st.x + st.w / 2;
     const cy = st.y + st.h / 2;
-    const phoneH = Math.min(st.h * 0.68, st.w * 0.9);
+    const piece = { x: cx + st.w * 0.16, y: cy };
     return {
       stage: st,
-      piece: { x: cx + st.w * 0.14, y: cy },
+      piece,
       pieceH: st.h * 0.86,
-      pieceW: st.w * 0.56,
-      back: { x: cx + st.w * 0.02, y: cy - st.h * 0.26 },
-      phone: { x: cx - st.w * 0.2, y: cy + st.h * 0.07 },
-      phoneH,
-      popPhone: { x: cx + st.w * 0.36, y: cy + st.h * 0.16 },
-      popPhoneH: phoneH * 0.66,
-      pop: { x: cx - st.w * 0.08, y: cy + st.h * 0.1 },
-      popR: Math.min(st.w * 0.34, st.h * 0.42),
+      pieceW: st.w * 0.54,
+      back: { x: piece.x, y: cy - st.h * 0.3 },
+      phone: { x: cx - st.w * 0.28, y: cy + st.h * 0.06 },
+      phoneH: Math.min(st.h * 0.66, st.w * 0.85),
+      pop: { x: cx + st.w * 0.07, y: cy + st.h * 0.1 },
+      popR: Math.min(st.w * 0.36, st.h * 0.42),
     };
   }
 
@@ -580,39 +668,34 @@ export class ArStage {
   }
 
   /* ------------------------------------------------------------ input */
-  private onMove = (e: PointerEvent) => {
-    if (e.pointerType !== "mouse") return;
-    const st = this.lay.stage;
-    const r = this.canvas.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-    this.pointerOn = x > st.x - 40;
-    this.pointer.set(
-      Math.max(-1, Math.min(1, (x - (st.x + st.w / 2)) / (st.w / 2))),
-      Math.max(-1, Math.min(1, (y - (st.y + st.h / 2)) / (st.h / 2))),
-    );
-  };
-  private onLeave = () => {
-    this.pointerOn = false;
-  };
+  // The phone itself is dragged through a DOM handle over it (Hero.tsx), so
+  // touch scrolling still works everywhere else. On the canvas: a tap moves the
+  // phone there; a horizontal swipe (touch) changes the piece.
   private onDown = (e: PointerEvent) => {
-    if (e.pointerType === "mouse") return;
-    this.swipe = { x: e.clientX, y: e.clientY, id: e.pointerId };
+    this.tap = { x: e.clientX, y: e.clientY, id: e.pointerId, touch: e.pointerType !== "mouse" };
   };
   private onUp = (e: PointerEvent) => {
-    const s = this.swipe;
-    this.swipe = null;
+    const s = this.tap;
+    this.tap = null;
     if (!s || s.id !== e.pointerId) return;
     const dx = e.clientX - s.x;
     const dy = e.clientY - s.y;
-    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    if (s.touch && Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4) {
       if (dx < 0) this.nextSlide();
       else this.prevSlide();
-      this.holdUntil = this.t + 4;
+      return;
     }
+    if (Math.hypot(dx, dy) > 10) return;
+    const r = this.canvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    const st = this.lay.stage;
+    if (x < st.x - 24 || y > st.y + st.h + 24) return; // the copy, not the stage
+    this.phGoal = this.clampPhone(x, y);
+    this.handsOn();
   };
   private onCancel = () => {
-    this.swipe = null;
+    this.tap = null;
   };
 
   /* ------------------------------------------------------------ carousel */
@@ -622,14 +705,17 @@ export class ArStage {
     return 1;
   }
 
+  /** How long a piece plays on the auto tour before the next one. */
   private dwell(s: Slide) {
-    if (s.def.ar.kind === "bobo") return 11;
-    if (s.def.ar.kind === "display") return 7;
+    if (s.def.ar.kind === "bobo") return GAME_MAX_T;
+    if (s.def.ar.kind === "display") return 8;
     return s.video && s.video.duration > 1 ? Math.min(Math.max(s.video.duration, 7), 11) : 8;
   }
 
   private enterAlive(s: Slide) {
     this.popT = 0;
+    this.dwellT = 0;
+    this.firstGuide = false;
     if (s.overlay) s.overlay.visible = true;
     if (s.def.ar.kind === "video" && !this.reduced) this.playVideo(s);
     this.events.onAlive?.(this.cur, true);
@@ -638,6 +724,10 @@ export class ArStage {
   private leaveAlive() {
     const s = this.slides[this.cur];
     if (s.video) s.video.pause();
+    if (s.overlayMat && s.still) {
+      s.overlayMat.map = s.still;
+      s.overlayMat.needsUpdate = true;
+    }
     if (this.phase === "alive") this.events.onAlive?.(this.cur, false);
   }
 
@@ -659,7 +749,7 @@ export class ArStage {
       vt.colorSpace = THREE.SRGBColorSpace;
       s.videoTex = vt;
       v.addEventListener("playing", () => {
-        if (s.overlayMat && s.videoTex) {
+        if (s.overlayMat && s.videoTex && this.phase === "alive" && this.slides[this.cur] === s) {
           s.overlayMat.map = s.videoTex;
           s.overlayMat.needsUpdate = true;
         }
@@ -675,51 +765,127 @@ export class ArStage {
     });
   }
 
+  /** The current piece (or what popped out of it) on the page, CSS px. */
+  private targetRect(s: Slide) {
+    const b = this.tmpBox2.makeEmpty();
+    if (s.loaded && s.bracket) b.setFromObject(s.bracket);
+    const p = s.pop;
+    if (p && p.ready && p.root.visible && this.popGrow > 0.5)
+      b.union(this.tmpBox.setFromObject(p.root));
+    if (b.isEmpty()) return null;
+    let x0 = 1e9,
+      y0 = 1e9,
+      x1 = -1e9,
+      y1 = -1e9;
+    const v = this.tmpV;
+    for (let i = 0; i < 8; i++) {
+      v.set(i & 1 ? b.max.x : b.min.x, i & 2 ? b.max.y : b.min.y, i & 4 ? b.max.z : b.min.z);
+      const q = this.toPx(v);
+      x0 = Math.min(x0, q.x);
+      x1 = Math.max(x1, q.x);
+      y0 = Math.min(y0, q.y);
+      y1 = Math.max(y1, q.y);
+    }
+    return { x0, y0, x1, y1 };
+  }
+  /** Where to hold the phone to see the piece: the design, or the board once it popped out. */
+  private targetCentre() {
+    const s = this.slides[this.cur];
+    if (s.pop && this.popGrow > 0.5) return { ...this.lay.pop };
+    const r = this.targetRect(s);
+    return r ? { x: (r.x0 + r.x1) / 2, y: (r.y0 + r.y1) / 2 } : { ...this.lay.piece };
+  }
+
   /* ------------------------------------------------------------ frame */
   private frame(dt: number) {
     this.t += dt;
     const t = this.t;
     const L = this.lay;
     const R = this.reduced;
+    const manual = t < this.manualUntil || this.dragging || this.stick.active;
+    const auto = !this.paused && !R && !manual;
 
-    // --- the carousel state machine
+    // --- the carousel: build in, wait for the phone, come alive, leave
     this.pt += dt;
     let s = this.slides[this.cur];
     if (this.phase === "out" && this.pt >= OUT_T) {
       s.group.visible = false;
       if (s.overlay) s.overlay.visible = false;
-      if (s.overlayMat && s.still) {
-        s.overlayMat.map = s.still;
-        s.overlayMat.needsUpdate = true;
-      }
       this.cur = this.next;
       s = this.slides[this.cur];
       this.phase = "in";
       this.pt = R ? IN_T : 0;
+      this.scanAmt = 0;
+      this.popGrow = 0;
+      this.popAmt = 0;
+      if (s.pop instanceof BoboGame) s.pop.reset();
       this.ensure(this.cur).then(() => this.ensure((this.cur + 1) % this.slides.length));
       this.events.onSlide?.(this.cur);
     }
     if (this.phase === "in") {
       if (!s.loaded) this.pt = 0;
       else if (this.pt >= IN_T) {
-        this.phase = "scan";
-        this.pt = R ? SCAN_T : 0;
+        this.phase = "wait";
+        this.pt = 0;
       }
     }
-    if (this.phase === "scan" && this.pt >= SCAN_T) {
-      this.phase = "alive";
-      this.pt = 0;
-      this.enterAlive(s);
+
+    // is the phone over the piece? (its screen centre, from the last frame)
+    const tr = this.phase === "wait" || this.phase === "alive" ? this.targetRect(s) : null;
+    if (tr && this.scr.w > 0) {
+      const m = this.scr.w * (this.over ? 0.35 : 0.08);
+      const { x, y } = this.scr;
+      this.over = x > tr.x0 - m && x < tr.x1 + m && y > tr.y0 - m && y < tr.y1 + m;
+    } else this.over = false;
+
+    this.guiding = false;
+    if (this.phase === "wait") {
+      if (this.over) this.scanAmt = R ? 1 : this.scanAmt + dt / SCAN_T;
+      else this.scanAmt = Math.max(0, this.scanAmt - dt * 1.5);
+      if (this.scanAmt >= 1) {
+        this.scanAmt = 1;
+        this.phase = "alive";
+        this.pt = 0;
+        this.offT = 0;
+        this.enterAlive(s);
+      } else if (auto && this.pt > (this.firstGuide ? 2.4 : 1.2) && tr) {
+        // nobody has picked the phone up: show them, point it at the piece
+        this.phGoal = this.clampPhone((tr.x0 + tr.x1) / 2, (tr.y0 + tr.y1) / 2);
+        this.guiding = true;
+      }
+    } else if (this.phase === "alive") {
+      this.offT = this.over ? 0 : this.offT + dt;
+      if (this.offT > 0.35) {
+        // moved away: tracking lost, the experience stops
+        this.leaveAlive();
+        this.phase = "wait";
+        this.pt = 0;
+        this.scanAmt = 0.5;
+      }
     }
+    if (s.pop instanceof BoboGame) s.pop.auto = auto;
+
     let progress = 0;
     if (this.phase === "alive") {
       const d = this.dwell(s);
-      const held = t < this.holdUntil || this.stick.active;
-      if (held) this.pt = Math.min(this.pt, d - 2);
-      progress = clamp01(this.pt / d);
-      if (!this.paused && !R && this.pt >= d) this.go(this.cur + 1);
+      if (auto) this.dwellT += dt;
+      progress = clamp01(this.dwellT / d);
+      if (auto && this.dwellT >= d) this.go(this.cur + 1);
     }
     this.events.onProgress?.(this.paused ? 0 : progress);
+
+    const tr2: Track =
+      this.phase === "alive"
+        ? "alive"
+        : this.phase === "wait"
+          ? this.scanAmt > 0.02
+            ? "lock"
+            : "search"
+          : "build";
+    if (tr2 !== this.track) {
+      this.track = tr2;
+      this.events.onTrack?.(tr2);
+    }
 
     const isPop = s.def.ar.kind !== "video";
     const popWant = isPop && this.phase === "alive" ? 1 : 0;
@@ -764,9 +930,9 @@ export class ArStage {
         lerp(base.y, back.y, popE) + bob,
         pz,
       );
-      const scale = sz * lerp(1, 0.55, popE);
+      const scale = sz * lerp(1, 0.5, popE);
       g.scale.setScalar(scale);
-      const sway = R ? 0 : Math.sin(t * 0.45) * (s.def.target.kind === "glb" ? 0.22 : 0.12);
+      const sway = R ? 0 : Math.sin(t * 0.45) * (s.def.target.kind === "glb" ? 0.16 : 0.08);
       g.rotation.set(R ? 0 : Math.sin(t * 0.6) * 0.03, sway + (R ? 0 : slide * 0.8), 0);
       pieceBottom = g.position.y + s.box.min.y * scale;
       pieceTop = g.position.y + s.box.max.y * scale;
@@ -788,7 +954,7 @@ export class ArStage {
       }
     }
 
-    // --- pop-outs
+    // --- pop-outs: out of the piece, onto a board in front of it
     for (const o of this.slides) {
       const p = o.pop;
       if (!p) continue;
@@ -796,94 +962,98 @@ export class ArStage {
       const live = mine && this.phase === "alive";
       let grow = 0;
       if (mine) {
-        if (this.phase === "alive") grow = this.popGrow = R ? 1 : backOut(this.popT / 0.8);
-        else if (this.phase === "out") grow = (1 - ease(this.pt / OUT_T)) * this.popGrow;
-        else this.popGrow = 0;
+        if (this.phase === "alive") {
+          this.popOffT = 0;
+          grow = this.popGrow = R ? 1 : backOut(this.popT / 0.8);
+        } else {
+          this.popOffT += dt;
+          grow = this.popGrow * (1 - (R ? 1 : ease(this.popOffT / 0.4)));
+          if (grow < 0.001) this.popGrow = 0;
+        }
       }
       p.root.visible = grow > 0.001 && p.ready;
       if (!p.root.visible) continue;
       const from = s.group.position;
       const to = this.toWorld(L.pop, Z_POP, this.tmpV);
-      const k = R ? 1 : smooth(0, 0.6, this.popT);
+      const k = R || this.phase !== "alive" ? 1 : smooth(0, 0.6, this.popT);
       p.root.position.set(lerp(from.x, to.x, k), lerp(from.y, to.y, k), lerp(from.z, to.z, k));
       p.root.scale.setScalar(Math.max(1e-3, L.popR * this.wpp(Z_POP) * grow));
       p.update(dt, t, live);
     }
 
-    // --- the phone
-    const dockPx = {
-      x: L.phone.x + (this.pointerOn && !R ? this.pointerAim.x * L.stage.w * 0.05 : 0),
-      y: L.phone.y + (this.pointerOn && !R ? this.pointerAim.y * L.stage.h * 0.04 : 0),
-    };
-    if (dt)
-      this.pointerAim.lerp(
-        this.pointerOn ? this.pointer : new THREE.Vector2(),
-        1 - Math.exp(-4 * dt),
-      );
-    const dockPos = this.toWorld(dockPx, Z_PHONE, new THREE.Vector3());
-    const popPos = this.toWorld(L.popPhone, Z_PHONE, new THREE.Vector3());
-    const pos = dockPos.lerp(popPos, popE);
+    // --- the phone: follows the hand (or the tour)
+    if (dt === 0 || R) {
+      this.ph = { ...this.phGoal };
+      this.phVel = { x: 0, y: 0 };
+    } else {
+      const k = this.dragging ? 30 : this.guiding ? 3.6 : 9;
+      const nx = damp(this.ph.x, this.phGoal.x, k, dt);
+      const ny = damp(this.ph.y, this.phGoal.y, k, dt);
+      this.phVel.x = damp(this.phVel.x, (nx - this.ph.x) / dt, 12, dt);
+      this.phVel.y = damp(this.phVel.y, (ny - this.ph.y) / dt, 12, dt);
+      this.ph = { x: nx, y: ny };
+    }
+    const pos = this.toWorld(this.ph, Z_PHONE, new THREE.Vector3());
     // rise in from below
     pos.y -= (1 - intro) * L.phoneH * this.wpp(Z_PHONE) * 1.4;
-    if (!R) pos.y += Math.sin(t * 1.1) * 0.012;
-    const phH = lerp(L.phoneH, L.popPhoneH, popE) * this.wpp(Z_PHONE);
-    this.phone.scale.setScalar(phH / PH_H);
+    if (!R && !this.dragging) pos.y += Math.sin(t * 1.1) * 0.01;
+    this.phone.scale.setScalar((L.phoneH * this.wpp(Z_PHONE)) / PH_H);
     this.phone.position.copy(pos);
-    // aim: the design (or what popped out)
-    const aimDock = new THREE.Vector3();
+
+    // what the phone's camera looks at: straight through the phone, turning
+    // onto the design as it locks (or onto what popped out)
+    const lk = this.phase === "alive" ? 1 : this.phase === "wait" ? ease(this.scanAmt) : 0;
+    const tc = new THREE.Vector3(pos.x, pos.y, Z_PIECE);
+    let dockH = L.pieceH * this.wpp(Z_PIECE);
     if (s.loaded && s.bracket) {
       this.tmpBox.setFromObject(s.bracket);
-      if (!this.tmpBox.isEmpty()) this.tmpBox.getCenter(aimDock);
-      else aimDock.copy(s.group.position);
-    } else aimDock.copy(this.toWorld(L.piece, Z_PIECE, this.tmpV2));
-    const aimPop = this.toWorld(L.pop, Z_POP, new THREE.Vector3());
-    aimPop.y += L.popR * this.wpp(Z_POP) * 0.25;
-    const aim = aimDock.lerp(aimPop, popE);
-    if (this.pointerOn && !R) {
-      aim.x += this.pointerAim.x * 0.25;
-      aim.y -= this.pointerAim.y * 0.18;
+      if (!this.tmpBox.isEmpty()) {
+        const c = this.tmpBox.getCenter(this.tmpV2);
+        tc.lerp(c, lk * 0.9);
+        const sz = this.tmpBox.getSize(this.tmpV2);
+        dockH = Math.max(sz.y, sz.x / this.phoneCam.aspect) * 1.05;
+      }
     }
+    const popC = this.toWorld(L.pop, Z_POP, new THREE.Vector3());
+    popC.y += L.popR * this.wpp(Z_POP) * 0.12;
+    const aim = tc.lerp(popC, popE);
     // the phone looks where its camera looks: its back faces the target
     this.phone.lookAt(this.tmpV.copy(pos).multiplyScalar(2).sub(aim));
-    this.phone.rotateZ(-0.05 + (R ? 0 : Math.sin(t * 0.7) * 0.012));
+    this.phone.rotateZ(
+      -0.04 + (R ? 0 : Math.sin(t * 0.7) * 0.01) - clampAbs(this.phVel.x * 0.00022, 0.18),
+    );
+    this.phone.rotateX(clampAbs(this.phVel.y * 0.00018, 0.15));
     // its camera looks where the phone points
     this.phoneCam.position.copy(pos);
     this.phoneCam.quaternion.copy(this.phone.quaternion);
-    // the body turns a little more towards us, so it reads as a 3D object
-    this.phone.rotateY(lerp(0.26, -0.18, popE));
+    // the body turns a little towards us, so it reads as a 3D object
+    this.phone.rotateY(0.24);
     if (intro < 1) this.phone.rotateX((1 - intro) * 0.9);
     this.phone.updateMatrixWorld(true);
     const dist = Math.max(0.5, pos.distanceTo(aim));
-    // frame the design (height and width) with a margin, or what popped out
-    const tgtH = Math.max(0.5, pieceTop - pieceBottom || L.pieceH * this.wpp(Z_PIECE));
-    let dockH = tgtH;
-    if (s.loaded && s.bracket) {
-      this.tmpBox.setFromObject(s.bracket);
-      const sz = this.tmpBox.getSize(this.tmpV2);
-      dockH = Math.max(sz.y, sz.x / this.phoneCam.aspect) * 1.05;
-    }
-    const frameH = lerp(
-      dockH,
-      (L.popR * this.wpp(Z_POP) * 2.3) / Math.min(1, this.phoneCam.aspect * 1.6),
-      popE,
-    );
-    const fov = THREE.MathUtils.radToDeg(2 * Math.atan((frameH * 0.5) / 0.8 / dist));
-    this.phoneCam.fov = Math.min(80, Math.max(18, fov));
+    // framing: what is behind the phone (a little wider, like a real camera),
+    // then the design once locked, then the pop-out
+    const scrPx = L.phoneH * ((PH_H - 2 * BEZEL) / PH_H);
+    const seeH = scrPx * this.wpp(Z_PIECE) * 1.3;
+    const fitH = dockH / 0.8;
+    const popH = (L.popR * this.wpp(Z_POP) * 1.95) / Math.min(1, this.phoneCam.aspect * 1.6) / 0.8;
+    const frameH = lerp(lerp(seeH, fitH, lk), popH, popE);
+    const fov = THREE.MathUtils.radToDeg(2 * Math.atan((frameH * 0.5) / dist));
+    this.phoneCam.fov = Math.min(80, Math.max(12, fov));
     this.phoneCam.updateProjectionMatrix();
     this.phoneCam.updateMatrixWorld(true);
     this.phoneCam.layers.set(L_PIECE);
     this.phoneCam.layers.enable(L_AR);
     this.phoneCam.layers.enable(L_POP);
 
-    // brackets: where the design sits in the feed
+    // brackets: searching, then locking onto where the design sits in the feed
     const u = this.screenMat.uniforms;
     if (s.loaded && s.bracket) {
       this.tmpBox.setFromObject(s.bracket);
       const r = projectBox(this.tmpBox, this.phoneCam);
       u.uRect.value.set(r[0], r[1], r[2], r[3]);
     }
-    const lock = this.phase === "scan" ? ease(this.pt / SCAN_T) : this.phase === "alive" ? 1 : 0;
-    u.uLock.value = lock;
+    u.uLock.value = lk;
     u.uBr.value =
       this.phase === "alive"
         ? 1 - smooth(1.0, 1.6, this.pt)
@@ -897,18 +1067,27 @@ export class ArStage {
     u.uAccent.value.copy(this.tint);
     u.uOn.value = R ? 1 : smooth(0.6, 1.3, this.introT);
 
-    // chip anchor: bottom-centre of the screen
-    if (this.events.onPhone) {
-      const scrH = PH_H - 2 * BEZEL;
-      const a = this.tmpV.set(0, -scrH * 0.5 + 0.13, PH_D / 2).applyMatrix4(this.phone.matrixWorld);
-      const b = this.tmpV2
-        .set(0.2, -scrH * 0.5 + 0.13, PH_D / 2)
-        .applyMatrix4(this.phone.matrixWorld);
-      const pa = this.toPx(a);
-      const pb = this.toPx(b);
-      const ang = Math.atan2(pb.y - pa.y, pb.x - pa.x);
-      const wpx = (Math.hypot(pb.x - pa.x, pb.y - pa.y) / 0.2) * (PH_W - 2 * BEZEL);
-      this.events.onPhone(pa.x, pa.y, ang, wpx);
+    // the phone's screen on the page (for the DOM layer: handle, joystick, cards)
+    {
+      const sw = PH_W - 2 * BEZEL;
+      const sh = PH_H - 2 * BEZEL;
+      const z = PH_D / 2;
+      const mw = this.phone.matrixWorld;
+      const at = (x: number, y: number) => this.toPx(this.tmpV.set(x, y, z).applyMatrix4(mw));
+      const c = at(0, 0);
+      const l = at(-sw / 2, 0);
+      const r = at(sw / 2, 0);
+      const tp = at(0, sh / 2);
+      const bt = at(0, -sh / 2);
+      const sr = {
+        x: c.x,
+        y: c.y,
+        w: Math.hypot(r.x - l.x, r.y - l.y),
+        h: Math.hypot(tp.x - bt.x, tp.y - bt.y),
+        angle: Math.atan2(r.y - l.y, r.x - l.x),
+      };
+      this.scr = sr;
+      this.events.onPhone?.(sr);
     }
 
     // --- hologram tint
@@ -946,7 +1125,7 @@ export class ArStage {
   }
 
   private toPx(v: THREE.Vector3) {
-    const p = v.clone().project(this.camera);
+    const p = this.tmpV2.copy(v).project(this.camera);
     return { x: (p.x * 0.5 + 0.5) * this.w, y: (-p.y * 0.5 + 0.5) * this.h };
   }
 
@@ -955,8 +1134,6 @@ export class ArStage {
     this.stop();
     this.ro.disconnect();
     const c = this.canvas;
-    c.removeEventListener("pointermove", this.onMove);
-    c.removeEventListener("pointerleave", this.onLeave);
     c.removeEventListener("pointerdown", this.onDown);
     c.removeEventListener("pointerup", this.onUp);
     c.removeEventListener("pointercancel", this.onCancel);
@@ -1042,8 +1219,9 @@ function board(accent: number) {
 type Can = { obj: THREE.Object3D; x: number; z: number; state: "drop" | "idle" | "pop"; t: number };
 
 /**
- * A tiny Cola Run: Bobo on a round board, cans drop in, collect them forever.
- * Steered by the joystick (stage.stick); when nobody steers, Bobo plays itself.
+ * A tiny Cola Run: Bobo on a round board, three cans drop in, collect them and
+ * the reward unlocks. A finite, clear experience (no endless respawn).
+ * Steered by the joystick (stage.stick); on the auto tour, Bobo plays himself.
  */
 class BoboGame implements Pop {
   root = new THREE.Group();
@@ -1056,17 +1234,20 @@ class BoboGame implements Pop {
   private canTpl: THREE.Object3D | null = null;
   private cans: Can[] = [];
   private bursts: { m: THREE.Mesh; t: number }[] = [];
-  private pos = new THREE.Vector2(0, 0.2);
+  private pos = new THREE.Vector2(0, 0.15);
   private vel = new THREE.Vector2();
   private heading = 0;
   private score = 0;
+  private needSpawn = true;
+  private done = false;
   private shadow: THREE.Mesh;
-  auto = true;
+  auto = false;
   stage: { stick: { x: number; y: number; active: boolean; at: number } } | null = null;
 
   constructor(
     private accent: number,
     private onScore: (n: number) => void,
+    private onDone: () => void,
   ) {
     this.boardG = board(accent);
     this.boardG.rotation.x = 0.5;
@@ -1090,7 +1271,7 @@ class BoboGame implements Pop {
   setModels(b: GLTF, anims: THREE.AnimationClip[], c: GLTF) {
     const bobo = fit(cloneSkinned(b.scene), 1);
     bobo.traverse((o) => (o.frustumCulled = false));
-    // stand on the board, 0.4 tall
+    // stand on the board, 0.42 tall
     const box = new THREE.Box3().setFromObject(bobo);
     const hgt = box.max.y - box.min.y;
     bobo.scale.multiplyScalar(0.42 / hgt);
@@ -1123,29 +1304,45 @@ class BoboGame implements Pop {
     tpl.add(can);
     this.canTpl = tpl;
     setLayer(this.root, L_POP);
-    for (let i = 0; i < 3; i++) this.spawn(i * 0.25);
     this.ready = true;
   }
 
-  private spawn(delay = 0) {
-    if (!this.canTpl) return;
-    let x = 0;
-    let z = 0;
-    for (let k = 0; k < 16; k++) {
-      const r = Math.sqrt(Math.random()) * 0.74;
-      const a = Math.random() * Math.PI * 2;
-      x = Math.cos(a) * r;
-      z = Math.sin(a) * r;
-      const farBobo = Math.hypot(x - this.pos.x, z - this.pos.y) > 0.38;
-      const farCans = this.cans.every((c) => Math.hypot(c.x - x, c.z - z) > 0.3);
-      if (farBobo && farCans) break;
+  /** A new game: Bobo back in the middle, cans drop in when it next comes alive. */
+  reset() {
+    for (const c of this.cans) this.boardG.remove(c.obj);
+    this.cans = [];
+    for (const b of this.bursts) {
+      this.boardG.remove(b.m);
+      b.m.geometry.dispose();
+      (b.m.material as THREE.Material).dispose();
     }
-    const obj = cloneSkinned(this.canTpl);
-    setLayer(obj, L_POP);
-    obj.position.set(x, 0.9, z);
-    obj.rotation.y = Math.random() * 6;
-    this.boardG.add(obj);
-    this.cans.push({ obj, x, z, state: "drop", t: -delay });
+    this.bursts = [];
+    this.pos.set(0, 0.15);
+    this.vel.set(0, 0);
+    this.heading = 0;
+    this.score = 0;
+    this.done = false;
+    this.needSpawn = true;
+    this.onScore(0);
+  }
+
+  /** Three cans, spread around the board and away from Bobo. */
+  private spawnAll() {
+    if (!this.canTpl) return;
+    const a0 = Math.random() * Math.PI * 2;
+    for (let i = 0; i < CANS; i++) {
+      const a = a0 + (i / CANS) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const r = 0.5 + Math.random() * 0.18;
+      const x = Math.cos(a) * r;
+      const z = Math.sin(a) * r;
+      const obj = cloneSkinned(this.canTpl);
+      setLayer(obj, L_POP);
+      obj.position.set(x, 0.9, z);
+      obj.rotation.y = Math.random() * 6;
+      obj.visible = false;
+      this.boardG.add(obj);
+      this.cans.push({ obj, x, z, state: "drop", t: -(0.45 + i * 0.22) });
+    }
   }
 
   private burst(x: number, z: number) {
@@ -1167,8 +1364,12 @@ class BoboGame implements Pop {
 
   update(dt: number, t: number, live: boolean) {
     if (!this.ready || !this.bobo) return;
+    if (live && this.needSpawn) {
+      this.needSpawn = false;
+      this.spawnAll();
+    }
     const st = this.stage?.stick;
-    // input: the joystick, else Bobo plays itself
+    // input: the joystick, else (on the tour) Bobo plays himself
     const dir = new THREE.Vector2();
     let speed = 0.95;
     if (live && st && (st.active || t - st.at < 3.5)) {
@@ -1185,7 +1386,7 @@ class BoboGame implements Pop {
       if (near) {
         dir.set(near.x - this.pos.x, near.z - this.pos.y);
         if (dir.length() > 0.02) dir.normalize();
-        speed = 0.7;
+        speed = 0.6;
       }
     }
     this.vel.lerp(dir.multiplyScalar(speed), 1 - Math.exp(-10 * dt));
@@ -1208,7 +1409,7 @@ class BoboGame implements Pop {
     if (this.run) this.run.timeScale = 0.7 + v * 0.6;
     this.mixer?.update(dt);
 
-    // cans
+    // cans: drop in, spin, and disappear when Bobo reaches them
     for (const c of [...this.cans]) {
       c.t += dt;
       if (c.state === "drop") {
@@ -1232,15 +1433,18 @@ class BoboGame implements Pop {
         }
       } else {
         const k = clamp01(c.t / 0.3);
-        c.obj.scale.setScalar(1 + k * 0.4 - k * k * 1.4);
+        c.obj.scale.setScalar(Math.max(1e-3, 1 + k * 0.4 - k * k * 1.4));
         c.obj.position.y = 0.02 + k * 0.25;
         c.obj.rotation.y += dt * 14;
         if (k >= 1) {
           this.boardG.remove(c.obj);
           this.cans.splice(this.cans.indexOf(c), 1);
-          this.spawn(0.15);
         }
       }
+    }
+    if (!this.done && this.score >= CANS && this.cans.length === 0) {
+      this.done = true;
+      this.onDone();
     }
     for (const b of [...this.bursts]) {
       b.t += dt;
