@@ -464,22 +464,161 @@
     transform: scale(1.06);
   }
 }
-/* The program loop (Buy, Tap, Play, Collect, Next drop): a light travels along it. */
-.loop-step {
-  animation: loop-step 5s ease-in-out infinite;
-  animation-delay: calc(var(--i) * 1s);
+/* What we do: service cards light their border in their own colour. */
+.svc-card {
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.4s,
+    box-shadow 0.4s;
 }
-@keyframes loop-step {
+.svc-card:hover,
+.svc-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--c) 55%, transparent);
+  box-shadow: 0 24px 60px -30px color-mix(in oklab, var(--c) 70%, transparent);
+}
+.svc-icon {
+  background: color-mix(in oklab, var(--c) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--c) 30%, transparent);
+}
+/* Partner logos: white marks that brighten on hover. */
+.logo-mark img {
+  opacity: 0.78;
+  transition:
+    opacity 0.3s,
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.logo-mark:hover img {
+  opacity: 1;
+  transform: scale(1.04);
+}
+/* Service flow chips light up one after another, in the card's colour. */
+.svc-step {
+  border-color: rgba(255, 255, 255, 0.14);
+  animation: svc-step 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--k) * 0.9s + 1.2s);
+}
+@keyframes svc-step {
   0%,
   30%,
   100% {
     border-color: rgba(255, 255, 255, 0.14);
-    color: rgba(255, 255, 255, 0.75);
+    color: rgba(255, 255, 255, 0.85);
   }
-  10%,
+  8%,
   20% {
     border-color: var(--c);
     color: #fff;
+  }
+}
+.fmt-card {
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.4s;
+}
+.fmt-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+/* The analytics illustration: lines draw in, then keep a slow live drift. */
+.live-chart .lc-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+[data-reveal="in"] .live-chart .lc-line {
+  animation:
+    draw-in 2.2s cubic-bezier(0.6, 0, 0.2, 1) both,
+    lc-drift 6s ease-in-out 2.2s infinite;
+}
+[data-reveal="in"] .live-chart .lc-line--b {
+  animation-delay: 0.3s, 2.5s;
+}
+@keyframes lc-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+/* How it works: a light runs along the line between the three steps and each
+   step's ring lights up as it passes. */
+@media (min-width: 768px) {
+  .flow {
+    position: relative;
+    --gap: 2rem;
+    --col: calc((100% - 2 * var(--gap)) / 3);
+  }
+  .flow::before,
+  .flow::after {
+    content: "";
+    position: absolute;
+    top: 23.5px;
+    height: 1px;
+  }
+  .flow::before {
+    left: 24px;
+    right: calc(var(--col) - 24px);
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .flow::after {
+    top: 21px;
+    left: 24px;
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: #19afff;
+    box-shadow: 0 0 12px 2px currentColor;
+    color: #19afff;
+    animation: flow-run 4.5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+  }
+}
+@keyframes flow-run {
+  0% {
+    left: 24px;
+    background: #19afff;
+    color: #19afff;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  50% {
+    background: #ff2fae;
+    color: #ff2fae;
+  }
+  85% {
+    left: calc(100% - var(--col) + 21px);
+    background: #19afff;
+    color: #19afff;
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - var(--col) + 21px);
+    opacity: 0;
+  }
+}
+.flow-icon {
+  animation: flow-ring 4.5s ease-in-out infinite;
+}
+.flow-step:nth-child(2) .flow-icon {
+  animation-delay: 1.9s;
+}
+.flow-step:nth-child(3) .flow-icon {
+  animation-delay: 3.8s;
+}
+@keyframes flow-ring {
+  0%,
+  22%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
+  }
+  6%,
+  14% {
+    border-color: var(--c);
+    box-shadow: 0 0 24px -4px var(--c);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -493,8 +632,17 @@
     stroke-dashoffset: 0;
   }
   .icon-pulse,
-  .loop-step {
+  .flow::after,
+  .flow-icon,
+  .svc-step,
+  .live-chart .lc-line {
     animation: none !important;
+  }
+  .flow::after {
+    display: none;
+  }
+  .svc-card:hover {
+    transform: none;
   }
 }
 

@@ -85,3 +85,111 @@
   .get-card { transition: none; }
 }
 .gc-copy { display: grid; gap: 10px; justify-items: start; }
+
+/* ── Section subtitles + small labels ─────────────────────────────────────── */
+.sec-sub { margin: 0; max-width: 56ch; color: var(--fg-2); font-size: clamp(15px, 1.4vw, 18px); line-height: 1.55; }
+.sec-sub b { color: var(--fg); }
+.reel-kicker { margin: clamp(40px, 6vw, 72px) 0 22px; text-align: center; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.sec-head > .soon-pill {
+  display: inline-flex; justify-self: center; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold-2);
+  background: rgba(246, 195, 68, 0.1); border: 1px solid rgba(246, 195, 68, 0.35);
+}
+.sec-head > .soon-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+
+/* ── 01 · The live globe, framed ──────────────────────────────────────────── */
+.globe-embed {
+  position: relative; height: clamp(460px, 60vw, 720px); border-radius: var(--r-xl); overflow: hidden;
+  background: #03060a; border: 1px solid var(--line-2);
+  box-shadow: 0 50px 120px -50px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(246, 195, 68, 0.06), 0 0 90px -40px rgba(63, 230, 224, 0.55);
+}
+.globe-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; }
+.ge-open { position: absolute; right: 16px; bottom: 16px; z-index: 2; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.ge-cover { display: none; }
+@media (pointer: coarse) {
+  .ge-cover {
+    display: grid; place-items: end center; position: absolute; inset: 0; z-index: 1; padding: 0 0 72px;
+    border: 0; background: transparent; color: #fff; cursor: pointer;
+  }
+  .globe-embed.is-live .ge-cover { display: none; }
+}
+.ge-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  background: rgba(5, 8, 10, 0.7); border: 1px solid var(--line-2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.ge-chip .ic { width: 16px; height: 16px; color: var(--gold); }
+
+/* ── 03 · Bobo's Hideout: real screenshots as floating panels ─────────────── */
+.band--hideout { overflow: clip; }
+.band--hideout::before {
+  content: ""; position: absolute; left: 50%; top: 38%; width: min(1100px, 120vw); aspect-ratio: 1.6; translate: -50% -50%;
+  background: radial-gradient(closest-side, rgba(63, 230, 224, 0.13), transparent 70%), radial-gradient(closest-side at 70% 60%, rgba(255, 55, 174, 0.1), transparent 70%);
+  pointer-events: none;
+}
+.hideout-stage { position: relative; --mx: 0; --my: 0; }
+.hs-panel {
+  margin: 0; border-radius: 18px; overflow: hidden; z-index: var(--z);
+  border: 1px solid rgba(255, 255, 255, 0.16); background: #070b1c;
+  box-shadow: 0 40px 90px -40px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(0, 0, 0, 0.4), 0 0 60px -30px rgba(63, 230, 224, 0.6);
+}
+.hs-panel img { display: block; width: 100%; height: auto; }
+.hs-room { border-radius: 28px; }
+.hs-os { box-shadow: 0 50px 110px -40px rgba(0, 0, 0, 0.95), 0 0 80px -34px rgba(255, 55, 174, 0.7); }
+
+@media (min-width: 900px) {
+  .hideout-stage { height: clamp(500px, 42vw, 640px); perspective: 1600px; }
+  .hs-panel {
+    position: absolute;
+    transform: rotateY(calc(var(--ry, 0deg) + var(--mx) * 6deg)) rotateX(calc(var(--rx, 0deg) + var(--my) * -5deg))
+      translate3d(calc(var(--mx) * var(--depth, 10px)), calc(var(--my) * var(--depth, 10px)), 0);
+    transition: transform 0.6s var(--ease);
+    animation: hs-float 7s ease-in-out infinite;
+    animation-delay: var(--fd, 0s);
+  }
+  .hs-room { left: 0; top: 0; width: 38%; --ry: 10deg; --depth: 8px; }
+  .hs-os { right: 0; top: 3%; width: 63%; --ry: -9deg; --rx: 2deg; --depth: 16px; --fd: -2s; }
+  .hs-col { left: 21%; bottom: 2%; width: 30%; --ry: 7deg; --depth: 28px; --fd: -4s; }
+  .hs-alerts { left: 55%; bottom: -6%; width: 14%; --ry: -4deg; --depth: 24px; --fd: -5s; }
+  .hs-lead { right: 3%; bottom: -9%; width: 15%; --ry: -12deg; --depth: 34px; --fd: -1s; }
+}
+@keyframes hs-float { 0%, 100% { translate: 0 0; } 50% { translate: 0 -12px; } }
+
+@media (max-width: 899px) {
+  .hideout-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hs-room, .hs-os, .hs-col { grid-column: 1 / -1; }
+  .hs-os { margin-top: -56px; margin-inline: 4%; }
+  .hs-panel { border-radius: 14px; }
+}
+
+.hide-feats {
+  list-style: none; margin: clamp(56px, 9vw, 130px) 0 0; padding: 0;
+  display: grid; gap: 14px; grid-template-columns: 1fr;
+}
+@media (min-width: 560px) { .hide-feats { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1000px) { .hide-feats { grid-template-columns: repeat(4, 1fr); } }
+.hide-feats li {
+  display: grid; gap: 8px; align-content: start; padding: 22px; border-radius: var(--r-lg);
+  background: var(--card); border: 1px solid var(--line); color: var(--fg-2); font-size: 14.5px; line-height: 1.5;
+}
+.hide-feats b { color: var(--fg); font-size: 18px; letter-spacing: -0.01em; }
+.hf-ic {
+  display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 8px; border-radius: 14px;
+  color: var(--teal); background: rgba(63, 230, 224, 0.1); border: 1px solid rgba(63, 230, 224, 0.28);
+}
+.hide-feats li:nth-child(even) .hf-ic { color: var(--gold); background: rgba(246, 195, 68, 0.1); border-color: rgba(246, 195, 68, 0.3); }
+.hf-ic svg { width: 24px; height: 24px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hs-panel { animation: none !important; transition: none; }
+  .hideout-stage { --mx: 0 !important; --my: 0 !important; }
+}
+@media (pointer: coarse) {
+  .ge-cover { place-items: start end; padding: 16px; }
+}
+@media (max-width: 699px) {
+  .globe-embed { overflow: visible; margin-bottom: 76px; }
+  .globe-embed iframe { border-radius: var(--r-xl); }
+  .ge-open { right: 50%; bottom: -60px; translate: 50% 0; white-space: nowrap; }
+  .sec-head > .soon-pill { font-size: 10px; letter-spacing: 0.1em; padding: 7px 12px; }
+}

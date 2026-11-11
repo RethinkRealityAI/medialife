@@ -31,7 +31,7 @@
 <link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css" />
+<link rel="stylesheet" href="/evade/launch.css?v=2" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -41,6 +41,7 @@
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
+<script src="/evade/launch.js" defer></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -68,6 +69,9 @@
     <symbol id="i-trophy" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h12v8a6 6 0 0 1-12 0Z"/><path d="M10 7H5a4 4 0 0 0 5 5M22 7h5a4 4 0 0 1-5 5M16 18v5M11 28h10M12 23h8v5"/></g></symbol>
     <symbol id="i-keys" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 27 27M22 22l3-3M25 25l2.5-2.5"/></g></symbol>
     <symbol id="i-versus" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="18" r="10"/><path d="M16 12v6l4 2M13 3h6M16 3v5"/></g></symbol>
+    <symbol id="i-home" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h14v20H9Z"/><path d="M9 16h14M13 26v-4h6v4"/><ellipse cx="16" cy="6" rx="7" ry="2"/></g></symbol>
+    <symbol id="i-os" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="26" height="18" rx="3"/><path d="M11 28h10M16 23v5"/><rect x="7" y="9" width="5" height="5" rx="1.4"/><rect x="14" y="9" width="5" height="5" rx="1.4"/></g></symbol>
+    <symbol id="i-bell" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4c-5 0-8 3.8-8 8.6v5L5.5 21h21L24 17.6v-5C24 7.8 21 4 16 4Z"/><path d="M13 25a3 3 0 0 0 6 0"/></g><circle cx="24" cy="7" r="3" fill="currentColor"/></symbol>
     <symbol id="i-day" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="16" cy="16" r="5.5"/><path d="M16 3v3M16 26v3M3 16h3M26 16h3M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M6.8 25.2l2.1-2.1M23.1 8.9l2.1-2.1"/></g></symbol>
   </defs>
 </svg>
@@ -81,8 +85,9 @@
       <img class="brand-evade" src="/brand/evade-logo.webp" alt="EVADE" width="88" height="23" />
     </a>
     <nav class="nav-links" aria-label="Sections">
-      <a href="#footage">In the wild</a>
+      <a href="#footage">Around the world</a>
       <a href="#activated">How it works</a>
+      <a href="#hideout">Bobo's Hideout</a>
       <a href="#get">Get yours</a>
       <a href="#faq">FAQ</a>
     </nav>
@@ -184,9 +189,20 @@
   <section class="band band--footage" id="footage" aria-labelledby="footTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">01 · In the wild</span>
-        <h2 id="footTitle">Bobo, <span class="gold">out in the world.</span></h2>
+        <span class="mono">01 · Where is Bobo?</span>
+        <h2 id="footTitle">Bobo in action, <span class="gold">around the world.</span></h2>
+        <p class="sec-sub">Fans film Bobo in AR wherever they are. Every clip lands on a live globe, pinned to the place it was shot.</p>
       </div>
+      <!-- the live globe itself (?embed hides its own header). Touch screens get a cover
+           first so a swipe scrolls the page instead of spinning the planet. -->
+      <div class="globe-embed rv rv-d1" id="globeEmbed">
+        <iframe src="/evade/where-is-bobo/?embed" title="Where is Bobo? A live 3D globe of Bobo sightings" loading="lazy" allow="fullscreen; geolocation"></iframe>
+        <button type="button" class="ge-cover" id="geCover" aria-label="Explore the globe">
+          <span class="ge-chip mono"><svg class="ic" aria-hidden="true"><use href="#i-scan"/></svg>Tap to explore</span>
+        </button>
+        <a class="ge-open btn btn--sm btn--ghost" href="/evade/where-is-bobo/" data-track="globe_open">Open the full globe <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <p class="reel-kicker mono rv">Straight from fans' phones</p>
       <div class="reel rv rv-d1" id="reel" role="group" aria-label="Bobo in AR, recorded on a phone">
         <figure class="clip">
           <video data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Golden Gate Bridge"></video>
@@ -279,11 +295,49 @@
     </div>
   </section>
 
+
+  <!-- 3. BOBO'S HIDEOUT: the Collector Hub, shown with real screenshots of the room and BOBO OS (no live embed here) -->
+  <section class="band band--hideout" id="hideout" aria-labelledby="hideTitle">
+    <div class="wrap">
+      <div class="sec-head sec-head--center rv">
+        <span class="mono">03 · Collector Hub</span>
+        <h2 id="hideTitle">Unlock <span class="gold">Bobo's Hideout.</span></h2>
+        <p class="sec-sub">Your keychain's code opens a room of your own inside a giant Eclipse can. Bobo lives there, and his computer runs <b>BOBO OS</b>.</p>
+        <span class="soon-pill mono"><span class="dot"></span>Coming soon for keychain owners</span>
+      </div>
+
+      <div class="hideout-stage rv rv-d1" id="hideoutStage" aria-label="Screenshots of Bobo's Hideout and BOBO OS">
+        <figure class="hs-panel hs-room" style="--z:10">
+          <img src="/evade/hideout/room.webp" alt="Bobo's Hideout: a two-floor room inside a giant Eclipse can, with Bobo on his bed and BOBO OS on the upstairs computer" width="1400" height="1450" loading="lazy" decoding="async" />
+        </figure>
+        <figure class="hs-panel hs-os" style="--z:30">
+          <img src="/evade/hideout/bobo-os.webp" alt="BOBO OS: a desktop with Alerts, Where's Bobo?, Leaderboard, Cola Run, Digital Collection, Shop and Me" width="1600" height="1012" loading="lazy" decoding="async" />
+        </figure>
+        <figure class="hs-panel hs-win hs-col" style="--z:40">
+          <img src="/evade/hideout/collection.webp" alt="The Digital Collection window: the Eclipse can collected, 1 of 5 towards The Golden Bobo" width="980" height="622" loading="lazy" decoding="async" />
+        </figure>
+        <figure class="hs-panel hs-win hs-lead" style="--z:45">
+          <img src="/evade/hideout/leaderboard.webp" alt="The Where's Bobo? leaderboard: cities ranked by Bobo sightings" width="460" height="560" loading="lazy" decoding="async" />
+        </figure>
+        <figure class="hs-panel hs-win hs-alerts" style="--z:35">
+          <img src="/evade/hideout/alerts.webp" alt="The Alerts window: new sightings and drops" width="420" height="520" loading="lazy" decoding="async" />
+        </figure>
+      </div>
+
+      <ul class="hide-feats" role="list">
+        <li class="rv"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-home"/></svg></span><b>A room of your own</b><span>Two floors, a bed for Bobo and a shelf for everything you collect. Look around from any phone.</span></li>
+        <li class="rv rv-d1"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-os"/></svg></span><b>BOBO OS</b><span>Bobo's computer is your home screen: play Cola Run, check the globe and see what's new.</span></li>
+        <li class="rv rv-d2"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-trophy"/></svg></span><b>Collect the set</b><span>Every EVADE drop adds a piece. Complete it to unlock The Golden Bobo.</span></li>
+        <li class="rv rv-d3"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-bell"/></svg></span><b>First to know</b><span>New drops, events and rewards land in your room before anywhere else.</span></li>
+      </ul>
+    </div>
+  </section>
+
   <!-- 4. GET YOURS: the shop, the globe and the creator crew (no sign-up form here) -->
   <section class="band band--get" id="get" aria-labelledby="getTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">03 · Get yours</span>
+        <span class="mono">04 · Get yours</span>
         <h2 id="getTitle">Bring Bobo <span class="gold">home.</span></h2>
       </div>
       <div class="get-grid">
@@ -351,8 +405,9 @@
       <div>
         <h4>EVADE</h4>
         <ul>
-          <li><a href="#footage">In the wild</a></li>
+          <li><a href="#footage">Around the world</a></li>
           <li><a href="#activated">How it works</a></li>
+          <li><a href="#hideout">Bobo's Hideout</a></li>
           <li><a href="#get">Get yours</a></li>
         </ul>
       </div>

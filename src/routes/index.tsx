@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { SHOP_URL } from "@/components/site/Nav";
 import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
-import { TOUCHPOINTS, PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
+import { PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
 import { liveCampaigns } from "@/lib/campaigns";
 import { Hero } from "@/components/home/Hero";
 import { Reveal } from "@/components/home/Reveal";
@@ -15,9 +15,9 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "MEDIALIFE makes immersive products and experiences for entertainment and gaming IP: ACTIVATED MERCHANDISE™ and ACTIVATED APPAREL™, activated print, retail, live events and browser games that open with a tap or scan. No app.",
+          "MEDIALIFE is an immersive AI studio that commercializes entertainment and gaming IP with app-free experiences and real-time analytics: activated products, activated print, retail, live events and browser games that open with a tap or scan.",
       },
-      { property: "og:title", content: "MEDIALIFE | Everything we touch comes alive" },
+      { property: "og:title", content: "MEDIALIFE | We activate everything we touch" },
       {
         property: "og:description",
         content:
@@ -110,43 +110,143 @@ function Eyebrow({ hue, children }: { hue: Hue; children: React.ReactNode }) {
   );
 }
 
-/* ─────────────────────────── What we do: four pillars ─────────────────────────── */
+/* ─────────────────────────── What we do: two flagship services ─────────────────────────── */
 
-const PILLARS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[] = [
+const SERVICES: {
+  hue: Hue;
+  tag: string;
+  title: string;
+  line: string;
+  flow: string[];
+  link: { label: string; href: string };
+  icon: React.ReactNode;
+}[] = [
   {
     hue: "blue",
+    tag: "Flagship",
     title: "Activated products",
-    line: "Apparel, keychains, stickers, print and retail displays with NFC and AR built into the design.",
+    line: "Merch, apparel and collectibles that tie straight back to the IP. One tap opens a mini-game built on the IP, and it sends fans on to the real game, on whatever platform it lives.",
+    flow: ["The product", "IP mini-game", "Back to the game"],
+    link: { label: "See activated products", href: "/activated-merch/" },
     icon: (
       <>
-        <rect x="14" y="6" width="20" height="36" rx="5" pathLength="1" />
-        <path d="M21 10h6" pathLength="1" />
+        <path
+          d="M17 7 7 12.5l3.5 8.5 4.5-2.2V41h18V18.8l4.5 2.2 3.5-8.5L31 7c-1.2 3.4-3.8 5.4-7 5.4S18.2 10.4 17 7Z"
+          pathLength="1"
+        />
+        <circle cx="24" cy="26" r="3.2" pathLength="1" />
         <g className="icon-pulse">
-          <path d="M38 17c2.5 2 2.5 12 0 14" pathLength="1" />
-          <path d="M42 13c4.5 4 4.5 18 0 22" pathLength="1" />
+          <path d="M29 22.5c1.6 2 1.6 5 0 7" pathLength="1" />
+          <path d="M19 22.5c-1.6 2-1.6 5 0 7" pathLength="1" />
         </g>
       </>
     ),
   },
   {
     hue: "magenta",
-    title: "Immersive experiences",
-    line: "Art that comes alive, games anywhere, exclusive content and a 3D collector hub.",
+    tag: "IP launches",
+    title: "Immersive marketing",
+    line: "Posters, magazines, stickers, retail displays and live events that turn an IP launch into something fans can play with, film and share.",
+    flow: ["Print + retail", "AR moment", "Watch, share, buy"],
+    link: { label: "Read the case studies", href: "/case-studies" },
     icon: (
       <>
-        <path d="M6 14V8h6M36 8h6v6M42 34v6h-6M12 40H6v-6" pathLength="1" />
-        <path d="M24 13l9 5v11l-9 5-9-5V18z" pathLength="1" />
-        <path d="M15 18l9 5 9-5M24 23v11" pathLength="1" />
+        <rect x="9" y="6" width="24" height="32" rx="2.5" pathLength="1" />
+        <path d="M13 31l6-7 4 4 3-3 3 4" pathLength="1" />
+        <circle cx="25" cy="15" r="2.6" pathLength="1" />
         <g className="icon-pulse">
-          <path d="M37 4v4M35 6h4" pathLength="1" />
+          <path d="M38 22v8M34 26h8" pathLength="1" />
+          <path d="M40 38v4M38 40h4" pathLength="1" />
+        </g>
+      </>
+    ),
+  },
+];
+
+/** The experience formats we build. All of them open in the browser. */
+const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[] = [
+  {
+    hue: "blue",
+    title: "Image-tracked AR",
+    line: "The artwork is the trigger. Posters, prints and packaging come alive on camera.",
+    icon: (
+      <>
+        <path
+          d="M5 13V7a2 2 0 0 1 2-2h6M35 5h6a2 2 0 0 1 2 2v6M43 35v6a2 2 0 0 1-2 2h-6M13 43H7a2 2 0 0 1-2-2v-6"
+          pathLength="1"
+        />
+        <rect x="14" y="12" width="20" height="24" rx="2" pathLength="1" />
+        <g className="icon-pulse">
+          <path d="M19 30l4-5 3 3 3-4" pathLength="1" />
+        </g>
+      </>
+    ),
+  },
+  {
+    hue: "magenta",
+    title: "World-tracked AR",
+    line: "Characters step into any room or street and stay put while fans walk around them.",
+    icon: (
+      <>
+        <path d="M6 36l18 8 18-8-18-8z" pathLength="1" />
+        <path d="M24 30V12" pathLength="1" />
+        <circle cx="24" cy="9" r="4" pathLength="1" />
+        <g className="icon-pulse">
+          <path d="M14 20c-3 2-3 6 0 8M34 20c3 2 3 6 0 8" pathLength="1" />
         </g>
       </>
     ),
   },
   {
     hue: "blue",
+    title: "Geospatial",
+    line: "Experiences pinned to real places, from city landmarks to convention halls.",
+    icon: (
+      <>
+        <circle cx="24" cy="24" r="17" pathLength="1" />
+        <path d="M7 24h34M24 7c-6 5-6 29 0 34M24 7c6 5 6 29 0 34" pathLength="1" />
+        <g className="icon-pulse">
+          <path d="M33 13a4 4 0 0 1 4 4c0 3-4 7-4 7s-4-4-4-7a4 4 0 0 1 4-4z" pathLength="1" />
+        </g>
+      </>
+    ),
+  },
+  {
+    hue: "magenta",
+    title: "Browser mini-games",
+    line: "Games built on the IP that open straight from the product. Nothing to install.",
+    icon: (
+      <>
+        <path
+          d="M15 17h18a9 9 0 0 1 9 9v2.5a6.5 6.5 0 0 1-12 3.4L28.5 30h-9L18 31.9a6.5 6.5 0 0 1-12-3.4V26a9 9 0 0 1 9-9Z"
+          pathLength="1"
+        />
+        <path d="M15 21.5v7M11.5 25h7" pathLength="1" />
+        <g className="icon-pulse">
+          <circle cx="32" cy="23.5" r="1.6" pathLength="1" />
+          <circle cx="35.5" cy="27" r="1.6" pathLength="1" />
+        </g>
+      </>
+    ),
+  },
+  {
+    hue: "blue",
+    title: "3D collector hubs",
+    line: "A home for everything a fan owns, where new drops and rewards land first.",
+    icon: (
+      <>
+        <path d="M24 5l17 9v20l-17 9-17-9V14z" pathLength="1" />
+        <path d="M7 14l17 9 17-9M24 23v20" pathLength="1" />
+        <g className="icon-pulse">
+          <path d="M38 4v5M35.5 6.5h5" pathLength="1" />
+        </g>
+      </>
+    ),
+  },
+  {
+    hue: "magenta",
     title: "Fan rewards",
-    line: "Points, giveaways, collectible sets and first access that bring fans back for the next drop.",
+    line: "Points, giveaways and collectible sets that bring fans back for the next drop.",
     icon: (
       <>
         <path
@@ -154,33 +254,73 @@ const PILLARS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
           pathLength="1"
         />
         <g className="icon-pulse">
-          <path d="M8 40h4M36 40h4M22 42h4" pathLength="1" />
-        </g>
-      </>
-    ),
-  },
-  {
-    hue: "magenta",
-    title: "Revenue for IP owners",
-    line: "We design, make, sell and fulfil. You earn a royalty on every unit, drop after drop.",
-    icon: (
-      <>
-        <path d="M6 40h36" pathLength="1" />
-        <path d="M10 34l9-9 7 6 13-14" pathLength="1" />
-        <path d="M32 17h7v7" pathLength="1" />
-        <g className="icon-pulse">
-          <circle cx="19" cy="25" r="1.6" pathLength="1" />
-          <circle cx="26" cy="31" r="1.6" pathLength="1" />
+          <path d="M8 41h4M36 41h4M22 43h4" pathLength="1" />
         </g>
       </>
     ),
   },
 ];
 
-/* ─────────────────────────── Who we've worked with ─────────────────────────── */
+/** What every experience measures, live (from the approved capabilities copy). */
+const MEASURES = [
+  "Scans + taps",
+  "Dwell time",
+  "Repeat visits",
+  "CTA conversion",
+  "Location",
+  "Placement",
+];
 
-/** Names drawn from the site's approved case studies and live campaigns only. */
-const PARTNERS = ["Netflix", "ONE PIECE", "Sakamoto Days", "Den of Geek", "EVADE"];
+/* ─────────────────────────── Partner logos ─────────────────────────── */
+
+/**
+ * Approved partners only (see capabilities.ts). The ONE PIECE, Sakamoto Days
+ * and Den of Geek marks are cut from our own campaign art in the Activated
+ * Experiences deck; all logos are shown in white so the strip reads as one.
+ */
+const LOGOS: { src: string; name: string; h: string }[] = [
+  { src: "/home/logos/netflix.svg", name: "Netflix", h: "h-7 sm:h-9" },
+  { src: "/home/logos/onepiece.webp", name: "ONE PIECE", h: "h-12 sm:h-16" },
+  { src: "/home/logos/sakamoto.webp", name: "Sakamoto Days", h: "h-10 sm:h-12" },
+  { src: "/home/logos/denofgeek.webp", name: "Den of Geek", h: "h-5 sm:h-7" },
+  { src: "/home/logos/evade.webp", name: "EVADE", h: "h-7 sm:h-9" },
+];
+
+/** How every activated product works, in three beats. */
+const STEPS: { title: string; line: string; icon: React.ReactNode }[] = [
+  {
+    title: "Built in",
+    line: "NFC and AR are designed into the product itself, never a sticker on top.",
+    icon: (
+      <>
+        <circle cx="16" cy="16" r="10" />
+        <circle cx="16" cy="16" r="4" />
+        <path d="M16 2v3M16 27v3M2 16h3M27 16h3" />
+      </>
+    ),
+  },
+  {
+    title: "Tap or scan",
+    line: "The experience opens straight in the phone's browser. No app to download.",
+    icon: (
+      <>
+        <rect x="9" y="3" width="14" height="26" rx="3" />
+        <path d="M14 7h4" />
+        <path d="M26 11c1.6 1.4 1.6 8.6 0 10M5.5 11c-1.6 1.4-1.6 8.6 0 10" />
+      </>
+    ),
+  },
+  {
+    title: "Play, collect, return",
+    line: "Games, rewards and first access bring fans back for the next drop.",
+    icon: (
+      <>
+        <path d="m16 4 3.4 7 7.6 1-5.5 5.3 1.3 7.6L16 21.3l-6.8 3.6 1.3-7.6L5 12l7.6-1Z" />
+        <path d="M8 29h16" />
+      </>
+    ),
+  },
+];
 
 /* ─────────────────────────── Activated products ─────────────────────────── */
 
@@ -223,6 +363,13 @@ const PRODUCTS: {
     span: "",
   },
   {
+    name: "Hoodies",
+    tags: "NFC · AR",
+    img: "/activated-merch/posters/sukeban-hoodie.webp",
+    alt: "The Sukeban AR hoodie",
+    span: "",
+  },
+  {
     name: "Stickers",
     tags: "NFC · AR",
     img: "/activated-merch/posters/ar-stickers.webp",
@@ -234,120 +381,8 @@ const PRODUCTS: {
     tags: "AR · QR",
     img: "/live/one-piece-poster.webp",
     alt: "The activated ONE PIECE poster",
-    span: "row-span-2",
+    span: "",
     cover: true,
-  },
-  {
-    name: "Hoodies",
-    tags: "NFC · AR",
-    img: "/activated-merch/posters/sukeban-hoodie.webp",
-    alt: "The Sukeban AR hoodie",
-    span: "row-span-2",
-  },
-  {
-    name: "Collectibles",
-    tags: "NFC",
-    img: "/medialife/activated-retail/assets/ml_reward_figure.webp",
-    alt: "An activated collectible figure with matching charms",
-    span: "col-span-2",
-    cover: true,
-  },
-  {
-    name: "Desk mats",
-    tags: "AR · QR",
-    img: "/medialife/activated-retail/assets/ml_mat.webp",
-    alt: "An activated desk mat with a scannable print",
-    span: "col-span-2 lg:col-span-3",
-    cover: true,
-  },
-  {
-    name: "Retail displays",
-    tags: "NFC · AR",
-    img: "/medialife/activated-retail/page/showcase-poster-sm.webp",
-    alt: "The MEDIALIFE activated retail fixture",
-    span: "col-span-2 lg:col-span-3",
-    cover: true,
-  },
-];
-
-/* ─────────────────────────── Immersive experiences ─────────────────────────── */
-
-const EXPERIENCES: {
-  hue: Hue;
-  title: string;
-  line: string;
-  img: string;
-  alt: string;
-  href: string;
-}[] = [
-  {
-    hue: "magenta",
-    title: "Art that comes alive",
-    line: "Point at the print and the design moves, talks and plays.",
-    img: "/home/ar/one-piece-alive.webp",
-    alt: "The ONE PIECE poster, animated in AR",
-    href: "/live",
-  },
-  {
-    hue: "blue",
-    title: "Games anywhere",
-    line: "A mini-game opens straight from the merch. Cola Run starts from the EVADE charms.",
-    img: "/evade/creators/assets/img/cola-run-splash-sm.webp",
-    alt: "Cola Run, the browser game unlocked by the EVADE charms",
-    href: "/evade/",
-  },
-  {
-    hue: "magenta",
-    title: "A collector hub",
-    line: "A 3D home that fills up with everything a fan owns, with perks and drops landing there first.",
-    img: "/home/hub.webp",
-    alt: "Bobo's Hideout, a two-floor 3D collector room shaped like a charm",
-    href: "/evade/",
-  },
-  {
-    hue: "blue",
-    title: "Shared adventures",
-    line: "Fans film Bobo in AR wherever they are and pin the clips on a live world map.",
-    img: "/home/bobo-golden-gate.webp",
-    alt: "Bobo in AR in front of the Golden Gate Bridge",
-    href: "/evade/where-is-bobo/",
-  },
-];
-
-/* ─────────────────────────── The ecosystem ─────────────────────────── */
-
-const LOOP = ["Buy", "Tap", "Play", "Collect", "Next drop"];
-
-const SIDES: { hue: Hue; who: string; title: string; points: string[] }[] = [
-  {
-    hue: "magenta",
-    who: "For fans",
-    title: "Rewarded for playing.",
-    points: [
-      "Points and giveaways for playing, sharing and referring friends",
-      "First access to new drops, perks and secret items in the hub",
-      "Sets and rare pieces worth completing",
-    ],
-  },
-  {
-    hue: "blue",
-    who: "For the IP",
-    title: "Every tap leads back to your world.",
-    points: [
-      "Experiences built around your characters and story",
-      "Creator program: kits, briefs and content that sells",
-      "Data on who bought, played and came back",
-    ],
-  },
-  {
-    hue: "magenta",
-    who: "For IP owners",
-    title: "A new revenue channel, $0 to start.",
-    points: [
-      "Design, production and fulfilment, done for you",
-      "We fund the launch; you earn a royalty on every unit",
-      "Sold where fans are: your store, creators, conventions and specialty retail",
-    ],
   },
 ];
 
@@ -358,6 +393,35 @@ function Home() {
   return (
     <>
       <Hero />
+
+      {/* ─────────────────────────── TRUSTED BY ─────────────────────────── */}
+      <section
+        aria-labelledby="logos-title"
+        className="relative border-y border-white/10 bg-white/[0.025] py-10 sm:py-12"
+      >
+        <div className={SECTION}>
+          <p id="logos-title" className={`${EYEBROW} text-center`}>
+            Trusted by the worlds fans love
+          </p>
+          <Reveal
+            as="ul"
+            className="mx-auto mt-8 flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-8 sm:gap-x-16 lg:justify-between"
+          >
+            {LOGOS.map((l) => (
+              <li key={l.name} className="logo-mark flex items-center">
+                <img
+                  src={l.src}
+                  alt={l.name}
+                  loading="lazy"
+                  decoding="async"
+                  className={`${l.h} w-auto select-none`}
+                  draggable={false}
+                />
+              </li>
+            ))}
+          </Reveal>
+        </div>
+      </section>
 
       {/* ─────────────── 1. FANS DON'T JUST SEE IT. THEY PLAY IT. ─────────────── */}
       <section
@@ -424,7 +488,7 @@ function Home() {
         </div>
       </section>
 
-      {/* ─────────────────────────── 2. WHAT WE DO ─────────────────────────── */}
+      {/* ─────────────────────────── 2. WHO WE ARE + WHAT WE DO ─────────────────────────── */}
       <section
         id="capabilities"
         aria-labelledby="what-title"
@@ -434,64 +498,243 @@ function Home() {
           <Reveal className="lg:col-span-7">
             <Eyebrow hue="blue">What we do</Eyebrow>
             <h2 id="what-title" className={`${H2} mt-4`}>
-              We make the things fans buy <span className={TEXT.blue}>come alive.</span>
+              We commercialize IP <span className={TEXT.blue}>through play.</span>
             </h2>
           </Reveal>
           <Reveal delay={120} className="lg:col-span-5">
             <p className="text-muted-foreground lg:text-lg">
-              MEDIALIFE designs, makes and runs activated products for entertainment and gaming IP.
-              Each one opens an experience in the browser, so there is no app to download.
+              MEDIALIFE is an immersive AI studio. We put app-free experiences on the products and
+              media fans already love, with real-time analytics in every one, so IP earns more from
+              its fans.
             </p>
           </Reveal>
         </div>
 
-        <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {PILLARS.map((p, i) => (
+        <ul className="mt-12 grid gap-3 lg:grid-cols-2">
+          {SERVICES.map((sv, i) => (
+            <Reveal as="li" key={sv.title} delay={i * 110} className="min-w-0">
+              <a
+                href={sv.link.href}
+                className="svc-card lg-card group flex h-full flex-col rounded-[32px] p-6 sm:p-9"
+                style={{ "--c": HEX[sv.hue] } as React.CSSProperties}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <span className="svc-icon grid h-16 w-16 place-items-center rounded-2xl">
+                    <svg
+                      viewBox="0 0 48 48"
+                      width="40"
+                      height="40"
+                      fill="none"
+                      stroke={HEX[sv.hue]}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                      className="draw"
+                    >
+                      {sv.icon}
+                    </svg>
+                  </span>
+                  <span
+                    className={`lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.2em] ${TEXT[sv.hue]}`}
+                  >
+                    {sv.tag}
+                  </span>
+                </div>
+                <h3 className="mt-8 display text-[clamp(32px,3.2vw,48px)] text-white">
+                  {sv.title}
+                </h3>
+                <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground sm:text-[17px]">
+                  {sv.line}
+                </p>
+                <ol
+                  className="mt-7 flex flex-wrap items-center gap-2"
+                  aria-label={`${sv.title}, step by step`}
+                >
+                  {sv.flow.map((f, k) => (
+                    <li key={f} className="flex items-center gap-2">
+                      <span
+                        className="svc-step rounded-full border px-3.5 py-2 text-[13px] text-white/85"
+                        style={{ "--k": k } as React.CSSProperties}
+                      >
+                        {f}
+                      </span>
+                      {k < sv.flow.length - 1 && (
+                        <span aria-hidden className="text-white/35">
+                          →
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+                <span
+                  className={`mt-auto inline-flex items-center gap-2 pt-9 text-sm font-medium ${TEXT[sv.hue]}`}
+                >
+                  {sv.link.label}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                    →
+                  </span>
+                </span>
+              </a>
+            </Reveal>
+          ))}
+        </ul>
+      </section>
+
+      {/* ─────────────────────────── 3. WHAT WE BUILD ─────────────────────────── */}
+      <section
+        id="technology"
+        aria-labelledby="tech-title"
+        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
+      >
+        <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
+          <Reveal className="lg:col-span-7">
+            <Eyebrow hue="magenta">What we build</Eyebrow>
+            <h2 id="tech-title" className={`${H2} mt-4`}>
+              Every format. <span className={TEXT.magenta}>No app.</span>
+            </h2>
+          </Reveal>
+          <Reveal delay={120} className="lg:col-span-5">
+            <p className="text-muted-foreground lg:text-lg">
+              We pick the format that fits the IP and the place fans meet it. Every one opens in the
+              browser from a tap or a scan.
+            </p>
+          </Reveal>
+        </div>
+
+        <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FORMATS.map((f, i) => (
             <Reveal
               as="li"
-              key={p.title}
-              delay={i * 110}
-              className="lg-card rounded-[28px] p-6 sm:p-7"
+              key={f.title}
+              delay={(i % 3) * 90}
+              className="fmt-card lg-card flex gap-5 rounded-[26px] p-6"
             >
               <svg
                 viewBox="0 0 48 48"
-                width="56"
-                height="56"
+                width="44"
+                height="44"
                 fill="none"
-                stroke={HEX[p.hue]}
+                stroke={HEX[f.hue]}
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden
-                className="draw"
+                className="draw shrink-0"
               >
-                {p.icon}
+                {f.icon}
               </svg>
-              <h3 className="mt-8 text-xl font-medium text-white">{p.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.line}</p>
+              <div>
+                <h3 className="text-lg font-medium text-white">{f.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.line}</p>
+              </div>
             </Reveal>
           ))}
         </ul>
 
-        <Reveal delay={200} className="mt-8 flex flex-wrap items-center gap-2">
-          {TOUCHPOINTS.map((t) => (
-            <span
-              key={t}
-              className="lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.16em] text-white/75"
+        <div className="mt-3 grid gap-3 lg:grid-cols-12">
+          <Reveal delay={120} className="lg-card rounded-[28px] p-6 sm:p-8 lg:col-span-7">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <p className={EYEBROW}>How it works</p>
+              <Link
+                to="/technology"
+                className="inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+              >
+                The technology <span aria-hidden>→</span>
+              </Link>
+            </div>
+            <ol className="flow mt-6 grid gap-6 md:grid-cols-3 md:gap-8">
+              {STEPS.map((st, i) => (
+                <li key={st.title} className="flow-step relative flex gap-4 md:block">
+                  <span
+                    className="flow-icon relative z-[1] grid h-12 w-12 shrink-0 place-items-center rounded-full border border-white/15 bg-background"
+                    style={{ "--c": i % 2 ? HEX.magenta : HEX.blue } as React.CSSProperties}
+                  >
+                    <svg
+                      viewBox="0 0 32 32"
+                      width="22"
+                      height="22"
+                      fill="none"
+                      stroke={i % 2 ? HEX.magenta : HEX.blue}
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      {st.icon}
+                    </svg>
+                  </span>
+                  <div className="md:mt-5">
+                    <h3 className="text-base font-medium text-white">
+                      <span className="mono mr-2 text-[11px] text-white/40">0{i + 1}</span>
+                      {st.title}
+                    </h3>
+                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                      {st.line}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </Reveal>
+
+          {/* Real-time analytics: an illustration of the live view, not real numbers. */}
+          <Reveal delay={200} className="lg-card rounded-[28px] p-6 sm:p-8 lg:col-span-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className={EYEBROW}>Real-time analytics</p>
+              <span className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-[0.2em] text-white/70">
+                <span
+                  className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-glow"
+                  aria-hidden
+                />
+                Live
+              </span>
+            </div>
+            <p className="mt-3 text-white/90">
+              Every scan and tap reports back as it happens, so you see what works by product, place
+              and placement.
+            </p>
+            <svg
+              viewBox="0 0 320 96"
+              className="live-chart mt-6 h-24 w-full"
+              fill="none"
+              aria-hidden
+              preserveAspectRatio="none"
             >
-              {t}
-            </span>
-          ))}
-          <Link
-            to="/technology"
-            className="ml-1 inline-flex items-center gap-2 px-2 text-sm text-primary hover:underline underline-offset-4"
-          >
-            The technology <span aria-hidden>→</span>
-          </Link>
-        </Reveal>
+              <path d="M0 95.5h320" stroke="rgba(255,255,255,.12)" />
+              <path
+                className="lc-line"
+                pathLength="1"
+                d="M0 80 C30 76 42 60 64 62 S100 74 124 52 S160 30 184 40 S220 58 244 30 S286 12 320 16"
+                stroke={HEX.blue}
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <path
+                className="lc-line lc-line--b"
+                pathLength="1"
+                d="M0 90 C34 88 50 80 72 82 S110 86 132 72 S170 62 196 66 S232 70 256 56 S292 44 320 46"
+                stroke={HEX.magenta}
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".8"
+              />
+            </svg>
+            <ul className="mt-5 flex flex-wrap gap-2">
+              {MEASURES.map((m) => (
+                <li
+                  key={m}
+                  className="lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.14em] text-white/75"
+                >
+                  {m}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
       </section>
 
-      {/* ─────────────────────── 3. WHO WE'VE WORKED WITH ─────────────────────── */}
+      {/* ─────────────────────── 4. RESULTS ─────────────────────── */}
       <section
         id="partners"
         aria-labelledby="partners-title"
@@ -499,28 +742,13 @@ function Home() {
       >
         <div className={SECTION}>
           <Reveal>
-            <Eyebrow hue="magenta">Who we've worked with</Eyebrow>
+            <Eyebrow hue="magenta">Results</Eyebrow>
             <h2 id="partners-title" className={`${H2} mt-4`}>
-              Built with the worlds <span className={TEXT.magenta}>fans love.</span>
+              Proven at <span className={TEXT.magenta}>retail scale.</span>
             </h2>
           </Reveal>
 
-          <Reveal
-            delay={100}
-            as="ul"
-            className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5"
-          >
-            {PARTNERS.map((n) => (
-              <li
-                key={n}
-                className="lg-card grid h-24 last:col-span-2 sm:last:col-span-1 place-items-center rounded-3xl px-4 text-center display text-[clamp(20px,2.2vw,30px)] text-white/90"
-              >
-                {n}
-              </li>
-            ))}
-          </Reveal>
-
-          <div className="mt-3 grid gap-3 lg:grid-cols-12">
+          <div className="mt-10 grid gap-3 lg:grid-cols-12">
             <Reveal
               delay={160}
               className="lg-card flex flex-col rounded-3xl p-6 sm:p-8 lg:col-span-7"
@@ -682,12 +910,6 @@ function Home() {
                   >
                     Where is Bobo?
                   </a>
-                  <a
-                    href="/evade/creators/"
-                    className="px-2 text-sm text-white/70 hover:text-white"
-                  >
-                    Creators: join <span aria-hidden>→</span>
-                  </a>
                 </div>
               </div>
             </article>
@@ -809,7 +1031,7 @@ function Home() {
           </Reveal>
         </div>
 
-        <ul className="mt-10 grid grid-flow-dense auto-rows-[170px] grid-cols-2 gap-3 sm:auto-rows-[200px] md:grid-cols-4 lg:auto-rows-[220px] lg:grid-cols-6">
+        <ul className="mt-10 grid auto-rows-[170px] grid-cols-2 gap-3 sm:auto-rows-[220px] md:grid-cols-4 lg:auto-rows-[250px]">
           {PRODUCTS.map((p, i) => (
             <Reveal as="li" key={p.name} delay={(i % 4) * 70} className={`${p.span} min-w-0`}>
               <a
@@ -821,7 +1043,7 @@ function Home() {
                   alt={p.alt}
                   loading="lazy"
                   decoding="async"
-                  className={`absolute inset-0 h-full w-full transition-transform duration-700 group-hover:scale-[1.05] ${p.cover ? "object-cover opacity-90" : "object-contain p-3"}`}
+                  className={`absolute inset-0 h-full w-full transition-transform duration-700 group-hover:scale-[1.05] ${p.cover ? "object-cover object-top opacity-90" : "object-contain p-3"}`}
                 />
                 <span className="lg-chip absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium text-white">
                   {p.name}
@@ -837,151 +1059,6 @@ function Home() {
         </ul>
       </section>
 
-      {/* ─────────────────────────── 6. IMMERSIVE EXPERIENCES ─────────────────────────── */}
-      <section
-        id="experiences"
-        aria-labelledby="exp-title"
-        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
-      >
-        <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
-          <Reveal className="lg:col-span-7">
-            <Eyebrow hue="magenta">Immersive experiences</Eyebrow>
-            <h2 id="exp-title" className={`${H2} mt-4`}>
-              One tap, <span className={TEXT.magenta}>many worlds.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={120} className="lg:col-span-5">
-            <p className="text-muted-foreground lg:text-lg">
-              Every drop gets the experience that fits the IP, with exclusive videos, music and
-              early access layered on top. EVADE × Bobo uses all four.
-            </p>
-          </Reveal>
-        </div>
-
-        <ul className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {EXPERIENCES.map((e, i) => (
-            <Reveal as="li" key={e.title} delay={i * 100}>
-              <a
-                href={e.href}
-                className="lg-card group flex h-full flex-col overflow-hidden rounded-[28px]"
-              >
-                <div className="relative aspect-[4/5] overflow-hidden bg-black/40">
-                  <img
-                    src={e.img}
-                    alt={e.alt}
-                    loading="lazy"
-                    decoding="async"
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.05]"
-                  />
-                  <span
-                    aria-hidden
-                    className={`absolute left-4 top-4 grid h-8 w-8 place-items-center rounded-full mono text-[11px] text-white ${DOT[e.hue]}`}
-                  >
-                    {i + 1}
-                  </span>
-                </div>
-                <div className="p-5 sm:p-6">
-                  <h3 className="text-lg font-medium text-white">{e.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{e.line}</p>
-                </div>
-              </a>
-            </Reveal>
-          ))}
-        </ul>
-      </section>
-
-      {/* ─────────────────────────── 7. THE ECOSYSTEM ─────────────────────────── */}
-      <section
-        id="ecosystem"
-        aria-labelledby="eco-title"
-        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
-      >
-        <div className="lg-card overflow-hidden rounded-[36px] p-6 sm:p-10 lg:p-14">
-          <Reveal>
-            <Eyebrow hue="blue">The Activated Merch program</Eyebrow>
-            <h2 id="eco-title" className={`${H2} mt-4 max-w-5xl`}>
-              Fans get rewarded. <span className={TEXT.blue}>Your IP grows.</span>{" "}
-              <span className={TEXT.magenta}>You get paid.</span>
-            </h2>
-            <p className="mt-6 max-w-2xl text-muted-foreground lg:text-lg">
-              Every product is a way in. Fans are rewarded for playing, every reward ties back to
-              your world, and each drop sells the next one.
-            </p>
-          </Reveal>
-
-          <Reveal delay={120}>
-            <ol
-              aria-label="How the program loops"
-              className="mt-10 flex flex-wrap items-center gap-2 sm:gap-3"
-            >
-              {LOOP.map((s, i) => (
-                <li key={s} className="flex items-center gap-2 sm:gap-3">
-                  <span
-                    className="loop-step rounded-full border px-4 py-2 display text-lg sm:text-2xl"
-                    style={
-                      {
-                        "--i": i,
-                        "--c": i % 2 ? HEX.magenta : HEX.blue,
-                      } as React.CSSProperties
-                    }
-                  >
-                    {s}
-                  </span>
-                  {i < LOOP.length - 1 && (
-                    <span aria-hidden className="text-white/40">
-                      →
-                    </span>
-                  )}
-                </li>
-              ))}
-              <li aria-hidden className="text-white/40">
-                ↺
-              </li>
-            </ol>
-          </Reveal>
-
-          <div className="mt-10 grid gap-3 lg:grid-cols-3">
-            {SIDES.map((c, i) => (
-              <Reveal key={c.who} delay={160 + i * 100} className="lg-chip rounded-3xl p-6">
-                <p className={`mono text-[10px] uppercase tracking-[0.22em] ${TEXT[c.hue]}`}>
-                  {c.who}
-                </p>
-                <h3 className="mt-3 text-xl font-medium text-white">{c.title}</h3>
-                <ul className="mt-4 grid gap-2.5">
-                  {c.points.map((pt) => (
-                    <li key={pt} className="flex gap-2.5 text-sm leading-snug text-white/75">
-                      <span
-                        className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${DOT[c.hue]}`}
-                        aria-hidden
-                      />
-                      {pt}
-                    </li>
-                  ))}
-                </ul>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={260} className="mt-10 flex flex-wrap gap-3">
-            <Link
-              to="/contact"
-              className="group btn-pill btn-solid px-6 py-3.5 text-sm font-medium"
-            >
-              Activate your IP
-              <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-                →
-              </span>
-            </Link>
-            <Link
-              to="/activated-retail"
-              className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
-            >
-              The retail program
-            </Link>
-          </Reveal>
-        </div>
-      </section>
-
       {/* ─────────────────────────── CONTACT ─────────────────────────── */}
       <section
         id="contact"
@@ -993,10 +1070,11 @@ function Home() {
           id="contact-title"
           className="display mx-auto mt-5 max-w-5xl text-[clamp(48px,8vw,128px)]"
         >
-          Let's make yours <span className={TEXT.magenta}>come alive.</span>
+          Let's activate <span className={TEXT.magenta}>your IP.</span>
         </h2>
-        <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
-          Entertainment, gaming, creators, retail and licensed IP.
+        <p className="mx-auto mt-6 max-w-xl text-muted-foreground lg:text-lg">
+          For entertainment, gaming, creators and licensed IP. $0 to start: we design, make, sell
+          and fulfil, and you earn a royalty on every unit.
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link to="/contact" className="group btn-pill btn-solid px-7 py-4 text-sm font-medium">

@@ -577,11 +577,11 @@ export function Hero() {
             id="hero-title"
             className="display mt-4 sm:mt-5 text-[clamp(44px,7.6vw,120px)] lg:text-[clamp(60px,5.6vw,100px)] text-white"
           >
-            Everything we touch <span className={accentText}>comes alive.</span>
+            We activate <span className={accentText}>everything we touch.</span>
           </h1>
           <p className="mt-4 sm:mt-5 max-w-[46ch] text-[15px] sm:text-base leading-relaxed text-white/75">
-            Merch, print, retail and games for entertainment and gaming IP. Point a phone at it and
-            it plays. No app.
+            The immersive AI studio for entertainment and gaming IP. App-free experiences with
+            real-time analytics built in. Tap or scan, and it plays.
           </p>
           <div className="pointer-events-auto mt-6 sm:mt-7 flex flex-wrap items-center gap-3">
             <Link

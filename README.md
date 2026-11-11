@@ -163,6 +163,22 @@ assets `public/home/ar/evade-sign.webp` (the sign texture) and
 compressed, with the channel letters removed). To bring it back, add `RETAIL_SLIDE` to
 `HERO_SLIDES`.
 
+### Homepage sections (below the hero)
+
+Story order: hero, partner logos (white marks in `public/home/logos/`, cut from our own
+campaign art; approved partners only), fan reactions + ranges, what we do (two flagship
+services), what we build (formats, how it works, real-time analytics illustration), results
+(Sakamoto Days case, award, conventions), latest launches, activated products, contact.
+
+### EVADE launch page (`/evade/`)
+
+- "Bobo in action, around the world" frames the live globe (`/evade/where-is-bobo/?embed`,
+  which hides the globe's own header). Touch screens get a "Tap to explore" cover so a
+  swipe still scrolls the page (`public/evade/launch.js`).
+- "Unlock Bobo's Hideout" shows real screenshots of the room and BOBO OS
+  (`public/evade/hideout/*.webp`, captured from `/labs/collector-hub/`), never a live embed.
+  It says "Coming soon" until the hub opens to owners.
+
 ## Known gaps
 
 - `/fan-reactions` "Submit your capture" points at `/contact`. The original design
