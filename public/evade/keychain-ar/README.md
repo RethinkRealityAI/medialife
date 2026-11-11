@@ -38,6 +38,12 @@ while the target is tracked: when the target is lost, or no pose arrives for hal
 hides (after a 0.25 s grace against flicker) and comes back in place when the target is found again.
 The pose is followed without lag; only sub-millimetre jitter is smoothed.
 
+## Where they rest (`restQ`, `spotOf` in `main.js`)
+Once out, a character hovers just above its own print, facing the same way as the print (parallel to
+the charm), so it stays in frame with the charm. Tune sliders: Hover (height above the print), Tilt
+(0% parallel to the print, 100% upright on the ground), Distance (0% over its own print, 100% the
+standing spot beside the charm, where Spacing applies).
+
 ## Which charm pops (`updateFrames` in `main.js`)
 Each charm has its own state (idle, charging, flying, out), so one charm arriving or leaving never
 restarts the other, and a charm that leaves the view comes back as it was.

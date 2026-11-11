@@ -33,7 +33,7 @@ const CHARMS = {
 // Landed characters are the size of their printed art on the charms (art height in the charm pictures / 14 px per mm).
 const SIZE = { bobo: 825 / PXM, can: 679 / PXM };
 // Size and spacing can be tuned live from the Size panel; the chosen numbers are remembered on the device.
-const TUNE_DEFAULT = { size: 1, gap: 1, portal: 3, stagger: 0.55, fly: 1 };   // portal build-up, wait between the two pops, flight to the landing spot (seconds)
+const TUNE_DEFAULT = { size: 1, gap: 1, hover: 0.012, tilt: 0, away: 0, portal: 3, stagger: 0.55, fly: 1 };   // portal build-up, wait between the two pops, flight to the landing spot (seconds)
 const tune = { ...TUNE_DEFAULT };
 try { Object.assign(tune, JSON.parse(localStorage.getItem('kc-ar-tune') || '{}')); } catch (e) { /* defaults */ }
 for (const k of Object.keys(TUNE_DEFAULT)) if (params.has(k) && isFinite(parseFloat(params.get(k)))) tune[k] = Math.min(Math.max(parseFloat(params.get(k)), 0), 8);
@@ -402,7 +402,13 @@ const SPOTS = {
   bobo: (flat) => new THREE.Vector3(-0.004 - HALF_GAP * (tune.gap - 1), -0.066 * (1 - flat), 0.012 + 0.06 * flat),
   can: (flat) => new THREE.Vector3(-0.003 + HALF_GAP * (tune.gap - 1), -0.049 * (1 - flat), 0.022 + 0.06 * flat),
 };
-const spotOf = (ch) => SPOTS[ch.key](ch.G.flat).applyQuaternion(ch.G.q);
+const groundSpot = (ch) => SPOTS[ch.key](ch.G.flat).applyQuaternion(ch.G.q);
+// Where a character rests once it is out. By default it hovers just above its own print and faces the same
+// way as the print (parallel to the charm), so it stays in view with the charm. Tilt turns it toward
+// standing upright on the ground; Distance moves it from its print toward the standing spot beside the charm.
+const restQ = (ch) => new THREE.Quaternion().slerpQuaternions(ch.lie.quat, ch.G.q, THREE.MathUtils.clamp(tune.tilt, 0, 1));
+const spotOf = (ch) => new THREE.Vector3(ch.lie.pos.x, ch.lie.pos.y, ch.lie.pos.z + tune.hover).lerp(groundSpot(ch), THREE.MathUtils.clamp(tune.away, 0, 1));
+const hopDir = (ch) => new THREE.Vector3(0, 0, 1).lerp(_v2.set(0, 1, 0).applyQuaternion(ch.G.q), THREE.MathUtils.clamp(tune.tilt, 0, 1)).normalize();
 
 // ---------------------------------------------------------------- the pop-out
 function resetScene() {
@@ -474,8 +480,8 @@ function launch(ch) {
     pd.visible = true; flash.position.copy(from.pos); burst(ch, from.pos, isBobo ? 50 : 34);
     tween(flyT, (kk) => {         // it flies to its spot; the silhouette stays
       const e = easeOut(kk); const to = spotOf(ch);
-      ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(_v.set(0, 1, 0).applyQuaternion(G.q), Math.sin(kk * Math.PI) * 0.04);
-      ch.root.quaternion.slerpQuaternions(from.quat, G.q, easeOut(kk * 2));
+      ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(hopDir(ch), Math.sin(kk * Math.PI) * 0.03);
+      ch.root.quaternion.slerpQuaternions(from.quat, restQ(ch), easeOut(kk * 2));
       ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, tune.size, e));
       fx.portal = portal0 * (1 - easeOut(kk * 1.2)); fx.glow = THREE.MathUtils.lerp(Math.max(glow0, 1) * (1 + 0.8 * Math.sin(Math.min(kk * 3, 1) * Math.PI)), 0.28, easeInOut(kk));   // the portal closes to black, the rim stays faintly lit
       const f = Math.sin(Math.min(kk * 1.6, 1) * Math.PI);
@@ -492,7 +498,7 @@ function launch(ch) {
 // the can rockets up spinning on a geyser of bubbles and Bobo cheers (Bobo alone gets the geyser himself).
 const FINALE = 10;
 let bubbleNext = 0;
-const upVec = (ch) => new THREE.Vector3(0, 1, 0).applyQuaternion(ch.G.q);
+const upVec = (ch) => new THREE.Vector3(0, 1, 0).applyQuaternion(restQ(ch));
 const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * tune.size);
 const live = (ch) => ch.landed && pres[ch.key];
 function blow(ch, n, size, speed = 0.05, spread = 0.5) {
@@ -556,11 +562,12 @@ function replay() { resetScene(); }
 // landed characters stand on their spot in their charm's ground frame
 function settle() {
   for (const ch of [B, C]) {
-    const G = ch.G, pd = ch.pad; pd.position.copy(spotOf(ch)); pd.quaternion.copy(G.q); pd.userData.ring.rotation.z += 0.01;
+    const Q = restQ(ch), pd = ch.pad; pd.position.copy(spotOf(ch)); pd.quaternion.copy(Q); pd.userData.ring.rotation.z += 0.01;
+    pd.traverse((o) => { if (o.material) o.material.visible = tune.tilt > 0.5; });   // the landing pad only makes sense when they stand on the ground
     if (!ch.landed) continue;
-    ch.root.position.copy(pd.position); ch.root.quaternion.copy(G.q); ch.root.scale.setScalar(tune.size); pd.scale.setScalar(tune.size);
+    ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(tune.size); pd.scale.setScalar(tune.size);
     if (ch.walk) {
-      const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(G.q)); ch.root.rotateY(ch.walk.turn);
+      const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(Q)); ch.root.rotateY(ch.walk.turn);
     }
     if (ch.spin) { ch.root.rotateY(Math.PI * 2 * (ch.spin.turns || 1) * easeInOut(ch.spin.k)); ch.root.position.addScaledVector(upVec(ch), Math.sin(ch.spin.k * Math.PI) * (ch.spin.lift || 0.02)); }
   }
@@ -680,10 +687,10 @@ $('shot-close').onclick = () => { $('shot').hidden = true; };
 $('err-retry').onclick = () => location.reload();
 
 // size and spacing sliders (preview tool: find the numbers, then they become the defaults)
-const TUNE_UI = { size: ['t-size', 100, '%'], gap: ['t-gap', 100, '%'], portal: ['t-portal', 1, ' s'], stagger: ['t-stagger', 1, ' s'], fly: ['t-fly', 1, ' s'] };
+const TUNE_UI = { size: ['t-size', 100, '%'], gap: ['t-gap', 100, '%'], hover: ['t-hover', 1000, ' mm'], tilt: ['t-tilt', 100, '%'], away: ['t-away', 100, '%'], portal: ['t-portal', 1, ' s'], stagger: ['t-stagger', 1, ' s'], fly: ['t-fly', 1, ' s'] };
 function showTune() {
   for (const [k, [id, mul, unit]] of Object.entries(TUNE_UI)) {
-    $(id).value = tune[k] * mul; $(id + '-v').textContent = (mul === 100 ? Math.round(tune[k] * 100) : (+tune[k]).toFixed(2).replace(/0$/, '')) + unit;
+    $(id).value = tune[k] * mul; $(id + '-v').textContent = (mul >= 100 ? Math.round(tune[k] * mul) : (+tune[k]).toFixed(2).replace(/0$/, '')) + unit;
   }
 }
 function setTune(k, v) { tune[k] = v; showTune(); try { localStorage.setItem('kc-ar-tune', JSON.stringify(tune)); } catch (e) { /* not saved */ } }
