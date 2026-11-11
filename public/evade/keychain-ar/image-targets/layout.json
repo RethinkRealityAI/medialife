@@ -23,9 +23,10 @@
       "silhouettes": true,
       "charms": {
         "bobo": {
-          "x": 0,
-          "y": 0,
-          "rz": 0,
+          "x": 0.000154,
+          "y": -2e-06,
+          "rz": 0.00227,
+          "s": 0.99715,
           "mirror": true
         }
       },
@@ -57,6 +58,11 @@
           "y": 0,
           "rz": 0
         }
+      },
+      "mask": {
+        "src": "kc-old-mask.png",
+        "widthM": 0.07605,
+        "heightM": 0.1014
       }
     },
     "kc-can": {
@@ -65,9 +71,11 @@
       "silhouettes": true,
       "charms": {
         "can": {
-          "x": 0,
-          "y": 0,
-          "rz": 0
+          "x": 0.000213,
+          "y": 0.000772,
+          "rz": 0.05263,
+          "s": 0.98626,
+          "mirror": false
         }
       },
       "mask": {
@@ -82,9 +90,10 @@
       "silhouettes": true,
       "charms": {
         "can": {
-          "x": 0,
-          "y": 0,
-          "rz": 0,
+          "x": 0.000305,
+          "y": -9.8e-05,
+          "rz": -0.00081,
+          "s": 0.99684,
           "mirror": true
         }
       },

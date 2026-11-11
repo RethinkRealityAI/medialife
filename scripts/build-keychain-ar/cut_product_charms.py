@@ -82,12 +82,18 @@ def cut(name, art_file, region, hole, tab_r, margin):
     cv2.imwrite(HERE + name + '.png', np.clip(img, 0, 255).astype(np.uint8))
     json.dump(dict(note=f'{name}: acrylic outline in src/{name}.png, x/y as fractions of its width/height; the picture is the artwork {art_file} frame, mirrored',
                    points=[[round(x / TW, 5), round(y / TH, 5)] for x, y in out[::3]]), open(HERE + name + '-outline.json', 'w'))
+    from fit_print import fit
+    print(name, fit(pm, S * 14000, SIL_FILE[name], True, HERE + name + '-fit.json', debug=DEBUG and DEBUG + name + '-fit.png'))
     return pic, pm, pts, out
+
+SIL_FILE = {'can-back': 'silhouette-eclipse.png', 'bobo-product': 'silhouette-bobo.png'}
+DEBUG = None
 
 
 if __name__ == '__main__':
     import sys
     dbg = len(sys.argv) > 1
+    if dbg: DEBUG = sys.argv[1]
     for args in (('can-back', 'charm-eclipse.png', (150, 850, 860, 2048), (700, 172), 84, 40),
                  ('bobo-product', 'charm-bobo.png', (880, 800, 1850, 2048), (682, 278), 80, 50)):
         pic, pm, pts, out = cut(*args)

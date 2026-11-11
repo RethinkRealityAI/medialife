@@ -60,11 +60,18 @@ while the target is tracked: when the target is lost, or no pose arrives for hal
 hides (after a 0.25 s grace against flicker) and comes back in place when the target is found again.
 The pose is followed without lag; only sub-millimetre jitter is smoothed.
 
+Two corrections sit on top of that (`MODEL_FIT`, `FLAT` in `main.js`): the cat model is not centred on the
+outline baked into its GLB, so it is moved and scaled to match the art (measured by rendering the model straight
+on in its keychain pose; eyes, visor and collar line up afterwards), and while a character is still on its charm
+it is pressed flat into the print (12% depth), so it lines up from any angle instead of standing proud of the
+print and sliding off it in perspective. It fills out to full depth as it jumps.
+
 ## Where they rest (`restQ`, `spotOf` in `main.js`)
 Once out, a character hovers just above its own print, facing the same way as the print (parallel to
 the charm), so it stays in frame with the charm. Tune sliders: Hover (height above the print), Tilt
 (0% parallel to the print, 100% upright on the ground), Distance (0% over its own print, 100% the
-standing spot beside the charm, where Spacing applies).
+standing spot beside the charm, where Spacing applies). The Roblox Bobo lands 15% bigger than his print
+(`LAND_SCALE`): at print size he read as too small.
 
 ## Which charm pops (`updateFrames` in `main.js`)
 Each charm has its own state (idle, charging, flying, out) and runs only from its own picture, so one
@@ -84,6 +91,14 @@ The Tune panel shows what is tracked and counts found / lost / rescans.
 one sequence (can first, Bobo after the Can to Bobo time). The pair picture also locks onto a single
 charm, so a charm still has to be confirmed by its own picture; the pair picture then places both, as
 long as it agrees with the single pictures to within 8 mm on screen, or after 1.5 s when only it holds.
+
+## iPhone close-up focus (`IOS_MACRO` in `main.js`)
+iPhone Safari gives the plain wide camera by default, which cannot focus closer than about 20 cm, so the charm
+blurred when the phone came close. On iPhone the page now asks for the multi-lens camera (Back Triple, then Back
+Dual Wide) at up to 1920x1440, which switches to the close-focus lens by itself, with zoom set so the picture
+matches the plain camera. If that camera gives no picture within 4 s, the page reloads once with the standard
+camera for the rest of the visit. `?macro=0` turns it off; a Tune > Camera test profile overrides it. Android is
+unchanged.
 
 ## Camera (`tuneCamera` in `main.js`)
 The engine chooses its own camera constraints and tracks on a small greyscale copy of each frame. Added

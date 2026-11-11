@@ -122,6 +122,25 @@ def portal_mask(tname, outline_file):
     ImageDraw.Draw(big).polygon([(((x - 0.5) / MASK_PAD + 0.5) * MW * SS, ((y - 0.5) / MASK_PAD + 0.5) * MH * SS) for x, y in pts], fill=255)
     m = Image.new('RGBA', (MW, MH), (255, 255, 255, 0)); m.putalpha(big.resize((MW, MH), Image.LANCZOS)); m.save(OUT + f'{tname}-mask.png', optimize=True)
     lay['mask'] = dict(src=f'{tname}-mask.png', widthM=lay['widthM'] * MASK_PAD, heightM=lay['heightM'] * MASK_PAD)
+# Roblox Bobo's acrylic: its picture is already cut out on a flat background, so the outline is simply the
+# edge of everything that is not background (smoothed)
+def flat_outline(fname, out_name):
+    import numpy as np
+    from scipy import ndimage as ndi
+    from scipy.ndimage import gaussian_filter1d
+    from skimage import measure
+    a = np.asarray(Image.open(HERE_SRC + fname).convert('RGB')).astype(int)
+    m = ndi.binary_opening(np.abs(a - np.array([236, 238, 240])).sum(2) > 10, iterations=2)
+    m = ndi.binary_fill_holes(ndi.binary_closing(m, iterations=3)); lab, n = ndi.label(m); m = lab == 1 + np.argmax(ndi.sum(m, lab, range(1, n + 1)))
+    c = max(measure.find_contours(m.astype(float), 0.5), key=len)
+    c = np.c_[gaussian_filter1d(c[:, 1], 3, mode='wrap'), gaussian_filter1d(c[:, 0], 3, mode='wrap')][::4]
+    json.dump(dict(note=f'acrylic outline in src/{fname}, x/y as fractions', points=[[round(x / m.shape[1], 5), round(y / m.shape[0], 5)] for x, y in c]), open(HERE_SRC + out_name, 'w'))
+flat_outline('old-bobo.png', 'old-bobo-outline.json')
+portal_mask('kc-old', 'old-bobo-outline.json')
+# the 3D characters lined up with the print in each photo-based picture (fit_print.py, run by the cut scripts)
+for tname, key, fit_file in (('kc-can', 'can', 'can-photo-fit.json'), ('kc-can-back', 'can', 'can-back-fit.json'), ('kc-bobo', 'bobo', 'bobo-product-fit.json')):
+    f = json.load(open(HERE_SRC + fit_file))
+    LAYOUT[tname]['charms'][key] = dict(x=f['x'], y=f['y'], rz=f['rz'], s=f['s'], mirror=f['mirror'])
 portal_mask('kc-can', 'can-outline.json')
 portal_mask('kc-can-back', 'can-back-outline.json')
 portal_mask('kc-bobo', 'bobo-product-outline.json')

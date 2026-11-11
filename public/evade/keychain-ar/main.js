@@ -253,6 +253,20 @@ function pad(r) {
   g.add(sh, ring); g.userData.ring = ring; g.visible = false; return g;
 }
 
+// The cat model does not sit centred on the outline baked into its GLB: measured by rendering the model straight
+// on in its keychain pose and matching it to that outline (and to the charm art: eyes, visor and collar line up),
+// it needs moving 8.6% of the charm's width to the art's right, 2.1% down, and shrinking to 92%. In the outline's
+// own units (the quad is 1 x 1). Without this it sat to one side of the print, and the charm's picture of the
+// other side (mirrored) showed it to the right (Dapo, 2026-11-11). The can and the Roblox Bobo already match.
+const MODEL_FIT = { bobo: { x: 0.0863, y: -0.0213, s: 0.92 } };
+// While a character is still on its charm it is pressed flat into the print, so it lines up with it from any
+// angle (a full-depth model stands proud of the print and slides off it in perspective); it fills out to its
+// full depth as it jumps.
+const FLAT = 0.12;
+// Landed size relative to the printed art. The Roblox Bobo read as too small next to its charm (Dapo, 2026-11-11):
+// his print is mostly the raised arm and big head, and out of the charm he stands with his arms down.
+const LAND_SCALE = { old: 1.15 };
+const landScale = (ch) => LAND_SCALE[ch.kind] || 1;
 function prepCharacter(gltf, key, padR, kind = key) {
   const def = CHARMS[kind], height = SIZE[kind];
   const frame = charm[key] = new THREE.Group(); frame.visible = false; scene.add(frame);
@@ -279,7 +293,9 @@ function prepCharacter(gltf, key, padR, kind = key) {
   m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
   root.add(m); root.visible = false; frame.add(root);
   // where the model lies exactly over its print, in the charm frame (a constant)
-  const lie = new THREE.Matrix4().makeScale(def.w, def.h, 1).multiply(new THREE.Matrix4().makeScale(baseScale, baseScale, baseScale).multiply(silLocal).invert());
+  const fit = MODEL_FIT[kind] || { x: 0, y: 0, s: 1 };
+  const lie = new THREE.Matrix4().makeScale(def.w, def.h, 1).multiply(new THREE.Matrix4().makeTranslation(fit.x, fit.y, 0)).multiply(new THREE.Matrix4().makeScale(fit.s, fit.s, fit.s))
+    .multiply(new THREE.Matrix4().makeScale(baseScale, baseScale, baseScale).multiply(silLocal).invert());
   const lp = new THREE.Vector3(), lq = new THREE.Quaternion(), ls = new THREE.Vector3(); lie.decompose(lp, lq, ls);
   lp.addScaledVector(new THREE.Vector3(0, 0, 1).applyQuaternion(lq), 0.0025);
   const pd = pad(padR), flash = sprite(glowTex, 0.001);
@@ -321,16 +337,17 @@ function buildScene(xr, [bobo, can, oldBobo, layout, ...targets]) {
   for (const target of targets) {
     const lay = layout.targets[target.name]; const local = {};
     // "mirror": the picture shows the charm's other side, whose outline is the artwork's mirrored
-    for (const [k, c] of Object.entries(lay.charms)) local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz)).multiply(new THREE.Matrix4().makeScale(c.mirror ? -1 : 1, 1, 1));
+    // s: the artwork frame's scale in a photo-based picture (the character fitted to the real print, fit_print.py)
+    for (const [k, c] of Object.entries(lay.charms)) { const sc = c.s || 1; local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz)).multiply(new THREE.Matrix4().makeScale(c.mirror ? -sc : sc, sc, sc)); }
     TS[target.name] = { name: target.name, pr: target.properties, lay, local, tracked: false, at: 0, seen: -1e9, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true, g: new THREE.Group() };
   }
   Bcat = B = prepCharacter(bobo, 'bobo', 0.03);
   Bold = prepCharacter(oldBobo, 'bobo', 0.03, 'old');   // the earlier design's Bobo takes the Bobo slot when its charm is the one in view
   ALL = [Bcat, Bold, C = prepCharacter(can, 'can', 0.02)];
   // each charm picture with its own portal mask (the whole acrylic piece): baked once, swapped in by useMask
-  for (const ch of [Bcat, C]) for (const t of Object.values(TS)) {
+  for (const ch of [Bcat, Bold, C]) for (const t of Object.values(TS)) {
     const mk = t.lay.mask, tex = layout.masks[t.name];
-    if (mk && tex && t.lay.charms[ch.key]) { tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; ch.masks[t.name] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
+    if (mk && tex && t.lay.charms[ch.key] && (ch === Bold) === (t.name === 'kc-old')) { tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; ch.masks[t.name] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
   }
   for (let i = 0; i < 90; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, depthTest: false }));
@@ -443,14 +460,21 @@ function updateFrames(dt) {
     } else { goneFor[k] += dt; if (goneFor[k] > 0.25) driver[k] = null; }
     pres[k] = !!t || (pres[k] && goneFor[k] < 0.25);                       // nothing is drawn unless it is tracked now (short grace against flicker)
     f.visible = pres[k]; f.updateMatrixWorld(true); present = present || pres[k];
-    if (t) useMask(ch, t.name);
+    if (t) useMask(ch, t);
     if (t && ch.st === 'idle') { groundFrame(ch); ch.sils = t.lay.silhouettes; }   // once it pops, its ground frame is fixed to the charm
   }
 }
-function useMask(ch, name) {
-  const want = ch.masks[name] ? name : 'own'; if (ch.maskOn === want) return;
-  const m = ch.masks[want], u = ch.sil.material.uniforms; ch.maskOn = want;
-  u.map.value = m.tex; u.uAspect.value = m.w / m.h; ch.sil.scale.set(m.w, m.h, 1);
+// A target's own mask is drawn in that target's picture (centred, never mirrored), so in the charm frame it
+// sits at (charm frame in the picture)^-1: this undoes the fit and the mirror, and the mask lies exactly on
+// the acrylic in the picture whatever the 3D character's frame is.
+const _mm = new THREE.Matrix4();
+function useMask(ch, t) {
+  const want = ch.masks[t.name] ? t.name : 'own'; if (ch.maskOn === want) return;
+  const m = ch.masks[want], u = ch.sil.material.uniforms, sil = ch.sil; ch.maskOn = want;
+  u.map.value = m.tex; u.uAspect.value = m.w / m.h;
+  if (want === 'own') { sil.position.set(0, 0, 0.0004); sil.quaternion.identity(); sil.scale.set(m.w, m.h, 1); return; }
+  _mm.copy(t.local[ch.key]).invert().multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.0004)).multiply(new THREE.Matrix4().makeScale(m.w, m.h, 1));
+  _mm.decompose(sil.position, sil.quaternion, sil.scale);
 }
 const SPOTS = {
   bobo: (flat) => new THREE.Vector3(-0.004 - HALF_GAP * (tune.gap - 1), -0.066 * (1 - flat), 0.012 + 0.06 * flat),
@@ -525,7 +549,7 @@ function launch(ch) {
   } });
   const pop = ch.current; pop.paused = true; const flyT = Math.max(tune.fly, 0.1); pop.setEffectiveTimeScale(THREE.MathUtils.clamp(1 / flyT, 0.4, 2.5));   // the pop-out clip keeps pace with the Jump time
   const place = (wig) => {
-    ch.root.position.copy(ch.lie.pos); ch.root.quaternion.copy(ch.lie.quat); ch.root.scale.setScalar(ch.lie.s);
+    ch.root.position.copy(ch.lie.pos); ch.root.quaternion.copy(ch.lie.quat); ch.root.scale.setScalar(ch.lie.s); ch.root.scale.z *= FLAT;
     if (wig) ch.root.rotateZ(wig);
   };
   place(0); ch.mixer.update(0);
@@ -540,7 +564,7 @@ function launch(ch) {
       const e = easeOut(kk); const to = spotOf(ch);
       ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(hopDir(ch), Math.sin(kk * Math.PI) * 0.03);
       ch.root.quaternion.slerpQuaternions(from.quat, restQ(ch), easeOut(kk * 2));
-      ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, tune.size, e));
+      ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, tune.size * landScale(ch), e)); ch.root.scale.z *= THREE.MathUtils.lerp(FLAT, 1, easeOut(Math.min(kk * 2.5, 1)));
       fx.portal = THREE.MathUtils.lerp(portal0, PORTAL_REST, easeInOut(kk)); fx.glow = THREE.MathUtils.lerp(Math.max(glow0, 1) * (1 + 0.8 * Math.sin(Math.min(kk * 3, 1) * Math.PI)), GLOW_REST, easeInOut(kk));   // the portal stays open behind the character, its rim softly lit
       const f = Math.sin(Math.min(kk * 1.6, 1) * Math.PI);
       flash.scale.setScalar(0.09 * f + 0.0001); flash.material.opacity = f;
@@ -557,7 +581,7 @@ function launch(ch) {
 const FINALE = 10;
 let bubbleNext = 0;
 const upVec = (ch) => new THREE.Vector3(0, 1, 0).applyQuaternion(restQ(ch));
-const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * tune.size);
+const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * tune.size * landScale(ch));
 const live = (ch) => ch.landed && pres[ch.key];
 function blow(ch, n, size, speed = 0.05, spread = 0.5) {
   const up = upVec(ch), at = topOf(ch);
@@ -624,7 +648,7 @@ function settle() {
     const Q = restQ(ch), pd = ch.pad; pd.position.copy(spotOf(ch)); pd.quaternion.copy(Q); pd.userData.ring.rotation.z += 0.01;
     pd.traverse((o) => { if (o.material) o.material.visible = tune.tilt > 0.5; });   // the landing pad only makes sense when they stand on the ground
     if (!ch.landed) continue;
-    ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(tune.size); pd.scale.setScalar(tune.size);
+    ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(tune.size * landScale(ch)); pd.scale.setScalar(tune.size);
     if (ch.walk) {
       const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(Q)); ch.root.rotateY(ch.walk.turn);
     }
@@ -757,18 +781,28 @@ const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [1920, 1440] };
 // the chosen lens's deviceId, looked up by name (names only exist once the camera has been allowed, so a
 // miss is not remembered: the engine's second open on iOS finds it)
 function lensId() {
-  if (!CAM.lens) return Promise.resolve(null);
+  const want = CAM.lens ? [CAM.lens] : IOS_MACRO ? MACRO_LENSES : [];
+  if (!want.length) return Promise.resolve(null);
   return navigator.mediaDevices.enumerateDevices()
-    .then((ds) => { const d = ds.find((x) => x.kind === 'videoinput' && x.label === CAM.lens); return d ? d.deviceId : null; }).catch(() => null);
+    .then((ds) => { for (const n of want) { const d = ds.find((x) => x.kind === 'videoinput' && x.label === n); if (d) return d.deviceId; } return null; }).catch(() => null);
 }
 // Only wrap getUserMedia when a non-default profile is chosen: with the engine's own choice the call goes
 // straight to the browser, untouched (iOS Safari is sensitive to anything sitting in its camera start).
-const CAM_CUSTOM = CAM.res !== 'engine' || CAM.fps !== 'engine' || !!CAM.lens;
+// iPhones (Dapo, 2026-11-11: the keychain goes soft up close on iPhone): the engine opens the plain "Back
+// Camera" at 1024x768. On Pro iPhones that lens cannot focus closer than about 20 cm, and the test log shows
+// people holding the charm 10-25 cm away. The multi-lens "Back Triple Camera" / "Back Dual Wide Camera"
+// hands over to the macro lens up close by itself, like the Camera app does, so iPhones open that one, at
+// 1920x1440, by default. If it shows no picture within 4 s the page reloads once with the standard camera
+// (remembered for this tab). ?macro=0 turns it off; any lens picked in Tune > Camera test wins.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const MACRO_LENSES = ['Back Triple Camera', 'Back Dual Wide Camera'];
+let iosStd = false; try { iosStd = sessionStorage.getItem('kc-ios-std') === '1'; } catch (e) { /* none */ }
+const IOS_MACRO = IOS && !CAM.lens && CAM.res === 'engine' && CAM.fps === 'engine' && params.get('hd') !== '0' && params.get('macro') !== '0' && !iosStd;
+const CAM_CUSTOM = CAM.res !== 'engine' || CAM.fps !== 'engine' || !!CAM.lens || IOS_MACRO;
 // iPhones: the standard camera is the request that worked on Dapo's iPhone up to 29bfcdc (ideal 1920x1440,
 // falling back to the engine's own request). With the engine's request alone the stream opens on iOS but
 // never delivers a frame (test log 2026-11-11), so iOS keeps this as its standard. Android keeps the
 // engine's own choice, which Dapo rated perfect.
-const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 if (!CAM_CUSTOM && IOS && params.get('hd') !== '0' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
   md.getUserMedia = (c) => {
@@ -784,6 +818,7 @@ if (CAM_CUSTOM && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
   const ask = (c, v, id) => {
     const nv = { ...v };
     if (CAM.res !== 'engine' && RES[CAM.res]) { const [w, h] = RES[CAM.res]; nv.width = { ideal: w }; nv.height = { ideal: h }; }
+    else if (IOS_MACRO) { nv.width = { ideal: 1920 }; nv.height = { ideal: 1440 }; }
     if (CAM.fps !== 'engine') nv.frameRate = { ideal: +CAM.fps };
     if (id) { nv.deviceId = { exact: id }; delete nv.facingMode; }
     if (JSON.stringify(nv) === JSON.stringify(v)) return orig(c);
@@ -793,7 +828,7 @@ if (CAM_CUSTOM && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
   md.getUserMedia = (c) => {
     const v = c && c.video;
     if (!v || v === true) return orig(c);
-    return CAM.lens ? lensId().then((id) => ask(c, v, id)) : ask(c, v, null);
+    return CAM.lens || IOS_MACRO ? lensId().then((id) => ask(c, v, id)) : ask(c, v, null);
   };
 }
 let camTrack = null;
@@ -802,6 +837,14 @@ function tuneCamera(video) {
     camTrack = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!camTrack) return;
     const caps = camTrack.getCapabilities ? camTrack.getCapabilities() : {};
     if (CAM.focus === 'continuous' && caps.focusMode && caps.focusMode.includes('continuous')) camTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    // the multi-lens camera can open at the ultra wide's view (0.5x): bring it to the normal 1x view, so the
+    // charm is as big on screen as before. Where the browser counts the ultra wide as 0.5, 1 is already 1x;
+    // where it counts it as 1, the 1x lens is 2.
+    if ((IOS_MACRO || MACRO_LENSES.includes(CAM.lens)) && /Triple|Dual Wide/.test(camTrack.label) && caps.zoom) {
+      const z = Math.min(Math.max(caps.zoom.min < 1 ? 1 : 2, caps.zoom.min), caps.zoom.max);
+      diag.macro = { label: camTrack.label, zoomMin: caps.zoom.min, zoomMax: caps.zoom.max, zoomWas: (camTrack.getSettings() || {}).zoom, zoom: z };
+      camTrack.applyConstraints({ advanced: [{ zoom: z }] }).catch((e) => { diag.macro.error = String(e && e.name); });
+    }
     const st = camTrack.getSettings ? camTrack.getSettings() : {};
     diag.camera = { label: camTrack.label, width: st.width || video.videoWidth, height: st.height || video.videoHeight, frameRate: st.frameRate, focusMode: st.focusMode, zoom: st.zoom,
       caps: { focusMode: caps.focusMode, zoom: caps.zoom, width: caps.width, height: caps.height, frameRate: caps.frameRate } };
@@ -874,7 +917,7 @@ function diagRecord() {
   return {
     sid: SID, v: 1, page: location.pathname, params: location.search, note: diag.note, profile: { ...CAM }, tune: { ...tune },
     screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, renderDpr: Math.min(devicePixelRatio || 1, CAM.dpr) },
-    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM, ios: IOS, motion: motionPerm, stream: diag.stream || null, visible: document.visibilityState,
+    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM, ios: IOS, iosMacro: IOS_MACRO, macro: diag.macro || null, motion: motionPerm, stream: diag.stream || null, visible: document.visibilityState,
     asked: diag.asked, askFailed: diag.askFailed || null, camera: diag.camera, cameras: diag.cameras || null, zoom: diag.zoom || null,
     targetsLoaded: activeTargets.map((t) => t.name), runS: camStartAt ? Math.round((performance.now() - camStartAt) / 1000) : 0,
     fps: { avg: avg(diag.fps.all), tracking: avg(diag.fps.tracking), idle: avg(diag.fps.idle), min: diag.fps.all.length ? Math.min(...diag.fps.all) : null, last30: diag.fps.all.slice(-30) },
@@ -902,7 +945,12 @@ function camLog(step) {
 let tapCamShown = false;
 function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
 function kickVideo() {
-  setTimeout(() => { if (!camStartAt) { camLog('notPlaying'); showTapCam(); } }, 4000);
+  setTimeout(() => {
+    if (camStartAt) return;
+    camLog('notPlaying');
+    if (IOS_MACRO) { camLog('iosMacroFallback'); flushDiag(true, true); try { sessionStorage.setItem('kc-ios-std', '1'); } catch (e) { /* none */ } location.reload(); return; }   // back to the standard iPhone camera, once
+    showTapCam();
+  }, 4000);
 }
 // what the phone handed over: a track that is "muted" or "ended" here means another tab or app holds the camera
 function noteStream(stream) {
@@ -931,11 +979,13 @@ function camFailed(why) {
   if (camStartAt || diag.camFailed) return;
   diag.camFailed = why; flushDiag(true, true);
   hideTapCam();
-  ui.error('The camera didn\'t start', CAM_CUSTOM
+  const test = CAM_CUSTOM && !IOS_MACRO;     // a profile picked in Tune > Camera test
+  if (IOS_MACRO) try { sessionStorage.setItem('kc-ios-std', '1'); } catch (e) { /* none */ }   // Try again uses the standard iPhone camera
+  ui.error('The camera didn\'t start', test
     ? 'The camera test settings on this phone may not suit it. Tap below to go back to the standard camera.'
     : 'Another app or tab may be using it. Close the Camera app, any video call, and other browser tabs or browsers that use the camera, then tap Try again.',
-    CAM_CUSTOM ? '' : 'Still stuck? Allow camera access for this site in your browser settings. On iPhone use Safari, on Android use Chrome.');
-  if (CAM_CUSTOM) addResetButton();
+    test ? '' : 'Still stuck? Allow camera access for this site in your browser settings. On iPhone use Safari, on Android use Chrome.');
+  if (test) addResetButton();
 }
 function addResetButton() {
   const host = document.querySelector('#error') || document.body;

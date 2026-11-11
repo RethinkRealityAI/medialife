@@ -79,4 +79,6 @@ pic = photo * acr[..., None] + bg * (1 - acr[..., None])
 cv2.imwrite(HERE + 'can-photo.png', np.clip(pic, 0, 255).astype(np.uint8))
 json.dump(dict(note='Eclipse can charm acrylic outline in src/can-photo.png, x/y as fractions of its width/height',
                points=[[round(x / OW, 5), round(y / OH, 5)] for x, y in o2[::3]]), open(HERE + 'can-outline.json', 'w'))
+from fit_print import fit                              # line the 3D can up with this print
+print('kc-can', fit(cv2.warpAffine(pm, M, (OW, OH), flags=cv2.INTER_LINEAR), OH / 0.0598, 'silhouette-eclipse.png', False, HERE + 'can-photo-fit.json'))
 print('acrylic', round(x1 - x0), 'x', round(y1 - y0), 'px in the photo; aspect', round((x1 - x0) / (y1 - y0), 3))
