@@ -164,6 +164,43 @@ def contour_of(mask, eps=1.5):
     return pts
 
 
+def pillow(name, mask, step=4, H=0.07, R=20.0):
+    """soft inflated shape from a pixel mask (art px): a watertight grid mesh, thickest in the middle and
+    tapering to fine edges. x/z follow the art, thickness is along y."""
+    dist = ndimage.distance_transform_edt(mask)
+    ys_, xs_ = np.nonzero(mask[::step, ::step])
+    bm = bmesh.new(); F = {}; B = {}
+    for gy, gx in zip(ys_, xs_):
+        d = dist[gy * step, gx * step]
+        h = H * math.sqrt(max(0.0, 1 - (1 - min(d / R, 1)) ** 2)) + 0.004
+        q = P(gx * step, gy * step)
+        F[(gx, gy)] = bm.verts.new((q.x, -h, q.z)); B[(gx, gy)] = bm.verts.new((q.x, h, q.z))
+    for (gx, gy) in list(F):
+        c = [(gx, gy), (gx + 1, gy), (gx + 1, gy + 1), (gx, gy + 1)]
+        if all(k in F for k in c):
+            bm.faces.new([F[k] for k in c]); bm.faces.new([B[k] for k in reversed(c)])
+    KEY = {v: k for k, v in F.items()}
+    for e in [e for e in bm.edges if e.is_boundary]:            # stitch the rim, front to back
+        a, b = e.verts
+        if a in KEY and b in KEY:
+            bm.faces.new([a, b, B[KEY[b]], B[KEY[a]]])
+    seen = {}; groups = []                                    # keep the main piece only
+    for v in bm.verts:
+        if v in seen: continue
+        st = [v]; seen[v] = len(groups); g = []
+        while st:
+            x = st.pop(); g.append(x)
+            for e in x.link_edges:
+                y = e.other_vert(x)
+                if y not in seen: seen[y] = len(groups); st.append(y)
+        groups.append(g)
+    big = max(groups, key=len)
+    bmesh.ops.delete(bm, geom=[v for g in groups if g is not big for v in g] + [v for v in big if not v.link_faces], context='VERTS')
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    for _ in range(7):
+        bmesh.ops.smooth_vert(bm, verts=bm.verts, factor=0.5, use_axis_x=True, use_axis_y=False, use_axis_z=True)
+    return bm_to_obj(bm, name)
+
 # ---------------------------------------------------------------- the original Bobo
 bpy.ops.import_scene.gltf(filepath=OLD)
 for n in ('Icosphere', 'Clothes1', 'Clothes2'):          # helper sphere + the hoodie
@@ -394,7 +431,7 @@ def make_mat(name, img=None, color=None, metallic=0.0, rough=0.85, emis=0.22):
     m.use_backface_culling = True
     return m
 MATS = {k: make_mat('Bobo_' + k, img=v) for k, v in TEX.items()}
-MAT_FLUFF = make_mat('Bobo_Fluff', color=FUR)
+MAT_FLUFF = make_mat('Bobo_Fluff', img=FACE)
 MAT_COLLAR = make_mat('Bobo_Collar', color=BLUE)
 MAT_STUD = make_mat('Bobo_Stud', color=(58, 110, 220))
 MAT_BELL = make_mat('Bobo_Bell', color=(190, 208, 216), metallic=0.25, rough=0.35, emis=0.3)
@@ -524,19 +561,67 @@ T = {n: REST[n] @ SIT[n].inverted() for n in ORDER}     # sit space -> rest spac
 
 # ---------------------------------------------------------------- keychain extras
 extras = []     # (object, bone)
-# cheek fluff: three soft pointed tufts per side, placed and sized after the art
-TUFTS = [((0.26, 0.02, 0.00), (0.47, 0.05, -0.02), (0.66, 0.10, -0.045), 0.125),
-         ((0.26, 0.02, -0.10), (0.44, 0.04, -0.13), (0.57, 0.08, -0.17), 0.115),
-         ((0.24, 0.00, -0.19), (0.38, 0.02, -0.25), (0.46, 0.05, -0.335), 0.105)]
-for sx in (-1, 1):
-    for i, (p0, p1, p2, r) in enumerate(TUFTS):
-        path = [hp((XC + sx * q[0], piv.y - 0.03 + q[1], ZE + q[2])) for q in (p0, p1, p2)]
-        ob = tube(f'Fluff{"L" if sx < 0 else "R"}{i}', path, [r * HEAD_S, r * HEAD_S * 0.72, r * HEAD_S * 0.1], ring=14, cap_rings=2)
-        c0 = path[0]
-        for v in ob.data.vertices:                         # flatter front-to-back, like a lock of fur
-            v.co.y = c0.y + (v.co.y - c0.y) * 0.62
-        ob.data.materials.append(MAT_FLUFF)
-        extras.append((ob, 'CatHead', False))
+# cheek fur: traced from the keychain art's silhouette, so it has the art's shape. It grows out of the
+# front of the cheeks, hugs the head, and carries the art's own colours (orange strokes on the edges),
+# mapped exactly like the painted face so the two run into each other without a seam.
+art = np.array(Image.open(ART).convert('RGBA'))
+alpha = art[..., 3] > 100
+HH, WW = alpha.shape
+yy, xx = np.mgrid[0:HH, 0:WW]
+HEAD_YC = piv.y + 0.07; HEAD_RX = 0.41; FLUFF_S = 1.0
+FLUFF_LINE = {}
+fluff_rgb = np.broadcast_to(FUR, art[..., :3].shape).copy()
+for side, (x0, x1) in (('L', (0, 340)), ('R', (740, WW))):
+    m = alpha & (xx >= x0) & (xx < x1) & (yy > 283) & (yy < 490) & ((yy > 304) | (xx < 236) | (xx > 844))
+    lab, nl = ndimage.label(m)
+    edge_col = x1 - 1 if side == 'L' else x0
+    keep = set(np.unique(lab[:, edge_col])) - {0}
+    m = np.isin(lab, list(keep))
+    m = ndimage.binary_opening(m, iterations=2)                    # drop hair-thin wisps, keep the points
+    cx_ = 372 if side == 'L' else 708
+    m |= ((xx - cx_) / 60.0) ** 2 + ((yy - 385) / 100.0) ** 2 < 1       # root, buried in the cheek
+    m = ndimage.gaussian_filter(m.astype(float), 2.0) > 0.5
+    lab, nl = ndimage.label(m); m = lab == (1 + int(np.argmax(ndimage.sum(m, lab, range(1, nl + 1)))))
+    # clean colours for this tuft: the art's interior pixels only (well clear of any ink line)
+    dark = ndimage.binary_dilation((art[..., :3].max(-1) < 150) | ~alpha, iterations=5)
+    inner = alpha & m & ~dark
+    idx = ndimage.distance_transform_edt(~inner, return_distances=False, return_indices=True)
+    sel = ndimage.binary_dilation(m, iterations=12)
+    cols = art[..., :3][idx[0], idx[1]].astype(np.float32)
+    stroke = (cols[..., 0] > 200) & (cols[..., 1] > 120) & (cols[..., 1] < 185) & (cols[..., 2] < 140) & (np.abs(xx - 540) > 225)
+    cols[~stroke] = FUR                                                # keep only the orange edge strokes
+    fluff_rgb[sel] = cols[sel]
+    ob = pillow('Fluff' + side, m)
+    me = ob.data
+    while me.uv_layers: me.uv_layers.remove(me.uv_layers[0])
+    uvl = me.uv_layers.new(name='UVMap')
+    for lp in me.loops:
+        co = me.vertices[lp.vertex_index].co
+        uvl.data[lp.index].uv = (min(max(540 + (co.x - XC) * K, 1), WW - 2) / WW, 1 - min(max(310 - (co.z - ZE) * K, 1), HH - 2) / HH)
+    root_w = {}
+    for v in me.vertices:
+        sx = 1.0 if v.co.x > XC else -1.0
+        # art head edge (295 px from the centre line) -> this head's edge, tufts sized like the art's
+        ax = 0.357 + (abs(v.co.x - XC) - 0.357) * FLUFF_S
+        zz = ZE - 0.09 + (v.co.z - (ZE - 0.09)) * FLUFF_S
+        # the fur leaves the head at the FRONT of the cheek (flush with the face) and flares out and back
+        a0 = 0.35
+        def ys(a, z):                                                 # the head's front surface
+            return HEAD_YC - 0.40 * math.sqrt(max(0.02, 1 - (min(a, 0.40) / HEAD_RX) ** 2 - ((z - 1.48) / 0.37) ** 2))
+        thick = 1.5 - 0.9 * min(max(ax - a0, 0) / 0.42, 1)
+        if ax <= a0:
+            yf = ys(ax, zz) - 0.012 + 1.6 * max(0.0, 0.325 - ax)     # flush with the cheek, root sinks in
+        else:
+            yf = ys(a0, zz) - 0.012 + 0.6 * (ax - a0)                # then flares out and back
+        yc = yf + 0.074 * thick
+        root_w[v.index] = min(max((ax - 0.40) / 0.14, 0), 1)
+        v.co = hp((XC + sx * ax, yc + v.co.y * thick, zz))
+    FLUFF_LINE[ob.name] = root_w
+    ob.data.materials.append(MAT_FLUFF)
+    extras.append((ob, 'CatHead', False))
+
+Image.fromarray(fluff_rgb.astype(np.uint8)).save(WORK + '/bobo_fluff.png')
+MAT_FLUFF.node_tree.nodes['Image Texture'].image = bpy.data.images.load(WORK + '/bobo_fluff.png')
 
 # collar + bell sit on the neck in the keychain pose
 tv = posed(SIT, ['Torso']); ztop = max(p.z for p in tv)
@@ -567,7 +652,8 @@ LINE_W = {'Torso': 0.016, 'CatHead': 0.016, 'FrontLeg': 0.014, 'FrontLeg2': 0.01
 def add_outline(ob, w):
     o2 = ob.copy(); o2.data = ob.data.copy(); o2.name = ob.name + '_Line'; scene.collection.objects.link(o2)
     bm = bmesh.new(); bm.from_mesh(o2.data); bm.normal_update()
-    for v in bm.verts: v.co = v.co + v.normal * w
+    fl = FLUFF_LINE.get(ob.name)          # cheek fur: no ink line where it joins the face
+    for v in bm.verts: v.co = v.co + v.normal * (w * fl[v.index] - 0.006 * (1 - fl[v.index]) if fl else w)
     bmesh.ops.reverse_faces(bm, faces=bm.faces)
     bm.to_mesh(o2.data); bm.free()
     o2.data.materials.clear(); o2.data.materials.append(MAT_LINE)

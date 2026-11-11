@@ -11,7 +11,9 @@ How it is made (no generative AI, no image-to-3D):
   visor), restyled to the keychain: the hoodie is removed, the head is enlarged, forms are smoothed, and every
   texture is repainted in flat keychain colours by a script (cream fur, orange stripes and paws, white bib,
   light-blue visor with white trim and lettering). The face is the keychain art's face painted onto the head
-  (`public/evade/keychain/src/cat_art.png`); cheek tufts, collar, studs and bell are added; black
+  (`public/evade/keychain/src/cat_art.png`); the cheek fur is traced from the art's silhouette, grows out
+  of the front of the cheeks with no ink line at the join, and keeps the art's orange strokes; collar, studs
+  and bell are added; black
   inverted-hull outlines give the ink line. The keychain sitting pose is a pose on the original rig (hind
   legs folded, tail on a five-bone chain), so the original clips (walk etc.) run unchanged as `Classic*`.
 - **Can** (`build_label.py`, `build_can.py`): a lathe of a measured 12 oz can profile; the label is drawn
