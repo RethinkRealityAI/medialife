@@ -42,7 +42,12 @@ CHARM = {
     'roblox': cut_photo(HERE + '/src/old-bobo.png', 75),
 }
 CHARM['catl'] = CHARM['cat'].transpose(Image.FLIP_LEFT_RIGHT)       # the cat charm's other side: the print seen through the acrylic, tail on the left
-NAME = {'catl': 'cat Bobo (other side)', 'cat': 'cat Bobo', 'canback': 'Eclipse can (QR side)', 'can': 'Eclipse can', 'roblox': 'Roblox Bobo'}
+CHARM['robloxl'] = CHARM['roblox'].transpose(Image.FLIP_LEFT_RIGHT)  # the Roblox Bobo charm's other side, the same way
+NAME = {'catl': 'cat Bobo (other side)', 'cat': 'cat Bobo', 'canback': 'Eclipse can (QR side)', 'can': 'Eclipse can', 'roblox': 'Roblox Bobo', 'robloxl': 'Roblox Bobo (other side)'}
+# The whole keychain turned over: every charm shows its other side (the cat and Roblox Bobo mirrored, the can
+# its other face) and the layout is mirrored with it.
+TURN = {'cat': 'catl', 'catl': 'cat', 'roblox': 'robloxl', 'robloxl': 'roblox', 'can': 'canback', 'canback': 'can'}
+TURNED = False
 
 
 def hole(im):
@@ -98,6 +103,7 @@ def place(canvas, key, at, swing_deg, scale=1.0):
 def keychain(charms, bg='light', ring=(800, 120), seed=1):
     """charms: (key, chain direction in degrees from straight down (+ = to the right), chain length mm,
     charm swing in degrees). Each charm is its own keychain on its own chain, all from one ring."""
+    if TURNED: charms = [(TURN[k], -dr, ln, -sw) for k, dr, ln, sw in charms]; ring = (W - ring[0], ring[1])
     cv = backdrop(bg, seed); d = ImageDraw.Draw(cv)
     R = 14 * PX
     for key, direction, length, swing in charms:
@@ -142,27 +148,32 @@ def add(slug, title, what, img, light=None, blur=0):
     img = img.convert('RGB')
     if light: img = ImageEnhance.Brightness(img).enhance(light); img = ImageEnhance.Contrast(img).enhance(0.85)
     if blur: img = img.filter(ImageFilter.GaussianBlur(blur))
+    if TURNED: img.save(OUT + slug + '-flip.jpg', quality=88); return
     img.save(OUT + slug + '.jpg', quality=88)
-    TESTS.append(dict(slug=slug, title=title, what=what))
+    TESTS.append(dict(slug=slug, title=title, what=what, flip=slug + '-flip'))
+def build_all():
 
-# ---- the new keychain (cat Bobo + can), each charm on its own chain from the ring
-add('new-apart', 'Cat Bobo and can, spread apart', 'The two keychains laid out on a table, a few centimetres apart.', keychain(NEW))
-add('new-hanging', 'Hanging side by side', 'Both hanging straight down from the ring, close together but not touching.', keychain([('cat', -32, 46, 0), ('canback', 30, 44, 0)]))
-add('new-front-can', 'Cat Bobo with the can front', 'Cat Bobo next to the front of the real can charm (the photo).', keychain([('cat', -40, 44, -10), ('can', 38, 42, 10)], seed=11))
-add('new-other-side', 'The other side', 'The keychain turned over: cat Bobo with the tail on the left, next to the front of the can.', keychain([('catl', -34, 46, 4), ('can', 34, 44, -4)], seed=12))
-add('new-wide', 'Far apart', 'Spread wide, as if the ring was dropped on a table.', keychain([('cat', -58, 36, -60), ('canback', 58, 34, 56)], bg='wood', ring=(800, 260), seed=2))
-add('new-overlap', 'One over the other', 'The can lying partly on top of the cat charm.', keychain([('cat', -10, 26, -6), ('canback', 14, 34, 14)]))
-add('new-tilt-back', 'Seen from below', 'Tipped back 40 degrees, like a phone held low.', perspective(keychain(NEW), tilt_x=40))
-add('new-tilt-side', 'Seen from the side', 'Turned 45 degrees sideways.', perspective(keychain(NEW, bg='dark', seed=3), tilt_y=45))
-add('new-far', 'Far away', 'Half size, like holding the phone at arm\'s length.', perspective(keychain(NEW), zoom=0.5, bg=(226, 224, 220)))
-add('new-sideways', 'Turned on its side', 'The keychain on a table, turned 90 degrees.', perspective(keychain(NEW, bg='wood', seed=4), rot=90, zoom=0.62, bg=(150, 112, 78)))
-add('new-dim', 'Dim light', 'Darker and softer, like a room in the evening.', keychain(NEW, seed=5), light=0.55, blur=1.2)
-# ---- the earlier keychain (Roblox Bobo + can)
-add('old-apart', 'Roblox Bobo and can, spread apart', 'The two keychains laid out a few centimetres apart.', keychain(OLD, bg='dark', seed=6))
-add('old-hanging', 'Roblox Bobo hanging', 'Both hanging straight down from the ring.', keychain([('roblox', -34, 46, 0), ('can', 32, 46, 0)], seed=7))
-add('old-tilt', 'Roblox Bobo at an angle', 'Tipped back 35 degrees and turned 25 degrees.', perspective(keychain(OLD, bg='wood', seed=8), tilt_x=35, tilt_y=-25))
-add('old-far', 'Roblox Bobo far away', 'Half size.', perspective(keychain(OLD, bg='dark', seed=9), zoom=0.5, bg=(62, 62, 66)))
-# ---- all three on one ring
-add('all-three', 'All three on one ring', 'Cat Bobo, Roblox Bobo and the can together.', keychain([('cat', -64, 36, -50), ('roblox', 0, 12, 0), ('can', 64, 34, 50)], ring=(800, 190), seed=10))
+    # ---- the new keychain (cat Bobo + can), each charm on its own chain from the ring
+    add('new-apart', 'Cat Bobo and can, spread apart', 'The two keychains laid out on a table, a few centimetres apart.', keychain(NEW))
+    add('new-hanging', 'Hanging side by side', 'Both hanging straight down from the ring, close together but not touching.', keychain([('cat', -32, 46, 0), ('canback', 30, 44, 0)]))
+    add('new-front-can', 'Cat Bobo with the can front', 'Cat Bobo next to the front of the real can charm (the photo).', keychain([('cat', -40, 44, -10), ('can', 38, 42, 10)], seed=11))
+    add('new-other-side', 'The other side', 'The keychain turned over: cat Bobo with the tail on the left, next to the front of the can.', keychain([('catl', -34, 46, 4), ('can', 34, 44, -4)], seed=12))
+    add('new-wide', 'Far apart', 'Spread wide, as if the ring was dropped on a table.', keychain([('cat', -58, 36, -60), ('canback', 58, 34, 56)], bg='wood', ring=(800, 260), seed=2))
+    add('new-overlap', 'One over the other', 'The can lying partly on top of the cat charm.', keychain([('cat', -10, 26, -6), ('canback', 14, 34, 14)]))
+    add('new-tilt-back', 'Seen from below', 'Tipped back 40 degrees, like a phone held low.', perspective(keychain(NEW), tilt_x=40))
+    add('new-tilt-side', 'Seen from the side', 'Turned 45 degrees sideways.', perspective(keychain(NEW, bg='dark', seed=3), tilt_y=45))
+    add('new-far', 'Far away', 'Half size, like holding the phone at arm\'s length.', perspective(keychain(NEW), zoom=0.5, bg=(226, 224, 220)))
+    add('new-sideways', 'Turned on its side', 'The keychain on a table, turned 90 degrees.', perspective(keychain(NEW, bg='wood', seed=4), rot=90, zoom=0.62, bg=(150, 112, 78)))
+    add('new-dim', 'Dim light', 'Darker and softer, like a room in the evening.', keychain(NEW, seed=5), light=0.55, blur=1.2)
+    # ---- the earlier keychain (Roblox Bobo + can)
+    add('old-apart', 'Roblox Bobo and can, spread apart', 'The two keychains laid out a few centimetres apart.', keychain(OLD, bg='dark', seed=6))
+    add('old-hanging', 'Roblox Bobo hanging', 'Both hanging straight down from the ring.', keychain([('roblox', -34, 46, 0), ('can', 32, 46, 0)], seed=7))
+    add('old-tilt', 'Roblox Bobo at an angle', 'Tipped back 35 degrees and turned 25 degrees.', perspective(keychain(OLD, bg='wood', seed=8), tilt_x=35, tilt_y=-25))
+    add('old-far', 'Roblox Bobo far away', 'Half size.', perspective(keychain(OLD, bg='dark', seed=9), zoom=0.5, bg=(62, 62, 66)))
+    # ---- all three on one ring
+    add('all-three', 'All three on one ring', 'Cat Bobo, Roblox Bobo and the can together.', keychain([('cat', -64, 36, -50), ('roblox', 0, 12, 0), ('can', 64, 34, 50)], ring=(800, 190), seed=10))
+build_all()
+TURNED = True
+build_all()                    # the same pictures with the keychain turned over ("-flip")
 json.dump(dict(tests=TESTS), open(OUT + 'tests.json', 'w'), indent=1)
 print(len(TESTS), 'test pictures in', OUT)

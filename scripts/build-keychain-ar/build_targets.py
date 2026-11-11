@@ -105,8 +105,20 @@ Image.open(OUT + 'kc-can_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2
 # side). Both are seen from the side whose outline is the artwork's mirrored, so their pictures sit in the
 # artwork's own picture frame mirrored ("mirror" in layout.json flips the charm frame, and the 3D character
 # with it, so it lines up with its print). They replace the flat cat artwork as kc-bobo.
+# The QR code on the product shot is a stand-in: the one printed on the real charm encodes something else,
+# so its hundreds of little corners would only ever disagree with the real print. It is painted over with the
+# disc's own paper colour, and the engine holds on to the can, the lettering and the bubbles instead.
+QR_BOX = (0.387, 0.531, 0.599, 0.695)          # in src/can-back.png, fractions (found by edge density)
+def hide_qr(im):
+    import numpy as np
+    a = np.asarray(im).copy(); H_, W_ = a.shape[:2]
+    x0, y0, x1, y1 = round(QR_BOX[0] * W_), round(QR_BOX[1] * H_), round(QR_BOX[2] * W_), round(QR_BOX[3] * H_)
+    box = a[y0:y1, x0:x1].reshape(-1, 3); light = box[box.sum(1) > np.percentile(box.sum(1), 70)]
+    a[y0:y1, x0:x1] = np.median(light, 0).astype(np.uint8)
+    return Image.fromarray(a)
 for tname, fname, key in (('kc-bobo', 'bobo-product.png', 'bobo'), ('kc-can-back', 'can-back.png', 'can')):
     im = Image.open(HERE_SRC + fname).convert('RGB')
+    if tname == 'kc-can-back': im = hide_qr(im)
     base = LAYOUT['kc-bobo' if key == 'bobo' else 'kc-can-art']
     write_target(tname, im, dict(widthM=base['widthM'], heightM=base['heightM'], silhouettes=True, charms={key: dict(x=0, y=0, rz=0, mirror=True)}))
     Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
@@ -156,5 +168,35 @@ Image.open(OUT + 'kc-bobo-l_luminance.jpg').filter(ImageFilter.UnsharpMask(radiu
 pts = json.load(open(HERE_SRC + 'bobo-product-outline.json'))['points']
 json.dump(dict(note='kc-bobo-l: the bobo-product outline mirrored', points=[[round(1 - x, 5), y] for x, y in pts]), open(HERE_SRC + 'bobo-product-l-outline.json', 'w'))
 portal_mask('kc-bobo-l', 'bobo-product-l-outline.json')
+# ---- the Roblox Bobo charm's other side, the same way: its print mirrored, the 3D Bobo unmirrored on it
+im = ImageOps.mirror(Image.open(HERE_SRC + 'old-bobo.png').convert('RGB'))
+co = LAYOUT['kc-old']['charms']['bobo']
+write_target('kc-old-l', im, dict(widthM=LAYOUT['kc-old']['widthM'], heightM=LAYOUT['kc-old']['heightM'], silhouettes=True,
+                                  charms={'bobo': dict(x=-co['x'], y=co['y'], rz=-co['rz'], s=co.get('s', 1), mirror=not co.get('mirror', False))}))
+Image.open(OUT + 'kc-old-l_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + 'kc-old-l_luminance.jpg', quality=95)
+pts = json.load(open(HERE_SRC + 'old-bobo-outline.json'))['points']
+json.dump(dict(note='kc-old-l: the old-bobo outline mirrored', points=[[round(1 - x, 5), y] for x, y in pts]), open(HERE_SRC + 'old-bobo-l-outline.json', 'w'))
+portal_mask('kc-old-l', 'old-bobo-l-outline.json')
+
+# ---- side probes: for a charm with a picture of each side (the print seen from the front or through the
+# acrylic, so one is the other's mirror image), both pictures often lock onto the same charm. The page then
+# looks at the camera image under a picture's pose and asks whether it matches that picture better than the
+# picture mirrored about the character's own middle (`axis`, where the face is symmetric). probe.json: each
+# picture's brightness, heavily blurred, on a coarse grid (big shapes like the tail survive a pose that is a
+# little off; fine detail would not).
+def probe(tname, cols=12, rows=16):
+    import numpy as np
+    L = Image.open(OUT + f'{tname}_luminance.jpg').convert('L')
+    lum = np.asarray(L.filter(ImageFilter.GaussianBlur(8)).resize((cols, rows), Image.BOX)).astype(int)
+    band = np.asarray(L.resize((240, 320), Image.BOX)).astype(float)[38:144]     # the head rows: the most symmetric part
+    best = (-2, 0.5); xs = np.arange(240)
+    for a in np.arange(0.3, 0.7, 0.0025):
+        xm = np.round(2 * a * 240 - xs - 1).astype(int); ok = (xm >= 0) & (xm < 240)
+        if ok.sum() < 120: continue
+        c = np.corrcoef(band[:, ok].ravel(), band[:, xm[ok]].ravel())[0, 1]
+        if c > best[0]: best = (c, a)
+    return dict(cols=cols, rows=rows, axis=round(float(best[1]), 4), lum=lum.flatten().tolist())
+PROBES = {t: probe(t) for t in ('kc-bobo', 'kc-bobo-l', 'kc-old', 'kc-old-l')}
+json.dump(PROBES, open(OUT + 'probe.json', 'w'), separators=(',', ':'))
 json.dump(dict(targets=LAYOUT), open(OUT + 'layout.json', 'w'), indent=2)
 print(open(OUT + 'layout.json').read())

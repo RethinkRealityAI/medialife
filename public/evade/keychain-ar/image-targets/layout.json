@@ -121,6 +121,25 @@
         "widthM": 0.07809285714285714,
         "heightM": 0.10418571428571428
       }
+    },
+    "kc-old-l": {
+      "widthM": 0.0585,
+      "heightM": 0.078,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": 0,
+          "y": 0,
+          "rz": 0,
+          "s": 1,
+          "mirror": true
+        }
+      },
+      "mask": {
+        "src": "kc-old-l-mask.png",
+        "widthM": 0.07605,
+        "heightM": 0.1014
+      }
     }
   }
 }

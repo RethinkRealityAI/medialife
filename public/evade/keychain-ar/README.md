@@ -96,6 +96,24 @@ one sequence (can first, Bobo after the Can to Bobo time). The pair picture also
 charm, so a charm still has to be confirmed by its own picture; the pair picture then places both, as
 long as it agrees with the single pictures to within 8 mm on screen, or after 1.5 s when only it holds.
 
+## Which side of the charm (`pickSides` in `main.js`)
+Cat Bobo (`kc-bobo` tail right, `kc-bobo-l` tail left) and Roblox Bobo (`kc-old`, `kc-old-l`) each have a
+picture of both sides: the print and its mirror image, as it looks through the clear acrylic. Their faces are
+nearly symmetric, so both pictures often lock onto the same charm (Dapo's phone log, 2026-11-11). The camera
+image decides which side is really there: under each tracked picture's pose, the camera (160 px, blurred) is
+correlated with that picture and with the picture mirrored about the character's own middle
+(`image-targets/probe.json`, written by `build_targets.py`). A small lead picks the side before he pops; once
+he is out it takes a clear lead to turn him. Side changes go into the phone test log (`e: 'side'`). On the
+mirrored side the 3D character is drawn mirrored, with its lettering turned to read the right way round
+(the cat's visor texture, Roblox Bobo's `CapText`), and the can turns round to show its QR face.
+
+The QR on the product shot that `kc-can-back` is cut from is a stand-in (the real charm's QR encodes
+something else), so it is painted over in the target picture. A phone photo of the real QR side, like the
+one `kc-can` is cut from, would make that side much easier to find.
+
+Test pictures (`/target/`): every picture has a Flip toggle (and Flip all) that shows the keychain turned
+over: cat Bobo and Roblox Bobo mirrored, the can with its other face, the layout mirrored.
+
 ## iPhone close-up focus (`IOS_MACRO` in `main.js`)
 iPhone Safari gives the plain wide camera by default, which cannot focus closer than about 20 cm, so the charm
 blurred when the phone came close. On iPhone the page now asks for the multi-lens camera (Back Triple, then Back

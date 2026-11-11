@@ -223,11 +223,12 @@ const assets = Promise.all([
   // layout.json, then the portal mask of each charm picture that has one (the whole acrylic piece)
   fetch(HERE + 'image-targets/layout.json').then((r) => r.json()).then(async (layout) => {
     layout.masks = {};
+    layout.probes = await fetch(HERE + 'image-targets/probe.json').then((r) => r.json()).catch(() => null);   // for telling a charm's two sides apart
     await Promise.all(Object.entries(layout.targets).filter(([, t]) => t.mask).map(([n, t]) => new THREE.TextureLoader().loadAsync(HERE + 'image-targets/' + t.mask.src)
       .then((tex) => { tex.flipY = false; layout.masks[n] = tex; }).catch(() => { /* falls back to the model's silhouette */ })));   // flipY off: the glTF uv convention, like the models' own masks
     return layout;
   }),
-  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-can-back', 'kc-old', 'kc-bobo-l'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
+  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-can-back', 'kc-old', 'kc-bobo-l', 'kc-old-l'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -368,7 +369,7 @@ function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
 }
 
 function buildScene(xr, [bobo, can, oldBobo, layout, ...targets]) {
-  ({ scene, camera, renderer } = xr);
+  ({ scene, camera, renderer } = xr); probes = layout.probes;
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.6;
@@ -390,7 +391,7 @@ function buildScene(xr, [bobo, can, oldBobo, layout, ...targets]) {
   // each charm picture with its own portal mask (the whole acrylic piece): baked once, swapped in by useMask
   for (const ch of [Bcat, Bold, C]) for (const t of Object.values(TS)) {
     const mk = t.lay.mask, tex = layout.masks[t.name];
-    if (mk && tex && t.lay.charms[ch.key] && (ch === Bold) === (t.name === 'kc-old')) { tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; ch.masks[t.name] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
+    if (mk && tex && t.lay.charms[ch.key] && (ch === Bold) === t.name.startsWith('kc-old')) { tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; ch.masks[t.name] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
   }
   for (let i = 0; i < 90; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, depthTest: false }));
@@ -418,6 +419,7 @@ function onTarget(d) {
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
   t.s = t.pr.height * upp / t.lay.heightM;                                 // world units per metre
+  t.upp = upp;
   if (!t.tracked) { t.snap = true; t.foundAt = performance.now(); if (camera) noteFound(t, measure(t)); } else if (camera && Math.random() < 0.1) measure(t);
   t.tracked = true; t.at = performance.now();
 }
@@ -460,22 +462,91 @@ function groundFrame(ch) {
 // believed for a few seconds after the earlier design's Bobo was seen (its can matches the pair picture).
 const PAIR = params.get('pair') === '1';   // the combined version: the pair picture is loaded too and the two pop as one sequence. Off by default (Dapo, 2026-11-11): each charm runs only from its own picture, so one never shows up for the other.
 const conf = { bobo: false, can: false };
-let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0, catSide = null;
+let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0;
+
+// ---------------------------------------------------------------- which side of a two-sided charm is in view
+// Cat Bobo and Roblox Bobo each have a picture of both sides: the print, and the print seen through the clear
+// acrylic (its mirror image). Their faces are nearly symmetric, so both pictures often lock onto the same charm
+// (Dapo's phone log, 2026-11-11: kc-bobo and kc-bobo-l found 0.6 s apart on one charm), and taking the one
+// found first could bring Bobo out mirrored. So the camera picture decides. Under each tracked picture's pose,
+// the camera image (small and blurred, so a pose that is a little off still lines up) is compared with that
+// picture and with the picture mirrored about the character's own middle (probe.json). Where the picture wins,
+// that side is in view; where its mirror wins, the other side is. Before he pops a small lead is enough; once
+// he is out it takes a clear one to turn him round.
+const SIDES = { cat: ['kc-bobo', 'kc-bobo-l'], old: ['kc-old', 'kc-old-l'] };
+const sideOf = { cat: null, old: null }, sideLead = { cat: 0, old: 0 }, sideLast = {};
+let probes = null, sampler = null;
+const _pv = new THREE.Vector3();
+function camLuma() {
+  const v = engineVideo(); if (!v || !v.videoWidth) return null;
+  const k = 160 / Math.max(v.videoWidth, v.videoHeight), w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
+  if (!sampler) { const c = document.createElement('canvas'); sampler = { c, g: c.getContext('2d', { willReadFrequently: true }) }; }
+  if (sampler.c.width !== w || sampler.c.height !== h) { sampler.c.width = w; sampler.c.height = h; }
+  sampler.g.drawImage(v, 0, 0, w, h);
+  const d = sampler.g.getImageData(0, 0, w, h).data; let L = new Float32Array(w * h), T = new Float32Array(w * h);
+  for (let i = 0; i < L.length; i++) L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  for (let pass = 0; pass < 2; pass++) {                                  // a small blur: 3x3 box, twice
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; T[i] = (L[i - (x > 0)] + L[i] + L[i + (x < w - 1)]) / 3; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; L[i] = (T[i - (y > 0) * w] + T[i] + T[i + (y < h - 1) * w]) / 3; }
+  }
+  return { L, w, h, vw: v.videoWidth, vh: v.videoHeight };
+}
+// > 0: the camera matches this picture better than its mirror image (this side is in view); < 0: the other side
+function sideScore(t, cam) {
+  const pb = probes && probes[t.name]; if (!pb || !t.upp) return null;
+  const cw = canvas.clientWidth, chh = canvas.clientHeight;
+  const sc = Math.max(cw / cam.vw, chh / cam.vh), hw = cw / sc / 2, hh = chh / sc / 2;   // the part of the video the screen shows (cover)
+  const W = t.pr.width * t.upp, H = t.pr.height * t.upp, k = cam.w / cam.vw;
+  const S = [0, 0, 0, 0, 0], M = [0, 0, 0, 0, 0];                       // sums for two correlations: n, a, b, aa, bb, ab (n shared)
+  let n = 0, sb = 0, sbb = 0;
+  const acc = (o, a, b) => { o[0] += a; o[1] += a * a; o[2] += a * b; };
+  for (let r = 0; r < pb.rows; r++) for (let c = 0; c < pb.cols; c++) {
+    const cm = Math.floor((2 * pb.axis - (c + 0.5) / pb.cols) * pb.cols); if (cm < 0 || cm >= pb.cols) continue;
+    _pv.set(((c + 0.5) / pb.cols - 0.5) * W, (0.5 - (r + 0.5) / pb.rows) * H, 0).applyQuaternion(t.q).add(t.p).project(camera);
+    const x = (cam.vw / 2 + _pv.x * hw) * k, y = (cam.vh / 2 - _pv.y * hh) * k;
+    if (!(x >= 0 && y >= 0 && x < cam.w - 1 && y < cam.h - 1)) continue;
+    const b = cam.L[(y | 0) * cam.w + (x | 0)];
+    n++; sb += b; sbb += b * b; acc(S, pb.lum[r * pb.cols + c], b); acc(M, pb.lum[r * pb.cols + cm], b);
+  }
+  if (n < 60) return null;
+  const vb = sbb - sb * sb / n; if (vb <= 0) return null;
+  const corr = (o) => { const va = o[1] - o[0] * o[0] / n; return va > 0 ? (o[2] - o[0] * sb / n) / Math.sqrt(va * vb) : 0; };
+  return corr(S) - corr(M);
+}
+function pickSides(on, now) {
+  let cam;
+  for (const key of ['cat', 'old']) {
+    const [na, nb] = SIDES[key], A = on(na), Bb = on(nb), ch = key === 'cat' ? Bcat : Bold;
+    let cur = sideOf[key];
+    if (cur && !on(cur) && (now - TS[cur].seen > 700 || on(cur === na ? nb : na))) cur = null;   // gone: the other side (if it is there) takes over
+    if (!A && !Bb) { sideLead[key] = 0; sideOf[key] = cur; continue; }
+    if (!cur) cur = A && Bb ? (A.foundAt <= Bb.foundAt ? na : nb) : A ? na : nb;          // for now: the one found first
+    if (now - (sideLast[key] ? sideLast[key].at : 0) > 120) {
+      if (cam === undefined) cam = camLuma();
+      const a = cam && A ? sideScore(A, cam) : null, b = cam && Bb ? sideScore(Bb, cam) : null;
+      sideLast[key] = { at: now, a, b };
+      if (a != null || b != null) sideLead[key] = sideLead[key] * 0.7 + ((a || 0) - (b || 0)) * 0.3;
+    }
+    let want = cur;
+    if (A && Bb) { const need = ch.st === 'idle' ? 0.05 : 0.2, lead = sideLead[key]; want = lead > need ? na : lead < -need ? nb : cur; }
+    if (want !== sideOf[key] && sideOf[key] && camStartAt) { diag.events.push({ t: +((now - camStartAt) / 1000).toFixed(1), n: want, e: 'side', lead: +sideLead[key].toFixed(3) }); if (diag.events.length > 300) diag.events.shift(); }
+    sideOf[key] = want;
+  }
+}
 const _v2 = new THREE.Vector3();
 function updateFrames(dt) {
   const now = performance.now();
   for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; tDiag(t.name).trackedS = +(tDiag(t.name).trackedS + dt).toFixed(2); } }
   const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
-  const oldRecent = recent('kc-old', 5000);
+  const oldRecent = recent('kc-old', 5000) || recent('kc-old-l', 5000);
   const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
   const canT = on('kc-can') || on('kc-can-back') || on('kc-can-art');        // the photo of the real can charm, its QR side, then the flat art
-  // the cat charm from either side: the print seen through the clear acrylic is mirrored (tail right on kc-bobo,
-  // tail left on kc-bobo-l); each picture's charm frame carries the matching flip, so the 3D Bobo follows it.
-  // The cat's face is nearly symmetric, so the other side's picture can also latch onto a charm a moment after
-  // the right one (a little to one side). So the side found first holds until it has been gone for 0.7 s.
-  if (catSide && !on(catSide) && now - TS[catSide].seen > 700) catSide = null;
-  if (!catSide) { const r = on('kc-bobo'), l = on('kc-bobo-l'); catSide = r && l ? (r.foundAt <= l.foundAt ? r.name : l.name) : r ? r.name : l ? l.name : null; }
-  const catT = catSide ? on(catSide) : null, catRecent = (ms) => recent('kc-bobo', ms) || recent('kc-bobo-l', ms);
+  // the cat charm (and the Roblox Bobo charm) from either side: the print seen through the clear acrylic is
+  // mirrored (tail right on kc-bobo, tail left on kc-bobo-l); each picture's charm frame carries the matching
+  // flip, so the 3D Bobo follows it. pickSides decides which side is really in view.
+  pickSides(on, now);
+  const catT = sideOf.cat ? on(sideOf.cat) : null, catRecent = (ms) => recent('kc-bobo', ms) || recent('kc-bobo-l', ms);
+  const oldT = sideOf.old ? on(sideOf.old) : null;
   if (catT) conf.bobo = true; if (canT) conf.can = true;
   // one charm's own picture is in view and the other's has not been for a while: the other charm has left
   if (conf.bobo && canT && !catRecent(1500)) conf.bobo = false;
@@ -495,10 +566,10 @@ function updateFrames(dt) {
   pairOff = agree ? Math.max(pairOff - dt, 0) : 0.6;                        // stay off it for a moment after a disagreement, so it does not flip back and forth
   const pair = conf.bobo && conf.can && pairOff === 0 ? both : null;
   // which Bobo is in play: it follows the charm in view, but never changes under a Bobo that is on screen
-  const want = on('kc-old') && !catT ? Bold : catT && !on('kc-old') ? Bcat : B;
+  const want = oldT && !catT ? Bold : catT && !oldT ? Bcat : B;
   if (want !== B && !pres.bobo) { B.frame.visible = false; B = want; driver.bobo = null; goneFor.bobo = 9; }
-  const pick = !PAIR ? { bobo: B === Bold ? on('kc-old') : catT, can: canT } : {
-    bobo: B === Bold ? on('kc-old') : conf.bobo ? pair || catT || (pairOff === 0 ? both : null) : null,
+  const pick = !PAIR ? { bobo: B === Bold ? oldT : catT, can: canT } : {
+    bobo: B === Bold ? oldT : conf.bobo ? pair || catT || (pairOff === 0 ? both : null) : null,
     can: conf.can ? pair || canT || (pairOff === 0 ? both : null) : null,
   };
   present = false;
@@ -520,12 +591,14 @@ function updateFrames(dt) {
 // A charm picture of the other side flips the charm frame, and the 3D character with it. Two things must not
 // read as a mirror image: the can, which instead turns round to show its back (the QR side, as on that
 // picture: flipping its depth as well makes the whole thing a half turn), and the BOBO on the cat's visor,
-// which is swapped for a copy of the head texture with the lettering flipped back.
+// which is swapped for a copy of the head texture with the lettering flipped back (and Roblox Bobo's cap text).
 function sideFix(ch, t) {
   const c = t.lay.charms[ch.key], mir = !!(c && c.mirror);
   if (ch.mirrored === mir) return; ch.mirrored = mir;
   if (ch.kind === 'can') ch.model.scale.z = Math.abs(ch.model.scale.z) * (mir ? -1 : 1);
   if (ch.visor) { ch.visor.mat.map = mir ? ch.visor.flipped : ch.visor.plain; ch.visor.mat.needsUpdate = true; }
+  const cap = ch.model.getObjectByName('CapText');                          // Roblox Bobo's BOBO is its own little mesh: turn it to read the right way round
+  if (cap) cap.scale.x = Math.abs(cap.scale.x) * (mir ? -1 : 1);
 }
 const VISOR_TEXT = [60, 150, 205, 490];   // the BOBO lettering in the cat's 2048 px head texture (x0, y0, x1, y1); it reads top to bottom
 function visorFlip(m) {
@@ -1358,4 +1431,4 @@ if (!mobile) {
 // the camera guide cycles through the three things to look for
 { const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
 
-window.__ar = { diag, feed, pet, get fed() { return fed; }, get fishBusy() { return fishBusy; }, get dbg() { return { free: boboFree(), busy: fishBusy, sup: !!B.super, walk: !!B.walk, live: live(B), cur: B.current && B.current.getClip().name }; }, get capture() { return capture; }, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+window.__ar = { diag, feed, pet, get fed() { return fed; }, get fishBusy() { return fishBusy; }, get dbg() { return { free: boboFree(), busy: fishBusy, sup: !!B.super, walk: !!B.walk, live: live(B), cur: B.current && B.current.getClip().name }; }, get capture() { return capture; }, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get sides() { return { sideOf, sideLead, sideLast }; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
