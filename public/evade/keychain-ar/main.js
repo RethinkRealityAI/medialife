@@ -38,10 +38,10 @@ const REST = {                                                  // charm frames 
 };
 
 // landed sizes and spots (metres), in the "ground frame": x right, y up (gravity), z toward the viewer
-const SIZE = { bobo: 0.06, can: 0.043 };
+const SIZE = { bobo: 0.042, can: 0.031 };     // a little smaller than the prints, so both fit on screen up close
 const SPOT = {
-  bobo: (flat) => new THREE.Vector3(-0.03, -0.085 * (1 - flat), 0.02 + 0.08 * flat),
-  can: (flat) => new THREE.Vector3(0.036, -0.085 * (1 - flat), 0.018 + 0.08 * flat),
+  bobo: (flat) => new THREE.Vector3(-0.009, -0.06 * (1 - flat), 0.015 + 0.06 * flat),
+  can: (flat) => new THREE.Vector3(0.026, -0.06 * (1 - flat), 0.014 + 0.06 * flat),
 };
 
 // ---------------------------------------------------------------- small helpers
@@ -215,7 +215,7 @@ function buildScene(xr, [bobo, can, target, layout]) {
   stage = sit(new THREE.Group(), 'bobo');
   B = prepCharacter(bobo, SIZE.bobo, charm.bobo, CHARMS.bobo);
   C = prepCharacter(can, SIZE.can, charm.can, CHARMS.can);
-  PADS.bobo = pad(0.033); PADS.can = pad(0.023); stage.add(PADS.bobo, PADS.can);
+  PADS.bobo = pad(0.023); PADS.can = pad(0.016); stage.add(PADS.bobo, PADS.can);
   flashB = sprite(glowTex, 0.001); flashC = sprite(glowTex, 0.001); stage.add(flashB, flashC);
   const scanMat = () => new THREE.MeshBasicMaterial({ color: 0x8fd8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false });
   scanB = new THREE.Mesh(new THREE.PlaneGeometry(CHARMS.bobo.w * 0.96, 0.0018), scanMat()); scanB.position.z = 0.001; charm.bobo.add(scanB);
@@ -380,7 +380,7 @@ function settle() {
     if (!ch.landed) continue;
     ch.root.position.copy(pd.position); ch.root.quaternion.copy(G.q);
     if (ch === B && B.walk) {
-      const R = 0.03; ch.root.position.add(_v.set(Math.sin(B.walk.a) * R, 0, (Math.cos(B.walk.a) - 1) * R).applyQuaternion(G.q)); ch.root.rotateY(B.walk.turn);
+      const R = 0.018; ch.root.position.add(_v.set(Math.sin(B.walk.a) * R, 0, (Math.cos(B.walk.a) - 1) * R).applyQuaternion(G.q)); ch.root.rotateY(B.walk.turn);
     }
     if (ch === C && C.spin) { ch.root.rotateY(Math.PI * 2 * easeInOut(C.spin.k)); ch.root.position.addScaledVector(upG, Math.sin(C.spin.k * Math.PI) * 0.02); }
   }
