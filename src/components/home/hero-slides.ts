@@ -83,6 +83,10 @@ export type HeroSlide = {
   /** On phones, the title over the stage (what this kind of piece is) and one line on it */
   title: string;
   detail: string;
+  /** The coloured edge lights on the piece (default 1; 0 = none, for dark garments) */
+  rim?: number;
+  /** Bigger or smaller than the default fit (1) */
+  size?: number;
   /** A soft glow in the accent behind the piece (0..1), so it reads on the dark page */
   glow?: number;
   /** One sentence for screen readers when the slide changes */
@@ -107,20 +111,22 @@ export const HERO_SLIDES: HeroSlide[] = [
   {
     key: "apparel",
     tab: "Apparel",
-    aim: "the tee",
+    aim: "the hoodie",
     accent: "blue",
     title: "Activated apparel",
     detail: "Point a phone at the print and the artwork plays.",
+    size: 1.2,
+    rim: 0,
     glow: 1,
-    describe: "An activated tee: point a phone at the print and the artwork animates.",
-    target: { kind: "glb", src: "/activated-merch/models/trainwreck-tee.glb", rotY: Math.PI },
+    describe: "An activated hoodie: point a phone at the print and the artwork animates.",
+    target: { kind: "glb", src: "/activated-merch/models/trainwreck-hoodie.glb", rotY: Math.PI },
     spots: [
       {
-        aim: "the tee",
+        aim: "the hoodie",
         cta: {
-          sub: "Trainwreck AR Tee · $75",
+          sub: "Trainwreck AR Hoodie · $90",
           label: "Buy now",
-          href: "https://shop.medialife.ai/products/unisex-classic-tee",
+          href: "https://shop.medialife.ai/products/unisex-hoodie",
           external: true,
           theme: "trainwreck",
         },
@@ -129,10 +135,10 @@ export const HERO_SLIDES: HeroSlide[] = [
           still: "/activated-merch/media/ar/trainwreck.webp",
           cloth: {
             rect: [
-              [0.3987, 0.7898],
-              [-0.3744, 0.7895],
-              [-0.3744, 0.2428],
-              [0.3987, 0.2431],
+              [0.364, 0.6545],
+              [-0.3657, 0.6546],
+              [-0.366, 0.2358],
+              [0.3658, 0.2361],
             ],
             quad: [
               [0.0101, 0.0109],

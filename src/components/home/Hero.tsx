@@ -466,7 +466,7 @@ export function Hero() {
             style={{ visibility: "hidden" }}
           >
             <span
-              className={`lg-chip absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium text-white/75 transition-colors group-hover:text-white ${s.accent === "magenta" ? "group-hover:bg-accent" : "group-hover:bg-[var(--btn-blue)]"}`}
+              className={`lg-chip absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium text-white/75 transition-colors group-hover:text-white ${s.accent === "magenta" ? "group-hover:bg-accent" : "group-hover:bg-[var(--btn-blue)]"}`}
             >
               {s.tab}
             </span>

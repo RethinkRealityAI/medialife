@@ -124,8 +124,15 @@ joystick, reward card).
 - Phones (portrait): the hero is a little taller, and the piece's title sits over the
   stage (`title` and `detail` in `hero-slides.ts`): Activated apparel, Immersive
   marketing, Immersive merchandising.
+- Apparel is the Trainwreck AR hoodie (`/activated-merch/models/trainwreck-hoodie.glb`,
+  same print rect as the merch page), shown a little bigger (`size` in `hero-slides.ts`,
+  mostly dropped on phones) with a breeze on the cloth (`clothWave`), and without the
+  coloured edge lights (`rim: 0`: on the black hoodie they read as an outline).
 - A soft glow in the piece's accent sits behind it (`glow` in `hero-slides.ts`), so the
-  black tee reads on the dark page.
+  dark garment reads on the dark page.
+- The other pieces stand in the right-hand column as holograms (`holoMaterial`): no scan
+  lines; a hint of their own colours, glowing edges, brighter near the projector, each on
+  a glowing projector pad with a soft beam and a few rising motes.
 - A piece can hold several designs ("spots"). Print has two: the ONE PIECE x Den of Geek
   poster and a Sakamoto Days sticker; each has its own video and button.
 - Each design's button is styled after its own print (`.ar-cta--<theme>` in
@@ -165,10 +172,24 @@ compressed, with the channel letters removed). To bring it back, add `RETAIL_SLI
 
 ### Homepage sections (below the hero)
 
-Story order: hero, partner logos (white marks in `public/home/logos/`, cut from our own
-campaign art; approved partners only), fan reactions + ranges, what we do (two flagship
-services), what we build (formats, how it works, real-time analytics illustration), results
-(Sakamoto Days case, award, conventions), latest launches, activated products, contact.
+Story order: hero, partner logos, fan reactions + ranges, what we do, what we build,
+results (Sakamoto Days case, award, conventions), latest launches, contact.
+
+- Partner logos (`LogoBand.tsx`): white marks in `public/home/logos/` (cut from our own
+  campaign art; approved partners only) that crossfade to their brand colours
+  (`*-color.*`) on hover or tap, and light up in turn while on screen.
+- What we do: "We commercialize IP through experiential activations", then the two
+  flagship services as full blocks. Activated products (`#merch`) holds the merch range
+  (5-product bento, See it in 3D, Shop). Immersive marketing shows the Netflix campaign
+  (`MarketingCollage.tsx`): the ONE PIECE cover, the Sakamoto Days poster, the standee
+  (cut from deck page 3) and the NFC sticker fanned out behind a phone playing the recap
+  (`public/home/marketing/`).
+- What we build: each format card plays a short 4:5 loop (`public/home/formats/`, H.264
+  CRF 27, 480x600, no audio; `InViewVideo.tsx` loads and plays only on screen). Mini-games,
+  collector hubs and fan rewards use stand-in Bobo clips until the real captures are
+  uploaded: replace the file of the same name.
+- Headings: one h1 (hero), h2 per section (including the logo strip), h3 for cards, h4
+  for the how-it-works steps.
 
 ### EVADE launch page (`/evade/`)
 

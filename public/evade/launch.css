@@ -172,7 +172,7 @@
   display: grid; gap: 8px; align-content: start; padding: 22px; border-radius: var(--r-lg);
   background: var(--card); border: 1px solid var(--line); color: var(--fg-2); font-size: 14.5px; line-height: 1.5;
 }
-.hide-feats b { color: var(--fg); font-size: 18px; letter-spacing: -0.01em; }
+.hide-feats h3 { margin: 0; color: var(--fg); font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
 .hf-ic {
   display: grid; place-items: center; width: 46px; height: 46px; margin-bottom: 8px; border-radius: 14px;
   color: var(--teal); background: rgba(63, 230, 224, 0.1); border: 1px solid rgba(63, 230, 224, 0.28);
@@ -193,3 +193,6 @@
   .ge-open { right: 50%; bottom: -60px; translate: 50% 0; white-space: nowrap; }
   .sec-head > .soon-pill { font-size: 10px; letter-spacing: 0.1em; padding: 7px 12px; }
 }
+
+/* Footer column titles are h2s (heading order), styled like the shared .foot h4 */
+.foot .foot-h { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 8px; }

@@ -266,6 +266,9 @@ export class ArStage {
   /** The game: how long the mouse-held phone has been still (it settles after a moment) */
   private settleT = 0;
   private clothU = { uClothT: { value: 0 } };
+  /** The coloured edge lights, dimmed per piece (a dark garment showed them as an outline) */
+  private rims: { l: THREE.PointLight; i: number }[] = [];
+  private rimK = 1;
   private hotSent = false;
   private tint = BLUE.clone();
   private readyFired = false;
@@ -591,6 +594,10 @@ export class ArStage {
     const rim2 = new THREE.PointLight(0xff4fb8, 6, 16, 1.4);
     rim2.position.set(4, -1, 2);
     add(rim2);
+    this.rims = [
+      { l: rim, i: rim.intensity },
+      { l: rim2, i: rim2.intensity },
+    ];
   }
 
   private gltf(src: string) {
@@ -1343,6 +1350,12 @@ export class ArStage {
 
     // the cloth breathes
     if (!R) this.clothU.uClothT.value = t;
+    // edge lights follow the piece on show
+    {
+      const k = s.def.rim ?? 1;
+      this.rimK = dt === 0 ? k : damp(this.rimK, k, 4, dt);
+      for (const r of this.rims) r.l.intensity = r.i * this.rimK;
+    }
 
     // --- intro: the phone rises into place
     this.introT += dt;
@@ -1361,7 +1374,10 @@ export class ArStage {
       g.visible = true;
       const bw = s.box.max.x - s.box.min.x;
       const bh = s.box.max.y - s.box.min.y;
-      const sz = Math.min((L.pieceH * this.wpp(Z_PIECE)) / bh, (L.pieceW * this.wpp(Z_PIECE)) / bw);
+      const sz =
+        Math.min((L.pieceH * this.wpp(Z_PIECE)) / bh, (L.pieceW * this.wpp(Z_PIECE)) / bw) *
+        // (phones have less room beside the phone, so most of a bigger size goes)
+        (this.tall ? 1 + ((s.def.size ?? 1) - 1) * 0.3 : (s.def.size ?? 1));
       const pz = lerp(Z_PIECE, Z_BACK, popE);
       const base = this.toWorld(L.piece, Z_PIECE, this.tmpV);
       const back = this.toWorld(L.back, Z_BACK, this.tmpV2);
@@ -1483,6 +1499,7 @@ export class ArStage {
       this.sideFade = R || dt === 0 ? want : damp(this.sideFade, want, want ? 3 : 8, dt);
       for (const o of this.slides) if (o.side) o.side.visible = false;
       const out: (SideRect | null)[] = [];
+      const padHalf: number[] = [];
       if (sd && this.sideFade > 0.01) {
         const wz = this.wpp(Z_PIECE);
         for (let k = 0; k < Math.min(2, n - 1); k++) {
@@ -1503,6 +1520,7 @@ export class ArStage {
             (0.9 + 0.1 * this.sideFade) *
             (1 + hov * 0.06);
           g.scale.setScalar(sc);
+          padHalf[k] = (bh * sc) / (2 * wz);
           const at = this.toWorld(pt, Z_PIECE, this.tmpV);
           g.position.set(at.x, at.y + (R ? 0 : Math.sin(t * 0.9 + k * 1.7) * 0.015), Z_PIECE);
           // a slow turn to and fro (a full spin would show thin pieces edge-on)
@@ -1516,6 +1534,18 @@ export class ArStage {
         u2.uTintB.value.copy(accentVec(this.slides[(this.cur + 2) % n].def.accent));
         u2.uSplit.value = (this.h - (sd.pts[0].y + sd.pts[1].y) / 2) * (this.bufH / this.h);
         u2.uHover.value.set(this.sideHover === 0 ? 1 : 0, this.sideHover === 1 ? 1 : 0);
+        // the projector pads, just under each piece (buffer px, y up)
+        const d = this.bufH / this.h;
+        const pads = [u2.uPadA.value, u2.uPadB.value];
+        let tallest = 0;
+        sd.pts.forEach((pt, k) => {
+          if (k > 1) return;
+          const half = padHalf[k] ?? sd.h * 0.5;
+          tallest = Math.max(tallest, half * 2);
+          pads[k].set(pt.x * d, (this.h - (pt.y + half + 10)) * d);
+        });
+        u2.uPadW.value = sd.w * 0.36 * d;
+        u2.uBeamH.value = (tallest + 20) * d;
       }
       if (out.length) {
         this.sideSent = true;
@@ -2339,7 +2369,7 @@ function clothWave(cloth: THREE.Mesh, mats: THREE.Material[], u: { uClothT: { va
     ...u,
     uClothY: { value: new THREE.Vector2(bb.min.y, bb.max.y) },
     uClothK: { value: new THREE.Vector2((Math.PI * 2 * 1.1) / w, (Math.PI * 2 * 0.8) / h) },
-    uClothA: { value: h * 0.012 },
+    uClothA: { value: h * 0.02 },
   };
   for (const m of mats) {
     m.onBeforeCompile = (sh) => {
@@ -2467,8 +2497,11 @@ function glowPlane(accent: "blue" | "magenta") {
 
 /**
  * The side holograms: the colour render of the other pieces, turned into a
- * scan-lined hologram in their accent (the top one and the bottom one can
- * differ) and added over the page. Same look as the round-4 hologram.
+ * translucent hologram in their accent (the top one and the bottom one can
+ * differ) and added over the page, each standing in the light of a projector
+ * pad underneath (a glowing disc and a soft beam up through the piece).
+ * No scan lines: the piece keeps a hint of its own colours, glows at its
+ * edges and fades towards the top, away from the projector.
  */
 function holoMaterial() {
   return new THREE.ShaderMaterial({
@@ -2486,6 +2519,12 @@ function holoMaterial() {
       uTintA: { value: BLUE.clone() },
       uTintB: { value: MAGENTA.clone() },
       uHover: { value: new THREE.Vector2() },
+      /** The projector pads (buffer px, y up): centre of each disc */
+      uPadA: { value: new THREE.Vector2(-1e4, -1e4) },
+      uPadB: { value: new THREE.Vector2(-1e4, -1e4) },
+      /** Disc half width and beam height (buffer px) */
+      uPadW: { value: 1 },
+      uBeamH: { value: 1 },
     },
     vertexShader: /* glsl */ `
       void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
@@ -2493,8 +2532,8 @@ function holoMaterial() {
     fragmentShader: /* glsl */ `
       precision highp float;
       uniform sampler2D tScene;
-      uniform vec2 uRes, uHover;
-      uniform float uTime, uDpr, uFade, uSplit;
+      uniform vec2 uRes, uHover, uPadA, uPadB;
+      uniform float uTime, uDpr, uFade, uSplit, uPadW, uBeamH;
       uniform vec3 uTintA, uTintB;
       vec3 aces(vec3 x) {
         const float a = 2.51, b = 0.03, c = 2.43, d = 0.59, e = 0.14;
@@ -2502,24 +2541,57 @@ function holoMaterial() {
       }
       vec4 scene(vec2 px) { return texture2D(tScene, px / uRes); }
       float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      // the projector: a glowing disc and a beam that widens and fades as it rises
+      vec3 projector(vec2 px, vec2 pad, vec3 tint, float hv) {
+        vec2 d = px - pad;
+        float W = uPadW;
+        // the disc, seen at an angle: a bright rim and a softer core
+        float r = length(vec2(d.x / W, d.y / (W * 0.2)));
+        float rim = exp(-pow((r - 0.86) * 7.0, 2.0));
+        float core = (1.0 - smoothstep(0.0, 1.0, r)) * 0.55;
+        float halo = exp(-r * r * 0.9) * 0.35;
+        vec3 disc = tint * (rim * 1.3 + core + halo) + vec3(1.0) * rim * 0.35;
+        // the beam
+        float h = d.y / uBeamH;
+        float hw = W * mix(0.82, 1.18, clamp(h, 0.0, 1.0));
+        float side = 1.0 - smoothstep(hw * 0.15, hw, abs(d.x));
+        float up = smoothstep(-0.02, 0.03, h) * pow(clamp(1.0 - h, 0.0, 1.0), 1.25);
+        float pulse = 0.85 + 0.15 * sin(uTime * 1.7);
+        // a few motes drifting up in the light
+        vec2 cell = floor(vec2(d.x / (6.0 * uDpr), (d.y - uTime * 22.0 * uDpr) / (6.0 * uDpr)));
+        float mote = step(0.985, hash(cell)) * side * up * 0.9;
+        vec3 beam = tint * (side * side * up * 0.7 * pulse + mote * 0.5);
+        return (disc + beam) * (0.85 + hv * 0.4);
+      }
       void main() {
         vec2 px = gl_FragCoord.xy;
+        bool top = px.y > uSplit;
+        vec3 tint = top ? uTintA : uTintB;
+        float hv = top ? uHover.x : uHover.y;
+        vec2 pad = top ? uPadA : uPadB;
+        vec3 light = projector(px, pad, tint, hv);
         vec4 s = scene(px);
         float o = 1.25 * uDpr;
         vec4 n1 = scene(px + vec2(o, 0.0)), n2 = scene(px - vec2(o, 0.0));
         vec4 n3 = scene(px + vec2(0.0, o)), n4 = scene(px - vec2(0.0, o));
         float sil = abs(n1.a - n2.a) + abs(n3.a - n4.a);
         float a = max(clamp(s.a, 0.0, 1.0), sil * 0.5);
-        if (a < 0.002) discard;
-        float L = lum(aces(s.rgb * 1.1));
-        float e = abs(lum(aces(n1.rgb)) - lum(aces(n2.rgb))) + abs(lum(aces(n3.rgb)) - lum(aces(n4.rgb)));
-        bool top = px.y > uSplit;
-        vec3 tint = top ? uTintA : uTintB;
-        float hv = top ? uHover.x : uHover.y;
-        float scan = 0.72 + 0.28 * sin((px.y / uDpr) * 2.1 - uTime * 3.0);
-        float flick = 0.94 + 0.06 * sin(uTime * 13.0 + px.y * 0.01);
-        vec3 holo = tint * (0.14 + pow(L, 0.8) * 0.9 + e * 1.8 + sil * 0.9) * scan * flick;
-        gl_FragColor = vec4(holo * a * uFade * (0.85 + hv * 0.55), 1.0);
+        vec3 holo = vec3(0.0);
+        if (a > 0.002) {
+          vec3 c = aces(s.rgb * 1.1);
+          float L = lum(c);
+          float e = abs(lum(aces(n1.rgb)) - lum(aces(n2.rgb))) + abs(lum(aces(n3.rgb)) - lum(aces(n4.rgb)));
+          // a hint of the piece's own colours, mostly the accent light
+          vec3 body = mix(tint * (0.2 + pow(L, 0.75) * 0.95), c * 0.9, 0.28);
+          vec3 edge = mix(tint, vec3(1.0), 0.35) * (e * 1.4 + sil * 1.1);
+          // brightest just above the projector, fading towards the top
+          float rise = clamp((px.y - pad.y) / uBeamH, 0.0, 1.0);
+          float fadeUp = mix(1.15, 0.6, rise);
+          float flick = 0.95 + 0.05 * sin(uTime * 9.0) * sin(uTime * 3.7);
+          holo = (body * 0.85 + edge) * fadeUp * flick * a;
+        }
+        gl_FragColor = vec4((holo * (0.85 + hv * 0.5) + light * 0.9) * uFade, 1.0);
       }
     `,
   });

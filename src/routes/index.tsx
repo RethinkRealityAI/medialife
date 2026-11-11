@@ -7,6 +7,9 @@ import { PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
 import { liveCampaigns } from "@/lib/campaigns";
 import { Hero } from "@/components/home/Hero";
 import { Reveal } from "@/components/home/Reveal";
+import { LogoBand, type PartnerLogo } from "@/components/home/LogoBand";
+import { InViewVideo } from "@/components/home/InViewVideo";
+import { MarketingCollage } from "@/components/home/MarketingCollage";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -110,6 +113,63 @@ function Eyebrow({ hue, children }: { hue: Hue; children: React.ReactNode }) {
   );
 }
 
+/** A service's heading block: icon, tag, title, one line and its flow, step by step. */
+function ServiceIntro({ sv, id }: { sv: (typeof SERVICES)[number]; id: string }) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-4">
+        <span className="svc-icon grid h-16 w-16 place-items-center rounded-2xl">
+          <svg
+            viewBox="0 0 48 48"
+            width="40"
+            height="40"
+            fill="none"
+            stroke={HEX[sv.hue]}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="draw"
+          >
+            {sv.icon}
+          </svg>
+        </span>
+        <span
+          className={`lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.2em] ${TEXT[sv.hue]}`}
+        >
+          {sv.tag}
+        </span>
+      </div>
+      <h3 id={id} className="mt-8 display text-[clamp(32px,3.2vw,48px)] text-white">
+        {sv.title}
+      </h3>
+      <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground sm:text-[17px]">
+        {sv.line}
+      </p>
+      <ol
+        className="mt-7 flex flex-wrap items-center gap-2"
+        aria-label={`${sv.title}, step by step`}
+      >
+        {sv.flow.map((f, k) => (
+          <li key={f} className="flex items-center gap-2">
+            <span
+              className="svc-step rounded-full border px-3.5 py-2 text-[13px] text-white/85"
+              style={{ "--k": k } as React.CSSProperties}
+            >
+              {f}
+            </span>
+            {k < sv.flow.length - 1 && (
+              <span aria-hidden className="text-white/35">
+                →
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
 /* ─────────────────────────── What we do: two flagship services ─────────────────────────── */
 
 const SERVICES: {
@@ -163,8 +223,19 @@ const SERVICES: {
   },
 ];
 
-/** The experience formats we build. All of them open in the browser. */
-const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[] = [
+/**
+ * The experience formats we build. All of them open in the browser. Each card
+ * plays a short real clip (public/home/formats/, cut to 4:5 loops). The mini-game,
+ * collector hub and fan rewards clips are stand-ins until the gameplay,
+ * hub and rewards captures are uploaded.
+ */
+const FORMATS: {
+  hue: Hue;
+  title: string;
+  line: string;
+  icon: React.ReactNode;
+  clip: { src: string; poster: string; caption: string; label: string };
+}[] = [
   {
     hue: "blue",
     title: "Image-tracked AR",
@@ -181,6 +252,12 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/image-tracked.mp4",
+      poster: "/home/formats/image-tracked.webp",
+      caption: "Convention tee + sport cards",
+      label: "A fan scans a creator tee at Anime NYC, then activated sport cards come alive",
+    },
   },
   {
     hue: "magenta",
@@ -196,6 +273,12 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/world-tracked.mp4",
+      poster: "/home/formats/world-tracked.webp",
+      caption: "EVADE × Bobo · Golden Gate",
+      label: "Bobo the cat placed in AR at the Golden Gate Bridge",
+    },
   },
   {
     hue: "blue",
@@ -210,11 +293,17 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/geospatial.mp4",
+      poster: "/home/formats/geospatial.webp",
+      caption: "Sakamoto Days × Netflix",
+      label: "Sakamoto Days written across a real building in AR",
+    },
   },
   {
     hue: "magenta",
-    title: "Browser mini-games",
-    line: "Games built on the IP that open straight from the product. Nothing to install.",
+    title: "Immersive mini-games",
+    line: "Games built on the IP that open straight from the product, like EVADE Cola Run. Nothing to install.",
     icon: (
       <>
         <path
@@ -228,6 +317,12 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/mini-games.mp4",
+      poster: "/home/formats/mini-games.webp",
+      caption: "EVADE Cola Run",
+      label: "Bobo running in EVADE Cola Run, played in the browser",
+    },
   },
   {
     hue: "blue",
@@ -242,6 +337,12 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/collector-hub.mp4",
+      poster: "/home/formats/collector-hub.webp",
+      caption: "Bobo's Hideout",
+      label: "Bobo's Hideout, the EVADE collector hub, building itself in 3D",
+    },
   },
   {
     hue: "magenta",
@@ -258,6 +359,12 @@ const FORMATS: { hue: Hue; title: string; line: string; icon: React.ReactNode }[
         </g>
       </>
     ),
+    clip: {
+      src: "/home/formats/fan-rewards.mp4",
+      poster: "/home/formats/fan-rewards.webp",
+      caption: "EVADE keychain unlock",
+      label: "Bobo and the Eclipse can popping out of the EVADE keychain",
+    },
   },
 ];
 
@@ -276,14 +383,46 @@ const MEASURES = [
 /**
  * Approved partners only (see capabilities.ts). The ONE PIECE, Sakamoto Days
  * and Den of Geek marks are cut from our own campaign art in the Activated
- * Experiences deck; all logos are shown in white so the strip reads as one.
+ * Experiences deck. They sit in white so the strip reads as one, and light up
+ * in their brand colours (the *-color files) on hover or tap. ONE PIECE is
+ * black on parchment in the campaign, so it lights up parchment.
  */
-const LOGOS: { src: string; name: string; h: string }[] = [
-  { src: "/home/logos/netflix.svg", name: "Netflix", h: "h-7 sm:h-9" },
-  { src: "/home/logos/onepiece.webp", name: "ONE PIECE", h: "h-12 sm:h-16" },
-  { src: "/home/logos/sakamoto.webp", name: "Sakamoto Days", h: "h-10 sm:h-12" },
-  { src: "/home/logos/denofgeek.webp", name: "Den of Geek", h: "h-5 sm:h-7" },
-  { src: "/home/logos/evade.webp", name: "EVADE", h: "h-7 sm:h-9" },
+const LOGOS: PartnerLogo[] = [
+  {
+    src: "/home/logos/netflix.svg",
+    color: "/home/logos/netflix-color.svg",
+    glow: "#e50914",
+    name: "Netflix",
+    h: "h-7 sm:h-9",
+  },
+  {
+    src: "/home/logos/onepiece.webp",
+    color: "/home/logos/onepiece-color.webp",
+    glow: "#f6c26b",
+    name: "ONE PIECE",
+    h: "h-12 sm:h-16",
+  },
+  {
+    src: "/home/logos/sakamoto.webp",
+    color: "/home/logos/sakamoto-color.webp",
+    glow: "#e8443a",
+    name: "Sakamoto Days",
+    h: "h-10 sm:h-12",
+  },
+  {
+    src: "/home/logos/denofgeek.webp",
+    color: "/home/logos/denofgeek-color.webp",
+    glow: "#e5262d",
+    name: "Den of Geek",
+    h: "h-5 sm:h-7",
+  },
+  {
+    src: "/home/logos/evade.webp",
+    color: "/home/logos/evade-color.webp",
+    glow: "#f5c84b",
+    name: "EVADE",
+    h: "h-7 sm:h-9",
+  },
 ];
 
 /** How every activated product works, in three beats. */
@@ -400,25 +539,14 @@ function Home() {
         className="relative border-y border-white/10 bg-white/[0.025] py-10 sm:py-12"
       >
         <div className={SECTION}>
-          <p id="logos-title" className={`${EYEBROW} text-center`}>
+          <h2 id="logos-title" className={`${EYEBROW} text-center font-normal`}>
             Trusted by the worlds fans love
-          </p>
-          <Reveal
-            as="ul"
-            className="mx-auto mt-8 flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-8 sm:gap-x-16 lg:justify-between"
-          >
-            {LOGOS.map((l) => (
-              <li key={l.name} className="logo-mark flex items-center">
-                <img
-                  src={l.src}
-                  alt={l.name}
-                  loading="lazy"
-                  decoding="async"
-                  className={`${l.h} w-auto select-none`}
-                  draggable={false}
-                />
-              </li>
-            ))}
+          </h2>
+          <Reveal className="mt-8">
+            <LogoBand
+              logos={LOGOS}
+              className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-10 gap-y-8 sm:gap-x-16 lg:justify-between"
+            />
           </Reveal>
         </div>
       </section>
@@ -488,20 +616,21 @@ function Home() {
         </div>
       </section>
 
-      {/* ─────────────────────────── 2. WHO WE ARE + WHAT WE DO ─────────────────────────── */}
+      {/* ─────────────────────────── 2. WHAT WE DO ─────────────────────────── */}
       <section
         id="capabilities"
         aria-labelledby="what-title"
         className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
       >
         <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
-          <Reveal className="lg:col-span-7">
+          <Reveal className="lg:col-span-8">
             <Eyebrow hue="blue">What we do</Eyebrow>
-            <h2 id="what-title" className={`${H2} mt-4`}>
-              We commercialize IP <span className={TEXT.blue}>through play.</span>
+            <h2 id="what-title" className="display mt-4 text-[clamp(40px,5.2vw,80px)]">
+              We commercialize IP through{" "}
+              <span className={TEXT.blue}>experiential activations.</span>
             </h2>
           </Reveal>
-          <Reveal delay={120} className="lg:col-span-5">
+          <Reveal delay={120} className="lg:col-span-4">
             <p className="text-muted-foreground lg:text-lg">
               MEDIALIFE is an immersive AI studio. We put app-free experiences on the products and
               media fans already love, with real-time analytics in every one, so IP earns more from
@@ -510,75 +639,101 @@ function Home() {
           </Reveal>
         </div>
 
-        <ul className="mt-12 grid gap-3 lg:grid-cols-2">
-          {SERVICES.map((sv, i) => (
-            <Reveal as="li" key={sv.title} delay={i * 110} className="min-w-0">
-              <a
-                href={sv.link.href}
-                className="svc-card lg-card group flex h-full flex-col rounded-[32px] p-6 sm:p-9"
-                style={{ "--c": HEX[sv.hue] } as React.CSSProperties}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <span className="svc-icon grid h-16 w-16 place-items-center rounded-2xl">
-                    <svg
-                      viewBox="0 0 48 48"
-                      width="40"
-                      height="40"
-                      fill="none"
-                      stroke={HEX[sv.hue]}
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden
-                      className="draw"
-                    >
-                      {sv.icon}
-                    </svg>
-                  </span>
-                  <span
-                    className={`lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.2em] ${TEXT[sv.hue]}`}
-                  >
-                    {sv.tag}
-                  </span>
-                </div>
-                <h3 className="mt-8 display text-[clamp(32px,3.2vw,48px)] text-white">
-                  {sv.title}
-                </h3>
-                <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground sm:text-[17px]">
-                  {sv.line}
-                </p>
-                <ol
-                  className="mt-7 flex flex-wrap items-center gap-2"
-                  aria-label={`${sv.title}, step by step`}
+        {/* Flagship: activated products (the merch range lives here) */}
+        <Reveal className="mt-12">
+          <article
+            id="merch"
+            aria-labelledby="svc-products"
+            className="svc-card lg-card grid scroll-mt-24 gap-8 rounded-[32px] p-6 sm:p-9 lg:grid-cols-12 lg:gap-10"
+            style={{ "--c": HEX.blue } as React.CSSProperties}
+          >
+            <div className="flex flex-col lg:col-span-5">
+              <ServiceIntro sv={SERVICES[0]} id="svc-products" />
+              <p className="mt-5 text-sm leading-relaxed text-white/70">
+                A flat NFC disc sits inside the design and the print itself is the AR target, on
+                apparel, keychains, stickers and print.
+              </p>
+              <div className="mt-auto flex flex-wrap gap-3 pt-8">
+                <a
+                  href="/activated-merch/"
+                  className="group btn-pill btn-solid px-6 py-3.5 text-sm font-medium"
                 >
-                  {sv.flow.map((f, k) => (
-                    <li key={f} className="flex items-center gap-2">
-                      <span
-                        className="svc-step rounded-full border px-3.5 py-2 text-[13px] text-white/85"
-                        style={{ "--k": k } as React.CSSProperties}
-                      >
-                        {f}
-                      </span>
-                      {k < sv.flow.length - 1 && (
-                        <span aria-hidden className="text-white/35">
-                          →
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-                <span
-                  className={`mt-auto inline-flex items-center gap-2 pt-9 text-sm font-medium ${TEXT[sv.hue]}`}
-                >
-                  {sv.link.label}
-                  <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                  See it in 3D
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
                     →
                   </span>
-                </span>
-              </a>
-            </Reveal>
-          ))}
-        </ul>
+                </a>
+                <a
+                  href={SHOP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
+                >
+                  Shop <span aria-hidden>↗</span>
+                  <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
+                </a>
+              </div>
+            </div>
+            <ul
+              aria-label="Activated products"
+              className="grid auto-rows-[150px] grid-cols-2 gap-3 sm:auto-rows-[190px] md:grid-cols-4 lg:col-span-7 lg:auto-rows-[178px]"
+            >
+              {PRODUCTS.map((p, i) => (
+                <li key={p.name} className={`${p.span} min-w-0`}>
+                  <a
+                    href="/activated-merch/"
+                    className="group relative flex h-full overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.03] transition-colors hover:border-white/25"
+                  >
+                    <img
+                      src={p.img}
+                      alt={p.alt}
+                      loading="lazy"
+                      decoding="async"
+                      className={`absolute inset-0 h-full w-full transition-transform duration-700 group-hover:scale-[1.05] ${p.cover ? "object-cover object-top opacity-90" : "object-contain p-3"}`}
+                    />
+                    <span className="lg-chip absolute bottom-2.5 left-2.5 flex flex-col rounded-2xl px-3 py-1.5 text-[12px] font-medium leading-tight text-white">
+                      {p.name}
+                      <span
+                        className={`mono mt-0.5 text-[9px] uppercase tracking-[0.16em] ${i % 2 ? TEXT.magenta : TEXT.blue}`}
+                      >
+                        {p.tags}
+                      </span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </article>
+        </Reveal>
+
+        {/* Immersive marketing for IP launches: the Netflix campaign pieces, shown */}
+        <Reveal className="mt-3">
+          <article
+            aria-labelledby="svc-marketing"
+            className="svc-card lg-card grid gap-8 overflow-hidden rounded-[32px] p-6 sm:p-9 lg:grid-cols-12 lg:gap-10"
+            style={{ "--c": HEX.magenta } as React.CSSProperties}
+          >
+            <MarketingCollage className="order-2 aspect-[6/5] w-full lg:order-1 lg:col-span-7 lg:aspect-[5/4]" />
+            <div className="order-1 flex flex-col lg:order-2 lg:col-span-5 lg:justify-center">
+              <ServiceIntro sv={SERVICES[1]} id="svc-marketing" />
+              <p className="mt-5 text-sm leading-relaxed text-white/70">
+                For Netflix: activated Den of Geek covers, posters, stickers and life-size standees
+                for ONE PIECE and Sakamoto Days, in retail and at conventions.
+              </p>
+              <div className="mt-8">
+                <Link
+                  to="/case-studies"
+                  className="group btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
+                >
+                  Read the case studies
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
+                </Link>
+              </div>
+            </div>
+          </article>
+        </Reveal>
       </section>
 
       {/* ─────────────────────────── 3. WHAT WE BUILD ─────────────────────────── */}
@@ -602,31 +757,39 @@ function Home() {
           </Reveal>
         </div>
 
-        <ul className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="-mx-5 mt-12 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
           {FORMATS.map((f, i) => (
             <Reveal
               as="li"
               key={f.title}
               delay={(i % 3) * 90}
-              className="fmt-card lg-card flex gap-5 rounded-[26px] p-6"
+              className="fmt-card lg-card flex w-[80%] shrink-0 snap-start flex-col rounded-[26px] p-3 sm:w-auto"
             >
-              <svg
-                viewBox="0 0 48 48"
-                width="44"
-                height="44"
-                fill="none"
-                stroke={HEX[f.hue]}
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                className="draw shrink-0"
-              >
-                {f.icon}
-              </svg>
-              <div>
-                <h3 className="text-lg font-medium text-white">{f.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.line}</p>
+              <div className="fmt-media">
+                <InViewVideo src={f.clip.src} poster={f.clip.poster} label={f.clip.label} />
+                <span className="lg-chip absolute left-3 top-3 rounded-full px-3 py-1 mono text-[9px] uppercase tracking-[0.16em] text-white/85">
+                  {f.clip.caption}
+                </span>
+              </div>
+              <div className="flex gap-4 px-3 pb-3 pt-5">
+                <svg
+                  viewBox="0 0 48 48"
+                  width="36"
+                  height="36"
+                  fill="none"
+                  stroke={HEX[f.hue]}
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                  className="draw shrink-0"
+                >
+                  {f.icon}
+                </svg>
+                <div>
+                  <h3 className="text-lg font-medium text-white">{f.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.line}</p>
+                </div>
               </div>
             </Reveal>
           ))}
@@ -635,7 +798,7 @@ function Home() {
         <div className="mt-3 grid gap-3 lg:grid-cols-12">
           <Reveal delay={120} className="lg-card rounded-[28px] p-6 sm:p-8 lg:col-span-7">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
-              <p className={EYEBROW}>How it works</p>
+              <h3 className={EYEBROW}>How it works</h3>
               <Link
                 to="/technology"
                 className="inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
@@ -665,10 +828,10 @@ function Home() {
                     </svg>
                   </span>
                   <div className="md:mt-5">
-                    <h3 className="text-base font-medium text-white">
+                    <h4 className="text-base font-medium text-white">
                       <span className="mono mr-2 text-[11px] text-white/40">0{i + 1}</span>
                       {st.title}
-                    </h3>
+                    </h4>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                       {st.line}
                     </p>
@@ -681,7 +844,7 @@ function Home() {
           {/* Real-time analytics: an illustration of the live view, not real numbers. */}
           <Reveal delay={200} className="lg-card rounded-[28px] p-6 sm:p-8 lg:col-span-5">
             <div className="flex items-center justify-between gap-3">
-              <p className={EYEBROW}>Real-time analytics</p>
+              <h3 className={EYEBROW}>Real-time analytics</h3>
               <span className="inline-flex items-center gap-2 mono text-[10px] uppercase tracking-[0.2em] text-white/70">
                 <span
                   className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse-glow"
@@ -753,9 +916,9 @@ function Home() {
               delay={160}
               className="lg-card flex flex-col rounded-3xl p-6 sm:p-8 lg:col-span-7"
             >
-              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <h3 className="mono text-[10px] font-normal uppercase tracking-[0.2em] text-muted-foreground">
                 Netflix / Sakamoto Days
-              </p>
+              </h3>
               <p className="mt-3 text-xl sm:text-2xl font-medium tracking-tight text-balance">
                 Activated magazines, stickers, posters and life-sized displays across 150+ comic and
                 manga retailers and three major conventions.
@@ -795,9 +958,9 @@ function Home() {
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 Award · {AWARD.year}
               </p>
-              <p className={`mt-3 display text-[clamp(32px,3.6vw,52px)] ${TEXT.magenta}`}>
+              <h3 className={`mt-3 display text-[clamp(32px,3.6vw,52px)] ${TEXT.magenta}`}>
                 {AWARD.tier} {AWARD.name}
-              </p>
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">{AWARD.category}</p>
               <div className="mt-5 overflow-hidden rounded-2xl">
                 <PosterViewer
@@ -820,8 +983,10 @@ function Home() {
           </div>
         </div>
 
-        <div aria-label="Conventions we attend" role="group" className="mt-12">
-          <p className={`${SECTION} ${EYEBROW} mb-6`}>You can find us at</p>
+        <div aria-labelledby="cons-title" role="group" className="mt-12">
+          <h3 id="cons-title" className={`${SECTION} ${EYEBROW} mb-6 font-normal`}>
+            You can find us at
+          </h3>
           <div
             className="flex items-center gap-16 animate-marquee-slow motion-reduce:animate-none"
             style={{ width: "max-content" }}
@@ -986,77 +1151,6 @@ function Home() {
             </Reveal>
           )}
         </div>
-      </section>
-
-      {/* ─────────────────────────── 5. ACTIVATED PRODUCTS ─────────────────────────── */}
-      <section
-        id="merch"
-        aria-labelledby="merch-title"
-        className={`${SECTION} scroll-mt-20 pb-20 lg:pb-28`}
-      >
-        <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
-          <Reveal className="lg:col-span-7">
-            <Eyebrow hue="blue">Activated Merchandise™ · Activated Apparel™</Eyebrow>
-            <h2 id="merch-title" className={`${H2} mt-4`}>
-              Tap it. Scan it.
-              <br />
-              <span className={TEXT.blue}>It comes alive.</span>
-            </h2>
-          </Reveal>
-          <Reveal delay={120} className="lg:col-span-5">
-            <p className="text-muted-foreground lg:text-lg">
-              A flat NFC disc sits inside the design and the print itself is the AR target. One tap
-              or scan and it plays, on any product fans already love to own.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <a
-                href="/activated-merch/"
-                className="group btn-pill btn-solid px-6 py-3.5 text-sm font-medium"
-              >
-                See it in 3D
-                <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
-                  →
-                </span>
-              </a>
-              <a
-                href={SHOP_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
-              >
-                Shop <span aria-hidden>↗</span>
-                <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
-              </a>
-            </div>
-          </Reveal>
-        </div>
-
-        <ul className="mt-10 grid auto-rows-[170px] grid-cols-2 gap-3 sm:auto-rows-[220px] md:grid-cols-4 lg:auto-rows-[250px]">
-          {PRODUCTS.map((p, i) => (
-            <Reveal as="li" key={p.name} delay={(i % 4) * 70} className={`${p.span} min-w-0`}>
-              <a
-                href="/activated-merch/"
-                className="lg-card group relative flex h-full overflow-hidden rounded-[24px]"
-              >
-                <img
-                  src={p.img}
-                  alt={p.alt}
-                  loading="lazy"
-                  decoding="async"
-                  className={`absolute inset-0 h-full w-full transition-transform duration-700 group-hover:scale-[1.05] ${p.cover ? "object-cover object-top opacity-90" : "object-contain p-3"}`}
-                />
-                <span className="lg-chip absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium text-white">
-                  {p.name}
-                  <span
-                    className={`mono text-[9px] uppercase tracking-[0.16em] ${i % 2 ? TEXT.magenta : TEXT.blue}`}
-                  >
-                    {p.tags}
-                  </span>
-                </span>
-              </a>
-            </Reveal>
-          ))}
-        </ul>
       </section>
 
       {/* ─────────────────────────── CONTACT ─────────────────────────── */}
