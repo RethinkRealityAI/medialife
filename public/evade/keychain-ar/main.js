@@ -710,6 +710,21 @@ function lensId() {
 // Only wrap getUserMedia when a non-default profile is chosen: with the engine's own choice the call goes
 // straight to the browser, untouched (iOS Safari is sensitive to anything sitting in its camera start).
 const CAM_CUSTOM = CAM.res !== 'engine' || CAM.fps !== 'engine' || !!CAM.lens;
+// iPhones: the standard camera is the request that worked on Dapo's iPhone up to 29bfcdc (ideal 1920x1440,
+// falling back to the engine's own request). With the engine's request alone the stream opens on iOS but
+// never delivers a frame (test log 2026-11-11), so iOS keeps this as its standard. Android keeps the
+// engine's own choice, which Dapo rated perfect.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (!CAM_CUSTOM && IOS && params.get('hd') !== '0' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
+  md.getUserMedia = (c) => {
+    const v = c && c.video;
+    if (!v || v === true || (v.width && v.width.exact) || (v.height && v.height.exact)) return orig(c);
+    const sharp = { ...c, video: { ...v, width: { ...(v.width || {}), ideal: 1920 }, height: { ...(v.height || {}), ideal: 1440 } } };
+    diag.asked = sharp.video;
+    return orig(sharp).catch((e) => { diag.askFailed = String(e && e.name || e); return orig(c); });
+  };
+}
 if (CAM_CUSTOM && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
   const ask = (c, v, id) => {
@@ -805,7 +820,7 @@ function diagRecord() {
   return {
     sid: SID, v: 1, page: location.pathname, params: location.search, note: diag.note, profile: { ...CAM }, tune: { ...tune },
     screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, renderDpr: Math.min(devicePixelRatio || 1, CAM.dpr) },
-    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM,
+    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM, ios: IOS,
     asked: diag.asked, askFailed: diag.askFailed || null, camera: diag.camera, cameras: diag.cameras || null, zoom: diag.zoom || null,
     targetsLoaded: activeTargets.map((t) => t.name), runS: camStartAt ? Math.round((performance.now() - camStartAt) / 1000) : 0,
     fps: { avg: avg(diag.fps.all), tracking: avg(diag.fps.tracking), idle: avg(diag.fps.idle), min: diag.fps.all.length ? Math.min(...diag.fps.all) : null, last30: diag.fps.all.slice(-30) },
@@ -833,16 +848,7 @@ function camLog(step) {
 let tapCamShown = false;
 function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
 function kickVideo() {
-  let tries = 0;
-  const go = () => {
-    const v = engineVideo();
-    if (!v) { if (++tries < 40) setTimeout(go, 50); return; }
-    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
-    const p = v.play();
-    if (p && p.catch) p.catch((e) => { camLog('playRejected:' + (e && e.name)); showTapCam(); });
-    setTimeout(() => { if (!camStartAt && (v.paused || !v.currentTime)) { camLog('notPlaying'); showTapCam(); } }, 2500);
-  };
-  setTimeout(go, 0);
+  setTimeout(() => { if (!camStartAt) { camLog('notPlaying'); showTapCam(); } }, 4000);
 }
 function showTapCam() {
   if (camStartAt || tapCamShown) return; tapCamShown = true;
