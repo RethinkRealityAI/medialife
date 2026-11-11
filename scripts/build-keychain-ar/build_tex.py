@@ -59,6 +59,7 @@ for y in range(540,1000,70):
     stroke(540,y,300,26); stroke(330,y+20,200,20); stroke(750,y+20,200,20)
 d.rectangle([0,950,W,H],fill=STR)
 back=back.filter(ImageFilter.GaussianBlur(1.2))
+Image.fromarray(L1.astype(np.uint8)).save(WORK + '/face_skin.png')
 AW,AH=3072,1088
 atlas=Image.new('RGB',(AW,AH),FUR)
 atlas.paste(Image.fromarray(L0.astype(np.uint8)),(0,0))

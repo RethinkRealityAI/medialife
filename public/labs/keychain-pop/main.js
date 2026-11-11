@@ -90,12 +90,17 @@ const centreOf = (o) => new THREE.Box3().setFromObject(o).getCenter(new THREE.Ve
 const FLOOR_Y = -0.5;
 function prepCharacter(gltf, height) {
   const root = new THREE.Group(); const m = gltf.scene;
-  const box = new THREE.Box3().setFromObject(m); const h = box.max.y - box.min.y;
+  const mixer = new THREE.AnimationMixer(m);
+  const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+  // measure in the resting clip (Bobo's bind pose is on all fours, the keychain pose is sitting)
+  const restClip = clips.Sit || clips.Idle;
+  if (restClip) { mixer.clipAction(restClip).play(); mixer.setTime(0); }
+  m.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(m, true); const h = box.max.y - box.min.y;
+  mixer.stopAllAction();
   m.scale.setScalar(height / h);
   root.add(m); root.visible = false; scene.add(root);
   m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; } });
-  const mixer = new THREE.AnimationMixer(m);
-  const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
   return { root, model: m, mixer, clips, current: null, baseScale: height / h, height };
 }
 const B = prepCharacter(bobo, 0.78);

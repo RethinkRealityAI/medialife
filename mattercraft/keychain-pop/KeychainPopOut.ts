@@ -191,13 +191,18 @@ export class KeychainPopOut extends Group {
 
   private _prep(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }): Char {
     const root = new THREE.Group(); const model = gltf.scene;
-    const box = new THREE.Box3().setFromObject(model);
-    const h = Math.max(1e-4, box.max.y - box.min.y);
-    model.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.frustumCulled = false; });
-    root.add(model); root.visible = false; this.element.add(root);
     const mixer = new THREE.AnimationMixer(model);
     const clips: Record<string, THREE.AnimationClip> = {};
     for (const a of gltf.animations) clips[a.name] = a;
+    // measure in the resting clip: Bobo's bind pose is on all fours, the keychain pose is sitting
+    const restClip = clips.Sit || clips.Idle;
+    if (restClip) { mixer.clipAction(restClip).play(); mixer.setTime(0); }
+    model.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(model, true);
+    mixer.stopAllAction();
+    const h = Math.max(1e-4, box.max.y - box.min.y);
+    model.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.frustumCulled = false; });
+    root.add(model); root.visible = false; this.element.add(root);
     model.traverse((o) => {
       const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
       if ((o as THREE.Mesh).geometry) this._disposables.push((o as THREE.Mesh).geometry);

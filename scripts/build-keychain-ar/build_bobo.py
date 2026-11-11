@@ -1,13 +1,17 @@
-# Bobo (keychain version) - built from primitives in Blender, textured by projecting the
-# supplied keychain art. No generative AI. Run: python build_bobo.py -- out.glb [out.blend]
+# Bobo (keychain version), v2: the ORIGINAL Bobo model (mesh + rig) posed like the keychain
+# and restyled to the keychain look (flat cel colours, ink lines, painted face from the supplied
+# art, light-blue visor, collar + bell). No generative AI.
+# Run: python build_bobo.py -- out.glb [out.blend]
 import os
 WORK = os.environ.get('KC_WORK', '/tmp/keychain-ar'); os.makedirs(WORK, exist_ok=True)
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 
-import bpy, bmesh, math, json, sys
+import bpy, bmesh, math, sys
 import numpy as np
-from mathutils import Vector, Matrix, Quaternion, Euler
+from collections import defaultdict
+from mathutils import Vector, Matrix, Quaternion
 from PIL import Image
+from scipy import ndimage
 from skimage import measure
 
 ARGV = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -15,46 +19,10 @@ OUT = ARGV[0] if ARGV else WORK + '/bobo.glb'
 OUT_BLEND = ARGV[1] if len(ARGV) > 1 else None
 OLD = os.environ.get('BOBO_OLD_RIG', '/mnt/project-files/Evade/Cat_Bobo_Evade/CatBobo_Anims.glb')
 ART = REPO + '/public/evade/keychain/src/cat_art.png'
-ATLAS = WORK + '/bobo_atlas.png'
-AJ = json.load(open(WORK + '/atlas.json'))
-
-S = 0.00185          # metres-ish per art pixel (model is ~1.9 units tall, same scale as the old Bobo)
-GROUND_PX = 1020
-
-def P(x, y, depth=0.0):
-    """art pixel -> sit-space point (front of the cat faces -Y)"""
-    return Vector(((x - 540) * S, depth, (GROUND_PX - y) * S))
-
-def art_uv(co, layer):
-    xp = co.x / S + 540
-    yp = GROUND_PX - co.z / S
-    xp = min(max(xp, 1), AJ['artW'] - 2)
-    yp = min(max(yp, 1), AJ['artH'] - 2)
-    return ((layer * 1024 + xp) / AJ['W'], 1 - yp / AJ['H'])
+FACE = WORK + '/face_skin.png'          # from build_tex.py: the art with outlines + accessories removed
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
-
-# ---------------------------------------------------------------- old rig (bone names + orientations)
-bpy.ops.import_scene.gltf(filepath=OLD)
-old_arm = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
-OLD_BONES = {}
-for b in old_arm.data.bones:
-    m = old_arm.matrix_world @ b.matrix_local
-    OLD_BONES[b.name] = dict(rot=m.to_quaternion().normalized(), head=m.to_translation(),
-                             length=b.length, parent=b.parent.name if b.parent else None)
-OLD_ACTIONS = {}
-for a in list(bpy.data.actions):
-    OLD_ACTIONS[a.name] = a
-    a.name = 'Old' + a.name
-for o in list(bpy.data.objects):
-    bpy.data.objects.remove(o, do_unlink=True)
-for m in list(bpy.data.meshes):
-    bpy.data.meshes.remove(m)
-for m in list(bpy.data.materials):
-    bpy.data.materials.remove(m)
-for i in list(bpy.data.images):
-    bpy.data.images.remove(i)
 
 # ---------------------------------------------------------------- mesh helpers (all in sit space)
 def bm_to_obj(bm, name):
@@ -195,357 +163,441 @@ def contour_of(mask, eps=1.5):
     pts = rdp(pts[:h + 1], eps)[:-1] + rdp(pts[h:] + [pts[0]], eps)[:-1]
     return pts
 
-# ---------------------------------------------------------------- the parts
-art = np.array(Image.open(ART).convert('RGBA'))
-alpha = art[..., 3] > 100
-HH, WW = alpha.shape
-yy, xx = np.mgrid[0:HH, 0:WW]
 
-parts = []   # (object, bone, uvmode)
+# ---------------------------------------------------------------- the original Bobo
+bpy.ops.import_scene.gltf(filepath=OLD)
+for n in ('Icosphere', 'Clothes1', 'Clothes2'):          # helper sphere + the hoodie
+    if n in bpy.data.objects:
+        bpy.data.objects.remove(bpy.data.objects[n], do_unlink=True)
+arm = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
+arm.name = 'BoboRig'; arm.data.name = 'BoboRig'
+OLD_ACTIONS = {a.name: a for a in bpy.data.actions}
+for k, a in OLD_ACTIONS.items(): a.name = 'Classic' + k
+if arm.animation_data:
+    arm.animation_data.action = None
+    for t in list(arm.animation_data.nla_tracks):
+        arm.animation_data.nla_tracks.remove(t)
+OBJ = {o.name: o for o in bpy.data.objects if o.type == 'MESH'}
+BONE_OF = {'Torso': 'FakeTorso'}
+XC = 0.055                                               # the model's centre line
 
-# head: soft "mochi" ellipsoid
-HEAD_C = Vector((0.0, 0.02, (GROUND_PX - 262) * S))
-def head_shape(p):
-    if p.y < 0:
-        p.y *= 0.9
-    if p.z < 0:            # fuller cheeks / jowls
-        p.x *= 1.0 + 0.06 * (-p.z / 0.39)
-    return p
-head = ellipsoid('Head', HEAD_C, (0.545, 0.46, 0.395), exp=2.35, shape=head_shape)
-parts.append((head, 'CatHead', 'skin'))
+def orig_tex(ob):
+    for n in ob.material_slots[0].material.node_tree.nodes:
+        if n.type == 'TEX_IMAGE' and 'diff' in n.image.name:
+            im = n.image
+            return np.array(im.pixels[:], dtype=np.float32).reshape(im.size[1], im.size[0], 4)[..., :3]
 
-# cheek fluff, traced from the art silhouette
-for side, (x0, x1) in (('L', (0, 262)), ('R', (818, WW))):
-    m = alpha & (xx >= x0) & (xx < x1) & (yy > 275) & (yy < 485)
-    lab, nl = __import__('scipy.ndimage', fromlist=['label']).label(m)
-    edge_col = x1 - 1 if side == 'L' else x0
-    keep = set(np.unique(lab[:, edge_col])) - {0}
-    m = np.isin(lab, list(keep))
-    # extend into the head so it is anchored
-    cx_ = 300 if side == 'L' else 780
-    m |= ((xx - cx_) / 70.0) ** 2 + ((yy - 380) / 92.0) ** 2 < 1
-    pts = contour_of(m, 1.2)
-    ob = slab('Fluff' + side, pts, 0.16, 0.05, ycen=-0.02)
-    for v in ob.data.vertices:  # sweep the tips back around the head
-        ax = abs(v.co.x)
-        v.co.y += 0.95 * max(0.0, ax - 0.40) ** 1.3
-    parts.append((ob, 'CatHead', 'art2'))
-
-# ears (outline from the art; base hidden inside the head)
-EARS = {
-    'Ear': [(262, 150), (290, 70), (318, 20), (338, 12), (390, 40), (468, 58), (470, 150), (380, 190)],
-    'Ear2': [(820, 185), (840, 150), (790, 40), (748, 12), (722, 18), (660, 45), (612, 60), (612, 150), (700, 190)],
-}
-for bone, pts in EARS.items():
-    ob = slab(bone + 'Mesh', pts, 0.11, 0.035, ycen=0.0)
-    for v in ob.data.vertices:          # lean back a touch and curve with the skull
-        h = v.co.z - 1.55
-        v.co.y += 0.18 * max(h, 0) + 0.3 * (abs(v.co.x) - 0.35) ** 2
-    parts.append((ob, bone, 'art'))
-
-# visor band around the head + flipped-up brim with "BOBO"
-band = ring_band('VisorBand', (0, 0.02, (GROUND_PX - 222) * S), 0.535, 0.455, 0.16, 0.045, tilt=-0.03)
-parts.append((band, 'CatHead', 'art:blue'))
-brim_pts = [(352, 90), (420, 74), (540, 76), (660, 74), (730, 90), (736, 120), (732, 226), (700, 238),
-            (540, 242), (380, 238), (348, 226), (344, 120)]
-brim = slab('VisorBrim', brim_pts, 0.05, 0.018, ycen=0.0)
-for v in brim.data.vertices:
-    zrel = v.co.z - (GROUND_PX - 255) * S         # 0 at brim root
-    ell = 0.50 * math.sqrt(max(0.0, 1 - (v.co.x / 0.565) ** 2))
-    v.co.y += -ell - 0.03 + 0.30 * zrel           # wraps the band, leaning back
-parts.append((brim, 'CatHead', 'art:blue'))
-
-# torso (pear) - in sit space it is upright
-TOR_C = Vector((0.01, 0.06, 0.50))
-def torso_shape(p):
-    z = p.z + TOR_C.z
-    k = 1.06 - 0.16 * min(max(z / 1.0, 0), 1)     # wider at the base
-    p.x *= k; p.y *= k * 0.98
-    if p.y < 0:
-        p.y *= 0.92
-    return p
-torso = ellipsoid('Torso', TOR_C, (0.47, 0.40, 0.60), exp=2.7, shape=torso_shape)
-for v in torso.data.vertices:
-    v.co.z = max(v.co.z, 0.015)
-parts.append((torso, 'FakeTorso', 'skin'))
-
-# collar + bell
-collar = ring_band('Collar', (0, 0.04, (GROUND_PX - 500) * S), 0.405, 0.345, 0.085, 0.04, dip=0.0)
-parts.append((collar, 'FakeTorso', 'art:blue'))
-BELL_C = P(540, 568, -0.37)
-bell = ellipsoid('Bell', BELL_C, (0.098, 0.09, 0.094))
-loop = ellipsoid('BellLoop', P(540, 506, -0.36), (0.03, 0.025, 0.035))
-parts.append((bell, 'FakeTorso', 'bell'))
-parts.append((loop, 'FakeTorso', 'bell'))
-
-# front legs (columns), paws on the ground
-for bone, cx in (('FrontLeg', 415), ('FrontLeg2', 668)):
-    c = P(cx, 830, -0.25)
-    def leg_shape(p, c=c):
-        z = p.z + c.z
-        if z < 0.13:
-            p.x *= 1.0 + 0.5 * (0.13 - z); p.y *= 1.0 + 0.9 * (0.13 - z)
-        if p.y < 0:
-            p.y *= 1.0
-        return p
-    ob = ellipsoid(bone + 'Mesh', c, (0.165, 0.15, 0.40), exp=2.8, shape=leg_shape)
-    for v in ob.data.vertices:
-        v.co.z = max(v.co.z, 0.0)
-    parts.append((ob, bone, 'skin'))
-
-# haunches (back legs folded) + hind feet
-for bone, sx in (('BackLeg', -1), ('BackLeg2', 1)):
-    h = ellipsoid(bone + 'Mesh', (sx * 0.37, 0.06, 0.24), (0.18, 0.36, 0.25), exp=2.3)
-    f = ellipsoid(bone + 'Foot', (sx * 0.42, -0.25, 0.075), (0.13, 0.17, 0.08), exp=2.4)
-    for v in list(h.data.vertices) + list(f.data.vertices):
-        v.co.z = max(v.co.z, 0.0)
-    parts.append((h, bone, 'skin'))
-    parts.append((f, bone, 'skin'))
-
-# tail - follows the art's curve up the left side, root tucked behind the body
-TAIL_PATH = [Vector((-0.10, 0.36, 0.14)), Vector((-0.40, 0.30, 0.20)), P(268, 760, 0.16), P(250, 640, 0.10),
-             P(212, 540, 0.06), P(150, 460, 0.03), P(85, 410, 0.01), P(40, 388, 0.0)]
-tail = tube('TailMesh', TAIL_PATH, [0.085, 0.092, 0.096, 0.098, 0.096, 0.094, 0.092, 0.088])
-parts.append((tail, 'Tail', 'art2'))
-
-# ---------------------------------------------------------------- UVs: project the art from the front
-SW = AJ['swatch']
-def apply_uvs(ob, mode):
+def islands(ob):
+    """label loose parts (welding coincident verts) -> per-polygon island id, list of info"""
     me = ob.data
-    while me.uv_layers:
-        me.uv_layers.remove(me.uv_layers[0])
-    uv = me.uv_layers.new(name='UVMap')
-    for poly in me.polygons:
-        ny = poly.normal.y
-        front = ny < (-0.35 if mode in ('skin',) else (-0.45 if mode.startswith('art:') else 0.0))
-        for li in poly.loop_indices:
-            co = me.vertices[me.loops[li].vertex_index].co
-            if mode == 'skin':
-                u = art_uv(co, 1 if front else 2)
-            elif mode == 'art2':
-                u = art_uv(co, 0)
-            elif mode == 'bell':
-                u = art_uv(co, 0) if front else SW['silver']
-            elif mode.startswith('art'):
-                sw = mode.split(':')[1] if ':' in mode else 'fur'
-                u = art_uv(co, 0) if front else SW[sw]
-            uv.data[li].uv = u
+    key = lambda v: (round(v.co.x, 4), round(v.co.y, 4), round(v.co.z, 4))
+    groups = defaultdict(list)
+    for v in me.vertices: groups[key(v)].append(v.index)
+    adj = defaultdict(set)
+    for e in me.edges:
+        a, b = e.vertices; adj[a].add(b); adj[b].add(a)
+    lab = {}; info = []
+    for v in me.vertices:
+        if v.index in lab: continue
+        i = len(info); st = [v.index]; lab[v.index] = i; n = 0
+        while st:
+            x = st.pop(); n += 1
+            for y in list(adj[x]) + groups[key(me.vertices[x])]:
+                if y not in lab: lab[y] = i; st.append(y)
+        info.append(n)
+    return [lab[p.vertices[0]] for p in me.polygons], info, lab
 
-for ob, bone, mode in parts:
-    apply_uvs(ob, mode)
-    for poly in ob.data.polygons:
-        poly.use_smooth = True
+# ---------------------------------------------------------------- keychain palette + face art
+face = np.array(Image.open(FACE).convert('RGB')).astype(np.float32)
+FUR = np.median(face[300:440, 440:640].reshape(-1, 3), axis=0)
+STR = np.array([242, 154, 99], np.float32)      # stripes / paws
+EAR = np.array([240, 160, 104], np.float32)
+CREAM = np.array([255, 245, 234], np.float32)
+PINK = np.array([247, 166, 166], np.float32)
+BLUE = np.array([153, 200, 246], np.float32)
+WHITE = np.array([255, 255, 255], np.float32)
+# art pixel -> head (rest space, original head size): eyes of the art sit where the old eyes were
+K = 560.0; ZE = 1.525
+def P(x, y, depth=0.0):
+    return Vector((XC + (x - 540) / K, depth, ZE + (310 - y) / K))
+
+def sstep(a, b, x):
+    t = np.clip((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t)
+def tri(x):                                    # 0..1 triangle wave, period 1
+    return 1 - np.abs((x % 1.0) * 2 - 1)
+def mix(c0, c1, w):
+    return c0 * (1 - w[..., None]) + c1 * w[..., None]
+def lens(d, half):                             # soft-edged band of half-width `half` (array)
+    return sstep(0.006, -0.006, np.abs(d) - half)
+
+def col_leg(ob, front):
+    b = arm.data.bones[ob.name]; x0, y0 = b.head_local.x, b.head_local.y
+    s = 1.0 if x0 > XC else -1.0
+    def fn(p, n, o, isl):
+        dx = (p[..., 0] - x0) * s; dy = p[..., 1] - y0; z = p[..., 2]
+        out = np.clip(np.cos(np.arctan2(dy, dx)), 0, 1)           # 1 on the outer side
+        c = np.broadcast_to(FUR, p.shape).copy()
+        for zk, hw in ((0.44, 0.045), (0.62, 0.04)) if front else ((0.42, 0.05), (0.62, 0.05), (0.82, 0.04)):
+            c = mix(c, STR, lens(z - zk - 0.05 * (1 - out), hw * out ** 0.8))
+        c = mix(c, STR, sstep(0.25, 0.22, z + 0.02 * tri(np.arctan2(dy, dx) * 1.6)))   # orange paw
+        pad = (o[..., 0] > o[..., 1] * 1.25) & (o[..., 1] < 0.75)                    # original pink pads
+        c[pad] = PINK
+        return c
+    return fn
+
+def col_torso(p, n, o, isl):
+    x = p[..., 0] - XC; y = p[..., 1]; z = p[..., 2] - 1.05
+    th = np.degrees(np.arctan2(x, -z))                       # 0 = belly, 180 = spine
+    c = np.broadcast_to(FUR, p.shape).copy()
+    # stripes over the back and down the sides
+    side = np.clip((np.abs(th) - 55) / 60, 0, 1)
+    for yk in (-0.30, -0.02, 0.26, 0.54):
+        c = mix(c, STR, lens(y - yk - 0.05 * (1 - side), 0.05 * side ** 0.7))
+    # cream bib: chest + belly, with a jagged fur edge
+    w = 36 + 6 * sstep(0.3, -0.5, y) + 5 * tri(y * 9.0)
+    bib = sstep(w + 2, w - 2, np.abs(th)) * sstep(0.62, 0.52, y)
+    chest = sstep(0.0, -0.2, n[..., 1] + 0.75) * sstep(0.34, 0.30, np.abs(x) + 0.04 * tri(z * 8)) * sstep(0.42, 0.36, z)
+    c = mix(c, CREAM, np.maximum(bib, chest))
+    return c
+
+def col_tail(p, n, o, isl):
+    b = arm.data.bones['Tail']; h = np.array(b.head_local); d = np.array((b.tail_local - b.head_local).normalized())
+    t = (p - h) @ d
+    L = max((v.co - b.head_local).dot(b.tail_local - b.head_local) for v in OBJ['Tail'].data.vertices) / b.length
+    c = np.broadcast_to(FUR, p.shape).copy()
+    c = mix(c, STR, lens((t % 0.21) - 0.105, 0.036) * sstep(0.12, 0.2, t))
+    c = mix(c, STR, sstep(L - 0.26, L - 0.22, t))
+    return c
+
+def col_ear(p, n, o, isl):
+    c = np.broadcast_to(EAR, p.shape).copy()
+    pink = (o[..., 0] > o[..., 1] * 1.3) & (o[..., 2] > o[..., 1] * 0.9)
+    c[pink] = PINK
+    return c
+
+HEAD_ISL = {}
+def col_head(p, n, o, isl):
+    x = p[..., 0] - XC; y = p[..., 1]; z = p[..., 2]
+    c = np.broadcast_to(FUR, p.shape).copy()
+    # three forehead stripes running back over the crown
+    for xk in (-0.14, 0.0, 0.14):
+        c = mix(c, STR, lens(x - xk, 0.032 * sstep(-1.12, -0.95, y) * sstep(-0.42, -0.6, y)) * sstep(1.55, 1.62, z))
+    # cheek stripes at the sides / back of the head
+    for zk in (1.36, 1.50):
+        c = mix(c, STR, lens(z - zk, 0.03 * sstep(0.26, 0.38, np.abs(x)) * sstep(-0.45, -0.6, y)))
+    # painted face from the keychain art
+    px = 540 + x * K; py = 310 - (z - ZE) * K
+    xi = np.clip(px, 0, face.shape[1] - 1).astype(int); yi = np.clip(py, 0, face.shape[0] - 1).astype(int)
+    w = (sstep(338, 362, px) * sstep(742, 718, px) * sstep(268, 284, py) * sstep(452, 428, py)
+         * sstep(-0.2, -0.45, n[..., 1]))
+    c = mix(c, face[yi, xi], w)
+    # visor: light blue, white trim + lettering (the old paw prints and dots are dropped)
+    vis = isl == HEAD_ISL['visor']
+    grey = vis & (np.abs(o[..., 0] - o[..., 2]) < 0.12) & (o[..., 0] > 0.45)
+    lab, nl = ndimage.label(grey)
+    keep = np.zeros(nl + 1, bool)
+    if nl:
+        area = ndimage.sum(grey, lab, range(1, nl + 1))
+        cx = ndimage.mean(np.abs(x), lab, range(1, nl + 1))
+        big = area.max() * 0.2
+        for i in range(nl):
+            keep[i + 1] = area[i] > big or (cx[i] < 0.24 and area[i] > area.max() * 0.004)
+    c[vis] = BLUE
+    c[vis & keep[lab]] = WHITE
+    return c
+
+def bake(name, size, jobs):
+    """rasterise every job's UV triangles; colour each texel from its 3D position / normal /
+    original texel -> flat keychain-style texture"""
+    pos = np.zeros((size, size, 3), np.float32); nrm = np.zeros((size, size, 3), np.float32)
+    isl = np.full((size, size), -1, np.int32); mask = np.zeros((size, size), bool)
+    rgb = np.zeros((size, size, 3), np.float32)
+    for ob, fn in jobs:
+        me = ob.data; me.calc_loop_triangles()
+        uvl = me.uv_layers.active.data
+        pid, _, _ = islands(ob)
+        m_ = np.zeros((size, size), bool)
+        for t in me.loop_triangles:
+            uv = np.array([uvl[l].uv[:] for l in t.loops], np.float64) % 1.0001 * size - 0.5
+            P3 = np.array([me.vertices[v].co[:] for v in t.vertices]); N3 = np.array([me.vertices[v].normal[:] for v in t.vertices])
+            x0, y0 = np.floor(uv.min(0)).astype(int) - 1; x1, y1 = np.ceil(uv.max(0)).astype(int) + 1
+            x0 = max(x0, 0); y0 = max(y0, 0); x1 = min(x1, size - 1); y1 = min(y1, size - 1)
+            if x1 < x0 or y1 < y0: continue
+            gx, gy = np.meshgrid(np.arange(x0, x1 + 1), np.arange(y0, y1 + 1))
+            a, b_, c_ = uv
+            den = (b_[1] - c_[1]) * (a[0] - c_[0]) + (c_[0] - b_[0]) * (a[1] - c_[1])
+            if abs(den) < 1e-9: continue
+            w0 = ((b_[1] - c_[1]) * (gx - c_[0]) + (c_[0] - b_[0]) * (gy - c_[1])) / den
+            w1 = ((c_[1] - a[1]) * (gx - c_[0]) + (a[0] - c_[0]) * (gy - c_[1])) / den
+            w2 = 1 - w0 - w1
+            e = -0.6 / max(np.sqrt(abs(den)), 1.0)
+            ins = (w0 >= e) & (w1 >= e) & (w2 >= e)
+            if not ins.any(): continue
+            W3 = np.stack([w0[ins], w1[ins], w2[ins]], -1)
+            pos[gy[ins], gx[ins]] = W3 @ P3; nrm[gy[ins], gx[ins]] = W3 @ N3
+            isl[gy[ins], gx[ins]] = pid[t.polygon_index]; m_[gy[ins], gx[ins]] = True
+        o = orig_tex(ob)
+        if o.shape[0] != size:
+            o = np.array(Image.fromarray((np.clip(o, 0, 1) * 255).astype(np.uint8)).resize((size, size), Image.NEAREST)).astype(np.float32) / 255
+        nl = np.linalg.norm(nrm, axis=-1, keepdims=True); nn = nrm / np.maximum(nl, 1e-6)
+        c = fn(pos, nn, o, isl)
+        rgb[m_] = c[m_]; mask |= m_
+    idx = ndimage.distance_transform_edt(~mask, return_distances=False, return_indices=True)
+    rgb = rgb[idx[0], idx[1]]
+    path = f'{WORK}/bobo_{name}.png'
+    Image.fromarray(np.clip(rgb[::-1], 0, 255).astype(np.uint8)).save(path)
+    return path
+
+# head islands: sphere (largest), visor (blue), the rest (old eyes, nose, whiskers, flat fins) go
+head = OBJ['CatHead']
+pid, info, vlab = islands(head)
+ot = orig_tex(head); uvl = head.data.uv_layers.active.data
+blue_score = defaultdict(list)
+for p in head.data.polygons:
+    u = np.mean([uvl[l].uv[:] for l in p.loop_indices], axis=0) % 1.0
+    t = ot[int(u[1] * ot.shape[0]) % ot.shape[0], int(u[0] * ot.shape[1]) % ot.shape[1]]
+    blue_score[pid[p.index]].append(t[2] - t[0])
+HEAD_ISL['sphere'] = int(np.argmax(info))
+HEAD_ISL['visor'] = max((i for i in blue_score if i != HEAD_ISL['sphere']), key=lambda i: np.mean(blue_score[i]) * (info[i] > 100))
+
+TEX = {
+    'Head': bake('head', 2048, [(head, col_head)]),
+    'Torso': bake('torso', 1024, [(OBJ['Torso'], col_torso)]),
+    'FrontLeg': bake('frontleg', 512, [(OBJ['FrontLeg'], col_leg(OBJ['FrontLeg'], True)), (OBJ['FrontLeg2'], col_leg(OBJ['FrontLeg2'], True))]),
+    'BackLeg': bake('backleg', 512, [(OBJ['BackLeg'], col_leg(OBJ['BackLeg'], False)), (OBJ['BackLeg2'], col_leg(OBJ['BackLeg2'], False))]),
+    'Tail': bake('tail', 512, [(OBJ['Tail'], col_tail)]),
+    'Ear': bake('ear', 256, [(OBJ['Ear'], col_ear), (OBJ['Ear2'], col_ear)]),
+}
+TEX_OF = {'CatHead': 'Head', 'Torso': 'Torso', 'FrontLeg': 'FrontLeg', 'FrontLeg2': 'FrontLeg', 'BackLeg': 'BackLeg',
+          'BackLeg2': 'BackLeg', 'Tail': 'Tail', 'Ear': 'Ear', 'Ear2': 'Ear'}
+
+# drop the old 3D eyes / nose / whiskers / flat cheek fins (the face is painted, fluff is rebuilt)
+bm = bmesh.new(); bm.from_mesh(head.data); bm.verts.ensure_lookup_table()
+kill = [v for v in bm.verts if vlab[v.index] not in (HEAD_ISL['sphere'], HEAD_ISL['visor'])]
+bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(head.data); bm.free()
 
 # ---------------------------------------------------------------- materials
-img = bpy.data.images.load(ATLAS); img.name = 'bobo_atlas'
-def make_mat(name, metallic=0.0, rough=0.85, emis=0.22, culling=True):
+for m in list(bpy.data.materials): bpy.data.materials.remove(m)
+for i in list(bpy.data.images): bpy.data.images.remove(i)
+def make_mat(name, img=None, color=None, metallic=0.0, rough=0.85, emis=0.22):
     m = bpy.data.materials.new(name); m.use_nodes = True
     nt = m.node_tree; bsdf = nt.nodes['Principled BSDF']
-    tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = img
-    nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
-    nt.links.new(tex.outputs['Color'], bsdf.inputs['Emission Color'])
+    if img:
+        tex = nt.nodes.new('ShaderNodeTexImage'); tex.image = bpy.data.images.load(img)
+        nt.links.new(tex.outputs['Color'], bsdf.inputs['Base Color'])
+        nt.links.new(tex.outputs['Color'], bsdf.inputs['Emission Color'])
+    else:
+        c = [(v / 255) ** 2.2 for v in color] + [1]
+        bsdf.inputs['Base Color'].default_value = c; bsdf.inputs['Emission Color'].default_value = c
     bsdf.inputs['Emission Strength'].default_value = emis
-    bsdf.inputs['Metallic'].default_value = metallic
-    bsdf.inputs['Roughness'].default_value = rough
-    m.use_backface_culling = culling
+    bsdf.inputs['Metallic'].default_value = metallic; bsdf.inputs['Roughness'].default_value = rough
+    m.use_backface_culling = True
     return m
-MAT_FUR = make_mat('Bobo_Fur')
-MAT_BELL = make_mat('Bobo_Bell', metallic=0.2, rough=0.35, emis=0.3)
-MAT_LINE = bpy.data.materials.new('Bobo_Outline'); MAT_LINE.use_nodes = True
-b = MAT_LINE.node_tree.nodes['Principled BSDF']
-b.inputs['Base Color'].default_value = (0.0, 0.0, 0.0, 1); b.inputs['Roughness'].default_value = 1.0
-MAT_LINE.use_backface_culling = True
+MATS = {k: make_mat('Bobo_' + k, img=v) for k, v in TEX.items()}
+MAT_FLUFF = make_mat('Bobo_Fluff', color=FUR)
+MAT_COLLAR = make_mat('Bobo_Collar', color=BLUE)
+MAT_STUD = make_mat('Bobo_Stud', color=(58, 110, 220))
+MAT_BELL = make_mat('Bobo_Bell', color=(190, 208, 216), metallic=0.25, rough=0.35, emis=0.3)
+MAT_LINE = make_mat('Bobo_Outline', color=(0, 0, 0), rough=1.0, emis=0.0)
+for nm, ob in OBJ.items():
+    ob.data.materials.clear(); ob.data.materials.append(MATS[TEX_OF[nm]])
 
-for ob, bone, mode in parts:
-    ob.data.materials.append(MAT_BELL if mode == 'bell' else MAT_FUR)
-
-# ---------------------------------------------------------------- inverted-hull outline (cartoon ink line)
-LINE_W = {'Head': 0.014, 'Torso': 0.014, 'TailMesh': 0.012}
-def add_outline(ob, w):
-    bm = bmesh.new(); bm.from_mesh(ob.data)
-    bm.normal_update()
-    for v in bm.verts:
-        v.co = v.co + v.normal * w
-    bmesh.ops.reverse_faces(bm, faces=bm.faces)
-    me = bpy.data.meshes.new(ob.name + '_Line'); bm.to_mesh(me); bm.free()
-    me.materials.clear(); me.materials.append(MAT_LINE)
-    for p in me.polygons:
-        p.material_index = 0
-    o2 = bpy.data.objects.new(ob.name + '_Line', me); scene.collection.objects.link(o2)
-    return o2
-line_parts = []
-for ob, bone, mode in parts:
-    if ob.name.startswith('BellLoop'):
-        continue
-    w = LINE_W.get(ob.name, 0.010 if mode != 'bell' else 0.006)
-    line_parts.append((add_outline(ob, w), bone))
-
-# ---------------------------------------------------------------- skeleton: old bone names/orientations, new joints
-# sit-space joints (where each bone pivots on the keychain pose)
-def rotX(deg):
-    return Quaternion((1, 0, 0), math.radians(deg))
-JOINTS = {
-    'HRP': (OLD_BONES['HRP']['head'], Quaternion()),
-    'FakeTorso': (Vector((0.0, 0.06, 0.34)), rotX(-72)),
-    'CatHead': (Vector((0.0, 0.0, 1.02)), Quaternion()),
-    'Ear': (Vector((-0.34, 0.0, 1.62)), Quaternion()),
-    'Ear2': (Vector((0.34, 0.0, 1.62)), Quaternion()),
-    'FrontLeg': (P(415, 640, -0.24), Quaternion()),
-    'FrontLeg2': (P(668, 640, -0.24), Quaternion()),
-    'BackLeg': (Vector((-0.36, 0.10, 0.36)), rotX(-90)),
-    'BackLeg2': (Vector((0.36, 0.10, 0.36)), rotX(-90)),
-    'Tail': (Vector((-0.12, 0.34, 0.15)), Quaternion()),
-}
-ORDER = ['HRP', 'FakeTorso', 'CatHead', 'Ear', 'Ear2', 'FrontLeg', 'FrontLeg2', 'BackLeg', 'BackLeg2', 'Tail']
-
-def mat_of(q, t):
-    m = q.to_matrix().to_4x4(); m.translation = t; return m
-
-REST = {}; SIT = {}; T = {}
-LIFT = Vector((0, 0, 0.0))
-def solve(lift):
-    for name in ORDER:
-        ob_ = OLD_BONES[name]; J, D = JOINTS[name]
-        rot_rest = ob_['rot']; rot_sit = (D @ rot_rest).normalized()
-        SIT[name] = mat_of(rot_sit, J)
-        par = ob_['parent']
-        if par is None:
-            REST[name] = mat_of(rot_rest, J)
-        else:
-            head = T[par] @ J
-            if name == 'FakeTorso':
-                head = head + lift
-            REST[name] = mat_of(rot_rest, head)
-        T[name] = REST[name] @ SIT[name].inverted()
-solve(LIFT)
-# lift the torso in the rest pose so the front paws touch the old ground
-fl = [o for o, b, m in parts if b == 'FrontLeg'][0]
-minz = min((T['FrontLeg'] @ v.co).z for v in fl.data.vertices)
-LIFT = Vector((0, 0, -0.065 - minz)); solve(LIFT)
-
-# tail chain: extra bones along the curve so the tail can wag smoothly
-tail_pts = []
-me = tail.data
-TAIL_CHAIN = ['Tail', 'Tail2', 'Tail3', 'Tail4', 'Tail5']
-chain_sit = [JOINTS['Tail'][0], TAIL_PATH[2], TAIL_PATH[4], TAIL_PATH[5], TAIL_PATH[6], TAIL_PATH[7] + Vector((-0.08, 0, 0))]
-CHAIN = {}
-for i, nm in enumerate(TAIL_CHAIN[1:], start=1):
-    h, t2 = chain_sit[i], chain_sit[i + 1]
-    y = (t2 - h).normalized()
-    x = y.cross(Vector((0, -1, 0))).normalized(); z = x.cross(y)
-    m = Matrix((x, y, z)).transposed().to_4x4(); m.translation = h
-    SIT[nm] = m
-    par = TAIL_CHAIN[i - 1]
-    REST[nm] = T[par] @ m          # identity pose in sit -> follows the parent
-    T[nm] = REST[nm] @ SIT[nm].inverted()
-    CHAIN[nm] = (par, (t2 - h).length)
-
-# build the armature in REST space
-arm_data = bpy.data.armatures.new('BoboRig'); arm = bpy.data.objects.new('BoboRig', arm_data)
-scene.collection.objects.link(arm)
+# ---------------------------------------------------------------- cartoon proportions: bigger head, rounder forms
+HEAD_S = 1.62
+piv = arm.data.bones['CatHead'].head_local.copy()
+for nm in ('CatHead', 'Ear', 'Ear2'):
+    for v in OBJ[nm].data.vertices:
+        v.co = piv + (v.co - piv) * HEAD_S
+for nm in ('Ear', 'Ear2'):                       # taller ears, like the art
+    eh = piv + (arm.data.bones[nm].head_local - piv) * HEAD_S
+    for v in OBJ[nm].data.vertices:
+        v.co = eh + (v.co - eh) * 1.22
+def hp(v):                                       # original head-space point -> scaled head
+    return piv + (Vector(v) - piv) * HEAD_S
 bpy.context.view_layer.objects.active = arm
-for o in scene.objects: o.select_set(o == arm)
 bpy.ops.object.mode_set(mode='EDIT')
-eb = {}
-def add_bone(name, mrest, length, parent):
-    b = arm_data.edit_bones.new(name)
-    b.head = (0, 0, 0); b.tail = (0, length, 0); b.roll = 0
-    b.matrix = mrest
-    eb[name] = b
-    if parent:
-        b.parent = eb[parent]
-for name in ORDER:
-    add_bone(name, REST[name], OLD_BONES[name]['length'] * (0.6 if name in ('HRP',) else 0.8), OLD_BONES[name]['parent'])
-for nm in TAIL_CHAIN[1:]:
-    add_bone(nm, REST[nm], CHAIN[nm][1], CHAIN[nm][0])
+for nm in ('Ear', 'Ear2'):
+    b = arm.data.edit_bones[nm]; d = b.tail - b.head
+    b.head = piv + (b.head - piv) * HEAD_S; b.tail = b.head + d
+for nm in ('Clothes2', 'Clothes1'):
+    if nm in arm.data.edit_bones: arm.data.edit_bones.remove(arm.data.edit_bones[nm])
 bpy.ops.object.mode_set(mode='OBJECT')
-ALL_BONES = ORDER + TAIL_CHAIN[1:]
+for nm, ob in OBJ.items():
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-4)
+    bmesh.ops.holes_fill(bm, edges=[e for e in bm.edges if e.is_boundary], sides=0)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(ob.data); bm.free()
+    for p in ob.data.polygons: p.use_smooth = True
+    md = ob.modifiers.new('sub', 'SUBSURF'); md.levels = 1
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.modifier_move_to_index(modifier='sub', index=0)
+    bpy.ops.object.modifier_apply(modifier='sub')
 
-# ---------------------------------------------------------------- move meshes into rest space, weight, join
-def tail_weights(ob):
-    """smooth weights along the tail chain (by nearest segment in sit space)"""
+
+# ---------------------------------------------------------------- tail: extra bones so it can curl and wag
+tail = OBJ['Tail']; tb = arm.data.bones['Tail']
+t_h = tb.head_local.copy(); t_d = (tb.tail_local - tb.head_local).normalized()
+for v in tail.data.vertices:                     # the keychain tail is longer and fuller
+    t = (v.co - t_h).dot(t_d); perp = v.co - t_h - t_d * t
+    v.co = t_h + t_d * (t * (1.4 if t > 0 else 1.0)) + perp * 1.25
+tt = np.array([(v.co - t_h).dot(t_d) for v in tail.data.vertices]); TL = float(tt.max())
+CUTS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+def t_centre(f):
+    sel = [v.co for v, t in zip(tail.data.vertices, tt) if abs(t - f * TL) < 0.07 * TL]
+    return sum(sel, Vector()) / len(sel)
+t_pts = [t_h] + [t_centre(f) for f in CUTS[1:-1]] + [t_h + t_d * TL]
+TAIL_CHAIN = ['Tail', 'Tail2', 'Tail3', 'Tail4', 'Tail5']
+bpy.context.view_layer.objects.active = arm
+bpy.ops.object.mode_set(mode='EDIT')
+for i, nm in enumerate(TAIL_CHAIN[1:], start=1):
+    b = arm.data.edit_bones.new(nm); b.head = t_pts[i]; b.tail = t_pts[i + 1]; b.roll = 0
+    b.parent = arm.data.edit_bones[TAIL_CHAIN[i - 1]]; b.use_connect = False
+bpy.ops.object.mode_set(mode='OBJECT')
+for nm in TAIL_CHAIN[1:]:
+    tail.vertex_groups.new(name=nm)
+bw = 0.08 * TL
+for v, t in zip(tail.data.vertices, tt):
+    s = [1.0] + [float(sstep(CUTS[i] * TL - bw, CUTS[i] * TL + bw, t)) for i in range(1, 5)] + [0.0]
+    for j, nm in enumerate(TAIL_CHAIN):
+        w = s[j] * (1 - s[j + 1])
+        tail.vertex_groups[nm].add([v.index], w, 'REPLACE')
+
+REST = {b.name: b.matrix_local.copy() for b in arm.data.bones}
+PAR = {b.name: (b.parent.name if b.parent else None) for b in arm.data.bones}
+ORDER = [b.name for b in arm.data.bones]
+ALL_BONES = ORDER
+
+def qx(d): return Quaternion((1, 0, 0), math.radians(d))
+def qy(d): return Quaternion((0, 1, 0), math.radians(d))
+def qz(d): return Quaternion((0, 0, 1), math.radians(d))
+
+def fk(deltas, base, off=None, trans=None, scl=None):
+    """world matrices: `base` pose plus world-space rotation deltas about each joint (inherited
+    down the chain), optional per-bone world translations and a root offset"""
     W = {}
-    segs = [(TAIL_CHAIN[i], chain_sit[i], chain_sit[i + 1]) for i in range(len(TAIL_CHAIN))]
-    for v in ob.data.vertices:
-        p = v.co
-        ws = []
-        for nm, a, b in segs:
-            ab = b - a; t = max(0, min(1, (p - a).dot(ab) / ab.length_squared))
-            d = (a + ab * t - p).length
-            ws.append((nm, 1.0 / (d ** 4 + 1e-6)))
-        tot = sum(w for _, w in ws)
-        W[v.index] = [(nm, w / tot) for nm, w in ws if w / tot > 0.02]
+    for n in ORDER:
+        p = PAR[n]; m = base[n].copy()
+        if p: m = W[p] @ base[p].inverted() @ m
+        d = deltas.get(n)
+        if d is not None:
+            j = m.translation.copy()
+            m = Matrix.Translation(j) @ d.to_matrix().to_4x4() @ Matrix.Translation(-j) @ m
+        if trans and n in trans: m = Matrix.Translation(trans[n]) @ m
+        if scl and n in scl: m = m @ Matrix.Diagonal((*scl[n], 1.0))
+        if p is None and off is not None: m = Matrix.Translation(off) @ m
+        W[n] = m
     return W
 
-all_objs = []
-for (ob, bone, mode) in parts + [(o, b, 'line') for o, b in line_parts]:
-    for nm in ALL_BONES:
-        ob.vertex_groups.new(name=nm)
-    if bone == 'Tail':
-        W = tail_weights(ob)
-        for vi, lst in W.items():
-            for nm, w in lst:
-                ob.vertex_groups[nm].add([vi], w, 'REPLACE')
-        # transform each vertex with its blended rest transform
-        for v in ob.data.vertices:
-            acc = Vector((0, 0, 0)); tw = 0
-            for nm, w in W[v.index]:
-                acc += (T[nm] @ v.co) * w; tw += w
-            v.co = acc / tw
-    else:
-        ob.vertex_groups[bone].add([v.index for v in ob.data.vertices], 1.0, 'REPLACE')
-        ob.data.transform(T[bone])
-    ob.data.update()
-    all_objs.append(ob)
+# ---------------------------------------------------------------- the keychain pose (sitting upright)
+A = 60.0                                    # how far the body rears up from the walking pose
+SITD = {
+    'FakeTorso': qx(-A), 'CatHead': qx(A - 3),
+    'FrontLeg': qz(3) @ qx(A), 'FrontLeg2': qz(-3) @ qx(A),
+    # hind legs fold under the body: a short, full haunch with the foot flat on the ground
+    'BackLeg': qz(-16) @ qy(-14) @ qx(A - 24), 'BackLeg2': qz(16) @ qy(14) @ qx(A - 24),
+}
+SIT_SCL = {'BackLeg': (1.2, 0.58, 1.2), 'BackLeg2': (1.2, 0.58, 1.2)}
+# the tail sweeps out to Bobo's right (viewer's left), up, and curls over at the tip - like the art
+TAIL_DIRS = [(-0.85, 0.35, 0.15), (-0.72, -0.1, 0.62), (-0.3, -0.2, 0.93), (-0.2, -0.12, 0.97), (-0.8, -0.05, 0.6)]
+for nm, d in zip(TAIL_CHAIN, TAIL_DIRS):
+    cur = fk(SITD, REST)[nm].to_3x3().col[1].normalized()
+    SITD[nm] = cur.rotation_difference(Vector(d).normalized())
+def posed(W, names):
+    out = []
+    for nm in names:
+        b = BONE_OF.get(nm, nm); M = W[b] @ REST[b].inverted()
+        out += [M @ v.co for v in OBJ[nm].data.vertices]
+    return out
+W0 = fk(SITD, REST, scl=SIT_SCL)
+ground = min(p.z for p in posed(W0, ['Torso']))
+SIT_TR = {}                                   # slide each leg so its paw stands on the ground
+for nm in ('FrontLeg', 'FrontLeg2', 'BackLeg', 'BackLeg2'):
+    sx = -1 if nm.endswith('Leg') else 1
+    SIT_TR[nm] = Vector((sx * (0.05 if nm.startswith('Front') else 0.16), 0, ground - min(p.z for p in posed(W0, [nm]))))
+W0 = fk(SITD, REST, trans=SIT_TR, scl=SIT_SCL)
+pts = posed(W0, ['FrontLeg', 'FrontLeg2', 'BackLeg', 'BackLeg2', 'Torso'])
+ys = [p.y for p in pts]
+SIT_OFF = Vector((-XC, -(min(ys) + max(ys)) / 2, -min(p.z for p in pts)))
+SIT = fk(SITD, REST, off=SIT_OFF, trans=SIT_TR, scl=SIT_SCL)
+T = {n: REST[n] @ SIT[n].inverted() for n in ORDER}     # sit space -> rest space, per bone
 
+# ---------------------------------------------------------------- keychain extras
+extras = []     # (object, bone)
+# cheek fluff: three soft pointed tufts per side, placed and sized after the art
+TUFTS = [((0.26, 0.02, 0.00), (0.47, 0.05, -0.02), (0.66, 0.10, -0.045), 0.125),
+         ((0.26, 0.02, -0.10), (0.44, 0.04, -0.13), (0.57, 0.08, -0.17), 0.115),
+         ((0.24, 0.00, -0.19), (0.38, 0.02, -0.25), (0.46, 0.05, -0.335), 0.105)]
+for sx in (-1, 1):
+    for i, (p0, p1, p2, r) in enumerate(TUFTS):
+        path = [hp((XC + sx * q[0], piv.y - 0.03 + q[1], ZE + q[2])) for q in (p0, p1, p2)]
+        ob = tube(f'Fluff{"L" if sx < 0 else "R"}{i}', path, [r * HEAD_S, r * HEAD_S * 0.72, r * HEAD_S * 0.1], ring=14, cap_rings=2)
+        c0 = path[0]
+        for v in ob.data.vertices:                         # flatter front-to-back, like a lock of fur
+            v.co.y = c0.y + (v.co.y - c0.y) * 0.62
+        ob.data.materials.append(MAT_FLUFF)
+        extras.append((ob, 'CatHead', False))
+
+# collar + bell sit on the neck in the keychain pose
+tv = posed(SIT, ['Torso']); ztop = max(p.z for p in tv)
+ring = [p for p in tv if ztop - 0.22 < p.z < ztop - 0.12]
+cx = (min(p.x for p in ring) + max(p.x for p in ring)) / 2; cy = (min(p.y for p in ring) + max(p.y for p in ring)) / 2
+rx = (max(p.x for p in ring) - min(p.x for p in ring)) / 2 + 0.015; ry = (max(p.y for p in ring) - min(p.y for p in ring)) / 2 + 0.015
+cz = ztop - 0.17
+collar = ring_band('Collar', (cx, cy, cz), rx, ry, 0.085, 0.045)
+collar.data.materials.append(MAT_COLLAR); extras.append((collar, 'FakeTorso', True))
+for a in (-70, -35, 35, 70, 110, 180, 250):
+    r = math.radians(a - 90)
+    st = ellipsoid('Stud', (cx + (rx + 0.022) * math.cos(r), cy + (ry + 0.022) * math.sin(r), cz), (0.016, 0.016, 0.016), seg=12, rings=8)
+    st.data.materials.append(MAT_STUD); extras.append((st, 'FakeTorso', True))
+bell = ellipsoid('Bell', (cx, cy - ry - 0.05, cz - 0.115), (0.1, 0.092, 0.096), seg=24, rings=16)
+loop = ellipsoid('BellLoop', (cx, cy - ry - 0.035, cz - 0.03), (0.032, 0.028, 0.045), seg=12, rings=8)
+slot = ellipsoid('BellSlot', (cx, cy - ry - 0.05 - 0.088, cz - 0.15), (0.05, 0.012, 0.012), seg=12, rings=8)
+for o in (bell, loop):
+    o.data.materials.append(MAT_BELL); extras.append((o, 'FakeTorso', True))
+slot.data.materials.append(MAT_LINE); extras.append((slot, 'FakeTorso', True))
+for ob, bone, in_sit in extras:
+    for p in ob.data.polygons: p.use_smooth = True
+    if in_sit: ob.data.transform(T[bone])
+    ob.vertex_groups.new(name=bone).add([v.index for v in ob.data.vertices], 1.0, 'REPLACE')
+
+# ---------------------------------------------------------------- inverted-hull outline (cartoon ink line)
+LINE_W = {'Torso': 0.016, 'CatHead': 0.016, 'FrontLeg': 0.014, 'FrontLeg2': 0.014, 'BackLeg': 0.014, 'BackLeg2': 0.014,
+          'Tail': 0.013, 'Ear': 0.012, 'Ear2': 0.012, 'Bell': 0.007, 'Collar': 0.008}
+def add_outline(ob, w):
+    o2 = ob.copy(); o2.data = ob.data.copy(); o2.name = ob.name + '_Line'; scene.collection.objects.link(o2)
+    bm = bmesh.new(); bm.from_mesh(o2.data); bm.normal_update()
+    for v in bm.verts: v.co = v.co + v.normal * w
+    bmesh.ops.reverse_faces(bm, faces=bm.faces)
+    bm.to_mesh(o2.data); bm.free()
+    o2.data.materials.clear(); o2.data.materials.append(MAT_LINE)
+    return o2
+all_objs = list(OBJ.values()) + [e[0] for e in extras]
+lines = [add_outline(o, LINE_W.get(o.name, 0.011)) for o in all_objs if o.name[:4] not in ('Stud', 'Bell') or o.name == 'Bell']
+for o in [e[0] for e in extras] + lines:
+    if not any(m.type == 'ARMATURE' for m in o.modifiers):
+        pass
 bpy.ops.object.select_all(action='DESELECT')
-for o in all_objs: o.select_set(True)
-bpy.context.view_layer.objects.active = all_objs[0]
+body = OBJ['Torso']
+for o in all_objs + lines: o.select_set(True)
+bpy.context.view_layer.objects.active = body
 bpy.ops.object.join()
-body = bpy.context.view_layer.objects.active; body.name = 'Bobo'; body.data.name = 'Bobo'
-body.parent = arm
-mod = body.modifiers.new('Armature', 'ARMATURE'); mod.object = arm
-for p in body.data.polygons:
-    pass
+body.name = 'Bobo'; body.data.name = 'Bobo'
 
 # ---------------------------------------------------------------- animation
 FPS = 30; scene.render.fps = FPS
-arm.animation_data_create()
 pb = arm.pose.bones
 for p in pb:
     p.rotation_mode = 'QUATERNION'
 
-def sit_world(name, extra=None):
-    """world (armature) matrix of a bone in the keychain pose, optionally with a world-space
-    rotation delta about its joint"""
-    m = SIT[name].copy()
-    if extra is not None:
-        j = m.translation.copy()
-        m = Matrix.Translation(j) @ extra.to_matrix().to_4x4() @ Matrix.Translation(-j) @ m
-    return m
-
 def pose_frame(deltas, root_off=None, root_scale=None):
-    """set every bone to the sit pose plus per-bone world deltas (applied down the chain)"""
-    # compute world matrices top-down, children inherit the parent's delta motion
-    W = {}
-    for name in ALL_BONES:
-        par = OLD_BONES[name]['parent'] if name in OLD_BONES else CHAIN[name][0]
-        base = SIT[name]
-        if par is not None:
-            # follow the parent: parent_world_now @ parent_sit^-1 @ base
-            base = W[par] @ SIT[par].inverted() @ base
-        d = deltas.get(name)
-        if d is not None:
-            j = base.translation.copy()
-            base = Matrix.Translation(j) @ d.to_matrix().to_4x4() @ Matrix.Translation(-j) @ base
-        if name == 'HRP':
-            off = Vector(root_off) if root_off is not None else Vector((0, 0, 0))
-            if root_scale is not None:
-                off.z -= base.translation.z * (1 - root_scale[2])   # keep the paws on the ground
-            base = Matrix.Translation(off) @ base
-        W[name] = base
-    for name in ALL_BONES:
-        par = OLD_BONES[name]['parent'] if name in OLD_BONES else CHAIN[name][0]
+    """keychain pose plus per-bone world deltas (applied down the chain)"""
+    off = Vector(root_off) if root_off is not None else Vector((0, 0, 0))
+    if root_scale is not None:
+        off.z -= SIT['HRP'].translation.z * (1 - root_scale[2])     # keep the paws on the ground
+    W = fk(deltas, SIT, off=off)
+    for name in ORDER:
+        par = PAR[name]
         if par is None:
             basis = REST[name].inverted() @ W[name]
         else:
@@ -553,42 +605,33 @@ def pose_frame(deltas, root_off=None, root_scale=None):
             basis = rel.inverted() @ (W[par].inverted() @ W[name])
         pb[name].matrix_basis = basis
     if root_scale is not None:
-        # squash in the HRP's local axes (children keep clean rotations)
-        R = REST['HRP'].to_3x3()
-        loc = []
+        R = REST['HRP'].to_3x3(); loc = []
         for i in range(3):
-            ax = R.col[i]
-            k = max(range(3), key=lambda j: abs(ax[j]))
-            loc.append(root_scale[k])
+            ax = R.col[i]; k = max(range(3), key=lambda j: abs(ax[j])); loc.append(root_scale[k])
         pb['HRP'].scale = loc
 
-def key_all(frame, names=None):
-    for name in (names or ALL_BONES):
+def key_all(frame):
+    for name in ORDER:
         p = pb[name]
         p.keyframe_insert('rotation_quaternion', frame=frame, group=name)
         p.keyframe_insert('location', frame=frame, group=name)
         p.keyframe_insert('scale', frame=frame, group=name)
 
-def qx(d): return Quaternion((1, 0, 0), math.radians(d))
-def qy(d): return Quaternion((0, 1, 0), math.radians(d))
-def qz(d): return Quaternion((0, 0, 1), math.radians(d))
-
 def tail_deltas(t, amp=1.0, speed=1.0):
     d = {}
     for i, nm in enumerate(TAIL_CHAIN):
         ph = t * 2 * math.pi * speed - i * 0.7
-        a = amp * (6 + 5 * i)
-        d[nm] = qy(a * math.sin(ph)) @ qz(0.4 * a * math.sin(ph + 0.6))
+        a = amp * (5 + 4 * i)
+        d[nm] = qy(a * math.sin(ph)) @ qz(0.5 * a * math.sin(ph + 0.6))
     return d
 
-def make_action(name, length_s, fn, loop=True):
+arm.animation_data_create()
+def make_action(name, length_s, fn):
     act = bpy.data.actions.new(name)
     arm.animation_data.action = act
     nfr = int(round(length_s * FPS))
-    step = 2
-    for f in list(range(0, nfr, step)) + [nfr]:
-        t = f / FPS
-        deltas, off, sc = fn(t, length_s)
+    for f in list(range(0, nfr, 2)) + [nfr]:
+        deltas, off, sc = fn(f / FPS, length_s)
         pose_frame(deltas, off, sc)
         key_all(f)
     act.use_fake_user = True
@@ -617,7 +660,7 @@ def paw_raise(t, L):
     # Bobo's right paw (viewer's left) lifts, waves three times, settles back
     up = ease(t / 0.45) * (1 - ease((t - (L - 0.5)) / 0.45))
     wave = math.sin((t - 0.45) * 2 * math.pi * 1.6) if 0.45 < t < L - 0.5 else 0
-    d = {'FrontLeg': qy(-28 * up) @ qx(-135 * up) @ qy(16 * wave * up),
+    d = {'FrontLeg': qy(-24 * up) @ qx(-120 * up) @ qy(16 * wave * up),
          'FakeTorso': breathe(t) @ qy(3 * up),
          'CatHead': qz(-6 * up) @ qy(-5 * up)}
     d.update(tail_deltas(t / 0.9, amp=1.3))
@@ -630,8 +673,6 @@ def tail_wag(t, L):
 
 def pop_out(t, L):
     # starts flat on the charm (depth squashed), springs out toward the viewer, lands sitting
-    k = min(t / 0.55, 1.0)
-    # spring for depth and size
     def spring(x, f=3.2, damp=5.0):
         return 1 - math.exp(-damp * x) * math.cos(f * math.pi * x)
     s_xy = 0.82 + 0.18 * spring(t / 1.0)
@@ -641,22 +682,19 @@ def pop_out(t, L):
     d.update(tail_deltas(t / 0.7, amp=1.0 * min(t / 0.5, 1)))
     return d, Vector((0, 0, hop)), (s_xy, s_y, s_xy)
 
-make_action('PopOut', 1.4, pop_out, loop=False)
+make_action('PopOut', 1.4, pop_out)
 make_action('Sit', 6.0, sit_idle)
-make_action('PawRaise', 3.2, paw_raise, loop=False)
+make_action('PawRaise', 3.2, paw_raise)
 make_action('TailWag', 2.4, tail_wag)
 
-# legacy clips from the original Bobo rig (same bone names) - quadruped moves
+# the original Bobo clips (same rig) - walk and the other quadruped moves
 for nm in ('Walk', 'Excited', 'Chill', 'Sleep', 'Sit'):
     if nm not in OLD_ACTIONS:
         continue
-    src = OLD_ACTIONS[nm]
-    act = src.copy(); act.name = 'Classic' + nm
+    act = OLD_ACTIONS[nm]
     act.use_fake_user = True
     trk = arm.animation_data.nla_tracks.new(); trk.name = act.name
     st = trk.strips.new(act.name, 0, act); st.name = act.name
-for a in OLD_ACTIONS.values():
-    a.use_fake_user = False
 
 # rest the rig in the keychain pose when no clip runs
 pose_frame({})
@@ -666,17 +704,10 @@ for o in scene.objects: o.select_set(o in (arm, body))
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True,
                           export_animations=True, export_animation_mode='NLA_TRACKS',
                           export_force_sampling=True, export_yup=True,
-                          export_image_format='WEBP', export_image_quality=88,
+                          export_image_format='WEBP', export_image_quality=90,
                           export_apply=False, export_skins=True, export_def_bones=False,
                           export_optimize_animation_size=True)
 if OUT_BLEND:
     bpy.ops.file.pack_all()
     bpy.ops.wm.save_as_mainfile(filepath=OUT_BLEND)
 print('EXPORTED', OUT)
-
-# ---- self-check (rest and keychain-pose matrices must match exactly)
-def merr(a, b):
-    return max(abs(a[i][j] - b[i][j]) for i in range(4) for j in range(4))
-pose_frame({}); bpy.context.view_layer.update()
-for nm in ALL_BONES:
-    print('CHECK', nm, 'rest', round(merr(arm.data.bones[nm].matrix_local, REST[nm]), 4), 'sit', round(merr(arm.pose.bones[nm].matrix, SIT[nm]), 4))
