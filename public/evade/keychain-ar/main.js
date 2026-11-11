@@ -11,11 +11,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+// the Cola Run recorder (mattercraft/cola-run/CaptureCore.ts, built for the browser): record, review, save,
+// and send the clip to the Where is Bobo? globe
+import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 
 window.THREE = THREE;                       // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
+const DEV = params.has('tune') || params.has('dev');   // the Tune panel is a preview tool: only with ?tune (Dapo, 2026-11-11)
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const BASE = '/evade/keychain/';
 const HERE = '/evade/keychain-ar/';
@@ -63,6 +67,26 @@ function bubbleTexture() {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
 const bubbleTex = bubbleTexture();
+function canvasTex(size, draw) { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+const fishTex = canvasTex(128, (g) => {          // a cartoon fish, drawn here (no image files)
+  g.translate(64, 64); g.rotate(-0.25);
+  const body = g.createLinearGradient(0, -26, 0, 26); body.addColorStop(0, '#9fe3ff'); body.addColorStop(0.5, '#4fb4ff'); body.addColorStop(1, '#2a6fd6');
+  g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = '#123a6b';
+  g.beginPath(); g.moveTo(26, 0); g.lineTo(52, -22); g.lineTo(48, 0); g.lineTo(52, 22); g.closePath(); g.fillStyle = '#ff9f43'; g.fill(); g.stroke();
+  g.beginPath(); g.ellipse(-6, 0, 38, 25, 0, 0, 7); g.fillStyle = body; g.fill(); g.stroke();
+  g.beginPath(); g.moveTo(-4, -22); g.quadraticCurveTo(8, -38, 18, -20); g.fillStyle = '#ff9f43'; g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(-12, -10, 16, 6, -0.3, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(-26, -4, 7, 0, 7); g.fill(); g.fillStyle = '#123a6b'; g.beginPath(); g.arc(-27, -4, 3.6, 0, 7); g.fill();
+  g.strokeStyle = '#123a6b'; g.lineWidth = 3; g.beginPath(); g.arc(-38, 6, 5, 0.2, 1.6); g.stroke();
+});
+const heartTex = canvasTex(128, (g) => {
+  const gr = g.createLinearGradient(0, 20, 0, 110); gr.addColorStop(0, '#ff8ad8'); gr.addColorStop(1, '#ff3d7f');
+  g.beginPath(); g.moveTo(64, 108); g.bezierCurveTo(10, 72, 8, 26, 40, 22); g.bezierCurveTo(54, 20, 62, 30, 64, 40); g.bezierCurveTo(66, 30, 74, 20, 88, 22); g.bezierCurveTo(120, 26, 118, 72, 64, 108); g.closePath();
+  g.fillStyle = gr; g.fill(); g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
+  g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(42, 42, 9, 5, -0.7, 0, 7); g.fill();
+});
+const zzzTex = canvasTex(128, (g) => { g.font = '900 96px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 10; g.strokeStyle = '#1b2240'; g.strokeText('z', 64, 66); g.fillStyle = '#cfe6ff'; g.fillText('z', 64, 66); });
+const auraTex = radialTexture([[0, 'rgba(255,236,170,.95)'], [0.35, 'rgba(255,196,70,.55)'], [0.7, 'rgba(255,140,40,.15)'], [1, 'rgba(0,0,0,0)']]);
 const sparkTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.2, 'rgba(255,255,255,.9)'], [0.5, 'rgba(160,220,255,.35)'], [1, 'rgba(0,0,0,0)']]);
 
 // ---------------------------------------------------------------- the charm mask: glow, portal, black
@@ -143,13 +167,19 @@ const PORTAL_COLOURS = { bobo: [0xff9a3c, 0xffd28a, 0x6fb6ff], can: [0x4fc3ff, 0
 // ---------------------------------------------------------------- sound (synthesised, no files)
 const sound = {
   ctx: null, on: true,
-  init() { try { this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume(); } catch (e) { /* no audio */ } },
+  master: null,
+  init() {
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume();
+      if (!this.master) { this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination); }   // everything plays through here, so the recorder can listen in
+    } catch (e) { /* no audio */ }
+  },
   tone(f0, f1, dur, vol = 0.2, type = 'sine', when = 0) {
     if (!this.ctx || !this.on) return;
     const t = this.ctx.currentTime + when; const o = this.ctx.createOscillator(); const g = this.ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.ctx.destination); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g).connect(this.master || this.ctx.destination); o.start(t); o.stop(t + dur + 0.05);
   },
   noise(dur, vol, hp, lp, when = 0) {
     if (!this.ctx || !this.on) return;
@@ -158,7 +188,7 @@ const sound = {
     const s = this.ctx.createBufferSource(); s.buffer = b; const g = this.ctx.createGain(); g.gain.value = vol;
     const f1 = this.ctx.createBiquadFilter(); f1.type = 'highpass'; f1.frequency.value = hp;
     const f2 = this.ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = lp;
-    s.connect(f1).connect(f2).connect(g).connect(this.ctx.destination); s.start(this.ctx.currentTime + when);
+    s.connect(f1).connect(f2).connect(g).connect(this.master || this.ctx.destination); s.start(this.ctx.currentTime + when);
   },
   scan() { this.tone(500, 1500, 0.6, 0.06, 'triangle'); },
   rumble(d = 1.7) { this.tone(46, 96, d, 0.3, 'sawtooth'); this.tone(69, 150, d, 0.12, 'square'); this.noise(d, 0.05, 60, 420); this.tone(300, 2400, d * 0.92, 0.05, 'triangle', d * 0.08); },
@@ -169,7 +199,13 @@ const sound = {
   land() { this.tone(180, 70, 0.18, 0.25); },
   bell() { for (const [f, w] of [[2093, 0], [2637, 0.09], [3136, 0.18]]) this.tone(f, f * 0.995, 0.5, 0.07, 'sine', w); },
   mew() { this.tone(620, 880, 0.14, 0.09, 'triangle'); this.tone(880, 560, 0.22, 0.09, 'triangle', 0.13); },
+  whoosh() { this.noise(0.32, 0.07, 900, 5000); this.tone(320, 760, 0.28, 0.035); },
+  chomp() { this.noise(0.05, 0.2, 400, 3000); this.noise(0.05, 0.17, 400, 3000, 0.13); this.tone(230, 150, 0.07, 0.1, 'square', 0.02); this.tone(220, 140, 0.07, 0.08, 'square', 0.15); },
+  purr(d = 1.4) { const n = Math.round(d * 8); for (let i = 0; i < n; i++) { this.tone(54, 47, 0.1, 0.11, 'sawtooth', i * 0.12); this.noise(0.08, 0.025, 80, 300, i * 0.12); } },
+  sparkle() { [1568, 2093, 2637, 3136, 3951, 4699].forEach((f, i) => this.tone(f, f * 1.01, 0.3, 0.045, 'sine', i * 0.055)); },
+  shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
 };
+const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* no haptics */ } };
 
 // ---------------------------------------------------------------- UI
 const ui = {
@@ -304,10 +340,17 @@ function prepCharacter(gltf, key, padR, kind = key) {
   const N = 70, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
   const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ map: sparkTex, size: 0.007, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, sizeAttenuation: true }));
   sparks.frustumCulled = false; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 };
-  frame.add(pd, flash, scan, sparks);
+  // a soft shadow on the print under the hovering character, and a golden aura for Super Bobo
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, depthTest: false, opacity: 0 }));
+  shadow.renderOrder = 6; shadow.visible = false;
+  const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: auraTex, transparent: true, depthWrite: false, depthTest: true, blending: THREE.AdditiveBlending, opacity: 0 }));
+  aura.renderOrder = 8; aura.visible = false;                              // drawn behind him (depth tested), between him and the print
+  frame.add(pd, flash, scan, sparks, shadow, aura);
+  const head = m.getObjectByName('CatHead') || m.getObjectByName('Head') || null;   // Bobo watches the phone
   return { key, kind, def, frame, root, model: m, mixer, clips, current: null, baseScale, height, sil, lie: { pos: lp, quat: lq, s: ls.y },
     masks: { own }, maskOn: 'own', fx: { glow: 0, portal: 0, black: 0, shake: 0 }, G: { q: new THREE.Quaternion(), flat: 0 }, pad: pd, flash, scan, sparks,
-    st: 'idle', steady: 0, landed: false, sils: true };
+    visor: kind === 'bobo' ? visorFlip(m) : null, mirrored: false,
+    st: 'idle', steady: 0, landed: false, sils: true, shadow, aura, head, headRest: null, lookW: 0, lookDir: null, boost: 1, super: null };
 }
 
 function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
@@ -467,13 +510,36 @@ function updateFrames(dt) {
     } else { goneFor[k] += dt; if (goneFor[k] > 0.25) driver[k] = null; }
     pres[k] = !!t || (pres[k] && goneFor[k] < 0.25);                       // nothing is drawn unless it is tracked now (short grace against flicker)
     f.visible = pres[k]; f.updateMatrixWorld(true); present = present || pres[k];
-    if (t) useMask(ch, t);
+    if (t) { useMask(ch, t); sideFix(ch, t); }
     if (t && ch.st === 'idle') { groundFrame(ch); ch.sils = t.lay.silhouettes; }   // once it pops, its ground frame is fixed to the charm
   }
 }
 // A target's own mask is drawn in that target's picture (centred, never mirrored), so in the charm frame it
 // sits at (charm frame in the picture)^-1: this undoes the fit and the mirror, and the mask lies exactly on
 // the acrylic in the picture whatever the 3D character's frame is.
+// A charm picture of the other side flips the charm frame, and the 3D character with it. Two things must not
+// read as a mirror image: the can, which instead turns round to show its back (the QR side, as on that
+// picture: flipping its depth as well makes the whole thing a half turn), and the BOBO on the cat's visor,
+// which is swapped for a copy of the head texture with the lettering flipped back.
+function sideFix(ch, t) {
+  const c = t.lay.charms[ch.key], mir = !!(c && c.mirror);
+  if (ch.mirrored === mir) return; ch.mirrored = mir;
+  if (ch.kind === 'can') ch.model.scale.z = Math.abs(ch.model.scale.z) * (mir ? -1 : 1);
+  if (ch.visor) { ch.visor.mat.map = mir ? ch.visor.flipped : ch.visor.plain; ch.visor.mat.needsUpdate = true; }
+}
+const VISOR_TEXT = [60, 150, 205, 490];   // the BOBO lettering in the cat's 2048 px head texture (x0, y0, x1, y1); it reads top to bottom
+function visorFlip(m) {
+  let mat = null; m.traverse((o) => { if (o.isMesh) for (const x of [].concat(o.material)) if (x.name === 'Bobo_Head') mat = x; });
+  const tex = mat && mat.map, img = tex && tex.image; if (!img || !img.width) return null;
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const k = img.width / 2048, [x0, y0, x1, y1] = VISOR_TEXT.map((v) => Math.round(v * k));
+  const part = g.getImageData(x0, y0, x1 - x0, y1 - y0), w = x1 - x0, h = y1 - y0, out = g.createImageData(w, h);
+  for (let y = 0; y < h; y++) out.data.set(part.data.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
+  g.putImageData(out, x0, y0);
+  const t = new THREE.CanvasTexture(c); t.flipY = tex.flipY; t.colorSpace = tex.colorSpace; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.channel = tex.channel;
+  t.minFilter = tex.minFilter; t.magFilter = tex.magFilter; t.anisotropy = tex.anisotropy;
+  return { mat, plain: tex, flipped: t };
+}
 const _mm = new THREE.Matrix4();
 function useMask(ch, t) {
   const want = ch.masks[t.name] ? t.name : 'own'; if (ch.maskOn === want) return;
@@ -498,8 +564,10 @@ const hopDir = (ch) => new THREE.Vector3(0, 0, 1).lerp(_v2.set(0, 1, 0).applyQua
 // ---------------------------------------------------------------- the pop-out
 function resetScene() {
   tweens.length = 0; taps = 0; finaleOn = false; hinted = false; showFizz(); for (const b of bubbles) { b.life = 0; b.sp.visible = false; }
+  fed = 0; fishBusy = false; napping = false; idleT = 0; idleNext = 7; showFish(); for (const f of floaters) { f.life = 0; f.sp.visible = false; }
   for (const ch of ALL) {
     ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false; ch.st = 'idle'; ch.steady = 0; ch.spin = null; ch.walk = null;
+    ch.boost = 1; ch.super = null; ch.headRest = null; ch.lookW = 0; ch.shadow.visible = false; ch.aura.visible = false;
     ch.sil.visible = false; Object.assign(ch.fx, { glow: 0, portal: 0, black: 0, shake: 0 });
     ch.pad.visible = false; ch.flash.material.opacity = 0; ch.scan.material.opacity = 0; ch.sparks.userData.life.fill(0);
   }
@@ -578,7 +646,11 @@ function launch(ch) {
       pd.scale.setScalar((0.2 + 0.8 * easeOut(kk * 1.3)) * tune.size); pd.userData.ring.material.opacity = easeOut(kk);
     }, () => {
       ch.landed = true; ch.st = 'out'; sound.land(); burst(ch, spotOf(ch), 14, 0.07);
-      if (!hinted) { hinted = true; ui.hint('Tap for bubbles. Keep tapping!'); after(5, () => { if (!finaleOn && $('hint').textContent.startsWith('Tap for')) ui.hint(''); }); }
+      if (!ch.seenOut) { ch.seenOut = true; postEvent('sighting', { charm: ch.kind }); }   // a keychain sighting for the Where is Bobo? globe (city level)
+      if (!hinted) {
+        hinted = true; const t = live(B) ? 'Feed Bobo a fish, or tap him to pet him' : 'Tap the can for bubbles. Keep tapping!';
+        ui.hint(t); after(5, () => { if (!finaleOn && $('hint').textContent === t) ui.hint(''); });
+      }
     }, ch);
   }, ch);
 }
@@ -588,7 +660,8 @@ function launch(ch) {
 const FINALE = 10;
 let bubbleNext = 0;
 const upVec = (ch) => new THREE.Vector3(0, 1, 0).applyQuaternion(restQ(ch));
-const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * tune.size * landScale(ch));
+const scaleOf = (ch) => tune.size * landScale(ch) * (ch.boost || 1);
+const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * scaleOf(ch));
 const live = (ch) => ch.landed && pres[ch.key];
 function blow(ch, n, size, speed = 0.05, spread = 0.5) {
   const up = upVec(ch), at = topOf(ch);
@@ -636,10 +709,10 @@ function finale() {
 }
 
 const boboFree = () => live(B) && !B.walk;
-function wave() { if (!boboFree()) return; sound.mew(); play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
-function wag() { if (!boboFree()) return; sound.bell(); play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+function wave() { if (!boboFree()) return; wake(); sound.mew(); play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+function wag() { if (!boboFree()) return; wake(); sound.bell(); play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
 function walk() {
-  if (!boboFree()) return;
+  if (!boboFree() || fishBusy || B.super) return; wake();
   play(B, 'ClassicWalk', { fade: 0.35 }); B.walk = { a: 0, turn: 0 };
   const who = B;
   tween(4.2, (k) => { who.walk.a = k * Math.PI * 2; who.walk.turn = who.walk.a + Math.PI / 2; }, () => {
@@ -649,13 +722,184 @@ function walk() {
 function spinCan() { if (!live(C) || C.spin) return; sound.pop(); C.spin = { k: 0 }; tween(0.9, (k) => { if (C.spin) C.spin.k = k; }, () => { C.spin = null; }, C); }
 function replay() { resetScene(); }
 
+// ---------------------------------------------------------------- floaters: fish, hearts, Zzz (sprites in a charm frame)
+const floaters = [];
+function floater(ch, tex, at, { size = 0.008, life = 1.2, vel = null, rise = 0.03, spin = 0 } = {}) {
+  let f = floaters.find((x) => x.life <= 0);
+  if (!f) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false })); sp.renderOrder = 26; f = { sp, vel: new THREE.Vector3() }; floaters.push(f); }
+  if (f.sp.parent !== ch.frame) ch.frame.add(f.sp);
+  f.sp.material.map = tex; f.sp.material.needsUpdate = true; f.sp.material.rotation = 0;
+  f.sp.position.copy(at); f.size = size; f.life = f.max = life; f.spin = spin; f.ph = Math.random() * 6.28; f.ch = ch; f.free = true;
+  if (vel) f.vel.copy(vel); else f.vel.copy(upVec(ch)).multiplyScalar(rise).add(_v.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() * 0.4).multiplyScalar(rise * 0.6));
+  f.sp.visible = true; return f;
+}
+function updateFloaters(dt) {
+  for (const f of floaters) {
+    if (f.life <= 0) continue;
+    if (!f.free) continue;                                                    // a thrown fish is moved by its own tween
+    f.life -= dt; if (f.life <= 0) { f.sp.visible = false; continue; }
+    const age = 1 - f.life / f.max;
+    f.sp.position.addScaledVector(f.vel, dt); f.sp.position.addScaledVector(_v.set(1, 0, 0), Math.sin(f.ph + age * 8) * 0.004 * dt);
+    f.sp.material.rotation = Math.sin(f.ph + age * 6) * 0.25 + f.spin * age;
+    f.sp.scale.setScalar(f.size * (0.4 + 0.6 * easeOut(age * 4)));
+    f.sp.material.opacity = Math.min(age * 8, 1) * (1 - Math.max((age - 0.7) / 0.3, 0));
+  }
+}
+const hearts = (ch, n) => { for (let i = 0; i < n; i++) floater(ch, heartTex, topOf(ch).addScaledVector(upVec(ch), -0.01 * Math.random()), { size: 0.007 + Math.random() * 0.005, life: 1.3 + Math.random() * 0.7, rise: 0.035 }); };
+
+// ---------------------------------------------------------------- feed Bobo
+// Feed throws a fish from the phone to Bobo, who catches it and eats it. Three fish make Super Bobo:
+// he spins up, grows, glows gold with hearts and sparkles all round him, then settles back down.
+const FISH_GOAL = 3;
+let fed = 0, fishBusy = false;
+const mouthOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * (ch.kind === 'old' ? 0.78 : 0.62) * scaleOf(ch));
+function showFish() { const m = $('fish-m'); if (!m) return; m.hidden = fed === 0; m.firstElementChild.style.width = (fed / FISH_GOAL * 100) + '%'; $('fish-n').textContent = `${fed} / ${FISH_GOAL}`; m.setAttribute('aria-valuenow', String(fed)); }
+function feed() {
+  if (!boboFree() || fishBusy || B.super) return;
+  wake(); fishBusy = true; sound.whoosh(); buzz(12);
+  const ch = B; ch.frame.updateMatrixWorld(true);
+  const cam = ch.frame.worldToLocal(_v2.copy(camera.position)), mouth = mouthOf(ch);
+  const from = mouth.clone().lerp(cam, 0.6).addScaledVector(upVec(ch), -0.05);   // from just below the phone
+  const f = floater(ch, fishTex, from, { size: 0.016, life: 99 }); f.free = false; f.sp.material.opacity = 0;
+  const ctrl = new THREE.Vector3(), p = new THREE.Vector3();
+  tween(0.8, (k) => {
+    const to = mouthOf(ch), e = easeInOut(k);
+    ctrl.copy(from).lerp(to, 0.5).addScaledVector(upVec(ch), 0.06);
+    p.copy(from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(ctrl, 2 * (1 - e) * e).addScaledVector(to, e * e);
+    f.sp.position.copy(p); f.sp.material.rotation = -k * 7; f.sp.material.opacity = Math.min(k * 6, 1);
+    f.sp.scale.setScalar(0.016 * (1 - 0.45 * e));
+  }, () => { f.life = 0; f.sp.visible = false; eat(); }, ch);
+  if (ch.kind !== 'old') after(0.45, () => play(ch, 'PawRaise', { loop: false, fade: 0.15 }), ch);   // he reaches for it
+}
+function eat() {
+  const ch = B; fishBusy = false; fed++; showFish(); sound.chomp(); buzz([18, 40, 18]);
+  burst(ch, mouthOf(ch), 16, 0.06); hearts(ch, 2 + fed);
+  if (fed >= FISH_GOAL) { after(0.3, superBobo, ch); return; }
+  ui.hint(fed === 1 ? 'Yum! Bobo wants more' : 'One more fish…');
+  if (ch.kind !== 'old') sound.mew();
+  play(ch, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(ch, 'Sit', { fade: 0.3 }) });
+}
+function superBobo() {
+  const ch = B; ch.super = { t: 0 };
+  sound.fanfare(); sound.sparkle(); sound.purr(2.2); buzz([40, 60, 40, 60, 140]);
+  toast('Super Bobo!'); ui.hint('Full, happy and glowing');
+  postEvent('reward', { what: 'super-bobo', charm: ch.kind });
+  ch.spin = { k: 0, turns: 2, lift: 0.035 }; ch.aura.visible = true;
+  burst(ch, topOf(ch), 60, 0.18);
+  tween(1.3, (k) => { if (ch.spin) ch.spin.k = k; ch.boost = 1 + 0.3 * easeOut(k); }, () => {
+    ch.spin = null;
+    play(ch, ch.clips.ClassicExcited ? 'ClassicExcited' : 'TailWag', { loop: false, fade: 0.25, onDone: () => play(ch, 'Sit', { fade: 0.35 }) });
+  }, ch);
+  tween(7.5, (k) => {
+    ch.super.t = k;
+    if (Math.random() < 0.45) { const a = Math.random() * 6.28, r = ch.height * 0.45 * scaleOf(ch); burst(ch, ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.5 * scaleOf(ch)).add(_v.set(Math.cos(a) * r, 0, Math.sin(a) * r * 0.5)), 2, 0.03); }
+    if (Math.random() < 0.08) hearts(ch, 1);
+    if (k > 0.85) ch.boost = 1 + 0.3 * (1 - easeInOut((k - 0.85) / 0.15));
+  }, () => { ch.super = null; ch.boost = 1; ch.aura.visible = false; fed = 0; showFish(); }, ch);
+}
+let toastT = 0;
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
+function pet() {
+  if (!live(B)) return; wake(); hearts(B, 4); sound.purr(0.9); buzz(10);
+  if (boboFree() && !fishBusy && !B.super) wave();
+}
+
+// ---------------------------------------------------------------- Bobo's own life while you watch
+// Between your actions he does something now and then (a tail wag, a stretch, a wave), and after half a
+// minute with nothing happening he curls up for a nap (Zzz). Anything you do wakes him.
+let idleT = 0, idleNext = 7, napping = false;
+const IDLES = { bobo: ['TailWag', 'ClassicChill', 'PawRaise', 'TailWag'], old: ['TailWag', 'PawRaise'] };
+const resting = (ch) => ch.current && ch.current.getClip().name === 'Sit';
+function wake() { idleT = 0; idleNext = 8 + Math.random() * 4; if (napping) { napping = false; play(B, 'Sit', { fade: 0.4 }); } }
+function idleLife(dt) {
+  if (!live(B) || !boboFree() || fishBusy || B.super || finaleOn) { if (!napping) idleT = 0; return; }
+  idleT += dt;
+  if (napping) { if (Math.random() < dt * 0.9) floater(B, zzzTex, topOf(B), { size: 0.006 + Math.random() * 0.004, life: 1.8, rise: 0.02, spin: 0.4 }); return; }
+  if (!resting(B)) return;
+  if (idleT > 30 && B.clips.ClassicSleep) { napping = true; play(B, 'ClassicSleep', { fade: 0.8 }); return; }
+  if (idleT > idleNext) {
+    const pool = (IDLES[B.kind] || IDLES.bobo).filter((n) => B.clips[n]); const n = pool[Math.floor(Math.random() * pool.length)];
+    idleNext = idleT + 7 + Math.random() * 5;
+    if (n) play(B, n, { loop: false, fade: 0.3, onDone: () => { if (!napping && boboFree()) play(B, 'Sit', { fade: 0.35 }); } });
+  }
+}
+
+// ---------------------------------------------------------------- Bobo watches the phone
+// After the animation has posed him, his head turns toward the camera (up to about 30 degrees), smoothly.
+// Worked out in the head's parent space, so it is right on the mirrored (other side) charm frames too.
+const _hp = new THREE.Vector3(), _hf = new THREE.Vector3(), _hq = new THREE.Quaternion(), _hm = new THREE.Matrix4(), _hI = new THREE.Quaternion();
+function lookAtViewer(ch, dt) {
+  const h = ch.head; if (!h) return;
+  ch.headRest = (ch.headRest || new THREE.Quaternion()).copy(h.quaternion);
+  const want = live(ch) && !ch.spin && !(napping && ch === B) && !ch.walk ? 1 : 0;
+  ch.lookW += THREE.MathUtils.clamp(want - ch.lookW, -dt * 2.5, dt * 1.2);
+  if (ch.lookW <= 0.001) return;
+  const par = h.parent; par.updateWorldMatrix(true, false); _hm.copy(par.matrixWorld).invert();
+  const to = _hp.copy(camera.position).applyMatrix4(_hm).sub(h.position).normalize();
+  ch.model.updateWorldMatrix(true, false);
+  const fwd = _hf.set(0, 0, 1).transformDirection(ch.model.matrixWorld).transformDirection(_hm);
+  if (!ch.lookDir) ch.lookDir = to.clone(); ch.lookDir.lerp(to, Math.min(dt * 6, 1)).normalize();
+  const ang = fwd.angleTo(ch.lookDir); if (ang < 1e-4) return;
+  _hq.setFromUnitVectors(fwd, ch.lookDir);
+  _hq.slerpQuaternions(_hI, _hq, Math.min(1, 0.52 / ang) * ch.lookW * 0.9);
+  h.quaternion.premultiply(_hq);
+}
+
+// soft shadows on the print under the hovering characters
+function shadows() {
+  for (const ch of [B, C]) {
+    const on = ch.landed && tune.tilt < 0.5; ch.shadow.visible = on; if (!on) continue;
+    const sc = scaleOf(ch), w = ch.def.w * sc * 0.9, hh = ch.def.h * sc * 0.55;
+    const bc = _v.copy(ch.root.position).addScaledVector(upVec(ch), ch.height * 0.45 * sc); ch.shadow.position.set(bc.x, bc.y, 0.0009);
+    ch.shadow.scale.set(w, hh, 1);
+    const lift = Math.max(ch.root.position.z, 0.002); ch.shadow.material.opacity = THREE.MathUtils.clamp(0.012 / lift, 0.25, 0.75);
+    if (ch.aura.visible) {
+      ch.aura.position.copy(ch.root.position).addScaledVector(upVec(ch), ch.height * 0.5 * sc); ch.aura.position.z = Math.min(ch.aura.position.z, 0.003);
+      const k = ch.super ? ch.super.t : 0, pulse = 0.85 + 0.15 * Math.sin(performance.now() / 160);
+      ch.aura.scale.setScalar(ch.height * sc * 1.6 * pulse); ch.aura.material.opacity = Math.min(k * 8, 1) * (1 - Math.max((k - 0.8) / 0.2, 0)) * 0.6;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
+function postEvent(type, props) {
+  if (params.has('nolog') || params.has('nopop')) return;
+  try { fetch('/api/bobo/events', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, source: 'keychain-ar', sessionId: SID, props }) }).catch(() => {}); } catch (e) { /* offline */ }
+}
+
+// ---------------------------------------------------------------- logos on photos and videos
+const LOGO = { evade: new Image(), act: new Image() };
+LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
+function drawWatermark(c, W, H) {
+  const u = Math.min(W, H) / 720, pad = 26 * u;
+  c.save(); c.shadowColor = 'rgba(0,0,0,.45)'; c.shadowBlur = 12 * u;
+  if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
+  if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.globalAlpha = 0.95; c.drawImage(LOGO.act, W - pad - w, H - pad - h, w, h); }
+  c.restore();
+}
+
+// the dock shows what can be done right now: Bobo's actions when he is out, the can's when it is out
+let dockOn = false;
+function updateDock(out) {
+  const bOut = live(B), cOut = live(C), busy = !boboFree() || fishBusy || !!B.super;
+  const on = !!(out && present && (bOut || cOut));
+  if (on !== dockOn) { dockOn = on; $('dock').classList.toggle('on', on); $('hud').classList.toggle('looking', !on); }
+  for (const id of ['b-feed', 'b-wave', 'b-wag', 'b-walk']) $(id).hidden = !bOut;
+  for (const id of ['b-fizz', 'b-spin']) $(id).hidden = !cOut;
+  document.querySelector('#dock .sep').hidden = !(bOut && cOut);
+  $('b-feed').disabled = busy; $('b-wave').disabled = $('b-wag').disabled = $('b-walk').disabled = busy;
+  $('b-fizz').disabled = finaleOn; $('b-spin').disabled = !!C.spin;
+  const wagLabel = B === Bold ? 'Dance' : 'Wag tail', sp = $('b-wag').querySelector('span'); if (sp.textContent !== wagLabel) sp.textContent = wagLabel;
+  $('b-replay').disabled = $('b-photo').disabled = !(out && present);
+}
+
 // landed characters stand on their spot in their charm's ground frame
 function settle() {
   for (const ch of [B, C]) {
     const Q = restQ(ch), pd = ch.pad; pd.position.copy(spotOf(ch)); pd.quaternion.copy(Q); pd.userData.ring.rotation.z += 0.01;
     pd.traverse((o) => { if (o.material) o.material.visible = tune.tilt > 0.5; });   // the landing pad only makes sense when they stand on the ground
     if (!ch.landed) continue;
-    ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(tune.size * landScale(ch)); pd.scale.setScalar(tune.size);
+    ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(scaleOf(ch)); pd.scale.setScalar(tune.size);
     if (ch.walk) {
       const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(Q)); ch.root.rotateY(ch.walk.turn);
     }
@@ -707,20 +951,18 @@ function tick(dt) {
     const PULL = 'Move back a little to see them', KEEP = 'Point at Bobo or the can to bring them back';
     ui.guide(!present);
     let off = false;
-    for (const ch of [B, C]) if (live(ch)) { const n = ch.root.getWorldPosition(_v).project(camera); off = off || Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
+    for (const ch of [B, C]) if (live(ch) && !ch.super) { const n = ch.root.getWorldPosition(_v).project(camera); off = off || Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
     const cur = $('hint').textContent;
     if (!present) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL || cur === HINT_FIND || cur.startsWith('Found it')) ui.hint('');
   }
-  const bo = !boboFree(); for (const id of ['b-wave', 'b-wag', 'b-walk']) $(id).disabled = bo;
-  const wagLabel = B === Bold ? 'Dance' : 'Wag tail'; if ($('b-wag').textContent !== wagLabel) $('b-wag').textContent = wagLabel;
-  $('b-replay').disabled = $('b-photo').disabled = !(out && present);
+  updateDock(out);
   for (let i = tweens.length - 1; i >= 0; i--) {
     const w = tweens[i]; if (!w) continue; if (w.owner && !w.owner.every(inView)) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
     if (k >= 1) { const j = tweens.indexOf(w); if (j >= 0) tweens.splice(j, 1); w.done && w.done(); }
   }
   settle();
-  for (const ch of [B, C]) if (pres[ch.key]) ch.mixer.update(dt);           // a character off screen holds still
-  updateBubbles(dt); updateMasks(dt);
+  for (const ch of [B, C]) if (pres[ch.key]) { if (ch.head && ch.headRest) ch.head.quaternion.copy(ch.headRest); ch.mixer.update(dt); lookAtViewer(ch, dt); }   // a character off screen holds still
+  updateBubbles(dt); updateFloaters(dt); updateMasks(dt); idleLife(dt); shadows();
   if (taps && !finaleOn) { tapIdle += dt; if (tapIdle > 6) { taps = 0; showFizz(); } }   // the fizz goes flat if you stop tapping
   for (const ch of ALL) {                                                  // sparks
     const pos = ch.sparks.geometry.attributes.position, u = ch.sparks.userData; let alive = 0;
@@ -754,7 +996,7 @@ const appModule = (data) => ({
     if (status === 'requesting') ui.hint('Allow camera access to begin');
     if (status === 'hasVideo') {   // camera first, then the what-to-point-at card on top of it (Dapo, 2026-11-11)
       camStartAt = performance.now(); tuneCamera(video); $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      $('how').hidden = false; $('b-go').focus();
+      $('how').hidden = false; $('b-go').focus(); syncRec();
     }
     if (status === 'failed') camFailed('failed');
   },
@@ -1008,7 +1250,7 @@ addEventListener('error', (e) => { (diag.errors = diag.errors || []).push(String
 async function start() {
   if (!loaded) return;
   $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
-  sound.init(); await askMotion();
+  sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
   // kc-can-art (the flat can art) only with ?canart=1: the photo target is what finds the real charm (test
@@ -1021,6 +1263,7 @@ async function start() {
     XR8.XrController.pipelineModule(),
     XR8.CanvasScreenshot.pipelineModule(),
     appModule(data),
+    { name: 'kc-capture', onRender: () => { if (capture) capture.frame(); } },   // after the scene is drawn: copy the frame into the recording
   ]);
   runAt = performance.now(); camLog('run');
   setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
@@ -1031,23 +1274,51 @@ async function start() {
 // Start goes straight to the camera, in the same tap (iOS only shows its permission prompts from a tap);
 // the what-to-point-at card appears once the camera picture is up, and Got it closes it.
 $('b-start').onclick = start;
-$('b-go').onclick = () => { $('how').hidden = true; };
-$('b-wave').onclick = wave; $('b-wag').onclick = wag; $('b-walk').onclick = walk; $('b-replay').onclick = replay;
-$('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').textContent = sound.on ? 'Sound on' : 'Sound off'; };
+$('b-go').onclick = () => { $('how').hidden = true; syncRec(); };
+// the record button shows as soon as the camera runs, so the pop-out itself can be filmed
+function syncRec() { capture && capture.setVisible(!$('hud').hidden && $('how').hidden && $('shot').hidden); }
+$('b-feed').onclick = feed; $('b-wave').onclick = () => { buzz(8); wave(); }; $('b-wag').onclick = () => { buzz(8); wag(); }; $('b-walk').onclick = () => { buzz(8); walk(); }; $('b-replay').onclick = () => { buzz(8); replay(); };
+$('b-fizz').onclick = () => { buzz(8); tapBubbles(C); }; $('b-spin').onclick = () => { buzz(8); spinCan(); };
+$('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').setAttribute('aria-label', sound.on ? 'Sound on' : 'Sound off'); };
+$('b-tune').hidden = !DEV;
+
+// ---------------------------------------------------------------- video (the Cola Run recorder, shared with Mattercraft)
+// Records the camera picture with the characters (not the buttons), with the logos on it and the page's
+// sounds; then the review sheet: save or share it, or send it to the Where is Bobo? globe (it lands in the
+// Media Library as "Needs review", source keychain-ar, and shows as an "in review" pin at the city).
+let capture = null;
+try {
+  capture = new ColaCapture({
+    canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'keychain-ar', audioContext: null,
+    connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
+    overlay: drawWatermark,
+    on: (name) => { if (name === 'recordStart') { buzz(25); diag.recs = (diag.recs || 0) + 1; } if (name === 'sent') diag.sent = (diag.sent || 0) + 1; },
+  });
+  Object.assign(capture.settings, {
+    corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#ffc23a', maxSeconds: 30,
+    hintText: 'Film Bobo and send him to the globe', sendLabel: 'Send to Where is Bobo?',
+    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Keychain AR clip', filePrefix: 'bobo-keychain', backLabel: 'Back to the camera',
+  });
+  capture.apply(); capture.setVisible(false);
+} catch (e) { console.warn('recorder', e); capture = null; }
 $('b-photo').onclick = async () => {
   try {
+    sound.shutter(); buzz(20); const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
     const b64 = await XR8.CanvasScreenshot.takeScreenshot();
-    const blob = await (await fetch('data:image/jpeg;base64,' + b64)).blob();
+    const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
+    const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0); drawWatermark(cx, cv.width, cv.height);   // EVADE and Activated by MEDIALIFE on the photo
+    const blob = await new Promise((res) => cv.toBlob(res, 'image/jpeg', 0.92));
     const file = new File([blob], `bobo-keychain-${++shots}.jpg`, { type: 'image/jpeg' });
     const url = URL.createObjectURL(blob);
     $('shot-img').src = url; $('shot-save').href = url; $('shot-save').download = file.name;
     const canShare = navigator.canShare && navigator.canShare({ files: [file] });
     $('shot-share').hidden = !canShare;
     $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo popped out of my EVADE keychain' }).catch(() => {});
-    $('shot').hidden = false; sound.tone(1200, 1800, 0.08, 0.1);
+    $('shot-save').hidden = false; $('shot').hidden = false; capture && capture.setVisible(false);
   } catch (e) { console.error(e); }
 };
-$('shot-close').onclick = () => { $('shot').hidden = true; };
+$('shot-close').onclick = () => { $('shot').hidden = true; syncRec(); };
 $('err-retry').onclick = () => location.reload();
 
 // size and spacing sliders (preview tool: find the numbers, then they become the defaults)
@@ -1073,7 +1344,8 @@ canvas.addEventListener('pointerup', (e) => {
   ray.setFromCamera(ndc, camera);
   const hit = (ch) => live(ch) && ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
   if (!present) return;
-  if (hit(B)) { wave(); tapBubbles(B); } else { if (hit(C)) spinCan(); tapBubbles(C); }   // a tap anywhere else fizzes the can (or Bobo, if he is on his own)
+  // tap Bobo to pet him (hearts, a purr, a wave); tap the can, or anywhere else, for bubbles from the can
+  if (hit(B)) pet(); else if (hit(C)) { spinCan(); tapBubbles(C); } else if (live(C)) tapBubbles(C); else pet();
 });
 
 // desktop: offer the phone hand-off, but the webcam works too
@@ -1086,4 +1358,4 @@ if (!mobile) {
 // the camera guide cycles through the three things to look for
 { const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
 
-window.__ar = { diag, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+window.__ar = { diag, feed, pet, get fed() { return fed; }, get fishBusy() { return fishBusy; }, get dbg() { return { free: boboFree(), busy: fishBusy, sup: !!B.super, walk: !!B.walk, live: live(B), cur: B.current && B.current.getClip().name }; }, get capture() { return capture; }, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };

@@ -76,6 +76,8 @@ export interface ColaCaptureOptions {
   isXR?: () => boolean;
   /** Fired for everything the UI does (analytics, pausing the game, Mattercraft Events). */
   on?: <K extends keyof CaptureEvents>(name: K, payload: CaptureEvents[K]) => void;
+  /** Draws the watermark instead of the built-in brand pill (logos, for example). W x H is the clip size. */
+  overlay?: ((c: CanvasRenderingContext2D, W: number, H: number) => void) | null;
 }
 
 export interface CaptureSettings {
@@ -100,6 +102,14 @@ export interface CaptureSettings {
   hideInXR: boolean;
   /** Sends clips to the endpoint. Off = save/share only. */
   sendEnabled: boolean;
+  /** Review sheet heading when sending is on / off. */
+  sheetTitle: string;
+  keepTitle: string;
+  /** Title stored with a sent clip, and the start of its file name. */
+  clipTitle: string;
+  filePrefix: string;
+  /** The button that closes the "Sent!" screen. */
+  backLabel: string;
 }
 
 export const DEFAULT_SETTINGS: CaptureSettings = {
@@ -120,6 +130,11 @@ export const DEFAULT_SETTINGS: CaptureSettings = {
   hintText: "Record your run and send it to the Bobo globe",
   hideInXR: true,
   sendEnabled: true,
+  sheetTitle: "Send Bobo's run to the globe?",
+  keepTitle: "Nice run! Keep the clip?",
+  clipTitle: "Cola Run clip",
+  filePrefix: "cola-run",
+  backLabel: "Back to the game",
 };
 
 /* ══ Recorder ═══════════════════════════════════════════════════════════ */
@@ -180,6 +195,7 @@ export class ClipRecorder {
   public onTick: ((seconds: number, fraction: number) => void) | null = null;
   public onStop: ((clip: Clip) => void) | null = null;
   public onError: ((message: string) => void) | null = null;
+  public overlay: ColaCaptureOptions["overlay"] = null;
 
   private readonly _out = document.createElement("canvas");
   private readonly _ctx = this._out.getContext("2d", { alpha: false })!;
@@ -272,7 +288,15 @@ export class ClipRecorder {
         /* a lost context draws nothing this frame */
       }
     }
-    if (s.watermark) this._drawOverlay(c, W, H, s);
+    if (s.watermark) {
+      if (this.overlay) {
+        try {
+          this.overlay(c, W, H);
+        } catch {
+          /* a broken watermark must not stop the recording */
+        }
+      } else this._drawOverlay(c, W, H, s);
+    }
     this._seconds = (performance.now() - this._t0) / 1000;
     this.onTick?.(this._seconds, Math.min(1, this._seconds / s.maxSeconds));
     if (this._seconds >= s.maxSeconds) this.stop();
@@ -422,6 +446,10 @@ export class ClipRecorder {
 export interface SendOptions {
   endpoint: string;
   source: string;
+  /** Stored with the clip; default "Cola Run clip". */
+  title?: string;
+  /** Start of the file name; default "cola-run". */
+  filePrefix?: string;
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
 }
@@ -488,11 +516,11 @@ export async function sendClip(clip: Clip, o: SendOptions): Promise<SentClip> {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: `cola-run-${stamp}.${clip.ext}`,
+        name: `${o.filePrefix || "cola-run"}-${stamp}.${clip.ext}`,
         size: clip.blob.size,
         mime: clip.mime,
         source: o.source,
-        title: "Cola Run clip",
+        title: o.title || "Cola Run clip",
         description: [scoreText, `${Math.round(clip.seconds)} s`, h?.badge]
           .filter(Boolean)
           .join(" · "),
@@ -566,13 +594,17 @@ export async function sendClip(clip: Clip, o: SendOptions): Promise<SentClip> {
 }
 
 /** Share sheet (phones: "Save video") or a download. */
-export async function saveClip(clip: Clip): Promise<"shared" | "downloaded" | "cancelled"> {
-  const name = `cola-run-${Date.now()}.${clip.ext}`;
+export async function saveClip(
+  clip: Clip,
+  filePrefix = "cola-run",
+  shareTitle = "My Cola Run",
+): Promise<"shared" | "downloaded" | "cancelled"> {
+  const name = `${filePrefix}-${Date.now()}.${clip.ext}`;
   const file = new File([clip.blob], name, { type: clip.mime });
   const nav = navigator as any;
   if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title: "My Cola Run" });
+      await nav.share({ files: [file], title: shareTitle });
       return "shared";
     } catch (e: any) {
       if (e?.name === "AbortError") return "cancelled";
@@ -749,6 +781,7 @@ export class ColaCapture {
     this._rec.onTick = (sec, f) => this._onTick(sec, f);
     this._rec.onStop = (clip) => this._onClip(clip);
     this._rec.onError = (m) => this._onRecordError(m);
+    this._rec.overlay = _o.overlay ?? null;
     this._ensureStyle();
     this._build();
     this.mount(_o.host);
@@ -784,8 +817,9 @@ export class ColaCapture {
     this._layer.querySelector(".crc-sendLbl")!.textContent = s.sendLabel;
     this._layer.querySelector(".crc-fine")!.textContent = s.consentText;
     this._layer.querySelector(".crc-main .crc-title")!.textContent = s.sendEnabled
-      ? "Send Bobo's run to the globe?"
-      : "Nice run! Keep the clip?";
+      ? s.sheetTitle
+      : s.keepTitle;
+    this._layer.querySelector('.crc-done [data-a="close"] span')!.textContent = s.backLabel;
     (this._layer.querySelector(".crc-send") as HTMLElement).style.display = s.sendEnabled
       ? ""
       : "none";
@@ -1127,6 +1161,8 @@ export class ColaCapture {
       const r = await sendClip(clip, {
         endpoint: this._o.endpoint,
         source: this._o.source,
+        title: this.settings.clipTitle,
+        filePrefix: this.settings.filePrefix,
         signal: ac.signal,
         onProgress: (f) => this._setSending(true, f),
       });
@@ -1159,7 +1195,7 @@ export class ColaCapture {
 
   private async _save() {
     if (!this._clip) return;
-    const r = await saveClip(this._clip);
+    const r = await saveClip(this._clip, this.settings.filePrefix, this.settings.clipTitle);
     if (r !== "cancelled") {
       this._emit("saved", undefined);
       if (r === "downloaded") this._showToast("Saved to your downloads.");

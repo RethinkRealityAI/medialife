@@ -110,7 +110,25 @@ from outside: an ideal 1920x1440 stream (falls back to the engine's own request)
 Zoom slider where the browser exposes them (Android Chrome), and drawing at up to 3x pixel density.
 `?hd=0` turns all of that off. The Tune panel shows the stream the phone actually gave.
 
+## The experience (UI round, 2026-11-11)
+- **HUD**: EVADE and Activated by MEDIALIFE logos top left (with the fish and fizz meters under them),
+  round icon buttons top right (photo, record, sound, replay), and an action dock at the bottom that
+  shows only the actions for the characters out right now (Feed, Wave, Wag tail or Dance, Walk for Bobo;
+  Bubbles and Spin for the can).
+- **Feed Bobo**: a fish flies from the phone into his mouth; three fish make **Super Bobo** (he grows,
+  spins, glows, cheers, then settles back). Tap Bobo to pet him (hearts and a purr).
+- **Alive when idle**: random tail wags, chill and paw-raise moments, a nap with Zzz after 30 s of
+  nothing, and his head turns to follow the phone. A soft shadow sits on the print under each character.
+- **Photo and video**: photos and clips carry the two logos. Video uses the Cola Run recorder
+  (`mattercraft/cola-run/CaptureCore.ts`, built to `/evade/cola-run-lab/assets/capture-core.js`), so a
+  clip can be saved, shared or sent to the Where is Bobo? globe (Media Library, "Needs review").
+  The record button shows as soon as the camera runs, so the pop-out itself can be filmed.
+- **Where is Bobo? events**: `scan` on start, `sighting` when a character lands, `reward` on Super Bobo,
+  and the capture event on a sent clip, all with source `keychain-ar`. `?nolog` sends nothing.
+- **Tune**: hidden; `?tune` (or `?dev`) brings the button and panel back.
+
 ## URL switches
+- `?tune` shows the Tune button and panel; `?nolog` sends no globe events.
 - `?only=kc-both` (or any other target name) loads just that image target.
 - `?debug` draws the target and charm frames and tints the silhouettes, and logs engine events.
 - `?debug&nopop` only tracks: use it to check alignment on a real keychain.

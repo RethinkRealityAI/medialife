@@ -34,7 +34,9 @@
     #splash.gone{opacity:0;transform:scale(1.06);pointer-events:none}
     #splash>*{position:relative;z-index:1}
     .brand{position:absolute!important;top:max(18px,env(safe-area-inset-top));left:0;right:0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.6)}
-    .brand b{color:var(--blue)}
+    .brand img{height:30px;width:auto;display:inline-block;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+    .act-by{display:block;height:26px;width:auto;margin:14px auto 0;opacity:.9}
+    @media (min-aspect-ratio:1/1){.act-by{margin-left:0}}
     h1{font-size:clamp(34px,10vw,56px);line-height:1;margin:0 0 10px;font-weight:900;letter-spacing:-.02em;background:linear-gradient(90deg,#bfe6ff,#fff 45%,#ffc6f6);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(79,180,255,.45))}
     .lead{margin:0 auto 18px;max-width:30ch;color:var(--text);font-size:16px}
     .steps{display:flex;gap:8px;justify-content:center;margin:0 0 18px;padding:0;list-style:none;font-size:12px;color:var(--muted)}
@@ -71,15 +73,49 @@
     .finds b{display:block;color:#fff;font-size:14px}
     #b-go{width:min(100%,340px);min-height:56px;font-size:17px}
     #b-back{background:none;border:0;color:var(--muted);font-size:14px;min-height:44px;text-decoration:underline}
-    nav{position:absolute;left:0;right:0;bottom:0;padding:26px 12px max(16px,env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:center;flex-wrap:wrap;background:linear-gradient(rgba(7,6,13,0),rgba(7,6,13,.7))}
-    nav button{min-height:46px;padding:0 15px;font-size:14px}
-    #side{position:absolute;right:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));display:flex;flex-direction:column;gap:8px}
-    #side button{min-height:44px;padding:0 12px;font-size:12px}
+    /* top: logos left, round icon buttons right (the record button from the capture core sits in the column too) */
+    .tl{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:flex-start;gap:14px;pointer-events:none!important}
+    .logos{display:flex;flex-direction:column;align-items:flex-start;gap:7px;pointer-events:none!important;filter:drop-shadow(0 2px 8px rgba(0,0,0,.55))}
+    .logos .evade{height:26px;width:auto}
+    .logos .actby{height:30px;width:auto;opacity:.92}
+    #side{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:10px}
+    .ib{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(14,16,24,.62);border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .2s}
+    .ib:active{transform:scale(.92)}
+    .ib svg{width:22px;height:22px}
+    .ib[aria-pressed=false] .on,.ib[aria-pressed=true] .off{display:none}
+    .crc-anchor,.crc-layer{--safe-area-inset-top:env(safe-area-inset-top);--safe-area-inset-bottom:env(safe-area-inset-bottom);--safe-area-inset-right:env(safe-area-inset-right);--safe-area-inset-left:env(safe-area-inset-left)}
+    .crc-anchor .crc-rec{width:48px!important;height:48px!important;background:rgba(14,16,24,.62)!important}
+    .crc-anchor .crc-ring{width:48px!important;height:48px!important}
+    .crc-anchor .crc-time{position:absolute;right:58px;top:12px}
+    .crc-anchor .crc-hint{top:2px!important;right:58px!important}
+    .crc-anchor .crc-hint::before{display:none}
 
-    #fizz{position:absolute;left:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));width:112px;height:28px;border-radius:999px;background:var(--panel);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
-    #fizz i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));transition:width .25s ease}
-    #fizz span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff}
-    #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);margin:0 auto;max-width:380px;background:rgba(14,16,24,.34);border:1px solid var(--line);border-radius:18px;padding:10px 14px;text-shadow:0 1px 4px rgba(0,0,0,.9);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;font-size:13px;font-weight:700;max-height:44vh;overflow:auto;overscroll-behavior:contain}
+    /* meters, under the logos */
+    .meters{display:flex;flex-direction:column;gap:8px;pointer-events:none!important}
+    .meter{position:relative;width:126px;height:30px;border-radius:999px;background:rgba(14,16,24,.62);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    .meter i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));transition:width .3s cubic-bezier(.2,.8,.2,1)}
+    #fish-m i{background:linear-gradient(90deg,#ffb23a,#ff6a3d)}
+    .meter span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fff}
+    .meter svg{width:16px;height:16px}
+
+    /* the action dock: appears once a character is out, shows only what can be done right now */
+    #dock{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translate(-50%,140%);display:flex;align-items:stretch;gap:4px;padding:6px;border-radius:26px;background:rgba(12,14,22,.66);border:1px solid rgba(255,255,255,.14);box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);transition:transform .45s cubic-bezier(.2,.9,.25,1.15),opacity .3s;opacity:0;max-width:calc(100% - 24px)}
+    #dock.on{transform:translate(-50%,0);opacity:1}
+    #dock .sep{width:1px;margin:8px 2px;background:rgba(255,255,255,.14)}
+    .act{flex-direction:column;gap:3px;width:68px;min-height:64px;padding:6px 2px 7px;border-radius:20px;border:0;background:transparent;font-size:11px;font-weight:700;letter-spacing:.01em;color:#eef3fa;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background .2s,transform .12s}
+    .act svg{width:26px;height:26px}
+    .act:active{transform:scale(.93)} .act:not(:disabled):hover{background:rgba(255,255,255,.08)}
+    .act.hero{background:linear-gradient(160deg,rgba(255,178,58,.95),rgba(255,106,61,.95));color:#fff;box-shadow:0 6px 18px rgba(255,120,60,.4)}
+    .act.hero:disabled{background:rgba(255,255,255,.08);box-shadow:none}
+    .act:disabled{opacity:.42}
+    #hint{top:auto!important;bottom:calc(98px + env(safe-area-inset-bottom));transition:bottom .4s}
+    #hud.looking #hint{bottom:calc(26px + env(safe-area-inset-bottom))}
+    #toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.8);padding:12px 20px;border-radius:20px;font-size:20px;font-weight:900;letter-spacing:-.01em;background:linear-gradient(90deg,rgba(255,178,58,.95),rgba(232,91,216,.95));color:#fff;box-shadow:0 10px 40px rgba(232,91,216,.45);opacity:0;pointer-events:none!important;transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.25,1.3);white-space:nowrap}
+    #toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+    #flashw{position:fixed;inset:0;z-index:45;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
+    #flashw.on{opacity:.85;transition:none}
+    @media (min-aspect-ratio:1/1) and (max-height:500px){.act{width:60px;min-height:56px}.act svg{width:22px;height:22px}#hint{bottom:calc(86px + env(safe-area-inset-bottom))}}
+    #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 96px);z-index:2;margin:0 auto;max-width:380px;background:rgba(14,16,24,.34);border:1px solid var(--line);border-radius:18px;padding:10px 14px;text-shadow:0 1px 4px rgba(0,0,0,.9);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;font-size:13px;font-weight:700;max-height:44vh;overflow:auto;overscroll-behavior:contain}
     #tune output{display:inline-block;min-width:5ch;color:var(--blue);font-variant-numeric:tabular-nums}
     #tune input{width:100%;accent-color:var(--pink);height:28px;margin:0}
     #tune p span{display:flex;gap:6px;flex:none}
@@ -91,7 +127,8 @@
     #cam-set button{grid-column:1/-1;min-height:40px;font-size:13px}
     /* photo preview + errors */
     .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
-    #shot-img{max-width:100%;max-height:66vh;border-radius:16px;border:1px solid var(--line)}
+    #shot-img{max-width:100%;max-height:62vh;border-radius:18px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+    #shot .kick{margin:0;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#ffc23a}
     .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
     #error h2{margin:0;font-size:22px} #error p{margin:0;max-width:34ch;color:var(--muted)} #error .err-more{font-size:13px;opacity:.85}
     #tap-cam{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;width:min(88vw,360px);padding:18px 18px 16px;border-radius:18px;background:rgba(7,6,13,.86);border:1px solid var(--line);text-align:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
@@ -111,13 +148,13 @@
   <canvas id="cam" aria-label="Camera view with Bobo and the Eclipse can popping out of the EVADE keychain"></canvas>
 
   <section id="splash" aria-labelledby="title">
-    <div class="brand">EVADE <b>×</b> MEDIALIFE</div>
+    <div class="brand"><img src="/brand/evade-logo.webp" alt="EVADE" width="110" height="29"></div>
     <h1 id="title">Bobo's Pop-Out</h1>
     <p class="lead">Point your camera at Bobo or the Eclipse can on your EVADE keychain and watch them jump out.</p>
     <ol class="steps" aria-label="How it works">
       <li><b>1. Start</b>Allow the camera</li>
       <li><b>2. Aim</b>At Bobo, the can, or both</li>
-      <li><b>3. Play</b>Tap for bubbles, take a photo</li>
+      <li><b>3. Play</b>Feed Bobo, film it, send it to the globe</li>
     </ol>
     <div id="desk" hidden>
       <div id="qr" aria-label="QR code that opens this page on your phone"></div>
@@ -125,7 +162,8 @@
     </div>
     <button id="b-start" class="primary" disabled>Loading…</button>
     <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
-    <p class="fine">The camera stays on your device. Nothing is recorded or uploaded. No keychain to hand? <a href="./target/">Open the test picture</a> on another screen.</p>
+    <p class="fine">The camera stays on your device. Nothing leaves it unless you choose to send a clip. No keychain to hand? <a href="./target/">Open the test picture</a> on another screen.</p>
+    <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="66" height="26">
   </section>
 
   <section id="how" hidden role="dialog" aria-modal="true" aria-labelledby="how-title">
@@ -140,14 +178,23 @@
     <button id="b-go" class="primary">Got it</button>
   </section>
 
-  <div id="hud" hidden>
+  <div id="hud" class="looking" hidden>
+    <div class="tl">
+    <div class="logos" aria-hidden="true"><img class="evade" src="/brand/evade-logo.webp" alt=""><img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt=""></div>
+    <div class="meters">
+      <div id="fizz" class="meter" hidden role="progressbar" aria-label="Fizz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i></i><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="14" r="5"/><circle cx="17" cy="7" r="3"/><circle cx="18" cy="16" r="1.8"/><path d="M6.8 12.2a2.6 2.6 0 0 1 2-1.6" stroke-linecap="round"/></svg>Fizz</span></div>
+      <div id="fish-m" class="meter" hidden role="progressbar" aria-label="Fish fed" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i></i><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3.2-4.6 8.6-5.8 13-3.2L21 6v12l-5-2.8C11.6 17.8 6.2 16.6 3 12z"/><circle cx="8" cy="11.2" r="1" fill="currentColor" stroke="none"/></svg><b id="fish-n">0 / 3</b></span></div>
+    </div>
+    </div>
     <div id="hint" role="status" aria-live="polite" hidden></div>
+    <div id="toast" aria-hidden="true"></div>
     <div id="guide" aria-hidden="true"><img class="show" src="/evade/keychain/ar/silhouette-bobo.png" alt=""><img src="/evade/keychain/ar/silhouette-eclipse.png" alt=""><img src="./image-targets/guide-both.png" alt=""></div>
-    <div id="fizz" hidden role="progressbar" aria-label="Fizz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i></i><span>Fizz</span></div>
     <div id="side">
-      <button id="b-photo" disabled aria-label="Take a photo">Photo</button>
-      <button id="b-sound" aria-pressed="true">Sound on</button>
-      <button id="b-tune" aria-expanded="false" aria-controls="tune">Tune</button>
+      <button id="b-photo" class="ib" disabled aria-label="Take a photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.4-2h5l1.4 2h1.6A2.5 2.5 0 0 1 20 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+      <div class="rec-slot" aria-hidden="true" style="width:48px;height:48px"></div>
+      <button id="b-sound" class="ib" aria-pressed="true" aria-label="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="on" d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+      <button id="b-replay" class="ib" disabled aria-label="Play the pop-out again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></svg></button>
+      <button id="b-tune" class="ib" hidden aria-expanded="false" aria-controls="tune" aria-label="Tune (preview tool)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 7h9M18 7h1M5 17h3M12 17h7"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </div>
     <form id="tune" hidden aria-label="Size, spacing and timing" onsubmit="return false">
       <label for="t-size">Size <output id="t-size-v" for="t-size">100%</output></label>
@@ -188,19 +235,24 @@
       <p id="t-cam"></p>
       <p id="t-diag"></p>
     </form>
-    <nav aria-label="Bobo controls">
-      <button id="b-wave" disabled>Wave</button>
-      <button id="b-wag" disabled>Wag tail</button>
-      <button id="b-walk" disabled>Walk</button>
-      <button id="b-replay" class="primary" disabled>Replay</button>
+    <nav id="dock" aria-label="Things to do">
+      <button id="b-feed" class="act hero" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3.2-4.6 8.6-5.8 13-3.2L21 6v12l-5-2.8C11.6 17.8 6.2 16.6 3 12z"/><circle cx="8" cy="11.2" r="1" fill="currentColor" stroke="none"/></svg><span>Feed</span></button>
+      <button id="b-wave" class="act" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="12" cy="15.6" rx="4.6" ry="3.9"/><ellipse cx="6" cy="10.4" rx="1.9" ry="2.4"/><ellipse cx="9.6" cy="6.6" rx="1.9" ry="2.5"/><ellipse cx="14.4" cy="6.6" rx="1.9" ry="2.5"/><ellipse cx="18" cy="10.4" rx="1.9" ry="2.4"/></svg><span>Wave</span></button>
+      <button id="b-wag" class="act" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 20c6 0 9-3 9-7s-3-5-2-8 4-3 6-1"/><path d="M3 9.5l2 2M3.5 15l2.5 0.4M20.5 9l-1.8 1.4" opacity=".7"/></svg><span>Wag tail</span></button>
+      <button id="b-walk" class="act" disabled><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="8" cy="15" rx="2.6" ry="3.4" transform="rotate(-12 8 15)"/><ellipse cx="16" cy="8" rx="2.6" ry="3.4" transform="rotate(12 16 8)"/><circle cx="5.6" cy="9.6" r="1"/><circle cx="8.2" cy="9" r="1"/><circle cx="13.8" cy="2.9" r="1"/><circle cx="16.6" cy="2.6" r="1"/></svg><span>Walk</span></button>
+      <i class="sep" aria-hidden="true"></i>
+      <button id="b-fizz" class="act" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="14" r="5"/><circle cx="17" cy="7" r="3"/><circle cx="18" cy="16" r="1.8"/><path d="M6.8 12.2a2.6 2.6 0 0 1 2-1.6" stroke-linecap="round"/></svg><span>Bubbles</span></button>
+      <button id="b-spin" class="act" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2.5"/><path d="M3.5 9.5c-1.5 3 1 6 5 6.5M20.5 14.5c1.5-3-1-6-5-6.5"/><path d="M7 18l1.5-2-2-1.2M17 6l-1.5 2 2 1.2"/></svg><span>Spin</span></button>
     </nav>
   </div>
+  <div id="flashw" aria-hidden="true"></div>
 
   <div id="shot" class="sheet" hidden role="dialog" aria-label="Your photo">
+    <p class="kick">Your photo</p>
     <img id="shot-img" alt="Your photo of Bobo and the Eclipse can">
     <div class="row">
       <button id="shot-share" class="primary" hidden>Share</button>
-      <a id="shot-save" class="btn">Save</a>
+      <a id="shot-save" class="btn" hidden>Save</a>
       <button id="shot-close">Back to camera</button>
     </div>
   </div>
