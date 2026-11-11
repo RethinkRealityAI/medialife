@@ -93,7 +93,9 @@
     .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
     #shot-img{max-width:100%;max-height:66vh;border-radius:16px;border:1px solid var(--line)}
     .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-    #error h2{margin:0;font-size:22px} #error p{margin:0;max-width:34ch;color:var(--muted)}
+    #error h2{margin:0;font-size:22px} #error p{margin:0;max-width:34ch;color:var(--muted)} #error .err-more{font-size:13px;opacity:.85}
+    #tap-cam{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;width:min(88vw,360px);padding:18px 18px 16px;border-radius:18px;background:rgba(7,6,13,.86);border:1px solid var(--line);text-align:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+    #tap-cam h2{margin:0 0 6px;font-size:19px} #tap-cam p{margin:0 0 14px;color:var(--muted);font-size:14px} #tap-cam .row button{min-height:48px}
     @media (max-height:720px){.steps{display:none}.lead{margin-bottom:14px}#splash{background-position:center -70px}}
     @media (min-aspect-ratio:1/1){
       #splash{background-size:auto 128%;background-position:22% 0;align-items:flex-end;justify-content:center;padding-right:9vw;text-align:left}
@@ -206,6 +208,7 @@
   <div id="error" class="sheet" hidden role="alert">
     <h2 id="err-title">Something went wrong</h2>
     <p id="err-body"></p>
+    <p id="err-more" class="err-more" hidden></p>
     <button id="err-retry" class="primary">Try again</button>
   </div>
 

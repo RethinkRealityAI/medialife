@@ -36,11 +36,12 @@ def cut_art(path, ppm_mm):
 
 
 CHARM = {
-    'cat': cut_art(REPO + '/public/evade/keychain/src/charm-bobo.png', 14),
+    'cat': cut_photo(HERE + '/src/bobo-product.png', 65),        # from the product shot (cut_product_charms.py)
+    'canback': cut_photo(HERE + '/src/can-back.png', 57.5),      # the can's QR side, from the product shot
     'can': cut_photo(HERE + '/src/can-photo.png', 57.5),
     'roblox': cut_photo(HERE + '/src/old-bobo.png', 75),
 }
-NAME = {'cat': 'cat Bobo', 'can': 'Eclipse can', 'roblox': 'Roblox Bobo'}
+NAME = {'cat': 'cat Bobo', 'canback': 'Eclipse can (QR side)', 'can': 'Eclipse can', 'roblox': 'Roblox Bobo'}
 
 
 def hole(im):
@@ -133,7 +134,7 @@ def perspective(im, tilt_x=0.0, tilt_y=0.0, zoom=1.0, rot=0.0, bg=(60, 60, 64)):
     return out
 
 
-NEW = [('cat', -48, 44, -34), ('can', 48, 40, 34)]
+NEW = [('cat', -48, 44, -34), ('canback', 48, 40, 34)]
 OLD = [('roblox', -48, 40, -30), ('can', 48, 40, 34)]
 TESTS = []
 def add(slug, title, what, img, light=None, blur=0):
@@ -145,9 +146,10 @@ def add(slug, title, what, img, light=None, blur=0):
 
 # ---- the new keychain (cat Bobo + can), each charm on its own chain from the ring
 add('new-apart', 'Cat Bobo and can, spread apart', 'The two keychains laid out on a table, a few centimetres apart.', keychain(NEW))
-add('new-hanging', 'Hanging side by side', 'Both hanging straight down from the ring, close together but not touching.', keychain([('cat', -32, 46, 0), ('can', 30, 44, 0)]))
-add('new-wide', 'Far apart', 'Spread wide, as if the ring was dropped on a table.', keychain([('cat', -58, 36, -60), ('can', 58, 34, 56)], bg='wood', ring=(800, 260), seed=2))
-add('new-overlap', 'One over the other', 'The can lying partly on top of the cat charm.', keychain([('cat', -10, 26, -6), ('can', 14, 34, 14)]))
+add('new-hanging', 'Hanging side by side', 'Both hanging straight down from the ring, close together but not touching.', keychain([('cat', -32, 46, 0), ('canback', 30, 44, 0)]))
+add('new-front-can', 'Cat Bobo with the can front', 'Cat Bobo next to the front of the real can charm (the photo).', keychain([('cat', -40, 44, -10), ('can', 38, 42, 10)], seed=11))
+add('new-wide', 'Far apart', 'Spread wide, as if the ring was dropped on a table.', keychain([('cat', -58, 36, -60), ('canback', 58, 34, 56)], bg='wood', ring=(800, 260), seed=2))
+add('new-overlap', 'One over the other', 'The can lying partly on top of the cat charm.', keychain([('cat', -10, 26, -6), ('canback', 14, 34, 14)]))
 add('new-tilt-back', 'Seen from below', 'Tipped back 40 degrees, like a phone held low.', perspective(keychain(NEW), tilt_x=40))
 add('new-tilt-side', 'Seen from the side', 'Turned 45 degrees sideways.', perspective(keychain(NEW, bg='dark', seed=3), tilt_y=45))
 add('new-far', 'Far away', 'Half size, like holding the phone at arm\'s length.', perspective(keychain(NEW), zoom=0.5, bg=(226, 224, 220)))

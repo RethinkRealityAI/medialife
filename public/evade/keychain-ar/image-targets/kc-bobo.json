@@ -6,16 +6,16 @@
   "properties": {
     "left": 0,
     "top": 0,
-    "width": 841,
-    "height": 1122,
+    "width": 1682,
+    "height": 2244,
     "isRotated": false,
-    "originalWidth": 841,
-    "originalHeight": 1122
+    "originalWidth": 1682,
+    "originalHeight": 2244
   },
   "resources": {
     "luminanceImage": "kc-bobo_luminance.jpg",
     "thumbnailImage": "kc-bobo_thumbnail.jpg"
   },
-  "created": 1794411336970,
-  "updated": 1794411336970
+  "created": 1794431560338,
+  "updated": 1794431560338
 }

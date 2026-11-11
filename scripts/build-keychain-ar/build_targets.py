@@ -101,5 +101,29 @@ im = im.resize((1200, 1600), Image.LANCZOS)
 hM = ART_CAN[3] * 1.04
 write_target('kc-can', im, dict(widthM=hM * 0.75, heightM=hM, silhouettes=True, charms={'can': dict(x=0, y=0, rz=0)}))
 Image.open(OUT + 'kc-can_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=140, threshold=2)).save(OUT + 'kc-can_luminance.jpg', quality=95)
+# ---- the two charms from the product shot (cut_product_charms.py): cat Bobo and the back of the can (the QR
+# side). Both are seen from the side whose outline is the artwork's mirrored, so their pictures sit in the
+# artwork's own picture frame mirrored ("mirror" in layout.json flips the charm frame, and the 3D character
+# with it, so it lines up with its print). They replace the flat cat artwork as kc-bobo.
+for tname, fname, key in (('kc-bobo', 'bobo-product.png', 'bobo'), ('kc-can-back', 'can-back.png', 'can')):
+    im = Image.open(HERE_SRC + fname).convert('RGB')
+    base = LAYOUT['kc-bobo' if key == 'bobo' else 'kc-can-art']
+    write_target(tname, im, dict(widthM=base['widthM'], heightM=base['heightM'], silhouettes=True, charms={key: dict(x=0, y=0, rz=0, mirror=True)}))
+    Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
+
+# ---- portal masks: the whole acrylic piece of each charm picture (outlines traced by cut_can_photo.py and
+# cut_product_charms.py), in that picture's frame grown by MASK_PAD so the glow round it has room
+from PIL import ImageDraw
+MASK_PAD = 1.3
+def portal_mask(tname, outline_file):
+    lay = LAYOUT[tname]; MH = 800; MW = round(MH * lay['widthM'] / lay['heightM'])
+    pts = json.load(open(HERE_SRC + outline_file))['points']
+    SS = 4; big = Image.new('L', (MW * SS, MH * SS), 0)
+    ImageDraw.Draw(big).polygon([(((x - 0.5) / MASK_PAD + 0.5) * MW * SS, ((y - 0.5) / MASK_PAD + 0.5) * MH * SS) for x, y in pts], fill=255)
+    m = Image.new('RGBA', (MW, MH), (255, 255, 255, 0)); m.putalpha(big.resize((MW, MH), Image.LANCZOS)); m.save(OUT + f'{tname}-mask.png', optimize=True)
+    lay['mask'] = dict(src=f'{tname}-mask.png', widthM=lay['widthM'] * MASK_PAD, heightM=lay['heightM'] * MASK_PAD)
+portal_mask('kc-can', 'can-outline.json')
+portal_mask('kc-can-back', 'can-back-outline.json')
+portal_mask('kc-bobo', 'bobo-product-outline.json')
 json.dump(dict(targets=LAYOUT), open(OUT + 'layout.json', 'w'), indent=2)
 print(open(OUT + 'layout.json').read())

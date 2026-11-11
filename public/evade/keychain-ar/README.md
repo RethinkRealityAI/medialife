@@ -1,8 +1,10 @@
 # EVADE keychain AR: Bobo's Pop-Out
 
 `/evade/keychain-ar/` — point the camera at the EVADE acrylic keychain and Bobo and the Eclipse can
-jump off their charms, land below the keychain and come alive. A black silhouette stays on each charm
-where the character was.
+jump off their charms, land below the keychain and come alive. A swirling portal in the charm's colours
+stays open on each charm where the character was (it covers the whole acrylic piece for the charms that
+have a traced outline). The portal's soft halo is baked once at load (`bakeMask`), and its swirl noise
+repeats exactly once round the circle, so there is no seam where the angle wraps.
 
 Image tracking is the **open-source 8th Wall engine** (`@8thwall/engine` 0.1.0, MIT,
 github.com/8thwall/8thwall), self-hosted in `vendor/xr/` (`xr.js` + the `xr-tracking.js` chunk; the
@@ -14,10 +16,19 @@ binary under a different licence and is not needed here.
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
 - `image-targets/` — written by `scripts/build-keychain-ar/build_targets.py`:
-  - `kc-bobo`: the cat keychain's Bobo charm (flat art). `*_luminance.jpg` is what the engine tracks.
-  - `kc-can`: the Eclipse can charm, cut from a phone photo of the real acrylic charm (clear edge and
-    tab included, `scripts/build-keychain-ar/src/can-photo.png`). The can is the same on both keychain
-    designs. `kc-can-art` is the flat art of the same charm, as a second picture of it.
+  Four targets are active: `kc-can`, `kc-can-back`, `kc-bobo`, `kc-old`. `*_luminance.jpg` is what the engine tracks.
+  - `kc-bobo`: the cat Bobo charm, cut from the product shot Dapo sent (2026-11-11,
+    `scripts/build-keychain-ar/cut_product_charms.py`). That side's outline is the artwork's mirrored
+    (tail on the right), so its charm frame is mirrored in `layout.json` (`"mirror": true`) and the 3D
+    Bobo is mirrored with it.
+  - `kc-can`: the front of the real Eclipse can charm, cut from Dapo's phone photo
+    (`scripts/build-keychain-ar/cut_can_photo.py`: GrabCut for the print, then the acrylic's outer edge
+    traced and smoothed; skin seen through the clear acrylic is softened so it gives no false detail).
+  - `kc-can-back`: the can's QR side, from the product shot (mirrored frame, like `kc-bobo`).
+  - `kc-can-art`: the flat can art, only with `?canart=1`.
+  - `*-mask.png`: the portal mask of a target (its whole acrylic piece), in its picture frame grown 1.3x
+    for the glow; the page swaps it in while that target drives the charm. Targets without one use the
+    silhouette inside the model.
   - `kc-old`: the earlier design's Bobo charm (the blocky avatar with one arm up), cut from a phone
     photo. It has its own model (`/evade/keychain/ar/old-bobo.glb`, built from boxes in Blender by
     `scripts/build-keychain-ar/build_old_bobo.py` to match the print) and its own silhouette. In

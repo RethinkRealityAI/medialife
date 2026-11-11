@@ -9,6 +9,7 @@ export KC_WORK=${KC_WORK:-/tmp/keychain-ar}
 OUT=../../public/evade/keychain/ar
 mkdir -p "$KC_WORK" "$OUT"
 $PY build_silhouettes.py
+# $PY cut_can_photo.py; $PY cut_product_charms.py   # only when a charm photo changes (needs opencv-python-headless): src/*.png + src/*-outline.json
 $PY build_targets.py
 $PY build_tex.py
 $PY build_bobo.py -- "$KC_WORK/bobo.glb" "$KC_WORK/bobo-keychain.blend"

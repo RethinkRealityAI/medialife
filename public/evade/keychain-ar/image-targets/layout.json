@@ -25,8 +25,14 @@
         "bobo": {
           "x": 0,
           "y": 0,
-          "rz": 0
+          "rz": 0,
+          "mirror": true
         }
+      },
+      "mask": {
+        "src": "kc-bobo-mask.png",
+        "widthM": 0.07809285714285714,
+        "heightM": 0.10418571428571428
       }
     },
     "kc-can-art": {
@@ -63,6 +69,29 @@
           "y": 0,
           "rz": 0
         }
+      },
+      "mask": {
+        "src": "kc-can-mask.png",
+        "widthM": 0.058305,
+        "heightM": 0.07774
+      }
+    },
+    "kc-can-back": {
+      "widthM": 0.04485714285714286,
+      "heightM": 0.05978571428571428,
+      "silhouettes": true,
+      "charms": {
+        "can": {
+          "x": 0,
+          "y": 0,
+          "rz": 0,
+          "mirror": true
+        }
+      },
+      "mask": {
+        "src": "kc-can-back-mask.png",
+        "widthM": 0.05831428571428572,
+        "heightM": 0.07772142857142857
       }
     }
   }

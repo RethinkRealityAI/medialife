@@ -1,5 +1,5 @@
 // EVADE keychain AR: point the camera at the keychain and Bobo and the Eclipse can jump off their
-// charms, leaving black silhouettes behind. Image tracking by the open-source 8th Wall engine
+// charms, leaving a swirling portal behind on each charm. Image tracking by the open-source 8th Wall engine
 // (github.com/8thwall/8thwall, MIT), self-hosted in ./vendor/xr. Rendering is plain three.js.
 //
 // How the alignment works: the image target is the Bobo charm and the can charm together as they sit on
@@ -67,34 +67,45 @@ const sparkTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.2, 'rgba(255,255,
 
 // ---------------------------------------------------------------- the charm mask: glow, portal, black
 // One quad per charm, cut by the silhouette picture. uGlow lights a border around the cut-out, uPortal
-// fills it with a swirling portal in that charm's colours, uBlack is the plain black mask left behind.
+// fills it with a swirling portal in that charm's colours, uBlack is the plain black mask behind it.
+// The soft halo round the cut-out is worked out once when the page loads (bakeMask: red = the mask, green =
+// the halo), so the live shader reads one texel per pixel instead of 25. The swirl's noise repeats exactly
+// once round the circle, so there is no seam where the angle wraps from -pi to pi (that seam was the line
+// running from the middle of the portal to its edge).
+const HALO_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D map; uniform float uAspect;
+  void main() {
+    float halo = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float an = float(i) * 0.5236; vec2 d = vec2(cos(an), sin(an) * uAspect);
+      halo += texture2D(map, vUv + d * 0.022).a + texture2D(map, vUv + d * 0.05).a * 0.7;
+    }
+    gl_FragColor = vec4(texture2D(map, vUv).a, halo / 20.4, 0.0, 1.0);
+  }`;
 const PORTAL_FRAG = /* glsl */ `
   precision highp float;
   varying vec2 vUv;
   uniform sampler2D map; uniform float uTime, uGlow, uPortal, uBlack, uAspect;
   uniform vec3 uA, uB, uC;
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
-  float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p = p * 2.03 + 7.1; a *= 0.5; } return v; }
+  // value noise that repeats every P cells across (and every 256 down, which also keeps the hash inputs small)
+  float noise(vec2 p, float P) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    float x0 = mod(i.x, P), x1 = mod(i.x + 1.0, P), y0 = mod(i.y, 256.0), y1 = mod(i.y + 1.0, 256.0);
+    return mix(mix(hash(vec2(x0, y0)), hash(vec2(x1, y0)), f.x), mix(hash(vec2(x0, y1)), hash(vec2(x1, y1)), f.x), f.y); }
+  float fbm(vec2 p, float P) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p, P); p = p * 2.0 + 7.1; P *= 2.0; a *= 0.5; } return v; }
   void main() {
-    float a = texture2D(map, vUv).a;
-    // soft halo: average of the mask around this pixel, at two radii
-    float halo = 0.0;
-    for (int i = 0; i < 12; i++) {
-      float an = float(i) * 0.5236; vec2 d = vec2(cos(an), sin(an) * uAspect);
-      halo += texture2D(map, vUv + d * 0.022).a + texture2D(map, vUv + d * 0.05).a * 0.7;
-    }
-    halo /= 20.4;
+    vec2 m = texture2D(map, vUv).rg; float a = m.r, halo = m.g;
     vec2 q = (vUv - 0.5) * vec2(1.0, 1.0 / uAspect); float r = length(q), ang = atan(q.y, q.x);
     float rim = smoothstep(0.0, 0.55, halo) * (1.0 - a);                    // outside the cut-out
     float edge = a * (1.0 - smoothstep(0.55, 1.0, halo));                   // just inside it
     float sweep = 0.5 + 0.5 * sin(ang * 2.0 - uTime * 3.2);
     vec3 rimCol = mix(uA, uC, sweep) * (1.1 + 0.5 * sin(uTime * 9.0 + ang * 5.0));
-    // portal: a spiral falling into the middle
+    // portal: a spiral falling into the middle (8 and 16 noise cells round the circle: seamless)
     float sw = ang + 1.6 / (r + 0.18) - uTime * 1.5;
-    float n = fbm(vec2(sw * 1.3, r * 5.0 - uTime * 0.9));
-    float n2 = fbm(vec2(sw * 2.6 + 3.0, r * 9.0 + uTime * 0.6));
+    float n = fbm(vec2(sw * 1.27324, r * 5.0 - uTime * 0.9), 8.0);
+    float n2 = fbm(vec2(sw * 2.54648 + 3.0, r * 9.0 + uTime * 0.6), 16.0);
     vec3 pc = mix(uB * 0.35, uA, smoothstep(0.25, 0.75, n));
     pc = mix(pc, uC, smoothstep(0.55, 0.9, n2) * 0.8);
     pc += vec3(1.0) * pow(n * n2 * 2.2, 3.0) * 0.9;                         // sparks in the swirl
@@ -105,9 +116,21 @@ const PORTAL_FRAG = /* glsl */ `
     vec3 glow = rimCol * rim * uGlow * 1.5;
     gl_FragColor = vec4(inside + glow, inA);                                // premultiplied: the glow is additive
   }`;
-function portalMaterial(map, aspect, a, b, c) {
+// mask picture -> a small texture holding the mask (red) and its halo (green), rendered once on the GPU
+function bakeMask(map, aspect) {
+  const img = map.image || {}; const k = Math.min(1, 512 / Math.max(img.width || 512, img.height || 512));
+  const rt = new THREE.WebGLRenderTarget(Math.max(2, Math.round((img.width || 512) * k)), Math.max(2, Math.round((img.height || 512) * k)), { depthBuffer: false });
+  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: map }, uAspect: { value: aspect } }, fragmentShader: HALO_FRAG,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }', depthTest: false, depthWrite: false });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false;
+  const sc = new THREE.Scene(); sc.add(quad);
+  const prev = renderer.getRenderTarget(); renderer.setRenderTarget(rt); renderer.render(sc, new THREE.Camera()); renderer.setRenderTarget(prev);
+  quad.geometry.dispose(); mat.dispose();
+  return rt.texture;
+}
+function portalMaterial(baked, aspect, a, b, c) {
   const m = new THREE.ShaderMaterial({
-    uniforms: { map: { value: map }, uTime: { value: 0 }, uGlow: { value: 0 }, uPortal: { value: 0 }, uBlack: { value: 0 }, uAspect: { value: aspect },
+    uniforms: { map: { value: baked }, uTime: { value: 0 }, uGlow: { value: 0 }, uPortal: { value: 0 }, uBlack: { value: 0 }, uAspect: { value: aspect },
       uA: { value: new THREE.Color(a) }, uB: { value: new THREE.Color(b) }, uC: { value: new THREE.Color(c) } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: PORTAL_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -152,7 +175,7 @@ const sound = {
 const ui = {
   hint(text) { const h = $('hint'); if (!text) { h.hidden = true; return; } if (h.textContent !== text) h.textContent = text; h.hidden = false; },
   guide(on) { $('guide').classList.toggle('on', on); },
-  error(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; $('splash').hidden = true; },
+  error(title, body, more = '') { $('err-title').textContent = title; $('err-body').textContent = body; $('err-more').textContent = more; $('err-more').hidden = !more; $('error').hidden = false; $('splash').hidden = true; $('err-retry').focus(); },
 };
 
 // ---------------------------------------------------------------- assets (loaded behind the splash)
@@ -161,8 +184,14 @@ const assets = Promise.all([
   loader.loadAsync(BASE + 'ar/bobo-keychain.glb'),
   loader.loadAsync(BASE + 'ar/eclipse-can.glb'),
   loader.loadAsync(BASE + 'ar/old-bobo.glb'),
-  fetch(HERE + 'image-targets/layout.json').then((r) => r.json()),
-  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-old'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
+  // layout.json, then the portal mask of each charm picture that has one (the whole acrylic piece)
+  fetch(HERE + 'image-targets/layout.json').then((r) => r.json()).then(async (layout) => {
+    layout.masks = {};
+    await Promise.all(Object.entries(layout.targets).filter(([, t]) => t.mask).map(([n, t]) => new THREE.TextureLoader().loadAsync(HERE + 'image-targets/' + t.mask.src)
+      .then((tex) => { tex.flipY = false; layout.masks[n] = tex; }).catch(() => { /* falls back to the model's silhouette */ })));   // flipY off: the glTF uv convention, like the models' own masks
+    return layout;
+  }),
+  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-can-back', 'kc-old'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -234,8 +263,11 @@ function prepCharacter(gltf, key, padR, kind = key) {
   const root = new THREE.Group(); const m = gltf.scene;
   // the silhouette quad comes off the model and is pinned to the charm frame
   const sil = m.getObjectByName('Silhouette'); sil.updateMatrix(); const silLocal = sil.matrix.clone(); sil.removeFromParent();
-  sil.material.map.wrapS = sil.material.map.wrapT = THREE.ClampToEdgeWrapping; sil.material.map.needsUpdate = true;
-  sil.material = portalMaterial(sil.material.map, def.w / def.h, ...PORTAL_COLOURS[kind]);
+  // the silhouette that ships in the model is the mask by default; a charm picture with a mask of its own
+  // (the whole acrylic piece) swaps that in while it is the one in view (useMask)
+  const map = sil.material.map; map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping; map.needsUpdate = true;
+  const own = { tex: bakeMask(map, def.w / def.h), w: def.w, h: def.h };
+  sil.material = portalMaterial(own.tex, def.w / def.h, ...PORTAL_COLOURS[kind]);
   sil.renderOrder = 5; sil.visible = false;
   sil.position.set(0, 0, 0.0004); sil.quaternion.identity(); sil.scale.set(def.w, def.h, 1);
   frame.add(sil);
@@ -258,7 +290,7 @@ function prepCharacter(gltf, key, padR, kind = key) {
   sparks.frustumCulled = false; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 };
   frame.add(pd, flash, scan, sparks);
   return { key, kind, def, frame, root, model: m, mixer, clips, current: null, baseScale, height, sil, lie: { pos: lp, quat: lq, s: ls.y },
-    fx: { glow: 0, portal: 0, black: 0, shake: 0 }, G: { q: new THREE.Quaternion(), flat: 0 }, pad: pd, flash, scan, sparks,
+    masks: { own }, maskOn: 'own', fx: { glow: 0, portal: 0, black: 0, shake: 0 }, G: { q: new THREE.Quaternion(), flat: 0 }, pad: pd, flash, scan, sparks,
     st: 'idle', steady: 0, landed: false, sils: true };
 }
 
@@ -288,12 +320,18 @@ function buildScene(xr, [bobo, can, oldBobo, layout, ...targets]) {
 
   for (const target of targets) {
     const lay = layout.targets[target.name]; const local = {};
-    for (const [k, c] of Object.entries(lay.charms)) local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz));
+    // "mirror": the picture shows the charm's other side, whose outline is the artwork's mirrored
+    for (const [k, c] of Object.entries(lay.charms)) local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz)).multiply(new THREE.Matrix4().makeScale(c.mirror ? -1 : 1, 1, 1));
     TS[target.name] = { name: target.name, pr: target.properties, lay, local, tracked: false, at: 0, seen: -1e9, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true, g: new THREE.Group() };
   }
   Bcat = B = prepCharacter(bobo, 'bobo', 0.03);
   Bold = prepCharacter(oldBobo, 'bobo', 0.03, 'old');   // the earlier design's Bobo takes the Bobo slot when its charm is the one in view
   ALL = [Bcat, Bold, C = prepCharacter(can, 'can', 0.02)];
+  // each charm picture with its own portal mask (the whole acrylic piece): baked once, swapped in by useMask
+  for (const ch of [Bcat, C]) for (const t of Object.values(TS)) {
+    const mk = t.lay.mask, tex = layout.masks[t.name];
+    if (mk && tex && t.lay.charms[ch.key]) { tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping; ch.masks[t.name] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
+  }
   for (let i = 0; i < 90; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, depthTest: false }));
     sp.visible = false; sp.renderOrder = 25; B.frame.add(sp); bubbles.push({ sp, life: 0, max: 1, vel: new THREE.Vector3(), size: 0.01, ph: 0 });
@@ -343,9 +381,10 @@ function groundFrame(ch) {
   const toFrame = _q.copy(f0.quaternion).invert().multiply(camera.quaternion);       // camera space -> charm space
   const up = new THREE.Vector3(0, 1, 0);
   if (gravity.up && performance.now() - gravity.t < 1500) up.copy(gravity.up);
-  up.applyQuaternion(toFrame).normalize();
+  const sx = Math.sign(f0.scale.x) || 1;                                          // a mirrored charm frame (the charm's other side)
+  up.applyQuaternion(toFrame); up.x *= sx; up.normalize();
   const camL = f0.worldToLocal(_v.copy(camera.position)).normalize();
-  const scrDown = new THREE.Vector3(0, -1, 0).applyQuaternion(toFrame);
+  const scrDown = new THREE.Vector3(0, -1, 0).applyQuaternion(toFrame); scrDown.x *= sx;
   const f = camL.clone().addScaledVector(up, -camL.dot(up)).add(scrDown.addScaledVector(up, -scrDown.dot(up)).multiplyScalar(0.6));
   if (f.lengthSq() < 1e-8) f.set(0, 0, 1); f.normalize();
   const r = new THREE.Vector3().crossVectors(up, f).normalize();
@@ -369,11 +408,11 @@ function updateFrames(dt) {
   const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
   const oldRecent = recent('kc-old', 5000);
   const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
-  const canT = on('kc-can') || on('kc-can-art');                             // the photo of the real can charm first, the flat art as a second opinion
+  const canT = on('kc-can') || on('kc-can-back') || on('kc-can-art');        // the photo of the real can charm, its QR side, then the flat art
   if (on('kc-bobo')) conf.bobo = true; if (canT) conf.can = true;
   // one charm's own picture is in view and the other's has not been for a while: the other charm has left
   if (conf.bobo && canT && !recent('kc-bobo', 1500)) conf.bobo = false;
-  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500) && !recent('kc-can-art', 1500)) conf.can = false;
+  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500) && !recent('kc-can-back', 1500) && !recent('kc-can-art', 1500)) conf.can = false;
   bothFor = both ? bothFor + dt : 0;
   if (bothFor > 1.5 && !conf.bobo && !conf.can) conf.bobo = conf.can = true;
   noneFor = Object.values(TS).some((t) => t.tracked) ? 0 : noneFor + dt; if (noneFor > 1) conf.bobo = conf.can = false;
@@ -404,8 +443,14 @@ function updateFrames(dt) {
     } else { goneFor[k] += dt; if (goneFor[k] > 0.25) driver[k] = null; }
     pres[k] = !!t || (pres[k] && goneFor[k] < 0.25);                       // nothing is drawn unless it is tracked now (short grace against flicker)
     f.visible = pres[k]; f.updateMatrixWorld(true); present = present || pres[k];
+    if (t) useMask(ch, t.name);
     if (t && ch.st === 'idle') { groundFrame(ch); ch.sils = t.lay.silhouettes; }   // once it pops, its ground frame is fixed to the charm
   }
+}
+function useMask(ch, name) {
+  const want = ch.masks[name] ? name : 'own'; if (ch.maskOn === want) return;
+  const m = ch.masks[want], u = ch.sil.material.uniforms; ch.maskOn = want;
+  u.map.value = m.tex; u.uAspect.value = m.w / m.h; ch.sil.scale.set(m.w, m.h, 1);
 }
 const SPOTS = {
   bobo: (flat) => new THREE.Vector3(-0.004 - HALF_GAP * (tune.gap - 1), -0.066 * (1 - flat), 0.012 + 0.06 * flat),
@@ -455,15 +500,19 @@ function charge(chs, go) {
 }
 const startPair = () => charge([C, B], () => { launch(C); after(Math.max(tune.stagger, 0.01), () => launch(B), B); });   // the can pops first, then Bobo
 const startSolo = (ch) => { diag.pops.push({ t: camStartAt ? +((performance.now() - camStartAt) / 1000).toFixed(1) : null, who: ch.kind }); charge([ch], () => launch(ch)); };
-// push the mask state into the shader, and rumble the masks on the charms
+// Once a character is out, the portal keeps swirling on its charm instead of turning black (Dapo, 2026-11-11).
+// It costs little: the quad only covers the charm, the halo is baked, and nothing is drawn when the charm is out of view.
+const PORTAL_REST = 1, GLOW_REST = 0.55;
+// push the mask state into the shader
 let fxTime = 0;
 function updateMasks(dt) {
   fxTime += dt;
   for (const ch of ALL) {
     const u = ch.sil.material.uniforms, fx = ch.fx;
-    u.uTime.value = fxTime; u.uGlow.value = fx.glow * (0.86 + 0.14 * Math.sin(fxTime * 5.0)); u.uPortal.value = fx.portal; u.uBlack.value = fx.black;
-    const s = fx.shake * 0.0007;
-    ch.sil.position.set((Math.random() - 0.5) * 2 * s, (Math.random() - 0.5) * 2 * s, 0.0004); ch.sil.rotation.z = (Math.random() - 0.5) * fx.shake * 0.03;
+    // the build-up throbs in light rather than shaking the mask about: a jittering quad read as the whole
+    // picture shaking on iPhone (Dapo, 2026-11-11)
+    const throb = 1 + Math.min(fx.shake, 1.5) * 0.35 * Math.sin(fxTime * 22.0);
+    u.uTime.value = fxTime; u.uGlow.value = fx.glow * (0.86 + 0.14 * Math.sin(fxTime * 5.0)) * throb; u.uPortal.value = fx.portal; u.uBlack.value = fx.black;
   }
 }
 function launch(ch) {
@@ -492,7 +541,7 @@ function launch(ch) {
       ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(hopDir(ch), Math.sin(kk * Math.PI) * 0.03);
       ch.root.quaternion.slerpQuaternions(from.quat, restQ(ch), easeOut(kk * 2));
       ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, tune.size, e));
-      fx.portal = portal0 * (1 - easeOut(kk * 1.2)); fx.glow = THREE.MathUtils.lerp(Math.max(glow0, 1) * (1 + 0.8 * Math.sin(Math.min(kk * 3, 1) * Math.PI)), 0.28, easeInOut(kk));   // the portal closes to black, the rim stays faintly lit
+      fx.portal = THREE.MathUtils.lerp(portal0, PORTAL_REST, easeInOut(kk)); fx.glow = THREE.MathUtils.lerp(Math.max(glow0, 1) * (1 + 0.8 * Math.sin(Math.min(kk * 3, 1) * Math.PI)), GLOW_REST, easeInOut(kk));   // the portal stays open behind the character, its rim softly lit
       const f = Math.sin(Math.min(kk * 1.6, 1) * Math.PI);
       flash.scale.setScalar(0.09 * f + 0.0001); flash.material.opacity = f;
       pd.scale.setScalar((0.2 + 0.8 * easeOut(kk * 1.3)) * tune.size); pd.userData.ring.material.opacity = easeOut(kk);
@@ -699,10 +748,10 @@ const appModule = (data) => ({
 //                                        the macro lens up close by themselves; the plain "Back Camera"
 //                                        cannot focus closer than about 15-20 cm on recent Pro models
 //  dpr   1 | 1.5 | 2 | 3                 how sharp the page draws; higher costs frame rate
-const CAM_DEFAULT = { res: 'engine', fps: 'engine', focus: 'engine', lens: '', dpr: 2 };
+const CAM_DEFAULT = { res: 'engine', fps: 'engine', focus: 'engine', lens: '', dpr: 1 };   // 1x drawing: fastest, and the charms are picked up quickest (Dapo's iPhone and Android tests, 2026-11-11)
 const CAM = { ...CAM_DEFAULT };
 try { Object.assign(CAM, JSON.parse(localStorage.getItem('kc-ar-cam') || '{}')); } catch (e) { /* defaults */ }
-for (const k of Object.keys(CAM_DEFAULT)) if (params.has(k)) CAM[k] = k === 'dpr' ? +params.get(k) || 2 : params.get(k);
+for (const k of Object.keys(CAM_DEFAULT)) if (params.has(k)) CAM[k] = k === 'dpr' ? +params.get(k) || 1 : params.get(k);
 if (params.get('hd') === '0') { Object.assign(CAM, CAM_DEFAULT); try { localStorage.removeItem('kc-ar-cam'); } catch (e) { /* none */ } }
 const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [1920, 1440] };
 // the chosen lens's deviceId, looked up by name (names only exist once the camera has been allowed, so a
@@ -865,25 +914,27 @@ function noteStream(stream) {
 }
 function showTapCam() {
   if (camStartAt || tapCamShown) return; tapCamShown = true;
-  const b = document.createElement('button'); b.id = 'tap-cam'; b.type = 'button'; b.className = 'primary'; b.textContent = 'Tap to start the camera';
-  Object.assign(b.style, { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 50, minHeight: '56px', padding: '0 28px', fontSize: '17px' });
-  b.onclick = () => {
+  // the usual cause (seen on Dapo's iPhone, 2026-11-11): another app or tab already has the camera, so the
+  // phone hands over a stream that never shows a picture
+  const card = document.createElement('div'); card.id = 'tap-cam'; card.setAttribute('role', 'alert');
+  card.innerHTML = '<h2>Waiting for the camera</h2><p>Another app or tab may be using it. Close the Camera app, any video call, and other browser tabs or browsers that use the camera, then tap Try again.</p><div class="row"><button type="button" class="primary" data-a="reload">Try again</button><button type="button" data-a="play">Start camera here</button></div>';
+  card.querySelector('[data-a=reload]').onclick = () => { camLog('tapReload'); location.reload(); };
+  card.querySelector('[data-a=play]').onclick = () => {
     camLog('tapPlay');
     const v = engineVideo(); if (v) { v.muted = true; v.play().catch((e) => camLog('tapPlayRejected:' + (e && e.name))); }
     setTimeout(() => { if (!camStartAt) camFailed('no video after tap'); }, 8000);
   };
-  const n = document.createElement('p'); n.id = 'tap-cam-note';
-  n.textContent = 'Still no picture? Close any other tabs or apps using the camera, then reload.';
-  Object.assign(n.style, { position: 'fixed', left: '50%', top: 'calc(50% + 48px)', transform: 'translateX(-50%)', zIndex: 50, width: 'min(86vw, 340px)', margin: 0, textAlign: 'center', color: '#fff', fontSize: '14px', textShadow: '0 1px 3px #000' });
-  document.body.appendChild(b); document.body.appendChild(n); b.focus();
+  document.body.appendChild(card); card.querySelector('button').focus();
 }
-function hideTapCam() { for (const id of ['tap-cam', 'tap-cam-note']) { const el = document.getElementById(id); if (el) el.remove(); } }
+function hideTapCam() { const el = document.getElementById('tap-cam'); if (el) el.remove(); }
 function camFailed(why) {
   if (camStartAt || diag.camFailed) return;
   diag.camFailed = why; flushDiag(true, true);
-  ui.error('Camera not available', CAM_CUSTOM
+  hideTapCam();
+  ui.error('The camera didn\'t start', CAM_CUSTOM
     ? 'The camera test settings on this phone may not suit it. Tap below to go back to the standard camera.'
-    : 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
+    : 'Another app or tab may be using it. Close the Camera app, any video call, and other browser tabs or browsers that use the camera, then tap Try again.',
+    CAM_CUSTOM ? '' : 'Still stuck? Allow camera access for this site in your browser settings. On iPhone use Safari, on Android use Chrome.');
   if (CAM_CUSTOM) addResetButton();
 }
 function addResetButton() {
