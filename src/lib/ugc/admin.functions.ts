@@ -11,6 +11,7 @@ import {
   deleteCampaign,
   deleteCreatorData,
   editCreator,
+  importChannelStats,
   importPerkCodes,
   importTrackingCsv,
   markDelivered,
@@ -143,6 +144,9 @@ export const adminEditUgcCreator = createServerFn({ method: "POST" })
       teeSize: z.enum(UGC_TEE_SIZES).nullable().optional(),
       phone: str(40).optional(),
       address: address.nullable().optional(),
+      followers: z
+        .record(z.enum(UGC_PLATFORMS), z.number().int().min(0).max(10_000_000_000).nullable())
+        .optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -215,6 +219,17 @@ export const adminImportUgcCsv = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const ns = await requireUgcAdmin();
     return importCsv(ns, data.csv, { dryRun: data.dryRun });
+  });
+
+/**
+ * Follower / subscriber counts per channel: email,platform,followers[,posts,likes,url,note,checked_at].
+ * Matched to creators by email. Idempotent.
+ */
+export const adminImportUgcChannelStats = createServerFn({ method: "POST" })
+  .validator(z.object({ csv: z.string().max(5_000_000), dryRun: z.boolean().optional() }))
+  .handler(async ({ data }) => {
+    const ns = await requireUgcAdmin();
+    return importChannelStats(ns, data.csv, { dryRun: data.dryRun });
   });
 
 /* ---------------------------------------------------------------------------

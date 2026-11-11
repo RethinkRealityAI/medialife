@@ -41,7 +41,7 @@ import {
   syncCreatorStatus,
   type UgcCreatorSummary,
 } from "./data.server";
-import { parseCodesCsv, parseTrackingCsv, toCsv } from "./import";
+import { parseChannelStatsCsv, parseCodesCsv, parseTrackingCsv, toCsv } from "./import";
 import { importSignup, manualSignup, type ManualCreatorInput } from "./import.server";
 import { sendJoinEmail, sendUgcNotice } from "./mail.server";
 import {
@@ -58,6 +58,8 @@ import {
   submissionView,
   trackingUrlFor,
   type ShippingAddress,
+  type UgcChannelStat,
+  type UgcPlatform,
   type UgcActivity,
   type UgcAdminFields,
   type UgcAssetGroup,
@@ -297,7 +299,12 @@ export type AdminCreatorEdit = Partial<
     UgcCreator,
     "name" | "creatorName" | "email" | "country" | "handles" | "mainPlatform" | "teeSize"
   >
-> & { phone?: string; address?: ShippingAddress | null };
+> & {
+  phone?: string;
+  address?: ShippingAddress | null;
+  /** Follower / subscriber counts typed in by the team; null clears that platform's count. */
+  followers?: Partial<Record<UgcPlatform, number | null>>;
+};
 
 export async function editCreator(
   ns: UgcNamespace,
@@ -322,6 +329,18 @@ export async function editCreator(
   }
   if (patch.mainPlatform !== undefined) c.mainPlatform = patch.mainPlatform;
   if (patch.teeSize !== undefined) c.teeSize = patch.teeSize;
+  if (patch.followers) {
+    const stats = { ...(c.channelStats ?? {}) };
+    for (const [p, n] of Object.entries(patch.followers) as [UgcPlatform, number | null][]) {
+      const cur = stats[p];
+      if (n == null) {
+        delete stats[p];
+      } else if (cur?.followers !== n) {
+        stats[p] = { ...cur, followers: n, checkedAt: Date.now(), source: "manual" };
+      }
+    }
+    c.channelStats = stats;
+  }
   await saveCreator(ns, c);
   if (patch.phone !== undefined || patch.address !== undefined) {
     const p = await getPii(ns, id);
@@ -1224,4 +1243,118 @@ export async function deleteCreatorData(
     title: "Your phone and address were deleted",
   });
   return { ok: true };
+}
+
+/* ---------------------------------------------------------------------------
+   Channel stats (follower / subscriber counts)
+   --------------------------------------------------------------------------- */
+
+export type ChannelStatsResult = {
+  email: string;
+  platform: UgcPlatform | null;
+  result: "updated" | "unchanged" | "no-creator" | "skipped";
+  creatorId: string | null;
+  creatorName: string;
+  reason?: string;
+};
+
+/**
+ * Merges a channel stats CSV into the creators it names (matched by email).
+ * Idempotent: re-importing the same file changes nothing. Rows for one creator
+ * are saved together.
+ */
+export async function importChannelStats(
+  ns: UgcNamespace,
+  csv: string,
+  opts: { dryRun?: boolean } = {},
+): Promise<{
+  updated: number;
+  unchanged: number;
+  noCreator: number;
+  skipped: number;
+  creators: number;
+  rows: ChannelStatsResult[];
+}> {
+  const rows = parseChannelStatsCsv(csv).slice(0, 5000);
+  const out: ChannelStatsResult[] = [];
+  const byEmail = new Map<string, typeof rows>();
+  for (const r of rows) {
+    if (r.problem || !r.platform) {
+      out.push({
+        email: r.email,
+        platform: r.platform,
+        result: "skipped",
+        creatorId: null,
+        creatorName: "",
+        reason: r.problem ?? "Unknown platform",
+      });
+      continue;
+    }
+    byEmail.set(r.email, [...(byEmail.get(r.email) ?? []), r]);
+  }
+  let creators = 0;
+  for (const [email, list] of byEmail) {
+    const c = await findCreatorByEmail(ns, email);
+    if (!c) {
+      for (const r of list)
+        out.push({
+          email,
+          platform: r.platform,
+          result: "no-creator",
+          creatorId: null,
+          creatorName: "",
+          reason: "No creator with this email yet. Import the sign-ups first.",
+        });
+      continue;
+    }
+    const stats = { ...(c.channelStats ?? {}) };
+    let changed = false;
+    for (const r of list) {
+      const p = r.platform as UgcPlatform;
+      const next: UgcChannelStat = {
+        followers: r.followers,
+        posts: r.posts,
+        likes: r.likes,
+        url: r.url || undefined,
+        note: r.note || undefined,
+        checkedAt: r.checkedAt ?? Date.now(),
+        source: "import",
+      };
+      const cur = stats[p];
+      const same =
+        !!cur &&
+        cur.followers === next.followers &&
+        (cur.posts ?? null) === next.posts &&
+        (cur.likes ?? null) === next.likes &&
+        (cur.url ?? "") === (next.url ?? "") &&
+        (cur.note ?? "") === (next.note ?? "");
+      if (!same) {
+        stats[p] = next;
+        changed = true;
+      }
+      out.push({
+        email,
+        platform: p,
+        result: same ? "unchanged" : "updated",
+        creatorId: c.id,
+        creatorName: c.creatorName || c.name,
+      });
+    }
+    if (changed) {
+      creators += 1;
+      if (!opts.dryRun) {
+        c.channelStats = stats;
+        await saveCreator(ns, c);
+      }
+    }
+  }
+  const n = (k: ChannelStatsResult["result"]) => out.filter((r) => r.result === k).length;
+  return {
+    updated: n("updated"),
+    unchanged: n("unchanged"),
+    noCreator: n("no-creator"),
+    skipped: n("skipped"),
+    creators,
+    rows: out,
+  };
 }

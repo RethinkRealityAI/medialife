@@ -143,7 +143,8 @@ All in `model.ts` unless noted.
 
 - `UgcCreator` (admin) / `UgcCreatorView` (creator; no `source`, no `hubUserId`). Fields: `id,
   status, statusChangedAt, campaignIds, name` (person), `creatorName` (channel name), `email,
-  country, platforms, mainPlatform, handles, audiences, applicationNotes, teeSize, consent, deletionRequest
+  country, platforms, mainPlatform, handles, audiences, channelStats (admin only, stripped from
+  `creatorView`), applicationNotes, teeSize, consent, deletionRequest
   ({at, note} | null), createdAt, approvedAt, joinedAt, lastLoginAt, sample?`.
 - `UgcPii` (admin only; creators get their own phone/address via `getUgcProfile`): `phone,
   address: ShippingAddress | null, purgeAfter, purgedAt`. `ShippingAddress = { name, line1, line2,
@@ -391,3 +392,13 @@ mocked Netlify API, delete-after-import), 2 GB / 5 GB limits at init and on chun
 sniffing, magic-link sign-in (single use, applicants refused, off-site `next` dropped), one
 creator can't read another's files or submission, the disclosure rule on live links, status
 transitions, shipping/home/brief, and the seed.
+
+## Channel stats
+
+`UgcCreator.channelStats` holds looked-up follower / subscriber counts per platform
+(`UgcChannelStat`: `followers, posts, likes, url, note, checkedAt, source`). Admin only.
+They come from Admin > UGC Hub > Import > Channel stats (CSV
+`email,platform,followers[,posts,likes,url,note,checked_at]`, matched by email, idempotent;
+`adminImportUgcChannelStats`) or from the Edit profile dialog (`adminEditUgcCreator`
+`followers`). The pipeline index carries `reach` (sum across channels, `ugcTotalReach`) for the
+Reach column and the "Biggest reach first" sort.

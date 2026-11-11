@@ -48,11 +48,19 @@ import {
   adminSeedUgcSample,
   adminSetUgcStatus,
 } from "@/lib/ugc/admin.functions";
-import { UGC_STATUS_LABELS, UGC_STATUSES, canTransition, type UgcStatus } from "@/lib/ugc/model";
+import {
+  UGC_PLATFORM_LABELS,
+  UGC_STATUS_LABELS,
+  UGC_STATUSES,
+  canTransition,
+  formatCount,
+  type UgcPlatform,
+  type UgcStatus,
+} from "@/lib/ugc/model";
 import { cn } from "@/lib/utils";
 
 import type { CreatorSummary, Pipeline } from "./types";
-import { JoinLinksDialog, MainHandle, UgcStatusPill, mainAudience, plural, useBulk } from "./ui";
+import { JoinLinksDialog, MainHandle, UgcStatusPill, plural, reachLabel, useBulk } from "./ui";
 
 export const PIPELINE_FILTERS = [...UGC_STATUSES, "all", "deletion-requested"] as const;
 export type PipelineFilter = (typeof PIPELINE_FILTERS)[number];
@@ -169,6 +177,12 @@ export function PipelinePage({
   );
 }
 
+/** "TikTok 38.2K · Roblox 1.9K" for the reach cell's tooltip. */
+const reachTitle = (c: CreatorSummary) =>
+  Object.entries(c.followers ?? {})
+    .map(([p, n]) => `${UGC_PLATFORM_LABELS[p as UgcPlatform] ?? p} ${formatCount(n)}`)
+    .join(" · ") || undefined;
+
 function PipelineTable({
   data,
   filters,
@@ -187,22 +201,25 @@ function PipelineTable({
   const [links, setLinks] = useState<{ name: string; email: string; devLink: string }[]>([]);
   const titles = useMemo(() => new Map(campaigns.map((c) => [c.id, c.title])), [campaigns]);
 
+  const [sort, setSort] = useState<"newest" | "reach">("newest");
   const q = filters.q.trim().toLowerCase();
   const shown = useMemo(
     () =>
-      creators.filter(
-        (c) =>
-          (filters.status === "all" ||
-            (filters.status === "deletion-requested"
-              ? c.deletionRequested
-              : c.status === filters.status)) &&
-          (!filters.campaign || c.campaignIds.includes(filters.campaign)) &&
-          (!q ||
-            [c.name, c.creatorName, c.email, c.country, ...Object.values(c.handles ?? {})].some(
-              (v) => v?.toLowerCase().includes(q),
-            )),
-      ),
-    [creators, filters.status, filters.campaign, q],
+      creators
+        .filter(
+          (c) =>
+            (filters.status === "all" ||
+              (filters.status === "deletion-requested"
+                ? c.deletionRequested
+                : c.status === filters.status)) &&
+            (!filters.campaign || c.campaignIds.includes(filters.campaign)) &&
+            (!q ||
+              [c.name, c.creatorName, c.email, c.country, ...Object.values(c.handles ?? {})].some(
+                (v) => v?.toLowerCase().includes(q),
+              )),
+        )
+        .sort((a, b) => (sort === "reach" ? (b.reach ?? -1) - (a.reach ?? -1) : 0)),
+    [creators, filters.status, filters.campaign, q, sort],
   );
   const shownIds = shown.map((c) => c.id);
   const picked = shown.filter((c) => selected.has(c.id));
@@ -305,6 +322,15 @@ function PipelineTable({
               ))}
             </SelectContent>
           </Select>
+          <Select value={sort} onValueChange={(v) => setSort(v as "newest" | "reach")}>
+            <SelectTrigger className="h-10 w-full rounded-xl bg-black/30 sm:w-48" aria-label="Sort">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="reach">Biggest reach first</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -381,7 +407,7 @@ function PipelineTable({
                     Main platform
                   </th>
                   <th scope="col" className="px-3 py-2.5 font-normal">
-                    Audience
+                    Reach
                   </th>
                   <th scope="col" className="px-3 py-2.5 font-normal">
                     Status
@@ -437,8 +463,11 @@ function PipelineTable({
                         handles={c.handles}
                       />
                     </td>
-                    <td className="px-3 py-2.5 text-xs whitespace-nowrap">
-                      {mainAudience(c) ?? <span className="text-muted-foreground/60">–</span>}
+                    <td
+                      className="px-3 py-2.5 text-xs whitespace-nowrap tabular-nums"
+                      title={reachTitle(c)}
+                    >
+                      {reachLabel(c) ?? <span className="text-muted-foreground/60">–</span>}
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex flex-wrap items-center gap-1">
@@ -525,8 +554,8 @@ function PipelineTable({
                         handles={c.handles}
                         plain
                       />
-                      {mainAudience(c) ? (
-                        <span className="text-sky-200">{mainAudience(c)}</span>
+                      {reachLabel(c) ? (
+                        <span className="text-sky-200 tabular-nums">{reachLabel(c)}</span>
                       ) : null}
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
