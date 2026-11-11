@@ -187,11 +187,13 @@ function onMotion(e) {
 async function askMotion() {
   try {
     if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) {
-      if ((await DeviceMotionEvent.requestPermission()) !== 'granted') return;
+      const r = await DeviceMotionEvent.requestPermission(); motionPerm = r;
+      if (r !== 'granted') return;
     }
     window.addEventListener('devicemotion', onMotion);
-  } catch (e) { /* stay in keychain-relative mode */ }
+  } catch (e) { motionPerm = 'error:' + (e && e.name); /* stay in keychain-relative mode */ }
 }
+let motionPerm = 'not asked';
 
 // ---------------------------------------------------------------- scene state
 let scene, camera, renderer;
@@ -665,9 +667,9 @@ const appModule = (data) => ({
   name: 'evade-keychain',
   onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },   // the scene exists from here on
   onUpdate: () => { const now = performance.now(); countFrame(now, Object.values(TS).some((t) => t.tracked)); flushDiag(false); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
-  onCameraStatusChange: ({ status, video }) => {
+  onCameraStatusChange: ({ status, video, stream }) => {
     camLog(status);
-    if (status === 'hasStream') kickVideo(video);
+    if (status === 'hasStream') { kickVideo(video); noteStream(stream); }
     if (status === 'hasVideo') hideTapCam();
     if (status === 'requesting') ui.hint('Allow camera access to begin');
     if (status === 'hasVideo') { camStartAt = performance.now(); tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
@@ -820,7 +822,7 @@ function diagRecord() {
   return {
     sid: SID, v: 1, page: location.pathname, params: location.search, note: diag.note, profile: { ...CAM }, tune: { ...tune },
     screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, renderDpr: Math.min(devicePixelRatio || 1, CAM.dpr) },
-    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM, ios: IOS,
+    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM, ios: IOS, motion: motionPerm, stream: diag.stream || null, visible: document.visibilityState,
     asked: diag.asked, askFailed: diag.askFailed || null, camera: diag.camera, cameras: diag.cameras || null, zoom: diag.zoom || null,
     targetsLoaded: activeTargets.map((t) => t.name), runS: camStartAt ? Math.round((performance.now() - camStartAt) / 1000) : 0,
     fps: { avg: avg(diag.fps.all), tracking: avg(diag.fps.tracking), idle: avg(diag.fps.idle), min: diag.fps.all.length ? Math.min(...diag.fps.all) : null, last30: diag.fps.all.slice(-30) },
@@ -850,6 +852,14 @@ function engineVideo() { return [...document.querySelectorAll('video')].find((v)
 function kickVideo() {
   setTimeout(() => { if (!camStartAt) { camLog('notPlaying'); showTapCam(); } }, 4000);
 }
+// what the phone handed over: a track that is "muted" or "ended" here means another tab or app holds the camera
+function noteStream(stream) {
+  try {
+    const t = stream && stream.getVideoTracks()[0];
+    diag.stream = t ? { label: t.label, muted: t.muted, state: t.readyState, enabled: t.enabled, settings: t.getSettings ? t.getSettings() : null } : null;
+    if (t) { t.onmute = () => camLog('trackMuted'); t.onunmute = () => camLog('trackUnmuted'); t.onended = () => camLog('trackEnded'); }
+  } catch (e) { diag.stream = { error: String(e) }; }
+}
 function showTapCam() {
   if (camStartAt || tapCamShown) return; tapCamShown = true;
   const b = document.createElement('button'); b.id = 'tap-cam'; b.type = 'button'; b.className = 'primary'; b.textContent = 'Tap to start the camera';
@@ -859,9 +869,12 @@ function showTapCam() {
     const v = engineVideo(); if (v) { v.muted = true; v.play().catch((e) => camLog('tapPlayRejected:' + (e && e.name))); }
     setTimeout(() => { if (!camStartAt) camFailed('no video after tap'); }, 8000);
   };
-  document.body.appendChild(b); b.focus();
+  const n = document.createElement('p'); n.id = 'tap-cam-note';
+  n.textContent = 'Still no picture? Close any other tabs or apps using the camera, then reload.';
+  Object.assign(n.style, { position: 'fixed', left: '50%', top: 'calc(50% + 48px)', transform: 'translateX(-50%)', zIndex: 50, width: 'min(86vw, 340px)', margin: 0, textAlign: 'center', color: '#fff', fontSize: '14px', textShadow: '0 1px 3px #000' });
+  document.body.appendChild(b); document.body.appendChild(n); b.focus();
 }
-function hideTapCam() { const b = document.getElementById('tap-cam'); if (b) b.remove(); }
+function hideTapCam() { for (const id of ['tap-cam', 'tap-cam-note']) { const el = document.getElementById(id); if (el) el.remove(); } }
 function camFailed(why) {
   if (camStartAt || diag.camFailed) return;
   diag.camFailed = why; flushDiag(true, true);
