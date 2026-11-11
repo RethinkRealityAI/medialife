@@ -14,13 +14,13 @@ binary under a different licence and is not needed here.
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
 - `image-targets/` — written by `scripts/build-keychain-ar/build_targets.py`:
-  - `kc-both`: the Bobo cat charm and the can charm together as they hang on the keychain (no ring or
-    chain). `*_luminance.jpg` is what the engine tracks, `*.jpg` is the same in colour.
-  - `kc-bobo`, `kc-can`: each charm of the cat keychain on its own (the two charms are separate
-    keychains on one ring, so people may have only one, or hold them apart).
-  - `kc-old`, `kc-old-can`: the earlier design's two charms, cut from a phone photo of the real
-    keychain (`scripts/build-keychain-ar/src/old-*.png`). No silhouettes on these.
-  - `guide-both.png`: the two silhouettes together, for the camera guide.
+  - `kc-bobo`: the cat keychain's Bobo charm (flat art). `*_luminance.jpg` is what the engine tracks.
+  - `kc-can`: the Eclipse can charm, cut from a phone photo of the real acrylic charm (clear edge and
+    tab included, `scripts/build-keychain-ar/src/can-photo.png`). The can is the same on both keychain
+    designs. `kc-can-art` is the flat art of the same charm, as a second picture of it.
+  - `kc-old`: the earlier design's Bobo charm, cut from a phone photo.
+  - `kc-both`: the two cat-keychain charms hanging together. Only loaded with `?pair=1`.
+  - `guide-both.png`, `how-can.jpg`: pictures for the camera guide and the instructions screen.
   - `layout.json`: per target, the picture's size and where the two charm frames sit in it (metres).
 - `splash.jpg` — backdrop generated with Higgsfield from a text prompt only (no EVADE artwork was
   given to it); the real Bobo and can renders are composited on top.
@@ -45,20 +45,20 @@ the charm), so it stays in frame with the charm. Tune sliders: Hover (height abo
 standing spot beside the charm, where Spacing applies).
 
 ## Which charm pops (`updateFrames` in `main.js`)
-Each charm has its own state (idle, charging, flying, out), so one charm arriving or leaving never
-restarts the other, and a charm that leaves the view comes back as it was.
+Each charm has its own state (idle, charging, flying, out) and runs only from its own picture, so one
+charm never shows up for the other, one arriving or leaving never restarts the other, and a charm that
+leaves the view comes back as it was. Replay starts both over.
 
-- A charm only counts as present once its own picture (`kc-bobo` / `kc-can`) has been seen. The pair
-  picture locks onto a single charm too (half of it is enough), so alone it cannot say who is there.
-- With both confirmed, `kc-both` places both charms, as long as it agrees with each charm's own picture
-  to within 8 mm. Charms held apart disagree, and then each follows its own picture.
-- Too far for the single pictures but `kc-both` holds for 1.5 s: taken as both charms.
-- One charm's picture in view and the other's unseen for 1.5 s: the other charm has left.
-- Both in view and steady: they pop together (can first). One in view: it pops alone; if the pair
-  picture is tracked it waits up to 1.4 s for the other.
-- The two designs' cans look alike. `kc-can` does not fire on the old can, but `kc-old-can` fires on the
-  new one, so the old can only counts after 1.2 s without `kc-can` (at once next to the old Bobo), and
-  `kc-both` is ignored for 5 s after an old-design charm.
+`?pair=1` is the combined version: `kc-both` is loaded too, and when both charms are steady they pop as
+one sequence (can first, Bobo after the Can to Bobo time). The pair picture also locks onto a single
+charm, so a charm still has to be confirmed by its own picture; the pair picture then places both, as
+long as it agrees with the single pictures to within 8 mm on screen, or after 1.5 s when only it holds.
+
+## Camera (`tuneCamera` in `main.js`)
+The engine chooses its own camera constraints and tracks on a small greyscale copy of each frame. Added
+from outside: an ideal 1920x1440 stream (falls back to the engine's own request), continuous focus and a
+Zoom slider where the browser exposes them (Android Chrome), and drawing at up to 3x pixel density.
+`?hd=0` turns all of that off. The Tune panel shows the stream the phone actually gave.
 
 ## URL switches
 - `?only=kc-both` (or any other target name) loads just that image target.

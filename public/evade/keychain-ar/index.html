@@ -127,8 +127,8 @@
     <p>The two charms can be together or apart. Each one comes to life on its own.</p>
     <ul class="finds">
       <li><img src="./image-targets/kc-bobo_thumbnail.jpg" alt="The Bobo charm"><b>Bobo</b>Bobo jumps out</li>
-      <li><img src="./image-targets/kc-can_thumbnail.jpg" alt="The Eclipse can charm"><b>The Eclipse can</b>The can pops out</li>
-      <li><img src="./image-targets/kc-both_thumbnail.jpg" alt="The Bobo charm and the Eclipse can charm side by side"><b>Both together</b>They jump out together</li>
+      <li><img src="./image-targets/how-can.jpg" alt="The Eclipse can charm"><b>The Eclipse can</b>The can pops out</li>
+      <li><img src="./image-targets/kc-both_thumbnail.jpg" alt="The Bobo charm and the Eclipse can charm side by side"><b>Both together</b>Each pops out of its own charm</li>
     </ul>
     <p>Hold the charm flat, in good light, and fill about half the screen with it.</p>
     <button id="b-go" class="primary">Open camera</button>
@@ -155,6 +155,8 @@
       <input id="t-tilt" type="range" min="0" max="100" step="1" value="0">
       <label for="t-away">Distance <output id="t-away-v" for="t-away">0%</output></label>
       <input id="t-away" type="range" min="0" max="100" step="1" value="0">
+      <label class="zoom" for="t-zoom" hidden>Zoom <output id="t-zoom-v" for="t-zoom">1×</output></label>
+      <input class="zoom" id="t-zoom" type="range" min="1" max="4" step="0.1" value="1" hidden>
       <label for="t-portal">Portal <output id="t-portal-v" for="t-portal">3 s</output></label>
       <input id="t-portal" type="range" min="0.5" max="6" step="0.1" value="3">
       <label for="t-stagger">Can to Bobo <output id="t-stagger-v" for="t-stagger">0.55 s</output></label>
@@ -162,6 +164,7 @@
       <label for="t-fly">Jump <output id="t-fly-v" for="t-fly">1 s</output></label>
       <input id="t-fly" type="range" min="0.4" max="2.5" step="0.05" value="1">
       <p>Tilt 0% lies parallel to the print, 100% stands upright. Distance 0% is over its own print, 100% beside the charm (Spacing applies there). Let go of a timing slider and the pop replays with it. <span><button id="t-replay" type="button">Replay</button> <button id="t-reset" type="button">Reset</button></span></p>
+      <p id="t-cam"></p>
     </form>
     <nav aria-label="Bobo controls">
       <button id="b-wave" disabled>Wave</button>

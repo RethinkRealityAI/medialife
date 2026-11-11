@@ -29,7 +29,7 @@
         }
       }
     },
-    "kc-can": {
+    "kc-can-art": {
       "widthM": 0.04485714285714286,
       "heightM": 0.05978571428571428,
       "silhouettes": true,
@@ -53,10 +53,10 @@
         }
       }
     },
-    "kc-old-can": {
-      "widthM": 0.029166666666666667,
-      "heightM": 0.03888888888888889,
-      "silhouettes": false,
+    "kc-can": {
+      "widthM": 0.04485,
+      "heightM": 0.059800000000000006,
+      "silhouettes": true,
       "charms": {
         "can": {
           "x": 0,

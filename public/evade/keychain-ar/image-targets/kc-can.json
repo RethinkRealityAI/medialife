@@ -6,16 +6,16 @@
   "properties": {
     "left": 0,
     "top": 0,
-    "width": 628,
-    "height": 837,
+    "width": 1200,
+    "height": 1600,
     "isRotated": false,
-    "originalWidth": 628,
-    "originalHeight": 837
+    "originalWidth": 1200,
+    "originalHeight": 1600
   },
   "resources": {
     "luminanceImage": "kc-can_luminance.jpg",
     "thumbnailImage": "kc-can_thumbnail.jpg"
   },
-  "created": 1794407231547,
-  "updated": 1794407231547
+  "created": 1794410817133,
+  "updated": 1794410817133
 }

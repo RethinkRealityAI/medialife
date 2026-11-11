@@ -3,9 +3,8 @@
 // (github.com/8thwall/8thwall, MIT), self-hosted in ./vendor/xr. Rendering is plain three.js.
 //
 // How the alignment works: the image target is the Bobo charm and the can charm together as they sit on
-// the keychain. The two charms can also be apart, so each has a target of its own, and two more recognise
-// the earlier keychain design (no silhouettes on that one). Each charm pops on its own when it is the only
-// one in view, and the two pop together when both are. image-targets/layout.json says where each picture
+// the keychain (only used with ?pair=1). The two charms are separate keychains on one ring, so each has a
+// target of its own and its own pop-out; one more target recognises the earlier design's Bobo charm. image-targets/layout.json says where each picture
 // sits relative to its charm (metres), which fixes each charm's frame. The silhouette quad that ships inside each GLB covers exactly its
 // charm frame, and the model starts at (charm frame) x (Silhouette node matrix)^-1, i.e. over its print.
 // Nothing is drawn unless the target is being tracked right now.
@@ -161,7 +160,7 @@ const assets = Promise.all([
   loader.loadAsync(BASE + 'ar/bobo-keychain.glb'),
   loader.loadAsync(BASE + 'ar/eclipse-can.glb'),
   fetch(HERE + 'image-targets/layout.json').then((r) => r.json()),
-  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-old', 'kc-old-can'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
+  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-old'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -344,38 +343,37 @@ function groundFrame(ch) {
   const r = new THREE.Vector3().crossVectors(up, f).normalize();
   ch.G.q.setFromRotationMatrix(_m.makeBasis(r, up, f)); ch.G.flat = Math.min(Math.abs(up.z) * 1.25, 1);
 }
-// Which image target places each charm this frame. A charm only counts as being there once the engine has
-// seen that charm's own picture: the pair picture also locks onto a single charm (half of it is enough), so
-// on its own it does not say which charms are in view. With both charms confirmed the pair picture places
-// them (it holds best when the can hangs over Bobo, and from further away); a charm on its own follows its
-// own picture. Too far for the single pictures but the pair picture holds: after a moment, take it as both.
-// The earlier design has two pictures of its own. The two designs' cans look alike: the cat keychain's can
-// picture never fires on the old can, but the old can's picture does fire on the new can, so the old can
-// only counts when the new can's picture stays quiet, and the pair picture is not believed for a few
-// seconds after an old-design charm was seen.
+// Which image target places each charm this frame. Each charm runs from its own picture only: kc-bobo (or
+// kc-old, the earlier design's Bobo) and kc-can (a photo of the real can charm, which is the same on both
+// keychain designs). So a charm can never show up for the other one.
+// With ?pair=1 the pair picture is loaded as well. It also locks onto a single charm (half of it is enough),
+// so a charm still only counts once its own picture has been seen; with both confirmed the pair picture
+// places them, as long as it agrees with each charm's own picture (charms held apart do not), and when only
+// the pair picture holds (too far for the single ones) it is taken as both after a moment. It is not
+// believed for a few seconds after the earlier design's Bobo was seen (its can matches the pair picture).
+const PAIR = params.get('pair') === '1';   // the combined version: the pair picture is loaded too and the two pop as one sequence. Off by default (Dapo, 2026-11-11): each charm runs only from its own picture, so one never shows up for the other.
 const conf = { bobo: false, can: false };
-let bothFor = 0, oldCanFor = 0, oldCanSeen = -1e9, noneFor = 0, pairMaybe = false, pairOff = 0;
+let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0;
 const _v2 = new THREE.Vector3();
 function updateFrames(dt) {
   const now = performance.now();
   for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; } }
   const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
-  oldCanFor = on('kc-old-can') && !recent('kc-can', 3000) ? oldCanFor + dt : 0;
-  const oldCan = oldCanFor > 1.2 || (oldCanFor > 0 && recent('kc-old', 5000)) ? on('kc-old-can') : null; if (oldCan) oldCanSeen = now;   // next to the old Bobo there is no doubt
-  const oldRecent = recent('kc-old', 5000) || now - oldCanSeen < 5000;
-  const both = oldRecent ? null : on('kc-both'); pairMaybe = !!both;
-  if (on('kc-bobo')) conf.bobo = true; if (on('kc-can')) conf.can = true;
+  const oldRecent = recent('kc-old', 5000);
+  const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
+  const canT = on('kc-can') || on('kc-can-art');                             // the photo of the real can charm first, the flat art as a second opinion
+  if (on('kc-bobo')) conf.bobo = true; if (canT) conf.can = true;
   // one charm's own picture is in view and the other's has not been for a while: the other charm has left
-  if (conf.bobo && on('kc-can') && !recent('kc-bobo', 1500)) conf.bobo = false;
-  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500)) conf.can = false;
+  if (conf.bobo && canT && !recent('kc-bobo', 1500)) conf.bobo = false;
+  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500) && !recent('kc-can-art', 1500)) conf.can = false;
   bothFor = both ? bothFor + dt : 0;
-  if (bothFor > 1.5 && !conf.bobo && !conf.can && !on('kc-old-can')) conf.bobo = conf.can = true;
+  if (bothFor > 1.5 && !conf.bobo && !conf.can) conf.bobo = conf.can = true;
   noneFor = Object.values(TS).some((t) => t.tracked) ? 0 : noneFor + dt; if (noneFor > 1) conf.bobo = conf.can = false;
   // the pair picture only places the charms while it agrees with each charm's own picture: two charms held
   // apart (not hanging together) still match it, but then it would put one of them in the wrong place
   let agree = true;
   if (both) for (const [k, n] of [['bobo', 'kc-bobo'], ['can', 'kc-can']]) {
-    const t = on(n); if (!t) continue;
+    const t = on(n) || (k === 'can' ? canT : null); if (!t) continue;
     const a = _v.setFromMatrixPosition(_m.copy(both.g.matrix).multiply(both.local[k])), b = _v2.setFromMatrixPosition(_m.copy(t.g.matrix).multiply(t.local[k]));
     a.sub(camera.position); b.sub(camera.position);                          // compare where they appear, not how far away: the two pictures' depth estimates differ a little
     if (a.angleTo(b) * b.length() / t.s > 0.008) agree = false;
@@ -384,7 +382,7 @@ function updateFrames(dt) {
   const pair = conf.bobo && conf.can && pairOff === 0 ? both : null;
   const pick = {
     bobo: on('kc-old') || (conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null),
-    can: oldCan || (conf.can ? pair || on('kc-can') || (pairOff === 0 ? both : null) : null),
+    can: conf.can ? pair || canT || (pairOff === 0 ? both : null) : null,
   };
   present = false;
   for (const ch of [B, C]) {
@@ -580,7 +578,8 @@ function tick(dt) {
   for (const ch of [B, C]) ch.steady = driver[ch.key] ? ch.steady + dt : 0;
   if (!params.has('nopop')) {
     const ripe = (ch) => ch.st === 'idle' && ch.steady > 0.6, coming = (ch) => ch.st === 'idle' && ch.steady > 0;
-    if (ripe(B) && ripe(C)) startPair();
+    if (!PAIR) { for (const ch of [C, B]) if (ripe(ch)) startSolo(ch); }
+    else if (ripe(B) && ripe(C)) startPair();
     else if (ripe(C) && !coming(B) && (!pairMaybe || C.steady > 1.4)) startSolo(C);   // with the pair picture in play, give the other charm a moment to show up
     else if (ripe(B) && !coming(C) && (!pairMaybe || B.steady > 1.4)) startSolo(B);
   }
@@ -623,7 +622,7 @@ function tick(dt) {
 // ---------------------------------------------------------------- 8th Wall pipeline
 const canvas = $('cam');
 function sizeCanvas() {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const dpr = Math.min(devicePixelRatio || 1, HD ? 3 : 2);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 }
@@ -632,9 +631,9 @@ const appModule = (data) => ({
   name: 'evade-keychain',
   onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },   // the scene exists from here on
   onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
-  onCameraStatusChange: ({ status }) => {
+  onCameraStatusChange: ({ status, video }) => {
     if (status === 'requesting') ui.hint('Allow camera access to begin');
-    if (status === 'hasVideo') { $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
+    if (status === 'hasVideo') { tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
     if (status === 'failed') ui.error('Camera not available', 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
   },
   onException: (e) => { console.error('XR', e); ui.error('Something went wrong', String((e && e.message) || e)); },
@@ -647,13 +646,48 @@ const appModule = (data) => ({
   ],
 });
 
+// ---------------------------------------------------------------- camera quality
+// The engine picks its own camera constraints (high resolution on Android Chrome, a modest minimum elsewhere)
+// and tracks on a small greyscale copy of the frame. What we can add from outside:
+//  - ask for the sharpest 4:3 stream the phone offers (ideal 1920x1440), falling back to the engine's request;
+//  - keep the lens refocusing (a keychain is a close-up subject), where the browser exposes focus;
+//  - draw at the screen's full pixel density;
+//  - optical/digital zoom where the browser exposes it (Tune > Zoom): more pixels on a far-away charm.
+// `?hd=0` turns all of it off, to compare.
+const HD = params.get('hd') !== '0';
+if (HD && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
+  md.getUserMedia = (c) => {
+    const v = c && c.video;
+    if (!v || v === true || (v.width && v.width.exact) || (v.height && v.height.exact)) return orig(c);
+    const sharp = { ...c, video: { ...v, width: { ...(v.width || {}), ideal: 1920 }, height: { ...(v.height || {}), ideal: 1440 } } };
+    return orig(sharp).catch(() => orig(c));
+  };
+}
+let camTrack = null;
+function tuneCamera(video) {
+  try {
+    camTrack = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!camTrack) return;
+    const st = camTrack.getSettings ? camTrack.getSettings() : {}, caps = camTrack.getCapabilities ? camTrack.getCapabilities() : {};
+    $('t-cam').textContent = `Camera ${st.width || video.videoWidth}×${st.height || video.videoHeight}${st.frameRate ? ' at ' + Math.round(st.frameRate) + ' fps' : ''}`;
+    if (!HD) return;
+    if (caps.focusMode && caps.focusMode.includes('continuous')) camTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    if (caps.zoom && caps.zoom.max > caps.zoom.min) {
+      const z = $('t-zoom'); z.min = caps.zoom.min; z.max = Math.min(caps.zoom.max, 4); z.step = caps.zoom.step || 0.1; z.value = st.zoom || caps.zoom.min;
+      for (const el of document.querySelectorAll('.zoom')) el.hidden = false;
+      const show = () => { $('t-zoom-v').textContent = (+z.value).toFixed(1) + '×'; }; show();
+      z.oninput = () => { show(); camTrack.applyConstraints({ advanced: [{ zoom: +z.value }] }).catch(() => {}); };
+    }
+  } catch (e) { /* the camera still works without these */ }
+}
+
 async function start() {
   if (!loaded) return;
   $('b-go').disabled = true; $('b-go').textContent = 'Starting…';
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(3).filter((t) => !params.get('only') || t.name === params.get('only')) });
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(3).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only'))) });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
     XR8.Threejs.pipelineModule(),

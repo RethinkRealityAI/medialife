@@ -1,5 +1,5 @@
 # Image targets for the 8th Wall (open-source engine) keychain experience. kc-both: the Bobo cat charm and
-# the Eclipse can charm together as they sit on the keychain (no ring or chain). kc-bobo / kc-can: each charm on its own. kc-old / kc-old-can: the earlier design's two charms. Same output format as
+# the Eclipse can charm together as they sit on the keychain (no ring or chain). kc-bobo / kc-can: each charm on its own. kc-can is cut from a phone photo of the real charm. kc-old: the earlier design's Bobo charm. Same output format as
 # @8thwall/image-target-cli (a json + a 480x640 greyscale "luminance" picture the engine extracts
 # features from). layout.json says where that picture sits in keychain space (metres), so the AR page
 # can place each charm frame (and its silhouette) exactly on its print.
@@ -61,6 +61,12 @@ for key, tname, (fname, _, _, _) in (('bobo', 'kc-bobo', CHARMS[0]), ('can', 'kc
     tw, th = (cw, round(cw / 0.75)) if cw / chh > 0.75 else (round(chh * 0.75), chh)
     tw, th = round(tw * 1.04), round(th * 1.04)
     canvas = Image.new('RGBA', (tw, th), (236, 238, 240, 255)); canvas.alpha_composite(im, ((tw - cw) // 2, (th - chh) // 2))
+    if key == 'can':
+        # The can is tracked from a phone photo of the real acrylic charm instead (below): it holds better on
+        # the real thing than the flat art. The art picture stays as the thumbnail on the instructions screen.
+        canvas.convert('RGB').resize((263, 350), Image.LANCZOS).save(OUT + 'how-can.jpg', quality=85)
+        ART_CAN = (tw / PPM, th / PPM, cw / PPM, chh / PPM)   # picture and acrylic piece, metres
+        tname = 'kc-can-art'                                  # the art stays as a second picture of the same charm
     write_target(tname, canvas.convert('RGB'), dict(widthM=tw / PPM, heightM=th / PPM, silhouettes=True, charms={key: dict(x=0, y=0, rz=0)}))
 
 # ---- camera guide: the two silhouettes together, in the same frame as kc-both
@@ -79,10 +85,20 @@ gb.crop(box).resize((503, 670), Image.LANCZOS).save(OUT + 'guide-both.png')
 from PIL import ImageFilter
 HERE_SRC = os.path.dirname(os.path.abspath(__file__)) + '/src/'
 OPPM = 28800
-for key, tname, fname in (('bobo', 'kc-old', 'old-bobo.png'), ('can', 'kc-old-can', 'old-can.png')):
+for key, tname, fname in (('bobo', 'kc-old', 'old-bobo.png'),):
     im = Image.open(HERE_SRC + fname).convert('RGB')
     write_target(tname, im, dict(widthM=im.width / OPPM, heightM=im.height / OPPM, silhouettes=False, charms={key: dict(x=0, y=0, rz=0)}))
     # the photo is a little soft: sharpen the tracked picture so the engine has corners to hold on to
     Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=160, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
+
+# ---- the Eclipse can charm, for both keychain designs (the can is the same on both): cut from Dapo's phone
+# photo of the real charm, clear acrylic edge and tab included (src/can-photo.png: the acrylic piece centred
+# in a 3:4 picture with a 4% margin, the same framing as the art picture). So it maps onto the art's charm
+# frame directly: the acrylic piece is as tall in metres as the art's.
+im = Image.open(HERE_SRC + 'can-photo.png').convert('RGB')
+im = im.resize((1200, 1600), Image.LANCZOS)
+hM = ART_CAN[3] * 1.04
+write_target('kc-can', im, dict(widthM=hM * 0.75, heightM=hM, silhouettes=True, charms={'can': dict(x=0, y=0, rz=0)}))
+Image.open(OUT + 'kc-can_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=140, threshold=2)).save(OUT + 'kc-can_luminance.jpg', quality=95)
 json.dump(dict(targets=LAYOUT), open(OUT + 'layout.json', 'w'), indent=2)
 print(open(OUT + 'layout.json').read())
