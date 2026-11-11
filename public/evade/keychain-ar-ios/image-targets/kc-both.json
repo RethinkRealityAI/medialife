@@ -1,0 +1,21 @@
+{
+  "imagePath": "/evade/keychain-ar-ios/image-targets/kc-both_luminance.jpg",
+  "metadata": null,
+  "name": "kc-both",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 1006,
+    "height": 1341,
+    "isRotated": false,
+    "originalWidth": 1006,
+    "originalHeight": 1341
+  },
+  "resources": {
+    "luminanceImage": "kc-both_luminance.jpg",
+    "thumbnailImage": "kc-both_thumbnail.jpg"
+  },
+  "created": 1794411336970,
+  "updated": 1794411336970
+}
