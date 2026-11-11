@@ -68,9 +68,10 @@
     #fizz{position:absolute;left:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));width:112px;height:28px;border-radius:999px;background:var(--panel);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
     #fizz i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));transition:width .25s ease}
     #fizz span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff}
-    #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);margin:0 auto;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;font-size:13px;font-weight:700}
-    #tune output{display:inline-block;min-width:4ch;color:var(--blue);font-variant-numeric:tabular-nums}
-    #tune input{width:100%;accent-color:var(--pink);height:32px;margin:0}
+    #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);margin:0 auto;max-width:380px;background:rgba(14,16,24,.34);border:1px solid var(--line);border-radius:18px;padding:10px 14px;text-shadow:0 1px 4px rgba(0,0,0,.9);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;font-size:13px;font-weight:700}
+    #tune output{display:inline-block;min-width:5ch;color:var(--blue);font-variant-numeric:tabular-nums}
+    #tune input{width:100%;accent-color:var(--pink);height:28px;margin:0}
+    #tune p span{display:flex;gap:6px;flex:none}
     #tune p{grid-column:1/-1;margin:0;font-weight:500;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
     #tune p button{min-height:32px;padding:0 12px;font-size:12px}
     /* photo preview + errors */
@@ -117,14 +118,20 @@
     <div id="side">
       <button id="b-photo" disabled aria-label="Take a photo">Photo</button>
       <button id="b-sound" aria-pressed="true">Sound on</button>
-      <button id="b-tune" aria-expanded="false" aria-controls="tune">Size</button>
+      <button id="b-tune" aria-expanded="false" aria-controls="tune">Tune</button>
     </div>
-    <form id="tune" hidden aria-label="Size and spacing" onsubmit="return false">
+    <form id="tune" hidden aria-label="Size, spacing and timing" onsubmit="return false">
       <label for="t-size">Size <output id="t-size-v" for="t-size">100%</output></label>
       <input id="t-size" type="range" min="40" max="200" step="1" value="100">
       <label for="t-gap">Spacing <output id="t-gap-v" for="t-gap">100%</output></label>
       <input id="t-gap" type="range" min="0" max="300" step="5" value="100">
-      <p>100% size is the size of the print on the keychain. <button id="t-reset" type="button">Reset</button></p>
+      <label for="t-portal">Portal <output id="t-portal-v" for="t-portal">3 s</output></label>
+      <input id="t-portal" type="range" min="0.5" max="6" step="0.1" value="3">
+      <label for="t-stagger">Can to Bobo <output id="t-stagger-v" for="t-stagger">0.55 s</output></label>
+      <input id="t-stagger" type="range" min="0" max="2" step="0.05" value="0.55">
+      <label for="t-fly">Jump <output id="t-fly-v" for="t-fly">1 s</output></label>
+      <input id="t-fly" type="range" min="0.4" max="2.5" step="0.05" value="1">
+      <p>100% size is the print on the keychain. Timing changes show on the next replay. <span><button id="t-replay" type="button">Replay</button> <button id="t-reset" type="button">Reset</button></span></p>
     </form>
     <nav aria-label="Bobo controls">
       <button id="b-wave" disabled>Wave</button>

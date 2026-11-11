@@ -60,8 +60,9 @@ portals: oranges and visor blue on Bobo's side, blue and magenta on the can's. T
 and the portals close to the black masks, with a faint lit rim left behind. It is one shader
 (`PORTAL_FRAG` in `main.js`) on the silhouette quad, driven by `fx.glow`, `fx.portal`, `fx.black`.
 
-Landed characters are the size of their print on the charms (`SIZE`). The **Size** button opens two
-sliders, Size and Spacing, saved on the device (`localStorage` key `kc-ar-tune`); `?size=1.2&gap=0.8`
+Landed characters are the size of their print on the charms (`SIZE`). The **Tune** button opens sliders for
+Size, Spacing, Portal (build-up length, default 3 s), Can to Bobo (wait between the two pops) and Jump
+(flight time), saved on the device (`localStorage` key `kc-ar-tune`); `?size=1.2&gap=0.8&portal=2.5`
 does the same from the URL. It is a preview tool for picking the defaults (`TUNE_DEFAULT`); take the
 button out before launch.
 

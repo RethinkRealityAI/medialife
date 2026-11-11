@@ -31,10 +31,10 @@ const CHARMS = {
 // Landed characters are the size of their printed art on the charms (art height in the charm pictures / 14 px per mm).
 const SIZE = { bobo: 825 / PXM, can: 679 / PXM };
 // Size and spacing can be tuned live from the Size panel; the chosen numbers are remembered on the device.
-const TUNE_DEFAULT = { size: 1, gap: 1 };
+const TUNE_DEFAULT = { size: 1, gap: 1, portal: 3, stagger: 0.55, fly: 1 };   // portal build-up, wait between the two pops, flight to the landing spot (seconds)
 const tune = { ...TUNE_DEFAULT };
 try { Object.assign(tune, JSON.parse(localStorage.getItem('kc-ar-tune') || '{}')); } catch (e) { /* defaults */ }
-for (const k of ['size', 'gap']) if (params.has(k)) tune[k] = Math.min(Math.max(parseFloat(params.get(k)) || 1, 0.3), 2.5);
+for (const k of Object.keys(TUNE_DEFAULT)) if (params.has(k) && isFinite(parseFloat(params.get(k)))) tune[k] = Math.min(Math.max(parseFloat(params.get(k)), 0), 8);
 // spots in the "ground frame": x right, y up (gravity), z toward the viewer. The can stands a little in
 // front of Bobo's side, like on the keychain.
 const MID_X = 0.0085, HALF_GAP = 0.01225;
@@ -142,7 +142,7 @@ const sound = {
     s.connect(f1).connect(f2).connect(g).connect(this.ctx.destination); s.start(this.ctx.currentTime + when);
   },
   scan() { this.tone(500, 1500, 0.6, 0.06, 'triangle'); },
-  rumble() { this.tone(46, 96, 1.7, 0.3, 'sawtooth'); this.tone(69, 150, 1.7, 0.12, 'square'); this.noise(1.7, 0.05, 60, 420); this.tone(300, 2400, 1.6, 0.05, 'triangle', 0.15); },
+  rumble(d = 1.7) { this.tone(46, 96, d, 0.3, 'sawtooth'); this.tone(69, 150, d, 0.12, 'square'); this.noise(d, 0.05, 60, 420); this.tone(300, 2400, d * 0.92, 0.05, 'triangle', d * 0.08); },
   blip(n) { const f = 420 * Math.pow(1.09, n); this.tone(f, f * 1.9, 0.11, 0.13); },
   fanfare() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, f, 0.32, 0.12, 'triangle', i * 0.11)); this.noise(1.8, 0.11, 3500, 12000); },
   pop() { this.tone(260, 900, 0.16, 0.28); this.noise(0.12, 0.12, 900, 6000); },
@@ -402,14 +402,15 @@ function popOut() {
   resetScene(); state = 'popping'; ui.hint(''); ui.guide(false);
   const go = () => {
     launch(C, 'can', flashC);                                             // the can pops first
-    after(reduceMotion ? 0.01 : 0.55, () => launch(B, 'bobo', flashB));   // then Bobo
+    after(reduceMotion ? 0.01 : tune.stagger, () => launch(B, 'bobo', flashB));   // then Bobo
   };
   if (T.lay.silhouettes) {
     // the build-up: a border lights up around each charm, the keychain rumbles, and the cut-outs open
     // into portals in the cat's and the can's colours. Then they pop.
-    sound.rumble(); try { navigator.vibrate && navigator.vibrate([70, 50, 70, 50, 90, 40, 160]); } catch (e) { /* no haptics */ }
+    const dur = reduceMotion ? 0.3 : Math.max(tune.portal, 0.2);
+    sound.rumble(dur); try { navigator.vibrate && navigator.vibrate([70, 50, 70, 50, 90, 40, 160].map((x) => Math.round(x * dur / 0.53 / 1.7 * 0.53))); } catch (e) { /* no haptics */ }
     for (const ch of [B, C]) ch.sil.visible = true;
-    tween(reduceMotion ? 0.3 : 1.7, (k) => {
+    tween(dur, (k) => {
       for (const ch of [B, C]) {
         ch.fx.glow = easeOut(k * 2.2) * (0.8 + 0.35 * k);
         ch.fx.portal = easeInOut((k - 0.22) / 0.55);
@@ -462,7 +463,7 @@ function launch(ch, k, flash) {
     const from = place(0); pop.paused = false; fx.black = 1; fx.shake = 0;
     sound.pop(); if (!isBobo) sound.fizz();
     pd.visible = true; flash.position.copy(from.pos); burst(from.pos, isBobo ? 50 : 34);
-    tween(reduceMotion ? 0.01 : 1.0, (kk) => {                            // it flies to its spot; the silhouette stays
+    tween(reduceMotion ? 0.01 : Math.max(tune.fly, 0.1), (kk) => {         // it flies to its spot; the silhouette stays
       const e = easeOut(kk); const to = spotOf(k);
       ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(_v.set(0, 1, 0).applyQuaternion(G.q), Math.sin(kk * Math.PI) * 0.04);
       ch.root.quaternion.slerpQuaternions(from.quat, G.q, easeOut(kk * 2));
@@ -653,14 +654,16 @@ $('shot-close').onclick = () => { $('shot').hidden = true; };
 $('err-retry').onclick = () => location.reload();
 
 // size and spacing sliders (preview tool: find the numbers, then they become the defaults)
+const TUNE_UI = { size: ['t-size', 100, '%'], gap: ['t-gap', 100, '%'], portal: ['t-portal', 1, ' s'], stagger: ['t-stagger', 1, ' s'], fly: ['t-fly', 1, ' s'] };
 function showTune() {
-  $('t-size').value = Math.round(tune.size * 100); $('t-gap').value = Math.round(tune.gap * 100);
-  $('t-size-v').textContent = Math.round(tune.size * 100) + '%'; $('t-gap-v').textContent = Math.round(tune.gap * 100) + '%';
+  for (const [k, [id, mul, unit]] of Object.entries(TUNE_UI)) {
+    $(id).value = tune[k] * mul; $(id + '-v').textContent = (mul === 100 ? Math.round(tune[k] * 100) : (+tune[k]).toFixed(2).replace(/0$/, '')) + unit;
+  }
 }
-function setTune(k, v) { tune[k] = v / 100; showTune(); try { localStorage.setItem('kc-ar-tune', JSON.stringify(tune)); } catch (e) { /* not saved */ } }
-$('t-size').oninput = (e) => setTune('size', +e.target.value);
-$('t-gap').oninput = (e) => setTune('gap', +e.target.value);
-$('t-reset').onclick = () => { setTune('size', TUNE_DEFAULT.size * 100); setTune('gap', TUNE_DEFAULT.gap * 100); };
+function setTune(k, v) { tune[k] = v; showTune(); try { localStorage.setItem('kc-ar-tune', JSON.stringify(tune)); } catch (e) { /* not saved */ } }
+for (const [k, [id, mul]] of Object.entries(TUNE_UI)) $(id).oninput = (e) => setTune(k, +e.target.value / mul);
+$('t-reset').onclick = () => { for (const k of Object.keys(TUNE_DEFAULT)) setTune(k, TUNE_DEFAULT[k]); };
+$('t-replay').onclick = replay;
 $('b-tune').onclick = () => { const t = $('tune'); t.hidden = !t.hidden; $('b-tune').setAttribute('aria-expanded', String(!t.hidden)); };
 showTune();
 
