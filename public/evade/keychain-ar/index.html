@@ -85,6 +85,10 @@
     #tune p span{display:flex;gap:6px;flex:none}
     #tune p{grid-column:1/-1;margin:0;font-weight:500;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
     #tune p button{min-height:32px;padding:0 12px;font-size:12px}
+    #cam-set{grid-column:1/-1;border:1px solid var(--line);border-radius:12px;margin:6px 0 2px;padding:6px 10px 10px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center}
+    #cam-set legend{padding:0 4px;font-size:12px;color:var(--muted)}
+    #cam-set select,#cam-set input[type=text]{min-height:32px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:0 8px;width:100%}
+    #cam-set button{grid-column:1/-1;min-height:40px;font-size:13px}
     /* photo preview + errors */
     .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
     #shot-img{max-width:100%;max-height:66vh;border-radius:16px;border:1px solid var(--line)}
@@ -164,6 +168,22 @@
       <label for="t-fly">Jump <output id="t-fly-v" for="t-fly">1 s</output></label>
       <input id="t-fly" type="range" min="0.4" max="2.5" step="0.05" value="1">
       <p>Tilt 0% lies parallel to the print, 100% stands upright. Distance 0% is over its own print, 100% beside the charm (Spacing applies there). Let go of a timing slider and the pop replays with it. <span><button id="t-replay" type="button">Replay</button> <button id="t-reset" type="button">Reset</button></span></p>
+      <fieldset id="cam-set">
+        <legend>Camera test <output id="t-fps"></output></legend>
+        <label for="c-res">Resolution</label>
+        <select id="c-res"><option value="engine">Engine choice</option><option value="720">1280×720</option><option value="1080">1920×1080</option><option value="1440">1920×1440 (4:3)</option></select>
+        <label for="c-fps">Frame rate</label>
+        <select id="c-fps"><option value="engine">Engine choice</option><option value="30">30</option><option value="60">60</option></select>
+        <label for="c-focus">Focus</label>
+        <select id="c-focus"><option value="engine">Engine choice</option><option value="continuous">Continuous</option></select>
+        <label for="c-lens">Lens</label>
+        <select id="c-lens"><option value="">Engine choice</option></select>
+        <label for="c-dpr">Sharpness</label>
+        <select id="c-dpr"><option value="1">1× (fastest)</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3× (sharpest)</option></select>
+        <label for="c-note">Test note</label>
+        <input id="c-note" type="text" maxlength="80" placeholder="e.g. iPhone, far, real keychain">
+        <button id="c-apply" type="button" class="primary">Apply and restart camera</button>
+      </fieldset>
       <p id="t-cam"></p>
       <p id="t-diag"></p>
     </form>

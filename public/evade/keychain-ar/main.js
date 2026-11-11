@@ -318,10 +318,10 @@ function onTarget(d) {
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
   t.s = t.pr.height * upp / t.lay.heightM;                                 // world units per metre
-  if (!t.tracked) t.snap = true;
+  if (!t.tracked) { t.snap = true; if (camera) noteFound(t, measure(t)); } else if (camera && Math.random() < 0.1) measure(t);
   t.tracked = true; t.at = performance.now();
 }
-function onLost(d) { const t = TS[d.name]; if (t) t.tracked = false; }
+function onLost(d) { const t = TS[d.name]; if (t) { t.tracked = false; noteLost(d.name); } }
 
 // Stick to the print: follow real movement at once, and only smooth out the sub-millimetre jitter of a
 // charm that is being held still (any lag here shows up as the 3D sliding off the print).
@@ -363,7 +363,7 @@ let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0;
 const _v2 = new THREE.Vector3();
 function updateFrames(dt) {
   const now = performance.now();
-  for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; } }
+  for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; tDiag(t.name).trackedS = +(tDiag(t.name).trackedS + dt).toFixed(2); } }
   const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
   const oldRecent = recent('kc-old', 5000);
   const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
@@ -452,7 +452,7 @@ function charge(chs, go) {
   }
 }
 const startPair = () => charge([C, B], () => { launch(C); after(Math.max(tune.stagger, 0.01), () => launch(B), B); });   // the can pops first, then Bobo
-const startSolo = (ch) => charge([ch], () => launch(ch));
+const startSolo = (ch) => { diag.pops.push({ t: camStartAt ? +((performance.now() - camStartAt) / 1000).toFixed(1) : null, who: ch.kind }); charge([ch], () => launch(ch)); };
 // push the mask state into the shader, and rumble the masks on the charms
 let fxTime = 0;
 function updateMasks(dt) {
@@ -532,7 +532,7 @@ function showFizz() { const f = $('fizz'); f.hidden = taps === 0; f.firstElement
 function tapBubbles(ch) {
   if (!live(ch)) ch = ch === B ? C : B;
   if (finaleOn || !live(ch)) return;
-  taps++; tapIdle = 0; showFizz();
+  taps++; diag.taps++; tapIdle = 0; showFizz();
   if (taps >= FINALE) { finale(); return; }
   sound.blip(taps);
   blow(ch, 2 + taps * 2, 0.005 + taps * 0.0016, 0.04 + taps * 0.004);
@@ -589,7 +589,6 @@ function onScreen(ch, m = 0.7) {
 // Watchdog (opt-in, ?watchdog=1): hand the engine the same pictures again when nothing has been tracked
 // for a while. Off by default: on Dapo's phone (2026-11-11) restarting the search every few seconds made
 // recognition much worse, because a search from further away never got to finish.
-const diag = { found: 0, lost: 0, resets: 0, last: '', lastAt: 0 };
 let lastTrackedAt = 0, lastReset = 0, everTracked = false, activeTargets = [];
 function watchdog() {
   const now = performance.now();
@@ -657,7 +656,7 @@ function tick(dt) {
 // ---------------------------------------------------------------- 8th Wall pipeline
 const canvas = $('cam');
 function sizeCanvas() {
-  const dpr = Math.min(devicePixelRatio || 1, HD ? 3 : 2);
+  const dpr = Math.min(devicePixelRatio || 1, CAM.dpr);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 }
@@ -665,10 +664,10 @@ let last = 0;
 const appModule = (data) => ({
   name: 'evade-keychain',
   onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },   // the scene exists from here on
-  onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
+  onUpdate: () => { const now = performance.now(); countFrame(now, Object.values(TS).some((t) => t.tracked)); flushDiag(false); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
   onCameraStatusChange: ({ status, video }) => {
     if (status === 'requesting') ui.hint('Allow camera access to begin');
-    if (status === 'hasVideo') { tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
+    if (status === 'hasVideo') { camStartAt = performance.now(); tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
     if (status === 'failed') ui.error('Camera not available', 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
   },
   onException: (e) => { console.error('XR', e); ui.error('Something went wrong', String((e && e.message) || e)); },
@@ -681,40 +680,139 @@ const appModule = (data) => ({
   ],
 });
 
-// ---------------------------------------------------------------- camera quality
-// The engine picks its own camera constraints (high resolution on Android Chrome, a modest minimum elsewhere)
-// and tracks on a small greyscale copy of the frame. What we can add from outside:
-//  - ask for the sharpest 4:3 stream the phone offers (ideal 1920x1440), falling back to the engine's request;
-//  - keep the lens refocusing (a keychain is a close-up subject), where the browser exposes focus;
-//  - draw at the screen's full pixel density;
-//  - optical/digital zoom where the browser exposes it (Tune > Zoom): more pixels on a far-away charm.
-// `?hd=0` turns all of it off, to compare.
-const HD = params.get('hd') !== '0';
-if (HD && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+// ---------------------------------------------------------------- camera profiles
+// The engine picks its own camera constraints and tracks on a small greyscale copy of each frame. These
+// settings sit around it, so they can be compared on real phones (Tune > Camera, saved on the device,
+// applied by restarting the camera). Every choice can also be forced from the link, e.g. ?res=1080&lens=0.5x.
+//  res   engine | 720 | 1080 | 1440      the stream size asked for (1440 = 1920x1440, 4:3)
+//  fps   engine | 30 | 60
+//  focus engine | continuous             where the browser exposes focus (mostly Android Chrome)
+//  lens  '' | a camera's name            iPhones: "Back Dual Wide Camera" / "Back Triple Camera" switch to
+//                                        the macro lens up close by themselves; the plain "Back Camera"
+//                                        cannot focus closer than about 15-20 cm on recent Pro models
+//  dpr   1 | 1.5 | 2 | 3                 how sharp the page draws; higher costs frame rate
+const CAM_DEFAULT = { res: 'engine', fps: 'engine', focus: 'engine', lens: '', dpr: 2 };
+const CAM = { ...CAM_DEFAULT };
+try { Object.assign(CAM, JSON.parse(localStorage.getItem('kc-ar-cam') || '{}')); } catch (e) { /* defaults */ }
+for (const k of Object.keys(CAM_DEFAULT)) if (params.has(k)) CAM[k] = k === 'dpr' ? +params.get(k) || 2 : params.get(k);
+if (params.get('hd') === '0') Object.assign(CAM, CAM_DEFAULT);
+const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [1920, 1440] };
+let lensIdP = null;   // the chosen lens's deviceId, looked up by name once the camera has been allowed
+function lensId() {
+  if (!CAM.lens) return Promise.resolve(null);
+  if (!lensIdP) lensIdP = navigator.mediaDevices.enumerateDevices()
+    .then((ds) => { const d = ds.find((x) => x.kind === 'videoinput' && x.label === CAM.lens); return d ? d.deviceId : null; }).catch(() => null);
+  return lensIdP;
+}
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
-  md.getUserMedia = (c) => {
+  md.getUserMedia = async (c) => {
     const v = c && c.video;
-    if (!v || v === true || (v.width && v.width.exact) || (v.height && v.height.exact)) return orig(c);
-    const sharp = { ...c, video: { ...v, width: { ...(v.width || {}), ideal: 1920 }, height: { ...(v.height || {}), ideal: 1440 } } };
-    return orig(sharp).catch(() => orig(c));
+    if (!v || v === true) return orig(c);
+    const nv = { ...v };
+    if (CAM.res !== 'engine' && RES[CAM.res]) { const [w, h] = RES[CAM.res]; nv.width = { ideal: w }; nv.height = { ideal: h }; }
+    if (CAM.fps !== 'engine') nv.frameRate = { ideal: +CAM.fps };
+    const id = await lensId();
+    if (id) { nv.deviceId = { exact: id }; delete nv.facingMode; }
+    if (nv === v || JSON.stringify(nv) === JSON.stringify(v)) return orig(c);
+    diag.asked = nv;
+    return orig({ ...c, video: nv }).catch((e) => { diag.askFailed = String(e && e.name || e); return orig(c); });
   };
 }
 let camTrack = null;
 function tuneCamera(video) {
   try {
     camTrack = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!camTrack) return;
-    const st = camTrack.getSettings ? camTrack.getSettings() : {}, caps = camTrack.getCapabilities ? camTrack.getCapabilities() : {};
-    $('t-cam').textContent = `Camera ${st.width || video.videoWidth}×${st.height || video.videoHeight}${st.frameRate ? ' at ' + Math.round(st.frameRate) + ' fps' : ''}`;
-    if (!HD) return;
-    if (caps.focusMode && caps.focusMode.includes('continuous')) camTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    const caps = camTrack.getCapabilities ? camTrack.getCapabilities() : {};
+    if (CAM.focus === 'continuous' && caps.focusMode && caps.focusMode.includes('continuous')) camTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    const st = camTrack.getSettings ? camTrack.getSettings() : {};
+    diag.camera = { label: camTrack.label, width: st.width || video.videoWidth, height: st.height || video.videoHeight, frameRate: st.frameRate, focusMode: st.focusMode, zoom: st.zoom,
+      caps: { focusMode: caps.focusMode, zoom: caps.zoom, width: caps.width, height: caps.height, frameRate: caps.frameRate } };
+    $('t-cam').textContent = `Camera: ${camTrack.label || 'back camera'}, ${diag.camera.width}×${diag.camera.height}${st.frameRate ? ' at ' + Math.round(st.frameRate) + ' fps' : ''}`;
     if (caps.zoom && caps.zoom.max > caps.zoom.min) {
       const z = $('t-zoom'); z.min = caps.zoom.min; z.max = Math.min(caps.zoom.max, 4); z.step = caps.zoom.step || 0.1; z.value = st.zoom || caps.zoom.min;
       for (const el of document.querySelectorAll('.zoom')) el.hidden = false;
       const show = () => { $('t-zoom-v').textContent = (+z.value).toFixed(1) + '×'; }; show();
-      z.oninput = () => { show(); camTrack.applyConstraints({ advanced: [{ zoom: +z.value }] }).catch(() => {}); };
+      z.oninput = () => { show(); diag.zoom = +z.value; camTrack.applyConstraints({ advanced: [{ zoom: +z.value }] }).catch(() => {}); };
     }
-  } catch (e) { /* the camera still works without these */ }
+    // the camera menu: list this phone's back cameras by name (names only appear once the camera is allowed)
+    navigator.mediaDevices.enumerateDevices().then((ds) => {
+      const sel = $('c-lens'), names = ds.filter((d) => d.kind === 'videoinput' && d.label && !/front|user|facetime/i.test(d.label)).map((d) => d.label);
+      diag.cameras = names;
+      sel.innerHTML = '<option value="">Engine choice</option>' + names.map((n) => `<option>${n.replace(/</g, '')}</option>`).join('');
+      sel.value = names.includes(CAM.lens) ? CAM.lens : '';
+    }).catch(() => {});
+  } catch (e) { diag.cameraError = String(e); }
 }
+function camMenu() {
+  for (const k of ['res', 'fps', 'focus', 'dpr']) $('c-' + k).value = String(CAM[k]);
+  $('c-apply').onclick = () => {
+    const next = { res: $('c-res').value, fps: $('c-fps').value, focus: $('c-focus').value, lens: $('c-lens').value, dpr: +$('c-dpr').value };
+    try { localStorage.setItem('kc-ar-cam', JSON.stringify(next)); localStorage.setItem('kc-ar-note', $('c-note').value || ''); } catch (e) { /* not saved */ }
+    flushDiag(true);
+    const u = new URL(location.href); for (const k of Object.keys(CAM_DEFAULT)) u.searchParams.delete(k); u.searchParams.delete('hd');
+    location.replace(u.toString());
+  };
+  try { $('c-note').value = localStorage.getItem('kc-ar-note') || ''; } catch (e) { /* none */ }
+  $('c-note').onchange = () => { diag.note = $('c-note').value; try { localStorage.setItem('kc-ar-note', diag.note); } catch (e) { /* none */ } };
+}
+
+// ---------------------------------------------------------------- test log
+// One record per session, sent to /api/ar/kc-diag every 10 s and when the page is hidden, so results
+// from real phones can be read back without the tester writing them down. No camera images, no IP.
+const SID = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+const diag = { found: 0, lost: 0, resets: 0, asked: null, camera: null, events: [], targets: {}, fps: { all: [], tracking: [], idle: [] }, pops: [], taps: 0 };
+try { diag.note = localStorage.getItem('kc-ar-note') || ''; } catch (e) { diag.note = ''; }
+let camStartAt = 0;
+const tDiag = (n) => (diag.targets[n] = diag.targets[n] || { firstFoundS: null, found: 0, lost: 0, trackedS: 0, distFirstCm: null, distMinCm: null, distMaxCm: null, angleMaxDeg: 0 });
+function noteFound(t, d) {
+  const td = tDiag(t.name); td.found++;
+  const s = camStartAt ? +((performance.now() - camStartAt) / 1000).toFixed(1) : null;
+  if (td.firstFoundS === null) { td.firstFoundS = s; td.distFirstCm = d.cm; }
+  diag.events.push({ t: s, n: t.name, e: 'found', cm: d.cm, deg: d.deg }); if (diag.events.length > 300) diag.events.shift();
+}
+function noteLost(name) {
+  const td = tDiag(name); td.lost++;
+  diag.events.push({ t: camStartAt ? +((performance.now() - camStartAt) / 1000).toFixed(1) : null, n: name, e: 'lost' }); if (diag.events.length > 300) diag.events.shift();
+}
+function measure(t) {   // distance (cm) and viewing angle (degrees off straight-on) of a tracked picture
+  const toCam = _v2.copy(camera.position).sub(t.p); const cm = Math.round(toCam.length() / t.s * 1000) / 10;
+  const n = new THREE.Vector3(0, 0, 1).applyQuaternion(t.q); const deg = Math.round(THREE.MathUtils.radToDeg(n.angleTo(toCam.normalize())));
+  const td = tDiag(t.name); td.distMinCm = td.distMinCm === null ? cm : Math.min(td.distMinCm, cm); td.distMaxCm = Math.max(td.distMaxCm || 0, cm); td.angleMaxDeg = Math.max(td.angleMaxDeg, deg);
+  return { cm, deg };
+}
+let fpsFrames = 0, fpsT0 = 0, fpsTracking = 0;
+function countFrame(now, anyTracked) {
+  if (!fpsT0) fpsT0 = now; fpsFrames++; if (anyTracked) fpsTracking++;
+  if (now - fpsT0 >= 1000) {
+    const f = Math.round(fpsFrames * 1000 / (now - fpsT0));
+    diag.fps.all.push(f); (fpsTracking > fpsFrames / 2 ? diag.fps.tracking : diag.fps.idle).push(f);
+    for (const a of Object.values(diag.fps)) if (a.length > 600) a.shift();
+    $('t-fps') && ($('t-fps').textContent = `${f} fps`);
+    fpsFrames = 0; fpsTracking = 0; fpsT0 = now;
+  }
+}
+const avg = (a) => (a.length ? Math.round(a.reduce((x, y) => x + y, 0) / a.length) : null);
+function diagRecord() {
+  return {
+    sid: SID, v: 1, page: location.pathname, params: location.search, note: diag.note, profile: { ...CAM }, tune: { ...tune },
+    screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, renderDpr: Math.min(devicePixelRatio || 1, CAM.dpr) },
+    asked: diag.asked, askFailed: diag.askFailed || null, camera: diag.camera, cameras: diag.cameras || null, zoom: diag.zoom || null,
+    targetsLoaded: activeTargets.map((t) => t.name), runS: camStartAt ? Math.round((performance.now() - camStartAt) / 1000) : 0,
+    fps: { avg: avg(diag.fps.all), tracking: avg(diag.fps.tracking), idle: avg(diag.fps.idle), min: diag.fps.all.length ? Math.min(...diag.fps.all) : null, last30: diag.fps.all.slice(-30) },
+    targets: diag.targets, found: diag.found, lost: diag.lost, pops: diag.pops, taps: diag.taps, events: diag.events, errors: diag.errors || [],
+  };
+}
+let lastFlush = 0;
+function flushDiag(force) {
+  if (!camStartAt || params.has('nolog')) return;
+  const now = performance.now(); if (!force && now - lastFlush < 10000) return; lastFlush = now;
+  const body = JSON.stringify(diagRecord());
+  try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
+}
+addEventListener('pagehide', () => flushDiag(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushDiag(true); });
+addEventListener('error', (e) => { (diag.errors = diag.errors || []).push(String(e.message).slice(0, 200)); });
 
 async function start() {
   if (!loaded) return;
@@ -769,7 +867,7 @@ $('t-reset').onclick = () => { for (const k of Object.keys(TUNE_DEFAULT)) setTun
 $('t-replay').onclick = replay;
 for (const k of ['portal', 'stagger', 'fly']) $(TUNE_UI[k][0]).onchange = replay;   // let go of a timing slider and the pop plays again with it
 $('b-tune').onclick = () => { const t = $('tune'); t.hidden = !t.hidden; $('b-tune').setAttribute('aria-expanded', String(!t.hidden)); };
-showTune();
+showTune(); camMenu();
 
 const ray = new THREE.Raycaster(); const ndc = new THREE.Vector2(); let down = null;
 canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
