@@ -27,10 +27,11 @@ const PXM = 14000;
 const CHARMS = {
   bobo: { w: 809 / PXM, h: 923 / PXM },
   can: { w: 434 / PXM, h: 805 / PXM },
+  old: { w: 0.058, h: 0.0775 },       // the earlier design's Bobo charm picture (sizes from a phone photo, taking the can charm as 55 mm tall)
 };
 // landed sizes and spots (metres), in the "ground frame": x right, y up (gravity), z toward the viewer
 // Landed characters are the size of their printed art on the charms (art height in the charm pictures / 14 px per mm).
-const SIZE = { bobo: 825 / PXM, can: 679 / PXM };
+const SIZE = { bobo: 825 / PXM, can: 679 / PXM, old: 0.0775 * 619 / 720 };
 // Size and spacing can be tuned live from the Size panel; the chosen numbers are remembered on the device.
 const TUNE_DEFAULT = { size: 1, gap: 1, hover: 0.012, tilt: 0, away: 0, portal: 3, stagger: 0.55, fly: 1 };   // portal build-up, wait between the two pops, flight to the landing spot (seconds)
 const tune = { ...TUNE_DEFAULT };
@@ -114,7 +115,7 @@ function portalMaterial(map, aspect, a, b, c) {
   });
   return m;
 }
-const PORTAL_COLOURS = { bobo: [0xff9a3c, 0xffd28a, 0x6fb6ff], can: [0x4fc3ff, 0x8a1f6e, 0xff6ad5] };   // the cat's oranges and visor blue; the can's blue and magenta
+const PORTAL_COLOURS = { bobo: [0xff9a3c, 0xffd28a, 0x6fb6ff], can: [0x4fc3ff, 0x8a1f6e, 0xff6ad5], old: [0xe2574a, 0xf4c5b2, 0x3a4ad0] };   // the cat's oranges and visor blue; the can's blue and magenta
 
 // ---------------------------------------------------------------- sound (synthesised, no files)
 const sound = {
@@ -159,6 +160,7 @@ const loader = new GLTFLoader();
 const assets = Promise.all([
   loader.loadAsync(BASE + 'ar/bobo-keychain.glb'),
   loader.loadAsync(BASE + 'ar/eclipse-can.glb'),
+  loader.loadAsync(BASE + 'ar/old-bobo.glb'),
   fetch(HERE + 'image-targets/layout.json').then((r) => r.json()),
   ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-old'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
@@ -198,7 +200,7 @@ const charm = {};            // per charm: a group in world space = that charm's
 const pres = { bobo: false, can: false }, goneFor = { bobo: 9, can: 9 }, driver = { bobo: null, can: null };
 let present = false;         // is any charm in view right now
 const bubbles = []; let taps = 0, tapIdle = 0, finaleOn = false;
-let B, C;
+let B, C, Bcat, Bold, ALL = [];   // B is whichever Bobo is in play: the cat (Bcat) or the earlier design's blocky Bobo (Bold)
 const tweens = [];
 const tween = (dur, fn, done) => tweens.push({ t: 0, dur, fn, done });
 const after = (delay, fn) => tween(delay, () => {}, fn);
@@ -217,8 +219,8 @@ function pad(r) {
   g.add(sh, ring); g.userData.ring = ring; g.visible = false; return g;
 }
 
-function prepCharacter(gltf, key, padR) {
-  const def = CHARMS[key], height = SIZE[key];
+function prepCharacter(gltf, key, padR, kind = key) {
+  const def = CHARMS[kind], height = SIZE[kind];
   const frame = charm[key] = new THREE.Group(); frame.visible = false; scene.add(frame);
   if (DEBUG) {
     const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(def.w, def.h)), new THREE.LineBasicMaterial({ color: key === 'bobo' ? 0x4fb4ff : 0xe85bd8, depthTest: false }));
@@ -228,7 +230,7 @@ function prepCharacter(gltf, key, padR) {
   // the silhouette quad comes off the model and is pinned to the charm frame
   const sil = m.getObjectByName('Silhouette'); sil.updateMatrix(); const silLocal = sil.matrix.clone(); sil.removeFromParent();
   sil.material.map.wrapS = sil.material.map.wrapT = THREE.ClampToEdgeWrapping; sil.material.map.needsUpdate = true;
-  sil.material = portalMaterial(sil.material.map, def.w / def.h, ...PORTAL_COLOURS[key]);
+  sil.material = portalMaterial(sil.material.map, def.w / def.h, ...PORTAL_COLOURS[kind]);
   sil.renderOrder = 5; sil.visible = false;
   sil.position.set(0, 0, 0.0004); sil.quaternion.identity(); sil.scale.set(def.w, def.h, 1);
   frame.add(sil);
@@ -250,7 +252,7 @@ function prepCharacter(gltf, key, padR) {
   const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ map: sparkTex, size: 0.007, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, sizeAttenuation: true }));
   sparks.frustumCulled = false; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 };
   frame.add(pd, flash, scan, sparks);
-  return { key, def, frame, root, model: m, mixer, clips, current: null, baseScale, height, sil, lie: { pos: lp, quat: lq, s: ls.y },
+  return { key, kind, def, frame, root, model: m, mixer, clips, current: null, baseScale, height, sil, lie: { pos: lp, quat: lq, s: ls.y },
     fx: { glow: 0, portal: 0, black: 0, shake: 0 }, G: { q: new THREE.Quaternion(), flat: 0 }, pad: pd, flash, scan, sparks,
     st: 'idle', steady: 0, landed: false, sils: true };
 }
@@ -269,7 +271,7 @@ function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
   }
 }
 
-function buildScene(xr, [bobo, can, layout, ...targets]) {
+function buildScene(xr, [bobo, can, oldBobo, layout, ...targets]) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -284,8 +286,9 @@ function buildScene(xr, [bobo, can, layout, ...targets]) {
     for (const [k, c] of Object.entries(lay.charms)) local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz));
     TS[target.name] = { name: target.name, pr: target.properties, lay, local, tracked: false, at: 0, seen: -1e9, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true, g: new THREE.Group() };
   }
-  B = prepCharacter(bobo, 'bobo', 0.03);
-  C = prepCharacter(can, 'can', 0.02);
+  Bcat = B = prepCharacter(bobo, 'bobo', 0.03);
+  Bold = prepCharacter(oldBobo, 'bobo', 0.03, 'old');   // the earlier design's Bobo takes the Bobo slot when its charm is the one in view
+  ALL = [Bcat, Bold, C = prepCharacter(can, 'can', 0.02)];
   for (let i = 0; i < 90; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, depthTest: false }));
     sp.visible = false; sp.renderOrder = 25; B.frame.add(sp); bubbles.push({ sp, life: 0, max: 1, vel: new THREE.Vector3(), size: 0.01, ph: 0 });
@@ -380,8 +383,11 @@ function updateFrames(dt) {
   }
   pairOff = agree ? Math.max(pairOff - dt, 0) : 0.6;                        // stay off it for a moment after a disagreement, so it does not flip back and forth
   const pair = conf.bobo && conf.can && pairOff === 0 ? both : null;
+  // which Bobo is in play: it follows the charm in view, but never changes under a Bobo that is on screen
+  const want = on('kc-old') && !on('kc-bobo') ? Bold : on('kc-bobo') && !on('kc-old') ? Bcat : B;
+  if (want !== B && !pres.bobo) { B.frame.visible = false; B = want; driver.bobo = null; goneFor.bobo = 9; }
   const pick = {
-    bobo: on('kc-old') || (conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null),
+    bobo: B === Bold ? on('kc-old') : conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null,
     can: conf.can ? pair || canT || (pairOff === 0 ? both : null) : null,
   };
   present = false;
@@ -411,7 +417,7 @@ const hopDir = (ch) => new THREE.Vector3(0, 0, 1).lerp(_v2.set(0, 1, 0).applyQua
 // ---------------------------------------------------------------- the pop-out
 function resetScene() {
   tweens.length = 0; taps = 0; finaleOn = false; hinted = false; showFizz(); for (const b of bubbles) { b.life = 0; b.sp.visible = false; }
-  for (const ch of [B, C]) {
+  for (const ch of ALL) {
     ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false; ch.st = 'idle'; ch.steady = 0; ch.spin = null; ch.walk = null;
     ch.sil.visible = false; Object.assign(ch.fx, { glow: 0, portal: 0, black: 0, shake: 0 });
     ch.pad.visible = false; ch.flash.material.opacity = 0; ch.scan.material.opacity = 0; ch.sparks.userData.life.fill(0);
@@ -448,7 +454,7 @@ const startSolo = (ch) => charge([ch], () => launch(ch));
 let fxTime = 0;
 function updateMasks(dt) {
   fxTime += dt;
-  for (const ch of [B, C]) {
+  for (const ch of ALL) {
     const u = ch.sil.material.uniforms, fx = ch.fx;
     u.uTime.value = fxTime; u.uGlow.value = fx.glow * (0.86 + 0.14 * Math.sin(fxTime * 5.0)); u.uPortal.value = fx.portal; u.uBlack.value = fx.black;
     const s = fx.shake * 0.0007;
@@ -460,7 +466,7 @@ function launch(ch) {
   ch.root.visible = true; ch.st = 'flying';
   const fx = ch.fx, glow0 = fx.glow, portal0 = fx.portal;
   play(ch, 'PopOut', { loop: false, fade: 0, onDone: () => {
-    if (isBobo) { sound.bell(); sound.mew(); play(B, 'TailWag', { loop: false, fade: 0.25, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+    if (isBobo) { if (ch.kind === 'bobo') { sound.bell(); sound.mew(); } play(B, 'TailWag', { loop: false, fade: 0.25, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
     else play(ch, 'Idle', { fade: 0.3 });
   } });
   const pop = ch.current; pop.paused = true; const flyT = Math.max(tune.fly, 0.1); pop.setEffectiveTimeScale(THREE.MathUtils.clamp(1 / flyT, 0.4, 2.5));   // the pop-out clip keeps pace with the Jump time
@@ -597,16 +603,17 @@ function tick(dt) {
     if (!present) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL || cur === HINT_FIND || cur.startsWith('Found it')) ui.hint('');
   }
   const bo = !boboFree(); for (const id of ['b-wave', 'b-wag', 'b-walk']) $(id).disabled = bo;
+  const wagLabel = B === Bold ? 'Dance' : 'Wag tail'; if ($('b-wag').textContent !== wagLabel) $('b-wag').textContent = wagLabel;
   $('b-replay').disabled = $('b-photo').disabled = !(out && present);
   for (let i = tweens.length - 1; i >= 0; i--) {
     const w = tweens[i]; if (!w) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
     if (k >= 1) { const j = tweens.indexOf(w); if (j >= 0) tweens.splice(j, 1); w.done && w.done(); }
   }
   settle();
-  B.mixer.update(dt); C.mixer.update(dt);
+  for (const ch of ALL) ch.mixer.update(dt);
   updateBubbles(dt); updateMasks(dt);
   if (taps && !finaleOn) { tapIdle += dt; if (tapIdle > 6) { taps = 0; showFizz(); } }   // the fizz goes flat if you stop tapping
-  for (const ch of [B, C]) {                                               // sparks
+  for (const ch of ALL) {                                                  // sparks
     const pos = ch.sparks.geometry.attributes.position, u = ch.sparks.userData; let alive = 0;
     const down = _v.set(0, -1, 0).applyQuaternion(ch.G.q);
     for (let i = 0; i < u.life.length; i++) {
@@ -687,7 +694,7 @@ async function start() {
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(3).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only'))) });
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(4).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only'))) });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
     XR8.Threejs.pipelineModule(),
@@ -756,4 +763,4 @@ if (!mobile) {
 // the camera guide cycles through the three things to look for
 { const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
 
-window.__ar = { get state() { return state; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+window.__ar = { get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };

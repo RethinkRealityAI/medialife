@@ -14,6 +14,7 @@ $PY build_tex.py
 $PY build_bobo.py -- "$KC_WORK/bobo.glb" "$KC_WORK/bobo-keychain.blend"
 $PY build_label.py
 $PY build_can.py -- "$KC_WORK/eclipse-can.glb" "$KC_WORK/eclipse-can.blend"
+$PY build_old_bobo.py -- "$OUT/old-bobo.glb" "$KC_WORK/old-bobo.blend"   # the earlier design's blocky Bobo (small: no resample pass)
 for n in bobo:bobo-keychain eclipse-can:eclipse-can; do
   src="$KC_WORK/${n%%:*}.glb"; dst="$OUT/${n##*:}.glb"
   npx -y @gltf-transform/cli@4 resample "$src" "$dst"

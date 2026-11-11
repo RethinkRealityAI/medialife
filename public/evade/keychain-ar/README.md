@@ -18,7 +18,11 @@ binary under a different licence and is not needed here.
   - `kc-can`: the Eclipse can charm, cut from a phone photo of the real acrylic charm (clear edge and
     tab included, `scripts/build-keychain-ar/src/can-photo.png`). The can is the same on both keychain
     designs. `kc-can-art` is the flat art of the same charm, as a second picture of it.
-  - `kc-old`: the earlier design's Bobo charm, cut from a phone photo.
+  - `kc-old`: the earlier design's Bobo charm (the blocky avatar with one arm up), cut from a phone
+    photo. It has its own model (`/evade/keychain/ar/old-bobo.glb`, built from boxes in Blender by
+    `scripts/build-keychain-ar/build_old_bobo.py` to match the print) and its own silhouette. In
+    `main.js` it takes the Bobo slot (`B`) whenever its charm is the one in view; clip names match the
+    cat's, so the same buttons drive it.
   - `kc-both`: the two cat-keychain charms hanging together. Only loaded with `?pair=1`.
   - `guide-both.png`, `how-can.jpg`: pictures for the camera guide and the instructions screen.
   - `layout.json`: per target, the picture's size and where the two charm frames sit in it (metres).

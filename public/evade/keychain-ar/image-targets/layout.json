@@ -42,9 +42,9 @@
       }
     },
     "kc-old": {
-      "widthM": 0.0375,
-      "heightM": 0.05,
-      "silhouettes": false,
+      "widthM": 0.058125,
+      "heightM": 0.0775,
+      "silhouettes": true,
       "charms": {
         "bobo": {
           "x": 0,
