@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b0d12">
+  <title>Bobo's Pop-Out · EVADE keychain AR</title>
+  <meta name="description" content="Point your camera at the EVADE keychain and watch Bobo and the Eclipse can jump out.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preload" as="image" href="./splash.jpg">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/roblox/creators/vendor/three/build/three.module.js",
+        "three/addons/": "/roblox/creators/vendor/three/jsm/"
+      }
+    }
+  </script>
+  <style>
+    :root{--bg:#0b0d12;--panel:rgba(14,16,24,.72);--line:rgba(255,255,255,.16);--text:#f3f6fa;--muted:#b4bfcc;--blue:#4fb4ff;--pink:#e85bd8;color-scheme:dark}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
+    [hidden]{display:none!important}
+    #cam{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+    button,a.btn{font:700 15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+    button.primary,a.btn.primary{background:linear-gradient(90deg,var(--blue),var(--pink));border:0;color:#fff;box-shadow:0 8px 30px rgba(232,91,216,.35)}
+    button:disabled{opacity:.5;cursor:default}
+    button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+    /* splash */
+    #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:24px 22px max(26px,env(safe-area-inset-bottom));background:#07060d url(./splash.jpg) center top/cover no-repeat;transition:opacity .6s ease,transform .6s ease}
+    #splash::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,13,0) 38%,rgba(7,6,13,.72) 62%,rgba(7,6,13,.96) 100%);pointer-events:none}
+    #splash.gone{opacity:0;transform:scale(1.06);pointer-events:none}
+    #splash>*{position:relative;z-index:1}
+    .brand{position:absolute!important;top:max(18px,env(safe-area-inset-top));left:0;right:0;font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:800;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.6)}
+    .brand b{color:var(--blue)}
+    h1{font-size:clamp(34px,10vw,56px);line-height:1;margin:0 0 10px;font-weight:900;letter-spacing:-.02em;background:linear-gradient(90deg,#bfe6ff,#fff 45%,#ffc6f6);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(79,180,255,.45))}
+    .lead{margin:0 auto 18px;max-width:30ch;color:var(--text);font-size:16px}
+    .steps{display:flex;gap:8px;justify-content:center;margin:0 0 18px;padding:0;list-style:none;font-size:12px;color:var(--muted)}
+    .steps li{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px;flex:1;max-width:120px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    .steps b{display:block;color:#fff;font-size:13px}
+    #b-start{width:min(100%,340px);min-height:56px;font-size:17px}
+    #load{height:4px;width:min(100%,340px);border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:12px}
+    #load i{display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--blue),var(--pink));border-radius:4px;animation:ld 1.1s ease-in-out infinite}
+    @keyframes ld{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+    .fine{margin:12px 0 0;font-size:12px;color:var(--muted)}
+    .fine a{color:var(--muted)}
+    #desk{margin:0 0 16px;display:flex;gap:14px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;max-width:380px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+    #qr{width:96px;height:96px;flex:none;background:#fff;border-radius:10px;padding:8px}
+    #qr svg{display:block;width:100%;height:100%}
+    #desk p{margin:0;font-size:13px;color:var(--muted)} #desk b{color:#fff}
+
+    /* in-camera HUD */
+    #hud{position:fixed;inset:0;z-index:10;pointer-events:none}
+    #hud>*{pointer-events:auto}
+    #hint{position:absolute;left:50%;top:max(16px,env(safe-area-inset-top));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);text-align:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
+    #guide{position:absolute;left:50%;top:44%;width:min(58vw,300px);transform:translate(-50%,-50%);opacity:0;transition:opacity .35s;pointer-events:none}
+    #guide.on{opacity:1}
+    #guide img{display:block;width:100%;filter:invert(1) drop-shadow(0 0 10px rgba(79,180,255,.9));opacity:.34;animation:pulse 1.8s ease-in-out infinite}
+    #guide span{display:block;text-align:center;margin-top:10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+    @keyframes pulse{50%{opacity:.16;transform:scale(.97)}}
+    nav{position:absolute;left:0;right:0;bottom:0;padding:26px 12px max(16px,env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:center;flex-wrap:wrap;background:linear-gradient(rgba(7,6,13,0),rgba(7,6,13,.7))}
+    nav button{min-height:46px;padding:0 15px;font-size:14px}
+    #side{position:absolute;right:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));display:flex;flex-direction:column;gap:8px}
+    #side button{min-height:44px;padding:0 12px;font-size:12px}
+
+    /* photo preview + errors */
+    .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
+    #shot-img{max-width:100%;max-height:66vh;border-radius:16px;border:1px solid var(--line)}
+    .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+    #error h2{margin:0;font-size:22px} #error p{margin:0;max-width:34ch;color:var(--muted)}
+    @media (max-height:720px){.steps{display:none}.lead{margin-bottom:14px}#splash{background-position:center -70px}}
+    @media (min-aspect-ratio:1/1){
+      #splash{background-size:auto 128%;background-position:22% 0;align-items:flex-end;justify-content:center;padding-right:9vw;text-align:left}
+      #splash::after{background:linear-gradient(90deg,rgba(7,6,13,0) 40%,rgba(7,6,13,.9) 62%)}
+      #splash>*{max-width:400px;width:400px}
+      .brand{left:auto!important;right:9vw} .lead{margin:0 0 18px;max-width:400px} h1{font-size:46px} .steps{justify-content:flex-start}
+      .fine{text-align:left}
+    }
+    @media (prefers-reduced-motion:reduce){#guide img,#load i{animation:none}}
+  </style>
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view with Bobo and the Eclipse can popping out of the EVADE keychain"></canvas>
+
+  <section id="splash" aria-labelledby="title">
+    <div class="brand">EVADE <b>×</b> MEDIALIFE</div>
+    <h1 id="title">Bobo's Pop-Out</h1>
+    <p class="lead">Point your camera at your EVADE keychain and watch Bobo and the Eclipse can jump out.</p>
+    <ol class="steps" aria-label="How it works">
+      <li><b>1. Start</b>Allow the camera</li>
+      <li><b>2. Aim</b>At the Bobo charm</li>
+      <li><b>3. Play</b>Tap them, take a photo</li>
+    </ol>
+    <div id="desk" hidden>
+      <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+      <p><b>Best on your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
+    </div>
+    <button id="b-start" class="primary" disabled>Loading…</button>
+    <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+    <p class="fine">The camera stays on your device. Nothing is recorded or uploaded. No keychain to hand? <a href="./target/">Open the test picture</a> on another screen.</p>
+  </section>
+
+  <div id="hud" hidden>
+    <div id="hint" role="status" aria-live="polite" hidden></div>
+    <div id="guide"><img src="/evade/keychain/ar/silhouette-bobo.png" alt=""><span>Line up the Bobo charm</span></div>
+    <div id="side">
+      <button id="b-photo" disabled aria-label="Take a photo">Photo</button>
+      <button id="b-sound" aria-pressed="true">Sound on</button>
+    </div>
+    <nav aria-label="Bobo controls">
+      <button id="b-wave" disabled>Wave</button>
+      <button id="b-wag" disabled>Wag tail</button>
+      <button id="b-walk" disabled>Walk</button>
+      <button id="b-replay" class="primary" disabled>Replay</button>
+    </nav>
+  </div>
+
+  <div id="shot" class="sheet" hidden role="dialog" aria-label="Your photo">
+    <img id="shot-img" alt="Your photo of Bobo and the Eclipse can">
+    <div class="row">
+      <button id="shot-share" class="primary" hidden>Share</button>
+      <a id="shot-save" class="btn">Save</a>
+      <button id="shot-close">Back to camera</button>
+    </div>
+  </div>
+
+  <div id="error" class="sheet" hidden role="alert">
+    <h2 id="err-title">Something went wrong</h2>
+    <p id="err-body"></p>
+    <button id="err-retry" class="primary">Try again</button>
+  </div>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="./vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

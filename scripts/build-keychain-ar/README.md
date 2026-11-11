@@ -31,3 +31,7 @@ The build also saves `.blend` files with packed textures in `$KC_WORK` (default 
 `PopOut`: what is left on the charm when the character jumps off. See `mattercraft/keychain-pop/README.md`.
 The film of the lab was made with `/labs/keychain-pop/?capture`, which stops the real-time loop and lets a
 script step frames with `__kc.step(dt)`.
+
+## Image targets (8th Wall AR page)
+`build_targets.py` writes the two image targets for `/evade/keychain-ar/` from the charm pictures, in the
+same format as `@8thwall/image-target-cli`. See `public/evade/keychain-ar/README.md`.

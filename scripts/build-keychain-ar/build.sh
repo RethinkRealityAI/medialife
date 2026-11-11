@@ -9,6 +9,7 @@ export KC_WORK=${KC_WORK:-/tmp/keychain-ar}
 OUT=../../public/evade/keychain/ar
 mkdir -p "$KC_WORK" "$OUT"
 $PY build_silhouettes.py
+$PY build_targets.py
 $PY build_tex.py
 $PY build_bobo.py -- "$KC_WORK/bobo.glb" "$KC_WORK/bobo-keychain.blend"
 $PY build_label.py
