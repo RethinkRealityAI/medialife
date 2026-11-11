@@ -16,11 +16,15 @@ binary under a different licence and is not needed here.
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
 - `image-targets/` — written by `scripts/build-keychain-ar/build_targets.py`:
-  Four targets are active: `kc-can`, `kc-can-back`, `kc-bobo`, `kc-old`. `*_luminance.jpg` is what the engine tracks.
+  Five targets are active: `kc-can`, `kc-can-back`, `kc-bobo`, `kc-bobo-l`, `kc-old`. `*_luminance.jpg` is what the engine tracks.
   - `kc-bobo`: the cat Bobo charm, cut from the product shot Dapo sent (2026-11-11,
     `scripts/build-keychain-ar/cut_product_charms.py`). That side's outline is the artwork's mirrored
     (tail on the right), so its charm frame is mirrored in `layout.json` (`"mirror": true`) and the 3D
     Bobo is mirrored with it.
+  - `kc-bobo-l`: the cat charm's other side (the same print seen through the clear acrylic, so mirrored: tail
+    on the left). Its frame is not mirrored, so the 3D Bobo has his tail on the left there. The cat's face is
+    nearly symmetric, so either picture can briefly latch onto the other side; the side found first holds
+    until it has been gone for 0.7 s (`catSide` in `main.js`).
   - `kc-can`: the front of the real Eclipse can charm, cut from Dapo's phone photo
     (`scripts/build-keychain-ar/cut_can_photo.py`: GrabCut for the print, then the acrylic's outer edge
     traced and smoothed; skin seen through the clear acrylic is softened so it gives no false detail).

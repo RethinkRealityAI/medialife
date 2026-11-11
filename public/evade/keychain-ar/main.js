@@ -191,7 +191,7 @@ const assets = Promise.all([
       .then((tex) => { tex.flipY = false; layout.masks[n] = tex; }).catch(() => { /* falls back to the model's silhouette */ })));   // flipY off: the glTF uv convention, like the models' own masks
     return layout;
   }),
-  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-can-back', 'kc-old'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
+  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-can-art', 'kc-can-back', 'kc-old', 'kc-bobo-l'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -375,7 +375,7 @@ function onTarget(d) {
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
   t.s = t.pr.height * upp / t.lay.heightM;                                 // world units per metre
-  if (!t.tracked) { t.snap = true; if (camera) noteFound(t, measure(t)); } else if (camera && Math.random() < 0.1) measure(t);
+  if (!t.tracked) { t.snap = true; t.foundAt = performance.now(); if (camera) noteFound(t, measure(t)); } else if (camera && Math.random() < 0.1) measure(t);
   t.tracked = true; t.at = performance.now();
 }
 function onLost(d) { const t = TS[d.name]; if (t) { t.tracked = false; noteLost(d.name); } }
@@ -417,7 +417,7 @@ function groundFrame(ch) {
 // believed for a few seconds after the earlier design's Bobo was seen (its can matches the pair picture).
 const PAIR = params.get('pair') === '1';   // the combined version: the pair picture is loaded too and the two pop as one sequence. Off by default (Dapo, 2026-11-11): each charm runs only from its own picture, so one never shows up for the other.
 const conf = { bobo: false, can: false };
-let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0;
+let bothFor = 0, noneFor = 0, pairMaybe = false, pairOff = 0, catSide = null;
 const _v2 = new THREE.Vector3();
 function updateFrames(dt) {
   const now = performance.now();
@@ -426,10 +426,17 @@ function updateFrames(dt) {
   const oldRecent = recent('kc-old', 5000);
   const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
   const canT = on('kc-can') || on('kc-can-back') || on('kc-can-art');        // the photo of the real can charm, its QR side, then the flat art
-  if (on('kc-bobo')) conf.bobo = true; if (canT) conf.can = true;
+  // the cat charm from either side: the print seen through the clear acrylic is mirrored (tail right on kc-bobo,
+  // tail left on kc-bobo-l); each picture's charm frame carries the matching flip, so the 3D Bobo follows it.
+  // The cat's face is nearly symmetric, so the other side's picture can also latch onto a charm a moment after
+  // the right one (a little to one side). So the side found first holds until it has been gone for 0.7 s.
+  if (catSide && !on(catSide) && now - TS[catSide].seen > 700) catSide = null;
+  if (!catSide) { const r = on('kc-bobo'), l = on('kc-bobo-l'); catSide = r && l ? (r.foundAt <= l.foundAt ? r.name : l.name) : r ? r.name : l ? l.name : null; }
+  const catT = catSide ? on(catSide) : null, catRecent = (ms) => recent('kc-bobo', ms) || recent('kc-bobo-l', ms);
+  if (catT) conf.bobo = true; if (canT) conf.can = true;
   // one charm's own picture is in view and the other's has not been for a while: the other charm has left
-  if (conf.bobo && canT && !recent('kc-bobo', 1500)) conf.bobo = false;
-  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500) && !recent('kc-can-back', 1500) && !recent('kc-can-art', 1500)) conf.can = false;
+  if (conf.bobo && canT && !catRecent(1500)) conf.bobo = false;
+  if (conf.can && catT && !recent('kc-can', 1500) && !recent('kc-can-back', 1500) && !recent('kc-can-art', 1500)) conf.can = false;
   bothFor = both ? bothFor + dt : 0;
   if (bothFor > 1.5 && !conf.bobo && !conf.can) conf.bobo = conf.can = true;
   noneFor = Object.values(TS).some((t) => t.tracked) ? 0 : noneFor + dt; if (noneFor > 1) conf.bobo = conf.can = false;
@@ -445,10 +452,10 @@ function updateFrames(dt) {
   pairOff = agree ? Math.max(pairOff - dt, 0) : 0.6;                        // stay off it for a moment after a disagreement, so it does not flip back and forth
   const pair = conf.bobo && conf.can && pairOff === 0 ? both : null;
   // which Bobo is in play: it follows the charm in view, but never changes under a Bobo that is on screen
-  const want = on('kc-old') && !on('kc-bobo') ? Bold : on('kc-bobo') && !on('kc-old') ? Bcat : B;
+  const want = on('kc-old') && !catT ? Bold : catT && !on('kc-old') ? Bcat : B;
   if (want !== B && !pres.bobo) { B.frame.visible = false; B = want; driver.bobo = null; goneFor.bobo = 9; }
-  const pick = !PAIR ? { bobo: B === Bold ? on('kc-old') : on('kc-bobo'), can: canT } : {
-    bobo: B === Bold ? on('kc-old') : conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null,
+  const pick = !PAIR ? { bobo: B === Bold ? on('kc-old') : catT, can: canT } : {
+    bobo: B === Bold ? on('kc-old') : conf.bobo ? pair || catT || (pairOff === 0 ? both : null) : null,
     can: conf.can ? pair || canT || (pairOff === 0 ? both : null) : null,
   };
   present = false;

@@ -113,7 +113,7 @@ for tname, fname, key in (('kc-bobo', 'bobo-product.png', 'bobo'), ('kc-can-back
 
 # ---- portal masks: the whole acrylic piece of each charm picture (outlines traced by cut_can_photo.py and
 # cut_product_charms.py), in that picture's frame grown by MASK_PAD so the glow round it has room
-from PIL import ImageDraw
+from PIL import ImageDraw, ImageOps
 MASK_PAD = 1.3
 def portal_mask(tname, outline_file):
     lay = LAYOUT[tname]; MH = 800; MW = round(MH * lay['widthM'] / lay['heightM'])
@@ -144,5 +144,17 @@ for tname, key, fit_file in (('kc-can', 'can', 'can-photo-fit.json'), ('kc-can-b
 portal_mask('kc-can', 'can-outline.json')
 portal_mask('kc-can-back', 'can-back-outline.json')
 portal_mask('kc-bobo', 'bobo-product-outline.json')
+# ---- the cat charm's other side: the same print seen through the clear acrylic is its mirror image (tail on the
+# left, like the artwork). Its own target, so the cat is found whichever way round the charm hangs, and the 3D
+# Bobo is drawn unmirrored on it (tail on the left with the print). Mirroring the picture mirrors the charm frame:
+# x and rz change sign and the frame's own flip cancels (Dapo, 2026-11-11).
+im = ImageOps.mirror(Image.open(HERE_SRC + 'bobo-product.png').convert('RGB'))
+cb = LAYOUT['kc-bobo']['charms']['bobo']
+write_target('kc-bobo-l', im, dict(widthM=LAYOUT['kc-bobo']['widthM'], heightM=LAYOUT['kc-bobo']['heightM'], silhouettes=True,
+                                   charms={'bobo': dict(x=-cb['x'], y=cb['y'], rz=-cb['rz'], s=cb['s'], mirror=not cb['mirror'])}))
+Image.open(OUT + 'kc-bobo-l_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + 'kc-bobo-l_luminance.jpg', quality=95)
+pts = json.load(open(HERE_SRC + 'bobo-product-outline.json'))['points']
+json.dump(dict(note='kc-bobo-l: the bobo-product outline mirrored', points=[[round(1 - x, 5), y] for x, y in pts]), open(HERE_SRC + 'bobo-product-l-outline.json', 'w'))
+portal_mask('kc-bobo-l', 'bobo-product-l-outline.json')
 json.dump(dict(targets=LAYOUT), open(OUT + 'layout.json', 'w'), indent=2)
 print(open(OUT + 'layout.json').read())
