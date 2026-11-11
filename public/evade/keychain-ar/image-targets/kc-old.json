@@ -6,16 +6,16 @@
   "properties": {
     "left": 0,
     "top": 0,
-    "width": 495,
-    "height": 660,
+    "width": 1080,
+    "height": 1440,
     "isRotated": false,
-    "originalWidth": 495,
-    "originalHeight": 660
+    "originalWidth": 1080,
+    "originalHeight": 1440
   },
   "resources": {
     "luminanceImage": "kc-old_luminance.jpg",
     "thumbnailImage": "kc-old_thumbnail.jpg"
   },
-  "created": 1794404048598,
-  "updated": 1794404048598
+  "created": 1794407231547,
+  "updated": 1794407231547
 }

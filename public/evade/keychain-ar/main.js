@@ -3,8 +3,10 @@
 // (github.com/8thwall/8thwall, MIT), self-hosted in ./vendor/xr. Rendering is plain three.js.
 //
 // How the alignment works: the image target is the Bobo charm and the can charm together as they sit on
-// the keychain (a second target recognises the earlier keychain design; it has no silhouettes). image-targets/layout.json says where that picture sits in keychain space (metres),
-// which fixes each charm's frame. The silhouette quad that ships inside each GLB covers exactly its
+// the keychain. The two charms can also be apart, so each has a target of its own, and two more recognise
+// the earlier keychain design (no silhouettes on that one). Each charm pops on its own when it is the only
+// one in view, and the two pop together when both are. image-targets/layout.json says where each picture
+// sits relative to its charm (metres), which fixes each charm's frame. The silhouette quad that ships inside each GLB covers exactly its
 // charm frame, and the model starts at (charm frame) x (Silhouette node matrix)^-1, i.e. over its print.
 // Nothing is drawn unless the target is being tracked right now.
 import * as THREE from 'three';
@@ -35,13 +37,7 @@ const TUNE_DEFAULT = { size: 1, gap: 1, portal: 3, stagger: 0.55, fly: 1 };   //
 const tune = { ...TUNE_DEFAULT };
 try { Object.assign(tune, JSON.parse(localStorage.getItem('kc-ar-tune') || '{}')); } catch (e) { /* defaults */ }
 for (const k of Object.keys(TUNE_DEFAULT)) if (params.has(k) && isFinite(parseFloat(params.get(k)))) tune[k] = Math.min(Math.max(parseFloat(params.get(k)), 0), 8);
-// spots in the "ground frame": x right, y up (gravity), z toward the viewer. The can stands a little in
-// front of Bobo's side, like on the keychain.
-const MID_X = 0.0085, HALF_GAP = 0.01225;
-const SPOT = {
-  bobo: (flat) => new THREE.Vector3(MID_X - HALF_GAP * tune.gap, -0.066 * (1 - flat), 0.012 + 0.06 * flat),
-  can: (flat) => new THREE.Vector3(MID_X + HALF_GAP * tune.gap, -0.066 * (1 - flat), 0.022 + 0.06 * flat),
-};
+const HALF_GAP = 0.01225;   // half the distance between Bobo and the can when they stand together (Spacing 100%)
 
 // ---------------------------------------------------------------- small helpers
 const easeOut = (x) => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
@@ -156,7 +152,6 @@ const sound = {
 const ui = {
   hint(text) { const h = $('hint'); if (!text) { h.hidden = true; return; } if (h.textContent !== text) h.textContent = text; h.hidden = false; },
   guide(on) { $('guide').classList.toggle('on', on); },
-  buttons(on) { for (const id of ['b-wave', 'b-wag', 'b-walk', 'b-replay', 'b-photo']) $(id).disabled = !on; },
   error(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; $('splash').hidden = true; },
 };
 
@@ -165,13 +160,12 @@ const loader = new GLTFLoader();
 const assets = Promise.all([
   loader.loadAsync(BASE + 'ar/bobo-keychain.glb'),
   loader.loadAsync(BASE + 'ar/eclipse-can.glb'),
-  fetch(HERE + 'image-targets/kc-both.json').then((r) => r.json()),
-  fetch(HERE + 'image-targets/kc-old.json').then((r) => r.json()),
   fetch(HERE + 'image-targets/layout.json').then((r) => r.json()),
+  ...['kc-both', 'kc-bobo', 'kc-can', 'kc-old', 'kc-old-can'].map((n) => fetch(HERE + `image-targets/${n}.json`).then((r) => r.json())),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
-Promise.all([assets, xrReady]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = 'Start camera'; $('load').hidden = true; })
+Promise.all([assets, xrReady]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = 'Start'; $('load').hidden = true; })
   .catch((e) => { console.error(e); ui.error('Could not load the experience', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- gravity (so the characters stand upright)
@@ -200,19 +194,17 @@ async function askMotion() {
 
 // ---------------------------------------------------------------- scene state
 let scene, camera, renderer;
-const TS = {};               // tracker state per image target (the cat keychain and the earlier design)
-let T = null;                // the target being followed right now
-let kc;                      // the tracked picture: a group in metres, centred on the target, follows it rigidly
-const charm = {};            // THREE.Group per charm inside kc, in charm space (metres)
-let stage;                   // the Bobo charm frame again: the characters live in it
-const G = { q: new THREE.Quaternion(), flat: 0 };   // ground frame inside the stage
+const TS = {};               // per image target: raw pose from the engine + a smoothed group
+const charm = {};            // per charm: a group in world space = that charm's frame (metres). Everything of that character lives in it.
+const pres = { bobo: false, can: false }, goneFor = { bobo: 9, can: 9 }, driver = { bobo: null, can: null };
+let present = false;         // is any charm in view right now
 const bubbles = []; let taps = 0, tapIdle = 0, finaleOn = false;
-let B, C; const PADS = {}; let flashB, flashC, scanB, scanC, sparks;
+let B, C;
 const tweens = [];
 const tween = (dur, fn, done) => tweens.push({ t: 0, dur, fn, done });
 const after = (delay, fn) => tween(delay, () => {}, fn);
-let state = 'idle';          // idle -> looking -> popping -> ready
-let steady = 0, lostFor = 0, shots = 0;
+let state = 'idle';          // idle -> looking -> popping -> ready/walking: a summary of the two characters, for the UI
+let shots = 0, hinted = false;
 
 function sprite(tex, size) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, opacity: 0 }));
@@ -226,24 +218,42 @@ function pad(r) {
   g.add(sh, ring); g.userData.ring = ring; g.visible = false; return g;
 }
 
-function prepCharacter(gltf, height, charmGroup, def, key) {
+function prepCharacter(gltf, key, padR) {
+  const def = CHARMS[key], height = SIZE[key];
+  const frame = charm[key] = new THREE.Group(); frame.visible = false; scene.add(frame);
+  if (DEBUG) {
+    const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(def.w, def.h)), new THREE.LineBasicMaterial({ color: key === 'bobo' ? 0x4fb4ff : 0xe85bd8, depthTest: false }));
+    fr.renderOrder = 30; frame.add(fr);
+  }
   const root = new THREE.Group(); const m = gltf.scene;
   // the silhouette quad comes off the model and is pinned to the charm frame
   const sil = m.getObjectByName('Silhouette'); sil.updateMatrix(); const silLocal = sil.matrix.clone(); sil.removeFromParent();
   sil.material.map.wrapS = sil.material.map.wrapT = THREE.ClampToEdgeWrapping; sil.material.map.needsUpdate = true;
   sil.material = portalMaterial(sil.material.map, def.w / def.h, ...PORTAL_COLOURS[key]);
-  const fx = { glow: 0, portal: 0, black: 0, shake: 0 };
   sil.renderOrder = 5; sil.visible = false;
   sil.position.set(0, 0, 0.0004); sil.quaternion.identity(); sil.scale.set(def.w, def.h, 1);
-  charmGroup.add(sil);
+  frame.add(sil);
   const mixer = new THREE.AnimationMixer(m);
   const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
   const rest = clips.Sit || clips.Idle; mixer.clipAction(rest).play(); mixer.setTime(0); m.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(m, true); const h = box.max.y - box.min.y; mixer.stopAllAction();
   const baseScale = height / h; m.scale.setScalar(baseScale);
   m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
-  root.add(m); root.visible = false; stage.add(root);
-  return { root, model: m, mixer, clips, current: null, baseScale, height, sil, silLocal, charm: charmGroup, fx };
+  root.add(m); root.visible = false; frame.add(root);
+  // where the model lies exactly over its print, in the charm frame (a constant)
+  const lie = new THREE.Matrix4().makeScale(def.w, def.h, 1).multiply(new THREE.Matrix4().makeScale(baseScale, baseScale, baseScale).multiply(silLocal).invert());
+  const lp = new THREE.Vector3(), lq = new THREE.Quaternion(), ls = new THREE.Vector3(); lie.decompose(lp, lq, ls);
+  lp.addScaledVector(new THREE.Vector3(0, 0, 1).applyQuaternion(lq), 0.0025);
+  const pd = pad(padR), flash = sprite(glowTex, 0.001);
+  const scan = new THREE.Mesh(new THREE.PlaneGeometry(def.w * 0.96, 0.0018), new THREE.MeshBasicMaterial({ color: 0x8fd8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false }));
+  scan.position.z = 0.001;
+  const N = 70, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  const sparks = new THREE.Points(geo, new THREE.PointsMaterial({ map: sparkTex, size: 0.007, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, sizeAttenuation: true }));
+  sparks.frustumCulled = false; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 };
+  frame.add(pd, flash, scan, sparks);
+  return { key, def, frame, root, model: m, mixer, clips, current: null, baseScale, height, sil, lie: { pos: lp, quat: lq, s: ls.y },
+    fx: { glow: 0, portal: 0, black: 0, shake: 0 }, G: { q: new THREE.Quaternion(), flat: 0 }, pad: pd, flash, scan, sparks,
+    st: 'idle', steady: 0, landed: false, sils: true };
 }
 
 function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
@@ -260,7 +270,7 @@ function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
   }
 }
 
-function buildScene(xr, [bobo, can, tNew, tOld, layout]) {
+function buildScene(xr, [bobo, can, layout, ...targets]) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -270,39 +280,21 @@ function buildScene(xr, [bobo, can, tNew, tOld, layout]) {
   camera.position.set(0, 0, 0); camera.quaternion.identity();
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
 
-  kc = new THREE.Group(); kc.visible = false; scene.add(kc);
-  for (const target of [tNew, tOld]) {
-    TS[target.name] = { name: target.name, pr: target.properties, lay: layout.targets[target.name], tracked: false, at: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true };
+  for (const target of targets) {
+    const lay = layout.targets[target.name]; const local = {};
+    for (const [k, c] of Object.entries(lay.charms)) local[k] = new THREE.Matrix4().makeTranslation(c.x, c.y, 0).multiply(new THREE.Matrix4().makeRotationZ(c.rz));
+    TS[target.name] = { name: target.name, pr: target.properties, lay, local, tracked: false, at: 0, seen: -1e9, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true, g: new THREE.Group() };
   }
-  for (const [k, def] of Object.entries(CHARMS)) {
-    charm[k] = new THREE.Group(); kc.add(charm[k]);
-    if (DEBUG) {
-      const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(def.w, def.h)), new THREE.LineBasicMaterial({ color: k === 'bobo' ? 0x4fb4ff : 0xe85bd8, depthTest: false }));
-      fr.renderOrder = 30; charm[k].add(fr);
-    }
-  }
-  stage = new THREE.Group(); kc.add(stage);
-  useTarget(TS[tNew.name]);
-  B = prepCharacter(bobo, SIZE.bobo, charm.bobo, CHARMS.bobo, 'bobo');
-  C = prepCharacter(can, SIZE.can, charm.can, CHARMS.can, 'can');
-  PADS.bobo = pad(0.03); PADS.can = pad(0.02); stage.add(PADS.bobo, PADS.can);
-  flashB = sprite(glowTex, 0.001); flashC = sprite(glowTex, 0.001); stage.add(flashB, flashC);
-  const scanMat = () => new THREE.MeshBasicMaterial({ color: 0x8fd8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false });
-  scanB = new THREE.Mesh(new THREE.PlaneGeometry(CHARMS.bobo.w * 0.96, 0.0018), scanMat()); scanB.position.z = 0.001; charm.bobo.add(scanB);
-  scanC = new THREE.Mesh(new THREE.PlaneGeometry(CHARMS.can.w * 0.96, 0.0018), scanMat()); scanC.position.z = 0.001; charm.can.add(scanC);
-  // sparkle burst
-  const N = 90; const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-  sparks = new THREE.Points(geo, new THREE.PointsMaterial({ map: sparkTex, size: 0.007, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, sizeAttenuation: true }));
+  B = prepCharacter(bobo, 'bobo', 0.03);
+  C = prepCharacter(can, 'can', 0.02);
   for (let i = 0; i < 90; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex, transparent: true, depthWrite: false, depthTest: false }));
-    sp.visible = false; sp.renderOrder = 25; stage.add(sp); bubbles.push({ sp, life: 0, max: 1, vel: new THREE.Vector3(), size: 0.01, ph: 0 });
+    sp.visible = false; sp.renderOrder = 25; B.frame.add(sp); bubbles.push({ sp, life: 0, max: 1, vel: new THREE.Vector3(), size: 0.01, ph: 0 });
   }
-  sparks.frustumCulled = false; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 }; stage.add(sparks);
 }
 
-function burst(at, n = 40, speed = 0.16) {
-  const pos = sparks.geometry.attributes.position; const u = sparks.userData;
+function burst(ch, at, n = 40, speed = 0.16) {
+  const pos = ch.sparks.geometry.attributes.position; const u = ch.sparks.userData;
   for (let i = 0; i < n; i++) {
     const j = u.next; u.next = (u.next + 1) % u.life.length;
     const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.3) * Math.PI * 0.8, s = speed * (0.4 + Math.random());
@@ -314,118 +306,140 @@ function burst(at, n = 40, speed = 0.16) {
 }
 
 // ---------------------------------------------------------------- tracking -> charm frames
-const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _m3 = new THREE.Matrix4();
-// put the charm frames (and the stage, which is the Bobo charm frame) where this target's layout says they are
-function useTarget(t) {
-  T = t;
-  for (const [k, g] of [['bobo', charm.bobo], ['can', charm.can], ['bobo', stage]]) {
-    const c = t.lay.charms[k]; g.position.set(c.x, c.y, 0); g.rotation.set(0, 0, c.rz);
-  }
-  t.snap = true;
-}
+const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _m = new THREE.Matrix4();
 function onTarget(d) {
   const t = TS[d.name]; if (!t) return;
-  const now = performance.now(); t.seen = now;
-  // Both designs carry the same Eclipse can, so the cat keychain's target can lock onto the old keychain's
-  // can. The old design's target is its Bobo charm alone, which only exists on the old keychain: it wins,
-  // and for a few seconds after it was last seen the cat target is not believed.
-  const old = TS['kc-old'];
-  if (t !== old && old && now - (old.seen || -1e9) < 5000) return;
-  if (t !== T) useTarget(t);
   const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;               // world units per target pixel
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
-  t.s = t.pr.height * upp / t.lay.heightM;                                           // world units per metre
+  t.s = t.pr.height * upp / t.lay.heightM;                                 // world units per metre
   if (!t.tracked) t.snap = true;
-  t.tracked = true; t.at = now;
+  t.tracked = true; t.at = performance.now();
 }
-function onLost(d) { const t = TS[d.name]; if (t) { t.tracked = false; if (t.name === 'kc-old') t.seen = -1e9; } }
+function onLost(d) { const t = TS[d.name]; if (t) t.tracked = false; }
 
 // Stick to the print: follow real movement at once, and only smooth out the sub-millimetre jitter of a
-// keychain that is being held still (any lag here shows up as the 3D sliding off the charms).
-function follow() {
-  const t = T, g = kc, clamp = THREE.MathUtils.clamp;
+// charm that is being held still (any lag here shows up as the 3D sliding off the print).
+function follow(t) {
+  const g = t.g, clamp = THREE.MathUtils.clamp;
   const aP = t.snap ? 1 : clamp(g.position.distanceTo(t.p) / t.s / 0.0025, 0.3, 1);
   const aR = t.snap ? 1 : clamp(g.quaternion.angleTo(t.q) / 0.04, 0.3, 1);
   const aS = t.snap ? 1 : clamp(Math.abs(g.scale.x - t.s) / t.s / 0.03, 0.3, 1);
   t.snap = false;
   g.position.lerp(t.p, aP); g.quaternion.slerp(t.q, aR); g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, t.s, aS));
+  g.updateMatrix();
 }
-let present = false, gone = 0;           // is the keychain in view right now (with a short grace so it does not flicker)
-const _sq = new THREE.Quaternion();
-function updateFrames(dt) {
-  if (T.tracked && performance.now() - T.at > 500) T.tracked = false;      // no pose for half a second: lost
-  if (T.tracked) follow();
-  gone = T.tracked ? 0 : gone + dt; present = T.tracked || (present && gone < 0.25);
-  kc.visible = present; kc.updateMatrixWorld(true);                        // nothing is drawn unless it is tracked now
-  if (state !== 'looking' && state !== 'idle') return;   // once they pop, the ground frame is fixed to the keychain
-
-  // ground frame: up from gravity when the phone reports it, else the top of the screen
-  const toStage = _q.copy(stage.getWorldQuaternion(_sq)).invert().multiply(camera.quaternion);       // camera space -> stage space
+// ground frame of a character, in its charm frame: up from gravity when the phone reports it, else the top
+// of the screen; "forward" is toward the viewer along the ground (looking straight down: the bottom of the screen)
+function groundFrame(ch) {
+  const f0 = ch.frame;
+  const toFrame = _q.copy(f0.quaternion).invert().multiply(camera.quaternion);       // camera space -> charm space
   const up = new THREE.Vector3(0, 1, 0);
   if (gravity.up && performance.now() - gravity.t < 1500) up.copy(gravity.up);
-  up.applyQuaternion(toStage).normalize();
-  // "forward" is toward the viewer along the ground; looking straight down, that is the bottom of the screen
-  const camL = stage.worldToLocal(_v.copy(camera.position)).normalize();
-  const scrDown = new THREE.Vector3(0, -1, 0).applyQuaternion(toStage);
+  up.applyQuaternion(toFrame).normalize();
+  const camL = f0.worldToLocal(_v.copy(camera.position)).normalize();
+  const scrDown = new THREE.Vector3(0, -1, 0).applyQuaternion(toFrame);
   const f = camL.clone().addScaledVector(up, -camL.dot(up)).add(scrDown.addScaledVector(up, -scrDown.dot(up)).multiplyScalar(0.6));
   if (f.lengthSq() < 1e-8) f.set(0, 0, 1); f.normalize();
   const r = new THREE.Vector3().crossVectors(up, f).normalize();
-  _q.setFromRotationMatrix(_m.makeBasis(r, up, f));
-  G.q.copy(_q); G.flat = Math.min(Math.abs(up.z) * 1.25, 1);
+  ch.G.q.setFromRotationMatrix(_m.makeBasis(r, up, f)); ch.G.flat = Math.min(Math.abs(up.z) * 1.25, 1);
 }
-const spotOf = (k) => SPOT[k](G.flat).applyQuaternion(G.q);
-
-// where a character lies exactly over its print, in stage space
-function charmPose(ch) {
-  ch.charm.updateWorldMatrix(true, false);
-  _m.makeScale(ch.baseScale, ch.baseScale, ch.baseScale).multiply(ch.silLocal).invert();
-  _m2.copy(stage.matrixWorld).invert().multiply(ch.charm.matrixWorld).multiply(_m3.makeScale(ch.sil.scale.x, ch.sil.scale.y, 1)).multiply(_m);
-  const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
-  _m2.decompose(pos, quat, scl);
-  pos.addScaledVector(_v.set(0, 0, 1).applyQuaternion(quat), 0.0025);
-  return { pos, quat, s: scl.y };
+// Which image target places each charm this frame. A charm only counts as being there once the engine has
+// seen that charm's own picture: the pair picture also locks onto a single charm (half of it is enough), so
+// on its own it does not say which charms are in view. With both charms confirmed the pair picture places
+// them (it holds best when the can hangs over Bobo, and from further away); a charm on its own follows its
+// own picture. Too far for the single pictures but the pair picture holds: after a moment, take it as both.
+// The earlier design has two pictures of its own. The two designs' cans look alike: the cat keychain's can
+// picture never fires on the old can, but the old can's picture does fire on the new can, so the old can
+// only counts when the new can's picture stays quiet, and the pair picture is not believed for a few
+// seconds after an old-design charm was seen.
+const conf = { bobo: false, can: false };
+let bothFor = 0, oldCanFor = 0, oldCanSeen = -1e9, noneFor = 0, pairMaybe = false, pairOff = 0;
+const _v2 = new THREE.Vector3();
+function updateFrames(dt) {
+  const now = performance.now();
+  for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; } }
+  const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
+  oldCanFor = on('kc-old-can') && !recent('kc-can', 3000) ? oldCanFor + dt : 0;
+  const oldCan = oldCanFor > 1.2 || (oldCanFor > 0 && recent('kc-old', 5000)) ? on('kc-old-can') : null; if (oldCan) oldCanSeen = now;   // next to the old Bobo there is no doubt
+  const oldRecent = recent('kc-old', 5000) || now - oldCanSeen < 5000;
+  const both = oldRecent ? null : on('kc-both'); pairMaybe = !!both;
+  if (on('kc-bobo')) conf.bobo = true; if (on('kc-can')) conf.can = true;
+  // one charm's own picture is in view and the other's has not been for a while: the other charm has left
+  if (conf.bobo && on('kc-can') && !recent('kc-bobo', 1500)) conf.bobo = false;
+  if (conf.can && on('kc-bobo') && !recent('kc-can', 1500)) conf.can = false;
+  bothFor = both ? bothFor + dt : 0;
+  if (bothFor > 1.5 && !conf.bobo && !conf.can && !on('kc-old-can')) conf.bobo = conf.can = true;
+  noneFor = Object.values(TS).some((t) => t.tracked) ? 0 : noneFor + dt; if (noneFor > 1) conf.bobo = conf.can = false;
+  // the pair picture only places the charms while it agrees with each charm's own picture: two charms held
+  // apart (not hanging together) still match it, but then it would put one of them in the wrong place
+  let agree = true;
+  if (both) for (const [k, n] of [['bobo', 'kc-bobo'], ['can', 'kc-can']]) {
+    const t = on(n); if (!t) continue;
+    const a = _v.setFromMatrixPosition(_m.copy(both.g.matrix).multiply(both.local[k])), b = _v2.setFromMatrixPosition(_m.copy(t.g.matrix).multiply(t.local[k]));
+    a.sub(camera.position); b.sub(camera.position);                          // compare where they appear, not how far away: the two pictures' depth estimates differ a little
+    if (a.angleTo(b) * b.length() / t.s > 0.008) agree = false;
+  }
+  pairOff = agree ? Math.max(pairOff - dt, 0) : 0.6;                        // stay off it for a moment after a disagreement, so it does not flip back and forth
+  const pair = conf.bobo && conf.can && pairOff === 0 ? both : null;
+  const pick = {
+    bobo: on('kc-old') || (conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null),
+    can: oldCan || (conf.can ? pair || on('kc-can') || (pairOff === 0 ? both : null) : null),
+  };
+  present = false;
+  for (const ch of [B, C]) {
+    const k = ch.key, t = pick[k], f = ch.frame;
+    if (t) {
+      _m.copy(t.g.matrix).multiply(t.local[k]).decompose(f.position, f.quaternion, f.scale);
+      driver[k] = t; goneFor[k] = 0;
+    } else { goneFor[k] += dt; if (goneFor[k] > 0.25) driver[k] = null; }
+    pres[k] = !!t || (pres[k] && goneFor[k] < 0.25);                       // nothing is drawn unless it is tracked now (short grace against flicker)
+    f.visible = pres[k]; f.updateMatrixWorld(true); present = present || pres[k];
+    if (t && ch.st === 'idle') { groundFrame(ch); ch.sils = t.lay.silhouettes; }   // once it pops, its ground frame is fixed to the charm
+  }
 }
+const SPOTS = {
+  bobo: (flat) => new THREE.Vector3(-0.004 - HALF_GAP * (tune.gap - 1), -0.066 * (1 - flat), 0.012 + 0.06 * flat),
+  can: (flat) => new THREE.Vector3(-0.003 + HALF_GAP * (tune.gap - 1), -0.049 * (1 - flat), 0.022 + 0.06 * flat),
+};
+const spotOf = (ch) => SPOTS[ch.key](ch.G.flat).applyQuaternion(ch.G.q);
 
 // ---------------------------------------------------------------- the pop-out
 function resetScene() {
-  tweens.length = 0; taps = 0; finaleOn = false; C.spin = null; showFizz(); for (const b of bubbles) { b.life = 0; b.sp.visible = false; }
+  tweens.length = 0; taps = 0; finaleOn = false; hinted = false; showFizz(); for (const b of bubbles) { b.life = 0; b.sp.visible = false; }
   for (const ch of [B, C]) {
-    ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false;
+    ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false; ch.st = 'idle'; ch.steady = 0; ch.spin = null; ch.walk = null;
     ch.sil.visible = false; Object.assign(ch.fx, { glow: 0, portal: 0, black: 0, shake: 0 });
+    ch.pad.visible = false; ch.flash.material.opacity = 0; ch.scan.material.opacity = 0; ch.sparks.userData.life.fill(0);
   }
-  PADS.bobo.visible = PADS.can.visible = false;
-  for (const m of [flashB, flashC, scanB, scanC]) m.material.opacity = 0;
-  ui.buttons(false);
 }
-function popOut() {
-  resetScene(); state = 'popping'; ui.hint(''); ui.guide(false);
-  const go = () => {
-    launch(C, 'can', flashC);                                             // the can pops first
-    after(reduceMotion ? 0.01 : tune.stagger, () => launch(B, 'bobo', flashB));   // then Bobo
-  };
-  if (T.lay.silhouettes) {
-    // the build-up: a border lights up around each charm, the keychain rumbles, and the cut-outs open
-    // into portals in the cat's and the can's colours. Then they pop.
-    const dur = reduceMotion ? 0.3 : Math.max(tune.portal, 0.2);
-    sound.rumble(dur); try { navigator.vibrate && navigator.vibrate([70, 50, 70, 50, 90, 40, 160].map((x) => Math.round(x * dur / 0.53 / 1.7 * 0.53))); } catch (e) { /* no haptics */ }
-    for (const ch of [B, C]) ch.sil.visible = true;
+// The build-up, for one charm or both: a border lights up around the cut-out, the mask rumbles, and it opens
+// into a portal in that charm's colours. Then `go`. The earlier design has no masks: it gets a quick scan.
+function charge(chs, go) {
+  ui.hint(''); ui.guide(false);
+  for (const ch of chs) { ch.st = 'charging'; ch.sil.visible = ch.sils; }
+  const masked = chs.filter((ch) => ch.sils);
+  if (masked.length) {
+    const dur = Math.max(tune.portal, 0.2);
+    sound.rumble(dur); try { navigator.vibrate && navigator.vibrate([70, 50, 70, 50, 90, 40, 160].map((x) => Math.round(x * dur / 1.7))); } catch (e) { /* no haptics */ }
     tween(dur, (k) => {
-      for (const ch of [B, C]) {
+      for (const ch of masked) {
         ch.fx.glow = easeOut(k * 2.2) * (0.8 + 0.35 * k);
         ch.fx.portal = easeInOut((k - 0.22) / 0.55);
         ch.fx.shake = reduceMotion ? 0 : easeInOut(k * 1.5) * (0.4 + 0.9 * k);
       }
-    }, go);
+      for (const ch of chs) if (!ch.sils) { ch.scan.position.y = THREE.MathUtils.lerp(0.5, -0.5, (k * 3) % 1) * ch.def.h; ch.scan.material.opacity = Math.sin(k * Math.PI) * 0.9; }
+    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); });
   } else {
+    const dur = Math.max(tune.portal, 0.2), sweeps = Math.max(1, Math.round(dur / 0.75));   // the earlier design: scan lines for as long as the portal would take
     sound.scan();
-    tween(reduceMotion ? 0.01 : 0.7, (k) => {
-      const o = Math.sin(k * Math.PI) * 0.9;
-      scanB.position.y = THREE.MathUtils.lerp(0.5, -0.5, k) * CHARMS.bobo.h; scanB.material.opacity = o;
-      scanC.position.y = THREE.MathUtils.lerp(0.5, -0.5, k) * CHARMS.can.h; scanC.material.opacity = o;
-    }, () => { scanB.material.opacity = scanC.material.opacity = 0; go(); });
+    tween(dur, (k) => {
+      for (const ch of chs) { ch.scan.position.y = THREE.MathUtils.lerp(0.5, -0.5, Math.min(k * sweeps, sweeps - 1e-4) % 1) * ch.def.h; ch.scan.material.opacity = Math.sin(k * Math.PI) * 0.9; }
+    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); });
   }
 }
+const startPair = () => charge([C, B], () => { launch(C); after(Math.max(tune.stagger, 0.01), () => launch(B)); });   // the can pops first, then Bobo
+const startSolo = (ch) => charge([ch], () => launch(ch));
 // push the mask state into the shader, and rumble the masks on the charms
 let fxTime = 0;
 function updateMasks(dt) {
@@ -437,34 +451,29 @@ function updateMasks(dt) {
     ch.sil.position.set((Math.random() - 0.5) * 2 * s, (Math.random() - 0.5) * 2 * s, 0.0004); ch.sil.rotation.z = (Math.random() - 0.5) * fx.shake * 0.03;
   }
 }
-function launch(ch, k, flash) {
-  const isBobo = ch === B; const pd = PADS[k];
-  ch.root.visible = true; ch.sil.visible = T.lay.silhouettes;
+function launch(ch) {
+  const isBobo = ch === B, pd = ch.pad, flash = ch.flash, G = ch.G;
+  ch.root.visible = true; ch.st = 'flying';
   const fx = ch.fx, glow0 = fx.glow, portal0 = fx.portal;
   play(ch, 'PopOut', { loop: false, fade: 0, onDone: () => {
-    if (isBobo) {
-      sound.bell(); sound.mew();
-      play(B, 'TailWag', { loop: false, fade: 0.25, onDone: () => play(B, 'Sit', { fade: 0.3 }) });
-      state = 'ready'; ui.buttons(true); ui.hint('Tap Bobo or the can for bubbles. Keep tapping!'); after(5, () => { if (state === 'ready' && !finaleOn) ui.hint(''); });
-    } else play(ch, 'Idle', { fade: 0.3 });
+    if (isBobo) { sound.bell(); sound.mew(); play(B, 'TailWag', { loop: false, fade: 0.25, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+    else play(ch, 'Idle', { fade: 0.3 });
   } });
-  const pop = ch.current; pop.paused = true;
+  const pop = ch.current; pop.paused = true; const flyT = Math.max(tune.fly, 0.1); pop.setEffectiveTimeScale(THREE.MathUtils.clamp(1 / flyT, 0.4, 2.5));   // the pop-out clip keeps pace with the Jump time
   const place = (wig) => {
-    const p = charmPose(ch);
-    ch.root.position.copy(p.pos); ch.root.quaternion.copy(p.quat); ch.root.scale.setScalar(p.s);
+    ch.root.position.copy(ch.lie.pos); ch.root.quaternion.copy(ch.lie.quat); ch.root.scale.setScalar(ch.lie.s);
     if (wig) ch.root.rotateZ(wig);
-    return p;
   };
   place(0); ch.mixer.update(0);
   tween(reduceMotion ? 0.01 : 0.38, (kk) => {                             // a shiver, still stuck to the charm
-    fx.black = Math.max(fx.black, Math.min(kk * 4, 1)); fx.shake = 1 + kk;
+    if (ch.sils) fx.black = Math.max(fx.black, Math.min(kk * 4, 1)); fx.shake = 1 + kk;
     place(Math.sin(kk * Math.PI * 5) * 0.05 * kk);
   }, () => {
-    const from = place(0); pop.paused = false; fx.black = 1; fx.shake = 0;
+    place(0); const from = ch.lie; pop.paused = false; if (ch.sils) fx.black = 1; fx.shake = 0;
     sound.pop(); if (!isBobo) sound.fizz();
-    pd.visible = true; flash.position.copy(from.pos); burst(from.pos, isBobo ? 50 : 34);
-    tween(reduceMotion ? 0.01 : Math.max(tune.fly, 0.1), (kk) => {         // it flies to its spot; the silhouette stays
-      const e = easeOut(kk); const to = spotOf(k);
+    pd.visible = true; flash.position.copy(from.pos); burst(ch, from.pos, isBobo ? 50 : 34);
+    tween(flyT, (kk) => {         // it flies to its spot; the silhouette stays
+      const e = easeOut(kk); const to = spotOf(ch);
       ch.root.position.lerpVectors(from.pos, to, e).addScaledVector(_v.set(0, 1, 0).applyQuaternion(G.q), Math.sin(kk * Math.PI) * 0.04);
       ch.root.quaternion.slerpQuaternions(from.quat, G.q, easeOut(kk * 2));
       ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, tune.size, e));
@@ -472,20 +481,25 @@ function launch(ch, k, flash) {
       const f = Math.sin(Math.min(kk * 1.6, 1) * Math.PI);
       flash.scale.setScalar(0.09 * f + 0.0001); flash.material.opacity = f;
       pd.scale.setScalar((0.2 + 0.8 * easeOut(kk * 1.3)) * tune.size); pd.userData.ring.material.opacity = easeOut(kk);
-    }, () => { ch.landed = true; sound.land(); burst(spotOf(k), 14, 0.07); });
+    }, () => {
+      ch.landed = true; ch.st = 'out'; sound.land(); burst(ch, spotOf(ch), 14, 0.07);
+      if (!hinted) { hinted = true; ui.hint('Tap for bubbles. Keep tapping!'); after(5, () => { if (!finaleOn && $('hint').textContent.startsWith('Tap for')) ui.hint(''); }); }
+    });
   });
 }
 // ---------------------------------------------------------------- bubbles
-// Every tap blows bubbles; each tap in a row makes more of them and bigger. The tenth tap is the Eclipse
-// overflow: the can rockets up spinning on a geyser of bubbles and Bobo cheers.
+// Every tap blows bubbles; each tap in a row makes more of them and bigger. The tenth tap is the overflow:
+// the can rockets up spinning on a geyser of bubbles and Bobo cheers (Bobo alone gets the geyser himself).
 const FINALE = 10;
 let bubbleNext = 0;
-const upVec = () => new THREE.Vector3(0, 1, 0).applyQuaternion(G.q);
-const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(), ch.height * 0.95 * tune.size);
-function blow(at, n, size, speed = 0.05, spread = 0.5) {
-  const up = upVec();
+const upVec = (ch) => new THREE.Vector3(0, 1, 0).applyQuaternion(ch.G.q);
+const topOf = (ch) => ch.root.position.clone().addScaledVector(upVec(ch), ch.height * 0.95 * tune.size);
+const live = (ch) => ch.landed && pres[ch.key];
+function blow(ch, n, size, speed = 0.05, spread = 0.5) {
+  const up = upVec(ch), at = topOf(ch);
   for (let i = 0; i < n; i++) {
     const b = bubbles[bubbleNext]; bubbleNext = (bubbleNext + 1) % bubbles.length;
+    if (b.sp.parent !== ch.frame) ch.frame.add(b.sp);
     b.sp.position.copy(at); b.size = size * (0.55 + Math.random() * 0.9); b.max = b.life = 1.1 + Math.random() * 1.1; b.ph = Math.random() * 6.28;
     b.vel.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(speed * spread).addScaledVector(up, speed * (0.6 + Math.random() * 0.8));
     b.sp.visible = true;
@@ -503,72 +517,81 @@ function updateBubbles(dt) {
 }
 function showFizz() { const f = $('fizz'); f.hidden = taps === 0; f.firstElementChild.style.width = (Math.min(taps, FINALE) / FINALE * 100) + '%'; f.setAttribute('aria-valuenow', String(taps)); }
 function tapBubbles(ch) {
-  if (finaleOn || !ch.landed) return;
+  if (!live(ch)) ch = ch === B ? C : B;
+  if (finaleOn || !live(ch)) return;
   taps++; tapIdle = 0; showFizz();
   if (taps >= FINALE) { finale(); return; }
   sound.blip(taps);
-  blow(topOf(ch), 2 + taps * 2, 0.005 + taps * 0.0016, 0.04 + taps * 0.004);
+  blow(ch, 2 + taps * 2, 0.005 + taps * 0.0016, 0.04 + taps * 0.004);
 }
 function finale() {
-  finaleOn = true; sound.fanfare(); sound.bell(); ui.hint('Eclipse overflow!');
-  C.spin = { k: 0, turns: 4, lift: 0.05 };
-  play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }) });
-  burst(topOf(C), 60, 0.2); flashC.position.copy(topOf(C));
+  const src = live(C) ? C : B, MSG = src === C ? 'Eclipse overflow!' : 'Bubble storm!';
+  finaleOn = true; sound.fanfare(); sound.bell(); ui.hint(MSG);
+  if (src === C) C.spin = { k: 0, turns: 4, lift: 0.05 };
+  if (live(B)) play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }) });
+  burst(src, topOf(src), 60, 0.2); src.flash.position.copy(topOf(src));
   tween(2.4, (k) => {
-    C.spin.k = Math.min(k * 1.15, 1);
-    if (k < 0.85) { blow(topOf(C), 2, 0.012 + Math.random() * 0.016, 0.13, 0.35); if (Math.random() < 0.3) blow(topOf(B), 1, 0.012, 0.06); }
-    const f = Math.sin(Math.min(k * 3, 1) * Math.PI); flashC.scale.setScalar(0.06 * f + 0.0001); flashC.material.opacity = f;
+    if (C.spin) C.spin.k = Math.min(k * 1.15, 1);
+    if (k < 0.85) { blow(src, 2, 0.012 + Math.random() * 0.016, 0.13, 0.35); if (src === C && live(B) && Math.random() < 0.3) blow(B, 1, 0.012, 0.06); }
+    const f = Math.sin(Math.min(k * 3, 1) * Math.PI); src.flash.scale.setScalar(0.06 * f + 0.0001); src.flash.material.opacity = f;
   }, () => {
-    C.spin = null; burst(topOf(C), 40, 0.14); sound.land();
-    after(1.4, () => { finaleOn = false; taps = 0; showFizz(); if ($('hint').textContent === 'Eclipse overflow!') ui.hint(''); });
+    C.spin = null; burst(src, topOf(src), 40, 0.14); sound.land();
+    after(1.4, () => { finaleOn = false; taps = 0; showFizz(); if ($('hint').textContent === MSG) ui.hint(''); });
   });
 }
 
-function wave() { if (state !== 'ready') return; sound.mew(); play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
-function wag() { if (state !== 'ready') return; sound.bell(); play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+const boboFree = () => live(B) && !B.walk;
+function wave() { if (!boboFree()) return; sound.mew(); play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
+function wag() { if (!boboFree()) return; sound.bell(); play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
 function walk() {
-  if (state !== 'ready') return; state = 'walking'; ui.buttons(false);
+  if (!boboFree()) return;
   play(B, 'ClassicWalk', { fade: 0.35 }); B.walk = { a: 0, turn: 0 };
   tween(4.2, (k) => { B.walk.a = k * Math.PI * 2; B.walk.turn = B.walk.a + Math.PI / 2; }, () => {
-    tween(0.4, (k) => { B.walk.turn = THREE.MathUtils.lerp(Math.PI / 2, 0, easeInOut(k)); B.walk.a = 0; }, () => {
-      B.walk = null; play(B, 'Sit', { fade: 0.4 }); state = 'ready'; ui.buttons(true);
-    });
+    tween(0.4, (k) => { B.walk.turn = THREE.MathUtils.lerp(Math.PI / 2, 0, easeInOut(k)); B.walk.a = 0; }, () => { B.walk = null; play(B, 'Sit', { fade: 0.4 }); });
   });
 }
-function spinCan() { if (!C.landed || C.spin) return; sound.pop(); C.spin = { k: 0 }; tween(0.9, (k) => { C.spin.k = k; }, () => { C.spin = null; }); }
-function replay() { resetScene(); state = 'looking'; steady = 0; }
+function spinCan() { if (!live(C) || C.spin) return; sound.pop(); C.spin = { k: 0 }; tween(0.9, (k) => { if (C.spin) C.spin.k = k; }, () => { C.spin = null; }); }
+function replay() { resetScene(); }
 
-// landed characters ride the ground frame (it re-levels as the keychain or the phone moves)
+// landed characters stand on their spot in their charm's ground frame
 function settle() {
-  const upG = _v.set(0, 1, 0).applyQuaternion(G.q).clone();
-  for (const [ch, k] of [[B, 'bobo'], [C, 'can']]) {
-    const pd = PADS[k]; pd.position.copy(spotOf(k)); pd.quaternion.copy(G.q); pd.userData.ring.rotation.z += 0.01;
+  for (const ch of [B, C]) {
+    const G = ch.G, pd = ch.pad; pd.position.copy(spotOf(ch)); pd.quaternion.copy(G.q); pd.userData.ring.rotation.z += 0.01;
     if (!ch.landed) continue;
     ch.root.position.copy(pd.position); ch.root.quaternion.copy(G.q); ch.root.scale.setScalar(tune.size); pd.scale.setScalar(tune.size);
-    if (ch === B && B.walk) {
-      const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(B.walk.a) * R, 0, (Math.cos(B.walk.a) - 1) * R).applyQuaternion(G.q)); ch.root.rotateY(B.walk.turn);
+    if (ch.walk) {
+      const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(G.q)); ch.root.rotateY(ch.walk.turn);
     }
-    if (ch === C && C.spin) { ch.root.rotateY(Math.PI * 2 * (C.spin.turns || 1) * easeInOut(C.spin.k)); ch.root.position.addScaledVector(upG, Math.sin(C.spin.k * Math.PI) * (C.spin.lift || 0.02)); }
+    if (ch.spin) { ch.root.rotateY(Math.PI * 2 * (ch.spin.turns || 1) * easeInOut(ch.spin.k)); ch.root.position.addScaledVector(upVec(ch), Math.sin(ch.spin.k * Math.PI) * (ch.spin.lift || 0.02)); }
   }
 }
 
+const HINT_FIND = 'Point the camera at Bobo, the Eclipse can, or both together';
 function tick(dt) {
   updateFrames(dt);
-  // state: wait until the Bobo charm (or the can charm) has been held steady for a moment
-  const seen = T.tracked;
-  if (state === 'looking') {
-    steady = seen ? steady + dt : 0; ui.guide(!seen);
-    ui.hint(seen ? 'Found it. Hold still…' : 'Point your camera at Bobo and the can on your keychain');
-    if (steady > 0.6 && !params.has('nopop')) popOut();
-  } else if (state !== 'idle') {
-    lostFor = seen ? 0 : lostFor + dt;
-    const PULL = 'Move back a little to see Bobo and the can', KEEP = 'Point at the keychain to bring Bobo back';
-    let off = false;
-    ui.guide(!present); ui.buttons(present && state === 'ready');
-    if (present && B.landed) { const n = B.root.getWorldPosition(_v).project(camera); off = Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
-    const cur = $('hint').textContent;
-    if (!present) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL) ui.hint('');
+  // each charm starts its own pop-out once it has been held steady for a moment; if both are in view they go together
+  for (const ch of [B, C]) ch.steady = driver[ch.key] ? ch.steady + dt : 0;
+  if (!params.has('nopop')) {
+    const ripe = (ch) => ch.st === 'idle' && ch.steady > 0.6, coming = (ch) => ch.st === 'idle' && ch.steady > 0;
+    if (ripe(B) && ripe(C)) startPair();
+    else if (ripe(C) && !coming(B) && (!pairMaybe || C.steady > 1.4)) startSolo(C);   // with the pair picture in play, give the other charm a moment to show up
+    else if (ripe(B) && !coming(C) && (!pairMaybe || B.steady > 1.4)) startSolo(B);
   }
+  const busy = [B, C].some((ch) => ch.st === 'charging' || ch.st === 'flying'), out = B.landed || C.landed;
+  state = busy ? 'popping' : out ? (B.walk ? 'walking' : 'ready') : 'looking';
+  if (!busy && !out) {
+    const seen = !!(driver.bobo || driver.can); ui.guide(!seen);
+    ui.hint(seen ? 'Found it. Hold still…' : HINT_FIND);
+  } else {
+    const PULL = 'Move back a little to see them', KEEP = 'Point at Bobo or the can to bring them back';
+    ui.guide(!present);
+    let off = false;
+    for (const ch of [B, C]) if (live(ch)) { const n = ch.root.getWorldPosition(_v).project(camera); off = off || Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
+    const cur = $('hint').textContent;
+    if (!present) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL || cur === HINT_FIND || cur.startsWith('Found it')) ui.hint('');
+  }
+  const bo = !boboFree(); for (const id of ['b-wave', 'b-wag', 'b-walk']) $(id).disabled = bo;
+  $('b-replay').disabled = $('b-photo').disabled = !(out && present);
   for (let i = tweens.length - 1; i >= 0; i--) {
     const w = tweens[i]; if (!w) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
     if (k >= 1) { const j = tweens.indexOf(w); if (j >= 0) tweens.splice(j, 1); w.done && w.done(); }
@@ -577,16 +600,17 @@ function tick(dt) {
   B.mixer.update(dt); C.mixer.update(dt);
   updateBubbles(dt); updateMasks(dt);
   if (taps && !finaleOn) { tapIdle += dt; if (tapIdle > 6) { taps = 0; showFizz(); } }   // the fizz goes flat if you stop tapping
-  // sparks
-  const pos = sparks.geometry.attributes.position, u = sparks.userData; let alive = 0;
-  const down = _v.set(0, -1, 0).applyQuaternion(G.q);
-  for (let i = 0; i < u.life.length; i++) {
-    if (u.life[i] <= 0) continue; u.life[i] -= dt; alive++;
-    u.vel[i * 3] += down.x * 0.25 * dt; u.vel[i * 3 + 1] += down.y * 0.25 * dt; u.vel[i * 3 + 2] += down.z * 0.25 * dt;
-    pos.setXYZ(i, pos.getX(i) + u.vel[i * 3] * dt, pos.getY(i) + u.vel[i * 3 + 1] * dt, pos.getZ(i) + u.vel[i * 3 + 2] * dt);
-    if (u.life[i] <= 0) pos.setXYZ(i, 0, 0, -1e4);
+  for (const ch of [B, C]) {                                               // sparks
+    const pos = ch.sparks.geometry.attributes.position, u = ch.sparks.userData; let alive = 0;
+    const down = _v.set(0, -1, 0).applyQuaternion(ch.G.q);
+    for (let i = 0; i < u.life.length; i++) {
+      if (u.life[i] <= 0) continue; u.life[i] -= dt; alive++;
+      u.vel[i * 3] += down.x * 0.25 * dt; u.vel[i * 3 + 1] += down.y * 0.25 * dt; u.vel[i * 3 + 2] += down.z * 0.25 * dt;
+      pos.setXYZ(i, pos.getX(i) + u.vel[i * 3] * dt, pos.getY(i) + u.vel[i * 3 + 1] * dt, pos.getZ(i) + u.vel[i * 3 + 2] * dt);
+      if (u.life[i] <= 0) pos.setXYZ(i, 0, 0, -1e4);
+    }
+    pos.needsUpdate = true; ch.sparks.material.opacity = alive ? 0.95 : 0;
   }
-  pos.needsUpdate = true; sparks.material.opacity = alive ? 0.95 : 0;
 }
 
 // ---------------------------------------------------------------- 8th Wall pipeline
@@ -599,11 +623,11 @@ function sizeCanvas() {
 let last = 0;
 const appModule = (data) => ({
   name: 'evade-keychain',
-  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },
+  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },   // the scene exists from here on
   onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
   onCameraStatusChange: ({ status }) => {
     if (status === 'requesting') ui.hint('Allow camera access to begin');
-    if (status === 'hasVideo') { $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
+    if (status === 'hasVideo') { $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
     if (status === 'failed') ui.error('Camera not available', 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
   },
   onException: (e) => { console.error('XR', e); ui.error('Something went wrong', String((e && e.message) || e)); },
@@ -618,11 +642,11 @@ const appModule = (data) => ({
 
 async function start() {
   if (!loaded) return;
-  $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
+  $('b-go').disabled = true; $('b-go').textContent = 'Starting…';
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: [data[2], data[3]].filter((t) => !params.get('only') || t.name === params.get('only')) });
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(3).filter((t) => !params.get('only') || t.name === params.get('only')) });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
     XR8.Threejs.pipelineModule(),
@@ -634,7 +658,9 @@ async function start() {
 }
 
 // ---------------------------------------------------------------- input
-$('b-start').onclick = start;
+$('b-start').onclick = () => { if (loaded) { $('how').hidden = false; $('b-go').focus(); } };   // the splash leads to the what-to-point-at screen
+$('b-go').onclick = start;
+$('b-back').onclick = () => { $('how').hidden = true; $('b-start').focus(); };
 $('b-wave').onclick = wave; $('b-wag').onclick = wag; $('b-walk').onclick = walk; $('b-replay').onclick = replay;
 $('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').textContent = sound.on ? 'Sound on' : 'Sound off'; };
 $('b-photo').onclick = async () => {
@@ -664,6 +690,7 @@ function setTune(k, v) { tune[k] = v; showTune(); try { localStorage.setItem('kc
 for (const [k, [id, mul]] of Object.entries(TUNE_UI)) $(id).oninput = (e) => setTune(k, +e.target.value / mul);
 $('t-reset').onclick = () => { for (const k of Object.keys(TUNE_DEFAULT)) setTune(k, TUNE_DEFAULT[k]); };
 $('t-replay').onclick = replay;
+for (const k of ['portal', 'stagger', 'fly']) $(TUNE_UI[k][0]).onchange = replay;   // let go of a timing slider and the pop plays again with it
 $('b-tune').onclick = () => { const t = $('tune'); t.hidden = !t.hidden; $('b-tune').setAttribute('aria-expanded', String(!t.hidden)); };
 showTune();
 
@@ -673,9 +700,9 @@ canvas.addEventListener('pointerup', (e) => {
   if (!down || !camera || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 10) return;
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = (ch) => present && ch.landed && ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
-  if (!present || (state !== 'ready' && state !== 'walking')) return;
-  if (hit(B)) { wave(); tapBubbles(B); } else { if (hit(C)) spinCan(); tapBubbles(C); }   // a tap anywhere else fizzes the can
+  const hit = (ch) => live(ch) && ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
+  if (!present) return;
+  if (hit(B)) { wave(); tapBubbles(B); } else { if (hit(C)) spinCan(); tapBubbles(C); }   // a tap anywhere else fizzes the can (or Bobo, if he is on his own)
 });
 
 // desktop: offer the phone hand-off, but the webcam works too
@@ -685,4 +712,7 @@ if (!mobile) {
   try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
 }
 
-window.__ar = { get state() { return state; }, get T() { return T; }, get kc() { return kc; }, charm, get stage() { return stage; }, G, popOut, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+// the camera guide cycles through the three things to look for
+{ const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
+
+window.__ar = { get state() { return state; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };

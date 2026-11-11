@@ -1,0 +1,21 @@
+{
+  "imagePath": "/evade/keychain-ar/image-targets/kc-can_luminance.jpg",
+  "metadata": null,
+  "name": "kc-can",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 628,
+    "height": 837,
+    "isRotated": false,
+    "originalWidth": 628,
+    "originalHeight": 837
+  },
+  "resources": {
+    "luminanceImage": "kc-can_luminance.jpg",
+    "thumbnailImage": "kc-can_thumbnail.jpg"
+  },
+  "created": 1794407231547,
+  "updated": 1794407231547
+}

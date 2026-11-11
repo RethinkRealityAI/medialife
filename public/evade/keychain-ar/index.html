@@ -57,9 +57,20 @@
     #hint{position:absolute;left:50%;top:max(16px,env(safe-area-inset-top));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);text-align:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
     #guide{position:absolute;left:50%;top:44%;width:min(58vw,300px);transform:translate(-50%,-50%);opacity:0;transition:opacity .35s;pointer-events:none}
     #guide.on{opacity:1}
-    #guide img{display:block;width:100%;filter:invert(1) drop-shadow(0 0 10px rgba(79,180,255,.9));opacity:.34;animation:pulse 1.8s ease-in-out infinite}
-    #guide span{display:block;text-align:center;margin-top:10px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.8)}
-    @keyframes pulse{50%{opacity:.16;transform:scale(.97)}}
+    #guide{aspect-ratio:3/4}
+    #guide img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:invert(1) drop-shadow(0 0 10px rgba(79,180,255,.9));opacity:0;transition:opacity .5s ease}
+    #guide img.show{opacity:.34}
+    /* what to point at */
+    #how{position:fixed;inset:0;z-index:35;background:rgba(7,6,13,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(22px,env(safe-area-inset-top)) 20px max(22px,env(safe-area-inset-bottom));text-align:center;overflow:auto}
+    #how[hidden]{display:none}
+    #how h2{margin:0;font-size:24px;font-weight:900;letter-spacing:-.01em}
+    #how>p{margin:0;max-width:34ch;color:var(--muted);font-size:14px}
+    .finds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(100%,420px);margin:0;padding:0;list-style:none}
+    .finds li{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 8px 12px;font-size:12px;color:var(--muted)}
+    .finds img{display:block;width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:10px;background:#fff;margin-bottom:8px}
+    .finds b{display:block;color:#fff;font-size:14px}
+    #b-go{width:min(100%,340px);min-height:56px;font-size:17px}
+    #b-back{background:none;border:0;color:var(--muted);font-size:14px;min-height:44px;text-decoration:underline}
     nav{position:absolute;left:0;right:0;bottom:0;padding:26px 12px max(16px,env(safe-area-inset-bottom));display:flex;gap:8px;justify-content:center;flex-wrap:wrap;background:linear-gradient(rgba(7,6,13,0),rgba(7,6,13,.7))}
     nav button{min-height:46px;padding:0 15px;font-size:14px}
     #side{position:absolute;right:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));display:flex;flex-direction:column;gap:8px}
@@ -87,7 +98,7 @@
       .brand{left:auto!important;right:9vw} .lead{margin:0 0 18px;max-width:400px} h1{font-size:46px} .steps{justify-content:flex-start}
       .fine{text-align:left}
     }
-    @media (prefers-reduced-motion:reduce){#guide img,#load i{animation:none}}
+    @media (prefers-reduced-motion:reduce){#load i{animation:none}#guide img{transition:none}}
   </style>
 </head>
 <body>
@@ -96,10 +107,10 @@
   <section id="splash" aria-labelledby="title">
     <div class="brand">EVADE <b>×</b> MEDIALIFE</div>
     <h1 id="title">Bobo's Pop-Out</h1>
-    <p class="lead">Point your camera at your EVADE keychain and watch Bobo and the Eclipse can jump out.</p>
+    <p class="lead">Point your camera at Bobo or the Eclipse can on your EVADE keychain and watch them jump out.</p>
     <ol class="steps" aria-label="How it works">
       <li><b>1. Start</b>Allow the camera</li>
-      <li><b>2. Aim</b>At Bobo and the can</li>
+      <li><b>2. Aim</b>At Bobo, the can, or both</li>
       <li><b>3. Play</b>Tap for bubbles, take a photo</li>
     </ol>
     <div id="desk" hidden>
@@ -111,9 +122,22 @@
     <p class="fine">The camera stays on your device. Nothing is recorded or uploaded. No keychain to hand? <a href="./target/">Open the test picture</a> on another screen.</p>
   </section>
 
+  <section id="how" hidden role="dialog" aria-modal="true" aria-labelledby="how-title">
+    <h2 id="how-title">What to point at</h2>
+    <p>The two charms can be together or apart. Each one comes to life on its own.</p>
+    <ul class="finds">
+      <li><img src="./image-targets/kc-bobo_thumbnail.jpg" alt="The Bobo charm"><b>Bobo</b>Bobo jumps out</li>
+      <li><img src="./image-targets/kc-can_thumbnail.jpg" alt="The Eclipse can charm"><b>The Eclipse can</b>The can pops out</li>
+      <li><img src="./image-targets/kc-both_thumbnail.jpg" alt="The Bobo charm and the Eclipse can charm side by side"><b>Both together</b>They jump out together</li>
+    </ul>
+    <p>Hold the charm flat, in good light, and fill about half the screen with it.</p>
+    <button id="b-go" class="primary">Open camera</button>
+    <button id="b-back" type="button">Back</button>
+  </section>
+
   <div id="hud" hidden>
     <div id="hint" role="status" aria-live="polite" hidden></div>
-    <div id="guide"><img src="/evade/keychain/ar/silhouette-bobo.png" alt=""><span>Line up Bobo and the can</span></div>
+    <div id="guide" aria-hidden="true"><img class="show" src="/evade/keychain/ar/silhouette-bobo.png" alt=""><img src="/evade/keychain/ar/silhouette-eclipse.png" alt=""><img src="./image-targets/guide-both.png" alt=""></div>
     <div id="fizz" hidden role="progressbar" aria-label="Fizz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i></i><span>Fizz</span></div>
     <div id="side">
       <button id="b-photo" disabled aria-label="Take a photo">Photo</button>
@@ -131,7 +155,7 @@
       <input id="t-stagger" type="range" min="0" max="2" step="0.05" value="0.55">
       <label for="t-fly">Jump <output id="t-fly-v" for="t-fly">1 s</output></label>
       <input id="t-fly" type="range" min="0.4" max="2.5" step="0.05" value="1">
-      <p>100% size is the print on the keychain. Timing changes show on the next replay. <span><button id="t-replay" type="button">Replay</button> <button id="t-reset" type="button">Reset</button></span></p>
+      <p>100% size is the print on the keychain. Let go of a timing slider and the pop replays with it. <span><button id="t-replay" type="button">Replay</button> <button id="t-reset" type="button">Reset</button></span></p>
     </form>
     <nav aria-label="Bobo controls">
       <button id="b-wave" disabled>Wave</button>

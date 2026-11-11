@@ -33,5 +33,5 @@ The film of the lab was made with `/labs/keychain-pop/?capture`, which stops the
 script step frames with `__kc.step(dt)`.
 
 ## Image targets (8th Wall AR page)
-`build_targets.py` writes the image targets for `/evade/keychain-ar/` (the cat keychain's two charms together, and the earlier design's Bobo charm from the product photo), in the
+`build_targets.py` writes the image targets for `/evade/keychain-ar/` (the cat keychain's two charms together and each on its own, and the earlier design's two charms from a phone photo of the real keychain, `src/old-*.png`), in the
 same format as `@8thwall/image-target-cli`. See `public/evade/keychain-ar/README.md`.

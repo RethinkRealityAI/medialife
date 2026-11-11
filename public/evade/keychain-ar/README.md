@@ -14,10 +14,13 @@ binary under a different licence and is not needed here.
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
 - `image-targets/` — written by `scripts/build-keychain-ar/build_targets.py`:
-  - `kc-both`: the Bobo cat charm and the can charm together as they sit on the keychain (no ring or
-    chain). `kc-both_luminance.jpg` is what the engine tracks, `kc-both.jpg` is the same in colour.
-  - `kc-old`: the earlier keychain design (blocky Bobo with his arm up), cut from the product photo
-    `public/merch/keychain-hand.webp`. Bobo charm only, see "Two designs" below.
+  - `kc-both`: the Bobo cat charm and the can charm together as they hang on the keychain (no ring or
+    chain). `*_luminance.jpg` is what the engine tracks, `*.jpg` is the same in colour.
+  - `kc-bobo`, `kc-can`: each charm of the cat keychain on its own (the two charms are separate
+    keychains on one ring, so people may have only one, or hold them apart).
+  - `kc-old`, `kc-old-can`: the earlier design's two charms, cut from a phone photo of the real
+    keychain (`scripts/build-keychain-ar/src/old-*.png`). No silhouettes on these.
+  - `guide-both.png`: the two silhouettes together, for the camera guide.
   - `layout.json`: per target, the picture's size and where the two charm frames sit in it (metres).
 - `splash.jpg` — backdrop generated with Higgsfield from a text prompt only (no EVADE artwork was
   given to it); the real Bobo and can renders are composited on top.
@@ -35,39 +38,24 @@ while the target is tracked: when the target is lost, or no pose arrives for hal
 hides (after a 0.25 s grace against flicker) and comes back in place when the target is found again.
 The pose is followed without lag; only sub-millimetre jitter is smoothed.
 
-One target means the can charm is assumed to hang in its rest position over Bobo. If it swings well
-away, tracking gets weaker and the can silhouette will be off until it settles.
+## Which charm pops (`updateFrames` in `main.js`)
+Each charm has its own state (idle, charging, flying, out), so one charm arriving or leaving never
+restarts the other, and a charm that leaves the view comes back as it was.
 
-"Up" for the landed characters is read once, at the moment they pop (phone gravity when the browser
-allows it, otherwise the top of the screen), and from then on they are fixed to the keychain.
-
-## Two designs
-Both keychain designs carry the same Eclipse can art, so any target with the can in it matches both
-keychains. That is why `kc-old` is the old Bobo charm alone, and why `kc-both` will lock onto the old
-keychain's can. `onTarget` lets `kc-old` win: whenever it is seen, and for 5 s after, `kc-both` is not
-believed. The old design has no silhouettes (they are cut for the cat art); the characters pop out of
-the charms and land below them. Its sizes are estimated from the photo, not from a production file.
-
-## Bubbles
-A tap on Bobo, the can, or anywhere else on the camera view blows bubbles; every tap in a row makes
-more and bigger ones and fills the Fizz meter. The tenth tap is the "Eclipse overflow": the can spins
-up on a geyser of bubbles, Bobo cheers, and the meter resets. The meter also resets after 6 s idle.
-
-## Build-up, sizes and the Size panel
-When the cat keychain is found, a border lights up around each charm's cut-out, the masks rumble (with
-a low rumble sound and phone vibration where the browser has it) and the cut-outs open into swirling
-portals: oranges and visor blue on Bobo's side, blue and magenta on the can's. Then the characters pop
-and the portals close to the black masks, with a faint lit rim left behind. It is one shader
-(`PORTAL_FRAG` in `main.js`) on the silhouette quad, driven by `fx.glow`, `fx.portal`, `fx.black`.
-
-Landed characters are the size of their print on the charms (`SIZE`). The **Tune** button opens sliders for
-Size, Spacing, Portal (build-up length, default 3 s), Can to Bobo (wait between the two pops) and Jump
-(flight time), saved on the device (`localStorage` key `kc-ar-tune`); `?size=1.2&gap=0.8&portal=2.5`
-does the same from the URL. It is a preview tool for picking the defaults (`TUNE_DEFAULT`); take the
-button out before launch.
+- A charm only counts as present once its own picture (`kc-bobo` / `kc-can`) has been seen. The pair
+  picture locks onto a single charm too (half of it is enough), so alone it cannot say who is there.
+- With both confirmed, `kc-both` places both charms, as long as it agrees with each charm's own picture
+  to within 8 mm. Charms held apart disagree, and then each follows its own picture.
+- Too far for the single pictures but `kc-both` holds for 1.5 s: taken as both charms.
+- One charm's picture in view and the other's unseen for 1.5 s: the other charm has left.
+- Both in view and steady: they pop together (can first). One in view: it pops alone; if the pair
+  picture is tracked it waits up to 1.4 s for the other.
+- The two designs' cans look alike. `kc-can` does not fire on the old can, but `kc-old-can` fires on the
+  new one, so the old can only counts after 1.2 s without `kc-can` (at once next to the old Bobo), and
+  `kc-both` is ignored for 5 s after an old-design charm.
 
 ## URL switches
-- `?only=kc-both` or `?only=kc-old` loads just that image target.
+- `?only=kc-both` (or any other target name) loads just that image target.
 - `?debug` draws the target and charm frames and tints the silhouettes, and logs engine events.
 - `?debug&nopop` only tracks: use it to check alignment on a real keychain.
 
