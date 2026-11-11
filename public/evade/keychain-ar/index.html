@@ -68,6 +68,11 @@
     #fizz{position:absolute;left:12px;top:max(64px,calc(env(safe-area-inset-top) + 56px));width:112px;height:28px;border-radius:999px;background:var(--panel);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:none}
     #fizz i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));transition:width .25s ease}
     #fizz span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff}
+    #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 70px);margin:0 auto;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;font-size:13px;font-weight:700}
+    #tune output{display:inline-block;min-width:4ch;color:var(--blue);font-variant-numeric:tabular-nums}
+    #tune input{width:100%;accent-color:var(--pink);height:32px;margin:0}
+    #tune p{grid-column:1/-1;margin:0;font-weight:500;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:10px}
+    #tune p button{min-height:32px;padding:0 12px;font-size:12px}
     /* photo preview + errors */
     .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
     #shot-img{max-width:100%;max-height:66vh;border-radius:16px;border:1px solid var(--line)}
@@ -112,7 +117,15 @@
     <div id="side">
       <button id="b-photo" disabled aria-label="Take a photo">Photo</button>
       <button id="b-sound" aria-pressed="true">Sound on</button>
+      <button id="b-tune" aria-expanded="false" aria-controls="tune">Size</button>
     </div>
+    <form id="tune" hidden aria-label="Size and spacing" onsubmit="return false">
+      <label for="t-size">Size <output id="t-size-v" for="t-size">100%</output></label>
+      <input id="t-size" type="range" min="40" max="200" step="1" value="100">
+      <label for="t-gap">Spacing <output id="t-gap-v" for="t-gap">100%</output></label>
+      <input id="t-gap" type="range" min="0" max="300" step="5" value="100">
+      <p>100% size is the size of the print on the keychain. <button id="t-reset" type="button">Reset</button></p>
+    </form>
     <nav aria-label="Bobo controls">
       <button id="b-wave" disabled>Wave</button>
       <button id="b-wag" disabled>Wag tail</button>

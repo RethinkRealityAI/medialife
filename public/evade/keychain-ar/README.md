@@ -53,6 +53,18 @@ A tap on Bobo, the can, or anywhere else on the camera view blows bubbles; every
 more and bigger ones and fills the Fizz meter. The tenth tap is the "Eclipse overflow": the can spins
 up on a geyser of bubbles, Bobo cheers, and the meter resets. The meter also resets after 6 s idle.
 
+## Build-up, sizes and the Size panel
+When the cat keychain is found, a border lights up around each charm's cut-out, the masks rumble (with
+a low rumble sound and phone vibration where the browser has it) and the cut-outs open into swirling
+portals: oranges and visor blue on Bobo's side, blue and magenta on the can's. Then the characters pop
+and the portals close to the black masks, with a faint lit rim left behind. It is one shader
+(`PORTAL_FRAG` in `main.js`) on the silhouette quad, driven by `fx.glow`, `fx.portal`, `fx.black`.
+
+Landed characters are the size of their print on the charms (`SIZE`). The **Size** button opens two
+sliders, Size and Spacing, saved on the device (`localStorage` key `kc-ar-tune`); `?size=1.2&gap=0.8`
+does the same from the URL. It is a preview tool for picking the defaults (`TUNE_DEFAULT`); take the
+button out before launch.
+
 ## URL switches
 - `?only=kc-both` or `?only=kc-old` loads just that image target.
 - `?debug` draws the target and charm frames and tints the silhouettes, and logs engine events.
