@@ -900,7 +900,9 @@ async function start() {
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  activeTargets = data.slice(4).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only')));
+  // kc-can-art (the flat can art) only with ?canart=1: the photo target is what finds the real charm (test
+// log), and a second picture of the same charm takes a tracking slot and detection time from the Bobos.
+  activeTargets = data.slice(4).filter((t) => (PAIR || t.name !== 'kc-both') && (params.has('canart') || t.name !== 'kc-can-art') && (!params.get('only') || t.name === params.get('only')));
   XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: activeTargets });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
