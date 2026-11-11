@@ -58,8 +58,8 @@ so nothing plays out or makes a sound off screen; it carries on where it was whe
 A charm only counts as held steady while its middle is well inside the picture, so the other charm on the
 ring peeking in at the screen edge does not pop out of sight.
 
-Watchdog: when nothing has been tracked for 4 s, the image targets are handed to the engine again
-(`XR8.XrController.configure`), at most every 5 s; that restarts its search. `?nowatchdog` turns it off.
+Watchdog: when nothing has been tracked for a while, the image targets can be handed to the engine again
+(`XR8.XrController.configure`). Opt-in only (`?watchdog=1`, 8 s, at most every 15 s): restarting the search often made recognition worse on a real phone.
 The Tune panel shows what is tracked and counts found / lost / rescans.
 
 `?pair=1` is the combined version: `kc-both` is loaded too, and when both charms are steady they pop as

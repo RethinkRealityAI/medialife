@@ -586,14 +586,15 @@ function onScreen(ch, m = 0.7) {
   const n = ch.frame.getWorldPosition(_v).project(camera);
   return n.z < 1 && Math.abs(n.x) < m && Math.abs(n.y) < m;
 }
-// Watchdog: on some phones the engine stops looking for pictures after it has lost one. When nothing has
-// been tracked for 4 s, hand it the same pictures again (that restarts its search), at most every 5 s.
+// Watchdog (opt-in, ?watchdog=1): hand the engine the same pictures again when nothing has been tracked
+// for a while. Off by default: on Dapo's phone (2026-11-11) restarting the search every few seconds made
+// recognition much worse, because a search from further away never got to finish.
 const diag = { found: 0, lost: 0, resets: 0, last: '', lastAt: 0 };
 let lastTrackedAt = 0, lastReset = 0, everTracked = false, activeTargets = [];
 function watchdog() {
   const now = performance.now();
   if (Object.values(TS).some((t) => t.tracked)) { lastTrackedAt = now; everTracked = true; return; }
-  if (!everTracked || params.has('nowatchdog') || now - lastTrackedAt < 4000 || now - lastReset < 5000) return;
+  if (!everTracked || !params.has('watchdog') || now - lastTrackedAt < 8000 || now - lastReset < 15000) return;
   lastReset = now; diag.resets++;
   try { XR8.XrController.configure({ imageTargetData: activeTargets }); } catch (e) { console.warn('watchdog', e); }
 }
