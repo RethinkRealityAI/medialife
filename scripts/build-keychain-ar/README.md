@@ -22,3 +22,12 @@ How it is made (no generative AI, no image-to-3D):
   `https://evade.medialife.ai`. Open pull tab, fizz bubbles.
 
 The build also saves `.blend` files with packed textures in `$KC_WORK` (default `/tmp/keychain-ar`).
+
+## Silhouettes
+`build_silhouettes.py` cuts a black silhouette of the printed art out of each charm picture
+(`public/evade/keychain/src/charm-*.png`) and writes `public/evade/keychain/ar/silhouette-bobo.png`,
+`silhouette-eclipse.png` (transparent PNGs, same pixel frame as the charm pictures) and `silhouettes.json`.
+`silhouette.py` then adds them to both models as a flat `Silhouette` node lined up with the first frame of
+`PopOut`: what is left on the charm when the character jumps off. See `mattercraft/keychain-pop/README.md`.
+The film of the lab was made with `/labs/keychain-pop/?capture`, which stops the real-time loop and lets a
+script step frames with `__kc.step(dt)`.

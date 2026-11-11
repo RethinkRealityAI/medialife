@@ -31,12 +31,21 @@ type Char = {
   clips: Record<string, THREE.AnimationClip>;
   current: THREE.AnimationAction | null;
   height: number;
+  /** The black shape the character leaves on its charm, and where that shape sits inside the model. */
+  sil: THREE.Mesh | null;
+  silLocal: THREE.Matrix4;
 };
+
+// The charm pictures the silhouettes were cut from (public/evade/keychain/src/charm-*.png), in
+// tracker units: 1 = the height of the tracked Bobo charm image.
+const FRAME_BOBO: [number, number] = [809 / 923, 1];
+const FRAME_CAN: [number, number] = [434 / 923, 805 / 923];
 
 /**
  * Keychain pop-out: Bobo and the Eclipse can jump out of the EVADE keychain in 3D when the
- * keychain is found. Put this inside the Image Tracker that tracks the Bobo charm. Tap Bobo to
- * make him wave, tap the can to spin it.
+ * keychain is found, and leave their black silhouettes behind on the charms. Put this inside the
+ * Image Tracker that tracks the Bobo charm (use charm-bobo.png as the target image so the
+ * silhouette lines up). Tap Bobo to make him wave, tap the can to spin it.
  *
  * @zcomponent
  * @zicon pets
@@ -65,13 +74,25 @@ export class KeychainPopOut extends Group {
   public resetAfterLost = new Observable<number>(2);
 
   /**
-   * Bobo wave as soon as he lands.
+   * Bobo also waves after his landing tail wag.
    * @zui
    * @zgroup Pop-out
    * @zpriority 8
+   * @zdefault false
+   */
+  public waveOnLanding = new Observable<boolean>(false);
+
+  /**
+   * Leave a black silhouette on each charm where the character jumped off, so the printed
+   * keychain does not show behind the 3D characters.
+   * @zui
+   * @zgroup Pop-out
+   * @zpriority 7
    * @zdefault true
    */
-  public waveOnLanding = new Observable<boolean>(true);
+  public showSilhouettes = new Observable<boolean>(true, (v) => {
+    for (const c of [this._bobo, this._can]) if (c?.sil) c.sil.visible = v && this._shown;
+  });
 
   /**
    * Bobo's height when he has landed, in tracker units (1 = the height of the tracked image).
@@ -155,8 +176,10 @@ export class KeychainPopOut extends Group {
   public popOut() {
     if (!this._bobo || !this._can) return;
     this._shown = true;
-    this._launch(this._bobo, new THREE.Vector3(0, 0, 0.02), new THREE.Vector3(...this.boboSpot.value), this.boboHeight.value, 0, true);
-    this._launch(this._can, new THREE.Vector3(...this.canCharmOffset.value), new THREE.Vector3(...this.canSpot.value), this.canHeight.value, 0.18, false);
+    this._tweens.length = 0;
+    // the can pops first and lands beside Bobo's spot, then Bobo follows
+    this._launch(this._can, new THREE.Vector3(...this.canCharmOffset.value), FRAME_CAN, new THREE.Vector3(...this.canSpot.value), this.canHeight.value, 0, false);
+    this._launch(this._bobo, new THREE.Vector3(0, 0, 0.02), FRAME_BOBO, new THREE.Vector3(...this.boboSpot.value), this.boboHeight.value, 0.55, true);
   }
   /** Bobo raises his paw and waves. */
   public wave() {
@@ -171,7 +194,7 @@ export class KeychainPopOut extends Group {
   /** Hide both characters (they pop out again on the next popOut). */
   public hideCharacters() {
     this._shown = false; this._tweens.length = 0;
-    for (const c of [this._bobo, this._can]) if (c) c.root.visible = false;
+    for (const c of [this._bobo, this._can]) if (c) { c.root.visible = false; if (c.sil) c.sil.visible = false; }
     for (const p of this._pads) p.visible = false;
   }
 
@@ -191,6 +214,19 @@ export class KeychainPopOut extends Group {
 
   private _prep(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }): Char {
     const root = new THREE.Group(); const model = gltf.scene;
+    // the model carries its own silhouette: a flat 'Silhouette' quad covering the charm picture,
+    // placed where the model sits in its starting pose. It stays on the charm when the model leaves.
+    const sil = (model.getObjectByName("Silhouette") as THREE.Mesh | undefined) ?? null;
+    const silLocal = new THREE.Matrix4();
+    if (sil) {
+      sil.updateMatrix(); silLocal.copy(sil.matrix); sil.removeFromParent();
+      const old = sil.material as THREE.MeshStandardMaterial;
+      sil.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: old.map, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+      sil.renderOrder = 5; sil.visible = false; sil.raycast = () => undefined;
+      this.element.add(sil);
+      this._disposables.push(sil.geometry, sil.material as THREE.Material, old);
+      if (old.map) this._disposables.push(old.map);
+    }
     const mixer = new THREE.AnimationMixer(model);
     const clips: Record<string, THREE.AnimationClip> = {};
     for (const a of gltf.animations) clips[a.name] = a;
@@ -208,7 +244,7 @@ export class KeychainPopOut extends Group {
       if ((o as THREE.Mesh).geometry) this._disposables.push((o as THREE.Mesh).geometry);
       if (m) for (const mm of Array.isArray(m) ? m : [m]) this._disposables.push(mm);
     });
-    return { root, model, mixer, clips, current: null, height: h };
+    return { root, model, mixer, clips, current: null, height: h, sil, silLocal };
   }
 
   private _makePad() {
@@ -241,24 +277,55 @@ export class KeychainPopOut extends Group {
     }
   }
 
-  private _launch(ch: Char, from: THREE.Vector3, to: THREE.Vector3, height: number, delay: number, isBobo: boolean) {
+  private _launch(ch: Char, from: THREE.Vector3, frame: [number, number], to: THREE.Vector3, height: number, delay: number, isBobo: boolean) {
     const sFinal = height / ch.height;
-    const s0 = (isBobo ? 1.0 : 0.85) / ch.height;     // starts the size of its flat charm
-    const startFeet = from.clone().add(new THREE.Vector3(0, -0.5 * (isBobo ? 1.0 : 0.85), 0));
     const pad = this._pads[isBobo ? 0 : 1];
+    // start: lying over the printed art. With a silhouette that is (charm picture frame) x (where
+    // the silhouette sits in the model)^-1; without one, fall back to the size of the charm.
+    const p0 = new THREE.Vector3(), q0 = new THREE.Quaternion(), sc = new THREE.Vector3();
+    let s0 = frame[1] / ch.height;
+    if (ch.sil) {
+      ch.sil.position.copy(from); ch.sil.quaternion.identity(); ch.sil.scale.set(frame[0], frame[1], 1);
+      ch.sil.updateMatrix();
+      new THREE.Matrix4().copy(ch.sil.matrix).multiply(new THREE.Matrix4().copy(ch.silLocal).invert()).decompose(p0, q0, sc);
+      s0 = sc.y; p0.z += 0.03;                       // just in front of the silhouette
+    } else p0.copy(from).add(new THREE.Vector3(0, -0.5 * frame[1], 0.03));
+    const q1 = new THREE.Quaternion(); const q = new THREE.Quaternion();
+    const SHIVER = 0.38;
+    let pop: THREE.AnimationAction | null = null;
     ch.root.visible = false;
-    this._tweens.push({ t: -delay, dur: 1.0, fn: (k) => {
+    this._tweens.push({ t: -delay, dur: SHIVER + 1.0, fn: (k) => {
       if (k <= 0) return;
+      const t = k * (SHIVER + 1.0);
       if (!ch.root.visible) {
-        ch.root.visible = true; ch.root.rotation.set(0, 0, 0);
+        ch.root.visible = true;
+        if (ch.sil) { ch.sil.visible = this.showSilhouettes.value; (ch.sil.material as THREE.MeshBasicMaterial).opacity = 0; }
         this._play(ch, "PopOut", false, 0, () => {
-          this._play(ch, isBobo ? "Sit" : "Idle", true, 0.3);
-          if (isBobo && this.waveOnLanding.value) this._tweens.push({ t: 0, dur: 0.5, fn: () => undefined, done: () => this.wave() });
+          if (!isBobo) { this._play(ch, "Idle", true, 0.3); return; }
+          // Bobo lands wagging his tail, then settles (and waves if asked)
+          this._play(ch, "TailWag", false, 0.25, () => {
+            this._play(ch, "Sit", true, 0.3);
+            if (this.waveOnLanding.value) this.wave();
+          });
         });
+        pop = ch.current; if (pop) pop.paused = true;
       }
-      const e = 1 - Math.pow(1 - k, 3);
-      ch.root.position.lerpVectors(startFeet, to, e);
-      ch.root.position.y += Math.sin(k * Math.PI) * 0.6;
+      if (t < SHIVER) {
+        // a short shiver while still stuck to the charm; the silhouette fades in underneath
+        const u = t / SHIVER;
+        if (ch.sil) (ch.sil.material as THREE.MeshBasicMaterial).opacity = Math.min(u * 4, 1);
+        ch.root.position.copy(p0); ch.root.scale.setScalar(s0);
+        ch.root.quaternion.copy(q0).multiply(q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.sin(u * Math.PI * 5) * 0.05 * u));
+        return;
+      }
+      // it springs off the charm and flies to its spot; the silhouette stays behind
+      if (pop && pop.paused) pop.paused = false;
+      if (ch.sil) (ch.sil.material as THREE.MeshBasicMaterial).opacity = 1;
+      const u = (t - SHIVER) / 1.0;
+      const e = 1 - Math.pow(1 - u, 3);
+      ch.root.position.lerpVectors(p0, to, e);
+      ch.root.position.y += Math.sin(u * Math.PI) * 0.6;
+      ch.root.quaternion.slerpQuaternions(q0, q1, 1 - Math.pow(1 - Math.min(u * 2, 1), 3));
       ch.root.scale.setScalar(THREE.MathUtils.lerp(s0, sFinal, e));
       pad.visible = this.showPads.value;
       pad.position.copy(to); pad.scale.setScalar(height * (isBobo ? 1.0 : 0.75) * (0.2 + 0.8 * e));

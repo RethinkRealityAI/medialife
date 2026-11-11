@@ -5,6 +5,7 @@ WORK = os.environ.get('KC_WORK', '/tmp/keychain-ar'); os.makedirs(WORK, exist_ok
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 
 import bpy, bmesh, math, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from mathutils import Vector, Matrix, Quaternion, Euler
 
 ARGV = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -216,14 +217,17 @@ def clip(name, L, fn):
         s = tr.strips.new(name, 0, acts[o]); s.name = name
         acts[o].use_fake_user = True
 
+PITCH = math.radians(24)          # the print shows the can from slightly above (you can see the lid)
 def pop(t, L):
-    s_xz = 0.8 + 0.2 * spring(t / 1.0, 3.0, 5.0)
-    s_y = 0.04 + 0.96 * spring(t / 0.85)
+    # starts exactly like the print (full size, tipped toward the viewer), stands up, spins once, lands
+    wob = math.exp(-4.5 * t) * math.sin(3.0 * math.pi * t)
+    s_r, s_h = 1 - 0.10 * wob, 1 + 0.16 * wob
     spin = -2 * math.pi * (1 - ease(t / 1.05))
     hop = 0.18 * math.sin(min(t / 0.75, 1) * math.pi)
-    st = {root: (Vector((0, 0, hop)), Euler((0, 0, spin)), Vector((s_xz, s_y, s_xz)))}
+    st = {root: (Vector((0, 0, hop)), Euler((PITCH * (1 - ease(t / 0.4)), 0, spin)), Vector((s_r, s_r, s_h)))}
+    # the tab stays open like the print, and kicks when the can lands
     k = (t - 0.95) / 0.35
-    ang = OPEN * (spring(k, 2.2, 5.0) if k > 0 else 0)
+    ang = OPEN + (math.radians(22) * math.exp(-5 * k) * math.sin(2.2 * math.pi * k) if k > 0 else 0)
     st[tab] = (Vector((0, 0, LID_Z + 0.008)), Euler((ang, 0, 0)), Vector((1, 1, 1)))
     for i, f in enumerate(fizz):
         loc, s = fizz_state(i, max(t - 1.05, 0), t > 1.05)
@@ -244,6 +248,16 @@ clip('Idle', 5.2, idle)
 # resting pose = opened can like the keychain
 root.location = (0, 0, 0); root.rotation_euler = (0, 0, 0); root.scale = (1, 1, 1)
 tab.rotation_euler = (OPEN, 0, 0)
+for f in fizz: f.scale = (0, 0, 0)
+
+# ---------------------------------------------------------------- silhouette left on the charm
+from silhouette import add_silhouette, world_bounds
+root.animation_data.use_nla = False
+root.rotation_euler = (PITCH, 0, 0); bpy.context.view_layer.update()      # the pose PopOut starts in
+_b = world_bounds([o for o in scene.objects if o.type == 'MESH' and not o.name.startswith('Can_Fizz')])
+root.rotation_euler = (0, 0, 0); bpy.context.view_layer.update()
+root.animation_data.use_nla = True
+add_silhouette(scene, 'eclipse', _b)
 
 for o in scene.objects: o.select_set(True)
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True, export_animations=True,

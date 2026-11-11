@@ -7,6 +7,7 @@ WORK = os.environ.get('KC_WORK', '/tmp/keychain-ar'); os.makedirs(WORK, exist_ok
 REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 
 import bpy, bmesh, math, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 from collections import defaultdict
 from mathutils import Vector, Matrix, Quaternion
@@ -761,7 +762,8 @@ def pop_out(t, L):
     # starts flat on the charm (depth squashed), springs out toward the viewer, lands sitting
     def spring(x, f=3.2, damp=5.0):
         return 1 - math.exp(-damp * x) * math.cos(f * math.pi * x)
-    s_xy = 0.82 + 0.18 * spring(t / 1.0)
+    x = t / 1.0
+    s_xy = 1 + 0.16 * math.exp(-4.5 * x) * math.sin(3.2 * math.pi * x)   # full size from the first frame (matches the print), then a wobble
     s_y = 0.04 + 0.96 * spring(t / 0.9, f=2.6, damp=4.0)
     hop = 0.25 * math.sin(min(t / 0.7, 1) * math.pi)
     d = {'FakeTorso': breathe(t), 'CatHead': qx(-8 * math.sin(min(t / 0.8, 1) * math.pi))}
@@ -785,8 +787,12 @@ for nm in ('Walk', 'Excited', 'Chill', 'Sleep', 'Sit'):
 # rest the rig in the keychain pose when no clip runs
 pose_frame({})
 
+# ---------------------------------------------------------------- silhouette left on the charm
+from silhouette import add_silhouette, world_bounds
+sil = add_silhouette(scene, 'bobo', world_bounds([body]))
+
 # ---------------------------------------------------------------- export
-for o in scene.objects: o.select_set(o in (arm, body))
+for o in scene.objects: o.select_set(o in (arm, body, sil))
 bpy.ops.export_scene.gltf(filepath=OUT, export_format='GLB', use_selection=True,
                           export_animations=True, export_animation_mode='NLA_TRACKS',
                           export_force_sampling=True, export_yup=True,

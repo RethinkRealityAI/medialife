@@ -88,8 +88,25 @@ const centreOf = (o) => new THREE.Box3().setFromObject(o).getCenter(new THREE.Ve
 
 // characters
 const FLOOR_Y = -0.5;
-function prepCharacter(gltf, height) {
+// Each model carries a flat black 'Silhouette' node: the shape it leaves behind on its charm. It is
+// a unit quad covering the whole charm image frame, placed where the model sits in its flat start pose.
+function takeSilhouette(m, charm) {
+  const sil = m.getObjectByName('Silhouette'); if (!sil) return null;
+  sil.updateMatrix(); const local = sil.matrix.clone();     // where it sits in the model's own space
+  sil.removeFromParent();
+  sil.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: sil.material.map, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+  sil.renderOrder = 5; sil.visible = false;
+  // pin it over the charm's printed art (same picture frame as the print)
+  const print = charm.getObjectByName(charm.name + '_Print_Front');
+  print.geometry.computeBoundingBox(); const bb = print.geometry.boundingBox;
+  const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+  sil.position.set(c.x, c.y, c.z + 0.012); sil.quaternion.identity(); sil.scale.set(sz.x, sz.y, 1);
+  print.add(sil);
+  return { mesh: sil, local };
+}
+function prepCharacter(gltf, height, charm) {
   const root = new THREE.Group(); const m = gltf.scene;
+  const sil = takeSilhouette(m, charm);
   const mixer = new THREE.AnimationMixer(m);
   const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
   // measure in the resting clip (Bobo's bind pose is on all fours, the keychain pose is sitting)
@@ -101,10 +118,10 @@ function prepCharacter(gltf, height) {
   m.scale.setScalar(height / h);
   root.add(m); root.visible = false; scene.add(root);
   m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; } });
-  return { root, model: m, mixer, clips, current: null, baseScale: height / h, height };
+  return { root, model: m, mixer, clips, current: null, baseScale: height / h, height, sil };
 }
-const B = prepCharacter(bobo, 0.78);
-const C = prepCharacter(can, 0.56);
+const B = prepCharacter(bobo, 0.78, charmBobo);
+const C = prepCharacter(can, 0.56, charmCan);
 const PADS = { bobo: pad(0.42), can: pad(0.3) };
 const SPOT = { bobo: new THREE.Vector3(-0.36, FLOOR_Y, 0.62), can: new THREE.Vector3(0.42, FLOOR_Y, 0.58) };
 PADS.bobo.position.copy(SPOT.bobo); PADS.can.position.copy(SPOT.can);
@@ -137,47 +154,89 @@ function tween(dur, fn, done) { tweens.push({ t: 0, dur, fn, done }); }
 let state = 'idle';
 function setButtons(on) { for (const id of ['b-wave', 'b-wag', 'b-walk']) $(id).disabled = !on; }
 
+const after = (delay, fn) => tween(delay, () => {}, fn);
+
+// Where a character has to be so that it lies flat exactly over its printed art: the silhouette's
+// pinned frame times the inverse of where the silhouette sits inside the model.
+const _m = new THREE.Matrix4(), _inv = new THREE.Matrix4(), _fwd = new THREE.Vector3();
+function charmPose(ch) {
+  ch.sil.mesh.updateWorldMatrix(true, false);
+  _inv.makeScale(ch.baseScale, ch.baseScale, ch.baseScale).multiply(ch.sil.local).invert();
+  _m.copy(ch.sil.mesh.matrixWorld).multiply(_inv);
+  const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+  _m.decompose(pos, quat, scl);
+  _fwd.set(0, 0, 1).applyQuaternion(quat); pos.addScaledVector(_fwd, 0.02);   // just in front of the silhouette
+  return { pos, quat, s: scl.y };
+}
+
+function resetScene() {
+  tweens.length = 0; scanBar.material.opacity = 0;
+  for (const ch of [B, C]) {
+    ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false;
+    ch.root.quaternion.identity(); ch.root.scale.setScalar(1);
+    ch.sil.mesh.visible = false; ch.sil.mesh.material.opacity = 0;
+  }
+  PADS.bobo.visible = PADS.can.visible = false;
+  flashB.material.opacity = flashC.material.opacity = 0;
+}
+
 function popOut() {
+  resetScene();
   state = 'popping'; setButtons(false);
   $('b-pop').textContent = 'Replay'; $('hint').hidden = true;
-  B.root.visible = C.root.visible = false; PADS.bobo.visible = PADS.can.visible = false;
   keychain.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(keychain);
   // 1. scan line sweeps down the keychain
   tween(reduceMotion ? 0.01 : 0.7, (k) => {
     scanBar.position.y = THREE.MathUtils.lerp(box.max.y, box.min.y, k);
     scanBar.material.opacity = Math.sin(k * Math.PI) * 0.9;
-  }, () => { scanBar.material.opacity = 0; launch(B, charmBobo, SPOT.bobo, flashB, 0); launch(C, charmCan, SPOT.can, flashC, 0.18); });
+  }, () => {
+    scanBar.material.opacity = 0;
+    // 2. the can pops first and lands beside Bobo's spot, 3. Bobo follows
+    launch(C, SPOT.can, flashC, PADS.can);
+    after(reduceMotion ? 0.01 : 0.55, () => launch(B, SPOT.bobo, flashB, PADS.bobo));
+  });
 }
 
-function launch(ch, charm, spot, flash, delay) {
-  const start = centreOf(charm);
-  const charmH = new THREE.Box3().setFromObject(charm).getSize(new THREE.Vector3()).y;
-  const s0 = charmH / ch.height;          // same size as the flat charm
+function launch(ch, spot, flash, pd) {
   const isBobo = ch === B;
-  setTimeout(() => {
-    ch.root.visible = true;
-    ch.root.rotation.set(0, 0, 0);
-    // origin is at the feet; start centred on the charm
-    const startFeet = start.clone().add(new THREE.Vector3(0, -charmH * 0.5, 0.05));
-    flash.position.copy(start).add(new THREE.Vector3(0, 0, 0.08));
-    play(ch, 'PopOut', { loop: false, fade: 0, onDone: () => {
-      play(ch, isBobo ? 'Sit' : 'Idle', { fade: 0.3 });
-      if (isBobo) setTimeout(() => wave(), 500);
-      if (!isBobo) { state = 'ready'; setButtons(true); $('hint').hidden = false; }
-    } });
-    const pd = isBobo ? PADS.bobo : PADS.can;
-    pd.visible = true;
+  // the character appears flat on the charm, exactly over the print, with its black silhouette under it
+  ch.root.visible = true; ch.sil.mesh.visible = true;
+  play(ch, 'PopOut', { loop: false, fade: 0, onDone: () => {
+    if (isBobo) {
+      // Bobo lands wagging his tail, then settles into the sit
+      play(B, 'TailWag', { loop: false, fade: 0.25, onDone: () => play(B, 'Sit', { fade: 0.3 }) });
+      state = 'ready'; setButtons(true); $('hint').hidden = false;
+    } else play(ch, 'Idle', { fade: 0.3 });
+  } });
+  const pop = ch.current; pop.paused = true;
+  const place = (wig) => {
+    const p = charmPose(ch);
+    ch.root.position.copy(p.pos); ch.root.quaternion.copy(p.quat); ch.root.scale.setScalar(p.s);
+    if (wig) { ch.root.rotateZ(wig); }
+    return p;
+  };
+  place(0); ch.mixer.update(0);
+  // a. a short shiver while still stuck to the charm (it follows the swinging keychain)
+  tween(reduceMotion ? 0.01 : 0.38, (k) => {
+    ch.sil.mesh.material.opacity = Math.min(k * 4, 1);
+    place(Math.sin(k * Math.PI * 5) * 0.05 * k);
+  }, () => {
+    // b. it springs off the charm and flies to its spot; the silhouette stays behind
+    const from = place(0); pop.paused = false;
+    pd.visible = true; flash.position.copy(from.pos); flash.position.z += 0.08;
+    const q1 = new THREE.Quaternion();
     tween(reduceMotion ? 0.01 : 1.0, (k) => {
       const e = easeOut(k);
-      ch.root.position.lerpVectors(startFeet, spot, e);
-      ch.root.position.y += Math.sin(Math.min(k, 1) * Math.PI) * 0.45;
-      ch.root.scale.setScalar(THREE.MathUtils.lerp(s0, 1, e));
+      ch.root.position.lerpVectors(from.pos, spot, e);
+      ch.root.position.y += Math.sin(k * Math.PI) * 0.45;
+      ch.root.quaternion.slerpQuaternions(from.quat, q1, easeOut(k * 2));
+      ch.root.scale.setScalar(THREE.MathUtils.lerp(from.s, 1, e));
       const f = Math.sin(Math.min(k * 1.6, 1) * Math.PI);
       flash.scale.setScalar(0.9 * f + 0.001); flash.material.opacity = f;
       pd.scale.setScalar(0.2 + 0.8 * easeOut(k * 1.3)); pd.userData.ring.material.opacity = easeOut(k);
     });
-  }, reduceMotion ? 0 : delay * 1000);
+  });
 }
 
 function wave() {
@@ -234,12 +293,13 @@ canvas.addEventListener('pointerup', (e) => {
 });
 
 // ---------------------------------------------------------------- loop
+const params = new URLSearchParams(location.search);
 const clock = new THREE.Clock(); let tt = 0;
-renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05); tt += dt;
+function frame(dt) {
+  tt += dt;
   for (let i = tweens.length - 1; i >= 0; i--) {
-    const w = tweens[i]; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
-    if (k >= 1) { tweens.splice(i, 1); w.done && w.done(); }
+    const w = tweens[i]; if (!w) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
+    if (k >= 1) { const j = tweens.indexOf(w); if (j >= 0) tweens.splice(j, 1); w.done && w.done(); }
   }
   // the keychain sways a little, like it is hanging from a hand
   if (!reduceMotion) keychain.rotation.z = Math.sin(tt * 1.3) * 0.035;
@@ -247,8 +307,16 @@ renderer.setAnimationLoop(() => {
   for (const p of Object.values(PADS)) p.userData.ring.rotation.z += dt * 0.6;
   controls.update();
   renderer.render(scene, camera);
-});
+}
+// ?capture: no real-time loop; frames are stepped by hand (used to film the animation)
+const capture = params.has('capture');
+if (!capture) renderer.setAnimationLoop(() => frame(Math.min(clock.getDelta(), 0.05)));
+else { document.body.classList.add('capture'); frame(0); }
 
 // debug hook for headless checks
-window.__kc = { popOut, wave, wag, walk, spinCan, get state() { return state; }, clips: { bobo: Object.keys(B.clips), can: Object.keys(C.clips) } };
-if (new URLSearchParams(location.search).has('auto')) setTimeout(popOut, 300);
+window.__kc = {
+  popOut, wave, wag, walk, spinCan, camera, controls, B, C, keychain,
+  get state() { return state; }, clips: { bobo: Object.keys(B.clips), can: Object.keys(C.clips) },
+  step(dt, grab = true) { frame(dt); return grab ? canvas.toDataURL('image/png') : null; },
+};
+if (params.has('auto')) after(0.3, popOut);

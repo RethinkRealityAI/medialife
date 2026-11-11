@@ -1,8 +1,10 @@
 # Keychain pop-out (EVADE)
 
 Point the camera at the EVADE acrylic keychain and Bobo and the Eclipse can jump out of their
-charms in 3D, land on glowing pads in front of the keychain, and come alive: Bobo sits in the
-keychain pose, waves, wags his tail; the can idles with fizz coming out of the open tab.
+charms in 3D, land on glowing pads in front of the keychain, and come alive. Each one starts lying
+exactly over its printed art, shivers, then springs off: the can first, landing beside Bobo's spot,
+then Bobo, who lands wagging his tail and settles into the keychain sit. Where they were, a black
+silhouette is left on each charm, so the printed keychain does not show behind the 3D characters.
 
 - Component: `KeychainPopOut.ts` (type-checks against `@zcomponent/three@1.38.2`; not yet opened in the editor).
 - Browser test version (same logic): `/labs/keychain-pop/`.
@@ -21,8 +23,18 @@ of view for **Reset After Lost** seconds. If your tracker never hides its group,
 "on seen" action instead and set **Pop On Found** off. Public actions: `popOut()`, `wave()`, `wagTail()`, `hideCharacters()`.
 
 ## Clips in the GLBs
-Bobo: `PopOut` (squashed flat to full 3D), `Sit` (keychain pose idle), `PawRaise`, `TailWag`, plus the
+Bobo: `PopOut` (flat and full size like the print, then full 3D), `Sit` (keychain pose idle), `PawRaise`, `TailWag`, plus the
 original Bobo's `ClassicWalk`, `ClassicSit`, `ClassicChill`, `ClassicSleep`, `ClassicExcited`. The new
 Bobo uses the original Bobo's skeleton (same bone names and rest orientations: HRP, FakeTorso, CatHead,
 Ear, Ear2, FrontLeg, FrontLeg2, BackLeg, BackLeg2, Tail) plus Tail2–Tail5 for a smooth tail, so any clip made
-for the old Bobo plays on this one. Can: `PopOut` (spins out, tab snaps open) and `Idle` (fizz loop).
+for the old Bobo plays on this one. Can: `PopOut` (starts tipped toward the viewer like the print, stands up, spins once, tab kicks) and `Idle` (fizz loop).
+
+## Silhouettes
+Each GLB has a `Silhouette` node: a flat unit quad showing the black shape of that charm's printed art
+(`public/evade/keychain/ar/silhouette-bobo.png` / `silhouette-eclipse.png`, transparent PNGs in the same
+pixel frame as `src/charm-*.png`). It is placed where the model is in the first frame of `PopOut`. The
+component takes it off the model, pins it to the charm (Bobo: the tracked image; can: **Can Charm Offset**)
+and starts the model at (charm frame) x (Silhouette matrix)^-1, so model, silhouette and print line up.
+Train the tracker on `charm-bobo.png` (the whole picture, not a crop) so the Bobo silhouette sits exactly
+on the print; the can charm swings freely on the real keychain, so its silhouette is only as accurate as
+**Can Charm Offset**. Turn them off with **Show Silhouettes**.
