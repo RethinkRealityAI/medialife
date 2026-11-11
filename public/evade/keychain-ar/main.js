@@ -667,6 +667,8 @@ const appModule = (data) => ({
   onUpdate: () => { const now = performance.now(); countFrame(now, Object.values(TS).some((t) => t.tracked)); flushDiag(false); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
   onCameraStatusChange: ({ status, video }) => {
     camLog(status);
+    if (status === 'hasStream') kickVideo(video);
+    if (status === 'hasVideo') hideTapCam();
     if (status === 'requesting') ui.hint('Allow camera access to begin');
     if (status === 'hasVideo') { camStartAt = performance.now(); tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
     if (status === 'failed') camFailed('failed');
@@ -823,6 +825,37 @@ function camLog(step) {
   (diag.camSteps = diag.camSteps || []).push({ step, ms: runAt ? Math.round(performance.now() - runAt) : 0 });
   if (step !== 'hasVideo') flushDiag(true, true);
 }
+// iOS Safari: the engine hands the stream to a hidden <video> and waits for it to play by itself. The engine
+// only sets the muted *attribute*, which WebKit does not treat as muted once the element exists, and Low
+// Power Mode blocks autoplay outright, so on iPhones the stream can arrive and never play (seen in the test
+// log 2026-11-11: hasStream, then nothing). Make it muted and inline, play it, and if the phone still says
+// no, ask for one tap: a play() from a tap is always allowed.
+let tapCamShown = false;
+function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
+function kickVideo() {
+  let tries = 0;
+  const go = () => {
+    const v = engineVideo();
+    if (!v) { if (++tries < 40) setTimeout(go, 50); return; }
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    const p = v.play();
+    if (p && p.catch) p.catch((e) => { camLog('playRejected:' + (e && e.name)); showTapCam(); });
+    setTimeout(() => { if (!camStartAt && (v.paused || !v.currentTime)) { camLog('notPlaying'); showTapCam(); } }, 2500);
+  };
+  setTimeout(go, 0);
+}
+function showTapCam() {
+  if (camStartAt || tapCamShown) return; tapCamShown = true;
+  const b = document.createElement('button'); b.id = 'tap-cam'; b.type = 'button'; b.className = 'primary'; b.textContent = 'Tap to start the camera';
+  Object.assign(b.style, { position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 50, minHeight: '56px', padding: '0 28px', fontSize: '17px' });
+  b.onclick = () => {
+    camLog('tapPlay');
+    const v = engineVideo(); if (v) { v.muted = true; v.play().catch((e) => camLog('tapPlayRejected:' + (e && e.name))); }
+    setTimeout(() => { if (!camStartAt) camFailed('no video after tap'); }, 8000);
+  };
+  document.body.appendChild(b); b.focus();
+}
+function hideTapCam() { const b = document.getElementById('tap-cam'); if (b) b.remove(); }
 function camFailed(why) {
   if (camStartAt || diag.camFailed) return;
   diag.camFailed = why; flushDiag(true, true);
@@ -858,7 +891,7 @@ async function start() {
     appModule(data),
   ]);
   runAt = performance.now(); camLog('run');
-  setTimeout(() => { if (!camStartAt) camFailed('no video after 12 s'); }, 12000);
+  setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
   XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
 }
 
