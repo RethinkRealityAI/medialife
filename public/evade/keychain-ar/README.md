@@ -53,6 +53,15 @@ Each charm has its own state (idle, charging, flying, out) and runs only from it
 charm never shows up for the other, one arriving or leaving never restarts the other, and a charm that
 leaves the view comes back as it was. Replay starts both over.
 
+A pop-out's steps belong to their character and only run while that charm is in view (`tween(..., owner)`),
+so nothing plays out or makes a sound off screen; it carries on where it was when the charm comes back.
+A charm only counts as held steady while its middle is well inside the picture, so the other charm on the
+ring peeking in at the screen edge does not pop out of sight.
+
+Watchdog: when nothing has been tracked for 4 s, the image targets are handed to the engine again
+(`XR8.XrController.configure`), at most every 5 s; that restarts its search. `?nowatchdog` turns it off.
+The Tune panel shows what is tracked and counts found / lost / rescans.
+
 `?pair=1` is the combined version: `kc-both` is loaded too, and when both charms are steady they pop as
 one sequence (can first, Bobo after the Can to Bobo time). The pair picture also locks onto a single
 charm, so a charm still has to be confirmed by its own picture; the pair picture then places both, as

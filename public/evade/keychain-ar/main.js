@@ -202,8 +202,11 @@ let present = false;         // is any charm in view right now
 const bubbles = []; let taps = 0, tapIdle = 0, finaleOn = false;
 let B, C, Bcat, Bold, ALL = [];   // B is whichever Bobo is in play: the cat (Bcat) or the earlier design's blocky Bobo (Bold)
 const tweens = [];
-const tween = (dur, fn, done) => tweens.push({ t: 0, dur, fn, done });
-const after = (delay, fn) => tween(delay, () => {}, fn);
+// A tween can belong to one or more characters: it only runs while all of them are in view, so a pop-out
+// never plays out (or makes its sounds) while its charm is off screen; it carries on when the charm is back.
+const tween = (dur, fn, done, owner) => tweens.push({ t: 0, dur, fn, done, owner: owner ? [].concat(owner) : null });
+const after = (delay, fn, owner) => tween(delay, () => {}, fn, owner);
+const inView = (ch) => pres[ch.key] && (ch === B || ch === C);
 let state = 'idle';          // idle -> looking -> popping -> ready/walking: a summary of the two characters, for the UI
 let shots = 0, hinted = false;
 
@@ -386,7 +389,7 @@ function updateFrames(dt) {
   // which Bobo is in play: it follows the charm in view, but never changes under a Bobo that is on screen
   const want = on('kc-old') && !on('kc-bobo') ? Bold : on('kc-bobo') && !on('kc-old') ? Bcat : B;
   if (want !== B && !pres.bobo) { B.frame.visible = false; B = want; driver.bobo = null; goneFor.bobo = 9; }
-  const pick = {
+  const pick = !PAIR ? { bobo: B === Bold ? on('kc-old') : on('kc-bobo'), can: canT } : {
     bobo: B === Bold ? on('kc-old') : conf.bobo ? pair || on('kc-bobo') || (pairOff === 0 ? both : null) : null,
     can: conf.can ? pair || canT || (pairOff === 0 ? both : null) : null,
   };
@@ -439,16 +442,16 @@ function charge(chs, go) {
         ch.fx.shake = reduceMotion ? 0 : easeInOut(k * 1.5) * (0.4 + 0.9 * k);
       }
       for (const ch of chs) if (!ch.sils) { ch.scan.position.y = THREE.MathUtils.lerp(0.5, -0.5, (k * 3) % 1) * ch.def.h; ch.scan.material.opacity = Math.sin(k * Math.PI) * 0.9; }
-    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); });
+    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); }, chs);
   } else {
     const dur = Math.max(tune.portal, 0.2), sweeps = Math.max(1, Math.round(dur / 0.75));   // the earlier design: scan lines for as long as the portal would take
     sound.scan();
     tween(dur, (k) => {
       for (const ch of chs) { ch.scan.position.y = THREE.MathUtils.lerp(0.5, -0.5, Math.min(k * sweeps, sweeps - 1e-4) % 1) * ch.def.h; ch.scan.material.opacity = Math.sin(k * Math.PI) * 0.9; }
-    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); });
+    }, () => { for (const ch of chs) ch.scan.material.opacity = 0; go(); }, chs);
   }
 }
-const startPair = () => charge([C, B], () => { launch(C); after(Math.max(tune.stagger, 0.01), () => launch(B)); });   // the can pops first, then Bobo
+const startPair = () => charge([C, B], () => { launch(C); after(Math.max(tune.stagger, 0.01), () => launch(B), B); });   // the can pops first, then Bobo
 const startSolo = (ch) => charge([ch], () => launch(ch));
 // push the mask state into the shader, and rumble the masks on the charms
 let fxTime = 0;
@@ -494,8 +497,8 @@ function launch(ch) {
     }, () => {
       ch.landed = true; ch.st = 'out'; sound.land(); burst(ch, spotOf(ch), 14, 0.07);
       if (!hinted) { hinted = true; ui.hint('Tap for bubbles. Keep tapping!'); after(5, () => { if (!finaleOn && $('hint').textContent.startsWith('Tap for')) ui.hint(''); }); }
-    });
-  });
+    }, ch);
+  }, ch);
 }
 // ---------------------------------------------------------------- bubbles
 // Every tap blows bubbles; each tap in a row makes more of them and bigger. The tenth tap is the overflow:
@@ -556,11 +559,12 @@ function wag() { if (!boboFree()) return; sound.bell(); play(B, 'TailWag', { loo
 function walk() {
   if (!boboFree()) return;
   play(B, 'ClassicWalk', { fade: 0.35 }); B.walk = { a: 0, turn: 0 };
-  tween(4.2, (k) => { B.walk.a = k * Math.PI * 2; B.walk.turn = B.walk.a + Math.PI / 2; }, () => {
-    tween(0.4, (k) => { B.walk.turn = THREE.MathUtils.lerp(Math.PI / 2, 0, easeInOut(k)); B.walk.a = 0; }, () => { B.walk = null; play(B, 'Sit', { fade: 0.4 }); });
-  });
+  const who = B;
+  tween(4.2, (k) => { who.walk.a = k * Math.PI * 2; who.walk.turn = who.walk.a + Math.PI / 2; }, () => {
+    tween(0.4, (k) => { who.walk.turn = THREE.MathUtils.lerp(Math.PI / 2, 0, easeInOut(k)); who.walk.a = 0; }, () => { who.walk = null; play(who, 'Sit', { fade: 0.4 }); }, who);
+  }, who);
 }
-function spinCan() { if (!live(C) || C.spin) return; sound.pop(); C.spin = { k: 0 }; tween(0.9, (k) => { if (C.spin) C.spin.k = k; }, () => { C.spin = null; }); }
+function spinCan() { if (!live(C) || C.spin) return; sound.pop(); C.spin = { k: 0 }; tween(0.9, (k) => { if (C.spin) C.spin.k = k; }, () => { C.spin = null; }, C); }
 function replay() { resetScene(); }
 
 // landed characters stand on their spot in their charm's ground frame
@@ -578,10 +582,33 @@ function settle() {
 }
 
 const HINT_FIND = 'Point the camera at Bobo, the Eclipse can, or both together';
+function onScreen(ch, m = 0.7) {
+  const n = ch.frame.getWorldPosition(_v).project(camera);
+  return n.z < 1 && Math.abs(n.x) < m && Math.abs(n.y) < m;
+}
+// Watchdog: on some phones the engine stops looking for pictures after it has lost one. When nothing has
+// been tracked for 4 s, hand it the same pictures again (that restarts its search), at most every 5 s.
+const diag = { found: 0, lost: 0, resets: 0, last: '', lastAt: 0 };
+let lastTrackedAt = 0, lastReset = 0, everTracked = false, activeTargets = [];
+function watchdog() {
+  const now = performance.now();
+  if (Object.values(TS).some((t) => t.tracked)) { lastTrackedAt = now; everTracked = true; return; }
+  if (!everTracked || params.has('nowatchdog') || now - lastTrackedAt < 4000 || now - lastReset < 5000) return;
+  lastReset = now; diag.resets++;
+  try { XR8.XrController.configure({ imageTargetData: activeTargets }); } catch (e) { console.warn('watchdog', e); }
+}
+function showDiag() {
+  const el = $('t-diag'); if (!el || $('tune').hidden) return;
+  const on = Object.values(TS).filter((t) => t.tracked).map((t) => t.name).join(', ') || 'nothing';
+  el.textContent = `Tracking: ${on}. Found ${diag.found}, lost ${diag.lost}, rescans ${diag.resets}.`;
+}
 function tick(dt) {
+  watchdog(); showDiag();
   updateFrames(dt);
   // each charm starts its own pop-out once it has been held steady for a moment; if both are in view they go together
-  for (const ch of [B, C]) ch.steady = driver[ch.key] ? ch.steady + dt : 0;
+  // a charm only counts as held steady while its middle is well inside the picture: the other charm on the
+  // ring often peeks in at the edge of the screen, and it must not pop out there, out of sight
+  for (const ch of [B, C]) ch.steady = driver[ch.key] && onScreen(ch) ? ch.steady + dt : 0;
   if (!params.has('nopop')) {
     const ripe = (ch) => ch.st === 'idle' && ch.steady > 0.6, coming = (ch) => ch.st === 'idle' && ch.steady > 0;
     if (!PAIR) { for (const ch of [C, B]) if (ripe(ch)) startSolo(ch); }
@@ -606,11 +633,11 @@ function tick(dt) {
   const wagLabel = B === Bold ? 'Dance' : 'Wag tail'; if ($('b-wag').textContent !== wagLabel) $('b-wag').textContent = wagLabel;
   $('b-replay').disabled = $('b-photo').disabled = !(out && present);
   for (let i = tweens.length - 1; i >= 0; i--) {
-    const w = tweens[i]; if (!w) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
+    const w = tweens[i]; if (!w) continue; if (w.owner && !w.owner.every(inView)) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
     if (k >= 1) { const j = tweens.indexOf(w); if (j >= 0) tweens.splice(j, 1); w.done && w.done(); }
   }
   settle();
-  for (const ch of ALL) ch.mixer.update(dt);
+  for (const ch of [B, C]) if (pres[ch.key]) ch.mixer.update(dt);           // a character off screen holds still
   updateBubbles(dt); updateMasks(dt);
   if (taps && !finaleOn) { tapIdle += dt; if (tapIdle > 6) { taps = 0; showFizz(); } }   // the fizz goes flat if you stop tapping
   for (const ch of ALL) {                                                  // sparks
@@ -645,9 +672,9 @@ const appModule = (data) => ({
   },
   onException: (e) => { console.error('XR', e); ui.error('Something went wrong', String((e && e.message) || e)); },
   listeners: [
-    { event: 'reality.imagefound', process: ({ detail }) => { if (DEBUG) console.log('CAMPOSE', JSON.stringify(camera.position.toArray()), JSON.stringify(camera.quaternion.toArray()), 'proj', JSON.stringify(camera.projectionMatrix.elements.map((x) => +x.toFixed(3)))); onTarget(detail); } },
+    { event: 'reality.imagefound', process: ({ detail }) => { diag.found++; if (DEBUG) console.log('CAMPOSE', JSON.stringify(camera.position.toArray()), JSON.stringify(camera.quaternion.toArray()), 'proj', JSON.stringify(camera.projectionMatrix.elements.map((x) => +x.toFixed(3)))); onTarget(detail); } },
     { event: 'reality.imageupdated', process: ({ detail }) => onTarget(detail) },
-    { event: 'reality.imagelost', process: ({ detail }) => onLost(detail) },
+    { event: 'reality.imagelost', process: ({ detail }) => { diag.lost++; onLost(detail); } },
     { event: 'reality.imageloading', process: ({ detail }) => DEBUG && console.log('imageloading', JSON.stringify(detail)) },
     { event: 'reality.imagescanning', process: ({ detail }) => DEBUG && console.log('imagescanning', JSON.stringify(detail)) },
   ],
@@ -694,7 +721,8 @@ async function start() {
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.slice(4).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only'))) });
+  activeTargets = data.slice(4).filter((t) => (PAIR || t.name !== 'kc-both') && (!params.get('only') || t.name === params.get('only')));
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: activeTargets });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
     XR8.Threejs.pipelineModule(),
@@ -763,4 +791,4 @@ if (!mobile) {
 // the camera guide cycles through the three things to look for
 { const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
 
-window.__ar = { get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+window.__ar = { diag, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
