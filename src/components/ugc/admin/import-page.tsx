@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { Link, useRouter } from "@tanstack/react-router";
 import {
+  BarChart3,
   Check,
   CloudDownload,
   Download,
@@ -32,15 +33,25 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   adminAddUgcCreator,
+  adminImportUgcChannelStats,
   adminImportUgcCsv,
   adminSyncUgcNetlify,
 } from "@/lib/ugc/admin.functions";
-import { UGC_FORM_FIELDS, csvObjects, mapSignup, normaliseFields, toCsv } from "@/lib/ugc/import";
+import {
+  UGC_CHANNEL_STATS_FIELDS,
+  UGC_FORM_FIELDS,
+  csvObjects,
+  mapSignup,
+  normaliseFields,
+  parseChannelStatsCsv,
+  toCsv,
+} from "@/lib/ugc/import";
 import {
   UGC,
   UGC_PLATFORM_LABELS,
   UGC_PLATFORMS,
   UGC_TEE_SIZES,
+  formatCount,
   type ShippingAddress,
   type UgcPlatform,
   type UgcTeeSize,
@@ -86,13 +97,14 @@ export function ImportPage({
         title="Import sign-ups"
         icon={CloudDownload}
         tone="mint"
-        description="Bring in the landing page's sign-ups. Imports are safe to repeat: nobody is added twice."
+        description="Bring in the landing page's sign-ups and their channel stats. Imports are safe to repeat: nobody is added twice."
       />
       <PageBody>
         <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 @5xl/inset:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <div className="space-y-4">
             <NetlifyPanel status={status} />
             <CsvPanel />
+            <ChannelStatsPanel />
           </div>
           <div className="space-y-4">
             <AddCreatorPanel campaigns={campaigns} />
@@ -540,6 +552,235 @@ function ImportResult({
         </ul>
       ) : null}
     </div>
+  );
+}
+
+/* ── Channel stats ────────────────────────────────────────────────────────── */
+
+type StatsResult = Awaited<ReturnType<typeof adminImportUgcChannelStats>>;
+
+function ChannelStatsPanel() {
+  const router = useRouter();
+  const [csv, setCsv] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<StatsResult | null>(null);
+  const rows = useMemo(() => (csv ? parseChannelStatsCsv(csv) : null), [csv]);
+  const ok = rows?.filter((r) => !r.problem) ?? [];
+  const creators = new Set(ok.map((r) => r.email)).size;
+  const reach = ok.reduce((a, r) => a + (r.followers ?? 0), 0);
+
+  async function load(f: File | undefined) {
+    if (!f) return;
+    if (f.size > 5_000_000) {
+      toast.error("That file is over 5 MB. Split it and import the parts.");
+      return;
+    }
+    setResult(null);
+    setFileName(f.name);
+    setCsv(await f.text());
+  }
+
+  async function importIt() {
+    setBusy(true);
+    try {
+      const r = await adminImportUgcChannelStats({ data: { csv } });
+      setResult(r);
+      toast.success(
+        r.creators
+          ? `Updated ${plural(r.creators, "creator")}`
+          : r.noCreator
+            ? "Nobody matched. Import the sign-ups first."
+            : "Nothing new in that file",
+      );
+      await router.invalidate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const reset = () => {
+    setCsv("");
+    setFileName("");
+    setResult(null);
+  };
+
+  return (
+    <Panel className="p-4 sm:p-5">
+      <PanelTitle
+        icon={BarChart3}
+        tone="violet"
+        title="Channel stats"
+        sub="Follower and subscriber counts per channel, matched to creators by email. One row per creator and platform. Re-import any time to refresh."
+        actions={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-sky-300 hover:bg-white/[0.06] hover:text-sky-200"
+            onClick={() =>
+              void saveText(
+                toCsv([...UGC_CHANNEL_STATS_FIELDS], []),
+                "ugc-channel-stats-template.csv",
+              )
+            }
+          >
+            <Download aria-hidden />
+            Template
+          </Button>
+        }
+      />
+      {!rows ? (
+        <label className="mt-4 flex cursor-pointer flex-col items-center rounded-2xl border border-dashed border-white/[0.14] bg-white/[0.015] px-4 py-6 text-center transition-colors focus-within:ring-2 focus-within:ring-[var(--partner)] hover:bg-white/[0.03]">
+          <UploadCloud className="size-6 text-violet-300" aria-hidden />
+          <span className="mt-2 text-sm font-medium">Choose the channel stats CSV</span>
+          <span className="mt-0.5 text-xs text-muted-foreground">
+            Import the sign-ups above first. Nothing changes until you confirm.
+          </span>
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            className="sr-only"
+            data-testid="stats-csv-input"
+            onChange={(e) => {
+              void load(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      ) : result ? (
+        <div className="mt-4 space-y-3" data-testid="stats-result">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-medium">Imported {fileName || "the CSV"}</h3>
+            <Button variant="ghost" size="sm" onClick={reset}>
+              Import another
+            </Button>
+          </div>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                ["Creators updated", result.creators, "text-emerald-300"],
+                ["Channels updated", result.updated, "text-emerald-300"],
+                ["Unchanged", result.unchanged, "text-sky-200"],
+                [
+                  "Not matched",
+                  result.noCreator + result.skipped,
+                  result.noCreator + result.skipped ? "text-amber-200" : "text-white/60",
+                ],
+              ] as [string, number, string][]
+            ).map(([k, v, tone]) => (
+              <div key={k} className={cn("px-3 py-2.5", well)}>
+                <dt className="text-[11px] text-muted-foreground">{k}</dt>
+                <dd className={cn("text-xl font-semibold tabular-nums", tone)}>{v}</dd>
+              </div>
+            ))}
+          </dl>
+          {result.noCreator ? (
+            <p className="text-xs text-amber-200">
+              {plural(
+                new Set(result.rows.filter((r) => r.result === "no-creator").map((r) => r.email))
+                  .size,
+                "email",
+              )}{" "}
+              didn't match a creator. Import the sign-ups (Sync or Upload a CSV), then import this
+              file again.
+            </p>
+          ) : null}
+          <ul className={cn("max-h-60 divide-y divide-white/[0.05] overflow-y-auto text-xs", well)}>
+            {result.rows
+              .filter((r) => r.result !== "unchanged")
+              .map((r, i) => (
+                <li
+                  key={`${r.email}-${r.platform}-${i}`}
+                  className="flex items-center gap-2 px-3 py-1.5"
+                >
+                  {r.result === "updated" ? (
+                    <Check className="size-3.5 shrink-0 text-emerald-300" aria-hidden />
+                  ) : (
+                    <X className="size-3.5 shrink-0 text-amber-300" aria-hidden />
+                  )}
+                  {r.creatorId ? (
+                    <Link
+                      to="/admin/ugc/creators/$creatorId"
+                      params={{ creatorId: r.creatorId }}
+                      className="min-w-0 flex-1 truncate hover:underline"
+                    >
+                      {r.creatorName || r.email}
+                    </Link>
+                  ) : (
+                    <span className="mono min-w-0 flex-1 truncate">{r.email || "(no email)"}</span>
+                  )}
+                  <span className="shrink-0 text-muted-foreground">
+                    {r.platform ? UGC_PLATFORM_LABELS[r.platform] : "?"}
+                    {r.reason ? `: ${r.reason}` : ""}
+                  </span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+            <span>
+              <span className="font-medium">{plural(ok.length, "channel")}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                · {plural(creators, "creator")} · {formatCount(reach)} total reach
+                {rows.length - ok.length ? ` · ${rows.length - ok.length} will be skipped` : ""}
+              </span>
+            </span>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={reset}>
+                Clear
+              </Button>
+              <Button size="sm" onClick={importIt} disabled={busy || !ok.length}>
+                {busy ? (
+                  <Loader2 className="animate-spin" aria-hidden />
+                ) : (
+                  <UploadCloud aria-hidden />
+                )}
+                Import {plural(ok.length, "channel")}
+              </Button>
+            </div>
+          </div>
+          {rows.length && !ok.length ? (
+            <p className="text-xs text-amber-200">
+              No usable rows. The file needs email, platform and followers columns (see the
+              template).
+            </p>
+          ) : null}
+          <div className={cn("max-h-60 overflow-auto", well)}>
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-[oklch(0.12_0.01_280)]">
+                <tr className="text-left text-[10px] tracking-wide text-white/55 uppercase">
+                  <th className="px-3 py-2 font-normal">Email</th>
+                  <th className="px-3 py-2 font-normal">Platform</th>
+                  <th className="px-3 py-2 text-right font-normal">Followers</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/[0.05]">
+                {rows.slice(0, 300).map((r, i) => (
+                  <tr key={i} className={cn(r.problem && "text-muted-foreground")}>
+                    <td className="mono max-w-[12rem] truncate px-3 py-1.5">{r.email || "–"}</td>
+                    <td className="px-3 py-1.5">
+                      {r.platform ? UGC_PLATFORM_LABELS[r.platform] : "–"}
+                    </td>
+                    <td className="px-3 py-1.5 text-right whitespace-nowrap tabular-nums">
+                      {r.problem ? (
+                        <span className="text-amber-200">{r.problem}</span>
+                      ) : (
+                        formatCount(r.followers)
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </Panel>
   );
 }
 

@@ -28,6 +28,7 @@ import {
   UGC_STATUS_LABELS,
   UGC_STATUS_TONES,
   UGC_SUBMISSION_STATUS_LABELS,
+  formatCount,
   ugcHandleUrl,
   type ShippingAddress,
   type UgcCampaignStatus,
@@ -244,6 +245,16 @@ export function mainAudience(c: {
 }): string | null {
   const main = isPlatform(c.mainPlatform) ? c.mainPlatform : c.platforms.find(isPlatform);
   return (main && c.audiences?.[main]) || null;
+}
+
+/** Total looked-up reach ("212K reach"), else the form's audience band, else null. */
+export function reachLabel(c: {
+  mainPlatform: string | null;
+  platforms: string[];
+  audiences?: Partial<Record<UgcPlatform, string>>;
+  reach?: number | null;
+}): string | null {
+  return c.reach != null ? `${formatCount(c.reach)} reach` : mainAudience(c);
 }
 
 /* ── Section nav ──────────────────────────────────────────────────────────── */
