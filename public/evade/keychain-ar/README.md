@@ -13,31 +13,34 @@ binary under a different licence and is not needed here.
 ## Files
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
-- `image-targets/` — two targets written by `scripts/build-keychain-ar/build_targets.py`:
-  `kc-bobo` (Bobo's head and chest; at rest the can charm hangs over his lower right, so that part is
-  left out of the crop) and `kc-can` (the can's logo and wordmark).
+- `image-targets/` — ONE target, `kc-both`, written by `scripts/build-keychain-ar/build_targets.py`:
+  the Bobo charm and the can charm together as they sit on the keychain (no ring or chain).
+  `kc-both_luminance.jpg` is what the engine tracks, `kc-both.jpg` is the same picture in colour, and
+  `layout.json` says where the picture sits in keychain space (metres).
 - `splash.jpg` — backdrop generated with Higgsfield from a text prompt only (no EVADE artwork was
   given to it); the real Bobo and can renders are composited on top.
 - `target/` — a flat picture of the keychain to point a phone at when the real keychain is not to hand.
 
 ## How it lines up
-Each target is a 3:4 crop of a charm picture (14 px per mm). The crop numbers in the target json give
-the whole charm frame around the tracked crop, in real metres. The `Silhouette` quad inside each GLB
-covers exactly that frame, and the model starts at (charm frame) x (Silhouette matrix)^-1, so the
-model, the silhouette and the print coincide. The silhouettes are children of the tracked charm
-frames, so they stay on the keychain while the characters fly off.
+The target picture is built from the two charm pictures (14 px per mm) at the keychain's rest layout,
+taken from the 3D keychain model. `layout.json` gives the picture's size and centre in keychain space,
+so each charm frame is a fixed offset from the tracked picture. The `Silhouette` quad inside each GLB
+covers exactly its charm frame, and the model starts at (charm frame) x (Silhouette matrix)^-1, so the
+model, the silhouette and the print coincide.
 
-Either charm can start the experience. If only one is tracked, the other charm's frame is placed from
-the keychain's rest layout (taken from the 3D keychain model); as soon as both are tracked the measured
-offset is used and remembered. On the real keychain the charms swing, so the untracked one is
-approximate until the camera sees it.
+Everything (silhouettes, characters, pads, sparks) is a child of the tracked picture and is only drawn
+while the target is tracked: when the target is lost, or no pose arrives for half a second, it all
+hides (after a 0.25 s grace against flicker) and comes back in place when the target is found again.
+The pose is followed without lag; only sub-millimetre jitter is smoothed.
 
-The characters stand upright using the phone's gravity sensor when the browser allows it (iOS asks on
-Start), otherwise "up" is the top of the screen. If the keychain lies flat on a table they land on the
-table in front of it instead of below it.
+One target means the can charm is assumed to hang in its rest position over Bobo. If it swings well
+away, tracking gets weaker and the can silhouette will be off until it settles.
+
+"Up" for the landed characters is read once, at the moment they pop (phone gravity when the browser
+allows it, otherwise the top of the screen), and from then on they are fixed to the keychain.
 
 ## URL switches
-- `?debug` draws the two charm frames and tints the silhouettes, and logs engine events.
+- `?debug` draws the target and charm frames and tints the silhouettes, and logs engine events.
 - `?debug&nopop` only tracks: use it to check alignment on a real keychain.
 
 ## Tested / not tested

@@ -2,10 +2,11 @@
 // charms, leaving black silhouettes behind. Image tracking by the open-source 8th Wall engine
 // (github.com/8thwall/8thwall, MIT), self-hosted in ./vendor/xr. Rendering is plain three.js.
 //
-// How the alignment works: each image target is a 3:4 crop of a charm picture. The crop numbers give
-// the full charm frame around the tracked crop, in real metres ("charm space"). The silhouette quad
-// that ships inside each GLB covers exactly that frame, and the model starts at
-// (charm frame) x (Silhouette node matrix)^-1, i.e. lying over its own print.
+// How the alignment works: there is ONE image target, the Bobo charm and the can charm together as they
+// sit on the keychain. image-targets/layout.json says where that picture sits in keychain space (metres),
+// which fixes each charm's frame. The silhouette quad that ships inside each GLB covers exactly its
+// charm frame, and the model starts at (charm frame) x (Silhouette node matrix)^-1, i.e. over its print.
+// Nothing is drawn unless the target is being tracked right now.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -19,27 +20,28 @@ const BASE = '/evade/keychain/';
 const HERE = '/evade/keychain-ar/';
 
 // ---------------------------------------------------------------- the physical keychain (metres)
-// Charm pictures are 14 px per mm. Layout of the can charm relative to the Bobo charm at rest comes
-// from the 3D keychain model (public/evade/keychain/README.md): used until the can charm is tracked.
+// Charm pictures are 14 px per mm. Where each charm sits on the keychain comes from the 3D keychain
+// model (public/evade/keychain/README.md); scripts/build-keychain-ar/build_targets.py uses the same numbers.
 const PXM = 14000;
 const CHARMS = {
-  bobo: { target: 'kc-bobo', w: 809 / PXM, h: 923 / PXM },
-  can: { target: 'kc-can', w: 434 / PXM, h: 805 / PXM },
+  bobo: { w: 809 / PXM, h: 923 / PXM },
+  can: { w: 434 / PXM, h: 805 / PXM },
 };
 function restMatrix(tx, ty, tz, rz, cy) {
   return new THREE.Matrix4().makeTranslation(tx, ty, tz)
     .multiply(new THREE.Matrix4().makeRotationZ(rz))
     .multiply(new THREE.Matrix4().makeTranslation(0, cy, 0));
 }
-const REST_B = restMatrix(-0.0070, -0.0643, -0.0017, 2 * Math.asin(-0.096), -0.0288);
-const REST_C = restMatrix(0.0070, -0.0850, 0.0022, 2 * Math.asin(0.078), -0.0252);
-const REL_REST = REST_B.clone().invert().multiply(REST_C);     // can charm frame in Bobo charm space
+const REST = {                                                  // charm frames in keychain space, flat on the print
+  bobo: restMatrix(-0.0070, -0.0643, 0, 2 * Math.asin(-0.096), -0.0288),
+  can: restMatrix(0.0070, -0.0850, 0, 2 * Math.asin(0.078), -0.0252),
+};
 
 // landed sizes and spots (metres), in the "ground frame": x right, y up (gravity), z toward the viewer
 const SIZE = { bobo: 0.06, can: 0.043 };
 const SPOT = {
-  bobo: (flat) => new THREE.Vector3(-0.03, -0.094 * (1 - flat), 0.02 + 0.08 * flat),
-  can: (flat) => new THREE.Vector3(0.036, -0.094 * (1 - flat), 0.018 + 0.08 * flat),
+  bobo: (flat) => new THREE.Vector3(-0.03, -0.085 * (1 - flat), 0.02 + 0.08 * flat),
+  can: (flat) => new THREE.Vector3(0.036, -0.085 * (1 - flat), 0.018 + 0.08 * flat),
 };
 
 // ---------------------------------------------------------------- small helpers
@@ -98,8 +100,8 @@ const loader = new GLTFLoader();
 const assets = Promise.all([
   loader.loadAsync(BASE + 'ar/bobo-keychain.glb'),
   loader.loadAsync(BASE + 'ar/eclipse-can.glb'),
-  fetch(HERE + 'image-targets/kc-bobo.json').then((r) => r.json()),
-  fetch(HERE + 'image-targets/kc-can.json').then((r) => r.json()),
+  fetch(HERE + 'image-targets/kc-both.json').then((r) => r.json()),
+  fetch(HERE + 'image-targets/layout.json').then((r) => r.json()),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -132,9 +134,10 @@ async function askMotion() {
 
 // ---------------------------------------------------------------- scene state
 let scene, camera, renderer;
-const T = {};                // tracker state per charm
-const charm = {};            // THREE.Group per charm, in charm space (metres), follows the target
-let stage;                   // copy of the Bobo charm frame: the characters live in it
+let T = null;                // tracker state of the image target
+let kc;                      // the tracked picture: a group in metres, centred on the target, follows it rigidly
+const charm = {};            // THREE.Group per charm inside kc, in charm space (metres)
+let stage;                   // the Bobo charm frame again: the characters live in it
 const G = { q: new THREE.Quaternion(), flat: 0 };   // ground frame inside the stage
 let B, C; const PADS = {}; let flashB, flashC, scanB, scanC, sparks;
 const tweens = [];
@@ -187,7 +190,7 @@ function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
   }
 }
 
-function buildScene(xr, [bobo, can, tB, tC]) {
+function buildScene(xr, [bobo, can, target, layout]) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -197,15 +200,19 @@ function buildScene(xr, [bobo, can, tB, tC]) {
   camera.position.set(0, 0, 0); camera.quaternion.identity();
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
 
-  for (const [k, def, data] of [['bobo', CHARMS.bobo, tB], ['can', CHARMS.can, tC]]) {
-    charm[k] = new THREE.Group(); charm[k].visible = false; scene.add(charm[k]);
-    T[k] = { def, pr: data.properties, tracked: false, ever: false, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true };
+  kc = new THREE.Group(); kc.visible = false; scene.add(kc);
+  T = { name: target.name, pr: target.properties, hM: layout.heightM, tracked: false, ever: false, at: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, snap: true };
+  const toCentre = new THREE.Matrix4().makeTranslation(-layout.centre[0], -layout.centre[1], 0);   // keychain space -> target picture
+  const sit = (g, k) => { _m.copy(toCentre).multiply(REST[k]).decompose(g.position, g.quaternion, g.scale); kc.add(g); return g; };
+  for (const [k, def] of Object.entries(CHARMS)) {
+    charm[k] = sit(new THREE.Group(), k);
     if (DEBUG) {
       const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(def.w, def.h)), new THREE.LineBasicMaterial({ color: k === 'bobo' ? 0x4fb4ff : 0xe85bd8, depthTest: false }));
       fr.renderOrder = 30; charm[k].add(fr);
     }
   }
-  stage = new THREE.Group(); stage.visible = false; scene.add(stage);
+  if (DEBUG) { const fr = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(layout.widthM, layout.heightM)), new THREE.LineBasicMaterial({ color: 0x40ff80, depthTest: false })); fr.renderOrder = 30; kc.add(fr); }
+  stage = sit(new THREE.Group(), 'bobo');
   B = prepCharacter(bobo, SIZE.bobo, charm.bobo, CHARMS.bobo);
   C = prepCharacter(can, SIZE.can, charm.can, CHARMS.can);
   PADS.bobo = pad(0.033); PADS.can = pad(0.023); stage.add(PADS.bobo, PADS.can);
@@ -235,44 +242,37 @@ function burst(at, n = 40, speed = 0.16) {
 // ---------------------------------------------------------------- tracking -> charm frames
 const _v = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _m = new THREE.Matrix4(), _m2 = new THREE.Matrix4();
 function onTarget(d) {
-  const k = d.name === CHARMS.bobo.target ? 'bobo' : d.name === CHARMS.can.target ? 'can' : null; if (!k) return;
-  const t = T[k], pr = t.pr;
-  const upp = d.scale * (d.scaledHeight || 1) / pr.height;                 // world units per charm pixel
+  const t = T; if (!t || d.name !== t.name) return;
+  const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;               // world units per target pixel
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
-  _v.set((pr.originalWidth / 2 - (pr.left + pr.width / 2)) * upp, -(pr.originalHeight / 2 - (pr.top + pr.height / 2)) * upp, 0).applyQuaternion(t.q);
-  t.p.set(d.position.x, d.position.y, d.position.z).add(_v);
-  t.s = pr.originalHeight * upp / t.def.h;                                  // world units per metre
+  t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
+  t.s = t.pr.height * upp / t.hM;                                           // world units per metre
   if (!t.tracked) t.snap = true;
-  t.tracked = true; t.ever = true;
+  t.tracked = true; t.ever = true; t.at = performance.now();
 }
-function onLost(d) { for (const k of ['bobo', 'can']) if (d.name === CHARMS[k].target) T[k].tracked = false; }
+function onLost(d) { if (T && d.name === T.name) T.tracked = false; }
 
-let relCan = REL_REST.clone();          // can charm frame in Bobo charm space (measured when both are tracked)
-function follow(k, dt) {
-  const t = T[k], g = charm[k];
-  const a = t.snap ? 1 : 1 - Math.exp(-dt * 18); t.snap = false;
-  g.position.lerp(t.p, a); g.quaternion.slerp(t.q, a); g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, t.s, a));
+// Stick to the print: follow real movement at once, and only smooth out the sub-millimetre jitter of a
+// keychain that is being held still (any lag here shows up as the 3D sliding off the charms).
+function follow() {
+  const t = T, g = kc, clamp = THREE.MathUtils.clamp;
+  const aP = t.snap ? 1 : clamp(g.position.distanceTo(t.p) / t.s / 0.0025, 0.3, 1);
+  const aR = t.snap ? 1 : clamp(g.quaternion.angleTo(t.q) / 0.04, 0.3, 1);
+  const aS = t.snap ? 1 : clamp(Math.abs(g.scale.x - t.s) / t.s / 0.03, 0.3, 1);
+  t.snap = false;
+  g.position.lerp(t.p, aP); g.quaternion.slerp(t.q, aR); g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, t.s, aS));
 }
+let present = false, gone = 0;           // is the keychain in view right now (with a short grace so it does not flicker)
+const _sq = new THREE.Quaternion();
 function updateFrames(dt) {
-  if (T.bobo.tracked) follow('bobo', dt);
-  charm.bobo.updateMatrix(); charm.bobo.updateMatrixWorld(true);
-  if (T.can.tracked) {
-    follow('can', dt); charm.can.updateMatrix();
-    if (T.bobo.tracked) relCan.copy(charm.bobo.matrix).invert().multiply(charm.can.matrix);
-    else if (!T.bobo.ever) {            // only the can has been seen so far: place the Bobo frame from it
-      _m.copy(charm.can.matrix).multiply(_m2.copy(relCan).invert()).decompose(charm.bobo.position, charm.bobo.quaternion, _s);
-      charm.bobo.scale.setScalar(_s.x); charm.bobo.updateMatrix();
-    }
-  } else if (T.bobo.ever) {             // can charm not in view: keep it where it last was relative to Bobo's
-    _m.copy(charm.bobo.matrix).multiply(relCan).decompose(charm.can.position, charm.can.quaternion, _s);
-    charm.can.scale.setScalar(_s.x); charm.can.updateMatrix();
-  }
-  charm.bobo.visible = charm.can.visible = T.can.ever || T.bobo.ever; charm.bobo.updateMatrixWorld(true); charm.can.updateMatrixWorld(true);
-  stage.position.copy(charm.bobo.position); stage.quaternion.copy(charm.bobo.quaternion); stage.scale.copy(charm.bobo.scale);
-  stage.visible = T.bobo.ever || T.can.ever; stage.updateMatrixWorld(true);
+  if (T.tracked && performance.now() - T.at > 500) T.tracked = false;      // no pose for half a second: lost
+  if (T.tracked) follow();
+  gone = T.tracked ? 0 : gone + dt; present = T.tracked || (present && gone < 0.25);
+  kc.visible = present; kc.updateMatrixWorld(true);                        // nothing is drawn unless it is tracked now
+  if (state !== 'looking' && state !== 'idle') return;   // once they pop, the ground frame is fixed to the keychain
 
   // ground frame: up from gravity when the phone reports it, else the top of the screen
-  const toStage = _q.copy(stage.quaternion).invert().multiply(camera.quaternion);       // camera space -> stage space
+  const toStage = _q.copy(stage.getWorldQuaternion(_sq)).invert().multiply(camera.quaternion);       // camera space -> stage space
   const up = new THREE.Vector3(0, 1, 0);
   if (gravity.up && performance.now() - gravity.t < 1500) up.copy(gravity.up);
   up.applyQuaternion(toStage).normalize();
@@ -283,8 +283,7 @@ function updateFrames(dt) {
   if (f.lengthSq() < 1e-8) f.set(0, 0, 1); f.normalize();
   const r = new THREE.Vector3().crossVectors(up, f).normalize();
   _q.setFromRotationMatrix(_m.makeBasis(r, up, f));
-  const a = state === 'looking' || state === 'idle' ? 1 : 1 - Math.exp(-dt * 3);
-  G.q.slerp(_q, a); G.flat = THREE.MathUtils.lerp(G.flat, Math.min(Math.abs(up.z) * 1.25, 1), a);
+  G.q.copy(_q); G.flat = Math.min(Math.abs(up.z) * 1.25, 1);
 }
 const spotOf = (k) => SPOT[k](G.flat).applyQuaternion(G.q);
 
@@ -390,18 +389,19 @@ function settle() {
 function tick(dt) {
   updateFrames(dt);
   // state: wait until the Bobo charm (or the can charm) has been held steady for a moment
-  const seen = T.bobo.tracked || T.can.tracked;
+  const seen = T.tracked;
   if (state === 'looking') {
     steady = seen ? steady + dt : 0; ui.guide(!seen);
-    ui.hint(seen ? 'Found it. Hold still…' : 'Point your camera at the Bobo keychain');
+    ui.hint(seen ? 'Found it. Hold still…' : 'Point your camera at Bobo and the can on your keychain');
     if (steady > 0.45 && !params.has('nopop')) popOut();
   } else if (state !== 'idle') {
     lostFor = seen ? 0 : lostFor + dt;
-    const PULL = 'Move back a little to see Bobo and the can', KEEP = 'Keep the keychain in view';
+    const PULL = 'Move back a little to see Bobo and the can', KEEP = 'Point at the keychain to bring Bobo back';
     let off = false;
-    if (B.landed) { const n = B.root.getWorldPosition(_v).project(camera); off = Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
+    ui.guide(!present); ui.buttons(present && state === 'ready');
+    if (present && B.landed) { const n = B.root.getWorldPosition(_v).project(camera); off = Math.abs(n.x) > 0.92 || n.y < -0.86 || n.y > 0.7; }
     const cur = $('hint').textContent;
-    if (lostFor > 2.5) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL) ui.hint('');
+    if (!present) ui.hint(KEEP); else if (off) ui.hint(PULL); else if (cur === KEEP || cur === PULL) ui.hint('');
   }
   for (let i = tweens.length - 1; i >= 0; i--) {
     const w = tweens[i]; if (!w) continue; w.t += dt; const k = Math.min(w.t / w.dur, 1); w.fn(k);
@@ -454,7 +454,7 @@ async function start() {
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: [data[2], data[3]] });
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: [data[2]] });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(),
     XR8.Threejs.pipelineModule(),
@@ -491,7 +491,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (!down || !camera || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 10) return;
   ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = (ch) => ch.landed && ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
+  const hit = (ch) => present && ch.landed && ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
   if (hit(B)) wave(); else if (hit(C)) spinCan();
 });
 
@@ -502,4 +502,4 @@ if (!mobile) {
   try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
 }
 
-window.__ar = { get state() { return state; }, T, charm, get stage() { return stage; }, G, popOut, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; } };
+window.__ar = { get state() { return state; }, get T() { return T; }, get kc() { return kc; }, charm, get stage() { return stage; }, G, popOut, replay, gravity, get B() { return B; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; } };
