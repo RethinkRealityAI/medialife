@@ -666,11 +666,12 @@ const appModule = (data) => ({
   onStart: () => { buildScene(XR8.Threejs.xrScene(), data); state = 'looking'; $('hud').hidden = false; ui.guide(true); },   // the scene exists from here on
   onUpdate: () => { const now = performance.now(); countFrame(now, Object.values(TS).some((t) => t.tracked)); flushDiag(false); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); },
   onCameraStatusChange: ({ status, video }) => {
+    camLog(status);
     if (status === 'requesting') ui.hint('Allow camera access to begin');
     if (status === 'hasVideo') { camStartAt = performance.now(); tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
-    if (status === 'failed') ui.error('Camera not available', 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
+    if (status === 'failed') camFailed('failed');
   },
-  onException: (e) => { console.error('XR', e); ui.error('Something went wrong', String((e && e.message) || e)); },
+  onException: (e) => { console.error('XR', e); (diag.errors = diag.errors || []).push('XR: ' + String((e && e.message) || e).slice(0, 200)); flushDiag(true, true); ui.error('Something went wrong', String((e && e.message) || e)); },
   listeners: [
     { event: 'reality.imagefound', process: ({ detail }) => { diag.found++; if (DEBUG) console.log('CAMPOSE', JSON.stringify(camera.position.toArray()), JSON.stringify(camera.quaternion.toArray()), 'proj', JSON.stringify(camera.projectionMatrix.elements.map((x) => +x.toFixed(3)))); onTarget(detail); } },
     { event: 'reality.imageupdated', process: ({ detail }) => onTarget(detail) },
@@ -695,28 +696,33 @@ const CAM_DEFAULT = { res: 'engine', fps: 'engine', focus: 'engine', lens: '', d
 const CAM = { ...CAM_DEFAULT };
 try { Object.assign(CAM, JSON.parse(localStorage.getItem('kc-ar-cam') || '{}')); } catch (e) { /* defaults */ }
 for (const k of Object.keys(CAM_DEFAULT)) if (params.has(k)) CAM[k] = k === 'dpr' ? +params.get(k) || 2 : params.get(k);
-if (params.get('hd') === '0') Object.assign(CAM, CAM_DEFAULT);
+if (params.get('hd') === '0') { Object.assign(CAM, CAM_DEFAULT); try { localStorage.removeItem('kc-ar-cam'); } catch (e) { /* none */ } }
 const RES = { 720: [1280, 720], 1080: [1920, 1080], 1440: [1920, 1440] };
-let lensIdP = null;   // the chosen lens's deviceId, looked up by name once the camera has been allowed
+// the chosen lens's deviceId, looked up by name (names only exist once the camera has been allowed, so a
+// miss is not remembered: the engine's second open on iOS finds it)
 function lensId() {
   if (!CAM.lens) return Promise.resolve(null);
-  if (!lensIdP) lensIdP = navigator.mediaDevices.enumerateDevices()
+  return navigator.mediaDevices.enumerateDevices()
     .then((ds) => { const d = ds.find((x) => x.kind === 'videoinput' && x.label === CAM.lens); return d ? d.deviceId : null; }).catch(() => null);
-  return lensIdP;
 }
-if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+// Only wrap getUserMedia when a non-default profile is chosen: with the engine's own choice the call goes
+// straight to the browser, untouched (iOS Safari is sensitive to anything sitting in its camera start).
+const CAM_CUSTOM = CAM.res !== 'engine' || CAM.fps !== 'engine' || !!CAM.lens;
+if (CAM_CUSTOM && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
-  md.getUserMedia = async (c) => {
-    const v = c && c.video;
-    if (!v || v === true) return orig(c);
+  const ask = (c, v, id) => {
     const nv = { ...v };
     if (CAM.res !== 'engine' && RES[CAM.res]) { const [w, h] = RES[CAM.res]; nv.width = { ideal: w }; nv.height = { ideal: h }; }
     if (CAM.fps !== 'engine') nv.frameRate = { ideal: +CAM.fps };
-    const id = await lensId();
     if (id) { nv.deviceId = { exact: id }; delete nv.facingMode; }
-    if (nv === v || JSON.stringify(nv) === JSON.stringify(v)) return orig(c);
+    if (JSON.stringify(nv) === JSON.stringify(v)) return orig(c);
     diag.asked = nv;
     return orig({ ...c, video: nv }).catch((e) => { diag.askFailed = String(e && e.name || e); return orig(c); });
+  };
+  md.getUserMedia = (c) => {
+    const v = c && c.video;
+    if (!v || v === true) return orig(c);
+    return CAM.lens ? lensId().then((id) => ask(c, v, id)) : ask(c, v, null);
   };
 }
 let camTrack = null;
@@ -797,6 +803,7 @@ function diagRecord() {
   return {
     sid: SID, v: 1, page: location.pathname, params: location.search, note: diag.note, profile: { ...CAM }, tune: { ...tune },
     screen: { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, renderDpr: Math.min(devicePixelRatio || 1, CAM.dpr) },
+    camSteps: diag.camSteps || [], camFailed: diag.camFailed || null, custom: CAM_CUSTOM,
     asked: diag.asked, askFailed: diag.askFailed || null, camera: diag.camera, cameras: diag.cameras || null, zoom: diag.zoom || null,
     targetsLoaded: activeTargets.map((t) => t.name), runS: camStartAt ? Math.round((performance.now() - camStartAt) / 1000) : 0,
     fps: { avg: avg(diag.fps.all), tracking: avg(diag.fps.tracking), idle: avg(diag.fps.idle), min: diag.fps.all.length ? Math.min(...diag.fps.all) : null, last30: diag.fps.all.slice(-30) },
@@ -804,11 +811,32 @@ function diagRecord() {
   };
 }
 let lastFlush = 0;
-function flushDiag(force) {
-  if (!camStartAt || params.has('nolog')) return;
+function flushDiag(force, always) {
+  if ((!camStartAt && !always) || params.has('nolog')) return;
   const now = performance.now(); if (!force && now - lastFlush < 10000) return; lastFlush = now;
   const body = JSON.stringify(diagRecord());
   try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
+}
+// camera start-up, logged step by step so a phone where the camera never starts still reports why
+let runAt = 0;
+function camLog(step) {
+  (diag.camSteps = diag.camSteps || []).push({ step, ms: runAt ? Math.round(performance.now() - runAt) : 0 });
+  if (step !== 'hasVideo') flushDiag(true, true);
+}
+function camFailed(why) {
+  if (camStartAt || diag.camFailed) return;
+  diag.camFailed = why; flushDiag(true, true);
+  ui.error('Camera not available', CAM_CUSTOM
+    ? 'The camera test settings on this phone may not suit it. Tap below to go back to the standard camera.'
+    : 'Allow camera access for this site in your browser settings, then reload. On iPhone use Safari; on Android use Chrome.');
+  if (CAM_CUSTOM) addResetButton();
+}
+function addResetButton() {
+  const host = document.querySelector('#error') || document.body;
+  if (host.querySelector('.cam-reset')) return;
+  const b = document.createElement('button'); b.className = 'primary cam-reset'; b.style.marginTop = '10px'; b.type = 'button'; b.textContent = 'Use the standard camera';
+  b.onclick = () => { try { localStorage.removeItem('kc-ar-cam'); } catch (e) { /* none */ } const u = new URL(location.href); for (const k of Object.keys(CAM_DEFAULT)) u.searchParams.delete(k); location.replace(u.toString()); };
+  host.appendChild(b);
 }
 addEventListener('pagehide', () => flushDiag(true));
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushDiag(true); });
@@ -829,6 +857,8 @@ async function start() {
     XR8.CanvasScreenshot.pipelineModule(),
     appModule(data),
   ]);
+  runAt = performance.now(); camLog('run');
+  setTimeout(() => { if (!camStartAt) camFailed('no video after 12 s'); }, 12000);
   XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
 }
 
