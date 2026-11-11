@@ -672,7 +672,10 @@ const appModule = (data) => ({
     if (status === 'hasStream') { kickVideo(video); noteStream(stream); }
     if (status === 'hasVideo') hideTapCam();
     if (status === 'requesting') ui.hint('Allow camera access to begin');
-    if (status === 'hasVideo') { camStartAt = performance.now(); tuneCamera(video); $('how').hidden = true; $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600); }
+    if (status === 'hasVideo') {   // camera first, then the what-to-point-at card on top of it (Dapo, 2026-11-11)
+      camStartAt = performance.now(); tuneCamera(video); $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
+      $('how').hidden = false; $('b-go').focus();
+    }
     if (status === 'failed') camFailed('failed');
   },
   onException: (e) => { console.error('XR', e); (diag.errors = diag.errors || []).push('XR: ' + String((e && e.message) || e).slice(0, 200)); flushDiag(true, true); ui.error('Something went wrong', String((e && e.message) || e)); },
@@ -896,7 +899,7 @@ addEventListener('error', (e) => { (diag.errors = diag.errors || []).push(String
 
 async function start() {
   if (!loaded) return;
-  $('b-go').disabled = true; $('b-go').textContent = 'Starting…';
+  $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
   sound.init(); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
@@ -917,9 +920,10 @@ async function start() {
 }
 
 // ---------------------------------------------------------------- input
-$('b-start').onclick = () => { if (loaded) { $('how').hidden = false; $('b-go').focus(); } };   // the splash leads to the what-to-point-at screen
-$('b-go').onclick = start;
-$('b-back').onclick = () => { $('how').hidden = true; $('b-start').focus(); };
+// Start goes straight to the camera, in the same tap (iOS only shows its permission prompts from a tap);
+// the what-to-point-at card appears once the camera picture is up, and Got it closes it.
+$('b-start').onclick = start;
+$('b-go').onclick = () => { $('how').hidden = true; };
 $('b-wave').onclick = wave; $('b-wag').onclick = wag; $('b-walk').onclick = walk; $('b-replay').onclick = replay;
 $('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').textContent = sound.on ? 'Sound on' : 'Sound off'; };
 $('b-photo').onclick = async () => {
