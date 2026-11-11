@@ -4,20 +4,74 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Keychain test picture · EVADE keychain AR</title>
+  <title>Keychain test pictures · EVADE keychain AR</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <style>
-    html,body{margin:0;min-height:100%;background:#f0eeea;color:#1b1d22;font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-    main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center}
-    img{max-height:78vh;max-width:100%;height:auto;display:block}
-    p{margin:0;max-width:52ch;color:#4a4f58}
-    a{color:#1b1d22;font-weight:700}
+    :root{--bg:#f0eeea;--ink:#1b1d22;--muted:#4a4f58;--card:#fff}
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    header{max-width:1100px;margin:0 auto;padding:24px 16px 8px}
+    h1{font-size:22px;margin:0 0 6px}
+    header p{margin:0;color:var(--muted);max-width:70ch}
+    a{color:var(--ink);font-weight:700}
+    h2{font-size:15px;margin:22px 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+    main{max-width:1100px;margin:0 auto;padding:0 16px 40px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+    .grid button{all:unset;cursor:pointer;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px #0002;display:flex;flex-direction:column}
+    .grid button:focus-visible{outline:3px solid #2f6fed;outline-offset:2px}
+    .grid img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:#ddd}
+    .grid b{padding:10px 12px 2px}
+    .grid span{padding:0 12px 12px;color:var(--muted);font-size:13px}
+    #view{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:5}
+    #view[hidden]{display:none}
+    #view img{flex:1;min-height:0;width:100%;object-fit:contain}
+    #bar{display:flex;align-items:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#111;color:#eee}
+    #bar p{flex:1;margin:0;font-size:14px}
+    #bar button{background:#2a2d33;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;min-width:44px;min-height:44px;cursor:pointer}
   </style>
 </head>
 <body>
+  <header>
+    <h1>Keychain test pictures</h1>
+    <p>For trying the AR without the real keychain. Open <a href="../">the AR page</a> on your phone, then show one of these full screen on a computer and point the phone at it. Turn the screen brightness up and avoid reflections. Each charm is its own keychain on a shared ring, so you can check that each one is found on its own, from different angles and distances.</p>
+  </header>
   <main>
-    <img src="./keychain.jpg" width="1300" height="1750" alt="The EVADE keychain: the Bobo charm with the Eclipse can charm hanging in front of it">
-    <p>Test picture of the EVADE keychain, for trying the AR without the real one. Open <a href="../">the AR page</a> on your phone and point it at this screen. Turn the screen brightness up and avoid reflections.</p>
+    <h2>Separate charms on one ring</h2>
+    <div class="grid" id="grid"></div>
+    <h2>Original test picture</h2>
+    <div class="grid" id="grid-orig"></div>
   </main>
+  <div id="view" hidden role="dialog" aria-modal="true" aria-label="Test picture">
+    <img id="v-img" alt="">
+    <div id="bar">
+      <button id="v-prev" aria-label="Previous picture">‹</button>
+      <p id="v-text"></p>
+      <button id="v-next" aria-label="Next picture">›</button>
+      <button id="v-close">Close</button>
+    </div>
+  </div>
+  <script>
+    const items = [];
+    const card = (host, it) => {
+      const i = items.push(it) - 1;
+      const b = document.createElement('button');
+      b.innerHTML = `<img src="${it.src}" alt="" loading="lazy"><b></b><span></span>`;
+      b.querySelector('b').textContent = it.title; b.querySelector('span').textContent = it.what;
+      b.onclick = () => open(i); host.appendChild(b);
+    };
+    let at = 0, opener = null;
+    const $ = (id) => document.getElementById(id);
+    function show() { const it = items[at]; $('v-img').src = it.src; $('v-img').alt = it.title; $('v-text').textContent = `${at + 1} of ${items.length}: ${it.title}`; }
+    function open(i) { at = i; opener = document.activeElement; show(); $('view').hidden = false; $('v-close').focus(); if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); }
+    function close() { $('view').hidden = true; if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); opener && opener.focus(); }
+    const step = (d) => { at = (at + d + items.length) % items.length; show(); };
+    $('v-prev').onclick = () => step(-1); $('v-next').onclick = () => step(1); $('v-close').onclick = close;
+    $('v-img').onclick = () => step(1);
+    addEventListener('keydown', (e) => { if ($('view').hidden) return; if (e.key === 'ArrowRight' || e.key === ' ') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'Escape') close(); });
+    fetch('./tests/tests.json').then((r) => r.json()).then(({ tests }) => {
+      for (const t of tests) card($('grid'), { src: `./tests/${t.slug}.jpg`, title: t.title, what: t.what });
+      card($('grid-orig'), { src: './keychain.jpg', title: 'Bobo with the can in front', what: 'The first test picture: both charms together, as drawn.' });
+    });
+  </script>
 </body>
 </html>

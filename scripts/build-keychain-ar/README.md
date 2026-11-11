@@ -33,5 +33,7 @@ The film of the lab was made with `/labs/keychain-pop/?capture`, which stops the
 script step frames with `__kc.step(dt)`.
 
 ## Image targets (8th Wall AR page)
-`build_targets.py` writes the image targets for `/evade/keychain-ar/` (the cat keychain's charms, the can from a phone photo of the real charm `src/can-photo.png`, and the earlier design's Bobo from a phone photo `src/old-bobo.png`), in the
+`build_targets.py` writes the image targets for `/evade/keychain-ar/` (the cat keychain's charms, the can from a phone photo of the real charm `src/can-photo.png`, and the earlier design's Bobo from Dapo's sharp phone photo of the real charm `src/old-bobo.png`, clear acrylic included, ring blanked out), in the
 same format as `@8thwall/image-target-cli`. See `public/evade/keychain-ar/README.md`.
+
+`build_test_pictures.py` composites the test pictures in `public/evade/keychain-ar/target/tests/` (each charm on its own chain from one ring, in different layouts, angles and light) from the same charm pictures. Scripted compositing only.

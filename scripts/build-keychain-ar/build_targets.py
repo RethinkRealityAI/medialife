@@ -79,17 +79,18 @@ for (fname, (tx, ty), rz, cy_), sn in zip(CHARMS, ('silhouette-bobo.png', 'silho
 gb.crop(box).resize((503, 670), Image.LANCZOS).save(OUT + 'guide-both.png')
 
 # ---- the earlier keychain design (blocky Bobo with his arm up + Eclipse can). Cut from a phone photo of the
-# real keychain (src/old-bobo.png, src/old-can.png: the charms masked out of the photo, already 3:4). One
+# real charm (src/old-bobo.png: Dapo's sharp photo of the Roblox Bobo charm, 2026-11-11, clear acrylic included,
+# masked out and centred 3:4 with a 4% margin). One
 # target per charm, like the cat keychain's single-charm targets. No silhouettes: they are cut for the cat art.
 # Its silhouette and 3D model come from build_old_bobo.py, in this same picture frame.
 from PIL import ImageFilter
 HERE_SRC = os.path.dirname(os.path.abspath(__file__)) + '/src/'
-OPPM = 1440 / 0.0775       # the charm picture is about 77.5 mm tall (measured against the 55 mm can charm in the same photo)
+OPPM = 1440 / 0.078        # the acrylic piece is about 75 mm tall (measured against the 55 mm can charm), framed 3:4 with a 4% margin
 for key, tname, fname in (('bobo', 'kc-old', 'old-bobo.png'),):
     im = Image.open(HERE_SRC + fname).convert('RGB')
     write_target(tname, im, dict(widthM=im.width / OPPM, heightM=im.height / OPPM, silhouettes=True, charms={key: dict(x=0, y=0, rz=0)}))
-    # the photo is a little soft: sharpen the tracked picture so the engine has corners to hold on to
-    Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=160, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
+    # a light sharpen gives the engine crisper corners to hold on to
+    Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
 
 # ---- the Eclipse can charm, for both keychain designs (the can is the same on both): cut from Dapo's phone
 # photo of the real charm, clear acrylic edge and tab included (src/can-photo.png: the acrylic piece centred

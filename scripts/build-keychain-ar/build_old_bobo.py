@@ -17,12 +17,16 @@ ARGV = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 OUT = ARGV[0] if ARGV else '/tmp/keychain-ar/old-bobo.glb'
 OUT_BLEND = ARGV[1] if len(ARGV) > 1 else None
 
-# ---- the print, measured on the charm picture at 540 x 720 (x right, y down)
+# ---- the print, measured on the charm picture at 540 x 720 (x right, y down). The outline is traced from
+# Dapo's sharp photo of the real charm (2026-11-11): everything inside the clear acrylic that is not clear.
 PW, PH = 540, 720
-OUTLINE = [(118, 74), (168, 36), (240, 62), (246, 165), (290, 140), (345, 160), (368, 200), (370, 235), (355, 255), (345, 275),
-           (305, 293), (330, 300), (420, 420), (425, 440), (395, 490), (345, 470), (300, 432), (310, 445), (420, 580), (428, 625),
-           (355, 655), (320, 640), (262, 580), (245, 640), (215, 655), (140, 625), (135, 600), (180, 440), (185, 420), (200, 290), (185, 280)]
-TOP, FOOT = 36, 655                      # the print runs from y = 36 to y = 655
+OUTLINE = [(120, 30), (202, 52), (210, 128), (217, 148), (238, 120), (260, 114), (314, 126), (339, 138), (354, 153), (362, 168),
+           (360, 186), (368, 210), (359, 214), (348, 206), (330, 248), (318, 258), (298, 265), (305, 272), (323, 264), (450, 370),
+           (436, 431), (390, 445), (474, 509), (468, 587), (393, 620), (390, 610), (383, 608), (362, 584), (304, 485), (294, 469),
+           (300, 463), (295, 460), (284, 464), (280, 468), (280, 489), (296, 641), (273, 664), (246, 670), (227, 670), (216, 676),
+           (180, 654), (178, 619), (198, 441), (206, 310), (218, 266), (234, 247), (224, 240), (208, 268), (164, 258), (124, 201),
+           (86, 130), (62, 81)]
+TOP, FOOT = 30, 675                      # the print runs from y = 30 to y = 675
 U = 1.0 / (FOOT - TOP)                   # model units per picture pixel: the model is 1 unit tall
 def P(x, y, depth=0.0): return Vector(((x - PW / 2) * U, depth, (FOOT - y) * U))
 
@@ -71,19 +75,19 @@ def joint(name, at, to, up, depth):
     return e, math.hypot(dx, dz)
 
 # joints (picture points): the pose of the print
-torso, Lt = joint('Torso', (250, 438), (252, 292), True, 0.0)
-head, _ = joint('Head', (264, 296), (304, 226), True, -0.012)
-arm_up, La = joint('ArmUp', (212, 298), (181, 52), False, 0.035)       # the raised arm (behind the head)
-arm_dn, Lb = joint('ArmDown', (318, 302), (401, 470), False, -0.05)    # the other arm, in front of the body
-leg_l, Ll = joint('LegL', (222, 438), (178, 642), False, 0.012)
-leg_r, Lr = joint('LegR', (292, 438), (393, 622), False, -0.012)
+torso, Lt = joint('Torso', (264, 438), (264, 268), True, 0.0)
+head, _ = joint('Head', (284, 280), (304, 212), True, -0.012)          # the head leans right, like the cap
+arm_up, La = joint('ArmUp', (222, 280), (92, 52), False, 0.035)        # the raised arm (behind the head)
+arm_dn, Lb = joint('ArmDown', (322, 296), (442, 424), False, -0.05)    # the other arm, in front of the body
+leg_l, Ll = joint('LegL', (238, 440), (236, 664), False, 0.012)
+leg_r, Lr = joint('LegR', (330, 446), (436, 586), False, -0.012)
 
-box('TorsoMesh', 114, 62, -4, Lt + 4, M_SHIRT, torso)
-box('ArmUpMesh', 72, 58, 0, -La * 0.86, M_ARM, arm_up); box('ArmUpHand', 72, 58, -La * 0.86, -La, M_SKIN, arm_up, bevel=3)
-box('ArmDownMesh', 70, 58, 0, -Lb * 0.84, M_ARM, arm_dn); box('ArmDownHand', 70, 58, -Lb * 0.84, -Lb, M_SKIN, arm_dn, bevel=3)
-box('LegLMesh', 84, 62, 6, -Ll, M_PANTS, leg_l); box('LegRMesh', 84, 62, 6, -Lr, M_PANTS, leg_r)
+box('TorsoMesh', 128, 70, -4, Lt + 4, M_SHIRT, torso)
+box('ArmUpMesh', 86, 64, 0, -La * 0.86, M_ARM, arm_up); box('ArmUpHand', 86, 64, -La * 0.86, -La, M_SKIN, arm_up, bevel=3)
+box('ArmDownMesh', 86, 64, 0, -Lb * 0.84, M_ARM, arm_dn); box('ArmDownHand', 86, 64, -Lb * 0.84, -Lb, M_SKIN, arm_dn, bevel=3)
+box('LegLMesh', 108, 70, 6, -Ll, M_PANTS, leg_l); box('LegRMesh', 94, 70, 6, -Lr, M_PANTS, leg_r)
 # head: skin block, cap on top with a red brim, closed eyes and a small smile, BOBO on the cap
-HW, HH, HD, H0 = 100, 96, 92, 30
+HW, HH, HD, H0 = 128, 128, 116, 22
 box('HeadMesh', HW, HD, H0, H0 + HH, M_SKIN, head, bevel=8)
 box('Cap', HW + 6, HD + 6, H0 + HH * 0.60, H0 + HH + 4, M_CAP, head, bevel=8)
 box('Brim', HW + 8, 40, H0 + HH * 0.52, H0 + HH * 0.62, M_BRIM, head, y=-(HD / 2 + 4), bevel=3)

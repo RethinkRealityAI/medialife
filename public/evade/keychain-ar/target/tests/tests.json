@@ -1,0 +1,74 @@
+{
+ "tests": [
+  {
+   "slug": "new-apart",
+   "title": "Cat Bobo and can, spread apart",
+   "what": "The two keychains laid out on a table, a few centimetres apart."
+  },
+  {
+   "slug": "new-hanging",
+   "title": "Hanging side by side",
+   "what": "Both hanging straight down from the ring, close together but not touching."
+  },
+  {
+   "slug": "new-wide",
+   "title": "Far apart",
+   "what": "Spread wide, as if the ring was dropped on a table."
+  },
+  {
+   "slug": "new-overlap",
+   "title": "One over the other",
+   "what": "The can lying partly on top of the cat charm."
+  },
+  {
+   "slug": "new-tilt-back",
+   "title": "Seen from below",
+   "what": "Tipped back 40 degrees, like a phone held low."
+  },
+  {
+   "slug": "new-tilt-side",
+   "title": "Seen from the side",
+   "what": "Turned 45 degrees sideways."
+  },
+  {
+   "slug": "new-far",
+   "title": "Far away",
+   "what": "Half size, like holding the phone at arm's length."
+  },
+  {
+   "slug": "new-sideways",
+   "title": "Turned on its side",
+   "what": "The keychain on a table, turned 90 degrees."
+  },
+  {
+   "slug": "new-dim",
+   "title": "Dim light",
+   "what": "Darker and softer, like a room in the evening."
+  },
+  {
+   "slug": "old-apart",
+   "title": "Roblox Bobo and can, spread apart",
+   "what": "The two keychains laid out a few centimetres apart."
+  },
+  {
+   "slug": "old-hanging",
+   "title": "Roblox Bobo hanging",
+   "what": "Both hanging straight down from the ring."
+  },
+  {
+   "slug": "old-tilt",
+   "title": "Roblox Bobo at an angle",
+   "what": "Tipped back 35 degrees and turned 25 degrees."
+  },
+  {
+   "slug": "old-far",
+   "title": "Roblox Bobo far away",
+   "what": "Half size."
+  },
+  {
+   "slug": "all-three",
+   "title": "All three on one ring",
+   "what": "Cat Bobo, Roblox Bobo and the can together."
+  }
+ ]
+}

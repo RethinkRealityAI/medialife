@@ -28,7 +28,14 @@ binary under a different licence and is not needed here.
   - `layout.json`: per target, the picture's size and where the two charm frames sit in it (metres).
 - `splash.jpg` — backdrop generated with Higgsfield from a text prompt only (no EVADE artwork was
   given to it); the real Bobo and can renders are composited on top.
-- `target/` — a flat picture of the keychain to point a phone at when the real keychain is not to hand.
+- `target/` — test pictures to point a phone at when the real keychain is not to hand: 14 layouts with each
+  charm on its own chain from one ring (spread, hanging, overlapping, tilted, far, sideways, dim, the Roblox
+  Bobo set, all three together) plus the original picture. Tap one to show it full screen. Built by
+  `scripts/build-keychain-ar/build_test_pictures.py`. The cat charm there is still the art (no photo of the
+  real cat charm yet).
+- Camera: the page leaves the engine's own camera start untouched unless a test profile is chosen in
+  Tune > Camera test. If the camera never starts with a profile set, the page offers "Use the standard
+  camera", which clears it. `?hd=0` also clears it. Camera start-up steps are in the test log (`camSteps`).
 
 ## How it lines up
 The target picture is built from the two charm pictures (14 px per mm) at the keychain's rest layout,

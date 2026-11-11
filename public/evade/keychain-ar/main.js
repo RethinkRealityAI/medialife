@@ -27,11 +27,11 @@ const PXM = 14000;
 const CHARMS = {
   bobo: { w: 809 / PXM, h: 923 / PXM },
   can: { w: 434 / PXM, h: 805 / PXM },
-  old: { w: 0.058, h: 0.0775 },       // the earlier design's Bobo charm picture (sizes from a phone photo, taking the can charm as 55 mm tall)
+  old: { w: 0.0585, h: 0.078 },       // the earlier design's Bobo charm picture: the acrylic piece is about 75 mm tall, framed with a 4% margin
 };
 // landed sizes and spots (metres), in the "ground frame": x right, y up (gravity), z toward the viewer
 // Landed characters are the size of their printed art on the charms (art height in the charm pictures / 14 px per mm).
-const SIZE = { bobo: 825 / PXM, can: 679 / PXM, old: 0.0775 * 619 / 720 };
+const SIZE = { bobo: 825 / PXM, can: 679 / PXM, old: 0.078 * 645 / 720 };
 // Size and spacing can be tuned live from the Size panel; the chosen numbers are remembered on the device.
 const TUNE_DEFAULT = { size: 1, gap: 1, hover: 0.012, tilt: 0, away: 0, portal: 3, stagger: 0.55, fly: 1 };   // portal build-up, wait between the two pops, flight to the landing spot (seconds)
 const tune = { ...TUNE_DEFAULT };
