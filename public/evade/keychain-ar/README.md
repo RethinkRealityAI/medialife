@@ -144,7 +144,11 @@ Zoom slider where the browser exposes them (Android Chrome), and drawing at up t
   near-rigid cable catches it, the set swings and twists about the clasp, and each charm swings on its
   own jump ring, driven by how the ring accelerates. As it lands it is flicked sideways as if someone just
   touched it (about 37° of swing, settling over ~10 s), and after a few calm seconds it gets a small nudge
-  again, so it always reads as touchable. Drag or flick it to swing it, tap it to jiggle it. Then the
+  again, so it always reads as touchable. Drag or flick it to swing it, tap it to jiggle it.
+  Reduced motion (Android Chrome turns it on with the system "Remove animations" setting, which is why
+  Dapo saw it still on Android): no fall-in, but it still swings in (~23°) and sways, a little calmer.
+  Behind it, a quiet flat-colour pattern (Eclipse moons, twinkling gold sparkles, cola bubbles; an SVG
+  tile on `#splash::before`, tilted and drifting over 48 s; still under reduced motion). Then the
   title plate, an EVADE-gold Start, and Activated by MEDIALIFE at the bottom. The scene is disposed when
   the camera starts. Reduced motion: it just hangs.
 - **HUD**: EVADE top left with a small "BOBO OFF THE CHAIN" plate under it (meters below), sound top right.
@@ -160,8 +164,9 @@ Zoom slider where the browser exposes them (Android Chrome), and drawing at up t
   starts or stops a video.
 - **Menu (the way into Cola Run)**: the menu button (gold dot until first opened) opens a bottom sheet:
   a Cola Run card first (the Cola Run splash art and logo, "Play Cola Run" to evade.medialife.ai with
-  utm_source=medialife, utm_medium=off-the-chain), then the Where is Bobo? globe and the EVADE keychain
-  page. All open in a new tab so the AR keeps running. Cola Run is also earned in play: after Super Bobo,
+  utm_source=medialife, utm_medium=off-the-chain), then a Where is Bobo? card in Bobo's hoodie blue
+  (#1f6fd6, light-blue rim, live dot, art cropped from the globe's share card, "Open the globe"). Both
+  open in a new tab so the AR keeps running. Cola Run is also earned in play: after Super Bobo,
   or an Eclipse overflow, a "Bobo's charged up. Play Cola Run" chip shows for 9 s (twice per visit at most)
   and opens the sheet.
 - **Hint pill**: Bobo-visor blue (#8cc8f8) with navy text. While looking for the keychain it sits just

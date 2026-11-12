@@ -34,6 +34,10 @@
 
     /* splash: the real keychain drops in and dangles (splash3d.js), the title plate, Start */
     #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:24px 22px max(28px,calc(env(safe-area-inset-bottom) + 16px));background:var(--slate);transition:opacity .6s ease,transform .6s ease;overflow:hidden;touch-action:none}
+    /* a quiet pattern behind the keychain: Eclipse moons, gold sparkles (twinkling) and cola bubbles, flat
+       colours on the slate, tilted and drifting very slowly */
+    #splash::before{content:"";position:absolute;inset:-160px;z-index:0;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Crect width='120' height='120' fill='%23fff'/%3E%3Ccircle cx='33' cy='25' r='6' fill='%23000'/%3E%3Ccircle cx='93' cy='85' r='4.6' fill='%23000'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url%28%23m%29' fill='%23fff' fill-opacity='.075'%3E%3Ccircle cx='29' cy='29' r='7'/%3E%3Ccircle cx='90' cy='88' r='5.4'/%3E%3C/g%3E%3Cg fill='%23f6c344'%3E%3Cpath d='M90 22l1.6 4.4L96 28l-4.4 1.6L90 34l-1.6-4.4L84 28l4.4-1.6z' fill-opacity='.22'%3E%3Canimate attributeName='fill-opacity' values='.08;.4;.08' dur='4.2s' repeatCount='indefinite'/%3E%3C/path%3E%3Cpath d='M28 84l1.1 2.9L32 88l-2.9 1.1L28 92l-1.1-2.9L24 88l2.9-1.1z' fill-opacity='.2'%3E%3Canimate attributeName='fill-opacity' values='.3;.06;.3' dur='5.3s' repeatCount='indefinite'/%3E%3C/path%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.09'%3E%3Ccircle cx='60' cy='55' r='1.4'/%3E%3Ccircle cx='8' cy='58' r='1'/%3E%3Ccircle cx='62' cy='112' r='1.1'/%3E%3Ccircle cx='112' cy='50' r='1'/%3E%3C/g%3E%3C/svg%3E") 0 0/120px 120px;transform:rotate(-14deg);animation:drift 48s linear infinite}
+    @keyframes drift{to{transform:rotate(-14deg) translate3d(120px,120px,0)}}
     #splash.gone{opacity:0;transform:scale(1.04);pointer-events:none}
     #splash>*{position:relative;z-index:2}
     #splash>#kc3d{position:absolute;inset:0;z-index:1;width:100%;height:100%;opacity:0;transition:opacity .4s}
@@ -181,14 +185,20 @@
     .cr-card .d{font-size:13px;line-height:1.4;color:var(--muted)}
     .cr-card .cta{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:999px;background:var(--gold);color:var(--gold-ink);font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:14px;letter-spacing:.02em}
     .cr-card .cta svg{width:16px;height:16px}
-    #menu .row{display:flex;align-items:center;gap:12px;min-height:56px;padding:10px 4px;margin-top:4px;color:#fff;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.08)}
-    #menu .row:last-child{border-bottom:0}
-    #menu .row>svg:first-child{width:22px;height:22px;flex:none;color:var(--gold)}
-    #menu .row span{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
-    #menu .row b{font-size:15px}
-    #menu .row small{font-size:12.5px;color:var(--muted)}
-    #menu .row .go{width:18px;height:18px;flex:none;opacity:.5}
-    @media (max-height:500px){.cr-card .art{width:64px}.cr-card .logo{width:120px}#menu .panel{max-width:520px}}
+    /* Where is Bobo?: its own card, in Bobo's hoodie blue, art on the right (mirrors the Cola Run card) */
+    .wib-card{display:flex;gap:14px;align-items:center;margin-top:12px;padding:10px 10px 10px 16px;border-radius:18px;background:#1f6fd6;border:2px solid #8cc8f8;color:#fff;text-decoration:none;transition:transform .15s}
+    .wib-card:active{transform:scale(.98)}
+    .wib-card .txt{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+    .wib-card .live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#d8ecff}
+    .wib-card .live i{width:7px;height:7px;border-radius:50%;background:#fff;animation:livePulse 1.6s ease-in-out infinite}
+    @keyframes livePulse{50%{opacity:.25}}
+    .wib-card .t{font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:24px;line-height:1}
+    .wib-card .t b{color:#0b2545;background:#8cc8f8;padding:0 6px;border-radius:6px;font-weight:900}
+    .wib-card .d{font-size:13px;line-height:1.4;color:#e3f1ff}
+    .wib-card .cta{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 18px;border-radius:999px;background:#fff;color:#0b2545;font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:14px;letter-spacing:.02em}
+    .wib-card .cta svg{width:17px;height:17px}
+    .wib-card .art{width:112px;height:112px;object-fit:cover;border-radius:14px;flex:none;border:2px solid rgba(255,255,255,.35)}
+    @media (max-height:500px){.cr-card .art{width:64px}.cr-card .logo{width:120px}.wib-card .art{width:80px;height:80px}#menu .panel{max-width:520px}}
     /* landscape phone: the shutter moves to the right edge, middle (camera-app style, under the thumb);
        the dock sits bottom centre between Replay and the logo */
     @media (min-aspect-ratio:1/1) and (max-height:500px){
@@ -227,7 +237,7 @@
       .plate{align-items:flex-start}.plate .kick{margin-left:18px}.plate .main{font-size:clamp(28px,4.4vw,48px)}
       #splash>.act-by{height:46px;object-fit:contain;object-position:left center;margin:clamp(18px,5vh,40px) 0 0}
     }
-    @media (prefers-reduced-motion:reduce){.plate,#splash .drag,#menu .panel,#menu .scrim{animation:none}#load i{animation:none}#guide img{transition:none}#fish-drag{animation:none}}
+    @media (prefers-reduced-motion:reduce){#splash::before,.plate,#splash .drag,#menu .panel,#menu .scrim,.wib-card .live i{animation:none}#load i{animation:none}#guide img{transition:none}#fish-drag{animation:none}}
   </style>
 </head>
 <body>
@@ -373,8 +383,15 @@
           <span class="cta">Play Cola Run <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
         </span>
       </a>
-      <a class="row" href="/evade/where-is-bobo/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></svg><span><b>Where is Bobo?</b><small>See where Bobo has been spotted around the world</small></span><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
-      <a class="row" href="/evade/" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="5.5" r="2.5"/><path d="M12 8v3"/><rect x="7" y="11" width="10" height="10" rx="3"/></svg><span><b>The EVADE keychain</b><small>Cola Run, Off the Chain and where to get one</small></span><svg class="go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+      <a id="m-globe" class="wib-card" href="/evade/where-is-bobo/" target="_blank" rel="noopener">
+        <span class="txt">
+          <span class="live"><i aria-hidden="true"></i>Live</span>
+          <span class="t">Where is <b>Bobo?</b></span>
+          <span class="d">Follow Bobo around the world. Every pin is a real sighting.</span>
+          <span class="cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></svg>Open the globe</span>
+        </span>
+        <img class="art" src="./img/where-is-bobo-card.webp" alt="" width="360" height="360" loading="lazy">
+      </a>
     </div>
   </div>
 

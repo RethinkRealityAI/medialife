@@ -20,7 +20,10 @@
 //     every jolt, swing and touch;
 //   - when it lands it is flicked sideways, as if someone just touched it, and every few seconds of calm it
 //     gets a small nudge, so it always looks touchable. Drag it to swing it, tap it to jiggle it.
-// prefers-reduced-motion: it just hangs, still (touch still swings it).
+// prefers-reduced-motion: no fall-in from above; it starts hanging and swings in a little softer, and the
+// idle sway is gentler. (Android's "Remove animations" setting turns reduced motion on in Chrome, and with
+// a fully still keychain there Dapo saw nothing move, 2026-11-12. The motion is the point of it, so it
+// stays, just calmer. Pass sway: false to stop the idle nudges.)
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -28,7 +31,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 const G = 9.81;
 const _a = new THREE.Vector3(), _w = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 
-export function dangleKeychain({ canvas, hitArea = canvas.parentElement, frame, glb = '/evade/keychain/evade-keychain.glb', reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches, sway = !reduceMotion, onReady } = {}) {
+export function dangleKeychain({ canvas, hitArea = canvas.parentElement, frame, glb = '/evade/keychain/evade-keychain.glb', reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches, sway = true, onReady } = {}) {
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' }); } catch (e) { return null; }
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
@@ -79,7 +82,7 @@ export function dangleKeychain({ canvas, hitArea = canvas.parentElement, frame, 
     };
     layout();
     // start just above the top edge, so it falls into view and the cable catches it
-    if (reduceMotion) { r.P.copy(r.rest); r.taut = true; }
+    if (reduceMotion) { r.P.copy(r.rest); r.taut = true; r.phi = -0.3; nudge(1, 1); }   // no fall-in, but it still swings
     else { r.P.copy(r.rest).add(new THREE.Vector3(0.01, r.visTop - r.rest.y + size.y + 0.01, 0)); r.V.set(-0.05, -0.3, 0); r.dtau = 3; r.phi = 0.1; }
     canvas.classList.add('on');
     bindPointer();
@@ -128,11 +131,11 @@ export function dangleKeychain({ canvas, hitArea = canvas.parentElement, frame, 
     r.db += charm(Math.max(G + by, 0.5), r.lB, r.b, r.db, bx) * dt; r.b += r.db * dt;
     r.de += charm(Math.max(G + ey, 0.5), r.lE, r.e, r.de, ex) * dt; r.e += r.de * dt;
     r.deb += (-(G / r.lE) * Math.sin(r.eb) - 1.6 * r.deb - r.dpsi * 6) * dt; r.eb += r.deb * dt;
-    r.b = THREE.MathUtils.clamp(r.b, -1.2, 1.2); r.e = THREE.MathUtils.clamp(r.e, -1.2, 1.2);
+    r.b = THREE.MathUtils.clamp(r.b, -1, 1); r.e = THREE.MathUtils.clamp(r.e, -1, 1);
     // calm for a few seconds: a small nudge, like a breath of air (says "touch me")
     if (sway && r.taut) {
       calm = Math.abs(r.dphi) < 0.5 && Math.abs(r.phi) < 0.06 ? calm + dt : 0;
-      if (calm > nextSway) { calm = 0; nextSway = 3.5 + Math.random() * 3; nudge(Math.random() < 0.5 ? -1 : 1, 0.55 + Math.random() * 0.35); }
+      if (calm > nextSway) { calm = 0; nextSway = 3.5 + Math.random() * 3; nudge(Math.random() < 0.5 ? -1 : 1, (0.55 + Math.random() * 0.35) * (reduceMotion ? 0.85 : 1)); }
     }
   }
   function accOf(pivot, key, dt) {   // a ring's acceleration from its last positions, lightly smoothed
@@ -158,7 +161,7 @@ export function dangleKeychain({ canvas, hitArea = canvas.parentElement, frame, 
   // swing it as if flicked: dir -1 left / +1 right, strength ~1 for a clear swing
   function nudge(dir = 1, strength = 1) {
     if (!r) return;
-    r.dphi += dir * 3.4 * strength; r.dtau += -dir * 1.4 * strength; r.db += dir * 2.5 * strength; r.de -= dir * 1.5 * strength;
+    r.dphi += dir * 3.4 * strength; r.dtau += -dir * 1.4 * strength; r.db += dir * 1.7 * strength; r.de -= dir * 1.1 * strength;
   }
 
   // ---------------------------------------------------------------- touch: drag to swing, tap to jiggle
