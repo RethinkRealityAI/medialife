@@ -183,15 +183,15 @@ function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
       {/* Results */}
       <div className={`mt-16 grid gap-4 ${c.retail ? "lg:grid-cols-12" : ""}`}>
         <div
-          className={`grid gap-4 sm:grid-cols-2 ${c.retail ? "lg:col-span-7" : "lg:grid-cols-5"}`}
+          className={`grid grid-cols-2 gap-3 sm:gap-4 ${c.retail ? "lg:col-span-7" : "lg:grid-cols-5"}`}
         >
           {metrics.map((m, i) => (
             <Reveal
               key={m.l}
               delay={(i % 4) * 70}
-              className={`${CARD} p-5 sm:p-6 ${
-                c.retail && metrics.length % 2 === 1 && i === metrics.length - 1
-                  ? "sm:col-span-2"
+              className={`${CARD} p-4 sm:p-6 ${
+                metrics.length % 2 === 1 && i === metrics.length - 1
+                  ? `col-span-2 ${c.retail ? "" : "lg:col-span-1"}`
                   : ""
               }`}
             >
