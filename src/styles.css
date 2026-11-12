@@ -69,14 +69,19 @@
 
   --grid-line: oklch(1 0 0 / 6%);
   --grid-line-strong: oklch(1 0 0 / 12%);
-  --gradient-radial: radial-gradient(ellipse at top, oklch(0.3 0.18 240 / 30%), transparent 60%);
-  --gradient-ember: linear-gradient(135deg, oklch(0.72 0.16 240), oklch(0.68 0.26 350));
-  /* Button fill only. Same hues and chroma as --gradient-ember, dropped in
-     lightness to the exact point where WHITE text still clears WCAG AA 4.5:1
-     (cyan 0.556, magenta 0.595 — measured, not eyeballed). The bright
-     --gradient-ember is still what glows around the button, so it reads as the
-     same colour while the label stays legible. */
-  --gradient-ember-btn: linear-gradient(135deg, oklch(0.556 0.16 240), oklch(0.595 0.26 350));
+  /* No brand gradients anywhere (Dapo, 2026-11-10): the logo colours are used
+     as SOLID highlights only. These old token names stay so older pages keep
+     working, but they now resolve to solid colour (or nothing). */
+  --gradient-radial: none;
+  /* The ONE place a brand gradient stays: the logo's circle mark (and the
+     favicon). Everywhere else the logo colours are solid highlights. */
+  --gradient-logo: linear-gradient(135deg, #19affe, #ff2fae);
+  --gradient-ember: oklch(0.72 0.16 240);
+  /* Solid button fill: MEDIALIFE blue dropped to where WHITE text clears
+     WCAG AA 4.5:1 (oklch L 0.556 measured 4.61:1). */
+  --gradient-ember-btn: oklch(0.556 0.16 240);
+  --btn-blue: oklch(0.556 0.16 240);
+  --btn-blue-hover: oklch(0.6 0.16 240);
   --shadow-glow: 0 0 60px -10px oklch(0.72 0.16 240 / 40%);
 
   /* Hub surfaces (src/components/partner/ui.tsx) take these accents. The
@@ -177,19 +182,27 @@
     background-size: 32px 32px;
   }
 
+  /* Highlight words: solid MEDIALIFE blue. (Was gradient text.) */
   .ember-text {
-    background: var(--gradient-ember);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    color: var(--primary);
   }
 
-  /* ---- Pill buttons in the brand gradient ----
-     Labels are white. White on the FULL-brightness --gradient-ember measures
-     only 2.44:1 / 3.35:1, so button fills use --gradient-ember-btn instead —
-     same hues and chroma, lightness dropped to where white clears WCAG AA
-     (4.61:1 and 4.57:1 measured). The full-brightness gradient still supplies
-     the glow, so the button reads as the same colour. */
+  /* Display titles: Archivo Condensed Black, the closest free match to the
+     MEDIALIFE wordmark (same as /activated-merch/). */
+  .display {
+    font-family: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 900;
+    font-stretch: 62.5%;
+    font-variation-settings: "wdth" 62.5;
+    text-transform: uppercase;
+    line-height: 0.9;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+  }
+
+  /* ---- Pill buttons ----
+     Solid MEDIALIFE blue with a liquid-glass top light (no gradients). White
+     on --btn-blue measures 4.61:1, so labels clear WCAG AA. */
   .btn-pill {
     display: inline-flex;
     align-items: center;
@@ -198,75 +211,59 @@
     transition:
       transform 0.2s ease,
       box-shadow 0.3s ease,
+      background-color 0.2s ease,
       opacity 0.2s ease;
   }
 
-  .btn-ember {
-    background: var(--gradient-ember-btn);
+  .btn-ember,
+  .btn-solid {
+    background: var(--btn-blue);
     color: #fff;
-    box-shadow: 0 4px 24px -8px var(--glow);
-  }
-  .btn-ember:hover {
     box-shadow:
-      0 0 26px -4px var(--glow),
-      0 6px 30px -6px var(--glow);
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+      0 8px 24px -10px oklch(0.72 0.16 240 / 70%);
+  }
+  .btn-ember:hover,
+  .btn-solid:hover {
+    background: var(--btn-blue-hover);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+      0 10px 30px -8px oklch(0.72 0.16 240 / 80%);
     transform: translateY(-1px);
   }
-  .btn-ember:focus-visible {
-    outline: 2px solid var(--ring);
-    outline-offset: 3px;
-  }
-
-  /* Gradient border via two backgrounds: solid fill clipped to the padding
-     box, gradient clipped to the border box. Survives border-radius, which
-     border-image does not. */
-  .btn-ember-outline {
-    border: 1px solid transparent;
-    border-radius: 9999px;
-    background:
-      linear-gradient(var(--background), var(--background)) padding-box,
-      var(--gradient-ember) border-box;
-    color: var(--foreground);
-  }
-  .btn-ember-outline:hover {
-    box-shadow: 0 0 24px -6px var(--glow);
-    transform: translateY(-1px);
-  }
+  .btn-ember:focus-visible,
+  .btn-solid:focus-visible,
+  .btn-glass:focus-visible,
   .btn-ember-outline:focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 3px;
   }
 
-  /* Single-layer gradient carrying both the brand colours and the highlight
-     band, slid via background-position. Do NOT reintroduce a second background
-     layer with background-blend-mode here: Chromium stops honouring
-     background-clip: text and the element paints as a solid gradient BAR with
-     invisible glyphs. */
-  .ember-shine {
-    background: linear-gradient(
-      100deg,
-      oklch(0.72 0.16 240) 0%,
-      oklch(0.7 0.2 300) 28%,
-      oklch(0.97 0.04 320) 44%,
-      oklch(0.7 0.22 330) 60%,
-      oklch(0.68 0.26 350) 100%
-    );
-    background-size: 260% 100%;
-    background-position: 100% 0;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: ember-shine 5s ease-in-out infinite;
+  /* Clear glass pill (secondary action). */
+  .btn-ember-outline,
+  .btn-glass {
+    color: var(--foreground);
+    background: rgba(255, 255, 255, 0.07);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 6px 20px -10px rgba(0, 0, 0, 0.6);
   }
-  @keyframes ember-shine {
-    0%,
-    10% {
-      background-position: 100% 0;
-    }
-    60%,
-    100% {
-      background-position: 0 0;
-    }
+  .btn-ember-outline:hover,
+  .btn-glass:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.26);
+    transform: translateY(-1px);
+  }
+
+  /* Highlighted inline link text. Was an animated gradient shine; now solid
+     blue (kept as a class so existing pages pick it up). */
+  .ember-shine {
+    color: var(--primary);
   }
 
   /* Slow idle float for the floating product shot. */
@@ -286,18 +283,14 @@
   @media (prefers-reduced-motion: reduce) {
     .btn-pill,
     .btn-ember:hover,
+    .btn-solid:hover,
+    .btn-glass:hover,
     .btn-ember-outline:hover {
       transition: none;
       transform: none;
     }
-    .ember-shine,
     .animate-drift {
       animation: none;
-    }
-    .ember-shine {
-      background: var(--gradient-ember);
-      -webkit-background-clip: text;
-      background-clip: text;
     }
   }
 
@@ -305,26 +298,28 @@
     position: relative;
     overflow: hidden;
   }
+  /* A thin solid scan line (was a gradient band). */
   .scan-line::after {
     content: "";
     position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      180deg,
-      transparent 0%,
-      oklch(0.78 0.16 200 / 8%) 50%,
-      transparent 100%
-    );
+    inset: 0 0 auto;
+    height: 1px;
+    background: oklch(0.72 0.16 240 / 35%);
     animation: scan 6s linear infinite;
     pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .scan-line::after {
+      display: none;
+    }
   }
 
   @keyframes scan {
     0% {
-      transform: translateY(-100%);
+      top: 0;
     }
     100% {
-      transform: translateY(100%);
+      top: 100%;
     }
   }
 
@@ -385,4 +380,629 @@
 @utility glass-pill {
   background: var(--lg-pill-on);
   box-shadow: var(--lg-pill-shadow);
+}
+
+/* ---- Liquid glass, homepage + site chrome ----
+   lg-card: a pane of dark glass over the page. lg-chip: a small clear pill.
+   Both keep text at full contrast: the tint alone (without blur) is dark
+   enough for white and muted text to clear AA over any of our backgrounds. */
+@utility lg-card {
+  position: relative;
+  background: rgba(14, 16, 28, 0.62);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 24px 60px -24px rgba(0, 0, 0, 0.7);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: rgba(14, 16, 28, 0.94);
+  }
+}
+@utility lg-chip {
+  background: rgba(20, 22, 36, 0.55);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  @supports not (backdrop-filter: blur(1px)) {
+    background: rgba(20, 22, 36, 0.94);
+  }
+}
+
+/* ---- Homepage motion (src/components/home/Reveal.tsx) ----
+   Blocks below the fold fade up as they arrive; icon strokes inside them
+   (.draw, with pathLength="1") draw in. Reduced motion never hides anything. */
+[data-reveal] {
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--d, 0ms);
+}
+[data-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(22px);
+}
+.draw [pathLength] {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+[data-reveal="pending"] .draw [pathLength] {
+  stroke-dashoffset: 1;
+}
+[data-reveal="in"] .draw [pathLength] {
+  animation: draw-in 1.3s cubic-bezier(0.6, 0, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 150ms);
+}
+@keyframes draw-in {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A gentle loop on part of an icon (waves, sparkles) once it has drawn. */
+[data-reveal="in"] .icon-pulse {
+  animation: icon-pulse 2.4s ease-in-out 1.5s infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes icon-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+/* What we do: service cards light their border in their own colour. */
+.svc-card {
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.4s,
+    box-shadow 0.4s;
+}
+.svc-card:hover,
+.svc-card:focus-visible {
+  transform: translateY(-4px);
+  border-color: color-mix(in oklab, var(--c) 55%, transparent);
+  box-shadow: 0 24px 60px -30px color-mix(in oklab, var(--c) 70%, transparent);
+}
+.svc-icon {
+  background: color-mix(in oklab, var(--c) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--c) 30%, transparent);
+}
+/* Service flow chips light up one after another, in the card's colour. */
+.svc-step {
+  border-color: rgba(255, 255, 255, 0.14);
+  animation: svc-step 4.8s ease-in-out infinite;
+  animation-delay: calc(var(--k) * 0.9s + 1.2s);
+}
+@keyframes svc-step {
+  0%,
+  30%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.85);
+  }
+  8%,
+  20% {
+    border-color: var(--c);
+    color: #fff;
+  }
+}
+.fmt-card {
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    border-color 0.4s;
+}
+.fmt-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+/* The analytics illustration: lines draw in, then keep a slow live drift. */
+.live-chart .lc-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+[data-reveal="in"] .live-chart .lc-line {
+  animation:
+    draw-in 2.2s cubic-bezier(0.6, 0, 0.2, 1) both,
+    lc-drift 6s ease-in-out 2.2s infinite;
+}
+[data-reveal="in"] .live-chart .lc-line--b {
+  animation-delay: 0.3s, 2.5s;
+}
+@keyframes lc-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+/* How it works: a light runs along the line between the three steps and each
+   step's ring lights up as it passes. */
+@media (min-width: 768px) {
+  .flow {
+    position: relative;
+    --gap: 2rem;
+    --col: calc((100% - 2 * var(--gap)) / 3);
+  }
+  .flow::before,
+  .flow::after {
+    content: "";
+    position: absolute;
+    top: 23.5px;
+    height: 1px;
+  }
+  .flow::before {
+    left: 24px;
+    right: calc(var(--col) - 24px);
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .flow::after {
+    top: 21px;
+    left: 24px;
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: #19afff;
+    box-shadow: 0 0 12px 2px currentColor;
+    color: #19afff;
+    animation: flow-run 4.5s cubic-bezier(0.6, 0, 0.4, 1) infinite;
+  }
+}
+@keyframes flow-run {
+  0% {
+    left: 24px;
+    background: #19afff;
+    color: #19afff;
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  50% {
+    background: #ff2fae;
+    color: #ff2fae;
+  }
+  85% {
+    left: calc(100% - var(--col) + 21px);
+    background: #19afff;
+    color: #19afff;
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - var(--col) + 21px);
+    opacity: 0;
+  }
+}
+.flow-icon {
+  animation: flow-ring 4.5s ease-in-out infinite;
+}
+.flow-step:nth-child(2) .flow-icon {
+  animation-delay: 1.9s;
+}
+.flow-step:nth-child(3) .flow-icon {
+  animation-delay: 3.8s;
+}
+@keyframes flow-ring {
+  0%,
+  22%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
+  }
+  6%,
+  14% {
+    border-color: var(--c);
+    box-shadow: 0 0 24px -4px var(--c);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+  [data-reveal] .draw [pathLength] {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .icon-pulse,
+  .flow::after,
+  .flow-icon,
+  .svc-step,
+  .live-chart .lc-line {
+    animation: none !important;
+  }
+  .flow::after {
+    display: none;
+  }
+  .svc-card:hover {
+    transform: none;
+  }
+}
+
+/* Hero: the reward card pops up on the phone (Tailwind's translate-* use the
+   separate `translate` property, so this transform doesn't fight them) */
+.reward-pop {
+  animation: reward-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+@keyframes reward-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12%) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* Hero: the game's screen UI fades in */
+.animate-fade-in {
+  animation: hero-fade-in 0.5s ease-out both;
+}
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Hero: the joystick pulses until it's first used, so mouse users find it */
+.stick-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 0 rgba(255, 210, 31, 0.75);
+  animation: stick-pulse 1.4s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes stick-pulse {
+  to {
+    box-shadow: 0 0 0 16px rgba(255, 210, 31, 0);
+  }
+}
+/* Hero: the NFC hotspot's label sits beside the tag (flips left near the edge) */
+.nfc-label__box {
+  position: absolute;
+  top: 0;
+  left: calc(var(--r, 12px) + 12px);
+  transform: translateY(-50%);
+}
+.nfc-label[data-flip="1"] .nfc-label__box {
+  left: auto;
+  right: calc(var(--r, 12px) + 12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reward-pop,
+  .animate-fade-in,
+  .stick-pulse::after {
+    animation: none;
+  }
+}
+
+/* The button on the hero's phone, styled after each design's own print (the
+   same construction as /activated-merch/'s Buy now). */
+.ar-cta {
+  --cta-ink: #f6f0e6;
+  --cta-accent: #19afff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75em;
+  padding: 0.62em 1.1em 0.62em 0.75em;
+  border-radius: 14px;
+  border: 2px solid var(--cta-ink);
+  background: linear-gradient(160deg, #26262c, #08080a 70%);
+  box-shadow:
+    0 0 0 3px var(--cta-accent),
+    0 10px 28px rgba(0, 0, 0, 0.55);
+  color: var(--cta-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-decoration: none;
+  rotate: -2deg;
+}
+.ar-cta::after {
+  /* a light sweep across the gloss */
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: ar-cta-shine 3.2s 0.9s infinite;
+  pointer-events: none;
+}
+@keyframes ar-cta-shine {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.ar-cta__mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+}
+.ar-cta__mark svg {
+  width: 100%;
+  height: 100%;
+}
+.ar-cta__txt {
+  display: grid;
+  gap: 0.3em;
+  line-height: 1;
+  min-width: 0;
+}
+.ar-cta small {
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ar-cta strong {
+  font-family: "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  font-weight: 800;
+  font-size: 1.45em;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--cta-accent);
+}
+.ar-cta b {
+  font-size: 1.25em;
+  transition: transform 0.25s;
+}
+.ar-cta:hover b,
+.ar-cta:focus-visible b {
+  transform: translateX(4px);
+}
+.ar-cta:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+/* Trainwreck: the sunset through the train window, with a ticket. */
+.ar-cta--trainwreck {
+  border-color: #2a1a14;
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(180deg, #8cc0ea 0%, #f6c98d 46%, #e9773a 78%, #9a4a2c 100%);
+  box-shadow:
+    0 0 0 3px #f6f0e6,
+    0 0 0 5px #2a1a14,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(233, 119, 58, 0.45);
+  color: #2a1a14;
+}
+.ar-cta--trainwreck strong {
+  color: #2a1a14;
+  text-shadow: 1px 1px 0 #fbf0dc;
+}
+.ar-cta--trainwreck .ar-cta__mark svg {
+  fill: #fbf0dc;
+  stroke: #2a1a14;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+/* ONE PIECE x Den of Geek: the poster's cream paper and red masthead, inked. */
+.ar-cta--onepiece {
+  border-color: #141414;
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 45%), #f1e7d2;
+  box-shadow:
+    0 0 0 3px #d8322b,
+    0 0 0 5px #141414,
+    0 10px 28px rgba(0, 0, 0, 0.55);
+  color: #141414;
+}
+.ar-cta--onepiece strong {
+  color: #d8322b;
+  text-shadow: 1px 1px 0 #141414;
+}
+/* Sakamoto Days: the sticker's crimson panels, black ink and white specs. */
+.ar-cta--sakamoto {
+  border-color: #0b0b0b;
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(160deg, #c22a4c, #7c1430 75%);
+  box-shadow:
+    0 0 0 3px #f4eef0,
+    0 0 0 5px #0b0b0b,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(194, 42, 76, 0.45);
+  color: #f4eef0;
+}
+.ar-cta--sakamoto strong {
+  color: #f4eef0;
+  text-shadow:
+    1px 1px 0 #0b0b0b,
+    -1px 1px 0 #0b0b0b;
+}
+/* EVADE: can yellow and black. */
+.ar-cta--evade {
+  border-color: #0b0b0b;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 45%), #ffd21f;
+  box-shadow:
+    0 0 0 3px #0b0b0b,
+    0 10px 28px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(255, 210, 31, 0.35);
+  color: #0b0b0b;
+}
+.ar-cta--evade strong {
+  color: #0b0b0b;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar-cta::after {
+    animation: none;
+  }
+}
+
+/* ---- Homepage: partner logos light up in their brand colours ----
+   White marks by default; hover, focus, a tap or the gentle auto-cycle
+   (LogoBand.tsx) crossfades to the brand-colour mark with a soft glow. */
+.logo-mark .lm-w,
+.logo-mark .lm-c {
+  transition:
+    opacity 0.45s ease,
+    transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.45s ease;
+}
+.logo-mark .lm-w {
+  opacity: 0.78;
+}
+.logo-mark .lm-c {
+  opacity: 0;
+}
+.logo-mark:hover .lm-w,
+.logo-mark.is-lit .lm-w {
+  opacity: 0;
+}
+.logo-mark:hover .lm-c,
+.logo-mark.is-lit .lm-c {
+  opacity: 1;
+  filter: drop-shadow(0 0 14px color-mix(in oklab, var(--g) 55%, transparent));
+}
+.logo-mark:hover span,
+.logo-mark.is-lit span {
+  transform: scale(1.05);
+}
+.logo-mark span {
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* ---- Homepage: immersive marketing collage (MarketingCollage.tsx) ----
+   Campaign pieces fan out from behind the phone as the block arrives, and
+   spread a little further on hover. Units: % of the stage (container). */
+.mc-stage {
+  container-type: size;
+  --spread: 1;
+}
+.mc-stage:hover {
+  --spread: 1.08;
+}
+.mc-piece {
+  transform: translate(-50%, -50%)
+    translate(calc(var(--x) * 1cqw * var(--spread)), calc(var(--y) * 1cqh * var(--spread)))
+    rotate(var(--r));
+  transition: transform 1.1s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-delay: calc(var(--k) * 90ms + 150ms);
+  filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.55));
+}
+.mc-piece--print img {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.mc-stage:hover .mc-piece {
+  transition-delay: 0ms;
+  transition-duration: 0.6s;
+}
+[data-reveal="pending"] .mc-piece {
+  transform: translate(-50%, -50%) rotate(0deg) scale(0.86);
+}
+.mc-piece--sticker {
+  animation: mc-bob 5s ease-in-out 1.6s infinite;
+}
+@keyframes mc-bob {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -6px;
+  }
+}
+
+/* ---- Homepage: format cards with a clip on top ---- */
+.fmt-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  aspect-ratio: 4 / 5;
+  background: rgba(255, 255, 255, 0.04);
+}
+.fmt-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+}
+.fmt-media video,
+.fmt-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% var(--pos, 50%);
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.fmt-card:hover .fmt-media video {
+  transform: scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-piece,
+  .logo-mark .lm-w,
+  .logo-mark .lm-c,
+  .logo-mark span {
+    transition: none;
+  }
+  .mc-piece--sticker {
+    animation: none;
+  }
+  [data-reveal="pending"] .mc-piece {
+    transform: translate(-50%, -50%) translate(calc(var(--x) * 1cqw), calc(var(--y) * 1cqh))
+      rotate(var(--r));
+  }
+}
+@media (min-width: 1024px) {
+  /* laptops and up: landscape clips (cropped around each clip's focus) keep
+     both rows of formats close to one screen */
+  .fmt-media {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+/* Technology page: the chosen layer's text fades in */
+.layer-fade {
+  animation: layer-fade 0.5s ease both;
+}
+@keyframes layer-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer-fade {
+    animation: none;
+  }
 }

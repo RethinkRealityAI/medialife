@@ -24,6 +24,8 @@ import {
   stageOf,
   type StageId,
 } from "@/lib/hub/model";
+import { Reveal } from "@/components/home/Reveal";
+import { CARD, CtaBand, Eyebrow, H1, SECTION as COLUMN, TEXT } from "@/components/site/kit";
 
 const TITLE = "Creator Hub — Activated Merchandise for Creators | MEDIALIFE";
 const DESC =
@@ -56,9 +58,9 @@ export const Route = createFileRoute("/creator-hub/")({
 });
 
 const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
-const SECTION = "scroll-mt-20 border-b border-border";
-const WRAP = "w-full px-6 sm:px-8 lg:px-16";
-const H2 = "mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance";
+const SECTION = "scroll-mt-20";
+const WRAP = COLUMN;
+const H2 = "mt-5 display text-[clamp(30px,3.4vw,54px)]";
 
 /* The hub app's own routes. Plain links: the app sits outside the marketing site. */
 const SIGN_IN = `${HUB.base}/sign-in`;
@@ -75,7 +77,6 @@ function CreatorHubLanding() {
       <Products />
       <HowItWorks />
       <HubFeatures />
-      <Pipeline />
       <WhoFor />
       <Faq />
       <FinalCta join={join} />
@@ -85,19 +86,16 @@ function CreatorHubLanding() {
 
 /* ─────────────────────────── CTAs ─────────────────────────── */
 function Ctas({ join, big = false }: { join: string; big?: boolean }) {
-  const pad = big ? "px-7 py-4 tracking-[0.2em]" : "px-6 py-3.5 tracking-[0.18em]";
+  const pad = big ? "px-7 py-4" : "px-6 py-3.5";
   return (
     <div className="flex flex-wrap gap-3">
-      <a
-        href={join}
-        className={`group btn-pill btn-ember ${pad} mono text-xs uppercase font-medium`}
-      >
+      <a href={join} className={`group btn-pill btn-solid ${pad} text-sm font-medium`}>
         Apply to join
         <span className="transition-transform group-hover:translate-x-1" aria-hidden>
           →
         </span>
       </a>
-      <a href={SIGN_IN} className={`btn-pill btn-ember-outline ${pad} mono text-xs uppercase`}>
+      <a href={SIGN_IN} className={`btn-pill btn-glass ${pad} text-sm font-medium`}>
         Sign in
       </a>
     </div>
@@ -107,20 +105,20 @@ function Ctas({ join, big = false }: { join: string; big?: boolean }) {
 /* ─────────────────────────── HERO ─────────────────────────── */
 function Hero({ join, invited }: { join: string; invited: boolean }) {
   return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div className="absolute inset-0 grid-bg opacity-50" />
-      <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
+    <section className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[1100px] max-w-[160vw] -translate-x-1/2 rounded-full bg-accent opacity-30 blur-[120px]"
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-25" />
       <div className={`relative ${WRAP} pt-14 pb-16 lg:pt-20 lg:pb-24`}>
         <div className="grid gap-12 xl:grid-cols-12 xl:items-center">
           <div className="xl:col-span-5">
-            <div className="flex items-center gap-3 mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-accent motion-safe:animate-pulse-glow" />
-              <span>
-                {HUB.program} · {HUB.name}
-              </span>
-            </div>
-            <h1 className="mt-7 text-[2.6rem] sm:text-6xl lg:text-[4.4rem] font-medium tracking-tight leading-[0.98] text-balance">
-              Merch your fans can <span className="ember-text">experience.</span>
+            <Eyebrow hue="magenta">
+              {HUB.program} · {HUB.name}
+            </Eyebrow>
+            <h1 className={`mt-6 ${H1}`}>
+              Merch your fans can <span className={TEXT.magenta}>experience.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-muted-foreground">
               T-shirts, keychains and stickers that open an immersive experience when fans scan
@@ -131,7 +129,7 @@ function Hero({ join, invited }: { join: string; invited: boolean }) {
               <Ctas join={join} />
             </div>
             {invited ? (
-              <p className="mt-5 inline-flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-2 mono text-[10px] uppercase tracking-[0.18em] text-primary">
+              <p className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-3 py-2 mono text-[10px] uppercase tracking-[0.18em] text-primary">
                 <span aria-hidden>✓</span> Invite applied. It carries through when you apply.
               </p>
             ) : (
@@ -157,22 +155,11 @@ function HubPreview() {
   const bars = [22, 30, 26, 41, 38, 55, 48, 62, 58, 74, 69, 88];
   return (
     <figure className="relative">
-      <div
-        className="pointer-events-none absolute -inset-6 rounded-[40px] opacity-30 blur-3xl"
-        style={{ background: "var(--gradient-ember)" }}
-        aria-hidden
-      />
-      <div
-        className="relative border border-border bg-background/90 shadow-2xl backdrop-blur-xl"
-        aria-hidden
-      >
+      <div className="lg-card relative overflow-hidden rounded-[26px] shadow-2xl" aria-hidden>
         {/* window bar */}
         <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span
-              className="h-4 w-4 shrink-0 rounded-full"
-              style={{ background: "var(--gradient-ember)" }}
-            />
+            <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: "#19afff" }} />
             <span className="truncate mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
               {HUB.name} / Overview
             </span>
@@ -209,7 +196,7 @@ function HubPreview() {
                 <li key={s.id}>
                   <div
                     className={`h-1.5 ${i < current ? "bg-primary" : i === current ? "" : "bg-secondary"}`}
-                    style={i === current ? { background: "var(--gradient-ember)" } : undefined}
+                    style={i === current ? { background: "#19afff" } : undefined}
                   />
                   <div
                     className={`mt-2 whitespace-nowrap mono text-[8px] uppercase tracking-[0.08em] ${i === current ? "text-foreground" : i < current ? "hidden truncate text-foreground sm:block" : i === STAGES.length - 1 ? "hidden truncate text-muted-foreground sm:block" : "invisible"}`}
@@ -227,7 +214,7 @@ function HubPreview() {
             <div className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
               Your earnings · 30 days
             </div>
-            <div className="mt-2 text-2xl font-medium tracking-tight ember-text">
+            <div className="mt-2 text-2xl font-medium tracking-tight text-primary">
               {money(128460)}
             </div>
             <div className="mt-4 flex h-14 items-end gap-1">
@@ -363,14 +350,18 @@ const DIFFERENT = [
 ];
 function Different() {
   return (
-    <section aria-labelledby="different" className={`${SECTION} bg-surface`}>
+    <section aria-labelledby="different" className={SECTION}>
       <h2 id="different" className="sr-only">
         Why activated merch
       </h2>
-      <ul className={`${WRAP} grid gap-x-8 gap-y-6 py-10 sm:grid-cols-2 lg:grid-cols-4`}>
-        {DIFFERENT.map((d) => (
-          <li key={d.t} className="border-l border-primary/40 pl-4">
-            <h3 className="text-base font-medium">{d.t}</h3>
+      <ul className={`${WRAP} grid gap-4 pb-8 sm:grid-cols-2 lg:grid-cols-4`}>
+        {DIFFERENT.map((d, i) => (
+          <li key={d.t} className={`${CARD} p-5`}>
+            <span
+              aria-hidden
+              className={`block h-1.5 w-1.5 rounded-full ${i % 2 === 0 ? "bg-primary" : "bg-accent"}`}
+            />
+            <h3 className="mt-3 text-base font-semibold text-white">{d.t}</h3>
             <p className="mt-1 text-sm text-muted-foreground">{d.b}</p>
           </li>
         ))}
@@ -383,22 +374,22 @@ function Different() {
 function Products() {
   return (
     <section id="products" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
+      <div className={`${WRAP} py-20 lg:py-28`}>
         <div className="max-w-3xl">
-          <div className={EYEBROW}>/ 01 — The products</div>
+          <Eyebrow hue="blue">The products</Eyebrow>
           <h2 className={H2}>
-            Three products. <span className="ember-text">Every one opens something.</span>
+            Three products. <span className={TEXT.blue}>Every one opens something.</span>
           </h2>
           <p className="mt-5 text-muted-foreground">
             Your art, your characters, your brand. Each one carries a QR code or NFC tag that opens
             the experience in the phone's browser.
           </p>
         </div>
-        <ul className="mt-12 grid gap-px border border-border bg-border md:grid-cols-3">
+        <ul className="mt-12 grid gap-4 md:grid-cols-3">
           {SKU_IDS.map((id) => {
             const s = SKUS[id];
             return (
-              <li key={id} className="flex flex-col bg-background">
+              <li key={id} className={`${CARD} flex flex-col overflow-hidden`}>
                 <div className="aspect-[4/3] overflow-hidden bg-surface">
                   <img
                     src={s.image}
@@ -410,7 +401,7 @@ function Products() {
                   />
                 </div>
                 <div className="flex flex-1 flex-col p-6 lg:p-7">
-                  <h3 className="text-xl font-medium">{s.name}</h3>
+                  <h3 className="display text-[clamp(20px,1.8vw,26px)]">{s.name}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">{s.pitch}</p>
                   <p className="mt-4 flex-1 text-sm">
                     <span className="mono text-[10px] uppercase tracking-[0.18em] text-primary">
@@ -418,8 +409,8 @@ function Products() {
                     </span>
                     {s.trigger}
                   </p>
-                  <dl className="mt-6 grid grid-cols-2 gap-px border border-border bg-border">
-                    <div className="bg-background p-3">
+                  <dl className="mt-6 grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-white/[0.04] p-3">
                       <dt className="mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
                         Retail
                       </dt>
@@ -427,7 +418,7 @@ function Products() {
                         ${s.priceBand[0]}–{s.priceBand[1]}
                       </dd>
                     </div>
-                    <div className="bg-background p-3">
+                    <div className="rounded-2xl bg-white/[0.04] p-3">
                       <dt className="mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
                         Lead time
                       </dt>
@@ -468,18 +459,22 @@ const STEPS = [
 function HowItWorks() {
   return (
     <section id="how" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className={EYEBROW}>/ 02 — How it works</div>
+      <div className={`${WRAP} py-20 lg:py-28`}>
+        <Eyebrow hue="magenta">How it works</Eyebrow>
         <h2 className={`${H2} max-w-3xl`}>
-          You bring the fans. <span className="ember-text">We do the rest.</span>
+          You bring the fans. <span className={TEXT.magenta}>We do the rest.</span>
         </h2>
-        <ol className="mt-12 grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
+        <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {STEPS.map((s, i) => (
-            <li key={s.t} className="bg-background p-7">
-              <div className="mono text-[11px] text-primary">0{i + 1}</div>
-              <h3 className="mt-6 text-lg font-medium">{s.t}</h3>
+            <Reveal as="li" key={s.t} delay={i * 70} className={`${CARD} p-6`}>
+              <span
+                className={`grid h-9 w-9 place-items-center rounded-full border border-white/15 mono text-[11px] ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
+              >
+                {i + 1}
+              </span>
+              <h3 className="mt-6 text-lg font-semibold text-white">{s.t}</h3>
               <p className="mt-3 text-sm text-muted-foreground">{s.b}</p>
-            </li>
+            </Reveal>
           ))}
         </ol>
       </div>
@@ -522,84 +517,33 @@ const FEATURES: { t: string; b: string; icon: LucideIcon }[] = [
 ];
 function HubFeatures() {
   return (
-    <section id="hub" className={`${SECTION} bg-surface`}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12`}>
+    <section id="hub" className={SECTION}>
+      <div className={`${WRAP} grid gap-12 py-20 lg:grid-cols-12 lg:py-28`}>
         <div className="lg:col-span-4">
-          <div className={EYEBROW}>/ 03 — The hub</div>
+          <Eyebrow hue="blue">The hub</Eyebrow>
           <h2 className={H2}>
-            Everything in <span className="ember-text">one hub.</span>
+            Everything in <span className={TEXT.blue}>one hub.</span>
           </h2>
           <p className="mt-6 text-muted-foreground">
             Join the program and you get the Creator Hub: your products, your fans' scans and your
             money, in one place.
           </p>
         </div>
-        <ul className="lg:col-span-8 grid gap-px border border-border bg-border sm:grid-cols-2">
-          {FEATURES.map((f) => (
-            <li key={f.t} className="bg-background p-7">
-              <f.icon className="h-5 w-5 text-primary" strokeWidth={1.5} aria-hidden />
-              <h3 className="mt-5 text-lg font-medium">{f.t}</h3>
+        <ul className="grid gap-4 sm:grid-cols-2 lg:col-span-8">
+          {FEATURES.map((f, i) => (
+            <li key={f.t} className={`${CARD} p-6`}>
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-white/[0.06]">
+                <f.icon
+                  className={`h-5 w-5 ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
+                  strokeWidth={1.6}
+                  aria-hidden
+                />
+              </span>
+              <h3 className="mt-5 text-lg font-semibold text-white">{f.t}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{f.b}</p>
             </li>
           ))}
         </ul>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────── 04 · PIPELINE ─────────────────────────── */
-const OWNER_CLS: Record<string, string> = {
-  You: "border-accent/50 text-accent",
-  MEDIALIFE: "border-primary/50 text-primary",
-  Both: "border-foreground/30 text-foreground",
-};
-function Pipeline() {
-  return (
-    <section id="pipeline" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className="max-w-3xl">
-          <div className={EYEBROW}>/ 04 — The pipeline</div>
-          <h2 className={H2}>
-            Brief to live. <span className="ember-text">Every step in view.</span>
-          </h2>
-          <p className="mt-5 text-muted-foreground">
-            Each product moves through the same {STAGES.length} stages. The hub shows where it is
-            and whose move it is.
-          </p>
-        </div>
-        <ol className="mt-12 grid lg:grid-cols-7">
-          {STAGES.map((s, i) => (
-            <li
-              key={s.id}
-              className="relative pb-10 pl-8 last:pb-0 lg:border-t lg:border-border lg:pb-0 lg:pl-0 lg:pr-5 lg:pt-7"
-            >
-              {/* mobile: vertical rail */}
-              {i < STAGES.length - 1 && (
-                <span
-                  className="absolute left-[4px] top-3 bottom-0 w-px bg-border lg:hidden"
-                  aria-hidden
-                />
-              )}
-              <span
-                className={`absolute left-0 top-1.5 h-2.5 w-2.5 rounded-full lg:-top-[5px] ${i === STAGES.length - 1 ? "" : "border border-primary bg-background"}`}
-                style={
-                  i === STAGES.length - 1 ? { background: "var(--gradient-ember)" } : undefined
-                }
-                aria-hidden
-              />
-              <div className="mono text-[11px] text-muted-foreground">0{i + 1}</div>
-              <h3 className="mt-2 text-lg font-medium">{s.name}</h3>
-              <span
-                className={`mt-2 inline-block border px-2 py-0.5 mono text-[9px] uppercase tracking-[0.18em] ${OWNER_CLS[s.owner]}`}
-              >
-                <span className="sr-only">Owner: </span>
-                {s.owner}
-              </span>
-              <p className="mt-3 text-sm text-muted-foreground">{s.blurb}</p>
-            </li>
-          ))}
-        </ol>
       </div>
     </section>
   );
@@ -617,12 +561,12 @@ const CREATOR_TYPES = [
 function WhoFor() {
   const platforms = PLATFORM_IDS.filter((p) => p !== "other").map((p) => PLATFORMS[p].label);
   return (
-    <section id="who" className={`${SECTION} bg-surface`}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12 lg:items-end`}>
+    <section id="who" className={SECTION}>
+      <div className={`${WRAP} grid gap-12 py-20 lg:grid-cols-12 lg:items-end lg:py-28`}>
         <div className="lg:col-span-6">
-          <div className={EYEBROW}>/ 05 — Who it's for</div>
+          <Eyebrow hue="magenta">Who it's for</Eyebrow>
           <h2 className={H2}>
-            Built for creators <span className="ember-text">with a community.</span>
+            Built for creators <span className={TEXT.magenta}>with a community.</span>
           </h2>
           <p className="mt-6 max-w-xl text-muted-foreground">
             If your fans would wear it, clip it to a bag or stick it on a laptop, we can activate
@@ -644,7 +588,7 @@ function ChipRow({ label, items }: { label: string; items: string[] }) {
       <div className={EYEBROW}>{label}</div>
       <ul className="mt-3 flex flex-wrap gap-2">
         {items.map((t) => (
-          <li key={t} className="border border-border bg-background px-3.5 py-2 text-sm">
+          <li key={t} className="lg-chip rounded-full px-4 py-2 text-sm text-white/90">
             {t}
           </li>
         ))}
@@ -703,21 +647,21 @@ const FAQ: { q: string; a: ReactNode }[] = [
 function Faq() {
   return (
     <section id="faq" className={SECTION}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12`}>
+      <div className={`${WRAP} grid gap-12 py-20 lg:grid-cols-12 lg:py-28`}>
         <div className="lg:col-span-4">
-          <div className={EYEBROW}>/ 06 — Questions</div>
-          <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight">
-            Good to <span className="ember-text">know.</span>
+          <Eyebrow hue="blue">Questions</Eyebrow>
+          <h2 className={H2}>
+            Good to <span className={TEXT.blue}>know.</span>
           </h2>
         </div>
-        <div className="lg:col-span-8 border-t border-border">
+        <div className="grid gap-3 lg:col-span-8">
           {FAQ.map((f) => (
-            <details key={f.q} className="group border-b border-border">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-lg font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+            <details key={f.q} className={`${CARD} group px-6`}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-base font-semibold text-white sm:text-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
                 {f.q}
                 <span
                   aria-hidden
-                  className="mono text-primary transition-transform motion-reduce:transition-none group-open:rotate-45"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 text-primary transition-transform motion-reduce:transition-none group-open:rotate-45"
                 >
                   +
                 </span>
@@ -734,33 +678,27 @@ function Faq() {
 /* ─────────────────────────── CTA ─────────────────────────── */
 function FinalCta({ join }: { join: string }) {
   return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div className="absolute inset-0 grid-bg opacity-40" />
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl opacity-25"
-        style={{ background: "var(--gradient-ember)" }}
-        aria-hidden
-      />
-      <div className={`relative ${WRAP} py-24 text-center`}>
-        <h2 className="mx-auto max-w-4xl text-4xl md:text-6xl font-medium tracking-tight text-balance">
-          Make merch your fans can <span className="ember-text">experience.</span>
-        </h2>
-        <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
-          Apply in five minutes. We review every application and reply by email.
-        </p>
-        <div className="mt-10 flex justify-center">
-          <Ctas join={join} big />
-        </div>
-        <p className="mt-8 text-sm text-muted-foreground">
-          Questions?{" "}
+    <CtaBand
+      id="hub-cta"
+      hue="magenta"
+      eyebrow="Apply in five minutes"
+      title={
+        <>
+          Make merch your fans can <span className="text-accent">experience.</span>
+        </>
+      }
+      lead={
+        <>
+          We review every application and reply by email. Questions?{" "}
           <a
             href={`mailto:${HUB.supportEmail}`}
-            className="text-primary underline underline-offset-4"
+            className="text-white underline underline-offset-4 hover:text-primary"
           >
             {HUB.supportEmail}
           </a>
-        </p>
-      </div>
-    </section>
+        </>
+      }
+      actions={<Ctas join={join} big />}
+    />
   );
 }

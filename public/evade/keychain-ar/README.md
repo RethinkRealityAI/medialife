@@ -1,4 +1,6 @@
-# EVADE keychain AR: Bobo's Pop-Out
+# EVADE keychain AR: Off the Chain
+
+The experience was called "Bobo's Pop-Out" until 2026-11-12; Dapo renamed it. The URL stays `/evade/keychain-ar/`.
 
 `/evade/keychain-ar/` — point the camera at the EVADE acrylic keychain and Bobo and the Eclipse can
 jump off their charms, land below the keychain and come alive. A swirling portal in the charm's colours

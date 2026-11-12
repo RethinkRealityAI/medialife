@@ -86,7 +86,7 @@ export function PosterViewer({
               height={900}
               loading="lazy"
               className="w-full border border-border"
-              style={{ filter: "drop-shadow(0 30px 60px oklch(0.68 0.26 350 / 34%))" }}
+              style={{ filter: "drop-shadow(0 30px 60px rgba(0, 0, 0, 0.55))" }}
             />
 
             {/* Cursor-tracking sheen, as on the merch shot */}

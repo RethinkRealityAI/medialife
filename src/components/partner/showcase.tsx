@@ -84,7 +84,7 @@ export function VideosPanel({
           <ul className="mt-4 grid grid-cols-2 gap-3">
             {PROOF_STATS.map((s) => (
               <li key={s.l} className="rounded-xl bg-white/[0.04] p-3">
-                <div className="bg-gradient-to-r from-white to-[var(--partner)] bg-clip-text text-2xl font-semibold tracking-tight text-transparent tabular-nums">
+                <div className="text-2xl font-semibold tracking-tight text-[var(--partner)] tabular-nums">
                   {s.v}
                 </div>
                 <div className="text-xs text-muted-foreground">{s.l}</div>

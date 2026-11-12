@@ -153,7 +153,7 @@
   display: block;
   height: 100%;
   width: calc(var(--p, 0) * 100%);
-  background: linear-gradient(90deg, var(--ds-cyan), var(--ds-gold));
+  background: var(--ds-gold);
   transition: width 0.4s var(--ds-ease);
 }
 .ds-poster.is-fallback {
