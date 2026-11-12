@@ -18,7 +18,6 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FanReactionsRouteImport } from './routes/fan-reactions'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as LiveRouteImport } from './routes/live'
-import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
@@ -46,6 +45,7 @@ import { Route as PartnerHubJoinRouteImport } from './routes/partner-hub.join'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as ShelfIndexRouteImport } from './routes/shelf.index'
 import { Route as ShelfSlugRouteImport } from './routes/shelf.$slug'
+import { Route as TechnologyIndexRouteImport } from './routes/technology.index'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as UgcHubAppRouteImport } from './routes/ugc-hub._app'
 import { Route as UgcHubAuthRouteImport } from './routes/ugc-hub.auth'
@@ -207,11 +207,6 @@ const LiveRoute = LiveRouteImport.update({
   path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnologyRoute = TechnologyRouteImport.update({
-  id: '/technology',
-  path: '/technology',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -348,10 +343,15 @@ const ShelfSlugRoute = ShelfSlugRouteImport.update({
   path: '/shelf/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnologyIndexRoute = TechnologyIndexRouteImport.update({
+  id: '/technology/',
+  path: '/technology/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologySlugRoute = TechnologySlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => TechnologyRoute,
+  id: '/technology/$slug',
+  path: '/technology/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UgcHubAppRoute = UgcHubAppRouteImport.update({
   id: '/ugc-hub/_app',
@@ -957,7 +957,6 @@ export interface FileRoutesByFullPath {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/collector': typeof AdminCollectorRoute
@@ -992,6 +991,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
+  '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1110,7 +1110,6 @@ export interface FileRoutesByTo {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
@@ -1138,6 +1137,7 @@ export interface FileRoutesByTo {
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
   '/shelf': typeof ShelfIndexRoute
+  '/technology': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1258,7 +1258,6 @@ export interface FileRoutesById {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/collector': typeof AdminCollectorRoute
@@ -1293,6 +1292,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
+  '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1414,7 +1414,6 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
     | '/admin/collector'
@@ -1449,6 +1448,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
+    | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
@@ -1567,7 +1567,6 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/collector'
     | '/admin/demos'
@@ -1595,6 +1594,7 @@ export interface FileRouteTypes {
     | '/x/$slug'
     | '/admin'
     | '/shelf'
+    | '/technology'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
@@ -1714,7 +1714,6 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
     | '/admin/collector'
@@ -1749,6 +1748,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
+    | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
     | '/admin/partners/$partnerId'
@@ -1869,7 +1869,6 @@ export interface RootRouteChildren {
   FanReactionsRoute: typeof FanReactionsRoute
   InsightsRoute: typeof InsightsRoute
   LiveRoute: typeof LiveRoute
-  TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
   CreatorHubAppRoute: typeof CreatorHubAppRouteWithChildren
   CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
@@ -1885,6 +1884,7 @@ export interface RootRouteChildren {
   PartnerHubJoinRoute: typeof PartnerHubJoinRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   ShelfSlugRoute: typeof ShelfSlugRoute
+  TechnologySlugRoute: typeof TechnologySlugRoute
   UgcHubAppRoute: typeof UgcHubAppRouteWithChildren
   UgcHubAuthRoute: typeof UgcHubAuthRoute
   UgcHubCheckEmailRoute: typeof UgcHubCheckEmailRoute
@@ -1893,6 +1893,7 @@ export interface RootRouteChildren {
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
   ShelfIndexRoute: typeof ShelfIndexRoute
+  TechnologyIndexRoute: typeof TechnologyIndexRoute
   ApiArKcDiagRoute: typeof ApiArKcDiagRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
@@ -1995,13 +1996,6 @@ declare module '@tanstack/react-router' {
       path: '/live'
       fullPath: '/live'
       preLoaderRoute: typeof LiveRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/technology': {
-      id: '/technology'
-      path: '/technology'
-      fullPath: '/technology'
-      preLoaderRoute: typeof TechnologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -2193,12 +2187,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShelfSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technology/': {
+      id: '/technology/'
+      path: '/technology'
+      fullPath: '/technology/'
+      preLoaderRoute: typeof TechnologyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology/$slug': {
       id: '/technology/$slug'
-      path: '/$slug'
+      path: '/technology/$slug'
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
-      parentRoute: typeof TechnologyRoute
+      parentRoute: typeof rootRouteImport
     }
     '/ugc-hub/_app': {
       id: '/ugc-hub/_app'
@@ -3093,18 +3094,6 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface TechnologyRouteChildren {
-  TechnologySlugRoute: typeof TechnologySlugRoute
-}
-
-const TechnologyRouteChildren: TechnologyRouteChildren = {
-  TechnologySlugRoute: TechnologySlugRoute,
-}
-
-const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
-  TechnologyRouteChildren,
-)
-
 interface CreatorHubAppRouteChildren {
   CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
   CreatorHubAppAgreementRoute: typeof CreatorHubAppAgreementRoute
@@ -3371,7 +3360,6 @@ const rootRouteChildren: RootRouteChildren = {
   FanReactionsRoute: FanReactionsRoute,
   InsightsRoute: InsightsRoute,
   LiveRoute: LiveRoute,
-  TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
   CreatorHubAppRoute: CreatorHubAppRouteWithChildren,
   CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
@@ -3387,6 +3375,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnerHubJoinRoute: PartnerHubJoinRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   ShelfSlugRoute: ShelfSlugRoute,
+  TechnologySlugRoute: TechnologySlugRoute,
   UgcHubAppRoute: UgcHubAppRouteWithChildren,
   UgcHubAuthRoute: UgcHubAuthRoute,
   UgcHubCheckEmailRoute: UgcHubCheckEmailRoute,
@@ -3395,6 +3384,7 @@ const rootRouteChildren: RootRouteChildren = {
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
   ShelfIndexRoute: ShelfIndexRoute,
+  TechnologyIndexRoute: TechnologyIndexRoute,
   ApiArKcDiagRoute: ApiArKcDiagRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,

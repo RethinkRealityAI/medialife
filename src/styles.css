@@ -990,3 +990,19 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+/* Technology page: the chosen layer's text fades in */
+.layer-fade {
+  animation: layer-fade 0.5s ease both;
+}
+@keyframes layer-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layer-fade {
+    animation: none;
+  }
+}

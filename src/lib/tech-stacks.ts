@@ -23,7 +23,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "App-free, instant AR on any phone.",
     category: "Delivery Layer",
     summary:
-      "A WebGL/WebGPU runtime — powered by 8th Wall, MindAR and a proprietary scene graph — that opens immersive AR straight from a QR scan, NFC tap, or link. No app store, no install, sub-3-second time-to-experience.",
+      "A WebGL runtime, powered by the 8th Wall engine, MindAR and our own scene graph, that opens immersive AR straight from a QR scan, NFC tap, or link. No app store, no install, sub-3-second time-to-experience.",
     hero: "QR → Camera → AR scene, in under 3 seconds.",
     accent: "#1f6fd1",
     glyph: "◉",
@@ -71,7 +71,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "Premium native AR for flagship brand apps.",
     category: "Native Layer",
     summary:
-      "When experiences demand cinematic fidelity — LiDAR-grade occlusion, depth-aware lighting, and persistent room-scale anchors — we ship native iOS (ARKit) and Android (ARCore) modules embedded directly into brand and partner apps.",
+      "When an experience needs cinematic fidelity (LiDAR-grade occlusion, depth-aware lighting and persistent room-scale anchors), we ship native iOS (ARKit) and Android (ARCore) modules embedded directly into brand and partner apps.",
     hero: "Cinematic-grade AR with LiDAR occlusion and persistent anchors.",
     accent: "#7c3aed",
     glyph: "◆",
@@ -113,7 +113,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "Snap Lens Studio · Meta Spark · TikTok Effect House.",
     category: "Distribution Layer",
     summary:
-      "We design, ship and operate brand lenses across Snapchat, Instagram, Facebook and TikTok — built for virality, equipped with measurement, and engineered to convert organic reach into owned fan data.",
+      "We design, ship and operate brand lenses across Snapchat, Instagram, Facebook and TikTok, built for virality, equipped with measurement, and engineered to convert organic reach into owned fan data.",
     hero: "Designed for the For You page. Measured like media.",
     accent: "#b45309",
     glyph: "✦",
@@ -158,7 +158,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "The eyes behind every experience.",
     category: "Intelligence Layer",
     summary:
-      "Our computer-vision pipeline — built on TensorFlow Lite, MediaPipe and custom PyTorch models — powers brand-specific object recognition, IP-trained classifiers, face/hand/pose tracking and real-time scene understanding on commodity devices.",
+      "Our computer-vision pipeline, built on TensorFlow Lite, MediaPipe and custom PyTorch models, powers brand-specific object recognition, IP-trained classifiers, face/hand/pose tracking and real-time scene understanding on commodity devices.",
     hero: "IP-trained models that see what your brand is, in real time.",
     accent: "#047857",
     glyph: "◈",
@@ -187,7 +187,7 @@ export const TECH_STACKS: TechStack[] = [
       { k: "Privacy", v: "On-device, GDPR-clean" },
     ],
     useCases: [
-      { t: "Mascot Recognition", d: "Point a phone at any character — get the AR story." },
+      { t: "Mascot Recognition", d: "Point a phone at any character and get the AR story." },
       { t: "Try-On & Try-With", d: "Real-time fit for apparel, eyewear, cosmetics, accessories." },
       { t: "Gesture Gameplay", d: "Hand pose controls activate spells, drops, mini-games." },
     ],
@@ -200,7 +200,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "Personalised fan moments at infinite scale.",
     category: "Intelligence Layer",
     summary:
-      "We integrate frontier generative models — diffusion, voice, LLM, and multimodal — into AR activations so every fan walks away with a one-of-one artefact: a portrait, a track, a comic panel, a message from their favourite character.",
+      "We integrate frontier generative models (image, voice, language and multimodal) into AR activations so every fan walks away with a one-of-one artefact: a portrait, a track, a comic panel, a message from their favourite character.",
     hero: "Every fan gets a one-of-one moment. Owned by them. Branded by you.",
     accent: "#be185d",
     glyph: "✺",
@@ -236,7 +236,7 @@ export const TECH_STACKS: TechStack[] = [
     tagline: "Persistent, multiplayer AR worlds.",
     category: "World Layer",
     summary:
-      "Geo-anchored VPS, room-scale persistence and shared multi-user sessions — so a brand activation lives in a venue, evolves across days, and can be returned to by every fan who experienced it.",
+      "Geo-anchored VPS, room-scale persistence and shared multi-user sessions, so a brand activation lives in a venue, evolves across days, and can be returned to by every fan who experienced it.",
     hero: "Brand worlds that persist. Multiplayer. Geo-locked. Owned.",
     accent: "#0369a1",
     glyph: "⬢",
@@ -248,7 +248,7 @@ export const TECH_STACKS: TechStack[] = [
       { t: "Multi-User Sync", d: "Fans see the same dragon, the same drop, the same moment." },
       {
         t: "Persistent Anchors",
-        d: "AR that stays where you left it — for days, weeks, or the run of an exhibit.",
+        d: "AR that stays where you left it, for days, weeks, or the run of an exhibit.",
       },
       { t: "Venue Mesh Capture", d: "Photogrammetric venue scans baked into the experience." },
     ],
