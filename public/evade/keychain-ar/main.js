@@ -53,13 +53,14 @@ function radialTexture(stops) {
   g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
-const glowTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(160,210,255,.8)'], [0.6, 'rgba(232,91,216,.25)'], [1, 'rgba(0,0,0,0)']]);
-const padTex = radialTexture([[0, 'rgba(79,180,255,0)'], [0.62, 'rgba(79,180,255,0)'], [0.7, 'rgba(79,180,255,.9)'], [0.78, 'rgba(232,91,216,.55)'], [1, 'rgba(0,0,0,0)']]);
+// soft light falloffs for 3D glows (one colour each, no colour blends: the platform look is flat colour)
+const glowTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.25, 'rgba(255,236,190,.8)'], [0.6, 'rgba(246,195,68,.22)'], [1, 'rgba(246,195,68,0)']]);
+const padTex = radialTexture([[0, 'rgba(246,195,68,0)'], [0.62, 'rgba(246,195,68,0)'], [0.7, 'rgba(246,195,68,.9)'], [0.8, 'rgba(246,195,68,.3)'], [1, 'rgba(246,195,68,0)']]);
 const shadowTex = radialTexture([[0, 'rgba(0,0,0,.32)'], [0.6, 'rgba(0,0,0,.12)'], [1, 'rgba(0,0,0,0)']]);
 function bubbleTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
   const body = g.createRadialGradient(64, 64, 20, 64, 64, 60);
-  body.addColorStop(0, 'rgba(190,230,255,.06)'); body.addColorStop(0.72, 'rgba(170,220,255,.2)'); body.addColorStop(0.93, 'rgba(235,160,255,.95)'); body.addColorStop(1, 'rgba(255,255,255,0)');
+  body.addColorStop(0, 'rgba(180,222,255,.06)'); body.addColorStop(0.72, 'rgba(180,222,255,.2)'); body.addColorStop(0.93, 'rgba(180,222,255,.9)'); body.addColorStop(1, 'rgba(180,222,255,0)');
   g.fillStyle = body; g.beginPath(); g.arc(64, 64, 62, 0, 7); g.fill();
   g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 56, 0, 7); g.stroke();
   g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.ellipse(44, 40, 13, 7, -0.7, 0, 7); g.fill();
@@ -70,7 +71,7 @@ const bubbleTex = bubbleTexture();
 function canvasTex(size, draw) { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
 const fishTex = canvasTex(128, (g) => {          // a cartoon fish, drawn here (no image files)
   g.translate(64, 64); g.rotate(-0.25);
-  const body = g.createLinearGradient(0, -26, 0, 26); body.addColorStop(0, '#9fe3ff'); body.addColorStop(0.5, '#4fb4ff'); body.addColorStop(1, '#2a6fd6');
+  const body = '#4fb4ff';
   g.lineJoin = 'round'; g.lineWidth = 5; g.strokeStyle = '#123a6b';
   g.beginPath(); g.moveTo(26, 0); g.lineTo(52, -22); g.lineTo(48, 0); g.lineTo(52, 22); g.closePath(); g.fillStyle = '#ff9f43'; g.fill(); g.stroke();
   g.beginPath(); g.ellipse(-6, 0, 38, 25, 0, 0, 7); g.fillStyle = body; g.fill(); g.stroke();
@@ -80,14 +81,14 @@ const fishTex = canvasTex(128, (g) => {          // a cartoon fish, drawn here (
   g.strokeStyle = '#123a6b'; g.lineWidth = 3; g.beginPath(); g.arc(-38, 6, 5, 0.2, 1.6); g.stroke();
 });
 const heartTex = canvasTex(128, (g) => {
-  const gr = g.createLinearGradient(0, 20, 0, 110); gr.addColorStop(0, '#ff8ad8'); gr.addColorStop(1, '#ff3d7f');
+  const gr = '#ff4f8f';
   g.beginPath(); g.moveTo(64, 108); g.bezierCurveTo(10, 72, 8, 26, 40, 22); g.bezierCurveTo(54, 20, 62, 30, 64, 40); g.bezierCurveTo(66, 30, 74, 20, 88, 22); g.bezierCurveTo(120, 26, 118, 72, 64, 108); g.closePath();
   g.fillStyle = gr; g.fill(); g.lineWidth = 5; g.strokeStyle = '#fff'; g.stroke();
   g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.ellipse(42, 42, 9, 5, -0.7, 0, 7); g.fill();
 });
 const zzzTex = canvasTex(128, (g) => { g.font = '900 96px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 10; g.strokeStyle = '#1b2240'; g.strokeText('z', 64, 66); g.fillStyle = '#cfe6ff'; g.fillText('z', 64, 66); });
 const auraTex = radialTexture([[0, 'rgba(255,236,170,.95)'], [0.35, 'rgba(255,196,70,.55)'], [0.7, 'rgba(255,140,40,.15)'], [1, 'rgba(0,0,0,0)']]);
-const sparkTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.2, 'rgba(255,255,255,.9)'], [0.5, 'rgba(160,220,255,.35)'], [1, 'rgba(0,0,0,0)']]);
+const sparkTex = radialTexture([[0, 'rgba(255,255,255,1)'], [0.2, 'rgba(255,255,255,.9)'], [0.5, 'rgba(255,255,255,.3)'], [1, 'rgba(255,255,255,0)']]);
 
 // ---------------------------------------------------------------- the charm mask: glow, portal, black
 // One quad per charm, cut by the silhouette picture. uGlow lights a border around the cut-out, uPortal
@@ -777,7 +778,7 @@ function finale() {
     const f = Math.sin(Math.min(k * 3, 1) * Math.PI); src.flash.scale.setScalar(0.06 * f + 0.0001); src.flash.material.opacity = f;
   }, () => {
     C.spin = null; burst(src, topOf(src), 40, 0.14); sound.land();
-    after(1.4, () => { finaleOn = false; taps = 0; showFizz(); if ($('hint').textContent === MSG) ui.hint(''); });
+    after(1.4, () => { finaleOn = false; taps = 0; showFizz(); if ($('hint').textContent === MSG) ui.hint(''); if (src === C) chipOn(); });
   });
 }
 
@@ -930,7 +931,7 @@ function fishOnGround(ch, f, off) {
 function superBobo() {
   const ch = B; ch.super = { t: 0 };
   sound.fanfare(); sound.sparkle(); sound.purr(2.2); buzz([40, 60, 40, 60, 140]);
-  toast('Super Bobo!'); ui.hint('Full, happy and glowing');
+  toast('Super Bobo!'); ui.hint('Full, happy and glowing'); after(4, chipOn);   // then: take him to Cola Run
   postEvent('reward', { what: 'super-bobo', charm: ch.kind });
   ch.spin = { k: 0, turns: 2, lift: 0.035 }; ch.aura.visible = true;
   burst(ch, topOf(ch), 60, 0.18);
@@ -1429,7 +1430,7 @@ async function start() {
 $('b-start').onclick = start;
 $('b-go').onclick = () => { $('how').hidden = true; syncRec(); };
 // the record button shows as soon as the camera runs, so the pop-out itself can be filmed
-function syncRec() { capture && capture.setVisible(!$('hud').hidden && $('how').hidden && $('shot').hidden); }
+function syncRec() { capture && capture.setVisible(!$('hud').hidden && $('how').hidden && $('shot').hidden && $('menu').hidden); }
 $('b-feed').onclick = () => { buzz(8); if (basketOn) closeBasket(); else openBasket(); }; $('b-wave').onclick = () => { buzz(8); wave(); }; $('b-wag').onclick = () => { buzz(8); wag(); }; $('b-walk').onclick = () => { buzz(8); walk(); }; $('b-replay').onclick = () => { buzz(8); replay(); };
 $('b-fizz').onclick = () => { buzz(8); tapBubbles(C); }; $('b-spin').onclick = () => { buzz(8); spinCan(); };
 $('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').setAttribute('aria-label', sound.on ? 'Sound on' : 'Sound off'); };
@@ -1497,38 +1498,69 @@ async function takePhoto() {
   el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
   $('basket-close').onclick = () => { buzz(8); closeBasket(); };
 }
-// ---------------------------------------------------------------- the shutter (bottom right, one thumb)
-// Tap: a photo. Press and hold: a video for as long as the finger stays down (up to 30 s), the way camera
-// apps do it. The recording itself is the Cola Run capture core; its own button is hidden.
-const HOLD_MS = 320;
-let holdT = 0, holding = false, recFrom = 0;
+// ---------------------------------------------------------------- the shutter (bottom centre, one thumb)
+// A photo / video pill above it picks the mode (only the chosen side is filled). Photo: tap for a photo.
+// Video: tap to start, tap again to stop (or it stops itself at 30 s). The recording itself is the Cola Run
+// capture core; its own button is hidden. The mode is remembered on this phone.
+let mode = 'photo', recFrom = 0;
+const sh = $('b-shutter'), modeEl = $('mode');
+function setMode(m, focus) {
+  if (m === 'video' && !capture) m = 'photo';
+  mode = m; modeEl.dataset.mode = m;
+  for (const b of modeEl.querySelectorAll('button')) { const on = b.dataset.mode === m; b.setAttribute('aria-checked', String(on)); b.tabIndex = on ? 0 : -1; if (on && focus) b.focus(); }
+  sh.classList.toggle('video', m === 'video');
+  sh.setAttribute('aria-label', m === 'video' ? 'Start recording' : 'Take a photo');
+  try { localStorage.setItem('kc-ar-mode', m); } catch (e) { /* not saved */ }
+}
+for (const b of modeEl.querySelectorAll('button')) b.onclick = () => { if (mode !== b.dataset.mode) { buzz(6); setMode(b.dataset.mode); } };
+modeEl.addEventListener('keydown', (e) => {   // arrow keys move between the two, as in any radio group
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+  e.preventDefault(); setMode(mode === 'photo' ? 'video' : 'photo', true);
+});
+if (!capture) modeEl.hidden = true;   // no recorder on this browser: photo only, no pill
+try { setMode(localStorage.getItem('kc-ar-mode') === 'video' ? 'video' : 'photo'); } catch (e) { setMode('photo'); }
 function recUi(on) {
-  $('b-shutter').classList.toggle('rec', on); $('rec-time').hidden = !on; $('shoot-cap').hidden = on;
-  $('b-shutter').setAttribute('aria-label', on ? 'Stop recording' : 'Take a photo. Press and hold to record a video.');
-  recFrom = on ? performance.now() : 0; if (!on) $('b-shutter').querySelector('.prog').style.strokeDashoffset = '207';
+  sh.classList.toggle('rec', on); $('rec-time').hidden = !on; modeEl.hidden = on;
+  sh.setAttribute('aria-label', on ? 'Stop recording' : mode === 'video' ? 'Start recording' : 'Take a photo');
+  recFrom = on ? performance.now() : 0; if (!on) sh.querySelector('.prog').style.strokeDashoffset = '207';
 }
 function recTick() {   // the red ring and the timer while recording
   if (!recFrom) return;
   const sec = (performance.now() - recFrom) / 1000, max = (capture && capture.settings.maxSeconds) || 30;
-  $('b-shutter').querySelector('.prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
+  sh.querySelector('.prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
   const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
 }
-const sh = $('b-shutter');
 sh.addEventListener('contextmenu', (e) => e.preventDefault());
-sh.addEventListener('pointerdown', (e) => {
-  if (sh.disabled || e.button > 0) return;
-  if (capture && capture.status === 'recording') { holding = false; return; }        // a tap while recording (from a keyboard start) stops it on release
-  holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-  clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) { capture.start(); } }, HOLD_MS);
-});
-const shutterUp = () => {
-  if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
-  if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
+sh.onclick = () => {
+  if (sh.disabled) return;
+  if (capture && capture.status === 'recording') { capture.stop(); return; }
+  if (mode === 'video' && capture) capture.start(); else takePhoto();
 };
-sh.addEventListener('pointerup', shutterUp);
-sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
-sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.repeat) return; if (capture && capture.status === 'recording') capture.stop(); else takePhoto(); } });
 sh.addEventListener('keydown', (e) => { if ((e.key === 'r' || e.key === 'R') && capture) capture.toggle(); });   // keyboard: R records
+// ---------------------------------------------------------------- menu: the way into Cola Run
+// The menu button (top right) opens a sheet with Cola Run first, then the Where is Bobo? globe and the keychain
+// page; they open in a new tab so the AR keeps running here. Cola Run is also earned in play: after Super Bobo
+// or an Eclipse overflow, a chip offers it for a few seconds.
+const menu = $('menu'), menuBtn = $('b-menu');
+let menuFrom = null, chipT = 0, chipShown = 0;
+function openMenu() {
+  menuFrom = document.activeElement; menu.hidden = false; menuBtn.setAttribute('aria-expanded', 'true');
+  menuBtn.querySelector('.dot').hidden = true; try { localStorage.setItem('kc-ar-menu-seen', '1'); } catch (e) { /* not saved */ }
+  chipOff(); syncRec(); setTimeout(() => $('m-cola').focus({ preventScroll: true }), 60);
+}
+function closeMenu() { if (menu.hidden) return; menu.hidden = true; menuBtn.setAttribute('aria-expanded', 'false'); syncRec(); if (menuFrom && menuFrom.focus) menuFrom.focus(); }
+menuBtn.onclick = () => { buzz(8); if (menu.hidden) openMenu(); else closeMenu(); };
+for (const el of menu.querySelectorAll('[data-close]')) el.onclick = closeMenu;
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(); });
+try { if (localStorage.getItem('kc-ar-menu-seen')) menuBtn.querySelector('.dot').hidden = true; } catch (e) { /* no storage: keep the dot */ }
+function chipOn() {
+  if (chipShown >= 2 || !menu.hidden || $('hud').hidden || recFrom) return;
+  chipShown++; ui.hint('');
+  const c = $('cr-chip'); c.hidden = false; requestAnimationFrame(() => requestAnimationFrame(() => c.classList.add('on')));
+  clearTimeout(chipT); chipT = setTimeout(chipOff, 9000);
+}
+function chipOff() { const c = $('cr-chip'); clearTimeout(chipT); c.classList.remove('on'); setTimeout(() => { if (!c.classList.contains('on')) c.hidden = true; }, 450); }
+$('cr-chip').onclick = () => { buzz(8); openMenu(); };
 $('shot-close').onclick = () => { $('shot').hidden = true; syncRec(); };
 $('err-retry').onclick = () => location.reload();
 

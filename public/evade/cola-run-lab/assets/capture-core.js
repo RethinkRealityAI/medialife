@@ -474,7 +474,7 @@ const CSS = `
 .crc-scrim{position:absolute;inset:0;background:rgba(4,6,10,.62)}
 .crc-sheet{position:relative;width:100%;max-width:400px;max-height:calc(100% - var(--safe-area-inset-top,0px) - 12px);
   overflow:auto;border-radius:22px;padding:16px;color:#f2f6f8;
-  background:linear-gradient(180deg,rgba(30,33,38,.98),rgba(18,20,24,.98));
+  background:rgba(22,25,29,.98);
   border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.5);
   transform:translateY(16px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .crc-open .crc-sheet{transform:none}

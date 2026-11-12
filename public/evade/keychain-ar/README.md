@@ -17,6 +17,8 @@ binary under a different licence and is not needed here.
 ## Files
 - `index.html` — splash, in-camera HUD, photo sheet, error sheet.
 - `main.js` — everything else (see the comment at the top for how the alignment works).
+- `splash3d.js` — where the splash keychain hangs; the keychain itself is the shared `/evade/keychain/dangle.js`
+  (also meant for the EVADE hero).
 - `image-targets/` — written by `scripts/build-keychain-ar/build_targets.py`:
   Five targets are active: `kc-can`, `kc-can-back`, `kc-bobo`, `kc-bobo-l`, `kc-old`. `*_luminance.jpg` is what the engine tracks.
   - `kc-bobo`: the cat Bobo charm, cut from the product shot Dapo sent (2026-11-11,
@@ -130,22 +132,38 @@ from outside: an ideal 1920x1440 stream (falls back to the engine's own request)
 Zoom slider where the browser exposes them (Android Chrome), and drawing at up to 3x pixel density.
 `?hd=0` turns all of that off. The Tune panel shows the stream the phone actually gave.
 
-## The experience (UI round 2026-11-11, layout round 2026-11-12)
+## The experience (UI round 2026-11-11, layout rounds 2026-11-12)
 - **Look (2026-11-12, Dapo)**: EVADE's Cola Run family, in its own cut: dark slate, EVADE gold (#f6c344) for
   primary buttons and accents, Exo 2 black italic for display type, and a gold "BOBO" tab on a black,
   gold-rimmed "OFF THE CHAIN" plate (title, toast). Bobo-visor blue stays for the hint pill.
-- **Splash** (`splash3d.js`): no backdrop art. The real keychain model (`/evade/keychain/evade-keychain.glb`)
-  drops in on a cable that hangs from behind the EVADE logo and dangles with a small physics model: a
+  **No gradients anywhere** (Dapo, 2026-11-12: the platform no longer uses them): flat slate splash
+  (`--slate` #0f1519), flat black plate and toast, fizz bar flat can blue (`--fizz` #3f9be6), fish bar flat
+  gold, flat basket, single-colour 3D glows (gold pad ring, white sparks), flat recorder sheet.
+- **Splash** (`splash3d.js` + `/evade/keychain/dangle.js`): no backdrop art. The real keychain model
+  (`/evade/keychain/evade-keychain.glb`) drops in on a cable that hangs from behind the EVADE logo: a
   near-rigid cable catches it, the set swings and twists about the clasp, and each charm swings on its
-  own jump ring, driven by how the ring accelerates. Drag it to swing it, tap it to jiggle it. Then the
+  own jump ring, driven by how the ring accelerates. As it lands it is flicked sideways as if someone just
+  touched it (about 37° of swing, settling over ~10 s), and after a few calm seconds it gets a small nudge
+  again, so it always reads as touchable. Drag or flick it to swing it, tap it to jiggle it. Then the
   title plate, an EVADE-gold Start, and Activated by MEDIALIFE at the bottom. The scene is disposed when
   the camera starts. Reduced motion: it just hangs.
 - **HUD**: EVADE top left with a small "BOBO OFF THE CHAIN" plate under it (meters below), sound top right.
-  Bottom row: **Replay animation** left, the **shutter** in the middle, Activated by MEDIALIFE right. The
+  A **menu** button sits above sound. Bottom row: **Replay animation** left, the **shutter** in the middle
+  (with the photo/video pill above it), Activated by MEDIALIFE right. The
   action dock and the fish basket sit above the shutter, the hint pill above them. Landscape phones: the
   shutter moves to the right edge, middle; the dock sits bottom centre.
-- **Shutter**: tap for a photo, press and hold for a video (320 ms hold; release stops; a red ring fills
-  towards the clip limit and a timer shows). Keyboard: Enter or Space for a photo, R to start or stop.
+- **Shutter + mode pill**: a liquid glass pill above the shutter picks Photo or Video (minimal camera and
+  video icons; only the chosen side is filled, by a sliding gold thumb). Photo: tap for a photo (white
+  shutter). Video: the shutter turns red; tap to start, tap again to stop (a red ring fills towards the
+  30 s limit and a timer replaces the pill while recording). The mode is remembered on the phone
+  (`kc-ar-mode`). No recorder in the browser: no pill, photo only. Keyboard: arrows switch the mode, R
+  starts or stops a video.
+- **Menu (the way into Cola Run)**: the menu button (gold dot until first opened) opens a bottom sheet:
+  a Cola Run card first (the Cola Run splash art and logo, "Play Cola Run" to evade.medialife.ai with
+  utm_source=medialife, utm_medium=off-the-chain), then the Where is Bobo? globe and the EVADE keychain
+  page. All open in a new tab so the AR keeps running. Cola Run is also earned in play: after Super Bobo,
+  or an Eclipse overflow, a "Bobo's charged up. Play Cola Run" chip shows for 9 s (twice per visit at most)
+  and opens the sheet.
 - **Hint pill**: Bobo-visor blue (#8cc8f8) with navy text. While looking for the keychain it sits just
   under the silhouettes; once characters are out it sits above the dock.
 - **Feed Bobo (fish basket)**: Feed opens a basket with a fish. Swipe the fish up toward Bobo: the
