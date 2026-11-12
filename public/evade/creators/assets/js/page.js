@@ -177,7 +177,8 @@ qrSvg()
   const items = $$("li", loop);
   const say = $("#seqSay");
   const LINES = ["Tapping the keychain on a phone", "Cola Run opens in the browser", "Playing Cola Run and unlocking a reward"];
-  const DUR = [3600, 4000, 7200];
+  // how long each step plays (ms); a page can slow it down with data-durs="a,b,c"
+  const DUR = (seq.dataset.durs || "3600,4000,7200").split(",").map(Number);
   let step = 0;
   let timer = 0;
   let auto = !REDUCED;
@@ -246,12 +247,20 @@ qrSvg()
     void seq.offsetWidth; // restart the step-1 animations from the top
     go(0);
   }
+  // ...and only once the section itself has arrived (its top in the upper part of the
+  // screen), so the phone peeking in under the previous section doesn't start it early.
+  const band = seq.closest(".band") || seq.parentElement;
+  let inView = false;
+  function check() {
+    if (visible) return;
+    const ready = inView && band.getBoundingClientRect().top <= innerHeight * 0.3;
+    if (ready && !enterT) enterT = setTimeout(() => { enterT = 0; start(); }, 300);
+    else if (!ready && enterT) { clearTimeout(enterT); enterT = 0; }
+  }
   new IntersectionObserver(
     ([e]) => {
-      const inView = e.isIntersecting && e.intersectionRatio >= 0.6;
-      clearTimeout(enterT);
-      if (inView && !visible) enterT = setTimeout(start, 300);
-      else if (!inView && visible) {
+      inView = e.isIntersecting && e.intersectionRatio >= 0.6;
+      if (!inView && visible) {
         visible = false;
         leftAt = Date.now();
         clearTimeout(timer);
@@ -259,9 +268,11 @@ qrSvg()
         loop.classList.remove("is-live");
         pv?.pause();
       }
+      check();
     },
     { threshold: [0, 0.6, 0.8], rootMargin: "-12% 0px -12% 0px" },
   ).observe(seq);
+  addEventListener("scroll", () => inView && !visible && check(), { passive: true });
 })();
 
 /* ---------------------------------------------------------------- 3D stage hooks */

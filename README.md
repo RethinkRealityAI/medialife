@@ -202,15 +202,24 @@ results (Sakamoto Days case, award, conventions), latest launches, contact.
   yours, FAQ, plus Get the keychain) are a floating rail of icons on the left (`.bnav`),
   over the page rather than in a column. The current section's icon is lit gold with its
   name in a pill beside it, hovering an icon shows its name, and gold fills the line up to
-  where you are. On phones it appears once the hero scrolls away, shows the name for a
-  moment after each change, and dims while the page is still.
+  where you are. On phones it folds into one button (the current section's icon) in the
+  bottom-left corner once the hero scrolls away; a tap opens the whole rail upwards.
 
-- "Bobo in action, around the world" frames the live globe (`/evade/where-is-bobo/?embed`,
+- "Bobo in action, around the world": the fan clips ("Straight from fans' phones") come
+  first, then the live globe. The globe is framed (`/evade/where-is-bobo/?embed`,
   which hides the globe's own header). Touch screens get a "Tap to explore" cover so a
   swipe still scrolls the page (`public/evade/launch.js`).
-- "Unlock Bobo's Hideout" shows real screenshots of the room and BOBO OS
-  (`public/evade/hideout/*.webp`, captured from `/labs/collector-hub/`), never a live embed.
-  It says "Coming soon" until the hub opens to owners.
+- "How it comes alive" starts at step 1 only once the section's top reaches the upper
+  third of the screen and the phone is mostly in view; step lengths come from the
+  phone's `data-durs` (shared logic in `creators/assets/js/page.js`).
+- "Unlock Bobo's Hideout" pitches the hub as the owners' collector hub (rewards,
+  exclusive invites, giveaways, owner discounts). The room panel is live 3D
+  (`public/evade/hideout-3d.js`, the homepage's `public/home/ar/hub-lite.glb`; turns by
+  itself, mouse drag to look around, the screenshot is its poster). BOBO OS and the
+  collection window are screenshots (`public/evade/hideout/*.webp`, from
+  `/labs/collector-hub/`); Alerts and the leaderboard are one HTML phone that flips
+  between them. The panels rise in one after another. It says "Coming soon" until the
+  hub opens to owners.
 
 ## Known gaps
 

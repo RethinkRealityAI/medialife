@@ -31,7 +31,7 @@
 <link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=5" />
+<link rel="stylesheet" href="/evade/launch.css?v=7" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -41,7 +41,8 @@
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script src="/evade/launch.js?v=3" defer></script>
+<script src="/evade/launch.js?v=5" defer></script>
+<script type="module" src="/evade/hideout-3d.js"></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -229,16 +230,7 @@
         <h2 id="footTitle">Bobo in action, <span class="gold">around the world.</span></h2>
         <p class="sec-sub">Fans film Bobo in AR wherever they are. Every clip lands on a live globe, pinned to the place it was shot.</p>
       </div>
-      <!-- the live globe itself (?embed hides its own header). Touch screens get a cover
-           first so a swipe scrolls the page instead of spinning the planet. -->
-      <div class="globe-embed rv rv-d1" id="globeEmbed">
-        <iframe src="/evade/where-is-bobo/?embed" title="Where is Bobo? A live 3D globe of Bobo sightings" loading="lazy" allow="fullscreen; geolocation"></iframe>
-        <button type="button" class="ge-cover" id="geCover" aria-label="Explore the globe">
-          <span class="ge-chip mono"><svg class="ic" aria-hidden="true"><use href="#i-scan"/></svg>Tap to explore</span>
-        </button>
-        <a class="ge-open btn btn--sm btn--ghost" href="/evade/where-is-bobo/" data-track="globe_open">Open the full globe <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      </div>
-      <p class="reel-kicker mono rv">Straight from fans' phones</p>
+      <p class="reel-kicker reel-kicker--top mono rv">Straight from fans' phones</p>
       <div class="reel rv rv-d1" id="reel" role="group" aria-label="Bobo in AR, recorded on a phone">
         <figure class="clip">
           <video data-src="/evade/creators/assets/video/bobo-golden-gate.mp4" poster="/evade/creators/assets/video/bobo-golden-gate.webp" muted loop playsinline preload="none" width="540" height="1130" aria-label="Bobo in AR at the Golden Gate Bridge"></video>
@@ -262,6 +254,16 @@
         </figure>
       </div>
       <p class="reel-note mono rv rv-d2">Recorded on a phone · No app</p>
+      <p class="reel-kicker mono rv">Every clip, pinned on the live globe</p>
+      <!-- the live globe itself (?embed hides its own header). Touch screens get a cover
+           first so a swipe scrolls the page instead of spinning the planet. -->
+      <div class="globe-embed rv rv-d1" id="globeEmbed">
+        <iframe src="/evade/where-is-bobo/?embed" title="Where is Bobo? A live 3D globe of Bobo sightings" loading="lazy" allow="fullscreen; geolocation"></iframe>
+        <button type="button" class="ge-cover" id="geCover" aria-label="Explore the globe">
+          <span class="ge-chip mono"><svg class="ic" aria-hidden="true"><use href="#i-scan"/></svg>Tap to explore</span>
+        </button>
+        <a class="ge-open btn btn--sm btn--ghost" href="/evade/where-is-bobo/" data-track="globe_open">Open the full globe <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
     </div>
   </section>
 
@@ -289,7 +291,7 @@
       </div>
 
       <div class="act-visual rv rv-d1">
-        <div class="seq" id="seq" data-step="0" aria-live="polite">
+        <div class="seq" id="seq" data-step="0" data-durs="5200,5600,9000" aria-live="polite">
           <!-- the keychain comes in to tap the phone -->
           <div class="seq-key" aria-hidden="true">
             <img class="sk-bobo" src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="944" height="1032" loading="lazy" />
@@ -338,33 +340,59 @@
       <div class="sec-head sec-head--center rv">
         <span class="mono">03 · Collector Hub</span>
         <h2 id="hideTitle">Unlock <span class="gold">Bobo's Hideout.</span></h2>
-        <p class="sec-sub">Your keychain's code opens a room of your own inside a giant Eclipse can. Bobo lives there, and his computer runs <b>BOBO OS</b>.</p>
+        <p class="sec-sub">Your keychain is the key to Bobo's Hideout: a collector's hub for rewards, exclusive invites, giveaways and owner-only discounts, all running on <b>BOBO OS</b>.</p>
         <span class="soon-pill mono"><span class="dot"></span>Coming soon for keychain owners</span>
       </div>
 
-      <div class="hideout-stage rv rv-d1" id="hideoutStage" aria-label="Screenshots of Bobo's Hideout and BOBO OS">
-        <figure class="hs-panel hs-room" style="--z:10">
+      <div class="hideout-stage rv rv-d1" id="hideoutStage">
+        <!-- the room itself, live in 3D (hideout-3d.js); the picture stays as its poster -->
+        <figure class="hs-panel hs-room" id="hsRoom" style="--z:10; --in:0">
           <img src="/evade/hideout/room.webp" alt="Bobo's Hideout: a two-floor room inside a giant Eclipse can, with Bobo on his bed and BOBO OS on the upstairs computer" width="1400" height="1450" loading="lazy" decoding="async" />
+          <span class="hs-hint mono" aria-hidden="true"><svg class="ic"><use href="#i-scan"/></svg>Drag to look around</span>
         </figure>
-        <figure class="hs-panel hs-os" style="--z:30">
+        <figure class="hs-panel hs-os" style="--z:30; --in:1">
           <img src="/evade/hideout/bobo-os.webp" alt="BOBO OS: a desktop with Alerts, Where's Bobo?, Leaderboard, Cola Run, Digital Collection, Shop and Me" width="1600" height="1012" loading="lazy" decoding="async" />
         </figure>
-        <figure class="hs-panel hs-win hs-col" style="--z:40">
+        <figure class="hs-panel hs-win hs-col" style="--z:40; --in:2">
           <img src="/evade/hideout/collection.webp" alt="The Digital Collection window: the Eclipse can collected, 1 of 5 towards The Golden Bobo" width="980" height="622" loading="lazy" decoding="async" />
         </figure>
-        <figure class="hs-panel hs-win hs-lead" style="--z:45">
-          <img src="/evade/hideout/leaderboard.webp" alt="The Where's Bobo? leaderboard: cities ranked by Bobo sightings" width="460" height="560" loading="lazy" decoding="async" />
-        </figure>
-        <figure class="hs-panel hs-win hs-alerts" style="--z:35">
-          <img src="/evade/hideout/alerts.webp" alt="The Alerts window: new sightings and drops" width="420" height="520" loading="lazy" decoding="async" />
+        <!-- BOBO OS on a phone: flips between Alerts and the leaderboard -->
+        <figure class="hs-phone" id="hsPhone" style="--z:50; --in:3" aria-label="BOBO OS on a phone: alerts and the Where's Bobo? leaderboard">
+          <div class="hp-screen">
+            <div class="hp-top"><span class="hp-island" aria-hidden="true"></span></div>
+            <div class="hp-bar"><span class="hp-os mono">BOBO <b>OS</b></span><span class="hp-live mono"><i></i>Online</span></div>
+            <div class="hp-tabs" role="tablist" aria-label="BOBO OS apps">
+              <button type="button" role="tab" id="hpTab0" aria-controls="hpView0" aria-selected="true">Alerts</button>
+              <button type="button" role="tab" id="hpTab1" aria-controls="hpView1" aria-selected="false" tabindex="-1">Leaderboard</button>
+            </div>
+            <div class="hp-views">
+              <div class="hp-view" id="hpView0" role="tabpanel" aria-labelledby="hpTab0">
+                <ul class="hp-alerts" role="list">
+                  <li><span class="hp-ic hp-ic--violet" aria-hidden="true"><svg class="ic"><use href="#i-bell"/></svg></span><span><b>Exclusive invite</b><small>Event · just now</small>Keychain owners get in first.</span></li>
+                  <li><span class="hp-ic hp-ic--pink" aria-hidden="true"><svg class="ic"><use href="#i-gift"/></svg></span><span><b>Giveaway is live</b><small>Reward · 2 h ago</small>Play Cola Run to enter.</span></li>
+                  <li><span class="hp-ic hp-ic--gold" aria-hidden="true"><svg class="ic"><use href="#i-tag"/></svg></span><span><b>Owner discount unlocked</b><small>Discount · today</small>Your code for the next drop.</span></li>
+                </ul>
+              </div>
+              <div class="hp-view" id="hpView1" role="tabpanel" aria-labelledby="hpTab1" hidden>
+                <p class="hp-h">Where's Bobo? leaderboard</p>
+                <p class="hp-sub">Every clip puts a place on the board. Most Bobo sightings wins.</p>
+                <div class="hp-stats"><span><b>2</b>places</span><span><b>1</b>country</span><span><b>67</b>km</span></div>
+                <ol class="hp-board">
+                  <li><i>1</i><span><b>San Francisco</b><small>United States</small></span><em>10</em></li>
+                  <li><i>2</i><span><b>San Jose</b><small>United States</small></span><em>10</em></li>
+                </ol>
+                <span class="hp-cta">Put your city on the board</span>
+              </div>
+            </div>
+          </div>
         </figure>
       </div>
 
       <ul class="hide-feats" role="list">
-        <li class="rv"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-home"/></svg></span><h3>A room of your own</h3><span>Two floors, a bed for Bobo and a shelf for everything you collect. Look around from any phone.</span></li>
-        <li class="rv rv-d1"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-os"/></svg></span><h3>BOBO OS</h3><span>Bobo's computer is your home screen: play Cola Run, check the globe and see what's new.</span></li>
-        <li class="rv rv-d2"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-trophy"/></svg></span><h3>Collect the set</h3><span>Every EVADE drop adds a piece. Complete it to unlock The Golden Bobo.</span></li>
-        <li class="rv rv-d3"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-bell"/></svg></span><h3>First to know</h3><span>New drops, events and rewards land in your room before anywhere else.</span></li>
+        <li class="rv"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-bell"/></svg></span><h3>Exclusive invites</h3><span>Early access to drops, events and meetups, sent to keychain owners first.</span></li>
+        <li class="rv rv-d1"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-gift"/></svg></span><h3>Giveaways and rewards</h3><span>Play Cola Run and spot Bobo to earn rewards and enter giveaways.</span></li>
+        <li class="rv rv-d2"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-tag"/></svg></span><h3>Owner discounts</h3><span>Codes for the MEDIALIFE shop and new EVADE drops, only for owners.</span></li>
+        <li class="rv rv-d3"><span class="hf-ic" aria-hidden="true"><svg viewBox="0 0 32 32"><use href="#i-trophy"/></svg></span><h3>Collect the set</h3><span>Every drop adds a piece. Complete it to unlock The Golden Bobo.</span></li>
       </ul>
     </div>
   </section>

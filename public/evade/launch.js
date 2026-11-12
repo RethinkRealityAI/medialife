@@ -69,6 +69,7 @@
     links.forEach(function (a, k) {
       a.classList.toggle("is-active", k === i);
       a.classList.toggle("is-past", k < i);
+      a.parentNode.classList.toggle("is-cur", k === i);
       if (k === i) a.setAttribute("aria-current", "location"); else a.removeAttribute("aria-current");
     });
     list.style.setProperty("--i", i);
@@ -105,4 +106,60 @@
   small.addEventListener("change", onScroll);
   nav.addEventListener("pointerdown", wake);
   setTimeout(update, 400);
+
+  // phones: the folded button opens the rail; a name goes there and folds it again
+  function open(v) { nav.classList.toggle("is-open", v); }
+  nav.addEventListener("click", function (e) {
+    if (!small.matches) return;
+    if (!nav.classList.contains("is-open")) { e.preventDefault(); open(true); return; }
+    if (e.target.closest("a")) setTimeout(function () { open(false); }, 200);
+  });
+  document.addEventListener("pointerdown", function (e) {
+    if (nav.classList.contains("is-open") && !nav.querySelector(".bnav-rail").contains(e.target)) open(false);
+  });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") open(false); });
+  small.addEventListener("change", function () { open(false); });
+})();
+
+// BOBO OS phone: flips between Alerts and the leaderboard while on screen.
+(function () {
+  var phone = document.getElementById("hsPhone");
+  if (!phone) return;
+  var tabs = [].slice.call(phone.querySelectorAll('[role="tab"]'));
+  var views = tabs.map(function (t) { return document.getElementById(t.getAttribute("aria-controls")); });
+  var bar = phone.querySelector(".hp-tabs");
+  var cur = 0, timer = 0, visible = false, hold = 0;
+  var still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function show(i, focus) {
+    cur = i;
+    bar.dataset.tab = String(i);
+    tabs.forEach(function (t, k) {
+      t.setAttribute("aria-selected", k === i ? "true" : "false");
+      t.tabIndex = k === i ? 0 : -1;
+      views[k].hidden = k !== i;
+    });
+    if (focus) tabs[i].focus();
+  }
+  function tick() {
+    clearTimeout(timer);
+    if (still || !visible) return;
+    timer = setTimeout(function () {
+      if (Date.now() >= hold && !document.hidden) show((cur + 1) % tabs.length);
+      tick();
+    }, 4200);
+  }
+  tabs.forEach(function (t, k) {
+    t.addEventListener("click", function () { hold = Date.now() + 9000; show(k); });
+    t.addEventListener("keydown", function (e) {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      hold = Date.now() + 9000;
+      show((cur + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length, true);
+    });
+  });
+  phone.addEventListener("pointerenter", function () { hold = Infinity; });
+  phone.addEventListener("pointerleave", function () { hold = Date.now() + 2500; });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (es) { visible = es[0].isIntersecting; tick(); }, { threshold: 0.4 }).observe(phone);
+  }
 })();
