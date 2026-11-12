@@ -637,9 +637,9 @@ const hopDir = (ch) => new THREE.Vector3(0, 0, 1).lerp(_v2.set(0, 1, 0).applyQua
 // ---------------------------------------------------------------- the pop-out
 function resetScene() {
   tweens.length = 0; taps = 0; finaleOn = false; hinted = false; showFizz(); for (const b of bubbles) { b.life = 0; b.sp.visible = false; }
-  fed = 0; fishBusy = false; napping = false; idleT = 0; idleNext = 7; showFish(); for (const f of floaters) { f.life = 0; f.sp.visible = false; }
+  fed = 0; fishBusy = false; closeBasket(); napping = false; idleT = 0; idleNext = 7; showFish(); for (const f of floaters) { f.life = 0; f.sp.visible = false; }
   for (const ch of ALL) {
-    ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false; ch.st = 'idle'; ch.steady = 0; ch.spin = null; ch.walk = null;
+    ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false; ch.landed = false; ch.st = 'idle'; ch.steady = 0; ch.spin = null; ch.walk = null; ch.go = null;
     ch.boost = 1; ch.super = null; ch.headRest = null; ch.lookW = 0; ch.shadow.visible = false; ch.aura.visible = false;
     ch.sil.visible = false; Object.assign(ch.fx, { glow: 0, portal: 0, black: 0, shake: 0 });
     ch.pad.visible = false; ch.flash.material.opacity = 0; ch.scan.material.opacity = 0; ch.sparks.userData.life.fill(0);
@@ -781,7 +781,7 @@ function finale() {
   });
 }
 
-const boboFree = () => live(B) && !B.walk;
+const boboFree = () => live(B) && !B.walk && !B.go;
 function wave() { if (!boboFree()) return; wake(); sound.mew(); play(B, 'PawRaise', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
 function wag() { if (!boboFree()) return; wake(); sound.bell(); play(B, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(B, 'Sit', { fade: 0.3 }) }); }
 function walk() {
@@ -844,13 +844,88 @@ function feed() {
   }, () => { f.life = 0; f.sp.visible = false; eat(); }, ch);
   if (ch.kind !== 'old') after(0.45, () => play(ch, 'PawRaise', { loop: false, fade: 0.15 }), ch);   // he reaches for it
 }
-function eat() {
-  const ch = B; fishBusy = false; fed++; showFish(); sound.chomp(); buzz([18, 40, 18]);
+function eat(walking = false) {
+  const ch = B; if (!walking) fishBusy = false; fed++; showFish(); sound.chomp(); buzz([18, 40, 18]);
   burst(ch, mouthOf(ch), 16, 0.06); hearts(ch, 2 + fed);
-  if (fed >= FISH_GOAL) { after(0.3, superBobo, ch); return; }
+  if (fed >= FISH_GOAL) { if (basketOn) closeBasket(); if (!walking) after(0.3, superBobo, ch); return; }
   ui.hint(fed === 1 ? 'Yum! Bobo wants more' : 'One more fish…');
   if (ch.kind !== 'old') sound.mew();
-  play(ch, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(ch, 'Sit', { fade: 0.3 }) });
+  if (!walking) play(ch, 'TailWag', { loop: false, fade: 0.2, onDone: () => play(ch, 'Sit', { fade: 0.3 }) });
+}
+// ---------------------------------------------------------------- fish basket: flick a fish to Bobo
+// Feed opens a basket with a fish in it. Flick the fish up toward Bobo: where you aim decides where it lands.
+// A fish that lands beside him, he walks over to and eats, then walks back to his spot; one that lands at
+// his feet he just leans down for; a hard, straight flick at him he catches in mid-air. Always within his
+// reach, so every flick gets eaten. Three fish make Super Bobo, as before.
+let basketOn = false, flickBusy = false;
+function openBasket() { if (!live(B) || B.super) return; wake(); basketOn = true; resetFishDrag(); ui.hint('Flick the fish up to Bobo'); }
+function closeBasket() { basketOn = false; const t = 'Flick the fish up to Bobo'; if ($('hint').textContent === t) ui.hint(''); }
+function resetFishDrag(delay = 0) {
+  const el = $('fish-drag'); el.style.transition = 'none'; el.style.transform = 'translate(0,0) scale(.4)'; el.style.opacity = '0';
+  setTimeout(() => { el.style.transition = 'transform .35s cubic-bezier(.2,.9,.25,1.3),opacity .2s'; el.style.transform = ''; el.style.opacity = '1'; }, 30 + delay);
+}
+// where a screen point is, in Bobo's charm frame, part of the way from the phone to him
+function screenToFrame(ch, x, y, part) {
+  const r = canvas.getBoundingClientRect(), ndc = new THREE.Vector3(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1, 0.5).unproject(camera);
+  const bw = ch.root.getWorldPosition(new THREE.Vector3()), d = camera.position.distanceTo(bw);
+  const p = camera.position.clone().add(ndc.sub(camera.position).normalize().multiplyScalar(d * part));
+  return ch.frame.worldToLocal(p);
+}
+function flick(vx, vy, x, y) {
+  const ch = B;
+  if (!live(ch) || fishBusy || flickBusy || !boboFree() || ch.super) { ui.hint(ch.super ? 'Bobo is full!' : 'Bobo is still busy, try again in a moment'); resetFishDrag(); return; }
+  wake(); fishBusy = flickBusy = true; sound.whoosh(); buzz(12);
+  if (/^(Flick|Swipe) the fish/.test($('hint').textContent)) ui.hint('');
+  ch.frame.updateMatrixWorld(true);
+  const sz = tune.size * landScale(ch), up = Math.max(400, -vy);
+  const side = THREE.MathUtils.clamp(vx / up, -1, 1), power = THREE.MathUtils.clamp((up - 500) / 1700, 0, 1);
+  const catchIt = power > 0.8 && Math.abs(side) < 0.22;
+  const Q = restQ(ch), base = spotOf(ch);
+  // landing spot in his own ground frame: sideways from the aim, a little in front of him
+  const dx = Math.abs(side) < 0.2 ? 0 : Math.sign(side) * (0.014 + 0.022 * Math.min((Math.abs(side) - 0.2) / 0.6, 1)) * sz;
+  const off = new THREE.Vector3(dx, 0, 0.011 * sz), land = base.clone().add(off.clone().applyQuaternion(Q));
+  const from = screenToFrame(ch, x, y, 0.32);
+  const to = catchIt ? mouthOf(ch) : land;
+  const f = floater(ch, fishTex, from, { size: 0.016, life: 99 }); f.free = false;
+  const ctrl = new THREE.Vector3(), p = new THREE.Vector3(), upv = upVec(ch), T = catchIt ? 0.55 : 0.75;
+  tween(T, (k) => {
+    const e = catchIt ? easeInOut(k) : k, tgt = catchIt ? mouthOf(ch) : to;
+    ctrl.copy(from).lerp(tgt, 0.5).addScaledVector(upv, (catchIt ? 0.035 : 0.06) * sz);
+    p.copy(from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(ctrl, 2 * (1 - e) * e).addScaledVector(tgt, e * e);
+    f.sp.position.copy(p); f.sp.material.rotation = -k * 9; f.sp.material.opacity = Math.min(k * 8, 1);
+    f.sp.scale.setScalar(0.016 * (1 - 0.5 * k));
+  }, () => {
+    resetFishDrag(150);
+    if (catchIt) { f.life = 0; f.sp.visible = false; flickBusy = false; burst(ch, mouthOf(ch), 10, 0.05); eat(); toast('Nice catch!'); return; }
+    sound.land(); f.sp.scale.setScalar(0.008);
+    fishOnGround(ch, f, off);
+  }, ch);
+  if (catchIt && ch.kind !== 'old') after(T * 0.45, () => play(ch, 'PawRaise', { loop: false, fade: 0.12 }), ch);
+}
+function fishOnGround(ch, f, off) {
+  // the fish flops on the ground while he comes for it
+  let flop = 0; const flopFn = (k) => { flop += 0.016; f.sp.material.rotation = Math.sin(flop * 18) * 0.5; };
+  const walkTo = Math.abs(off.x) > 0.001;
+  const reach = 0.007 * tune.size * landScale(ch);
+  const goal = new THREE.Vector3(off.x - Math.sign(off.x) * reach, 0, walkTo ? off.z * 0.4 : 0);
+  ch.go = { off: new THREE.Vector3(), yaw: 0 };
+  const yawTo = (y0, y1, dur, then) => tween(dur, (k) => { flopFn(); ch.go.yaw = THREE.MathUtils.lerp(y0, y1, easeInOut(k)); }, then, ch);
+  const move = (a, b, then) => { const dur = Math.max(0.45, a.distanceTo(b) / (0.04 * tune.size)); tween(dur, (k) => { flopFn(); ch.go.off.lerpVectors(a, b, easeInOut(k)); }, then, ch); };
+  const eatIt = (then) => {
+    play(ch, 'PawRaise', { loop: false, fade: 0.15 });
+    tween(0.45, flopFn, () => { f.life = 0; f.sp.visible = false; eat(true); after(0.6, then, ch); }, ch);
+  };
+  const home = () => { ch.go = null; flickBusy = false; fishBusy = false; play(ch, 'Sit', { fade: 0.35 }); if (fed >= FISH_GOAL) after(0.2, superBobo, ch); };
+  if (!walkTo) { eatIt(home); return; }
+  const out = Math.atan2(goal.x, goal.z);
+  play(ch, 'ClassicWalk', { fade: 0.25 });
+  yawTo(0, out, 0.25, () => move(new THREE.Vector3(), goal, () => {
+    yawTo(out, out * 0.35, 0.2, () => eatIt(() => {
+      play(ch, 'ClassicWalk', { fade: 0.25 });
+      const back = Math.atan2(-goal.x, -goal.z);
+      yawTo(out * 0.35, back, 0.3, () => move(goal.clone(), new THREE.Vector3(), () => yawTo(back, 0, 0.3, home)));
+    }));
+  }));
 }
 function superBobo() {
   const ch = B; ch.super = { t: 0 };
@@ -956,14 +1031,16 @@ let dockOn = false;
 function updateDock(out) {
   const bOut = live(B), cOut = live(C), busy = !boboFree() || fishBusy || !!B.super;
   const on = !!(out && present && (bOut || cOut));
-  if (on !== dockOn) { dockOn = on; $('dock').classList.toggle('on', on); $('hud').classList.toggle('looking', !on); }
+  if (on !== dockOn) { dockOn = on; $('hud').classList.toggle('looking', !on); }
+  if (basketOn && !B.landed) closeBasket();   // a tracking blip only hides it for a moment; it closes when Bobo is gone
+  $('dock').classList.toggle('on', on && !basketOn); $('basket').classList.toggle('on', on && basketOn);
   for (const id of ['b-feed', 'b-wave', 'b-wag', 'b-walk']) $(id).hidden = !bOut;
   for (const id of ['b-fizz', 'b-spin']) $(id).hidden = !cOut;
   document.querySelector('#dock .sep').hidden = !(bOut && cOut);
   $('b-feed').disabled = busy; $('b-wave').disabled = $('b-wag').disabled = $('b-walk').disabled = busy;
   $('b-fizz').disabled = finaleOn; $('b-spin').disabled = !!C.spin;
   const wagLabel = B === Bold ? 'Dance' : 'Wag tail', sp = $('b-wag').querySelector('span'); if (sp.textContent !== wagLabel) sp.textContent = wagLabel;
-  $('b-replay').disabled = $('b-photo').disabled = !(out && present);
+  $('b-replay').disabled = !(out && present);
 }
 
 // landed characters stand on their spot in their charm's ground frame
@@ -973,6 +1050,7 @@ function settle() {
     pd.traverse((o) => { if (o.material) o.material.visible = tune.tilt > 0.5; });   // the landing pad only makes sense when they stand on the ground
     if (!ch.landed) continue;
     ch.root.position.copy(pd.position); ch.root.quaternion.copy(Q); ch.root.scale.setScalar(scaleOf(ch)); pd.scale.setScalar(tune.size);
+    if (ch.go) { ch.root.position.add(_v.copy(ch.go.off).applyQuaternion(Q)); ch.root.rotateY(ch.go.yaw); }   // off to get a fish
     if (ch.walk) {
       const R = 0.02 * tune.size; ch.root.position.add(_v.set(Math.sin(ch.walk.a) * R, 0, (Math.cos(ch.walk.a) - 1) * R).applyQuaternion(Q)); ch.root.rotateY(ch.walk.turn);
     }
@@ -1002,7 +1080,7 @@ function showDiag() {
   el.textContent = `Tracking: ${on}. Found ${diag.found}, lost ${diag.lost}, rescans ${diag.resets}.`;
 }
 function tick(dt) {
-  watchdog(); showDiag();
+  watchdog(); showDiag(); recTick();
   updateFrames(dt);
   // each charm starts its own pop-out once it has been held steady for a moment; if both are in view they go together
   // a charm only counts as held steady while its middle is well inside the picture: the other charm on the
@@ -1350,7 +1428,7 @@ $('b-start').onclick = start;
 $('b-go').onclick = () => { $('how').hidden = true; syncRec(); };
 // the record button shows as soon as the camera runs, so the pop-out itself can be filmed
 function syncRec() { capture && capture.setVisible(!$('hud').hidden && $('how').hidden && $('shot').hidden); }
-$('b-feed').onclick = feed; $('b-wave').onclick = () => { buzz(8); wave(); }; $('b-wag').onclick = () => { buzz(8); wag(); }; $('b-walk').onclick = () => { buzz(8); walk(); }; $('b-replay').onclick = () => { buzz(8); replay(); };
+$('b-feed').onclick = () => { buzz(8); if (basketOn) closeBasket(); else openBasket(); }; $('b-wave').onclick = () => { buzz(8); wave(); }; $('b-wag').onclick = () => { buzz(8); wag(); }; $('b-walk').onclick = () => { buzz(8); walk(); }; $('b-replay').onclick = () => { buzz(8); replay(); };
 $('b-fizz').onclick = () => { buzz(8); tapBubbles(C); }; $('b-spin').onclick = () => { buzz(8); spinCan(); };
 $('b-sound').onclick = () => { sound.on = !sound.on; $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound').setAttribute('aria-label', sound.on ? 'Sound on' : 'Sound off'); };
 $('b-tune').hidden = !DEV;
@@ -1365,7 +1443,11 @@ try {
     canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'keychain-ar', audioContext: null,
     connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
     overlay: drawWatermark,
-    on: (name) => { if (name === 'recordStart') { buzz(25); diag.recs = (diag.recs || 0) + 1; } if (name === 'sent') diag.sent = (diag.sent || 0) + 1; },
+    on: (name) => {
+      if (name === 'recordStart') { buzz(25); diag.recs = (diag.recs || 0) + 1; recUi(true); }
+      if (name === 'recordStop' || name === 'error') recUi(false);
+      if (name === 'sent') diag.sent = (diag.sent || 0) + 1;
+    },
   });
   Object.assign(capture.settings, {
     corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#ffc23a', maxSeconds: 30,
@@ -1374,7 +1456,7 @@ try {
   });
   capture.apply(); capture.setVisible(false);
 } catch (e) { console.warn('recorder', e); capture = null; }
-$('b-photo').onclick = async () => {
+async function takePhoto() {
   try {
     sound.shutter(); buzz(20); const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
     const b64 = await XR8.CanvasScreenshot.takeScreenshot();
@@ -1390,7 +1472,61 @@ $('b-photo').onclick = async () => {
     $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo popped out of my EVADE keychain' }).catch(() => {});
     $('shot-save').hidden = false; $('shot').hidden = false; capture && capture.setVisible(false);
   } catch (e) { console.error(e); }
+}
+// ---------------------------------------------------------------- dragging and flicking the fish out of the basket
+{
+  const el = $('fish-drag'); let drag = null;
+  el.src = fishTex.image.toDataURL();
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ } drag = { x0: e.clientX, y0: e.clientY, pts: [[e.clientX, e.clientY, e.timeStamp]] }; el.style.transition = 'none'; });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return; drag.pts.push([e.clientX, e.clientY, e.timeStamp]); if (drag.pts.length > 12) drag.pts.shift();
+    el.style.transform = `translate(${e.clientX - drag.x0}px,${e.clientY - drag.y0}px) rotate(${(e.clientX - drag.x0) * 0.2}deg)`;
+  });
+  const end = (e) => {
+    if (!drag) return; const d = drag; drag = null;
+    // speed over the last bit of the swipe (measured up to the last move, so a slow frame before release
+    // doesn't zero it). A slow but clear upward drag still throws, gently: forgiving for small hands.
+    const last = d.pts[d.pts.length - 1], recent = d.pts.filter((q) => last[2] - q[2] < 110), a = recent[0] || d.pts[0], dt = Math.max((last[2] - a[2]) / 1000, 0.016);
+    let vx = (last[0] - a[0]) / dt, vy = (last[1] - a[1]) / dt; const up = d.y0 - e.clientY;
+    if (up > 60 && vy > -600) { vx = ((e.clientX - d.x0) / up) * 600; vy = -600; }
+    if ((vy < -350 && up > 24) || up > 60) { el.style.opacity = '0'; flick(vx, vy, e.clientX, e.clientY); }
+    else { el.style.transition = 'transform .35s cubic-bezier(.2,.9,.25,1.3)'; el.style.transform = ''; if (Math.abs(e.clientY - d.y0) < 8) ui.hint('Swipe the fish up toward Bobo'); }
+  };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  $('basket-close').onclick = () => { buzz(8); closeBasket(); };
+}
+// ---------------------------------------------------------------- the shutter (bottom right, one thumb)
+// Tap: a photo. Press and hold: a video for as long as the finger stays down (up to 30 s), the way camera
+// apps do it. The recording itself is the Cola Run capture core; its own button is hidden.
+const HOLD_MS = 320;
+let holdT = 0, holding = false, recFrom = 0;
+function recUi(on) {
+  $('b-shutter').classList.toggle('rec', on); $('rec-time').hidden = !on; $('shoot-cap').hidden = on;
+  $('b-shutter').setAttribute('aria-label', on ? 'Stop recording' : 'Take a photo. Press and hold to record a video.');
+  recFrom = on ? performance.now() : 0; if (!on) $('b-shutter').querySelector('.prog').style.strokeDashoffset = '207';
+}
+function recTick() {   // the red ring and the timer while recording
+  if (!recFrom) return;
+  const sec = (performance.now() - recFrom) / 1000, max = (capture && capture.settings.maxSeconds) || 30;
+  $('b-shutter').querySelector('.prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
+  const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
+}
+const sh = $('b-shutter');
+sh.addEventListener('contextmenu', (e) => e.preventDefault());
+sh.addEventListener('pointerdown', (e) => {
+  if (sh.disabled || e.button > 0) return;
+  if (capture && capture.status === 'recording') { holding = false; return; }        // a tap while recording (from a keyboard start) stops it on release
+  holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
+  clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) { capture.start(); } }, HOLD_MS);
+});
+const shutterUp = () => {
+  if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
+  if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
 };
+sh.addEventListener('pointerup', shutterUp);
+sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
+sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (e.repeat) return; if (capture && capture.status === 'recording') capture.stop(); else takePhoto(); } });
+sh.addEventListener('keydown', (e) => { if ((e.key === 'r' || e.key === 'R') && capture) capture.toggle(); });   // keyboard: R records
 $('shot-close').onclick = () => { $('shot').hidden = true; syncRec(); };
 $('err-retry').onclick = () => location.reload();
 
@@ -1431,4 +1567,4 @@ if (!mobile) {
 // the camera guide cycles through the three things to look for
 { const imgs = [...document.querySelectorAll('#guide img')]; let gi = 0; setInterval(() => { gi = (gi + 1) % imgs.length; imgs.forEach((im, i) => im.classList.toggle('show', i === gi)); }, 1700); }
 
-window.__ar = { diag, feed, pet, get fed() { return fed; }, get fishBusy() { return fishBusy; }, get dbg() { return { free: boboFree(), busy: fishBusy, sup: !!B.super, walk: !!B.walk, live: live(B), cur: B.current && B.current.getClip().name }; }, get capture() { return capture; }, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get sides() { return { sideOf, sideLead, sideLast }; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };
+window.__ar = { diag, feed, pet, flick, openBasket, get basketOn() { return basketOn; }, get fed() { return fed; }, get fishBusy() { return fishBusy; }, get dbg() { return { free: boboFree(), busy: fishBusy, sup: !!B.super, walk: !!B.walk, live: live(B), cur: B.current && B.current.getClip().name }; }, get capture() { return capture; }, get state() { return state; }, get old() { return B === Bold; }, conf, get pairOff() { return pairOff; }, TS, charm, pres, get drivers() { return { bobo: driver.bobo && driver.bobo.name, can: driver.can && driver.can.name }; }, replay, gravity, get B() { return B; }, get sides() { return { sideOf, sideLead, sideLast }; }, get C() { return C; }, get camera() { return camera; }, get present() { return present; }, tune, get taps() { return taps; }, tapBubbles, tick, get bubbles() { return bubbles.filter((b) => b.life > 0).length; } };

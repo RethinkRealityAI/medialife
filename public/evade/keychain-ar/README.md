@@ -128,19 +128,31 @@ from outside: an ideal 1920x1440 stream (falls back to the engine's own request)
 Zoom slider where the browser exposes them (Android Chrome), and drawing at up to 3x pixel density.
 `?hd=0` turns all of that off. The Tune panel shows the stream the phone actually gave.
 
-## The experience (UI round, 2026-11-11)
-- **HUD**: EVADE and Activated by MEDIALIFE logos top left (with the fish and fizz meters under them),
-  round icon buttons top right (photo, record, sound, replay), and an action dock at the bottom that
-  shows only the actions for the characters out right now (Feed, Wave, Wag tail or Dance, Walk for Bobo;
-  Bubbles and Spin for the can).
-- **Feed Bobo**: a fish flies from the phone into his mouth; three fish make **Super Bobo** (he grows,
-  spins, glows, cheers, then settles back). Tap Bobo to pet him (hearts and a purr).
+## The experience (UI round 2026-11-11, layout round 2026-11-12)
+- **Splash**: EVADE logo at the top, the title, Start, and Activated by MEDIALIFE at the bottom. No
+  instructions (the "what to point at" sheet after Start shows the charms). Desktop also shows a QR card.
+- **HUD**: EVADE top left (fish and fizz meters under it), sound top right (Tune under it with `?tune`).
+  The bottom row is in thumb reach: **Reset animation** bottom left, Activated by MEDIALIFE in the middle,
+  the **shutter** bottom right. Above it, an action dock that shows only the actions for the characters
+  out right now (Feed, Wave, Wag tail or Dance, Walk for Bobo; Bubbles and Spin for the can).
+- **Shutter**: tap for a photo, press and hold for a video (320 ms hold; release stops; a red ring fills
+  towards the clip limit and a timer shows). Keyboard: Enter or Space for a photo, R to start or stop.
+- **Hint pill**: Bobo-visor blue (#8cc8f8) with navy text. While looking for the keychain it sits just
+  under the silhouettes; once characters are out it sits above the dock.
+- **Feed Bobo (fish basket)**: Feed opens a basket with a fish. Swipe the fish up toward Bobo: the
+  sideways angle of the swipe picks where it lands in front of him. He turns, walks over, eats it and
+  walks back to his spot. One that lands at his feet he just leans down for; a hard, straight swipe he
+  catches in mid-air ("Nice catch!"). A slow but clear upward drag (over 60 px) still throws, gently, so
+  every throw gets eaten. Three fish make **Super Bobo** (he grows, spins, glows, cheers, then settles
+  back). The basket stays open through short tracking blips and closes when Bobo is gone. Tap Bobo to
+  pet him (hearts and a purr).
 - **Alive when idle**: random tail wags, chill and paw-raise moments, a nap with Zzz after 30 s of
   nothing, and his head turns to follow the phone. A soft shadow sits on the print under each character.
 - **Photo and video**: photos and clips carry the two logos. Video uses the Cola Run recorder
   (`mattercraft/cola-run/CaptureCore.ts`, built to `/evade/cola-run-lab/assets/capture-core.js`), so a
   clip can be saved, shared or sent to the Where is Bobo? globe (Media Library, "Needs review").
-  The record button shows as soon as the camera runs, so the pop-out itself can be filmed.
+  The shutter works as soon as the camera runs, so the pop-out itself can be filmed. The recorder's own
+  button is hidden (`.crc-anchor`); the shutter drives it.
 - **Where is Bobo? events**: `scan` on start, `sighting` when a character lands, `reward` on Super Bobo,
   and the capture event on a sent clip, all with source `keychain-ar`. `?nolog` sends nothing.
 - **Tune**: hidden; `?tune` (or `?dev`) brings the button and panel back.
