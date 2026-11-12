@@ -188,7 +188,7 @@
 }
 .hp-screen {
   position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; border-radius: 26px;
-  background: radial-gradient(120% 60% at 50% 0%, #1b2350, transparent 60%), linear-gradient(180deg, #0c1230, #080b1d);
+  background: #0c1230;
   color: #e9edff; font-size: 11px; line-height: 1.35;
 }
 .hp-top { height: 26px; display: grid; place-items: center; flex-shrink: 0; }
@@ -201,10 +201,10 @@
 .hp-tabs { position: relative; display: grid; grid-template-columns: 1fr 1fr; margin: 0 10px 10px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); }
 .hp-tabs::before {
   content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px); border-radius: 999px;
-  background: linear-gradient(180deg, rgba(25, 175, 254, 0.35), rgba(25, 175, 254, 0.18)); border: 1px solid rgba(25, 175, 254, 0.45);
+  background: rgba(25, 175, 254, 0.26); border: 1px solid rgba(25, 175, 254, 0.45);
   transition: translate 0.45s var(--ease);
 }
-.hp-tabs[data-tab="1"]::before { translate: 100% 0; background: linear-gradient(180deg, rgba(255, 47, 174, 0.35), rgba(255, 47, 174, 0.18)); border-color: rgba(255, 47, 174, 0.5); }
+.hp-tabs[data-tab="1"]::before { translate: 100% 0; background: rgba(255, 47, 174, 0.26); border-color: rgba(255, 47, 174, 0.5); }
 .hp-tabs button { position: relative; z-index: 1; padding: 6px 0; border: 0; background: none; color: #aab2e0; font: inherit; font-size: 10px; font-weight: 600; cursor: pointer; border-radius: 999px; }
 .hp-tabs button[aria-selected="true"] { color: #fff; }
 .hp-tabs button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
@@ -384,7 +384,7 @@
 .bnav-list::before { bottom: calc(var(--ic) / 2); background: rgba(255, 255, 255, 0.1); }
 .bnav-list::after {
   height: calc(var(--i, 0) * (var(--ic) + var(--gap)));
-  background: linear-gradient(var(--gold-2), var(--gold)); box-shadow: 0 0 10px rgba(246, 195, 68, 0.55);
+  background: var(--gold); box-shadow: 0 0 10px rgba(246, 195, 68, 0.55);
   transition: height 0.6s var(--ease);
 }
 .bnav-list a, .bnav-buy {
@@ -501,7 +501,7 @@
 @keyframes hkUp { from { opacity: 0; translate: 0 24px; scale: 0.85; } }
 @media (max-width: 1099px) {
   .hero-stage { margin-bottom: 64px; }
-  .hs-kc { right: -3%; width: 38%; top: 24%; }
+  .hs-kc { right: 4%; width: 36%; top: 24%; }
   .hk-nfc { font-size: 11px; padding: 7px 11px; right: 0; bottom: -11%; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -512,7 +512,7 @@
 .hs-col { display: flex; flex-direction: column; background: #0b1022; }
 .hw-bar {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 8px 12px;
-  background: linear-gradient(180deg, #1b2244, #121834); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #171d3b; border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 12px; font-weight: 600; color: #e9edff;
 }
 .hw-dots { display: flex; gap: 6px; }
@@ -529,10 +529,10 @@
 .hs-col.is-live .hw-poster { opacity: 0; }
 .hw-foot {
   display: flex; align-items: center; gap: 12px; margin: 0; padding: 9px 12px; font-size: 11px; color: #c7cdf5;
-  background: linear-gradient(180deg, #121834, #0e1430); border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #10162f; border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 .hw-prog { flex: 1; min-width: 40px; height: 5px; border-radius: 99px; background: rgba(255, 255, 255, 0.09); overflow: hidden; }
-.hw-prog i { display: block; width: 20%; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #3fe6e0, #ff5ac8); }
+.hw-prog i { display: block; width: 20%; height: 100%; border-radius: inherit; background: var(--gold); }
 @media (min-width: 900px) {
   .hs-col { left: 8%; bottom: -13%; width: 45%; }
   .hs-phone { left: 56%; }
@@ -545,3 +545,28 @@
   .hw-body { aspect-ratio: 1 / 0.95; }
   .hw-foot { font-size: 10px; }
 }
+
+/* ---------------------------------------------------------------- hero: the live, touchable keychain (hero-keychain.js)
+   The 3D keychain is drawn over the whole hero (so its cable can run up out of it) exactly where the still sits. */
+.hero { touch-action: pan-y; }
+.hk-3d { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.5s var(--ease); }
+.hk-3d.on { opacity: 1; }
+.hs-kc.is-3d { translate: none; animation: none; }
+.hs-kc.is-3d .hk-swing { opacity: 0; animation: none; }
+.hero.kc-hover { cursor: grab; }
+.hero.kc-grab { cursor: grabbing; }
+.hk-hint {
+  position: absolute; right: calc(100% - 14px); bottom: -9%; z-index: 4; display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg);
+  background: rgba(5, 8, 10, 0.72); border: 1px solid rgba(246, 195, 68, 0.45);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  opacity: 0; translate: 0 6px; transition: opacity 0.5s var(--ease), translate 0.5s var(--ease);
+}
+.hk-hint.on { opacity: 1; translate: 0 0; }
+.hk-hint i { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 0 rgba(246, 195, 68, 0.6); animation: hkPing 1.8s ease-out infinite; }
+@keyframes hkPing { 70% { box-shadow: 0 0 0 9px rgba(246, 195, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(246, 195, 68, 0); } }
+@media (max-width: 1099px) { .hk-hint { right: calc(100% + 4px); bottom: -11%; font-size: 9.5px; padding: 6px 10px; } }
+
+/* no gradients on UI anywhere: the gold buttons and pills are solid EVADE gold on this page */
+:root { --grad-gold: #f6c344; }
