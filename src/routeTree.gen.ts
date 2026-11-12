@@ -67,6 +67,7 @@ import { Route as AdminUgcIndexRouteImport } from './routes/admin.ugc.index'
 import { Route as AdminUgcImportRouteImport } from './routes/admin.ugc.import'
 import { Route as AdminUgcReviewRouteImport } from './routes/admin.ugc.review'
 import { Route as AdminUgcShippingRouteImport } from './routes/admin.ugc.shipping'
+import { Route as ApiArKcDiagRouteImport } from './routes/api.ar.kc-diag'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiBoboEventsRouteImport } from './routes/api.bobo.events'
@@ -451,6 +452,11 @@ const AdminUgcShippingRoute = AdminUgcShippingRouteImport.update({
   id: '/shipping',
   path: '/shipping',
   getParentRoute: () => AdminUgcRoute,
+} as any)
+const ApiArKcDiagRoute = ApiArKcDiagRouteImport.update({
+  id: '/api/ar/kc-diag',
+  path: '/api/ar/kc-diag',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiArLinkRoute = ApiArLinkRouteImport.update({
   id: '/api/ar/link',
@@ -995,6 +1001,7 @@ export interface FileRoutesByFullPath {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1140,6 +1147,7 @@ export interface FileRoutesByTo {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1294,6 +1302,7 @@ export interface FileRoutesById {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1449,6 +1458,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1594,6 +1604,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1747,6 +1758,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1881,6 +1893,7 @@ export interface RootRouteChildren {
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
   ShelfIndexRoute: typeof ShelfIndexRoute
+  ApiArKcDiagRoute: typeof ApiArKcDiagRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiBoboEventsRoute: typeof ApiBoboEventsRoute
@@ -2326,6 +2339,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/ugc/shipping'
       preLoaderRoute: typeof AdminUgcShippingRouteImport
       parentRoute: typeof AdminUgcRoute
+    }
+    '/api/ar/kc-diag': {
+      id: '/api/ar/kc-diag'
+      path: '/api/ar/kc-diag'
+      fullPath: '/api/ar/kc-diag'
+      preLoaderRoute: typeof ApiArKcDiagRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/ar/link': {
       id: '/api/ar/link'
@@ -3375,6 +3395,7 @@ const rootRouteChildren: RootRouteChildren = {
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
   ShelfIndexRoute: ShelfIndexRoute,
+  ApiArKcDiagRoute: ApiArKcDiagRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
   ApiBoboEventsRoute: ApiBoboEventsRoute,

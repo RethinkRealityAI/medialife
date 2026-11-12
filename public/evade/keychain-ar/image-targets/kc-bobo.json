@@ -1,0 +1,21 @@
+{
+  "imagePath": "/evade/keychain-ar/image-targets/kc-bobo_luminance.jpg",
+  "metadata": null,
+  "name": "kc-bobo",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 1682,
+    "height": 2244,
+    "isRotated": false,
+    "originalWidth": 1682,
+    "originalHeight": 2244
+  },
+  "resources": {
+    "luminanceImage": "kc-bobo_luminance.jpg",
+    "thumbnailImage": "kc-bobo_thumbnail.jpg"
+  },
+  "created": 1794436478336,
+  "updated": 1794436478336
+}

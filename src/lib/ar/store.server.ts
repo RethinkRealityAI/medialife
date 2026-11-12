@@ -16,7 +16,7 @@ import process from "node:process";
 //   dev     — localhost
 
 export type ArNamespace = "prod" | "preview" | "dev";
-export type ArKind = "sessions" | "links" | "projects" | "assets" | "chunks" | "content";
+export type ArKind = "sessions" | "links" | "projects" | "assets" | "chunks" | "content" | "kcdiag";
 
 export function arNamespace(host: string | null | undefined): ArNamespace {
   const h = (host ?? "").toLowerCase().split(":")[0];
@@ -75,9 +75,20 @@ function netlifyStore(mod: BlobsModule, name: string): ArStore | null {
   } catch {
     return null; // no Blobs context (local dev)
   }
+  // A warm function can hold a Blobs token that has expired for strong-consistency reads
+  // ("Failed to decode token: Token expired"); reads then retry on the eventual-consistency edge.
+  type Store = ReturnType<BlobsModule["getStore"]>;
+  async function retryEventual<R>(fn: (st: Store) => Promise<R>): Promise<R> {
+    try {
+      return await fn(store);
+    } catch (err) {
+      if (!/token/i.test(String(err))) throw err;
+      return fn(mod.getStore({ name }));
+    }
+  }
   return {
     async getJSON(key) {
-      return ((await store.get(key, { type: "json" })) as never) ?? null;
+      return ((await retryEventual((st) => st.get(key, { type: "json" }))) as never) ?? null;
     },
     async setJSON(key, value) {
       await store.setJSON(key, value);
@@ -90,7 +101,7 @@ function netlifyStore(mod: BlobsModule, name: string): ArStore | null {
       await store.set(key, buf as ArrayBuffer, metadata ? { metadata } : undefined);
     },
     async list(prefix = "") {
-      const { blobs } = await store.list(prefix ? { prefix } : undefined);
+      const { blobs } = await retryEventual((st) => st.list(prefix ? { prefix } : undefined));
       return blobs.map((b) => b.key);
     },
     async del(key) {
