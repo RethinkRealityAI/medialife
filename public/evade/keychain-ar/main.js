@@ -1454,7 +1454,7 @@ try {
   Object.assign(capture.settings, {
     corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#ffc23a', maxSeconds: 30,
     hintText: 'Film Bobo and send him to the globe', sendLabel: 'Send to Where is Bobo?',
-    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Off the Chain clip', filePrefix: 'bobo-off-the-chain', backLabel: 'Back to the camera',
+    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Bobo Off the Chain clip', filePrefix: 'bobo-off-the-chain', backLabel: 'Back to the camera',
   });
   capture.apply(); capture.setVisible(false);
 } catch (e) { console.warn('recorder', e); capture = null; }
@@ -1471,7 +1471,7 @@ async function takePhoto() {
     $('shot-img').src = url; $('shot-save').href = url; $('shot-save').download = file.name;
     const canShare = navigator.canShare && navigator.canShare({ files: [file] });
     $('shot-share').hidden = !canShare;
-    $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo went Off the Chain' }).catch(() => {});
+    $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo went Off the Chain #BoboOffTheChain' }).catch(() => {});
     $('shot-save').hidden = false; $('shot').hidden = false; capture && capture.setVisible(false);
   } catch (e) { console.error(e); }
 }

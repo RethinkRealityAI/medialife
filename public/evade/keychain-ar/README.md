@@ -1,4 +1,4 @@
-# EVADE keychain AR: Off the Chain
+# EVADE keychain AR: Bobo Off the Chain
 
 The experience was called "Bobo's Pop-Out" until 2026-11-12; Dapo renamed it. The URL stays `/evade/keychain-ar/`.
 
@@ -131,12 +131,19 @@ Zoom slider where the browser exposes them (Android Chrome), and drawing at up t
 `?hd=0` turns all of that off. The Tune panel shows the stream the phone actually gave.
 
 ## The experience (UI round 2026-11-11, layout round 2026-11-12)
-- **Splash**: EVADE logo at the top, the title, Start, and Activated by MEDIALIFE at the bottom. No
-  instructions (the "what to point at" sheet after Start shows the charms). Desktop also shows a QR card.
-- **HUD**: EVADE top left (fish and fizz meters under it), sound top right (Tune under it with `?tune`).
-  The bottom row is in thumb reach: **Reset animation** bottom left, Activated by MEDIALIFE in the middle,
-  the **shutter** bottom right. Above it, an action dock that shows only the actions for the characters
-  out right now (Feed, Wave, Wag tail or Dance, Walk for Bobo; Bubbles and Spin for the can).
+- **Look (2026-11-12, Dapo)**: EVADE's Cola Run family, in its own cut: dark slate, EVADE gold (#f6c344) for
+  primary buttons and accents, Exo 2 black italic for display type, and a gold "BOBO" tab on a black,
+  gold-rimmed "OFF THE CHAIN" plate (title, toast). Bobo-visor blue stays for the hint pill.
+- **Splash** (`splash3d.js`): no backdrop art. The real keychain model (`/evade/keychain/evade-keychain.glb`)
+  drops in on a cable that hangs from behind the EVADE logo and dangles with a small physics model: a
+  near-rigid cable catches it, the set swings and twists about the clasp, and each charm swings on its
+  own jump ring, driven by how the ring accelerates. Drag it to swing it, tap it to jiggle it. Then the
+  title plate, an EVADE-gold Start, and Activated by MEDIALIFE at the bottom. The scene is disposed when
+  the camera starts. Reduced motion: it just hangs.
+- **HUD**: EVADE top left with a small "BOBO OFF THE CHAIN" plate under it (meters below), sound top right.
+  Bottom row: **Replay animation** left, the **shutter** in the middle, Activated by MEDIALIFE right. The
+  action dock and the fish basket sit above the shutter, the hint pill above them. Landscape phones: the
+  shutter moves to the right edge, middle; the dock sits bottom centre.
 - **Shutter**: tap for a photo, press and hold for a video (320 ms hold; release stops; a red ring fills
   towards the clip limit and a timer shows). Keyboard: Enter or Space for a photo, R to start or stop.
 - **Hint pill**: Bobo-visor blue (#8cc8f8) with navy text. While looking for the keychain it sits just
