@@ -282,7 +282,7 @@ function CaptureTile({ c }: { c: Capture }) {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/75 to-transparent"
       />
-      <figcaption className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 mono text-[9px] uppercase tracking-[0.18em] text-white">
+      <figcaption className="absolute bottom-3 left-3 right-3 flex flex-col items-start gap-0.5 mono text-[9px] uppercase leading-tight tracking-[0.16em] text-white sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         <span>{c.tag}</span>
         <span className="text-white/60">{c.where}</span>
       </figcaption>
