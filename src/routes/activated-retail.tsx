@@ -11,6 +11,18 @@ import {
 } from "@/components/program/showcase";
 import { AWARD, PERFORMANCE, RETAIL_UNITS } from "@/lib/capabilities";
 import { HUB } from "@/lib/hub/model";
+import { Reveal } from "@/components/home/Reveal";
+import {
+  CARD,
+  CtaBand,
+  EYEBROW,
+  Eyebrow,
+  H1,
+  PillLink,
+  SECTION as COLUMN,
+  SectionHead,
+  TEXT,
+} from "@/components/site/kit";
 
 const TITLE = "Activated Retail Program | MEDIALIFE";
 const DESC =
@@ -50,9 +62,8 @@ export const Route = createFileRoute("/activated-retail")({
   component: ProgramPage,
 });
 
-const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
-const SECTION = "scroll-mt-20 border-b border-border";
-const WRAP = "w-full px-6 sm:px-8 lg:px-16";
+const SECTION = `${COLUMN} scroll-mt-20 py-20 lg:py-28`;
+const WRAP = COLUMN;
 
 function ProgramPage() {
   return (
@@ -61,12 +72,9 @@ function ProgramPage() {
       <HowItWorks />
       <Anatomy />
       <Merch />
-      <ForCreators />
       <Venues />
       <YourIP />
       <Benefits />
-      <Proof />
-      <Process />
       <Faq />
       <FinalCta />
     </ShowcaseProvider>
@@ -77,47 +85,45 @@ function ProgramPage() {
 function Hero() {
   const sc = useShowcase();
   return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div className="absolute inset-0 grid-bg opacity-50" />
-      <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-      <div className={`relative ${WRAP} pt-14 pb-10`}>
-        <div className="flex items-center gap-3 mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-          <span className="h-2 w-2 rounded-full bg-accent animate-pulse-glow" />
-          Activated Retail Program
-        </div>
-        <div className="mt-7 grid gap-8 lg:grid-cols-12 lg:items-end">
-          <h1 className="lg:col-span-8 text-[2.1rem] sm:text-5xl lg:text-[4.1rem] font-medium tracking-tight leading-[0.98] text-balance">
-            Get your merch activated, and we'll build <span className="ember-text">this.</span>
-          </h1>
-          <div className="lg:col-span-4">
-            <p className="text-muted-foreground text-lg">
+    <section className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[1100px] max-w-[160vw] -translate-x-1/2 rounded-full bg-primary opacity-30 blur-[120px]"
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-25" />
+      <div className={`relative ${WRAP} pt-14 pb-10 sm:pt-20`}>
+        <Reveal>
+          <Eyebrow hue="blue">Activated Retail Program</Eyebrow>
+        </Reveal>
+        <div className="mt-6 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <Reveal className="lg:col-span-8">
+            <h1 className={H1}>
+              Get your merch activated. <span className={TEXT.blue}>We build this.</span>
+            </h1>
+          </Reveal>
+          <Reveal delay={120} className="lg:col-span-4">
+            <p className="text-muted-foreground lg:text-lg">
               A branded retail fixture where every product opens a digital experience. Fans tap,
               scan and unlock. You see every scan.
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                to="/contact"
-                className="group btn-pill btn-ember px-6 py-3.5 mono text-xs uppercase tracking-[0.18em] font-medium"
-              >
-                Book a call
-                <span className="transition-transform group-hover:translate-x-1" aria-hidden>
-                  →
-                </span>
-              </Link>
+              <PillLink to="/contact">Book a call</PillLink>
               <button
                 type="button"
                 onClick={() => sc.tour()}
-                className="btn-pill btn-ember-outline px-6 py-3.5 mono text-xs uppercase tracking-[0.18em]"
+                className="btn-pill btn-glass px-7 py-4 text-sm font-medium"
               >
                 Take the tour
               </button>
             </div>
-          </div>
+          </Reveal>
         </div>
       </div>
 
       <div id="showcase" className={`relative ${WRAP} pb-6 scroll-mt-24`}>
-        <ShowcaseStage />
+        <div className="overflow-hidden rounded-[26px] ring-1 ring-white/10">
+          <ShowcaseStage />
+        </div>
         <ShowcaseBar />
       </div>
     </section>
@@ -127,8 +133,7 @@ function Hero() {
 function ShowcaseBar() {
   const sc = useShowcase();
   const { themes, theme, venue } = sc.state;
-  const btn =
-    "inline-flex items-center gap-2 border border-border px-4 py-2.5 text-sm hover:border-primary hover:text-primary transition";
+  const btn = "btn-pill btn-glass gap-2 px-4 py-2.5 text-sm font-medium";
   return (
     <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
       <p className="text-sm text-muted-foreground">
@@ -177,22 +182,31 @@ const STEPS = [
 ];
 function HowItWorks() {
   return (
-    <section id="how" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className={EYEBROW}>/ 01 — How it works</div>
-        <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance max-w-3xl">
-          From merch to <span className="ember-text">measured</span>, in four steps.
-        </h2>
-        <ol className="mt-12 grid gap-px bg-border border border-border sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((s, i) => (
-            <li key={s.t} className="bg-background p-7 lg:p-8">
-              <div className="mono text-[11px] text-primary">0{i + 1}</div>
-              <h3 className="mt-6 text-xl font-medium">{s.t}</h3>
-              <p className="mt-3 text-sm text-muted-foreground">{s.b}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
+    <section id="how" aria-labelledby="how-title" className={SECTION}>
+      <SectionHead
+        id="how-title"
+        hue="magenta"
+        eyebrow="How it works"
+        title={
+          <>
+            From merch to <span className={TEXT.magenta}>measured.</span>
+          </>
+        }
+        lead="Four steps, one team, from the first design to the live dashboard."
+      />
+      <ol className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {STEPS.map((s, i) => (
+          <Reveal as="li" key={s.t} delay={i * 80} className={`${CARD} p-7`}>
+            <span
+              className={`grid h-9 w-9 place-items-center rounded-full border border-white/15 mono text-[11px] ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
+            >
+              {i + 1}
+            </span>
+            <h3 className="mt-6 text-lg font-semibold text-white">{s.t}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{s.b}</p>
+          </Reveal>
+        ))}
+      </ol>
     </section>
   );
 }
@@ -240,20 +254,20 @@ function Anatomy() {
   const sc = useShowcase();
   const [on, setOn] = useState<string | null>(null);
   return (
-    <section id="fixture" className={SECTION}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12`}>
-        <div className="lg:col-span-4">
-          <div className={EYEBROW}>/ 02 — Inside the fixture</div>
-          <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            Every surface <span className="ember-text">earns its place.</span>
+    <section id="fixture" aria-labelledby="fixture-title" className={SECTION}>
+      <div className="grid gap-12 lg:grid-cols-12">
+        <Reveal className="lg:col-span-4">
+          <Eyebrow hue="blue">Inside the fixture</Eyebrow>
+          <h2 id="fixture-title" className="mt-5 display text-[clamp(30px,3.4vw,54px)]">
+            Every surface <span className={TEXT.blue}>earns its place.</span>
           </h2>
-          <p className="mt-6 text-muted-foreground">
+          <p className="mt-6 text-muted-foreground lg:text-lg">
             Pick a part and the camera flies to it in the showcase above.
           </p>
-        </div>
-        <ul className="lg:col-span-8 grid gap-px bg-border border border-border sm:grid-cols-2">
+        </Reveal>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:col-span-8">
           {PARTS.map((p) => (
-            <li key={p.t} className="bg-background">
+            <li key={p.t}>
               <button
                 type="button"
                 onClick={() => {
@@ -261,10 +275,10 @@ function Anatomy() {
                   sc.goto(p.go.mode ? p.go : { mode: "explore", ...p.go });
                 }}
                 aria-pressed={on === p.t}
-                className="group w-full text-left p-7 transition hover:bg-secondary aria-pressed:bg-secondary"
+                className={`${CARD} group h-full w-full p-6 text-left transition-colors hover:border-white/25 aria-pressed:border-primary`}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="text-lg font-medium group-hover:text-primary transition-colors">
+                  <h3 className="text-lg font-semibold text-white transition-colors group-hover:text-primary">
                     {p.t}
                   </h3>
                   <span className="mono text-[10px] uppercase tracking-[0.18em] text-primary shrink-0 pt-1">
@@ -272,9 +286,7 @@ function Anatomy() {
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{p.b}</p>
-                <div className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {p.spec}
-                </div>
+                <div className={`mt-4 ${EYEBROW} text-[9px]`}>{p.spec}</div>
               </button>
             </li>
           ))}
@@ -330,30 +342,34 @@ const MERCH = [
 function Merch() {
   const sc = useShowcase();
   return (
-    <section id="merch" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-2xl">
-            <div className={EYEBROW}>/ 03 — The activated merch</div>
-            <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-              Real drops on the shelf. <span className="ember-text">Every one comes alive.</span>
-            </h2>
-            <p className="mt-5 text-muted-foreground">
-              Three are in our shop today. The rest are formats we produce for your IP.
-            </p>
-          </div>
-          <a
-            href={SHOP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1"
-          >
-            Shop activated merch ↗<span className="sr-only"> (opens in a new tab)</span>
-          </a>
-        </div>
-        <ul className="mt-12 grid gap-px bg-border border border-border sm:grid-cols-2 lg:grid-cols-3">
+    <section id="merch" aria-labelledby="merch-title" className={SECTION}>
+      <div>
+        <SectionHead
+          id="merch-title"
+          hue="magenta"
+          eyebrow="The activated merch"
+          title={
+            <>
+              Real drops. <span className={TEXT.magenta}>Every one comes alive.</span>
+            </>
+          }
+          lead={
+            <>
+              Three are in our shop today. The rest are formats we produce for your IP.{" "}
+              <a
+                href={SHOP_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white underline underline-offset-4 hover:text-primary"
+              >
+                Shop activated merch ↗<span className="sr-only"> (opens in a new tab)</span>
+              </a>
+            </>
+          }
+        />
+        <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {MERCH.map((m) => (
-            <li key={m.name} className="bg-background flex flex-col">
+            <li key={m.name} className={`${CARD} flex flex-col overflow-hidden`}>
               <div className="relative aspect-[4/3] overflow-hidden bg-surface">
                 <img
                   src={m.img}
@@ -362,13 +378,13 @@ function Merch() {
                   className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
                 />
                 <span
-                  className={`absolute top-3 left-3 mono text-[9px] uppercase tracking-[0.2em] px-2 py-1 backdrop-blur ${m.shop ? "bg-accent/90 text-accent-foreground" : "bg-background/80"}`}
+                  className={`absolute left-3 top-3 rounded-full px-2.5 py-1 mono text-[9px] uppercase tracking-[0.2em] backdrop-blur ${m.shop ? "bg-accent text-white" : "bg-black/60 text-white"}`}
                 >
                   {m.shop ? "In the shop" : "Format"}
                 </span>
               </div>
               <div className="p-6 flex flex-1 flex-col">
-                <h3 className="text-lg font-medium">{m.name}</h3>
+                <h3 className="text-lg font-semibold text-white">{m.name}</h3>
                 <p className="mt-2 text-sm text-muted-foreground flex-1">{m.how}</p>
                 <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
                   <button
@@ -399,43 +415,6 @@ function Merch() {
   );
 }
 
-/* ─────────────────────────── FOR CREATORS ─────────────────────────── */
-function ForCreators() {
-  return (
-    <section id="creators" className={`${SECTION} bg-surface`}>
-      <div className={`${WRAP} py-12 grid gap-6 lg:grid-cols-12 lg:items-center`}>
-        <div className="lg:col-span-8">
-          <div className={EYEBROW}>/ For creators</div>
-          <h2 className="mt-3 text-2xl md:text-3xl font-medium tracking-tight text-balance">
-            Are you a creator? <span className="ember-text">There's a hub for that.</span>
-          </h2>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
-            We design, produce and fulfil activated merch with you. The {HUB.name} shows every
-            stage, every order and your earnings, live.
-          </p>
-        </div>
-        <div className="lg:col-span-4 flex flex-wrap gap-3 lg:justify-end">
-          <Link
-            to="/creator-hub"
-            className="group btn-pill btn-ember px-6 py-3.5 mono text-xs uppercase tracking-[0.18em] font-medium"
-          >
-            Explore the {HUB.name}
-            <span className="transition-transform group-hover:translate-x-1" aria-hidden>
-              →
-            </span>
-          </Link>
-          <a
-            href={`${HUB.base}/join`}
-            className="btn-pill btn-ember-outline px-6 py-3.5 mono text-xs uppercase tracking-[0.18em]"
-          >
-            Apply
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ─────────────────────────── 04 · VENUES ─────────────────────────── */
 const P = "/medialife/activated-retail/page";
 const VENUES = [
@@ -461,26 +440,27 @@ const VENUES = [
 function Venues() {
   const sc = useShowcase();
   return (
-    <section id="venues" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className="max-w-3xl">
-          <div className={EYEBROW}>/ 04 — Anywhere fans gather</div>
-          <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            One fixture. <span className="ember-text">Any floor.</span>
-          </h2>
-          <p className="mt-5 text-muted-foreground">
-            The same modular unit stands in a store, anchors a pop-up or becomes a convention booth.
-            Pick one to see it there.
-          </p>
-        </div>
-        <ul className="mt-12 grid gap-6 md:grid-cols-3">
+    <section id="venues" aria-labelledby="venues-title" className={SECTION}>
+      <div>
+        <SectionHead
+          id="venues-title"
+          hue="blue"
+          eyebrow="Anywhere fans gather"
+          title={
+            <>
+              One fixture. <span className={TEXT.blue}>Any floor.</span>
+            </>
+          }
+          lead="The same modular unit stands in a store, anchors a pop-up or becomes a convention booth. Pick one to see it there."
+        />
+        <ul className="mt-12 grid gap-4 md:grid-cols-3">
           {VENUES.map((v) => (
             <li key={v.id}>
               <button
                 type="button"
                 onClick={() => sc.goto({ venue: v.id, view: "aisle" })}
                 aria-pressed={sc.state.venue === v.id}
-                className="group block w-full text-left border border-border bg-background hover:border-primary transition aria-pressed:border-primary"
+                className={`${CARD} group block w-full overflow-hidden text-left transition-colors hover:border-white/25 aria-pressed:border-primary`}
               >
                 <div className="aspect-video overflow-hidden">
                   <img
@@ -492,7 +472,7 @@ function Venues() {
                 </div>
                 <div className="p-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">{v.t}</h3>
+                    <h3 className="text-lg font-semibold text-white">{v.t}</h3>
                     <span className="mono text-[10px] uppercase tracking-[0.18em] text-primary">
                       See it →
                     </span>
@@ -503,7 +483,7 @@ function Venues() {
             </li>
           ))}
         </ul>
-        <p className="mt-6 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <p className={`mt-6 ${EYEBROW}`}>
           Also: tour merch tables · flagship stores · festivals and venues
         </p>
       </div>
@@ -560,29 +540,26 @@ function YourIP() {
   }, [result]);
 
   return (
-    <section id="your-ip" className={`${SECTION} bg-surface`}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12 lg:items-center`}>
-        <div className="lg:col-span-5">
-          <div className={EYEBROW}>/ 05 — Put your IP on it</div>
-          <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            See your IP on the fixture, <span className="ember-text">right now.</span>
+    <section id="your-ip" aria-labelledby="ip-title" className={SECTION}>
+      <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
+        <Reveal className="lg:col-span-5">
+          <Eyebrow hue="magenta">Put your IP on it</Eyebrow>
+          <h2 id="ip-title" className="mt-5 display text-[clamp(30px,3.4vw,54px)]">
+            Your IP on the fixture, <span className={TEXT.magenta}>right now.</span>
           </h2>
-          <p className="mt-6 text-muted-foreground">
+          <p className="mt-6 text-muted-foreground lg:text-lg">
             Drop in key art. The towers, screens and lights re-skin around it in seconds. Your image
             stays on this device: nothing is uploaded.
           </p>
-        </div>
-        <form
-          onSubmit={submit}
-          className="lg:col-span-7 border border-border bg-background p-6 sm:p-8"
-        >
+        </Reveal>
+        <form onSubmit={submit} className={`${CARD} p-6 sm:p-8 lg:col-span-7`}>
           <label
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
               take(e.dataTransfer.files?.[0]);
             }}
-            className="relative grid min-h-[200px] cursor-pointer place-items-center overflow-hidden border border-dashed border-border hover:border-primary transition"
+            className="relative grid min-h-[200px] cursor-pointer place-items-center overflow-hidden rounded-[18px] border border-dashed border-white/20 transition hover:border-primary"
           >
             <input
               ref={input}
@@ -615,13 +592,13 @@ function YourIP() {
                 maxLength={28}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your IP's name"
-                className="w-full border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary"
+                className="w-full rounded-full border border-white/15 bg-black/40 px-5 py-3 text-sm outline-none focus:border-primary"
               />
             </label>
             <button
               type="submit"
               disabled={busy}
-              className="btn-pill btn-ember justify-center px-6 py-3 mono text-xs uppercase tracking-[0.18em] font-medium disabled:opacity-60"
+              className="btn-pill btn-solid justify-center px-6 py-3 text-sm font-medium disabled:opacity-60"
             >
               {busy ? "Re-skinning…" : file ? "Re-skin the fixture" : "Choose key art"}
             </button>
@@ -670,71 +647,61 @@ const BENEFITS = [
   },
 ];
 function Benefits() {
-  return (
-    <section id="benefits" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className={EYEBROW}>/ 06 — What IP holders get</div>
-        <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance max-w-3xl">
-          More than a display. <span className="ember-text">A channel you own.</span>
-        </h2>
-        <ul className="mt-12 grid gap-px bg-border border border-border sm:grid-cols-2 lg:grid-cols-5">
-          {BENEFITS.map((b) => (
-            <li key={b.t} className="bg-background p-7">
-              <h3 className="text-lg font-medium">{b.t}</h3>
-              <p className="mt-3 text-sm text-muted-foreground">{b.b}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────── 07 · PROOF ─────────────────────────── */
-const PROOF_KEYS = [
-  "unique interactions per activated retail unit",
-  "interaction rate",
-  "repeat interactions per activated unit",
-  "attendees engaging at Anime NYC",
-];
-function Proof() {
   const stats = PROOF_KEYS.map((k) => PERFORMANCE.find((p) => p.l === k)).filter(
     (s): s is (typeof PERFORMANCE)[number] => !!s,
   );
   return (
-    <section id="proof" className={`${SECTION} bg-surface`}>
-      <div className={`${WRAP} py-20`}>
-        <div className={EYEBROW}>/ 07 — Proven on the floor</div>
-        <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance max-w-3xl">
-          Activated formats already <span className="ember-text">move fans.</span>
-        </h2>
-        <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border">
-          {stats.map((s) => (
-            <div key={s.l} className="bg-background p-6">
+    <section id="benefits" aria-labelledby="benefits-title" className={SECTION}>
+      <SectionHead
+        id="benefits-title"
+        hue="blue"
+        eyebrow="What IP holders get"
+        title={
+          <>
+            More than a display. <span className={TEXT.blue}>A channel you own.</span>
+          </>
+        }
+      />
+      <ul className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {BENEFITS.map((b, i) => (
+          <Reveal as="li" key={b.t} delay={i * 60} className={`${CARD} p-6`}>
+            <h3 className="font-semibold text-white">{b.t}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">{b.b}</p>
+          </Reveal>
+        ))}
+      </ul>
+
+      {/* proof from the field */}
+      <div id="proof" className="mt-16 scroll-mt-24">
+        <h3 className={EYEBROW}>Proven on the floor</h3>
+        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {stats.map((s, i) => (
+            <div key={s.l} className={`${CARD} p-5 sm:p-6`}>
               <CountUp
                 value={s.v}
-                className="block text-2xl md:text-3xl font-medium tracking-tight ember-text"
+                className={`display block text-[clamp(26px,2.6vw,40px)] ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
               />
-              <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
+              <p className="mt-2 text-sm text-white/85">{s.l}</p>
             </div>
           ))}
         </div>
-        <p className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Ranges across selected deployments · not a single campaign
+        <p className={`mt-3 ${EYEBROW} text-[9px]`}>
+          Ranges across selected deployments, not a single campaign
         </p>
-        <div className="mt-10 grid gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-8 border border-border bg-background p-6">
-            <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="mt-6 grid gap-4 lg:grid-cols-12">
+          <div className={`${CARD} p-6 lg:col-span-8`}>
+            <p className={`${EYEBROW} text-[9px]`}>
               Unique interactions per activated retail unit · Netflix / Sakamoto Days
-            </div>
-            <ul className="mt-4 grid gap-px bg-border border border-border sm:grid-cols-3">
-              {RETAIL_UNITS.map((u) => (
-                <li key={u.name} className="bg-background p-4">
-                  <CountUp value={u.v} className="block text-2xl font-medium ember-text" />
-                  <div className="mt-1 text-sm">{u.name}</div>
-                  <div className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {u.city}
-                  </div>
+            </p>
+            <ul className="mt-5 grid gap-4 sm:grid-cols-3">
+              {RETAIL_UNITS.map((u, i) => (
+                <li key={u.name}>
+                  <CountUp
+                    value={u.v}
+                    className={`display block text-3xl ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
+                  />
+                  <div className="mt-1 text-sm text-white">{u.name}</div>
+                  <div className={`${EYEBROW} text-[9px]`}>{u.city}</div>
                 </li>
               ))}
             </ul>
@@ -743,65 +710,36 @@ function Proof() {
             href={AWARD.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="lg:col-span-4 border border-border bg-background p-6 hover:border-primary transition flex flex-col justify-between"
+            className={`${CARD} flex flex-col justify-between p-6 transition-colors hover:border-white/25 lg:col-span-4`}
           >
-            <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <span className={`${EYEBROW} text-[9px]`}>
               {AWARD.year} · {AWARD.category}
-            </div>
-            <div className="mt-6 text-2xl font-medium">
-              <span className="ember-text">{AWARD.tier}</span> {AWARD.name}
-            </div>
-            <div className="mt-4 mono text-[10px] uppercase tracking-[0.18em] text-primary">
+            </span>
+            <span className="mt-6 display text-2xl">
+              <span className={TEXT.magenta}>{AWARD.tier}</span> {AWARD.name}
+            </span>
+            <span className="mt-4 text-sm text-muted-foreground">
               See the winners ↗<span className="sr-only"> (opens in a new tab)</span>
-            </div>
+            </span>
           </a>
         </div>
-        <Link
-          to="/case-studies"
-          className="mt-8 inline-block mono text-[10px] uppercase tracking-[0.2em] text-primary border-b border-primary pb-1"
-        >
-          Read the case studies →
-        </Link>
+        <div className="mt-8">
+          <PillLink to="/case-studies" variant="glass">
+            Read the case studies
+          </PillLink>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ─────────────────────────── 08 · PROCESS ─────────────────────────── */
-const PROCESS = [
-  { t: "Discover", b: "Your IP, fans, venues and goals." },
-  { t: "Design", b: "Merch, activations and fixture graphics." },
-  { t: "Produce", b: "Manufacture, program every tag, build the unit." },
-  { t: "Deploy", b: "Install in stores, pop-ups or on the show floor." },
-  { t: "Measure + refresh", b: "Live dashboard, then the next drop." },
+/* proof figures shown under the benefits */
+const PROOF_KEYS = [
+  "unique interactions per activated retail unit",
+  "interaction rate",
+  "repeat interactions per activated unit",
+  "attendees engaging at Anime NYC",
 ];
-function Process() {
-  return (
-    <section id="process" className={SECTION}>
-      <div className={`${WRAP} py-20`}>
-        <div className={EYEBROW}>/ 08 — How we work</div>
-        <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight text-balance max-w-3xl">
-          Brief to floor, <span className="ember-text">one team.</span>
-        </h2>
-        <ol className="mt-12 grid gap-8 md:grid-cols-5">
-          {PROCESS.map((p, i) => (
-            <li key={p.t} className="relative border-t border-border pt-6">
-              <span
-                className="absolute -top-[5px] left-0 h-2.5 w-2.5 rounded-full"
-                style={{ background: "var(--gradient-ember)" }}
-                aria-hidden
-              />
-              <div className="mono text-[11px] text-muted-foreground">0{i + 1}</div>
-              <h3 className="mt-3 text-lg font-medium">{p.t}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{p.b}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
 /* ─────────────────────────── 09 · FAQ ─────────────────────────── */
 const FAQ: { q: string; a: ReactNode }[] = [
   {
@@ -843,22 +781,22 @@ const FAQ: { q: string; a: ReactNode }[] = [
 ];
 function Faq() {
   return (
-    <section id="faq" className={SECTION}>
-      <div className={`${WRAP} py-20 grid gap-12 lg:grid-cols-12`}>
+    <section id="faq" aria-labelledby="faq-title" className={SECTION}>
+      <div className="grid gap-12 lg:grid-cols-12">
         <div className="lg:col-span-4">
-          <div className={EYEBROW}>/ 09 — Questions</div>
-          <h2 className="mt-4 text-3xl md:text-5xl font-medium tracking-tight">
-            Good to <span className="ember-text">know.</span>
+          <Eyebrow hue="magenta">Questions</Eyebrow>
+          <h2 id="faq-title" className="mt-5 display text-[clamp(30px,3.4vw,54px)]">
+            Good to <span className={TEXT.magenta}>know.</span>
           </h2>
         </div>
-        <div className="lg:col-span-8 border-t border-border">
+        <div className="grid gap-3 lg:col-span-8">
           {FAQ.map((f) => (
-            <details key={f.q} className="group border-b border-border">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-lg font-medium [&::-webkit-details-marker]:hidden">
+            <details key={f.q} className={`${CARD} group px-6`}>
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-base font-semibold text-white sm:text-lg [&::-webkit-details-marker]:hidden">
                 {f.q}
                 <span
                   aria-hidden
-                  className="mono text-primary transition-transform group-open:rotate-45"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 text-primary transition-transform group-open:rotate-45"
                 >
                   +
                 </span>
@@ -875,37 +813,24 @@ function Faq() {
 /* ─────────────────────────── CTA ─────────────────────────── */
 function FinalCta() {
   return (
-    <section className="relative overflow-hidden border-b border-border">
-      <div className="absolute inset-0 grid-bg opacity-40" />
-      <div className={`relative ${WRAP} py-24 text-center`}>
-        <h2 className="mx-auto max-w-4xl text-4xl md:text-6xl font-medium tracking-tight text-balance">
-          Get your merch activated, and we'll build <span className="ember-text">this.</span>
-        </h2>
-        <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
-          Tell us about your IP, your fans and where you want to show up. We'll scope the merch, the
-          fixture and the experience with you.
-        </p>
-        <div className="mt-10 flex flex-wrap justify-center gap-3">
-          <Link
-            to="/contact"
-            className="group btn-pill btn-ember px-7 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-          >
-            Book a call
-            <span className="transition-transform group-hover:translate-x-1" aria-hidden>
-              →
-            </span>
-          </Link>
-          <a
-            href={SHOP_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn-pill btn-ember-outline px-7 py-4 mono text-xs uppercase tracking-[0.2em]"
-          >
-            Shop activated merch <span aria-hidden>↗</span>
-            <span className="sr-only">(opens the MEDIALIFE shop in a new tab)</span>
-          </a>
-        </div>
-      </div>
-    </section>
+    <CtaBand
+      id="retail-cta"
+      hue="blue"
+      eyebrow="Book a call"
+      title={
+        <>
+          Get your merch activated. <span className="text-primary">We build the rest.</span>
+        </>
+      }
+      lead="Tell us about your IP, your fans and where you want to show up. We'll scope the merch, the fixture and the experience with you."
+      actions={
+        <>
+          <PillLink to="/contact">Book a call</PillLink>
+          <PillLink href={SHOP_URL} external variant="glass">
+            Shop activated merch
+          </PillLink>
+        </>
+      }
+    />
   );
 }
