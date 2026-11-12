@@ -1,13 +1,26 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { Reveal } from "@/components/home/Reveal";
 import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
 import { LoopClip } from "@/components/site/LoopClip";
+import {
+  CARD,
+  CtaBand,
+  EYEBROW,
+  Eyebrow,
+  H2,
+  PageHero,
+  PillLink,
+  SECTION,
+  TEXT,
+  type Hue,
+} from "@/components/site/kit";
 import { CASE_STUDIES, type CaseStudy, type Creator } from "@/lib/case-studies";
 
 export const Route = createFileRoute("/case-studies")({
   head: () => ({
     meta: [
-      { title: "Case Studies — Immersive Format Production | MEDIALIFE" },
+      { title: "Case Studies | MEDIALIFE" },
       {
         name: "description",
         content:
@@ -26,361 +39,308 @@ export const Route = createFileRoute("/case-studies")({
   component: CaseStudies,
 });
 
-const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
-const RULE = "mono text-[10px] uppercase tracking-[0.2em] text-primary";
-
 function CaseStudies() {
   return (
     <>
-      {/* HERO */}
-      <section className="relative overflow-hidden border-b border-border">
-        <div className="absolute inset-0 grid-bg opacity-50" />
-        <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-        <div className="relative w-full px-8 lg:px-16 pt-20 pb-16">
-          <div className={EYEBROW}>/ Case studies</div>
-          <h1 className="mt-6 text-5xl md:text-6xl font-medium tracking-tight text-balance leading-[0.95]">
-            Fandom touchpoints, <span className="ember-text">activated</span>.
-          </h1>
-          <p className="mt-8 max-w-2xl text-lg text-muted-foreground">
-            Selected programs across activated print, retail, live events and convention
-            distribution — with the measurement that came back from the field.
-          </p>
-
-          {/* Jump list — two studies today, but the page is built to grow. */}
-          <nav aria-label="Case studies" className="mt-10 flex flex-wrap gap-3">
+      <PageHero
+        hue="blue"
+        eyebrow="Case studies"
+        title={
+          <>
+            Fandom touchpoints, <span className={TEXT.blue}>activated.</span>
+          </>
+        }
+        lead="Selected programs across print, retail, live events and conventions, with the numbers that came back from the field."
+        actions={
+          <nav aria-label="Case studies" className="flex flex-wrap gap-3">
             {CASE_STUDIES.map((c, i) => (
               <a
                 key={c.slug}
                 href={`#${c.slug}`}
-                className="group inline-flex items-baseline gap-3 border border-border bg-background/60 backdrop-blur px-5 py-3 hover:border-primary transition-colors"
+                className="btn-pill btn-glass gap-3 px-5 py-3 text-sm font-medium"
               >
-                <span className="mono text-[10px] tracking-[0.25em] text-muted-foreground group-hover:text-primary transition-colors">
-                  /{String(i + 1).padStart(2, "0")}
+                <span className="mono text-[10px] tracking-[0.2em] text-muted-foreground">
+                  {String(i + 1).padStart(2, "0")}
                 </span>
-                <span className="text-sm">{c.client}</span>
+                {c.client}
               </a>
             ))}
           </nav>
-        </div>
-      </section>
+        }
+      />
 
       {CASE_STUDIES.map((c, i) => (
         <CaseStudyBlock key={c.slug} c={c} index={i} />
       ))}
 
-      {/* CTA */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-        <div className="relative w-full px-8 lg:px-16 py-20 text-center">
-          <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            <span className="ember-text">Activate your IP</span>.
-          </h2>
-          <div className="mt-8 flex justify-center">
-            <Link
-              to="/contact"
-              className="group btn-pill btn-ember px-8 py-4 mono text-xs uppercase tracking-[0.2em] font-medium"
-            >
-              Activate your IP
-              <span className="transition-transform group-hover:translate-x-1">→</span>
-            </Link>
-          </div>
-        </div>
-      </section>
+      <CtaBand
+        actions={
+          <>
+            <PillLink to="/contact">Activate your IP</PillLink>
+            <PillLink to="/live" variant="glass">
+              See what's live
+            </PillLink>
+          </>
+        }
+      />
     </>
   );
 }
 
 function CaseStudyBlock({ c, index }: { c: CaseStudy; index: number }) {
-  const num = String(index + 1).padStart(2, "0");
+  const hue: Hue = index % 2 === 0 ? "blue" : "magenta";
+  const other: Hue = hue === "blue" ? "magenta" : "blue";
+  const metrics = c.metricGroups.flatMap((g) => g.items.map((m) => ({ ...m, group: g.label })));
+  const maxRetail = Math.max(...(c.retail ?? []).map((r) => Number(r.v)), 1);
+
   return (
     <section
       id={c.slug}
-      className={`scroll-mt-20 border-b border-border ${index % 2 === 1 ? "bg-surface" : ""}`}
+      aria-labelledby={`${c.slug}-title`}
+      className={`${SECTION} scroll-mt-20 border-t border-white/10 py-20 lg:py-28`}
     >
-      <div className="w-full px-8 lg:px-16 py-20">
-        {/* ── Header ─────────────────────────────────────────────── */}
-        <div className="grid lg:grid-cols-12 gap-10 items-start">
-          <div className="lg:col-span-7">
-            <div className={EYEBROW}>
-              / {num} — {c.client}
-            </div>
-            <h2 className="mt-5 text-3xl md:text-5xl font-medium tracking-tight text-balance leading-[1.02]">
-              {c.title}
-            </h2>
-            <div className="mt-4 mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {c.kicker}
-            </div>
-
-            {c.intro.map((p) => (
-              <p key={p} className="mt-6 max-w-2xl text-muted-foreground">
-                {p}
-              </p>
-            ))}
-
-            <ul className="mt-8 flex flex-wrap gap-2 max-w-2xl">
-              {c.formats.map((f) => (
-                <li
-                  key={f}
-                  className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground border border-border px-3 py-2"
-                >
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            {c.award && (
-              <a
-                href={c.award.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-flex items-baseline gap-3 border border-border bg-background px-5 py-4 hover:border-primary transition-colors"
+      {/* Header */}
+      <div className="grid items-center gap-12 lg:grid-cols-12">
+        <Reveal className="lg:col-span-7">
+          <Eyebrow hue={hue}>
+            {String(index + 1).padStart(2, "0")} · {c.client}
+          </Eyebrow>
+          <h2 id={`${c.slug}-title`} className={`mt-5 ${H2}`}>
+            {c.title}
+          </h2>
+          {c.intro.map((p) => (
+            <p key={p} className="mt-6 max-w-2xl text-muted-foreground lg:text-lg">
+              {p}
+            </p>
+          ))}
+          <ul className="mt-7 flex max-w-2xl flex-wrap gap-2" aria-label="Formats">
+            {c.formats.map((f) => (
+              <li
+                key={f}
+                className="lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.16em] text-white/85"
               >
-                <span className="text-xl font-medium ember-text">
+                {f}
+              </li>
+            ))}
+          </ul>
+          {c.award && (
+            <a
+              href={c.award.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${CARD} mt-8 inline-flex items-center gap-4 px-5 py-4 transition-colors hover:border-white/30`}
+            >
+              <span
+                aria-hidden
+                className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-lg"
+              >
+                ★
+              </span>
+              <span>
+                <span className="block text-sm font-semibold text-white">
                   {c.award.tier} {c.award.name}
                 </span>
-                <span className="mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                  {c.award.category} ↗
+                <span className={`${EYEBROW} text-[9px]`}>
+                  {c.award.category} ↗<span className="sr-only"> (opens in a new tab)</span>
                 </span>
-              </a>
-            )}
-          </div>
-
-          {c.hero && (
-            <div className="lg:col-span-5">
-              {c.hero.large ? (
-                <PosterViewer src={c.hero.src} large={c.hero.large} alt={c.hero.alt} />
-              ) : (
-                <img
-                  src={c.hero.src}
-                  alt={c.hero.alt}
-                  loading="lazy"
-                  className="w-full border border-border"
-                />
-              )}
-            </div>
+              </span>
+            </a>
           )}
-        </div>
+        </Reveal>
 
-        {/* ── Challenge / Solution / Execution ───────────────────── */}
-        {c.approach && (
-          <div className="mt-16 grid md:grid-cols-3 gap-px bg-border border border-border">
-            {c.approach.map((a, i) => (
-              <div key={a.label} className="bg-background p-7 relative overflow-hidden group">
+        {c.hero && (
+          <Reveal delay={120} className="lg:col-span-5">
+            {c.hero.large ? (
+              <PosterViewer src={c.hero.src} large={c.hero.large} alt={c.hero.alt} />
+            ) : (
+              <img src={c.hero.src} alt={c.hero.alt} loading="lazy" className="w-full" />
+            )}
+          </Reveal>
+        )}
+      </div>
+
+      {/* Challenge → Solution → Execution */}
+      {c.approach && (
+        <ol className="mt-16 grid gap-4 md:grid-cols-3">
+          {c.approach.map((a, i) => (
+            <Reveal as="li" key={a.label} delay={i * 90} className={`${CARD} relative p-7`}>
+              <div className="flex items-center gap-3">
                 <span
-                  aria-hidden
-                  className="absolute -top-3 -right-1 text-7xl font-medium leading-none opacity-[0.06] select-none"
+                  className={`grid h-8 w-8 place-items-center rounded-full border border-white/15 mono text-[11px] ${TEXT[i === 1 ? other : hue]}`}
                 >
                   {i + 1}
                 </span>
-                <div className={RULE}>{a.label}</div>
-                <p className="mt-4 text-sm text-foreground/85 leading-relaxed relative">{a.body}</p>
-                <div
-                  aria-hidden
-                  className="absolute inset-x-0 bottom-0 h-px opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ background: "var(--gradient-ember)" }}
-                />
+                <h3 className="mono text-[11px] uppercase tracking-[0.2em] text-white">
+                  {a.label}
+                </h3>
               </div>
-            ))}
-          </div>
-        )}
+              <p className="mt-4 text-sm leading-relaxed text-white/80">{a.body}</p>
+            </Reveal>
+          ))}
+        </ol>
+      )}
 
-        {/* ── Metrics + retail ───────────────────────────────────── */}
-        <div className={`mt-16 grid gap-10 ${c.retail ? "md:grid-cols-2" : ""}`}>
-          <div className="space-y-8">
-            {c.metricGroups.map((grp) => (
-              <div key={grp.label}>
-                <div className={RULE}>{grp.label}</div>
-                {/* A one-item band must not leave a dead cell beside it. */}
-                <div
-                  className={`mt-4 grid gap-px bg-border border border-border ${
-                    grp.items.length === 1
-                      ? "grid-cols-1"
-                      : grp.items.length === 2
-                        ? "sm:grid-cols-2"
-                        : "sm:grid-cols-3"
-                  }`}
-                >
-                  {grp.items.map((m) => (
-                    <div
-                      key={m.l}
-                      className="group relative bg-background p-5 overflow-hidden transition-colors hover:bg-secondary/40"
-                    >
-                      <div
-                        aria-hidden
-                        className="absolute inset-x-0 top-0 h-px opacity-40 group-hover:opacity-100 transition-opacity"
-                        style={{ background: "var(--gradient-ember)" }}
-                      />
-                      <CountUp
-                        value={m.v}
-                        className="block text-3xl md:text-4xl font-medium tracking-tight ember-text"
-                      />
-                      <div className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                        {m.l}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {c.retail && (
-            <div>
-              <div className={RULE}>Retail unit engagement · sample data set</div>
-              <ul className="mt-4 space-y-px bg-border border border-border">
-                {c.retail.map((r, i) => (
-                  <li key={r.name} className="bg-background px-5 py-4">
-                    <div className="mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
-                      {String(i + 1).padStart(2, "0")}
-                    </div>
-                    <div className="mt-2 flex items-baseline justify-between gap-4">
-                      {/* City drops to its own line on narrow screens — inline
-                          it wraps mid-row and pushes the figure out of line. */}
-                      <span className="text-sm min-w-0">
-                        {r.name}
-                        <span className="block sm:inline mono text-[10px] uppercase tracking-widest text-muted-foreground sm:ml-2">
-                          {r.city}
-                        </span>
-                      </span>
-                      <span className="shrink-0">
-                        <CountUp
-                          value={r.v}
-                          className="text-lg font-medium ember-text tabular-nums"
-                        />
-                        <span className="mono text-[9px] uppercase tracking-widest text-muted-foreground ml-2">
-                          unique
-                        </span>
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Results */}
+      <div className={`mt-16 grid gap-4 ${c.retail ? "lg:grid-cols-12" : ""}`}>
+        <div
+          className={`grid gap-4 sm:grid-cols-2 ${c.retail ? "lg:col-span-7" : "lg:grid-cols-5"}`}
+        >
+          {metrics.map((m, i) => (
+            <Reveal
+              key={m.l}
+              delay={(i % 4) * 70}
+              className={`${CARD} p-5 sm:p-6 ${
+                c.retail && metrics.length % 2 === 1 && i === metrics.length - 1
+                  ? "sm:col-span-2"
+                  : ""
+              }`}
+            >
+              <CountUp
+                value={m.v}
+                className={`display block text-[clamp(30px,3vw,46px)] ${TEXT[i % 2 === 0 ? hue : other]}`}
+              />
+              <p className="mt-2 text-sm text-white/85">{m.l}</p>
+              <p className={`mt-1 ${EYEBROW} text-[9px]`}>{m.group}</p>
+            </Reveal>
+          ))}
         </div>
 
-        {/* ── Creators ───────────────────────────────────────────── */}
-        {c.creators && (
-          <div className="mt-16">
-            <div className={EYEBROW}>{c.creators.label}</div>
-            <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {c.creators.items.map((cr) => (
-                <CreatorCard key={cr.name} c={cr} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Bento: motion + stills ─────────────────────────────── */}
-        {(c.motion?.length || c.gallery.length > 0) && (
-          <div className="mt-16">
-            <div className={EYEBROW}>In the field</div>
-            <div
-              className="mt-6 grid grid-cols-2 lg:grid-cols-6 gap-3"
-              style={{ gridAutoFlow: "dense" }}
-            >
-              {/* The two motion pieces anchor the grid: two columns wide, three
-                  rows tall, which lands at roughly the 1:2 portrait ratio the
-                  source clips were shot at — so they fill their slot instead of
-                  being cropped to death. */}
-              {c.motion?.map((m, i) => (
-                <LoopClip
-                  key={m.src}
-                  clip={m}
-                  fill
-                  className={
-                    i === 0
-                      ? "col-span-1 row-span-2 lg:col-span-2 lg:row-span-3 lg:col-start-1 lg:row-start-1"
-                      : "col-span-1 row-span-2 lg:col-span-2 lg:row-span-3 lg:col-start-5 lg:row-start-1"
-                  }
-                />
-              ))}
-
-              {c.gallery.map((s, i) => {
-                // The tail of the set goes wide, which squares off the bottom
-                // band instead of leaving three orphaned cells.
-                const wide = c.motion?.length ? i >= c.gallery.length - 3 : false;
-                return (
-                  <figure
-                    key={s.src}
-                    className={`relative overflow-hidden border border-border bg-secondary group ${
-                      wide ? "lg:col-span-2" : ""
-                    }`}
-                  >
-                    <img
-                      src={s.src}
-                      alt={s.alt}
-                      loading="lazy"
-                      className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${
-                        wide ? "aspect-[3/4] lg:aspect-[3/2]" : "aspect-[3/4]"
-                      }`}
+        {c.retail && (
+          <Reveal delay={120} className={`${CARD} p-6 sm:p-8 lg:col-span-5`}>
+            <h3 className="mono text-[11px] uppercase tracking-[0.2em] text-white">
+              Unique engagements per store
+            </h3>
+            <p className={`mt-1 ${EYEBROW} text-[9px]`}>Sample data set</p>
+            <ul className="mt-6 grid gap-5">
+              {c.retail.map((r, i) => (
+                <li key={r.name}>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <span className="min-w-0 text-sm text-white">
+                      {r.name}
+                      <span className={`block ${EYEBROW} text-[9px]`}>{r.city}</span>
+                    </span>
+                    <CountUp
+                      value={r.v}
+                      className={`display shrink-0 text-2xl tabular-nums ${TEXT[i % 2 === 0 ? hue : other]}`}
                     />
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10" aria-hidden>
                     <div
-                      aria-hidden
-                      className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                      style={{
-                        background: "linear-gradient(to top, oklch(0 0 0 / 0.55), transparent 55%)",
-                      }}
+                      className={`h-full rounded-full ${i % 2 === 0 ? "bg-primary" : "bg-accent"}`}
+                      style={{ width: `${(Number(r.v) / maxRetail) * 100}%` }}
                     />
-                  </figure>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Quotes ─────────────────────────────────────────────── */}
-        {c.quotes.length > 0 && (
-          <div className="mt-16">
-            <div className={EYEBROW}>From the retailers</div>
-            <div className="mt-6 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {c.quotes.map((q) => (
-                <figure
-                  key={q.who}
-                  className="group relative border border-border bg-background p-6 flex flex-col justify-between overflow-hidden hover:border-primary/40 transition-colors"
-                >
-                  <blockquote className="text-sm text-foreground/90 leading-relaxed">
-                    “{q.text}”
-                  </blockquote>
-                  <figcaption className="mt-5 mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {q.who}
-                  </figcaption>
-                  <div
-                    aria-hidden
-                    className="absolute left-0 top-0 h-full w-px opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ background: "var(--gradient-ember)" }}
-                  />
-                </figure>
+                  </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </Reveal>
         )}
       </div>
+
+      {/* Creators */}
+      {c.creators && (
+        <div className="mt-16">
+          <h3 className={EYEBROW}>{c.creators.label}</h3>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {c.creators.items.map((cr, i) => (
+              <Reveal key={cr.name} delay={i * 90}>
+                <CreatorCard c={cr} hue={i % 2 === 0 ? hue : other} />
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* In the field */}
+      {(c.motion?.length || c.gallery.length > 0) && (
+        <div className="mt-16">
+          <h3 className={EYEBROW}>In the field</h3>
+          <div
+            className="gallery-round mt-6 grid grid-cols-2 gap-3 lg:grid-cols-6"
+            style={{ gridAutoFlow: "dense" }}
+          >
+            {/* the two motion pieces anchor the grid at roughly their 1:2 portrait shape */}
+            {c.motion?.map((m, i) => (
+              <LoopClip
+                key={m.src}
+                clip={m}
+                fill
+                className={`rounded-[18px] border-white/10 ${
+                  i === 0
+                    ? "col-span-1 row-span-2 lg:col-span-2 lg:col-start-1 lg:row-span-3 lg:row-start-1"
+                    : "col-span-1 row-span-2 lg:col-span-2 lg:col-start-5 lg:row-span-3 lg:row-start-1"
+                }`}
+              />
+            ))}
+            {c.gallery.map((s, i) => {
+              // the last three go wide, which squares off the bottom row
+              const wide = c.motion?.length ? i >= c.gallery.length - 3 : false;
+              return (
+                <figure
+                  key={s.src}
+                  className={`group relative overflow-hidden rounded-[18px] bg-secondary ${wide ? "lg:col-span-2" : ""}`}
+                >
+                  <img
+                    src={s.src}
+                    alt={s.alt}
+                    loading="lazy"
+                    className={`w-full object-cover transition-transform duration-700 group-hover:scale-105 ${
+                      wide ? "aspect-[3/4] lg:aspect-[3/2]" : "aspect-[3/4]"
+                    }`}
+                  />
+                </figure>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Quotes: a row you can swipe through */}
+      {c.quotes.length > 0 && (
+        <div className="mt-16">
+          <h3 className={EYEBROW}>From the stores</h3>
+          <ul className="-mx-5 mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 sm:-mx-8 sm:px-8 lg:mx-0 lg:px-0 [scrollbar-width:thin]">
+            {c.quotes.map((q, i) => (
+              <li
+                key={q.who}
+                className={`${CARD} flex w-[300px] shrink-0 snap-start flex-col justify-between p-6 sm:w-[360px]`}
+              >
+                <span
+                  aria-hidden
+                  className={`display text-5xl leading-none ${TEXT[i % 2 === 0 ? hue : other]}`}
+                >
+                  “
+                </span>
+                <blockquote className="mt-2 text-sm leading-relaxed text-white/90">
+                  {q.text}
+                </blockquote>
+                <p className={`mt-5 ${EYEBROW} text-[9px]`}>{q.who}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
 
-function CreatorCard({ c }: { c: Creator }) {
+function CreatorCard({ c, hue }: { c: Creator; hue: Hue }) {
   return (
-    <article className="group border border-border bg-background overflow-hidden hover:border-primary/40 transition-colors">
-      <LoopClip clip={c.clip} className="border-0 border-b border-border" />
+    <article className={`${CARD} overflow-hidden`}>
+      <LoopClip clip={c.clip} className="border-0" />
       <div className="p-5">
         <div className="flex items-baseline justify-between gap-3">
-          <h3 className="text-sm font-medium">{c.name}</h3>
-          <span className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground shrink-0">
-            {c.platform}
-          </span>
+          <h4 className="text-sm font-semibold text-white">{c.name}</h4>
+          <span className={`${EYEBROW} shrink-0 text-[9px]`}>{c.platform}</span>
         </div>
         {c.handle && (
-          <div className="mt-1 mono text-[11px] text-muted-foreground break-all">{c.handle}</div>
+          <p className="mt-1 break-all mono text-[11px] text-muted-foreground">{c.handle}</p>
         )}
         <div className="mt-4 flex items-baseline gap-2">
-          <CountUp value={c.stat} className="text-2xl font-medium tracking-tight ember-text" />
-          <span className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-            {c.statLabel}
-          </span>
+          <CountUp value={c.stat} className={`display text-3xl ${TEXT[hue]}`} />
+          <span className={`${EYEBROW} text-[9px]`}>{c.statLabel}</span>
         </div>
-        {c.note && <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{c.note}</p>}
+        {c.note && <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{c.note}</p>}
       </div>
     </article>
   );
