@@ -10,6 +10,7 @@ import { Reveal } from "@/components/home/Reveal";
 import { LogoBand, type PartnerLogo } from "@/components/home/LogoBand";
 import { InViewVideo } from "@/components/home/InViewVideo";
 import { MarketingCollage } from "@/components/home/MarketingCollage";
+import { EYEBROW, SECTION, H2, TEXT, HEX, Eyebrow, type Hue } from "@/components/site/kit";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -93,30 +94,6 @@ const CONVENTION_LOGOS = [
   },
   { src: "https://framerusercontent.com/images/tddeO2vJbRAtktw5LOsDnxjWwg.png", name: "Otafest" },
 ];
-
-const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
-/** Sections sit in one centred column, so large screens don't blow everything up. */
-const SECTION = "relative mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-16";
-/**
- * Section headings stay well under the hero title (which tops out at 100px), so
- * the hero keeps the lead: about half its size.
- */
-const H2 = "display text-[clamp(30px,3.4vw,54px)]";
-
-/** Brand highlights alternate between the logo's two colours, never as a gradient. */
-type Hue = "blue" | "magenta";
-const TEXT: Record<Hue, string> = { blue: "text-primary", magenta: "text-accent" };
-const DOT: Record<Hue, string> = { blue: "bg-primary", magenta: "bg-accent" };
-const HEX: Record<Hue, string> = { blue: "#19afff", magenta: "#ff2fae" };
-
-function Eyebrow({ hue, children }: { hue: Hue; children: React.ReactNode }) {
-  return (
-    <p className={`${EYEBROW} inline-flex items-center gap-2.5`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${DOT[hue]}`} aria-hidden />
-      {children}
-    </p>
-  );
-}
 
 /** A service's heading block: icon, tag, title, one line and its flow, step by step. */
 function ServiceIntro({ sv, id }: { sv: (typeof SERVICES)[number]; id: string }) {
