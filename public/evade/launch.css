@@ -580,3 +580,8 @@
 .phone { background: #1b2026; }
 .ps-tap { background: #060b0e; }
 .pbtn { background: var(--teal); }
+
+/* on the hero the rail's "EVADE, activated" label sat over the eyebrow; the hero headline already says it */
+@media (min-width: 900px) {
+  .bnav-list a.is-active[data-sec="top"]:not(:hover):not(:focus-visible) .bnav-tip { opacity: 0; translate: -6px -50%; }
+}
