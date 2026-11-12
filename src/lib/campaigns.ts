@@ -59,7 +59,7 @@ export const CAMPAIGNS: Campaign[] = [
     headline: "ONE PIECE, activated in the physical world.",
     body: [
       "MEDIALIFE is currently deploying an app-free immersive experience around ONE PIECE, turning promotional media into an interactive entry point for fans.",
-      "Scan the activated physical media to launch the experience directly in the mobile browser — no app required.",
+      "Scan the poster and the experience opens straight in the phone browser. No app to install.",
     ],
     facts: [
       { k: "Format", v: "Activated print" },
@@ -67,7 +67,6 @@ export const CAMPAIGNS: Campaign[] = [
       { k: "Surface", v: "Promotional media" },
     ],
     cta: { label: "Experience it", href: "https://netflix.medialife.ai/", external: true },
-    secondary: { label: "Activate Your IP", href: "/contact" },
     image: {
       src: "/live/one-piece-poster.webp",
       large: "/live/one-piece-poster-large.webp",
@@ -77,27 +76,32 @@ export const CAMPAIGNS: Campaign[] = [
   },
   {
     slug: "evade",
-    status: "coming-soon",
-    statusLabel: "Coming soon",
-    name: "EVADE",
-    kicker: "Game-native merch · Activated collectible",
-    headline: "EVADE / GAME-NATIVE MERCH",
+    status: "live",
+    statusLabel: "Out now",
+    name: "EVADE × Bobo",
+    kicker: "Activated collectible · Browser game",
+    headline: "Bobo, off the screen.",
     body: [
-      "MEDIALIFE is developing a limited-edition activated acrylic keychain co-produced with Evade, one of the biggest games on Roblox, combining physical merchandise, an immersive QR-activated experience, and game-native commerce infrastructure.",
+      "Bobo the cat and the Eclipse can on one acrylic charm set, made with EVADE. Scan the QR on the back of the can and Cola Run opens in the phone browser.",
+      "Every clip fans record lands on the Where is Bobo? globe, and owners get first access to Bobo's Hideout.",
     ],
     facts: [
       { k: "Format", v: "Activated collectible" },
-      { k: "Access", v: "QR-activated experience" },
-      { k: "Status", v: "Coming soon" },
+      { k: "Access", v: "QR on the back of the can" },
+      { k: "Unlocks", v: "Cola Run · Where is Bobo?" },
     ],
-    secondary: { label: "Get notified", href: "/contact" },
+    cta: { label: "See the launch", href: "/evade/" },
+    secondary: {
+      label: "Get the keychain",
+      href: "https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set",
+      external: true,
+    },
     image: {
       // The current keychain: Bobo the cat + the Eclipse can (the old
       // avatar-style /merch/keychain-cutout.webp is outdated).
       src: "/activated-merch/posters/evade-charms.webp",
-      alt: "Bobo the cat and ΣCLIPSE can acrylic keychain from the MEDIALIFE × EVADE program",
+      alt: "Bobo the cat and Eclipse can acrylic charm set from the MEDIALIFE × EVADE program",
     },
-    note: "Platform-specific commerce features and digital benefits are subject to applicable approvals.",
   },
 ];
 
