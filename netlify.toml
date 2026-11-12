@@ -383,6 +383,14 @@
     # The Mattercraft experience (another origin) loads the room from here.
     Access-Control-Allow-Origin = "*"
 
+# Keychain pop-out models: the Mattercraft experience (another origin) loads them from here.
+[[headers]]
+  for = "/evade/keychain/ar/*.glb"
+  [headers.values]
+    Content-Type = "model/gltf-binary"
+    Cache-Control = "public, max-age=86400"
+    Access-Control-Allow-Origin = "*"
+
 # The Where's Bobo? globe is embedded in Bobo's Hideout's computer, including
 # inside the Mattercraft experience on its own origin. frame-ancestors wins over
 # the site-wide X-Frame-Options in every current browser. The page is read-only.
