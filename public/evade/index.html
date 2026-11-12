@@ -31,7 +31,7 @@
 <link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=4" />
+<link rel="stylesheet" href="/evade/launch.css?v=5" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -41,7 +41,7 @@
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script src="/evade/launch.js?v=2" defer></script>
+<script src="/evade/launch.js?v=3" defer></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -73,6 +73,9 @@
     <symbol id="i-os" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="26" height="18" rx="3"/><path d="M11 28h10M16 23v5"/><rect x="7" y="9" width="5" height="5" rx="1.4"/><rect x="14" y="9" width="5" height="5" rx="1.4"/></g></symbol>
     <symbol id="i-bell" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4c-5 0-8 3.8-8 8.6v5L5.5 21h21L24 17.6v-5C24 7.8 21 4 16 4Z"/><path d="M13 25a3 3 0 0 0 6 0"/></g><circle cx="24" cy="7" r="3" fill="currentColor"/></symbol>
     <symbol id="i-day" viewBox="0 0 32 32"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="16" cy="16" r="5.5"/><path d="M16 3v3M16 26v3M3 16h3M26 16h3M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M6.8 25.2l2.1-2.1M23.1 8.9l2.1-2.1"/></g></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9S14.6 18.4 12 21c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3Z"/></g></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.4 9.3a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.3-2.6 3.9"/></g><circle cx="12" cy="17.3" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M13.5 2.5 4.5 14h6.5l-1 7.5 9-11.5h-6.5Z"/></symbol>
   </defs>
 </svg>
 
@@ -111,19 +114,20 @@
   </nav>
 </header>
 
-<!-- Bobo's side nav: floats over the page on the left, never takes a column.
-     The lit dot follows the section on screen (launch.js). -->
+<!-- Bobo's side nav: a rail of section icons floating over the left edge
+     (never a column). The current section is lit gold with its name beside it;
+     hovering an icon shows its name (launch.js). -->
 <nav class="bnav" id="bnav" aria-label="On this page">
-  <div class="bnav-card">
+  <div class="bnav-rail">
     <ol class="bnav-list">
-      <li><a href="#top" data-sec="top"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">EVADE, activated</span></a></li>
-      <li><a href="#footage" data-sec="footage"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Around the world</span></a></li>
-      <li><a href="#activated" data-sec="activated"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">How it works</span></a></li>
-      <li><a href="#hideout" data-sec="hideout"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Bobo's Hideout</span></a></li>
-      <li><a href="#get" data-sec="get"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Get yours</span></a></li>
-      <li><a href="#faq" data-sec="faq"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">FAQ</span></a></li>
+      <li><a href="#top" data-sec="top" aria-label="EVADE, activated"><svg class="bnav-ic" aria-hidden="true"><use href="#i-bolt"/></svg><span class="bnav-tip" aria-hidden="true">EVADE, activated</span></a></li>
+      <li><a href="#footage" data-sec="footage" aria-label="Around the world"><svg class="bnav-ic" aria-hidden="true"><use href="#i-globe"/></svg><span class="bnav-tip" aria-hidden="true">Around the world</span></a></li>
+      <li><a href="#activated" data-sec="activated" aria-label="How it works"><svg class="bnav-ic" aria-hidden="true"><use href="#i-nfc"/></svg><span class="bnav-tip" aria-hidden="true">How it works</span></a></li>
+      <li><a href="#hideout" data-sec="hideout" aria-label="Bobo's Hideout"><svg class="bnav-ic" aria-hidden="true"><use href="#i-home"/></svg><span class="bnav-tip" aria-hidden="true">Bobo's Hideout</span></a></li>
+      <li><a href="#get" data-sec="get" aria-label="Get yours"><svg class="bnav-ic" aria-hidden="true"><use href="#i-box"/></svg><span class="bnav-tip" aria-hidden="true">Get yours</span></a></li>
+      <li><a href="#faq" data-sec="faq" aria-label="FAQ"><svg class="bnav-ic" aria-hidden="true"><use href="#i-help"/></svg><span class="bnav-tip" aria-hidden="true">FAQ</span></a></li>
     </ol>
-    <a class="bnav-buy" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="sidenav_shop"><svg class="ic" aria-hidden="true"><use href="#i-keys"/></svg><span class="bnav-label">Get the keychain</span></a>
+    <a class="bnav-buy" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="sidenav_shop" aria-label="Get the keychain"><svg class="bnav-ic" aria-hidden="true"><use href="#i-keys"/></svg><span class="bnav-tip" aria-hidden="true">Get the keychain</span></a>
   </div>
 </nav>
 

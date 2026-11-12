@@ -274,85 +274,85 @@
 .snav-panel-cta .snav-cta { display: flex; justify-content: center; width: 100%; padding: 14px 28px; }
 
 /* ---------- Bobo's side nav ----------
-   A slim glass rail of dots floating over the left edge. It opens into labels
-   on hover or keyboard focus (desktop) or on a tap (touch); the gold dot and
-   the filled line follow the section on screen, and the section's name
-   flashes out beside the rail as you arrive in it. */
+   A slim glass rail of section icons over the left edge. The current section's
+   icon is lit gold with its name in a pill beside it; hovering or focusing
+   any icon shows its name the same way. Gold fills the line up to where you are. */
 .bnav {
-  --row: 34px;
-  position: fixed; z-index: 95; left: 16px; top: 50%;
-  translate: 0 -50%;
-  opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease), translate 0.5s var(--ease);
+  --ic: 38px; --gap: 10px;
+  position: fixed; z-index: 95; left: 16px; top: 50%; translate: 0 -50%;
+  opacity: 0; pointer-events: none; transition: opacity 0.5s var(--ease);
 }
 .bnav.is-on { opacity: 1; pointer-events: auto; }
-.bnav-card {
-  position: relative; display: grid; gap: 6px; padding: 8px 6px; width: 40px; overflow: hidden;
-  border-radius: 22px;
-  background: rgba(8, 12, 16, 0.55);
+.bnav-rail {
+  display: grid; justify-items: center; gap: 14px; padding: 8px;
+  border-radius: 999px;
+  background: rgba(8, 12, 16, 0.6);
   backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  transition: width 0.45s var(--ease), background 0.3s, border-color 0.3s;
 }
-.bnav.is-open .bnav-card { width: 214px; background: rgba(8, 12, 16, 0.86); border-color: rgba(246, 195, 68, 0.28); }
-.bnav-list { position: relative; list-style: none; margin: 0; padding: 0; display: grid; }
-/* the track behind the dots, and its gold fill up to the current section */
+.bnav-list { position: relative; list-style: none; margin: 0; padding: 0; display: grid; gap: var(--gap); }
+/* the track behind the icons, and its gold fill up to the current section */
 .bnav-list::before, .bnav-list::after {
-  content: ""; position: absolute; left: 13px; top: calc(var(--row) / 2); width: 2px; border-radius: 2px;
+  content: ""; position: absolute; left: 50%; width: 2px; margin-left: -1px; top: calc(var(--ic) / 2); border-radius: 2px;
 }
-.bnav-list::before { bottom: calc(var(--row) / 2); background: rgba(255, 255, 255, 0.12); }
+.bnav-list::before { bottom: calc(var(--ic) / 2); background: rgba(255, 255, 255, 0.1); }
 .bnav-list::after {
-  height: calc(var(--i, 0) * var(--row)); background: linear-gradient(var(--gold-2), var(--gold));
-  box-shadow: 0 0 10px rgba(246, 195, 68, 0.6); transition: height 0.6s var(--ease);
+  height: calc(var(--i, 0) * (var(--ic) + var(--gap)));
+  background: linear-gradient(var(--gold-2), var(--gold)); box-shadow: 0 0 10px rgba(246, 195, 68, 0.55);
+  transition: height 0.6s var(--ease);
 }
 .bnav-list a, .bnav-buy {
-  position: relative; display: flex; align-items: center; gap: 14px; height: var(--row);
-  padding: 0 8px 0 8px; border-radius: 12px; white-space: nowrap; color: var(--fg-2); font-size: 13.5px;
-  transition: color 0.2s, background 0.2s;
+  position: relative; z-index: 1; display: grid; place-items: center;
+  width: var(--ic); height: var(--ic); border-radius: 50%;
+  color: var(--muted); background: #0b1318; border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: color 0.25s, background 0.3s, border-color 0.3s, box-shadow 0.3s, transform 0.3s var(--ease);
 }
-.bnav-dot {
-  position: relative; z-index: 1; flex-shrink: 0; width: 12px; height: 12px; border-radius: 50%;
-  background: #0b1318; border: 2px solid rgba(255, 255, 255, 0.35);
-  transition: background 0.3s, border-color 0.3s, transform 0.3s var(--ease), box-shadow 0.3s;
+.bnav-ic { width: 18px; height: 18px; }
+.bnav-list a:hover, .bnav-list a:focus-visible { color: var(--fg); border-color: rgba(246, 195, 68, 0.6); transform: scale(1.06); }
+.bnav-list a.is-past { color: var(--gold); border-color: rgba(246, 195, 68, 0.45); }
+.bnav-list a.is-active {
+  color: #1a1300; background: var(--grad-gold); border-color: var(--gold-2);
+  box-shadow: 0 0 0 4px rgba(246, 195, 68, 0.16), 0 0 18px rgba(246, 195, 68, 0.6);
 }
-.bnav-list a.is-past .bnav-dot { border-color: var(--gold); background: var(--gold); transform: scale(0.7); }
-.bnav-list a.is-active { color: var(--fg); }
-.bnav-list a.is-active .bnav-dot {
-  border-color: var(--gold-2); background: var(--gold); transform: scale(1.15);
-  box-shadow: 0 0 0 4px rgba(246, 195, 68, 0.18), 0 0 14px rgba(246, 195, 68, 0.75);
-}
-.bnav-label { opacity: 0; translate: -6px 0; transition: opacity 0.25s, translate 0.35s var(--ease); }
-.bnav.is-open .bnav-label { opacity: 1; translate: 0 0; transition-delay: 0.08s; }
-.bnav.is-open .bnav-list a:hover { background: rgba(255, 255, 255, 0.06); color: var(--fg); }
-.bnav.is-open .bnav-list a:hover .bnav-dot { border-color: var(--gold-2); }
-.bnav-list a:focus-visible, .bnav-buy:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
 .bnav-buy {
-  margin-top: 4px; padding-left: 4px; gap: 10px; color: #1a1300; font-weight: 600;
-  background: var(--grad-gold);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 20px -10px rgba(246, 195, 68, 0.9);
+  color: #1a1300; background: var(--grad-gold); border-color: rgba(255, 223, 122, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 20px -8px rgba(246, 195, 68, 0.9);
 }
-.bnav-buy .ic { width: 20px; height: 20px; flex-shrink: 0; }
-.bnav-buy:hover { filter: brightness(1.06); }
-/* the section name that flashes out beside the rail on arrival */
-.bnav-flash {
-  position: absolute; left: calc(100% + 10px); top: 0; padding: 6px 12px; border-radius: 999px; white-space: nowrap;
-  background: rgba(8, 12, 16, 0.8); border: 1px solid rgba(246, 195, 68, 0.3); color: var(--fg);
-  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+.bnav-buy:hover, .bnav-buy:focus-visible { transform: scale(1.06); filter: brightness(1.06); }
+.bnav-list a:focus-visible, .bnav-buy:focus-visible { outline: 2px solid var(--gold-2); outline-offset: 3px; }
+.bnav-buy .bnav-ic { width: 20px; height: 20px; }
+/* the name pill beside an icon */
+.bnav-tip {
+  position: absolute; left: calc(100% + 16px); top: 50%; translate: -6px -50%;
+  padding: 7px 12px; border-radius: 999px; white-space: nowrap; pointer-events: none;
+  background: rgba(8, 12, 16, 0.85); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--fg);
   backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  opacity: 0; translate: -8px 0; pointer-events: none; transition: opacity 0.3s, translate 0.4s var(--ease);
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  opacity: 0; transition: opacity 0.25s, translate 0.35s var(--ease);
 }
-.bnav-flash.is-on { opacity: 1; translate: 0 0; }
-.bnav.is-open .bnav-flash { opacity: 0; }
-/* phones and small tablets: smaller rail; shown once past the hero, the shop
-   button stays in the bottom bar instead */
+.bnav-tip::before {
+  content: ""; position: absolute; right: 100%; top: 50%; width: 10px; height: 1px; background: rgba(246, 195, 68, 0.6);
+}
+.bnav-list a.is-active .bnav-tip { border-color: rgba(246, 195, 68, 0.4); color: var(--gold-2); }
+.bnav-list a.is-active .bnav-tip,
+.bnav-list a:hover .bnav-tip, .bnav-list a:focus-visible .bnav-tip,
+.bnav-buy:hover .bnav-tip, .bnav-buy:focus-visible .bnav-tip { opacity: 1; translate: 0 -50%; }
+/* while pointing at another icon, only that icon's name shows */
+.bnav-rail:hover .bnav-list a.is-active:not(:hover) .bnav-tip { opacity: 0; }
+/* phones and small tablets: a smaller rail, shown once past the hero; the
+   current name shows for a moment after each change, and the shop button
+   stays in the bottom bar instead */
 @media (max-width: 899px) {
-  .bnav { --row: 32px; left: 8px; }
-  .bnav-card { width: 36px; padding: 6px 4px; }
-  .bnav-list::before, .bnav-list::after { left: 13px; }
+  .bnav { --ic: 32px; --gap: 8px; left: 8px; }
+  .bnav-rail { padding: 5px; }
+  .bnav-ic { width: 15px; height: 15px; }
   .bnav-buy { display: none; }
-  .bnav.is-open .bnav-card { width: 200px; }
-  .bnav.is-on.is-idle { opacity: 0.45; }
+  .bnav-tip { left: calc(100% + 12px); font-size: 9.5px; padding: 6px 10px; }
+  .bnav-list a.is-active .bnav-tip { opacity: 0; translate: -6px -50%; }
+  .bnav.is-told .bnav-list a.is-active .bnav-tip { opacity: 1; translate: 0 -50%; }
+  .bnav.is-on.is-idle { opacity: 0.5; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bnav, .bnav-card, .bnav-label, .bnav-flash, .bnav-dot, .bnav-list::after { transition: none !important; }
+  .bnav, .bnav-list a, .bnav-buy, .bnav-tip, .bnav-list::after { transition: none !important; }
 }

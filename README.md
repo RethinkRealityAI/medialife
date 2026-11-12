@@ -199,10 +199,11 @@ results (Sakamoto Days case, award, conventions), latest launches, contact.
 - Top bar = the main medialife.ai navigation (static copy of `src/components/site/Nav.tsx`:
   same items, numbers and short labels; menu below 1280px). Change both together.
 - The page's own sections (EVADE, Around the world, How it works, Bobo's Hideout, Get
-  yours, FAQ, plus Get the keychain) are a floating side nav on the left (`.bnav`): a
-  glass rail of dots over the page that opens into names on hover, keyboard focus or a
-  tap, lights the current section and briefly flashes its name on arrival. On phones it
-  appears once the hero scrolls away and dims while the page is still.
+  yours, FAQ, plus Get the keychain) are a floating rail of icons on the left (`.bnav`),
+  over the page rather than in a column. The current section's icon is lit gold with its
+  name in a pill beside it, hovering an icon shows its name, and gold fills the line up to
+  where you are. On phones it appears once the hero scrolls away, shows the name for a
+  moment after each change, and dims while the page is still.
 
 - "Bobo in action, around the world" frames the live globe (`/evade/where-is-bobo/?embed`,
   which hides the globe's own header). Touch screens get a "Tap to explore" cover so a
