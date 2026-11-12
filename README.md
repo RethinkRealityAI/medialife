@@ -996,3 +996,26 @@ committed Bobo clips) with `POST /api/bobo/dev/seed` while signed in; production
 City data: GeoNames (CC BY 4.0) and Natural Earth via `world-atlas`, rebuilt with
 `node scripts/build-bobo-geo.mjs` into `src/lib/bobo/*.json`, `assets/data/globe.bin`
 (dots, outlines) and `assets/data/land.bin` (the raised continent mesh, ~240 KB).
+
+## Site design kit (all public pages)
+
+Every public page uses `src/components/site/kit.tsx` so the site reads as one
+system with the homepage: `SECTION` (one 1280px column), `H1`/`H2`/`H3`
+display headings, `Eyebrow` (mono label + dot), `CARD` (glass, 26px corners),
+`PageHero`, `SectionHead`, `PillLink`, `Stat` and `CtaBand` (the closing call
+to action). Highlights alternate blue `#19AFFE` and magenta `#FF2FAE`; the
+gradient lives only in the logo mark.
+
+Interactive pieces added with the restyle:
+
+- `/live`: `ScanLens.tsx`, a phone lens over the printed ONE PIECE poster;
+  inside the lens the poster plays its AR footage. Mouse follows, touch drags,
+  "See it all alive" opens it fully. EVADE × Bobo is listed as out now
+  (`src/lib/campaigns.ts`).
+- `/technology`: `LayerStack.tsx`, five glass planes in 3D; pick a layer and
+  it lifts out with its story. `technology.index.tsx` is an index route so
+  `/technology/$slug` pages render (the old parent route had no outlet).
+- `/fan-reactions`: real captures only, as small MP4 loops in
+  `public/fan-reactions/` (converted from the old hotlinked GIFs), with filters.
+- `/insights`: only figures traced to a published source (checked 2026-11-12).
+- `/contact`: an "interest" picker; the field is declared in `public/__forms.html`.

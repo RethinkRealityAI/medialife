@@ -83,6 +83,25 @@ function Technology() {
           </>
         }
         lead="What happens between a fan's phone and the experience: five layers, built and run by one team, with no app in the way."
+        aside={
+          <div className="relative mx-auto w-full max-w-[460px]">
+            <div
+              aria-hidden
+              className="absolute inset-[14%] rounded-full bg-accent opacity-25 blur-[90px]"
+            />
+            <div
+              aria-hidden
+              className="absolute inset-[22%] translate-x-[18%] rounded-full bg-primary opacity-25 blur-[90px]"
+            />
+            <img
+              src="/technology/scan-alive.webp"
+              alt="MEDIALIFE's Sukeban character stepping out of a phone screen in AR"
+              width={751}
+              height={900}
+              className="relative w-full animate-drift drop-shadow-[0_40px_60px_rgba(0,0,0,0.7)]"
+            />
+          </div>
+        }
       />
 
       {/* the stack, interactive */}
