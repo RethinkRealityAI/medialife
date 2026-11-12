@@ -31,17 +31,18 @@
 <link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=7" />
+<link rel="stylesheet" href="/evade/launch.css?v=8" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/","qrcode":"/roblox/creators/vendor/qrcode/qrcode.esm.js"}}
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://medialife.ai/evade/","name":"EVADE × MEDIALIFE: Cola Run, activated","description":"Our latest partner launch: the EVADE Bobo and Eclipse keychain unlocks Cola Run with a tap.","isPartOf":{"@type":"WebSite","name":"MEDIALIFE","url":"https://medialife.ai"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is Activated Merch?","acceptedAnswer":{"@type":"Answer","text":"Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards."}},{"@type":"Question","name":"Do I need to download anything?","acceptedAnswer":{"@type":"Answer","text":"No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens."}},{"@type":"Question","name":"Where do I get the keychain?","acceptedAnswer":{"@type":"Answer","text":"The Bobo and Eclipse charm set is in the MEDIALIFE shop. Creators can also get one free by joining the EVADE creator crew."}},{"@type":"Question","name":"Can I play without the keychain?","acceptedAnswer":{"@type":"Answer","text":"Yes. Open evade.medialife.ai on your phone, or point your camera at the code on this page. The keychain puts it in your pocket."}},{"@type":"Question","name":"Who is Bobo?","acceptedAnswer":{"@type":"Answer","text":"Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the Where is Bobo? globe."}},{"@type":"Question","name":"I'm a creator. How do I get involved?","acceptedAnswer":{"@type":"Answer","text":"Join the EVADE creator crew for a free merch package and giveaway codes for your community."}}]}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://medialife.ai/evade/","name":"EVADE × MEDIALIFE: Cola Run, activated","description":"Our latest partner launch: the EVADE Bobo and Eclipse keychain unlocks Cola Run with a tap.","isPartOf":{"@type":"WebSite","name":"MEDIALIFE","url":"https://medialife.ai"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is Activated Merch?","acceptedAnswer":{"@type":"Answer","text":"Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards."}},{"@type":"Question","name":"What is Off the Chain?","acceptedAnswer":{"@type":"Answer","text":"The keychain's second experience. Open Off the Chain at medialife.ai/evade/keychain-ar/ and point your camera at the charms: Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. It runs in your browser."}},{"@type":"Question","name":"Do I need to download anything?","acceptedAnswer":{"@type":"Answer","text":"No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens."}},{"@type":"Question","name":"Where do I get the keychain?","acceptedAnswer":{"@type":"Answer","text":"The Bobo and Eclipse charm set is in the MEDIALIFE shop. Creators can also get one free by joining the EVADE creator crew."}},{"@type":"Question","name":"Can I play without the keychain?","acceptedAnswer":{"@type":"Answer","text":"Yes. Open evade.medialife.ai on your phone, or point your camera at the code on this page. The keychain puts it in your pocket."}},{"@type":"Question","name":"Who is Bobo?","acceptedAnswer":{"@type":"Answer","text":"Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the Where is Bobo? globe."}},{"@type":"Question","name":"I'm a creator. How do I get involved?","acceptedAnswer":{"@type":"Answer","text":"Join the EVADE creator crew for a free merch package and giveaway codes for your community."}}]}]}</script>
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
 <script src="/evade/launch.js?v=5" defer></script>
+<script type="module">import("qrcode").then((m) => (m.default || m).toString("https://medialife.ai/evade/keychain-ar/", { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0a0a0a", light: "#ffffff" } })).then((svg) => { const el = document.getElementById("arQr"); if (el) el.innerHTML = svg; }).catch(() => {});</script>
 <script type="module" src="/evade/hideout-3d.js"></script>
 </head>
 <body data-demo="evade-launch">
@@ -122,6 +123,7 @@
   <div class="bnav-rail">
     <ol class="bnav-list">
       <li><a href="#top" data-sec="top" aria-label="EVADE, activated"><svg class="bnav-ic" aria-hidden="true"><use href="#i-bolt"/></svg><span class="bnav-tip" aria-hidden="true">EVADE, activated</span></a></li>
+      <li><a href="#two-ways" data-sec="two-ways" aria-label="Two experiences"><svg class="bnav-ic" aria-hidden="true"><use href="#i-scan"/></svg><span class="bnav-tip" aria-hidden="true">Two experiences</span></a></li>
       <li><a href="#footage" data-sec="footage" aria-label="Around the world"><svg class="bnav-ic" aria-hidden="true"><use href="#i-globe"/></svg><span class="bnav-tip" aria-hidden="true">Around the world</span></a></li>
       <li><a href="#activated" data-sec="activated" aria-label="How it works"><svg class="bnav-ic" aria-hidden="true"><use href="#i-nfc"/></svg><span class="bnav-tip" aria-hidden="true">How it works</span></a></li>
       <li><a href="#hideout" data-sec="hideout" aria-label="Bobo's Hideout"><svg class="bnav-ic" aria-hidden="true"><use href="#i-home"/></svg><span class="bnav-tip" aria-hidden="true">Bobo's Hideout</span></a></li>
@@ -147,11 +149,11 @@
       <div class="hero-head rv">
         <span class="hero-eyebrow mono"><span class="dot"></span><span>Partner launch · Activated Merchandise<sup>®</sup></span></span>
         <h1 id="heroTitle">EVADE,<br class="br-lg" /> <span class="gold">activated.</span></h1>
-        <p class="hero-sub">Bobo and the Eclipse can, on one keychain. Tap it and <b>Cola Run</b> opens on your phone. No app.</p>
+        <p class="hero-sub">One keychain, two experiences. Scan it to play <b>Cola Run</b>, or point your camera at it and Bobo jumps <b>Off the Chain</b>. No app.</p>
       </div>
       <div class="hero-cta rv rv-d1">
         <a class="btn btn--gold btn--lg" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="hero_shop">Get the keychain <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-        <a class="btn btn--ghost btn--lg" href="#activated">How it works</a>
+        <a class="btn btn--ghost btn--lg" href="#two-ways">See both experiences</a>
       </div>
 
       <!-- the Cola Run splash at the back, the activated keychain hanging over its right side -->
@@ -222,11 +224,51 @@
     </div>
   </section>
 
+
+  <!-- 1b. ONE PRODUCT, TWO EXPERIENCES: the QR (Cola Run + Bobo's Hideout) and image-tracked AR (Off the Chain).
+       The picture is composed from the real 3D models, renders and screenshots (no generative tools on EVADE art). -->
+  <section class="band band--two" id="two-ways" aria-labelledby="twoTitle">
+    <div class="wrap">
+      <div class="sec-head sec-head--center rv">
+        <span class="mono">01 · One product, two experiences</span>
+        <h2 id="twoTitle">One keychain. <span class="gold">Two ways to play.</span></h2>
+        <p class="sec-sub">Every EVADE keychain opens two different experiences on your phone, and neither needs an app.</p>
+      </div>
+      <figure class="two-art rv rv-d1">
+        <picture>
+          <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
+          <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
+            alt="The EVADE keychain in the middle. On the left, a phone that scanned its QR is playing Cola Run, with Bobo's Hideout behind it. On the right, a phone pointed at the keychain shows the charms empty, because Bobo and the Eclipse can have jumped out in 3D." />
+        </picture>
+      </figure>
+      <div class="two-grid">
+        <article class="two-card two-card--qr rv">
+          <span class="two-num mono"><b>1</b>Scan the QR</span>
+          <h3>Cola Run and Bobo's Hideout</h3>
+          <p>The QR on the back of the can opens Cola Run in your browser. Fly with Bobo, grab every can and unlock rewards. Keychain owners will also get into Bobo's Hideout, the collector hub.</p>
+          <div class="two-actions">
+            <a class="btn btn--ghost btn--sm" href="#activated">See how it plays <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <a class="gc-link" href="#hideout">Bobo's Hideout</a>
+          </div>
+        </article>
+        <article class="two-card two-card--ar rv rv-d1">
+          <span class="two-num mono"><b>2</b>Point your camera</span>
+          <h3>Off the Chain</h3>
+          <p>Point your camera at the charms and Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, wave hello, spin the can, then take a photo or film it to share.</p>
+          <div class="two-actions">
+            <a class="btn btn--gold btn--sm" href="/evade/keychain-ar/" data-track="two_ar">Try Off the Chain <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+            <span class="two-qr" aria-hidden="true"><span id="arQr"></span><small class="mono">Open it on your phone</small></span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- 2. LIVE FOOTAGE: real phone recordings (Samsung browser, no app); page.js plays each one only while it's on screen -->
   <section class="band band--footage" id="footage" aria-labelledby="footTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">01 · Where is Bobo?</span>
+        <span class="mono">02 · Where is Bobo?</span>
         <h2 id="footTitle">Bobo in action, <span class="gold">around the world.</span></h2>
         <p class="sec-sub">Fans film Bobo in AR wherever they are. Every clip lands on a live globe, pinned to the place it was shot.</p>
       </div>
@@ -272,7 +314,7 @@
     <div class="wrap act-grid">
       <div class="act-copy">
         <div class="sec-head rv">
-          <span class="mono">02 · How it comes alive</span>
+          <span class="mono">03 · Scan it: Cola Run</span>
           <h2 id="actTitle">Tap it. <span class="teal">Play it.</span></h2>
         </div>
         <ol class="loop rv rv-d1" id="loopSteps" aria-label="What happens when you tap the keychain">
@@ -338,7 +380,7 @@
   <section class="band band--hideout" id="hideout" aria-labelledby="hideTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">03 · Collector Hub</span>
+        <span class="mono">04 · Collector Hub</span>
         <h2 id="hideTitle">Unlock <span class="gold">Bobo's Hideout.</span></h2>
         <p class="sec-sub">Your keychain is the key to Bobo's Hideout: a collector's hub for rewards, exclusive invites, giveaways and owner-only discounts, all running on <b>BOBO OS</b>.</p>
         <span class="soon-pill mono"><span class="dot"></span>Coming soon for keychain owners</span>
@@ -401,7 +443,7 @@
   <section class="band band--get" id="get" aria-labelledby="getTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">04 · Get yours</span>
+        <span class="mono">05 · Get yours</span>
         <h2 id="getTitle">Bring Bobo <span class="gold">home.</span></h2>
       </div>
       <div class="get-grid">
@@ -413,7 +455,7 @@
           <div class="gc-copy">
             <span class="gc-tag mono">The keychain · $14.99</span>
             <h3>Bobo × Eclipse charm set</h3>
-            <p>Two acrylic charms on a silver clasp. Scan or tap it and Cola Run opens.</p>
+            <p>Two acrylic charms on a silver clasp. Scan it to play Cola Run, or point your camera at it and Bobo jumps Off the Chain.</p>
             <span class="btn btn--gold">Shop the keychain <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></span>
           </div>
         </a>
@@ -442,6 +484,7 @@
       </div>
       <div class="faq">
         <details class="rv"><summary>What is Activated Merch?</summary><p>Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards.</p></details>
+        <details class="rv"><summary>What is Off the Chain?</summary><p>The keychain's second experience. Open <a href="/evade/keychain-ar/">Off the Chain</a> and point your camera at the charms: Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. It runs in your browser too.</p></details>
         <details class="rv"><summary>Do I need to download anything?</summary><p>No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens.</p></details>
         <details class="rv"><summary>Where do I get the keychain?</summary><p>The Bobo and Eclipse charm set is in the <a href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set">MEDIALIFE shop</a>. Creators can also get one free by joining the <a href="/evade/creators/">EVADE creator crew</a>.</p></details>
         <details class="rv"><summary>Can I play without the keychain?</summary><p>Yes. Open evade.medialife.ai on your phone, or point your camera at the code on this page. The keychain puts it in your pocket.</p></details>

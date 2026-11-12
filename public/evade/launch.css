@@ -451,3 +451,30 @@
   .bnav, .bnav-list a, .bnav-buy, .bnav-tip, .bnav-list::after { transition: none !important; }
 }
 .hs-room.is-grabbed .hs-hint { opacity: 0 !important; }
+
+/* ---------------------------------------------------------------- 01 · one product, two experiences */
+.band--two { padding-top: clamp(48px, 8vw, 96px); }
+.two-art { margin: 0 auto clamp(20px, 3vw, 32px); max-width: 1200px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line-2); box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9), 0 0 80px -30px rgba(246, 195, 68, 0.35); }
+.two-art img { display: block; width: 100%; height: auto; }
+.two-grid { display: grid; gap: 14px; max-width: 1200px; margin: 0 auto; }
+@media (min-width: 760px) { .two-grid { grid-template-columns: 1fr 1fr; } }
+.two-card {
+  --c: var(--teal);
+  position: relative; display: grid; align-content: start; gap: 10px;
+  padding: clamp(22px, 3vw, 32px); border-radius: var(--r-lg);
+  border: 1px solid var(--line-2); background: var(--card);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  overflow: hidden; isolation: isolate;
+}
+.two-card::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(110% 90% at 100% 0%, color-mix(in srgb, var(--c) 18%, transparent), transparent 62%); }
+.two-card--ar { --c: #ff5ac8; }
+.two-card h3 { font-size: clamp(22px, 2.4vw, 28px); line-height: 1.15; margin: 0; }
+.two-card p { margin: 0; color: var(--fg-2); }
+.two-num { display: inline-flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--c); }
+.two-num b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--c); color: #05080a; font-size: 13px; letter-spacing: 0; }
+.two-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; margin-top: 8px; }
+.two-qr { display: none; align-items: center; gap: 10px; color: var(--muted); }
+.two-qr > span { display: block; width: 64px; height: 64px; padding: 6px; border-radius: 10px; background: #fff; }
+.two-qr > span svg { display: block; width: 100%; height: 100%; }
+.two-qr small { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; max-width: 9em; line-height: 1.4; }
+@media (hover: hover) and (pointer: fine) and (min-width: 900px) { .two-qr { display: inline-flex; } }
