@@ -1325,8 +1325,10 @@ function diagRecord() {
   };
 }
 let lastFlush = 0;
+// the live site keeps no test logs (they can only be read on previews); ?diag turns them on there
+const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
 function flushDiag(force, always) {
-  if ((!camStartAt && !always) || params.has('nolog')) return;
+  if ((!camStartAt && !always) || params.has('nolog') || (LIVE_SITE && !params.has('diag'))) return;
   const now = performance.now(); if (!force && now - lastFlush < 10000) return; lastFlush = now;
   const body = JSON.stringify(diagRecord());
   try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }

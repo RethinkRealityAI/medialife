@@ -158,7 +158,9 @@ Zoom slider where the browser exposes them (Android Chrome), and drawing at up t
 - **Tune**: hidden; `?tune` (or `?dev`) brings the button and panel back.
 
 ## URL switches
-- `?tune` shows the Tune button and panel; `?nolog` sends no globe events.
+- `?tune` shows the Tune button and panel; `?nolog` sends no globe events or test logs.
+- Test logs (`/api/ar/kc-diag`) are sent on previews and local dev only; on medialife.ai add `?diag`
+  (they can still only be read back on a preview).
 - `?only=kc-both` (or any other target name) loads just that image target.
 - `?debug` draws the target and charm frames and tints the silhouettes, and logs engine events.
 - `?debug&nopop` only tracks: use it to check alignment on a real keychain.

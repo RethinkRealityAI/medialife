@@ -305,10 +305,6 @@
 
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
   <script src="./vendor/xr/xr.js" async data-preload-chunks="slam"></script>
-  <script>
-    // ?v=29b runs the page exactly as it was at 29bfcdc (before the camera profiles), to compare on iPhone
-    (function () { var s = document.createElement('script'); s.type = 'module';
-      s.src = new URLSearchParams(location.search).get('v') === '29b' ? './main-29b.js' : './main.js'; document.body.appendChild(s); })();
-  </script>
+  <script type="module" src="./main.js"></script>
 </body>
 </html>
