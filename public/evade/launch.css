@@ -35,7 +35,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: radial-gradient(120% 90% at 100% 0%, var(--glow, rgba(63, 230, 224, 0.16)), transparent 60%);
+  inset: 0 0 auto; height: 2px; background: var(--edge, var(--teal));
   opacity: 0.8;
   transition: opacity 0.4s;
 }
@@ -49,11 +49,11 @@
 .gc-link .ic, .get-card .btn .ic { width: 16px; height: 16px; transition: transform 0.3s var(--ease); }
 .get-card:hover .gc-link .ic, .get-card:hover .btn .ic { transform: translateX(3px); }
 
-.get-card--shop { --glow: rgba(246, 195, 68, 0.22); grid-template-columns: 1fr; align-content: stretch; }
+.get-card--shop { --glow: rgba(246, 195, 68, 0.22); --edge: var(--gold); grid-template-columns: 1fr; align-content: stretch; }
 .get-card--shop .gc-tag { color: var(--gold); }
 .get-card--shop .btn { justify-self: start; margin-top: 10px; }
-.get-card--globe { --glow: rgba(25, 175, 254, 0.2); }
-.get-card--crew { --glow: rgba(255, 55, 174, 0.18); }
+.get-card--globe { --glow: rgba(25, 175, 254, 0.2); --edge: #19affe; }
+.get-card--crew { --glow: rgba(255, 55, 174, 0.18); --edge: #ff5ac8; }
 
 /* The two charms, hanging together and swaying a little. */
 .gc-art {
@@ -125,7 +125,7 @@
 .band--hideout { overflow: clip; }
 .band--hideout::before {
   content: ""; position: absolute; left: 50%; top: 38%; width: min(1100px, 120vw); aspect-ratio: 1.6; translate: -50% -50%;
-  background: radial-gradient(closest-side, rgba(63, 230, 224, 0.13), transparent 70%), radial-gradient(closest-side at 70% 60%, rgba(255, 55, 174, 0.1), transparent 70%);
+  background: none;
   pointer-events: none;
 }
 .hideout-stage { position: relative; --mx: 0; --my: 0; }
@@ -163,7 +163,7 @@
 }
 
 /* the room, live in 3D over its poster picture */
-.hs-room { position: relative; background: radial-gradient(70% 60% at 50% 55%, rgba(63, 230, 224, 0.16), transparent 70%), #070b1c; }
+.hs-room { position: relative; background: #070b1c; }
 .hs-room canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; opacity: 0; transition: opacity 0.9s var(--ease); cursor: grab; }
 .hs-room canvas:active { cursor: grabbing; }
 .hs-room.is-3d canvas { opacity: 1; }
@@ -183,7 +183,7 @@
 /* BOBO OS on a phone, flipping between Alerts and the leaderboard */
 .hs-phone {
   margin: 0; z-index: var(--z); aspect-ratio: 9 / 18.5; padding: 7px; border-radius: 32px;
-  background: linear-gradient(150deg, #2a3038, #0d1014 45%, #22272e);
+  background: #1b2026;
   box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.14), 0 0 60px -26px rgba(255, 55, 174, 0.7);
 }
 .hp-screen {
@@ -551,8 +551,11 @@
 .hero { touch-action: pan-y; }
 .hk-3d { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.5s var(--ease); }
 .hk-3d.on { opacity: 1; }
-.hs-kc.is-3d { translate: none; animation: none; }
-.hs-kc.is-3d .hk-swing { opacity: 0; animation: none; }
+/* phones: the canvas covers the stage only (with room to swing), under the NFC chip and the hint */
+.hk-3d--stage { inset: auto; top: -12%; left: -14%; width: 128%; height: 130%; z-index: 2; }
+.hs-kc.kc-live, .hs-kc.is-3d { translate: none; animation: none; }
+.hs-kc.kc-live .hk-swing { animation: none; }
+.hs-kc.is-3d .hk-swing { opacity: 0; }
 .hero.kc-hover { cursor: grab; }
 .hero.kc-grab { cursor: grabbing; }
 .hk-hint {
@@ -568,5 +571,12 @@
 @keyframes hkPing { 70% { box-shadow: 0 0 0 9px rgba(246, 195, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(246, 195, 68, 0); } }
 @media (max-width: 1099px) { .hk-hint { right: calc(100% + 4px); bottom: -11%; font-size: 9.5px; padding: 6px 10px; } }
 
-/* no gradients on UI anywhere: the gold buttons and pills are solid EVADE gold on this page */
+/* no gradients on UI anywhere (the MEDIALIFE logo mark is the one exception): solid EVADE colours on this page,
+   including the shared creators-page pieces this page reuses */
 :root { --grad-gold: #f6c344; }
+.hero-bg { background: #071014; }
+.hs-glow, .phone-glow { display: none; }
+.loop li.is-on button { background: rgba(246, 195, 68, 0.12); }
+.phone { background: #1b2026; }
+.ps-tap { background: #060b0e; }
+.pbtn { background: var(--teal); }
