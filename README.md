@@ -1019,3 +1019,18 @@ Interactive pieces added with the restyle:
   `public/fan-reactions/` (converted from the old hotlinked GIFs), with filters.
 - `/insights`: only figures traced to a published source (checked 2026-11-12).
 - `/contact`: an "interest" picker; the field is declared in `public/__forms.html`.
+
+Homepage = overview, inner pages = depth (Dapo, 2026-11-12). Don't repeat the
+homepage's cards on an inner page; give it material the homepage doesn't have:
+
+- Campaigns (`src/lib/campaigns.ts`): `teaser` is the homepage line; `body`,
+  `steps` ("How to try it"), `ways` (every experience one product opens) and
+  `related` only show on `/live`.
+- Fan captures (`src/lib/fan-captures.ts`): the homepage strip shows stills;
+  `/fan-reactions` opens each clip in a dialog with its story, format and a
+  link to go deeper. Approved partners only.
+- `/technology`: "Formats in depth" (what starts each format, what it follows,
+  what it suits, where to try one) and "What one scan tells you" (an
+  illustrative logged event).
+- `CtaBand` takes a page-specific `title`/`lead`; the default lead is for the
+  homepage-style pages only.

@@ -184,7 +184,15 @@ function Insights() {
         </p>
       </section>
 
-      <CtaBand />
+      <CtaBand
+        hue="blue"
+        title={
+          <>
+            Put the research <span className="text-primary">to work.</span>
+          </>
+        }
+        lead="Tell us about your IP and where fans meet it, and we'll show you the format that fits."
+      />
     </>
   );
 }

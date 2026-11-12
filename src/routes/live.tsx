@@ -70,7 +70,14 @@ function LiveNow() {
         </section>
       )}
 
-      <CtaBand />
+      <CtaBand
+        title={
+          <>
+            Your IP, <span className="text-accent">out in the world next.</span>
+          </>
+        }
+        lead="We design the product, build the experience and run the launch, and you watch every scan come in."
+      />
     </>
   );
 }
@@ -155,8 +162,94 @@ function CampaignRow({ c, flip = false }: { c: Campaign; flip?: boolean }) {
         <div className={`lg:col-span-6 ${flip ? "lg:order-1" : ""}`}>
           <CampaignMedia c={c} />
         </div>
+
+        {(c.steps || c.ways || c.related) && (
+          <div className="order-last border-t border-white/10 pt-8 lg:col-span-12 lg:pt-10">
+            <CampaignDepth c={c} />
+          </div>
+        )}
       </article>
     </Reveal>
+  );
+}
+
+/** The part only /live has: how to try it, and every experience it opens. */
+function CampaignDepth({ c }: { c: Campaign }) {
+  const evade = c.slug === "evade";
+  const accent = evade ? "text-[#f5c84b]" : "text-accent";
+  return (
+    <div className="grid gap-10 lg:grid-cols-12 lg:gap-12">
+      {c.steps && (
+        <div className={c.ways ? "lg:col-span-4" : "lg:col-span-7"}>
+          <h3 className={EYEBROW}>How to try it</h3>
+          <ol className="mt-5 grid gap-3">
+            {c.steps.map((s, i) => (
+              <li key={s} className="flex items-start gap-4">
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 mono text-[11px] ${accent}`}
+                >
+                  {i + 1}
+                </span>
+                <span className="pt-1 text-white/85">{s}</span>
+              </li>
+            ))}
+          </ol>
+          {c.related && (
+            <a
+              href={c.related.href}
+              className={`mt-6 inline-flex items-center gap-2 text-sm font-medium ${accent} hover:underline`}
+            >
+              {c.related.label} <span aria-hidden>→</span>
+            </a>
+          )}
+        </div>
+      )}
+      {c.ways && (
+        <div className="lg:col-span-8">
+          <h3 className={EYEBROW}>{c.ways.length} ways in, from one product</h3>
+          <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+            {c.ways.map((w) => (
+              <li key={w.title}>
+                <a
+                  href={w.href}
+                  {...(w.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  className="group flex h-full gap-4 rounded-[20px] border border-white/10 bg-white/[0.03] p-3 transition-colors hover:border-white/25 hover:bg-white/[0.06]"
+                >
+                  <img
+                    src={w.image}
+                    alt={w.alt}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-28 w-20 shrink-0 rounded-[14px] object-cover"
+                  />
+                  <span className="flex min-w-0 flex-col py-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-white">{w.title}</span>
+                      {w.status && (
+                        <span className="rounded-full border border-white/15 px-2 py-0.5 mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
+                          {w.status}
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-1 text-sm text-muted-foreground">{w.body}</span>
+                    <span className={`mt-auto pt-2 text-sm font-medium ${accent}`}>
+                      {w.status ? "Preview" : "Open"}{" "}
+                      <span
+                        aria-hidden
+                        className="inline-block transition-transform group-hover:translate-x-0.5"
+                      >
+                        {w.external ? "↗" : "→"}
+                      </span>
+                      {w.external && <span className="sr-only">(opens in a new tab)</span>}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
 }
 

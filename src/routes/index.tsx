@@ -5,6 +5,7 @@ import { PosterViewer } from "@/components/site/PosterViewer";
 import { CountUp } from "@/components/site/CountUp";
 import { PERFORMANCE, RETAIL_UNITS, AWARD } from "@/lib/capabilities";
 import { liveCampaigns } from "@/lib/campaigns";
+import { CAPTURES } from "@/lib/fan-captures";
 import { Hero } from "@/components/home/Hero";
 import { Reveal } from "@/components/home/Reveal";
 import { LogoBand, type PartnerLogo } from "@/components/home/LogoBand";
@@ -52,14 +53,8 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const FAN_GIFS = [
-  "https://framerusercontent.com/images/NqCy3mPVKQMKDufaM8S8R391MQ.gif",
-  "https://framerusercontent.com/images/eRU3BYCVAoDOa97AqKQfyFLWuFg.gif",
-  "https://framerusercontent.com/images/nbDc4peZes8YcOMwGUjJn0JxxqQ.gif",
-  "https://framerusercontent.com/images/6JPnl8xKolTHId6veAegVcNBAcg.gif",
-  "https://framerusercontent.com/images/Fl5k7LHWCXny6RJSOjywigkiX4.gif",
-  "https://framerusercontent.com/images/9C7rbeiGjyeI5w32YBlKaPoQU.gif",
-];
+/** The homepage strip shows stills of the real captures; /fan-reactions has every clip and its story. */
+const FAN_STILLS = CAPTURES.map((c) => ({ src: c.poster, alt: c.alt }));
 
 /**
  * Convention logos for the YOU CAN FIND US AT runner.
@@ -357,7 +352,7 @@ const FORMATS: {
       src: "/home/formats/fan-rewards.mp4",
       poster: "/home/formats/fan-rewards.webp",
       pos: "55%",
-      caption: "EVADE keychain unlock",
+      caption: "EVADE Off the Chain",
       label: "Bobo and the Eclipse can popping out of the EVADE keychain",
     },
   },
@@ -563,8 +558,14 @@ function Home() {
           </Reveal>
           <Reveal delay={120}>
             <p className="max-w-sm text-muted-foreground">
-              Real fans at real conventions, scanning, tapping and filming what happens next.
+              Real fans at conventions, in stores and out in the world, filming what happens next.
             </p>
+            <Link
+              to="/fan-reactions"
+              className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-white hover:underline"
+            >
+              Every clip and the story behind it <span aria-hidden>→</span>
+            </Link>
           </Reveal>
         </div>
 
@@ -572,17 +573,15 @@ function Home() {
           className="mt-10 flex gap-4 animate-marquee motion-reduce:animate-none"
           style={{ width: "max-content", willChange: "transform" }}
         >
-          {[...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS, ...FAN_GIFS].map((src, i) => (
+          {[...FAN_STILLS, ...FAN_STILLS, ...FAN_STILLS, ...FAN_STILLS].map((f, i) => (
             <div
               key={i}
-              aria-hidden={i >= FAN_GIFS.length}
+              aria-hidden={i >= FAN_STILLS.length}
               className="relative h-[300px] w-[172px] flex-shrink-0 overflow-hidden rounded-3xl border border-white/10 bg-secondary"
             >
               <img
-                src={src}
-                alt={
-                  i < FAN_GIFS.length ? "A fan using a MEDIALIFE AR experience at a convention" : ""
-                }
+                src={f.src}
+                alt={i < FAN_STILLS.length ? f.alt : ""}
                 loading="lazy"
                 decoding="async"
                 width={172}
@@ -1029,20 +1028,15 @@ function Home() {
               aria-labelledby="evade-title"
               className="lg-card flex h-full scroll-mt-24 flex-col overflow-hidden rounded-[32px] border-[#f5c84b]/25"
             >
-              <div className="relative aspect-[16/10] overflow-hidden">
+              <div className="relative aspect-[16/9] overflow-hidden">
                 <img
-                  src="/evade/creators/assets/img/cola-run-splash-sm.webp"
-                  alt="Cola Run, the browser game the charms unlock"
+                  src="/evade/img/keychain-two-ways-1200.webp"
+                  alt="The EVADE keychain between two phones: one playing Cola Run, the other showing Bobo and the Eclipse can jumping off the charms in 3D"
                   loading="lazy"
                   decoding="async"
-                  className="absolute left-[8%] top-[8%] h-[120%] w-auto -rotate-6 rounded-[24px] border border-white/15 object-cover shadow-2xl"
-                />
-                <img
-                  src="/activated-merch/posters/evade-charms.webp"
-                  alt="The EVADE × Bobo charms: Bobo the cat and the Eclipse can"
-                  loading="lazy"
-                  decoding="async"
-                  className="absolute -bottom-[6%] right-[2%] w-[58%] drop-shadow-[0_30px_40px_rgba(0,0,0,0.6)]"
+                  width={1200}
+                  height={675}
+                  className="h-full w-full object-cover"
                 />
               </div>
               <div className="flex flex-1 flex-col p-6 sm:p-8">
@@ -1054,8 +1048,8 @@ function Home() {
                   Bobo, off the screen.
                 </h3>
                 <p className="mt-3 max-w-md text-muted-foreground">
-                  Bobo and the Eclipse can on one charm set. Scan it and Cola Run opens in the
-                  browser, then follow Bobo around the world.
+                  One keychain, two experiences: scan it for Cola Run, or point your camera and Bobo
+                  jumps Off the Chain.
                 </p>
                 <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
                   <a
@@ -1068,10 +1062,10 @@ function Home() {
                     </span>
                   </a>
                   <a
-                    href="/evade/where-is-bobo/"
+                    href="/evade/keychain-ar/"
                     className="btn-pill btn-glass px-6 py-3.5 text-sm font-medium"
                   >
-                    Where is Bobo?
+                    Try Off the Chain
                   </a>
                 </div>
               </div>
@@ -1097,20 +1091,8 @@ function Home() {
                   <h3 id="live-title" className="mt-4 display text-[clamp(24px,2.4vw,38px)]">
                     <span className={TEXT.magenta}>{lead.name}</span>, activated.
                   </h3>
-                  <p className="mt-3 text-muted-foreground">{lead.body[0]}</p>
-                  <dl className="mt-5 grid gap-2">
-                    {lead.facts.map((f) => (
-                      <div
-                        key={f.k}
-                        className="flex items-baseline justify-between gap-3 border-b border-white/10 pb-2"
-                      >
-                        <dt className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
-                          {f.k}
-                        </dt>
-                        <dd className="text-right text-xs text-white">{f.v}</dd>
-                      </div>
-                    ))}
-                  </dl>
+                  <p className="mt-3 text-muted-foreground">{lead.teaser}</p>
+
                   <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
                     {lead.cta && (
                       <a

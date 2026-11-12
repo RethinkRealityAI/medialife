@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { CAPTURES, type Capture, type Where } from "@/lib/fan-captures";
 import { Reveal } from "@/components/home/Reveal";
 import {
   CARD,
@@ -32,107 +33,11 @@ export const Route = createFileRoute("/fan-reactions")({
   component: FanReactions,
 });
 
-type Where = "Conventions" | "Stores" | "Out in the world";
-type Capture = {
-  src?: string;
-  poster: string;
-  alt: string;
-  where: Where;
-  tag: string;
-  ratio: string;
-};
-
-const F = "/fan-reactions";
-const V = "/evade/creators/assets/video";
-
-// Real captures only. Clips that show partners not yet approved for public use
-// are left out on purpose.
-const CAPTURES: Capture[] = [
-  {
-    src: `${F}/anime-nyc-tee.mp4`,
-    poster: `${F}/anime-nyc-tee.webp`,
-    alt: "Logan Chitwood showing the Yujiro × Animebae activated tee at Anime NYC",
-    where: "Conventions",
-    tag: "Anime NYC",
-    ratio: "480 / 822",
-  },
-  {
-    src: `${V}/bobo-golden-gate.mp4`,
-    poster: `${V}/bobo-golden-gate.webp`,
-    alt: "Bobo in AR at the Golden Gate Bridge",
-    where: "Out in the world",
-    tag: "EVADE × Bobo",
-    ratio: "9 / 16",
-  },
-  {
-    src: `${F}/sakamoto-poster.mp4`,
-    poster: `${F}/sakamoto-poster.webp`,
-    alt: "The Sakamoto Days activated poster coming alive in a comic store",
-    where: "Stores",
-    tag: "Sakamoto Days",
-    ratio: "480 / 822",
-  },
-  {
-    src: `${F}/sakamoto-facade.mp4`,
-    poster: `${F}/sakamoto-facade.webp`,
-    alt: "A Sakamoto Days tag painting itself across a storefront, seen through a phone",
-    where: "Out in the world",
-    tag: "Sakamoto Days",
-    ratio: "480 / 936",
-  },
-  {
-    poster: `${F}/sakamoto-javits.webp`,
-    alt: "Cosplayers with a life-sized AR Mr. Sakamoto at the Javits Center",
-    where: "Conventions",
-    tag: "Anime NYC",
-    ratio: "600 / 1036",
-  },
-  {
-    src: `${V}/bobo-meetup.mp4`,
-    poster: `${V}/bobo-meetup.webp`,
-    alt: "Bobo in AR meeting a mascot outside an event",
-    where: "Out in the world",
-    tag: "EVADE × Bobo",
-    ratio: "9 / 16",
-  },
-  {
-    src: `${F}/figure-shelf.mp4`,
-    poster: `${F}/figure-shelf.webp`,
-    alt: "An AR figure placed on a collector's shelf next to real figures",
-    where: "Stores",
-    tag: "Activated collectible",
-    ratio: "480 / 816",
-  },
-  {
-    src: `${F}/sakamoto-street.mp4`,
-    poster: `${F}/sakamoto-street.webp`,
-    alt: "A life-sized AR Mr. Sakamoto on the street outside a venue",
-    where: "Out in the world",
-    tag: "Sakamoto Days",
-    ratio: "480 / 816",
-  },
-  {
-    src: `${V}/bobo-exhibit.mp4`,
-    poster: `${V}/bobo-exhibit.webp`,
-    alt: "Bobo in AR running and flipping by an outdoor exhibit",
-    where: "Out in the world",
-    tag: "EVADE × Bobo",
-    ratio: "9 / 16",
-  },
-  {
-    src: `${V}/bobo-bridge.mp4`,
-    poster: `${V}/bobo-bridge.webp`,
-    alt: "Bobo in AR on the Golden Gate Bridge walkway",
-    where: "Out in the world",
-    tag: "EVADE × Bobo",
-    ratio: "9 / 16",
-  },
-];
-
 const FILTERS: ("All" | Where)[] = ["All", "Conventions", "Stores", "Out in the world"];
 
 function FanReactions() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("All");
+  const [open, setOpen] = useState<Capture | null>(null);
   const shown = CAPTURES.filter((c) => filter === "All" || c.where === filter);
 
   return (
@@ -145,7 +50,7 @@ function FanReactions() {
             For fans. <span className={TEXT.magenta}>By fans.</span>
           </>
         }
-        lead="Recorded on fans' own phones, at conventions, in stores and out in the world. These are not renders."
+        lead="Recorded on fans' own phones, at conventions, in stores and out in the world. These are not renders. Open any clip for the story behind it."
       />
 
       <section aria-labelledby="wall-title" className={`${SECTION} pb-24`}>
@@ -176,10 +81,11 @@ function FanReactions() {
         <ul className="mt-8 columns-2 gap-3 md:columns-3 lg:columns-4 [&>li]:mb-3">
           {shown.map((c) => (
             <li key={c.poster} className="break-inside-avoid">
-              <CaptureTile c={c} />
+              <CaptureTile c={c} onOpen={() => setOpen(c)} />
             </li>
           ))}
         </ul>
+        <CaptureDialog c={open} onClose={() => setOpen(null)} />
       </section>
 
       <section aria-labelledby="share-title" className={`${SECTION} pb-24`}>
@@ -227,13 +133,20 @@ function FanReactions() {
         </Reveal>
       </section>
 
-      <CtaBand />
+      <CtaBand
+        title={
+          <>
+            Give your fans <span className="text-accent">something to film.</span>
+          </>
+        }
+        lead="Every activation is made to be filmed and shared, and every share brings in the next fan."
+      />
     </>
   );
 }
 
 /** A capture that plays only while it's on screen (and never with reduced motion). */
-function CaptureTile({ c }: { c: Capture }) {
+function CaptureTile({ c, onOpen }: { c: Capture; onOpen: () => void }) {
   const ref = useRef<HTMLVideoElement | null>(null);
   const [near, setNear] = useState(false);
 
@@ -255,7 +168,14 @@ function CaptureTile({ c }: { c: Capture }) {
   }, []);
 
   return (
-    <figure className="group relative overflow-hidden rounded-[18px] bg-secondary ring-1 ring-white/10">
+    <figure className="group relative overflow-hidden rounded-[18px] bg-secondary ring-1 ring-white/10 transition-shadow hover:ring-white/30">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-haspopup="dialog"
+        aria-label={`${c.alt}. Open the story`}
+        className="absolute inset-0 z-10 cursor-pointer rounded-[18px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      />
       {c.src ? (
         <video
           ref={ref}
@@ -285,7 +205,100 @@ function CaptureTile({ c }: { c: Capture }) {
       <figcaption className="absolute bottom-3 left-3 right-3 flex flex-col items-start gap-0.5 mono text-[9px] uppercase leading-tight tracking-[0.16em] text-white sm:flex-row sm:items-center sm:justify-between sm:gap-2">
         <span>{c.tag}</span>
         <span className="text-white/60">{c.where}</span>
+        <span
+          aria-hidden
+          className="absolute -top-1 right-0 hidden rounded-full bg-white/15 px-2 py-1 text-[8px] backdrop-blur group-hover:block"
+        >
+          Story +
+        </span>
       </figcaption>
     </figure>
+  );
+}
+
+/** One clip, bigger, with what happened and where to go deeper. Native dialog: Esc and focus come for free. */
+function CaptureDialog({ c, onClose }: { c: Capture | null; onClose: () => void }) {
+  const ref = useRef<HTMLDialogElement | null>(null);
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (c && !d.open) d.showModal();
+    if (!c && d.open) d.close();
+  }, [c]);
+  return (
+    <dialog
+      ref={ref}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === ref.current) onClose();
+      }}
+      aria-labelledby="capture-title"
+      className="m-auto w-[min(920px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-auto rounded-[26px] border border-white/15 bg-[#0b0d12] p-0 text-white backdrop:bg-black/75 backdrop:backdrop-blur-sm"
+    >
+      {c && (
+        <div className="grid gap-0 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="bg-black">
+            {c.src ? (
+              <video
+                key={c.src}
+                src={c.src}
+                poster={c.poster}
+                muted
+                loop
+                playsInline
+                autoPlay
+                controls
+                aria-label={c.alt}
+                className="block max-h-[70dvh] w-full object-contain sm:max-h-[80dvh]"
+              />
+            ) : (
+              <img
+                src={c.poster}
+                alt={c.alt}
+                className="block max-h-[70dvh] w-full object-contain sm:max-h-[80dvh]"
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-5 p-6 sm:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {c.tag} · {c.where}
+              </p>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="-mr-2 -mt-2 grid h-10 w-10 shrink-0 place-items-center rounded-full border border-white/15 text-lg hover:bg-white/10"
+              >
+                ×
+              </button>
+            </div>
+            <h3
+              id="capture-title"
+              className="text-[clamp(20px,2vw,26px)] font-semibold leading-snug"
+            >
+              {c.story}
+            </h3>
+            <dl className="grid gap-2">
+              <div className="flex items-baseline justify-between gap-4 border-b border-white/10 pb-2">
+                <dt className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Format
+                </dt>
+                <dd className="text-right text-sm">{c.format}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-4 border-b border-white/10 pb-2">
+                <dt className="mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+                  Filmed on
+                </dt>
+                <dd className="text-right text-sm">A fan's own phone</dd>
+              </div>
+            </dl>
+            <div className="mt-auto">
+              <PillLink href={c.link.href}>{c.link.label}</PillLink>
+            </div>
+          </div>
+        </div>
+      )}
+    </dialog>
   );
 }
