@@ -463,8 +463,9 @@
 .hero-stage { --px: 0; --py: 0; }
 .hero-stage .hs-poster { position: relative; z-index: 1; translate: calc(var(--px) * -6px) calc(var(--py) * -4px); }
 .hs-card2 {
-  position: absolute; z-index: 2; left: 35%; top: 6%; width: 49%;
-  transform-origin: 30% 100%;
+  /* the same size as the Cola Run splash, tucked behind it and fanned out to the right */
+  position: absolute; z-index: 0; left: 33%; top: 1%; width: 60%;
+  transform-origin: 15% 100%;
   transform: rotate(9deg) rotateX(calc(var(--py) * -4deg)) rotateY(calc(var(--px) * 6deg));
   translate: calc(var(--px) * 4px) calc(var(--py) * 3px);
   transition: transform 0.7s var(--ease), translate 0.7s var(--ease);
@@ -475,7 +476,7 @@
   box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.02), 0 40px 80px -30px rgba(0, 0, 0, 0.95), 0 0 90px -24px rgba(246, 195, 68, 0.45);
   animation: card2In 1.1s var(--ease) both 0.45s;
 }
-@keyframes card2In { from { opacity: 0; rotate: -11deg; translate: -38% 3%; } }
+@keyframes card2In { from { opacity: 0; rotate: -13deg; translate: -55% 2%; } }
 .hs-kc {
   position: absolute; z-index: 3; margin: 0; right: -10%; top: 24%; width: 41%;
   translate: calc(var(--px) * 16px) calc(var(--py) * 10px);
@@ -501,7 +502,9 @@
 @keyframes hkUp { from { opacity: 0; translate: 0 24px; scale: 0.85; } }
 @media (max-width: 1099px) {
   .hero-stage { margin-bottom: 64px; }
-  .hs-kc { right: 4%; width: 36%; top: 24%; }
+  .hero-stage .hs-poster, .hs-card2 { width: 54%; }
+  .hs-card2 { left: 24%; }
+  .hs-kc { right: 2%; width: 33%; top: 26%; }
   .hk-nfc { font-size: 11px; padding: 7px 11px; right: 0; bottom: -11%; }
 }
 @media (prefers-reduced-motion: reduce) {

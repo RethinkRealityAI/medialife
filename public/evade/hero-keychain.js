@@ -2,10 +2,10 @@
 // The physics and touch live in the shared module (/evade/keychain/dangle.js); this file only frames it so it
 // hangs exactly where the still render (#heroKc img) is. The still stays as the poster and the fallback
 // (no WebGL, slow load, the model failing to load).
-//   - wide screens: the canvas covers the hero and the cable runs up out of the top edge; it drops in on load,
-//     the cable catches it and it swings off as if someone had just touched it.
-//   - phones: the copy sits above it, so the canvas only covers the hero stage, there is no cable and no drop;
-//     it starts swinging where it hangs.
+//   - it hangs free (Dapo: no cable line), already in place, and swings off on load as if someone had just
+//     touched it; no drop-in, since without a cable a fall would look like it stops in mid-air.
+//   - wide screens: the canvas covers the hero (room to swing); phones: only the hero stage, so it never
+//     draws over the copy above.
 // Drag or flick it to swing it, tap it to jiggle it. Every few seconds of calm it nudges itself.
 import { dangleKeychain } from "/evade/keychain/dangle.js";
 
@@ -34,7 +34,7 @@ function init() {
     const cr = canvas.getBoundingClientRect(), ir = img.getBoundingClientRect();
     // in the still, the clasp top sits at 58.9% across and 1% down; the whole set is 97.57% of its height
     const x = ir.left - cr.left + 0.589 * ir.width, y = ir.top - cr.top + 0.01 * ir.height;
-    return { clasp: { x, y }, height: 0.9757 * ir.height, hook: wide ? null : { x, y: y - 2 } };
+    return { clasp: { x, y }, height: 0.9757 * ir.height, hook: { x, y: y - 2 } };
   };
 
   let hintEl = null, touched = false;
@@ -44,11 +44,10 @@ function init() {
     frame,
     onReady(api) {
       const r = api.rig;
-      if (!wide) {
-        // phones: no drop, it is already hanging; swing it off as if just touched
-        r.P.copy(r.rest); r.V.set(0, 0, 0); r.taut = true;
-        if (!matchMedia("(prefers-reduced-motion: reduce)").matches) api.nudge(1, 1.25);
-      }
+      // free-hanging: no cable and no drop; it is already hanging and swings off as if just touched
+      r.cable.visible = false;
+      r.P.copy(r.rest); r.V.set(0, 0, 0); r.taut = true;
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches) api.nudge(1, 1.25);
       fig.classList.add("is-3d");
       setTimeout(() => { if (!touched) hint(true); }, 2600);
     },
