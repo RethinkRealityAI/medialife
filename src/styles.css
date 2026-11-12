@@ -961,6 +961,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: 50% var(--pos, 50%);
   transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .fmt-card:hover .fmt-media video {
@@ -980,5 +981,12 @@
   [data-reveal="pending"] .mc-piece {
     transform: translate(-50%, -50%) translate(calc(var(--x) * 1cqw), calc(var(--y) * 1cqh))
       rotate(var(--r));
+  }
+}
+@media (min-width: 1024px) {
+  /* laptops and up: landscape clips (cropped around each clip's focus) keep
+     both rows of formats close to one screen */
+  .fmt-media {
+    aspect-ratio: 4 / 3;
   }
 }

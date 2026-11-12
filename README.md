@@ -187,11 +187,22 @@ results (Sakamoto Days case, award, conventions), latest launches, contact.
 - What we build: each format card plays a short 4:5 loop (`public/home/formats/`, H.264
   CRF 27, 480x600, no audio; `InViewVideo.tsx` loads and plays only on screen). Mini-games,
   collector hubs and fan rewards use stand-in Bobo clips until the real captures are
-  uploaded: replace the file of the same name.
+  uploaded: replace the file of the same name. From 1024px the clips are cropped to 4:3
+  around each clip's `pos` (vertical focus) so both rows sit close to one screen.
+- Sizing: sections cap at 1280px (`SECTION`), so large screens get margins instead of
+  bigger blocks. Section titles use `H2` (30 to 54px), always well under the hero title.
 - Headings: one h1 (hero), h2 per section (including the logo strip), h3 for cards, h4
   for the how-it-works steps.
 
 ### EVADE launch page (`/evade/`)
+
+- Top bar = the main medialife.ai navigation (static copy of `src/components/site/Nav.tsx`:
+  same items, numbers and short labels; menu below 1280px). Change both together.
+- The page's own sections (EVADE, Around the world, How it works, Bobo's Hideout, Get
+  yours, FAQ, plus Get the keychain) are a floating side nav on the left (`.bnav`): a
+  glass rail of dots over the page that opens into names on hover, keyboard focus or a
+  tap, lights the current section and briefly flashes its name on arrival. On phones it
+  appears once the hero scrolls away and dims while the page is still.
 
 - "Bobo in action, around the world" frames the live globe (`/evade/where-is-bobo/?embed`,
   which hides the globe's own header). Touch screens get a "Tap to explore" cover so a

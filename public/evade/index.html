@@ -31,7 +31,7 @@
 <link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=3" />
+<link rel="stylesheet" href="/evade/launch.css?v=4" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -41,7 +41,7 @@
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script src="/evade/launch.js" defer></script>
+<script src="/evade/launch.js?v=2" defer></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -76,24 +76,56 @@
   </defs>
 </svg>
 
-<header class="nav" id="nav">
-  <div class="wrap nav-row">
-    <a class="brand" href="#main" aria-label="MEDIALIFE × EVADE, back to top">
-      <img src="/card/mark.svg" alt="" width="24" height="24" />
-      <b>MEDIALIFE<sup>™</sup></b>
-      <span class="x" aria-hidden="true">×</span>
-      <img class="brand-evade" src="/brand/evade-logo.webp" alt="EVADE" width="88" height="23" />
+<!-- The main medialife.ai navigation (same items, order and look as the site
+     header in src/components/site/Nav.tsx: keep the two in step). The EVADE
+     sections live in the floating side nav below it. -->
+<header class="nav snav" id="nav">
+  <div class="snav-row">
+    <a class="snav-logo" href="/" aria-label="MEDIALIFE home">
+      <span class="snav-orb" aria-hidden="true"><i></i><i></i><i></i></span>
+      <img src="/brand/medialife-lockup.webp" alt="" width="686" height="183" />
     </a>
-    <nav class="nav-links" aria-label="Sections">
-      <a href="#footage">Around the world</a>
-      <a href="#activated">How it works</a>
-      <a href="#hideout">Bobo's Hideout</a>
-      <a href="#get">Get yours</a>
-      <a href="#faq">FAQ</a>
+    <nav class="snav-links" aria-label="Main">
+      <a href="/activated-merch/"><span class="sn-num">/01</span><span class="sl-s">Merch</span><span class="sl-l">Activated Merch</span></a>
+      <a href="/evade/" aria-current="page"><span class="sn-num">/02</span>EVADE<span class="sn-new" role="img" aria-label="(new)"></span></a>
+      <a href="/live"><span class="sn-num">/03</span>Live Now</a>
+      <a href="/#capabilities"><span class="sn-num">/04</span><span class="sl-s">Capabilities</span><span class="sl-l">Production Capabilities</span></a>
+      <a href="/activated-retail"><span class="sn-num">/05</span><span class="sl-s">Retail</span><span class="sl-l">Retail Program</span></a>
+      <a href="/creator-hub"><span class="sn-num">/06</span>Creator Hub</a>
+      <a href="/case-studies"><span class="sn-num">/07</span>Case Studies</a>
+      <a href="https://shop.medialife.ai/" target="_blank" rel="noopener noreferrer"><span class="sn-num">/08</span>Shop<span class="sn-ext" aria-hidden="true">↗</span><span class="sr-only">(opens the MEDIALIFE shop in a new tab)</span></a>
     </nav>
-    <a class="btn btn--sm btn--gold" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="nav_shop">Get the keychain</a>
+    <a class="snav-cta" href="/contact">Activate your IP <span aria-hidden="true">→</span></a>
+    <button type="button" class="snav-menu" id="snavMenu" aria-expanded="false" aria-controls="snavPanel">Menu</button>
   </div>
+  <nav class="snav-panel" id="snavPanel" aria-label="Main" hidden>
+      <a href="/activated-merch/"><span>Activated Merch</span><span class="sn-num">/01</span></a>
+      <a href="/evade/" aria-current="page"><span>EVADE <span class="sn-newpill">New</span></span><span class="sn-num">/02</span></a>
+      <a href="/live"><span>Live Now</span><span class="sn-num">/03</span></a>
+      <a href="/#capabilities"><span>Production Capabilities</span><span class="sn-num">/04</span></a>
+      <a href="/activated-retail"><span>Retail Program</span><span class="sn-num">/05</span></a>
+      <a href="/creator-hub"><span>Creator Hub</span><span class="sn-num">/06</span></a>
+      <a href="/case-studies"><span>Case Studies</span><span class="sn-num">/07</span></a>
+      <a href="https://shop.medialife.ai/" target="_blank" rel="noopener noreferrer"><span>Shop <span aria-hidden="true">↗</span><span class="sr-only">(opens the MEDIALIFE shop in a new tab)</span></span><span class="sn-num">/08</span></a>
+    <div class="snav-panel-cta"><a class="snav-cta" href="/contact">Activate your IP <span aria-hidden="true">→</span></a></div>
+  </nav>
 </header>
+
+<!-- Bobo's side nav: floats over the page on the left, never takes a column.
+     The lit dot follows the section on screen (launch.js). -->
+<nav class="bnav" id="bnav" aria-label="On this page">
+  <div class="bnav-card">
+    <ol class="bnav-list">
+      <li><a href="#top" data-sec="top"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">EVADE, activated</span></a></li>
+      <li><a href="#footage" data-sec="footage"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Around the world</span></a></li>
+      <li><a href="#activated" data-sec="activated"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">How it works</span></a></li>
+      <li><a href="#hideout" data-sec="hideout"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Bobo's Hideout</span></a></li>
+      <li><a href="#get" data-sec="get"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">Get yours</span></a></li>
+      <li><a href="#faq" data-sec="faq"><span class="bnav-dot" aria-hidden="true"></span><span class="bnav-label">FAQ</span></a></li>
+    </ol>
+    <a class="bnav-buy" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="sidenav_shop"><svg class="ic" aria-hidden="true"><use href="#i-keys"/></svg><span class="bnav-label">Get the keychain</span></a>
+  </div>
+</nav>
 
 <main id="main">
 

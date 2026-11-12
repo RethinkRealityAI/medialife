@@ -95,8 +95,13 @@ const CONVENTION_LOGOS = [
 ];
 
 const EYEBROW = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground";
-const SECTION = "relative px-5 sm:px-8 lg:px-16";
-const H2 = "display text-[clamp(40px,6vw,88px)]";
+/** Sections sit in one centred column, so large screens don't blow everything up. */
+const SECTION = "relative mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-16";
+/**
+ * Section headings stay well under the hero title (which tops out at 100px), so
+ * the hero keeps the lead: about half its size.
+ */
+const H2 = "display text-[clamp(30px,3.4vw,54px)]";
 
 /** Brand highlights alternate between the logo's two colours, never as a gradient. */
 type Hue = "blue" | "magenta";
@@ -118,7 +123,7 @@ function ServiceIntro({ sv, id }: { sv: (typeof SERVICES)[number]; id: string })
   return (
     <>
       <div className="flex items-start justify-between gap-4">
-        <span className="svc-icon grid h-16 w-16 place-items-center rounded-2xl">
+        <span className="svc-icon grid h-14 w-14 place-items-center rounded-2xl">
           <svg
             viewBox="0 0 48 48"
             width="40"
@@ -140,7 +145,7 @@ function ServiceIntro({ sv, id }: { sv: (typeof SERVICES)[number]; id: string })
           {sv.tag}
         </span>
       </div>
-      <h3 id={id} className="mt-8 display text-[clamp(32px,3.2vw,48px)] text-white">
+      <h3 id={id} className="mt-6 display text-[clamp(24px,2.2vw,34px)] text-white">
         {sv.title}
       </h3>
       <p className="mt-3 max-w-xl leading-relaxed text-muted-foreground sm:text-[17px]">
@@ -234,7 +239,14 @@ const FORMATS: {
   title: string;
   line: string;
   icon: React.ReactNode;
-  clip: { src: string; poster: string; caption: string; label: string };
+  clip: {
+    src: string;
+    poster: string;
+    caption: string;
+    label: string;
+    /** Vertical focus of the clip (object-position y) where laptops crop it to 4:3 */
+    pos?: string;
+  };
 }[] = [
   {
     hue: "blue",
@@ -255,6 +267,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/image-tracked.mp4",
       poster: "/home/formats/image-tracked.webp",
+      pos: "72%",
       caption: "Convention tee + sport cards",
       label: "A fan scans a creator tee at Anime NYC, then activated sport cards come alive",
     },
@@ -276,6 +289,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/world-tracked.mp4",
       poster: "/home/formats/world-tracked.webp",
+      pos: "78%",
       caption: "EVADE × Bobo · Golden Gate",
       label: "Bobo the cat placed in AR at the Golden Gate Bridge",
     },
@@ -296,6 +310,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/geospatial.mp4",
       poster: "/home/formats/geospatial.webp",
+      pos: "45%",
       caption: "Sakamoto Days × Netflix",
       label: "Sakamoto Days written across a real building in AR",
     },
@@ -320,6 +335,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/mini-games.mp4",
       poster: "/home/formats/mini-games.webp",
+      pos: "85%",
       caption: "EVADE Cola Run",
       label: "Bobo running in EVADE Cola Run, played in the browser",
     },
@@ -340,6 +356,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/collector-hub.mp4",
       poster: "/home/formats/collector-hub.webp",
+      pos: "60%",
       caption: "Bobo's Hideout",
       label: "Bobo's Hideout, the EVADE collector hub, building itself in 3D",
     },
@@ -362,6 +379,7 @@ const FORMATS: {
     clip: {
       src: "/home/formats/fan-rewards.mp4",
       poster: "/home/formats/fan-rewards.webp",
+      pos: "55%",
       caption: "EVADE keychain unlock",
       label: "Bobo and the Eclipse can popping out of the EVADE keychain",
     },
@@ -604,7 +622,7 @@ function Home() {
               <Reveal as="li" key={s.l} delay={i * 80} className="lg-card rounded-3xl p-5 sm:p-6">
                 <CountUp
                   value={s.v}
-                  className={`block display text-[clamp(30px,3.6vw,48px)] ${i % 2 ? TEXT.magenta : TEXT.blue}`}
+                  className={`block display text-[clamp(26px,2.6vw,40px)] ${i % 2 ? TEXT.magenta : TEXT.blue}`}
                 />
                 <div className="mt-2 text-xs text-muted-foreground">{s.l}</div>
               </Reveal>
@@ -625,7 +643,7 @@ function Home() {
         <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
           <Reveal className="lg:col-span-8">
             <Eyebrow hue="blue">What we do</Eyebrow>
-            <h2 id="what-title" className="display mt-4 text-[clamp(40px,5.2vw,80px)]">
+            <h2 id="what-title" className={`${H2} mt-4`}>
               We commercialize IP through{" "}
               <span className={TEXT.blue}>experiential activations.</span>
             </h2>
@@ -640,11 +658,11 @@ function Home() {
         </div>
 
         {/* Flagship: activated products (the merch range lives here) */}
-        <Reveal className="mt-12">
+        <Reveal className="mt-10">
           <article
             id="merch"
             aria-labelledby="svc-products"
-            className="svc-card lg-card grid scroll-mt-24 gap-8 rounded-[32px] p-6 sm:p-9 lg:grid-cols-12 lg:gap-10"
+            className="svc-card lg-card grid scroll-mt-24 gap-8 rounded-[32px] p-6 sm:p-8 lg:grid-cols-12 lg:gap-10"
             style={{ "--c": HEX.blue } as React.CSSProperties}
           >
             <div className="flex flex-col lg:col-span-5">
@@ -710,10 +728,10 @@ function Home() {
         <Reveal className="mt-3">
           <article
             aria-labelledby="svc-marketing"
-            className="svc-card lg-card grid gap-8 overflow-hidden rounded-[32px] p-6 sm:p-9 lg:grid-cols-12 lg:gap-10"
+            className="svc-card lg-card grid gap-8 overflow-hidden rounded-[32px] p-6 sm:p-8 lg:grid-cols-12 lg:gap-10"
             style={{ "--c": HEX.magenta } as React.CSSProperties}
           >
-            <MarketingCollage className="order-2 aspect-[6/5] w-full lg:order-1 lg:col-span-7 lg:aspect-[5/4]" />
+            <MarketingCollage className="order-2 aspect-[6/5] w-full lg:order-1 lg:col-span-7 lg:aspect-[16/11]" />
             <div className="order-1 flex flex-col lg:order-2 lg:col-span-5 lg:justify-center">
               <ServiceIntro sv={SERVICES[1]} id="svc-marketing" />
               <p className="mt-5 text-sm leading-relaxed text-white/70">
@@ -757,7 +775,7 @@ function Home() {
           </Reveal>
         </div>
 
-        <ul className="-mx-5 mt-12 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+        <ul className="-mx-5 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
           {FORMATS.map((f, i) => (
             <Reveal
               as="li"
@@ -765,17 +783,20 @@ function Home() {
               delay={(i % 3) * 90}
               className="fmt-card lg-card flex w-[80%] shrink-0 snap-start flex-col rounded-[26px] p-3 sm:w-auto"
             >
-              <div className="fmt-media">
+              <div
+                className="fmt-media"
+                style={{ "--pos": f.clip.pos ?? "50%" } as React.CSSProperties}
+              >
                 <InViewVideo src={f.clip.src} poster={f.clip.poster} label={f.clip.label} />
                 <span className="lg-chip absolute left-3 top-3 rounded-full px-3 py-1 mono text-[9px] uppercase tracking-[0.16em] text-white/85">
                   {f.clip.caption}
                 </span>
               </div>
-              <div className="flex gap-4 px-3 pb-3 pt-5">
+              <div className="flex gap-3.5 px-2.5 pb-2 pt-4">
                 <svg
                   viewBox="0 0 48 48"
-                  width="36"
-                  height="36"
+                  width="30"
+                  height="30"
                   fill="none"
                   stroke={HEX[f.hue]}
                   strokeWidth="2"
@@ -787,8 +808,8 @@ function Home() {
                   {f.icon}
                 </svg>
                 <div>
-                  <h3 className="text-lg font-medium text-white">{f.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{f.line}</p>
+                  <h3 className="text-base font-medium text-white">{f.title}</h3>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{f.line}</p>
                 </div>
               </div>
             </Reveal>
@@ -958,7 +979,7 @@ function Home() {
               <p className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 Award · {AWARD.year}
               </p>
-              <h3 className={`mt-3 display text-[clamp(32px,3.6vw,52px)] ${TEXT.magenta}`}>
+              <h3 className={`mt-3 display text-[clamp(24px,2.4vw,38px)] ${TEXT.magenta}`}>
                 {AWARD.tier} {AWARD.name}
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">{AWARD.category}</p>
@@ -1052,7 +1073,7 @@ function Home() {
                   <span className="h-1.5 w-1.5 rounded-full bg-[#f5c84b]" aria-hidden />
                   New · EVADE × Bobo
                 </p>
-                <h3 id="evade-title" className="mt-4 display text-[clamp(32px,3.4vw,52px)]">
+                <h3 id="evade-title" className="mt-4 display text-[clamp(24px,2.4vw,38px)]">
                   Bobo, off the screen.
                 </h3>
                 <p className="mt-3 max-w-md text-muted-foreground">
@@ -1096,7 +1117,7 @@ function Home() {
                     />
                     {lead.statusLabel}
                   </span>
-                  <h3 id="live-title" className="mt-4 display text-[clamp(32px,3.4vw,52px)]">
+                  <h3 id="live-title" className="mt-4 display text-[clamp(24px,2.4vw,38px)]">
                     <span className={TEXT.magenta}>{lead.name}</span>, activated.
                   </h3>
                   <p className="mt-3 text-muted-foreground">{lead.body[0]}</p>
@@ -1162,7 +1183,7 @@ function Home() {
         <Eyebrow hue="magenta">Bring your IP</Eyebrow>
         <h2
           id="contact-title"
-          className="display mx-auto mt-5 max-w-5xl text-[clamp(48px,8vw,128px)]"
+          className="display mx-auto mt-5 max-w-4xl text-[clamp(36px,4.8vw,72px)]"
         >
           Let's activate <span className={TEXT.magenta}>your IP.</span>
         </h2>
