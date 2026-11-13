@@ -186,8 +186,8 @@ async function init() {
     phone.style.transform = back.style.transform = tr;
   }
 
-  // touch: drag the phone; a tap on a side moves it there. A mouse is the phone (below); it can also grab and
-  // drag the phone while the phone is parked on an experience.
+  // touch: drag the phone; a tap on a side moves it there. A mouse is the phone (below), and it can also grab
+  // and drag it.
   let down = null;
   stage.addEventListener("pointerdown", (e) => {
     if (e.target.closest(".tw-stick, .tw-switch")) return;
@@ -195,7 +195,7 @@ async function init() {
     const x = e.clientX - b.left;
     const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - phoneY()) < L.ph / 2;
     const mouse = e.pointerType === "mouse";
-    down = { x: e.clientX, y: e.clientY, u, onPhone, mouse, drag: onPhone && (!mouse || locked), lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
+    down = { x: e.clientX, y: e.clientY, u, onPhone, mouse, drag: onPhone, lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
     if (down.drag) { try { stage.setPointerCapture(e.pointerId); } catch {} }
   });
   stage.addEventListener("pointermove", (e) => {
@@ -229,7 +229,9 @@ async function init() {
   };
   let mouseAt = null;   // the last mouse position (client px), so a scroll with the wheel picks the phone up too
   const track = (cx, cy) => {
-    if (reduce || dragging) return;
+    // (no reduced-motion opt-out here: following the mouse is direct manipulation, not decoration; with reduced
+    // motion the phone simply moves without the easing, as on the homepage hero)
+    if (dragging) return;
     const b = canvas.getBoundingClientRect();
     const x = cx - b.left, y = cy - b.top;
     const inside = x >= 0 && y >= 0 && x <= L.w && y <= L.h;
