@@ -36,7 +36,8 @@ else addEventListener("DOMContentLoaded", initTracking, { once: true });
 
 /* ---------------------------------------------------------------- chrome */
 const nav = $("#nav");
-const onScroll = () => nav.classList.toggle("is-scrolled", scrollY > 8);
+// /evade/ uses the shared site header (no #nav), so this is optional.
+const onScroll = () => nav?.classList.toggle("is-scrolled", scrollY > 8);
 addEventListener("scroll", onScroll, { passive: true });
 onScroll();
 

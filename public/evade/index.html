@@ -30,7 +30,8 @@
 <link rel="preload" as="image" href="/evade/img/keychain-render-560.webp" imagesrcset="/evade/img/keychain-render-560.webp 560w, /evade/img/keychain-render.webp 1118w" imagesizes="(min-width: 1100px) 320px, 42vw" type="image/webp" fetchpriority="high" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=19" />
+<link rel="stylesheet" href="/site-nav/site-nav.css" />
+<link rel="stylesheet" href="/evade/launch.css?v=20" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -39,8 +40,8 @@
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://medialife.ai/evade/","name":"EVADE × MEDIALIFE: Cola Run, activated","description":"Our latest partner launch: the EVADE Bobo and Eclipse keychain unlocks Cola Run with a tap.","isPartOf":{"@type":"WebSite","name":"MEDIALIFE","url":"https://medialife.ai"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is Activated Merch?","acceptedAnswer":{"@type":"Answer","text":"Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards."}},{"@type":"Question","name":"What is Bobo Off the Chain?","acceptedAnswer":{"@type":"Answer","text":"The keychain's AR experience. Point your phone camera at the charms and Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. No app."}},{"@type":"Question","name":"Do I need to download anything?","acceptedAnswer":{"@type":"Answer","text":"No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens."}},{"@type":"Question","name":"Where do I get the keychain?","acceptedAnswer":{"@type":"Answer","text":"The Bobo and Eclipse charm set is in the MEDIALIFE shop. Creators can also get one free by joining the EVADE creator crew."}},{"@type":"Question","name":"Who is Bobo?","acceptedAnswer":{"@type":"Answer","text":"Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the Where is Bobo? globe."}},{"@type":"Question","name":"I'm a creator. How do I get involved?","acceptedAnswer":{"@type":"Answer","text":"Join the EVADE creator crew for a free merch package and giveaway codes for your community."}}]}]}</script>
 
 <script src="/vendor/ar-kit/track.js" defer></script>
-<script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script src="/evade/launch.js?v=6" defer></script>
+<script type="module" src="/evade/creators/assets/js/page.js?v=2"></script>
+<script src="/evade/launch.js?v=7" defer></script>
 <script type="module" src="/evade/hideout-3d.js"></script>
 <script type="module" src="/evade/hero-keychain.js?v=3"></script>
 <script type="module" src="/evade/two-ways.js?v=2"></script>
@@ -81,40 +82,11 @@
   </defs>
 </svg>
 
-<!-- The main medialife.ai navigation (same items, order and look as the site
-     header in src/components/site/Nav.tsx: keep the two in step). The EVADE
-     sections live in the floating side nav below it. -->
-<header class="nav snav" id="nav">
-  <div class="snav-row">
-    <a class="snav-logo" href="/" aria-label="MEDIALIFE home">
-      <span class="snav-orb" aria-hidden="true"><i></i><i></i><i></i></span>
-      <img src="/brand/medialife-lockup.webp" alt="" width="686" height="183" />
-    </a>
-    <nav class="snav-links" aria-label="Main">
-      <a href="/activated-merch/"><span class="sn-num">/01</span><span class="sl-s">Merch</span><span class="sl-l">Activated Merch</span></a>
-      <a href="/evade/" aria-current="page"><span class="sn-num">/02</span>EVADE<span class="sn-new" role="img" aria-label="(new)"></span></a>
-      <a href="/live"><span class="sn-num">/03</span>Live Now</a>
-      <a href="/#capabilities"><span class="sn-num">/04</span><span class="sl-s">Capabilities</span><span class="sl-l">Production Capabilities</span></a>
-      <a href="/activated-retail"><span class="sn-num">/05</span><span class="sl-s">Retail</span><span class="sl-l">Retail Program</span></a>
-      <a href="/creator-hub"><span class="sn-num">/06</span>Creator Hub</a>
-      <a href="/case-studies"><span class="sn-num">/07</span>Case Studies</a>
-      <a href="https://shop.medialife.ai/" target="_blank" rel="noopener noreferrer"><span class="sn-num">/08</span>Shop<span class="sn-ext" aria-hidden="true">↗</span><span class="sr-only">(opens the MEDIALIFE shop in a new tab)</span></a>
-    </nav>
-    <a class="snav-cta" href="/contact">Activate your IP <span aria-hidden="true">→</span></a>
-    <button type="button" class="snav-menu" id="snavMenu" aria-expanded="false" aria-controls="snavPanel">Menu</button>
-  </div>
-  <nav class="snav-panel" id="snavPanel" aria-label="Main" hidden>
-      <a href="/activated-merch/"><span>Activated Merch</span><span class="sn-num">/01</span></a>
-      <a href="/evade/" aria-current="page"><span>EVADE <span class="sn-newpill">New</span></span><span class="sn-num">/02</span></a>
-      <a href="/live"><span>Live Now</span><span class="sn-num">/03</span></a>
-      <a href="/#capabilities"><span>Production Capabilities</span><span class="sn-num">/04</span></a>
-      <a href="/activated-retail"><span>Retail Program</span><span class="sn-num">/05</span></a>
-      <a href="/creator-hub"><span>Creator Hub</span><span class="sn-num">/06</span></a>
-      <a href="/case-studies"><span>Case Studies</span><span class="sn-num">/07</span></a>
-      <a href="https://shop.medialife.ai/" target="_blank" rel="noopener noreferrer"><span>Shop <span aria-hidden="true">↗</span><span class="sr-only">(opens the MEDIALIFE shop in a new tab)</span></span><span class="sn-num">/08</span></a>
-    <div class="snav-panel-cta"><a class="snav-cta" href="/contact">Activate your IP <span aria-hidden="true">→</span></a></div>
-  </nav>
-</header>
+<!-- The main medialife.ai navigation: the same bar as every page on the site
+     (public/site-nav/, items from src/lib/site-nav.json). The EVADE sections
+     live in the floating side nav below it. -->
+<header class="mlnav" id="site-nav"></header>
+<script src="/site-nav/site-nav.js"></script>
 
 <!-- Bobo's side nav: a rail of section icons floating over the left edge
      (never a column). The current section is lit gold with its name beside it;
