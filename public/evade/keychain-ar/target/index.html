@@ -35,6 +35,27 @@
     #bar p{flex:1;margin:0;font-size:14px}
     #bar button{background:#2a2d33;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;min-width:44px;min-height:44px;cursor:pointer}
     #bar #v-flip[aria-pressed="true"]{background:#2f6fed}
+    /* the two charms on their own (the pictures the trackers use): side by side, or one at a time */
+    .charms{background:var(--card);border-radius:14px;box-shadow:0 1px 3px #0002;overflow:hidden}
+    #stage{background:#111;height:min(78vh,760px);display:flex;flex-direction:column}
+    #stage .row{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;gap:clamp(40px,9vw,160px);padding:24px clamp(16px,4vw,48px)}
+    #stage img{display:block;height:100%;width:auto;max-width:100%;min-width:0;object-fit:contain;cursor:pointer}
+    #stage img.can{height:74.7%}                 /* the can's picture is 59.8 mm tall to the cat's 80.1 mm: shown at true size to each other */
+    #stage[data-l="one"] img{height:100%!important}
+    #stage[data-l="one"] img:not(.on){display:none}
+    #stage[data-l="pair"] img{max-width:calc(50% - clamp(20px,4.5vw,80px))}
+    #stage:fullscreen{height:100vh}
+    #stage:fullscreen .row{padding:4vh 4vw}
+    .cbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:#1b1d22;color:#eee}
+    .cbar p{flex:1;margin:0;font-size:14px;min-width:120px}
+    @media (max-width:560px){ .cbar p{order:5;flex-basis:100%} .seg{flex-basis:100%} .seg button{flex:1;justify-content:center} }
+    .cbar button{background:#2a2d33;color:#fff;border:0;border-radius:8px;padding:0 14px;font:inherit;font-weight:600;min-width:44px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .cbar button[aria-pressed="true"]{background:#2f6fed}
+    .cbar button:focus-visible{outline:3px solid #8ab4ff;outline-offset:2px}
+    .seg{display:inline-flex;background:#2a2d33;border-radius:10px;padding:3px;gap:3px}
+    .seg button{min-height:38px;background:none}
+    #c-prev,#c-next{display:none}
+    .charms[data-l="one"] #c-prev,.charms[data-l="one"] #c-next{display:inline-flex}
   </style>
 </head>
 <body>
@@ -45,6 +66,27 @@
     <div class="tools"><button class="flip" id="flip-all" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M8 7 3 12l5 5V7z"/><path d="M16 7l5 5-5 5V7z"/></svg>Flip all</button></div>
   </header>
   <main>
+    <h2>The two charms on their own</h2>
+    <p style="margin:-4px 0 12px;color:var(--muted);max-width:70ch">The exact pictures the AR looks for, for <a href="/evade/spray-bobo/">Spray Bobo</a> and <a href="../">Off the Chain</a>. Side by side shows both with a gap between them (true size to each other); one at a time fills the screen with one charm (tap it or use the arrows to switch). Flip shows their other sides.</p>
+    <section class="charms" id="charms" data-l="pair" aria-label="The two charms">
+      <div id="stage" data-l="pair">
+        <div class="row">
+          <img class="cat on" id="c-cat" src="../image-targets/kc-bobo.jpg" alt="Bobo cat charm">
+          <img class="can" id="c-can" src="../image-targets/kc-can.jpg" alt="Eclipse can charm">
+        </div>
+        <div class="cbar">
+          <div class="seg" role="group" aria-label="Layout">
+            <button type="button" data-l="pair" aria-pressed="true">Side by side</button>
+            <button type="button" data-l="one" aria-pressed="false">One at a time</button>
+          </div>
+          <button type="button" id="c-prev" aria-label="Previous charm">‹</button>
+          <button type="button" id="c-next" aria-label="Next charm">›</button>
+          <p id="c-text" aria-live="polite">Bobo and the can, front</p>
+          <button type="button" id="c-flip" aria-pressed="false">Flip</button>
+          <button type="button" id="c-full">Full screen</button>
+        </div>
+      </div>
+    </section>
     <h2>Separate charms on one ring</h2>
     <div class="grid" id="grid"></div>
     <h2>Original test picture</h2>
@@ -96,6 +138,33 @@
     $('v-prev').onclick = () => step(-1); $('v-next').onclick = () => step(1); $('v-close').onclick = close;
     $('v-img').onclick = () => step(1);
     addEventListener('keydown', (e) => { if ($('view').hidden) return; if (e.key === 'ArrowRight' || e.key === ' ') step(1); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'f' || e.key === 'F') setFlip(at, !items[at].flipped); else if (e.key === 'Escape') close(); });
+    // the two charms on their own
+    {
+      const C = { l: 'pair', one: 0, back: false };
+      const SRC = { cat: ['kc-bobo.jpg', 'kc-bobo-l.jpg'], can: ['kc-can.jpg', 'kc-can-back.jpg'] };
+      const NAMES = ['Bobo', 'the can'];
+      const imgs = [$('c-cat'), $('c-can')];
+      function render() {
+        $('charms').dataset.l = C.l; $('stage').dataset.l = C.l;
+        imgs[0].src = '../image-targets/' + SRC.cat[+C.back]; imgs[1].src = '../image-targets/' + SRC.can[+C.back];
+        imgs[0].alt = 'Bobo cat charm' + (C.back ? ', other side' : ''); imgs[1].alt = 'Eclipse can charm' + (C.back ? ', other side' : '');
+        imgs.forEach((im, i) => im.classList.toggle('on', i === C.one));
+        for (const b of document.querySelectorAll('.seg button')) b.setAttribute('aria-pressed', String(b.dataset.l === C.l));
+        $('c-flip').setAttribute('aria-pressed', String(C.back));
+        const side = C.back ? 'other side' : 'front';
+        $('c-text').textContent = C.l === 'pair' ? `Bobo and the can, ${side}` : `${C.one + 1} of 2: ${NAMES[C.one]}, ${side}`;
+        $('c-full').textContent = document.fullscreenElement ? 'Exit full screen' : 'Full screen';
+      }
+      const turn = (d) => { C.one = (C.one + d + 2) % 2; render(); };
+      for (const b of document.querySelectorAll('.seg button')) b.onclick = () => { C.l = b.dataset.l; render(); };
+      $('c-prev').onclick = () => turn(-1); $('c-next').onclick = () => turn(1);
+      imgs.forEach((im, i) => { im.onclick = () => { if (C.l === 'one') turn(1); else { C.l = 'one'; C.one = i; render(); } }; });
+      $('c-flip').onclick = () => { C.back = !C.back; render(); };
+      $('c-full').onclick = () => { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); else if ($('stage').requestFullscreen) $('stage').requestFullscreen().catch(() => {}); };
+      document.addEventListener('fullscreenchange', render);
+      $('stage').addEventListener('keydown', (e) => { if (C.l !== 'one') return; if (e.key === 'ArrowRight') turn(1); else if (e.key === 'ArrowLeft') turn(-1); });
+      render();
+    }
     fetch('./tests/tests.json').then((r) => r.json()).then(({ tests }) => {
       for (const t of tests) card($('grid'), { src: `./tests/${t.slug}.jpg`, flipSrc: t.flip ? `./tests/${t.flip}.jpg` : null, title: t.title, what: t.what });
       card($('grid-orig'), { src: './keychain.jpg', title: 'Bobo with the can in front', what: 'The first test picture: both charms together, as drawn.' });
