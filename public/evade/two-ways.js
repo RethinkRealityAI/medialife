@@ -177,27 +177,33 @@ async function init() {
   layout();
 
   const phoneX = () => lerp(L.lx, L.rx, u);
+  // with a mouse the phone also rides up and down with the pointer (vy, px from the middle), as on the homepage hero
+  let vy = 0, vyT = 0;
+  const phoneY = () => L.h / 2 + vy;
   function placePhone() {
-    const x = phoneX() - L.pw / 2, y = (L.h - L.ph) / 2;
+    const x = phoneX() - L.pw / 2, y = phoneY() - L.ph / 2;
     const tr = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
     phone.style.transform = back.style.transform = tr;
   }
 
-  // touch: drag the phone; a tap on a side moves it there. A mouse never drags (it is the phone, below).
+  // touch: drag the phone; a tap on a side moves it there. A mouse is the phone (below); it can also grab and
+  // drag the phone while the phone is parked on an experience.
   let down = null;
   stage.addEventListener("pointerdown", (e) => {
     if (e.target.closest(".tw-stick, .tw-switch")) return;
     const b = stage.getBoundingClientRect();
     const x = e.clientX - b.left;
-    const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - L.h / 2) < L.ph / 2;
-    down = { x: e.clientX, y: e.clientY, u, onPhone, mouse: e.pointerType === "mouse", lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
-    if (onPhone && !down.mouse) { phone.classList.add("is-drag"); try { stage.setPointerCapture(e.pointerId); } catch {} }
+    const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - phoneY()) < L.ph / 2;
+    const mouse = e.pointerType === "mouse";
+    down = { x: e.clientX, y: e.clientY, u, onPhone, mouse, drag: onPhone && (!mouse || locked), lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
+    if (down.drag) { try { stage.setPointerCapture(e.pointerId); } catch {} }
   });
   stage.addEventListener("pointermove", (e) => {
-    if (!down || !down.onPhone || down.mouse) return;
+    if (!down || !down.drag) return;
     const dx = e.clientX - down.x;
     down.moved = Math.max(down.moved, Math.abs(dx), Math.abs(e.clientY - down.y));
     if (down.moved < 6) return;
+    if (!dragging) { phone.classList.add("is-drag"); setFollow(false); }
     dragging = true; touched = true;
     const span = L.rx - L.lx;
     u = Math.min(Math.max(down.u + dx / span, -0.05), 1.05);
@@ -206,35 +212,49 @@ async function init() {
     down.lx = e.clientX; down.lt = e.timeStamp;
     target = u; uv = 0;
   });
-  // mouse: the cursor is the phone. It sits right under the pointer (a quick damp, no spring) and the real
-  // cursor is hidden over the scene. Once an experience is on, the phone holds still so the joystick and Bobo
-  // can be used; moving the pointer off the phone picks it up again.
-  let following = false, locked = false, mouseX = -1;
+  // mouse: the cursor is the phone, as on the homepage hero. It sits right under the pointer (a quick damp,
+  // no spring), sideways and a little up and down, and the real cursor is hidden over the scene. On Cola Run,
+  // once the phone has been held still for a moment it parks so the joystick can be used (the cursor shows
+  // again); Off the Chain keeps following. Moving the pointer off a parked phone picks it up again.
+  // Listening on the window (not the stage) means nothing laid over the scene can swallow the movement.
+  let following = false, locked = false, stillT = 0;
   const span = () => L.rx - L.lx;
-  const uOf = (x) => {
-    // never past a piece: beyond the splash or the keychain the phone stays centred on it, so the lens frames it
-    return Math.min(Math.max((x - L.lx) / span(), 0), 1);
-  };
+  // never past a piece: beyond the splash or the keychain the phone stays centred on it, so the lens frames it
+  const uOf = (x) => Math.min(Math.max((x - L.lx) / span(), 0), 1);
   const setFollow = (f) => {
     if (f === following) return;
     following = f;
     stage.classList.toggle("is-follow", f);
+    if (!f) vyT = 0;
   };
-  stage.addEventListener("pointermove", (e) => {
-    if (e.pointerType !== "mouse" || reduce) return;
-    const b = stage.getBoundingClientRect();
-    const x = e.clientX - b.left, y = e.clientY - b.top;
-    if (y > L.h || e.target.closest(".tw-switch, .tw-stick")) { setFollow(false); return; }   // the switch strip, the joystick
-    mouseX = x;
+  let mouseAt = null;   // the last mouse position (client px), so a scroll with the wheel picks the phone up too
+  const track = (cx, cy) => {
+    if (reduce || dragging) return;
+    const b = canvas.getBoundingClientRect();
+    const x = cx - b.left, y = cy - b.top;
+    const inside = x >= 0 && y >= 0 && x <= L.w && y <= L.h;
+    if (!inside) { setFollow(false); return; }
+    // the switch and the joystick: leave the phone be
+    const el = document.elementFromPoint(cx, cy);
+    if (el && el.closest(".tw-switch, .tw-stick, a, button")) { setFollow(false); return; }
     if (locked) {
-      if (Math.abs(x - phoneX()) > L.pw / 2 + 4) locked = false;   // off the phone: pick it up again
-      else { setFollow(false); return; }
+      const off = Math.abs(x - phoneX()) > L.pw / 2 + 4 || Math.abs(y - phoneY()) > L.ph / 2 + 4;
+      if (!off) { setFollow(false); return; }
+      locked = false;
     }
     setFollow(true);
     touched = true;
     target = uOf(x);
-  });
-  stage.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") setFollow(false); });
+    const room = Math.max(0, (L.h - L.ph) / 2 - 2);
+    vyT = Math.min(Math.max(y - L.h / 2, -room), room);
+  };
+  addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse") return;
+    mouseAt = { x: e.clientX, y: e.clientY };
+    track(e.clientX, e.clientY);
+  }, { passive: true });
+  addEventListener("scroll", () => { if (mouseAt) track(mouseAt.x, mouseAt.y); }, { passive: true });
+  document.documentElement.addEventListener("pointerleave", () => { mouseAt = null; setFollow(false); });
   const up = (e) => {
     if (!down) return;
     const d = down; down = null;
@@ -357,7 +377,7 @@ async function init() {
   // ------------------------------------------------------------------ render: dimmed outside the lens, vivid through it
   const run = { visible: true };
   new IntersectionObserver((es) => { run.visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(stage);
-  let grow = 0, last = performance.now(), arWas = false, idleT = 1.6, nudgeDir = 1, atWas = null;
+  let grow = 0, last = performance.now(), arWas = false, idleT = 1.6, nudgeDir = 1;
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min((now - last) / 1000, 1 / 20);
@@ -371,6 +391,7 @@ async function init() {
       else if (following) { const n = lerp(u, target, 1 - Math.exp(-26 * dt)); uv = (n - u) / dt; u = n; }   // right under the pointer
       else { uv += ((target - u) * 70 - uv * 13) * dt; u += uv * dt; }
     }
+    vy = reduce ? vyT : lerp(vy, vyT, 1 - Math.exp(-(following ? 26 : 8) * dt));
     placePhone();
     const settled = !dragging && Math.abs(target - u) < 0.03 && Math.abs(uv) < 0.4;
     // which experience the phone is on, with a little hysteresis so it doesn't flicker at the edges
@@ -386,8 +407,10 @@ async function init() {
 
     // left: the hideout rises and the game plays while the phone is over the splash
     // with a mouse, an experience that comes on holds the phone over its piece (the cursor shows again)
-    if (following && at && !locked && atWas !== at) { locked = true; setFollow(false); target = at === "game" ? 0 : 1; }
-    atWas = at;
+    if (following && at === "game" && !locked) {
+      stillT = Math.abs(uv) < 0.3 ? stillT + dt : 0;
+      if (stillT > 0.45) { locked = true; setFollow(false); target = 0; }   // parks, centred on the splash
+    } else stillT = 0;
     // an experience starts as soon as the phone is over its piece, while it is still being dragged or moved
     const gameOn = at === "game";
     grow = reduce ? (gameOn ? 1 : 0) : clamp01(grow + (gameOn ? dt / 0.7 : -dt / 0.35));
@@ -425,7 +448,7 @@ async function init() {
     camera.layers.set(BASE);
     renderer.toneMappingExposure = 0.38;
     renderer.render(scene, camera);
-    const sx = phoneX() - L.pw / 2 + L.bez, sy = (L.h - L.ph) / 2 + L.bez, sw = L.pw - L.bez * 2, sh = L.ph - L.bez * 2;
+    const sx = phoneX() - L.pw / 2 + L.bez, sy = phoneY() - L.ph / 2 + L.bez, sw = L.pw - L.bez * 2, sh = L.ph - L.bez * 2;
     renderer.setScissorTest(true);
     renderer.setScissor(sx, L.h - sy - sh, sw, sh);
     renderer.clear();
@@ -663,7 +686,7 @@ async function init() {
     } else play(B, "TailWag", { loop: false, fade: 0.2, onDone: () => play(B, "Sit", { fade: 0.3 }) });
   }
 
-  window.__tw = { go, get u() { return u; }, get at() { return at; }, game, ar, step(n = 60) { for (let i = 0; i < n; i++) frame(performance.now()); } };
+  window.__tw = { go, get u() { return u; }, get uv() { return uv; }, get locked() { return locked; }, get stillT() { return stillT; }, get at() { return at; }, game, ar, step(n = 60) { for (let i = 0; i < n; i++) frame(performance.now()); } };
 }
 
 // ------------------------------------------------------------------ effects for the pop-out
