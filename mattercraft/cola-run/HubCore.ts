@@ -3351,7 +3351,7 @@ export class CollectorHub {
 <div class="mlh-wg"><div class="k">Bobo's Hideout</div><div class="big">${esc(time)}</div><small>${esc(date)} · Bobo is home</small></div>
 <button type="button" class="mlh-wg" data-w="collection"><div class="k">Digital Collection</div>
   <div class="row"><div class="mlh-ringwrap"><div class="mlh-ring" style="--p:${pct}"></div><b>${n}/${total}</b></div>
-  <div><b>${n} of ${total} collected</b><small>Collect all for ${esc(me?.collection?.reward || "The Golden Bobo")}</small></div></div></button>
+  <div><b>${n} of ${total} collected</b><small>Collect all for an exclusive reward</small></div></div></button>
 <button type="button" class="mlh-wg" data-w="alerts"><div class="k">${unread ? `${unread} new alert${unread > 1 ? "s" : ""}` : "Alerts"}</div>
   ${
     latest
@@ -3392,7 +3392,7 @@ export class CollectorHub {
         const total = me?.collection?.products.length || me?.total || 5;
         const n = me?.owned ?? 0;
         body.innerHTML = `<div class="mlh-vwrap"><div class="mlh-vault"><iframe class="mlh-frame" title="Your EVADE Digital Collection in 3D" src="${esc(this._vaultSrc())}"></iframe></div>
-<div class="mlh-vbar"><div class="mlh-prog"><div class="mlh-bar"><i style="width:${Math.round((100 * n) / Math.max(1, total))}%"></i></div><b>${n} of ${total} · collect all for ${esc(me?.collection?.reward || "The Golden Bobo")}</b></div><button type="button" class="mlh-btn" data-add>Add an item</button></div></div>`;
+<div class="mlh-vbar"><div class="mlh-prog"><div class="mlh-bar"><i style="width:${Math.round((100 * n) / Math.max(1, total))}%"></i></div><b>${n} of ${total} collected · collect all for an exclusive reward</b></div><button type="button" class="mlh-btn" data-add>Add an item</button></div></div>`;
         body.querySelector("[data-add]")!.addEventListener("click", () => {
           this.closeOS();
           this.openGate("add");
