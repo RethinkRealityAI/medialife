@@ -1,0 +1,785 @@
+// EVADE section 01, "1 Keychain, 2 Experiences": one phone, two experiences.
+// The visitor slides one phone between the two things the keychain opens:
+//   - left: the Cola Run splash. With the phone over it, Bobo's Hideout rises out of the phone and the
+//     mini game from the homepage hero plays (Bobo collects three cans; joystick on the phone, arrow keys,
+//     or Bobo plays himself when left alone).
+//   - right: the real keychain. With the phone over it, Bobo and the Eclipse can pop off their charms
+//     (the Off the Chain pop-out, ported from /labs/keychain-pop/). Tap Bobo to wave.
+// The phone is a lens: outside it the pieces are dimmed; through it they are vivid, and what pops out
+// spills past its edges. Drag the phone, tap a side, or use the switch under the stage.
+// Only real assets: the 3D keychain, the Bobo and can models, Bobo's Hideout, the Cola Run splash.
+import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { clone as cloneSkinned } from "three/addons/utils/SkeletonUtils.js";
+
+const wrap = document.querySelector(".tw");
+const stage = document.getElementById("twStage");
+if (wrap && stage) {
+  const io = new IntersectionObserver((es) => {
+    if (es[0].isIntersecting) { io.disconnect(); init().catch((e) => console.warn("[two-ways]", e)); }
+  }, { rootMargin: "500px 0px" });
+  io.observe(stage);
+}
+
+const VH = 4;                       // world units visible top to bottom
+const FOV = 28;
+const D = VH / 2 / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+const BASE = 0, POP = 1;            // layers: the pieces (dimmed outside the lens), what pops out
+const GOLD = 0xf6c344;
+const CANS = 3;
+const clamp01 = (x) => Math.min(Math.max(x, 0), 1);
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeOut = (x) => 1 - Math.pow(1 - clamp01(x), 3);
+const easeInOut = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
+const backOut = (x) => { x = clamp01(x); const c = 1.4; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+const setLayer = (o, l) => o.traverse((c) => c.layers.set(l));
+function fit(obj, size) {
+  const g = new THREE.Group();
+  const box = new THREE.Box3().setFromObject(obj);
+  const dim = box.getSize(new THREE.Vector3());
+  obj.position.sub(box.getCenter(new THREE.Vector3()));
+  g.add(obj);
+  g.scale.setScalar(size / Math.max(dim.x, dim.y, dim.z, 1e-6));
+  return g;
+}
+
+async function init() {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const canvas = stage.querySelector(".tw-3d");
+  const phone = stage.querySelector(".tw-phone");
+  const back = stage.querySelector(".tw-back");
+  const hudApp = phone.querySelector(".tw-app");
+  const hudScore = phone.querySelector(".tw-score");
+  const msgEl = phone.querySelector(".tw-msg");
+  const stickEl = phone.querySelector(".tw-stick");
+  const knob = stickEl.querySelector("i");
+  const buttons = [...wrap.querySelectorAll(".tw-switch button")];
+  const coarse = matchMedia("(pointer: coarse)").matches;
+
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" }); } catch { return; }
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.autoClear = false;
+  renderer.setClearColor(0x000000, 0);
+  const scene = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+  pm.dispose();
+  scene.environmentIntensity = 0.7;
+  const lights = [new THREE.HemisphereLight(0xffffff, 0x2a2340, 1.3), new THREE.DirectionalLight(0xfff4e0, 1.7), new THREE.DirectionalLight(0x3fe6e0, 0.8)];
+  lights[1].position.set(2, 4, 6);
+  lights[2].position.set(-4, 2, -2);
+  for (const l of lights) { l.layers.enableAll(); scene.add(l); }
+  const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 60);
+  camera.position.set(0, 0, D);
+  camera.layers.enableAll();
+
+  const loader = new GLTFLoader();
+  loader.setMeshoptDecoder(MeshoptDecoder);
+  const load = (u) => loader.loadAsync(u);
+
+  // ------------------------------------------------------------------ layout (px in the stage <-> world)
+  const L = { w: 1, h: 1, ph: 1, pw: 1, lx: 0, rx: 1, wpp: 1, bez: 7 };
+  const px2x = (px) => (px - L.w / 2) * L.wpp;
+  const py2y = (py) => (L.h / 2 - py) * L.wpp;
+
+  // ------------------------------------------------------------------ left: the Cola Run splash, the hideout and the game
+  const left = new THREE.Group();
+  scene.add(left);
+  const splash = await new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => res(null);
+    im.src = "/evade/creators/assets/img/cola-run-splash.webp";
+  });
+  const CARD_H = VH * 0.6, CARD_W = CARD_H * (1080 / 1935);
+  const card = new THREE.Mesh(new THREE.PlaneGeometry(CARD_W, CARD_H), new THREE.MeshBasicMaterial({ transparent: true }));
+  if (splash) {
+    const cv = document.createElement("canvas");
+    cv.width = 540; cv.height = 968;
+    const x = cv.getContext("2d");
+    const r = 34;
+    x.beginPath(); x.roundRect(3, 3, cv.width - 6, cv.height - 6, r); x.save(); x.clip();
+    x.drawImage(splash, 0, 0, cv.width, cv.height); x.restore();
+    x.lineWidth = 4; x.strokeStyle = "rgba(246,195,68,0.75)"; x.stroke();
+    const t = new THREE.CanvasTexture(cv);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    card.material.map = t;
+  }
+  card.rotation.set(0, 0.16, -0.04);
+  left.add(card);
+
+  const game = new BoboGame(GOLD);
+  setLayer(game.root, POP);
+  left.add(game.root);
+  let hub = null;
+
+  // ------------------------------------------------------------------ right: the keychain and what pops off it
+  // the same composition as the pop-out lab (keychain at 8x real size, floor below it), scaled into place
+  const right = new THREE.Group();
+  scene.add(right);
+  const KS = 8, KY = 1.18, FLOOR_Y = -0.5;
+  const ar = { ready: false, state: "idle", tweens: [] };
+
+  // ------------------------------------------------------------------ the phone: position, spring, drag
+  let u = 0, uv = 0, target = 0, dragging = null, touched = false, tour = true, tourT = 0, at = "game";
+  const go = (k, byUser = true) => {
+    target = k;
+    if (byUser) { touched = true; tour = false; }
+    if (reduce) { u = k; uv = 0; }
+    buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
+  };
+  buttons.forEach((b, i) => b.addEventListener("click", () => go(i)));
+
+  function layout() {
+    L.w = stage.clientWidth || 1;
+    L.h = stage.clientHeight || 1;
+    renderer.setSize(L.w, L.h, false);
+    camera.aspect = L.w / L.h;
+    camera.updateProjectionMatrix();
+    const narrow = L.w < 700;
+    L.ph = L.h * (narrow ? 0.86 : 0.88);
+    L.pw = L.ph * 0.47;
+    L.bez = narrow ? 6 : 7;
+    L.lx = L.w * (narrow ? 0.3 : 0.27);
+    L.rx = L.w * (narrow ? 0.66 : 0.73);
+    L.wpp = VH / L.h;
+    phone.style.width = back.style.width = L.pw + "px";
+    phone.style.height = back.style.height = L.ph + "px";
+    // pieces: left centred on its station, right on its own
+    left.position.set(px2x(L.lx), 0, 0);
+    right.position.set(px2x(L.rx), 0, 0);
+    // the keychain set fills about three quarters of the stage height
+    const f = (VH * (narrow ? 0.6 : 0.68)) / (KY - FLOOR_Y);
+    right.scale.setScalar(f);
+    right.position.y = -((KY + FLOOR_Y) / 2) * f + 0.1;
+    L.narrow = narrow;
+  }
+  new ResizeObserver(layout).observe(stage);
+  layout();
+
+  const phoneX = () => lerp(L.lx, L.rx, u);
+  function placePhone() {
+    const x = phoneX() - L.pw / 2, y = (L.h - L.ph) / 2;
+    const tr = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+    phone.style.transform = back.style.transform = tr;
+  }
+
+  // drag the phone; a tap on a side moves it there
+  let down = null;
+  stage.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".tw-stick")) return;
+    const b = stage.getBoundingClientRect();
+    const x = e.clientX - b.left;
+    const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - L.h / 2) < L.ph / 2;
+    down = { x: e.clientX, y: e.clientY, u, onPhone, t: e.timeStamp, lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
+    if (onPhone) { phone.classList.add("is-drag"); try { stage.setPointerCapture(e.pointerId); } catch {} }
+  });
+  stage.addEventListener("pointermove", (e) => {
+    if (!down || !down.onPhone) return;
+    const dx = e.clientX - down.x;
+    down.moved = Math.max(down.moved, Math.abs(dx), Math.abs(e.clientY - down.y));
+    if (down.moved < 6) return;
+    dragging = true; touched = true; tour = false;
+    const span = L.rx - L.lx;
+    u = Math.min(Math.max(down.u + dx / span, -0.06), 1.06);
+    const dt = Math.max((e.timeStamp - down.lt) / 1000, 0.008);
+    down.v = (e.clientX - down.lx) / span / dt;
+    down.lx = e.clientX; down.lt = e.timeStamp;
+    uv = 0;
+  });
+  const up = (e) => {
+    if (!down) return;
+    const d = down; down = null;
+    phone.classList.remove("is-drag");
+    if (dragging) {
+      dragging = false;
+      const proj = u + d.v * 0.18;   // a flick carries it over
+      go(proj > 0.5 ? 1 : 0);
+      uv = d.v * 0.5;
+      return;
+    }
+    if (d.moved > 8 || !e) return;
+    const b = stage.getBoundingClientRect();
+    if (d.onPhone) { tapScreen(e.clientX - b.left, e.clientY - b.top); return; }
+    go(e.clientX - b.left < L.w / 2 ? 0 : 1);
+  };
+  stage.addEventListener("pointerup", up);
+  stage.addEventListener("pointercancel", () => { down = null; dragging = false; phone.classList.remove("is-drag"); go(u > 0.5 ? 1 : 0, false); });
+
+  // ------------------------------------------------------------------ the joystick and the arrow keys
+  const stick = { x: 0, y: 0, active: false, at: -99 };
+  game.stick = stick;
+  let clock = 0;
+  stickEl.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    touched = true; tour = false;
+    try { stickEl.setPointerCapture(e.pointerId); } catch {}
+    stick.active = true;
+    const move = (ev) => {
+      const b = stickEl.getBoundingClientRect();
+      let x = (ev.clientX - (b.left + b.width / 2)) / (b.width * 0.42);
+      let y = -(ev.clientY - (b.top + b.height / 2)) / (b.height * 0.42);
+      const m = Math.hypot(x, y);
+      if (m > 1) { x /= m; y /= m; }
+      stick.x = x; stick.y = y; stick.at = clock;
+      knob.style.transform = `translate(${(x * 22).toFixed(1)}px, ${(-y * 22).toFixed(1)}px)`;
+    };
+    const end = () => {
+      stick.active = false; stick.x = stick.y = 0; stick.at = clock;
+      knob.style.transform = "";
+      stickEl.removeEventListener("pointermove", move);
+      stickEl.removeEventListener("pointerup", end);
+      stickEl.removeEventListener("pointercancel", end);
+    };
+    move(e);
+    stickEl.addEventListener("pointermove", move);
+    stickEl.addEventListener("pointerup", end);
+    stickEl.addEventListener("pointercancel", end);
+  });
+  let hover = false;
+  stage.addEventListener("pointerenter", () => (hover = true));
+  stage.addEventListener("pointerleave", () => (hover = false));
+  const keys = new Set();
+  addEventListener("keydown", (e) => {
+    if (!/^Arrow/.test(e.key) || at !== "game" || !(hover || stage.contains(document.activeElement))) return;
+    e.preventDefault();
+    keys.add(e.key); touched = true; tour = false;
+  });
+  addEventListener("keyup", (e) => keys.delete(e.key));
+  function keyStick() {
+    if (!keys.size || stick.active) return;
+    stick.x = (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0);
+    stick.y = (keys.has("ArrowUp") ? 1 : 0) - (keys.has("ArrowDown") ? 1 : 0);
+    stick.at = clock;
+  }
+
+  // ------------------------------------------------------------------ the phone's screen
+  let msgT = 0;
+  function say(text, secs = 0) {
+    msgEl.textContent = text;
+    msgEl.classList.toggle("on", !!text);
+    msgT = secs ? clock + secs : 0;
+  }
+  function setAt(next) {
+    if (next === at) return;
+    at = next;
+    phone.dataset.at = at || "none";
+    hudApp.textContent = at === "game" ? (L.narrow ? "Cola Run" : "EVADE · Cola Run") : at === "ar" ? (L.narrow ? "Off the Chain" : "Bobo · Off the Chain") : "Camera";
+    hudScore.hidden = at !== "game";
+    say("");
+  }
+  game.onScore = (n) => { hudScore.textContent = `Cans ${n}/${CANS}`; };
+  game.onDone = () => {
+    say("All 3 cans! Rewards land in Bobo's Hideout", 4);
+    winT = clock;
+  };
+  let winT = -1;
+
+  // ------------------------------------------------------------------ assets: the game first, then the keychain set
+  const [cb, crun, ccan] = await Promise.all([
+    load("/roblox/activated-retail/models/catbobo.glb"),
+    load("/roblox/activated-retail/models/catrun.glb"),
+    load("/roblox/activated-retail/models/cola.glb"),
+  ]);
+  game.setModels(cb, [...crun.animations, ...cb.animations], ccan);
+  load("/home/ar/hub-lite.glb").then((g) => {
+    const room = fit(g.scene, VH * 0.74);
+    hub = new THREE.Group();
+    hub.add(room);
+    room.rotation.set(0.14, -0.55, 0);
+    setLayer(hub, POP);
+    hub.visible = false;
+    left.add(hub);
+  }).catch((e) => console.warn("[two-ways] hub", e));
+
+  stage.classList.add("is-ready");
+  wrap.classList.add("is-ready");
+  placePhone();
+  setAt(null); setAt("game");
+  hudScore.textContent = `Cans 0/${CANS}`;
+
+  loadAR().catch((e) => console.warn("[two-ways] keychain", e));
+
+  // ------------------------------------------------------------------ render: dimmed outside the lens, vivid through it
+  const run = { visible: true };
+  new IntersectionObserver((es) => { run.visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(stage);
+  let grow = 0, last = performance.now(), arWas = false;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min((now - last) / 1000, 1 / 20);
+    last = now;
+    if (!run.visible || document.hidden) return;
+    clock += dt;
+
+    // the phone: a soft spring to where it is going, unless it is held
+    if (!dragging) {
+      if (reduce) u = target;
+      else { uv += ((target - u) * 70 - uv * 13) * dt; u += uv * dt; }
+    }
+    placePhone();
+    const settled = !dragging && Math.abs(target - u) < 0.03 && Math.abs(uv) < 0.4;
+    setAt(u < 0.16 ? "game" : u > 0.84 ? "ar" : null);
+
+    // the tour: the game plays itself first, then the phone moves on to the keychain
+    if (tour && settled && at === "game") {
+      tourT += dt;
+      if ((winT > 0 && clock - winT > 2.2) || tourT > 16) { go(1, false); tour = false; }
+    }
+
+    // left: the hideout rises and the game plays while the phone is over the splash
+    const gameOn = at === "game" && (settled || dragging);
+    grow = reduce ? (gameOn ? 1 : 0) : clamp01(grow + (gameOn ? dt / 0.7 : -dt / 0.35));
+    const g = gameOn ? backOut(grow) : easeInOut(grow);
+    card.scale.setScalar(Math.max(1e-3, 1 - easeInOut(grow) * 0.98));
+    card.visible = grow < 0.98;
+    if (hub) {
+      hub.visible = grow > 0.01;
+      hub.scale.setScalar(Math.max(1e-3, g) * (L.narrow ? 0.86 : 1));
+      hub.position.y = VH * 0.06 - (1 - Math.min(1, g)) * 0.6;
+    }
+    game.root.visible = grow > 0.01 && game.ready;
+    game.root.scale.setScalar(Math.max(1e-3, g) * VH * 0.2);
+    game.root.position.set(0.05, -VH * 0.17, 0.9);
+    if (!gameOn && grow === 0 && (game.score || !game.needSpawn)) { game.reset(); winT = -1; }
+    if (gameOn && winT > 0 && clock - winT > 4.5) { game.reset(); winT = -1; }
+    keyStick();
+    game.auto = true;
+    game.update(dt, clock, gameOn && grow > 0.6);
+    stickEl.classList.toggle("on", gameOn && grow > 0.6);
+    if (gameOn && grow > 0.6 && !msgEl.classList.contains("on") && winT < 0 && clock - stick.at > 6 && !game.score)
+      say(coarse ? "Drag the stick to move Bobo" : "Use the stick or arrow keys to move Bobo");
+
+    // right: the pop-out plays each time the phone arrives at the keychain
+    const arOn = at === "ar" && settled;
+    if (arOn && !arWas) arWas = arStart();
+    if (!arOn && at !== "ar" && arWas) { arReset(); arWas = false; }
+    arFrame(dt);
+
+    if (msgT && clock > msgT) say("");
+
+    // draw
+    renderer.setScissorTest(false);
+    renderer.clear();
+    camera.layers.set(BASE);
+    renderer.toneMappingExposure = 0.38;
+    renderer.render(scene, camera);
+    const sx = phoneX() - L.pw / 2 + L.bez, sy = (L.h - L.ph) / 2 + L.bez, sw = L.pw - L.bez * 2, sh = L.ph - L.bez * 2;
+    renderer.setScissorTest(true);
+    renderer.setScissor(sx, L.h - sy - sh, sw, sh);
+    renderer.clear();
+    renderer.toneMappingExposure = 1;
+    renderer.render(scene, camera);
+    renderer.setScissorTest(false);
+    renderer.clearDepth();
+    camera.layers.set(POP);
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(frame);
+
+  // ------------------------------------------------------------------ the Off the Chain pop-out (from /labs/keychain-pop/)
+  let K = null, B = null, C = null, PADS = null, SPOT = null, scanBar = null, flashB = null, flashC = null;
+  const tween = (dur, fn, done) => ar.tweens.push({ t: 0, dur, fn, done });
+  const after = (d, fn) => tween(d, () => {}, fn);
+
+  async function loadAR() {
+    const [kc, bobo, can] = await Promise.all([
+      load("/evade/keychain/evade-keychain.glb"),
+      load("/evade/keychain/ar/bobo-keychain.glb"),
+      load("/evade/keychain/ar/eclipse-can.glb"),
+    ]);
+    K = kc.scene;
+    K.traverse((o) => {
+      const m = o.isMesh && o.material;
+      if (m && m.transmission) { m.transmission = 0; m.transparent = true; m.opacity = 0.14; m.roughness = 0.05; m.clearcoat = 1; m.depthWrite = false; }
+    });
+    K.scale.setScalar(KS);
+    K.position.set(0, KY, 0);
+    right.add(K);
+    right.updateMatrixWorld(true);
+    B = prepCharacter(bobo, 0.78, K.getObjectByName("Charm_Bobo"));
+    C = prepCharacter(can, 0.56, K.getObjectByName("Charm_Eclipse"));
+    PADS = { bobo: pad(0.42), can: pad(0.3) };
+    SPOT = { bobo: new THREE.Vector3(-0.36, FLOOR_Y, 0.62), can: new THREE.Vector3(0.42, FLOOR_Y, 0.58) };
+    PADS.bobo.position.copy(SPOT.bobo); PADS.can.position.copy(SPOT.can);
+    for (const p of Object.values(PADS)) { p.visible = false; right.add(p); setLayer(p, POP); }
+    scanBar = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.018), new THREE.MeshBasicMaterial({ color: 0x7fd0ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    scanBar.position.z = 0.06;
+    flashB = sprite(glowTex, 0.01); flashC = sprite(glowTex, 0.01);
+    right.add(scanBar, flashB, flashC);
+    setLayer(scanBar, POP); setLayer(flashB, POP); setLayer(flashC, POP);
+    ar.ready = true;
+    if (at === "ar" && arWas === "wait") arWas = arStart();
+  }
+  function prepCharacter(gltf, height, charm) {
+    const root = new THREE.Group();
+    const m = gltf.scene;
+    const sil = takeSilhouette(m, charm);
+    const mixer = new THREE.AnimationMixer(m);
+    const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+    const restClip = clips.Sit || clips.Idle;
+    if (restClip) { mixer.clipAction(restClip).play(); mixer.setTime(0); }
+    m.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(m, true);
+    const h = box.max.y - box.min.y;
+    mixer.stopAllAction();
+    m.scale.setScalar(height / h);
+    root.add(m);
+    root.visible = false;
+    right.add(root);
+    m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+    setLayer(root, POP);
+    return { root, model: m, mixer, clips, current: null, baseScale: height / h, height, sil };
+  }
+  function takeSilhouette(m, charm) {
+    const sil = m.getObjectByName("Silhouette");
+    if (!sil) return null;
+    sil.updateMatrix();
+    const local = sil.matrix.clone();
+    sil.removeFromParent();
+    sil.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: sil.material.map, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
+    sil.renderOrder = 5;
+    sil.visible = false;
+    const print = charm.getObjectByName(charm.name + "_Print_Front");
+    print.geometry.computeBoundingBox();
+    const bb = print.geometry.boundingBox;
+    const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+    sil.position.set(c.x, c.y, c.z + 0.012);
+    sil.quaternion.identity();
+    sil.scale.set(sz.x, sz.y, 1);
+    print.add(sil);
+    return { mesh: sil, local };
+  }
+  function play(ch, name, { loop = true, fade = 0.25, onDone } = {}) {
+    const clip = ch.clips[name];
+    if (!clip) return;
+    const next = ch.mixer.clipAction(clip);
+    next.reset();
+    next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+    next.clampWhenFinished = !loop;
+    next.enabled = true;
+    next.setEffectiveWeight(1);
+    if (ch.current && ch.current !== next && fade > 0) next.crossFadeFrom(ch.current, fade, false);
+    else if (ch.current && ch.current !== next) ch.current.stop();
+    next.play();
+    ch.current = next;
+    if (onDone) {
+      const h = (e) => { if (e.action === next) { ch.mixer.removeEventListener("finished", h); onDone(); } };
+      ch.mixer.addEventListener("finished", h);
+    }
+  }
+  // where a character lies flat over its printed charm, in the keychain group's own space
+  const _m = new THREE.Matrix4(), _inv = new THREE.Matrix4(), _gi = new THREE.Matrix4(), _fwd = new THREE.Vector3();
+  function charmPose(ch) {
+    right.updateMatrixWorld(true);
+    ch.sil.mesh.updateWorldMatrix(true, false);
+    _inv.makeScale(ch.baseScale, ch.baseScale, ch.baseScale).multiply(ch.sil.local).invert();
+    _gi.copy(right.matrixWorld).invert();
+    _m.copy(_gi).multiply(ch.sil.mesh.matrixWorld).multiply(_inv);
+    const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+    _m.decompose(pos, quat, scl);
+    _fwd.set(0, 0, 1).applyQuaternion(quat);
+    pos.addScaledVector(_fwd, 0.02);
+    return { pos, quat, s: scl.y };
+  }
+  function arReset() {
+    if (!ar.ready) return;
+    ar.tweens.length = 0;
+    ar.state = "idle";
+    scanBar.material.opacity = 0;
+    for (const ch of [B, C]) {
+      ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false;
+      ch.root.quaternion.identity(); ch.root.scale.setScalar(1);
+      ch.sil.mesh.visible = false; ch.sil.mesh.material.opacity = 0;
+    }
+    PADS.bobo.visible = PADS.can.visible = false;
+    flashB.material.opacity = flashC.material.opacity = 0;
+  }
+  function arStart() {
+    if (!ar.ready) { say("Opening the camera…"); return "wait"; }
+    arReset();
+    ar.state = "popping";
+    say("");
+    K.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(K);
+    const gi = new THREE.Matrix4().copy(right.matrixWorld).invert();
+    box.applyMatrix4(gi);
+    tween(reduce ? 0.01 : 0.7, (k) => {
+      scanBar.position.y = lerp(box.max.y, box.min.y, k);
+      scanBar.material.opacity = Math.sin(k * Math.PI) * 0.9;
+    }, () => {
+      scanBar.material.opacity = 0;
+      launch(C, SPOT.can, flashC, PADS.can);
+      after(reduce ? 0.01 : 0.55, () => launch(B, SPOT.bobo, flashB, PADS.bobo));
+    });
+    return true;
+  }
+  function launch(ch, spot, flash, pd) {
+    const isBobo = ch === B;
+    ch.root.visible = true;
+    ch.sil.mesh.visible = true;
+    play(ch, "PopOut", { loop: false, fade: 0, onDone: () => {
+      if (isBobo) {
+        play(B, "TailWag", { loop: false, fade: 0.25, onDone: () => play(B, "Sit", { fade: 0.3 }) });
+        ar.state = "ready";
+        say("Bobo's off the chain! Tap him to say hi", 5);
+      } else play(ch, "Idle", { fade: 0.3 });
+    } });
+    const pop = ch.current;
+    pop.paused = true;
+    const place = (wig) => {
+      const p = charmPose(ch);
+      ch.root.position.copy(p.pos); ch.root.quaternion.copy(p.quat); ch.root.scale.setScalar(p.s);
+      if (wig) ch.root.rotateZ(wig);
+      return p;
+    };
+    place(0);
+    ch.mixer.update(0);
+    tween(reduce ? 0.01 : 0.38, (k) => {
+      ch.sil.mesh.material.opacity = Math.min(k * 4, 1);
+      place(Math.sin(k * Math.PI * 5) * 0.05 * k);
+    }, () => {
+      const from = place(0);
+      pop.paused = false;
+      pd.visible = true;
+      flash.position.copy(from.pos);
+      flash.position.z += 0.08;
+      const q1 = new THREE.Quaternion();
+      tween(reduce ? 0.01 : 1.0, (k) => {
+        const e = easeOut(k);
+        ch.root.position.lerpVectors(from.pos, spot, e);
+        ch.root.position.y += Math.sin(k * Math.PI) * 0.45;
+        ch.root.quaternion.slerpQuaternions(from.quat, q1, easeOut(k * 2));
+        ch.root.scale.setScalar(lerp(from.s, 1, e));
+        const f = Math.sin(Math.min(k * 1.6, 1) * Math.PI);
+        flash.scale.setScalar(0.9 * f + 0.001);
+        flash.material.opacity = f;
+        pd.scale.setScalar(0.2 + 0.8 * easeOut(k * 1.3));
+        pd.userData.ring.material.opacity = easeOut(k);
+      });
+    });
+  }
+  function arFrame(dt) {
+    if (!ar.ready) return;
+    for (let i = ar.tweens.length - 1; i >= 0; i--) {
+      const w = ar.tweens[i];
+      if (!w) continue;
+      w.t += dt;
+      const k = Math.min(w.t / w.dur, 1);
+      w.fn(k);
+      if (k >= 1) { const j = ar.tweens.indexOf(w); if (j >= 0) ar.tweens.splice(j, 1); w.done && w.done(); }
+    }
+    if (!reduce) K.rotation.z = Math.sin(clock * 1.3) * 0.035;
+    B.mixer.update(dt);
+    C.mixer.update(dt);
+    for (const p of Object.values(PADS)) p.userData.ring.rotation.z += dt * 0.6;
+  }
+  // a tap on the phone's screen: Bobo waves, the can spins
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function tapScreen(x, y) {
+    if (at !== "ar" || ar.state !== "ready") return;
+    ndc.set((x / L.w) * 2 - 1, -(y / L.h) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    const hit = (ch) => ray.ray.intersectsBox(new THREE.Box3().setFromObject(ch.root));
+    if (hit(B)) play(B, "PawRaise", { loop: false, fade: 0.2, onDone: () => play(B, "Sit", { fade: 0.3 }) });
+    else if (hit(C)) {
+      const r0 = C.root.rotation.y, y0 = SPOT.can.y;
+      tween(0.9, (k) => { C.root.rotation.y = r0 + Math.PI * 2 * easeInOut(k); C.root.position.y = y0 + Math.sin(k * Math.PI) * 0.18; });
+    } else play(B, "TailWag", { loop: false, fade: 0.2, onDone: () => play(B, "Sit", { fade: 0.3 }) });
+  }
+
+  window.__tw = { go, get u() { return u; }, get at() { return at; }, game, ar, step(n = 60) { for (let i = 0; i < n; i++) frame(performance.now()); } };
+}
+
+// ------------------------------------------------------------------ effects for the pop-out
+function radialTexture(stops) {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const g = c.getContext("2d");
+  const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  for (const [o, col] of stops) gr.addColorStop(o, col);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const glowTex = radialTexture([[0, "rgba(255,255,255,1)"], [0.25, "rgba(255,230,160,.8)"], [0.6, "rgba(246,195,68,.25)"], [1, "rgba(0,0,0,0)"]]);
+const padTex = radialTexture([[0, "rgba(246,195,68,0)"], [0.62, "rgba(246,195,68,0)"], [0.7, "rgba(246,195,68,.9)"], [0.78, "rgba(63,230,224,.45)"], [1, "rgba(0,0,0,0)"]]);
+const shadowTex = radialTexture([[0, "rgba(0,0,0,.55)"], [1, "rgba(0,0,0,0)"]]);
+function sprite(tex, size) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  s.scale.setScalar(size);
+  return s;
+}
+function pad(r) {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.CircleGeometry(r, 64), new THREE.MeshBasicMaterial({ map: padTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(r * 0.75, 48), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false }));
+  ring.rotation.x = sh.rotation.x = -Math.PI / 2;
+  sh.position.y = 0.002;
+  g.add(sh, ring);
+  g.userData.ring = ring;
+  return g;
+}
+
+// ------------------------------------------------------------------ the mini game (the homepage hero's Cola Run)
+// Bobo on a board, three cans drop in, collect them for the reward. Joystick or arrow keys; when nobody is
+// steering, Bobo heads for the nearest can himself.
+class BoboGame {
+  constructor(accent) {
+    this.accent = accent;
+    this.root = new THREE.Group();
+    this.board = new THREE.Group();
+    this.board.rotation.x = 0.42;
+    this.root.add(this.board);
+    const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0.55 }));
+    shadowDisc.rotation.x = -Math.PI / 2;
+    this.board.add(shadowDisc);
+    this.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.11, 32), new THREE.MeshBasicMaterial({ color: 0, transparent: true, opacity: 0.45, depthWrite: false }));
+    this.shadow.rotation.x = -Math.PI / 2;
+    this.shadow.position.y = 0.004;
+    this.board.add(this.shadow);
+    this.ready = false;
+    this.cans = []; this.bursts = [];
+    this.pos = new THREE.Vector2(0, 0.15); this.vel = new THREE.Vector2(); this.heading = 0;
+    this.score = 0; this.needSpawn = true; this.done = false; this.auto = false;
+    this.stick = null; this.onScore = () => {}; this.onDone = () => {};
+  }
+  setModels(b, anims, c) {
+    const bobo = fit(cloneSkinned(b.scene), 1);
+    bobo.traverse((o) => (o.frustumCulled = false));
+    const box = new THREE.Box3().setFromObject(bobo);
+    bobo.scale.multiplyScalar(0.42 / (box.max.y - box.min.y));
+    const box2 = new THREE.Box3().setFromObject(bobo);
+    bobo.position.y -= box2.min.y;
+    const holder = new THREE.Group();
+    holder.add(bobo);
+    this.bobo = holder;
+    this.board.add(holder);
+    this.mixer = new THREE.AnimationMixer(bobo);
+    const clip = (n) => anims.find((a) => a.name === n);
+    const ic = clip("Idle") || clip("Chill") || anims[0];
+    const rc = clip("Run") || clip("Walk") || anims[1];
+    if (ic) { this.idle = this.mixer.clipAction(ic); this.idle.play(); }
+    if (rc) { this.run = this.mixer.clipAction(rc); this.run.play(); this.run.setEffectiveWeight(0); }
+    const can = fit(cloneSkinned(c.scene), 1);
+    can.traverse((o) => (o.frustumCulled = false));
+    const cb = new THREE.Box3().setFromObject(can);
+    can.scale.multiplyScalar(0.2 / (cb.max.y - cb.min.y));
+    const cb2 = new THREE.Box3().setFromObject(can);
+    can.position.y -= cb2.min.y;
+    this.canTpl = new THREE.Group();
+    this.canTpl.add(can);
+    setLayer(this.root, POP);
+    this.ready = true;
+  }
+  reset() {
+    for (const c of this.cans) this.board.remove(c.obj);
+    this.cans = [];
+    for (const b of this.bursts) { this.board.remove(b.m); b.m.geometry.dispose(); b.m.material.dispose(); }
+    this.bursts = [];
+    this.pos.set(0, 0.15); this.vel.set(0, 0); this.heading = 0;
+    this.score = 0; this.done = false; this.needSpawn = true;
+    this.onScore(0);
+  }
+  spawnAll() {
+    if (!this.canTpl) return;
+    const a0 = Math.random() * Math.PI * 2;
+    for (let i = 0; i < CANS; i++) {
+      const a = a0 + (i / CANS) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      const r = 0.5 + Math.random() * 0.18;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      const obj = cloneSkinned(this.canTpl);
+      setLayer(obj, POP);
+      obj.position.set(x, 0.9, z);
+      obj.rotation.y = Math.random() * 6;
+      obj.visible = false;
+      this.board.add(obj);
+      this.cans.push({ obj, x, z, state: "drop", t: -(0.45 + i * 0.22) });
+    }
+  }
+  burst(x, z) {
+    const m = new THREE.Mesh(new THREE.RingGeometry(0.8, 1.0, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(this.accent).multiplyScalar(2), transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(x, 0.01, z);
+    m.layers.set(POP);
+    this.board.add(m);
+    this.bursts.push({ m, t: 0 });
+  }
+  update(dt, t, live) {
+    if (!this.ready || !this.bobo) return;
+    if (live && this.needSpawn) { this.needSpawn = false; this.spawnAll(); }
+    const st = this.stick;
+    const dir = new THREE.Vector2();
+    let speed = 0.95;
+    if (live && st && (st.active || t - st.at < 3.5)) {
+      dir.set(st.x, -st.y);
+      if (dir.length() > 1) dir.normalize();
+    } else if (live && this.auto) {
+      const near = this.cans.filter((c) => c.state === "idle")
+        .sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.y) - Math.hypot(b.x - this.pos.x, b.z - this.pos.y))[0];
+      if (near) {
+        dir.set(near.x - this.pos.x, near.z - this.pos.y);
+        if (dir.length() > 0.02) dir.normalize();
+        speed = 0.6;
+      }
+    }
+    this.vel.lerp(dir.multiplyScalar(speed), 1 - Math.exp(-10 * dt));
+    this.pos.addScaledVector(this.vel, dt);
+    const r = this.pos.length();
+    if (r > 0.84) this.pos.multiplyScalar(0.84 / r);
+    const v = this.vel.length();
+    if (v > 0.05) {
+      const want = Math.atan2(this.vel.x, this.vel.y);
+      let d = want - this.heading;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      this.heading += d * (1 - Math.exp(-12 * dt));
+    }
+    this.bobo.position.set(this.pos.x, 0, this.pos.y);
+    this.bobo.rotation.set(-0.22, this.heading, 0, "XYZ");
+    this.shadow.position.set(this.pos.x, 0.004, this.pos.y);
+    const w = clamp01(v / 0.45);
+    this.idle && this.idle.setEffectiveWeight(1 - w);
+    if (this.run) { this.run.setEffectiveWeight(w); this.run.timeScale = 0.7 + v * 0.6; }
+    this.mixer && this.mixer.update(dt);
+    for (const c of [...this.cans]) {
+      c.t += dt;
+      if (c.state === "drop") {
+        const k = clamp01(c.t / 0.55);
+        c.obj.position.y = (1 - k * k) * 0.9;
+        c.obj.visible = c.t >= 0;
+        if (k >= 1) { c.state = "idle"; c.t = 0; }
+      } else if (c.state === "idle") {
+        c.obj.rotation.x = -0.22;
+        c.obj.rotation.y += dt * 2.2;
+        c.obj.position.y = 0.02 + Math.sin(t * 3 + c.x * 9) * 0.015;
+        if (live && Math.hypot(c.x - this.pos.x, c.z - this.pos.y) < 0.15) {
+          c.state = "pop"; c.t = 0;
+          this.score += 1;
+          this.onScore(this.score);
+          this.burst(c.x, c.z);
+        }
+      } else {
+        const k = clamp01(c.t / 0.3);
+        c.obj.scale.setScalar(Math.max(1e-3, 1 + k * 0.4 - k * k * 1.4));
+        c.obj.position.y = 0.02 + k * 0.25;
+        c.obj.rotation.y += dt * 14;
+        if (k >= 1) { this.board.remove(c.obj); this.cans.splice(this.cans.indexOf(c), 1); }
+      }
+    }
+    if (!this.done && this.score >= CANS && this.cans.length === 0) { this.done = true; this.onDone(); }
+    for (const b of [...this.bursts]) {
+      b.t += dt;
+      const k = clamp01(b.t / 0.45);
+      b.m.scale.setScalar(0.08 + k * 0.32);
+      b.m.material.opacity = 1 - k;
+      if (k >= 1) { this.board.remove(b.m); b.m.geometry.dispose(); b.m.material.dispose(); this.bursts.splice(this.bursts.indexOf(b), 1); }
+    }
+  }
+}

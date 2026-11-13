@@ -27,23 +27,23 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <!-- Same href as src/routes/__root.tsx and /roblox/creators/, so the font file is a cache hit. -->
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block" rel="stylesheet" />
-<link rel="preload" as="image" href="/evade/creators/assets/img/bobo-cat.webp" type="image/webp" fetchpriority="high" />
-<link rel="preload" as="image" href="/evade/creators/assets/img/eclipse-can.webp" type="image/webp" />
+<link rel="preload" as="image" href="/evade/img/keychain-render-560.webp" imagesrcset="/evade/img/keychain-render-560.webp 560w, /evade/img/keychain-render.webp 1118w" imagesizes="(min-width: 1100px) 320px, 42vw" type="image/webp" fetchpriority="high" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=8" />
+<link rel="stylesheet" href="/evade/launch.css?v=16" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/","qrcode":"/roblox/creators/vendor/qrcode/qrcode.esm.js"}}
 </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://medialife.ai/evade/","name":"EVADE × MEDIALIFE: Cola Run, activated","description":"Our latest partner launch: the EVADE Bobo and Eclipse keychain unlocks Cola Run with a tap.","isPartOf":{"@type":"WebSite","name":"MEDIALIFE","url":"https://medialife.ai"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is Activated Merch?","acceptedAnswer":{"@type":"Answer","text":"Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards."}},{"@type":"Question","name":"What is Off the Chain?","acceptedAnswer":{"@type":"Answer","text":"The keychain's second experience. Open Off the Chain at medialife.ai/evade/keychain-ar/ and point your camera at the charms: Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. It runs in your browser."}},{"@type":"Question","name":"Do I need to download anything?","acceptedAnswer":{"@type":"Answer","text":"No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens."}},{"@type":"Question","name":"Where do I get the keychain?","acceptedAnswer":{"@type":"Answer","text":"The Bobo and Eclipse charm set is in the MEDIALIFE shop. Creators can also get one free by joining the EVADE creator crew."}},{"@type":"Question","name":"Can I play without the keychain?","acceptedAnswer":{"@type":"Answer","text":"Yes. Open evade.medialife.ai on your phone, or point your camera at the code on this page. The keychain puts it in your pocket."}},{"@type":"Question","name":"Who is Bobo?","acceptedAnswer":{"@type":"Answer","text":"Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the Where is Bobo? globe."}},{"@type":"Question","name":"I'm a creator. How do I get involved?","acceptedAnswer":{"@type":"Answer","text":"Join the EVADE creator crew for a free merch package and giveaway codes for your community."}}]}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebPage","@id":"https://medialife.ai/evade/","name":"EVADE × MEDIALIFE: Cola Run, activated","description":"Our latest partner launch: the EVADE Bobo and Eclipse keychain unlocks Cola Run with a tap.","isPartOf":{"@type":"WebSite","name":"MEDIALIFE","url":"https://medialife.ai"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is Activated Merch?","acceptedAnswer":{"@type":"Answer","text":"Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards."}},{"@type":"Question","name":"What is Bobo Off the Chain?","acceptedAnswer":{"@type":"Answer","text":"The keychain's AR experience. Point your phone camera at the charms and Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. No app."}},{"@type":"Question","name":"Do I need to download anything?","acceptedAnswer":{"@type":"Answer","text":"No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens."}},{"@type":"Question","name":"Where do I get the keychain?","acceptedAnswer":{"@type":"Answer","text":"The Bobo and Eclipse charm set is in the MEDIALIFE shop. Creators can also get one free by joining the EVADE creator crew."}},{"@type":"Question","name":"Who is Bobo?","acceptedAnswer":{"@type":"Answer","text":"Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the Where is Bobo? globe."}},{"@type":"Question","name":"I'm a creator. How do I get involved?","acceptedAnswer":{"@type":"Answer","text":"Join the EVADE creator crew for a free merch package and giveaway codes for your community."}}]}]}</script>
 
 <script src="/vendor/ar-kit/track.js" defer></script>
 <script type="module" src="/evade/creators/assets/js/page.js"></script>
-<script src="/evade/launch.js?v=5" defer></script>
-<script type="module">import("qrcode").then((m) => (m.default || m).toString("https://medialife.ai/evade/keychain-ar/", { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0a0a0a", light: "#ffffff" } })).then((svg) => { const el = document.getElementById("arQr"); if (el) el.innerHTML = svg; }).catch(() => {});</script>
+<script src="/evade/launch.js?v=6" defer></script>
 <script type="module" src="/evade/hideout-3d.js"></script>
+<script type="module" src="/evade/hero-keychain.js?v=3"></script>
+<script type="module" src="/evade/two-ways.js?v=1"></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -123,7 +123,7 @@
   <div class="bnav-rail">
     <ol class="bnav-list">
       <li><a href="#top" data-sec="top" aria-label="EVADE, activated"><svg class="bnav-ic" aria-hidden="true"><use href="#i-bolt"/></svg><span class="bnav-tip" aria-hidden="true">EVADE, activated</span></a></li>
-      <li><a href="#two-ways" data-sec="two-ways" aria-label="Two experiences"><svg class="bnav-ic" aria-hidden="true"><use href="#i-scan"/></svg><span class="bnav-tip" aria-hidden="true">Two experiences</span></a></li>
+      <li><a href="#two-ways" data-sec="two-ways" aria-label="Experiential product"><svg class="bnav-ic" aria-hidden="true"><use href="#i-scan"/></svg><span class="bnav-tip" aria-hidden="true">Experiential product</span></a></li>
       <li><a href="#footage" data-sec="footage" aria-label="Around the world"><svg class="bnav-ic" aria-hidden="true"><use href="#i-globe"/></svg><span class="bnav-tip" aria-hidden="true">Around the world</span></a></li>
       <li><a href="#activated" data-sec="activated" aria-label="How it works"><svg class="bnav-ic" aria-hidden="true"><use href="#i-nfc"/></svg><span class="bnav-tip" aria-hidden="true">How it works</span></a></li>
       <li><a href="#hideout" data-sec="hideout" aria-label="Bobo's Hideout"><svg class="bnav-ic" aria-hidden="true"><use href="#i-home"/></svg><span class="bnav-tip" aria-hidden="true">Bobo's Hideout</span></a></li>
@@ -156,70 +156,24 @@
         <a class="btn btn--ghost btn--lg" href="#two-ways">See both experiences</a>
       </div>
 
-      <!-- the Cola Run splash at the back, the activated keychain hanging over its right side -->
+      <!-- Off the Chain behind, fanned out to the right; the Cola Run splash in front of it; the keychain hanging in front -->
       <div class="hero-stage rv rv-d1" id="heroStage">
         <div class="hs-glow" aria-hidden="true"></div>
         <div class="hs-poster">
           <img src="/evade/creators/assets/img/cola-run-splash.webp" alt="EVADE Cola Run, activated by MEDIALIFE" width="1080" height="1935" fetchpriority="high" decoding="async" />
         </div>
-  <figure class="keychain" id="heroKeychain" aria-label="The EVADE activated keychain: a Bobo the cat charm and an Eclipse soda can charm on a silver lobster clasp">
-            <div class="kc-tilt">
-              <svg class="kc-hw" viewBox="0 0 460 520" aria-hidden="true">
-                <defs>
-                  <linearGradient id="silver" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0" stop-color="#f4f7fb"/><stop offset=".35" stop-color="#9aa3ae"/>
-                    <stop offset=".55" stop-color="#e9eef4"/><stop offset="1" stop-color="#6c7480"/>
-                  </linearGradient>
-                  <linearGradient id="silver2" x1="1" y1="0" x2="0" y2="1">
-                    <stop offset="0" stop-color="#dfe5ec"/><stop offset=".5" stop-color="#7d8692"/><stop offset="1" stop-color="#f1f4f8"/>
-                  </linearGradient>
-                </defs>
-                <!-- lobster clasp -->
-                <g class="kc-clasp">
-                  <path d="M230 14c-20 0-34 18-34 42 0 20 11 36 26 41l2 9h12l2-9c15-5 26-21 26-41 0-24-14-42-34-42Z" fill="url(#silver)" stroke="#5d6470" stroke-width="1.5"/>
-                  <path d="M230 28c-11 0-19 12-19 28s8 27 19 27 19-11 19-27-8-28-19-28Z" fill="#06090c"/>
-                  <path d="M247 40c4 6 5 12 4 18" stroke="url(#silver2)" stroke-width="7" stroke-linecap="round" fill="none"/>
-                  <rect x="244" y="44" width="10" height="16" rx="3" fill="url(#silver2)" stroke="#5d6470"/>
-                  <path d="M215 22c4-5 9-7 15-7" stroke="#fff" stroke-opacity=".7" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-                  <!-- swivel -->
-                  <rect x="222" y="104" width="16" height="22" rx="5" fill="url(#silver2)" stroke="#5d6470" stroke-width="1.2"/>
-                  <circle cx="230" cy="115" r="3" fill="#59606b"/>
-                </g>
-                <!-- split ring -->
-                <ellipse cx="230" cy="150" rx="25" ry="23" fill="none" stroke="url(#silver)" stroke-width="6"/>
-                <ellipse cx="230" cy="150" rx="25" ry="23" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.4" stroke-dasharray="30 120"/>
-                <!-- jump rings: split ring to each charm's acrylic hole (positions match .kc-bobo / .kc-can tabs) -->
-                <ellipse cx="203.5" cy="186" rx="6.5" ry="22" transform="rotate(30 203.5 186)" fill="none" stroke="url(#silver)" stroke-width="4.2"/>
-                <ellipse cx="266.7" cy="172.2" rx="6" ry="20" transform="rotate(-66.7 266.7 172.2)" fill="none" stroke="url(#silver)" stroke-width="4.2"/>
-                <ellipse cx="300" cy="186.5" rx="2.4" ry="20" transform="rotate(-66.7 300 186.5)" fill="none" stroke="url(#silver2)" stroke-width="4.2"/>
-                <ellipse cx="333.3" cy="200.8" rx="6" ry="20" transform="rotate(-66.7 333.3 200.8)" fill="none" stroke="url(#silver)" stroke-width="4.2"/>
-              </svg>
-
-              <div class="kc-charm kc-bobo" style="--art:url(/evade/creators/assets/img/bobo-cat.webp)">
-                <span class="kc-tab" aria-hidden="true"></span>
-                <div class="kc-flip">
-                  <img class="kc-face" src="/evade/creators/assets/img/bobo-cat.webp" alt="" width="944" height="1032" fetchpriority="high" />
-                </div>
-              </div>
-              <div class="kc-charm kc-can" style="--art:url(/evade/creators/assets/img/eclipse-can.webp)">
-                <span class="kc-tab" aria-hidden="true"></span>
-                <div class="kc-flip">
-                  <img class="kc-face" src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" />
-                  <!-- the back of the can charm: the real QR, as printed on the keychain -->
-                  <div class="kc-back" aria-hidden="true">
-                    <img src="/evade/creators/assets/img/eclipse-can.webp" alt="" width="743" height="871" />
-                    <span class="kcb-qr" id="heroQr"></span>
-                    <span class="kcb-label">Scan to activate</span>
-                  </div>
-                </div>
-                <span class="kc-pulse" aria-hidden="true"><i></i><i></i><i></i></span>
-              </div>
-              <div class="kc-nfc" aria-hidden="true"><svg><use href="#i-nfc"/></svg><span>NFC + QR enabled</span></div>
-            </div>
-            <button type="button" class="kc-hit" id="kcHit" aria-label="Tap the keychain to activate it">
-              <span class="kc-hint mono" aria-hidden="true"><i></i>Tap to activate</span>
-            </button>
-          </figure>
+        <!-- a second splash, behind Cola Run and fanned out to the right: Off the Chain, the keychain AR experience -->
+        <div class="hs-card2">
+          <img src="/evade/img/off-the-chain-splash.webp?v=3" alt="Bobo Off the Chain, the keychain's AR experience, activated by MEDIALIFE" width="864" height="1548" decoding="async" />
+        </div>
+        <!-- the keychain itself: the render from the 3D model (the same one as the next section) -->
+        <figure class="hs-kc" id="heroKc">
+          <div class="hk-swing">
+            <img src="/evade/img/keychain-render-560.webp" srcset="/evade/img/keychain-render-560.webp 560w, /evade/img/keychain-render.webp 1118w" sizes="(min-width: 1100px) 320px, 42vw" width="1118" height="2405" fetchpriority="high" decoding="async"
+              alt="The EVADE keychain: a Bobo the cat charm and an Eclipse soda can charm on a silver clasp" />
+          </div>
+          <figcaption class="hk-nfc"><svg aria-hidden="true"><use href="#i-nfc"/></svg>NFC + QR enabled</figcaption>
+        </figure>
       </div>
     </div>
   </section>
@@ -230,36 +184,36 @@
   <section class="band band--two" id="two-ways" aria-labelledby="twoTitle">
     <div class="wrap">
       <div class="sec-head sec-head--center rv">
-        <span class="mono">01 · One product, two experiences</span>
-        <h2 id="twoTitle">One keychain. <span class="gold">Two ways to play.</span></h2>
-        <p class="sec-sub">Every EVADE keychain opens two different experiences on your phone, and neither needs an app.</p>
+        <span class="mono">01 · Experiential product</span>
+        <h2 id="twoTitle">1 Keychain, <span class="gold">2 Experiences</span></h2>
+        <p class="sec-sub">The Bobo EVADE keychain opens via QR code scan or NFC tap. It gives you access to an immersive mini game, augmented reality, and an AR mini experience that activates when pointed at the keychain charms.</p>
       </div>
-      <figure class="two-art rv rv-d1">
-        <picture>
-          <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
-          <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
-            alt="The EVADE keychain in the middle. On the left, a phone that scanned its QR is playing Cola Run, with Bobo's Hideout behind it. On the right, a phone pointed at the keychain shows the charms empty, because Bobo and the Eclipse can have jumped out in 3D." />
-        </picture>
-      </figure>
-      <div class="two-grid">
-        <article class="two-card two-card--qr rv">
-          <span class="two-num mono"><b>1</b>Scan the QR</span>
-          <h3>Cola Run and Bobo's Hideout</h3>
-          <p>The QR on the back of the can opens Cola Run in your browser. Fly with Bobo, grab every can and unlock rewards. Keychain owners will also get into Bobo's Hideout, the collector hub.</p>
-          <div class="two-actions">
-            <a class="btn btn--ghost btn--sm" href="#activated">See how it plays <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-            <a class="gc-link" href="#hideout">Bobo's Hideout</a>
+      <!-- one phone, two experiences (two-ways.js): slide the phone between the Cola Run splash (the mini game
+           plays in it) and the keychain (Bobo and the can pop off their charms). The still is the fallback. -->
+      <div class="tw rv rv-d1">
+        <div class="tw-stage" id="twStage" role="group" aria-label="One phone, two experiences. Use the switch below to move the phone between the Cola Run mini game and Bobo Off the Chain.">
+          <picture class="tw-poster">
+            <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
+            <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
+              alt="The EVADE keychain in the middle. On the left, a phone that scanned its QR is playing Cola Run, with Bobo's Hideout behind it. On the right, a phone pointed at the keychain shows the charms empty, because Bobo and the Eclipse can have jumped out in 3D." />
+          </picture>
+          <canvas class="tw-3d" aria-hidden="true"></canvas>
+          <div class="tw-back" aria-hidden="true"></div>
+          <div class="tw-phone" data-at="game">
+            <span class="tw-island" aria-hidden="true"></span>
+            <div class="tw-screen">
+              <div class="tw-hud" aria-hidden="true"><span class="tw-app mono">EVADE · Cola Run</span><span class="tw-score mono">Cans 0/3</span></div>
+              <span class="tw-finder" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <p class="tw-msg" aria-live="polite"></p>
+              <div class="tw-stick" aria-hidden="true"><i></i></div>
+            </div>
           </div>
-        </article>
-        <article class="two-card two-card--ar rv rv-d1">
-          <span class="two-num mono"><b>2</b>Point your camera</span>
-          <h3>Off the Chain</h3>
-          <p>Point your camera at the charms and Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, wave hello, spin the can, then take a photo or film it to share.</p>
-          <div class="two-actions">
-            <a class="btn btn--gold btn--sm" href="/evade/keychain-ar/" data-track="two_ar">Try Off the Chain <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-            <span class="two-qr" aria-hidden="true"><span id="arQr"></span><small class="mono">Open it on your phone</small></span>
-          </div>
-        </article>
+        </div>
+        <div class="tw-switch" role="group" aria-label="Move the phone">
+          <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span>Cola Run mini game</button>
+          <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span>Bobo Off the Chain</button>
+        </div>
+        <p class="tw-tip mono">Drag the phone from one to the other</p>
       </div>
     </div>
   </section>
@@ -314,22 +268,14 @@
     <div class="wrap act-grid">
       <div class="act-copy">
         <div class="sec-head rv">
-          <span class="mono">03 · Scan it: Cola Run</span>
-          <h2 id="actTitle">Tap it. <span class="teal">Play it.</span></h2>
+          <span class="mono">03 · Cola Run</span>
+          <h2 id="actTitle">How it <span class="teal">works.</span></h2>
         </div>
         <ol class="loop rv rv-d1" id="loopSteps" aria-label="What happens when you tap the keychain">
           <li data-step="0"><button type="button"><i aria-hidden="true"><b>1</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Scan the QR or tap the keychain</button></li>
           <li data-step="1"><button type="button"><i aria-hidden="true"><b>2</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Cola Run opens in your browser</button></li>
           <li data-step="2"><button type="button"><i aria-hidden="true"><b>3</b><svg viewBox="0 0 16 16"><use href="#i-check"/></svg></i>Play and get rewarded</button></li>
         </ol>
-        <div class="realqr rv rv-d2">
-          <div class="rq-code" id="realQr" aria-hidden="true"></div>
-          <div class="rq-copy">
-            <b>Play it for real</b>
-            <span>Point your phone camera here.</span>
-            <a href="https://evade.medialife.ai" target="_blank" rel="noopener">evade.medialife.ai <span aria-hidden="true">↗</span></a>
-          </div>
-        </div>
       </div>
 
       <div class="act-visual rv rv-d1">
@@ -395,8 +341,14 @@
         <figure class="hs-panel hs-os" style="--z:30; --in:1">
           <img src="/evade/hideout/bobo-os.webp" alt="BOBO OS: a desktop with Alerts, Where's Bobo?, Leaderboard, Cola Run, Digital Collection, Shop and Me" width="1600" height="1012" loading="lazy" decoding="async" />
         </figure>
-        <figure class="hs-panel hs-win hs-col" style="--z:40; --in:2">
-          <img src="/evade/hideout/collection.webp" alt="The Digital Collection window: the Eclipse can collected, 1 of 5 towards The Golden Bobo" width="980" height="622" loading="lazy" decoding="async" />
+        <!-- the Digital Collection window, live: the real vault from the Collector Hub (keychain owned, the rest as holograms) -->
+        <figure class="hs-panel hs-win hs-col" id="hsCol" style="--z:40; --in:2">
+          <div class="hw-bar"><span class="hw-dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="hw-title">Digital Collection</span><span class="hw-live mono" aria-hidden="true"><i></i>Live</span></div>
+          <div class="hw-body">
+            <img class="hw-poster" src="/evade/hideout/collection-body.webp" alt="" width="978" height="520" loading="lazy" decoding="async" />
+            <iframe class="hw-frame" data-src="/evade/vault/index.html?owned=keychain" title="The EVADE Digital Collection in 3D: tap a piece to look closer, or tap Bobo" loading="lazy"></iframe>
+          </div>
+          <figcaption class="hw-foot"><span class="hw-prog" aria-hidden="true"><i></i></span><span>1 of 5 collected · collect all for The Golden Bobo</span></figcaption>
         </figure>
         <!-- BOBO OS on a phone: flips between Alerts and the leaderboard -->
         <figure class="hs-phone" id="hsPhone" style="--z:50; --in:3" aria-label="BOBO OS on a phone: alerts and the Where's Bobo? leaderboard">
@@ -484,10 +436,9 @@
       </div>
       <div class="faq">
         <details class="rv"><summary>What is Activated Merch?</summary><p>Activated Merchandise® is a physical product that unlocks an immersive experience. Scan the QR or tap the NFC on your EVADE keychain and Cola Run, starring Bobo, opens on your phone. Play it to unlock rewards.</p></details>
-        <details class="rv"><summary>What is Off the Chain?</summary><p>The keychain's second experience. Open <a href="/evade/keychain-ar/">Off the Chain</a> and point your camera at the charms: Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. It runs in your browser too.</p></details>
+        <details class="rv"><summary>What is Bobo Off the Chain?</summary><p>The keychain's AR experience. Point your phone camera at the charms and Bobo and the Eclipse can jump off the keychain in 3D. Feed Bobo, play, and film it to share. No app.</p></details>
         <details class="rv"><summary>Do I need to download anything?</summary><p>No. Cola Run plays right in your phone's browser, so there's no app to install. Scan or tap and it opens.</p></details>
         <details class="rv"><summary>Where do I get the keychain?</summary><p>The Bobo and Eclipse charm set is in the <a href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set">MEDIALIFE shop</a>. Creators can also get one free by joining the <a href="/evade/creators/">EVADE creator crew</a>.</p></details>
-        <details class="rv"><summary>Can I play without the keychain?</summary><p>Yes. Open evade.medialife.ai on your phone, or point your camera at the code on this page. The keychain puts it in your pocket.</p></details>
         <details class="rv"><summary>Who is Bobo?</summary><p>Bobo is EVADE's cat and the star of Cola Run. Fans spot Bobo in AR all over the world, and you can follow along on the <a href="/evade/where-is-bobo/">Where is Bobo?</a> globe.</p></details>
         <details class="rv"><summary>I'm a creator. How do I get involved?</summary><p>Join the <a href="/evade/creators/">EVADE creator crew</a> for a free merch package and giveaway codes for your community.</p></details>
       </div>
