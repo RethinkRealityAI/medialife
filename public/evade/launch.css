@@ -283,81 +283,8 @@
 /* Footer column titles are h2s (heading order), styled like the shared .foot h4 */
 .foot .foot-h { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 0 0 8px; }
 
-/* ---------- main navigation: the medialife.ai site header ----------
-   Mirrors src/components/site/Nav.tsx (64px bar, same items, numbers from
-   1536px, short labels below that, menu below 1280px). */
+/* ---------- main navigation: shared, see /site-nav/site-nav.css ---------- */
 :root { --nav-h: 64px; }
-@media (min-width: 600px) { :root { --nav-h: 64px; } }
-.snav {
-  height: var(--nav-h);
-  background: rgba(5, 6, 12, 0.7);
-  backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
-}
-.snav.is-scrolled { background: rgba(5, 6, 12, 0.82); border-bottom-color: rgba(255, 255, 255, 0.1); }
-.snav-row { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; }
-@media (min-width: 1024px) { .snav-row { padding: 0 40px; } }
-.snav-logo { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; min-height: 44px; }
-.snav-logo img { height: 28px; width: auto; }
-.snav-orb { position: relative; width: 24px; height: 24px; flex-shrink: 0; }
-.snav-orb i { position: absolute; border-radius: 50%; }
-.snav-orb i:nth-child(1) { inset: 0; background: linear-gradient(135deg, #19affe, #ff2fae); filter: blur(4px); opacity: 0.7; transition: opacity 0.2s; }
-.snav-orb i:nth-child(2) { inset: 4px; border: 1px solid #19affe; }
-.snav-orb i:nth-child(3) { inset: 8px; background: linear-gradient(135deg, #19affe, #ff2fae); }
-.snav-logo:hover .snav-orb i:nth-child(1) { opacity: 1; }
-.snav-links { display: none; align-items: center; gap: 2px; }
-.snav-links a {
-  position: relative; display: inline-flex; align-items: center; white-space: nowrap;
-  padding: 8px 12px; font-size: 14px; color: var(--fg); transition: color 0.2s;
-}
-.snav-links a:hover, .snav-links a[aria-current="page"] { color: #19affe; }
-.snav-links .sn-num { display: none; margin-right: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--muted); transition: color 0.2s; }
-.snav-links a:hover .sn-num { color: #19affe; }
-.snav-links .sl-l { display: none; }
-.sn-new { width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: #f5c84b; }
-.sn-ext { margin-left: 6px; font-size: 10px; opacity: 0.6; }
-.snav-cta {
-  display: none; align-items: center; gap: 12px; flex-shrink: 0;
-  padding: 10px 20px; border-radius: 999px; font-size: 14px; font-weight: 500; color: #fff;
-  background: oklch(0.556 0.16 240);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 8px 24px -10px oklch(0.72 0.16 240 / 70%);
-  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-.snav-cta:hover { background: oklch(0.6 0.16 240); transform: translateY(-1px); }
-.snav-cta:focus-visible, .snav-links a:focus-visible, .snav-menu:focus-visible, .snav-panel a:focus-visible { outline: 2px solid #19affe; outline-offset: 3px; }
-.snav-menu {
-  min-height: 44px; padding: 0 4px; background: none; border: 0; color: var(--fg); cursor: pointer;
-  font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
-}
-@media (min-width: 1280px) {
-  .snav-links, .snav-cta { display: inline-flex; }
-  .snav-menu, .snav-panel { display: none !important; }
-}
-@media (min-width: 1536px) {
-  .snav-links .sn-num { display: inline; }
-  .snav-links .sl-s { display: none; }
-  .snav-links .sl-l { display: inline; }
-}
-.snav-panel {
-  position: absolute; left: 0; right: 0; top: 100%;
-  max-height: calc(100vh - var(--nav-h)); max-height: calc(100dvh - var(--nav-h)); overflow-y: auto;
-  background: #05060c; border-top: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
-}
-.snav-panel > a {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 16px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); color: var(--fg);
-}
-.snav-panel > a:hover { background: rgba(255, 255, 255, 0.04); }
-.snav-panel > a[aria-current="page"] { color: #19affe; }
-.snav-panel .sn-num { font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
-.sn-newpill {
-  display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; vertical-align: 2px;
-  background: #f5c84b; color: #1a1300; font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
-}
-.snav-panel-cta { padding: 24px; }
-.snav-panel-cta .snav-cta { display: flex; justify-content: center; width: 100%; padding: 14px 28px; }
 
 /* ---------- Bobo's side nav ----------
    A slim glass rail of section icons over the left edge. The current section's

@@ -35,24 +35,6 @@
   }, { passive: true });
 })();
 
-// Main navigation: the menu below 1280px (closes on a link, Escape or a wider screen).
-(function () {
-  var btn = document.getElementById("snavMenu");
-  var panel = document.getElementById("snavPanel");
-  if (!btn || !panel) return;
-  function set(open) {
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
-    btn.textContent = open ? "Close" : "Menu";
-    panel.hidden = !open;
-  }
-  btn.addEventListener("click", function () { set(panel.hidden); });
-  panel.addEventListener("click", function (e) { if (e.target.closest("a")) set(false); });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !panel.hidden) { set(false); btn.focus(); }
-  });
-  matchMedia("(min-width: 1280px)").addEventListener("change", function (m) { if (m.matches) set(false); });
-})();
-
 // Bobo's side nav: lights the section on screen (gold icon + its name).
 (function () {
   var nav = document.getElementById("bnav");

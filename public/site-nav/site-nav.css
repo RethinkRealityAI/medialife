@@ -1,0 +1,102 @@
+/* medialife.ai main navigation for the static pages (/evade/, /activated-merch/).
+   Same bar as src/components/site/Nav.tsx: 64px tall everywhere, inline links
+   from 1024px (compact until 1280px), numbers and long labels from 1536px,
+   the Menu button below 1024px. Self-contained: it does not rely on the host
+   page's CSS variables. No gradients except the logo mark. */
+.mlnav {
+  --mln-fg: oklch(0.97 0.005 280);
+  --mln-muted: oklch(0.65 0.02 280);
+  --mln-primary: oklch(0.72 0.16 240);
+  --mln-btn: oklch(0.556 0.16 240);
+  --mln-btn-hover: oklch(0.6 0.16 240);
+  --mln-logo: linear-gradient(135deg, #19affe, #ff2fae);
+  position: sticky; top: 0; z-index: 90;
+  height: 65px; box-sizing: border-box; /* 64px bar + 1px rule, like Nav.tsx */
+  background: rgba(5, 6, 12, 0.7);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5); backdrop-filter: blur(24px) saturate(1.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  font-family: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  color: var(--mln-fg);
+  line-height: 1.5;
+  text-align: left;
+}
+.mlnav[data-fixed] { position: fixed; left: 0; right: 0; }
+.mlnav *, .mlnav *::before, .mlnav *::after { box-sizing: border-box; }
+.mlnav a { color: inherit; text-decoration: none; }
+.mlnav-row { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 24px; }
+@media (min-width: 1280px) { .mlnav-row { padding: 0 40px; } }
+.mlnav-logo { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; min-height: 44px; }
+.mlnav-logo img { display: block; height: 28px; width: auto; }
+.mlnav-orb { position: relative; width: 24px; height: 24px; flex-shrink: 0; }
+.mlnav-orb i { position: absolute; border-radius: 50%; }
+.mlnav-orb i:nth-child(1) { inset: 0; background: var(--mln-logo); filter: blur(4px); opacity: 0.7; transition: opacity 0.2s; }
+.mlnav-orb i:nth-child(2) { inset: 4px; border: 1px solid var(--mln-primary); }
+.mlnav-orb i:nth-child(3) { inset: 8px; background: var(--mln-logo); }
+.mlnav-logo:hover .mlnav-orb i:nth-child(1) { opacity: 1; }
+
+.mlnav-links { display: none; align-items: center; gap: 2px; }
+.mlnav-links a {
+  display: inline-flex; align-items: center; white-space: nowrap;
+  padding: 8px 8px; font-size: 13px; font-weight: 400; letter-spacing: normal; text-transform: none;
+  color: var(--mln-fg); transition: color 0.2s;
+}
+.mlnav-links a:hover, .mlnav-links a[aria-current="page"] { color: var(--mln-primary); }
+.mlnav-num { display: none; margin-right: 8px; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 10px; color: var(--mln-muted); transition: color 0.2s; }
+.mlnav-links a:hover .mlnav-num { color: var(--mln-primary); }
+.mlnav-l { display: none; }
+.mlnav-new { width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: #f5c84b; }
+.mlnav-ext { margin-left: 6px; font-size: 10px; opacity: 0.6; }
+
+.mlnav-cta {
+  display: none; align-items: center; gap: 12px; flex-shrink: 0; white-space: nowrap;
+  padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; color: #fff !important;
+  background: var(--mln-btn);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -1px 0 rgba(0, 0, 0, 0.15), 0 8px 24px -10px oklch(0.72 0.16 240 / 70%);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.mlnav-cta:hover { background: var(--mln-btn-hover); transform: translateY(-1px); }
+.mlnav a:focus-visible, .mlnav-menu:focus-visible { outline: 2px solid var(--mln-primary); outline-offset: 3px; }
+
+.mlnav-menu {
+  min-height: 44px; padding: 0 4px; margin: 0; background: none; border: 0; color: var(--mln-fg); cursor: pointer;
+  font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+@media (min-width: 1024px) {
+  .mlnav-links, .mlnav-cta { display: inline-flex; }
+  .mlnav-menu, .mlnav-panel { display: none !important; }
+}
+@media (min-width: 1280px) {
+  .mlnav-links a { padding: 8px 12px; font-size: 14px; }
+  .mlnav-cta { padding: 10px 20px; font-size: 14px; }
+}
+@media (min-width: 1536px) {
+  .mlnav-num { display: inline; }
+  .mlnav-s { display: none; }
+  .mlnav-l { display: inline; }
+}
+
+.mlnav-panel {
+  position: absolute; left: 0; right: 0; top: 100%;
+  max-height: calc(100vh - 65px); max-height: calc(100dvh - 65px); overflow-y: auto;
+  background: #05060c; border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+}
+.mlnav-panel[hidden] { display: none; }
+.mlnav-panel > a {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); font-size: 16px;
+}
+.mlnav-panel > a:hover { background: rgba(255, 255, 255, 0.04); }
+.mlnav-panel > a[aria-current="page"] { color: var(--mln-primary); }
+.mlnav-panel .mlnav-num { display: inline; margin: 0; }
+.mlnav-pill {
+  display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; vertical-align: 2px;
+  background: #f5c84b; color: #1a1300; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.mlnav-panel-cta { padding: 24px; }
+.mlnav-panel-cta .mlnav-cta { display: flex; justify-content: center; width: 100%; padding: 14px 28px; font-size: 14px; }
+.mlnav .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* In-page links land below the sticky bar, not under it. */
+html:has(.mlnav) { scroll-padding-top: 72px; }
