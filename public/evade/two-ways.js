@@ -409,7 +409,7 @@ async function init() {
     game.update(dt, clock, gameOn && grow > 0.6);
     stickEl.classList.toggle("on", gameOn && grow > 0.6);
     if (gameOn && grow > 0.6 && !msgEl.classList.contains("on") && winT < 0 && clock - stick.at > 6 && !game.score)
-      say(coarse ? "Drag the stick to move Bobo" : "Use the stick or arrow keys to move Bobo");
+      say(L.narrow ? "Drag the stick" : coarse ? "Drag the stick to move Bobo" : "Use the stick or arrow keys to move Bobo");
 
     // right: the pop-out plays each time the phone arrives at the keychain
     const arOn = at === "ar";
