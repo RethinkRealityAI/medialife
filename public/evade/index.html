@@ -30,7 +30,7 @@
 <link rel="preload" as="image" href="/evade/img/keychain-render-560.webp" imagesrcset="/evade/img/keychain-render-560.webp 560w, /evade/img/keychain-render.webp 1118w" imagesizes="(min-width: 1100px) 320px, 42vw" type="image/webp" fetchpriority="high" />
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=15" />
+<link rel="stylesheet" href="/evade/launch.css?v=16" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -43,6 +43,7 @@
 <script src="/evade/launch.js?v=6" defer></script>
 <script type="module" src="/evade/hideout-3d.js"></script>
 <script type="module" src="/evade/hero-keychain.js?v=3"></script>
+<script type="module" src="/evade/two-ways.js?v=1"></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -187,13 +188,33 @@
         <h2 id="twoTitle">1 Keychain, <span class="gold">2 Experiences</span></h2>
         <p class="sec-sub">The Bobo EVADE keychain opens via QR code scan or NFC tap. It gives you access to an immersive mini game, augmented reality, and an AR mini experience that activates when pointed at the keychain charms.</p>
       </div>
-      <figure class="two-art rv rv-d1">
-        <picture>
-          <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
-          <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
-            alt="The EVADE keychain in the middle. On the left, a phone that scanned its QR is playing Cola Run, with Bobo's Hideout behind it. On the right, a phone pointed at the keychain shows the charms empty, because Bobo and the Eclipse can have jumped out in 3D." />
-        </picture>
-      </figure>
+      <!-- one phone, two experiences (two-ways.js): slide the phone between the Cola Run splash (the mini game
+           plays in it) and the keychain (Bobo and the can pop off their charms). The still is the fallback. -->
+      <div class="tw rv rv-d1">
+        <div class="tw-stage" id="twStage" role="group" aria-label="One phone, two experiences. Use the switch below to move the phone between the Cola Run mini game and Bobo Off the Chain.">
+          <picture class="tw-poster">
+            <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
+            <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
+              alt="The EVADE keychain in the middle. On the left, a phone that scanned its QR is playing Cola Run, with Bobo's Hideout behind it. On the right, a phone pointed at the keychain shows the charms empty, because Bobo and the Eclipse can have jumped out in 3D." />
+          </picture>
+          <canvas class="tw-3d" aria-hidden="true"></canvas>
+          <div class="tw-back" aria-hidden="true"></div>
+          <div class="tw-phone" data-at="game">
+            <span class="tw-island" aria-hidden="true"></span>
+            <div class="tw-screen">
+              <div class="tw-hud" aria-hidden="true"><span class="tw-app mono">EVADE · Cola Run</span><span class="tw-score mono">Cans 0/3</span></div>
+              <span class="tw-finder" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <p class="tw-msg" aria-live="polite"></p>
+              <div class="tw-stick" aria-hidden="true"><i></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="tw-switch" role="group" aria-label="Move the phone">
+          <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span>Cola Run mini game</button>
+          <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span>Bobo Off the Chain</button>
+        </div>
+        <p class="tw-tip mono">Drag the phone from one to the other</p>
+      </div>
     </div>
   </section>
 

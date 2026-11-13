@@ -588,3 +588,86 @@
 @media (min-width: 900px) {
   .bnav-list a.is-active[data-sec="top"]:not(:hover):not(:focus-visible) .bnav-tip { opacity: 0; translate: -6px -50%; }
 }
+
+/* ---------------------------------------------------------------- 01 · one phone, two experiences (two-ways.js)
+   The phone slides between the Cola Run splash and the keychain. Through it the pieces are vivid and what
+   pops out spills past its edges; outside it they are dimmed (drawn in the canvas). Solid colours only. */
+.tw { max-width: 1200px; margin: 0 auto clamp(20px, 3vw, 32px); }
+.tw-stage {
+  position: relative; aspect-ratio: 1200 / 640; border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--line-2); background: #070b10;
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
+  touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: pointer;
+}
+.tw-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.6s var(--ease); }
+.tw-stage.is-ready .tw-poster img { opacity: 0; pointer-events: none; }
+.tw-3d { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.6s var(--ease); }
+.tw-back, .tw-phone { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.6s var(--ease); will-change: transform; }
+.tw-stage.is-ready .tw-3d, .tw-stage.is-ready .tw-back, .tw-stage.is-ready .tw-phone { opacity: 1; }
+.tw-back { z-index: 1; border-radius: 34px; background: #0d141b; box-shadow: inset 0 0 0 1px rgba(63, 230, 224, 0.08); }
+.tw-phone {
+  z-index: 3; border-radius: 34px; border: 7px solid #15191e; cursor: grab; touch-action: pan-y;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 30px 70px -20px rgba(0, 0, 0, 0.9), 0 0 60px -20px rgba(246, 195, 68, 0.5);
+}
+.tw-phone.is-drag { cursor: grabbing; }
+.tw-island { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 30%; height: 17px; border-radius: 12px; background: #000; z-index: 2; }
+.tw-screen { position: absolute; inset: 0; border-radius: 27px; overflow: hidden; }
+.tw-hud { position: absolute; top: 34px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.tw-app, .tw-score {
+  padding: 5px 9px; border-radius: 999px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+.tw-app { background: var(--gold); color: #1a1203; font-weight: 600; }
+.tw-phone[data-at="ar"] .tw-app { background: var(--teal); color: #032224; }
+.tw-phone[data-at="none"] .tw-app { background: rgba(5, 8, 10, 0.7); color: var(--fg); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.tw-score { background: rgba(5, 8, 10, 0.72); color: var(--fg); box-shadow: inset 0 0 0 1px rgba(246, 195, 68, 0.5); }
+/* the camera's frame corners, while the phone is between the two */
+.tw-finder { position: absolute; inset: 24% 14%; opacity: 0; transition: opacity 0.3s; }
+.tw-phone[data-at="none"] .tw-finder { opacity: 1; }
+.tw-finder i { position: absolute; width: 18px; height: 18px; border: 2px solid rgba(255, 255, 255, 0.75); }
+.tw-finder i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 6px; }
+.tw-finder i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
+.tw-finder i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
+.tw-finder i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+.tw-msg {
+  position: absolute; left: 10px; right: 10px; top: 66px; margin: 0; padding: 7px 10px; border-radius: 12px;
+  font-size: 11.5px; line-height: 1.35; text-align: center; color: var(--fg); background: rgba(5, 8, 10, 0.78);
+  opacity: 0; translate: 0 6px; transition: opacity 0.3s, translate 0.3s; pointer-events: none;
+}
+.tw-msg.on { opacity: 1; translate: 0 0; }
+.tw-stick {
+  position: absolute; bottom: 16px; right: 14px; width: 76px; height: 76px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(5, 8, 10, 0.5); border: 1.5px solid rgba(246, 195, 68, 0.6);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); touch-action: none; cursor: pointer;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.tw-stick.on { opacity: 1; pointer-events: auto; }
+.tw-stick i { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.8); transition: transform 0.08s; }
+/* the switch: the accessible way to move the phone */
+.tw-switch {
+  display: flex; width: fit-content; margin: 16px auto 0; padding: 5px; gap: 4px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.04); visibility: hidden;
+}
+.tw.is-ready .tw-switch, .tw.is-ready .tw-tip { visibility: visible; }
+.tw-switch button {
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 48px; padding: 4px 20px;
+  border: 0; border-radius: 999px; background: none; color: var(--fg-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background 0.25s, color 0.25s;
+}
+.tw-switch button span { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 400; opacity: 0.8; }
+.tw-switch button:hover { color: var(--fg); }
+.tw-switch button[aria-pressed="true"] { background: var(--gold); color: #1a1203; }
+.tw-switch button[data-go="1"][aria-pressed="true"] { background: var(--teal); color: #032224; }
+.tw-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tw-tip { margin: 10px 0 0; text-align: center; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3, rgba(255, 255, 255, 0.5)); visibility: hidden; }
+@media (max-width: 700px) {
+  .tw-stage { aspect-ratio: 4 / 5.2; }
+  .tw-back, .tw-phone { border-radius: 28px; }
+  .tw-phone { border-width: 6px; }
+  .tw-screen { border-radius: 22px; }
+  .tw-hud { top: 30px; left: 8px; right: 8px; }
+  .tw-app, .tw-score { font-size: 8.5px; padding: 4px 7px; }
+  .tw-stick { width: 64px; height: 64px; bottom: 12px; right: 10px; }
+  .tw-stick i { width: 28px; height: 28px; }
+  .tw-msg { top: 56px; font-size: 10.5px; }
+  .tw-switch button { padding: 4px 13px; font-size: 13px; }
+}
