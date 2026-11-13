@@ -35,24 +35,6 @@
   }, { passive: true });
 })();
 
-// Main navigation: the menu below 1280px (closes on a link, Escape or a wider screen).
-(function () {
-  var btn = document.getElementById("snavMenu");
-  var panel = document.getElementById("snavPanel");
-  if (!btn || !panel) return;
-  function set(open) {
-    btn.setAttribute("aria-expanded", open ? "true" : "false");
-    btn.textContent = open ? "Close" : "Menu";
-    panel.hidden = !open;
-  }
-  btn.addEventListener("click", function () { set(panel.hidden); });
-  panel.addEventListener("click", function (e) { if (e.target.closest("a")) set(false); });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !panel.hidden) { set(false); btn.focus(); }
-  });
-  matchMedia("(min-width: 1280px)").addEventListener("change", function (m) { if (m.matches) set(false); });
-})();
-
 // Bobo's side nav: lights the section on screen (gold icon + its name).
 (function () {
   var nav = document.getElementById("bnav");
@@ -162,4 +144,51 @@
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (es) { visible = es[0].isIntersecting; tick(); }, { threshold: 0.4 }).observe(phone);
   }
+})();
+
+// Hero: the three layers (Cola Run, Off the Chain, the keychain) drift apart with the pointer.
+(function () {
+  var stage = document.getElementById("heroStage");
+  if (!stage || !stage.querySelector(".hs-kc")) return;
+  if (!matchMedia("(pointer: fine)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  var hero = stage.closest(".hero") || stage, raf = 0, px = 0, py = 0;
+  var poster = stage.querySelector(".hs-poster");
+  function paint() {
+    raf = 0;
+    stage.style.setProperty("--px", px.toFixed(3));
+    stage.style.setProperty("--py", py.toFixed(3));
+    if (poster) {
+      poster.style.setProperty("--sy", (px * 6).toFixed(2) + "deg");
+      poster.style.setProperty("--sx", (-py * 4).toFixed(2) + "deg");
+    }
+  }
+  hero.addEventListener("pointermove", function (e) {
+    var r = stage.getBoundingClientRect();
+    px = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2)));
+    py = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2)));
+    if (!raf) raf = requestAnimationFrame(paint);
+  }, { passive: true });
+  hero.addEventListener("pointerleave", function () { px = 0; py = 0; if (!raf) raf = requestAnimationFrame(paint); });
+})();
+
+// Bobo's Hideout: the Digital Collection window loads the real vault once it is near the screen.
+(function () {
+  var win = document.getElementById("hsCol");
+  if (!win) return;
+  var frame = win.querySelector(".hw-frame");
+  if (!frame || !frame.dataset.src) return;
+  function load() {
+    if (frame.src) return;
+    frame.addEventListener("load", function () {
+      // the vault paints its own poster first; give it a beat before swapping out the picture
+      setTimeout(function () { win.classList.add("is-live"); }, 700);
+    }, { once: true });
+    frame.src = frame.dataset.src;
+  }
+  if (!("IntersectionObserver" in window)) return load();
+  new IntersectionObserver(function (es, io) {
+    if (!es[0].isIntersecting) return;
+    io.disconnect();
+    load();
+  }, { rootMargin: "300px 0px" }).observe(win);
 })();

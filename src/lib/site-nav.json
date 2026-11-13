@@ -1,0 +1,14 @@
+{
+  "$comment": "The ONE list of main navigation items for medialife.ai. Nav.tsx (React pages) imports it, and `npm run build` copies it into public/site-nav/site-nav.js (static pages such as /evade/ and /activated-merch/) via scripts/sync-site-nav.mjs. Edit here only.",
+  "items": [
+    { "kind": "static", "href": "/activated-merch/", "label": "Activated Merch", "short": "Merch", "num": "01" },
+    { "kind": "static", "href": "/evade/", "label": "EVADE", "num": "02", "isNew": true },
+    { "kind": "route", "href": "/live", "label": "Live Now", "num": "03" },
+    { "kind": "anchor", "href": "/#capabilities", "label": "Production Capabilities", "short": "Capabilities", "num": "04" },
+    { "kind": "route", "href": "/activated-retail", "label": "Retail Program", "short": "Retail", "num": "05" },
+    { "kind": "route", "href": "/creator-hub", "label": "Creator Hub", "num": "06" },
+    { "kind": "route", "href": "/case-studies", "label": "Case Studies", "num": "07" },
+    { "kind": "external", "href": "https://shop.medialife.ai/", "label": "Shop", "num": "08" }
+  ],
+  "cta": { "href": "/contact", "label": "Activate your IP" }
+}

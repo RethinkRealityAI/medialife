@@ -16,7 +16,8 @@
     "test:hub": "node scripts/test-hub.mjs",
     "test:ugc": "node scripts/test-hub.mjs ugc",
     "test:media": "node scripts/test-hub.mjs media",
-    "check:shelf": "node scripts/check-shelf-default.mjs"
+    "check:shelf": "node scripts/check-shelf-default.mjs",
+    "prebuild": "node scripts/sync-site-nav.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
