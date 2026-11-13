@@ -429,7 +429,9 @@
 .hk-nfc svg { width: 16px; height: 16px; color: var(--teal); }
 @keyframes hkUp { from { opacity: 0; translate: 0 24px; scale: 0.85; } }
 @media (max-width: 1099px) {
-  .hero-stage { margin-bottom: 64px; }
+  /* phones and tablets: title, then the hero images, then the buttons */
+  .hero .hero-grid { grid-template-areas: "head" "stage" "cta" "clips"; }
+  .hero-stage { margin-bottom: 40px; }
   .hero-stage .hs-poster, .hs-card2 { width: 54%; }
   .hs-card2 { left: 24%; }
   .hs-kc { right: 2%; width: 33%; top: 26%; }
