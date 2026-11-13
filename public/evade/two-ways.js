@@ -6,7 +6,9 @@
 //   - right: the real keychain. With the phone over it, Bobo and the Eclipse can pop off their charms
 //     (the Off the Chain pop-out, ported from /labs/keychain-pop/). Tap Bobo to wave.
 // The phone is a lens: outside it the pieces are dimmed; through it they are vivid, and what pops out
-// spills past its edges. Drag the phone, tap a side, or use the switch under the stage.
+// spills past its edges. It starts in the middle, pointing at neither. With a mouse the phone follows the
+// cursor; on touch you drag it (or tap a side); the switch under the stage works everywhere. Over the keychain
+// the charms first open into portals (3 s, the same shader as the real AR) and then Bobo and the can pop out.
 // Only real assets: the 3D keychain, the Bobo and can models, Bobo's Hideout, the Cola Run splash.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -127,10 +129,11 @@ async function init() {
   const ar = { ready: false, state: "idle", tweens: [] };
 
   // ------------------------------------------------------------------ the phone: position, spring, drag
-  let u = 0, uv = 0, target = 0, dragging = null, touched = false, tour = true, tourT = 0, at = "game";
+  // it starts in the middle, between the two, pointing at nothing; moving it to a side starts that experience
+  let u = 0.5, uv = 0, target = 0.5, dragging = null, touched = false, at = "game";
   const go = (k, byUser = true) => {
     target = k;
-    if (byUser) { touched = true; tour = false; }
+    if (byUser) touched = true;
     if (reduce) { u = k; uv = 0; }
     buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
   };
@@ -185,13 +188,25 @@ async function init() {
     const dx = e.clientX - down.x;
     down.moved = Math.max(down.moved, Math.abs(dx), Math.abs(e.clientY - down.y));
     if (down.moved < 6) return;
-    dragging = true; touched = true; tour = false;
+    dragging = true; touched = true;
     const span = L.rx - L.lx;
     u = Math.min(Math.max(down.u + dx / span, -0.06), 1.06);
     const dt = Math.max((e.timeStamp - down.lt) / 1000, 0.008);
     down.v = (e.clientX - down.lx) / span / dt;
     down.lx = e.clientX; down.lt = e.timeStamp;
     uv = 0;
+  });
+  // with a mouse the cursor is the phone: it follows the pointer across the stage. The ends are sticky (the
+  // phone parks on a piece while the cursor is anywhere near it), so the joystick on the phone stays usable.
+  const STICKY = 0.3;
+  stage.addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse" || down || stick.active || reduce) return;
+    const b = stage.getBoundingClientRect();
+    const raw = (e.clientX - b.left - L.lx) / (L.rx - L.lx);
+    const k = raw <= STICKY ? 0 : raw >= 1 - STICKY ? 1 : (raw - STICKY) / (1 - STICKY * 2);
+    if (Math.abs(k - target) < 0.004) return;
+    target = k; touched = true;
+    buttons.forEach((bt, i) => bt.setAttribute("aria-pressed", String(k === i)));
   });
   const up = (e) => {
     if (!down) return;
@@ -218,7 +233,7 @@ async function init() {
   let clock = 0;
   stickEl.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
-    touched = true; tour = false;
+    touched = true;
     try { stickEl.setPointerCapture(e.pointerId); } catch {}
     stick.active = true;
     const move = (ev) => {
@@ -249,7 +264,7 @@ async function init() {
   addEventListener("keydown", (e) => {
     if (!/^Arrow/.test(e.key) || at !== "game" || !(hover || stage.contains(document.activeElement))) return;
     e.preventDefault();
-    keys.add(e.key); touched = true; tour = false;
+    keys.add(e.key); touched = true;
   });
   addEventListener("keyup", (e) => keys.delete(e.key));
   function keyStick() {
@@ -269,7 +284,7 @@ async function init() {
   function setAt(next) {
     if (next === at) return;
     at = next;
-    phone.dataset.at = at || "none";
+    phone.dataset.at = wrap.dataset.at = at || "none";
     hudApp.textContent = at === "game" ? (L.narrow ? "Cola Run" : "EVADE · Cola Run") : at === "ar" ? (L.narrow ? "Off the Chain" : "Bobo · Off the Chain") : "Camera";
     hudScore.hidden = at !== "game";
     say("");
@@ -301,7 +316,8 @@ async function init() {
   stage.classList.add("is-ready");
   wrap.classList.add("is-ready");
   placePhone();
-  setAt(null); setAt("game");
+  setAt(null);
+  buttons.forEach((b) => b.setAttribute("aria-pressed", "false"));   // neither, until the phone is on one
   hudScore.textContent = `Cans 0/${CANS}`;
 
   loadAR().catch((e) => console.warn("[two-ways] keychain", e));
@@ -309,7 +325,7 @@ async function init() {
   // ------------------------------------------------------------------ render: dimmed outside the lens, vivid through it
   const run = { visible: true };
   new IntersectionObserver((es) => { run.visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(stage);
-  let grow = 0, last = performance.now(), arWas = false;
+  let grow = 0, last = performance.now(), arWas = false, idleT = 1.6, nudgeDir = 1;
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min((now - last) / 1000, 1 / 20);
@@ -326,11 +342,11 @@ async function init() {
     const settled = !dragging && Math.abs(target - u) < 0.03 && Math.abs(uv) < 0.4;
     setAt(u < 0.16 ? "game" : u > 0.84 ? "ar" : null);
 
-    // the tour: the game plays itself first, then the phone moves on to the keychain
-    if (tour && settled && at === "game") {
-      tourT += dt;
-      if ((winT > 0 && clock - winT > 2.2) || tourT > 16) { go(1, false); tour = false; }
-    }
+    // until someone moves it, the phone waits in the middle and now and then leans each way, as a hint
+    if (!touched && !reduce && settled && target === 0.5) {
+      idleT += dt;
+      if (idleT > 3.2) { idleT = 0; nudgeDir = -nudgeDir; uv += nudgeDir * 1.15; }
+    } else idleT = 0;
 
     // left: the hideout rises and the game plays while the phone is over the splash
     const gameOn = at === "game" && (settled || dragging);
@@ -383,7 +399,8 @@ async function init() {
   requestAnimationFrame(frame);
 
   // ------------------------------------------------------------------ the Off the Chain pop-out (from /labs/keychain-pop/)
-  let K = null, B = null, C = null, PADS = null, SPOT = null, scanBar = null, flashB = null, flashC = null;
+  let K = null, B = null, C = null, PADS = null, SPOT = null, flashB = null, flashC = null;
+  const PORTAL_S = 3, PORTAL_REST = 1, GLOW_REST = 0.55;   // the portal builds for 3 s before anything pops out (Dapo), and stays open after
   const tween = (dur, fn, done) => ar.tweens.push({ t: 0, dur, fn, done });
   const after = (d, fn) => tween(d, () => {}, fn);
 
@@ -402,24 +419,22 @@ async function init() {
     K.position.set(0, KY, 0);
     right.add(K);
     right.updateMatrixWorld(true);
-    B = prepCharacter(bobo, 0.78, K.getObjectByName("Charm_Bobo"));
-    C = prepCharacter(can, 0.56, K.getObjectByName("Charm_Eclipse"));
+    B = prepCharacter(bobo, 0.78, K.getObjectByName("Charm_Bobo"), PORTAL_COLOURS.bobo);
+    C = prepCharacter(can, 0.56, K.getObjectByName("Charm_Eclipse"), PORTAL_COLOURS.can);
     PADS = { bobo: pad(0.42), can: pad(0.3) };
     SPOT = { bobo: new THREE.Vector3(-0.36, FLOOR_Y, 0.62), can: new THREE.Vector3(0.42, FLOOR_Y, 0.58) };
     PADS.bobo.position.copy(SPOT.bobo); PADS.can.position.copy(SPOT.can);
     for (const p of Object.values(PADS)) { p.visible = false; right.add(p); setLayer(p, POP); }
-    scanBar = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.018), new THREE.MeshBasicMaterial({ color: 0x7fd0ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-    scanBar.position.z = 0.06;
     flashB = sprite(glowTex, 0.01); flashC = sprite(glowTex, 0.01);
-    right.add(scanBar, flashB, flashC);
-    setLayer(scanBar, POP); setLayer(flashB, POP); setLayer(flashC, POP);
+    right.add(flashB, flashC);
+    setLayer(flashB, POP); setLayer(flashC, POP);
     ar.ready = true;
     if (at === "ar" && arWas === "wait") arWas = arStart();
   }
-  function prepCharacter(gltf, height, charm) {
+  function prepCharacter(gltf, height, charm, colours) {
     const root = new THREE.Group();
     const m = gltf.scene;
-    const sil = takeSilhouette(m, charm);
+    const sil = takeSilhouette(m, charm, colours);
     const mixer = new THREE.AnimationMixer(m);
     const clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
     const restClip = clips.Sit || clips.Idle;
@@ -434,21 +449,25 @@ async function init() {
     right.add(root);
     m.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
     setLayer(root, POP);
-    return { root, model: m, mixer, clips, current: null, baseScale: height / h, height, sil };
+    return { root, model: m, mixer, clips, current: null, baseScale: height / h, height, sil, fx: { glow: 0, portal: 0, black: 0, shake: 0 } };
   }
-  function takeSilhouette(m, charm) {
+  function takeSilhouette(m, charm, colours) {
     const sil = m.getObjectByName("Silhouette");
     if (!sil) return null;
     sil.updateMatrix();
     const local = sil.matrix.clone();
     sil.removeFromParent();
-    sil.material = new THREE.MeshBasicMaterial({ color: 0x000000, map: sil.material.map, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
-    sil.renderOrder = 5;
-    sil.visible = false;
     const print = charm.getObjectByName(charm.name + "_Print_Front");
     print.geometry.computeBoundingBox();
     const bb = print.geometry.boundingBox;
     const c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+    const map = sil.material.map;
+    map.wrapS = map.wrapT = THREE.ClampToEdgeWrapping;
+    map.needsUpdate = true;
+    const aspect = sz.x / sz.y;
+    sil.material = portalMaterial(bakeMask(renderer, map, aspect), aspect, ...colours);
+    sil.renderOrder = 5;
+    sil.visible = false;
     sil.position.set(c.x, c.y, c.z + 0.012);
     sil.quaternion.identity();
     sil.scale.set(sz.x, sz.y, 1);
@@ -491,11 +510,11 @@ async function init() {
     if (!ar.ready) return;
     ar.tweens.length = 0;
     ar.state = "idle";
-    scanBar.material.opacity = 0;
     for (const ch of [B, C]) {
       ch.mixer.stopAllAction(); ch.current = null; ch.root.visible = false;
       ch.root.quaternion.identity(); ch.root.scale.setScalar(1);
-      ch.sil.mesh.visible = false; ch.sil.mesh.material.opacity = 0;
+      ch.sil.mesh.visible = false;
+      Object.assign(ch.fx, { glow: 0, portal: 0, black: 0, shake: 0 });
     }
     PADS.bobo.visible = PADS.can.visible = false;
     flashB.material.opacity = flashC.material.opacity = 0;
@@ -504,23 +523,24 @@ async function init() {
     if (!ar.ready) { say("Opening the camera…"); return "wait"; }
     arReset();
     ar.state = "popping";
-    say("");
-    K.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(K);
-    const gi = new THREE.Matrix4().copy(right.matrixWorld).invert();
-    box.applyMatrix4(gi);
-    tween(reduce ? 0.01 : 0.7, (k) => {
-      scanBar.position.y = lerp(box.max.y, box.min.y, k);
-      scanBar.material.opacity = Math.sin(k * Math.PI) * 0.9;
+    say("Keychain found. Opening the portals…");
+    // the build-up: a border lights round each charm, the light throbs, and the charm opens into a portal
+    for (const ch of [B, C]) ch.sil.mesh.visible = true;
+    tween(reduce ? 0.01 : PORTAL_S, (k) => {
+      for (const ch of [B, C]) {
+        ch.fx.glow = easeOut(k * 2.2) * (0.8 + 0.35 * k);
+        ch.fx.portal = reduce ? 1 : easeInOut((k - 0.22) / 0.55);
+        ch.fx.shake = reduce ? 0 : easeInOut(k * 1.5) * (0.4 + 0.9 * k);
+      }
     }, () => {
-      scanBar.material.opacity = 0;
+      say("");
       launch(C, SPOT.can, flashC, PADS.can);
       after(reduce ? 0.01 : 0.55, () => launch(B, SPOT.bobo, flashB, PADS.bobo));
     });
     return true;
   }
   function launch(ch, spot, flash, pd) {
-    const isBobo = ch === B;
+    const isBobo = ch === B, fx = ch.fx;
     ch.root.visible = true;
     ch.sil.mesh.visible = true;
     play(ch, "PopOut", { loop: false, fade: 0, onDone: () => {
@@ -541,10 +561,12 @@ async function init() {
     place(0);
     ch.mixer.update(0);
     tween(reduce ? 0.01 : 0.38, (k) => {
-      ch.sil.mesh.material.opacity = Math.min(k * 4, 1);
+      fx.black = Math.max(fx.black, Math.min(k * 4, 1)); fx.shake = 1 + k;
       place(Math.sin(k * Math.PI * 5) * 0.05 * k);
     }, () => {
       const from = place(0);
+      fx.black = 1; fx.shake = 0;
+      const portal0 = fx.portal, glow0 = fx.glow;
       pop.paused = false;
       pd.visible = true;
       flash.position.copy(from.pos);
@@ -561,6 +583,8 @@ async function init() {
         flash.material.opacity = f;
         pd.scale.setScalar(0.2 + 0.8 * easeOut(k * 1.3));
         pd.userData.ring.material.opacity = easeOut(k);
+        fx.portal = lerp(portal0, PORTAL_REST, easeInOut(k));   // the portal stays open behind it, its rim softly lit
+        fx.glow = lerp(Math.max(glow0, 1) * (1 + 0.8 * Math.sin(Math.min(k * 3, 1) * Math.PI)), GLOW_REST, easeInOut(k));
       });
     });
   }
@@ -575,6 +599,12 @@ async function init() {
       if (k >= 1) { const j = ar.tweens.indexOf(w); if (j >= 0) ar.tweens.splice(j, 1); w.done && w.done(); }
     }
     if (!reduce) K.rotation.z = Math.sin(clock * 1.3) * 0.035;
+    for (const ch of [B, C]) {
+      const uni = ch.sil.mesh.material.uniforms, fx = ch.fx;
+      const throb = 1 + Math.min(fx.shake, 1.5) * 0.35 * Math.sin(clock * 22);
+      uni.uTime.value = clock; uni.uGlow.value = fx.glow * (0.86 + 0.14 * Math.sin(clock * 5)) * throb;
+      uni.uPortal.value = fx.portal; uni.uBlack.value = fx.black;
+    }
     B.mixer.update(dt);
     C.mixer.update(dt);
     for (const p of Object.values(PADS)) p.userData.ring.rotation.z += dt * 0.6;
@@ -597,6 +627,76 @@ async function init() {
 }
 
 // ------------------------------------------------------------------ effects for the pop-out
+// The charm portal, the same shader as Off the Chain (/evade/keychain-ar/main.js): a border lights up round
+// the charm's cut-out, then it opens into a swirl in that charm's colours, and stays open once the character is out.
+const HALO_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D map; uniform float uAspect;
+  void main() {
+    float halo = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float an = float(i) * 0.5236; vec2 d = vec2(cos(an), sin(an) * uAspect);
+      halo += texture2D(map, vUv + d * 0.022).a + texture2D(map, vUv + d * 0.05).a * 0.7;
+    }
+    gl_FragColor = vec4(texture2D(map, vUv).a, halo / 20.4, 0.0, 1.0);
+  }`;
+const PORTAL_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D map; uniform float uTime, uGlow, uPortal, uBlack, uAspect;
+  uniform vec3 uA, uB, uC;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  // value noise that repeats every P cells across (and every 256 down, which also keeps the hash inputs small)
+  float noise(vec2 p, float P) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    float x0 = mod(i.x, P), x1 = mod(i.x + 1.0, P), y0 = mod(i.y, 256.0), y1 = mod(i.y + 1.0, 256.0);
+    return mix(mix(hash(vec2(x0, y0)), hash(vec2(x1, y0)), f.x), mix(hash(vec2(x0, y1)), hash(vec2(x1, y1)), f.x), f.y); }
+  float fbm(vec2 p, float P) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p, P); p = p * 2.0 + 7.1; P *= 2.0; a *= 0.5; } return v; }
+  void main() {
+    vec2 m = texture2D(map, vUv).rg; float a = m.r, halo = m.g;
+    vec2 q = (vUv - 0.5) * vec2(1.0, 1.0 / uAspect); float r = length(q), ang = atan(q.y, q.x);
+    float rim = smoothstep(0.0, 0.55, halo) * (1.0 - a);                    // outside the cut-out
+    float edge = a * (1.0 - smoothstep(0.55, 1.0, halo));                   // just inside it
+    float sweep = 0.5 + 0.5 * sin(ang * 2.0 - uTime * 3.2);
+    vec3 rimCol = mix(uA, uC, sweep) * (1.1 + 0.5 * sin(uTime * 9.0 + ang * 5.0));
+    // portal: a spiral falling into the middle (8 and 16 noise cells round the circle: seamless)
+    float sw = ang + 1.6 / (r + 0.18) - uTime * 1.5;
+    float n = fbm(vec2(sw * 1.27324, r * 5.0 - uTime * 0.9), 8.0);
+    float n2 = fbm(vec2(sw * 2.54648 + 3.0, r * 9.0 + uTime * 0.6), 16.0);
+    vec3 pc = mix(uB * 0.35, uA, smoothstep(0.25, 0.75, n));
+    pc = mix(pc, uC, smoothstep(0.55, 0.9, n2) * 0.8);
+    pc += vec3(1.0) * pow(n * n2 * 2.2, 3.0) * 0.9;                         // sparks in the swirl
+    pc *= mix(0.12, 1.25, smoothstep(0.0, 0.42, r));                        // dark at the centre: it has depth
+    pc += rimCol * edge * 1.4;
+    float inA = a * max(uBlack, uPortal);
+    vec3 inside = pc * uPortal * a + rimCol * edge * uGlow * 0.9 * a;
+    vec3 glow = rimCol * rim * uGlow * 1.5;
+    gl_FragColor = vec4(inside + glow, inA);                                // premultiplied: the glow is additive
+  }`;
+// mask picture -> a small texture holding the mask (red) and its halo (green), rendered once on the GPU
+function bakeMask(renderer, map, aspect) {
+  const img = map.image || {}; const k = Math.min(1, 512 / Math.max(img.width || 512, img.height || 512));
+  const rt = new THREE.WebGLRenderTarget(Math.max(2, Math.round((img.width || 512) * k)), Math.max(2, Math.round((img.height || 512) * k)), { depthBuffer: false });
+  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: map }, uAspect: { value: aspect } }, fragmentShader: HALO_FRAG,
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }", depthTest: false, depthWrite: false });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat); quad.frustumCulled = false;
+  const sc = new THREE.Scene(); sc.add(quad);
+  const prev = renderer.getRenderTarget(); renderer.setRenderTarget(rt); renderer.render(sc, new THREE.Camera()); renderer.setRenderTarget(prev);
+  quad.geometry.dispose(); mat.dispose();
+  return rt.texture;
+}
+function portalMaterial(baked, aspect, a, b, c) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { map: { value: baked }, uTime: { value: 0 }, uGlow: { value: 0 }, uPortal: { value: 0 }, uBlack: { value: 0 }, uAspect: { value: aspect },
+      uA: { value: new THREE.Color(a) }, uB: { value: new THREE.Color(b) }, uC: { value: new THREE.Color(c) } },
+    vertexShader: "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: PORTAL_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+  });
+  return m;
+}
+const PORTAL_COLOURS = { bobo: [0xff9a3c, 0xffd28a, 0x6fb6ff], can: [0x4fc3ff, 0x8a1f6e, 0xff6ad5], old: [0xe2574a, 0xf4c5b2, 0x3a4ad0] };   // the cat"s oranges and visor blue; the can"s blue and magenta
+
 function radialTexture(stops) {
   const c = document.createElement("canvas");
   c.width = c.height = 256;
