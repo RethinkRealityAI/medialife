@@ -6,9 +6,12 @@
 //   - right: the real keychain. With the phone over it, Bobo and the Eclipse can pop off their charms
 //     (the Off the Chain pop-out, ported from /labs/keychain-pop/). Tap Bobo to wave.
 // The phone is a lens: outside it the pieces are dimmed; through it they are vivid, and what pops out
-// spills past its edges. It starts in the middle, pointing at neither. With a mouse the phone follows the
-// cursor; on touch you drag it (or tap a side); the switch under the stage works everywhere. Over the keychain
-// the charms first open into portals (3 s, the same shader as the real AR) and then Bobo and the can pop out.
+// spills past its edges. It starts in the middle, pointing at neither. With a mouse the phone IS the cursor
+// (as on the homepage hero: it sits right under the pointer, no dragging) and holds still once an experience is
+// on so the joystick and Bobo can be used; moving off the phone picks it up again. On touch you drag it (or tap
+// a side), and the experience starts the moment the phone is over it, while still held. The switch under the
+// stage works everywhere. Over the keychain the charms first open into portals (3 s, the same shader as the
+// real AR) and then Bobo and the can pop out.
 // Only real assets: the 3D keychain, the Bobo and can models, Bobo's Hideout, the Cola Run splash.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -59,6 +62,8 @@ async function init() {
   const knob = stickEl.querySelector("i");
   const buttons = [...wrap.querySelectorAll(".tw-switch button")];
   const coarse = matchMedia("(pointer: coarse)").matches;
+  const hint = phone.querySelector(".tw-hint");
+  if (hint) hint.textContent = coarse ? "Drag the phone to either side" : "Move the phone to either side";
 
   let renderer;
   try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" }); } catch { return; }
@@ -85,7 +90,7 @@ async function init() {
   const load = (u) => loader.loadAsync(u);
 
   // ------------------------------------------------------------------ layout (px in the stage <-> world)
-  const L = { w: 1, h: 1, ph: 1, pw: 1, lx: 0, rx: 1, wpp: 1, bez: 7 };
+  const L = { w: 1, h: 1, ph: 1, pw: 1, lx: 0, rx: 1, wpp: 1, bez: 7, k: 1 };
   const px2x = (px) => (px - L.w / 2) * L.wpp;
   const py2y = (py) => (L.h / 2 - py) * L.wpp;
 
@@ -133,6 +138,7 @@ async function init() {
   let u = 0.5, uv = 0, target = 0.5, dragging = null, touched = false, at = "game";
   const go = (k, byUser = true) => {
     target = k;
+    locked = true;   // with a mouse, it stays there until the pointer comes back onto the scene off the phone
     if (byUser) touched = true;
     if (reduce) { u = k; uv = 0; }
     buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
@@ -147,11 +153,14 @@ async function init() {
     camera.aspect = L.w / L.h;
     camera.updateProjectionMatrix();
     const narrow = L.w < 700;
-    L.ph = L.h * (narrow ? 0.86 : 0.88);
+    // on phones the phone and the two pieces are smaller and sit further apart, so the phone waiting in the
+    // middle doesn't cover both of them and each piece has room around it
+    L.ph = L.h * (narrow ? 0.74 : 0.88);
     L.pw = L.ph * 0.47;
-    L.bez = narrow ? 6 : 7;
-    L.lx = L.w * (narrow ? 0.3 : 0.27);
-    L.rx = L.w * (narrow ? 0.66 : 0.73);
+    L.bez = narrow ? 5 : 7;
+    L.lx = L.w * (narrow ? 0.25 : 0.27);
+    L.rx = L.w * (narrow ? 0.73 : 0.73);
+    L.k = narrow ? 0.8 : 1;             // the pieces and what plays in the phone, scaled with it
     L.wpp = VH / L.h;
     phone.style.width = back.style.width = L.pw + "px";
     phone.style.height = back.style.height = L.ph + "px";
@@ -159,7 +168,7 @@ async function init() {
     left.position.set(px2x(L.lx), 0, 0);
     right.position.set(px2x(L.rx), 0, 0);
     // the keychain set fills about three quarters of the stage height
-    const f = (VH * (narrow ? 0.6 : 0.68)) / (KY - FLOOR_Y);
+    const f = (VH * (narrow ? 0.5 : 0.68)) / (KY - FLOOR_Y);
     right.scale.setScalar(f);
     right.position.y = -((KY + FLOOR_Y) / 2) * f + 0.1;
     L.narrow = narrow;
@@ -174,60 +183,80 @@ async function init() {
     phone.style.transform = back.style.transform = tr;
   }
 
-  // drag the phone; a tap on a side moves it there
+  // touch: drag the phone; a tap on a side moves it there. A mouse never drags (it is the phone, below).
   let down = null;
   stage.addEventListener("pointerdown", (e) => {
     if (e.target.closest(".tw-stick, .tw-switch")) return;
     const b = stage.getBoundingClientRect();
     const x = e.clientX - b.left;
     const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - L.h / 2) < L.ph / 2;
-    down = { x: e.clientX, y: e.clientY, u, onPhone, t: e.timeStamp, lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
-    if (onPhone) { phone.classList.add("is-drag"); try { stage.setPointerCapture(e.pointerId); } catch {} }
+    down = { x: e.clientX, y: e.clientY, u, onPhone, mouse: e.pointerType === "mouse", lx: e.clientX, lt: e.timeStamp, v: 0, moved: 0 };
+    if (onPhone && !down.mouse) { phone.classList.add("is-drag"); try { stage.setPointerCapture(e.pointerId); } catch {} }
   });
   stage.addEventListener("pointermove", (e) => {
-    if (!down || !down.onPhone) return;
+    if (!down || !down.onPhone || down.mouse) return;
     const dx = e.clientX - down.x;
     down.moved = Math.max(down.moved, Math.abs(dx), Math.abs(e.clientY - down.y));
     if (down.moved < 6) return;
     dragging = true; touched = true;
     const span = L.rx - L.lx;
-    u = Math.min(Math.max(down.u + dx / span, -0.06), 1.06);
+    u = Math.min(Math.max(down.u + dx / span, -0.05), 1.05);
     const dt = Math.max((e.timeStamp - down.lt) / 1000, 0.008);
-    down.v = (e.clientX - down.lx) / span / dt;
+    down.v = lerp(down.v, (e.clientX - down.lx) / span / dt, 0.5);
     down.lx = e.clientX; down.lt = e.timeStamp;
-    uv = 0;
+    target = u; uv = 0;
   });
-  // with a mouse the cursor is the phone: it follows the pointer across the stage. The ends are sticky (the
-  // phone parks on a piece while the cursor is anywhere near it), so the joystick on the phone stays usable.
-  const STICKY = 0.3;
+  // mouse: the cursor is the phone. It sits right under the pointer (a quick damp, no spring) and the real
+  // cursor is hidden over the scene. Once an experience is on, the phone holds still so the joystick and Bobo
+  // can be used; moving the pointer off the phone picks it up again.
+  let following = false, locked = false, mouseX = -1;
+  const span = () => L.rx - L.lx;
+  const uOf = (x) => {
+    // never past a piece: beyond the splash or the keychain the phone stays centred on it, so the lens frames it
+    return Math.min(Math.max((x - L.lx) / span(), 0), 1);
+  };
+  const setFollow = (f) => {
+    if (f === following) return;
+    following = f;
+    stage.classList.toggle("is-follow", f);
+  };
   stage.addEventListener("pointermove", (e) => {
-    if (e.pointerType !== "mouse" || down || stick.active || reduce) return;
+    if (e.pointerType !== "mouse" || reduce) return;
     const b = stage.getBoundingClientRect();
-    if (e.clientY - b.top > L.h || e.target.closest(".tw-switch")) return;   // over the switch strip: leave the phone be
-    const raw = (e.clientX - b.left - L.lx) / (L.rx - L.lx);
-    const k = raw <= STICKY ? 0 : raw >= 1 - STICKY ? 1 : (raw - STICKY) / (1 - STICKY * 2);
-    if (Math.abs(k - target) < 0.004) return;
-    target = k; touched = true;
-    buttons.forEach((bt, i) => bt.setAttribute("aria-pressed", String(k === i)));
+    const x = e.clientX - b.left, y = e.clientY - b.top;
+    if (y > L.h || e.target.closest(".tw-switch, .tw-stick")) { setFollow(false); return; }   // the switch strip, the joystick
+    mouseX = x;
+    if (locked) {
+      if (Math.abs(x - phoneX()) > L.pw / 2 + 4) locked = false;   // off the phone: pick it up again
+      else { setFollow(false); return; }
+    }
+    setFollow(true);
+    touched = true;
+    target = uOf(x);
   });
+  stage.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") setFollow(false); });
   const up = (e) => {
     if (!down) return;
     const d = down; down = null;
     phone.classList.remove("is-drag");
     if (dragging) {
       dragging = false;
-      const proj = u + d.v * 0.18;   // a flick carries it over
+      const proj = u + d.v * 0.15;   // a flick carries it over
       go(proj > 0.5 ? 1 : 0);
-      uv = d.v * 0.5;
+      uv = d.v * 0.35;
       return;
     }
     if (d.moved > 8 || !e) return;
     const b = stage.getBoundingClientRect();
     if (d.onPhone) { tapScreen(e.clientX - b.left, e.clientY - b.top); return; }
-    go(e.clientX - b.left < L.w / 2 ? 0 : 1);
+    if (!d.mouse) go(e.clientX - b.left < L.w / 2 ? 0 : 1);
   };
   stage.addEventListener("pointerup", up);
-  stage.addEventListener("pointercancel", () => { down = null; dragging = false; phone.classList.remove("is-drag"); go(u > 0.5 ? 1 : 0, false); });
+  stage.addEventListener("pointercancel", () => {
+    const wasDrag = dragging;
+    down = null; dragging = false; phone.classList.remove("is-drag");
+    if (wasDrag) go(u > 0.5 ? 1 : 0, false);
+  });
 
   // ------------------------------------------------------------------ the joystick and the arrow keys
   const stick = { x: 0, y: 0, active: false, at: -99 };
@@ -287,6 +316,7 @@ async function init() {
     if (next === at) return;
     at = next;
     phone.dataset.at = wrap.dataset.at = at || "none";
+    buttons.forEach((b, i) => b.setAttribute("aria-pressed", String((at === "game" && i === 0) || (at === "ar" && i === 1))));
     hudApp.textContent = at === "game" ? (L.narrow ? "Cola Run" : "EVADE · Cola Run") : at === "ar" ? (L.narrow ? "Off the Chain" : "Bobo · Off the Chain") : "Camera";
     hudScore.hidden = at !== "game";
     say("");
@@ -327,7 +357,7 @@ async function init() {
   // ------------------------------------------------------------------ render: dimmed outside the lens, vivid through it
   const run = { visible: true };
   new IntersectionObserver((es) => { run.visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(stage);
-  let grow = 0, last = performance.now(), arWas = false, idleT = 1.6, nudgeDir = 1;
+  let grow = 0, last = performance.now(), arWas = false, idleT = 1.6, nudgeDir = 1, atWas = null;
   function frame(now) {
     requestAnimationFrame(frame);
     const dt = Math.min((now - last) / 1000, 1 / 20);
@@ -338,11 +368,15 @@ async function init() {
     // the phone: a soft spring to where it is going, unless it is held
     if (!dragging) {
       if (reduce) u = target;
+      else if (following) { const n = lerp(u, target, 1 - Math.exp(-26 * dt)); uv = (n - u) / dt; u = n; }   // right under the pointer
       else { uv += ((target - u) * 70 - uv * 13) * dt; u += uv * dt; }
     }
     placePhone();
     const settled = !dragging && Math.abs(target - u) < 0.03 && Math.abs(uv) < 0.4;
-    setAt(u < 0.16 ? "game" : u > 0.84 ? "ar" : null);
+    // which experience the phone is on, with a little hysteresis so it doesn't flicker at the edges
+    setAt(at === "game" ? (u < 0.26 ? "game" : u > 0.82 ? "ar" : null)
+      : at === "ar" ? (u > 0.74 ? "ar" : u < 0.18 ? "game" : null)
+      : u < 0.18 ? "game" : u > 0.82 ? "ar" : null);
 
     // until someone moves it, the phone waits in the middle and now and then leans each way, as a hint
     if (!touched && !reduce && settled && target === 0.5) {
@@ -351,19 +385,23 @@ async function init() {
     } else idleT = 0;
 
     // left: the hideout rises and the game plays while the phone is over the splash
-    const gameOn = at === "game" && (settled || dragging);
+    // with a mouse, an experience that comes on holds the phone over its piece (the cursor shows again)
+    if (following && at && !locked && atWas !== at) { locked = true; setFollow(false); target = at === "game" ? 0 : 1; }
+    atWas = at;
+    // an experience starts as soon as the phone is over its piece, while it is still being dragged or moved
+    const gameOn = at === "game";
     grow = reduce ? (gameOn ? 1 : 0) : clamp01(grow + (gameOn ? dt / 0.7 : -dt / 0.35));
     const g = gameOn ? backOut(grow) : easeInOut(grow);
-    card.scale.setScalar(Math.max(1e-3, 1 - easeInOut(grow) * 0.98));
+    card.scale.setScalar(Math.max(1e-3, 1 - easeInOut(grow) * 0.98) * L.k);
     card.visible = grow < 0.98;
     if (hub) {
       hub.visible = grow > 0.01;
-      hub.scale.setScalar(Math.max(1e-3, g) * (L.narrow ? 0.86 : 1));
+      hub.scale.setScalar(Math.max(1e-3, g) * (L.narrow ? 0.74 : 1));
       hub.position.y = VH * 0.06 - (1 - Math.min(1, g)) * 0.6;
     }
     game.root.visible = grow > 0.01 && game.ready;
-    game.root.scale.setScalar(Math.max(1e-3, g) * VH * 0.2);
-    game.root.position.set(0.05, -VH * 0.17, 0.9);
+    game.root.scale.setScalar(Math.max(1e-3, g) * VH * 0.2 * L.k);
+    game.root.position.set(0.05, -VH * 0.17 * L.k, 0.9);
     if (!gameOn && grow === 0 && (game.score || !game.needSpawn)) { game.reset(); winT = -1; }
     if (gameOn && winT > 0 && clock - winT > 4.5) { game.reset(); winT = -1; }
     keyStick();
@@ -371,12 +409,12 @@ async function init() {
     game.update(dt, clock, gameOn && grow > 0.6);
     stickEl.classList.toggle("on", gameOn && grow > 0.6);
     if (gameOn && grow > 0.6 && !msgEl.classList.contains("on") && winT < 0 && clock - stick.at > 6 && !game.score)
-      say(coarse ? "Drag the stick to move Bobo" : "Use the stick or arrow keys to move Bobo");
+      say(L.narrow ? "Drag the stick" : coarse ? "Drag the stick to move Bobo" : "Use the stick or arrow keys to move Bobo");
 
     // right: the pop-out plays each time the phone arrives at the keychain
-    const arOn = at === "ar" && settled;
+    const arOn = at === "ar";
     if (arOn && !arWas) arWas = arStart();
-    if (!arOn && at !== "ar" && arWas) { arReset(); arWas = false; }
+    if (!arOn && arWas) { arReset(); arWas = false; }
     arFrame(dt);
 
     if (msgT && clock > msgT) say("");
@@ -525,7 +563,7 @@ async function init() {
     if (!ar.ready) { say("Opening the camera…"); return "wait"; }
     arReset();
     ar.state = "popping";
-    say("Keychain found. Opening the portals…");
+    say(L.narrow ? "Opening the portals…" : "Keychain found. Opening the portals…");
     // the build-up: a border lights round each charm, the light throbs, and the charm opens into a portal
     for (const ch of [B, C]) ch.sil.mesh.visible = true;
     tween(reduce ? 0.01 : PORTAL_S, (k) => {

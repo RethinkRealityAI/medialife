@@ -539,6 +539,9 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16), 0 30px 70px -20px rgba(0, 0, 0, 0.9), 0 0 60px -20px rgba(246, 195, 68, 0.5);
 }
 .tw-phone.is-drag { cursor: grabbing; }
+/* with a mouse the phone is the cursor: no grab hand, and the pointer itself is hidden while the phone follows it */
+@media (hover: hover) and (pointer: fine) { .tw-stage, .tw-phone { cursor: default; } }
+.tw-stage.is-follow, .tw-stage.is-follow .tw-phone { cursor: none; }
 .tw-island { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 30%; height: 17px; border-radius: 12px; background: #000; z-index: 2; }
 .tw-screen { position: absolute; inset: 0; border-radius: 27px; overflow: hidden; }
 .tw-hud { position: absolute; top: 34px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
@@ -609,7 +612,7 @@
   border: 0; border-radius: 999px; background: none; color: var(--fg-2); font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.15; cursor: pointer;
   transition: background 0.25s, color 0.25s;
 }
-.tw-switch button span { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 400; opacity: 0.75; }
+.tw-switch button .mono { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 400; opacity: 0.75; }
 .tw-switch button:hover { color: var(--fg); }
 .tw-switch button[aria-pressed="true"] { background: var(--gold); color: #1a1203; }
 .tw-switch button[data-go="1"][aria-pressed="true"] { background: var(--teal); color: #032224; }
@@ -638,19 +641,27 @@
 @keyframes twGlow { from { translate: 0 0; scale: 1; } to { translate: 3% -4%; scale: 1.08; } }
 @media (prefers-reduced-motion: reduce) { .tw-amb i { animation: none; } }
 @media (max-width: 700px) {
-  .tw-stage { aspect-ratio: 4 / 5.6; --tw-foot: 56px; }
-  .tw-hint { font-size: 10px; width: 80%; padding: 8px 9px; border-radius: 10px; }
+  /* phones: a smaller phone, smaller pieces with room between them, and compact choices above */
+  .tw-stage { aspect-ratio: 4 / 4.7; --tw-foot: 60px; }
+  .tw-choices { gap: 8px; margin-top: 16px; }
+  .tw-choice { gap: 10px; padding: 10px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.4; }
+  .tw-choice b { font-size: 14.5px; margin-bottom: 1px; }
+  .tw-choice-n { width: 24px; height: 24px; font-size: 12px; }
+  .tw-hint { font-size: 9px; letter-spacing: 0.08em; width: 84%; padding: 7px 6px; border-radius: 10px; }
+  .tw-island { top: 6px; height: 13px; }
   .tw-amb i { filter: blur(48px); }
-  .tw-back, .tw-phone { border-radius: 28px; }
-  .tw-phone { border-width: 6px; }
-  .tw-screen { border-radius: 22px; }
-  .tw-hud { top: 30px; left: 8px; right: 8px; }
-  .tw-app, .tw-score { font-size: 8.5px; padding: 4px 7px; }
-  .tw-stick { width: 64px; height: 64px; bottom: 12px; }
-  .tw-stick i { width: 28px; height: 28px; }
-  .tw-msg { top: 56px; font-size: 10.5px; }
-  .tw-guide { left: 6px; right: 6px; font-size: 8px; letter-spacing: 0.04em; gap: 4px; }
-  .tw-guide span { padding: 4px 6px; gap: 3px; }
-  .tw-switch { bottom: 9px; }
-  .tw-switch button { padding: 2px 11px; font-size: 11.5px; min-height: 34px; }
+  .tw-back, .tw-phone { border-radius: 24px; }
+  .tw-phone { border-width: 5px; }
+  .tw-screen { border-radius: 19px; }
+  .tw-hud { top: 25px; left: 6px; right: 6px; gap: 4px; }
+  .tw-app, .tw-score { font-size: 7.5px; letter-spacing: 0.06em; padding: 3px 6px; }
+  .tw-stick { width: 56px; height: 56px; bottom: 10px; }
+  .tw-stick i { width: 24px; height: 24px; }
+  .tw-msg { top: 48px; left: 6px; right: 6px; padding: 6px 7px; font-size: 9.5px; }
+  .tw-finder { inset: 22% 12%; }
+  .tw-finder i { width: 14px; height: 14px; }
+  .tw-guide { display: none; }   /* the hint and the switch say the same thing; too tight on a small phone */
+  .tw-switch { bottom: 10px; }
+  .tw-switch button { padding: 2px 16px; font-size: 12px; min-height: 40px; }
+  .tw-long { display: none; }   /* "Cola Run" / "Off the Chain": a short switch that clears the side nav button */
 }
