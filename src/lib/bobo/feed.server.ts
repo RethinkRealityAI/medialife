@@ -26,6 +26,7 @@ const iso = (ms: number) => new Date(ms).toISOString();
 const REVIEW_TITLE: Record<string, string> = {
   "cola-run": "New Cola Run clip",
   "keychain-ar": "New keychain AR clip",
+  "spray-bobo": "New Spray Bobo clip",
 };
 
 /** A game clip waiting for review: enough for a pin, nothing that shows the clip. */
