@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#0b0d12">
-  <title>Off the Chain · EVADE keychain AR</title>
-  <meta name="description" content="Off the Chain: point your camera at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D.">
+  <title>Bobo Off the Chain · EVADE</title>
+  <meta name="description" content="Bobo Off the Chain: point your camera at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="preload" as="image" href="./splash.jpg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&display=swap" rel="stylesheet">
+  <link rel="preload" as="fetch" href="/evade/keychain/evade-keychain.glb" crossorigin>
   <script type="importmap">
     {
       "imports": {
@@ -18,37 +21,41 @@
     }
   </script>
   <style>
-    :root{--bg:#0b0d12;--panel:rgba(14,16,24,.72);--line:rgba(255,255,255,.16);--text:#f3f6fa;--muted:#b4bfcc;--blue:#4fb4ff;--pink:#e85bd8;color-scheme:dark}
+    :root{--bg:#0a0e11;--panel:rgba(12,17,21,.72);--line:rgba(255,255,255,.16);--text:#f3f6fa;--muted:#b4bfcc;--blue:#4fb4ff;--pink:#e85bd8;--gold:#f6c344;--slate:#0f1519;--fizz:#3f9be6;--gold-2:#ffdf7a;--gold-ink:#1a1300;--bobo:#8cc8f8;--display:'Exo 2',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color-scheme:dark}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;overscroll-behavior:none}
     [hidden]{display:none!important}
     #cam{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
     button,a.btn{font:700 15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
-    button.primary,a.btn.primary{background:linear-gradient(90deg,var(--blue),var(--pink));border:0;color:#fff;box-shadow:0 8px 30px rgba(232,91,216,.35)}
+    button.primary,a.btn.primary{background:var(--gold);border:0;color:var(--gold-ink);font-weight:800;box-shadow:0 1px 0 rgba(255,255,255,.55) inset,0 -2px 0 rgba(120,70,0,.3) inset,0 10px 30px -8px rgba(246,195,68,.6)}
+    button.primary:not(:disabled):active{transform:translateY(1px);filter:brightness(.96)}
     button:disabled{opacity:.5;cursor:default}
     button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
 
-    /* splash */
-    #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;gap:0;align-items:center;text-align:center;padding:24px 22px max(26px,env(safe-area-inset-bottom));background:#07060d url(./splash.jpg) center top/cover no-repeat;transition:opacity .6s ease,transform .6s ease}
-    #splash::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(7,6,13,0) 38%,rgba(7,6,13,.72) 62%,rgba(7,6,13,.96) 100%);pointer-events:none}
-    #splash.gone{opacity:0;transform:scale(1.06);pointer-events:none}
-    #splash>*{position:relative;z-index:1}
-    .brand{position:absolute!important;top:max(20px,env(safe-area-inset-top));left:0;right:0}
-    .brand img{height:38px;width:auto;display:inline-block;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
-    .act-by{display:block;height:58px;width:auto;margin:26px auto 0;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
-    .test-link{margin:14px 0 0;font-size:12px;color:var(--muted)} .test-link a{color:var(--muted)}
-    @media (min-aspect-ratio:1/1){.act-by{margin-left:0}}
-    h1{font-size:clamp(36px,11vw,64px);line-height:1;margin:0 0 28px;white-space:nowrap;font-weight:900;letter-spacing:-.02em;background:linear-gradient(90deg,#bfe6ff,#fff 45%,#ffc6f6);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(79,180,255,.45))}
-    .lead{margin:0 auto 18px;max-width:30ch;color:var(--text);font-size:16px}
-    .steps{display:flex;gap:8px;justify-content:center;margin:0 0 18px;padding:0;list-style:none;font-size:12px;color:var(--muted)}
-    .steps li{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:8px 10px;flex:1;max-width:120px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
-    .steps b{display:block;color:#fff;font-size:13px}
-    #b-start{width:min(100%,340px);min-height:56px;font-size:17px}
+    /* splash: the real keychain drops in and dangles (splash3d.js), the title plate, Start */
+    #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:24px 22px max(28px,calc(env(safe-area-inset-bottom) + 16px));background:var(--slate);transition:opacity .6s ease,transform .6s ease;overflow:hidden;touch-action:none}
+    /* a quiet pattern behind the keychain: Eclipse moons, gold sparkles (twinkling) and cola bubbles, flat
+       colours on the slate, tilted and drifting very slowly */
+    #splash::before{content:"";position:absolute;inset:-160px;z-index:0;pointer-events:none;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cdefs%3E%3Cmask id='m'%3E%3Crect width='120' height='120' fill='%23fff'/%3E%3Ccircle cx='33' cy='25' r='6' fill='%23000'/%3E%3Ccircle cx='93' cy='85' r='4.6' fill='%23000'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url%28%23m%29' fill='%23fff' fill-opacity='.075'%3E%3Ccircle cx='29' cy='29' r='7'/%3E%3Ccircle cx='90' cy='88' r='5.4'/%3E%3C/g%3E%3Cg fill='%23f6c344'%3E%3Cpath d='M90 22l1.6 4.4L96 28l-4.4 1.6L90 34l-1.6-4.4L84 28l4.4-1.6z' fill-opacity='.22'%3E%3Canimate attributeName='fill-opacity' values='.08;.4;.08' dur='4.2s' repeatCount='indefinite'/%3E%3C/path%3E%3Cpath d='M28 84l1.1 2.9L32 88l-2.9 1.1L28 92l-1.1-2.9L24 88l2.9-1.1z' fill-opacity='.2'%3E%3Canimate attributeName='fill-opacity' values='.3;.06;.3' dur='5.3s' repeatCount='indefinite'/%3E%3C/path%3E%3C/g%3E%3Cg fill='%23fff' fill-opacity='.09'%3E%3Ccircle cx='60' cy='55' r='1.4'/%3E%3Ccircle cx='8' cy='58' r='1'/%3E%3Ccircle cx='62' cy='112' r='1.1'/%3E%3Ccircle cx='112' cy='50' r='1'/%3E%3C/g%3E%3C/svg%3E") 0 0/120px 120px;transform:rotate(-14deg);animation:drift 48s linear infinite}
+    @keyframes drift{to{transform:rotate(-14deg) translate3d(120px,120px,0)}}
+    #splash.gone{opacity:0;transform:scale(1.04);pointer-events:none}
+    #splash>*{position:relative;z-index:2}
+    #splash>#kc3d{position:absolute;inset:0;z-index:1;width:100%;height:100%;opacity:0;transition:opacity .4s}
+    #splash>#kc3d.on{opacity:1}
+    .brand{position:absolute!important;top:max(22px,env(safe-area-inset-top));left:0;right:0;z-index:3!important;pointer-events:none}
+    .brand img{height:44px;width:auto;display:inline-block;filter:drop-shadow(0 3px 12px rgba(0,0,0,.7))}
+    /* title plate: gold "BOBO" tab on a black plate with a gold rim (EVADE's Cola Run plate, in its own cut) */
+    .plate{margin:0 0 24px;display:flex;flex-direction:column;align-items:center;font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;line-height:1;animation:plateIn .7s cubic-bezier(.2,.9,.25,1.2) .9s both}
+    .plate .kick{position:relative;z-index:1;margin-bottom:-12px;padding:6px 16px 5px;border-radius:10px;background:var(--gold);color:var(--gold-ink);font-size:20px;letter-spacing:.08em;box-shadow:0 6px 18px -6px rgba(246,195,68,.7)}
+    .plate .main{display:block;padding:20px 22px 14px;border-radius:16px;background:#0a0c0e;border:3px solid var(--gold);color:#fff;font-size:clamp(30px,9.4vw,46px);letter-spacing:.01em;white-space:nowrap;text-shadow:0 2px 0 rgba(0,0,0,.6);box-shadow:0 0 0 1px rgba(0,0,0,.6),0 18px 40px -12px rgba(0,0,0,.8),0 0 30px -8px rgba(246,195,68,.35)}
+    @keyframes plateIn{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+    .act-by{display:block;height:54px;width:auto;margin:clamp(22px,5vh,48px) auto 0;filter:drop-shadow(0 2px 10px rgba(0,0,0,.6))}
+    #b-start{width:min(100%,340px);min-height:56px;font-size:17px;letter-spacing:.02em;text-transform:uppercase;font-family:var(--display);font-style:italic;font-weight:900}
+    #splash .drag{margin:10px 0 0;font-size:12px;color:var(--muted);opacity:.75;animation:plateIn .6s ease 1.6s both}
     #load{height:4px;width:min(100%,340px);border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:12px}
-    #load i{display:block;height:100%;width:40%;background:linear-gradient(90deg,var(--blue),var(--pink));border-radius:4px;animation:ld 1.1s ease-in-out infinite}
+    #load i{display:block;height:100%;width:40%;background:var(--gold);border-radius:4px;animation:ld 1.1s ease-in-out infinite}
     @keyframes ld{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
-    .fine{margin:12px 0 0;font-size:12px;color:var(--muted)}
-    .fine a{color:var(--muted)}
+    /* no WebGL: a still of the keychain instead */
     #desk{margin:0 0 16px;display:flex;gap:14px;align-items:center;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:12px 14px;max-width:380px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
     #qr{width:96px;height:96px;flex:none;background:#fff;border-radius:10px;padding:8px}
     #qr svg{display:block;width:100%;height:100%}
@@ -64,40 +71,55 @@
     #guide img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;filter:invert(1) drop-shadow(0 0 10px rgba(79,180,255,.9));opacity:0;transition:opacity .5s ease}
     #guide img.show{opacity:.34}
     /* what to point at */
-    #how{position:fixed;inset:0;z-index:35;background:rgba(7,6,13,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(22px,env(safe-area-inset-top)) 20px max(22px,env(safe-area-inset-bottom));text-align:center;overflow:auto}
+    #how{position:fixed;inset:0;z-index:35;background:rgba(10,14,17,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:max(22px,env(safe-area-inset-top)) 20px max(22px,env(safe-area-inset-bottom));text-align:center;overflow:auto}
     #how[hidden]{display:none}
-    #how h2{margin:0;font-size:24px;font-weight:900;letter-spacing:-.01em}
+    #how h2{margin:0;font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:26px;letter-spacing:.01em}
     #how>p{margin:0;max-width:34ch;color:var(--muted);font-size:14px}
     .finds{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:min(100%,420px);margin:0;padding:0;list-style:none}
     .finds li{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 8px 12px;font-size:12px;color:var(--muted)}
     .finds img{display:block;width:100%;aspect-ratio:3/4;object-fit:contain;border-radius:10px;background:#fff;margin-bottom:8px}
     .finds b{display:block;color:#fff;font-size:14px}
-    #b-go{width:min(100%,340px);min-height:56px;font-size:17px}
+    #b-go{width:min(100%,340px);min-height:56px;font-size:17px;text-transform:uppercase;font-family:var(--display);font-style:italic;font-weight:900}
     #b-back{background:none;border:0;color:var(--muted);font-size:14px;min-height:44px;text-decoration:underline}
     /* top: logos left, round icon buttons right (the record button from the capture core sits in the column too) */
     .tl{position:absolute;left:calc(14px + env(safe-area-inset-left));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:flex-start;gap:14px;pointer-events:none!important}
     .logos{display:flex;flex-direction:column;align-items:flex-start;gap:7px;pointer-events:none!important;filter:drop-shadow(0 2px 8px rgba(0,0,0,.55))}
     .logos .evade{height:30px;width:auto}
+    .logos .mini{font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:11px;letter-spacing:.04em;line-height:1;color:#fff;background:rgba(5,6,7,.82);border:1.5px solid var(--gold);border-radius:7px;padding:4px 8px 3px;white-space:nowrap}
+    .logos .mini b{color:var(--gold);margin-right:3px}
     #side{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:10px}
-    /* bottom row, in thumb reach: Reset animation left, Activated by MEDIALIFE middle, the shutter right */
-    #bottom{position:absolute;left:0;right:0;bottom:0;padding:0 calc(14px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));display:flex;align-items:flex-end;justify-content:space-between;gap:10px;pointer-events:none!important}
+    /* bottom row, in thumb reach: Replay animation left, the shutter in the middle, Activated by MEDIALIFE right */
+    #bottom{position:absolute;left:0;right:0;bottom:0;padding:0 calc(14px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:10px;pointer-events:none!important}
     #bottom>*{pointer-events:auto}
-    #b-replay{min-height:44px;padding:0 13px 0 10px;font-size:12.5px;gap:6px;white-space:nowrap;background:rgba(14,16,24,.62);border-color:rgba(255,255,255,.18);margin-bottom:14px}
-    #b-replay svg{width:18px;height:18px}
-    #bottom .actby{height:42px;width:auto;margin-bottom:12px;pointer-events:none;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
-    #shoot{display:flex;flex-direction:column;align-items:center;gap:5px}
-    #shoot small{font-size:10px;line-height:1.25;text-align:center;font-weight:700;letter-spacing:.02em;color:#fff;opacity:.85;text-shadow:0 1px 4px rgba(0,0,0,.8);white-space:nowrap}
+    #replay{justify-self:start;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:72px}
+    #b-replay{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;background:rgba(10,14,17,.66);border-color:rgba(255,255,255,.2)}
+    #b-replay svg{width:21px;height:21px}
+    #b-replay:disabled,#replay:has(#b-replay:disabled) small{opacity:.45}
+    #bottom .actby{justify-self:end;height:40px;width:auto;margin-bottom:8px;pointer-events:none;filter:drop-shadow(0 2px 8px rgba(0,0,0,.6))}
+    #bottom small{font-size:10px;line-height:1.25;text-align:center;font-weight:700;letter-spacing:.02em;color:#fff;opacity:.85;text-shadow:0 1px 4px rgba(0,0,0,.8);white-space:nowrap}
+    #shoot{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px}
+    /* photo / video: a liquid glass pill; only the chosen side is filled (a gold thumb slides under it) */
+    #mode{position:relative;display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),inset 0 -1px 0 rgba(255,255,255,.08),0 8px 22px rgba(0,0,0,.28);backdrop-filter:blur(16px) saturate(1.7);-webkit-backdrop-filter:blur(16px) saturate(1.7)}
+    #mode button{position:relative;z-index:1;width:46px;height:34px;min-height:34px;padding:0;border:0;border-radius:999px;background:none;color:#fff;display:grid;place-items:center;backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:none;transition:color .25s}
+    #mode button svg{width:19px;height:19px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.45))}
+    #mode button[aria-checked=true]{color:var(--gold-ink)}
+    #mode button[aria-checked=true] svg{filter:none}
+    #mode .thumb{position:absolute;top:3px;left:3px;width:46px;height:34px;border-radius:999px;background:var(--gold);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 2px 8px rgba(0,0,0,.25);transition:transform .32s cubic-bezier(.2,.9,.25,1.2)}
+    #mode[data-mode=video] .thumb{transform:translateX(46px)}
+    #mode[hidden]{display:flex!important;visibility:hidden}
     #b-shutter{position:relative;width:72px;height:72px;min-height:72px;padding:0;border-radius:50%;border:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
     #b-shutter svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
     #b-shutter .ring{fill:none;stroke:#fff;stroke-width:4.5;filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
     #b-shutter .prog{fill:none;stroke:#ff3b4e;stroke-width:4.5;stroke-linecap:round;stroke-dasharray:207;stroke-dashoffset:207}
     #b-shutter i{position:absolute;inset:9px;border-radius:50%;background:rgba(255,255,255,.92);transition:inset .2s,border-radius .2s,background .2s,transform .12s}
     #b-shutter:active i{transform:scale(.92)}
+    #b-shutter:not(.rec) .prog{opacity:0}
+    #b-shutter.video i{background:#ff3b4e}
     #b-shutter.rec i{inset:22px;border-radius:8px;background:#ff3b4e}
     #b-shutter:disabled{opacity:.45}
-    #rec-time{font-size:12px;font-weight:800;color:#fff;background:#ff3b4e;border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
+    #rec-time{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:800;color:#fff;background:#ff3b4e;border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
     .crc-anchor{display:none!important}   /* the capture core's own record button: the shutter drives it instead */
-    .ib{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(14,16,24,.62);border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .2s}
+    .ib{width:48px;height:48px;min-height:48px;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(10,14,17,.66);border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .2s}
     .ib:active{transform:scale(.92)}
     .ib svg{width:22px;height:22px}
     .ib[aria-pressed=false] .on,.ib[aria-pressed=true] .off{display:none}
@@ -105,16 +127,16 @@
 
     /* meters, under the logos */
     .meters{display:flex;flex-direction:column;gap:8px;pointer-events:none!important}
-    .meter{position:relative;width:126px;height:30px;border-radius:999px;background:rgba(14,16,24,.62);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
-    .meter i{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--blue),var(--pink));transition:width .3s cubic-bezier(.2,.8,.2,1)}
-    #fish-m i{background:linear-gradient(90deg,#ffb23a,#ff6a3d)}
-    .meter span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fff}
+    .meter{position:relative;width:126px;height:30px;border-radius:999px;background:rgba(10,14,17,.66);border:1px solid var(--line);overflow:hidden;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    .meter i{position:absolute;inset:0 auto 0 0;width:0;background:var(--fizz);transition:width .3s cubic-bezier(.2,.8,.2,1)}
+    #fish-m i{background:var(--gold)}
+    .meter span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
     .meter svg{width:16px;height:16px}
 
     /* the action dock: appears once a character is out, shows only what can be done right now */
-    #dock{position:absolute;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));transform:translate(-50%,140%);display:flex;align-items:stretch;gap:4px;padding:6px;border-radius:26px;background:rgba(12,14,22,.66);border:1px solid rgba(255,255,255,.14);box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);transition:transform .45s cubic-bezier(.2,.9,.25,1.15),opacity .3s;opacity:0;max-width:calc(100% - 24px)}
+    #dock{position:absolute;left:50%;bottom:calc(144px + env(safe-area-inset-bottom));transform:translate(-50%,140%);display:flex;align-items:stretch;gap:4px;padding:6px;border-radius:26px;background:rgba(10,14,17,.72);border:1px solid rgba(246,195,68,.28);box-shadow:0 14px 40px rgba(0,0,0,.4);backdrop-filter:blur(18px) saturate(1.3);-webkit-backdrop-filter:blur(18px) saturate(1.3);transition:transform .45s cubic-bezier(.2,.9,.25,1.15),opacity .3s;opacity:0;max-width:calc(100% - 24px)}
     #dock.on{transform:translate(-50%,0);opacity:1}
-    #basket{position:absolute;left:50%;bottom:calc(104px + env(safe-area-inset-bottom));transform:translate(-50%,160%);opacity:0;transition:transform .45s cubic-bezier(.2,.9,.25,1.15),opacity .3s;display:flex;align-items:flex-end;gap:8px;pointer-events:none!important}
+    #basket{position:absolute;left:50%;bottom:calc(140px + env(safe-area-inset-bottom));transform:translate(-50%,160%);opacity:0;transition:transform .45s cubic-bezier(.2,.9,.25,1.15),opacity .3s;display:flex;align-items:flex-end;gap:8px;pointer-events:none!important}
     #basket.on{transform:translate(-50%,0);opacity:1;pointer-events:auto!important}
     #basket .tray{position:relative;width:150px;height:96px}
     #basket .bk{position:absolute;left:0;right:0;bottom:0;width:150px;height:79px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.45))}
@@ -126,24 +148,68 @@
     .act{flex-direction:column;gap:3px;width:68px;min-height:64px;padding:6px 2px 7px;border-radius:20px;border:0;background:transparent;font-size:11px;font-weight:700;letter-spacing:.01em;color:#eef3fa;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background .2s,transform .12s}
     .act svg{width:26px;height:26px}
     .act:active{transform:scale(.93)} .act:not(:disabled):hover{background:rgba(255,255,255,.08)}
-    .act.hero{background:linear-gradient(160deg,rgba(255,178,58,.95),rgba(255,106,61,.95));color:#fff;box-shadow:0 6px 18px rgba(255,120,60,.4)}
+    .act.hero{background:var(--gold);color:var(--gold-ink);box-shadow:0 6px 18px -4px rgba(246,195,68,.55)}
     .act.hero:disabled{background:rgba(255,255,255,.08);box-shadow:none}
     .act:disabled{opacity:.42}
-    #hint{top:auto!important;bottom:calc(196px + env(safe-area-inset-bottom));background:#8cc8f8;color:#0b2545;border:1px solid rgba(255,255,255,.55);font-size:12.5px;font-weight:700;padding:7px 14px;box-shadow:0 6px 20px rgba(20,60,110,.35);backdrop-filter:none;-webkit-backdrop-filter:none;max-width:min(320px,calc(100% - 48px));transition:bottom .4s}
-    #hud.looking #hint{top:min(calc(44% + min(58vw,300px) * 2 / 3 + 12px),calc(100% - 150px - env(safe-area-inset-bottom)))!important;bottom:auto}
-    #toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.8);padding:12px 20px;border-radius:20px;font-size:20px;font-weight:900;letter-spacing:-.01em;background:linear-gradient(90deg,rgba(255,178,58,.95),rgba(232,91,216,.95));color:#fff;box-shadow:0 10px 40px rgba(232,91,216,.45);opacity:0;pointer-events:none!important;transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.25,1.3);white-space:nowrap}
+    #hint{top:auto!important;bottom:calc(232px + env(safe-area-inset-bottom));background:#8cc8f8;color:#0b2545;border:1px solid rgba(255,255,255,.55);font-size:12.5px;font-weight:700;padding:7px 14px;box-shadow:0 6px 20px rgba(20,60,110,.35);backdrop-filter:none;-webkit-backdrop-filter:none;max-width:min(320px,calc(100% - 48px));transition:bottom .4s}
+    #hud.looking #hint{top:min(calc(44% + min(58vw,300px) * 2 / 3 + 12px),calc(100% - 186px - env(safe-area-inset-bottom)))!important;bottom:auto}
+    #toast{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%) scale(.8);padding:12px 20px;border-radius:16px;font-family:var(--display);font-style:italic;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:.01em;background:#0a0c0e;border:3px solid var(--gold);color:#fff;box-shadow:0 14px 40px -10px rgba(0,0,0,.8),0 0 30px -6px rgba(246,195,68,.45);opacity:0;pointer-events:none!important;transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.25,1.3);white-space:nowrap}
     #toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
     #flashw{position:fixed;inset:0;z-index:45;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s}
     #flashw.on{opacity:.85;transition:none}
-    /* landscape phone: the dock sits in the bottom row between Reset and the shutter, the logo goes above Reset */
+    /* menu button (with a gold dot until it has been opened once), the earned Cola Run chip, the menu sheet */
+    #b-menu{position:relative}
+    #b-menu .dot{position:absolute;top:9px;right:9px;width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px #0a0e11}
+    #b-menu .dot[hidden]{display:none}
+    #cr-chip{position:absolute;left:50%;bottom:calc(278px + env(safe-area-inset-bottom));transform:translate(-50%,12px);opacity:0;display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 16px 6px 10px;border-radius:999px;background:#0a0c0e;border:2px solid var(--gold);color:#fff;font-size:13px;font-weight:700;white-space:nowrap;box-shadow:0 10px 30px rgba(0,0,0,.45);backdrop-filter:none;-webkit-backdrop-filter:none;transition:opacity .3s,transform .45s cubic-bezier(.2,.9,.25,1.25)}
+    #cr-chip.on{opacity:1;transform:translate(-50%,0)}
+    #cr-chip[hidden]{display:none}
+    #cr-chip img{height:28px;width:auto}
+    #cr-chip b{color:var(--gold)}
+    #menu{position:fixed;inset:0;z-index:42;display:flex;align-items:flex-end;justify-content:center}
+    #menu[hidden]{display:none}
+    #menu .scrim{position:absolute;inset:0;background:rgba(5,7,9,.55);animation:fade .25s both}
+    #menu .panel{position:relative;width:100%;max-width:440px;max-height:calc(100% - 24px);overflow:auto;overscroll-behavior:contain;padding:10px 16px max(18px,calc(env(safe-area-inset-bottom) + 12px));border-radius:24px 24px 0 0;background:var(--slate);border-top:2px solid var(--gold);box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:sheetUp .4s cubic-bezier(.2,.9,.25,1) both}
+    @keyframes sheetUp{from{transform:translateY(48px);opacity:0}to{transform:none;opacity:1}}
+    @keyframes fade{from{opacity:0}}
+    #menu .grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);margin:0 auto 8px}
+    #menu header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    #menu h2{margin:0;font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:18px;letter-spacing:.02em}
+    #menu .x{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);border:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+    #menu .x svg{width:20px;height:20px}
+    .cr-card{display:flex;gap:14px;align-items:center;padding:10px;border-radius:18px;background:#0a0c0e;border:2px solid var(--gold);color:#fff;text-decoration:none;transition:transform .15s}
+    .cr-card:active{transform:scale(.98)}
+    .cr-card .art{width:92px;height:auto;aspect-ratio:540/967;object-fit:cover;border-radius:12px;flex:none}
+    .cr-card .txt{display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-width:0}
+    .cr-card .logo{width:min(160px,100%);height:auto}
+    .cr-card .d{font-size:13px;line-height:1.4;color:var(--muted)}
+    .cr-card .cta{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 18px;border-radius:999px;background:var(--gold);color:var(--gold-ink);font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:14px;letter-spacing:.02em}
+    .cr-card .cta svg{width:16px;height:16px}
+    /* Where is Bobo?: its own card, in Bobo's hoodie blue, art on the right (mirrors the Cola Run card) */
+    .wib-card{display:flex;gap:14px;align-items:center;margin-top:12px;padding:10px 10px 10px 16px;border-radius:18px;background:#1f6fd6;border:2px solid #8cc8f8;color:#fff;text-decoration:none;transition:transform .15s}
+    .wib-card:active{transform:scale(.98)}
+    .wib-card .txt{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+    .wib-card .live{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:#d8ecff}
+    .wib-card .live i{width:7px;height:7px;border-radius:50%;background:#fff;animation:livePulse 1.6s ease-in-out infinite}
+    @keyframes livePulse{50%{opacity:.25}}
+    .wib-card .t{font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:24px;line-height:1}
+    .wib-card .t b{color:#0b2545;background:#8cc8f8;padding:0 6px;border-radius:6px;font-weight:900}
+    .wib-card .d{font-size:13px;line-height:1.4;color:#e3f1ff}
+    .wib-card .cta{display:inline-flex;align-items:center;gap:7px;min-height:44px;padding:0 18px;border-radius:999px;background:#fff;color:#0b2545;font-family:var(--display);font-style:italic;font-weight:900;text-transform:uppercase;font-size:14px;letter-spacing:.02em}
+    .wib-card .cta svg{width:17px;height:17px}
+    .wib-card .art{width:112px;height:112px;object-fit:cover;border-radius:14px;flex:none;border:2px solid rgba(255,255,255,.35)}
+    @media (max-height:500px){.cr-card .art{width:64px}.cr-card .logo{width:120px}.wib-card .art{width:80px;height:80px}#menu .panel{max-width:520px}}
+    /* landscape phone: the shutter moves to the right edge, middle (camera-app style, under the thumb);
+       the dock sits bottom centre between Replay and the logo */
     @media (min-aspect-ratio:1/1) and (max-height:500px){
       .act{width:58px;min-height:54px}.act svg{width:22px;height:22px}
       #dock{bottom:calc(10px + env(safe-area-inset-bottom))}
       #basket{bottom:calc(6px + env(safe-area-inset-bottom))}
       #hint{bottom:calc(84px + env(safe-area-inset-bottom))}
       #hud.looking #hint{top:auto!important;bottom:calc(22px + env(safe-area-inset-bottom))}
-      #bottom .actby{position:absolute;left:calc(14px + env(safe-area-inset-left));bottom:calc(76px + env(safe-area-inset-bottom));height:40px;margin:0}
+      #shoot{position:fixed;right:calc(16px + env(safe-area-inset-right));top:50%;transform:translateY(-50%)}
       #b-shutter{width:64px;height:64px;min-height:64px}
+      #bottom .actby{grid-column:3;height:36px}
     }
     #tune{position:absolute;left:12px;right:12px;bottom:calc(max(16px,env(safe-area-inset-bottom)) + 96px);z-index:2;margin:0 auto;max-width:380px;background:rgba(14,16,24,.34);border:1px solid var(--line);border-radius:18px;padding:10px 14px;text-shadow:0 1px 4px rgba(0,0,0,.9);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;align-items:center;font-size:13px;font-weight:700;max-height:44vh;overflow:auto;overscroll-behavior:contain}
     #tune output{display:inline-block;min-width:5ch;color:var(--blue);font-variant-numeric:tabular-nums}
@@ -156,40 +222,38 @@
     #cam-set select,#cam-set input[type=text]{min-height:32px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:#fff;font:inherit;font-size:13px;font-weight:600;padding:0 8px;width:100%}
     #cam-set button{grid-column:1/-1;min-height:40px;font-size:13px}
     /* photo preview + errors */
-    .sheet{position:fixed;inset:0;z-index:40;background:rgba(7,6,13,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
+    .sheet{position:fixed;inset:0;z-index:40;background:rgba(10,14,17,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:22px;text-align:center}
     #shot-img{max-width:100%;max-height:62vh;border-radius:18px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.5)}
     #shot .kick{margin:0;font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#ffc23a}
     .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
     #error h2{margin:0;font-size:22px} #error p{margin:0;max-width:34ch;color:var(--muted)} #error .err-more{font-size:13px;opacity:.85}
     #tap-cam{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;width:min(88vw,360px);padding:18px 18px 16px;border-radius:18px;background:rgba(7,6,13,.86);border:1px solid var(--line);text-align:center;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
     #tap-cam h2{margin:0 0 6px;font-size:19px} #tap-cam p{margin:0 0 14px;color:var(--muted);font-size:14px} #tap-cam .row button{min-height:48px}
-    #splash{padding-bottom:max(30px,calc(env(safe-area-inset-bottom) + 18px))}
-    #splash .act-by{margin-top:clamp(28px,7vh,64px)}
-    @media (max-height:720px){#splash{background-position:center -70px}}
+    /* wide screens: keychain on the left, the title and Start on the right */
     @media (min-aspect-ratio:1/1){
-      #splash{background-size:auto 128%;background-position:22% 0;align-items:flex-end;justify-content:center;padding-right:9vw;text-align:left}
-      #splash::after{background:linear-gradient(90deg,rgba(7,6,13,0) 40%,rgba(7,6,13,.9) 62%)}
-      #splash>*{max-width:400px;width:400px}
-      #splash>.brand{position:relative!important;top:auto;left:auto!important;right:auto;margin:0 0 18px;text-align:left}
-      #splash>.act-by{width:400px;height:46px;object-fit:contain;object-position:left center;margin:clamp(18px,5vh,40px) 0 0}
-      h1{font-size:52px;margin-bottom:20px}
+      #splash{align-items:flex-end;justify-content:center;padding-right:max(7vw,24px);text-align:left}
+        #splash>*:not(#kc3d):not(.brand){width:400px;max-width:46vw}
+      #splash>.brand{position:relative!important;top:auto;margin:0 0 20px;text-align:left}
+      .plate{align-items:flex-start}.plate .kick{margin-left:18px}.plate .main{font-size:clamp(28px,4.4vw,48px)}
+      #splash>.act-by{height:46px;object-fit:contain;object-position:left center;margin:clamp(18px,5vh,40px) 0 0}
     }
-    @media (prefers-reduced-motion:reduce){#load i{animation:none}#guide img{transition:none}#fish-drag{animation:none}}
+    @media (prefers-reduced-motion:reduce){#splash::before,.plate,#splash .drag,#menu .panel,#menu .scrim,.wib-card .live i{animation:none}#load i{animation:none}#guide img{transition:none}#fish-drag{animation:none}}
   </style>
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view with Bobo and the Eclipse can popping out of the EVADE keychain"></canvas>
 
   <section id="splash" aria-labelledby="title">
-    <div class="brand"><img src="/brand/evade-logo.webp" alt="EVADE" width="110" height="29"></div>
-    <h1 id="title">Off the Chain</h1>
+    <canvas id="kc3d" aria-hidden="true"></canvas>
+    <div class="brand"><img src="/brand/evade-logo.webp" alt="EVADE" width="167" height="44"></div>
+    <h1 id="title" class="plate"><span class="kick">Bobo</span><span class="main">Off the Chain</span></h1>
     <div id="desk" hidden>
       <div id="qr" aria-label="QR code that opens this page on your phone"></div>
       <p><b>Best on your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
     </div>
     <button id="b-start" class="primary" disabled>Loading…</button>
     <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
-    <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="137" height="54">
   </section>
 
   <section id="how" hidden role="dialog" aria-modal="true" aria-labelledby="how-title">
@@ -206,7 +270,7 @@
 
   <div id="hud" class="looking" hidden>
     <div class="tl">
-    <div class="logos" aria-hidden="true"><img class="evade" src="/brand/evade-logo.webp" alt=""></div>
+    <div class="logos" aria-hidden="true"><img class="evade" src="/brand/evade-logo.webp" alt=""><span class="mini"><b>Bobo</b>Off the Chain</span></div>
     <div class="meters">
       <div id="fizz" class="meter" hidden role="progressbar" aria-label="Fizz" aria-valuemin="0" aria-valuemax="10" aria-valuenow="0"><i></i><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="14" r="5"/><circle cx="17" cy="7" r="3"/><circle cx="18" cy="16" r="1.8"/><path d="M6.8 12.2a2.6 2.6 0 0 1 2-1.6" stroke-linecap="round"/></svg>Fizz</span></div>
       <div id="fish-m" class="meter" hidden role="progressbar" aria-label="Fish fed" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i></i><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3.2-4.6 8.6-5.8 13-3.2L21 6v12l-5-2.8C11.6 17.8 6.2 16.6 3 12z"/><circle cx="8" cy="11.2" r="1" fill="currentColor" stroke="none"/></svg><b id="fish-n">0 / 3</b></span></div>
@@ -214,8 +278,10 @@
     </div>
     <div id="hint" role="status" aria-live="polite" hidden></div>
     <div id="toast" aria-hidden="true"></div>
+    <button id="cr-chip" type="button" hidden><img src="/home/ar/cola-run-logo.webp" alt="" width="480" height="216"><span>Bobo's charged up. <b>Play Cola Run</b></span></button>
     <div id="guide" aria-hidden="true"><img class="show" src="/evade/keychain/ar/silhouette-bobo.png" alt=""><img src="/evade/keychain/ar/silhouette-eclipse.png" alt=""><img src="./image-targets/guide-both.png" alt=""></div>
     <div id="side">
+      <button id="b-menu" class="ib" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" aria-label="Menu: play Cola Run and more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h9"/></svg><b class="dot" aria-hidden="true"></b></button>
       <button id="b-sound" class="ib" aria-pressed="true" aria-label="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="on" d="M15.5 9a4.5 4.5 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/><path class="off" d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
       <button id="b-tune" class="ib" hidden aria-expanded="false" aria-controls="tune" aria-label="Tune (preview tool)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M5 7h9M18 7h1M5 17h3M12 17h7"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     </div>
@@ -259,17 +325,24 @@
       <p id="t-diag"></p>
     </form>
     <div id="bottom">
-      <button id="b-replay" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></svg>Reset animation</button>
-      <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE">
-      <div id="shoot">
-        <span id="rec-time" hidden>0:00</span>
-        <button id="b-shutter" aria-label="Take a photo. Press and hold to record a video."><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle class="prog" cx="36" cy="36" r="33"/></svg><i></i></button>
-        <small id="shoot-cap">Tap photo<br>Hold video</small>
+      <div id="replay">
+        <button id="b-replay" disabled aria-label="Replay animation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/></svg></button>
+        <small aria-hidden="true">Replay animation</small>
       </div>
+      <div id="shoot">
+        <div id="mode" role="radiogroup" aria-label="Camera mode" data-mode="photo">
+          <span class="thumb" aria-hidden="true"></span>
+          <button type="button" role="radio" aria-checked="true" data-mode="photo" aria-label="Photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.1l1.3-2h6.2l1.3 2h2.1A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z"/><circle cx="12" cy="13" r="3.4"/></svg></button>
+          <button type="button" role="radio" aria-checked="false" data-mode="video" aria-label="Video" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="12.5" height="10" rx="2"/><path d="M15.5 11l5-3v8l-5-3z"/></svg></button>
+        </div>
+        <span id="rec-time" hidden>0:00</span>
+        <button id="b-shutter" aria-label="Take a photo"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle class="prog" cx="36" cy="36" r="33"/></svg><i></i></button>
+      </div>
+      <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE">
     </div>
     <div id="basket" role="group" aria-label="Fish basket: swipe the fish up to throw it to Bobo">
       <div class="tray">
-        <svg class="bk" viewBox="0 0 160 84" aria-hidden="true"><defs><linearGradient id="bkg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d99a4e"/><stop offset="1" stop-color="#9c5f24"/></linearGradient></defs><path d="M10 26h140l-14 52a8 8 0 0 1-8 6H32a8 8 0 0 1-8-6z" fill="url(#bkg)" stroke="#6b3f14" stroke-width="3"/><path d="M18 42h124M22 58h116M26 72h108" stroke="#7a4818" stroke-width="2.5" opacity=".6"/><path d="M44 26l6 58M80 26v58M116 26l-6 58" stroke="#7a4818" stroke-width="2.5" opacity=".45"/><rect x="4" y="18" width="152" height="12" rx="6" fill="#e6ad63" stroke="#6b3f14" stroke-width="3"/></svg>
+        <svg class="bk" viewBox="0 0 160 84" aria-hidden="true"><path d="M10 26h140l-14 52a8 8 0 0 1-8 6H32a8 8 0 0 1-8-6z" fill="#c4823d" stroke="#6b3f14" stroke-width="3"/><path d="M18 42h124M22 58h116M26 72h108" stroke="#7a4818" stroke-width="2.5" opacity=".6"/><path d="M44 26l6 58M80 26v58M116 26l-6 58" stroke="#7a4818" stroke-width="2.5" opacity=".45"/><rect x="4" y="18" width="152" height="12" rx="6" fill="#e6ad63" stroke="#6b3f14" stroke-width="3"/></svg>
         <img id="fish-drag" alt="A fish: swipe it up toward Bobo" draggable="false">
       </div>
       <button id="basket-close" aria-label="Done feeding"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
@@ -296,6 +369,32 @@
     </div>
   </div>
 
+  <!-- menu: the way into Cola Run, plus the globe and the keychain page (all open in a new tab, so the AR keeps running here) -->
+  <div id="menu" hidden role="dialog" aria-modal="true" aria-labelledby="menu-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header><h2 id="menu-t">More from EVADE</h2><button type="button" class="x" data-close aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+      <a id="m-cola" class="cr-card" href="https://evade.medialife.ai/?utm_source=medialife&amp;utm_medium=off-the-chain&amp;utm_campaign=evade-keychain" target="_blank" rel="noopener">
+        <img class="art" src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="" width="540" height="967" loading="lazy">
+        <span class="txt">
+          <img class="logo" src="/home/ar/cola-run-logo.webp" alt="EVADE Cola Run" width="480" height="216" loading="lazy">
+          <span class="d">Bobo's own game. It plays right in your browser, no app needed.</span>
+          <span class="cta">Play Cola Run <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></span>
+        </span>
+      </a>
+      <a id="m-globe" class="wib-card" href="/evade/where-is-bobo/" target="_blank" rel="noopener">
+        <span class="txt">
+          <span class="live"><i aria-hidden="true"></i>Live</span>
+          <span class="t">Where is <b>Bobo?</b></span>
+          <span class="d">Follow Bobo around the world. Every pin is a real sighting.</span>
+          <span class="cta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17"/></svg>Open the globe</span>
+        </span>
+        <img class="art" src="./img/where-is-bobo-card.webp" alt="" width="360" height="360" loading="lazy">
+      </a>
+    </div>
+  </div>
+
   <div id="error" class="sheet" hidden role="alert">
     <h2 id="err-title">Something went wrong</h2>
     <p id="err-body"></p>
@@ -305,6 +404,7 @@
 
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
   <script src="./vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="./splash3d.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>
