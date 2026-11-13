@@ -46,11 +46,13 @@ const CAPS = [                                // the colours ("caps"), EVADE yel
 const NOZZLES = [{ n: 'Skinny', a: 0.6, dot: 3 }, { n: 'Medium', a: 1.4, dot: 5 }, { n: 'Fat', a: 2.8, dot: 8 }];
 const CAN_SECONDS = 24;                       // seconds of spraying in a full can
 const BRIDGE_GYRO_MS = 1500, BRIDGE_HOLD_MS = 400;
-// The charms you can paint. Each has its own image targets (both sides; the back is the mirror shape, so the
-// canvas is flipped there), stencil art cut from its front picture, and its own saved painting.
+// The charms you can paint. Each has its own image targets (both sides), stencil art lined up with its front
+// picture, and its own saved painting. The cat's back picture is the print seen through the acrylic (mirrored),
+// so the canvas is flipped there; the can's back picture shows the same can body, so the canvas is only moved
+// onto it (the offset comes with the can's outline file, from scripts/build-spray-bobo/build_stencil.py).
 const PIECES = {
   bobo: { k: 'bobo', name: 'Bobo', title: 'MY BOBO', art: 'cat', print: 'kc-bobo.jpg', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, mirrorPair: true, key: 'current', found: 'Found Bobo! Tap the spray can', back: 'Your Bobo is back', line: 'Sprayed on my EVADE keychain' },
-  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: { 'kc-can-back': -1 }, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain' },
+  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: {}, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain' },
 };
 const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
 
@@ -250,6 +252,7 @@ function buildScene(xr, [layout, lumImg, , arts]) {
 function buildPiece(P, L, [maskImg, linesImg, outline]) {
   const W = P.W = L.widthM, H = P.H = L.heightM;
   const F = P.F = new THREE.Group(); F.visible = false; A.add(F);
+  P.xf = outline.sides || {};
   const paint = P.paint = makePaint(); paint.init(maskImg, linesImg);
   P.centre = maskCentre(paint.maskSmall);                  // the middle of the stencil (uv, y down): the canvas spreads from here
   // the canvas on the charm. It spreads out from the middle of the charm with a ragged wet edge in EVADE
@@ -594,8 +597,12 @@ function updatePose(now) {
   if (st === 'none') pose.snap = true;
   pose.state = st; pose.valid = st !== 'none';
   A.visible = pose.valid;
-  const flip = (pose.last && cp.flip[pose.last.side]) || 1;
-  if (F.scale.x !== flip) { F.scale.x = flip; pose.snap = true; }
+  // the canvas on the side in view: flipped (the cat's back) and/or moved onto that picture (the can's back)
+  const sn = pose.last ? pose.last.side : null;
+  if (F.userData.side !== sn) {
+    F.userData.side = sn; const flip = (sn && cp.flip[sn]) || 1, xf = (sn && cp.xf[sn]) || { x: 0, y: 0, rz: 0, s: 1 };
+    F.position.set(xf.x, xf.y, 0); F.rotation.z = xf.rz; F.scale.set(flip * xf.s, xf.s, 1); pose.snap = true;
+  }
 }
 // Stick to the print: follow real movement at once, only smooth the sub-millimetre jitter of a charm held still
 function follow(p, q, s, raw = false) {
@@ -639,7 +646,7 @@ function dripDown() {
   if (!gravity.up) return { x: 0, y: 1, k: 1 };
   _iq.copy(A.quaternion).invert(); _dn.copy(gravity.up).negate().applyQuaternion(camera.quaternion).applyQuaternion(_iq);   // phone -> world -> charm
   const k = Math.hypot(_dn.x, _dn.y); if (k < 0.15) return { x: 0, y: 0, k: 0 };
-  return { x: _dn.x / k * F.scale.x, y: -_dn.y / k, k };
+  return { x: _dn.x / k * Math.sign(F.scale.x), y: -_dn.y / k, k };
 }
 
 // ---------------------------------------------------------------- modes and UI

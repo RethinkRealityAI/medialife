@@ -14,11 +14,13 @@ your Bobo straight back.
 - `art/` — written by `scripts/build-spray-bobo/build_stencil.py` from the kc-bobo image target itself
   (thresholds and morphology only; no generative tool touches EVADE art):
   `cat-mask.png` (the stencil: paint only shows inside the cat), `cat-lines.png` (the outline),
-  `cat-outline.json` (the sticker's cut line); `can-*` the same for the Eclipse can, cut from the kc-can
-  photo target (the printed can, smoothed to its outline; the acrylic rim stays clear).
+  `cat-outline.json` (the sticker's cut line); `can-*` the same for the Eclipse can. The can's tracked
+  picture is a soft photo, so its stencil is cut from the clean flat art (kc-can-art.jpg) and placed onto the
+  photo by matching the two pictures (moon, lettering and tab line up). The back picture (QR side) shows the
+  same can body, so the canvas is moved onto it by the offset stored in `can-outline.json` ("sides").
 - Engine and image targets are shared with Off the Chain: `/evade/keychain-ar/vendor/xr/` (open-source 8th
   Wall, MIT) and `/evade/keychain-ar/image-targets/kc-bobo*.json` (both sides of the cat charm) and `kc-can.json`,
-  `kc-can-back.json` (both sides of the can charm; the canvas is mirrored on the back, like the cat).
+  `kc-can-back.json` (both sides of the can charm).
 - `PIECES` in `main.js` lists the charms. Whichever is in view becomes the current one (`pickPiece`); while
   painting it stays locked to the charm being painted.
 
@@ -84,3 +86,6 @@ charm is found and painted from a photo of kc-can; can fly-in, canvas spread, ca
 gestures work. Android's "remove animations" setting no longer hides the spray.
 **The new parts are not yet tried on a phone or on the real charms.** Unknowns until then: the gyro bridge, acrylic glare,
 how steep an angle still tracks, and whether shaking to refill feels right.
+
+Test pictures: `/evade/keychain-ar/target/` has both charms' tracked pictures side by side (with a gap, true
+size to each other) or one at a time, with Flip for the other sides and full screen.
