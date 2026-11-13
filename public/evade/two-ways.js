@@ -212,8 +212,8 @@ async function init() {
   let following = false, locked = false, mouseX = -1;
   const span = () => L.rx - L.lx;
   const uOf = (x) => {
-    const lo = Math.max(-0.14, (L.pw / 2 + 8 - L.lx) / span()), hi = Math.min(1.14, (L.w - L.pw / 2 - 8 - L.lx) / span());
-    return Math.min(Math.max((x - L.lx) / span(), lo), hi);
+    // never past a piece: beyond the splash or the keychain the phone stays centred on it, so the lens frames it
+    return Math.min(Math.max((x - L.lx) / span(), 0), 1);
   };
   const setFollow = (f) => {
     if (f === following) return;
