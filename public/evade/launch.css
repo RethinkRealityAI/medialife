@@ -628,6 +628,16 @@
 .tw-finder i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 6px; }
 .tw-finder i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 6px; }
 .tw-finder i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 6px; }
+/* the two choices under the section intro */
+.tw-choices { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 760px; margin: 20px auto 0; padding: 0; text-align: left; }
+.tw-choice { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03); color: var(--fg-2); font-size: 15px; line-height: 1.45; }
+.tw-choice b { display: block; margin-bottom: 2px; color: var(--fg); font-size: 16px; }
+.tw-choice-n { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-size: 13px; font-weight: 700; }
+.tw-choice--game { border-color: rgba(246, 195, 68, 0.35); }
+.tw-choice--game .tw-choice-n { background: var(--gold); color: #1a1203; }
+.tw-choice--ar { border-color: rgba(63, 230, 224, 0.35); }
+.tw-choice--ar .tw-choice-n { background: var(--teal); color: #032224; }
+@media (max-width: 700px) { .tw-choices { grid-template-columns: 1fr; } }
 /* while the phone waits in the middle: which way each experience is */
 .tw-guide {
   position: absolute; left: 10px; right: 10px; bottom: 9%; display: flex; justify-content: space-between; gap: 6px;
@@ -650,7 +660,7 @@
 }
 .tw-msg.on { opacity: 1; translate: 0 0; }
 .tw-stick {
-  position: absolute; bottom: 16px; right: 14px; width: 76px; height: 76px; border-radius: 50%;
+  position: absolute; bottom: 16px; left: 50%; translate: -50% 0; width: 76px; height: 76px; border-radius: 50%;
   display: grid; place-items: center; background: rgba(5, 8, 10, 0.5); border: 1.5px solid rgba(246, 195, 68, 0.6);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); touch-action: none; cursor: pointer;
   opacity: 0; pointer-events: none; transition: opacity 0.3s;
@@ -681,7 +691,7 @@
   .tw-screen { border-radius: 22px; }
   .tw-hud { top: 30px; left: 8px; right: 8px; }
   .tw-app, .tw-score { font-size: 8.5px; padding: 4px 7px; }
-  .tw-stick { width: 64px; height: 64px; bottom: 12px; right: 10px; }
+  .tw-stick { width: 64px; height: 64px; bottom: 12px; }
   .tw-stick i { width: 28px; height: 28px; }
   .tw-msg { top: 56px; font-size: 10.5px; }
   .tw-guide { left: 6px; right: 6px; font-size: 8px; letter-spacing: 0.04em; gap: 4px; }
