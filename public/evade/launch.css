@@ -540,7 +540,7 @@
 }
 .tw-phone.is-drag { cursor: grabbing; }
 /* with a mouse the phone is the cursor: no grab hand, and the pointer itself is hidden while the phone follows it */
-@media (hover: hover) and (pointer: fine) { .tw-stage, .tw-phone { cursor: default; } }
+@media (hover: hover) and (pointer: fine) { .tw-stage { cursor: default; } .tw-stage:not(.is-follow) .tw-phone { cursor: grab; } }
 .tw-stage.is-follow, .tw-stage.is-follow .tw-phone { cursor: none; }
 .tw-island { position: absolute; top: 8px; left: 50%; translate: -50% 0; width: 30%; height: 17px; border-radius: 12px; background: #000; z-index: 2; }
 .tw-screen { position: absolute; inset: 0; border-radius: 27px; overflow: hidden; }
