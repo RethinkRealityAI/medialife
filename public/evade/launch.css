@@ -522,14 +522,15 @@
    pops out spills past its edges; outside it they are dimmed (drawn in the canvas). Solid colours only. */
 .tw { max-width: 1200px; margin: 0 auto clamp(20px, 3vw, 32px); }
 .tw-stage {
-  position: relative; aspect-ratio: 1200 / 640; border-radius: var(--r-lg); overflow: hidden;
+  --tw-foot: 62px;   /* the strip under the scene that holds the switch */
+  position: relative; aspect-ratio: 1200 / 700; border-radius: var(--r-lg); overflow: hidden;
   border: 1px solid var(--line-2); background: #070b10;
   box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.9);
   touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: pointer;
 }
 .tw-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.6s var(--ease); }
 .tw-stage.is-ready .tw-poster img { opacity: 0; pointer-events: none; }
-.tw-3d { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 0.6s var(--ease); }
+.tw-3d { position: absolute; left: 0; top: 0; z-index: 2; width: 100%; height: calc(100% - var(--tw-foot)); pointer-events: none; opacity: 0; transition: opacity 0.6s var(--ease); }
 .tw-back, .tw-phone { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity 0.6s var(--ease); will-change: transform; }
 .tw-stage.is-ready .tw-3d, .tw-stage.is-ready .tw-back, .tw-stage.is-ready .tw-phone { opacity: 1; }
 .tw-back { z-index: 1; border-radius: 34px; background: #0d141b; box-shadow: inset 0 0 0 1px rgba(63, 230, 224, 0.08); }
@@ -597,23 +598,49 @@
 .tw-stick i { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.8); transition: transform 0.08s; }
 /* the switch: the accessible way to move the phone */
 .tw-switch {
-  display: flex; width: fit-content; margin: 16px auto 0; padding: 5px; gap: 4px; border-radius: 999px;
-  border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.04); visibility: hidden;
+  position: absolute; left: 50%; bottom: 12px; translate: -50% 0; z-index: 4;
+  display: flex; width: max-content; padding: 4px; gap: 3px; border-radius: 999px;
+  border: 1px solid var(--line-2); background: rgba(5, 8, 12, 0.82); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  visibility: hidden; cursor: default;
 }
-.tw.is-ready .tw-switch, .tw.is-ready .tw-tip { visibility: visible; }
+.tw.is-ready .tw-switch { visibility: visible; }
 .tw-switch button {
-  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 48px; padding: 4px 20px;
-  border: 0; border-radius: 999px; background: none; color: var(--fg-2); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 36px; padding: 2px 14px;
+  border: 0; border-radius: 999px; background: none; color: var(--fg-2); font: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.15; cursor: pointer;
   transition: background 0.25s, color 0.25s;
 }
-.tw-switch button span { font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 400; opacity: 0.8; }
+.tw-switch button span { font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 400; opacity: 0.75; }
 .tw-switch button:hover { color: var(--fg); }
 .tw-switch button[aria-pressed="true"] { background: var(--gold); color: #1a1203; }
 .tw-switch button[data-go="1"][aria-pressed="true"] { background: var(--teal); color: #032224; }
 .tw-switch button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-.tw-tip { margin: 12px 0 0; text-align: center; font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-2, rgba(255, 255, 255, 0.72)); visibility: hidden; }
+/* the instruction, on the phone's screen while it waits in the middle; gone once an experience is on */
+.tw-hint {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 74%; margin: 0; text-align: center;
+  padding: 10px 12px; border-radius: 12px; background: rgba(5, 8, 10, 0.78); border: 1px solid rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  font-size: 12px; line-height: 1.45; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg);
+  opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.tw-phone[data-at="none"] .tw-hint { opacity: 1; }
+/* ambient light behind the scene: the pixel grid of the Activated Merch hero and three soft, flat-colour glows
+   (blurred discs, no gradients); the glow on the side the phone is on comes up */
+.tw-amb {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Cpath d='M0 .5H6M.5 0V6' stroke='%2396aaff' stroke-opacity='.07'/%3E%3C/svg%3E");
+}
+.tw-amb i { position: absolute; border-radius: 50%; filter: blur(70px); opacity: 0.22; transition: opacity 0.8s var(--ease); animation: twGlow 9s ease-in-out infinite alternate; }
+.tw-amb i:nth-child(1) { left: 6%; top: 18%; width: 38%; height: 62%; background: var(--gold); }
+.tw-amb i:nth-child(2) { right: 4%; top: 14%; width: 40%; height: 66%; background: var(--teal); animation-delay: -3s; }
+.tw-amb i:nth-child(3) { left: 34%; top: -18%; width: 34%; height: 50%; background: #6f5bff; opacity: 0.16; animation-delay: -6s; }
+.tw[data-at="game"] .tw-amb i:nth-child(1) { opacity: 0.4; }
+.tw[data-at="ar"] .tw-amb i:nth-child(2) { opacity: 0.4; }
+@keyframes twGlow { from { translate: 0 0; scale: 1; } to { translate: 3% -4%; scale: 1.08; } }
+@media (prefers-reduced-motion: reduce) { .tw-amb i { animation: none; } }
 @media (max-width: 700px) {
-  .tw-stage { aspect-ratio: 4 / 5.2; }
+  .tw-stage { aspect-ratio: 4 / 5.6; --tw-foot: 56px; }
+  .tw-hint { font-size: 10px; width: 80%; padding: 8px 9px; border-radius: 10px; }
+  .tw-amb i { filter: blur(48px); }
   .tw-back, .tw-phone { border-radius: 28px; }
   .tw-phone { border-width: 6px; }
   .tw-screen { border-radius: 22px; }
@@ -624,5 +651,6 @@
   .tw-msg { top: 56px; font-size: 10.5px; }
   .tw-guide { left: 6px; right: 6px; font-size: 8px; letter-spacing: 0.04em; gap: 4px; }
   .tw-guide span { padding: 4px 6px; gap: 3px; }
-  .tw-switch button { padding: 4px 13px; font-size: 13px; }
+  .tw-switch { bottom: 9px; }
+  .tw-switch button { padding: 2px 11px; font-size: 11.5px; min-height: 34px; }
 }
