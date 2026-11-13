@@ -31,7 +31,7 @@
 <link rel="stylesheet" href="/evade/creators/assets/css/page.css" />
 <link rel="stylesheet" href="/evade/creators/assets/css/stage.css" />
 <link rel="stylesheet" href="/site-nav/site-nav.css" />
-<link rel="stylesheet" href="/evade/launch.css?v=20" />
+<link rel="stylesheet" href="/evade/launch.css?v=21" />
 
 <script>document.documentElement.classList.add("js");</script>
 <script type="importmap">
@@ -44,7 +44,7 @@
 <script src="/evade/launch.js?v=7" defer></script>
 <script type="module" src="/evade/hideout-3d.js"></script>
 <script type="module" src="/evade/hero-keychain.js?v=3"></script>
-<script type="module" src="/evade/two-ways.js?v=3"></script>
+<script type="module" src="/evade/two-ways.js?v=4"></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -121,7 +121,6 @@
       <div class="hero-head rv">
         <span class="hero-eyebrow mono"><span class="dot"></span><span>Partner launch · Activated Merchandise<sup>®</sup></span></span>
         <h1 id="heroTitle">EVADE,<br class="br-lg" /> <span class="gold">activated.</span></h1>
-        <p class="hero-sub">One keychain, two experiences. Scan it to play <b>Cola Run</b>, or point your camera at it and Bobo jumps <b>Off the Chain</b>. No app.</p>
       </div>
       <div class="hero-cta rv rv-d1">
         <a class="btn btn--gold btn--lg" href="https://shop.medialife.ai/products/bobo-eclipse-ar-keychain-set" data-track="hero_shop">Get the keychain <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -167,7 +166,7 @@
       <!-- one phone, two experiences (two-ways.js): slide the phone between the Cola Run splash (the mini game
            plays in it) and the keychain (Bobo and the can pop off their charms). The still is the fallback. -->
       <div class="tw rv rv-d1">
-        <div class="tw-stage" id="twStage" role="group" aria-label="One phone, two experiences. Drag the phone to either side, or use the switch below, to open the Cola Run mini game or Bobo Off the Chain.">
+        <div class="tw-stage" id="twStage" role="group" aria-label="One phone, two experiences. Move the phone to either side, or use the switch below, to open the Cola Run mini game or Bobo Off the Chain.">
           <div class="tw-amb" aria-hidden="true"><i></i><i></i><i></i></div>
           <picture class="tw-poster">
             <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
@@ -181,15 +180,15 @@
             <div class="tw-screen">
               <div class="tw-hud" aria-hidden="true"><span class="tw-app mono">EVADE · Cola Run</span><span class="tw-score mono">Cans 0/3</span></div>
               <span class="tw-finder" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-              <p class="tw-hint mono" aria-hidden="true">Drag phone to either side to activate experience</p>
+              <p class="tw-hint mono" aria-hidden="true">Move the phone to either side</p>
               <div class="tw-guide" aria-hidden="true"><span class="tw-guide-l"><b>&larr;</b>Cola Run</span><span class="tw-guide-r">Off the Chain<b>&rarr;</b></span></div>
               <p class="tw-msg" aria-live="polite"></p>
               <div class="tw-stick" aria-hidden="true"><i></i></div>
             </div>
           </div>
           <div class="tw-switch" role="group" aria-label="Move the phone">
-            <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span>Cola Run mini game</button>
-            <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span>Bobo Off the Chain</button>
+            <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span><span class="tw-lbl">Cola Run<span class="tw-long"> mini game</span></span></button>
+            <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span><span class="tw-lbl"><span class="tw-long">Bobo </span>Off the Chain</span></button>
           </div>
         </div>
 
