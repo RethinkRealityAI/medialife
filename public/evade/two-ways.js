@@ -140,8 +140,9 @@ async function init() {
   buttons.forEach((b, i) => b.addEventListener("click", () => go(i)));
 
   function layout() {
-    L.w = stage.clientWidth || 1;
-    L.h = stage.clientHeight || 1;
+    // the scene is the canvas: the stage minus the strip at the bottom that holds the switch
+    L.w = canvas.clientWidth || stage.clientWidth || 1;
+    L.h = canvas.clientHeight || stage.clientHeight || 1;
     renderer.setSize(L.w, L.h, false);
     camera.aspect = L.w / L.h;
     camera.updateProjectionMatrix();
@@ -176,7 +177,7 @@ async function init() {
   // drag the phone; a tap on a side moves it there
   let down = null;
   stage.addEventListener("pointerdown", (e) => {
-    if (e.target.closest(".tw-stick")) return;
+    if (e.target.closest(".tw-stick, .tw-switch")) return;
     const b = stage.getBoundingClientRect();
     const x = e.clientX - b.left;
     const onPhone = Math.abs(x - phoneX()) < L.pw / 2 && Math.abs(e.clientY - b.top - L.h / 2) < L.ph / 2;
@@ -202,6 +203,7 @@ async function init() {
   stage.addEventListener("pointermove", (e) => {
     if (e.pointerType !== "mouse" || down || stick.active || reduce) return;
     const b = stage.getBoundingClientRect();
+    if (e.clientY - b.top > L.h || e.target.closest(".tw-switch")) return;   // over the switch strip: leave the phone be
     const raw = (e.clientX - b.left - L.lx) / (L.rx - L.lx);
     const k = raw <= STICKY ? 0 : raw >= 1 - STICKY ? 1 : (raw - STICKY) / (1 - STICKY * 2);
     if (Math.abs(k - target) < 0.004) return;

@@ -44,7 +44,7 @@
 <script src="/evade/launch.js?v=7" defer></script>
 <script type="module" src="/evade/hideout-3d.js"></script>
 <script type="module" src="/evade/hero-keychain.js?v=3"></script>
-<script type="module" src="/evade/two-ways.js?v=2"></script>
+<script type="module" src="/evade/two-ways.js?v=3"></script>
 </head>
 <body data-demo="evade-launch">
 <a class="skip-link" href="#main">Skip to content</a>
@@ -168,6 +168,7 @@
            plays in it) and the keychain (Bobo and the can pop off their charms). The still is the fallback. -->
       <div class="tw rv rv-d1">
         <div class="tw-stage" id="twStage" role="group" aria-label="One phone, two experiences. Drag the phone to either side, or use the switch below, to open the Cola Run mini game or Bobo Off the Chain.">
+          <div class="tw-amb" aria-hidden="true"><i></i><i></i><i></i></div>
           <picture class="tw-poster">
             <source media="(max-width: 700px)" srcset="/evade/img/keychain-two-ways-tall.webp" width="1080" height="1350" />
             <img src="/evade/img/keychain-two-ways.webp" srcset="/evade/img/keychain-two-ways-1200.webp 1200w, /evade/img/keychain-two-ways.webp 2400w" sizes="(max-width: 1240px) 100vw, 1200px" width="2400" height="1350" loading="lazy" decoding="async"
@@ -180,17 +181,18 @@
             <div class="tw-screen">
               <div class="tw-hud" aria-hidden="true"><span class="tw-app mono">EVADE · Cola Run</span><span class="tw-score mono">Cans 0/3</span></div>
               <span class="tw-finder" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+              <p class="tw-hint mono" aria-hidden="true">Drag phone to either side to activate experience</p>
               <div class="tw-guide" aria-hidden="true"><span class="tw-guide-l"><b>&larr;</b>Cola Run</span><span class="tw-guide-r">Off the Chain<b>&rarr;</b></span></div>
               <p class="tw-msg" aria-live="polite"></p>
               <div class="tw-stick" aria-hidden="true"><i></i></div>
             </div>
           </div>
+          <div class="tw-switch" role="group" aria-label="Move the phone">
+            <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span>Cola Run mini game</button>
+            <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span>Bobo Off the Chain</button>
+          </div>
         </div>
-        <div class="tw-switch" role="group" aria-label="Move the phone">
-          <button type="button" data-go="0" aria-pressed="true"><span class="mono">Scan or tap</span>Cola Run mini game</button>
-          <button type="button" data-go="1" aria-pressed="false"><span class="mono">Point at it</span>Bobo Off the Chain</button>
-        </div>
-        <p class="tw-tip mono">Drag phone to either side to activate experience</p>
+
       </div>
     </div>
   </section>
