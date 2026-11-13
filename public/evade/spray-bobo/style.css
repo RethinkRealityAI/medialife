@@ -3,7 +3,8 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--slate);color:var(--text);font:15px/1.45 "Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 [hidden]{display:none!important}
-#cam{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+/* !important: the engine writes its drawing size into the inline style (2x the screen at a pixel ratio of 2) */
+#cam{position:fixed;inset:0;width:100%!important;height:100%!important;display:block;touch-action:none}
 button,a.btn{font:700 15px "Space Grotesk",system-ui,sans-serif;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 button.primary,a.btn.primary{background:var(--y);border:0;color:var(--ink);box-shadow:0 8px 0 #b98d1f,0 14px 30px rgba(0,0,0,.35);transition:transform .1s,box-shadow .1s}
 button.primary:active{transform:translateY(4px);box-shadow:0 4px 0 #b98d1f,0 8px 18px rgba(0,0,0,.35)}
@@ -63,8 +64,8 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 #b-primer[aria-pressed=true] svg rect{fill:#fff} #b-primer[aria-pressed=true] svg .fillsq{display:none}
 #hud:not([data-mode=paint]) .paint-only{display:none}
 
-#guide{position:absolute;left:50%;top:44%;width:min(56vw,280px);aspect-ratio:3/4;transform:translate(-50%,-50%);opacity:0;transition:opacity .4s;pointer-events:none!important}
-#guide img{width:100%;height:100%;object-fit:contain;filter:invert(1) drop-shadow(0 0 2px #000);opacity:.42;animation:breathe 2.4s ease-in-out infinite}
+#guide{position:absolute;left:50%;top:44%;width:min(84vw,420px);aspect-ratio:3/2;transform:translate(-50%,-50%);opacity:0;transition:opacity .4s;pointer-events:none!important;display:flex;gap:4%}
+#guide img{flex:1;min-width:0;height:100%;object-fit:contain;filter:invert(1) drop-shadow(0 0 2px #000);opacity:.42;animation:breathe 2.4s ease-in-out infinite}
 #hud[data-mode=find] #guide{opacity:1}
 @keyframes breathe{50%{opacity:.22;transform:scale(.97)}}
 
@@ -80,7 +81,7 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 
 #hint{position:absolute;left:50%;bottom:calc(214px + env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;background:var(--sky);color:#0b2545;font-size:13px;font-weight:700;padding:8px 15px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:min(330px,calc(100% - 40px));text-align:center;pointer-events:none!important;transition:opacity .25s,bottom .35s}
 #hint:empty{opacity:0}
-#hud[data-mode=find] #hint{bottom:auto;top:calc(44% + min(56vw,280px) * 2 / 3 + 14px)}
+#hud[data-mode=find] #hint{bottom:auto;top:calc(44% + min(84vw,420px) / 3 + 14px)}
 #hud[data-mode=ready] #hint{bottom:calc(214px + env(safe-area-inset-bottom))}
 #hud[data-mode=alive] #shoot small{display:none}
 #toast{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%) scale(.7) rotate(-4deg);padding:10px 22px 12px;border-radius:14px;font:400 30px/1 "Permanent Marker",cursive;background:var(--y);color:var(--ink);box-shadow:5px 5px 0 var(--ink);opacity:0;pointer-events:none!important;transition:opacity .25s,transform .45s cubic-bezier(.2,.9,.25,1.4);white-space:nowrap}
@@ -117,20 +118,38 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 .tool.done{background:var(--y);color:var(--ink);border:0}
 .tool:active{transform:scale(.95)}
 
-/* alive mode: actions on the left, shutter right */
-#alive{right:calc(104px + env(safe-area-inset-right))}
+/* alive mode: his actions in a row, the shutter under them in the bottom centre */
+#alive{right:calc(10px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom))}
 #hud[data-mode=alive] #alive{transform:none;opacity:1;pointer-events:auto!important}
-#bottom{position:absolute;left:0;right:0;bottom:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));display:flex;align-items:flex-end;justify-content:space-between;pointer-events:none!important}
+#hud[data-mode=alive] #hint{bottom:calc(182px + env(safe-area-inset-bottom))}
+/* the bottom row: left (badge / back to tools), the shutter always in the middle, right kept clear (the can) */
+#bottom{position:absolute;left:0;right:0;bottom:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:10px;pointer-events:none!important}
 #bottom>*{pointer-events:auto}
+#bottom .b-left{display:flex;align-items:flex-end;min-width:0}
+#bottom .b-right{pointer-events:none}
 #bottom .actby{height:40px;width:auto;margin-bottom:14px;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
-#hud[data-mode=alive] #bottom .actby,#hud[data-mode=paint] #bottom .actby,#hud[data-mode=ready] #bottom .actby{visibility:hidden}
-#shoot{display:flex;flex-direction:column;align-items:center;gap:4px}
-#hud[data-mode=paint] #shoot,#hud[data-mode=ready] #shoot{display:none}
+#hud[data-mode=alive] #bottom .actby,#hud[data-mode=paint] #bottom .actby,#hud[data-mode=ready] #bottom .actby{display:none}
+#b-back{display:none;margin-bottom:12px;padding:0 16px 0 10px;gap:4px}
+#hud.cam[data-mode=paint] #b-back{display:inline-flex}
+#shoot{display:flex;flex-direction:column;align-items:center;gap:4px;grid-column:2}
+#hud[data-mode=ready] #shoot,#hud[data-mode=paint]:not(.cam) #shoot{display:none}
+/* camera mode while painting: the tools step aside, the can stays */
+#hud.cam[data-mode=paint] #caps,#hud.cam[data-mode=paint] #bar{transform:translateY(30px);opacity:0;pointer-events:none!important}
+#hud.cam .paint-only:not(#b-cam){display:none}
+#b-cam[aria-pressed=true]{background:var(--y)} #b-cam[aria-pressed=true] svg{stroke:var(--ink)}
+#hud.cam[data-mode=paint] #hint{bottom:calc(214px + env(safe-area-inset-bottom))}
+/* the can flying onto the charm, and the word it makes */
+.can-fly{position:absolute;z-index:6;pointer-events:none!important;transform-origin:50% 6%}
+.can-fly svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 10px 14px rgba(0,0,0,.5))}
+.pop-word{position:absolute;z-index:7;transform:translate(-50%,-50%) rotate(-7deg);font:400 40px/1 "Permanent Marker",cursive;color:var(--ink);background:var(--c,#f6c344);padding:8px 16px 10px;border-radius:14px;box-shadow:5px 5px 0 var(--ink);pointer-events:none!important;animation:popw .95s cubic-bezier(.2,.9,.25,1.3) forwards;white-space:nowrap}
+@keyframes popw{0%{opacity:0;transform:translate(-50%,-50%) rotate(-7deg) scale(.3)}18%{opacity:1;transform:translate(-50%,-50%) rotate(-7deg) scale(1.12)}30%{transform:translate(-50%,-50%) rotate(-5deg) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-90%) rotate(-5deg) scale(.95)}}
+.how-pics{display:flex;gap:12px;justify-content:center}
 #shoot small{font-size:10px;font-weight:700;color:#fff;opacity:.85;text-shadow:0 1px 4px rgba(0,0,0,.8);white-space:nowrap}
 #b-shutter{position:relative;width:72px;height:72px;min-height:72px;padding:0;border-radius:50%;border:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;touch-action:none;-webkit-touch-callout:none}
 #b-shutter svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 #b-shutter .ring{fill:none;stroke:#fff;stroke-width:4.5}
-#b-shutter .prog{fill:none;stroke:#ff3b4e;stroke-width:4.5;stroke-linecap:round;stroke-dasharray:207;stroke-dashoffset:207}
+#b-shutter .prog{fill:none;stroke:#ff3b4e;stroke-width:4.5;stroke-linecap:round;stroke-dasharray:207;stroke-dashoffset:207;opacity:0}
+#b-shutter.rec .prog{opacity:1}
 #b-shutter i{position:absolute;inset:9px;border-radius:50%;background:#fff;transition:inset .2s,border-radius .2s,background .2s}
 #b-shutter.rec i{inset:22px;border-radius:8px;background:#ff3b4e}
 #rec-time{font-size:12px;font-weight:800;color:#fff;background:#ff3b4e;border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
@@ -159,11 +178,13 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 /* landscape phones: tools in a column on the left, can on the right */
 @media (min-aspect-ratio:1/1) and (max-height:520px){
   #caps{right:auto;left:calc(10px + env(safe-area-inset-left));bottom:calc(84px + env(safe-area-inset-bottom));max-width:calc(100% - 220px)}
-  #bar,#alive{right:auto;width:min(380px,calc(100% - 220px))}
+  #bar,#alive{right:auto;width:min(380px,calc(50% - 60px))}
+  #alive{bottom:calc(16px + env(safe-area-inset-bottom))}
   #can{height:150px;width:68px}
   #hint{bottom:calc(150px + env(safe-area-inset-bottom))}
 }
-@media (prefers-reduced-motion:reduce){
-  .can-hero,.mist,#can[data-state=offer],#guide img{animation:none!important}
-}
+/* reduced motion only calms the splash: in the camera, the can, spray and guide animations are how it works
+   (Android's "remove animations" switch was hiding the spray) */
+@media (prefers-reduced-motion:reduce){ .can-hero{animation:none!important} }
 #hud.lost #guide{opacity:1}
+.how-pics .how-pic{width:100px;height:134px}

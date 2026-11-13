@@ -49,3 +49,33 @@ json.dump({'note': 'Spray Bobo die-cut outline, uv of the kc-bobo picture (x rig
 print('outline points', len(c))
 ys, xs = np.nonzero(mask > 127)
 print('mask bbox (uv)', xs.min() / W, ys.min() / H, xs.max() / W, ys.max() / H, 'fill', (mask > 127).mean())
+
+# ---------------------------------------------------------------- the Eclipse can charm (kc-can, Dapo 2026-11-13)
+# Cut from the kc-can image target (a photo of the real charm, 1200x1600, same 3:4). The stencil is the
+# printed can (its blue, red and white), smoothed to its convex outline; the acrylic rim stays clear.
+#   art/can-mask.png, art/can-lines.png, art/can-outline.json (as above)
+SRC = os.path.join(ROOT, 'public/evade/keychain-ar/image-targets/kc-can.jpg')
+im = cv2.resize(cv2.imread(SRC), (W, H), interpolation=cv2.INTER_AREA)
+hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
+s, v = hsv[..., 1].astype(np.float32) / 255, hsv[..., 2].astype(np.float32) / 255
+bg = (v > 0.8) & (s < 0.08)                                   # the grey-white table behind the charm
+pr = (((v > 0.47) | (s > 0.3)) & ~bg).astype(np.uint8) * 255  # the print: light or strongly coloured (the rim is dark and grey)
+pr = cv2.morphologyEx(pr, cv2.MORPH_OPEN, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15)))
+cs, _ = cv2.findContours(pr, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+hull = cv2.convexHull(np.vstack([c for c in cs if cv2.contourArea(c) > 3000]))
+mask = np.zeros((H, W), np.uint8); cv2.fillPoly(mask, [hull], 255)
+mask = cv2.erode(mask, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9)))
+mask = cv2.GaussianBlur(mask, (3, 3), 0)
+cv2.imwrite(os.path.join(OUT, 'can-mask.png'), np.dstack([np.full_like(mask, 255)] * 3 + [mask]))
+g = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype(np.float32)
+local = cv2.GaussianBlur(g, (0, 0), 5)
+dark = np.clip((local - g - 5) / 25, 0, 1) * (cv2.erode(mask, np.ones((9, 9), np.uint8)) > 0)
+a = (np.clip(dark * 1.6, 0, 1) * 255).astype(np.uint8)
+edge = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5)))
+lines = np.zeros((H, W, 4), np.uint8); lines[..., 0:3] = (24, 18, 30); lines[..., 3] = np.maximum(a, edge)
+cv2.imwrite(os.path.join(OUT, 'can-lines.png'), lines)
+c = cv2.approxPolyDP(hull, 1.2, True)[:, 0, :]
+json.dump({'note': 'Spray Bobo can die-cut outline, uv of the kc-can picture (x right, y down)', 'points': [[round(x / W, 5), round(y / H, 5)] for x, y in c]},
+          open(os.path.join(OUT, 'can-outline.json'), 'w'))
+ys, xs = np.nonzero(mask > 127)
+print('can outline points', len(c), 'bbox (uv)', xs.min() / W, ys.min() / H, xs.max() / W, ys.max() / H, 'fill', (mask > 127).mean())

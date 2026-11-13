@@ -1,8 +1,10 @@
 # EVADE keychain AR: Spray Bobo
 
-`/evade/spray-bobo/` — your phone is the spray can. Point it at the cat charm on the EVADE keychain; when
-Bobo is found his outline lights up and a spray can slides onto the screen. Tap the can and a canvas (Bobo
-as a colouring-book stencil) is laid over the charm. Aim the phone like a can and hold the can (or the
+`/evade/spray-bobo/` — your phone is the spray can. Point it at a charm on the EVADE keychain: the Bobo cat
+or the Eclipse can (each has its own canvas and its own saved painting). When the charm is found its outline
+lights up and a spray can slides onto the screen. Tap the can: it flies onto the charm, bursts ("PSSHT!"),
+and the blank canvas (the charm as a colouring-book stencil) spreads out from the charm's middle with a wet
+yellow edge. Aim the phone like a can and hold the can (or the
 screen) to spray. Save, and the painting flashes, peels off the charm as a 3D die-cut sticker of your Bobo,
 spins and lives above the print from then on. It is kept on the phone (IndexedDB), so the next scan brings
 your Bobo straight back.
@@ -12,11 +14,28 @@ your Bobo straight back.
 - `art/` — written by `scripts/build-spray-bobo/build_stencil.py` from the kc-bobo image target itself
   (thresholds and morphology only; no generative tool touches EVADE art):
   `cat-mask.png` (the stencil: paint only shows inside the cat), `cat-lines.png` (the outline),
-  `cat-outline.json` (the sticker's cut line).
+  `cat-outline.json` (the sticker's cut line); `can-*` the same for the Eclipse can, cut from the kc-can
+  photo target (the printed can, smoothed to its outline; the acrylic rim stays clear).
 - Engine and image targets are shared with Off the Chain: `/evade/keychain-ar/vendor/xr/` (open-source 8th
-  Wall, MIT) and `/evade/keychain-ar/image-targets/kc-bobo*.json` (both sides of the cat charm).
+  Wall, MIT) and `/evade/keychain-ar/image-targets/kc-bobo*.json` (both sides of the cat charm) and `kc-can.json`,
+  `kc-can-back.json` (both sides of the can charm; the canvas is mirrored on the back, like the cat).
+- `PIECES` in `main.js` lists the charms. Whichever is in view becomes the current one (`pickPiece`); while
+  painting it stays locked to the charm being painted.
+
+## Once saved
+He (or the can) turns to look at the phone, paint drops in its colours orbit it (passing behind), and a flat
+white shine sweeps over the gloss now and then. Tap: hop. Hold, then let go: a big jump with a spin and a
+splat. Swipe: spin, which coasts and settles face-front. Shake the phone: he shakes the wet paint off.
+Little cheers at 25, 50 and 80% painted.
 
 ## How painting lines up
+The engine's `renderer.setSize()` writes the drawing size into the canvas's inline style, so with a pixel
+ratio of 2 the canvas showed at twice the screen size and its middle (where the paint went) sat in the bottom
+right corner (Dapo's first phone test). The stylesheet pins the canvas to the screen (`!important`; also
+added to Off the Chain, whose dpr setting had the same problem), the page draws at 1x by default like Off the
+Chain (`?dpr=2` for sharper), and screen points are mapped through the canvas's own box. The test log records
+`aim` (how far the paint's spot shows from the nozzle, in px) to confirm on phones.
+
 The paint texture (768x1024) is the kc-bobo target picture, so a point on the tracked picture is a point on
 the canvas. The nozzle is the middle of the screen (or the finger, in finger mode): a ray from the camera
 hits the picture's plane, and the paint lands there. The spray footprint grows with distance (nozzle
@@ -44,7 +63,9 @@ turns that off.
   fallback. Android asks for continuous focus where offered.
 
 ## Photo, video, artwork
-Shutter (alive mode): tap for a photo, hold to film (the Cola Run recorder, source `spray-bobo`; clips can
+The shutter is always in the bottom centre: in find and saved modes, and while painting through the camera
+button in the right column (the tools step aside, the can stays so you can film yourself spraying; "Tools"
+brings them back). Tap for a photo, hold to film; the spray mist is drawn into photos and clips (the Cola Run recorder, source `spray-bobo`; clips can
 go to the Where is Bobo? globe as "New Spray Bobo clip"). **Artwork** makes a 1080x1350 post: your Bobo as
 a die-cut sticker on EVADE yellow with both logos.
 
@@ -58,5 +79,8 @@ with `?diag` on medialife.ai.
 Tested headlessly in Chromium with a simulated camera (a video of the kc-bobo picture moving and tilting,
 and of its mirror): found in under half a second, canvas lines up, spraying, colours, undo, drips, finger
 mode, save, the sticker animation, artwork export and coming back after a reload all work.
-**Not yet tried on a phone or on the real charm.** Unknowns until then: the gyro bridge, acrylic glare,
+Round 2 (2026-11-13, simulator again, at a pixel ratio of 2): paint lands under the reticle; the can
+charm is found and painted from a photo of kc-can; can fly-in, canvas spread, camera mode, saved-mode
+gestures work. Android's "remove animations" setting no longer hides the spray.
+**The new parts are not yet tried on a phone or on the real charms.** Unknowns until then: the gyro bridge, acrylic glare,
 how steep an angle still tracks, and whether shaking to refill feels right.

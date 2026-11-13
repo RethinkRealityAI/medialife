@@ -1,4 +1,5 @@
-// Spray Bobo: the phone is the spray can. Point it at the cat charm on the EVADE keychain; once the charm is
+// Spray Bobo: the phone is the spray can. Point it at a charm on the EVADE keychain (the Bobo cat or the
+// Eclipse can, each with a canvas and a painting of its own); once the charm is
 // found a spray can slides onto the screen. Tap it and a canvas (Bobo as a colouring-book stencil) is laid
 // over the charm; aim the phone like a can and hold the can to spray. Save, and the painting peels off the
 // charm as a 3D die-cut sticker of your Bobo that lives on the keychain from then on (kept on this phone).
@@ -24,7 +25,6 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const DEBUG = params.has('debug');
 const ENDLESS = params.has('endless');        // no paint level (testing)
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const KC = '/evade/keychain-ar/';             // the Off the Chain page: engine, image targets
 const HERE = '/evade/spray-bobo/';
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
@@ -46,6 +46,13 @@ const CAPS = [                                // the colours ("caps"), EVADE yel
 const NOZZLES = [{ n: 'Skinny', a: 0.6, dot: 3 }, { n: 'Medium', a: 1.4, dot: 5 }, { n: 'Fat', a: 2.8, dot: 8 }];
 const CAN_SECONDS = 24;                       // seconds of spraying in a full can
 const BRIDGE_GYRO_MS = 1500, BRIDGE_HOLD_MS = 400;
+// The charms you can paint. Each has its own image targets (both sides; the back is the mirror shape, so the
+// canvas is flipped there), stencil art cut from its front picture, and its own saved painting.
+const PIECES = {
+  bobo: { k: 'bobo', name: 'Bobo', title: 'MY BOBO', art: 'cat', print: 'kc-bobo.jpg', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, mirrorPair: true, key: 'current', found: 'Found Bobo! Tap the spray can', back: 'Your Bobo is back', line: 'Sprayed on my EVADE keychain' },
+  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: { 'kc-can-back': -1 }, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain' },
+};
+const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
 
 // ---------------------------------------------------------------- sound (made here, no files)
 const sound = {
@@ -100,21 +107,20 @@ const sound = {
 
 // ---------------------------------------------------------------- loading
 const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const getJson = (u) => fetch(u).then((r) => r.json());
 const assets = Promise.all([
-  fetch(KC + 'image-targets/layout.json').then((r) => r.json()),
-  loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null),   // for telling the charm's two sides apart
-  fetch(KC + 'image-targets/kc-bobo.json').then((r) => r.json()),
-  fetch(KC + 'image-targets/kc-bobo-l.json').then((r) => r.json()),
-  loadImg(HERE + 'art/cat-mask.png'), loadImg(HERE + 'art/cat-lines.png'),
-  fetch(HERE + 'art/cat-outline.json').then((r) => r.json()),
+  getJson(KC + 'image-targets/layout.json'),
+  loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null),   // for telling the cat's two sides apart
+  Promise.all(Object.values(PIECES).flatMap((P) => P.targets).map((n) => getJson(KC + `image-targets/${n}.json`))),
+  Promise.all(Object.values(PIECES).map((P) => Promise.all([loadImg(HERE + `art/${P.art}-mask.png`), loadImg(HERE + `art/${P.art}-lines.png`), getJson(HERE + `art/${P.art}-outline.json`)]))),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
-Promise.all([assets, xrReady, loadSaved()]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = saved ? 'Find my Bobo' : 'Start painting'; $('load').hidden = true; })
+Promise.all([assets, xrReady, loadSaved()]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = Object.values(PIECES).some((P) => P.saved) ? 'Find my charms' : 'Start painting'; $('load').hidden = true; })
   .catch((e) => { console.error(e); showError('Could not load the experience', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- the paint (a 2D canvas the AR plane shows)
-const paint = {
+const makePaint = () => ({
   P: null, pg: null,            // the paint layer (what was sprayed)
   D: null, dg: null,            // what is shown: base coat + paint + outline, cut to the cat
   mask: null, lines: null, maskSmall: null,
@@ -141,13 +147,15 @@ const paint = {
   // one frame of spray at (u, v) (0..1, v down), r = footprint radius in texture px
   spray(u, v, r, col, dt) {
     const x = u * TW, y = v * TH, f = clamp(dt * 60, 0.3, 3), g = this.pg;
-    g.globalAlpha = Math.min(1, 0.34 * f * clamp(16 / r, 0.4, 1.4)); g.drawImage(this.brush(col), x - r, y - r, 2 * r, 2 * r);
+    g.globalAlpha = Math.min(1, 0.46 * f * clamp(16 / r, 0.4, 1.4)); g.drawImage(this.brush(col), x - r, y - r, 2 * r, 2 * r);
     g.globalAlpha = 0.9; g.fillStyle = col;
-    const n = Math.round((14 + r * 1.2) * f), dotS = Math.max(1, r / 26);
+    const n = Math.round((18 + r * 1.5) * f), dotS = Math.max(1, r / 26);
     for (let i = 0; i < n; i++) {
       const dx = gauss() * r * 0.5, dy = gauss() * r * 0.5, s = (0.6 + Math.random() * 1.3) * dotS;
       g.fillRect(x + dx - s / 2, y + dy - s / 2, s, s);
     }
+    g.globalAlpha = 0.55;                          // overspray: a few fine flecks further out, like a real can
+    for (let i = 0, m = Math.round((3 + r * 0.35) * f); i < m; i++) { const s = dotS * (0.5 + Math.random() * 0.7); g.fillRect(x + gauss() * r * 1.05 - s / 2, y + gauss() * r * 1.05 - s / 2, s, s); }
     g.globalAlpha = 1;
     this.used.set(col, (this.used.get(col) || 0) + dt);
     // wet paint: a spot sprayed long and close starts to run
@@ -195,10 +203,10 @@ const paint = {
   popUndo() { const d = this.undo.pop(); if (!d) return false; this.pg.putImageData(d, 0, 0); this.drips.length = 0; this.dirty = true; return true; },
   clear() { this.pg.clearRect(0, 0, TW, TH); this.drips.length = 0; this.used.clear(); this.undo.length = 0; this.dirty = true; },
   topColours(n = 5) { const a = [...this.used.entries()].sort((x, y) => y[1] - x[1]).map((e) => e[0]); return a.length ? a.slice(0, n) : ['#f6c344', '#3f9be6', '#e85bd8']; },
-};
+});
 
 // ---------------------------------------------------------------- saved painting (IndexedDB, on this phone only)
-let saved = null;     // { paint: Blob, primer, linesOn, colours, at }
+let saved = null;     // the current charm's: { paint: Blob, primer, linesOn, colours, at } (each charm keeps its own, PIECES[k].saved)
 function idb() {
   return new Promise((res, rej) => {
     try { const r = indexedDB.open('spray-bobo', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
@@ -207,25 +215,27 @@ function idb() {
 async function loadSaved() {
   try {
     const db = await idb();
-    saved = await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get('current'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
-  } catch (e) { saved = null; }
+    for (const P of Object.values(PIECES)) P.saved = await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(P.key); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
+  } catch (e) { /* none saved */ }
 }
 async function storeSaved(rec) {
-  try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(rec, 'current'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch (e) { console.warn('save', e); return false; }
+  cp.saved = rec;
+  try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(rec, cp.key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch (e) { console.warn('save', e); return false; }
 }
-async function dropSaved() { try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete('current'); } catch (e) { /* none */ } saved = null; }
+async function dropSaved() { try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; }
 
 // ---------------------------------------------------------------- three.js scene
 let scene, camera, renderer;
-let W = 0.0601, H = 0.0801;                   // the kc-bobo picture in metres (from layout.json)
 const A = new THREE.Group();                  // follows the charm (world units per metre in its scale)
-const F = new THREE.Group();                  // the picture's frame; x flipped on the charm's other side
-let paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, debugFrame;
+// The current charm's things (each charm has its own set, see usePiece): its picture in metres, its frame
+// (x flipped on the charm's other side), its paint, the canvas on it, its outline, sticker, shadow, splats.
+let cp = null, W = 0.0601, H = 0.0801, F = null, paint = null;
+let paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, debugFrame, orbit, shine;
 let stickerTex, stickerCanvas;
-function buildScene(xr, [layout, lumImg, , , maskImg, linesImg, outline]) {
+const clock = { t: 0 };
+function buildScene(xr, [layout, lumImg, , arts]) {
   ({ scene, camera, renderer } = xr);
   probes = lumImg ? buildProbes(lumImg) : null;
-  const L = layout.targets['kc-bobo']; W = L.widthM; H = L.heightM;
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.7;
@@ -233,51 +243,105 @@ function buildScene(xr, [layout, lumImg, , , maskImg, linesImg, outline]) {
   const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(1.2, 2.5, 4); scene.add(key);
   camera.position.set(0, 0, 0); camera.quaternion.identity();
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
-  scene.add(A); A.add(F); A.visible = false; A.matrixAutoUpdate = true;
-
-  paint.init(maskImg, linesImg);
-  if (saved) restorePaint(saved);
-  // the canvas on the charm: the paint, with a wipe that lays it down from the top and a flash on save
-  paintTex = new THREE.CanvasTexture(paint.D); paintTex.colorSpace = THREE.SRGBColorSpace; paintTex.anisotropy = 4;
+  scene.add(A); A.visible = false; A.matrixAutoUpdate = true;
+  Object.values(PIECES).forEach((P, i) => buildPiece(P, layout.targets[P.targets[0]], arts[i]));
+  usePiece('bobo');
+}
+function buildPiece(P, L, [maskImg, linesImg, outline]) {
+  const W = P.W = L.widthM, H = P.H = L.heightM;
+  const F = P.F = new THREE.Group(); F.visible = false; A.add(F);
+  const paint = P.paint = makePaint(); paint.init(maskImg, linesImg);
+  P.centre = maskCentre(paint.maskSmall);                  // the middle of the stencil (uv, y down): the canvas spreads from here
+  // the canvas on the charm. It spreads out from the middle of the charm with a ragged wet edge in EVADE
+  // yellow (uReveal), flashes white when saved (uFlash), and fades as the sticker lifts off (uOpacity)
+  P.paintTex = new THREE.CanvasTexture(paint.D); P.paintTex.colorSpace = THREE.SRGBColorSpace; P.paintTex.anisotropy = 4;
   const maskTex = new THREE.Texture(maskImg); maskTex.needsUpdate = true;
-  paintMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.ShaderMaterial({
-    uniforms: { map: { value: paintTex }, mask: { value: maskTex }, uReveal: { value: 0 }, uFlash: { value: 0 }, uOpacity: { value: 1 }, uEdge: { value: new THREE.Color('#f6c344') } },
+  P.paintMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.ShaderMaterial({
+    uniforms: { map: { value: P.paintTex }, mask: { value: maskTex }, uReveal: { value: 0 }, uFlash: { value: 0 }, uOpacity: { value: 1 }, uTime: { value: 0 },
+      uEdge: { value: new THREE.Color('#f6c344') }, uInk: { value: new THREE.Color('#15131a') }, uC: { value: new THREE.Vector2(P.centre[0], 1 - P.centre[1]) }, uAsp: { value: W / H } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: /* glsl */ `
       precision highp float; varying vec2 vUv;
-      uniform sampler2D map, mask; uniform float uReveal, uFlash, uOpacity; uniform vec3 uEdge;
+      uniform sampler2D map, mask; uniform float uReveal, uFlash, uOpacity, uTime, uAsp; uniform vec3 uEdge, uInk; uniform vec2 uC;
+      float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+        return mix(mix(hs(i), hs(i + vec2(1.0, 0.0)), f.x), mix(hs(i + vec2(0.0, 1.0)), hs(i + vec2(1.0, 1.0)), f.x), f.y); }
       void main() {
         vec4 c = texture2D(map, vUv); float m = texture2D(mask, vUv).a;
-        float cut = 1.0 - uReveal * 1.04;                        // shown above this line (uv y up)
-        float shown = step(cut, vUv.y);
-        float edge = (1.0 - smoothstep(0.0, 0.012, abs(vUv.y - cut))) * step(0.001, uReveal) * step(uReveal, 0.999) * m;
+        vec2 d = (vUv - uC) * vec2(uAsp, 1.0);
+        float an = atan(d.y, d.x);
+        // a wet, splashy edge: wobbles around the circle, with little runs
+        float r = length(d) + (vn(vec2(an * 2.6 + 9.0, uTime * 1.3)) - 0.5) * 0.10 + (vn(vUv * 22.0) - 0.5) * 0.025;
+        float R = uReveal * 0.82, going = step(0.001, uReveal) * step(uReveal, 0.999);
+        float shown = step(r, R);
+        float band = step(R, r) * step(r, R + 0.03) * going;
+        float ink = step(R + 0.03, r) * step(r, R + 0.042) * going;
         vec3 col = mix(c.rgb, vec3(1.0), uFlash * 0.85);
-        col = mix(col, uEdge, edge);
-        float a = max(c.a * shown, edge) * uOpacity;
+        col = mix(col, uEdge, band); col = mix(col, uInk, ink);
+        float a = max(c.a * shown, (band + ink) * m) * uOpacity;
         gl_FragColor = vec4(col, a);
         #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   }));
-  paintMesh.position.z = 0.0003; paintMesh.renderOrder = 10; paintMesh.visible = false; F.add(paintMesh);
-  // "found you": Bobo's outline lights up in EVADE yellow over the charm
-  previewMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: outlineTexture(linesImg, maskImg), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-  previewMesh.position.z = 0.0004; previewMesh.renderOrder = 11; previewMesh.visible = false; F.add(previewMesh);
-  // the finished painting as a 3D die-cut sticker
-  stickerCanvas = document.createElement('canvas'); stickerCanvas.width = TW; stickerCanvas.height = TH;
-  stickerTex = new THREE.CanvasTexture(stickerCanvas); stickerTex.colorSpace = THREE.SRGBColorSpace; stickerTex.anisotropy = 4;
-  stickerPivot = new THREE.Group(); F.add(stickerPivot); stickerPivot.visible = false;
-  sticker = new THREE.Mesh(stickerGeometry(outline.points), [
-    new THREE.MeshPhysicalMaterial({ map: stickerTex, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.12, side: THREE.DoubleSide }),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 }),
-  ]);
-  sticker.renderOrder = 12; stickerPivot.add(sticker);
-  shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.95), new THREE.MeshBasicMaterial({ map: shadowTexture(maskImg), transparent: true, depthWrite: false, opacity: 0 }));
-  shadow.position.z = 0.0002; shadow.renderOrder = 9; F.add(shadow);
-  splats = makeSplats(); F.add(splats.points);
-  if (DEBUG) { debugFrame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0xff00ff })); F.add(debugFrame); }
+  P.paintMesh.position.z = 0.0003; P.paintMesh.renderOrder = 10; P.paintMesh.visible = false; F.add(P.paintMesh);
+  // "found you": the charm's outline lights up in EVADE yellow
+  P.previewMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: outlineTexture(linesImg), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  P.previewMesh.position.z = 0.0004; P.previewMesh.renderOrder = 11; P.previewMesh.visible = false; F.add(P.previewMesh);
+  // the finished painting as a 3D die-cut sticker, with a flat shine band that sweeps over it now and then
+  P.stickerCanvas = document.createElement('canvas'); P.stickerCanvas.width = TW; P.stickerCanvas.height = TH;
+  P.stickerTex = new THREE.CanvasTexture(P.stickerCanvas); P.stickerTex.colorSpace = THREE.SRGBColorSpace; P.stickerTex.anisotropy = 4;
+  P.stickerPivot = new THREE.Group(); F.add(P.stickerPivot); P.stickerPivot.visible = false;
+  P.shine = { value: -1 };
+  const face = new THREE.MeshPhysicalMaterial({ map: P.stickerTex, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.12, side: THREE.DoubleSide });
+  face.onBeforeCompile = (sh) => {
+    sh.uniforms.uShine = P.shine;
+    sh.fragmentShader = 'uniform float uShine;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n{ float sb = vMapUv.x * 0.55 + (1.0 - vMapUv.y); totalEmissiveRadiance += vec3(0.6) * (step(abs(sb - uShine), 0.045) + 0.7 * step(abs(sb - uShine + 0.12), 0.014)); }');
+  };
+  P.sticker = new THREE.Mesh(stickerGeometry(outline.points, W, H), [face, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })]);
+  P.sticker.renderOrder = 12; P.stickerPivot.add(P.sticker);
+  P.shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.95), new THREE.MeshBasicMaterial({ map: shadowTexture(maskImg), transparent: true, depthWrite: false, opacity: 0 }));
+  P.shadow.position.z = 0.0002; P.shadow.renderOrder = 9; F.add(P.shadow);
+  P.splats = makeSplats(); F.add(P.splats.points);
+  P.orbit = makeOrbit(); F.add(P.orbit.mesh);
+  if (DEBUG) F.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0xff00ff })));
+  if (P.saved) restorePaint(P.saved, P);
 }
-function outlineTexture(linesImg, maskImg) {   // flat: an ink rim, then the lines in EVADE yellow
+// make a charm the current one: the globals the rest of the page uses point at its things
+function usePiece(k) {
+  const P = PIECES[k]; if (cp === P && P.F.visible) return;
+  if (cp) cp.F.visible = false;
+  cp = P; ({ W, H, F, paint, paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, orbit, shine, stickerTex, stickerCanvas } = P);
+  saved = P.saved || null; F.visible = true; document.documentElement.dataset.piece = k;
+}
+function maskCentre(m) {   // the centroid of the 48x64 stencil, in uv (y down)
+  let x = 0, y = 0, n = 0; for (let i = 0; i < m.length; i++) if (m[i]) { x += i % 48; y += Math.floor(i / 48); n++; }
+  return n ? [(x / n + 0.5) / 48, (y / n + 0.5) / 64] : [0.5, 0.5];
+}
+// paint drops in your colours, orbiting the finished sticker (they pass behind him)
+function makeOrbit() {
+  const N = 7, mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshPhysicalMaterial({ roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }), N);
+  mesh.visible = false; mesh.renderOrder = 13; mesh.frustumCulled = false;
+  const c = new THREE.Color('#f6c344'); for (let i = 0; i < N; i++) mesh.setColorAt(i, c);
+  return { mesh, N, on: 0 };
+}
+const _om = new THREE.Matrix4(), _oq = new THREE.Quaternion(), _op = new THREE.Vector3(), _os = new THREE.Vector3();
+function tickOrbit(dt, zc) {
+  const o = orbit; if (!o) return;
+  const want = mode === 'alive' && life.phase === 'idle' ? 1 : 0;
+  o.on += (want - o.on) * Math.min(1, dt * 3); o.mesh.visible = o.on > 0.02; if (!o.mesh.visible) return;
+  const t = clock.t, R = W * 0.62;
+  for (let i = 0; i < o.N; i++) {
+    const a = t * 0.9 + (i / o.N) * Math.PI * 2, r = 0.0016 + 0.0008 * Math.sin(i * 2.3) ;
+    _op.set(Math.cos(a) * R, -H * 0.08 + Math.sin(a * 2 + i) * H * 0.06, zc + Math.sin(a) * R * 0.55);
+    _os.setScalar(r * o.on * (1 + 0.15 * Math.sin(t * 6 + i)));
+    o.mesh.setMatrixAt(i, _om.compose(_op, _oq, _os));
+  }
+  o.mesh.instanceMatrix.needsUpdate = true;
+}
+function colourOrbit(cols) { const c = new THREE.Color(); for (let i = 0; i < orbit.N; i++) { c.set(cols[i % cols.length]); orbit.mesh.setColorAt(i, c); } orbit.mesh.instanceColor.needsUpdate = true; }
+function outlineTexture(linesImg) {   // flat: an ink rim, then the lines in EVADE yellow
   const c = document.createElement('canvas'); c.width = TW; c.height = TH; const g = c.getContext('2d');
   const tint = (col) => { const t = document.createElement('canvas'); t.width = TW; t.height = TH; const tg = t.getContext('2d'); tg.drawImage(linesImg, 0, 0, TW, TH); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = col; tg.fillRect(0, 0, TW, TH); return t; };
   const ink = tint('#15131a'), yel = tint('#f6c344');
@@ -291,7 +355,7 @@ function shadowTexture(maskImg) {   // the sticker's soft shadow on the print: t
   g.globalCompositeOperation = 'source-in'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 0, 192, 256);
   return new THREE.CanvasTexture(c);
 }
-function stickerGeometry(points) {
+function stickerGeometry(points, W, H) {
   const shape = new THREE.Shape(points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H)));
   const depth = 0.0022;
   const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.0005, bevelSize: 0.0006, bevelSegments: 3, curveSegments: 2 });
@@ -339,13 +403,13 @@ function tickSplats(dt, scale) {
 // ---------------------------------------------------------------- tracking: the charm's pose, both sides, gyro bridge
 const TS = {};                               // per image target: last pose from the engine
 let probes = null;
-function initTargets(targets) { for (const t of targets) TS[t.name] = { name: t.name, pr: t.properties, tracked: false, at: 0, seen: -1e9, foundAt: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, upp: 0 }; }
+function initTargets(targets) { for (const t of targets) TS[t.name] = { name: t.name, piece: PIECE_OF[t.name], pr: t.properties, tracked: false, at: 0, seen: -1e9, foundAt: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, upp: 0 }; }
 function onTarget(d) {
   const t = TS[d.name]; if (!t) return;
   const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;          // world units per target pixel
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);
-  t.s = t.pr.height * upp / H; t.upp = upp;
+  t.s = t.pr.height * upp / PIECES[t.piece].H; t.upp = upp;
   if (!t.tracked) { t.foundAt = performance.now(); diag.found++; tDiag(t.name).found++; }
   t.tracked = true; t.at = performance.now();
 }
@@ -409,24 +473,42 @@ function sideScore(t, cam) {
   return va > 0 && vb > 0 ? (sab / sw - ma * mb) / Math.sqrt(va * vb) : null;
 }
 let soleSince = 0;
+const onT = (n) => (TS[n] && TS[n].tracked ? TS[n] : null);
+const pieceInView = (k) => PIECES[k].targets.some(onT);
+const pieceSeen = (k) => Math.max(...PIECES[k].targets.map((n) => (TS[n] ? TS[n].seen : -1e9)));
+// which charm: while painting, the one being painted; otherwise whichever is in view (the current one first)
+function pickPiece(now) {
+  if (!cp || mode === 'paint' || pieceInView(cp.k)) return;
+  if (cp.F.visible && now - pieceSeen(cp.k) < 700) return;
+  const k = Object.keys(PIECES).find(pieceInView); if (!k || k === cp.k) return;
+  switchPiece(k);
+}
+function switchPiece(k) {
+  usePiece(k); syncToggles(); side = null; sideLead = 0; soleSince = 0; pose.last = null; pose.snap = true;
+  for (const P of Object.values(PIECES)) { P.stickerPivot.visible = false; P.paintMesh.visible = false; P.previewMesh.visible = false; P.shadow.material.opacity = 0; }
+  life.phase = 'off'; setMode('find');                          // tick() then offers the can, or brings back its painting
+  diag.pieces = (diag.pieces || 0) + 1;
+}
 function pickSide(now) {
-  const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), other = (n) => (n === 'kc-bobo' ? 'kc-bobo-l' : 'kc-bobo');
-  const a = on('kc-bobo'), b = on('kc-bobo-l');
-  if (side && !on(side) && on(other(side))) {
-    // only the other side's picture is in view. While painting that is usually a mirror match on the same
-    // charm, so the canvas stays put (the pose is bridged) unless it lasts: then the keychain was turned over.
+  pickPiece(now);
+  const [na, nb] = cp.targets, other = (n) => (n === na ? nb : na);
+  const a = onT(na), b = onT(nb);
+  if (side && !onT(side) && onT(other(side))) {
+    // only the other side's picture is in view. For the cat, while painting, that is usually a mirror match on
+    // the same charm, so the canvas stays put (the pose is bridged) unless it lasts: then the keychain was
+    // turned over. The can's two sides are different prints, so that is a turn straight away.
     soleSince = soleSince || now;
-    if (mode !== 'paint' || now - soleSince > 1500) { side = other(side); sideLead = 0; diag.sides++; }
+    if (mode !== 'paint' || now - soleSince > (cp.mirrorPair ? 1500 : 250)) { side = other(side); sideLead = 0; diag.sides++; }
   } else soleSince = 0;
-  if (side && !on(side) && now - TS[side].seen > 700 && mode !== 'paint') side = null;
+  if (side && !onT(side) && now - TS[side].seen > 700 && mode !== 'paint') side = null;
   if (!a && !b) return side;
-  if (!side) side = a && b ? (a.foundAt <= b.foundAt ? 'kc-bobo' : 'kc-bobo-l') : a ? 'kc-bobo' : 'kc-bobo-l';
-  if (a && b && now - sideAt > 120) {
+  if (!side) side = a && b ? (a.foundAt <= b.foundAt ? na : nb) : a ? na : nb;
+  if (cp.mirrorPair && a && b && now - sideAt > 120) {
     sideAt = now; const cam = camLuma();
     const sa = cam ? sideScore(a, cam) : null, sb = cam ? sideScore(b, cam) : null;
     if (sa != null && sb != null) sideLead = sideLead * 0.9 + (sa - sb) * 0.1;
     const need = mode === 'paint' ? 0.15 : 0.05;             // while painting it takes a clear, lasting lead to turn the canvas over
-    const want = sideLead > need ? 'kc-bobo' : sideLead < -need ? 'kc-bobo-l' : side;
+    const want = sideLead > need ? na : sideLead < -need ? nb : side;
     if (want !== side) { diag.sides++; side = want; }
   }
   return side;
@@ -468,21 +550,24 @@ function onMotion(e) {
   }
   gyro.last = now;
 }
-const _qa = new THREE.Quaternion();
+const _qa = new THREE.Quaternion(), _qc = new THREE.Quaternion(), _qr = new THREE.Quaternion();
+// the charm's turn as the phone sees it (the engine's camera is not always at rest in the scene)
+const camRel = (q, out) => out.copy(camera.quaternion).invert().multiply(q);
 function gyroCheck(t, now) {     // called on tracked frames
   for (const q of gyro.acc) q.identity();
   if (!gyro.last) return;
-  if (!gyro.ref) { gyro.ref = t.q.clone(); gyro.refAt = now; for (const q of gyro.win) q.identity(); return; }
+  camRel(t.q, _qr);
+  if (!gyro.ref) { gyro.ref = _qr.clone(); gyro.refAt = now; for (const q of gyro.win) q.identity(); return; }
   if (now - gyro.refAt < 300) return;
-  const hold = gyro.ref.angleTo(t.q);
+  const hold = gyro.ref.angleTo(_qr);
   if (hold > 0.035 && hold < 0.8) {
     gyro.hold = gyro.hold * 0.8 + hold * 0.2; gyro.n++;
-    for (let k = 0; k < 4; k++) { _qa.copy(gyro.win[k]).invert().multiply(gyro.ref); gyro.err[k] = gyro.err[k] * 0.8 + _qa.angleTo(t.q) * 0.2; }
+    for (let k = 0; k < 4; k++) { _qa.copy(gyro.win[k]).invert().multiply(gyro.ref); gyro.err[k] = gyro.err[k] * 0.8 + _qa.angleTo(_qr) * 0.2; }
     let best = -1; for (let k = 0; k < 4; k++) if (best < 0 || gyro.err[k] < gyro.err[best]) best = k;
     const ok = gyro.n >= 3 && gyro.err[best] < gyro.hold * 0.55;
     if (ok !== gyro.ok || best !== gyro.best) { gyro.ok = ok; gyro.best = best; diag.gyro = { ok, map: best, err: +gyro.err[best].toFixed(3), hold: +gyro.hold.toFixed(3), n: gyro.n }; }
   }
-  gyro.ref.copy(t.q); gyro.refAt = now; for (const q of gyro.win) q.identity();
+  gyro.ref.copy(_qr); gyro.refAt = now; for (const q of gyro.win) q.identity();
 }
 
 // the pose the scene uses this frame: 'track', 'gyro' (carried by the gyroscope), 'hold', or 'none'
@@ -498,8 +583,9 @@ function updatePose(now) {
   } else if (pose.last) {
     const gone = now - pose.lostAt;
     if (gyro.ok && gone < BRIDGE_GYRO_MS) {
-      st = 'gyro'; _qa.copy(gyro.acc[gyro.best]).invert();
-      follow(pose.last.p.clone().applyQuaternion(_qa), _qa.clone().multiply(pose.last.q), pose.last.s, true);
+      // in the phone's frame: undo the phone's turn since the last tracked frame (C · gyro⁻¹ · C⁻¹)
+      st = 'gyro'; _qc.copy(camera.quaternion); _qa.copy(_qc).multiply(_qr.copy(gyro.acc[gyro.best]).invert()).multiply(_qr.copy(_qc).invert());
+      follow(pose.last.p.clone().sub(camera.position).applyQuaternion(_qa).add(camera.position), _qa.clone().multiply(pose.last.q), pose.last.s, true);
     } else if (gone < BRIDGE_HOLD_MS) st = 'hold';
     else st = 'none';
   } else st = 'none';
@@ -508,7 +594,7 @@ function updatePose(now) {
   if (st === 'none') pose.snap = true;
   pose.state = st; pose.valid = st !== 'none';
   A.visible = pose.valid;
-  const flip = pose.last && pose.last.side === 'kc-bobo-l' ? -1 : 1;
+  const flip = (pose.last && cp.flip[pose.last.side]) || 1;
   if (F.scale.x !== flip) { F.scale.x = flip; pose.snap = true; }
 }
 // Stick to the print: follow real movement at once, only smooth the sub-millimetre jitter of a charm held still
@@ -523,10 +609,13 @@ function follow(p, q, s, raw = false) {
 
 // ---------------------------------------------------------------- aiming: where the nozzle hits the canvas
 const ray = new THREE.Raycaster(), _ndc = new THREE.Vector2(), _plane = new THREE.Plane(), _n = new THREE.Vector3(), _hit = new THREE.Vector3(), _loc = new THREE.Vector3(), _sc = new THREE.Vector3(), _sc2 = new THREE.Vector3();
+// screen px -> the camera canvas's NDC (the canvas, not the window: on iPhones the two can differ in height)
+function toNdc(px, py, out) { const r = canvas.getBoundingClientRect(); return out.set((px - r.left) / r.width * 2 - 1, -((py - r.top) / r.height) * 2 + 1); }
+function nozzle0() { const r = canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
 const aim = { finger: !TOUCH, x: 0, y: 0, has: false, u: 0, v: 0, on: false, dist: 0, rPx: 10, rScreen: 30, cos: 1 };
 function aimAt(px, py) {
   aim.has = false; if (!pose.valid || !camera) return aim;
-  _ndc.set(px / innerWidth * 2 - 1, -(py / innerHeight) * 2 + 1);
+  toNdc(px, py, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true);
   ray.setFromCamera(_ndc, camera);
   _n.set(0, 0, 1).applyQuaternion(A.quaternion); _plane.setFromNormalAndCoplanarPoint(_n, A.position);
   if (!ray.ray.intersectPlane(_plane, _hit)) return aim;
@@ -539,21 +628,23 @@ function aimAt(px, py) {
   aim.rPx = clamp(rM / W * TW, 2.5, 150);
   // the footprint on screen: project a point one radius along the charm's x
   _sc.copy(_hit).project(camera); _sc2.set(1, 0, 0).applyQuaternion(A.quaternion).multiplyScalar(rM * A.scale.x).add(_hit).project(camera);
-  aim.rScreen = clamp(Math.hypot((_sc2.x - _sc.x) * innerWidth / 2, (_sc2.y - _sc.y) * innerHeight / 2), 6, 220);
+  const cr = canvas.getBoundingClientRect();
+  aim.rScreen = clamp(Math.hypot((_sc2.x - _sc.x) * cr.width / 2, (_sc2.y - _sc.y) * cr.height / 2), 6, 220);
+  aim.sx = cr.left + (_sc.x + 1) / 2 * cr.width; aim.sy = cr.top + (1 - _sc.y) / 2 * cr.height;   // where the hit shows on screen (should be the nozzle)
   aim.has = true; return aim;
 }
 // which way is down on the canvas (texture px per px of drip), from gravity; k = how steep the charm stands
 const _dn = new THREE.Vector3(), _iq = new THREE.Quaternion();
 function dripDown() {
   if (!gravity.up) return { x: 0, y: 1, k: 1 };
-  _iq.copy(A.quaternion).invert(); _dn.copy(gravity.up).negate().applyQuaternion(_iq);
+  _iq.copy(A.quaternion).invert(); _dn.copy(gravity.up).negate().applyQuaternion(camera.quaternion).applyQuaternion(_iq);   // phone -> world -> charm
   const k = Math.hypot(_dn.x, _dn.y); if (k < 0.15) return { x: 0, y: 0, k: 0 };
   return { x: _dn.x / k * F.scale.x, y: -_dn.y / k, k };
 }
 
 // ---------------------------------------------------------------- modes and UI
 // find -> ready (charm found, can offered) -> paint -> alive (saved: the sticker lives on the charm)
-let mode = 'find', capIdx = 0, nozzle = 1, level = 1, spraying = false, strokeOpen = false, everFound = false, lostFor = 0;
+let mode = 'find', capIdx = 0, nozzle = 1, level = 1, spraying = false, strokeOpen = false, everFound = false, lostFor = 0, flying = false;
 const hud = $('hud');
 function setMode(m) {
   mode = m; hud.dataset.mode = m;
@@ -561,9 +652,17 @@ function setMode(m) {
   $('can').setAttribute('aria-label', m === 'ready' ? 'Spray can. Tap to start painting' : 'Spray can. Hold to spray');
   $('meter').hidden = m !== 'paint';
   previewMesh && (previewMesh.visible = m === 'ready');
-  if (m !== 'paint') stopSpray();
+  if (m !== 'paint') { stopSpray(); setCamMode(false); }
   syncRec();
 }
+// camera mode while painting: the tools step aside and the shutter takes the bottom centre; the can stays,
+// so you can film yourself spraying
+function setCamMode(on) {
+  hud.classList.toggle('cam', on); toggle('b-cam', on, on ? 'Back to the paint tools' : 'Camera: take a photo or film');
+  if (on) hint('Tap the shutter for a photo, hold it to film. Keep spraying', 2600);
+}
+$('b-cam').onclick = () => { setCamMode(!hud.classList.contains('cam')); buzz(6); };
+$('b-back').onclick = () => { setCamMode(false); buzz(6); };
 let hintT = 0;
 function hint(text, ms = 0) { $('hint').textContent = text || ''; clearTimeout(hintT); if (ms) hintT = setTimeout(() => { if ($('hint').textContent === text) $('hint').textContent = ''; }, ms); }
 let toastT = 0;
@@ -600,12 +699,14 @@ $('b-undo').onclick = () => { if (paint.popUndo()) { sound.undo(); buzz(8); } up
 function updateUndo() { $('b-undo').disabled = !paint.undo.length; }
 $('b-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); toggle('b-sound', sound.on, sound.on ? 'Sound on' : 'Sound off'); };
 
+
 // ---------------------------------------------------------------- the can: tap (ready), hold to spray (paint), shake to refill
 const can = $('can');
 can.addEventListener('contextmenu', (e) => e.preventDefault());
 can.addEventListener('pointerdown', (e) => {
   e.preventDefault();
-  if (mode === 'ready') { startPainting(); return; }
+  if (flying) return;
+  if (mode === 'ready') { startPainting(false, true); return; }
   if (mode !== 'paint') return;
   try { can.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
   if (level <= 0.001 && !ENDLESS) { refill(0.16); return; }   // no motion sensor: tapping the empty can shakes it
@@ -613,33 +714,57 @@ can.addEventListener('pointerdown', (e) => {
 });
 can.addEventListener('pointerup', () => stopSpray());
 can.addEventListener('pointercancel', () => stopSpray());
-// holding the screen also sprays (aim mode: at the nozzle in the middle; finger mode: under the finger)
+// the screen: while painting, holding it also sprays (aim mode: at the nozzle in the middle; finger mode: under
+// the finger). Once saved: tap him to make him hop, hold him and let go for a big jump, swipe to spin him.
 const cv = $('cam');
+const gest = { id: null, x: 0, lx: 0, t: 0, lt: 0, on: false, drag: false };
 cv.addEventListener('pointerdown', (e) => {
-  if (mode === 'alive') { tapSticker(e.clientX, e.clientY); return; }
+  if (mode === 'alive') {
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
+    Object.assign(gest, { id: e.pointerId, x: e.clientX, lx: e.clientX, t: performance.now(), lt: performance.now(), on: hitSticker(e.clientX, e.clientY), drag: false });
+    if (gest.on && life.phase === 'idle') { life.press = true; buzz(6); }
+    return;
+  }
   if (mode !== 'paint') return;
   try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
   startSpray(aim.finger ? { x: e.clientX, y: e.clientY } : null);
 });
-cv.addEventListener('pointermove', (e) => { if (spraying && fingerAt) { fingerAt.x = e.clientX; fingerAt.y = e.clientY; } });
-cv.addEventListener('pointerup', () => stopSpray());
-cv.addEventListener('pointercancel', () => stopSpray());
+cv.addEventListener('pointermove', (e) => {
+  if (spraying && fingerAt) { fingerAt.x = e.clientX; fingerAt.y = e.clientY; }
+  if (mode === 'alive' && gest.id === e.pointerId && life.phase === 'idle') {
+    const now = performance.now(), dx = e.clientX - gest.lx;
+    if (!gest.drag && Math.abs(e.clientX - gest.x) > 14) { gest.drag = true; life.press = false; }
+    if (gest.drag) { const k = 0.014; life.uy += dx * k; life.uv = (dx * k) / Math.max((now - gest.lt) / 1000, 0.008); life.dragging = true; }
+    gest.lx = e.clientX; gest.lt = now;
+  }
+});
+function endGesture(e) {
+  if (mode !== 'alive' || gest.id !== e.pointerId) return;
+  const held = performance.now() - gest.t; gest.id = null; life.dragging = false;
+  if (gest.drag) { if (performance.now() - gest.lt > 90) life.uv = 0; if (Math.abs(life.uv) > 6) { sound.whoosh(); buzz(8); } }
+  else if (gest.on && life.phase === 'idle') { const sq = life.squish; life.press = false; jump(held > 260 ? 2 : 1, sq); }
+  else life.press = false;
+}
+cv.addEventListener('pointerup', (e) => { stopSpray(); endGesture(e); });
+cv.addEventListener('pointercancel', (e) => { stopSpray(); endGesture(e); });
 addEventListener('keydown', (e) => { if (e.code === 'Space' && mode === 'paint' && !e.repeat && document.activeElement === document.body) { e.preventDefault(); startSpray(null); } });
 addEventListener('keyup', (e) => { if (e.code === 'Space') stopSpray(); });
 let fingerAt = null, buzzT = 0, emptyNag = 0;
 function startSpray(at) {
+  if (flying) return;
   fingerAt = at; spraying = true; strokeOpen = false; can.dataset.state = 'spray';
   if (!at) fingerAt = null;
 }
 function stopSpray() {
   if (!spraying) return; spraying = false; fingerAt = null; sound.spray(0);
   if (mode === 'paint') can.dataset.state = level <= 0.001 && !ENDLESS ? 'empty' : 'idle';
-  strokeOpen = false; paint.measure(); updateMeter(); updateUndo();
+  strokeOpen = false; paint.measure(); updateMeter(); updateUndo(); milestone();
 }
 let lastShake = 0;
 function shakeKick() {
   const now = performance.now(); if (now - lastShake < 160) return; lastShake = now;
   if (mode === 'ready' || mode === 'paint') refill(0.14);
+  if (mode === 'alive') shakeOff();
 }
 let shakeT = 0;
 function refill(k) {
@@ -649,21 +774,69 @@ function refill(k) {
   if (level >= 1) hint('Full can. Spray away', 1400);
 }
 function updateMeter() { const p = Math.round(paint.coverage * 100); $('meter').querySelector('i').style.width = p + '%'; $('meter-t').textContent = `Painted ${p}%`; }
+// little cheers as the charm fills up (once each per painting)
+const MILESTONES = [[0.25, 'Nice!'], [0.5, 'Fresh!'], [0.8, 'Masterpiece!']];
+function milestone() {
+  const i = cp.mile || 0; if (i >= MILESTONES.length || paint.coverage < MILESTONES[i][0]) return;
+  cp.mile = i + 1; toast(MILESTONES[i][1], 1300); sound.sparkle(); buzz([10, 30, 10]);
+  burstSplats(paint.topColours(), 26, centreLocal(0.004), 0.06);
+}
 
 // ---------------------------------------------------------------- the flow
-function startPainting(fresh = false) {
-  if (fresh) { paint.clear(); }
-  setMode('paint'); buzz([10, 40, 10]);
-  sound.rattle(5); setTimeout(() => sound.pssh(), 260);
-  previewMesh.visible = false; stickerPivot.visible = false; shadow.material.opacity = 0;
-  paintMesh.visible = true; paintMesh.material.uniforms.uOpacity.value = 1; paintMesh.material.uniforms.uFlash.value = 0;
-  paint.dirty = true;
-  reveal = { t: 0, dur: reduceMotion ? 0.01 : 0.9 };
-  hint(aim.finger ? 'Paint Bobo with your finger' : 'Aim at Bobo and hold the can to spray', 4200);
-  paint.measure(); updateMeter(); updateUndo();
-  postEvent('play', { step: 'paint' });
+// Tapping the offered can: it flies onto the charm and bursts, and the blank canvas spreads out from the
+// charm's middle with a wet yellow edge.
+function startPainting(fresh = false, fly = false) {
+  if (fresh) paint.clear();
+  setMode('paint'); syncToggles();
+  stickerPivot.visible = false; shadow.material.opacity = 0; orbit.mesh.visible = false; orbit.on = 0;
+  const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = 0;
+  paintMesh.visible = true; paint.dirty = true; reveal = null;
+  paint.measure(); cp.mile = MILESTONES.filter(([k]) => paint.coverage >= k).length;
+  if (fly) {
+    previewMesh.visible = true; previewMesh.material.opacity = 1;
+    flying = true; can.dataset.state = 'away'; can.style.visibility = 'hidden';
+    sound.rattle(5); buzz([10, 40, 10]);
+    flyCan(() => { flying = false; beginReveal(); setTimeout(() => { can.style.visibility = ''; if (mode === 'paint') can.dataset.state = 'idle'; }, 350); });
+  } else { sound.rattle(3); beginReveal(); }
+  hint(aim.finger ? `Paint ${cp.name} with your finger` : `Aim at ${cp.name} and hold the can to spray`, 4200);
+  updateMeter(); updateUndo();
+  postEvent('play', { step: 'paint', piece: cp.k });
 }
 let reveal = null;
+function beginReveal() {
+  reveal = { t: 0, dur: 1.25 }; sound.pssh(); buzz(30);
+  burstSplats([CAPS[capIdx].c, '#ffffff', '#f6c344'], 46, centreLocal(0.003), 0.07);
+  const at = pieceScreen(); if (at) popWord('PSSHT!', at[0], at[1]);
+}
+const _cl = new THREE.Vector3();
+function centreLocal(z) { return new THREE.Vector3((cp.centre[0] - 0.5) * W, (0.5 - cp.centre[1]) * H, z); }
+function pieceScreen() {   // the charm's middle on screen (px), or null
+  if (!pose.valid || !camera) return null;
+  _cl.copy(centreLocal(0)); F.localToWorld(_cl); _cl.project(camera); const r = canvas.getBoundingClientRect();
+  return [r.left + (_cl.x + 1) / 2 * r.width, r.top + (1 - _cl.y) / 2 * r.height];
+}
+function flyCan(done) {
+  const r = can.getBoundingClientRect(), [tx, ty] = pieceScreen() || nozzle0();
+  const el = document.createElement('div'); el.className = 'can-fly'; el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = can.querySelector('svg').outerHTML.replace(/id="[^"]*"/g, '');
+  Object.assign(el.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  hud.appendChild(el);
+  const dx = tx - (r.left + r.width / 2), dy = ty - (r.top + r.height * 0.06);
+  let fin = false; const end = () => { if (fin) return; fin = true; el.remove(); done(); };
+  if (!el.animate) { setTimeout(end, 50); return; }
+  el.animate([
+    { transform: 'translate(0,0) rotate(0deg) scale(1)' },
+    { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 70}px) rotate(-30deg) scale(.75)`, offset: 0.5 },
+    { transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.42)`, opacity: 1, offset: 0.86 },
+    { transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.15)`, opacity: 0 },
+  ], { duration: 560, easing: 'cubic-bezier(.35,.05,.35,1)', fill: 'forwards' }).onfinish = end;
+  setTimeout(end, 900);
+}
+function popWord(text, x, y) {
+  const el = document.createElement('div'); el.className = 'pop-word'; el.textContent = text; el.setAttribute('aria-hidden', 'true');
+  el.style.left = clamp(x, 80, innerWidth - 80) + 'px'; el.style.top = clamp(y - 30, 90, innerHeight - 200) + 'px'; el.style.setProperty('--c', CAPS[capIdx].c);
+  hud.appendChild(el); setTimeout(() => el.remove(), 1000);
+}
 $('b-done').onclick = async () => {
   paint.measure();
   if (paint.coverage < 0.015) { toast('Spray some paint first'); return; }
@@ -674,34 +847,51 @@ async function savePainting() {
   const blob = await new Promise((res) => paint.P.toBlob(res, 'image/png'));
   saved = { paint: blob, primer: paint.primer, linesOn: paint.linesOn, colours: paint.topColours(), at: Date.now() };
   const ok = await storeSaved(saved);
-  diag.saves++; postEvent('custom', { action: 'spray-save', painted: Math.round(paint.coverage * 100), colours: saved.colours.length });
+  diag.saves++; postEvent('custom', { action: 'spray-save', piece: cp.k, painted: Math.round(paint.coverage * 100), colours: saved.colours.length });
   if (!ok) hint('Saved for this visit (this browser would not keep it)', 2600);
 }
-async function restorePaint(rec) {
-  paint.primer = rec.primer !== false; paint.linesOn = rec.linesOn !== false;
-  toggle('b-lines', paint.linesOn, paint.linesOn ? 'Outline on' : 'Outline off'); toggle('b-primer', paint.primer, paint.primer ? 'White base coat on' : 'White base coat off: paint over the print');
-  try { const bmp = await createImageBitmap(rec.paint); paint.pg.clearRect(0, 0, TW, TH); paint.pg.drawImage(bmp, 0, 0); paint.dirty = true; paint.measure(); } catch (e) { console.warn('restore', e); }
-  for (const c of rec.colours || []) paint.used.set(c, 1);
+async function restorePaint(rec, P) {
+  const pt = P.paint; pt.primer = rec.primer !== false; pt.linesOn = rec.linesOn !== false;
+  try { const bmp = await createImageBitmap(rec.paint); pt.pg.clearRect(0, 0, TW, TH); pt.pg.drawImage(bmp, 0, 0); pt.dirty = true; pt.measure(); } catch (e) { console.warn('restore', e); }
+  for (const c of rec.colours || []) pt.used.set(c, 1);
 }
-let printImg = null;
+function syncToggles() {   // the outline and base coat buttons show the current charm's paint
+  toggle('b-lines', paint.linesOn, paint.linesOn ? 'Outline on' : 'Outline off'); toggle('b-primer', paint.primer, paint.primer ? 'White base coat on' : 'White base coat off: paint over the print');
+}
+
 async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
-  if (!paint.primer) { try { printImg = printImg || await loadImg(KC + 'image-targets/kc-bobo.jpg'); g.drawImage(printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
+  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(KC + 'image-targets/' + cp.print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
   paint.dirty = true; paint.composite(); g.drawImage(paint.D, 0, 0);
-  // the cut: outside the cat stays clear, the edge of the sticker is white
+  // the cut: outside the stencil stays clear, the edge of the sticker is white
   g.globalCompositeOperation = 'destination-in'; g.drawImage(paint.mask, 0, 0, TW, TH); g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH);
   g.globalCompositeOperation = 'source-over';
   stickerTex.needsUpdate = true;
 }
-// once saved: the painting flashes, peels off the charm as a 3D sticker, spins and settles above the print
-const life = { t: 0, phase: 'off', hopAt: 4, hop: null, spin: null };
+// Once saved: the painting flashes, peels off the charm as a 3D sticker, spins and settles above the print.
+// Then he lives there: he turns to look at the phone, paint drops in his colours orbit him, a shine sweeps
+// over the gloss now and then. Tap him (hop), hold and let go (big jump), swipe (spin), shake the phone (he
+// shakes the wet paint off).
+const life = { t: 0, phase: 'off', hopAt: 4, hop: null, spin: null, lx: 0, ly: 0, uy: 0, uv: 0, dragging: false, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: 0, tip: 0 };
+const TIPS = ['Tap him to make him hop', 'Swipe to spin him', 'Hold him, then let go', 'Shake your phone', 'Tap the shutter for a photo, hold it to film'];
 async function startAlive(justSaved) {
   await bakeSticker();
   setMode('alive');
-  life.t = 0; life.phase = justSaved ? 'flash' : 'lift'; life.hop = null; life.spin = null; life.hopAt = 5 + Math.random() * 3;
+  Object.assign(life, { t: 0, phase: justSaved ? 'flash' : 'lift', hop: null, spin: null, hopAt: 5 + Math.random() * 3, uy: 0, uv: 0, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: justSaved ? 3.2 : 2.4, tip: 0, burst: false });
+  colourOrbit(paint.topColours(7));
   paintMesh.visible = justSaved; paintMesh.material.uniforms.uOpacity.value = 1; paintMesh.material.uniforms.uReveal.value = 1;
   stickerPivot.visible = false;
-  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); setTimeout(() => { if (mode === 'alive') hint('Tap him. Tap the shutter for a photo, hold it to film', 4000); }, 2400); } else { hint('Your Bobo is back', 2200); }
+  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else hint(cp.back, 2200);
+}
+function jump(kind, power = 0) {   // 1: a hop; 2: the big one (after holding him), with a spin and a burst
+  const big = kind === 2;
+  life.hop = { t: 0, big, k: big ? 1 + power * 0.6 : 1 }; sound.mew(); buzz(big ? [15, 30, 25] : 12);
+  burstSplats(paint.topColours(), big ? 50 : 22, new THREE.Vector3(0, -H * 0.3, 0.004), big ? 0.08 : 0.05);
+}
+function shakeOff() {
+  if (life.phase !== 'idle') return;
+  life.wig = { t: 0 }; sound.rattle(4); buzz([12, 30, 12]);
+  burstSplats(paint.topColours(), 18, new THREE.Vector3(0, 0, stickerPivot.position.z), 0.1);
 }
 function tickAlive(dt) {
   if (mode !== 'alive') return;
@@ -714,75 +904,100 @@ function tickAlive(dt) {
   }
   if (life.phase === 'lift') {
     if (!stickerPivot.visible) { stickerPivot.visible = true; sound.whoosh(); setTimeout(() => sound.sparkle(), 500); }
-    const k = clamp(life.t / (reduceMotion ? 0.3 : 1.3), 0, 1), e = easeInOut(k);
+    const k = clamp(life.t / 1.3, 0, 1), e = easeInOut(k);
     u.uOpacity.value = 1 - easeOut(k * 3); paintMesh.visible = u.uOpacity.value > 0.01;
     stickerPivot.position.set(0, 0, 0.0012 + HOVER * e + Math.sin(k * Math.PI) * 0.012);
     sticker.rotation.set(0, e * Math.PI * 2, 0);
     const sq = k > 0.85 ? 1 + Math.sin((k - 0.85) / 0.15 * Math.PI) * 0.06 : 1;
     sticker.scale.set(1 / sq, sq, 1);
-    if (k >= 1) { life.phase = 'idle'; life.t = 0; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1); }
+    if (k >= 1) { life.phase = 'idle'; life.t = 0; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1); burstSplats(paint.topColours(), 30, new THREE.Vector3(0, -H * 0.35, 0.002), 0.05); }
   }
   if (life.phase === 'idle') {
-    const t = life.t, calm = reduceMotion ? 0.3 : 1;
-    let z = HOVER + Math.sin(t * 1.7) * 0.0018 * calm, ry = Math.sin(t * 0.7) * 0.22 * calm, rx = Math.sin(t * 0.9 + 1) * 0.1 * calm, rz = 0, sy = 1 + Math.sin(t * 2.2) * 0.012 * calm;
-    if (t > life.hopAt && !life.hop) { life.hop = { t: 0, big: false }; life.hopAt = t + 6 + Math.random() * 4; }
-    if (life.hop) {                                   // a little hop and a wiggle now and then
-      const h = life.hop; h.t += dt; const k = h.t / (h.big ? 0.9 : 0.6);
-      z += Math.sin(clamp(k, 0, 1) * Math.PI) * (h.big ? 0.02 : 0.009);
+    const t = life.t;
+    let z = HOVER + Math.sin(t * 1.7) * 0.0018, ry = Math.sin(t * 0.7) * 0.16, rx = Math.sin(t * 0.9 + 1) * 0.07, rz = 0, sy = 1 + Math.sin(t * 2.2) * 0.012;
+    // he looks at the phone: turn the face part of the way toward the camera
+    _cl.copy(camera.position); F.worldToLocal(_cl);
+    const yaw = clamp(Math.atan2(_cl.x, _cl.z), -0.7, 0.7) * 0.5, pitch = clamp(Math.atan2(-_cl.y, _cl.z), -0.7, 0.7) * 0.4, f = Math.min(1, dt * 4);
+    life.ly += (yaw - life.ly) * f; life.lx += (pitch - life.lx) * f; ry += life.ly; rx += life.lx;
+    // swipe to spin: coasts, then settles face-front on the nearest full turn
+    if (!life.dragging) {
+      life.uy += life.uv * dt; life.uv *= Math.pow(0.12, dt);
+      if (Math.abs(life.uv) < 1.5) { const tgt = Math.round(life.uy / (Math.PI * 2)) * Math.PI * 2; life.uy += (tgt - life.uy) * Math.min(1, dt * 5); life.uv *= Math.pow(0.02, dt); }
+    }
+    ry += life.uy;
+    // pressed: he squashes down, ready to jump
+    life.squish += ((life.press ? 1 : 0) - life.squish) * Math.min(1, dt * (life.press ? 3 : 12));
+    sy *= 1 - life.squish * 0.16; z -= life.squish * 0.004;
+    if (t > life.hopAt && !life.hop && !life.press && !life.dragging) { life.hop = { t: 0, big: false, k: 0.8 }; life.hopAt = t + 6 + Math.random() * 4; }
+    if (life.hop) {                                   // a hop and a wiggle; the big one spins too
+      const h = life.hop; h.t += dt; const k = h.t / (h.big ? 0.95 : 0.6);
+      z += Math.sin(clamp(k, 0, 1) * Math.PI) * (h.big ? 0.022 : 0.009) * h.k;
       rz = Math.sin(k * Math.PI * 4) * 0.16 * (1 - clamp(k, 0, 1));
       sy *= k < 0.15 ? 1 - Math.sin(k / 0.15 * Math.PI) * 0.1 : 1;
       if (h.big && k > 0.15 && !h.spun) { h.spun = true; life.spin = { t: 0 }; }
-      if (k >= 1) life.hop = null;
+      if (k >= 1) { life.hop = null; if (h.big) { burstSplats(paint.topColours(), 24, new THREE.Vector3(0, -H * 0.35, 0.002), 0.04); sound.pop(); } }
     }
+    if (life.wig) { life.wig.t += dt; const k = clamp(life.wig.t / 0.7, 0, 1); rz += Math.sin(k * Math.PI * 9) * 0.22 * (1 - k); if (k >= 1) life.wig = null; }
     if (life.spin) { life.spin.t += dt; const k = clamp(life.spin.t / 0.8, 0, 1); ry += easeInOut(k) * Math.PI * 2; if (k >= 1) life.spin = null; }
     stickerPivot.position.set(0, 0, z); sticker.rotation.set(rx, ry, rz); sticker.scale.set(1 / Math.sqrt(sy), sy, 1);
+    // the shine: a flat white band across the gloss every few seconds
+    if (t > life.shineAt) { const k = (t - life.shineAt) / 0.9; shine.value = -0.4 + k * 2.2; if (k >= 1) { shine.value = -1; life.shineAt = t + 3.5 + Math.random() * 2; } }
+    if (t > life.tipAt) { hint(TIPS[life.tip % TIPS.length], 2600); life.tip++; life.tipAt = t + (life.tip < TIPS.length ? 5 : 22); }
   }
   shadow.material.opacity = stickerPivot.visible ? clamp(0.85 - stickerPivot.position.z * 18, 0.25, 0.8) : 0;
   const ss = 1 + stickerPivot.position.z * 6; shadow.scale.set(ss, ss, 1);
 }
-function tapSticker(x, y) {
-  if (!pose.valid || life.phase !== 'idle') return;
-  _ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(_ndc, camera);
-  if (!ray.intersectObject(sticker, false).length) return;
-  life.hop = { t: 0, big: true }; sound.mew(); buzz(12); burstSplats(paint.topColours(), 24, new THREE.Vector3(0, 0, 0.018), 0.05);
+function hitSticker(x, y) {
+  if (!pose.valid || !stickerPivot.visible) return false;
+  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
+  return ray.intersectObject(sticker, false).length > 0;
 }
-$('b-spin').onclick = () => { if (life.phase === 'idle' && !life.spin) { life.spin = { t: 0 }; sound.whoosh(); buzz(8); } };
+$('b-spin').onclick = () => { if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
 $('b-repaint').onclick = () => { stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(); };
 let newArmed = 0;
 $('b-new').onclick = async () => {
-  if (performance.now() - newArmed > 2500) { newArmed = performance.now(); hint('Tap New again to start a fresh Bobo', 2500); return; }
+  if (performance.now() - newArmed > 2500) { newArmed = performance.now(); hint(`Tap New again to start ${cp.name} fresh`, 2500); return; }
   newArmed = 0; await dropSaved(); stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(true);
 };
 
 // ---------------------------------------------------------------- per frame
 const mist = { c: $('mist'), g: null, parts: [] };
-let coverT = 0;
+let coverT = 0, aimLogAt = 0;
 function tick(dt) {
-  const now = performance.now();
+  const now = performance.now(); clock.t += dt;
   updatePose(now);
   if (pose.valid && pose.state === 'track') {
     lostFor = 0;
-    if (!everFound) { everFound = true; diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1); postEvent('sighting', {}); }
+    if (!everFound) { everFound = true; diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1); postEvent('sighting', { piece: cp.k }); }
     if (mode === 'find') {
       if (saved) startAlive(false);
-      else { setMode('ready'); sound.found(); buzz([12, 50, 12]); hint('Found Bobo! Tap the spray can'); }
+      else { setMode('ready'); sound.found(); buzz([12, 50, 12]); hint(cp.found); }
     }
   } else if (!pose.valid) lostFor += dt;
   hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
-  if (mode === 'find' && !pose.valid) hint(everFound ? 'Point at Bobo again' : 'Point your camera at the Bobo charm');
-  else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint('Point at Bobo again');
-  else if (pose.valid && $('hint').textContent === 'Point at Bobo again') hint('');
+  const again = `Point at ${cp.name} again`;
+  if (mode === 'find' && !pose.valid) hint(everFound ? 'Point at Bobo or the can' : 'Point your camera at the Bobo or the can charm');
+  else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint(again);
+  else if (pose.valid && $('hint').textContent === again) hint('');
+  paintMesh.material.uniforms.uTime.value = clock.t;
   if (mode === 'ready' && previewMesh) previewMesh.material.opacity = 0.65 + Math.sin(now / 260) * 0.35;
 
-  // the canvas laying itself down
-  if (reveal) { reveal.t += dt; const k = clamp(reveal.t / reveal.dur, 0, 1); paintMesh.material.uniforms.uReveal.value = easeOut(k); if (k >= 1) reveal = null; }
+  // the canvas spreading out over the charm; the yellow outline fades as it goes
+  if (reveal) {
+    reveal.t += dt; const k = clamp(reveal.t / reveal.dur, 0, 1); paintMesh.material.uniforms.uReveal.value = easeOut(k);
+    if (previewMesh.visible) { previewMesh.material.opacity = 1 - k; if (k >= 1) previewMesh.visible = false; }
+    if (k >= 1) reveal = null;
+  }
 
   // aim + spray
-  let ax = innerWidth / 2, ay = innerHeight / 2;
+  let [ax, ay] = nozzle0();
   if (aim.finger && fingerAt) { ax = fingerAt.x; ay = fingerAt.y; }
   if (mode === 'paint') {
     aimAt(ax, ay);
-    const ret = $('reticle'); ret.style.left = (aim.finger && fingerAt ? ax : innerWidth / 2) + 'px'; ret.style.top = (aim.finger && fingerAt ? ay : innerHeight / 2) + 'px';
+    const ret = $('reticle'); ret.style.left = ax + 'px'; ret.style.top = ay + 'px';
+    if (aim.has && now - aimLogAt > 1000) {   // test log: how far the paint's spot shows from the nozzle, and how far the engine turns the camera
+      aimLogAt = now; const e = Math.hypot(aim.sx - ax, aim.sy - ay); diag.aim = { errPx: +e.toFixed(1), maxPx: Math.max((diag.aim && diag.aim.maxPx) || 0, +e.toFixed(1)), camDeg: +(camera.quaternion.angleTo(new THREE.Quaternion()) * 57.3).toFixed(1), canvas: [Math.round(canvas.clientWidth), Math.round(canvas.clientHeight)], win: [innerWidth, innerHeight], dpr: devicePixelRatio };
+    }
     ret.classList.toggle('on', aim.has && (!aim.finger || spraying));
     ret.classList.toggle('off', !aim.on);
     ret.classList.toggle('spray', spraying && aim.on);
@@ -801,28 +1016,35 @@ function tick(dt) {
         for (let i = 1; i <= steps; i++) { const k = i / steps; paint.spray(lu == null ? aim.u : lu + (aim.u - lu) * k, lv == null ? aim.v : lv + (aim.v - lv) * k, aim.rPx, CAPS[capIdx].c, dt / steps); }
         aim.lu = aim.u; aim.lv = aim.v; diag.sprayS += dt; if (pose.state !== 'track') diag.bridgeSprayS += dt;
       } else { aim.lu = aim.lv = null; }
-      emitMist(ax, ay, aim.has ? aim.rScreen : 40);
+      emitMist(ax, ay, aim.has ? aim.rScreen : 40, dt);
       if (level <= 0.001 && !ENDLESS) { can.dataset.state = 'empty'; sound.spray(0); sound.sputter(); hint(gravity.up ? 'Out of paint! Shake your phone to refill' : 'Out of paint! Tap the can to shake it', 3000); }
     } else {
       sound.spray(0); aim.lu = aim.lv = null;
       if (spraying && empty && now - emptyNag > 900) { emptyNag = now; sound.sputter(); }
     }
-    coverT += dt; if (coverT > 0.5 && spraying) { coverT = 0; paint.measure(); updateMeter(); }
+    coverT += dt; if (coverT > 0.5 && spraying) { coverT = 0; paint.measure(); updateMeter(); milestone(); }
   } else $('reticle').classList.remove('on');
   paint.tick(dt, pose.valid ? dripDown() : null);
   if (paint.composite() && paintTex) paintTex.needsUpdate = true;
   tickAlive(dt);
+  tickOrbit(dt, stickerPivot.position.z);
   if (splats) tickSplats(dt, A.scale.x);
   tickMist(dt);
   recTick();
   diag.fpsN++;
 }
-function emitMist(x, y, r) {
-  if (reduceMotion) return;
-  for (let i = 0; i < 3; i++) {
-    const a = Math.random() * Math.PI * 2, d = r * (2.2 + Math.random() * 2.5);
-    mist.parts.push({ x: x + Math.cos(a) * d, y: y + Math.sin(a) * d, tx: x + gauss() * r * 0.3, ty: y + gauss() * r * 0.3, t: 0, life: 0.22 + Math.random() * 0.12, s: 3 + Math.random() * 5, col: CAPS[capIdx].c });
-  }
+// The spray on screen (flat dots, no gradients): a jet from the can's nozzle to the spot, a cloud puffing out
+// where it hits, and flecks of overspray around it.
+function mistFrom() {
+  if (aim.finger && fingerAt) return [innerWidth / 2, innerHeight + 30];
+  const r = can.getBoundingClientRect(); return r.width ? [r.left + r.width * 0.5, r.top + r.height * 0.05] : [innerWidth, innerHeight];
+}
+function emitMist(x, y, r, dt) {
+  const col = CAPS[capIdx].c, f = clamp(dt * 60, 0.5, 2.5), [nx, ny] = mistFrom(), P = mist.parts;
+  if (P.length > 420) P.splice(0, P.length - 420);
+  for (let i = 0; i < Math.round(5 * f); i++) P.push({ k: 0, x0: nx + gauss() * 3, y0: ny + gauss() * 3, x1: x + gauss() * r * 0.4, y1: y + gauss() * r * 0.4, t: -Math.random() * 0.05, life: 0.15 + Math.random() * 0.08, s: 1.4 + Math.random() * 2.6, col });
+  for (let i = 0; i < Math.round(2 * f); i++) P.push({ k: 1, x0: x + gauss() * r * 0.3, y0: y + gauss() * r * 0.3, vx: gauss() * r * 1.3, vy: gauss() * r * 1.3 - r * 0.5, t: 0, life: 0.4 + Math.random() * 0.3, s: r * (0.1 + Math.random() * 0.16) + 2, col });
+  for (let i = 0; i < Math.round(3 * f); i++) P.push({ k: 2, x0: x + gauss() * r * 0.85, y0: y + gauss() * r * 0.85, vx: gauss() * 12, vy: 14 + Math.random() * 20, t: 0, life: 0.35 + Math.random() * 0.3, s: 0.8 + Math.random() * 1.6, col });
 }
 function tickMist(dt) {
   const c = mist.c; if (!mist.g) mist.g = c.getContext('2d');
@@ -831,17 +1053,26 @@ function tickMist(dt) {
   const g = mist.g; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight);
   if (!mist.parts.length) return;
   for (let i = mist.parts.length - 1; i >= 0; i--) {
-    const p = mist.parts[i]; p.t += dt; const k = p.t / p.life; if (k >= 1) { mist.parts.splice(i, 1); continue; }
-    const e = easeOut(k), x = p.x + (p.tx - p.x) * e, y = p.y + (p.ty - p.y) * e;
-    g.globalAlpha = 0.55 * (1 - k); g.fillStyle = p.col; g.beginPath(); g.arc(x, y, p.s * (1 - k * 0.8), 0, 7); g.fill();
+    const p = mist.parts[i]; p.t += dt; if (p.t < 0) continue;
+    const k = p.t / p.life; if (k >= 1) { mist.parts.splice(i, 1); continue; }
+    let x, y, s, a;
+    if (p.k === 0) { const e = easeOut(k); x = p.x0 + (p.x1 - p.x0) * e; y = p.y0 + (p.y1 - p.y0) * e; s = p.s * (0.6 + k * 0.8); a = 0.75 * (1 - k * k); }
+    else if (p.k === 1) { const e = easeOut(k); x = p.x0 + p.vx * e; y = p.y0 + p.vy * e; s = p.s * (1 + k * 1.4); a = 0.2 * (1 - k); }
+    else { x = p.x0 + p.vx * p.t; y = p.y0 + p.vy * p.t; s = p.s; a = 0.85 * (1 - k); }
+    g.globalAlpha = a; g.fillStyle = p.col; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill();
   }
   g.globalAlpha = 1;
 }
 
 // ---------------------------------------------------------------- 8th Wall pipeline
 const canvas = $('cam');
+// The engine's renderer.setSize() writes the drawing size into the canvas's inline style, so with a pixel ratio
+// above 1 the canvas was drawn twice the size of the screen and its middle (where the paint went) sat at the
+// bottom right. The stylesheet now pins the canvas to the screen (!important), and it draws at 1x by default,
+// like Off the Chain (fastest, and quickest to pick up the charm in Dapo's tests); ?dpr=2 for a sharper picture.
+const DPR = clamp(+params.get('dpr') || 1, 1, 3);
 function sizeCanvas() {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const dpr = Math.min(devicePixelRatio || 1, DPR);
   const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
   if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
 }
@@ -883,7 +1114,7 @@ async function start() {
   sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  const targets = [data[2], data[3]].filter((t) => !params.get('only') || t.name === params.get('only'));
+  const targets = data[2].filter((t) => !params.get('only') || t.name === params.get('only'));
   initTargets(targets);
   XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: targets });
   XR8.addCameraPipelineModules([
@@ -957,6 +1188,7 @@ function camFailed(why) {
 // ---------------------------------------------------------------- photo, video (the Cola Run recorder), artwork
 const LOGO = { evade: new Image(), act: new Image() };
 LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
+function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } }   // the spray shows in photos and clips too
 function drawWatermark(c, Wd, Hd) {
   const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
   if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
@@ -967,7 +1199,7 @@ try {
   capture = new ColaCapture({
     canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'spray-bobo', audioContext: null,
     connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
-    overlay: drawWatermark,
+    overlay: (c, Wd, Hd) => { drawMist(c, Wd, Hd); drawWatermark(c, Wd, Hd); },
     on: (name) => { if (name === 'recordStart') { buzz(25); recUi(true); } if (name === 'recordStop' || name === 'error') recUi(false); },
   });
   Object.assign(capture.settings, {
@@ -995,7 +1227,7 @@ async function takePhoto() {
     const b64 = await XR8.CanvasScreenshot.takeScreenshot();
     const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
     const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawWatermark(g, c.width, c.height);
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawMist(g, c.width, c.height); drawWatermark(g, c.width, c.height);
     const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.92));
     showFile('shot', blob, `spray-bobo-${++shots}.jpg`, 'My Bobo, sprayed');
   } catch (e) { console.error(e); }
@@ -1036,13 +1268,13 @@ $('b-art').onclick = async () => {
     sil('#15131a', 30); sil('#ffffff', 22);
     g.drawImage(stickerCanvas, ax, ay, aw, ah); g.restore();
     g.fillStyle = '#15131a'; g.font = '400 92px "Permanent Marker", cursive'; g.textAlign = 'center';
-    g.save(); g.translate(Wc / 2, 168); g.rotate(-0.04); g.fillText('MY BOBO', 0, 0); g.restore();
+    g.save(); g.translate(Wc / 2, 168); g.rotate(-0.04); g.fillText(cp.title, 0, 0); g.restore();
     if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 46, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; g.filter = 'brightness(0)'; g.drawImage(LOGO.evade, 54, 50, w, h); g.filter = 'none'; }
     if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 58, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; g.fillStyle = '#15131a'; g.beginPath(); g.roundRect(Wc - w - 74, Hc - h - 74, w + 40, h + 30, 20); g.fill(); g.drawImage(LOGO.act, Wc - w - 54, Hc - h - 59, w, h); }
-    g.fillStyle = '#15131a'; g.font = '700 28px "Space Grotesk", sans-serif'; g.textAlign = 'left'; g.fillText('Sprayed on my EVADE keychain', 54, Hc - 86);
+    g.fillStyle = '#15131a'; g.font = '700 28px "Space Grotesk", sans-serif'; g.textAlign = 'left'; g.fillText(cp.line, 54, Hc - 86);
     const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
-    showFile('art', blob, 'my-bobo.png', 'My Bobo');
-    postEvent('share', { what: 'spray-art' });
+    showFile('art', blob, `my-${cp.k}.png`, cp.k === 'can' ? 'My can' : 'My Bobo');
+    postEvent('share', { what: 'spray-art', piece: cp.k });
   } catch (e) { console.error(e); }
 };
 
@@ -1070,7 +1302,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { flu
 addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, paint, diag };
+if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, paint, diag };
 
 // desktop: a QR to open it on the phone
 if (!TOUCH) {
