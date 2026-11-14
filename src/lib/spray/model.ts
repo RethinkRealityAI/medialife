@@ -35,6 +35,41 @@ export type PaintableTarget = {
   image: string;
 };
 
+// ------------------------------------------------------------------ the scene (things placed around the print)
+//
+// One coordinate system everywhere (the admin scene editor, the Studio, the share viewer, the AR page):
+// the origin is the centre of the 3:4 tracked picture; x runs right, y up, z out of the print towards the
+// viewer; units are MILLIMETRES of the real print. The picture is heightMm tall and heightMm * 3/4 wide.
+// A renderer whose card is H units tall multiplies every length by H / heightMm, so the scene sits and
+// scales exactly as placed. Rotations are degrees, applied in XYZ order.
+
+export type SceneItemKind = "model" | "image" | "video";
+
+export type SceneItem = {
+  id: string;
+  kind: SceneItemKind;
+  name: string;
+  /** /api/spray/file/... path of the asset (GLB, PNG/JPEG/WebP, MP4). */
+  file: string;
+  /** Centre of the item, millimetres from the centre of the print. */
+  pos: [number, number, number];
+  /** Degrees, XYZ order. */
+  rot: [number, number, number];
+  /** Height of the item in millimetres (models: bounding-box height; images and video: the plane's height). */
+  size: number;
+  /** Images and video: width / height of the picture. Models: null. */
+  aspect: number | null;
+  /** Models: the animation clip to loop, or null for none. */
+  clip: string | null;
+  /** Video: play with sound (after a tap); images and models ignore it. */
+  sound: boolean;
+  /** Hidden items stay in the editor but are not shown to anyone. */
+  visible: boolean;
+};
+
+export const SCENE_MAX_ITEMS = 12;
+export const SCENE_MAX_BYTES = { model: 8 * 1024 * 1024, image: 4 * 1024 * 1024, video: 20 * 1024 * 1024 };
+
 export type Paintable = {
   id: string;
   name: string;
@@ -45,6 +80,8 @@ export type Paintable = {
   /** The real print's height in millimetres (sets the AR scale). */
   heightMm: number;
   targets: PaintableTarget[];
+  /** Things placed around the print (models, pictures, video). Missing on older records: treat as []. */
+  scene?: SceneItem[];
   files: {
     /** Colour picture of the front, 3:4. */
     print: string;
