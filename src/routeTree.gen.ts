@@ -39,6 +39,7 @@ import { Route as CreatorHubResetPasswordRouteImport } from './routes/creator-hu
 import { Route as CreatorHubSignInRouteImport } from './routes/creator-hub.sign-in'
 import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
 import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
+import { Route as GiveawayAuthRouteImport } from './routes/giveaway.auth'
 import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
 import { Route as PartnerHubAppRouteImport } from './routes/partner-hub._app'
@@ -58,6 +59,8 @@ import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.in
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
 import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
+import { Route as AdminGiveawaysIndexRouteImport } from './routes/admin.giveaways.index'
+import { Route as AdminGiveawaysCampaignIdRouteImport } from './routes/admin.giveaways.$campaignId'
 import { Route as AdminPartnersIndexRouteImport } from './routes/admin.partners.index'
 import { Route as AdminPartnersPartnerIdRouteImport } from './routes/admin.partners.$partnerId'
 import { Route as AdminPartnersCollateralRouteImport } from './routes/admin.partners.collateral'
@@ -78,6 +81,7 @@ import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
 import { Route as ApiCollectorAlertsDotjsonRouteImport } from './routes/api.collector.alerts[.]json'
 import { Route as ApiCollectorMeRouteImport } from './routes/api.collector.me'
 import { Route as ApiCollectorUnlockRouteImport } from './routes/api.collector.unlock'
+import { Route as ApiGiveawayDiscordRouteImport } from './routes/api.giveaway.discord'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
@@ -99,6 +103,8 @@ import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub.
 import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
 import { Route as CreatorHubAppLaunchKitRouteImport } from './routes/creator-hub._app.launch-kit'
 import { Route as CreatorHubAppLiveRouteImport } from './routes/creator-hub._app.live'
+import { Route as GiveawaySlugIndexRouteImport } from './routes/giveaway.$slug.index'
+import { Route as GiveawaySlugRulesRouteImport } from './routes/giveaway.$slug.rules'
 import { Route as MIdFilenameRouteImport } from './routes/m.$id.$filename'
 import { Route as PartnerHubAppIndexRouteImport } from './routes/partner-hub._app.index'
 import { Route as PartnerHubAppCollateralRouteImport } from './routes/partner-hub._app.collateral'
@@ -130,6 +136,7 @@ import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-c
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as ApiBoboClipsIdRouteImport } from './routes/api.bobo.clips.$id'
 import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
+import { Route as ApiGiveawayDiscordCallbackRouteImport } from './routes/api.giveaway.discord.callback'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
 import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
@@ -333,6 +340,11 @@ const CreatorHubVerifyEmailRoute = CreatorHubVerifyEmailRouteImport.update({
   path: '/creator-hub/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GiveawayAuthRoute = GiveawayAuthRouteImport.update({
+  id: '/giveaway/auth',
+  path: '/giveaway/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GoCodeRoute = GoCodeRouteImport.update({
   id: '/go/$code',
   path: '/go/$code',
@@ -428,6 +440,17 @@ const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
   path: '/creators/$creatorId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGiveawaysIndexRoute = AdminGiveawaysIndexRouteImport.update({
+  id: '/giveaways/',
+  path: '/giveaways/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGiveawaysCampaignIdRoute =
+  AdminGiveawaysCampaignIdRouteImport.update({
+    id: '/giveaways/$campaignId',
+    path: '/giveaways/$campaignId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminPartnersIndexRoute = AdminPartnersIndexRouteImport.update({
   id: '/partners/',
   path: '/partners/',
@@ -527,6 +550,11 @@ const ApiCollectorMeRoute = ApiCollectorMeRouteImport.update({
 const ApiCollectorUnlockRoute = ApiCollectorUnlockRouteImport.update({
   id: '/api/collector/unlock',
   path: '/api/collector/unlock',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGiveawayDiscordRoute = ApiGiveawayDiscordRouteImport.update({
+  id: '/api/giveaway/discord',
+  path: '/api/giveaway/discord',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
@@ -634,6 +662,16 @@ const CreatorHubAppLiveRoute = CreatorHubAppLiveRouteImport.update({
   id: '/live',
   path: '/live',
   getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const GiveawaySlugIndexRoute = GiveawaySlugIndexRouteImport.update({
+  id: '/giveaway/$slug/',
+  path: '/giveaway/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GiveawaySlugRulesRoute = GiveawaySlugRulesRouteImport.update({
+  id: '/giveaway/$slug/rules',
+  path: '/giveaway/$slug/rules',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MIdFilenameRoute = MIdFilenameRouteImport.update({
   id: '/m/$id/$filename',
@@ -792,6 +830,12 @@ const ApiBoboDevSeedRoute = ApiBoboDevSeedRouteImport.update({
   path: '/api/bobo/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGiveawayDiscordCallbackRoute =
+  ApiGiveawayDiscordCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => ApiGiveawayDiscordRoute,
+  } as any)
 const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
   id: '/api/hub/auth/discord',
   path: '/api/hub/auth/discord',
@@ -1102,6 +1146,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub': typeof PartnerHubAppRouteWithChildren
@@ -1121,6 +1166,7 @@ export interface FileRoutesByFullPath {
   '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -1138,6 +1184,7 @@ export interface FileRoutesByFullPath {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1159,6 +1206,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
@@ -1180,9 +1228,11 @@ export interface FileRoutesByFullPath {
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/ugc-hub/': typeof UgcHubAppIndexRoute
@@ -1194,6 +1244,7 @@ export interface FileRoutesByFullPath {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1272,6 +1323,7 @@ export interface FileRoutesByTo {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub/join': typeof PartnerHubJoinRoute
@@ -1287,6 +1339,7 @@ export interface FileRoutesByTo {
   '/technology': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -1304,6 +1357,7 @@ export interface FileRoutesByTo {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1325,6 +1379,7 @@ export interface FileRoutesByTo {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
@@ -1346,9 +1401,11 @@ export interface FileRoutesByTo {
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
   '/admin/creators': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways': typeof AdminGiveawaysIndexRoute
   '/admin/partners': typeof AdminPartnersIndexRoute
   '/admin/shelves': typeof AdminShelvesIndexRoute
   '/admin/ugc': typeof AdminUgcIndexRoute
+  '/giveaway/$slug': typeof GiveawaySlugIndexRoute
   '/partner-hub': typeof PartnerHubAppIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/ugc-hub': typeof UgcHubAppIndexRoute
@@ -1360,6 +1417,7 @@ export interface FileRoutesByTo {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1443,6 +1501,7 @@ export interface FileRoutesById {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub/_app': typeof PartnerHubAppRouteWithChildren
@@ -1462,6 +1521,7 @@ export interface FileRoutesById {
   '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -1479,6 +1539,7 @@ export interface FileRoutesById {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
@@ -1500,6 +1561,7 @@ export interface FileRoutesById {
   '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/_app/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/_app/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/_app/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/_app/links': typeof PartnerHubAppLinksRoute
@@ -1521,9 +1583,11 @@ export interface FileRoutesById {
   '/ugc-hub/_app/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/_app/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/ugc-hub/_app/': typeof UgcHubAppIndexRoute
@@ -1535,6 +1599,7 @@ export interface FileRoutesById {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1619,6 +1684,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub'
@@ -1638,6 +1704,7 @@ export interface FileRouteTypes {
     | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1655,6 +1722,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1676,6 +1744,7 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/collateral'
     | '/partner-hub/links'
@@ -1697,9 +1766,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/upload'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/giveaway/$slug/'
     | '/partner-hub/'
     | '/roblox/portal/'
     | '/ugc-hub/'
@@ -1711,6 +1782,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1789,6 +1861,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub/join'
@@ -1804,6 +1877,7 @@ export interface FileRouteTypes {
     | '/technology'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1821,6 +1895,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -1842,6 +1917,7 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/collateral'
     | '/partner-hub/links'
@@ -1863,9 +1939,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/upload'
     | '/admin/builder'
     | '/admin/creators'
+    | '/admin/giveaways'
     | '/admin/partners'
     | '/admin/shelves'
     | '/admin/ugc'
+    | '/giveaway/$slug'
     | '/partner-hub'
     | '/roblox/portal'
     | '/ugc-hub'
@@ -1877,6 +1955,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1959,6 +2038,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub/_app'
@@ -1978,6 +2058,7 @@ export interface FileRouteTypes {
     | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1995,6 +2076,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
@@ -2016,6 +2098,7 @@ export interface FileRouteTypes {
     | '/creator-hub/_app/experiences'
     | '/creator-hub/_app/launch-kit'
     | '/creator-hub/_app/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/_app/collateral'
     | '/partner-hub/_app/links'
@@ -2037,9 +2120,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/_app/upload'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/giveaway/$slug/'
     | '/partner-hub/_app/'
     | '/roblox/portal/'
     | '/ugc-hub/_app/'
@@ -2051,6 +2136,7 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -2124,6 +2210,7 @@ export interface RootRouteChildren {
   CreatorHubSignInRoute: typeof CreatorHubSignInRoute
   CreatorHubTermsRoute: typeof CreatorHubTermsRoute
   CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
+  GiveawayAuthRoute: typeof GiveawayAuthRoute
   GoCodeRoute: typeof GoCodeRoute
   OverlayTokenRoute: typeof OverlayTokenRoute
   PartnerHubAppRoute: typeof PartnerHubAppRouteWithChildren
@@ -2150,6 +2237,7 @@ export interface RootRouteChildren {
   ApiCollectorAlertsDotjsonRoute: typeof ApiCollectorAlertsDotjsonRoute
   ApiCollectorMeRoute: typeof ApiCollectorMeRoute
   ApiCollectorUnlockRoute: typeof ApiCollectorUnlockRoute
+  ApiGiveawayDiscordRoute: typeof ApiGiveawayDiscordRouteWithChildren
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
@@ -2162,7 +2250,9 @@ export interface RootRouteChildren {
   ApiSprayRealtimeRoute: typeof ApiSprayRealtimeRoute
   ApiSpraySetsRoute: typeof ApiSpraySetsRouteWithChildren
   ApiUgcUploadsRoute: typeof ApiUgcUploadsRouteWithChildren
+  GiveawaySlugRulesRoute: typeof GiveawaySlugRulesRoute
   MIdFilenameRoute: typeof MIdFilenameRoute
+  GiveawaySlugIndexRoute: typeof GiveawaySlugIndexRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
@@ -2400,6 +2490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreatorHubVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/giveaway/auth': {
+      id: '/giveaway/auth'
+      path: '/giveaway/auth'
+      fullPath: '/giveaway/auth'
+      preLoaderRoute: typeof GiveawayAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/go/$code': {
       id: '/go/$code'
       path: '/go/$code'
@@ -2531,6 +2628,20 @@ declare module '@tanstack/react-router' {
       path: '/creators/$creatorId'
       fullPath: '/admin/creators/$creatorId'
       preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/giveaways/': {
+      id: '/admin/giveaways/'
+      path: '/giveaways'
+      fullPath: '/admin/giveaways/'
+      preLoaderRoute: typeof AdminGiveawaysIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/giveaways/$campaignId': {
+      id: '/admin/giveaways/$campaignId'
+      path: '/giveaways/$campaignId'
+      fullPath: '/admin/giveaways/$campaignId'
+      preLoaderRoute: typeof AdminGiveawaysCampaignIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/partners/': {
@@ -2671,6 +2782,13 @@ declare module '@tanstack/react-router' {
       path: '/api/collector/unlock'
       fullPath: '/api/collector/unlock'
       preLoaderRoute: typeof ApiCollectorUnlockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/giveaway/discord': {
+      id: '/api/giveaway/discord'
+      path: '/api/giveaway/discord'
+      fullPath: '/api/giveaway/discord'
+      preLoaderRoute: typeof ApiGiveawayDiscordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/hub/files': {
@@ -2819,6 +2937,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/creator-hub/live'
       preLoaderRoute: typeof CreatorHubAppLiveRouteImport
       parentRoute: typeof CreatorHubAppRoute
+    }
+    '/giveaway/$slug/': {
+      id: '/giveaway/$slug/'
+      path: '/giveaway/$slug'
+      fullPath: '/giveaway/$slug/'
+      preLoaderRoute: typeof GiveawaySlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/giveaway/$slug/rules': {
+      id: '/giveaway/$slug/rules'
+      path: '/giveaway/$slug/rules'
+      fullPath: '/giveaway/$slug/rules'
+      preLoaderRoute: typeof GiveawaySlugRulesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/m/$id/$filename': {
       id: '/m/$id/$filename'
@@ -3036,6 +3168,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/bobo/dev/seed'
       preLoaderRoute: typeof ApiBoboDevSeedRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/giveaway/discord/callback': {
+      id: '/api/giveaway/discord/callback'
+      path: '/callback'
+      fullPath: '/api/giveaway/discord/callback'
+      preLoaderRoute: typeof ApiGiveawayDiscordCallbackRouteImport
+      parentRoute: typeof ApiGiveawayDiscordRoute
     }
     '/api/hub/auth/discord': {
       id: '/api/hub/auth/discord'
@@ -3462,10 +3601,12 @@ interface AdminRouteChildren {
   AdminUgcRoute: typeof AdminUgcRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
+  AdminGiveawaysCampaignIdRoute: typeof AdminGiveawaysCampaignIdRoute
   AdminPartnersPartnerIdRoute: typeof AdminPartnersPartnerIdRoute
   AdminPartnersCollateralRoute: typeof AdminPartnersCollateralRoute
   AdminPartnersKitRoute: typeof AdminPartnersKitRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
+  AdminGiveawaysIndexRoute: typeof AdminGiveawaysIndexRoute
   AdminPartnersIndexRoute: typeof AdminPartnersIndexRoute
 }
 
@@ -3482,10 +3623,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminUgcRoute: AdminUgcRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
+  AdminGiveawaysCampaignIdRoute: AdminGiveawaysCampaignIdRoute,
   AdminPartnersPartnerIdRoute: AdminPartnersPartnerIdRoute,
   AdminPartnersCollateralRoute: AdminPartnersCollateralRoute,
   AdminPartnersKitRoute: AdminPartnersKitRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
+  AdminGiveawaysIndexRoute: AdminGiveawaysIndexRoute,
   AdminPartnersIndexRoute: AdminPartnersIndexRoute,
 }
 
@@ -3602,6 +3745,17 @@ const UgcHubAppRouteChildren: UgcHubAppRouteChildren = {
 const UgcHubAppRouteWithChildren = UgcHubAppRoute._addFileChildren(
   UgcHubAppRouteChildren,
 )
+
+interface ApiGiveawayDiscordRouteChildren {
+  ApiGiveawayDiscordCallbackRoute: typeof ApiGiveawayDiscordCallbackRoute
+}
+
+const ApiGiveawayDiscordRouteChildren: ApiGiveawayDiscordRouteChildren = {
+  ApiGiveawayDiscordCallbackRoute: ApiGiveawayDiscordCallbackRoute,
+}
+
+const ApiGiveawayDiscordRouteWithChildren =
+  ApiGiveawayDiscordRoute._addFileChildren(ApiGiveawayDiscordRouteChildren)
 
 interface ApiHubFilesCreatorIdFileIdRouteChildren {
   ApiHubFilesCreatorIdFileIdCompleteRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRoute
@@ -3853,6 +4007,7 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorHubSignInRoute: CreatorHubSignInRoute,
   CreatorHubTermsRoute: CreatorHubTermsRoute,
   CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
+  GiveawayAuthRoute: GiveawayAuthRoute,
   GoCodeRoute: GoCodeRoute,
   OverlayTokenRoute: OverlayTokenRoute,
   PartnerHubAppRoute: PartnerHubAppRouteWithChildren,
@@ -3879,6 +4034,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCollectorAlertsDotjsonRoute: ApiCollectorAlertsDotjsonRoute,
   ApiCollectorMeRoute: ApiCollectorMeRoute,
   ApiCollectorUnlockRoute: ApiCollectorUnlockRoute,
+  ApiGiveawayDiscordRoute: ApiGiveawayDiscordRouteWithChildren,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
@@ -3891,7 +4047,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSprayRealtimeRoute: ApiSprayRealtimeRoute,
   ApiSpraySetsRoute: ApiSpraySetsRouteWithChildren,
   ApiUgcUploadsRoute: ApiUgcUploadsRouteWithChildren,
+  GiveawaySlugRulesRoute: GiveawaySlugRulesRoute,
   MIdFilenameRoute: MIdFilenameRoute,
+  GiveawaySlugIndexRoute: GiveawaySlugIndexRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,

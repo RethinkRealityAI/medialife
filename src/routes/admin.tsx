@@ -12,6 +12,7 @@ import {
   Boxes,
   ChevronRight,
   Clapperboard,
+  Gift,
   Handshake,
   House,
   Images,
@@ -93,6 +94,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
       { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
+      { to: "/admin/giveaways", label: "Giveaways", icon: Gift, tone: "rose" },
       {
         to: "/admin/collector",
         label: "Collector Hub",
