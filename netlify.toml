@@ -57,6 +57,28 @@
   to = "/evade/where-is-bobo/"
   status = 301
 
+# Spray Studio (the Spray Bobo web companion, spray-studio/, built to public/spray/): a single-page app,
+# so its rooms resolve to its one document. /sb/<id> is a creation's short share link (the QR target).
+[[redirects]]
+  from = "/spray/studio/*"
+  to = "/spray/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/spray/join/*"
+  to = "/spray/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/sb/*"
+  to = "/evade/spray-bobo/view/index.html"
+  status = 200
+
+[[headers]]
+  for = "/spray/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
 # src/server.ts instead. Keep the two lists in sync.
