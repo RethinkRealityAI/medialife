@@ -34,7 +34,11 @@ function Login() {
     try {
       const r = await adminLogin({ data: { password } });
       if (r.ok) {
-        // only follow same-site paths under /admin
+        // only follow same-site paths under /admin, or back to the Spray Studio (a static app: full load)
+        if (next && /^\/spray\/[\w\-/?=&%.]*$/.test(next)) {
+          window.location.assign(next);
+          return;
+        }
         const target = next && next.startsWith("/admin") ? next : "/admin";
         await router.navigate({ href: target });
       } else setState(r.error === "wrong" ? "wrong" : "error");

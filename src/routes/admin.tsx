@@ -19,6 +19,7 @@ import {
   Menu,
   Presentation,
   Sparkles,
+  SprayCan,
   Store,
   Users,
   type LucideIcon,
@@ -89,6 +90,7 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
         icon: Gem,
         tone: "sky",
       },
+      { to: "/admin/spray", label: "Spray Bobo", short: "Spray", icon: SprayCan, tone: "amber" },
     ],
   },
   {

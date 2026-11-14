@@ -7,6 +7,9 @@
   # Pin it to Netlify explicitly so the build never depends on auto-detection.
   NITRO_PRESET = "netlify"
   NODE_VERSION = "22"
+  # The server bundle (three.js, recharts, the admin pages) peaks close to Node's default 2 GB heap while
+  # rendering chunks; give the build room so it never dies there.
+  NODE_OPTIONS = "--max-old-space-size=4096"
   NPM_FLAGS = "--no-audit --no-fund"
 
 # Canonical host: apex. www 301s to the apex so we have one indexable URL.
@@ -56,6 +59,28 @@
   from = "/bobo"
   to = "/evade/where-is-bobo/"
   status = 301
+
+# Spray Studio (the Spray Bobo web companion, spray-studio/, built to public/spray/): a single-page app,
+# so its rooms resolve to its one document. /sb/<id> is a creation's short share link (the QR target).
+[[redirects]]
+  from = "/spray/studio/*"
+  to = "/spray/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/spray/join/*"
+  to = "/spray/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/sb/*"
+  to = "/evade/spray-bobo/view/index.html"
+  status = 200
+
+[[headers]]
+  for = "/spray/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
 
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
