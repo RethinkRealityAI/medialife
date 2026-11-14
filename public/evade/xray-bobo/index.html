@@ -58,6 +58,8 @@
       <img class="evade" src="/brand/evade-logo.webp" alt="EVADE" width="104" height="30">
       <span class="tag">X-RAY</span>
     </div>
+    <!-- balls knocked out of the box -->
+    <div id="score" hidden aria-live="polite"><b id="score-n">0</b><span>out</span><small id="score-b">Best!</small></div>
     <div id="side">
       <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
@@ -77,7 +79,13 @@
 
     <!-- bottom row: badge left, the shutter always in the bottom centre -->
     <div id="bottom">
-      <div class="b-left"><img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58"></div>
+      <div class="b-left">
+        <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+        <button id="b-ball" class="act" type="button" aria-label="Throw a ball into the box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M4.6 9.5c3.2 1.4 11.6 1.4 14.8 0M4.6 14.5c3.2-1.4 11.6-1.4 14.8 0"/></svg>
+          <span>Ball</span>
+        </button>
+      </div>
       <div id="shoot">
         <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
           <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
@@ -85,7 +93,12 @@
         <small>Tap: photo · Hold: video</small>
         <span id="rec-time" hidden>0:00</span>
       </div>
-      <div class="b-right"></div>
+      <div class="b-right">
+        <button id="b-swipe" class="act" type="button" aria-label="Make Bobo swipe at the balls">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><ellipse cx="12" cy="15.5" rx="4.6" ry="3.8"/><circle cx="6" cy="10" r="2"/><circle cx="9.6" cy="6.6" r="2"/><circle cx="14.4" cy="6.6" r="2"/><circle cx="18" cy="10" r="2"/></svg>
+          <span id="b-swipe-t">Swipe</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -137,7 +150,8 @@
       <ol class="how-steps">
         <li><b>Point at a charm.</b> Hold Bobo or the Eclipse can about a hand from the camera (either side works), or step back until Bobo on your tee fills the screen.</li>
         <li><b>Look inside.</b> The print opens into a box. Move your phone around it and look in from the sides: what's inside floats in the middle.</li>
-        <li><b>Scan it.</b> Switch between Scan, X-ray and Skin: Bobo shows his bones, the can its soda. Tap to say hi or fizz the can, swipe to turn it.</li>
+        <li><b>Scan it.</b> Switch between Scan, X-ray and Skin: Bobo shows his bones, the can its soda. Swipe the screen to turn it.</li>
+        <li><b>Play.</b> Tap the box or press Ball to throw balls in, then press Swipe (or Fizz on the can) to knock them out. Each one out scores, several in one go is a combo. Shake the phone to rattle the box.</li>
       </ol>
       <button id="b-go" class="primary">Got it</button>
     </div>

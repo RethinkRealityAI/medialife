@@ -10,7 +10,7 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   (`renderOrder -10`) with `colorWrite: false`, so it writes depth only: the camera picture still shows, but anything
   behind the print plane is hidden except through the window.
 - Everything else sits behind the print plane: five flat walls with a grid (`box`, built one unit deep and scaled to
-  the depth), the X-ray film on the back wall, floating specks, Bobo. Moving the phone slides them against the
+  the depth), floating specks, Bobo. Moving the phone slides them against the
   window's edge, which is the parallax.
 - Not stencil: the 8th Wall engine creates the WebGL context itself without a stencil buffer, so a stencil portal
   would silently draw nothing. Depth-only needs nothing from the context.
@@ -18,7 +18,7 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   (`/evade/spray-bobo/art/cat-outline.json`). The cyan rim is a flat ribbon just outside the window.
 - Opening (`makeShatter`, one instanced draw): the picture as a grid of tiles over the real print (identical at
   first). From the middle out each tile turns digital (pixelates, posterises into scanner cyan with a cyan edge),
-  lifts off, flies outwards and turns, and dissolves block by block, uncovering the box as the walls grow.
+  lifts off, flies outwards and turns, and dissolves block by block, uncovering the box as the walls grow. It lasts `OPEN_S` (3.6 s; Dapo asked for at least 3).
 - Pieces (`PIECES`): Bobo (`kc-bobo`, `kc-bobo-l`) with Bobo floating inside, and the Eclipse can (`kc-can`,
   `kc-can-back`) with the can inside; in X-ray the can shows its soda with bubbles (tap: a spin and a fizz). The 3D
   Bobo is mirrored so his tail is on the same side as the print (as in Off the Chain).
@@ -36,13 +36,26 @@ PR #47 rules: the scene is only drawn where the print is tracked now; a drop hol
 motion sensors say the phone is still (120 ms without sensors); a target the engine stops updating counts as lost
 after 3 of its usual update gaps. Lost for 2.5 s: the box opens again with its intro.
 
+## Balls and the paw swipe (game)
+- Physics is a small custom sphere solver in `main.js` (`tickBalls`), not Rapier: the scene is one box, a round bumper
+  (Bobo or the can) and up to 10 balls, which a few dozen lines handle exactly, while Rapier's WASM would add about
+  2 MB to a page that has to load fast on a phone. The OSS 8th Wall engine has no physics of its own.
+- Everything runs in the print's own frame (x across, y up the print, z out of it), 3 substeps a frame, toy gravity
+  `G = 7 H`. Walls, floor (with friction), back wall, Bobo as a sphere, ball against ball.
+- Tap the box or press Ball: a ball is thrown from the phone on an arc that lands where you tapped, mid-box. Balls that
+  miss the window bounce off the print (rim shot). A loose ball stays in the box: it rolls back off the window's lip.
+- Swipe (Fizz on the can): Bobo turns to the nearest ball, lunges and bats every ball near his paw out through the
+  window. Each ball out scores, several within 1.2 s is a combo, best score kept in localStorage. Milestones at 5, 10,
+  25, 50. The can's Fizz blasts every ball out at once. Shaking the phone rattles the balls.
+
 ## Controls
-View pill above the shutter: Scan / X-ray / Skin. Tap Bobo: a wave or tail wag and a fresh sweep. Swipe: turn him.
+View pill above the shutter: Scan / X-ray / Skin. Ball button left of the shutter, Swipe right of it (both only once
+the box is open; the Activated badge hides then). Tap the box: throw a ball. Drag: turn Bobo.
 Shutter bottom centre (tap photo, hold video; the Cola Run recorder, source `xray-bobo`). Options: window shape,
 depth (Shallow / Deep / Deeper), sound, how it works, test picture link. Settings are kept in localStorage.
 
 ## Switches
-`?test` exposes `window.__xr`; `?nolog` sends nothing; `?dpr=2` sharper drawing; `?macro=0` standard iPhone camera.
+`?test` exposes `window.__xr` (`game`, `throwBall`, `doSwipe` for the ball test); `?nolog` sends nothing; `?dpr=2` sharper drawing; `?macro=0` standard iPhone camera.
 Test logs go to `/api/ar/kc-diag` (records with `page: 'xray-bobo'`) on previews and local dev, or with `?diag`.
 
 ## Tested

@@ -87,11 +87,20 @@ const sound = {
     const f2 = this.ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = lp;
     s.connect(f1).connect(f2).connect(g).connect(this.master); s.start(this.ctx.currentTime + when);
   },
-  open() { this.noise(0.9, 0.09, 200, 2200); this.tone(180, 60, 0.9, 0.14, 'sine'); this.tone(900, 1800, 0.25, 0.03, 'triangle', 0.6); },
+  open() {   // spans the 3.6 s break-up: a low crack, digital blips as the tiles fly, a rising sweep as the box opens
+    this.noise(0.9, 0.09, 200, 2200); this.tone(180, 60, 0.9, 0.14, 'sine');
+    for (let i = 0; i < 10; i++) this.tone(1200 + Math.random() * 1400, 900 + Math.random() * 900, 0.05, 0.025, 'square', 0.4 + i * 0.22);
+    this.noise(1.6, 0.04, 2500, 9000, 0.6); this.tone(220, 660, 1.4, 0.05, 'sine', 1.9); this.tone(900, 1800, 0.25, 0.03, 'triangle', 3.2);
+  },
   beep() { this.tone(1760, 1760, 0.06, 0.035, 'square'); },
   mew() { this.tone(620, 880, 0.14, 0.08, 'triangle'); this.tone(880, 560, 0.22, 0.08, 'triangle', 0.13); },
   fizz() { this.noise(0.6, 0.12, 3000, 12000); this.tone(1400, 2600, 0.12, 0.03, 'sine', 0.05); },
   click() { this.tone(1200, 900, 0.05, 0.05, 'triangle'); },
+  bounce(v) { if (v > 0.15) this.tone(520 + v * 500, 300 + v * 200, 0.07, Math.min(0.09, 0.02 + v * 0.05), 'triangle'); },
+  throwIt() { this.noise(0.18, 0.05, 1500, 6000); },
+  swat() { this.noise(0.22, 0.12, 700, 5000); this.tone(300, 900, 0.16, 0.06, 'triangle'); },
+  whiff() { this.noise(0.2, 0.06, 900, 3000); },
+  score(n) { [1047, 1319, 1568, 2093].slice(0, 2 + Math.min(n, 2)).forEach((f, i) => this.tone(f, f, 0.14, 0.06, 'triangle', i * 0.07)); },
   shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
 };
 
@@ -126,7 +135,8 @@ function save(P) { const v = { win, W, H, occluder, rim, box, walls, lid, specks
 function load(P) { ({ win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root } = P); }
 function usePiece(P) {
   if (cp === P) return; if (cp) { save(cp); cp.root.visible = false; }
-  cp = P; load(P); root.visible = true; open.dWant = H * BOX.depthK; open.k = 0; open.target = 1; open.depth = 0;
+  clearBalls(); cp = P; load(P); root.visible = true;
+  $('b-swipe-t').textContent = P.k === 'can' ? 'Fizz' : 'Swipe'; open.dWant = H * BOX.depthK; open.k = 0; open.target = 1; open.depth = 0;
 }
 const skinPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // the skin shows below the scan line
 const rayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);     // the X-ray shows above it
@@ -477,10 +487,10 @@ function tickBubbles(dt) {
     b.position.set(Math.cos(d.a + d.y * 2) * d.d, (d.y - 0.5) * u.h, Math.sin(d.a + d.y * 2) * d.d); b.scale.setScalar(d.s * (0.7 + d.y * 0.6));
   }
 }
-function play(name, { loop = true, fade = 0.3, onDone } = {}) {
+function play(name, { loop = true, fade = 0.3, onDone, speed = 1 } = {}) {
   const clip = clips[name]; if (!clip || !mixer) return;
   const next = mixer.clipAction(clip);
-  next.reset(); next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+  next.reset(); next.timeScale = speed; next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
   next.clampWhenFinished = !loop; next.enabled = true; next.setEffectiveWeight(1);
   if (current && current !== next && fade > 0) next.crossFadeFrom(current, fade, false); else if (current && current !== next) current.stop();
   next.play(); current = next;
@@ -549,6 +559,7 @@ function onMotion(e) {
   if (turn == null && push == null) return;
   const now = performance.now(); motion.seen = now;
   if ((turn != null && turn > STILL_DEG) || (push != null && push > STILL_ACC)) motion.moved = now;
+  if (push != null && push > 14) shakeBox(push);
 }
 const pose = { state: 'none', lostAt: 0, snap: true, last: null, valid: false, goneAt: 0 };
 function updatePose(now) {
@@ -616,7 +627,7 @@ canvas_on('pointermove', (e) => {
   const dx = e.clientX - gest.lx; gest.lx = e.clientX; gest.moved += Math.abs(dx);
   life.yawV = dx / innerWidth * Math.PI * 2.4 / Math.max(1 / 60, 0.016); life.yaw += dx / innerWidth * Math.PI * 2.4;
 });
-canvas_on('pointerup', (e) => { if (e.pointerId !== gest.id) return; gest.id = null; life.drag = false; if (gest.moved < 12 && performance.now() - gest.t < 400) poke(); });
+canvas_on('pointerup', (e) => { if (e.pointerId !== gest.id) return; gest.id = null; life.drag = false; if (gest.moved < 12 && performance.now() - gest.t < 400) throwBall(e.clientX, e.clientY); });
 canvas_on('pointercancel', () => { gest.id = null; life.drag = false; });
 function canvas_on(ev, fn) { $('cam').addEventListener(ev, fn); }
 
@@ -633,7 +644,7 @@ function tick(dt) {
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
   // the box opening: the print breaks up into digital tiles, the walls grow, then Bobo arrives
-  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.6 : 1.7));
+  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.6 : OPEN_S));
   const k = open.k, ek = easeInOut(clamp(k / 0.7, 0, 1));
   open.depth += (open.dWant * ek - open.depth) * (k < 1 ? 1 : clamp(dt * 6, 0, 1));   // depth changes glide
   const D = Math.max(open.depth, 0.0005);
@@ -646,15 +657,172 @@ function tick(dt) {
   life.t += dt;
   if (!life.drag) { life.yawV *= Math.pow(0.04, dt); life.yaw += life.yawV * dt * 0.02; life.yaw *= Math.pow(0.35, dt); }
   bob.position.set(0, Math.sin(life.t * 1.4) * H * 0.025, -Math.min(D * lerp(0.92, 0.5, kb), D * 0.92 - H * 0.2, H * 0.6));   // the middle, but never so deep he hides behind the rim
-  bob.rotation.set(Math.sin(life.t * 0.7) * 0.05, life.yaw + Math.sin(life.t * 0.45) * 0.28, Math.sin(life.t * 0.9) * 0.03);
+  tickSwipe(dt); bob.position.add(swipe.lunge);
+  const sway = Math.sin(life.t * 0.45) * 0.28 * (1 - swipe.face);
+  bob.rotation.set(Math.sin(life.t * 0.7) * 0.05, life.yaw + sway + swipe.yaw * swipe.face, Math.sin(life.t * 0.9) * 0.03);
   bob.scale.setScalar(lerp(0.55, 1, kb) * Math.min(1, D / (H * 0.62)) || 0.001);   // a shallow box: a smaller Bobo, so he never pokes out
-  mixer.update(dt); tickBubbles(dt);
+  mixer.update(dt); tickBubbles(dt); tickBalls(dt);
   tickSpecks(dt);
   F.updateMatrixWorld(true);
   tickScan(dt);
   sound.humTo(pose.valid && k > 0.8 && view !== 'skin' ? 1 : 0);
   recTick();
   diag.fpsN++;
+}
+
+
+// ---------------------------------------------------------------- balls: throw them in, bat them out
+// A tiny sphere solver, in the box's own frame (metres of the print, y up, the box from z = 0 back to z = -D).
+// The open-source 8th Wall engine has no physics, and a dozen balls in a box with one moving paw don't need a
+// physics engine (Rapier's WASM would add a 2 MB download for what is ~150 lines here). Gravity is the print's
+// "down" (-y): right for a charm held up or a tee on a standing person.
+// - Tap the screen: a ball is thrown from the phone to where you tapped, in an arc. It drops into the box through
+//   the window, or bounces off the print around it (a rim shot).
+// - Swipe (Bobo) / Fizz (the can): Bobo turns to the nearest ball, lunges and swipes; a ball in reach is batted
+//   out through the window into the room. The can blasts a fizz geyser that throws every ball up and out.
+// - Shake the phone: the balls rattle around.
+// Each ball knocked out scores; several from one swipe is a combo. The best score is kept on the phone.
+const BALL_COLS = [0xf6c344, 0x4fd6e8, 0xe85bd8, 0xffffff, 0x3f9be6];
+const OPEN_S = 3.6;   // the digital break-up and the box opening, in seconds (Dapo: at least 3 s)
+const MAX_BALLS = 10, E_WALL = 0.62, E_LIP = 0.3, E_BOBO = 0.75;
+const balls = [], ballGroup = new THREE.Group(); F.add(ballGroup);
+let ballGeo = null, ballN = 0;
+const game = { score: 0, best: +store.get('best', 0) || 0, combo: 0, comboT: 0, thrown: 0, swiped: 0 };
+const G = () => H * 7;                         // toy gravity: a ball drops the box's height in about half a second
+const R = () => H * 0.055;
+function insideWindow(x, y) {                   // through the window? (the cut-out: point in the die-cut polygon)
+  if (BOX.shape !== 'cat') return Math.abs(x) < W / 2 - R() * 0.6 && Math.abs(y) < H / 2 - R() * 0.6;
+  const pts = windowPoints('cat'), w = win, c = Math.cos(-w.rotation.z), sn = Math.sin(-w.rotation.z);
+  const lx = ((x - w.position.x) * c - (y - w.position.y) * sn) / w.scale.x, ly = ((x - w.position.x) * sn + (y - w.position.y) * c) / w.scale.x;
+  let inn = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a.y > ly) !== (b.y > ly) && lx < (b.x - a.x) * (ly - a.y) / (b.y - a.y) + a.x) inn = !inn; }
+  return inn;
+}
+function addBall(p, v) {
+  if (!ballGeo) ballGeo = new THREE.SphereGeometry(1, 20, 14);
+  if (balls.length >= MAX_BALLS) removeBall(balls[0]);
+  const m = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: BALL_COLS[ballN++ % BALL_COLS.length], roughness: 0.35, metalness: 0, transparent: true }));
+  m.scale.setScalar(R()); m.renderOrder = 6; m.frustumCulled = false; ballGroup.add(m);
+  const b = { m, p: p.clone(), v: v.clone(), inside: p.z < 0, age: 0, outAt: 0, swatted: 0 };
+  balls.push(b); return b;
+}
+function removeBall(b) { const i = balls.indexOf(b); if (i >= 0) balls.splice(i, 1); ballGroup.remove(b.m); b.m.material.dispose(); }
+function clearBalls() { while (balls.length) removeBall(balls[0]); }
+const _o = new THREE.Vector3(), _d = new THREE.Vector3(), _nd = new THREE.Vector2(), _ray = new THREE.Raycaster();
+function throwBall(x, y) {
+  if (!A.visible || open.k < 0.9) return;
+  const r = canvas.getBoundingClientRect(); _nd.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  _ray.setFromCamera(_nd, camera); F.updateMatrixWorld(true);
+  _o.copy(_ray.ray.origin); F.worldToLocal(_o);
+  _d.copy(_ray.ray.origin).add(_ray.ray.direction); F.worldToLocal(_d); _d.sub(_o).normalize();
+  if (_d.z > -0.05) return;                     // pointing away from the print
+  const D = open.depth, t = (-D * 0.45 - _o.z) / _d.z, aim = _o.clone().addScaledVector(_d, t);   // where the tap points, mid-box
+  const p0 = _o.clone().addScaledVector(_d, t * 0.45), T = 0.5;
+  const v = aim.clone().sub(p0).divideScalar(T); v.y += 0.5 * G() * T;   // an arc that lands on the aim point
+  addBall(p0, v); sound.throwIt(); buzz(6); game.thrown++;
+  if (game.thrown === 1) setTimeout(() => hint(cp.k === 'can' ? 'Hit Fizz to blast it out!' : 'Hit Swipe and Bobo bats it out!'), 700);
+}
+function shakeBox(m) {
+  if (!A.visible || performance.now() - (shakeBox.at || 0) < 300) return; shakeBox.at = performance.now();
+  for (const b of balls) if (b.inside) b.v.add(new THREE.Vector3((Math.random() - 0.5) * H * 3, H * (1.5 + Math.random() * 2), (Math.random() - 0.3) * H * 2));
+}
+// Bobo's swipe: face the nearest ball, lunge at it, bat it out
+const swipe = { t: -1, yaw: 0, face: 0, lunge: new THREE.Vector3(), aim: new THREE.Vector3(), hit: 0 };
+function doSwipe() {
+  if (!A.visible || open.k < 0.9 || swipe.t >= 0) return;
+  buzz(10);
+  if (cp.k === 'can') { fizzBlast(); return; }
+  const c = bob.position, near = balls.filter((b) => b.inside).sort((a, b) => a.p.distanceToSquared(c) - b.p.distanceToSquared(c))[0];
+  swipe.aim.copy(near ? near.p : c.clone().add(new THREE.Vector3(0, 0, H * 0.3)));
+  swipe.yaw = clamp(Math.atan2(swipe.aim.x - c.x, Math.max(swipe.aim.z - c.z, H * 0.05)), -1.3, 1.3);
+  swipe.t = 0; swipe.hit = 0; life.busy = true; game.swiped++; if (game.swiped === 1) hint('');
+  play('PawRaise', { loop: false, fade: 0.1, speed: 1.8, onDone: () => { life.busy = false; play('Sit', { fade: 0.3 }); } });
+}
+function tickSwipe(dt) {
+  if (swipe.t < 0) { swipe.face = Math.max(0, swipe.face - dt * 2.5); swipe.lunge.multiplyScalar(Math.pow(0.02, dt)); return; }
+  swipe.t += dt; swipe.face = Math.min(1, swipe.face + dt * 8);
+  const k = swipe.t / 0.6, reach = Math.sin(Math.min(k, 1) * Math.PI);   // out and back in 0.6 s
+  const to = swipe.aim.clone().sub(bob.position); to.y *= 0.5; const len = Math.min(to.length(), H * 0.22);
+  swipe.lunge.copy(to.setLength(len || 0.0001)).multiplyScalar(reach);
+  if (k > 0.2 && k < 0.75) {                    // the paw is out: anything in reach gets batted
+    const c = bob.position.clone().add(swipe.lunge), rr = H * 0.4 * bob.scale.x;   // round the paw, generous so a swipe feels fair
+    for (const b of balls) {
+      if (!b.inside || b.swatted > 0 || b.p.distanceTo(c) > rr + R()) continue;
+      const dir = b.p.clone().sub(c).normalize();
+      b.v.set(dir.x * H * 2 + (Math.random() - 0.5) * H, H * (2.2 + Math.random()), H * (3.6 + Math.random() * 0.8));
+      b.swatted = 1.2; swipe.hit++;
+      sound.swat(); buzz([14, 30, 14]);
+    }
+  }
+  if (k >= 1) { if (!swipe.hit) sound.whiff(); swipe.t = -1; }
+}
+function fizzBlast() {
+  sound.fizz(); fizzBurst(); life.yawV += 120; swipe.t = -1;
+  let n = 0;
+  for (const b of balls) if (b.inside) { b.v.set((Math.random() - 0.5) * H * 2, H * (3 + Math.random() * 1.2), H * (3 + Math.random())); b.swatted = 1.2; n++; }
+  if (!n) hint('Tap to throw a ball in first');
+}
+function scored(b) {
+  const now = clock.t;
+  game.combo = now - game.comboT < 1.2 ? game.combo + 1 : 1; game.comboT = now;
+  game.score++; if (game.score > game.best) { game.best = game.score; store.set('best', game.best); }
+  sound.score(game.combo); updateScore();
+  popWord(game.combo > 1 ? `x${game.combo} COMBO!` : 'OUT!', b);
+  if ([5, 10, 25, 50].includes(game.score)) setTimeout(() => popWord(`${game.score} BOUNCED OUT!`, null), 500);
+  postEvent('custom', { action: 'xray-ball-out', score: game.score });
+}
+function updateScore() {
+  const el = $('score'); el.hidden = false;
+  $('score-n').textContent = String(game.score); $('score-b').textContent = game.best > game.score ? `Best ${game.best}` : 'Best!';
+  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+}
+function popWord(text, b) {
+  const el = document.createElement('div'); el.className = 'pop-word'; el.textContent = text;
+  let x = innerWidth / 2, y = innerHeight * 0.3;
+  if (b) { const w = b.m.getWorldPosition(new THREE.Vector3()).project(camera); x = clamp((w.x + 1) / 2 * innerWidth, 70, innerWidth - 70); y = clamp((1 - w.y) / 2 * innerHeight, 90, innerHeight - 220); }
+  y -= document.querySelectorAll('#hud .pop-word').length * 30;   // several at once stack instead of overlapping
+  el.style.left = x + 'px'; el.style.top = y + 'px'; $('hud').appendChild(el); setTimeout(() => el.remove(), 1000);
+}
+function tickBalls(dt) {
+  if (!balls.length) return;
+  const D = Math.max(open.depth, 0.001), r = R(), g = G(), hw = W / 2 - r, hh = H / 2 - r;
+  const bc = bob.position.clone().add(new THREE.Vector3(0, H * 0.02, 0)), br = H * 0.21 * bob.scale.x;
+  const n = 3, h = dt / n;
+  for (let s = 0; s < n; s++) {
+    for (const b of balls) {
+      const pz = b.p.z; b.v.y -= g * h; b.p.addScaledVector(b.v, h);
+      if (b.inside) {
+        if (b.p.x < -hw) { b.p.x = -hw; if (b.v.x < 0) { sound.bounce(-b.v.x / H / 3); b.v.x *= -E_WALL; } }
+        if (b.p.x > hw) { b.p.x = hw; if (b.v.x > 0) { sound.bounce(b.v.x / H / 3); b.v.x *= -E_WALL; } }
+        if (b.p.y > hh) { b.p.y = hh; if (b.v.y > 0) b.v.y *= -E_WALL; }
+        if (b.p.y < -hh) { b.p.y = -hh; if (b.v.y < 0) { sound.bounce(-b.v.y / H / 3); b.v.y *= -E_WALL; b.v.x *= 0.96; b.v.z *= 0.96; } }
+        if (b.p.z < -D + r) { b.p.z = -D + r; if (b.v.z < 0) { sound.bounce(-b.v.z / H / 3); b.v.z *= -E_WALL; } }
+        const dc = b.p.clone().sub(bc), dl = dc.length();   // Bobo (or the can) is a round bumper
+        if (dl < br + r && dl > 1e-6) { dc.divideScalar(dl); b.p.copy(bc).addScaledVector(dc, br + r); const vn = b.v.dot(dc); if (vn < 0) { b.v.addScaledVector(dc, -(1 + E_BOBO) * vn); sound.bounce(-vn / H / 3); } }
+        if (!b.swatted && b.p.z > -r) {             // the box keeps a loose ball: it rolls back off the lip of the window
+          b.p.z = -r; if (b.v.z > 0) b.v.z *= -E_LIP;
+        } else if (b.p.z > 0) {                     // a batted ball flies out through the window
+          if (insideWindow(b.p.x, b.p.y)) { b.inside = false; b.outAt = clock.t; scored(b); }
+          else { b.p.z = 0; if (b.v.z > 0) b.v.z *= -E_WALL; }   // it hit the inside of the rim
+        }
+      } else if (pz >= 0 && b.p.z < 0) {            // outside, crossing the print plane on the way in
+        if (insideWindow(b.p.x, b.p.y)) { b.inside = true; b.outAt = 0; b.age = 0; }
+        else { b.p.z = 0.0001; b.v.z *= -E_WALL; sound.bounce(-b.v.z / H / 3); }   // a rim shot off the print
+      }
+    }
+    for (let i = 0; i < balls.length; i++) for (let j = i + 1; j < balls.length; j++) {   // ball against ball
+      const a = balls[i], c = balls[j]; if (a.inside !== c.inside) continue;
+      const d = c.p.clone().sub(a.p), l = d.length(); if (l >= 2 * r || l < 1e-6) continue;
+      d.divideScalar(l); const push = (2 * r - l) / 2; a.p.addScaledVector(d, -push); c.p.addScaledVector(d, push);
+      const rel = c.v.clone().sub(a.v).dot(d); if (rel < 0) { a.v.addScaledVector(d, rel * 0.9); c.v.addScaledVector(d, -rel * 0.9); }
+    }
+  }
+  for (const b of [...balls]) {
+    b.age += dt; b.swatted = Math.max(0, b.swatted - dt);
+    b.m.position.copy(b.p);
+    const gone = !b.inside && (b.outAt ? clock.t - b.outAt : b.age) > 2.2;
+    b.m.material.opacity = b.inside ? 1 : clamp(1 - ((b.outAt ? clock.t - b.outAt : b.age) - 1.6) / 0.6, 0, 1);
+    if (gone || b.p.length() > H * 12) removeBall(b);
+  }
 }
 
 // ---------------------------------------------------------------- UI
@@ -865,6 +1033,8 @@ sh.addEventListener('pointerup', () => {
 sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
 sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); takePhoto(); } });
 $('shot-close').onclick = () => { $('shot').hidden = true; };
+$('b-swipe').onclick = () => doSwipe();
+$('b-ball').onclick = () => { const r = canvas.getBoundingClientRect(); throwBall(r.left + r.width / 2 + (Math.random() - 0.5) * 40, r.top + r.height * 0.44); };
 
 // ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
 const SID = 'xr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
@@ -893,6 +1063,7 @@ addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 2
 if (params.has('test')) window.__xr = {
   get pose() { return pose.state; }, get mode() { return mode; }, get open() { return open.k; }, get depth() { return open.depth; }, get side() { return side; },
   get view() { return view; }, setView, poke, diag,
+  get game() { return { ...game, balls: balls.length, inside: balls.filter((b) => b.inside).length }; }, throwBall, doSwipe,
   replay: (k = 0, hold = false) => { open.k = k; if (!k) open.depth = 0; open.target = hold ? k : 1; },
   target: () => { const t = side && TS[side]; return t ? { name: side, tracked: t.tracked, p: t.p.toArray(), s: t.s } : null; },
   // the screen box of the window's corners and of Bobo (to check he stays inside the window)
