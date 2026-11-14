@@ -20,7 +20,8 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   first). From the middle out each tile turns digital (pixelates, posterises into scanner cyan with a cyan edge),
   lifts off, flies outwards and turns, and dissolves block by block, uncovering the box as the walls grow. It lasts `OPEN_S` (3.6 s; Dapo asked for at least 3).
 - The can is different (Dapo 2026-11-14: "truly look like we X-rayed inside of it"): no box and no grid. The window
-  is the drawn can traced exactly (Spray Bobo's can-outline.json: lid, pull tab, shoulders, body, base). Behind it is
+  is the whole acrylic charm (`can-charm-outline.json`, traced per picture from the keychain-ar portal masks, loop
+  hole filled, grown 2.5 % / 1.2 % so no acrylic sliver stays; Dapo: the whole target opens, not just the drawn can). Behind it is
   the back half of the can, a lathe whose radius at each height is the outline's widest half-width (`canTube`, 41
   samples), so it covers the window, tab included. Brushed aluminium lit by a lamp inside the can so the round back
   reads, a domed base and bead grooves. Inside: the soda (`buildCan`: tinted wall, see-through front face, surface, bubbles).

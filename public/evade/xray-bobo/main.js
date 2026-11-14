@@ -38,7 +38,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem('xray-bobo-' + 
 // The cat's back picture is the print seen through the acrylic (mirrored); the can's back is a different print.
 const PIECES = {
   bobo: { k: 'bobo', name: 'Bobo', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, outline: 'cat-outline.json', glb: 'bobo-keychain.glb' },
-  can: { k: 'can', name: 'the can', targets: ['kc-can', 'kc-can-back'], flip: {}, outline: 'can-outline.json', glb: null },   // no model: you look inside the can itself
+  can: { k: 'can', name: 'the can', targets: ['kc-can', 'kc-can-back'], flip: {}, outline: 'can-outline.json', glb: null, charm: 'can-charm-outline.json' },   // no model: you look inside the can itself
 };
 const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P;
 const TARGETS = Object.keys(PIECE_OF);
@@ -115,7 +115,8 @@ const assets = Promise.all([
     P.glb ? gl.loadAsync('/evade/keychain/ar/' + P.glb) : null,
     getJson('/evade/spray-bobo/art/' + P.outline),            // the die-cut line, uv of the front picture (y down)
     Promise.all(P.targets.map((n) => loadImg(KC + `image-targets/${n}.jpg`))),   // each picture: the tiles that break away
-  ]).then(([gltf, outline, prints]) => { P.gltf = gltf; P.outlineData = outline; P.prints = Object.fromEntries(P.targets.map((n, i) => [n, prints[i]])); })),
+    P.charm ? getJson('./' + P.charm) : null,                 // the whole acrylic piece, per picture (the can's window)
+  ]).then(([gltf, outline, prints, charm]) => { P.gltf = gltf; P.outlineData = outline; P.charmData = charm; P.prints = Object.fromEntries(P.targets.map((n, i) => [n, prints[i]])); })),
 ]).then(([layout, tdata]) => { for (const P of Object.values(PIECES)) { const L = layout.targets[P.targets[0]]; P.W = L.widthM; P.H = L.heightM; } return { tdata }; });
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -129,7 +130,7 @@ const A = new THREE.Group();                  // follows the print (units: metre
 const F = new THREE.Group(); A.add(F);        // x flipped on the charm's other side
 let W = 0.0601, H = 0.0801;                   // the kc-bobo picture in metres (layout.json)
 let occluder, rim, box, walls = {}, lid, specks, scanBar, inside, bob, model, mixer, clips = {}, current = null, outlineData = null, root = null;
-let tube = null;                              // the can: the tube inside it (profile, radius, window); null for Bobo's box
+let cp0 = null, tube = null;                              // the can: the tube inside it (profile, radius, window); null for Bobo's box
 let cp = null;                                // the current piece (its things are in the variables above while it is current)
 const KEYS = ['win', 'W', 'H', 'occluder', 'rim', 'box', 'walls', 'lid', 'specks', 'scanBar', 'inside', 'bob', 'model', 'mixer', 'clips', 'current', 'outlineData', 'root', 'tube'];
 function save(P) { const v = { win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root, tube }; for (const k of KEYS) P[k] = v[k]; }
@@ -159,7 +160,7 @@ function buildScene(xr, data) {
 
   for (const P of Object.values(PIECES)) {
     W = P.W; H = P.H; outlineData = P.outlineData; walls = {}; win = null; current = null; clips = {}; occluder = rim = null;
-    tube = P.k === 'can' ? canTube() : null;
+    cp0 = P; tube = P.k === 'can' ? canTube() : null;
     open.dWant = depthWant();
     root = new THREE.Group(); F.add(root); root.visible = false;
     box = new THREE.Group(); root.add(box);     // walls are built one unit deep and scaled to the depth
@@ -509,22 +510,30 @@ function buildBones(list) {
 // print exactly and the print reads as the front half cut away. Inside: bare aluminium and the soda, no grid.
 const SODA_V = 0.43;                                    // the soda's level, down the picture
 const PROF_N = 41;                                      // profile samples (the burn shader has the same array)
-// The window traces the can exactly as drawn (Spray Bobo's die-cut line: lid, pull tab, shoulders, body, base). The
-// tube behind it is a lathe whose radius at each height is the outline's widest half-width there (plus a hair), so its
-// silhouette always covers the window, pull tab included.
+// The window is the whole acrylic charm (its outer edge from the target's portal mask, loop and border included, the
+// loop's hole filled), so the entire target opens, not just the drawn can. Each picture has its own outline. The tube
+// behind it is a lathe whose radius at each height is the widest half-width of either outline there (plus a hair),
+// so its silhouette always covers the window.
 function canTube() {
-  const pts = outlineData.points, vs = pts.map((q) => q[1]), v0 = Math.min(...vs), v1 = Math.max(...vs);
-  const across = (v) => { const xs = []; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [ua, va] = pts[i], [ub, vb] = pts[j]; if ((va > v) !== (vb > v)) xs.push(ua + (ub - ua) * (v - va) / (vb - va)); } return xs; };
-  const mid = across(lerp(v0, v1, 0.6)), u0 = (Math.min(...mid) + Math.max(...mid)) / 2;
+  // grow each outline a touch about its middle (the mask is cut tight; no sliver of acrylic left at the edge)
+  const sides = Object.fromEntries(Object.entries(cp0.charmData.sides).map(([n, pts]) => {
+    const us = pts.map((q) => q[0]), vs = pts.map((q) => q[1]), mu = (Math.min(...us) + Math.max(...us)) / 2, mv = (Math.min(...vs) + Math.max(...vs)) / 2;
+    return [n, pts.map(([u, v]) => [mu + (u - mu) * 1.025, mv + (v - mv) * 1.012])];
+  })), names = Object.keys(sides);
+  const across = (pts, v) => { const xs = []; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [ua, va] = pts[i], [ub, vb] = pts[j]; if ((va > v) !== (vb > v)) xs.push(ua + (ub - ua) * (v - va) / (vb - va)); } return xs; };
+  const ext = (pts) => { const vs = pts.map((q) => q[1]); return [Math.min(...vs), Math.max(...vs)]; };
+  const front = sides[names[0]], [f0, f1] = ext(front), mid = across(front, lerp(f0, f1, 0.6)), u0 = (Math.min(...mid) + Math.max(...mid)) / 2;
+  let v0 = 1, v1 = 0; for (const n of names) { const [a, b] = ext(sides[n]); v0 = Math.min(v0, a); v1 = Math.max(v1, b); }
   const profUv = [];
   for (let i = 0; i < PROF_N; i++) {
-    const v = lerp(v0 + 0.0015, v1 - 0.0015, i / (PROF_N - 1)), xs = across(v);
-    profUv.push([v, (xs.length ? Math.max(...xs.map((x) => Math.abs(x - u0))) : 0.01) + 0.006]);
+    const vv = lerp(v0 - 0.006, v1 + 0.006, i / (PROF_N - 1)), v = clamp(vv, v0 + 0.0015, v1 - 0.0015); let hw = 0.004;
+    for (const n of names) { const pts = sides[n], c = n === names[0] ? u0 : (() => { const [a, b] = ext(pts), m = across(pts, lerp(a, b, 0.6)); return (Math.min(...m) + Math.max(...m)) / 2; })(); for (const x of across(pts, v)) hw = Math.max(hw, Math.abs(x - c)); }
+    profUv.push([vv, hw + 0.006]);
   }
   const prof = profUv.map(([v, hw]) => new THREE.Vector2(hw * W, (0.5 - v) * H));   // (radius, y) top to bottom
   const R = Math.max(...prof.map((q) => q.x)), cx = (u0 - 0.5) * W;
-  const win = pts.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H));
-  return { prof, profUv, u0, R, cx, win, top: prof[0].y, bot: prof[prof.length - 1].y, level: (0.5 - SODA_V) * H, fit: null };
+  const wins = Object.fromEntries(names.map((n) => [n, sides[n].map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H))]));
+  return { prof, profUv, u0, R, cx, wins, win: wins[names[0]], top: prof[0].y, bot: prof[prof.length - 1].y, level: (0.5 - SODA_V) * H, fit: null };
 }
 function tubeR(y) {                                     // the can's radius at height y (local, metres)
   const pr = tube.prof; if (y >= pr[0].y) return pr[0].x;
@@ -705,9 +714,11 @@ function updatePose(now) {
   if (n && win.userData.side !== n + BOX.shape) {   // this side's picture on the tiles; the cut-out moved onto it
     win.userData.side = n + BOX.shape;
     lid.material.uniforms.uMap.value = cp.lidTex[n];
-    const xf = ((BOX.shape === 'cat' || tube) && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
-    for (const g of tube ? [win, box, inside] : [win]) { g.position.set(xf.x + (tube && g !== win ? tube.cx : 0), xf.y, 0); g.rotation.z = xf.rz; g.scale.set(xf.s, xf.s, g === box ? box.scale.z : xf.s); }
-    if (tube) tube.fit = xf;
+    if (tube) { if (tube.wins[n] && tube.win !== tube.wins[n]) { tube.win = tube.wins[n]; buildWindow(BOX.shape); win.userData.side = n + BOX.shape; } }
+    else {
+      const xf = (BOX.shape === 'cat' && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
+      win.position.set(xf.x, xf.y, 0); win.rotation.z = xf.rz; win.scale.setScalar(xf.s);
+    }
   }
 }
 // follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
