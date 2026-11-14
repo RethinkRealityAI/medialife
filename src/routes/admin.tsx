@@ -7,6 +7,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import {
+  ArrowUpRight,
   BarChart3,
   Boxes,
   ChevronRight,
@@ -17,6 +18,7 @@ import {
   Link2,
   LogOut,
   Menu,
+  Palette,
   Presentation,
   Sparkles,
   SprayCan,
@@ -67,7 +69,15 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-type NavItem = { to: string; label: string; short?: string; icon: LucideIcon; tone: Tone };
+type NavItem = {
+  to: string;
+  label: string;
+  short?: string;
+  icon: LucideIcon;
+  tone: Tone;
+  /** A separate app outside the admin router (plain link, opens in a new tab). */
+  app?: boolean;
+};
 
 const GROUPS: { label: string; items: NavItem[] }[] = [
   {
@@ -91,6 +101,8 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
         tone: "sky",
       },
       { to: "/admin/spray", label: "Spray Bobo", short: "Spray", icon: SprayCan, tone: "amber" },
+      // Spray Studio is its own app (spray-studio/ built to public/spray/); same admin sign-in.
+      { to: "/spray/", label: "Spray Studio", icon: Palette, tone: "violet", app: true },
     ],
   },
   {
@@ -183,13 +195,28 @@ function AdminLayout() {
                               tooltip={item.label}
                               className="h-10 rounded-xl text-white/75 hover:bg-white/[0.05] hover:text-white focus-visible:ring-[var(--partner)] data-[active=true]:bg-[linear-gradient(90deg,color-mix(in_oklab,var(--partner)_22%,transparent),transparent)] data-[active=true]:font-medium data-[active=true]:text-white data-[active=true]:shadow-[inset_2px_0_0_0_var(--partner)]"
                             >
-                              <Link to={item.to} aria-current={active ? "page" : undefined}>
-                                <item.icon
-                                  aria-hidden
-                                  className={cn(toneText(item.tone), !active && "opacity-75")}
-                                />
-                                <span>{item.label}</span>
-                              </Link>
+                              {item.app ? (
+                                <a href={item.to} target="_blank" rel="noopener">
+                                  <item.icon
+                                    aria-hidden
+                                    className={cn(toneText(item.tone), "opacity-75")}
+                                  />
+                                  <span>{item.label}</span>
+                                  <ArrowUpRight
+                                    aria-hidden
+                                    className="ml-auto size-3.5 opacity-50"
+                                  />
+                                  <span className="sr-only">(opens in a new tab)</span>
+                                </a>
+                              ) : (
+                                <Link to={item.to} aria-current={active ? "page" : undefined}>
+                                  <item.icon
+                                    aria-hidden
+                                    className={cn(toneText(item.tone), !active && "opacity-75")}
+                                  />
+                                  <span>{item.label}</span>
+                                </Link>
+                              )}
                             </SidebarMenuButton>
                           </SidebarMenuItem>
                         );
