@@ -5,7 +5,7 @@
 // How the hole works (no stencil buffer): an invisible "occluder" sheet lies on the print, with the window cut out
 // of it. It is drawn first and writes only depth (colorWrite off), so the camera picture still shows through it, but
 // anything behind the print plane is hidden everywhere except through the window. The box (five flat walls with a
-// grid), the X-ray film on the back wall, the floating specks and Bobo all sit behind the print plane, so you only
+// grid), the floating specks and Bobo all sit behind the print plane, so you only
 // ever see them through the window, and they shift against its edge as the phone moves (that is the parallax).
 // The 8th Wall engine creates the WebGL context itself (no stencil requested), which is why it is depth-only.
 //
@@ -33,8 +33,16 @@ const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (
 const store = { get(k, d) { try { const v = localStorage.getItem('xray-bobo-' + k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('xray-bobo-' + k, String(v)); } catch (e) { /* none */ } } };
 
 // ---------------------------------------------------------------- what is tracked
-const TARGETS = ['kc-bobo', 'kc-bobo-l'];      // the cat charm's front and its mirror (the print seen through the acrylic)
-const FLIP = { 'kc-bobo-l': -1 };
+// Each charm is a piece: its two pictures (front and back), its die-cut line (Spray Bobo's outline files, uv of the
+// front picture; `sides` in the can's file places the window on the back picture), and what floats in its box.
+// The cat's back picture is the print seen through the acrylic (mirrored); the can's back is a different print.
+const PIECES = {
+  bobo: { k: 'bobo', name: 'Bobo', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, outline: 'cat-outline.json', glb: 'bobo-keychain.glb' },
+  can: { k: 'can', name: 'the can', targets: ['kc-can', 'kc-can-back'], flip: {}, outline: 'can-outline.json', glb: 'eclipse-can.glb' },
+};
+const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P;
+const TARGETS = Object.keys(PIECE_OF);
+const FLIP = Object.assign({}, ...Object.values(PIECES).map((P) => P.flip));
 // Losing the print: the last pose is held this long, and only while the phone is still (Spray Bobo's numbers)
 const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120, STILL_DEG = 25, STILL_ACC = 1.2;
 const REOPEN_AFTER_MS = 2500;                 // lost longer than this: the box opens again with its intro
@@ -82,6 +90,7 @@ const sound = {
   open() { this.noise(0.9, 0.09, 200, 2200); this.tone(180, 60, 0.9, 0.14, 'sine'); this.tone(900, 1800, 0.25, 0.03, 'triangle', 0.6); },
   beep() { this.tone(1760, 1760, 0.06, 0.035, 'square'); },
   mew() { this.tone(620, 880, 0.14, 0.08, 'triangle'); this.tone(880, 560, 0.22, 0.08, 'triangle', 0.13); },
+  fizz() { this.noise(0.6, 0.12, 3000, 12000); this.tone(1400, 2600, 0.12, 0.03, 'sine', 0.05); },
   click() { this.tone(1200, 900, 0.05, 0.05, 'triangle'); },
   shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
 };
@@ -89,13 +98,16 @@ const sound = {
 // ---------------------------------------------------------------- loading
 const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
+const gl = new GLTFLoader();
 const assets = Promise.all([
-  new GLTFLoader().loadAsync('/evade/keychain/ar/bobo-keychain.glb'),
-  getJson(KC + 'image-targets/layout.json').then((l) => l.targets['kc-bobo']),
+  getJson(KC + 'image-targets/layout.json'),
   Promise.all(TARGETS.map((n) => getJson(KC + `image-targets/${n}.json`))),
-  loadImg(KC + 'image-targets/kc-bobo.jpg'),
-  getJson('/evade/spray-bobo/art/cat-outline.json'),   // the cat's die-cut line, uv of the kc-bobo picture (y down)
-]).then(([gltf, L, tdata, print, outline]) => ({ gltf, L, tdata, print, outline }));
+  ...Object.values(PIECES).map((P) => Promise.all([
+    gl.loadAsync('/evade/keychain/ar/' + P.glb),
+    getJson('/evade/spray-bobo/art/' + P.outline),            // the die-cut line, uv of the front picture (y down)
+    Promise.all(P.targets.map((n) => loadImg(KC + `image-targets/${n}.jpg`))),   // each picture: the tiles that break away
+  ]).then(([gltf, outline, prints]) => { P.gltf = gltf; P.outlineData = outline; P.prints = Object.fromEntries(P.targets.map((n, i) => [n, prints[i]])); })),
+]).then(([layout, tdata]) => { for (const P of Object.values(PIECES)) { const L = layout.targets[P.targets[0]]; P.W = L.widthM; P.H = L.heightM; } return { tdata }; });
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
@@ -107,7 +119,15 @@ let scene, camera, renderer;
 const A = new THREE.Group();                  // follows the print (units: metres of the real print, see onTarget)
 const F = new THREE.Group(); A.add(F);        // x flipped on the charm's other side
 let W = 0.0601, H = 0.0801;                   // the kc-bobo picture in metres (layout.json)
-let occluder, rim, box, walls = {}, lid, film, specks, scanBar, inside, bob, model, mixer, clips = {}, current = null;
+let occluder, rim, box, walls = {}, lid, specks, scanBar, inside, bob, model, mixer, clips = {}, current = null, outlineData = null, root = null;
+let cp = null;                                // the current piece (its things are in the variables above while it is current)
+const KEYS = ['win', 'W', 'H', 'occluder', 'rim', 'box', 'walls', 'lid', 'specks', 'scanBar', 'inside', 'bob', 'model', 'mixer', 'clips', 'current', 'outlineData', 'root'];
+function save(P) { const v = { win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root }; for (const k of KEYS) P[k] = v[k]; }
+function load(P) { ({ win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root } = P); }
+function usePiece(P) {
+  if (cp === P) return; if (cp) { save(cp); cp.root.visible = false; }
+  cp = P; load(P); root.visible = true; open.dWant = H * BOX.depthK; open.k = 0; open.target = 1; open.depth = 0;
+}
 const skinPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // the skin shows below the scan line
 const rayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);     // the X-ray shows above it
 const skinMats = [], rayMats = [];
@@ -125,17 +145,21 @@ function buildScene(xr, data) {
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
   scene.add(A); A.visible = false;
 
-  W = data.L.widthM; H = data.L.heightM;
-  open.dWant = H * BOX.depthK;
-
-  box = new THREE.Group(); F.add(box);          // walls are built one unit deep and scaled to the depth
-  buildWalls();
-  buildWindow(BOX.shape, data.outline);
-  buildLidAndFilm(data.print);
-  inside = new THREE.Group(); F.add(inside);   // Bobo and the specks: not scaled with the box
-  specks = makeSpecks(); inside.add(specks);
-  buildBobo(data.gltf);
-  scanBar = makeScanBar(); box.add(scanBar);
+  for (const P of Object.values(PIECES)) {
+    W = P.W; H = P.H; outlineData = P.outlineData; walls = {}; win = null; current = null; clips = {}; occluder = rim = null;
+    open.dWant = H * BOX.depthK;
+    root = new THREE.Group(); F.add(root); root.visible = false;
+    box = new THREE.Group(); root.add(box);     // walls are built one unit deep and scaled to the depth
+    buildWalls();
+    buildWindow(BOX.shape);
+    buildLid(P);
+    inside = new THREE.Group(); root.add(inside);   // what floats inside and the specks: not scaled with the box
+    specks = makeSpecks(); inside.add(specks);
+    if (P.k === 'bobo') buildBobo(P.gltf); else buildCan(P.gltf);
+    scanBar = makeScanBar(); box.add(scanBar);
+    save(P);
+  }
+  cp = null; usePiece(PIECES.bobo);
   setView(view, false);
 }
 
@@ -168,7 +192,7 @@ function repeatWalls() {   // keep the cells square at the chosen depth
 
 // The window: its outline (a rectangle, or the cat's die-cut line), the occluder sheet with that hole, and a flat
 // cyan rim on the print around it.
-let outlineData = null;
+let win = null;                               // the occluder and rim (moved onto the can's back picture by its offset)
 function windowPoints(shape) {
   if (shape === 'cat' && outlineData) return outlineData.points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H));
   const r = Math.min(W, H) * 0.035, pts = [], hw = W / 2, hh = H / 2;   // a rectangle with small rounded corners
@@ -176,19 +200,20 @@ function windowPoints(shape) {
   corner(hw - r, hh - r, 0); corner(-hw + r, hh - r, Math.PI / 2); corner(-hw + r, -hh + r, Math.PI); corner(hw - r, -hh + r, Math.PI * 1.5);
   return pts;
 }
-function buildWindow(shape, outline) {
-  if (outline) outlineData = outline;
-  for (const o of [occluder, rim]) if (o) { F.remove(o); o.geometry.dispose(); }
+function buildWindow(shape) {
+  for (const o of [occluder, rim]) if (o) { win.remove(o); o.geometry.dispose(); }
+  if (!win || win.parent !== root) { win = new THREE.Group(); root.add(win); root.userData.win = win; }
   let pts = windowPoints(shape);
   if (THREE.ShapeUtils.isClockWise(pts)) pts = pts.slice().reverse();
   // the occluder: a big sheet (20 prints across) with the window as a hole. Depth only, drawn before everything.
   const R = H * 10, outer = new THREE.Shape([new THREE.Vector2(-R, -R), new THREE.Vector2(R, -R), new THREE.Vector2(R, R), new THREE.Vector2(-R, R)]);
   outer.holes.push(new THREE.Path(pts.slice().reverse()));
   occluder = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
-  occluder.renderOrder = -10; F.add(occluder);
+  occluder.renderOrder = -10; win.add(occluder);
   // the rim: a flat ribbon just outside the window's edge
   rim = new THREE.Mesh(ribbon(pts, H * 0.012), new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, side: THREE.DoubleSide, transparent: true, depthWrite: false }));
-  rim.position.z = 0.0004; rim.renderOrder = 30; F.add(rim);
+  rim.position.z = 0.0004; rim.renderOrder = 30; win.add(rim);
+  win.userData.side = null;
   BOX.shape = shape;
 }
 // a closed flat ribbon of width w on the outside of a counter-clockwise outline (mitred corners)
@@ -206,25 +231,67 @@ function ribbon(pts, w) {
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g;
 }
 
-// The lid: the print itself, which sinks back as the box opens (so the print looks pushed into the surface), then
-// fades into the X-ray film: the same print as a negative in scanner cyan (a per-pixel colour mapping, no
-// generative tools on EVADE art), on the back wall.
-function buildLidAndFilm(print) {
-  const tex = new THREE.Texture(print); tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true;
-  lid = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: true }));
-  lid.renderOrder = 2; F.add(lid);
-  const c = document.createElement('canvas'), w = 360, h = Math.round(w * print.naturalHeight / print.naturalWidth); c.width = w; c.height = h;
-  const g = c.getContext('2d'); g.drawImage(print, 0, 0, w, h);
-  const im = g.getImageData(0, 0, w, h), d = im.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const L = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255, inv = Math.pow(1 - L, 0.8);
-    const q = Math.round(inv * 5) / 5;            // posterised into flat steps: the film stays flat-coloured
-    d[i] = 79 * q + 40 * q * q; d[i + 1] = 214 * q + 30 * q * q; d[i + 2] = 232 * q + 20 * q * q; d[i + 3] = 255 * Math.min(1, q * 1.4);
+// The lid: each picture of this piece as a texture for the break-up tiles (makeShatter).
+function buildLid(P) {
+  P.lidTex = {};
+  for (const [n, print] of Object.entries(P.prints)) { const t = new THREE.Texture(print); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; P.lidTex[n] = t; }
+  const n0 = P.targets[0];
+  lid = makeShatter(P.lidTex[n0]); root.add(lid);
+}
+
+// The break-up: the print as a grid of tiles over the real print (it looks identical at first). From the middle
+// outwards each tile turns digital (pixelates down to a few blocks, posterises into scanner cyan, gets a cyan edge),
+// lifts off the surface, flies outwards and turns, and dissolves block by block, uncovering the box behind it.
+// One instanced plane, one draw call; uP (0..~1.25) is the whole animation.
+const SHATTER_VS = `
+uniform float uP, uW, uH, uCols, uRows;
+attribute vec2 aCell; attribute vec4 aRnd;
+varying vec2 vUv, vCell; varying float vT, vR;
+void main() {
+  vec2 c = (aCell + 0.5) / vec2(uCols, uRows);
+  vec2 ctr = vec2((c.x - 0.5) * uW, (c.y - 0.5) * uH);
+  float d = length(ctr) / (0.5 * length(vec2(uW, uH)));
+  float t = clamp((uP - (d * 0.55 + aRnd.x * 0.15)) / 0.5, 0.0, 1.0);
+  vT = t; vUv = uv; vCell = aCell; vR = aRnd.y;
+  vec3 p = position * vec3(uW / uCols, uH / uRows, 1.0) * (1.0 - smoothstep(0.5, 1.0, t) * 0.75);
+  float a = t * t * (aRnd.z - 0.5) * 7.0, b = t * t * (aRnd.w - 0.5) * 5.0;
+  p = vec3(p.x, p.y * cos(a) - p.z * sin(a), p.y * sin(a) + p.z * cos(a));
+  p = vec3(p.x * cos(b) + p.z * sin(b), p.y, -p.x * sin(b) + p.z * cos(b));
+  vec2 dir = normalize(ctr + vec2(1e-5, 2e-5));
+  vec3 off = vec3(ctr + dir * t * t * uW * 0.4 * (0.5 + aRnd.w), sin(t * 3.14159) * uH * 0.16 * (0.4 + aRnd.y) + 0.0003);
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(p + off, 1.0);
+}`;
+const SHATTER_FS = `
+uniform sampler2D uMap; uniform vec3 uCyan, uInk; uniform float uCols, uRows;
+varying vec2 vUv, vCell; varying float vT, vR;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+void main() {
+  if (vT >= 1.0) discard;
+  float steps = vT <= 0.0 ? 64.0 : floor(mix(14.0, 2.0, smoothstep(0.0, 0.6, vT)));
+  vec2 q = (floor(vUv * steps) + 0.5) / steps;
+  if (hash(floor(vUv * steps) + vCell * 7.13) < smoothstep(0.45, 0.95, vT)) discard;   // dissolves block by block
+  vec3 col = texture2D(uMap, (vCell + (vT <= 0.0 ? vUv : q)) / vec2(uCols, uRows)).rgb;
+  if (vT > 0.0) {
+    float L = dot(col, vec3(0.299, 0.587, 0.114));
+    vec3 dig = mix(uInk, uCyan, floor(L * 3.0 + 0.5) / 3.0);   // flat steps, no blends
+    if (vT + vR * 0.15 > 0.12) col = dig;
+    vec2 e = min(vUv, 1.0 - vUv);
+    if (min(e.x, e.y) < 0.07) col = uCyan;
   }
-  g.putImageData(im, 0, 0);
-  const ft = new THREE.CanvasTexture(c); ft.colorSpace = THREE.SRGBColorSpace;
-  film = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, H * 0.92), new THREE.MeshBasicMaterial({ map: ft, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
-  film.position.z = -1 + 0.002; film.renderOrder = 3; box.add(film);
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`;
+function makeShatter(tex) {
+  const cols = 18, rows = Math.round(cols * H / W), n = cols * rows;
+  const g = new THREE.InstancedBufferGeometry(); g.copy(new THREE.PlaneGeometry(1, 1)); g.instanceCount = n;
+  const cell = new Float32Array(n * 2), rnd = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) { cell[i * 2] = i % cols; cell[i * 2 + 1] = Math.floor(i / cols); for (let k = 0; k < 4; k++) rnd[i * 4 + k] = Math.random(); }
+  g.setAttribute('aCell', new THREE.InstancedBufferAttribute(cell, 2)); g.setAttribute('aRnd', new THREE.InstancedBufferAttribute(rnd, 4));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uP: { value: 0 }, uW: { value: W }, uH: { value: H }, uCols: { value: cols }, uRows: { value: rows }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uInk: { value: new THREE.Color(COL.back) } },
+    vertexShader: SHATTER_VS, fragmentShader: SHATTER_FS, side: THREE.DoubleSide, toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
 }
 
 // floating specks: depth cues that slide past each other as the phone moves
@@ -272,7 +339,9 @@ function buildBobo(gltf) {
   const bb = new THREE.Box3().setFromObject(body, true), size = bb.getSize(new THREE.Vector3()), mid = bb.getCenter(new THREE.Vector3());
   mixer.stopAllAction();
   const s = (H * 0.56) / size.y;               // Bobo stands a bit over half the box's height
-  model.scale.setScalar(s); model.position.set(-mid.x * s, -mid.y * s, -mid.z * s);
+  // mirrored: the keychain print shows Bobo with his tail on the right, the model has it on the left (Off the Chain
+  // mirrors him the same way). On the charm's back picture the whole piece is flipped again, so it matches there too.
+  model.scale.set(-s, s, s); model.position.set(mid.x * s, -mid.y * s, -mid.z * s);
   bob = new THREE.Group(); bob.add(model); inside.add(bob);
 
   const skinned = [];
@@ -360,6 +429,54 @@ function buildBones(list) {
     bone.add(grp);
   });
 }
+// ---------------------------------------------------------------- the Eclipse can: skin, ghost, the soda inside
+// The can from Off the Chain (Blender). In X-ray its body turns to a see-through cyan ghost and you see the soda
+// inside: a liquid column with bubbles rising through it (the bubbles speed up when you tap the can).
+function buildCan(gltf) {
+  model = gltf.scene;
+  // (not the Silhouette card, nor the fizz cloud Off the Chain sprays out of the opening)
+  model.traverse((o) => { if (o.name === 'Silhouette' || /Fizz/.test(o.name)) o.visible = false; if (o.isMesh) o.frustumCulled = false; });
+  mixer = new THREE.AnimationMixer(model);
+  clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+  const body = model.getObjectByName('EclipseCan') || model;
+  model.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(body, true), size = bb.getSize(new THREE.Vector3()), mid = bb.getCenter(new THREE.Vector3());
+  const s = (H * 0.6) / size.y;
+  model.scale.setScalar(s); model.position.set(-mid.x * s, -mid.y * s, -mid.z * s);
+  bob = new THREE.Group(); bob.add(model); inside.add(bob);
+  const ghostMat = new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [rayPlane] });
+  const ghosts = [];
+  model.traverse((o) => {
+    if (!o.isMesh || !o.visible || o.name === 'Silhouette' || /Fizz/.test(o.name)) return;
+    const ms = Array.isArray(o.material) ? o.material : [o.material];
+    ms.forEach((m) => { m.clippingPlanes = [skinPlane]; skinMats.push(m); });
+    o.renderOrder = 6;
+    if (!/Outline/.test(ms[0].name)) ghosts.push(o);
+  });
+  for (const o of ghosts) { const g = new THREE.Mesh(o.geometry, ghostMat); g.renderOrder = 8; g.frustumCulled = false; o.add(g); }
+  // the soda: a column inside the body, in can units (so it turns and floats with the can)
+  const r = Math.min(size.x, size.z) * 0.42 * s, h = size.y * 0.72 * s, soda = new THREE.Group();
+  const liq = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28), new THREE.MeshBasicMaterial({ color: 0x2aa8c4, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false, clippingPlanes: [rayPlane] }));
+  liq.renderOrder = 7; soda.add(liq);
+  const top = new THREE.Mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshBasicMaterial({ color: COL.bone, toneMapped: false, clippingPlanes: [rayPlane] }));
+  top.rotation.x = -Math.PI / 2; top.position.y = h / 2; top.renderOrder = 9; soda.add(top);
+  const bm = new THREE.MeshBasicMaterial({ color: COL.bone, toneMapped: false, clippingPlanes: [rayPlane] }), sph = new THREE.SphereGeometry(1, 10, 8);
+  const bubbles = [];
+  for (let i = 0; i < 26; i++) { const m = new THREE.Mesh(sph, bm); m.renderOrder = 9; m.userData = { a: Math.random() * 6.28, d: Math.sqrt(Math.random()) * r * 0.8, y: Math.random(), v: 0.18 + Math.random() * 0.25, s: r * (0.05 + Math.random() * 0.07) }; soda.add(m); bubbles.push(m); }
+  soda.position.y = -size.y * s * 0.06; bob.add(soda);
+  rayMats.push(ghostMat, liq.material, top.material, bm);
+  bob.userData = { bubbles, h, boost: 0 };
+  if (clips.Idle) play('Idle');
+}
+function fizzBurst() { if (bob.userData.bubbles) bob.userData.boost = 1.6; }
+function tickBubbles(dt) {
+  const u = bob.userData; if (!u.bubbles) return;
+  u.boost = Math.max(0, u.boost - dt * 0.8);
+  for (const b of u.bubbles) {
+    const d = b.userData; d.y += dt * d.v * (1 + u.boost * 3); if (d.y > 1) { d.y -= 1; d.a = Math.random() * 6.28; }
+    b.position.set(Math.cos(d.a + d.y * 2) * d.d, (d.y - 0.5) * u.h, Math.sin(d.a + d.y * 2) * d.d); b.scale.setScalar(d.s * (0.7 + d.y * 0.6));
+  }
+}
 function play(name, { loop = true, fade = 0.3, onDone } = {}) {
   const clip = clips[name]; if (!clip || !mixer) return;
   const next = mixer.clipAction(clip);
@@ -445,9 +562,17 @@ function updatePose(now) {
   } else st = 'none';
   if (st === 'none' && pose.state !== 'none') pose.goneAt = now;
   if (st === 'none') pose.snap = true;
-  if (st !== 'none' && pose.state === 'none') arrived(now);
+  const fresh = st !== 'none' && pose.state === 'none';
+  if (fresh) arrived(now);
   pose.state = st; pose.valid = st !== 'none'; A.visible = pose.valid;
   const flip = (n && FLIP[n]) || 1; if (F.scale.x !== flip) F.scale.x = flip;
+  if (n && PIECE_OF[n] !== cp) { usePiece(PIECE_OF[n]); if (!fresh) sound.open(); }   // the other charm: its own box opens
+  if (n && win.userData.side !== n + BOX.shape) {   // this side's picture on the tiles; the cut-out moved onto it
+    win.userData.side = n + BOX.shape;
+    lid.material.uniforms.uMap.value = cp.lidTex[n];
+    const xf = (BOX.shape === 'cat' && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
+    win.position.set(xf.x, xf.y, 0); win.rotation.z = xf.rz; win.scale.setScalar(xf.s);
+  }
 }
 // follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
 function follow(p, q, s) {
@@ -475,9 +600,13 @@ function hint(text) { if ($('hint').textContent !== text) $('hint').textContent 
 const life = { yaw: 0, yawV: 0, drag: false, busy: false, t: 0 };
 function poke() {
   if (!A.visible || open.k < 0.9 || life.busy) return;
-  life.busy = true; sound.mew(); buzz(12);
-  const pick = Math.random() < 0.5 ? 'PawRaise' : 'TailWag';
-  play(pick, { loop: false, fade: 0.2, onDone: () => { life.busy = false; play('Sit', { fade: 0.35 }); } });
+  buzz(12);
+  if (cp.k === 'can') { sound.fizz(); life.yawV += 260; fizzBurst(); }   // the can: a spin and a fizz
+  else {
+    life.busy = true; sound.mew();
+    const pick = Math.random() < 0.5 ? 'PawRaise' : 'TailWag';
+    play(pick, { loop: false, fade: 0.2, onDone: () => { life.busy = false; play('Sit', { fade: 0.35 }); } });
+  }
   if (view === 'scan') { scan.y = 0.56; scan.dir = -1; scan.pause = 0; }   // a fresh sweep over him
 }
 const gest = { id: null, x: 0, lx: 0, t: 0, moved: 0 };
@@ -499,20 +628,18 @@ function tick(dt) {
   if (!pose.valid) {
     lostFor += dt;
     if (mode !== 'find' && lostFor > 0.6) setMode('find');
-    if (mode === 'find') hint(everFound ? 'Find Bobo again' : 'Point at Bobo on your keychain or tee');
+    if (mode === 'find') hint(everFound ? 'Find Bobo or the can again' : 'Point at Bobo or the can on your keychain');
     sound.humTo(0);
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
-  // the box opening: the print sinks back, the walls grow, then the film and Bobo arrive
-  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.4 : 1.25));
+  // the box opening: the print breaks up into digital tiles, the walls grow, then Bobo arrives
+  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.6 : 1.7));
   const k = open.k, ek = easeInOut(clamp(k / 0.7, 0, 1));
   open.depth += (open.dWant * ek - open.depth) * (k < 1 ? 1 : clamp(dt * 6, 0, 1));   // depth changes glide
   const D = Math.max(open.depth, 0.0005);
   box.scale.z = D;
-  lid.position.z = -Math.max(D - 0.003, 0.0004);
-  lid.material.opacity = 1 - easeInOut(clamp((k - 0.62) / 0.3, 0, 1));
-  lid.visible = lid.material.opacity > 0.01;
-  film.material.opacity = 0.55 * easeInOut(clamp((k - 0.62) / 0.3, 0, 1));
+  lid.material.uniforms.uP.value = k * 1.26;   // the print breaks up, from the middle out
+  lid.visible = k < 1;
   const kb = easeOut(clamp((k - 0.5) / 0.5, 0, 1));
   inside.visible = k > 0.5;
   // Bobo floats in the middle of the box, rising from the back wall as it opens
@@ -521,7 +648,7 @@ function tick(dt) {
   bob.position.set(0, Math.sin(life.t * 1.4) * H * 0.025, -Math.min(D * lerp(0.92, 0.5, kb), D * 0.92 - H * 0.2, H * 0.6));   // the middle, but never so deep he hides behind the rim
   bob.rotation.set(Math.sin(life.t * 0.7) * 0.05, life.yaw + Math.sin(life.t * 0.45) * 0.28, Math.sin(life.t * 0.9) * 0.03);
   bob.scale.setScalar(lerp(0.55, 1, kb) * Math.min(1, D / (H * 0.62)) || 0.001);   // a shallow box: a smaller Bobo, so he never pokes out
-  mixer.update(dt);
+  mixer.update(dt); tickBubbles(dt);
   tickSpecks(dt);
   F.updateMatrixWorld(true);
   tickScan(dt);
@@ -537,8 +664,9 @@ function segInit(id, cur, fn) {
   const sync = (v) => btns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === String(v))));
   sync(cur); btns.forEach((b) => { b.onclick = () => { sync(b.dataset.v); fn(b.dataset.v); sound.click(); }; });
 }
-segInit('seg-win', BOX.shape, (v) => { store.set('win', v); if (F.children.length) buildWindow(v); else BOX.shape = v; });
-segInit('seg-depth', String(BOX.depthK), (v) => { BOX.depthK = +v; store.set('depth', v); open.dWant = H * BOX.depthK; if (walls.back) repeatWalls(); });
+segInit('seg-win', BOX.shape, (v) => { store.set('win', v); BOX.shape = v; if (cp) eachPiece(() => buildWindow(v)); });
+segInit('seg-depth', String(BOX.depthK), (v) => { BOX.depthK = +v; store.set('depth', v); if (cp) { eachPiece(() => { open.dWant = H * BOX.depthK; repeatWalls(); }); open.dWant = H * BOX.depthK; } });
+function eachPiece(fn) { const keep = cp; save(cp); for (const P of Object.values(PIECES)) { load(P); fn(P); save(P); } load(keep); }
 const optsEl = $('opts');
 function openOpts() { optsEl.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); optsEl.querySelector('.x').focus(); }
 function closeOpts() { optsEl.hidden = true; $('b-opts').setAttribute('aria-expanded', 'false'); $('b-opts').focus(); }
@@ -765,6 +893,7 @@ addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 2
 if (params.has('test')) window.__xr = {
   get pose() { return pose.state; }, get mode() { return mode; }, get open() { return open.k; }, get depth() { return open.depth; }, get side() { return side; },
   get view() { return view; }, setView, poke, diag,
+  replay: (k = 0, hold = false) => { open.k = k; if (!k) open.depth = 0; open.target = hold ? k : 1; },
   target: () => { const t = side && TS[side]; return t ? { name: side, tracked: t.tracked, p: t.p.toArray(), s: t.s } : null; },
   // the screen box of the window's corners and of Bobo (to check he stays inside the window)
   screen: () => {

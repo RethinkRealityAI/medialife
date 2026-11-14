@@ -16,8 +16,12 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   would silently draw nothing. Depth-only needs nothing from the context.
 - Window shape (Options): a rounded rectangle (the whole print) or the cat's die-cut line
   (`/evade/spray-bobo/art/cat-outline.json`). The cyan rim is a flat ribbon just outside the window.
-- Opening: the print itself (`kc-bobo.jpg`) is a lid that sinks to the back as the walls grow, then fades into the
-  film (the same print as a posterised cyan negative: a per-pixel colour mapping, no generative tools on EVADE art).
+- Opening (`makeShatter`, one instanced draw): the picture as a grid of tiles over the real print (identical at
+  first). From the middle out each tile turns digital (pixelates, posterises into scanner cyan with a cyan edge),
+  lifts off, flies outwards and turns, and dissolves block by block, uncovering the box as the walls grow.
+- Pieces (`PIECES`): Bobo (`kc-bobo`, `kc-bobo-l`) with Bobo floating inside, and the Eclipse can (`kc-can`,
+  `kc-can-back`) with the can inside; in X-ray the can shows its soda with bubbles (tap: a spin and a fizz). The 3D
+  Bobo is mirrored so his tail is on the same side as the print (as in Off the Chain).
 
 ## Bobo, ghost and bones
 The Off the Chain Bobo (`/evade/keychain/ar/bobo-keychain.glb`, its `Sit`, `PawRaise`, `TailWag` clips). Skin
