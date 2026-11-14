@@ -7,6 +7,9 @@
   # Pin it to Netlify explicitly so the build never depends on auto-detection.
   NITRO_PRESET = "netlify"
   NODE_VERSION = "22"
+  # The server bundle (three.js, recharts, the admin pages) peaks close to Node's default 2 GB heap while
+  # rendering chunks; give the build room so it never dies there.
+  NODE_OPTIONS = "--max-old-space-size=4096"
   NPM_FLAGS = "--no-audit --no-fund"
 
 # Canonical host: apex. www 301s to the apex so we have one indexable URL.

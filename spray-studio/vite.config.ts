@@ -6,18 +6,11 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig } from 'vite';
 
-// Realtime rooms (studio <-> phones) ride Supabase Realtime broadcast channels. These are the publishable
-// (browser) values from AiroHub; Realtime broadcast needs no tables and exposes no data. Override with
-// VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in the build environment to use another project.
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://zrtftliozslrjomxbfrr.supabase.co';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_4JZPu-HuA4MmYFqLW6DcnQ_HkfMvqSn';
+// Realtime rooms (studio <-> phones) ride Supabase Realtime broadcast channels. The project's browser values
+// are read at run time from /api/spray/realtime (server env SPRAY_SUPABASE_URL / SPRAY_SUPABASE_KEY).
 
 export default defineConfig({
   root: __dirname,
-  define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(SUPABASE_URL),
-    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(SUPABASE_KEY),
-  },
   base: '/spray/',
   plugins: [react(), tailwindcss()],
   build: {

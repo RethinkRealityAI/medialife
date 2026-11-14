@@ -17,8 +17,25 @@
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { PlayerInfo } from '../types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+// The Realtime project's browser values come from the site at run time (/api/spray/realtime, which reads
+// SPRAY_SUPABASE_URL / SPRAY_SUPABASE_KEY from the server environment), so nothing is baked into the build.
+// main.tsx loads them before the app renders; without them the Studio still paints, phones just can't join.
+let SUPABASE_URL: string | undefined;
+let SUPABASE_KEY: string | undefined;
+
+export async function loadRealtimeConfig(): Promise<void> {
+  try {
+    const r = await fetch('/api/spray/realtime', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = (await r.json()) as { url?: string | null; key?: string | null };
+    if (d.url && d.key) {
+      SUPABASE_URL = d.url;
+      SUPABASE_KEY = d.key;
+    }
+  } catch {
+    /* offline or not set up: phones-as-cans stays off */
+  }
+}
 
 export const MAX_PLAYERS = 4;
 

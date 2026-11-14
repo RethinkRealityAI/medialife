@@ -87,6 +87,7 @@ import { Route as ApiMediaUploadsRouteImport } from './routes/api.media.uploads'
 import { Route as ApiSprayCreationsRouteImport } from './routes/api.spray.creations'
 import { Route as ApiSprayMeRouteImport } from './routes/api.spray.me'
 import { Route as ApiSprayQrRouteImport } from './routes/api.spray.qr'
+import { Route as ApiSprayRealtimeRouteImport } from './routes/api.spray.realtime'
 import { Route as ApiSpraySetsRouteImport } from './routes/api.spray.sets'
 import { Route as ApiUgcUploadsRouteImport } from './routes/api.ugc.uploads'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
@@ -566,6 +567,11 @@ const ApiSprayMeRoute = ApiSprayMeRouteImport.update({
 const ApiSprayQrRoute = ApiSprayQrRouteImport.update({
   id: '/api/spray/qr',
   path: '/api/spray/qr',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayRealtimeRoute = ApiSprayRealtimeRouteImport.update({
+  id: '/api/spray/realtime',
+  path: '/api/spray/realtime',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSpraySetsRoute = ApiSpraySetsRouteImport.update({
@@ -1108,6 +1114,7 @@ export interface FileRoutesByFullPath {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
@@ -1268,6 +1275,7 @@ export interface FileRoutesByTo {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
@@ -1437,6 +1445,7 @@ export interface FileRoutesById {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
@@ -1607,6 +1616,7 @@ export interface FileRouteTypes {
     | '/api/spray/creations'
     | '/api/spray/me'
     | '/api/spray/qr'
+    | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/account'
@@ -1767,6 +1777,7 @@ export interface FileRouteTypes {
     | '/api/spray/creations'
     | '/api/spray/me'
     | '/api/spray/qr'
+    | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/account'
@@ -1935,6 +1946,7 @@ export interface FileRouteTypes {
     | '/api/spray/creations'
     | '/api/spray/me'
     | '/api/spray/qr'
+    | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/_app/account'
@@ -2084,6 +2096,7 @@ export interface RootRouteChildren {
   ApiSprayCreationsRoute: typeof ApiSprayCreationsRouteWithChildren
   ApiSprayMeRoute: typeof ApiSprayMeRoute
   ApiSprayQrRoute: typeof ApiSprayQrRoute
+  ApiSprayRealtimeRoute: typeof ApiSprayRealtimeRoute
   ApiSpraySetsRoute: typeof ApiSpraySetsRouteWithChildren
   ApiUgcUploadsRoute: typeof ApiUgcUploadsRouteWithChildren
   MIdFilenameRoute: typeof MIdFilenameRoute
@@ -2657,6 +2670,13 @@ declare module '@tanstack/react-router' {
       path: '/api/spray/qr'
       fullPath: '/api/spray/qr'
       preLoaderRoute: typeof ApiSprayQrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/realtime': {
+      id: '/api/spray/realtime'
+      path: '/api/spray/realtime'
+      fullPath: '/api/spray/realtime'
+      preLoaderRoute: typeof ApiSprayRealtimeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/spray/sets': {
@@ -3743,6 +3763,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSprayCreationsRoute: ApiSprayCreationsRouteWithChildren,
   ApiSprayMeRoute: ApiSprayMeRoute,
   ApiSprayQrRoute: ApiSprayQrRoute,
+  ApiSprayRealtimeRoute: ApiSprayRealtimeRoute,
   ApiSpraySetsRoute: ApiSpraySetsRouteWithChildren,
   ApiUgcUploadsRoute: ApiUgcUploadsRouteWithChildren,
   MIdFilenameRoute: MIdFilenameRoute,
