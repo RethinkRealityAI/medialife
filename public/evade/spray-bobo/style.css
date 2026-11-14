@@ -59,12 +59,10 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 #side{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top));display:flex;flex-direction:column;gap:10px}
 .ib{width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--panel);transition:transform .15s,background .2s}
 .ib:active{transform:scale(.92)} .ib svg{width:22px;height:22px}
-#b-sound[aria-pressed=false] .on,#b-sound[aria-pressed=true] .off,#b-aim[aria-pressed=false] .on,#b-aim[aria-pressed=true] .off{display:none}
-#b-lines[aria-pressed=false],#b-primer[aria-pressed=false]{background:rgba(15,21,25,.4);opacity:.65}
-#b-primer[aria-pressed=true] svg rect{fill:#fff} #b-primer[aria-pressed=true] svg .fillsq{display:none}
-#hud:not([data-mode=paint]) .paint-only{display:none}
+/* the top-right options button only shows before painting; after that it lives in the bottom bars, in thumb reach */
+#hud:not([data-mode=find]):not([data-mode=ready]) #side{display:none}
 
-#guide{position:absolute;left:50%;top:44%;width:min(84vw,420px);aspect-ratio:3/2;transform:translate(-50%,-50%);opacity:0;transition:opacity .4s;pointer-events:none!important;display:flex;gap:4%}
+#guide{position:absolute;left:50%;top:44%;width:min(92vw,480px);aspect-ratio:2/1;transform:translate(-50%,-50%);opacity:0;transition:opacity .4s;pointer-events:none!important;display:flex;gap:4%}
 #guide img{flex:1;min-width:0;height:100%;object-fit:contain;filter:invert(1) drop-shadow(0 0 2px #000);opacity:.42;animation:breathe 2.4s ease-in-out infinite}
 #hud[data-mode=find] #guide{opacity:1}
 @keyframes breathe{50%{opacity:.22;transform:scale(.97)}}
@@ -128,15 +126,14 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
 #bottom .b-left{display:flex;align-items:flex-end;min-width:0}
 #bottom .b-right{pointer-events:none}
 #bottom .actby{height:40px;width:auto;margin-bottom:14px;pointer-events:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
-#hud[data-mode=alive] #bottom .actby,#hud[data-mode=paint] #bottom .actby,#hud[data-mode=ready] #bottom .actby{display:none}
+#hud[data-mode=alive] #bottom .actby,#hud[data-mode=paint] #bottom .actby,#hud[data-mode=ready] #bottom .actby,#hud[data-mode=decal] #bottom .actby{display:none}
 #b-back{display:none;margin-bottom:12px;padding:0 16px 0 10px;gap:4px}
 #hud.cam[data-mode=paint] #b-back{display:inline-flex}
 #shoot{display:flex;flex-direction:column;align-items:center;gap:4px;grid-column:2}
-#hud[data-mode=ready] #shoot,#hud[data-mode=paint]:not(.cam) #shoot{display:none}
+#hud[data-mode=ready] #shoot,#hud[data-mode=paint]:not(.cam) #shoot,#hud[data-mode=decal] #shoot{display:none}
+#hud.asking #hint{opacity:0}
 /* camera mode while painting: the tools step aside, the can stays */
 #hud.cam[data-mode=paint] #caps,#hud.cam[data-mode=paint] #bar{transform:translateY(30px);opacity:0;pointer-events:none!important}
-#hud.cam .paint-only:not(#b-cam){display:none}
-#b-cam[aria-pressed=true]{background:var(--y)} #b-cam[aria-pressed=true] svg{stroke:var(--ink)}
 #hud.cam[data-mode=paint] #hint{bottom:calc(214px + env(safe-area-inset-bottom))}
 /* the can flying onto the charm, and the word it makes */
 .can-fly{position:absolute;z-index:6;pointer-events:none!important;transform-origin:50% 6%}
@@ -187,4 +184,79 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
    (Android's "remove animations" switch was hiding the spray) */
 @media (prefers-reduced-motion:reduce){ .can-hero{animation:none!important} }
 #hud.lost #guide{opacity:1}
-.how-pics .how-pic{width:100px;height:134px}
+.how-pics .how-pic{width:88px;height:117px}
+
+/* ---------------------------------------------------------------- alive row: the decals button stands out */
+.tool.deco{position:relative;background:var(--y);color:var(--ink);border:0}
+.tool .dot{position:absolute;top:7px;right:calc(50% - 22px);width:10px;height:10px;border-radius:50%;background:var(--mag);box-shadow:0 0 0 2px var(--ink)}
+.tool .dot[hidden]{display:none}
+@media (max-width:360px){.tool{font-size:10.5px}#alive{gap:6px}}
+
+/* after saving: dress him up? */
+#ask{position:absolute;left:calc(12px + env(safe-area-inset-left));right:calc(12px + env(safe-area-inset-right));bottom:calc(186px + env(safe-area-inset-bottom));margin:0 auto;max-width:420px;display:grid;grid-template-columns:auto 1fr;gap:10px 12px;align-items:center;padding:12px 12px 12px 14px;border-radius:22px;background:#182127;border:2px solid var(--y);box-shadow:6px 6px 0 var(--ink);animation:askin .5s cubic-bezier(.2,.9,.25,1.3) both}
+@keyframes askin{from{opacity:0;transform:translateY(24px) scale(.94)}}
+.ask-pics{display:flex}
+.ask-pics img{width:40px;height:40px;object-fit:contain;margin-right:-8px;filter:drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff)}
+.ask-pics img:nth-child(1){transform:rotate(-8deg)} .ask-pics img:nth-child(3){transform:rotate(8deg)}
+.ask-copy{display:flex;flex-direction:column;line-height:1.2} .ask-copy b{font:400 22px/1.05 "Permanent Marker",cursive;color:var(--y)} .ask-copy span{font-size:13px;color:var(--muted)}
+.ask-row{grid-column:1/-1;display:flex;gap:8px} .ask-row button{flex:1;min-height:46px}
+.ask-row .primary{box-shadow:0 5px 0 #b98d1f}
+
+/* ---------------------------------------------------------------- decal mode */
+#dtray,#dbar{position:absolute;left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));transform:translateY(30px);opacity:0;pointer-events:none!important;transition:transform .4s cubic-bezier(.2,.9,.25,1.2),opacity .3s}
+#dbar{bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:8px}
+#dbar .tool:disabled{opacity:.4}
+#dtray{bottom:calc(88px + env(safe-area-inset-bottom));padding:8px 0 10px;border-radius:22px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+#hud[data-mode=decal] #dtray,#hud[data-mode=decal] #dbar{transform:none;opacity:1;pointer-events:auto!important}
+#hud[data-mode=decal] #hint{bottom:calc(252px + env(safe-area-inset-bottom))}
+.dcats{display:flex;gap:6px;padding:0 10px 8px}
+.dcats button{min-height:34px;padding:0 14px;font-size:13px;border-radius:999px;background:rgba(255,255,255,.06);backdrop-filter:none;-webkit-backdrop-filter:none}
+.dcats button[aria-selected=true]{background:var(--y);color:var(--ink);border-color:var(--y)}
+.dcats .fits{margin-left:auto;align-self:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.02em;white-space:nowrap}
+.dlist{display:flex;gap:8px;overflow-x:auto;padding:4px 10px;scrollbar-width:none;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.dlist::-webkit-scrollbar{display:none}
+.dtile{flex:none;width:70px;height:70px;min-height:70px;padding:6px;border-radius:18px;background:#fbfaf5;border:3px solid var(--ink);box-shadow:3px 3px 0 var(--ink);scroll-snap-align:start;backdrop-filter:none;-webkit-backdrop-filter:none;transition:transform .15s}
+.dtile img{width:100%;height:100%;object-fit:contain;pointer-events:none}
+.dtile:active{transform:scale(.9) rotate(-4deg)}
+.dtile[aria-pressed=true]{background:var(--y)}
+.dtile.ghost{position:absolute;z-index:8;pointer-events:none!important;margin:0}
+#dsel{position:absolute;inset:0;width:100%;height:100%;pointer-events:none!important;overflow:visible;display:none}
+#hud[data-mode=decal] #dsel{display:block}
+#dsel polygon{fill:rgba(246,195,68,.1);stroke:var(--y);stroke-width:2.5;stroke-dasharray:8 6;stroke-linejoin:round;filter:drop-shadow(0 0 2px rgba(0,0,0,.7));animation:ants 1s linear infinite}
+@keyframes ants{to{stroke-dashoffset:-28}}
+#d-handle{position:absolute;left:0;top:0;width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;background:var(--y);border:3px solid var(--ink);box-shadow:2px 2px 0 var(--ink);transform:translate(-50%,-50%);touch-action:none;backdrop-filter:none;-webkit-backdrop-filter:none;z-index:5}
+#d-handle svg{width:22px;height:22px}
+#hud:not([data-mode=decal]) #d-handle{display:none}
+
+/* ---------------------------------------------------------------- options sheet */
+#opts{position:fixed;inset:0;z-index:42;display:flex;align-items:flex-end;justify-content:center}
+#opts .scrim{position:absolute;inset:0;background:rgba(5,7,9,.55);animation:fade .25s both}
+#opts .panel{position:relative;width:100%;max-width:440px;max-height:calc(100% - 24px);overflow:auto;overscroll-behavior:contain;padding:10px 14px max(18px,calc(env(safe-area-inset-bottom) + 12px));border-radius:24px 24px 0 0;background:#182127;border-top:2px solid var(--y);box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:sheetUp .4s cubic-bezier(.2,.9,.25,1) both}
+@keyframes sheetUp{from{transform:translateY(100%)}} @keyframes fade{from{opacity:0}}
+#opts .grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.22);margin:0 auto 8px}
+#opts header{display:flex;align-items:center;justify-content:space-between;margin:0 2px 10px}
+#opts h2{margin:0;font:400 26px/1 "Permanent Marker",cursive;color:var(--y)}
+#opts .x{width:44px;height:44px;min-height:44px;padding:0;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);border:0;backdrop-filter:none;-webkit-backdrop-filter:none}
+#opts .x svg{width:20px;height:20px}
+.opt{width:100%;display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:12px;min-height:62px;padding:10px 12px;margin:0 0 8px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line);text-align:left;font-weight:500;backdrop-filter:none;-webkit-backdrop-filter:none;color:var(--text)}
+.opt[hidden]{display:none}
+.opt:active{transform:scale(.98)}
+.opt .oi{width:40px;height:40px;border-radius:12px;background:rgba(246,195,68,.14);color:var(--y);display:grid;place-items:center}
+.opt .oi svg{width:22px;height:22px}
+.opt .ol{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.opt .ol b{font-size:15px} .opt .ol small{font-size:12.5px;color:var(--muted);font-weight:500}
+.opt.warn .oi{background:rgba(255,59,78,.14);color:#ff7a86} .opt.warn.armed{border-color:#ff3b4e;background:rgba(255,59,78,.12)}
+.opt .sw{position:relative;width:48px;height:28px;border-radius:999px;background:rgba(255,255,255,.18);transition:background .2s}
+.opt .sw::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s cubic-bezier(.2,.9,.25,1.2)}
+.opt[aria-checked=true] .sw{background:var(--y)} .opt[aria-checked=true] .sw::after{transform:translateX(20px);background:var(--ink)}
+.opt .go{width:10px;height:10px;border-right:2.5px solid var(--muted);border-top:2.5px solid var(--muted);transform:rotate(45deg);margin-right:6px}
+.seg-row{grid-template-columns:40px 1fr;grid-template-rows:auto auto}
+.seg-row .seg{grid-column:1/-1;display:flex;padding:3px;border-radius:999px;background:rgba(0,0,0,.3)}
+.seg button{flex:1;min-height:40px;border:0;background:none;border-radius:999px;font-size:14px;backdrop-filter:none;-webkit-backdrop-filter:none}
+.seg button[aria-checked=true]{background:var(--y);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){#opts .panel,#opts .scrim,#ask,#dsel polygon{animation:none}}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  #dtray{right:auto;width:min(460px,calc(100% - 20px));bottom:calc(84px + env(safe-area-inset-bottom))}
+  #dbar{right:auto;width:min(460px,calc(100% - 20px))}
+  #ask{bottom:calc(86px + env(safe-area-inset-bottom));left:auto;right:calc(12px + env(safe-area-inset-right));width:min(360px,45%)}
+}
