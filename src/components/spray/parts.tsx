@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { Upload } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -339,5 +346,141 @@ export function Note({
     >
       {children}
     </div>
+  );
+}
+
+/** A row of buttons where one is picked (Add / Erase, Fill / Outline only). 44 px tall. */
+export function Segmented<T extends string>({
+  value,
+  onChange,
+  options,
+  label,
+  className,
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: ReactNode; title?: string }[];
+  label: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn(
+        "inline-flex min-h-11 max-w-full flex-wrap gap-0.5 rounded-xl border border-white/[0.12] bg-black/25 p-1",
+        className,
+      )}
+    >
+      {options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          title={o.title}
+          aria-pressed={value === o.value}
+          onClick={() => onChange(o.value)}
+          className={cn(
+            "inline-flex min-h-9 min-w-11 flex-auto shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-[var(--partner)] focus-visible:outline-none",
+            value === o.value
+              ? "bg-[var(--partner)] text-black"
+              : "text-white/75 hover:bg-white/[0.06] hover:text-white",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A 3:4 preview you can tap or drag on (taps: fractions of the picture; drags: the change in fractions).
+ * Only takes over touch while `interactive`, so the page still scrolls over it otherwise.
+ */
+export function TouchPreview({
+  draw,
+  deps,
+  label,
+  caption,
+  interactive,
+  onTap,
+  onDrag,
+  w = 384,
+  h = 512,
+  className,
+}: {
+  draw: (g: CanvasRenderingContext2D, w: number, h: number) => void;
+  deps: unknown[];
+  label: string;
+  caption?: ReactNode;
+  interactive?: "tap" | "drag" | null;
+  onTap?: (u: number, v: number) => void;
+  onDrag?: (du: number, dv: number) => void;
+  w?: number;
+  h?: number;
+  className?: string;
+}) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const last = useRef<{ id: number; x: number; y: number; moved: number } | null>(null);
+  useEffect(() => {
+    const g = ref.current?.getContext("2d");
+    if (!g) return;
+    g.clearRect(0, 0, w, h);
+    draw(g, w, h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  const frac = (e: ReactPointerEvent) => {
+    const r = ref.current!.getBoundingClientRect();
+    return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height] as const;
+  };
+  return (
+    <figure className={cn("min-w-0", className)}>
+      <canvas
+        ref={ref}
+        width={w}
+        height={h}
+        role="img"
+        aria-label={label}
+        style={{ touchAction: interactive ? "none" : undefined }}
+        className={cn(
+          "block aspect-[3/4] w-full rounded-xl border border-white/[0.08] bg-[#24252b]",
+          interactive === "tap" && "cursor-crosshair",
+          interactive === "drag" && "cursor-move",
+        )}
+        onPointerDown={(e) => {
+          if (!interactive || (e.pointerType === "mouse" && e.button !== 0)) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          last.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
+        }}
+        onPointerMove={(e) => {
+          const l = last.current;
+          if (!l || l.id !== e.pointerId) return;
+          const r = ref.current!.getBoundingClientRect();
+          const dx = e.clientX - l.x,
+            dy = e.clientY - l.y;
+          l.moved += Math.abs(dx) + Math.abs(dy);
+          if (interactive === "drag" && onDrag) {
+            onDrag(dx / r.width, dy / r.height);
+            l.x = e.clientX;
+            l.y = e.clientY;
+          }
+        }}
+        onPointerUp={(e) => {
+          const l = last.current;
+          last.current = null;
+          if (!l || l.id !== e.pointerId) return;
+          if (interactive === "tap" && onTap && l.moved < 12) {
+            const [u, v] = frac(e);
+            if (u >= 0 && u <= 1 && v >= 0 && v <= 1) onTap(u, v);
+          }
+        }}
+        onPointerCancel={() => (last.current = null)}
+      />
+      {caption ? (
+        <figcaption className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          {caption}
+        </figcaption>
+      ) : null}
+    </figure>
   );
 }

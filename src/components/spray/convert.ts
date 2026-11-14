@@ -5,6 +5,8 @@
 // picture and a JSON file: it finds the feature points on the phone at run time. So "compiling" a target
 // is: frame the picture 3:4, make the greyscale copy, check it has enough detail to track (`trackability`).
 
+import { feather } from "./auto-mask";
+
 export const PAINT_W = 768;
 export const PAINT_H = 1024;
 const LUM_W = 480;
@@ -319,75 +321,131 @@ export type CanvasBuild = {
 };
 
 /**
- * The canvas overlay: a transparent PNG of the paintable part (e.g. the character cut out of the
- * shirt print), framed exactly like the front tracking picture (same size as that upload). Alpha →
- * mask. Lines: the art's own dark ink lines (colouring-book style), just the edge, none, or an upload.
+ * Where an uploaded overlay sits on the target picture when it doesn't line up by itself: moved by x, y
+ * (fractions of the picture's width and height), scaled by s around the middle and turned by r degrees.
+ * Baked into the saved files, so nothing that shows the canvas needs to know about it.
  */
-export function buildCanvas(
-  overlay: HTMLImageElement,
-  frame: Frame,
-  linesMode: LinesMode,
-  linesImg: HTMLImageElement | null,
-): CanvasBuild {
-  // the overlay may be a different resolution than the tracking upload: scale the frame to it
-  const k = overlay.naturalWidth / frame.sw;
-  const f: Frame = {
-    sw: overlay.naturalWidth,
-    sh: overlay.naturalHeight,
+export type Place = { x: number; y: number; s: number; r: number };
+export const PLACE0: Place = { x: 0, y: 0, s: 1, r: 0 };
+export const isPlaced = (p: Place) => p.x !== 0 || p.y !== 0 || p.s !== 1 || p.r !== 0;
+
+/** The tracking upload's frame, scaled to another picture exported from the same file. */
+export function frameOn(frame: Frame, img: { naturalWidth: number; naturalHeight: number }): Frame {
+  const k = img.naturalWidth / frame.sw;
+  return {
+    sw: img.naturalWidth,
+    sh: img.naturalHeight,
     x: frame.x * k,
     y: frame.y * k,
     w: frame.w * k,
     h: frame.h * k,
   };
-  const art = drawFramed(overlay, f, PAINT_W, PAINT_H, null);
-  const ag = art.getContext("2d", { willReadFrequently: true })!;
-  const ad = ag.getImageData(0, 0, PAINT_W, PAINT_H);
-  const N = PAINT_W * PAINT_H;
-  const m = new Uint8Array(N);
-  let on = 0;
+}
+
+/** drawFramed on a transparent canvas, then moved / scaled / turned by `place`. */
+export function drawPlaced(
+  img: CanvasImageSource,
+  f: Frame,
+  W: number,
+  H: number,
+  place: Place = PLACE0,
+): HTMLCanvasElement {
+  const flat = drawFramed(img, f, W, H, null);
+  if (!isPlaced(place)) return flat;
+  const c = canvas(W, H);
+  const g = c.getContext("2d")!;
+  g.imageSmoothingQuality = "high";
+  g.translate(W / 2 + place.x * W, H / 2 + place.y * H);
+  g.rotate((place.r * Math.PI) / 180);
+  g.scale(place.s, place.s);
+  g.drawImage(flat, -W / 2, -H / 2);
+  return c;
+}
+
+/** The RGBA pixels of a picture drawn at W x H. */
+export function pixels(src: CanvasImageSource, W: number, H: number): Uint8ClampedArray {
+  const c = canvas(W, H);
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.imageSmoothingQuality = "high";
+  g.drawImage(src, 0, 0, W, H);
+  return g.getImageData(0, 0, W, H).data;
+}
+
+/** The see-through channel of a picture at the paint size (0..255 per pixel). */
+export function alphaOf(src: CanvasImageSource): Uint8Array {
+  const d = pixels(src, PAINT_W, PAINT_H);
+  const a = new Uint8Array(PAINT_W * PAINT_H);
+  for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3];
+  return a;
+}
+
+/**
+ * An uploaded overlay → the part fans can paint (0..255 per pixel at the paint size) and the art's
+ * pixels for "Art's own dark lines". A transparent PNG of the paintable part (e.g. the character cut
+ * out of the shirt print), framed exactly like the front tracking picture, then placed by `place`.
+ */
+export function overlayShape(
+  overlay: HTMLImageElement,
+  frame: Frame,
+  place: Place = PLACE0,
+  noAlpha = !hasTransparency(overlay),
+): { alpha: Uint8Array; art: Uint8ClampedArray | null } {
+  const art = drawPlaced(overlay, frameOn(frame, overlay), PAINT_W, PAINT_H, place);
+  const d = art
+    .getContext("2d", { willReadFrequently: true })!
+    .getImageData(0, 0, PAINT_W, PAINT_H).data;
   // A picture with no transparency (a JPEG, a flattened PNG): treat near-white as "not paintable", like
   // a stencil on white paper. Checked on the upload itself: the padding bars of the frame are always
   // transparent, so the framed copy can't tell.
-  const noAlpha = !hasTransparency(overlay);
+  const alpha = new Uint8Array(PAINT_W * PAINT_H);
+  for (let i = 0; i < alpha.length; i++) {
+    const a = d[i * 4 + 3];
+    alpha[i] = noAlpha && d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2] >= 735 ? 0 : a;
+  }
+  return { alpha, art: noAlpha ? null : d };
+}
+
+/** An uploaded lines PNG, framed and placed like the overlay. */
+export const linesPlaced = (linesImg: HTMLImageElement, frame: Frame, place: Place = PLACE0) =>
+  drawPlaced(linesImg, frameOn(frame, linesImg), PAINT_W, PAINT_H, place);
+
+/**
+ * The finished canvas from the part fans can paint (0..255 per pixel, 768x1024): the saved shape
+ * (soft edge of about a pixel), the lines drawn over the paint, the sticker's cut line. `art`: the
+ * picture's pixels at the same size, for "Art's own dark lines" (the dark outlines, faces and lettering
+ * inside the shape).
+ */
+export function finishCanvas(
+  alpha: Uint8Array,
+  art: Uint8ClampedArray | null,
+  linesMode: LinesMode,
+  linesUpload: HTMLCanvasElement | null,
+): CanvasBuild {
+  const N = PAINT_W * PAINT_H;
+  const m = new Uint8Array(N);
+  let on = 0;
   for (let i = 0; i < N; i++) {
-    const r = ad.data[i * 4],
-      g = ad.data[i * 4 + 1],
-      b = ad.data[i * 4 + 2],
-      a = ad.data[i * 4 + 3];
-    const v = a > 127 && (!noAlpha || r + g + b < 735) ? 1 : 0;
+    const v = alpha[i] > 127 ? 1 : 0;
     m[i] = v;
     on += v;
   }
   if (on < N * 0.01)
     throw new Error(
-      "The overlay has almost nothing paintable: it should be a PNG with the paintable part opaque and the rest transparent.",
+      "Almost nothing is paintable yet. Mark the part fans can paint (step 4) before saving.",
     );
+  const soft = feather(m, PAINT_W, PAINT_H);
   const mask = canvas(PAINT_W, PAINT_H);
   const mg = mask.getContext("2d")!;
   const md = mg.createImageData(PAINT_W, PAINT_H);
   for (let i = 0; i < N; i++) {
     md.data[i * 4] = md.data[i * 4 + 1] = md.data[i * 4 + 2] = 255;
-    md.data[i * 4 + 3] = m[i] * 255;
+    md.data[i * 4 + 3] = soft[i];
   }
   mg.putImageData(md, 0, 0);
 
   let lines: HTMLCanvasElement | null = null;
-  if (linesMode === "upload" && linesImg) {
-    const lk = linesImg.naturalWidth / frame.sw;
-    lines = drawFramed(
-      linesImg,
-      {
-        sw: linesImg.naturalWidth,
-        sh: linesImg.naturalHeight,
-        x: frame.x * lk,
-        y: frame.y * lk,
-        w: frame.w * lk,
-        h: frame.h * lk,
-      },
-      PAINT_W,
-      PAINT_H,
-      null,
-    );
+  if (linesMode === "upload" && linesUpload) {
+    lines = linesUpload;
   } else if (linesMode === "art" || linesMode === "edge") {
     lines = canvas(PAINT_W, PAINT_H);
     const lg = lines.getContext("2d")!;
@@ -416,13 +474,13 @@ export function buildCanvas(
           }
         if (edge) ink(i);
       }
-    if (linesMode === "art" && !noAlpha) {
+    if (linesMode === "art" && art) {
       // the art's own dark lines inside the shape (outlines, faces, lettering): pixels clearly darker
       // than their surroundings (thin strokes), or near-black. Dark filled areas (navy trousers) stay
       // paintable instead of turning into a black blob.
       const lum = new Float32Array(N);
       for (let i = 0; i < N; i++)
-        lum[i] = 0.299 * ad.data[i * 4] + 0.587 * ad.data[i * 4 + 1] + 0.114 * ad.data[i * 4 + 2];
+        lum[i] = 0.299 * art[i * 4] + 0.587 * art[i * 4 + 1] + 0.114 * art[i * 4 + 2];
       const local = boxBlur(lum, PAINT_W, PAINT_H, 6);
       for (let i = 0; i < N; i++) {
         if (!m[i]) continue;
