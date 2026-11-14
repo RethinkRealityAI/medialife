@@ -74,7 +74,7 @@ try { sound.on = localStorage.getItem('sb-view-sound') !== '0'; } catch (e) { /*
 function syncSoundBtn() { const b = $('b-sound'); b.setAttribute('aria-pressed', String(sound.on)); b.setAttribute('aria-label', sound.on ? 'Sound on. Tap to mute' : 'Sound off. Tap to unmute'); }
 syncSoundBtn();
 $('b-sound').onclick = () => {
-  sound.on = !sound.on; syncSoundBtn(); sound.init(); if (sound.on) sound.click();
+  sound.on = !sound.on; syncSoundBtn(); sound.init(); if (sound.on) sound.click(); syncSceneSound();
   try { localStorage.setItem('sb-view-sound', sound.on ? '1' : '0'); } catch (e) { /* none */ }
 };
 // the first touch anywhere unlocks the audio (browsers only allow sound after one)
@@ -124,7 +124,7 @@ function fillCopy() {
   const sw = $('swatches'); sw.textContent = '';
   for (const c of cols()) { const i = document.createElement('i'); i.style.setProperty('--c', c); sw.appendChild(i); }
   $('b-ar').href = `/evade/spray-bobo/?c=${encodeURIComponent(ID)}`;
-  $('b-ar').setAttribute('aria-label', 'See it on your merch. Opens the camera page, needs the real EVADE merch and your camera');
+  $('b-ar').setAttribute('aria-label', 'View on merch. Opens the camera page, needs the real EVADE merch and your camera');
 }
 const cols = () => (C && C.colours && C.colours.length ? C.colours : DEFAULT_COLS);
 
@@ -251,8 +251,116 @@ function buildScene() {
   shadow.position.z = 0.0002; shadow.renderOrder = 9; F.add(shadow);
   splats = makeSplats(); F.add(splats.points);
   orbit = makeOrbit(); F.add(orbit.mesh); colourOrbit(cols());
+  buildSceneItems();
 
   new ResizeObserver(resize).observe(stage); resize();
+}
+
+// ---------------------------------------------------------------- the scene: models, pictures and video placed around the print
+// P.scene, as the admin scene editor saves it. One coordinate system everywhere (editor, Studio, this page, the AR page):
+// origin the centre of the 3:4 print, x right, y up, z out of the print towards the viewer, MILLIMETRES of the real print,
+// rotations in degrees, XYZ order. The group hangs off F (the card's frame, H tall in metres), scaled by H / heightMm, so
+// it lands and tilts with the card and stays put while only the sticker spins. GLTFLoader loads only when there is a model.
+// The items pop in (staggered) once the reveal has settled; a failed asset is skipped (console.warn), never the page.
+const SCENE_KINDS = new Set(['model', 'image', 'video']);
+const scn = { group: null, items: [], shown: false, reach: { x: 0, y: 0 }, heard: false };
+const fnum = (v, d) => (Number.isFinite(+v) ? +v : d);
+const trio = (a) => [0, 1, 2].map((i) => fnum(Array.isArray(a) ? a[i] : 0, 0));
+function sceneList() {
+  const s = P && Array.isArray(P.scene) ? P.scene : [];
+  return s.filter((it) => it && it.visible !== false && SCENE_KINDS.has(it.kind) && typeof it.file === 'string' && it.file && fnum(it.size, 0) > 0);
+}
+let gltfLoader = null;
+const getGltf = () => gltfLoader || (gltfLoader = Promise.all([import('three/addons/loaders/GLTFLoader.js'), import('three/addons/libs/meshopt_decoder.module.js')])
+  .then(([{ GLTFLoader }, { MeshoptDecoder }]) => { const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder); return l; }));
+function buildSceneItems() {
+  const list = sceneList(); if (!list.length) return;
+  const mm = H / (fnum(P.heightMm, 0) > 0 ? +P.heightMm : H * 1000);   // F units (metres of the card) per millimetre of the print
+  const g = new THREE.Group(); g.name = 'scene'; g.scale.setScalar(mm); F.add(g); scn.group = g;
+  list.forEach((it, i) => {
+    const holder = new THREE.Group(), p = trio(it.pos), r = trio(it.rot).map(THREE.MathUtils.degToRad), size = +it.size;
+    holder.name = `scene-${it.id || i}`; holder.position.set(p[0], p[1], p[2]); holder.rotation.set(r[0], r[1], r[2], 'XYZ'); holder.visible = false;
+    g.add(holder);
+    // how far it reaches from the print's centre (data only, so the framing is right from the first frame)
+    const half = size / 2 * Math.max(1, it.kind === 'model' ? 1 : fnum(it.aspect, 1));
+    scn.reach.x = Math.max(scn.reach.x, (Math.abs(p[0]) + half) * mm); scn.reach.y = Math.max(scn.reach.y, (Math.abs(p[1]) + half) * mm);
+    const e = { holder, i, t: 0, ready: false, mixer: null, video: null, sound: it.kind === 'video' && it.sound === true };
+    scn.items.push(e);
+    const made = it.kind === 'model' ? getGltf().then((l) => l.loadAsync(it.file)).then((gl) => sceneModel(gl, it, size, e))
+      : it.kind === 'image' ? loadImg(it.file).then((img) => { const t = new THREE.Texture(img); t.needsUpdate = true; scenePlane(t, fnum(it.aspect, 0) > 0 ? +it.aspect : img.naturalWidth / img.naturalHeight, size, e); })
+        : sceneVideo(it, size, e);
+    made.then(() => { e.ready = true; }).catch((err) => { console.warn('scene: skipped', it.file, err); holder.removeFromParent(); e.dead = true; });
+  });
+}
+function sceneModel(gl, it, size, e) {
+  // normalise in the rest pose: height = size, the bounding-box centre on pos, rot about that centre (the holder)
+  const m = gl.scene, inner = new THREE.Group(); inner.add(m); inner.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(inner), d = box.getSize(new THREE.Vector3());
+  const h = d.y > 1e-9 ? d.y : Math.max(d.x, d.y, d.z);   // a flat model: its largest side (as the editor does)
+  if (!(h > 1e-9)) throw new Error('empty model');
+  const s = size / h, c = box.getCenter(new THREE.Vector3());
+  inner.scale.setScalar(s); inner.position.copy(c).multiplyScalar(-s);
+  m.traverse((o) => { if (o.isMesh) { o.frustumCulled = false; o.renderOrder = 11; } });
+  if (it.clip) {
+    const clip = THREE.AnimationClip.findByName(gl.animations || [], it.clip);
+    if (clip) { e.mixer = new THREE.AnimationMixer(m); e.mixer.clipAction(clip).setLoop(THREE.LoopRepeat, Infinity).play(); }
+    else console.warn('scene: no clip', it.clip, 'in', it.file);
+  }
+  e.holder.add(inner);
+}
+function scenePlane(tex, aspect, size, e) {
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const a = aspect > 0 && Number.isFinite(aspect) ? aspect : 1;
+  // transparent PNG / WebP keep their alpha; alphaTest keeps the clear parts out of the depth buffer
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size * a, size), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.01, side: THREE.DoubleSide, toneMapped: false }));
+  mesh.renderOrder = 11; e.holder.add(mesh);
+}
+function sceneVideo(it, size, e) {
+  return new Promise((res, rej) => {
+    const v = document.createElement('video');
+    v.crossOrigin = 'anonymous'; v.muted = true; v.defaultMuted = true; v.loop = true; v.autoplay = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+    let done = false;
+    const ok = () => {
+      if (done) return; done = true;
+      const t = new THREE.VideoTexture(v);
+      scenePlane(t, fnum(it.aspect, 0) > 0 ? +it.aspect : (v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9), size, e);
+      e.video = v; syncSceneSound(); res();
+    };
+    v.addEventListener('loadeddata', ok, { once: true });
+    v.addEventListener('error', () => { if (!done) { done = true; rej(new Error('video ' + it.file)); } }, { once: true });
+    v.src = it.file; v.load();
+    v.play().catch(() => { /* starts when shown / after a tap */ });
+  });
+}
+// sound: videos marked `sound` unmute after the first tap or key (browsers allow it then), and follow the mute button
+function syncSceneSound() {
+  for (const e of scn.items) if (e.video && e.sound) { e.video.muted = !(scn.heard && sound.on); if (scn.shown && e.video.paused) e.video.play().catch(() => {}); }
+}
+function sceneHeard() {
+  if (scn.heard) return; scn.heard = true; syncSceneSound();
+  for (const t of ['pointerup', 'touchend', 'keydown']) removeEventListener(t, sceneHeard, true);
+}
+for (const t of ['pointerup', 'touchend', 'keydown']) addEventListener(t, sceneHeard, true);
+document.addEventListener('visibilitychange', () => { for (const e of scn.items) if (e.video) { if (document.hidden) e.video.pause(); else if (scn.shown) e.video.play().catch(() => {}); } });
+function sceneHide() {   // Replay: the items go and pop in again when the sticker has settled
+  scn.shown = false;
+  for (const e of scn.items) { e.holder.visible = false; e.t = 0; }
+}
+function tickScene(dt) {
+  if (!scn.group) return;
+  if (!scn.shown && life.phase === 'idle') {
+    scn.shown = true;
+    for (const e of scn.items) { e.t = REDUCED ? 0 : -e.i * 0.09; if (e.video) e.video.play().catch(() => {}); }
+  }
+  if (!scn.shown) return;
+  for (const e of scn.items) {
+    if (!e.ready || e.dead) continue;
+    e.t += dt; if (e.t < 0) continue;
+    const k = REDUCED ? 1 : easeBack(e.t / 0.42);
+    e.holder.visible = true; e.holder.scale.setScalar(Math.max(1e-4, k));
+    if (e.mixer) e.mixer.update(dt);
+  }
 }
 function boxOutline() { return [[0.04, 0.04], [0.96, 0.04], [0.96, 0.96], [0.04, 0.96]]; }
 function maskCentre(img) {   // the centroid of the stencil, in uv (y down)
@@ -343,7 +451,8 @@ function resize() {
   const w = Math.max(1, stage.clientWidth), h = Math.max(1, stage.clientHeight);
   renderer.setSize(w, h, false); camera.aspect = w / h;
   // fit the card, the hover and the orbit: about 1.5 card heights tall and 1.55 card widths wide
-  const needH = H * S * 1.26, needW = W * S * 1.48, tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  // with a scene, wide enough for it too (from the placed sizes; at most about twice the card alone)
+  const needH = Math.min(Math.max(H * 1.26, scn.reach.y * 2.16), H * 2.5) * S, needW = Math.min(Math.max(W * 1.48, scn.reach.x * 2.16), W * 2.9) * S, tn = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const dist = Math.max(needH / (2 * tn), needW / (2 * tn * camera.aspect));
   camera.position.set(0, 0, dist); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
   root.position.y = -H * S * 0.04;
@@ -372,7 +481,7 @@ function play(fromIntro) {
   Object.assign(life, { t: 0, phase: fromIntro ? 'intro' : 'hold', hop: null, spin: null, hopAt: 5 + Math.random() * 3, uy: 0, uv: 0, press: false, squish: 0, wig: null, shineAt: 2.5, burst: false });
   const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = fromIntro ? 0 : 1;
   paintMesh.visible = true; stickerPivot.visible = false; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1);
-  stickerPivot.position.set(0, 0, 0.0012); shine.value = -1;
+  stickerPivot.position.set(0, 0, 0.0012); shine.value = -1; sceneHide();
   if (!fromIntro) { sound.rattle(3); }
   setHint('');
 }
@@ -469,6 +578,7 @@ function frame(now) {
   tickAlive(dt);
   tickOrbit(dt, stickerPivot.position.z);
   tickSplats(dt);
+  tickScene(dt);
   renderer.render(scene, camera);
 }
 function runLoop(on) { if (on === running) return; running = on; last = 0; if (on) requestAnimationFrame(frame); }
@@ -625,6 +735,6 @@ $('rep-go').onclick = async () => {
 rep.addEventListener('click', (e) => { if (e.target === rep) rep.close(); });   // tap outside the sheet
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sbv = { get phase() { return life.phase; }, get id() { return ID; }, art: () => artBlob, life };
+if (params.has('test')) window.__sbv = { get phase() { return life.phase; }, get id() { return ID; }, art: () => artBlob, life, get scene() { return scn.group; }, get card() { return cardGroup; } };
 
 load();

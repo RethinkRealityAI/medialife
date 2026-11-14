@@ -19,11 +19,25 @@ What a share link or QR from the Studio opens: one fan's painting, no camera. Mo
 - **Replay** plays the peel-off again. **Save image**: a 1080x1350 PNG, the sticker on EVADE yellow with both
   logos, the paintable's name and the short link (made ahead, so the share sheet opens straight from the tap;
   Web Share with a file where possible, else a download). **Share**: Web Share link, else copy with a toast.
-  **See it on your merch**: `/evade/spray-bobo/?c=<id>` (needs the real merch and the camera).
+  **View on merch** (second line: needs the real merch and a camera): `/evade/spray-bobo/?c=<id>`.
   **Report**: confirm sheet, `POST /api/spray/creations/<id>/report`, "Thanks, the team will take a look".
 - States: loading, not found (404 or no id), taken down (410), offline / error with Retry. `noindex`.
 - `prefers-reduced-motion`: the peel-off is short (no spin, no screen flash, smaller bursts, no auto hops,
   no parallax), and the sticker always ends up showing. No WebGL: the sticker is shown as a flat picture.
+
+## The scene (models, pictures, video around the print)
+- `paintable.scene` (see `SceneItem` in `src/lib/spray/model.ts`; missing = none; `visible: false` skipped).
+  Millimetres of the print, origin its centre, x right, y up, z out; degrees XYZ. The group hangs off the
+  card's frame `F` (the print, `H` = 0.0801 tall) scaled by `H / heightMm`, so it lands and tilts with the card
+  and stays still while only the sticker spins. Models: rest-pose bounding box, height = `size`, box centre on
+  `pos`, `rot` about it, `clip` looped (same rules as `src/components/scene-editor/README.md`). Pictures and
+  video: unlit planes `size` tall, alpha kept; video muted, looping, inline; `sound` items unmute after the first
+  tap / key and follow the mute button.
+- Items pop in, staggered, once the sticker has settled (at once with reduced motion); Replay hides them and
+  they pop in again. The camera fits the scene's placed reach (at most about twice the card alone).
+- `GLTFLoader` + meshopt load only when there is a model (no Draco decoder is vendored: a Draco GLB is skipped).
+  A failed asset is skipped with `console.warn`. Shown in `?embed=1` too. Save image stays the sticker only.
+- `SCENE.md`: the recipe for the AR page.
 
 ## Pieces
 - `index.html`, `style.css`, `main.js`: plain ES modules, three.js from `/roblox/creators/vendor/three/`
@@ -32,7 +46,7 @@ What a share link or QR from the Studio opens: one fan's painting, no camera. Mo
   from `../main.js` (the AR page), not imported. The lights are softer than the AR page's (a dark page instead
   of a camera picture behind the sticker would otherwise wash the paint out).
 - Flat colours only (no gradients); the only soft edge is the sticker's blurred shadow, as on the AR page.
-- `?test` exposes `window.__sbv` (phase, life) for automated tests.
+- `?test` exposes `window.__sbv` (phase, life, scene and card groups) for automated tests.
 
 ## Tested
 Headless Chromium (SwiftShader) against `vite dev` with local storage in `.data/ar/`: at 390x844, 375x667,
