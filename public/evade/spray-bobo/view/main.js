@@ -104,14 +104,15 @@ async function load() {
   try {
     const d = await r.json(); C = d.creation; P = d.paintable;
     const f = P.files || {};
-    const [print, mask, lines, outline, paintImg] = await Promise.all([
+    const [print, mask, lines, outline, paintImg, decals] = await Promise.all([
       loadImg(f.print).catch(() => null),
       loadImg(f.mask),
       f.lines && C.linesOn ? loadImg(f.lines).catch(() => null) : null,
       getJson(f.outline).catch(() => null),
       loadImg(C.image),
+      loadDecals(),
     ]);
-    Object.assign(art, { print, mask, lines, paint: paintImg, points: outline && Array.isArray(outline.points) && outline.points.length > 2 ? outline.points : null });
+    Object.assign(art, { print, mask, lines, paint: paintImg, decals, points: outline && Array.isArray(outline.points) && outline.points.length > 2 ? outline.points : null });
   } catch (e) { console.error(e); setState('error'); return; }
   fillCopy();
   setState('ready');
@@ -251,6 +252,7 @@ function buildScene() {
   shadow.position.z = 0.0002; shadow.renderOrder = 9; F.add(shadow);
   splats = makeSplats(); F.add(splats.points);
   orbit = makeOrbit(); F.add(orbit.mesh); colourOrbit(cols());
+  buildDecals();
   buildSceneItems();
 
   new ResizeObserver(resize).observe(stage); resize();
@@ -362,6 +364,106 @@ function tickScene(dt) {
     if (e.mixer) e.mixer.update(dt);
   }
 }
+// ---------------------------------------------------------------- decals (from the AR page's decalArt / makeLayer / placeLayer)
+// C.decals, back to front: { id, u, v, w, r, f } in the picture's frame (u, v: the decal's middle as fractions of the
+// picture, v down; w: its width as a share of the picture's; r: turn in radians, counter-clockwise as you look at it;
+// f: -1 mirrored). The library (../decals/decals.json and its SVGs) loads only when there are decals. They pop on
+// in order once the paint has spread, lie on the flat painting, then ride the 3D sticker from the peel on (they hop,
+// spin and settle with it, and may stick out past its edge, as on the AR page). Save image draws them the same way.
+// An unknown id or a picture that fails is skipped (console.warn), never the page.
+const DEC_DIR = '/evade/spray-bobo/decals/';
+const dec = { layers: [], group: null, on: 'flat', started: false };
+function decalList() {
+  const s = C && Array.isArray(C.decals) ? C.decals : [];
+  return s.filter((x) => x && typeof x.id === 'string' && x.id);
+}
+async function loadDecals() {
+  const list = decalList(); if (!list.length) return [];
+  let lib;
+  try { lib = await getJson(DEC_DIR + 'decals.json'); } catch (e) { console.warn('decals: no library', e); return []; }
+  const by = {}; for (const d of (lib && Array.isArray(lib.decals) ? lib.decals : [])) if (d && d.id && d.file) by[d.id] = d;
+  // texture size: crisp at 2x on a phone for how wide it is drawn (the card is at most about 850 device px wide)
+  const px = {}; for (const s of list) px[s.id] = Math.max(px[s.id] || 0, clamp(+s.w || 0.3, 0.04, 1.6));
+  const arts = {};
+  const out = await Promise.all(list.map((s) => {
+    const d = by[s.id]; if (!d) { console.warn('decals: unknown', s.id); return null; }
+    const size = clamp(Math.ceil(px[s.id] * 900 / 64) * 64, 256, 1024);
+    arts[s.id] = arts[s.id] || decalArt(d, size);
+    return arts[s.id].then((a) => ({ id: s.id, u: fnum(s.u, 0.5), v: fnum(s.v, 0.5), w: clamp(+s.w || 0.3, 0.04, 1.6), r: fnum(s.r, 0), f: s.f === -1 ? -1 : 1, art: a }))
+      .catch((e) => { console.warn('decals: skipped', s.id, e); return null; });
+  }));
+  return out.filter(Boolean);
+}
+// the decal's picture, drawn once into a canvas (with a white die-cut edge for the stickers); also used by Save image
+function decalArt(d, size) {
+  return loadImg(DEC_DIR + d.file).then((img) => {
+    const iw = img.naturalWidth || img.width || 256, ih = img.naturalHeight || img.height || 256, k = size / Math.max(iw, ih);
+    const w = Math.round(iw * k), h = Math.round(ih * k), pad = d.border ? Math.round(Math.max(w, h) * 0.05) : 2;
+    const c = mk(w + pad * 2, h + pad * 2), g = c.getContext('2d');
+    if (d.border) {
+      const t = mk(w, h), tg = t.getContext('2d');
+      tg.drawImage(img, 0, 0, w, h); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = '#ffffff'; tg.fillRect(0, 0, w, h);
+      for (let a = 0; a < 16; a++) g.drawImage(t, pad + Math.cos(a * 0.3927) * pad * 0.92, pad + Math.sin(a * 0.3927) * pad * 0.92);
+    }
+    g.drawImage(img, pad, pad, w, h);
+    return { canvas: c, aspect: c.width / c.height, grow: c.width / w };
+  });
+}
+function buildDecals() {
+  if (!art.decals || !art.decals.length) return;
+  dec.group = new THREE.Group(); dec.group.name = 'decals'; dec.group.visible = false;
+  const geo = new THREE.PlaneGeometry(1, 1);
+  dec.layers = art.decals.map((s, i) => {
+    const tex = new THREE.CanvasTexture(s.art.canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, alphaTest: 0.02, toneMapped: false }));
+    mesh.name = `decal-${s.id}`; mesh.frustumCulled = false; mesh.renderOrder = 20 + i; mesh.visible = false; dec.group.add(mesh);
+    return { ...s, mesh, i, pop: null };
+  });
+  decalHost('flat');
+}
+// where they are shown: flat on the card's painting, or riding the 3D sticker (its face, just in front of the gloss)
+function decalHost(on) {
+  const g = dec.group; if (!g) return; const parent = on === 'sticker' ? sticker : F;
+  if (g.parent !== parent) parent.add(g);
+  g.position.set(0, 0, on === 'sticker' ? 0.0018 : 0.0007); dec.on = on;
+}
+function decalsReset() {   // the reveal (again): back on the flat painting, hidden until the paint has spread
+  if (!dec.group) return; dec.started = false; decalHost('flat');
+  for (const L of dec.layers) { L.pop = null; L.mesh.visible = false; }
+}
+// a decal landing: from nothing, overshoots, settles, with a little twist (the AR page's popK)
+const popK = (t) => { if (t <= 0) return 0; const k = clamp(t / 0.5, 0, 1), c = 2.2, x = k - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
+function placeDecal(L) {
+  let k = 1, tw = 0;
+  if (L.pop) { k = popK(L.pop.t); tw = -0.5 * (1 - easeOut(L.pop.t / 0.5)); }
+  k = Math.max(k, 1e-4); const ww = L.w * W * L.art.grow * k;
+  // r turns counter-clockwise (y is up here); f mirrors it about its own upright, after the turn (as Save image does)
+  L.mesh.position.set((L.u - 0.5) * W, (0.5 - L.v) * H, 0); L.mesh.rotation.set(0, 0, L.r + tw); L.mesh.scale.set(ww * L.f, ww / L.art.aspect, 1);
+}
+function tickDecals(dt) {
+  if (!dec.group) return;
+  // they pop on, in order, right after the paint has spread (at once with reduced motion)
+  if (!dec.started && life.phase !== 'intro' && life.phase !== 'off') {
+    dec.started = true;
+    for (const L of dec.layers) { L.pop = REDUCED ? null : { t: -L.i * 0.11, sounded: false }; L.mesh.visible = REDUCED; }
+  }
+  for (const L of dec.layers) {
+    if (L.pop) {
+      L.pop.t += dt;
+      if (L.pop.t >= 0 && !L.pop.sounded) { L.pop.sounded = true; L.mesh.visible = true; sound.tone(520 + L.i * 60, 980 + L.i * 60, 0.09, 0.05, 'triangle'); }
+      if (L.pop.t > 0.6) L.pop = null;
+    }
+    placeDecal(L);
+  }
+  dec.group.visible = dec.started && (paintMesh.visible || stickerPivot.visible);
+}
+// Save image and the no-WebGL picture: the decals onto a 2D canvas, the picture's frame at x, y, w wide (3:4)
+function drawDecals(g, x, y, w) {
+  for (const L of art.decals || []) {
+    const ww = L.w * w * L.art.grow, hh = ww / L.art.aspect;
+    g.save(); g.translate(x + L.u * w, y + L.v * (w * TH / TW)); g.rotate(-L.r); g.scale(L.f, 1); g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh); g.restore();
+  }
+}
 function boxOutline() { return [[0.04, 0.04], [0.96, 0.04], [0.96, 0.96], [0.04, 0.96]]; }
 function maskCentre(img) {   // the centroid of the stencil, in uv (y down)
   const c = mk(48, 64), g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, 48, 64);
@@ -409,7 +511,9 @@ function stickerGeometry(points, W, H) {
 // paint splats: a burst in the creation's colours
 function makeSplats() {
   const N = 160, geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  // unused drops wait far behind the card (at the origin they showed as a black fleck on the print mid-burst)
+  const p0 = new Float32Array(N * 3); for (let i = 0; i < N; i++) p0[i * 3 + 2] = -10;
+  geo.setAttribute('position', new THREE.BufferAttribute(p0, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
   const c = mk(64, 64), g = c.getContext('2d');
   g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 26, 0, 7); g.fill();
@@ -481,7 +585,7 @@ function play(fromIntro) {
   Object.assign(life, { t: 0, phase: fromIntro ? 'intro' : 'hold', hop: null, spin: null, hopAt: 5 + Math.random() * 3, uy: 0, uv: 0, press: false, squish: 0, wig: null, shineAt: 2.5, burst: false });
   const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = fromIntro ? 0 : 1;
   paintMesh.visible = true; stickerPivot.visible = false; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1);
-  stickerPivot.position.set(0, 0, 0.0012); shine.value = -1; sceneHide();
+  stickerPivot.position.set(0, 0, 0.0012); shine.value = -1; sceneHide(); decalsReset();
   if (!fromIntro) { sound.rattle(3); }
   setHint('');
 }
@@ -509,7 +613,7 @@ function tickAlive(dt) {
     if (k >= 1) { life.phase = 'lift'; life.t = 0; life.burst = false; u.uFlash.value = 0; }
   }
   if (life.phase === 'lift') {
-    if (!stickerPivot.visible) { stickerPivot.visible = true; sound.whoosh(); setTimeout(() => sound.sparkle(), REDUCED ? 150 : 500); }
+    if (!stickerPivot.visible) { stickerPivot.visible = true; decalHost('sticker'); sound.whoosh(); setTimeout(() => sound.sparkle(), REDUCED ? 150 : 500); }
     const k = clamp(life.t / dur(1.3, 0.5), 0, 1), e = easeInOut(k);
     u.uOpacity.value = 1 - easeOut(k * 3); paintMesh.visible = u.uOpacity.value > 0.01;
     stickerPivot.position.set(0, 0, 0.0012 + HOVER * e + (REDUCED ? 0 : Math.sin(k * Math.PI) * 0.012));
@@ -579,6 +683,7 @@ function frame(now) {
   tickOrbit(dt, stickerPivot.position.z);
   tickSplats(dt);
   tickScene(dt);
+  tickDecals(dt);
   renderer.render(scene, camera);
 }
 function runLoop(on) { if (on === running) return; running = on; last = 0; if (on) requestAnimationFrame(frame); }
@@ -636,7 +741,8 @@ function start() {
   catch (e) {   // no WebGL: show the sticker as a flat picture, never nothing
     console.warn('webgl', e); renderer = null;
     const D = composite(); stickerCanvas = bakeSticker(D);
-    const img = new Image(); img.className = 'fallback'; img.alt = "The fan's painting as a sticker"; img.src = stickerCanvas.toDataURL('image/png');
+    const pic = mk(TW, TH), pg = pic.getContext('2d'); pg.drawImage(stickerCanvas, 0, 0); drawDecals(pg, 0, 0, TW);   // a copy: Save image draws the decals itself
+    const img = new Image(); img.className = 'fallback'; img.alt = "The fan's painting as a sticker"; img.src = pic.toDataURL('image/png');
     stage.appendChild(img); canvas.hidden = true; $('b-replay').hidden = true;
     return;
   }
@@ -660,7 +766,9 @@ async function makeArtwork() {
   sil('#15131a', 30); sil('#ffffff', 22);
   // the face, cut to the stencil (the sticker canvas is white outside it; the silhouettes above are its die-cut edge)
   const cut = mk(TW, TH), cg = cut.getContext('2d'); cg.drawImage(stickerCanvas, 0, 0); cg.globalCompositeOperation = 'destination-in'; cg.drawImage(art.mask, 0, 0, TW, TH);
-  g.drawImage(cut, ax, ay, aw, ah); g.restore();
+  g.drawImage(cut, ax, ay, aw, ah);
+  drawDecals(g, ax, ay, aw);   // the decals, where they sit on the sticker (as the AR page's Artwork)
+  g.restore();
   g.fillStyle = '#15131a'; g.font = '400 92px "Permanent Marker", cursive'; g.textAlign = 'center';
   g.save(); g.translate(Wc / 2, 222); g.rotate(-0.04); g.fillText('FRESH PAINT', 0, 0); g.restore();
   // the EVADE logo in its own colours on an ink badge (its letters carry an ink outline: as a black silhouette it reads as a blob)
@@ -735,6 +843,7 @@ $('rep-go').onclick = async () => {
 rep.addEventListener('click', (e) => { if (e.target === rep) rep.close(); });   // tap outside the sheet
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sbv = { get phase() { return life.phase; }, get id() { return ID; }, art: () => artBlob, life, get scene() { return scn.group; }, get card() { return cardGroup; } };
+if (params.has('test')) window.__sbv = { get phase() { return life.phase; }, get id() { return ID; }, art: () => artBlob, life, get scene() { return scn.group; }, get card() { return cardGroup; },
+  decals: () => dec.layers.map((L) => ({ id: L.id, on: dec.on, shown: !!(dec.group && dec.group.visible) && L.mesh.visible, popping: !!L.pop, order: L.mesh.renderOrder, u: L.u, v: L.v, w: L.w, r: L.r, f: L.f, rotZ: L.mesh.rotation.z, sx: L.mesh.scale.x, sy: L.mesh.scale.y, tex: [L.art.canvas.width, L.art.canvas.height] })), get decalGroup() { return dec.group; } };
 
 load();

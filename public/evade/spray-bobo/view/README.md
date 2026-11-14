@@ -39,6 +39,20 @@ What a share link or QR from the Studio opens: one fan's painting, no camera. Mo
   A failed asset is skipped with `console.warn`. Shown in `?embed=1` too. Save image stays the sticker only.
 - `SCENE.md`: the recipe for the AR page.
 
+## Decals
+- `creation.decals` (see `CreationDecal` in `src/lib/spray/model.ts`; missing or empty = none), back to front:
+  `{ id, u, v, w, r, f }` in the 3:4 picture's frame: `u, v` its middle (fractions, v down), `w` its width as a share
+  of the picture's (height = width / its aspect), `r` a turn in radians, counter-clockwise on screen, `f` -1 mirrored
+  (about its own upright, after the turn). Same maths as the AR page (`placeLayer`, and its Artwork export).
+- `../decals/decals.json` and the SVGs load only when there are decals. Each SVG is drawn once into a canvas sized for
+  how wide it is placed (`w * 900` px, 256 to 1024 on the long side: crisp at 2x on a phone), with the white die-cut
+  edge for `border` decals, as on the AR page. An unknown id or a picture that fails is skipped with `console.warn`.
+- They pop on in order (small scale-in with a twist) right after the paint has spread, lie on the flat painting
+  through the flash, then ride the 3D sticker from the peel on (hop, spin, squash and settle with it). Like the AR
+  page they may stick out past the sticker's edge. Reduced motion: no pop, there at once. Replay pops them again.
+- Save image draws them on the sticker the same way (`drawDecals`, inside the artwork's tilt); so does the no-WebGL
+  picture (cut at the picture's edge there). Shown in `?embed=1` too.
+
 ## Pieces
 - `index.html`, `style.css`, `main.js`: plain ES modules, three.js from `/roblox/creators/vendor/three/`
   (importmap). All URLs are absolute because the page is also served at `/sb/<id>`.
@@ -46,11 +60,15 @@ What a share link or QR from the Studio opens: one fan's painting, no camera. Mo
   from `../main.js` (the AR page), not imported. The lights are softer than the AR page's (a dark page instead
   of a camera picture behind the sticker would otherwise wash the paint out).
 - Flat colours only (no gradients); the only soft edge is the sticker's blurred shadow, as on the AR page.
-- `?test` exposes `window.__sbv` (phase, life, scene and card groups) for automated tests.
+- `?test` exposes `window.__sbv` (phase, life, scene and card groups, `decals()`: each decal's id, host (`flat` /
+  `sticker`), shown, popping, placement and texture size) for automated tests.
 
 ## Tested
 Headless Chromium (SwiftShader) against `vite dev` with local storage in `.data/ar/`: at 390x844, 375x667,
 844x390 and 1440x900; reveal sequence; tap hop, hold jump, drag spin and settle, keyboard; Save image (download
 path); Share (copy path); Report; 404, 410, offline and loading states; a creation without base coat or lines
-(the print shows under the paint); `/sb/<id>` (rewrite simulated). Not tried on real phones: Web Share with a
+(the print shows under the paint); `/sb/<id>` (rewrite simulated). Decals: a Bobo creation with shades at their
+`fit` (on his eyes), MEOW turned `r = 0.5` (counter-clockwise, same in the 3D view and Save image), a fish with
+`f = -1`, a bolt past the edge and an unknown id (skipped); reveal, settled, mid-spin, embed, reduced motion, Save
+image, no WebGL; a creation without decals loads no decal files. Not tried on real phones: Web Share with a
 file, device tilt and sound need a real device.
