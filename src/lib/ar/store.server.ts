@@ -68,47 +68,62 @@ function loadBlobs(): Promise<BlobsModule | null> {
 }
 
 function netlifyStore(mod: BlobsModule, name: string): ArStore | null {
-  let store: ReturnType<BlobsModule["getStore"]>;
+  type Store = ReturnType<BlobsModule["getStore"]>;
+  // Netlify hands each invocation a short-lived Blobs token. A store handle kept from an earlier
+  // invocation of a warm function goes on using its old token and then fails with "Failed to
+  // decode token: Token expired", so a fresh handle is made for every operation (it is only a
+  // small object; nothing is fetched until it is used).
+  // strong consistency: analytics appends read-modify-write the session record
+  const strong = (): Store => mod.getStore({ name, consistency: "strong" });
   try {
-    // strong consistency: analytics appends read-modify-write the session record
-    store = mod.getStore({ name, consistency: "strong" });
+    strong();
   } catch {
     return null; // no Blobs context (local dev)
   }
-  // A warm function can hold a Blobs token that has expired for strong-consistency reads
-  // ("Failed to decode token: Token expired"); reads then retry on the eventual-consistency edge.
-  type Store = ReturnType<BlobsModule["getStore"]>;
-  async function retryEventual<R>(fn: (st: Store) => Promise<R>): Promise<R> {
+  const tokenError = (err: unknown) => /token/i.test(String(err));
+  /** Reads: if the strong-consistency read still fails on its token, read from the edge instead. */
+  async function read<R>(fn: (st: Store) => Promise<R>): Promise<R> {
     try {
-      return await fn(store);
+      return await fn(strong());
     } catch (err) {
-      if (!/token/i.test(String(err))) throw err;
+      if (!tokenError(err)) throw err;
       return fn(mod.getStore({ name }));
+    }
+  }
+  /** Writes: one more try with a new handle if the token was refused. */
+  async function write<R>(fn: (st: Store) => Promise<R>): Promise<R> {
+    try {
+      return await fn(strong());
+    } catch (err) {
+      if (!tokenError(err)) throw err;
+      await pause(120);
+      return fn(strong());
     }
   }
   return {
     async getJSON(key) {
-      return ((await retryEventual((st) => st.get(key, { type: "json" }))) as never) ?? null;
+      return ((await read((st) => st.get(key, { type: "json" }))) as never) ?? null;
     },
     async setJSON(key, value) {
-      await store.setJSON(key, value);
+      await write((st) => st.setJSON(key, value));
     },
     async getBytes(key) {
-      return (await store.get(key, { type: "arrayBuffer" })) ?? null;
+      return (await read((st) => st.get(key, { type: "arrayBuffer" }))) ?? null;
     },
     async setBytes(key, value, metadata) {
       const buf = value instanceof Uint8Array ? value.slice().buffer : value;
-      await store.set(key, buf as ArrayBuffer, metadata ? { metadata } : undefined);
+      await write((st) => st.set(key, buf as ArrayBuffer, metadata ? { metadata } : undefined));
     },
     async list(prefix = "") {
-      const { blobs } = await retryEventual((st) => st.list(prefix ? { prefix } : undefined));
+      const { blobs } = await read((st) => st.list(prefix ? { prefix } : undefined));
       return blobs.map((b) => b.key);
     },
     async del(key) {
-      await store.delete(key);
+      await write((st) => st.delete(key));
     },
     async update<T>(key: string, fn: (current: T | null) => T) {
       for (let attempt = 0; ; attempt++) {
+        const store = strong();
         const cur = await store.getWithMetadata(key, { type: "json" });
         const next = fn((cur?.data as T) ?? null);
         const res = !cur
