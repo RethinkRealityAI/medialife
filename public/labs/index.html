@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>MEDIALIFE Labs</title>
-<meta name="description" content="Browser test versions of MEDIALIFE's Mattercraft AR experiences.">
+<meta name="description" content="MEDIALIFE's new AR experiences and browser test versions of our Mattercraft features.">
 <meta name="theme-color" content="#0f1114">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
@@ -32,14 +32,89 @@
   .src{font-size:12.5px;color:var(--muted)}
   code{font-size:12.5px;color:#cfe9ee}
   footer{margin-top:40px;color:var(--muted);font-size:13px}
+  .section{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
+  .section h2{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin:0}
+  .section p{margin:0;color:var(--muted);font-size:13.5px}
+  .grid + .section{margin-top:48px}
+  .tag.live{background:rgba(110,231,150,.12);color:#bff5cf}
+  .actions{flex-wrap:wrap}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .btn.ghost:hover{border-color:rgba(255,255,255,.3)}
 </style>
 </head>
 <body>
 <main>
   <div class="kicker">MEDIALIFE Labs</div>
-  <h1>Test versions of our AR experiences</h1>
-  <p class="lead">Each lab is a plain three.js copy of a Mattercraft feature, running the same code the Mattercraft component uses, so it can be tried on any phone or laptop before it goes into the project. Not linked from the site and hidden from search.</p>
+  <h1>Our newest AR experiences, in one place</h1>
+  <p class="lead">The new experiences we've shipped, plus the test versions of Mattercraft features that run on any phone or laptop before they go into the project. This page isn't linked from the site and is hidden from search.</p>
 
+  <div class="section">
+    <h2>New experiences</h2>
+    <p>Live on medialife.ai. Open AR ones on your phone, or use the test pictures on a second screen.</p>
+  </div>
+  <div class="grid">
+    <article class="card">
+      <img src="/labs/img/off-the-chain.webp" alt="Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button" loading="lazy" width="960" height="540">
+      <div class="body">
+        <h2>Bobo Off the Chain</h2>
+        <p>Point the camera at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D. Feed Bobo, go Super Bobo, take photos or video, and jump into Cola Run.</p>
+        <div class="tags">
+          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Image-tracked AR</span><span class="tag">Keychain</span>
+        </div>
+        <div class="actions"><a class="btn" href="/evade/keychain-ar/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <img src="/labs/img/spray-bobo.webp" alt="Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button" loading="lazy" width="960" height="540">
+      <div class="body">
+        <h2>Spray Bobo</h2>
+        <p>Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and your painting becomes a 3D sticker on the merch.</p>
+        <div class="tags">
+          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">AR painting</span><span class="tag">Keychain + tee</span>
+        </div>
+        <div class="actions"><a class="btn" href="/evade/spray-bobo/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <img src="/labs/img/spray-studio.webp" alt="Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right" loading="lazy" width="960" height="540">
+      <div class="body">
+        <h2>Spray Studio</h2>
+        <p>Spray Bobo without a camera, for touchscreens at pop-ups and home computers. Up to four phones join as spray cans, and Save &amp; share gives a link and QR code to the finished piece, with View on merch in AR.</p>
+        <div class="tags">
+          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Kiosk mode</span>
+          <span class="tag warn">Team sign-in for now</span>
+        </div>
+        <div class="actions"><a class="btn" href="/spray/">Open it</a> <a class="btn ghost" href="/spray/?kiosk=1">Kiosk mode</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <img src="/labs/img/where-is-bobo.webp" alt="Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip" loading="lazy" width="960" height="540">
+      <div class="body">
+        <h2>Where is Bobo?</h2>
+        <p>A live 3D globe of Bobo sightings around the world. Every pin is a real scan, clip or play from fans, creators and activated merch.</p>
+        <div class="tags">
+          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">3D globe</span><span class="tag">Fan clips</span>
+        </div>
+        <div class="actions"><a class="btn" href="/evade/where-is-bobo/">Open it</a></div>
+      </div>
+    </article>
+    <article class="card">
+      <img src="/labs/img/vault.webp" alt="EVADE Digital Collection vault: the charm set collected in the middle case, hoodie and other pieces still holograms, Bobo standing in front" loading="lazy" width="960" height="540">
+      <div class="body">
+        <h2>EVADE Digital Collection</h2>
+        <p>Every piece of activated merch a fan owns shows up here as a digital collectible; the rest stay holograms until they activate one. It's the same vault that opens inside Bobo's Hideout.</p>
+        <div class="tags">
+          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Collectibles</span>
+        </div>
+        <div class="actions"><a class="btn" href="/evade/vault/">Open it</a> <a class="btn ghost" href="/evade/vault/?owned=keychain">As an owner</a></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="section">
+    <h2>Mattercraft test versions</h2>
+    <p>Plain three.js copies running the same code as the Mattercraft components.</p>
+  </div>
   <div class="grid">
     <article class="card">
       <img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="Cola Run splash art with Bobo the cat" loading="lazy" width="540" height="967">
