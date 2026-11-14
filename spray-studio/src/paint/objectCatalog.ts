@@ -16,6 +16,8 @@ export interface SprayPaintable {
   heightMm: number;
   files: { print: string; mask: string; lines: string | null; outline: string; thumb: string };
   targets: { name: string; side: string; flip: number }[];
+  /** Models, pictures and video placed around the print (see paint/sceneItems.ts). */
+  scene?: import('./sceneItems').SceneItem[];
 }
 
 export interface PaintableObject {

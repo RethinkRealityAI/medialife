@@ -10,12 +10,15 @@
 import * as THREE from 'three';
 import type { SprayPaintable } from './objectCatalog';
 import type { PaintUniforms } from './paintMaterial';
-import { buildSceneGroup, sceneOf } from './sceneItems';
+import { allSceneOf, buildSceneLayer } from './sceneItems';
 
 export const STRIP_X0 = 0.125;
 export const STRIP_W = 0.75;
 /** Base coat inside the canvas (Spray Bobo's "white base coat"). */
 export const PRIMER = '#fbfaf5';
+
+/** Every built card by its CMS id: its group (card centred on the origin, facing +z) and size in units. */
+export const cards = new Map<string, { root: THREE.Group; W: number; H: number }>();
 
 /** Shared toggles, flipped by the studio UI (outline lines on/off). */
 export const sprayUniforms = { linesOn: { value: 1 } };
@@ -117,8 +120,9 @@ export async function buildSprayModel(p: SprayPaintable, paintTexture: THREE.Tex
   root.add(slab, card);
   // the paintable's scene (models, pictures, video placed around the print, in millimetres): shown around the card,
   // never painted, never in the painter's way (paint/sceneItems.ts gives every scene object a no-op raycast)
-  const scene = buildSceneGroup(sceneOf(p), H, p.heightMm);
-  if (scene) root.add(scene);
+  const layer = buildSceneLayer(p.id, allSceneOf(p), H, p.heightMm);
+  root.add(layer.group);
+  cards.set(p.id, { root, W, H });
   return { root, paintBlocks: [block], radius: Math.hypot(W, H) / 2, center: new THREE.Vector3() };
 }
 

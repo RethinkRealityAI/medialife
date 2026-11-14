@@ -20,7 +20,7 @@ import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Crosshair, Pencil, Square, Undo2, Redo2, Palette, ChevronDown, Droplets, Smartphone,
-  MousePointer, QrCode, Share2, Shirt, SprayCan, X, Keyboard,
+  MousePointer, QrCode, Share2, Shirt, SprayCan, X, Keyboard, Sticker, Library,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useFlags } from '../config/flags';
@@ -127,7 +127,10 @@ const STUDIO_CARDS: GuideCard[] = [
 const STUDIO_TIPS: GuideTip[] = [
   { icons: [Undo2, Redo2], label: 'Ctrl+Z / Ctrl+Shift+Z to undo and redo' },
   { icons: [Keyboard], label: 'Press B to swap spray and brush' },
+  { icons: [Sticker], label: 'Decals: tap one to stick it on, drag to move' },
 ];
+/** Staff only (not on the kiosk): the asset library. */
+const ASSETS_TIP: GuideTip = { icons: [Library], label: 'Assets: drag models, pictures or video onto the print' };
 
 /* ------------------------------------------------------------------
    Illustrations: flat shapes, ink outlines, one accent per card.
@@ -263,7 +266,9 @@ export const WelcomeGuide: React.FC<{
   open: boolean;
   onClose: () => void;
   role: 'studio' | 'controller';
-}> = ({ open, onClose, role }) => {
+  /** Show the Assets line (the studio, not the kiosk). */
+  assets?: boolean;
+}> = ({ open, onClose, role, assets }) => {
   const isStudio = role === 'studio';
   const flags = useFlags();
   // Filtered at render, not at the source: the Pad card is written and ready,
@@ -271,7 +276,7 @@ export const WelcomeGuide: React.FC<{
   const cards = (isStudio ? STUDIO_CARDS : CONTROLLER_CARDS).filter(
     (card) => card.tag !== 'Pad' || flags.ui.padMode
   );
-  const tips = isStudio ? STUDIO_TIPS : CONTROLLER_TIPS;
+  const tips = isStudio ? (assets ? [...STUDIO_TIPS, ASSETS_TIP] : STUDIO_TIPS) : CONTROLLER_TIPS;
 
   useEffect(() => {
     if (!open) return;

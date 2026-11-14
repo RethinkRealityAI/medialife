@@ -1,8 +1,8 @@
 // The scene editor's shapes. The scene contract (SceneItem: millimetres of the real print, origin at the
 // centre of the 3:4 picture, x right, y up, z out of the print, degrees in XYZ order) lives in the Spray
 // model; this is the only import to change when the editor is copied into another tool.
-export type { SceneItem, SceneItemKind } from "@/lib/spray/model";
-import type { SceneItem, SceneItemKind } from "@/lib/spray/model";
+export type { Asset, SceneItem, SceneItemKind } from "@/lib/spray/model";
+import type { Asset, SceneItem, SceneItemKind } from "@/lib/spray/model";
 
 /** What the editor needs to know about the tracked picture. */
 export type ScenePrint = {
@@ -33,6 +33,8 @@ export type SceneEditorProps = {
   /** Save the scene (and the print height). Throw with a plain message on failure. */
   save: (v: { scene: SceneItem[]; heightMm: number }) => Promise<void>;
   onClose: () => void;
+  /** The shared asset library ("From your assets"); leave out to hide the picker. */
+  library?: () => Promise<Asset[]>;
 };
 
 /** What the editor measured about an item's file (not saved: measured again on load). */

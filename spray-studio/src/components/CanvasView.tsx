@@ -83,6 +83,49 @@ import { KioskLayer } from '../spray/KioskLayer';
 import { saveCreation, startSet, isKiosk, type SavedCreation } from '../spray/creation';
 import { track } from '../analytics/track';
 import { FeedbackButton } from '../feedback/FeedbackButton';
+import { Sticker, Move3d, Library } from 'lucide-react';
+import { useArrange, type SaveStatus } from '../arrange/useArrange';
+import { useDecals } from '../arrange/useDecals';
+import { StageInteraction, type StageCtl } from '../arrange/StageInteraction';
+import { DecalHandle } from '../arrange/DecalHandle';
+import { DecalTray } from '../arrange/DecalTray';
+import { startCardDrag } from '../arrange/drag';
+import { overStage, rayAt, stage } from '../arrange/stage';
+import { getSceneLayer } from '../paint/sceneItems';
+import { DECAL_BASE, MAX_DECALS, getDecalLayer, type DecalDef } from '../arrange/decals';
+import { addFiles } from '../arrange/assetStore';
+import { POS_LIMIT, SCENE_MAX_ITEMS, clamp as clampNum, defaultItem, itemDims, round as roundTo } from '../arrange/sceneMath';
+import type { Asset } from '../arrange/api';
+
+// Arrange and the asset library load the first time they are opened (staff only; never on the kiosk).
+const AssetsPanel = React.lazy(() => import('../arrange/AssetsPanel'));
+const ArrangePanel = React.lazy(() => import('../arrange/ArrangePanel'));
+
+type StageMode = 'paint' | 'stamp' | 'decal' | 'arrange' | 'orbit';
+/** The right rail on wide displays: wider than the left, for the asset grid. */
+const RIGHT_RAIL = 'clamp(320px, 28vw, 392px)';
+
+/** Arrange mode's save state, next to the mode switch. */
+const SaveBadge: React.FC<{ status: SaveStatus; error: string | null; onRetry: () => void }> = ({ status, error, onRetry }) => {
+  if (status === 'idle') return <span className="mono-caps px-2 text-[8.5px] text-white/45">All saved</span>;
+  if (status === 'error')
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        title={error ?? undefined}
+        className="tap flex items-center gap-1.5 rounded-full bg-[#ff3b4e] px-3 min-h-[34px] text-[11px] font-semibold text-white"
+      >
+        <AlertTriangle size={12} /> Couldn’t save, retry
+      </button>
+    );
+  return (
+    <span role="status" className="flex items-center gap-1.5 px-2 text-[11px] font-medium text-white/75 whitespace-nowrap">
+      {status === 'saved' ? <Check size={12} className="text-[#f6c344]" /> : <Loader2 size={12} className="animate-spin" />}
+      {status === 'saved' ? 'Saved' : 'Saving…'}
+    </span>
+  );
+};
 
 /**
  * Turns a tap on the stage into a surface UV.
@@ -490,7 +533,7 @@ export default function CanvasView() {
   const [hostTool, setHostTool] = useState<'spray' | 'brush'>('spray');
   const [hostColor, setHostColor] = useState('#f6c344');
   const [hostSize, setHostSize] = useState(1);
-  const [stageMode, setStageMode] = useState<'paint' | 'stamp' | 'orbit'>('paint');
+  const [stageMode, setStageMode] = useState<StageMode>('paint');
   // The island entry and the `s` key are gated on the flag, but a flag can flip
   // off while the tray is already open (the fetch lands ~2s after first paint).
   // Without this the tray would stay up with no control left to close it.
@@ -521,13 +564,54 @@ export default function CanvasView() {
   const stampArmed = useRef(false);
   stampArmed.current = stageMode === 'stamp' && Boolean(selectedStamp);
 
+  /* --------------------------- arrange & decals --------------------------- */
+
+  /** The piece on the stage as the CMS has it (its scene, mask, print size). */
+  const meta = OBJECT_BY_ID.get(objectId)?.paintable;
+  const arrange = useArrange(meta, !objectLoading, stageMode === 'arrange');
+  const decals = useDecals(meta, !objectLoading, stageMode === 'decal');
+  const decalsClearRef = useRef(decals.clear);
+  decalsClearRef.current = decals.clear;
+  /** One short line over the stage ("that piece is full"), gone after a few seconds. */
+  const [stageNotice, setStageNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!stageNotice) return;
+    const t = window.setTimeout(() => setStageNotice(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [stageNotice]);
+  // Arrange is staff only: never on the kiosk.
+  useEffect(() => {
+    if (isKiosk && stageMode === 'arrange') setStageMode('paint');
+  }, [stageMode]);
+  // Leaving Arrange saves at once; Decals face the print; neither spins.
+  const lastMode = useRef<StageMode>(stageMode);
+  useEffect(() => {
+    const prev = lastMode.current;
+    lastMode.current = stageMode;
+    if (prev === stageMode) return;
+    if (prev === 'arrange') void arrange.flush();
+    if (stageMode === 'arrange' || stageMode === 'decal') setAutoRotate(false);
+    if (stageMode === 'decal') {
+      const controls = orbitRef.current;
+      if (controls) {
+        controls.setAzimuthalAngle(0);
+        controls.setPolarAngle(Math.PI / 2);
+        controls.update();
+      }
+    }
+    if (stageMode === 'arrange' && !rails) setAssetsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageMode]);
+
   const [muted, setMuted] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
   const [connection, setConnection] = useState<ConnectionState>('connecting');
   /** Wide displays get the floating rails; everything else the dock. */
   const rails = useMediaQuery(RAILS_QUERY);
-  const [railTab, setRailTab] = useState<'objects' | 'crew'>('objects');
+  const [railTab, setRailTab] = useState<'objects' | 'assets' | 'crew'>('objects');
+  /** Compact displays: the Assets / Arrange drawer on the right. */
+  const [assetsOpen, setAssetsOpen] = useState(false);
   /** The sky behind the stage, and the accent the furniture takes from it. */
   const [atmosphere, setAtmosphere] = useState<Atmosphere>(() => loadAtmosphere());
   const changeAtmosphere = (next: Atmosphere) => {
@@ -996,6 +1080,7 @@ export default function CanvasView() {
 
     conn.on('clear-canvas', () => {
       paintSurface.clear();
+      decalsClearRef.current();
       sounds.playWhoosh();
     });
     conn.on('shake', () => sounds.playCanRattle());
@@ -1073,12 +1158,20 @@ export default function CanvasView() {
 
   const undoRef = useRef<() => void>(() => {});
   const redoRef = useRef<() => void>(() => {});
+  /** Arrange / Decals keys (Delete, arrows, Esc); true when the key was theirs. */
+  const stageKeysRef = useRef<(e: KeyboardEvent) => boolean>(() => false);
 
   useEffect(() => {
     const onFsChange = () => setFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener('fullscreenchange', onFsChange);
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
+      if (stageKeysRef.current(e)) return;
       const key = e.key.toLowerCase();
       if (key === 'f') toggleFullscreen();
       if (key === 'b') setHostTool((t) => (t === 'spray' ? 'brush' : 'spray'));
@@ -1142,6 +1235,7 @@ export default function CanvasView() {
   const clearCanvas = () => {
     paintSurface.clear();
     paintSurface.commit();
+    decals.clear();
     sounds.playWhoosh();
     connectionRef.current?.emit('clear-canvas', {});
   };
@@ -1154,7 +1248,6 @@ export default function CanvasView() {
     sounds.playClick(1.1);
     connectionRef.current?.emit('undo-stroke', { strokeId });
   }, [paintSurface]);
-  undoRef.current = undoLast;
 
   const redoLast = useCallback(() => {
     const strokeId = paintSurface.redoStroke();
@@ -1163,7 +1256,71 @@ export default function CanvasView() {
     sounds.playClick(1.25);
     connectionRef.current?.emit('redo-stroke', { strokeId });
   }, [paintSurface]);
-  redoRef.current = redoLast;
+  // Undo / redo follow the mode: the scene in Arrange, the decals in Decals, the paint otherwise.
+  undoRef.current = stageMode === 'arrange' ? arrange.undo : stageMode === 'decal' ? decals.undo : undoLast;
+  redoRef.current = stageMode === 'arrange' ? arrange.redo : stageMode === 'decal' ? decals.redo : redoLast;
+  const undoTitle =
+    stageMode === 'arrange' ? 'Undo (Ctrl+Z)' : stageMode === 'decal' ? 'Undo decal change (Ctrl+Z)' : 'Undo last stroke (Ctrl+Z)';
+  const redoTitle =
+    stageMode === 'arrange' ? 'Redo (Ctrl+Shift+Z)' : stageMode === 'decal' ? 'Redo decal change (Ctrl+Shift+Z)' : 'Redo undone stroke (Ctrl+Shift+Z)';
+
+  stageKeysRef.current = (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return false;
+    const k = e.key;
+    const arrows: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+    if (stageMode === 'arrange' && arrange.selectedItem) {
+      const it = arrange.selectedItem;
+      if (k === 'Delete' || k === 'Backspace') {
+        e.preventDefault();
+        arrange.remove(it.id);
+        return true;
+      }
+      if (k === 'Escape') {
+        arrange.select(null);
+        return true;
+      }
+      const d = arrows[k];
+      if (d) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const pos: [number, number, number] = [
+          clampNum(roundTo(it.pos[0] + d[0] * step, 0.1), -POS_LIMIT, POS_LIMIT),
+          clampNum(roundTo(it.pos[1] + d[1] * step, 0.1), -POS_LIMIT, POS_LIMIT),
+          it.pos[2],
+        ];
+        arrange.update(it.id, { ...it, pos }, `nudge:${it.id}`);
+        return true;
+      }
+    }
+    if (stageMode === 'decal' && decals.selected != null && decals.list[decals.selected]) {
+      const i = decals.selected;
+      const dc = decals.list[i];
+      if (k === 'Delete' || k === 'Backspace') {
+        e.preventDefault();
+        decals.remove(i);
+        return true;
+      }
+      if (k === 'Escape') {
+        decals.select(null);
+        return true;
+      }
+      const d = arrows[k];
+      if (d) {
+        e.preventDefault();
+        const step = e.shiftKey ? 0.02 : 0.005;
+        decals.change(
+          i,
+          {
+            u: Math.round(clampNum(dc.u + d[0] * step, -0.1, 1.1) * 10000) / 10000,
+            v: Math.round(clampNum(dc.v - d[1] * step, -0.1, 1.1) * 10000) / 10000,
+          },
+          `nudge:${i}`,
+        );
+        return true;
+      }
+    }
+    return false;
+  };
 
   /* ---------------------------- stamp actions ---------------------------- */
 
@@ -1263,7 +1420,7 @@ export default function CanvasView() {
     setSaving(true);
     setSaveError(null);
     try {
-      const made = await saveCreation(paintSurface.canvas, meta, { primer: finish === 'primer', linesOn });
+      const made = await saveCreation(paintSurface.canvas, meta, { primer: finish === 'primer', linesOn, decals: decals.list });
       track('snapshot.save', { objectId, creation: made.id }, roomId);
       sounds.playWhoosh();
       setShared(made);
@@ -1389,6 +1546,95 @@ export default function CanvasView() {
     if (placed) setAiSheet(false);
   };
 
+  /* ----------------------- placing from the panels ----------------------- */
+
+  /** Where an asset dropped at (x, y) on the screen lands: on its own default height above the print. */
+  const assetDrop = (a: Asset, at?: { x: number; y: number }) => {
+    const info = { box: a.dims ? { w: a.dims[0], h: a.dims[1], d: a.dims[2] } : undefined, clips: a.clips };
+    const probe = defaultItem(a.kind, a.file, a.name, arrange.heightMm, { ...info, aspect: a.aspect });
+    const dims = itemDims(probe, info);
+    const layer = getSceneLayer(arrange.pid ?? '');
+    const r = at ? rayAt(at.x, at.y) : null;
+    if (!at || !layer || !r) return { mm: undefined, pos: probe.pos, dims };
+    const hit = r.intersectPlane(layer.planeAt(probe.pos[2]), new THREE.Vector3());
+    if (!hit) return { mm: undefined, pos: probe.pos, dims };
+    const m = layer.toMm(hit);
+    return { mm: [m.x, m.y] as [number, number], pos: [m.x, m.y, probe.pos[2]] as [number, number, number], dims };
+  };
+
+  const fullNotice = () =>
+    setStageNotice(`${meta?.name ?? 'This piece'} already has ${SCENE_MAX_ITEMS} things on it, the most one piece can have. Delete one to add another.`);
+
+  /** A library asset onto this piece (at a drop point, or the middle), then Arrange to adjust it. */
+  const placeAsset = (a: Asset, at?: { x: number; y: number }) => {
+    if (isKiosk || !arrange.pid) return;
+    const item = arrange.add(a, assetDrop(a, at).mm);
+    if (!item) {
+      fullNotice();
+      return;
+    }
+    sounds.playClick(1.3);
+    track('scene.add', { kind: a.kind, how: at ? 'drag' : 'tap' }, roomId);
+    if (stageMode !== 'arrange') setStageMode('arrange');
+  };
+
+  const beginAssetDrag = (e: React.PointerEvent, a: Asset) =>
+    startCardDrag(e, {
+      thumb: a.thumb,
+      label: a.name,
+      overStage,
+      onOver: (at) => {
+        const layer = getSceneLayer(arrange.pid ?? '');
+        if (!layer) return;
+        if (!at) return layer.preview(null);
+        const d = assetDrop(a, at);
+        layer.preview(d.pos, d.dims);
+      },
+      onDrop: (at) => placeAsset(a, at),
+      onTap: () => placeAsset(a),
+    });
+
+  /** A decal onto the painting (at a drop point, or where the AR page would put it), then Decals mode. */
+  const placeDecal = async (d: DecalDef, at?: { x: number; y: number }) => {
+    let uv: [number, number] | undefined;
+    if (at) {
+      const r = rayAt(at.x, at.y);
+      uv = (r && getDecalLayer(decals.pid ?? '')?.uvAt(r)) || undefined;
+    }
+    const ok = await decals.add(d, uv);
+    if (ok !== 'ok') {
+      setStageNotice(
+        ok === 'full'
+          ? `That’s the most decals one painting can have (${MAX_DECALS}). Remove one to add another.`
+          : 'The decals are still loading. Try again in a moment.',
+      );
+      return;
+    }
+    sounds.playClick(1.35);
+    track('decal.add', { decal: d.id, how: at ? 'drag' : 'tap' }, roomId);
+    if (stageMode !== 'decal') setStageMode('decal');
+  };
+
+  const beginDecalDrag = (e: React.PointerEvent, d: DecalDef) =>
+    startCardDrag(e, {
+      thumb: DECAL_BASE + d.file,
+      label: d.name,
+      overStage,
+      onDrop: (at) => void placeDecal(d, at),
+      onTap: () => void placeDecal(d),
+    });
+
+  /** Files from the desktop dropped on the stage: into the library, then onto this piece where they fell. */
+  const dropFilesOnStage = (files: File[], at: { x: number; y: number }) => {
+    if (isKiosk || !files.length) return;
+    if (rails) setRailTab('assets');
+    else setAssetsOpen(true);
+    void addFiles(files).then((added) => added.forEach((a, i) => placeAsset(a, i === 0 ? at : undefined)));
+  };
+
+  const stageCtl = useRef<StageCtl | null>(null);
+  stageCtl.current = { mode: stageMode, arrange, decals, orbit: () => orbitRef.current };
+
   if (!roomId) {
     return (
       <div className="min-h-screen grid place-items-center stage-vignette text-white">
@@ -1454,6 +1700,24 @@ export default function CanvasView() {
       onClose={() => setStageMode('paint')}
     />
   );
+  /** Wide displays: Arrange's numbers need a little more room than the tool card. */
+  const leftRail = stageMode === 'arrange' ? 304 : 272;
+  /** The decal shelf, docked like the stamp shelf. */
+  const decalTray = (
+    <DecalTray
+      key="decal-tray"
+      decals={decals}
+      bobo={meta?.id === 'bobo'}
+      onPick={(d) => void placeDecal(d)}
+      onDragStart={beginDecalDrag}
+      onDone={() => {
+        decals.select(null);
+        setStageMode('paint');
+        sounds.playClick(1.1);
+      }}
+      notice={null}
+    />
+  );
   /** What an AI stencil would be stamped in right now. */
   const activeAiTint = aiTint || hostColor;
 
@@ -1470,6 +1734,17 @@ export default function CanvasView() {
     <div
       className="studio-theme h-screen w-screen overflow-hidden text-white relative select-none"
       style={atmosphereVars(atmosphere) as React.CSSProperties}
+      // files from the desktop dropped on the stage go into the asset library and onto the piece
+      onDragOver={(e) => {
+        if (isKiosk || !e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = e.target === stage.canvas ? 'copy' : 'none';
+      }}
+      onDrop={(e) => {
+        if (isKiosk || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        if (e.target === stage.canvas) dropFilesOnStage(Array.from(e.dataTransfer.files), { x: e.clientX, y: e.clientY });
+      }}
     >
       <StudioBackdrop atmosphere={atmosphere} />
       {/* ---------------------------- 3D stage ---------------------------- */}
@@ -1487,10 +1762,13 @@ export default function CanvasView() {
             ? 'cursor-crosshair'
             : stageMode === 'stamp'
               ? 'cursor-copy'
-              : 'cursor-grab active:cursor-grabbing'
+              : stageMode === 'arrange' || stageMode === 'decal'
+                ? 'cursor-pointer'
+                : 'cursor-grab active:cursor-grabbing'
         }`}
       >
         <StampPlacer armedRef={stampArmed} onPlace={placeStamp} pickCentreRef={pickCentreRef} />
+        <StageInteraction ctl={stageCtl} />
         <Suspense fallback={null}>
         <StudioScene
           objectId={objectId}
@@ -1737,16 +2015,32 @@ export default function CanvasView() {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: -60, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.05 }}
-                className="absolute left-5 top-[78px] bottom-5 z-30 w-[272px] flex flex-col gap-3 overflow-y-auto no-scrollbar"
+                className="absolute left-5 top-[78px] bottom-5 z-30 flex flex-col gap-3 overflow-y-auto no-scrollbar"
+                style={{ width: leftRail }}
               >
+                {stageMode === 'arrange' ? (
+                  <RailCard title="Arrange" badge={meta?.name} storageKey="arrange">
+                    <Suspense
+                      fallback={
+                        <div className="flex items-center gap-2 text-[12px] text-white/60">
+                          <Loader2 size={13} className="animate-spin" /> Loading
+                        </div>
+                      }
+                    >
+                      <ArrangePanel arrange={arrange} />
+                    </Suspense>
+                  </RailCard>
+                ) : (
                 <RailCard
-                  title={stageMode === 'stamp' ? 'Stencil' : hostTool === 'brush' ? 'Brush' : 'Spray Can'}
+                  title={stageMode === 'stamp' ? 'Stencil' : stageMode === 'decal' ? 'Decals' : hostTool === 'brush' ? 'Brush' : 'Spray Can'}
                   badge={
                     stageMode === 'stamp'
                       ? selectedStamp?.label ?? 'Stamp'
-                      : hostTool === 'brush'
-                        ? 'Soft bristle'
-                        : 'Fat cap'
+                      : stageMode === 'decal'
+                        ? `${decals.list.length} of ${MAX_DECALS}`
+                        : hostTool === 'brush'
+                          ? 'Soft bristle'
+                          : 'Fat cap'
                   }
                   storageKey="tool"
                 >
@@ -1813,7 +2107,7 @@ export default function CanvasView() {
                   {/* Tool tiles. */}
                   <div
                     className="mt-3.5 grid gap-2.5"
-                    style={{ gridTemplateColumns: `repeat(${flags.ui.stamps ? 3 : 2}, minmax(0, 1fr))` }}
+                    style={{ gridTemplateColumns: `repeat(${flags.ui.stamps ? 4 : 3}, minmax(0, 1fr))` }}
                   >
                     {(
                       [
@@ -1841,12 +2135,22 @@ export default function CanvasView() {
                           glow: `${atmosphere.hot}d9`,
                           title: 'Place stamps (S)',
                         },
+                        {
+                          id: 'decal' as const,
+                          label: 'Decals',
+                          icon: <Sticker size={19} />,
+                          tile: atmosphere.accent,
+                          glow: `${atmosphere.hot}d9`,
+                          title: 'Stick on decals',
+                        },
                       ] as const
                     )
                       .filter((tile) => tile.id !== 'stamp' || flags.ui.stamps)
                       .map((tile) => {
                         const active =
-                          tile.id === 'stamp' ? stageMode === 'stamp' : stageMode !== 'stamp' && hostTool === tile.id;
+                          tile.id === 'stamp' || tile.id === 'decal'
+                            ? stageMode === tile.id
+                            : stageMode !== 'stamp' && stageMode !== 'decal' && hostTool === tile.id;
                         return (
                           <button
                             key={tile.id}
@@ -1855,8 +2159,8 @@ export default function CanvasView() {
                             aria-pressed={active}
                             onClick={() => {
                               sounds.playClick(1.2);
-                              if (tile.id === 'stamp') {
-                                setStageMode('stamp');
+                              if (tile.id === 'stamp' || tile.id === 'decal') {
+                                setStageMode(tile.id);
                                 return;
                               }
                               setHostTool(tile.id);
@@ -1872,6 +2176,7 @@ export default function CanvasView() {
                       })}
                   </div>
                 </RailCard>
+                )}
 
                 <RailCard title="Stage" aside={<OrbitReadout orbitRef={orbitRef} />} storageKey="stage">
                   {/* Where the camera stands. */}
@@ -1940,11 +2245,18 @@ export default function CanvasView() {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: 60, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.08 }}
-                className="absolute right-5 top-[78px] bottom-5 z-30 w-[272px] flex flex-col gap-3"
+                className="absolute right-5 top-[78px] bottom-5 z-30 flex flex-col gap-3"
+                style={{ width: RIGHT_RAIL }}
               >
                 <RailCard
-                  title={railTab === 'objects' ? 'Merch' : 'Crew'}
-                  badge={railTab === 'objects' ? `${PAINTABLE_OBJECTS.length} pieces` : `${remotePlayers.length}/4 phones`}
+                  title={railTab === 'objects' ? 'Merch' : railTab === 'assets' ? 'Assets' : 'Crew'}
+                  badge={
+                    railTab === 'objects'
+                      ? `${PAINTABLE_OBJECTS.length} pieces`
+                      : railTab === 'assets'
+                        ? `${arrange.items.length}/${SCENE_MAX_ITEMS} on this piece`
+                        : `${remotePlayers.length}/4 phones`
+                  }
                   grow
                   storageKey="canvas"
                   footer={
@@ -1981,7 +2293,7 @@ export default function CanvasView() {
                     ) : undefined
                   }
                 >
-                  <Segmented<'objects' | 'crew'>
+                  <Segmented<'objects' | 'assets' | 'crew'>
                     layoutId="rail-tabs"
                     size="sm"
                     className="mb-3 shrink-0"
@@ -1992,6 +2304,9 @@ export default function CanvasView() {
                     }}
                     options={[
                       { value: 'objects', label: 'Merch', icon: <Box size={11} />, accent: atmosphere.accent },
+                      ...(isKiosk
+                        ? []
+                        : [{ value: 'assets' as const, label: 'Assets', icon: <Library size={11} />, accent: atmosphere.accent }]),
                       {
                         value: 'crew',
                         label: remotePlayers.length ? `Crew · ${remotePlayers.length}` : 'Crew',
@@ -2009,6 +2324,26 @@ export default function CanvasView() {
                         onUpload={flags.ui.uploads ? () => setUploadSheet(true) : undefined}
                         customName={customInfo?.name}
                       />
+                    ) : railTab === 'assets' && !isKiosk ? (
+                      <Suspense
+                        fallback={
+                          <div className="flex items-center gap-2 text-[12px] text-white/60">
+                            <Loader2 size={13} className="animate-spin" /> Loading your assets
+                          </div>
+                        }
+                      >
+                        <AssetsPanel
+                          sceneCount={arrange.items.length}
+                          pieceName={meta?.name ?? 'This piece'}
+                          decals={decals}
+                          onAdd={(a) => placeAsset(a)}
+                          onDragStart={beginAssetDrag}
+                          onPickDecal={(d) => void placeDecal(d)}
+                          onDecalDragStart={beginDecalDrag}
+                          beforeDelete={arrange.flush}
+                          onDeleted={(a) => arrange.dropFile(a.file)}
+                        />
+                      </Suspense>
                     ) : (
                       <CrewRows
                         players={remotePlayers}
@@ -2036,15 +2371,17 @@ export default function CanvasView() {
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: 60, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.1 }}
-                className="absolute bottom-0 left-[312px] right-[312px] z-30 pb-5 flex flex-col items-center gap-2 pointer-events-none"
+                className="absolute bottom-0 z-30 pb-5 flex flex-col items-center gap-2 pointer-events-none"
+                style={{ left: leftRail + 40, right: `calc(${RIGHT_RAIL} + 40px)` }}
               >
                 <AnimatePresence>{stageMode === 'stamp' && stampTray}</AnimatePresence>
+                <AnimatePresence>{stageMode === 'decal' && decalTray}</AnimatePresence>
                 <GlassPanel
                   radius="rounded-full"
                   className="pointer-events-auto flex items-center gap-1.5 px-1.5 py-1.5"
                   liquid
                 >
-                  <Segmented<'paint' | 'stamp' | 'orbit'>
+                  <Segmented<StageMode>
                     layoutId="stage-mode"
                     className="!bg-transparent !border-0 !shadow-none !backdrop-blur-none !p-0"
                     value={stageMode}
@@ -2057,22 +2394,25 @@ export default function CanvasView() {
                       ...(flags.ui.stamps
                         ? [{ value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: atmosphere.hot }]
                         : []),
+                      { value: 'decal' as const, label: 'Decals', icon: <Sticker size={13} />, accent: atmosphere.hot },
+                      ...(isKiosk
+                        ? []
+                        : [{ value: 'arrange' as const, label: 'Arrange', icon: <Move3d size={13} />, accent: atmosphere.accent }]),
                       { value: 'orbit', label: 'Orbit', icon: <Hand size={13} />, accent: '#8cc8f8' },
                     ]}
                   />
                   <span className="mx-0.5 h-5 w-px bg-white/15" />
-                  <GlassIconButton size={34} onClick={undoLast} title="Undo last stroke (Ctrl+Z)" className="!shadow-none">
+                  <GlassIconButton size={34} onClick={() => undoRef.current()} title={undoTitle} className="!shadow-none">
                     <Undo2 size={14} />
                   </GlassIconButton>
-                  <GlassIconButton
-                    size={34}
-                    onClick={redoLast}
-                    title="Redo undone stroke (Ctrl+Shift+Z)"
-                    className="!shadow-none"
-                  >
+                  <GlassIconButton size={34} onClick={() => redoRef.current()} title={redoTitle} className="!shadow-none">
                     <Redo2 size={14} />
                   </GlassIconButton>
                   <span className="mx-0.5 h-5 w-px bg-white/15" />
+                  {stageMode === 'arrange' ? (
+                    <SaveBadge status={arrange.status} error={arrange.error} onRetry={arrange.retry} />
+                  ) : (
+                  <>
                   <GlassIconButton
                     size={34}
                     onClick={replayArtwork}
@@ -2082,9 +2422,11 @@ export default function CanvasView() {
                   >
                     <History size={14} className={replaying ? 'animate-spin' : ''} />
                   </GlassIconButton>
-                  <GlassIconButton size={34} onClick={clearCanvas} title="Clear all paint" className="!shadow-none">
+                  <GlassIconButton size={34} onClick={clearCanvas} title="Clear all paint and decals" className="!shadow-none">
                     <Trash2 size={14} />
                   </GlassIconButton>
+                  </>
+                  )}
                 </GlassPanel>
               </motion.div>
             </React.Fragment>
@@ -2152,6 +2494,20 @@ export default function CanvasView() {
                         ink: 'text-white',
                       },
                       {
+                        mode: 'decal',
+                        icon: <Sticker size={14} />,
+                        title: 'Decals',
+                        paint: '#e0409a',
+                        ink: 'text-white',
+                      },
+                      {
+                        mode: 'arrange',
+                        icon: <Move3d size={14} />,
+                        title: 'Arrange: move things around the print',
+                        paint: '#f6c344',
+                        ink: 'text-black',
+                      },
+                      {
                         mode: 'orbit',
                         icon: <Hand size={14} />,
                         title: 'Orbit camera (O)',
@@ -2160,12 +2516,13 @@ export default function CanvasView() {
                       },
                     ] as const
                   )
-                    .filter((entry) => entry.mode !== 'stamp' || flags.ui.stamps)
+                    .filter((entry) => (entry.mode !== 'stamp' || flags.ui.stamps) && (entry.mode !== 'arrange' || !isKiosk))
                     .map((entry) => {
                       const active = stageMode === entry.mode;
                       return (
                         <button
                           key={entry.mode}
+                          aria-label={entry.title}
                           onClick={() => {
                             setStageMode(entry.mode);
                             sounds.playClick(1.2);
@@ -2181,14 +2538,89 @@ export default function CanvasView() {
                         </button>
                       );
                     })}
+                  {!isKiosk && (
+                    <>
+                      <div className="h-px bg-white/12 mx-2 my-0.5" />
+                      <button
+                        onClick={() => {
+                          setAssetsOpen((v) => !v);
+                          sounds.playClick(1.2);
+                        }}
+                        className={`tap w-[52px] py-2 rounded-[15px] grid place-items-center ${
+                          assetsOpen ? 'bg-white text-[#15131a]' : 'text-white/70 hover:bg-white/12'
+                        }`}
+                        title="Assets"
+                        aria-label="Assets"
+                        aria-pressed={assetsOpen}
+                      >
+                        <Library size={14} />
+                      </button>
+                    </>
+                  )}
                 </GlassPanel>
               </motion.div>
             )}
           </AnimatePresence>
 
+          {/* ------------------------- assets / arrange drawer ------------------------- */}
+          <AnimatePresence>
+            {!fullscreen && !isKiosk && assetsOpen && (
+              <motion.aside
+                key="assets-drawer"
+                initial={{ x: 80, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 80, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                aria-label={stageMode === 'arrange' ? 'Arrange and assets' : 'Assets'}
+                className="glass-strong absolute right-3 top-[64px] z-30 flex flex-col rounded-[24px] p-3"
+                style={{ width: 'min(360px, calc(100vw - 96px))', bottom: stageMode === 'decal' ? 260 : 150 }}
+              >
+                <div className="mb-2 flex items-center gap-2 shrink-0">
+                  <h2 className="flex-1 text-[15px] font-semibold text-white">{stageMode === 'arrange' ? 'Arrange' : 'Assets'}</h2>
+                  {stageMode === 'arrange' && <SaveBadge status={arrange.status} error={arrange.error} onRetry={arrange.retry} />}
+                  <button
+                    type="button"
+                    onClick={() => setAssetsOpen(false)}
+                    aria-label="Close"
+                    className="tap grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar -mx-1 px-1">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center gap-2 text-[12px] text-white/60">
+                        <Loader2 size={13} className="animate-spin" /> Loading
+                      </div>
+                    }
+                  >
+                    {stageMode === 'arrange' && (
+                      <div className="mb-4 border-b border-white/10 pb-4">
+                        <ArrangePanel arrange={arrange} compact />
+                      </div>
+                    )}
+                    {stageMode === 'arrange' && <h3 className="mb-2 text-[12.5px] font-semibold text-white/90">Assets</h3>}
+                    <AssetsPanel
+                      sceneCount={arrange.items.length}
+                      pieceName={meta?.name ?? 'This piece'}
+                      decals={decals}
+                      onAdd={(a) => placeAsset(a)}
+                      onDragStart={beginAssetDrag}
+                      onPickDecal={(d) => void placeDecal(d)}
+                      onDecalDragStart={beginDecalDrag}
+                      beforeDelete={arrange.flush}
+                      onDeleted={(a) => arrange.dropFile(a.file)}
+                    />
+                  </Suspense>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
           {/* --------------------------- right feedback rail --------------------------- */}
           <AnimatePresence>
-            {!fullscreen && (
+            {!fullscreen && !(assetsOpen && !isKiosk) && (
               <motion.div
                 initial={{ x: 80, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -2214,19 +2646,20 @@ export default function CanvasView() {
                     cover it, and stays non-modal so the next tap reaches the
                     model rather than a backdrop. */}
                 <AnimatePresence>{stageMode === 'stamp' && stampTray}</AnimatePresence>
+                <AnimatePresence>{stageMode === 'decal' && decalTray}</AnimatePresence>
 
                 <GlassPanel className="px-3 py-2.5 flex items-center gap-2 md:gap-3 flex-wrap justify-center w-full md:w-auto max-w-[min(100%,1120px)] pointer-events-auto">
                   {/* Row 1 on phones: tool + colour. */}
                   <div className="flex items-center gap-2 w-full md:w-auto md:contents">
-                    <Segmented<'spray' | 'brush' | 'stamp'>
+                    <Segmented<'spray' | 'brush' | 'stamp' | 'decal'>
                       layoutId="host-tool"
                       paint
                       className="flex-1 md:flex-none"
-                      value={stageMode === 'stamp' ? 'stamp' : hostTool}
+                      value={stageMode === 'stamp' || stageMode === 'decal' ? stageMode : hostTool}
                       onChange={(value) => {
                         sounds.playClick(1.2);
-                        if (value === 'stamp') {
-                          setStageMode('stamp');
+                        if (value === 'stamp' || value === 'decal') {
+                          setStageMode(value);
                           return;
                         }
                         setHostTool(value);
@@ -2236,6 +2669,7 @@ export default function CanvasView() {
                         { value: 'spray' as const, label: 'Spray', icon: <SprayCan size={13} />, accent: '#f6c344' },
                         { value: 'brush' as const, label: 'Brush', icon: <Brush size={13} />, accent: '#8cc8f8' },
                         { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: '#e85bd8' },
+                        { value: 'decal' as const, label: 'Decals', icon: <Sticker size={13} />, accent: '#e85bd8' },
                       ].filter((option) => option.value !== 'stamp' || flags.ui.stamps)}
                     />
                     <ColorWell color={hostColor} onChange={handleHostColor} />
@@ -2290,10 +2724,10 @@ export default function CanvasView() {
                   <div className="w-px h-7 bg-white/12 hidden md:block" />
 
                   <div className="flex items-center justify-center gap-2 w-full md:w-auto md:contents">
-                    <GlassIconButton onClick={undoLast} title="Undo last stroke (Ctrl+Z)" size={38}>
+                    <GlassIconButton onClick={() => undoRef.current()} title={undoTitle} size={38}>
                       <Undo2 size={15} />
                     </GlassIconButton>
-                    <GlassIconButton onClick={redoLast} title="Redo undone stroke (Ctrl+Shift+Z)" size={38}>
+                    <GlassIconButton onClick={() => redoRef.current()} title={redoTitle} size={38}>
                       <Redo2 size={15} />
                     </GlassIconButton>
                     <GlassIconButton
@@ -2307,7 +2741,7 @@ export default function CanvasView() {
                     <GlassIconButton onClick={() => sounds.playCanRattle()} title="Shake can" size={38}>
                       <Sparkles size={15} className="text-[var(--color-airo-ember)]" />
                     </GlassIconButton>
-                    <GlassIconButton onClick={clearCanvas} title="Clear paint" size={38}>
+                    <GlassIconButton onClick={clearCanvas} title="Clear paint and decals" size={38}>
                       <Trash2 size={15} />
                     </GlassIconButton>
                     {flags.ui.showcase && (
@@ -2344,7 +2778,7 @@ export default function CanvasView() {
               they stand down until it closes. */}
           <div
             className={`absolute right-3 md:right-4 bottom-48 md:bottom-28 z-20 flex-col items-end gap-2 pointer-events-none ${
-              stageMode === 'stamp' ? 'hidden md:flex' : 'flex'
+              stageMode === 'stamp' || stageMode === 'decal' ? 'hidden md:flex' : 'flex'
             }`}
           >
             <AnimatePresence>
@@ -2371,7 +2805,23 @@ export default function CanvasView() {
 
       {/* -------------------------------- sheets -------------------------------- */}
 
-      <WelcomeGuide open={guideOpen} onClose={closeGuide} role="studio" />
+      <WelcomeGuide open={guideOpen} onClose={closeGuide} role="studio" assets={!isKiosk} />
+
+      <DecalHandle decals={decals} active={stageMode === 'decal'} />
+      <AnimatePresence>
+        {stageNotice && (
+          <motion.div
+            key="stage-notice"
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="pointer-events-none fixed left-1/2 top-24 z-[60] max-w-[min(92vw,520px)] -translate-x-1/2 rounded-full bg-[#15131a] border border-white/15 px-4 py-2.5 text-center text-[12.5px] font-medium text-white shadow-xl"
+          >
+            {stageNotice}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ObjectPickerSheet
         open={objectSheet}

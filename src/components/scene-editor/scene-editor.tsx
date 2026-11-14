@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
+import { AssetPicker, LibraryIcon } from "./asset-picker";
 import { useHistory } from "./history";
 import { btn, btnOn, card, KIND_WORD } from "./ui";
 import { Inspector, ItemList, SectionHead } from "./panel";
@@ -43,7 +44,15 @@ import {
   round,
   scaleScene,
 } from "./scene-math";
-import type { AssetInfo, Mode, SceneEditorProps, SceneItem, SceneItemKind, View } from "./types";
+import type {
+  Asset,
+  AssetInfo,
+  Mode,
+  SceneEditorProps,
+  SceneItem,
+  SceneItemKind,
+  View,
+} from "./types";
 
 // The scene editor: place 3D models, pictures and video around a tracked print, in real millimetres,
 // so what is placed here is exactly what fans see in AR. Self-contained: the host passes the print,
@@ -112,6 +121,7 @@ export function SceneEditor(props: SceneEditorProps) {
   const [leaving, setLeaving] = useState(false);
   const [heightAsk, setHeightAsk] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -221,6 +231,30 @@ export function SceneEditor(props: SceneEditorProps) {
       }
     }
     setBusy(null);
+  };
+
+  /** "From your assets": the library already measured it, so it goes straight in. */
+  const addFromLibrary = (a: Asset) => {
+    setPicking(false);
+    setAddError(null);
+    const d = docRef.current;
+    if (d.items.length >= props.maxItems) {
+      setAddError(`A scene can hold ${props.maxItems} things. Delete one to add another.`);
+      return;
+    }
+    const info: AssetInfo = {
+      bytes: a.bytes,
+      aspect: a.aspect ?? undefined,
+      clips: a.clips,
+      triangles: a.tris ?? undefined,
+      box: a.dims ? { w: a.dims[0], h: a.dims[1], d: a.dims[2] } : undefined,
+    };
+    setInfos((m) => ({ ...m, [a.file]: { ...m[a.file], ...info } }));
+    const item = defaultItem(a.kind, a.file, a.name, d.heightMm, info);
+    commit({ ...d, items: [...d.items, item] });
+    setSelected(item.id);
+    setMode("translate");
+    setView((v) => ({ v: v.v, n: v.n + 1 }));
   };
 
   const inputs = {
@@ -611,6 +645,17 @@ export function SceneEditor(props: SceneEditorProps) {
                 </button>
               ))}
             </div>
+            {props.library ? (
+              <button
+                type="button"
+                className={cn(btn, "mt-2 w-full")}
+                disabled={full || !!busy}
+                onClick={() => setPicking(true)}
+              >
+                <LibraryIcon aria-hidden />
+                From your assets
+              </button>
+            ) : null}
             <p className="mt-2 text-xs text-white/50">
               3D models as .glb · pictures as PNG, JPEG or WebP · video as MP4
             </p>
@@ -744,6 +789,14 @@ export function SceneEditor(props: SceneEditorProps) {
       </div>
 
       {/* ------------------------------------------------ dialogs */}
+      {props.library ? (
+        <AssetPicker
+          open={picking}
+          onOpenChange={setPicking}
+          load={props.library}
+          onPick={addFromLibrary}
+        />
+      ) : null}
       <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

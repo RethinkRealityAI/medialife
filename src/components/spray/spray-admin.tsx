@@ -18,6 +18,7 @@ import { SceneEditor } from "@/components/scene-editor";
 import { SCENE_MAX_BYTES, SCENE_MAX_ITEMS } from "@/lib/spray/model";
 
 import {
+  listAssets,
   listCreations,
   listSets,
   saveScene,
@@ -181,6 +182,7 @@ export function SprayAdmin({ tab, onTab }: { tab: SprayTab; onTab: (t: SprayTab)
             void qc.invalidateQueries({ queryKey: sprayKeys.sets });
           }}
           onClose={() => setSceneOf(null)}
+          library={listAssets}
         />
       ) : null}
     </>

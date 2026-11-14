@@ -68,6 +68,34 @@ export type SceneItem = {
 };
 
 export const SCENE_MAX_ITEMS = 12;
+
+/**
+ * One file in the shared asset library (models, pictures, video any piece of merch can use). Its file is
+ * served at /api/spray/file/assets/<id>.<ext>; a scene item uses it by putting that path in `file`.
+ * The numbers are measured in the browser when it is added (the server checks the file's type itself).
+ */
+export type Asset = {
+  id: string;
+  kind: SceneItemKind;
+  name: string;
+  /** /api/spray/file/assets/<id>.<ext> */
+  file: string;
+  bytes: number;
+  /** A small picture of it (/api/spray/file/assets/thumbs/<id>.<ext>), or null. */
+  thumb: string | null;
+  /** Pictures and video: width / height. Models: null. */
+  aspect: number | null;
+  /** Models: the animation names in the file. */
+  clips: string[];
+  /** Models: triangles. */
+  tris: number | null;
+  /** Models: bounding box (width, height, depth) in the model's own units, as loaded. */
+  dims: [number, number, number] | null;
+  createdAt: number;
+};
+
+export const ASSET_LIBRARY_MAX = 200;
+export const ASSET_THUMB_MAX_BYTES = 300 * 1024;
 export const SCENE_MAX_BYTES = {
   model: 8 * 1024 * 1024,
   image: 4 * 1024 * 1024,
@@ -109,7 +137,7 @@ export type CreationStatus = "unlisted" | "featured" | "hidden";
  * a fraction of the picture width; r = turn in radians; f = 1, or -1 when flipped.
  */
 export type CreationDecal = { id: string; u: number; v: number; w: number; r: number; f: 1 | -1 };
-export const MAX_DECALS = 12;
+export const MAX_DECALS = 14;
 
 export type Creation = {
   id: string;

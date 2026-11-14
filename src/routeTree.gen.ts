@@ -138,6 +138,7 @@ import { Route as ApiMediaDevSeedRouteImport } from './routes/api.media.dev.seed
 import { Route as ApiMediaFilesIdRouteImport } from './routes/api.media.files.$id'
 import { Route as ApiMediaThumbsIdRouteImport } from './routes/api.media.thumbs.$id'
 import { Route as ApiMediaUploadsIdRouteImport } from './routes/api.media.uploads.$id'
+import { Route as ApiSprayAdminAssetsRouteImport } from './routes/api.spray.admin.assets'
 import { Route as ApiSprayAdminCreationsRouteImport } from './routes/api.spray.admin.creations'
 import { Route as ApiSprayAdminSetsRouteImport } from './routes/api.spray.admin.sets'
 import { Route as ApiSprayCreationsIdRouteImport } from './routes/api.spray.creations.$id'
@@ -160,6 +161,8 @@ import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.ov
 import { Route as ApiHubShelfAssetsIdCompleteRouteImport } from './routes/api.hub.shelf-assets.$id.complete'
 import { Route as ApiMediaUploadsIdCompleteRouteImport } from './routes/api.media.uploads.$id.complete'
 import { Route as ApiMediaUploadsIdThumbRouteImport } from './routes/api.media.uploads.$id.thumb'
+import { Route as ApiSprayAdminAssetsIdRouteImport } from './routes/api.spray.admin.assets.$id'
+import { Route as ApiSprayAdminAssetsUploadRouteImport } from './routes/api.spray.admin.assets.upload'
 import { Route as ApiSprayAdminCreationsIdRouteImport } from './routes/api.spray.admin.creations.$id'
 import { Route as ApiSprayAdminSetsIdRouteImport } from './routes/api.spray.admin.sets.$id'
 import { Route as ApiSprayCreationsIdImageRouteImport } from './routes/api.spray.creations.$id.image'
@@ -829,6 +832,11 @@ const ApiMediaUploadsIdRoute = ApiMediaUploadsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => ApiMediaUploadsRoute,
 } as any)
+const ApiSprayAdminAssetsRoute = ApiSprayAdminAssetsRouteImport.update({
+  id: '/api/spray/admin/assets',
+  path: '/api/spray/admin/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSprayAdminCreationsRoute = ApiSprayAdminCreationsRouteImport.update({
   id: '/api/spray/admin/creations',
   path: '/api/spray/admin/creations',
@@ -950,6 +958,17 @@ const ApiMediaUploadsIdThumbRoute = ApiMediaUploadsIdThumbRouteImport.update({
   path: '/thumb',
   getParentRoute: () => ApiMediaUploadsIdRoute,
 } as any)
+const ApiSprayAdminAssetsIdRoute = ApiSprayAdminAssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSprayAdminAssetsRoute,
+} as any)
+const ApiSprayAdminAssetsUploadRoute =
+  ApiSprayAdminAssetsUploadRouteImport.update({
+    id: '/upload',
+    path: '/upload',
+    getParentRoute: () => ApiSprayAdminAssetsRoute,
+  } as any)
 const ApiSprayAdminCreationsIdRoute =
   ApiSprayAdminCreationsIdRouteImport.update({
     id: '/$id',
@@ -1183,6 +1202,7 @@ export interface FileRoutesByFullPath {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
   '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
@@ -1206,6 +1226,8 @@ export interface FileRoutesByFullPath {
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
   '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
@@ -1346,6 +1368,7 @@ export interface FileRoutesByTo {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
   '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
@@ -1369,6 +1392,8 @@ export interface FileRoutesByTo {
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
   '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
@@ -1518,6 +1543,7 @@ export interface FileRoutesById {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
   '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
@@ -1541,6 +1567,8 @@ export interface FileRoutesById {
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
   '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
@@ -1691,6 +1719,7 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
     | '/api/spray/admin/creations'
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
@@ -1714,6 +1743,8 @@ export interface FileRouteTypes {
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
     | '/api/spray/admin/creations/$id'
     | '/api/spray/admin/sets/$id'
     | '/api/spray/creations/$id/image'
@@ -1854,6 +1885,7 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
     | '/api/spray/admin/creations'
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
@@ -1877,6 +1909,8 @@ export interface FileRouteTypes {
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
     | '/api/spray/admin/creations/$id'
     | '/api/spray/admin/sets/$id'
     | '/api/spray/creations/$id/image'
@@ -2025,6 +2059,7 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
     | '/api/spray/admin/creations'
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
@@ -2048,6 +2083,8 @@ export interface FileRouteTypes {
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
     | '/api/spray/admin/creations/$id'
     | '/api/spray/admin/sets/$id'
     | '/api/spray/creations/$id/image'
@@ -2139,6 +2176,7 @@ export interface RootRouteChildren {
   ApiMediaDevSeedRoute: typeof ApiMediaDevSeedRoute
   ApiMediaFilesIdRoute: typeof ApiMediaFilesIdRoute
   ApiMediaThumbsIdRoute: typeof ApiMediaThumbsIdRoute
+  ApiSprayAdminAssetsRoute: typeof ApiSprayAdminAssetsRouteWithChildren
   ApiSprayAdminCreationsRoute: typeof ApiSprayAdminCreationsRouteWithChildren
   ApiSprayAdminSetsRoute: typeof ApiSprayAdminSetsRouteWithChildren
   ApiSprayFileSplatRoute: typeof ApiSprayFileSplatRoute
@@ -3055,6 +3093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMediaUploadsIdRouteImport
       parentRoute: typeof ApiMediaUploadsRoute
     }
+    '/api/spray/admin/assets': {
+      id: '/api/spray/admin/assets'
+      path: '/api/spray/admin/assets'
+      fullPath: '/api/spray/admin/assets'
+      preLoaderRoute: typeof ApiSprayAdminAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/spray/admin/creations': {
       id: '/api/spray/admin/creations'
       path: '/api/spray/admin/creations'
@@ -3208,6 +3253,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/media/uploads/$id/thumb'
       preLoaderRoute: typeof ApiMediaUploadsIdThumbRouteImport
       parentRoute: typeof ApiMediaUploadsIdRoute
+    }
+    '/api/spray/admin/assets/$id': {
+      id: '/api/spray/admin/assets/$id'
+      path: '/$id'
+      fullPath: '/api/spray/admin/assets/$id'
+      preLoaderRoute: typeof ApiSprayAdminAssetsIdRouteImport
+      parentRoute: typeof ApiSprayAdminAssetsRoute
+    }
+    '/api/spray/admin/assets/upload': {
+      id: '/api/spray/admin/assets/upload'
+      path: '/upload'
+      fullPath: '/api/spray/admin/assets/upload'
+      preLoaderRoute: typeof ApiSprayAdminAssetsUploadRouteImport
+      parentRoute: typeof ApiSprayAdminAssetsRoute
     }
     '/api/spray/admin/creations/$id': {
       id: '/api/spray/admin/creations/$id'
@@ -3724,6 +3783,19 @@ const ApiHubOverlayTokenRouteChildren: ApiHubOverlayTokenRouteChildren = {
 const ApiHubOverlayTokenRouteWithChildren =
   ApiHubOverlayTokenRoute._addFileChildren(ApiHubOverlayTokenRouteChildren)
 
+interface ApiSprayAdminAssetsRouteChildren {
+  ApiSprayAdminAssetsIdRoute: typeof ApiSprayAdminAssetsIdRoute
+  ApiSprayAdminAssetsUploadRoute: typeof ApiSprayAdminAssetsUploadRoute
+}
+
+const ApiSprayAdminAssetsRouteChildren: ApiSprayAdminAssetsRouteChildren = {
+  ApiSprayAdminAssetsIdRoute: ApiSprayAdminAssetsIdRoute,
+  ApiSprayAdminAssetsUploadRoute: ApiSprayAdminAssetsUploadRoute,
+}
+
+const ApiSprayAdminAssetsRouteWithChildren =
+  ApiSprayAdminAssetsRoute._addFileChildren(ApiSprayAdminAssetsRouteChildren)
+
 interface ApiSprayAdminCreationsRouteChildren {
   ApiSprayAdminCreationsIdRoute: typeof ApiSprayAdminCreationsIdRoute
 }
@@ -3833,6 +3905,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMediaDevSeedRoute: ApiMediaDevSeedRoute,
   ApiMediaFilesIdRoute: ApiMediaFilesIdRoute,
   ApiMediaThumbsIdRoute: ApiMediaThumbsIdRoute,
+  ApiSprayAdminAssetsRoute: ApiSprayAdminAssetsRouteWithChildren,
   ApiSprayAdminCreationsRoute: ApiSprayAdminCreationsRouteWithChildren,
   ApiSprayAdminSetsRoute: ApiSprayAdminSetsRouteWithChildren,
   ApiSprayFileSplatRoute: ApiSprayFileSplatRoute,

@@ -6,6 +6,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Copy, Download, ExternalLink, SprayCan, X } from 'lucide-react';
 import type { SavedCreation } from './creation';
+import { drawDecals } from '../arrange/decals';
 
 export const ShareSheet: React.FC<{ creation: SavedCreation | null; onClose: () => void; onNew: () => void }> = ({
   creation,
@@ -41,9 +42,11 @@ export const ShareSheet: React.FC<{ creation: SavedCreation | null; onClose: () 
     c.height = 1024;
     const g = c.getContext('2d')!;
     const print = new Image();
-    print.onload = () => {
+    print.onload = async () => {
       g.drawImage(print, 0, 0, 768, 1024);
       g.drawImage(creation.image, 0, 0);
+      // the decals stuck on it, as the AR page's picture has them
+      await drawDecals(g, 0, 0, 768, 1024, creation.decals ?? []).catch((e) => console.warn('[share] decals not drawn', e));
       a.href = c.toDataURL('image/png');
       a.click();
     };

@@ -1,4 +1,5 @@
 import type {
+  Asset,
   Creation,
   CreationStatus,
   Paintable,
@@ -120,3 +121,7 @@ export const saveScene = (id: string, scene: SceneItem[], heightMm?: number) =>
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ scene, heightMm }),
   }).then((r) => r.paintable);
+
+/** The shared asset library (also used by the Studio's Assets tab). */
+export const listAssets = () =>
+  call<{ assets: Asset[]; max: number }>("/api/spray/admin/assets").then((r) => r.assets);

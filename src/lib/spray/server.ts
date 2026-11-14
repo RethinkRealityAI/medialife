@@ -4,6 +4,8 @@ import { isAdminRequest } from "@/lib/ar/auth.server";
 import { namedStore, namespaceFromRequest, type ArStore } from "@/lib/ar/store.server";
 
 import {
+  ASSET_LIBRARY_MAX,
+  ASSET_THUMB_MAX_BYTES,
   ID_RE,
   LUM_H,
   LUM_W,
@@ -19,6 +21,7 @@ import {
   type PublicCreation,
   type SceneItem,
   type SceneItemKind,
+  type Asset,
   MAX_DECALS,
   type CreationDecal,
 } from "./model";
@@ -402,6 +405,7 @@ const TYPES: Record<string, string> = {
 /** Public: a paintable's file (only for paintables that exist; drafts too, their ids are unguessable). */
 export async function serveSetFile(req: Request, splat: string) {
   if (splat.startsWith("scene/")) return serveSceneAsset(req, splat);
+  if (splat.startsWith("assets/")) return serveLibraryFile(req, splat);
   const m = /^sets\/([A-Za-z0-9]{6,40})\/([a-z0-9_]+\.(jpg|png|json))$/.exec(splat);
   if (!m) return new Response("not found", { status: 404 });
   const b = await (await files(req)).getBytes(`sets/${m[1]}/${m[2]}`);
@@ -686,10 +690,11 @@ type SceneAssetMeta = {
 };
 type SceneOverlay = { scene: SceneItem[]; updatedAt: number };
 
-const sceneKey = (pid: string, name: string) => `scene/${pid}/${name}`;
-const sceneMetaKey = (pid: string, name: string) => `${sceneKey(pid, name)}/m`;
-const scenePartKey = (pid: string, name: string, n: number) =>
-  `${sceneKey(pid, name)}/${String(n).padStart(4, "0")}`;
+const chunkKey = (prefix: string, name: string) => `${prefix}/${name}`;
+const chunkMetaKey = (prefix: string, name: string) => `${chunkKey(prefix, name)}/m`;
+const chunkPartKey = (prefix: string, name: string, n: number) =>
+  `${chunkKey(prefix, name)}/${String(n).padStart(4, "0")}`;
+const sceneMetaKey = (pid: string, name: string) => chunkMetaKey(`scene/${pid}`, name);
 export const sceneFileUrl = (pid: string, name: string) => `/api/spray/file/scene/${pid}/${name}`;
 
 /** A built-in charm with its stored scene, if one was saved. */
@@ -726,25 +731,21 @@ const KIND_WORD: Record<SceneItemKind, string> = {
   video: "an MP4 video",
 };
 
+type Piece =
+  | { done: false; name: string; part: number; parts: number }
+  | { done: true; name: string; size: number };
+
 /**
- * Admin: upload one scene file, in pieces of at most SCENE_CHUNK bytes. Multipart fields:
- *   file   this piece's bytes
- *   kind   "model" | "image" | "video"
- *   size   the whole file's size in bytes
- *   part   0-based piece number (default 0)
- *   upload the name the server gave on piece 0 (pieces 1+)
- * Answers { done: false, upload, part, parts } until the last piece, then
- * { done: true, file: "/api/spray/file/scene/...", bytes } (201).
+ * One piece of a chunked upload into `prefix` (scene/<paintable> or assets): the shared part of the
+ * scene uploads and the asset library. The first piece is checked by its header bytes (and a GLB for
+ * Draco / KTX2) and gets a fresh random name; later pieces name it. Answers a Response on a problem.
  */
-export async function uploadSceneAsset(req: Request, id: string) {
-  let form: FormData;
-  try {
-    form = await req.formData();
-  } catch {
-    return json({ error: "expected multipart form data" }, 400);
-  }
-  const p = await getPaintable(req, id);
-  if (!p) return json({ error: "not found" }, 404);
+async function receivePiece(
+  req: Request,
+  form: FormData,
+  prefix: string,
+  beforeFirst?: () => Promise<Response | null>,
+): Promise<Piece | Response> {
   const kind = String(form.get("kind") ?? "") as SceneItemKind;
   if (!(kind in SCENE_EXT)) return json({ error: "kind must be model, image or video" }, 400);
   const size = Number(form.get("size"));
@@ -774,27 +775,57 @@ export async function uploadSceneAsset(req: Request, id: string) {
       return json({ error: `That file isn't ${KIND_WORD[kind]}.` }, 415);
     const why = ext === "glb" ? glbUnsupported(bytes) : null;
     if (why) return json({ error: why }, 415);
+    const deny = beforeFirst ? await beforeFirst() : null;
+    if (deny) return deny;
     name = `${newId(12).toLowerCase()}.${ext}`;
     meta = { kind, ext, size, parts, done: false, createdAt: Date.now() };
   } else {
     name = String(form.get("upload") ?? "");
     if (!SCENE_NAME_RE.test(name)) return json({ error: "unknown upload" }, 404);
-    const m = await fs.getJSON<SceneAssetMeta>(sceneMetaKey(p.id, name));
+    const m = await fs.getJSON<SceneAssetMeta>(chunkMetaKey(prefix, name));
     if (!m || m.done || m.size !== size || m.kind !== kind)
       return json({ error: "unknown upload" }, 404);
     meta = m;
   }
-  await fs.setBytes(scenePartKey(p.id, name, part), bytes, { type: "application/octet-stream" });
+  await fs.setBytes(chunkPartKey(prefix, name, part), bytes, { type: "application/octet-stream" });
   if (part === parts - 1) {
-    const have = new Set(await fs.list(`${sceneKey(p.id, name)}/`));
+    const have = new Set(await fs.list(`${chunkKey(prefix, name)}/`));
     for (let n = 0; n < parts; n++)
-      if (!have.has(scenePartKey(p.id, name, n)))
+      if (!have.has(chunkPartKey(prefix, name, n)))
         return json({ error: `piece ${n + 1} of ${parts} is missing` }, 409);
     meta = { ...meta, done: true };
   }
-  await fs.setJSON(sceneMetaKey(p.id, name), meta);
-  if (!meta.done) return json({ done: false, upload: name, part, parts });
-  return json({ done: true, file: sceneFileUrl(p.id, name), bytes: size }, 201);
+  await fs.setJSON(chunkMetaKey(prefix, name), meta);
+  return meta.done ? { done: true, name, size } : { done: false, name, part, parts };
+}
+
+async function readForm(req: Request): Promise<FormData | Response> {
+  try {
+    return await req.formData();
+  } catch {
+    return json({ error: "expected multipart form data" }, 400);
+  }
+}
+
+/**
+ * Admin: upload one scene file, in pieces of at most SCENE_CHUNK bytes. Multipart fields:
+ *   file   this piece's bytes
+ *   kind   "model" | "image" | "video"
+ *   size   the whole file's size in bytes
+ *   part   0-based piece number (default 0)
+ *   upload the name the server gave on piece 0 (pieces 1+)
+ * Answers { done: false, upload, part, parts } until the last piece, then
+ * { done: true, file: "/api/spray/file/scene/...", bytes } (201).
+ */
+export async function uploadSceneAsset(req: Request, id: string) {
+  const form = await readForm(req);
+  if (form instanceof Response) return form;
+  const p = await getPaintable(req, id);
+  if (!p) return json({ error: "not found" }, 404);
+  const r = await receivePiece(req, form, `scene/${p.id}`);
+  if (r instanceof Response) return r;
+  if (!r.done) return json({ done: false, upload: r.name, part: r.part, parts: r.parts });
+  return json({ done: true, file: sceneFileUrl(p.id, r.name), bytes: r.size }, 201);
 }
 
 /** A single "bytes=" range clamped to the file; null for none; "invalid" for one we can't serve. */
@@ -817,22 +848,23 @@ function sceneRange(header: string | null, size: number) {
   return { start, end };
 }
 
-/** Public: a scene file, streamed piece by piece, with Range support and a long cache. */
-async function serveSceneAsset(req: Request, splat: string) {
-  const m = /^scene\/([A-Za-z0-9]{3,40})\/([a-z0-9]{12}\.(glb|mp4|webp|png|jpg))$/.exec(splat);
-  if (!m) return new Response("not found", { status: 404 });
-  const [, pid, name, ext] = m;
+const IMMUTABLE = {
+  "cache-control": "public, max-age=31536000, immutable",
+  "access-control-allow-origin": "*",
+  "x-content-type-options": "nosniff",
+};
+
+/** Public: a chunked file (scene or library), streamed piece by piece, with Range and a long cache. */
+async function serveChunked(req: Request, prefix: string, name: string, ext: string) {
   const fs = await files(req);
-  const meta = await fs.getJSON<SceneAssetMeta>(sceneMetaKey(pid, name));
+  const meta = await fs.getJSON<SceneAssetMeta>(chunkMetaKey(prefix, name));
   if (!meta?.done) return new Response("not found", { status: 404 });
   const etag = `"${name}"`;
   const headers: Record<string, string> = {
+    ...IMMUTABLE,
     "content-type": SCENE_TYPES[ext],
-    "cache-control": "public, max-age=31536000, immutable",
-    "access-control-allow-origin": "*",
     "access-control-expose-headers": "content-length, content-range, accept-ranges, etag",
     "accept-ranges": "bytes",
-    "x-content-type-options": "nosniff",
     etag,
   };
   if (req.headers.get("if-none-match") === etag)
@@ -852,9 +884,9 @@ async function serveSceneAsset(req: Request, splat: string) {
   let n = first;
   const body = new ReadableStream<Uint8Array>({
     async pull(controller) {
-      const buf = await fs.getBytes(scenePartKey(pid, name, n));
+      const buf = await fs.getBytes(chunkPartKey(prefix, name, n));
       if (!buf) {
-        controller.error(new Error(`scene file ${name}: piece ${n} missing`));
+        controller.error(new Error(`file ${name}: piece ${n} missing`));
         return;
       }
       const from = n === first ? start - n * SCENE_CHUNK : 0;
@@ -865,6 +897,250 @@ async function serveSceneAsset(req: Request, splat: string) {
     },
   });
   return new Response(body, { status: range ? 206 : 200, headers });
+}
+
+/** Public: a scene file. */
+async function serveSceneAsset(req: Request, splat: string) {
+  const m = /^scene\/([A-Za-z0-9]{3,40})\/([a-z0-9]{12}\.(glb|mp4|webp|png|jpg))$/.exec(splat);
+  if (!m) return new Response("not found", { status: 404 });
+  return serveChunked(req, `scene/${m[1]}`, m[2], m[3]);
+}
+
+// ---------------------------------------------------------------- the asset library
+//
+// Models, pictures and video shared by every piece of merch (the Studio's Assets tab and the admin scene
+// editor's "From your assets"). Files:
+//
+//   spray-files-<ns>  assets/<id>.<ext>/m, /0000...   the file, chunked like the scene files
+//                     assets/thumbs/<id>.<ext>          a small picture of it (PNG / JPEG / WebP)
+//   spray-<ns>        assets/<id>                       the Asset record (model.ts)
+//
+// Files are public at /api/spray/file/assets/<id>.<ext> (fans' pages load them), cached forever. A scene
+// item uses one by its path; saving a scene never deletes library files.
+
+const LIB = "assets";
+const LIB_ID_RE = /^[a-z0-9]{12}$/;
+const libFileUrl = (name: string) => `/api/spray/file/assets/${name}`;
+const libThumbKey = (id: string, ext: string) => `assets/thumbs/${id}.${ext}`;
+
+/** The library file name a path points at (<id>.<ext>), or null. */
+function libNameOf(file: string): string | null {
+  const pre = "/api/spray/file/assets/";
+  if (!file.startsWith(pre)) return null;
+  const name = file.slice(pre.length);
+  return SCENE_NAME_RE.test(name) ? name : null;
+}
+
+async function serveLibraryFile(req: Request, splat: string) {
+  const t = /^assets\/thumbs\/([a-z0-9]{12})\.(png|jpg|webp)$/.exec(splat);
+  if (t) {
+    const b = await (await files(req)).getBytes(libThumbKey(t[1], t[2]));
+    if (!b) return new Response("not found", { status: 404 });
+    return new Response(b, { headers: { ...IMMUTABLE, "content-type": SCENE_TYPES[t[2]] } });
+  }
+  const m = /^assets\/([a-z0-9]{12}\.(glb|mp4|webp|png|jpg))$/.exec(splat);
+  if (!m) return new Response("not found", { status: 404 });
+  return serveChunked(req, LIB, m[1], m[2]);
+}
+
+const libraryFull = () =>
+  json(
+    {
+      error: `Your asset library is full (${ASSET_LIBRARY_MAX} files). Delete some you no longer use to add more.`,
+    },
+    409,
+  );
+
+async function libraryCount(req: Request) {
+  return (await (await store(req)).list("assets/")).length;
+}
+
+/** Admin: the library, newest first. */
+export async function listAssets(req: Request) {
+  const all = await readAll<Asset>(await store(req), "assets/");
+  all.sort((a, b) => b.createdAt - a.createdAt);
+  return json({ assets: all, max: ASSET_LIBRARY_MAX });
+}
+
+/** Admin: one piece of a library file (same fields and answers as uploadSceneAsset, without `file`). */
+export async function uploadLibraryPiece(req: Request) {
+  const form = await readForm(req);
+  if (form instanceof Response) return form;
+  const r = await receivePiece(req, form, LIB, async () =>
+    (await libraryCount(req)) >= ASSET_LIBRARY_MAX ? libraryFull() : null,
+  );
+  if (r instanceof Response) return r;
+  if (!r.done) return json({ done: false, upload: r.name, part: r.part, parts: r.parts });
+  return json({ done: true, upload: r.name, bytes: r.size }, 201);
+}
+
+/**
+ * Admin: make the library record for a finished upload. Multipart:
+ *   upload  the file name the upload got; name  what to call it
+ *   aspect  pictures / video: width / height
+ *   clips   models: JSON list of animation names; tris: triangles; dims: JSON [w, h, d]
+ *   thumb   optional small picture (PNG / JPEG / WebP, at most 300 KB)
+ * Answers { asset } (201).
+ */
+export async function createAsset(req: Request) {
+  const form = await readForm(req);
+  if (form instanceof Response) return form;
+  const name = String(form.get("upload") ?? "");
+  if (!SCENE_NAME_RE.test(name)) return json({ error: "unknown upload" }, 400);
+  const id = name.split(".")[0];
+  const fs = await files(req);
+  const st = await store(req);
+  const meta = await fs.getJSON<SceneAssetMeta>(chunkMetaKey(LIB, name));
+  if (!meta?.done) return json({ error: "That upload didn't finish. Try again." }, 400);
+  if (await st.getJSON(`assets/${id}`)) return json({ error: "already added" }, 409);
+  if ((await libraryCount(req)) >= ASSET_LIBRARY_MAX) return libraryFull();
+  const kind = meta.kind;
+  const num = (k: string) => {
+    const v = form.get(k);
+    return v == null || v === "" ? null : Number(v);
+  };
+  const parse = <T>(k: string): T | null => {
+    try {
+      return JSON.parse(String(form.get(k) ?? "null")) as T;
+    } catch {
+      return null;
+    }
+  };
+  let aspect: number | null = null;
+  let clips: string[] = [];
+  let tris: number | null = null;
+  let dims: [number, number, number] | null = null;
+  if (kind === "model") {
+    const c = parse<unknown[]>("clips");
+    clips = Array.isArray(c)
+      ? c.filter((x): x is string => typeof x === "string" && !!x && x.length <= 200).slice(0, 50)
+      : [];
+    const t = num("tris");
+    tris = t != null && Number.isFinite(t) && t >= 0 ? Math.round(t) : null;
+    const d = parse<unknown[]>("dims");
+    dims =
+      Array.isArray(d) && d.length === 3 && d.every((v) => finite(v, 0, 1e9))
+        ? (d.map((v) => round3(v as number)) as [number, number, number])
+        : null;
+  } else {
+    const a = num("aspect");
+    if (a == null || !finite(a, 0.05, 20))
+      return json({ error: "picture shape (aspect) is missing" }, 400);
+    aspect = round3(a);
+  }
+  let thumb: string | null = null;
+  const tf = form.get("thumb");
+  if (tf && typeof tf !== "string") {
+    if (tf.size > ASSET_THUMB_MAX_BYTES)
+      return json({ error: "The small preview picture is over 300 KB." }, 413);
+    const tb = new Uint8Array(await tf.arrayBuffer());
+    const ext = sniffSceneAsset(tb, tb.length);
+    if (!ext || !SCENE_EXT.image.includes(ext))
+      return json({ error: "The preview must be a PNG, JPEG or WebP picture." }, 415);
+    await fs.setBytes(libThumbKey(id, ext), tb, { type: SCENE_TYPES[ext] });
+    thumb = `/api/spray/file/${libThumbKey(id, ext)}`;
+  }
+  const asset: Asset = {
+    id,
+    kind,
+    name:
+      String(form.get("name") ?? "")
+        .trim()
+        .slice(0, 80) || "Untitled",
+    file: libFileUrl(name),
+    bytes: meta.size,
+    thumb,
+    aspect,
+    clips,
+    tris,
+    dims,
+    createdAt: Date.now(),
+  };
+  await st.setJSON(`assets/${id}`, asset);
+  // tidy up: library uploads that never became a record
+  const now = Date.now();
+  const owners = new Map<string, string[]>();
+  for (const k of await fs.list("assets/")) {
+    const n = k.split("/")[1];
+    if (n && SCENE_NAME_RE.test(n)) owners.set(n, [...(owners.get(n) ?? []), k]);
+  }
+  for (const [n, keys] of owners) {
+    if (n === name) continue;
+    const m = await fs.getJSON<SceneAssetMeta>(chunkMetaKey(LIB, n));
+    if (m && now - m.createdAt < ORPHAN_MS) continue;
+    if (await st.getJSON(`assets/${n.split(".")[0]}`)) continue;
+    for (const k of keys) await fs.del(k);
+  }
+  return json({ asset }, 201);
+}
+
+/** Admin: rename one. JSON { name }. */
+export async function renameAsset(req: Request, id: string) {
+  if (!LIB_ID_RE.test(id)) return json({ error: "not found" }, 404);
+  let body: { name?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "invalid JSON" }, 400);
+  }
+  const name = typeof body.name === "string" ? body.name.trim().slice(0, 80) : "";
+  if (!name) return json({ error: "give it a name" }, 400);
+  const st = await store(req);
+  if (!(await st.getJSON(`assets/${id}`))) return json({ error: "not found" }, 404);
+  const asset = await st.update<Asset>(`assets/${id}`, (cur) => ({ ...cur!, name }));
+  return json({ asset });
+}
+
+/** Writes a paintable's scene as it stands (built-ins: their overlay). */
+async function storeScene(req: Request, p: Paintable, scene: SceneItem[]) {
+  const st = await store(req);
+  const now = Date.now();
+  if (p.builtin) {
+    await st.setJSON(`scene/${p.id}`, { scene, updatedAt: now } satisfies SceneOverlay);
+    return { ...p, scene };
+  }
+  return st.update<Paintable>(`paintables/${p.id}`, (cur) => ({
+    ...(cur ?? p),
+    scene,
+    updatedAt: now,
+  }));
+}
+
+/**
+ * Admin: delete one. Refused (409, { error, usedOn: [{ id, name }] }) while a piece of merch's scene uses
+ * it, unless force (?force=1), which also takes those items out of those scenes.
+ */
+export async function deleteAsset(req: Request, id: string, force: boolean) {
+  if (!LIB_ID_RE.test(id)) return json({ error: "not found" }, 404);
+  const st = await store(req);
+  const asset = await st.getJSON<Asset>(`assets/${id}`);
+  if (!asset) return json({ error: "not found" }, 404);
+  const users = (await listPaintables(req, true)).filter((p) =>
+    (p.scene ?? []).some((s) => s.file === asset.file),
+  );
+  if (users.length && !force)
+    return json(
+      {
+        error: `It is used on ${users.map((p) => p.name).join(", ")}.`,
+        usedOn: users.map((p) => ({ id: p.id, name: p.name })),
+      },
+      409,
+    );
+  for (const p of users)
+    await storeScene(
+      req,
+      p,
+      (p.scene ?? []).filter((s) => s.file !== asset.file),
+    );
+  const fs = await files(req);
+  const name = asset.file.split("/").pop()!;
+  for (const k of await fs.list(`${chunkKey(LIB, name)}/`)) await fs.del(k);
+  if (asset.thumb) {
+    const t = asset.thumb.split("/").pop()!;
+    await fs.del(libThumbKey(id, t.split(".")[1]));
+  }
+  await st.del(`assets/${id}`);
+  return json({ ok: true, removedFrom: users.map((p) => ({ id: p.id, name: p.name })) });
 }
 
 const finite = (v: unknown, lo: number, hi: number) =>
@@ -894,8 +1170,12 @@ function cleanSceneItem(raw: unknown, i: number, pid: string): SceneItem {
     throw new Error(`${at}: bad id`);
   const name = typeof r.name === "string" ? r.name.trim().slice(0, 80) : "";
   if (typeof r.file !== "string") throw new Error(`${at}: file is missing`);
-  const fname = sceneNameOf(pid, r.file);
-  if (!fname) throw new Error(`${at}: the file must be one uploaded to this paintable`);
+  const lname = libNameOf(r.file);
+  const fname = lname ?? sceneNameOf(pid, r.file);
+  if (!fname)
+    throw new Error(
+      `${at}: the file must be one uploaded to this paintable or in the asset library`,
+    );
   if (!SCENE_EXT[kind].includes(fname.split(".")[1]))
     throw new Error(`${at}: the file doesn't match its kind`);
   const vec = (v: unknown, lo: number, hi: number, what: string) => {
@@ -923,7 +1203,7 @@ function cleanSceneItem(raw: unknown, i: number, pid: string): SceneItem {
     id: r.id,
     kind,
     name: name || (kind === "model" ? "Model" : kind === "image" ? "Picture" : "Video"),
-    file: sceneFileUrl(pid, fname),
+    file: lname ? libFileUrl(lname) : sceneFileUrl(pid, fname),
     pos: pos.map(round3) as [number, number, number],
     rot: rot.map(wrapDeg) as [number, number, number],
     size: round3(r.size as number),
@@ -938,10 +1218,12 @@ function cleanSceneItem(raw: unknown, i: number, pid: string): SceneItem {
  * Admin: save a paintable's scene. JSON { scene: SceneItem[], heightMm?: number }. Every field is
  * checked; files must be finished uploads of this paintable. heightMm (10..3000) corrects the real
  * print size (CMS paintables only: the built-in charms' size is fixed in code). Files no item uses
- * any more are deleted (and unsaved uploads older than a day).
+ * any more are deleted (and unsaved uploads older than a day), unless keepFiles is true (the Studio,
+ * which autosaves and can undo a delete afterwards; the admin editor's next save tidies them). Items may
+ * also use files from the asset library, which saving never deletes.
  */
 export async function saveScene(req: Request, id: string) {
-  let body: { scene?: unknown; heightMm?: unknown };
+  let body: { scene?: unknown; heightMm?: unknown; keepFiles?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -966,11 +1248,20 @@ export async function saveScene(req: Request, id: string) {
     scene = body.scene.map((r, i) => cleanSceneItem(r, i, p.id));
     if (new Set(scene.map((s) => s.id)).size !== scene.length)
       throw new Error("two items have the same id");
-    const names = [...new Set(scene.map((s) => sceneNameOf(p.id, s.file)!))];
-    for (const n of names) {
-      const m = await fs.getJSON<SceneAssetMeta>(sceneMetaKey(p.id, n));
-      if (!m?.done)
-        throw new Error("One of the files was removed or never finished uploading. Add it again.");
+    const gone = "One of the files was removed or never finished uploading. Add it again.";
+    const names = [...new Set(scene.map((s) => s.file))];
+    const st0 = await store(req);
+    for (const f of names) {
+      const lib = libNameOf(f);
+      if (lib) {
+        if (!(await st0.getJSON(`assets/${lib.split(".")[0]}`)))
+          throw new Error(
+            "One of the assets was deleted from the library. Remove it or add it again.",
+          );
+        continue;
+      }
+      const m = await fs.getJSON<SceneAssetMeta>(sceneMetaKey(p.id, sceneNameOf(p.id, f)!));
+      if (!m?.done) throw new Error(gone);
     }
   } catch (e) {
     return json({ error: e instanceof Error ? e.message : String(e) }, 400);
@@ -991,6 +1282,7 @@ export async function saveScene(req: Request, id: string) {
     }));
   }
 
+  if (body.keepFiles === true) return json({ paintable: withTargetData(saved) });
   // tidy up: files of items that were removed, and abandoned uploads
   const keep = new Set(scene.map((s) => sceneNameOf(p.id, s.file)));
   const was = new Set((p.scene ?? []).map((s) => sceneNameOf(p.id, s.file)));

@@ -6,6 +6,7 @@ import type { SprayPaintable } from '../paint/objectCatalog';
 import { paintableId } from '../paint/objectCatalog';
 import { exportPaint } from '../paint/sprayModel';
 import type { TargetObjectType } from '../types';
+import type { Decal } from '../arrange/decals';
 
 const q = new URLSearchParams(window.location.search);
 /** ?set=<paintable id> opens the studio on that piece of merch; Bobo otherwise. */
@@ -21,6 +22,8 @@ export interface SavedCreation {
   url: string;
   paintable: SprayPaintable;
   image: HTMLCanvasElement;
+  /** Decals stuck on it, back to front (saved with it as `decals`). */
+  decals: Decal[];
 }
 
 const loadImg = (src: string) =>
@@ -76,11 +79,12 @@ async function measure(paint: HTMLCanvasElement, maskUrl: string) {
 export async function saveCreation(
   paintCanvas: HTMLCanvasElement,
   paintable: SprayPaintable,
-  opts: { primer: boolean; linesOn: boolean },
+  opts: { primer: boolean; linesOn: boolean; decals?: Decal[] },
 ): Promise<SavedCreation> {
+  const decals = opts.decals ?? [];
   const image = exportPaint(paintCanvas);
   const { coverage, colours, painted } = await measure(image, paintable.files.mask);
-  if (painted < 12) throw new Error('Spray something first, then save.');
+  if (painted < 12 && !decals.length) throw new Error('Spray something first, then save.');
   const blob = await new Promise<Blob>((res, rej) => image.toBlob((b) => (b ? res(b) : rej(new Error('Could not make the image'))), 'image/png'));
   const form = new FormData();
   form.set('paintable', paintable.id);
@@ -90,10 +94,11 @@ export async function saveCreation(
   form.set('colours', colours.join(','));
   form.set('coverage', coverage.toFixed(3));
   form.set('source', 'studio');
+  if (decals.length) form.set('decals', JSON.stringify(decals));
   if (eventTag) form.set('event', eventTag);
   const r = await fetch('/api/spray/creations', { method: 'POST', body: form, headers: { 'x-spray': '1' }, credentials: 'same-origin' });
   const j = await r.json().catch(() => ({}));
   if (r.status === 401) throw new Error('You are signed out. Sign in again at /admin/login, then save.');
   if (!r.ok) throw new Error(j.error || 'Could not save. Try again.');
-  return { id: j.creation.id, url: `${window.location.origin}/sb/${j.creation.id}`, paintable, image };
+  return { id: j.creation.id, url: `${window.location.origin}/sb/${j.creation.id}`, paintable, image, decals };
 }
