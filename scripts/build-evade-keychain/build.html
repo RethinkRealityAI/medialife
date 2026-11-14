@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<script type="importmap">{ "imports": { "three": "/three/build/three.module.js", "three/addons/": "/three/examples/jsm/" } }</script>
+</head><body>
+<script type="module">
+  import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+  import { buildKeychain } from '/tool/scene.js';
+  window.build = async ({ qr, acrylicMode }) => {
+    await document.fonts.load('800 20px Inter');
+    const root = await buildKeychain({ base: '/public/evade/keychain/src', qr, acrylicMode });
+    const glb = await new GLTFExporter().parseAsync(root, { binary: true, maxTextureSize: 1024 });
+    const bytes = new Uint8Array(glb); let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return { b64: btoa(s), info: root.userData };
+  };
+  window.ready = true;
+</script>
+</body></html>
