@@ -32,6 +32,9 @@ const HERE = '/evade/spray-bobo/';
 // ?c=<creation id>: VIEWER MODE. Someone's shared painting shown on the merch it was made for, nothing else (no can,
 // canvas, caps, decals, options or saving; this phone's own paintings are neither read nor written).
 const VIEWER = params.has('c');
+// &go=1 (the share page's "View on merch" button): open the camera straight away. Without it the viewer splash below
+// still shows, so a link opened on its own gets an introduction first.
+const VIEWER_GO = VIEWER && params.get('go') === '1';
 if (VIEWER) { document.documentElement.toggleAttribute('data-viewer', true); document.getElementById('lead').textContent = 'Loading the painting…'; }
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
 const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
@@ -206,7 +209,8 @@ Promise.all([assets.then(async (d) => { if (!VIEWER) await loadSaved(); return d
   if (VIEWER && !cmsInfo.viewer) { viewerGone(); return; }
   loaded = true; $('b-start').disabled = false;
   $('b-start').textContent = VIEWER ? 'View on merch' : Object.values(PIECES).some((P) => P.saved) ? 'See my paintings' : 'Start painting';
-  if (VIEWER) viewerSplash();
+  if (VIEWER_GO) { document.documentElement.toggleAttribute('data-go', true); $('title').textContent = 'Opening the camera'; $('lead').textContent = 'Allow camera access, then point your phone at the merch.'; start(); }
+  else if (VIEWER) viewerSplash();
 }).catch((e) => { console.error(e); if (VIEWER && !cmsInfo.viewer) { $('load').hidden = true; viewerGone(); return; } showError('Could not load the experience', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- the paint (a 2D canvas the AR plane shows)
@@ -1769,7 +1773,7 @@ let flushAt = 0;
 function flushDiag(force, always = false) {
   const now = performance.now(); if (!force && now - flushAt < 10000) return; flushAt = now;
   if ((!camStartAt && !always) || params.has('nolog') || (LIVE_SITE && !params.has('diag'))) return;
-  const body = JSON.stringify({ ...diag, secs: Math.round((now - (camStartAt || now)) / 1000), fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0, painted: Math.round(paint.coverage * 100), mode, screen: [innerWidth, innerHeight, devicePixelRatio], bridgeS: +diag.bridgeS.toFixed(1), sprayS: +diag.sprayS.toFixed(1), bridgeSprayS: +diag.bridgeSprayS.toFixed(1) });
+  const body = JSON.stringify({ ...diag, secs: Math.round((now - (camStartAt || now)) / 1000), fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0, painted: Math.round((paint ? paint.coverage : 0) * 100), mode, screen: [innerWidth, innerHeight, devicePixelRatio], bridgeS: +diag.bridgeS.toFixed(1), sprayS: +diag.sprayS.toFixed(1), bridgeSprayS: +diag.bridgeSprayS.toFixed(1) });
   try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
 }
 addEventListener('pagehide', () => flushDiag(true));

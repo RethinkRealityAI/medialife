@@ -278,3 +278,6 @@ html[data-viewer] #hud[data-mode=find] #shoot{display:flex}
 html[data-viewer] #hud #hint{bottom:calc(170px + env(safe-area-inset-bottom))}
 html[data-viewer] #hud[data-mode=find] #hint{bottom:auto}
 @media (min-aspect-ratio:1/1) and (max-height:520px){#viewbar{right:auto;width:min(380px,calc(50% - 60px));bottom:calc(16px + env(safe-area-inset-bottom))}}
+
+/* ?c=<id>&go=1: straight to the camera, so the splash is only a short "opening the camera" note */
+html[data-go] #splash .hero,html[data-go] #b-start{display:none!important}

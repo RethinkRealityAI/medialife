@@ -124,7 +124,7 @@ function fillCopy() {
   $('pname').textContent = P.name || 'EVADE merch';
   const sw = $('swatches'); sw.textContent = '';
   for (const c of cols()) { const i = document.createElement('i'); i.style.setProperty('--c', c); sw.appendChild(i); }
-  $('b-ar').href = `/evade/spray-bobo/?c=${encodeURIComponent(ID)}`;
+  $('b-ar').href = `/evade/spray-bobo/?c=${encodeURIComponent(ID)}&go=1`;   // go=1: straight to the camera, no second splash
   $('b-ar').setAttribute('aria-label', 'View on merch. Opens the camera page, needs the real EVADE merch and your camera');
 }
 const cols = () => (C && C.colours && C.colours.length ? C.colours : DEFAULT_COLS);
@@ -730,10 +730,6 @@ let hintT = 0;
 function setHint(t) { const h = $('hint'); h.textContent = t; h.classList.remove('gone'); clearTimeout(hintT); if (t) hintT = setTimeout(() => h.classList.add('gone'), 9000); }
 function touched() { if (!life.touched) { life.touched = true; $('hint').classList.add('gone'); } }
 
-$('b-replay').onclick = () => {
-  if (!renderer) return;
-  sound.init(); play(false);
-};
 
 // ---------------------------------------------------------------- start
 function start() {
@@ -743,7 +739,7 @@ function start() {
     const D = composite(); stickerCanvas = bakeSticker(D);
     const pic = mk(TW, TH), pg = pic.getContext('2d'); pg.drawImage(stickerCanvas, 0, 0); drawDecals(pg, 0, 0, TW);   // a copy: Save image draws the decals itself
     const img = new Image(); img.className = 'fallback'; img.alt = "The fan's painting as a sticker"; img.src = pic.toDataURL('image/png');
-    stage.appendChild(img); canvas.hidden = true; $('b-replay').hidden = true;
+    stage.appendChild(img); canvas.hidden = true;
     return;
   }
   cardIn(0); play(true); runLoop(true);
