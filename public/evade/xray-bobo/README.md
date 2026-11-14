@@ -20,9 +20,10 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   first). From the middle out each tile turns digital (pixelates, posterises into scanner cyan with a cyan edge),
   lifts off, flies outwards and turns, and dissolves block by block, uncovering the box as the walls grow. It lasts `OPEN_S` (3.6 s; Dapo asked for at least 3).
 - The can is different (Dapo 2026-11-14: "truly look like we X-rayed inside of it"): no box and no grid. The window
-  is the drawn can's own outline (`CAN_PROFILE`, measured from kc-can.jpg: rim, shoulder, body, rounded base) and
-  behind it is the back half of the can, a lathe of the same profile (`buildTube`), so its silhouette fits the print
-  exactly. Inside: bare aluminium and the soda (`buildCan`: tinted wall, see-through front face, surface, bubbles).
+  is the drawn can traced exactly (Spray Bobo's can-outline.json: lid, pull tab, shoulders, body, base). Behind it is
+  the back half of the can, a lathe whose radius at each height is the outline's widest half-width (`canTube`, 41
+  samples), so it covers the window, tab included. Brushed aluminium lit by a lamp inside the can so the round back
+  reads, a domed base and bead grooves. Inside: the soda (`buildCan`: tinted wall, see-through front face, surface, bubbles).
   X-ray: dark walls with cyan bead rings, cyan soda, white bubbles. Depth: Deep = a round can; Shallow / Deeper flatten
   or stretch it. Its reveal is a light burn, not the tiles (`makeBurn`, `OPEN_CAN_S` = 5.2 s): a pin of light, cracks running out, then the
   print burns away behind a white-hot edge with a cyan rim, only inside the can's outline. Balls float in the soda
