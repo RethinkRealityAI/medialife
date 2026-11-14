@@ -291,7 +291,7 @@ function HowItWorks({ c }: { c: PublicCampaign }) {
 function Backdrop() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-      <div className="absolute inset-x-0 top-0 h-[70vh] bg-[radial-gradient(60%_60%_at_80%_0%,rgb(25_175_254/0.18),transparent_70%),radial-gradient(50%_50%_at_10%_20%,rgb(255_55_174/0.12),transparent_70%)]" />
+      {/* Flat backdrop: no gradients anywhere on the platform. */}
     </div>
   );
 }
@@ -699,7 +699,7 @@ function EntrantPanel({ data, entrant }: { data: GiveawayData; entrant: EntrantV
               : ""}
           </p>
         </div>
-        <span className="hidden size-14 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(135deg,#19affe,#ff37ae)] text-white sm:grid">
+        <span className="hidden size-14 shrink-0 place-items-center rounded-2xl bg-[#ff37ae] text-white sm:grid">
           <Ticket className="size-7" aria-hidden />
         </span>
       </div>

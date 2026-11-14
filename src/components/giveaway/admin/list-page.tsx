@@ -82,7 +82,7 @@ export function GiveawayListPage({ data }: { data: Data }) {
                   params={{ campaignId: c.id }}
                   className={cn(surface, lift, "flex h-full flex-col overflow-hidden")}
                 >
-                  <div className="relative aspect-[16/7] bg-[linear-gradient(135deg,oklch(0.3_0.13_330),oklch(0.22_0.1_250))]">
+                  <div className="relative aspect-[16/7] bg-[oklch(0.24_0.09_290)]">
                     {c.heroImage ? (
                       <img
                         src={c.heroImage}
@@ -91,7 +91,6 @@ export function GiveawayListPage({ data }: { data: Data }) {
                         loading="lazy"
                       />
                     ) : null}
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgb(0_0_0/0.65))]" />
                     <div className="absolute top-3 left-3">
                       <StatusTag status={c.status} />
                     </div>
