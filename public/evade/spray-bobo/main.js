@@ -13,9 +13,11 @@
 // screen: a ray from the camera through it hits the picture's plane, and the hit (in the picture's own
 // frame) is where the paint lands. The spray's width grows with the distance, like a real can.
 //
-// Keeping the pose through shaky hands (tracking): the pose follows the engine without lag and only smooths
-// sub-millimetre jitter; when the engine drops the charm for a moment the phone's gyroscope carries the
-// pose on (it is checked against the tracking first, see `gyro`), so a stroke does not break off.
+// Keeping the canvas on the print (tracking): the pose follows the engine without lag and only smooths
+// sub-millimetre jitter. The canvas is drawn only where the camera really sees the piece: when the engine drops
+// it, the last pose is kept for a blink only while the phone is held still (a held pose is glued to the screen,
+// so with the phone moving it would ride along with the phone), and every tracked pose is checked against the
+// camera picture (`fit`), so a pose the engine has let slide off the print hides the canvas instead of dragging it.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
@@ -54,7 +56,12 @@ const CAPS = [                                // the colours ("caps"), EVADE yel
 // nozzles: the spray's half-angle. At a hand's distance (15 cm) skinny is about 3 mm wide, fat about 1.5 cm.
 const NOZZLES = [{ n: 'Skinny', a: 0.6, dot: 3 }, { n: 'Medium', a: 1.4, dot: 5 }, { n: 'Fat', a: 2.8, dot: 8 }];
 const CAN_SECONDS = 24;                       // seconds of spraying in a full can
-const BRIDGE_GYRO_MS = 1500, BRIDGE_HOLD_MS = 400;
+// Losing the piece: the last pose is held this long, and only while the phone is still (motion sensors), or for
+// HOLD_BLIND_MS without sensors. Then the canvas hides, and comes back the moment the engine finds the piece again.
+const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120;
+// The pose check: the tracked picture, placed by the engine's pose, against the camera picture (weighted
+// correlation, -1..1). FIT_BAD_N checks in a row under FIT_BAD and the pose is not trusted until one is over FIT_OK.
+const FIT_EVERY_MS = 150, FIT_BAD = 0.12, FIT_OK = 0.25, FIT_BAD_N = 3;
 // The charms you can paint. Each has its own image targets (both sides), stencil art lined up with its front
 // picture, and its own saved painting. The cat's back picture is the print seen through the acrylic (mirrored),
 // so the canvas is flipped there; the can's back picture shows the same can body, so the canvas is only moved
@@ -503,20 +510,30 @@ function tickSplats(dt, scale) {
   splats.points.material.size = 0.0032 * scale;
 }
 
-// ---------------------------------------------------------------- tracking: the charm's pose, both sides, gyro bridge
+// ---------------------------------------------------------------- tracking: the charm's pose, both sides, the pose check
 const TS = {};                               // per image target: last pose from the engine
 let probes = null;
-function initTargets(targets) { for (const t of targets) TS[t.name] = { name: t.name, piece: PIECE_OF[t.name], pr: t.properties, tracked: false, at: 0, seen: -1e9, foundAt: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, upp: 0 }; }
+function initTargets(targets) {
+  for (const t of targets) {
+    TS[t.name] = { name: t.name, piece: PIECE_OF[t.name], pr: t.properties, tracked: false, at: 0, seen: -1e9, foundAt: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, upp: 0,
+      gap: 40, bad: false, badN: 0, fit: null, fitAt: 0 };
+    loadFitProbe(t);
+  }
+}
 function onTarget(d) {
   const t = TS[d.name]; if (!t) return;
   const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;          // world units per target pixel
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);
   t.s = t.pr.height * upp / PIECES[t.piece].H; t.upp = upp;
-  if (!t.tracked) { t.foundAt = performance.now(); diag.found++; tDiag(t.name).found++; }
-  t.tracked = true; t.at = performance.now();
+  const now = performance.now();
+  if (!t.tracked) { t.foundAt = now; diag.found++; tDiag(t.name).found++; t.bad = false; t.badN = 0; t.fitAt = 0; }
+  else t.gap += (clamp(now - t.at, 8, 400) - t.gap) * 0.2;   // how often the engine updates it (for the stale check)
+  t.tracked = true; t.at = now;
 }
-function onLost(d) { const t = TS[d.name]; if (t && t.tracked) { t.tracked = false; diag.lost++; tDiag(d.name).lost++; } }
+function onLost(d) { const t = TS[d.name]; if (t && t.tracked) { t.tracked = false; t.bad = false; t.badN = 0; diag.lost++; tDiag(d.name).lost++; } }
+// usable now: the engine tracks it and its pose still fits the camera picture
+const live = (t) => !!t && t.tracked && !t.bad;
 
 // Which side of the charm: the print and its mirror (seen through the clear acrylic). The cat's face is
 // nearly symmetric, so both pictures often lock onto one charm. The camera picture decides: under each
@@ -557,26 +574,69 @@ function buildProbes(img) {
   return { 'kc-bobo': { cols, rows, lum: L, wt }, 'kc-bobo-l': { cols, rows, lum: mir(L), wt: mir(wt) } };
 }
 // how well a picture, placed by its own pose, matches the camera (weighted correlation, -1..1)
-function sideScore(t, cam) {
-  const pb = probes && probes[t.name]; if (!pb || !t.upp) return null;
+function sideScore(t, cam) { return fitScore(t, probes && probes[t.name], cam, 12, 80); }
+function fitScore(t, pb, cam, minW = 0, minN = 0) {
+  if (!pb || !t.upp || !cam) return null;
   const cw = canvas.clientWidth, chh = canvas.clientHeight;
   const sc = Math.max(cw / cam.vw, chh / cam.vh), hw = cw / sc / 2, hh = chh / sc / 2;
   const Wp = t.pr.width * t.upp, Hp = t.pr.height * t.upp, k = cam.w / cam.vw;
   let sw = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0, n = 0;
   for (let r = 0; r < pb.rows; r++) for (let c = 0; c < pb.cols; c++) {
-    const i = r * pb.cols + c, w = pb.wt[i]; if (w < 12) continue;
+    const i = r * pb.cols + c, w = pb.wt[i]; if (!(w > minW)) continue;
     _pv.set(((c + 0.5) / pb.cols - 0.5) * Wp, (0.5 - (r + 0.5) / pb.rows) * Hp, 0).applyQuaternion(t.q).add(t.p).project(camera);
     const x = (cam.vw / 2 + _pv.x * hw) * k, y = (cam.vh / 2 - _pv.y * hh) * k;
     if (!(x >= 0 && y >= 0 && x < cam.w - 1 && y < cam.h - 1)) continue;
     const a = pb.lum[i], b = cam.L[(y | 0) * cam.w + (x | 0)];
     n++; sw += w; sa += w * a; sb += w * b; saa += w * a * a; sbb += w * b * b; sab += w * a * b;
   }
-  if (n < 80) return null;
+  if (n < Math.max(minN, pb.need || 0)) return null;
   const ma = sa / sw, mb = sb / sw, va = saa / sw - ma * ma, vb = sbb / sw - mb * mb;
   return va > 0 && vb > 0 ? (sab / sw - ma * mb) / Math.sqrt(va * vb) : null;
 }
+// The pose check's picture of each target: its luminance picture at 24 cells across, each cell weighted by how
+// much detail it has (flat cells say little), inside the charm's outline only where a mask exists (the clear
+// acrylic around a charm shows whatever is behind it).
+const fitProbes = {};
+let camCache = null;
+function camNow(now) { if (!camCache || now - camCache.at > 90) { const c = camLuma(); camCache = c ? Object.assign(c, { at: now }) : null; } return camCache; }
+function loadFitProbe(td) {
+  const P = PIECES[PIECE_OF[td.name]]; if (!P || !td.imagePath) return;
+  const dir = P.cms ? null : tdir(P);
+  Promise.all([loadImg(td.imagePath), dir ? loadImg(dir + td.name + '-mask.png').catch(() => null) : Promise.resolve(null)]).then(([img, mask]) => {
+    const cols = 24, rows = Math.max(8, Math.round(cols * td.properties.height / td.properties.width)), c = document.createElement('canvas'); c.width = cols; c.height = rows;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, cols, rows);
+    const d = g.getImageData(0, 0, cols, rows).data, L = new Float32Array(cols * rows);
+    for (let i = 0; i < L.length; i++) L[i] = d[i * 4];
+    let m = null;
+    if (mask) { g.clearRect(0, 0, cols, rows); g.drawImage(mask, 0, 0, cols, rows); const md = g.getImageData(0, 0, cols, rows).data; m = new Float32Array(cols * rows); for (let i = 0; i < m.length; i++) m[i] = md[i * 4 + 3] / 255; }
+    const wt = new Float32Array(cols * rows); let k = 0;
+    for (let r = 0; r < rows; r++) for (let cc = 0; cc < cols; cc++) {
+      const i = r * cols + cc; if (m && m[i] < 0.6) continue;
+      const nb = [cc > 0 ? L[i - 1] : L[i], cc < cols - 1 ? L[i + 1] : L[i], r > 0 ? L[i - cols] : L[i], r < rows - 1 ? L[i + cols] : L[i]];
+      wt[i] = 4 + Math.abs(L[i] - (nb[0] + nb[1] + nb[2] + nb[3]) / 4); k++;
+    }
+    fitProbes[td.name] = { cols, rows, lum: L, wt, need: Math.round(k * 0.55) };   // judged only with most of the piece on screen
+  }).catch((e) => console.warn('pose check: no picture for', td.name, e));
+}
+// every FIT_EVERY_MS, each tracked target of the current piece: does its pose still sit on what the camera sees?
+function checkFit(now) {
+  if (!cp) return;
+  for (const n of cp.targets) {
+    const t = TS[n]; if (!t || !t.tracked || now - t.fitAt < FIT_EVERY_MS) continue;
+    const pb = fitProbes[n]; if (!pb) continue;
+    t.fitAt = now; const sc = fitScore(t, pb, camNow(now)); if (sc == null) continue;
+    t.fit = sc; const f = diag.fit || (diag.fit = { n: 0, sum: 0, min: 1, drops: 0 }); f.n++; f.sum += sc; f.min = Math.min(f.min, +sc.toFixed(3)); f.avg = +(f.sum / f.n).toFixed(3);
+    if (t.bad) { if (sc > FIT_OK) { t.bad = false; t.badN = 0; } continue; }
+    // the camera picture read here is a frame or two newer than the one the engine posed, so while the phone
+    // moves fast a right pose can score low: only a pose that is still off once the phone settles counts
+    if (now - motion.seen < 400 && now - motion.moved < 200) continue;
+    t.badN = sc < FIT_BAD ? t.badN + 1 : 0;
+    if (t.badN >= FIT_BAD_N) { t.bad = true; f.drops++; tDiag(n).drops = (tDiag(n).drops || 0) + 1; }
+  }
+}
+
 let soleSince = 0;
-const onT = (n) => (TS[n] && TS[n].tracked ? TS[n] : null);
+const onT = (n) => (live(TS[n]) ? TS[n] : null);
 const pieceInView = (k) => PIECES[k].targets.some(onT);
 const pieceSeen = (k) => Math.max(...PIECES[k].targets.map((n) => (TS[n] ? TS[n].seen : -1e9)));
 // which charm: while painting, the one being painted; otherwise whichever is in view (the current one first)
@@ -608,7 +668,7 @@ function pickSide(now) {
   if (!a && !b) return side;
   if (!side) side = a && b ? (a.foundAt <= b.foundAt ? na : nb) : a ? na : nb;
   if (cp.mirrorPair && a && b && now - sideAt > 120) {
-    sideAt = now; const cam = camLuma();
+    sideAt = now; const cam = camNow(now);
     const sa = cam ? sideScore(a, cam) : null, sb = cam ? sideScore(b, cam) : null;
     if (sa != null && sb != null) sideLead = sideLead * 0.9 + (sa - sb) * 0.1;
     const need = busy() ? 0.15 : 0.05;             // while painting it takes a clear, lasting lead to turn the canvas over
@@ -618,83 +678,51 @@ function pickSide(now) {
   return side;
 }
 
-// The gyroscope carries the pose through short dropouts. The browsers don't agree on rotationRate's axes,
-// so four readings are tried side by side, and each is checked against the real tracking: every 0.3 s, the
-// charm's turn on screen is predicted from each reading and compared with what the engine saw. One is only
-// used once it predicts clearly better than holding still; with none, the pose is held for a moment only.
-const gyro = {
-  ok: false, best: -1, last: 0, maps: [
-    (r) => [r.beta, r.gamma, r.alpha], (r) => [-r.beta, -r.gamma, -r.alpha],
-    (r) => [r.alpha, r.beta, r.gamma], (r) => [-r.alpha, -r.beta, -r.gamma],
-  ],
-  acc: [0, 1, 2, 3].map(() => new THREE.Quaternion()),   // camera turn since the last tracked frame
-  win: [0, 1, 2, 3].map(() => new THREE.Quaternion()),   // camera turn since the last check
-  err: [0, 0, 0, 0], hold: 0, n: 0, ref: null, refAt: 0,
-};
-const _gq = new THREE.Quaternion(), _gv = new THREE.Vector3();
+// The motion sensors only say whether the phone is held still (a held pose is only right then). Turning
+// faster than STILL_DEG deg/s, or a push over STILL_ACC m/s², counts as moving.
+const STILL_DEG = 25, STILL_ACC = 0.8;
+const motion = { seen: 0, moved: 0 };
 const gravity = { up: null };
 function onMotion(e) {
+  const now = performance.now();
   const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
   const rot = (x, y) => (ang === 90 ? [-y, x] : ang === 270 || ang === -90 ? [y, -x] : ang === 180 ? [-x, -y] : [x, y]);
   const a = e.accelerationIncludingGravity;
+  let m = 0;
   if (a && a.x != null) {   // gravity, for which way the paint runs; and shakes, which refill the can
-    let [x, y] = rot(a.x, a.y); const v = new THREE.Vector3(x, y, a.z); const m = v.length();
+    let [x, y] = rot(a.x, a.y); const v = new THREE.Vector3(x, y, a.z); m = v.length();
     if (m > 1) { v.normalize(); if (v.y + v.z < 0) v.negate(); gravity.up = gravity.up ? gravity.up.lerp(v, 0.15).normalize() : v; }
     if (m > 22) shakeKick(m);
   }
-  const r = e.rotationRate; const now = performance.now();
-  if (r && r.alpha != null && gyro.last) {
-    const dt = Math.min((now - gyro.last) / 1000, 0.1);
-    for (let k = 0; k < 4; k++) {
-      const w = gyro.maps[k](r); const [wx, wy] = rot(w[0], w[1]);
-      _gv.set(wx, wy, w[2]).multiplyScalar(Math.PI / 180); const an = _gv.length() * dt; if (an < 1e-6) continue;
-      _gq.setFromAxisAngle(_gv.normalize(), an);
-      gyro.acc[k].multiply(_gq); gyro.win[k].multiply(_gq);
-    }
-  }
-  gyro.last = now;
-}
-const _qa = new THREE.Quaternion(), _qc = new THREE.Quaternion(), _qr = new THREE.Quaternion();
-// the charm's turn as the phone sees it (the engine's camera is not always at rest in the scene)
-const camRel = (q, out) => out.copy(camera.quaternion).invert().multiply(q);
-function gyroCheck(t, now) {     // called on tracked frames
-  for (const q of gyro.acc) q.identity();
-  if (!gyro.last) return;
-  camRel(t.q, _qr);
-  if (!gyro.ref) { gyro.ref = _qr.clone(); gyro.refAt = now; for (const q of gyro.win) q.identity(); return; }
-  if (now - gyro.refAt < 300) return;
-  const hold = gyro.ref.angleTo(_qr);
-  if (hold > 0.035 && hold < 0.8) {
-    gyro.hold = gyro.hold * 0.8 + hold * 0.2; gyro.n++;
-    for (let k = 0; k < 4; k++) { _qa.copy(gyro.win[k]).invert().multiply(gyro.ref); gyro.err[k] = gyro.err[k] * 0.8 + _qa.angleTo(_qr) * 0.2; }
-    let best = -1; for (let k = 0; k < 4; k++) if (best < 0 || gyro.err[k] < gyro.err[best]) best = k;
-    const ok = gyro.n >= 3 && gyro.err[best] < gyro.hold * 0.55;
-    if (ok !== gyro.ok || best !== gyro.best) { gyro.ok = ok; gyro.best = best; diag.gyro = { ok, map: best, err: +gyro.err[best].toFixed(3), hold: +gyro.hold.toFixed(3), n: gyro.n }; }
-  }
-  gyro.ref.copy(_qr); gyro.refAt = now; for (const q of gyro.win) q.identity();
+  const r = e.rotationRate, l = e.acceleration;
+  const turn = r && r.alpha != null ? Math.hypot(r.alpha, r.beta, r.gamma) : null;   // deg/s, whatever the axes
+  const push = l && l.x != null ? Math.hypot(l.x, l.y, l.z) : m ? Math.abs(m - 9.81) : null;
+  if (turn == null && push == null) return;
+  motion.seen = now;
+  if ((turn != null && turn > STILL_DEG) || (push != null && push > STILL_ACC)) motion.moved = now;
 }
 
-// the pose the scene uses this frame: 'track', 'gyro' (carried by the gyroscope), 'hold', or 'none'
+// the pose the scene uses this frame: 'track', 'hold' (the last pose, phone held still, a blink at most), or 'none'
 const pose = { state: 'none', p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, lostAt: 0, snap: true, last: null, valid: false, since: 0 };
 function updatePose(now) {
+  for (const x of Object.values(TS)) { if (x.tracked && now - x.at > clamp(x.gap * 3, 120, 300)) x.tracked = false; }   // the engine went quiet
+  checkFit(now);
   const n = pickSide(now), t = n && TS[n];
-  for (const x of Object.values(TS)) { if (x.tracked && now - x.at > 500) x.tracked = false; if (x.tracked) x.seen = now; }
+  for (const x of Object.values(TS)) if (live(x)) x.seen = now;
   let st;
-  if (t && t.tracked) {
-    st = 'track'; gyroCheck(t, now);
+  if (live(t)) {
+    st = 'track';
     pose.last = { p: t.p.clone(), q: t.q.clone(), s: t.s, side: n }; pose.lostAt = now;
     follow(t.p, t.q, t.s);
   } else if (pose.last) {
-    const gone = now - pose.lostAt;
-    if (gyro.ok && gone < BRIDGE_GYRO_MS) {
-      // in the phone's frame: undo the phone's turn since the last tracked frame (C · gyro⁻¹ · C⁻¹)
-      st = 'gyro'; _qc.copy(camera.quaternion); _qa.copy(_qc).multiply(_qr.copy(gyro.acc[gyro.best]).invert()).multiply(_qr.copy(_qc).invert());
-      follow(pose.last.p.clone().sub(camera.position).applyQuaternion(_qa).add(camera.position), _qa.clone().multiply(pose.last.q), pose.last.s, true);
-    } else if (gone < BRIDGE_HOLD_MS) st = 'hold';
-    else st = 'none';
+    // a held pose stays put on the screen: right only while the phone is still. Moving, it would carry the
+    // canvas along with the phone (off the print), so then the canvas hides at once.
+    const gone = now - pose.lostAt, sensed = now - motion.seen < 400;
+    const still = sensed ? now - motion.moved > 150 : true;
+    st = still && gone < (sensed ? HOLD_STILL_MS : HOLD_BLIND_MS) ? 'hold' : 'none';
   } else st = 'none';
-  if (st !== 'track' && st !== pose.state) { if (st === 'gyro') diag.bridges++; }
-  if (st === 'gyro' || st === 'hold') diag.bridgeS += 1 / 60;
+  if (st === 'hold' && pose.state === 'track') diag.bridges++;
+  if (st === 'hold') diag.bridgeS += 1 / 60;
   if (st === 'none') pose.snap = true;
   pose.state = st; pose.valid = st !== 'none';
   A.visible = pose.valid;
@@ -706,10 +734,11 @@ function updatePose(now) {
   }
 }
 // Stick to the print: follow real movement at once, only smooth the sub-millimetre jitter of a charm held still
-function follow(p, q, s, raw = false) {
-  const aP = pose.snap || raw ? 1 : clamp(A.position.distanceTo(p) / s / 0.0025, 0.3, 1);
-  const aR = pose.snap || raw ? 1 : clamp(A.quaternion.angleTo(q) / 0.04, 0.3, 1);
-  const aS = pose.snap || raw ? 1 : clamp(Math.abs(A.scale.x - s) / s / 0.03, 0.3, 1);
+// (never more than half a frame behind, so a slow pan doesn't leave the canvas trailing the print)
+function follow(p, q, s) {
+  const aP = pose.snap ? 1 : clamp(A.position.distanceTo(p) / s / 0.0015, 0.5, 1);
+  const aR = pose.snap ? 1 : clamp(A.quaternion.angleTo(q) / 0.03, 0.5, 1);
+  const aS = pose.snap ? 1 : clamp(Math.abs(A.scale.x - s) / s / 0.02, 0.5, 1);
   pose.snap = false;
   A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(THREE.MathUtils.lerp(A.scale.x, s, aS));
   A.updateMatrixWorld(true);
@@ -1448,12 +1477,12 @@ function tick(dt) {
       sound.spray(1);
       if (now - buzzT > 140) { buzzT = now; buzz(6); }
       if (!ENDLESS) setLevel(level - dt / CAN_SECONDS);
-      if (aim.has && aim.on && pose.valid) {
+      if (aim.has && aim.on && pose.state === 'track') {   // paint lands only where the camera sees the piece now
         if (!strokeOpen) { paint.pushUndo(); strokeOpen = true; updateUndo(); }
         // fill the gap since the last frame so a fast sweep stays a line
         const lu = aim.lu, lv = aim.lv; const steps = lu == null ? 1 : clamp(Math.ceil(Math.hypot((aim.u - lu) * TW, (aim.v - lv) * TH) / Math.max(aim.rPx * 0.5, 2)), 1, 12);
         for (let i = 1; i <= steps; i++) { const k = i / steps; paint.spray(lu == null ? aim.u : lu + (aim.u - lu) * k, lv == null ? aim.v : lv + (aim.v - lv) * k, aim.rPx, CAPS[capIdx].c, dt / steps); }
-        aim.lu = aim.u; aim.lv = aim.v; diag.sprayS += dt; if (pose.state !== 'track') diag.bridgeSprayS += dt;
+        aim.lu = aim.u; aim.lv = aim.v; diag.sprayS += dt;
       } else { aim.lu = aim.lv = null; }
       emitMist(ax, ay, aim.has ? aim.rScreen : 40, dt);
       if (level <= 0.001 && !ENDLESS) { can.dataset.state = 'empty'; sound.spray(0); sound.sputter(); hint(gravity.up ? 'Out of paint! Shake your phone to refill' : 'Out of paint! Tap the can to shake it', 3000); }
@@ -1781,7 +1810,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { flu
 addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, get paint() { return paint; }, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H),
+if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, fit: () => Object.fromEntries(Object.entries(TS).filter(([, t]) => t.tracked || t.fit != null).map(([k, t]) => [k, { fit: t.fit == null ? null : +t.fit.toFixed(3), bad: t.bad, tracked: t.tracked }])), fitShift: (fx, fy) => { const t = TS[side]; if (!t || !t.tracked) return null; const sh = new THREE.Vector3(fx * t.pr.width * t.upp, fy * t.pr.height * t.upp, 0).applyQuaternion(t.q); const t2 = { ...t, p: t.p.clone().add(sh) }; const c = camLuma(); return fitScore(t2, fitProbes[side], c); }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, get paint() { return paint; }, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H),
   get piece() { return cp && cp.k; }, cms: () => cmsInfo, viewer: VIEWER,
   pieces: () => Object.values(PIECES).map((P) => ({ k: P.k, cms: !!P.cms, name: P.name, targets: P.targets, flip: P.flip, xf: P.xf, view: P.view, sprayK: P.sprayK, near: P.near, W: P.W, H: P.H, heightMm: P.heightMm, shared: !!P.shared, saved: !!P.saved, scene: P.sc ? P.sc.items.length : 0 })),
   scene: () => (cp && cp.sc ? measureScene(cp.sc, A) : []),

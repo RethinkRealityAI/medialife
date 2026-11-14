@@ -421,8 +421,9 @@ function onTarget(d) {
   t.p.set(d.position.x, d.position.y, d.position.z);                       // centre of the target picture
   t.s = t.pr.height * upp / t.lay.heightM;                                 // world units per metre
   t.upp = upp;
-  if (!t.tracked) { t.snap = true; t.foundAt = performance.now(); if (camera) noteFound(t, measure(t)); } else if (camera && Math.random() < 0.1) measure(t);
-  t.tracked = true; t.at = performance.now();
+  const now = performance.now();
+  if (!t.tracked) { t.snap = true; t.foundAt = now; if (camera) noteFound(t, measure(t)); } else { if (camera && Math.random() < 0.1) measure(t); t.gap = (t.gap || 40) + (Math.min(Math.max(now - t.at, 8), 400) - (t.gap || 40)) * 0.2; }
+  t.tracked = true; t.at = now;
 }
 function onLost(d) { const t = TS[d.name]; if (t) { t.tracked = false; noteLost(d.name); } }
 
@@ -537,7 +538,8 @@ function pickSides(on, now) {
 const _v2 = new THREE.Vector3();
 function updateFrames(dt) {
   const now = performance.now();
-  for (const t of Object.values(TS)) { if (t.tracked && now - t.at > 500) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; tDiag(t.name).trackedS = +(tDiag(t.name).trackedS + dt).toFixed(2); } }
+  // the engine gone quiet on a target (a few of its usual update gaps) counts as lost: a stale pose rides along with the phone
+  for (const t of Object.values(TS)) { if (t.tracked && now - t.at > THREE.MathUtils.clamp((t.gap || 40) * 3, 120, 300)) t.tracked = false; if (t.tracked) { follow(t); t.seen = now; tDiag(t.name).trackedS = +(tDiag(t.name).trackedS + dt).toFixed(2); } }
   const on = (n) => (TS[n] && TS[n].tracked ? TS[n] : null), recent = (n, ms) => !!TS[n] && now - TS[n].seen < ms;
   const oldRecent = recent('kc-old', 5000) || recent('kc-old-l', 5000);
   const both = !PAIR || oldRecent ? null : on('kc-both'); pairMaybe = !!both;
@@ -580,7 +582,9 @@ function updateFrames(dt) {
       _m.copy(t.g.matrix).multiply(t.local[k]).decompose(f.position, f.quaternion, f.scale);
       driver[k] = t; goneFor[k] = 0;
     } else { goneFor[k] += dt; if (goneFor[k] > 0.25) driver[k] = null; }
-    pres[k] = !!t || (pres[k] && goneFor[k] < 0.25);                       // nothing is drawn unless it is tracked now (short grace against flicker)
+    // nothing is drawn unless it is tracked now; the grace against flicker is a blink only, since the last pose is
+    // glued to the screen and would ride along with a moving phone
+    pres[k] = !!t || (pres[k] && goneFor[k] < 0.12);
     f.visible = pres[k]; f.updateMatrixWorld(true); present = present || pres[k];
     if (t) { useMask(ch, t); sideFix(ch, t); }
     if (t && ch.st === 'idle') { groundFrame(ch); ch.sils = t.lay.silhouettes; }   // once it pops, its ground frame is fixed to the charm

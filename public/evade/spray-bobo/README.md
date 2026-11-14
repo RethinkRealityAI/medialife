@@ -56,11 +56,16 @@ turns that off.
   painting the side is locked: it only turns if the other side alone is seen for 1.5 s (keychain turned
   over). In the simulator this always settled on the right side within about 1 s (front) and 5 s (back);
   the mirror-about-the-middle test used by Off the Chain flipped with the tilt.
-- **Gyro bridge** (`gyro`): when the engine drops the charm, the phone's gyroscope carries the pose for up to
-  1.5 s, so a stroke doesn't break off. Browsers disagree on rotationRate's axes, so four readings run side
-  by side and each is checked against the real tracking every 0.3 s; one is only used once it predicts the
-  charm's turn clearly better than holding still. With none proven, the pose is only held for 0.4 s.
-  (Not testable in the simulator: no motion sensors there. The test log shows which reading won.)
+- **Staying on the print** (2026-11-14, Dapo: the canvas lifted off the can and dragged along with the phone).
+  The canvas is only drawn where the camera sees the piece now. The old gyro bridge (1.5 s) and 0.4 s hold kept
+  the last pose glued to the screen when the engine dropped the charm, so moving the phone carried the canvas
+  with it; it is gone. Now: the last pose is held for 250 ms only while the motion sensors say the phone is
+  still (120 ms without sensors), then the canvas hides and snaps back when the engine finds the piece. A target
+  the engine stops updating counts as lost after 3 of its usual update gaps (120-300 ms, was 500 ms). Paint only
+  lands on tracked frames. **Pose check** (`checkFit`): every 150 ms the tracked picture, placed by the engine's
+  pose, is correlated with the camera picture (24 cells across, detail-weighted, inside the charm's mask); 3 checks
+  in a row under 0.12 and the pose is not trusted (canvas hidden) until one is over 0.25. In the simulator the
+  right pose scores ~0.96, a pose a quarter of the can's width off about -0.1. Test log: `fit {avg, min, drops}`.
 - iPhone close focus: the multi-lens camera at 1920x1440 (as Off the Chain), with the standard camera as
   fallback. Android asks for continuous focus where offered.
 
@@ -84,7 +89,7 @@ mode, save, the sticker animation, artwork export and coming back after a reload
 Round 2 (2026-11-13, simulator again, at a pixel ratio of 2): paint lands under the reticle; the can
 charm is found and painted from a photo of kc-can; can fly-in, canvas spread, camera mode, saved-mode
 gestures work. Android's "remove animations" setting no longer hides the spray.
-**The new parts are not yet tried on a phone or on the real charms.** Unknowns until then: the gyro bridge, acrylic glare,
+**The new parts are not yet tried on a phone or on the real charms.** Unknowns until then: the pose check's scores on real charms, acrylic glare,
 how steep an angle still tracks, and whether shaking to refill feels right.
 
 Test pictures: `/evade/keychain-ar/target/` has both charms' tracked pictures side by side (with a gap, true
