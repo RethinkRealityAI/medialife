@@ -52,11 +52,12 @@
     </div>
     <div class="copy">
     <h1 id="title">Spray Bobo</h1>
-    <p class="lead">Your phone is the spray can. Paint Bobo or the Eclipse can on your keychain, or the Sukeban on your tee, then watch your art come alive.</p>
+    <p class="lead" id="lead">Your phone is the spray can. Paint Bobo or the Eclipse can on your keychain, or the Sukeban on your tee, then watch your art come alive.</p>
     <div id="desk" hidden>
       <div id="qr" aria-label="QR code that opens this page on your phone"></div>
       <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
     </div>
+    <p id="notice" role="status" hidden></p>
     <button id="b-start" class="primary" disabled>Loading…</button>
     <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
     <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
@@ -138,6 +139,16 @@
       </button>
       <button id="b-opts-alive" class="tool opts-btn" aria-haspopup="dialog" aria-controls="opts" aria-label="Options: new painting, sound, how to play">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Options</span>
+      </button>
+    </div>
+
+    <!-- viewer mode (?c=, someone's shared painting): only these two, above the shutter -->
+    <div id="viewbar" aria-label="Shared painting">
+      <button id="b-sound" class="tool" type="button" aria-pressed="true" aria-label="Sound">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="on" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="off" d="M17 9l5 6M22 9l-5 6"/></svg><span id="b-sound-t">Sound on</span>
+      </button>
+      <button id="b-own" class="tool" type="button" aria-label="Paint your own: open Spray Bobo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 3l3 3-9 9-4 1 1-4z"/><path d="M4 20c2 0 4-1 4-4"/></svg><span>Paint your own</span>
       </button>
     </div>
 

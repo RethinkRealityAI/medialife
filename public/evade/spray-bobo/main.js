@@ -19,6 +19,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
+import { readCms, plan, MAX_TARGETS } from './cms.js';
+import { makeScene, tickScene, measureScene } from './scene.js';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
@@ -27,6 +29,10 @@ const DEBUG = params.has('debug');
 const ENDLESS = params.has('endless');        // no paint level (testing)
 const KC = '/evade/keychain-ar/';             // the Off the Chain page: engine, image targets
 const HERE = '/evade/spray-bobo/';
+// ?c=<creation id>: VIEWER MODE. Someone's shared painting shown on the merch it was made for, nothing else (no can,
+// canvas, caps, decals, options or saving; this phone's own paintings are neither read nor written).
+const VIEWER = params.has('c');
+if (VIEWER) { document.documentElement.toggleAttribute('data-viewer', true); document.getElementById('lead').textContent = 'Loading the painting…'; }
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
 const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
 const clamp = THREE.MathUtils.clamp;
@@ -62,8 +68,15 @@ const PIECES = {
     tdir: HERE + 'targets/', view: 0.1, sprayK: 1.6, near: 90 },
 };
 const tdir = (P) => P.tdir || KC + 'image-targets/';
-const SEEK = ((a) => a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1])(Object.values(PIECES).map((P) => P.seek));   // "Bobo, the can or the Sukeban tee"
-const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
+// Merch added in the CMS joins PIECES at start (cms.js maps each paintable onto these same fields), so these are
+// worked out again once the list is final.
+let SEEK = '', PIECE_OF = {};
+function indexPieces() {
+  const a = Object.values(PIECES).map((P) => P.seek);   // "Bobo, the can or the Sukeban tee"
+  SEEK = a.length > 1 ? a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1] : a[0] || '';
+  PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
+}
+indexPieces();
 
 // ---------------------------------------------------------------- sound (made here, no files)
 const sound = {
@@ -118,18 +131,83 @@ const sound = {
 
 // ---------------------------------------------------------------- loading
 const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const getJson = (u) => fetch(u).then((r) => r.json());
-const assets = Promise.all([
-  Promise.all([...new Set(Object.values(PIECES).map(tdir))].map((d) => getJson(d + 'layout.json')))   // every folder's sizes, in one map
-    .then((ls) => ({ targets: Object.assign({}, ...ls.map((l) => l.targets)) })),
-  loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null),   // for telling the cat's two sides apart
-  Promise.all(Object.values(PIECES).flatMap((P) => P.targets.map((n) => getJson(tdir(P) + `${n}.json`)))),
-  Promise.all(Object.values(PIECES).map((P) => Promise.all([loadImg(HERE + `art/${P.art}-mask.png`), loadImg(HERE + `art/${P.art}-lines.png`), getJson(HERE + `art/${P.art}-outline.json`)]))),
-]);
+const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
+// Each piece's files: its size (layout.json, or the CMS's heightMm), its image targets' data, and its stencil art
+// (mask, lines, cut line). The built-in pieces start loading at once; CMS merch joins once the CMS has answered.
+const layouts = {};
+const layoutOf = (d) => layouts[d] || (layouts[d] = getJson(d + 'layout.json'));
+const artUrls = (P) => P.urls || { mask: HERE + `art/${P.art}-mask.png`, lines: HERE + `art/${P.art}-lines.png`, outline: HERE + `art/${P.art}-outline.json`, print: tdir(P) + P.print };
+function pieceAssets(P) {
+  if (P.load) return P.load;
+  const u = artUrls(P);
+  return (P.load = Promise.all([
+    P.cms ? Promise.resolve(P.real) : layoutOf(tdir(P)).then((l) => l.targets[P.targets[0]]),
+    P.cms ? Promise.resolve(P.targetData) : Promise.all(P.targets.map((n) => getJson(tdir(P) + `${n}.json`))),
+    loadImg(u.mask),
+    u.lines ? loadImg(u.lines).catch((e) => { if (P.cms) return null; throw e; }) : Promise.resolve(null),
+    getJson(u.outline),
+  ]).then(([L, tdata, mask, lines, outline]) => {
+    if (!L || !(L.heightM > 0)) throw new Error('no size for ' + P.k);
+    if (!outline || !Array.isArray(outline.points) || outline.points.length < 3) throw new Error('no cut line for ' + P.k);
+    const ln = lines || linesFromMask(mask);              // CMS merch without an outline picture: a rim around the stencil
+    P.L = L; P.tdata = tdata; P.arts = [mask, ln, outline]; P.guideSrc = lines ? u.lines : ln.toDataURL();
+    return P;
+  }));
+}
+function linesFromMask(mask) {
+  const mk = () => { const c = document.createElement('canvas'); c.width = TW; c.height = TH; return c; };
+  const sil = mk(), sg = sil.getContext('2d'); sg.drawImage(mask, 0, 0, TW, TH); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#15131a'; sg.fillRect(0, 0, TW, TH);
+  const c = mk(), g = c.getContext('2d');
+  for (let a = 0; a < 12; a++) g.drawImage(sil, Math.cos(a * 0.5236) * 4, Math.sin(a * 0.5236) * 4);
+  g.globalCompositeOperation = 'destination-out'; g.drawImage(mask, 0, 0, TW, TH); g.globalCompositeOperation = 'source-over';
+  return c;
+}
+for (const P of Object.values(PIECES)) if (!VIEWER) pieceAssets(P).catch(() => {});   // reported below if it matters
+const lumP = loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null);   // for telling the cat's two sides apart
+// What the CMS adds (see cms.js and the README): merch, built-in scenes, ?set=, ?c= (viewer mode)
+let cmsInfo = { notice: '', viewer: null, skipped: [], gone: null, only: null };
+const BUILT = { ...PIECES };
+function applyCms(r) {
+  const p = plan({ builtins: BUILT, list: r.list || [], extra: r.extra || [], only: r.only });
+  for (const [k, sc] of Object.entries(p.scenes)) Object.assign(BUILT[k], { scene: sc.scene, heightMm: +sc.heightMm || 0 });
+  const all = { ...BUILT }; for (const P of p.add) all[P.k] = P;
+  let order = p.order;
+  if (VIEWER) order = r.viewer && all[r.viewer.key] ? [r.viewer.key] : [];
+  for (const k of Object.keys(PIECES)) delete PIECES[k];
+  for (const k of order) PIECES[k] = all[k];
+  if (r.viewer && PIECES[r.viewer.key]) PIECES[r.viewer.key].shared = r.viewer.rec;
+  cmsInfo = { notice: r.notice || '', viewer: r.viewer || null, skipped: p.skipped, gone: r.gone, only: r.only, targets: p.targets, max: MAX_TARGETS };
+  if (p.skipped.length) console.info(`spray-bobo: ${p.skipped.length} CMS piece(s) left out, over the ${MAX_TARGETS} image targets the engine tracks at once (open one with ?set=<id>):`, p.skipped);
+}
+const assets = readCms(params).catch(() => ({ list: [], extra: [] })).then(applyCms).then(async () => {
+  const keys = Object.keys(PIECES);
+  const ok = await Promise.all(keys.map((k) => pieceAssets(PIECES[k]).then(() => true, (e) => { if (!PIECES[k].cms) throw e; console.warn('spray-bobo: CMS piece skipped', k, e); return false; })));
+  keys.forEach((k, i) => { if (!ok[i]) delete PIECES[k]; });
+  if (VIEWER && !Object.keys(PIECES).length && !cmsInfo.gone) { cmsInfo.gone = 0; cmsInfo.notice = "Couldn't load that painting right now. Check your connection and try again."; }
+  if (!VIEWER && !Object.keys(PIECES).length) {                       // ?set= merch whose files failed: the usual pieces
+    for (const [k, P] of Object.entries(BUILT)) PIECES[k] = P;
+    await Promise.all(Object.values(PIECES).map(pieceAssets));
+    cmsInfo.notice = "Couldn't load that merch right now, so here are the usual pieces.";
+  }
+  indexPieces(); buildGuide();
+  return { lumImg: await lumP };
+});
+// the outlines shown while looking (viewer mode: the print itself, so you know what to look for)
+function buildGuide() {
+  const g = $('guide'); g.innerHTML = '';
+  if (VIEWER) { const v = cmsInfo.viewer; if (v && (v.thumb || v.print)) { const im = document.createElement('img'); im.className = 'print'; im.alt = ''; im.src = v.thumb || v.print; g.appendChild(im); } return; }
+  for (const P of Object.values(PIECES).slice(0, 4)) { const im = document.createElement('img'); im.alt = ''; im.src = P.guideSrc; g.appendChild(im); }
+}
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
-Promise.all([assets, xrReady, loadSaved()]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = Object.values(PIECES).some((P) => P.saved) ? 'See my paintings' : 'Start painting'; $('load').hidden = true; })
-  .catch((e) => { console.error(e); showError('Could not load the experience', 'Check your connection and reload the page.'); });
+Promise.all([assets.then(async (d) => { if (!VIEWER) await loadSaved(); return d; }), xrReady]).then(() => {
+  $('load').hidden = true;
+  if (cmsInfo.notice) { $('notice').textContent = cmsInfo.notice; $('notice').hidden = false; }
+  if (VIEWER && !cmsInfo.viewer) { viewerGone(); return; }
+  loaded = true; $('b-start').disabled = false;
+  $('b-start').textContent = VIEWER ? 'View on merch' : Object.values(PIECES).some((P) => P.saved) ? 'See my paintings' : 'Start painting';
+  if (VIEWER) viewerSplash();
+}).catch((e) => { console.error(e); if (VIEWER && !cmsInfo.viewer) { $('load').hidden = true; viewerGone(); return; } showError('Could not load the experience', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- the paint (a 2D canvas the AR plane shows)
 const makePaint = () => ({
@@ -231,10 +309,11 @@ async function loadSaved() {
   } catch (e) { /* none saved */ }
 }
 async function storeSaved(rec) {
+  if (VIEWER || cp.shared) return false;                 // a shared painting is never written over this phone's own
   cp.saved = rec;
   try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(rec, cp.key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch (e) { console.warn('save', e); return false; }
 }
-async function dropSaved() { try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; clearDecals(cp); }
+async function dropSaved() { if (VIEWER || cp.shared) return; try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; clearDecals(cp); }
 
 // ---------------------------------------------------------------- three.js scene
 let scene, camera, renderer;
@@ -245,7 +324,7 @@ let cp = null, W = 0.0601, H = 0.0801, F = null, paint = null;
 let paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, debugFrame, orbit, shine;
 let stickerTex, stickerCanvas;
 const clock = { t: 0 };
-function buildScene(xr, [layout, lumImg, , arts]) {
+function buildScene(xr, { lumImg }) {
   ({ scene, camera, renderer } = xr);
   probes = lumImg ? buildProbes(lumImg) : null;
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
@@ -256,14 +335,15 @@ function buildScene(xr, [layout, lumImg, , arts]) {
   camera.position.set(0, 0, 0); camera.quaternion.identity();
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
   scene.add(A); A.visible = false; A.matrixAutoUpdate = true;
-  Object.values(PIECES).forEach((P, i) => buildPiece(P, layout.targets[P.targets[0]], arts[i]));
-  usePiece('bobo');
+  Object.values(PIECES).forEach((P) => buildPiece(P, P.L, P.arts));
+  usePiece(Object.keys(PIECES)[0]);
 }
 function buildPiece(P, L, [maskImg, linesImg, outline]) {
   const vk = P.view ? P.view / L.heightM : 1;               // drawn at this share of its real size
   const W = P.W = L.widthM * vk, H = P.H = L.heightM * vk; P.m = 1 / vk;   // P.m: AR units to real metres
   const F = P.F = new THREE.Group(); F.visible = false; A.add(F);
-  P.xf = outline.sides || {};
+  // where the canvas sits on the other side: the can's outline file has it; CMS merch has it per target (metres)
+  P.xf = P.cms ? Object.fromEntries(Object.entries(P.xf0 || {}).map(([n, x]) => [n, { x: x.x * vk, y: x.y * vk, rz: x.rz, s: x.s }])) : outline.sides || {};
   const paint = P.paint = makePaint(); paint.init(maskImg, linesImg);
   P.centre = maskCentre(paint.maskSmall);                  // the middle of the stencil (uv, y down): the canvas spreads from here
   // the canvas on the charm. It spreads out from the middle of the charm with a ragged wet edge in EVADE
@@ -321,7 +401,10 @@ function buildPiece(P, L, [maskImg, linesImg, outline]) {
   P.splats = makeSplats(); F.add(P.splats.points);
   P.orbit = makeOrbit(); F.add(P.orbit.mesh);
   if (DEBUG) F.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0xff00ff })));
-  if (P.saved) restorePaint(P.saved, P);
+  if (P.shared || P.saved) P.restoring = restorePaint(P.shared || P.saved, P);
+  // things placed around the print in the CMS (models, pictures, video), at real size; see scene.js
+  const hmm = +P.heightMm > 0 ? +P.heightMm : L.heightM * 1000;
+  try { P.sc = makeScene({ scene: P.scene, heightMm: hmm, W, H, host: A, soundOn: () => sound.on }); } catch (e) { console.warn('scene', e); P.sc = null; }
 }
 // make a charm the current one: the globals the rest of the page uses point at its things
 function usePiece(k) {
@@ -329,6 +412,7 @@ function usePiece(k) {
   if (cp) cp.F.visible = false;
   cp = P; ({ W, H, F, paint, paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, orbit, shine, stickerTex, stickerCanvas } = P);
   saved = P.saved || null; F.visible = true; document.documentElement.dataset.piece = k;
+  document.documentElement.toggleAttribute('data-viewer', VIEWER);
 }
 function maskCentre(m) {   // the centroid of the 48x64 stencil, in uv (y down)
   let x = 0, y = 0, n = 0; for (let i = 0; i < m.length; i++) if (m[i]) { x += i % 48; y += Math.floor(i / 48); n++; }
@@ -722,12 +806,14 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !opts.hidden) clo
 const sw = (id, on) => $(id).setAttribute('aria-checked', String(!!on));
 function syncOpts() {
   sw('o-lines', paint && paint.linesOn); sw('o-primer', paint && paint.primer); sw('o-sound', sound.on);
+  $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound-t').textContent = sound.on ? 'Sound on' : 'Sound off';
   sw('o-phone', !aim.finger); sw('o-finger', aim.finger);
 }
 function syncToggles() { syncOpts(); }   // the outline and base coat switches show the current charm's paint
 $('o-lines').onclick = () => { paint.linesOn = !paint.linesOn; paint.dirty = true; syncOpts(); buzz(6); };
 $('o-primer').onclick = () => { paint.primer = !paint.primer; paint.dirty = true; syncOpts(); buzz(6); };
 $('o-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); syncOpts(); buzz(6); };
+$('b-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); syncOpts(); buzz(6); };
 function setFinger(on) {
   aim.finger = on; syncOpts(); buzz(6);
   hint(on ? 'Paint with your finger on the screen' : 'Aim your phone like a can and hold the can to spray', 2600);
@@ -923,7 +1009,7 @@ async function restorePaint(rec, P) {
 
 async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
-  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(tdir(cp) + cp.print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
+  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(artUrls(cp).print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
   paint.dirty = true; paint.composite(); g.drawImage(paint.D, 0, 0);
   // the cut: outside the stencil stays clear, the edge of the sticker is white
   g.globalCompositeOperation = 'destination-in'; g.drawImage(paint.mask, 0, 0, TW, TH); g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH);
@@ -937,6 +1023,7 @@ async function bakeSticker() {   // the sticker's face: the painting; without th
 const life = { t: 0, phase: 'off', hopAt: 4, hop: null, spin: null, lx: 0, ly: 0, uy: 0, uv: 0, dragging: false, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: 0, tip: 0 };
 const TIPS = ['Tap $ to make $ hop', 'Swipe to spin $', 'Hold $, then let go', 'Shake your phone', 'Tap the shutter for a photo, hold it to film'];
 async function startAlive(justSaved, fromDecals = false) {
+  if (cp.restoring) await cp.restoring;                 // a painting from storage or a share link, still being drawn in
   await bakeSticker();
   setMode('alive');
   decalHost(cp, justSaved ? 'flat' : 'sticker');
@@ -945,7 +1032,8 @@ async function startAlive(justSaved, fromDecals = false) {
   colourOrbit(paint.topColours(7));
   paintMesh.visible = justSaved; paintMesh.material.uniforms.uOpacity.value = 1; paintMesh.material.uniforms.uReveal.value = 1;
   stickerPivot.visible = false;
-  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else if (fromDecals) { toast(cp.decals.length ? 'Looking good!' : 'Fresh!'); sound.sparkle(); buzz([10, 30, 10]); } else hint(cp.back, 2200);
+  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else if (fromDecals) { toast(cp.decals.length ? 'Looking good!' : 'Fresh!'); sound.sparkle(); buzz([10, 30, 10]); } else hint(VIEWER ? `Tap ${cp.them || 'it'} to make ${cp.them || 'it'} hop` : cp.back, 2200);
+  if (VIEWER && !life.seen) { life.seen = true; postEvent('custom', { action: 'spray-view-found', piece: cp.k }); }
 }
 function jump(kind, power = 0) {   // 1: a hop; 2: the big one (after holding him), with a spin and a burst
   const big = kind === 2;
@@ -1317,8 +1405,8 @@ function tick(dt) {
     lostFor = 0;
     if (!everFound) { everFound = true; diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1); postEvent('sighting', { piece: cp.k }); }
     if (mode === 'find') {
-      if (saved) startAlive(false);
-      else { setMode('ready'); sound.found(); buzz([12, 50, 12]); hint(cp.found); }
+      if (cp.shared || saved) startAlive(false);           // viewer mode: always the shared painting
+      else if (!VIEWER) { setMode('ready'); sound.found(); buzz([12, 50, 12]); hint(cp.found); }
     }
   } else if (!pose.valid) lostFor += dt;
   hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
@@ -1378,6 +1466,9 @@ function tick(dt) {
   tickOrbit(dt, stickerPivot.position.z);
   if (splats) tickSplats(dt, A.scale.x);
   tickMist(dt);
+  // the CMS scene of the piece in view, only while it is tracked now (pose.valid), never hit-tested
+  const sn = pose.last ? pose.last.side : null;
+  for (const P of Object.values(PIECES)) if (P.sc) tickScene(P.sc, { on: P === cp && pose.valid, painting: busy(), flip: (sn && P.flip[sn]) || 1, xf: (sn && P.xf && P.xf[sn]) || null, dt, soundOn: () => sound.on });
   recTick();
   diag.fpsN++;
 }
@@ -1436,7 +1527,7 @@ const appModule = (data) => ({
       hideTapCam(); camStartAt = performance.now(); tuneCamera(video);
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
       let seen = false; try { seen = localStorage.getItem('spray-bobo-how') === '1'; } catch (e) { /* none */ }
-      if (!seen) { $('how').hidden = false; $('b-go').focus(); }
+      if (!seen && !VIEWER) { $('how').hidden = false; $('b-go').focus(); }
       syncRec();
     }
     if (status === 'requesting') hint('Allow camera access to begin');
@@ -1462,7 +1553,7 @@ async function start() {
   sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  const targets = data[2].filter((t) => !params.get('only') || t.name === params.get('only'));
+  const targets = Object.values(PIECES).flatMap((P) => P.tdata).filter((t) => !params.get('only') || t.name === params.get('only'));   // at most MAX_TARGETS (cms.js plan)
   initTargets(targets);
   XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: targets });
   XR8.addCameraPipelineModules([
@@ -1474,7 +1565,35 @@ async function start() {
   setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
   XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
 }
-$('b-start').onclick = start;
+$('b-start').onclick = () => { if (VIEWER && !cmsInfo.viewer) { location.href = HERE; return; } start(); };
+// ---------------------------------------------------------------- viewer mode (?c=): the splash
+// The painting, flat on its print (base coat and outline as the painter left them), so you know what you'll see.
+async function viewerSplash() {
+  const v = cmsInfo.viewer, P = v && PIECES[v.key]; if (!P) return;
+  document.documentElement.toggleAttribute('data-viewer', true);
+  $('title').textContent = 'See it on your merch';
+  $('lead').textContent = `Someone painted ${P.name}. Point your phone at your ${P.name} and watch their painting come alive on it.`;
+  try {
+    const [mask, lines] = P.arts, u = artUrls(P), print = await loadImg(u.print).catch(() => null), bmp = await createImageBitmap(v.rec.paint);
+    const mk = () => { const c = document.createElement('canvas'); c.width = TW; c.height = TH; return c; };
+    const c = mk(), g = c.getContext('2d'), t = mk(), tg = t.getContext('2d');
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH); if (print) g.drawImage(print, 0, 0, TW, TH);
+    if (v.rec.primer) { tg.fillStyle = '#fbfaf5'; tg.fillRect(0, 0, TW, TH); }
+    tg.drawImage(bmp, 0, 0, TW, TH); if (v.rec.linesOn && lines) tg.drawImage(lines, 0, 0, TW, TH);
+    tg.globalCompositeOperation = 'destination-in'; tg.drawImage(mask, 0, 0, TW, TH);
+    g.drawImage(t, 0, 0);
+    c.className = 'shared-pic'; c.setAttribute('role', 'img'); c.setAttribute('aria-label', `The shared painting on ${P.name}`);
+    const card = document.querySelector('#splash .hero .card'); card.innerHTML = ''; card.appendChild(c); card.classList.add('shared');
+  } catch (e) { console.warn('viewer splash', e); }
+}
+function viewerGone() {   // 404, 410 or unreachable: say so kindly, and offer the normal page
+  document.documentElement.toggleAttribute('data-viewer', true);
+  $('title').textContent = cmsInfo.gone === 410 ? 'Taken down' : cmsInfo.gone === 404 ? 'Not found' : 'Not loaded';
+  $('lead').textContent = cmsInfo.notice || "We couldn't find that painting.";
+  $('notice').hidden = true;
+  loaded = false; $('b-start').disabled = false; $('b-start').textContent = 'Paint your own';
+}
+$('b-own').onclick = () => { postEvent('custom', { action: 'spray-view-own' }); location.href = HERE; };
 $('b-go').onclick = () => { $('how').hidden = true; try { localStorage.setItem('spray-bobo-how', '1'); } catch (e) { /* none */ } syncRec(); };
 $('err-retry').onclick = () => location.reload();
 function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; }
@@ -1658,7 +1777,14 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { flu
 addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, paint, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H) };
+if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, get paint() { return paint; }, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H),
+  get piece() { return cp && cp.k; }, cms: () => cmsInfo, viewer: VIEWER,
+  pieces: () => Object.values(PIECES).map((P) => ({ k: P.k, cms: !!P.cms, name: P.name, targets: P.targets, flip: P.flip, xf: P.xf, view: P.view, sprayK: P.sprayK, near: P.near, W: P.W, H: P.H, heightMm: P.heightMm, shared: !!P.shared, saved: !!P.saved, scene: P.sc ? P.sc.items.length : 0 })),
+  scene: () => (cp && cp.sc ? measureScene(cp.sc, A) : []),
+  target: () => { const n = pose.last && pose.last.side, t = n && TS[n]; return t ? { name: n, tracked: t.tracked, worldH: t.pr.height * t.upp, worldW: t.pr.width * t.upp, p: t.p.toArray(), q: t.q.toArray() } : null; },
+  // debug: report a target as found at this pose (the engine's event shape), for when no camera can be used
+  fake: (name, d) => onTarget({ name, position: d.position, rotation: d.rotation, scale: d.scale, scaledHeight: d.scaledHeight || 1 }),
+  get life() { return life.phase; } };
 
 // desktop: a QR to open it on the phone
 if (!TOUCH) {

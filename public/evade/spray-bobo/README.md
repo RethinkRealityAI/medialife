@@ -113,3 +113,71 @@ its photos and artwork).
 0.91) and writes `targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
 stencil. The print is assumed to be 12 in wide (`WIDTH_M`): only the cm readout uses it. Tested in the
 simulator from the tee photo itself: found, canvas lines up, paint, save, decals, artwork.
+
+## CMS merch, `?set=`, viewer mode `?c=`, scenes (round 4, 2026-11-14)
+`cms.js` (no three.js, testable in Node) reads the Spray CMS (`src/lib/spray/`); `scene.js` draws scene items.
+The page still works with no API at all (a plain static server): every CMS fetch is optional and silent.
+
+**Start.** The built-in pieces start loading at once. In parallel `GET /api/spray/sets` (2.5 s limit, then the
+page carries on without it; `?set=` and `?c=` get 8 s since they are what the visitor came for). The start button
+waits for both, so a slow CMS delays it by at most 2.5 s and never blocks the camera once started.
+
+**CMS paintables → PIECES** (`pieceFromPaintable`). Built-in records (`builtin: true`, ids `bobo`, `can`) are not
+remapped: the built-ins stay exactly as in `main.js`; only their `scene` and `heightMm` are taken.
+| piece field | from the paintable |
+|---|---|
+| `k` | `id` |
+| `targets` | `targets[].name`, front first, at most 2 sides; engine data from `targetData` (matched by name) |
+| `flip` | `{ name: -1 }` for each target with `flip: -1` |
+| `xf` | each target's `xf` (metres, y up, radians), scaled like the canvas when drawn smaller (`view`) |
+| `mirrorPair` | any side has `flip: -1` (a turn while painting needs 1.5 s; the cat's own side test only runs for Bobo) |
+| art | `files.mask`, `files.lines` (null: a dark rim drawn around the mask), `files.outline` (`{points}`) |
+| `print` | `files.print` (the sticker without base coat; the viewer splash) |
+| real size | `heightMm` tall, width from the front target's pixel aspect (stands in for `layout.json`) |
+| `view` | 0.1 m when `heightMm` > 120 (drawn at charm size, like the Sukeban tee), else real size |
+| `sprayK` | `(heightMm / 80) ^ 0.3`, 1 to 2.5 (80 mm: 1, the tee's 406 mm: 1.63, its hand-set value 1.6) |
+| `near` | `40 * sqrt(heightMm / 80)` cm, 40 to 150 (80 mm: 40, 406 mm: 90, the tee's hand-set values) |
+| `key` | `cms:<id>` (its own saved painting in IndexedDB) |
+| copy | `name` without a trailing "(...)": seek, found, back, ask "Deck out X?", them "it", title "MY X" |
+| `evade` | `client === "EVADE"` (EVADE logo on photos and artwork) |
+| `scene` | `scene` |
+
+**Target limit.** The engine tracks at most 10 image targets at once (`MAX_TARGETS`; 8th Wall's documented limit,
+not enforced in the vendored code). The built-ins use 5 and always stay; live CMS pieces follow in the CMS's
+order (newest first) while they fit; the rest are left out (logged to the console). `?set=<id>` narrows the
+page to that one piece, so any piece, drafts included, can always be tried.
+
+**`?set=<id>`** (the Studio's camera button: `?set=<id>&from=studio`): `GET /api/spray/sets/<id>` (drafts too),
+that piece only, the normal painting flow. Unknown id or failed load: a small notice on the splash and the usual
+pieces.
+
+**`?c=<creation id>`: viewer mode** ("View on merch" in the share viewer). Reads the creation, then its merch
+through `/api/spray/sets/<paintable>` (the creation's copy if that fails) and the paint layer. Only that piece is
+an image target. The splash keeps its look: "See it on your merch", the painting flat on its print (base coat and
+outline as the painter left them), one button "View on merch" that opens the camera. In the camera: the print's
+thumbnail as the guide and "Point your camera at X"; once found, the painting shows as the finished 3D sticker
+(the same presentation as a saved painting, `primer` / `linesOn` respected, decals only if the creation carries
+them), with the merch's scene. Controls: the shutter (bottom centre), Sound, and "Paint your own" (loads the
+normal page). No can, canvas, caps, decals, options, ask or saving: nothing of the painting kit is reachable, and
+this phone's own paintings are neither read nor written. 404 / 410 / offline: "We couldn't find that painting" /
+"This painting was taken down" on the splash, and its button becomes "Paint your own".
+
+**Scenes** (`scene.js`, the contract in `model.ts`): the items hang off the tracked picture, `H / heightMm` AR
+units per mm, so they sit at exact real size relative to the print; shown only while the piece is tracked now,
+in every mode (they pop in when the piece is found). Models: scale = size / bounding-box height, box centre on
+pos, `clip` loops; pictures and video: planes `size` mm tall, `size * aspect` wide; video muted, looping, inline,
+its sound after the first tap if `sound` (and the page's sound is on); `visible: false` skipped. GLTFLoader (and
+the meshopt decoder) load only when there is a model. A failed asset is skipped with a console warning. On the
+can's back side they move with the canvas (`xf`); on a mirrored side (the cat through the acrylic) they are placed
+mirrored but not drawn mirrored (words stay readable). Items behind the print are hidden by an invisible card the
+size of the picture (added only when some item reaches behind it). **While painting** (paint and decal modes)
+nothing in the scene is hit-tested (the spray aims at the picture's plane), and items that stand in front of the
+print fade to 22 % (a ghost, so you still see where they are) and come back when you save. Items beside the
+print stay as they are.
+
+**Tested** (headless Chromium, fake camera from y4m stills of kc-bobo and the CMS piece's two pictures, `vite dev`
+with `.data/`): built-in Bobo found, painted, saved, back after reload (with Bobo's CMS scene); a CMS piece
+from the list and as a draft through `?set=` found, painted (scene items fade), saved; the mirrored side; scene
+items placed within 0.1 % of the expected position and size (as fractions of the engine's target height); broken
+and hidden items skipped; viewer mode for a Bobo and a CMS creation, 404, 410; IndexedDB left untouched in viewer
+mode. `node` checks for `cms.js` (mapping, limit, fetch fallbacks, time-out). Not tried on a phone.

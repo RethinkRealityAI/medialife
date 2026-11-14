@@ -260,3 +260,21 @@ h1{font:400 clamp(44px,13vw,76px)/.95 "Permanent Marker",cursive;margin:6px 0 8p
   #dbar{right:auto;width:min(460px,calc(100% - 20px))}
   #ask{bottom:calc(86px + env(safe-area-inset-bottom));left:auto;right:calc(12px + env(safe-area-inset-right));width:min(360px,45%)}
 }
+
+/* ---------------------------------------------------------------- CMS: notices, viewer mode (?c=) */
+#notice{margin:0 auto 14px;max-width:34ch;padding:8px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);color:var(--text);font-size:14px;font-weight:500}
+/* the guide in viewer mode is the print itself (a small card), not the outlines */
+#guide img.print{flex:none;width:auto;max-width:42%;height:100%;filter:none;opacity:.8;border-radius:12px;box-shadow:0 0 0 3px var(--ink),0 0 0 6px var(--y);background:#fff;margin:0 auto}
+.hero .card.shared canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+#viewbar{position:absolute;left:calc(10px + env(safe-area-inset-left));right:calc(10px + env(safe-area-inset-right));bottom:calc(104px + env(safe-area-inset-bottom));display:none;gap:8px;justify-content:center}
+#viewbar .tool{flex:0 1 150px;min-height:52px;flex-direction:row;gap:8px;font-size:13px}
+#viewbar .tool svg{width:20px;height:20px}
+#b-sound .off{display:none} #b-sound[aria-pressed=false] .off{display:inline} #b-sound[aria-pressed=false] .on{display:none}
+/* viewer mode: nothing of the painting kit is reachable; the shutter stays bottom centre */
+html[data-viewer] #viewbar{display:flex}
+html[data-viewer] #can,html[data-viewer] #caps,html[data-viewer] #bar,html[data-viewer] #alive,html[data-viewer] #ask,html[data-viewer] #side,
+html[data-viewer] #dtray,html[data-viewer] #dbar,html[data-viewer] #d-handle,html[data-viewer] #dsel,html[data-viewer] #opts,html[data-viewer] #reticle,html[data-viewer] #meter{display:none!important}
+html[data-viewer] #hud[data-mode=find] #shoot{display:flex}
+html[data-viewer] #hud #hint{bottom:calc(170px + env(safe-area-inset-bottom))}
+html[data-viewer] #hud[data-mode=find] #hint{bottom:auto}
+@media (min-aspect-ratio:1/1) and (max-height:520px){#viewbar{right:auto;width:min(380px,calc(50% - 60px));bottom:calc(16px + env(safe-area-inset-bottom))}}
