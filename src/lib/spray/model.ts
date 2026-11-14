@@ -103,6 +103,14 @@ export type Paintable = {
 
 export type CreationStatus = "unlisted" | "featured" | "hidden";
 
+/**
+ * One decal stuck on a painting (the library is /evade/spray-bobo/decals/decals.json; the AR page uses the
+ * same shape): id = the library decal; u, v = its centre in picture fractions (v down); w = its width as
+ * a fraction of the picture width; r = turn in radians; f = 1, or -1 when flipped.
+ */
+export type CreationDecal = { id: string; u: number; v: number; w: number; r: number; f: 1 | -1 };
+export const MAX_DECALS = 12;
+
 export type Creation = {
   id: string;
   paintable: string;
@@ -111,6 +119,8 @@ export type Creation = {
   primer: boolean;
   linesOn: boolean;
   colours: string[];
+  /** Decals stuck on the painting, back to front. Missing on older records: treat as []. */
+  decals?: CreationDecal[];
   /** 0..1 share of the canvas painted. */
   coverage: number;
   /** Free-text tag set by staff: where it was made ("Mall pop-up, Toronto"). */
@@ -128,7 +138,15 @@ export type Creation = {
 /** Public view of a creation (no report details). */
 export type PublicCreation = Pick<
   Creation,
-  "id" | "paintable" | "image" | "primer" | "linesOn" | "colours" | "coverage" | "createdAt"
+  | "id"
+  | "paintable"
+  | "image"
+  | "primer"
+  | "linesOn"
+  | "colours"
+  | "decals"
+  | "coverage"
+  | "createdAt"
 > & { name: string | null };
 
 export const REPORTS_TO_HIDE = 3;

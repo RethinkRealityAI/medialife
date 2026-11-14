@@ -19,6 +19,8 @@ import {
   type PublicCreation,
   type SceneItem,
   type SceneItemKind,
+  MAX_DECALS,
+  type CreationDecal,
 } from "./model";
 
 // Spray Bobo CMS storage + API logic. Netlify Blobs (local files in dev), split by host namespace like
@@ -422,10 +424,40 @@ const pub = (c: Creation, p: Paintable | null): PublicCreation => ({
   primer: c.primer,
   linesOn: c.linesOn,
   colours: c.colours,
+  decals: c.decals ?? [],
   coverage: c.coverage,
   createdAt: c.createdAt,
   name: p?.name ?? null,
 });
+
+/** The `decals` form field: a JSON list of CreationDecal. Anything malformed is dropped, never an error. */
+function parseDecals(raw: FormDataEntryValue | null): CreationDecal[] {
+  if (typeof raw !== "string" || !raw) return [];
+  let list: unknown;
+  try {
+    list = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(list)) return [];
+  const out: CreationDecal[] = [];
+  for (const d of list.slice(0, MAX_DECALS)) {
+    if (!d || typeof d !== "object") continue;
+    const { id, u, v, w, r, f } = d as Record<string, unknown>;
+    if (typeof id !== "string" || !/^[a-z0-9][a-z0-9-]{0,40}$/.test(id)) continue;
+    const n = [u, v, w, r].map(Number);
+    if (!n.every(Number.isFinite)) continue;
+    out.push({
+      id,
+      u: Math.max(-0.5, Math.min(1.5, n[0])),
+      v: Math.max(-0.5, Math.min(1.5, n[1])),
+      w: Math.max(0.02, Math.min(2, n[2])),
+      r: Math.max(-Math.PI * 2, Math.min(Math.PI * 2, n[3])),
+      f: f === -1 ? -1 : 1,
+    });
+  }
+  return out;
+}
 
 export async function createCreation(req: Request) {
   let form: FormData;
@@ -447,6 +479,7 @@ export async function createCreation(req: Request) {
     const ev = String(form.get("event") ?? "")
       .trim()
       .slice(0, 80);
+    const decals = parseDecals(form.get("decals"));
     const id = newId(10);
     const now = Date.now();
     const c: Creation = {
@@ -456,6 +489,7 @@ export async function createCreation(req: Request) {
       primer: form.get("primer") !== "0",
       linesOn: form.get("linesOn") !== "0",
       colours,
+      decals,
       coverage: Math.max(0, Math.min(1, Number(form.get("coverage")) || 0)),
       event: ev || null,
       source: form.get("source") === "ar" ? "ar" : "studio",
