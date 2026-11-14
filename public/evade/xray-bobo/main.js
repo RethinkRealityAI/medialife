@@ -38,7 +38,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem('xray-bobo-' + 
 // The cat's back picture is the print seen through the acrylic (mirrored); the can's back is a different print.
 const PIECES = {
   bobo: { k: 'bobo', name: 'Bobo', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, outline: 'cat-outline.json', glb: 'bobo-keychain.glb' },
-  can: { k: 'can', name: 'the can', targets: ['kc-can', 'kc-can-back'], flip: {}, outline: 'can-outline.json', glb: 'eclipse-can.glb' },
+  can: { k: 'can', name: 'the can', targets: ['kc-can', 'kc-can-back'], flip: {}, outline: 'can-outline.json', glb: null },   // no model: you look inside the can itself
 };
 const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P;
 const TARGETS = Object.keys(PIECE_OF);
@@ -112,7 +112,7 @@ const assets = Promise.all([
   getJson(KC + 'image-targets/layout.json'),
   Promise.all(TARGETS.map((n) => getJson(KC + `image-targets/${n}.json`))),
   ...Object.values(PIECES).map((P) => Promise.all([
-    gl.loadAsync('/evade/keychain/ar/' + P.glb),
+    P.glb ? gl.loadAsync('/evade/keychain/ar/' + P.glb) : null,
     getJson('/evade/spray-bobo/art/' + P.outline),            // the die-cut line, uv of the front picture (y down)
     Promise.all(P.targets.map((n) => loadImg(KC + `image-targets/${n}.jpg`))),   // each picture: the tiles that break away
   ]).then(([gltf, outline, prints]) => { P.gltf = gltf; P.outlineData = outline; P.prints = Object.fromEntries(P.targets.map((n, i) => [n, prints[i]])); })),
@@ -129,14 +129,16 @@ const A = new THREE.Group();                  // follows the print (units: metre
 const F = new THREE.Group(); A.add(F);        // x flipped on the charm's other side
 let W = 0.0601, H = 0.0801;                   // the kc-bobo picture in metres (layout.json)
 let occluder, rim, box, walls = {}, lid, specks, scanBar, inside, bob, model, mixer, clips = {}, current = null, outlineData = null, root = null;
+let tube = null;                              // the can: the tube inside it (profile, radius, window); null for Bobo's box
 let cp = null;                                // the current piece (its things are in the variables above while it is current)
-const KEYS = ['win', 'W', 'H', 'occluder', 'rim', 'box', 'walls', 'lid', 'specks', 'scanBar', 'inside', 'bob', 'model', 'mixer', 'clips', 'current', 'outlineData', 'root'];
-function save(P) { const v = { win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root }; for (const k of KEYS) P[k] = v[k]; }
-function load(P) { ({ win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root } = P); }
+const KEYS = ['win', 'W', 'H', 'occluder', 'rim', 'box', 'walls', 'lid', 'specks', 'scanBar', 'inside', 'bob', 'model', 'mixer', 'clips', 'current', 'outlineData', 'root', 'tube'];
+function save(P) { const v = { win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root, tube }; for (const k of KEYS) P[k] = v[k]; }
+function load(P) { ({ win, W, H, occluder, rim, box, walls, lid, specks, scanBar, inside, bob, model, mixer, clips, current, outlineData, root, tube } = P); }
+const depthWant = () => (tube ? tube.R : H) * BOX.depthK;   // Bobo's box: print heights; the can: its own radius (Deep = a round can)
 function usePiece(P) {
   if (cp === P) return; if (cp) { save(cp); cp.root.visible = false; }
   clearBalls(); cp = P; load(P); root.visible = true;
-  $('b-swipe-t').textContent = P.k === 'can' ? 'Fizz' : 'Swipe'; open.dWant = H * BOX.depthK; open.k = 0; open.target = 1; open.depth = 0;
+  $('b-swipe-t').textContent = P.k === 'can' ? 'Fizz' : 'Swipe'; open.dWant = depthWant(); open.k = 0; open.target = 1; open.depth = 0;
 }
 const skinPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // the skin shows below the scan line
 const rayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);     // the X-ray shows above it
@@ -157,16 +159,17 @@ function buildScene(xr, data) {
 
   for (const P of Object.values(PIECES)) {
     W = P.W; H = P.H; outlineData = P.outlineData; walls = {}; win = null; current = null; clips = {}; occluder = rim = null;
-    open.dWant = H * BOX.depthK;
+    tube = P.k === 'can' ? canTube() : null;
+    open.dWant = depthWant();
     root = new THREE.Group(); F.add(root); root.visible = false;
     box = new THREE.Group(); root.add(box);     // walls are built one unit deep and scaled to the depth
-    buildWalls();
+    if (tube) buildTube(); else buildWalls();
     buildWindow(BOX.shape);
     buildLid(P);
     inside = new THREE.Group(); root.add(inside);   // what floats inside and the specks: not scaled with the box
     specks = makeSpecks(); inside.add(specks);
-    if (P.k === 'bobo') buildBobo(P.gltf); else buildCan(P.gltf);
-    scanBar = makeScanBar(); box.add(scanBar);
+    if (P.k === 'bobo') buildBobo(P.gltf); else buildCan();
+    scanBar = tube ? makeTubeScanBar() : makeScanBar(); box.add(scanBar);
     save(P);
   }
   cp = null; usePiece(PIECES.bobo);
@@ -194,6 +197,7 @@ function buildWalls() {
   repeatWalls();
 }
 function repeatWalls() {   // keep the cells square at the chosen depth
+  if (!walls.back) return;
   const c = CELL(), D = open.dWant;
   walls.back.material.map.repeat.set(W / c, H / c);
   walls.left.material.map.repeat.set(D / c, H / c); walls.right.material.map.repeat.set(D / c, H / c);
@@ -204,6 +208,7 @@ function repeatWalls() {   // keep the cells square at the chosen depth
 // cyan rim on the print around it.
 let win = null;                               // the occluder and rim (moved onto the can's back picture by its offset)
 function windowPoints(shape) {
+  if (tube) return tube.win.map((v) => v.clone());
   if (shape === 'cat' && outlineData) return outlineData.points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H));
   const r = Math.min(W, H) * 0.035, pts = [], hw = W / 2, hh = H / 2;   // a rectangle with small rounded corners
   const corner = (cx, cy, a0) => { for (let i = 0; i <= 4; i++) { const a = a0 + i * Math.PI / 8; pts.push(new THREE.Vector2(cx + Math.cos(a) * r, cy + Math.sin(a) * r)); } };
@@ -246,7 +251,7 @@ function buildLid(P) {
   P.lidTex = {};
   for (const [n, print] of Object.entries(P.prints)) { const t = new THREE.Texture(print); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; P.lidTex[n] = t; }
   const n0 = P.targets[0];
-  lid = makeShatter(P.lidTex[n0]); root.add(lid);
+  lid = tube ? makeBurn(P.lidTex[n0]) : makeShatter(P.lidTex[n0]); root.add(lid);
 }
 
 // The break-up: the print as a grid of tiles over the real print (it looks identical at first). From the middle
@@ -304,6 +309,52 @@ function makeShatter(tex) {
   const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
 }
 
+// The can's reveal: a light pierces the print. A white point opens in the middle of the can, cracks of light run out
+// ahead of it, and the print burns away behind a white-hot edge with a cyan rim, uncovering the inside of the can.
+// Flat colour steps only (print / cyan / white), no blends. uP 0..~1.25 like the break-up.
+const BURN_VS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const BURN_FS = `
+uniform sampler2D uMap; uniform vec3 uCyan; uniform float uP, uAsp; uniform vec2 uC; uniform vec2 uProf[13];
+varying vec2 vUv;
+// inside the can's outline? (the profile: v down the picture, half width), so the light only burns the can itself
+bool inCan(vec2 uv) {
+  float v = 1.0 - uv.y; if (v < uProf[0].x || v > uProf[12].x) return false;
+  float hw = uProf[0].y;
+  for (int i = 1; i < 13; i++) if (v >= uProf[i - 1].x && v <= uProf[i].x) hw = mix(uProf[i - 1].y, uProf[i].y, (v - uProf[i - 1].x) / max(uProf[i].x - uProf[i - 1].x, 1e-4));
+  return abs(uv.x - uC.x) < hw;
+}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
+float fbm(vec2 p) { return vnoise(p) * 0.55 + vnoise(p * 2.1 + 7.3) * 0.3 + vnoise(p * 4.3 + 1.7) * 0.15; }
+void main() {
+  vec2 d = (vUv - uC) * vec2(uAsp, 1.0);
+  float r = length(d) / 0.62, n = fbm(vUv * vec2(uAsp, 1.0) * 7.0);
+  float front = uP * 1.25 - 0.08;                       // the burn front, from the middle out
+  float e = front - (r * 0.78 + n * 0.3);               // > 0: burnt through
+  vec3 col = texture2D(uMap, vUv).rgb;
+  if (!inCan(vUv)) { gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+  return; }
+  if (e > 0.075) discard;
+  float ang = atan(d.y, d.x) / 6.28318 + 0.5;
+  float crack = step(0.955, fract(ang * 11.0 + n * 1.6)) * step(-0.22, e) * step(0.02, uP);   // light running ahead
+  if (e > 0.045) col = vec3(1.0);                       // white-hot edge
+  else if (e > 0.0) col = uCyan;                        // its cyan rim
+  else if (crack > 0.0) col = e > -0.1 ? vec3(1.0) : uCyan;
+  else if (e > -0.05) col = mix(col, uCyan, 0.4);        // the print lit up just ahead of the edge (one flat tint)
+  if (uP < 0.12 && r < uP * 0.35) col = vec3(1.0);      // the first pin of light
+  gl_FragColor = vec4(col, 1.0);
+  #include <colorspace_fragment>
+}`;
+function makeBurn(tex) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uP: { value: 0 }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uAsp: { value: W / H }, uC: { value: new THREE.Vector2(CAN_U0, 0.5 + ((tube.top + tube.bot) / 2) / H) }, uProf: { value: CAN_PROFILE.map(([v, hw]) => new THREE.Vector2(v, hw)) } },
+    vertexShader: BURN_VS, fragmentShader: BURN_FS, side: THREE.DoubleSide, toneMapped: false,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), m); mesh.position.z = 0.0003; mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
+}
+
 // floating specks: depth cues that slide past each other as the phone moves
 function makeSpecks() {
   const N = 42, geo = new THREE.BufferGeometry(), p = new Float32Array(N * 3), seed = new Float32Array(N * 3);
@@ -320,7 +371,7 @@ function tickSpecks(dt) {
     p[i * 3] = s[i * 3] * W * 0.88; p[i * 3 + 1] = (s[i * 3 + 1] - 0.5) * H * 0.9; p[i * 3 + 2] = -s[i * 3 + 2] * D;
   }
   specks.geometry.attributes.position.needsUpdate = true;
-  specks.material.opacity = 1; specks.visible = open.k > 0.4;
+  specks.material.opacity = 1; specks.visible = open.k > 0.4 && !tube;
 }
 
 // the scan line: a bright band on the side and back walls, and a faint sheet across the box at the same height
@@ -332,6 +383,16 @@ function makeScanBar() {
   const sheet = new THREE.Mesh(new THREE.PlaneGeometry(W, 1), new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
   sheet.rotation.x = -Math.PI / 2; sheet.position.z = -0.5; g.add(sheet);
   g.children.forEach((m) => { m.renderOrder = 5; });
+  return g;
+}
+
+// the can's scan line: a band round the inside of the tube and a faint disc across it (scaled to the radius each frame)
+function makeTubeScanBar() {
+  const g = new THREE.Group(), t = H * 0.008, R = tube.R * 0.99;
+  const band = new THREE.LatheGeometry([new THREE.Vector2(R, -t / 2), new THREE.Vector2(R, t / 2)], 40, Math.PI / 2, Math.PI); band.scale(1, 1, 1 / tube.R);
+  g.add(new THREE.Mesh(band, new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, side: THREE.DoubleSide })));
+  g.add(new THREE.Mesh(halfDisc(R, 0), new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, toneMapped: false })));
+  g.children.forEach((m) => { m.renderOrder = 10; m.frustumCulled = false; });
   return g;
 }
 
@@ -442,46 +503,87 @@ function buildBones(list) {
 // ---------------------------------------------------------------- the Eclipse can: skin, ghost, the soda inside
 // The can from Off the Chain (Blender). In X-ray its body turns to a see-through cyan ghost and you see the soda
 // inside: a liquid column with bubbles rising through it (the bubbles speed up when you tap the can).
-function buildCan(gltf) {
-  model = gltf.scene;
-  // (not the Silhouette card, nor the fizz cloud Off the Chain sprays out of the opening)
-  model.traverse((o) => { if (o.name === 'Silhouette' || /Fizz/.test(o.name)) o.visible = false; if (o.isMesh) o.frustumCulled = false; });
-  mixer = new THREE.AnimationMixer(model);
-  clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
-  const body = model.getObjectByName('EclipseCan') || model;
-  model.updateMatrixWorld(true);
-  const bb = new THREE.Box3().setFromObject(body, true), size = bb.getSize(new THREE.Vector3()), mid = bb.getCenter(new THREE.Vector3());
-  const s = (H * 0.6) / size.y;
-  model.scale.setScalar(s); model.position.set(-mid.x * s, -mid.y * s, -mid.z * s);
-  bob = new THREE.Group(); bob.add(model); inside.add(bob);
-  const ghostMat = new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [rayPlane] });
-  const ghosts = [];
-  model.traverse((o) => {
-    if (!o.isMesh || !o.visible || o.name === 'Silhouette' || /Fizz/.test(o.name)) return;
-    const ms = Array.isArray(o.material) ? o.material : [o.material];
-    ms.forEach((m) => { m.clippingPlanes = [skinPlane]; skinMats.push(m); });
-    o.renderOrder = 6;
-    if (!/Outline/.test(ms[0].name)) ghosts.push(o);
-  });
-  for (const o of ghosts) { const g = new THREE.Mesh(o.geometry, ghostMat); g.renderOrder = 8; g.frustumCulled = false; o.add(g); }
-  // the soda: a column inside the body, in can units (so it turns and floats with the can)
-  const r = Math.min(size.x, size.z) * 0.42 * s, h = size.y * 0.72 * s, soda = new THREE.Group();
-  const liq = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28), new THREE.MeshBasicMaterial({ color: 0x2aa8c4, transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false, clippingPlanes: [rayPlane] }));
-  liq.renderOrder = 7; soda.add(liq);
-  const top = new THREE.Mesh(new THREE.CircleGeometry(r, 28), new THREE.MeshBasicMaterial({ color: COL.bone, toneMapped: false, clippingPlanes: [rayPlane] }));
-  top.rotation.x = -Math.PI / 2; top.position.y = h / 2; top.renderOrder = 9; soda.add(top);
-  const bm = new THREE.MeshBasicMaterial({ color: COL.bone, toneMapped: false, clippingPlanes: [rayPlane] }), sph = new THREE.SphereGeometry(1, 10, 8);
-  const bubbles = [];
-  for (let i = 0; i < 26; i++) { const m = new THREE.Mesh(sph, bm); m.renderOrder = 9; m.userData = { a: Math.random() * 6.28, d: Math.sqrt(Math.random()) * r * 0.8, y: Math.random(), v: 0.18 + Math.random() * 0.25, s: r * (0.05 + Math.random() * 0.07) }; soda.add(m); bubbles.push(m); }
-  soda.position.y = -size.y * s * 0.06; bob.add(soda);
-  rayMats.push(ghostMat, liq.material, top.material, bm);
-  bob.userData = { bubbles, h, boost: 0 };
-  if (clips.Idle) play('Idle');
+// ---------------------------------------------------------------- the can: you look into the can itself
+// The window is the drawn can's own outline (rim, shoulder, body, rounded base; uv of the kc-can picture, measured from
+// the print) and behind it is the back half of the can: a lathe of that same profile, so its silhouette fits the
+// print exactly and the print reads as the front half cut away. Inside: bare aluminium and the soda, no grid.
+const CAN_U0 = 0.4925;                                  // the can's middle, across the picture
+const CAN_PROFILE = [                                   // [v down the picture, half width in picture widths]
+  [0.188, 0.195], [0.200, 0.222], [0.222, 0.232], [0.250, 0.238], [0.272, 0.250], [0.292, 0.272], [0.312, 0.284],
+  [0.500, 0.287], [0.800, 0.287], [0.868, 0.284], [0.890, 0.272], [0.904, 0.248], [0.912, 0.215],
+];
+const SODA_V = 0.43;                                    // the soda's level, down the picture
+function canTube() {
+  const prof = CAN_PROFILE.map(([v, hw]) => new THREE.Vector2(hw * W, (0.5 - v) * H));   // (radius, y) top to bottom
+  const R = Math.max(...prof.map((q) => q.x)), cx = (CAN_U0 - 0.5) * W;
+  const win = [...prof.map((q) => new THREE.Vector2(cx + q.x, q.y)), ...prof.slice().reverse().map((q) => new THREE.Vector2(cx - q.x, q.y))];
+  return { prof, R, cx, win, top: prof[0].y, bot: prof[prof.length - 1].y, level: (0.5 - SODA_V) * H, fit: null };
+}
+function tubeR(y) {                                     // the can's radius at height y (local, metres)
+  const pr = tube.prof; if (y >= pr[0].y) return pr[0].x;
+  for (let i = 1; i < pr.length; i++) if (y >= pr[i].y) { const a = pr[i - 1], b = pr[i]; return lerp(b.x, a.x, (y - b.y) / (a.y - b.y)); }
+  return pr[pr.length - 1].x;
+}
+// the back half of a lathe of the profile, z scaled so the body is one unit deep (the box group scales it to depth)
+function halfLathe(prof, shrink = 1) {
+  const pts = prof.slice().reverse().map((q) => new THREE.Vector2(q.x * shrink, q.y));   // lathe wants bottom to top
+  const g = new THREE.LatheGeometry(pts, 40, Math.PI / 2, Math.PI); g.scale(1, 1, 1 / tube.R); return g;
+}
+function halfDisc(r, y) { const g = new THREE.CircleGeometry(r, 40, 0, Math.PI); g.rotateX(-Math.PI / 2); g.scale(1, 1, 1 / tube.R); g.translate(0, y, 0); return g; }
+function buildTube() {
+  box.position.x = tube.cx;
+  const metal = new THREE.MeshStandardMaterial({ color: 0xc4cdd4, metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide, clippingPlanes: [skinPlane] });
+  const dark = new THREE.MeshBasicMaterial({ color: COL.back, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [rayPlane] });
+  skinMats.push(metal); rayMats.push(dark);
+  const add = (geo, mat, ro = 1) => { const m = new THREE.Mesh(geo, mat); m.renderOrder = ro; m.frustumCulled = false; box.add(m); return m; };
+  const pr = tube.prof, wall = halfLathe(pr), lidG = halfDisc(pr[0].x, tube.top), baseG = halfDisc(pr[pr.length - 1].x, tube.bot);
+  walls = {};
+  for (const [mat, k] of [[metal, 'skin'], [dark, 'ray']]) { add(wall, mat); add(lidG, mat); add(baseG, mat); }
+  // X-ray: the can's beads as cyan rings (rim, shoulder, base), nothing else
+  const ringMat = new THREE.LineBasicMaterial({ color: COL.x, toneMapped: false, clippingPlanes: [rayPlane] }); rayMats.push(ringMat);
+  for (const v of [0.2, 0.25, 0.312, 0.868, 0.9]) {
+    const y = (0.5 - v) * H, r = tubeR(y) * 0.995, pts = [];
+    for (let i = 0; i <= 40; i++) { const a = Math.PI / 2 + i / 40 * Math.PI; pts.push(new THREE.Vector3(r * Math.sin(a), y, r * Math.cos(a) / tube.R)); }
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat); l.renderOrder = 3; box.add(l);
+  }
+}
+// the soda: the liquid fills the can to its level (a tinted back wall, a see-through front face, the surface) and
+// bubbles rise through it. Skin: Eclipse purple; X-ray: cyan with white bubbles.
+function buildCan() {
+  model = new THREE.Group(); mixer = new THREE.AnimationMixer(model); clips = {};
+  bob = new THREE.Group(); bob.add(model); inside.add(bob); inside.position.x = tube.cx;
+  const L = tube.level, pr = tube.prof, below = [new THREE.Vector2(tubeR(L), L), ...pr.filter((q) => q.y < L)];
+  const soda = new THREE.Group(); box.add(soda);
+  const mk = (color, opacity, plane, list) => { const m = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [plane] }); list.push(m); return m; };
+  const front = new THREE.Shape([...below.map((q) => new THREE.Vector2(q.x, q.y)), ...below.slice().reverse().map((q) => new THREE.Vector2(-q.x, q.y))]);
+  const parts = [[halfLathe(below, 0.99), 4], [halfDisc(tubeR(L) * 0.99, L), 5], [new THREE.ShapeGeometry(front), 9]];
+  parts[2][0].translate(0, 0, -0.002);
+  const looks = [[0x4a1230, 0.92, 0x8e2f5c, 0.85, 0x5b1835, 0.42, skinPlane, skinMats], [0x0b3a4a, 0.9, COL.x, 0.5, COL.x, 0.14, rayPlane, rayMats]];
+  for (const [cWall, oWall, cTop, oTop, cFront, oFront, plane, list] of looks) {
+    [[cWall, oWall], [cTop, oTop], [cFront, oFront]].forEach(([c, o], i) => { const m = new THREE.Mesh(parts[i][0], mk(c, o, plane, list)); m.renderOrder = parts[i][1]; m.frustumCulled = false; soda.add(m); if (i === 1) m.userData.surface = true; });
+  }
+  const bubbles = [], sph = new THREE.SphereGeometry(1, 10, 8);
+  for (const [color, plane, list] of [[0xe9b7cf, skinPlane, skinMats], [COL.bone, rayPlane, rayMats]]) {
+    const bm = mk(color, 1, plane, list); bm.depthWrite = true;
+    for (let i = 0; i < 22; i++) { const m = new THREE.Mesh(sph, bm); m.renderOrder = 6; m.userData = { a: Math.random(), d: Math.sqrt(Math.random()) * 0.85, y: Math.random(), v: 0.16 + Math.random() * 0.22, s: H * (0.004 + Math.random() * 0.006) }; bob.add(m); bubbles.push(m); }
+  }
+  bob.userData = { bubbles, boost: 0, tube: true, soda };
 }
 function fizzBurst() { if (bob.userData.bubbles) bob.userData.boost = 1.6; }
 function tickBubbles(dt) {
   const u = bob.userData; if (!u.bubbles) return;
   u.boost = Math.max(0, u.boost - dt * 0.8);
+  if (u.tube) {                                // up through the soda, in the can's own shape and depth
+    const L = tube.level, bot = tube.bot + H * 0.02, D = open.depth / tube.R;
+    for (const b of u.bubbles) {
+      const d = b.userData; d.y += dt * d.v * (1 + u.boost * 3); if (d.y > 1) { d.y -= 1; d.a = Math.random(); }
+      const y = lerp(bot, L - H * 0.006, d.y), r = tubeR(y) * d.d * 0.9, a = Math.PI / 2 + (d.a + d.y * 0.15) % 1 * Math.PI;
+      b.position.set(r * Math.sin(a), y, r * Math.cos(a) * D); b.scale.setScalar(d.s * (0.7 + d.y * 0.6));
+    }
+    const top = u.soda.children.filter((m) => m.userData.surface);   // the surface wobbles after a fizz or a ball lands
+    for (const m of top) m.position.y = Math.sin(clock.t * 9) * H * 0.006 * Math.min(1, u.boost);
+    return;
+  }
   for (const b of u.bubbles) {
     const d = b.userData; d.y += dt * d.v * (1 + u.boost * 3); if (d.y > 1) { d.y -= 1; d.a = Math.random() * 6.28; }
     b.position.set(Math.cos(d.a + d.y * 2) * d.d, (d.y - 0.5) * u.h, Math.sin(d.a + d.y * 2) * d.d); b.scale.setScalar(d.s * (0.7 + d.y * 0.6));
@@ -521,6 +623,7 @@ function tickScan(dt) {
   }
   scanBar.visible = view === 'scan' && open.k > 0.6 && Math.abs(y) < 0.56;
   scanBar.position.y = clamp(y, -0.5, 0.5) * H;
+  if (tube) { const k = tubeR(scanBar.position.y) / tube.R; scanBar.scale.set(k, 1, k); scanBar.visible = scanBar.visible && scanBar.position.y < tube.top && scanBar.position.y > tube.bot; }
   // the clipping planes live in world space: move them with the box
   const local = new THREE.Plane(new THREE.Vector3(0, -1, 0), y * H);
   skinPlane.copy(local).applyMatrix4(F.matrixWorld);
@@ -581,8 +684,9 @@ function updatePose(now) {
   if (n && win.userData.side !== n + BOX.shape) {   // this side's picture on the tiles; the cut-out moved onto it
     win.userData.side = n + BOX.shape;
     lid.material.uniforms.uMap.value = cp.lidTex[n];
-    const xf = (BOX.shape === 'cat' && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
-    win.position.set(xf.x, xf.y, 0); win.rotation.z = xf.rz; win.scale.setScalar(xf.s);
+    const xf = ((BOX.shape === 'cat' || tube) && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
+    for (const g of tube ? [win, box, inside] : [win]) { g.position.set(xf.x + (tube && g !== win ? tube.cx : 0), xf.y, 0); g.rotation.z = xf.rz; g.scale.set(xf.s, xf.s, g === box ? box.scale.z : xf.s); }
+    if (tube) tube.fit = xf;
   }
 }
 // follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
@@ -661,6 +765,7 @@ function tick(dt) {
   const sway = Math.sin(life.t * 0.45) * 0.28 * (1 - swipe.face);
   bob.rotation.set(Math.sin(life.t * 0.7) * 0.05, life.yaw + sway + swipe.yaw * swipe.face, Math.sin(life.t * 0.9) * 0.03);
   bob.scale.setScalar(lerp(0.55, 1, kb) * Math.min(1, D / (H * 0.62)) || 0.001);   // a shallow box: a smaller Bobo, so he never pokes out
+  if (tube) { bob.position.set(0, 0, 0); bob.rotation.set(0, 0, 0); bob.scale.setScalar(1); swipe.lunge.set(0, 0, 0); }
   mixer.update(dt); tickBubbles(dt); tickBalls(dt);
   tickSpecks(dt);
   F.updateMatrixWorld(true);
@@ -690,7 +795,8 @@ let ballGeo = null, ballN = 0;
 const game = { score: 0, best: +store.get('best', 0) || 0, combo: 0, comboT: 0, thrown: 0, swiped: 0 };
 const G = () => H * 7;                         // toy gravity: a ball drops the box's height in about half a second
 const R = () => H * 0.055;
-function insideWindow(x, y) {                   // through the window? (the cut-out: point in the die-cut polygon)
+function insideWindow(x, y) {                   // through the window? (the cut-out or the can: point in its polygon)
+  if (tube) { const pts = tube.win; let inn = false; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const a = pts[i], b = pts[j]; if ((a.y > y) !== (b.y > y) && x < (b.x - a.x) * (y - a.y) / (b.y - a.y) + a.x) inn = !inn; } return inn; }
   if (BOX.shape !== 'cat') return Math.abs(x) < W / 2 - R() * 0.6 && Math.abs(y) < H / 2 - R() * 0.6;
   const pts = windowPoints('cat'), w = win, c = Math.cos(-w.rotation.z), sn = Math.sin(-w.rotation.z);
   const lx = ((x - w.position.x) * c - (y - w.position.y) * sn) / w.scale.x, ly = ((x - w.position.x) * sn + (y - w.position.y) * c) / w.scale.x;
@@ -785,17 +891,20 @@ function popWord(text, b) {
 function tickBalls(dt) {
   if (!balls.length) return;
   const D = Math.max(open.depth, 0.001), r = R(), g = G(), hw = W / 2 - r, hh = H / 2 - r;
-  const bc = bob.position.clone().add(new THREE.Vector3(0, H * 0.02, 0)), br = H * 0.21 * bob.scale.x;
+  const bc = bob.position.clone().add(new THREE.Vector3(0, H * 0.02, 0)), br = tube ? -1 : H * 0.21 * bob.scale.x;   // the can has no bumper inside
   const n = 3, h = dt / n;
   for (let s = 0; s < n; s++) {
     for (const b of balls) {
       const pz = b.p.z; b.v.y -= g * h; b.p.addScaledVector(b.v, h);
       if (b.inside) {
-        if (b.p.x < -hw) { b.p.x = -hw; if (b.v.x < 0) { sound.bounce(-b.v.x / H / 3); b.v.x *= -E_WALL; } }
-        if (b.p.x > hw) { b.p.x = hw; if (b.v.x > 0) { sound.bounce(b.v.x / H / 3); b.v.x *= -E_WALL; } }
-        if (b.p.y > hh) { b.p.y = hh; if (b.v.y > 0) b.v.y *= -E_WALL; }
-        if (b.p.y < -hh) { b.p.y = -hh; if (b.v.y < 0) { sound.bounce(-b.v.y / H / 3); b.v.y *= -E_WALL; b.v.x *= 0.96; b.v.z *= 0.96; } }
-        if (b.p.z < -D + r) { b.p.z = -D + r; if (b.v.z < 0) { sound.bounce(-b.v.z / H / 3); b.v.z *= -E_WALL; } }
+        if (tube) tubeWalls(b, r, D, h);
+        else {
+          if (b.p.x < -hw) { b.p.x = -hw; if (b.v.x < 0) { sound.bounce(-b.v.x / H / 3); b.v.x *= -E_WALL; } }
+          if (b.p.x > hw) { b.p.x = hw; if (b.v.x > 0) { sound.bounce(b.v.x / H / 3); b.v.x *= -E_WALL; } }
+          if (b.p.y > hh) { b.p.y = hh; if (b.v.y > 0) b.v.y *= -E_WALL; }
+          if (b.p.y < -hh) { b.p.y = -hh; if (b.v.y < 0) { sound.bounce(-b.v.y / H / 3); b.v.y *= -E_WALL; b.v.x *= 0.96; b.v.z *= 0.96; } }
+          if (b.p.z < -D + r) { b.p.z = -D + r; if (b.v.z < 0) { sound.bounce(-b.v.z / H / 3); b.v.z *= -E_WALL; } }
+        }
         const dc = b.p.clone().sub(bc), dl = dc.length();   // Bobo (or the can) is a round bumper
         if (dl < br + r && dl > 1e-6) { dc.divideScalar(dl); b.p.copy(bc).addScaledVector(dc, br + r); const vn = b.v.dot(dc); if (vn < 0) { b.v.addScaledVector(dc, -(1 + E_BOBO) * vn); sound.bounce(-vn / H / 3); } }
         if (!b.swatted && b.p.z > -r) {             // the box keeps a loose ball: it rolls back off the lip of the window
@@ -825,6 +934,27 @@ function tickBalls(dt) {
   }
 }
 
+// inside the can: an elliptic tube (its radius across, the chosen depth back), lid and base, and the soda: a ball
+// that sinks into it is lifted (it floats, bobbing at the surface) and slowed
+function tubeWalls(b, r, D, h) {
+  const cx = tube.cx, top = tube.top - r, bot = tube.bot + r;
+  if (b.p.y > top) { b.p.y = top; if (b.v.y > 0) b.v.y *= -E_WALL; }
+  if (b.p.y < bot) { b.p.y = bot; if (b.v.y < 0) { sound.bounce(-b.v.y / H / 3); b.v.y *= -E_WALL; } }
+  const R = tube.R, rr = tubeR(b.p.y), ax = Math.max(rr - r, r * 0.2), az = Math.max(rr * D / R - r, r * 0.2);
+  const x = b.p.x - cx, z = Math.min(b.p.z, 0), q = (x / ax) ** 2 + (z / az) ** 2;
+  if (q > 1) {
+    const k = 1 / Math.sqrt(q); b.p.x = cx + x * k; if (b.p.z < 0) b.p.z = z * k;
+    const n = new THREE.Vector3(x / (ax * ax), 0, z / (az * az)).normalize(), vn = b.v.dot(n);
+    if (vn > 0) { b.v.addScaledVector(n, -(1 + E_WALL) * vn); sound.bounce(vn / H / 3); }
+  }
+  const sink = tube.level - b.p.y;                       // under the soda: buoyancy and drag
+  if (sink > -r) {
+    if (b.v.y < -H * 0.6 && !b.splashed) { b.splashed = true; fizzBurst(); sound.bounce(0.4); }
+    const sub = clamp((sink + r) / (2 * r), 0, 1);
+    b.v.y += G() * 1.9 * sub * h; b.v.multiplyScalar(1 - Math.min(1, 3.2 * sub * h));
+  } else b.splashed = false;
+}
+
 // ---------------------------------------------------------------- UI
 document.querySelectorAll('#views button').forEach((b) => { b.onclick = () => setView(b.dataset.v); });
 function segInit(id, cur, fn) {
@@ -833,7 +963,7 @@ function segInit(id, cur, fn) {
   sync(cur); btns.forEach((b) => { b.onclick = () => { sync(b.dataset.v); fn(b.dataset.v); sound.click(); }; });
 }
 segInit('seg-win', BOX.shape, (v) => { store.set('win', v); BOX.shape = v; if (cp) eachPiece(() => buildWindow(v)); });
-segInit('seg-depth', String(BOX.depthK), (v) => { BOX.depthK = +v; store.set('depth', v); if (cp) { eachPiece(() => { open.dWant = H * BOX.depthK; repeatWalls(); }); open.dWant = H * BOX.depthK; } });
+segInit('seg-depth', String(BOX.depthK), (v) => { BOX.depthK = +v; store.set('depth', v); if (cp) { eachPiece(() => { open.dWant = depthWant(); repeatWalls(); }); open.dWant = depthWant(); } });
 function eachPiece(fn) { const keep = cp; save(cp); for (const P of Object.values(PIECES)) { load(P); fn(P); save(P); } load(keep); }
 const optsEl = $('opts');
 function openOpts() { optsEl.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); optsEl.querySelector('.x').focus(); }
