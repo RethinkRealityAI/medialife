@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
 import SITE_NAV from "@/lib/site-nav.json";
 import { Lockup } from "./Logo";
@@ -23,8 +23,12 @@ export const SHOP_URL = "https://shop.medialife.ai/";
  * long labels show. Below lg it is the Menu button. The bar is 64px tall
  * everywhere, on every page.
  */
+type NavChild = { href: string; label: string; note?: string };
 type NavItem = {
   label: string;
+  /** Optional sub-pages (static links), shown in a small dropdown on desktop
+   *  and as indented rows in the mobile menu. The parent stays a real link. */
+  children?: NavChild[];
   num: string;
   short?: string;
   isNew?: boolean;
@@ -53,6 +57,8 @@ function DeskLabel({ item }: { item: NavItem }) {
 export function Nav() {
   const [open, setOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
+  // Which item's sub-page dropdown is open (by href), if any.
+  const [subOpen, setSubOpen] = useState<string | null>(null);
   const [hoveredStack, setHoveredStack] = useState(0);
   const featured = TECH_STACKS[hoveredStack];
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,6 +115,78 @@ export function Nav() {
                     <DeskLabel item={item} />
                     {isCapabilities && <span className="ml-2 text-[10px] opacity-60">▾</span>}
                   </a>
+                </div>
+              );
+            }
+            if (item.kind === "static" && item.children?.length) {
+              const isOpen = subOpen === item.href;
+              const menuId = `nav-sub-${item.num}`;
+              return (
+                <div
+                  key={item.href}
+                  className="relative inline-flex items-center"
+                  onMouseEnter={() => {
+                    setMegaOpen(false);
+                    setSubOpen(item.href);
+                  }}
+                  onMouseLeave={() => setSubOpen(null)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSubOpen(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setSubOpen(null);
+                  }}
+                >
+                  <a href={item.href} className={`${itemCls} pr-1 xl:pr-1`}>
+                    <span className={numCls}>/{item.num}</span>
+                    <DeskLabel item={item} />
+                    {item.isNew && (
+                      <span
+                        className="ml-1.5 h-1.5 w-1.5 rounded-full bg-[#f5c84b]"
+                        aria-label="(new)"
+                        role="img"
+                      />
+                    )}
+                  </a>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={menuId}
+                    aria-label={`${item.label} pages`}
+                    className="grid place-items-center h-8 w-6 text-[10px] opacity-60 hover:opacity-100 hover:text-primary transition"
+                    onClick={() => setSubOpen(isOpen ? null : item.href)}
+                  >
+                    <span
+                      aria-hidden
+                      className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+                  <div
+                    id={menuId}
+                    hidden={!isOpen}
+                    className="absolute left-0 top-full pt-2 min-w-[280px]"
+                  >
+                    <ul className="border border-white/10 bg-[#05060c] rounded-xl p-1.5 shadow-2xl">
+                      {item.children.map((c) => (
+                        <li key={c.href}>
+                          <a
+                            href={c.href}
+                            className="block rounded-lg px-3 py-2.5 hover:bg-white/[0.06] focus-visible:bg-white/[0.06] transition-colors"
+                            onClick={() => setSubOpen(null)}
+                          >
+                            <span className="block text-sm text-foreground">{c.label}</span>
+                            {c.note && (
+                              <span className="block text-xs text-muted-foreground mt-0.5">
+                                {c.note}
+                              </span>
+                            )}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               );
             }
@@ -305,22 +383,34 @@ export function Nav() {
               }
               if (item.kind === "static") {
                 return (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    className={row}
-                    onClick={() => setOpen(false)}
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      {item.label}
-                      {item.isNew && (
-                        <span className="rounded-full bg-[#f5c84b] px-1.5 py-0.5 mono text-[9px] uppercase tracking-wider text-[#1a1300]">
-                          New
-                        </span>
-                      )}
-                    </span>
-                    <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
-                  </a>
+                  <Fragment key={item.href}>
+                    <a href={item.href} className={row} onClick={() => setOpen(false)}>
+                      <span className="inline-flex items-center gap-2">
+                        {item.label}
+                        {item.isNew && (
+                          <span className="rounded-full bg-[#f5c84b] px-1.5 py-0.5 mono text-[9px] uppercase tracking-wider text-[#1a1300]">
+                            New
+                          </span>
+                        )}
+                      </span>
+                      <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                    </a>
+                    {item.children
+                      ?.filter((c) => c.href !== item.href)
+                      .map((c) => (
+                        <a
+                          key={c.href}
+                          href={c.href}
+                          className="flex items-center justify-between pl-10 pr-6 py-3 border-b border-border text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          onClick={() => setOpen(false)}
+                        >
+                          <span>{c.label}</span>
+                          <span aria-hidden className="text-xs opacity-60">
+                            →
+                          </span>
+                        </a>
+                      ))}
+                  </Fragment>
                 );
               }
               if (item.kind === "external") {

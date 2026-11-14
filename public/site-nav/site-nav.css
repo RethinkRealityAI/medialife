@@ -48,6 +48,29 @@
 .mlnav-new { width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: #f5c84b; }
 .mlnav-ext { margin-left: 6px; font-size: 10px; opacity: 0.6; }
 
+/* Sub-page dropdown (e.g. EVADE > Off the Chain, Spray Bobo). Flat, no gradients. */
+.mlnav-has-sub { position: relative; display: inline-flex; align-items: center; }
+.mlnav-links .mlnav-has-sub > a { padding-right: 4px; }
+.mlnav-caret {
+  display: grid; place-items: center; width: 24px; height: 32px; padding: 0; margin: 0;
+  background: none; border: 0; color: var(--mln-fg); font-size: 10px; opacity: 0.6; cursor: pointer;
+  transition: opacity 0.2s, color 0.2s;
+}
+.mlnav-caret:hover, .mlnav-has-sub.is-open .mlnav-caret { opacity: 1; color: var(--mln-primary); }
+.mlnav-caret span { display: inline-block; transition: transform 0.2s; }
+.mlnav-has-sub.is-open .mlnav-caret span { transform: rotate(180deg); }
+.mlnav-sub { display: none; position: absolute; left: 0; top: 100%; padding-top: 8px; min-width: 280px; }
+.mlnav-has-sub.is-open .mlnav-sub { display: block; }
+.mlnav-sub ul {
+  list-style: none; margin: 0; padding: 6px; border-radius: 12px;
+  background: #05060c; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8);
+}
+.mlnav-links .mlnav-sub a { display: block; padding: 10px 12px; border-radius: 8px; white-space: normal; font-size: 14px; }
+.mlnav-links .mlnav-sub a:hover, .mlnav-links .mlnav-sub a:focus-visible { background: rgba(255, 255, 255, 0.06); color: var(--mln-fg); }
+.mlnav-links .mlnav-sub a[aria-current="page"] .mlnav-sub-t { color: var(--mln-primary); }
+.mlnav-sub-t { display: block; }
+.mlnav-sub-n { display: block; margin-top: 2px; font-size: 12px; color: var(--mln-muted); }
+
 .mlnav-cta {
   display: none; align-items: center; gap: 12px; flex-shrink: 0; white-space: nowrap;
   padding: 10px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; color: #fff !important;
@@ -95,6 +118,8 @@
   display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 999px; vertical-align: 2px;
   background: #f5c84b; color: #1a1300; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase;
 }
+.mlnav-panel > a.mlnav-panel-sub { padding: 12px 24px 12px 40px; font-size: 14px; color: var(--mln-muted); }
+.mlnav-panel > a.mlnav-panel-sub:hover { color: var(--mln-fg); }
 .mlnav-panel-cta { padding: 24px; }
 .mlnav-panel-cta .mlnav-cta { display: flex; justify-content: center; width: 100%; padding: 14px 28px; font-size: 14px; }
 .mlnav .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
