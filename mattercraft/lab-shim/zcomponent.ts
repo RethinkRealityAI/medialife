@@ -305,6 +305,10 @@ export class Component {
     const cm = this.contextManager;
     return {
       constructed: cm.constructed,
+      // Every component the lab registered, so a walk of the tree finds them (as in Mattercraft).
+      get children() {
+        return [...cm.nodes.values()];
+      },
       resolveNodeID: <T>(id: string) => cm.nodes.get(id) as unknown as T | undefined,
       animation: { layerClipByID: cm.layerClipByID },
     };

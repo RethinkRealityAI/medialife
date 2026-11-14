@@ -51,6 +51,8 @@ export enum RecorderCorner {
   TopLeft = "topLeft",
   BottomRight = "bottomRight",
   BottomLeft = "bottomLeft",
+  /** A camera-style shutter at the bottom centre, in the thumb's reach. */
+  BottomCenter = "bottomCenter",
 }
 
 interface ConstructorProps {}

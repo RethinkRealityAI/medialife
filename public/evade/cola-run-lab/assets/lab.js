@@ -1,14 +1,22 @@
-// Cola Run recorder lab: a stand-in Cola Run scene in plain three.js, wired
-// to the exact recorder the Mattercraft component uses (capture-core.js is
-// generated from mattercraft/cola-run/CaptureCore.ts). The renderer is set up
-// like Mattercraft's (alpha, no preserveDrawingBuffer) and the recorder is fed
-// right after each render, the way the component's useOnAfterRender does.
+// Cola Run lab: the real Cola Run game (OrbHuntGame.ts, the exact file that
+// goes into Mattercraft) running in plain three.js, so its menu, intro, HUD,
+// lounge bar and modals can be tried in a browser. orb-hunt-game.js is
+// generated from mattercraft/cola-run/OrbHuntGame.ts with a small stand-in for
+// @zcomponent/* (mattercraft/lab-shim/zcomponent.ts).
+//
+// Bobo's Hideout is the real CollectorHubMode.ts too (with HubCore.ts), the same
+// file that goes into Mattercraft, bound to the game the way it is there.
+//
+// The recorder is the same one the Mattercraft component uses (capture-core.js
+// is generated from mattercraft/cola-run/CaptureCore.ts). The renderer is set
+// up like Mattercraft's (alpha, no preserveDrawingBuffer) and the recorder is
+// fed right after each render, the way the component's useOnAfterRender does.
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
-import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=3";
-import { CollectorHub } from "/labs/collector-hub/hub-core.js?v=7";
-import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=1";
+import { ColaCapture, DEFAULT_SETTINGS } from "./capture-core.js?v=4";
+import { OrbHuntGame, CollectorHubMode, LabContext } from "./orb-hunt-game.js?v=7";
+import { mountViewControls } from "/labs/collector-hub/view-controls.js?v=2";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");
@@ -62,19 +70,23 @@ function sky() {
 }
 const skyTex = sky();
 scene.background = skyTex;
-scene.add(new THREE.HemisphereLight(0xffffff, 0x7a6a55, 2.2));
-const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+// ?lights=plain: a bare Mattercraft scene's lighting (one soft light), to
+// check the room is bright enough on its own over a camera feed.
+const PLAIN = new URLSearchParams(location.search).get("lights") === "plain";
+scene.add(new THREE.HemisphereLight(0xffffff, 0x7a6a55, PLAIN ? 0.5 : 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, PLAIN ? 1 : 2.4);
 sun.position.set(4, 8, 3);
 scene.add(sun);
 
 const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(14, 64),
+  new THREE.CircleGeometry(20, 72),
   new THREE.MeshStandardMaterial({ color: 0x8fcf7a, roughness: 0.95 }),
 );
 ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.02; // just under the room's floor (no z-fighting)
 scene.add(ground);
 const ring = new THREE.Mesh(
-  new THREE.RingGeometry(13.6, 14, 96),
+  new THREE.RingGeometry(19.6, 20, 120),
   new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.7 }),
 );
 ring.rotation.x = -Math.PI / 2;
@@ -83,22 +95,22 @@ scene.add(ring);
 
 /* ── models ── */
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+// Stands in for the AR anchor that Place puts down: the game, Bobo and the
+// hideout all live under it, as they do under the placement group in Mattercraft.
+const anchor = new THREE.Group();
+scene.add(anchor);
 const player = new THREE.Group();
-scene.add(player);
+anchor.add(player);
 let mixer = null;
 let runAct = null;
 let idleAct = null;
 const emoteActs = {};
 let emote = null;
-const cans = [];
-let canProto = null;
-let canClip = null;
+const BOBO_URL = "/roblox/activated-retail/models/catrun.glb?v=2";
+const COLA_URL = "/roblox/activated-retail/models/cola.glb?v=2";
 
 async function loadModels() {
-  const [bobo, cola] = await Promise.all([
-    loader.loadAsync("/roblox/activated-retail/models/catrun.glb"),
-    loader.loadAsync("/roblox/activated-retail/models/cola.glb"),
-  ]);
+  const bobo = await loader.loadAsync(BOBO_URL);
   const b = bobo.scene;
   fit(b, 1.1);
   player.add(b);
@@ -117,9 +129,12 @@ async function loadModels() {
     a.play();
     emoteActs[n] = a;
   }
-  canProto = cola.scene;
-  fit(canProto, 0.9);
-  canClip = cola.animations[0] ?? null;
+}
+
+/** Bobo's lounge poses: what the game's lounge timelines play in Mattercraft. */
+function setEmote(name) {
+  emote = name && emoteActs[name] ? name : null;
+  if (emote) emoteActs[emote].reset();
 }
 
 function fit(obj, height) {
@@ -130,83 +145,14 @@ function fit(obj, height) {
   obj.position.y -= b2.min.y;
 }
 
-const TARGET = 6;
-function layoutCans() {
-  for (const c of cans) scene.remove(c.obj);
-  cans.length = 0;
-  if (!canProto) return;
-  for (let i = 0; i < TARGET; i++) {
-    const a = (i / TARGET) * Math.PI * 2 + 0.4;
-    const r = 4.5 + (i % 2) * 3.5;
-    const obj = canProto.clone(true);
-    const holder = new THREE.Group();
-    holder.add(obj);
-    holder.position.set(Math.cos(a) * r, 0.25, Math.sin(a) * r);
-    scene.add(holder);
-    const m = canClip ? new THREE.AnimationMixer(obj) : null;
-    m?.clipAction(canClip).play();
-    cans.push({ obj: holder, mixer: m, taken: false });
-  }
-}
-
-/* ── audio: a small synth loop + a pickup ding through one master bus ── */
-let ac = null;
-let master = null;
-let musicTimer = 0;
-function audioStart() {
-  if (ac) return;
-  ac = new (window.AudioContext || window.webkitAudioContext)();
-  master = ac.createGain();
-  master.gain.value = 0.5;
-  master.connect(ac.destination);
-  let step = 0;
-  let next = ac.currentTime + 0.05;
-  const bass = [55, 55, 65.4, 49];
-  const tick = () => {
-    while (next < ac.currentTime + 0.25) {
-      const beat = step % 8;
-      if (beat % 2 === 0) tone(bass[(step >> 3) % 4], next, 0.22, "triangle", 0.25);
-      if (beat % 2 === 1) noise(next, 0.04, 0.06);
-      if (beat === 4) tone(440, next, 0.08, "square", 0.05);
-      next += 0.1875;
-      step++;
-    }
-  };
-  tick();
-  musicTimer = setInterval(tick, 60);
-}
-function tone(f, t, d, type = "sine", v = 0.2) {
-  const o = ac.createOscillator();
-  const g = ac.createGain();
-  o.type = type;
-  o.frequency.value = f;
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(g).connect(master);
-  o.start(t);
-  o.stop(t + d + 0.02);
-}
-let noiseBuf = null;
-function noise(t, d, v) {
-  if (!noiseBuf) {
-    noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.1, ac.sampleRate);
-    const ch = noiseBuf.getChannelData(0);
-    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-  }
-  const s = ac.createBufferSource();
-  const g = ac.createGain();
-  s.buffer = noiseBuf;
-  g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  s.connect(g).connect(master);
-  s.start(t);
-}
-const ding = () => {
-  if (!ac) return;
-  const t = ac.currentTime;
-  tone(880, t, 0.12, "sine", 0.3);
-  tone(1320, t + 0.07, 0.18, "sine", 0.25);
-};
+/* ── audio: one context for the game and the recorder ──
+   Mattercraft resumes its shared AudioContext on the first tap; so does this. */
+const ac = new (window.AudioContext || window.webkitAudioContext)();
+const gameBus = ac.createGain(); // the game's audio layer
+gameBus.connect(ac.destination);
+const unlockAudio = () => ac.state === "suspended" && ac.resume().catch(() => undefined);
+addEventListener("pointerdown", unlockAudio, { capture: true });
+addEventListener("keydown", unlockAudio, { capture: true });
 
 /* ── camera background (optional) ── */
 let camStream = null;
@@ -238,90 +184,12 @@ async function useCamera(on) {
   }
 }
 
-/* ── game state ── */
-const ROUND = 45;
-let playing = false;
-let score = 0;
-let timeLeft = ROUND;
-let done = false;
-const scoreEl = $("#score");
-const timeEl = $("#time");
-
-/* ── lounge mode: hang out with Bobo, no clock, no cans ── */
-let lounge = false;
-const hudEl = $(".lab-hud");
-const loungeBar = $("#loungeBar");
-function enterLounge() {
-  lounge = true;
-  playing = true;
-  done = true;
-  for (const c of cans) c.obj.visible = false;
-  hudEl.classList.add("lab-lounging");
-  loungeBar.hidden = false;
-  // what the component does on the game's onLoungeEnter
-  capture.setHud({ badge: "Lounging with Bobo" });
-  capture.showHint(qs.has("hint"));
-  if (!hubOn) showModeButton(true);
-  log("lounge entered");
-}
-function exitLounge() {
-  lounge = false;
-  setEmote(null);
-  hudEl.classList.remove("lab-lounging");
-  loungeBar.hidden = true;
-  capture.setHud(null);
-  log("lounge exited");
-}
-function setEmote(name) {
-  emote = name && emoteActs[name] ? name : null;
-  if (emote) emoteActs[emote].reset();
-}
-for (const b of document.querySelectorAll("[data-emote]"))
-  b.addEventListener("click", () => {
-    setEmote(b.dataset.emote);
-    log(`emote ${b.dataset.emote}`);
-  });
-$("#loungeExit").addEventListener("click", () => {
-  exitLounge();
-  startRound();
-});
-
-function startRound() {
-  if (lounge) exitLounge();
-  score = 0;
-  timeLeft = ROUND;
-  done = false;
-  playing = true;
-  player.position.set(0, 0, 0);
-  layoutCans();
-  scoreEl.textContent = `0 / ${TARGET}`;
-  capture.setHud({ score: 0, target: TARGET });
-  capture.showHint(qs.has("hint"));
-  showModeButton(false);
-  log("round started");
-}
-
-function collect(c) {
-  c.taken = true;
-  c.obj.visible = false;
-  score++;
-  ding();
-  scoreEl.textContent = `${score} / ${TARGET}`;
-  const hud = { score, target: TARGET };
-  if (score >= TARGET) {
-    done = true;
-    hud.badge = "Run complete!";
-    log("run complete");
-  }
-  capture.setHud(hud);
-}
-
 /* ── input: keys + joystick ── */
 const keys = new Set();
 addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
   keys.add(e.key.toLowerCase());
-  if (e.key.toLowerCase() === "r" && playing) capture.toggle(); // handy on desktop
+  if (e.key.toLowerCase() === "r" && !inRoom()) capture.toggle(); // handy on desktop
 });
 addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 const stick = $("#stick");
@@ -358,11 +226,11 @@ const capture = new ColaCapture({
   endpoint: qs.get("endpoint") || location.origin,
   globeUrl: "/evade/where-is-bobo/",
   source: "cola-run-lab",
-  audioContext: null, // set on Play (needs a tap first)
+  audioContext: ac,
   connectAudio: (dest) => {
-    if (!$("#o-audio").checked || !master) return () => undefined;
-    master.connect(dest);
-    return () => master.disconnect(dest);
+    if (!$("#o-audio").checked) return () => undefined;
+    gameBus.connect(dest);
+    return () => gameBus.disconnect(dest);
   },
   isXR: () => false,
   on: (name, p) => {
@@ -371,52 +239,201 @@ const capture = new ColaCapture({
         `recorded ${p.seconds}s, ${(p.blob.size / 1048576).toFixed(1)} MB ${p.mime} ${p.width}x${p.height}`,
       );
     else if (name === "sent") {
-      log(`sent: asset ${p.id}${p.review ? " (in review)" : " (live)"}`, `/admin/media?asset=${p.id}`);
+      log(
+        `sent: asset ${p.id}${p.review ? " (in review)" : " (live)"}`,
+        `/admin/media?asset=${p.id}`,
+      );
       log("watch it on the globe", p.globeUrl);
-    }
-    else if (name === "error") log(`error (${p.stage}): ${p.message}`);
+    } else if (name === "error") log(`error (${p.stage}): ${p.message}`);
     else log(name);
   },
 });
 
-
-/* ── Bobo's Hideout: the Collector Hub as a game mode ──
-   Same core as the Mattercraft component (hub-core.js is generated from
-   mattercraft/cola-run/HubCore.ts). Tap the mode → unlock (first time) → the
-   portal appears ahead of Bobo → walk him into it → his room builds around
-   him. The OS's Cola Run app brings you back here to play or record. */
-const hub = new CollectorHub({
-  parent: scene,
-  host: overlay,
+/* ── the game: the real OrbHuntGame, in a stand-in Mattercraft context ── */
+const ctx = new LabContext({
+  overlay,
+  camera,
   canvas,
-  getCamera: () => camera,
+  audioContext: ac,
+  audioLayer: gameBus,
   loader,
-  api: qs.get("endpoint") || "",
-  modelUrl: "/hub/evade/room.glb",
-  globeUrl: "/evade/where-is-bobo/index.html",
-  testHint: qs.has("test") ? "BOBO-TEST-CATS" : null,
-  hubCode: qs.get("hub"),
-  exitLabel: "Back to Cola Run",
-  on: (name, p) => {
-    log(`hub: ${name}${typeof p === "string" ? " " + p : ""}`);
-    if (name === "exit") leaveHideout();
-    else if (name === "signedOut") leaveHideout();
-    else if (name === "play") leaveHideout(p.record ? "record" : "play");
-    else if (name === "portal") hub.prompt("Walk Bobo into the portal");
-    else if (name === "focus") {
-      // The welcome tour: aim the room camera at each stop.
+  renderer,
+  scene,
+});
+ctx.addNode("player", player);
+// The lounge timelines Bobo's buttons point at in Mattercraft.
+const EMOTE_FOR = { "lounge-sleep": "Sleep", "lounge-excited": "Alert", "lounge-purr": "Purr" };
+for (const [id, name] of Object.entries(EMOTE_FOR))
+  ctx.addClip(id, { play: () => setEmote(name), stop: () => emote === name && setEmote(null) });
+
+const game = new OrbHuntGame(ctx, { maxOrbs: 32, orbDetail: 32, pickupModel: COLA_URL });
+anchor.add(game.element);
+ctx.addComponent("game", game);
+// The settings the EVADE scene uses in Mattercraft; everything else stays at
+// the component's defaults, so the menu and copy are what players will see.
+game.playerNode.value = "player";
+game.pickupKind.value = "model";
+// AR placement: ?place=1 turns on the game's Place / Reset placement flow. Place
+// drops the scene at the size picked in the Lab panel (what a pinch or a
+// different floor distance does in AR), so a re-place really changes the room.
+// ?place=1 also switches the lab to an AR-style camera: you are the phone. It
+// stays where you stand (drag to look around, scroll or pinch to step closer),
+// and while placing, the scene follows the reticle in the middle of the screen,
+// the way Mattercraft's Instant World Tracker does.
+const AR = qs.has("place");
+game.placementEnabled.value = AR;
+let placeScale = Number(qs.get("scale")) || 1;
+ctx.addClip("lab-place", { play: () => anchor.scale.setScalar(placeScale) });
+ctx.addClip("lab-reset", { play: () => undefined });
+game.placeTimeline.value = "lab-place";
+game.resetTimeline.value = "lab-reset";
+game.logoImage.value = "/brand/medialife-wordmark.webp";
+game.introImage.value = "/evade/cola-run-lab/assets/cola-run-intro.webp";
+game.lounge1Timeline.value = "lounge-sleep";
+game.lounge2Timeline.value = "lounge-excited";
+game.lounge3Timeline.value = "lounge-purr";
+
+// What ColaRunRecorder does with the game's events.
+let hud = {};
+const pushHud = () => capture.setHud({ ...hud });
+const hint = () => capture.showHint(qs.has("hint"));
+const target = () => Number(game.targetCount.value) || undefined;
+game.onGameStart.addListener(() => {
+  hud = { score: 0, target: target() };
+  pushHud();
+  hint();
+  log("round started");
+});
+game.onLoungeEnter.addListener(() => {
+  hud = { badge: "Lounging with Bobo" };
+  pushHud();
+  hint();
+  log("lounge entered");
+});
+game.onLoungeExit.addListener(() => {
+  hud = {};
+  pushHud();
+  setEmote(null);
+  log("lounge exited");
+});
+game.onOrbCollected.addListener((e) => {
+  hud = { ...hud, score: Number(e?.score) || 0, target: Number(e?.target) || target() };
+  pushHud();
+});
+game.onTargetReached.addListener(() => {
+  hud = { ...hud, badge: "Run complete!" };
+  pushHud();
+  log("run complete");
+});
+game.onTimeUp.addListener(() => {
+  hud = { ...hud, badge: "Time's up" };
+  pushHud();
+  log("time up");
+});
+game.onLoungeAction.addListener((e) => log(`lounge: ${e.label}`));
+for (const n of [
+  "onPortalOpen",
+  "onRewardShown",
+  "onRewardModalShown",
+  "onClaimed",
+  "onReplay",
+  "onGameReset",
+])
+  game[n].addListener(() =>
+    log(
+      n
+        .replace(/^on/, "")
+        .replace(/[A-Z]/g, (c) => " " + c.toLowerCase())
+        .trim(),
+    ),
+  );
+
+/* ── Bobo's Hideout: the real CollectorHubMode, bound to the real game ──
+   It adds "Visit Bobo's Hideout" to the game's opening card and menu, the
+   small round icon, and follows the game's placement: Place opens the room,
+   Reset placement removes it, Place again rebuilds it at the new size. The
+   lab only adds what Mattercraft's AR camera would give you: a camera to look
+   around the room with (the component never moves the camera). */
+// What ColaRunRecorder looks like to Bobo's Hideout (it finds it in the scene,
+// moves it to the bottom centre with BOBO OS as home and hides it in the room).
+const lobs = (v, fn) => ({
+  _v: v,
+  get value() {
+    return this._v;
+  },
+  set value(x) {
+    this._v = x;
+    fn(x);
+  },
+  addListener() {},
+  removeListener() {},
+});
+ctx.addComponent("recorder", {
+  element: new THREE.Group(),
+  children: [],
+  onRecordStart: { addListener() {}, removeListener() {} },
+  buttonVisible: lobs(true, (v) => capture.setVisible(v)),
+  corner: lobs(capture.settings.corner, (v) => {
+    capture.settings.corner = v;
+    $("#o-corner").value = v;
+    capture.apply();
+  }),
+  startRecording: () => capture.status === "idle" && capture.toggle(),
+});
+const mode = new CollectorHubMode(ctx, {});
+anchor.add(mode.element);
+mode.gameNode.value = "game"; // what picking the game in the Game dropdown does
+mode.endpoint.value = qs.get("endpoint") || "";
+mode.modelUrl.value = "/hub/evade/room.glb";
+mode.globeUrl.value = "/evade/where-is-bobo/index.html";
+mode.showTestCode.value = qs.has("test");
+// BOBO OS as home: ?home=always to try it without a code (default: after activation).
+if (qs.get("home")) mode.homeScreen.value = qs.get("home");
+// The lab's stick registers the way the EVADE JoystickController does, so the
+// hideout's Joystick Side (Auto) finds it. ?stick=left moves it to the left.
+if (qs.get("stick") === "left") document.getElementById("stick")?.classList.add("left");
+(window.__mattercraftJoysticks ||= []).push({ joystickContainer: document.getElementById("stick") });
+// Around the viewer in the AR camera; Bobo-sized in the follow camera.
+mode.roomFit.value = AR ? "bothFloors" : "matchBobo";
+// Bobo's excited animation as the room builds, a purr once it's done.
+mode.buildTimeline.value = "lounge-excited";
+mode.roomTimeline.value = "lounge-purr";
+for (const k of ["onEnter", "onRoomReady", "onRoomMoving", "onLeave", "onUnlocked", "onAlert"])
+  mode[k].addListener(() => log(`hideout: ${k.replace(/^on/, "")}`));
+game.onHideoutEnter.addListener(() => {
+  hud = { badge: "In Bobo's Hideout" };
+  pushHud();
+  log("hideout mode");
+});
+game.onHideoutExit.addListener(() => log("hideout mode off"));
+game.onPlace.addListener(() => log(`placed (scene size ${placeScale})`));
+game.onResetPlacement.addListener(() => log("reset placement"));
+
+// The room camera: the tour's focus events steer it, as an AR viewer's feet would.
+let hub = null;
+ctx.constructed.then(() => {
+  hub = mode.hub;
+  const orig = mode._onHub.bind(mode);
+  mode._onHub = (name, p) => {
+    orig(name, p);
+    if (name === "focus" && AR) {
+      phone.look = p ? p.target.clone() : null;
+    } else if (name === "focus") {
       resetOrbit();
       if (p) {
         const f = hub.focus();
         orbit.pan.copy(p.target).sub(f.target);
         const base =
-          (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.1 : 0.8);
-        orbit.zoom = Math.min(1, Math.max(0.2, (p.distance * (camera.aspect < 0.8 ? 1.6 : 1)) / base));
+          (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) *
+          (camera.aspect < 0.8 ? 1.1 : 0.8);
+        orbit.zoom = Math.min(
+          1,
+          Math.max(0.2, (p.distance * (camera.aspect < 0.8 ? 1.6 : 1)) / base),
+        );
       }
-    }
-  },
+    } else if (name !== "state") log(`hub: ${name}`);
+  };
 });
-let hubOn = false; // the hideout mode is active (portal or room)
 let hubCam = 0; // 0 = follow cam, 1 = room cam
 const hubCamPos = new THREE.Vector3();
 const hubLook = new THREE.Vector3();
@@ -427,95 +444,71 @@ const resetOrbit = () => {
   orbit.zoom = 1;
   orbit.pan.set(0, 0, 0);
 };
-const PLAYER_H = 1.1;
-const inRoom = () => hubOn && hub.state !== "portal";
-function showModeButton(on) {
-  hub.modeButton(on ? () => openHideout() : null);
+const inRoom = () =>
+  !!hub && (hub.state === "building" || hub.state === "live" || hub.state === "leaving");
+const openHideout = () => {
+  unlockAudio();
+  mode.open();
+};
+
+let wasIn = false;
+function hubStep() {
+  // In the room the record button steps aside (BOBO OS has its own Record);
+  // the joystick stays: it walks Bobo around his room.
+  // (The record button steps aside in the room on its own: CollectorHubMode does it.)
+  const inside = inRoom();
+  if (inside !== wasIn) {
+    wasIn = inside;
+    if (inside) resetOrbit();
+  }
+  viewUi.show(AR || (!!hub && (hub.state === "building" || hub.state === "live")));
 }
 
-async function openHideout() {
-  if (hubOn) return;
-  if (!ac) {
-    audioStart();
-    capture.configure({ audioContext: ac });
-  }
-  $("#intro").hidden = true;
-  if (!lounge) enterLounge();
-  loungeBar.hidden = true;
-  showModeButton(false);
-  hubOn = true;
-  hub.prompt("Opening the portal…");
-  try {
-    await hub.load();
-  } catch (e) {
-    log(`hub load failed: ${e?.message || e}`);
-    hub.prompt(null);
-    hubOn = false;
-    loungeBar.hidden = false;
-    showModeButton(true);
-    return;
-  }
-  hub.prompt(null);
-  const ok = await hub.ensureAccess();
-  if (!ok) {
-    hubOn = false;
-    loungeBar.hidden = false;
-    showModeButton(true);
-    return;
-  }
-  // Room Bobo the same size as the player's Bobo; the portal 3.2 m ahead of him.
-  hub.placeNear(player.position, camera.position, 3.2, PLAYER_H / hub.boboHeight());
-  hub.showPortal();
-  hub.prompt("Walk Bobo into the portal");
-  stick.hidden = false;
-  log("hideout: portal open");
+/* ── the AR-style camera (?place=1) ── */
+const PHONE_START = { x: 0, y: 3.2, z: 8.5, yaw: 0, pitch: -0.36 };
+const phone = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, look: null };
+const resetPhone = () => {
+  phone.pos.set(PHONE_START.x, PHONE_START.y, PHONE_START.z);
+  phone.yaw = PHONE_START.yaw;
+  phone.pitch = PHONE_START.pitch;
+  phone.look = null;
+};
+resetPhone();
+function stepPhone(dist) {
+  const f = tmp.set(-Math.sin(phone.yaw), 0, -Math.cos(phone.yaw));
+  phone.pos.addScaledVector(f, dist);
+  const r = Math.hypot(phone.pos.x, phone.pos.z);
+  if (r > 18) phone.pos.multiplyScalar(18 / r);
+  phone.pos.y = PHONE_START.y;
 }
-
-function hubStep(dt) {
-  hub.update(dt);
-  if (!hubOn) {
-    viewUi.show(false);
-    hubCam = Math.max(0, hubCam - dt * 1.2);
-    return;
-  }
-  if (hub.state === "portal" && player.visible && hub.distanceToPortal(player.position) < 0.75) {
-    // Through the portal: the room's Bobo takes over and walks home.
-    player.visible = false;
-    stick.hidden = true;
-    hudEl.hidden = true; // the room has its own top bar
-    capture.setVisible(false);
-    resetOrbit();
-    hub.enter({ walk: true });
-    log("hideout: entered");
-  }
-  const want = hub.state === "building" || hub.state === "live" || hub.state === "leaving" ? 1 : 0;
-  viewUi.show(hubOn && (hub.state === "building" || hub.state === "live"));
-  hubCam += (want - hubCam) * (1 - Math.exp(-2.5 * dt));
-}
-
-async function leaveHideout(then) {
-  if (!hubOn) return;
-  await hub.leave();
-  // Bobo steps back out of the portal, towards the camera.
-  const p = hub.portalPosition(new THREE.Vector3());
-  const toCam = tmp.set(camera.position.x - p.x, 0, camera.position.z - p.z).normalize();
-  player.position.set(p.x + toCam.x * 1.1, 0, p.z + toCam.z * 1.1);
-  player.rotation.y = Math.atan2(toCam.x, toCam.z);
-  player.visible = true;
-  hubOn = false;
-  hub.hide();
-  stick.hidden = false;
-  hudEl.hidden = false;
-  capture.setVisible(true);
-  log("hideout: left");
-  if (then === "play" || then === "record") {
-    startRound();
-    if (then === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 400);
-    showModeButton(false);
-  } else {
-    loungeBar.hidden = false;
-    showModeButton(true);
-  }
+// Instant World Tracker stand-in: the reticle Mattercraft draws while placing.
+const reticle = new THREE.Mesh(
+  new THREE.RingGeometry(0.62, 0.8, 48),
+  new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+  }),
+);
+reticle.rotation.x = -Math.PI / 2;
+reticle.position.y = 0.02;
+reticle.visible = false;
+scene.add(reticle);
+const ray = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const hit = new THREE.Vector3();
+function followReticle(dt) {
+  const placing = AR && game.placementEnabled.value && !game.isPlaced;
+  reticle.visible = false;
+  if (!placing) return;
+  ray.setFromCamera({ x: 0, y: 0 }, camera);
+  if (!ray.ray.intersectPlane(groundPlane, hit)) return;
+  const d = hit.distanceTo(camera.position);
+  if (d < 1.5 || d > 22) return;
+  anchor.position.lerp(hit, 1 - Math.exp(-12 * dt));
+  reticle.position.set(anchor.position.x, 0.02, anchor.position.z);
+  reticle.visible = true;
 }
 
 // In the room: drag to look around, scroll or pinch to zoom, right-drag,
@@ -534,22 +527,34 @@ function panBy(dx, dy) {
 const pointers = new Map();
 let drag = null;
 let pinch = null;
-canvas.addEventListener("contextmenu", (e) => inRoom() && e.preventDefault());
+canvas.addEventListener("contextmenu", (e) => (AR || inRoom()) && e.preventDefault());
 canvas.addEventListener("pointerdown", (e) => {
-  if (!inRoom()) return;
+  if (!AR && !inRoom()) return;
+  // Adjusting the room: its drags and pinches belong to the room, not the camera.
+  if (hub?.adjusting) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2 && hub?.state === "live" && mode.allowAdjust.value) {
+    pinch = null; // two fingers in the built room resize and turn it
+    drag = null;
+    return;
+  }
   if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
-    pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), zoom: orbit.zoom, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+    pinch = {
+      d: Math.hypot(a.x - b.x, a.y - b.y),
+      zoom: orbit.zoom,
+      mx: (a.x + b.x) / 2,
+      my: (a.y + b.y) / 2,
+    };
     drag = null;
   } else
     drag = {
       x: e.clientX,
       y: e.clientY,
-      yaw: orbit.yaw,
-      pitch: orbit.pitch,
+      yaw: AR ? phone.yaw : orbit.yaw,
+      pitch: AR ? phone.pitch : orbit.pitch,
       id: e.pointerId,
-      pan: e.button === 2 || e.shiftKey,
+      pan: !AR && (e.button === 2 || e.shiftKey),
     };
 });
 addEventListener("pointermove", (e) => {
@@ -557,6 +562,11 @@ addEventListener("pointermove", (e) => {
   if (pinch && pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     const d = Math.hypot(a.x - b.x, a.y - b.y);
+    if (AR) {
+      stepPhone((d - pinch.d) * 0.02);
+      pinch.d = d;
+      return;
+    }
     if (d > 10) setZoom(pinch.zoom * (pinch.d / d));
     const mx = (a.x + b.x) / 2,
       my = (a.y + b.y) / 2;
@@ -572,6 +582,12 @@ addEventListener("pointermove", (e) => {
     drag.y = e.clientY;
     return;
   }
+  if (AR) {
+    phone.look = null; // looking around yourself ends a tour's "look here"
+    phone.yaw = drag.yaw + (e.clientX - drag.x) * 0.005;
+    phone.pitch = Math.min(0.6, Math.max(-1.25, drag.pitch + (e.clientY - drag.y) * 0.004));
+    return;
+  }
   orbit.yaw = drag.yaw - (e.clientX - drag.x) * 0.006;
   orbit.pitch = Math.min(1.1, Math.max(0.05, drag.pitch + (e.clientY - drag.y) * 0.004));
 });
@@ -585,6 +601,11 @@ addEventListener("pointercancel", endPointer);
 canvas.addEventListener(
   "wheel",
   (e) => {
+    if (AR) {
+      e.preventDefault();
+      stepPhone(-e.deltaY * 0.01);
+      return;
+    }
     if (!inRoom()) return;
     e.preventDefault();
     setZoom(orbit.zoom * Math.exp(e.deltaY * 0.0012));
@@ -592,8 +613,9 @@ canvas.addEventListener(
   { passive: false },
 );
 const viewUi = mountViewControls({
-  onZoom: (dir) => setZoom(orbit.zoom * (dir > 0 ? 0.85 : 1.18)),
-  onRecenter: resetOrbit,
+  onZoom: (dir) =>
+    AR ? stepPhone(dir > 0 ? 1.2 : -1.2) : setZoom(orbit.zoom * (dir > 0 ? 0.85 : 1.18)),
+  onRecenter: () => (AR ? resetPhone() : resetOrbit()),
 });
 
 /* ── settings panel ── */
@@ -640,33 +662,46 @@ toggle.addEventListener("click", () => {
   toggle.setAttribute("aria-expanded", String(!p.hidden));
 });
 
-$("#play").addEventListener("click", async () => {
-  audioStart();
-  // browsers only allow audio after a tap, so the recorder gets it now
-  capture.configure({ audioContext: ac });
-  if ($("#useCam").checked) await useCamera(true);
-  $("#intro").hidden = true;
-  startRound();
-});
-$("#lounge").addEventListener("click", async () => {
-  audioStart();
-  capture.configure({ audioContext: ac });
-  if ($("#useCam").checked) await useCamera(true);
-  $("#intro").hidden = true;
-  enterLounge();
-});
-$("#hideout").addEventListener("click", () => openHideout());
-$("#o-lounge").addEventListener("click", () => {
-  $("#intro").hidden = true;
-  if (!ac) {
-    audioStart();
-    capture.configure({ audioContext: ac });
-  }
-  if (lounge) {
-    exitLounge();
-    startRound();
-  } else enterLounge();
-});
+$("#o-hideout").addEventListener("click", () => openHideout());
+// BOBO OS look: the same three properties as on CollectorHubMode in Mattercraft.
+for (const [id, prop] of [
+  ["o-osSize", "osSize"],
+  ["o-osOpacity", "osOpacity"],
+  ["o-osDim", "osDim"],
+  ["o-roomScale", "roomScale"],
+  ["o-maxRoomScale", "maxRoomScale"],
+  ["o-brightness", "brightness"],
+  ["o-viewerSpot", "viewerSpot"],
+  ["o-roomDrop", "roomDrop"],
+  ["o-eyeLevel", "eyeLevel"],
+]) {
+  const el = $("#" + id);
+  const out = el.parentElement.querySelector("output");
+  const set = () => {
+    mode[prop].value = Number(el.value);
+    if (out) out.textContent = Number(el.value).toFixed(2);
+  };
+  el.addEventListener("input", set);
+  set();
+}
+{
+  const el = $("#o-placeScale");
+  const out = el.parentElement.querySelector("output");
+  el.value = String(placeScale);
+  const set = () => {
+    placeScale = Number(el.value);
+    if (out) out.textContent = `${placeScale.toFixed(2)}×`;
+  };
+  el.addEventListener("input", set);
+  set();
+  $("#o-placeRow").hidden = !qs.has("place");
+  $("#o-placeLink").hidden = qs.has("place");
+}
+$("#o-intro").addEventListener("click", () => game.showIntro());
+$("#useCam").addEventListener("change", (e) => useCamera(e.target.checked));
+$("#o-lounge").addEventListener("click", () =>
+  game.isLounging ? game.startGame() : game.enterLounge(),
+);
 
 /* ── loop ── */
 const clock = new THREE.Clock();
@@ -683,9 +718,11 @@ addEventListener("resize", resize);
 resize();
 
 let moving = 0;
+const pWorld = new THREE.Vector3();
+let lookY = 0.8;
 function step() {
   const dt = Math.min(0.1, clock.getDelta());
-  if (playing && !inRoom()) {
+  if (player.visible) {
     const mv = new THREE.Vector2(stickV.x, stickV.y);
     if (keys.has("arrowleft") || keys.has("a")) mv.x -= 1;
     if (keys.has("arrowright") || keys.has("d")) mv.x += 1;
@@ -693,10 +730,12 @@ function step() {
     if (keys.has("arrowdown") || keys.has("s")) mv.y += 1;
     if (mv.length() > 1) mv.normalize();
     const speed = 5.2;
+    // In AR the joystick is camera-relative (as the EVADE joystick is).
+    if (AR) mv.rotateAround(new THREE.Vector2(), -phone.yaw);
     if (mv.lengthSq() > 0.01) {
       player.position.x += mv.x * speed * dt;
       player.position.z += mv.y * speed * dt;
-      const lim = 13.2;
+      const lim = 19.2;
       const d = Math.hypot(player.position.x, player.position.z);
       if (d > lim) player.position.multiplyScalar(lim / d);
       const yaw = Math.atan2(mv.x, mv.y);
@@ -713,41 +752,70 @@ function step() {
       runAct.weight = moving;
       idleAct.weight = (1 - moving) * (1 - em);
     }
-    for (const c of cans) {
-      if (c.taken) continue;
-      if (player.position.distanceTo(tmp.set(c.obj.position.x, 0, c.obj.position.z)) < 1.3)
-        collect(c);
-    }
-    if (!done && !lounge) {
-      timeLeft = Math.max(0, timeLeft - dt);
-      if (timeLeft === 0) {
-        done = true;
-        capture.setHud({ score, target: TARGET, badge: "Time's up" });
-        log("time up");
-      }
-    }
-    timeEl.textContent = timeLeft.toFixed(1);
   }
   mixer?.update(dt);
-  for (const c of cans) c.mixer?.update(dt);
-  hubStep(dt);
-  if (hubCam > 0.001) {
+  ctx.step(dt); // triggers, then the game's and the hideout's onBeforeRender
+  hubStep();
+  if (AR) {
+    // You are the phone: it stays where you stand.
+    if (phone.look) {
+      const to = tmp.copy(phone.look).sub(phone.pos);
+      const wantYaw = Math.atan2(-to.x, -to.z);
+      const wantPitch = Math.atan2(to.y, Math.hypot(to.x, to.z));
+      const k = 1 - Math.exp(-3 * dt);
+      let dy = wantYaw - phone.yaw;
+      dy = ((((dy + Math.PI) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
+      phone.yaw += dy * k;
+      phone.pitch += (Math.max(-1.25, Math.min(0.6, wantPitch)) - phone.pitch) * k;
+    }
+    camera.position.copy(phone.pos);
+    camera.rotation.set(phone.pitch, phone.yaw, 0, "YXZ");
+    camera.updateMatrixWorld();
+    followReticle(dt);
+    renderer.render(scene, camera);
+    capture.frame();
+    requestAnimationFrame(step);
+    return;
+  }
+  hubCam += ((inRoom() && hub.state !== "leaving" ? 1 : 0) - hubCam) * (1 - Math.exp(-2.5 * dt));
+  const pw = player.getWorldPosition(pWorld);
+  if (hubCam > 0.001 && hub) {
     // In the hideout: orbit the room (drag to look around), blended from the follow cam.
     const f = hub.focus();
     const yaw = f.yaw + orbit.yaw;
     const dist =
-      (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.aspect < 0.8 ? 1.1 : 0.8) * orbit.zoom;
+      (f.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2)) *
+      (camera.aspect < 0.8 ? 1.1 : 0.8) *
+      orbit.zoom;
     f.target.add(orbit.pan);
-    hubCamPos.set(Math.sin(yaw) * Math.cos(orbit.pitch), Math.sin(orbit.pitch), Math.cos(yaw) * Math.cos(orbit.pitch))
-      .multiplyScalar(dist).add(f.target);
-    camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5)).lerp(hubCamPos, hubCam);
+    hubCamPos
+      .set(
+        Math.sin(yaw) * Math.cos(orbit.pitch),
+        Math.sin(orbit.pitch),
+        Math.cos(yaw) * Math.cos(orbit.pitch),
+      )
+      .multiplyScalar(dist)
+      .add(f.target);
+    camTarget
+      .copy(pw)
+      .add(tmp.set(0, 5.5, 8.5))
+      .lerp(hubCamPos, hubCam);
     camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
-    hubLook.lerp(tmp.copy(player.position).setY(player.position.y + 0.8).lerp(f.target, hubCam), 1 - Math.exp(-6 * dt));
+    hubLook.lerp(
+      tmp
+        .copy(pw)
+        .setY(pw.y + 0.8)
+        .lerp(f.target, hubCam),
+      1 - Math.exp(-6 * dt),
+    );
     camera.lookAt(hubLook);
   } else {
-    camTarget.copy(player.position).add(tmp.set(0, 5.5, 8.5));
+    camTarget.copy(pw).add(tmp.set(0, 5.5, 8.5));
     camera.position.lerp(camTarget, 1 - Math.exp(-4 * dt));
-    hubLook.set(player.position.x, player.position.y + 0.8, player.position.z);
+    // While lounging, aim below Bobo so he sits above the game's lounge bar.
+    const wantY = game.isLounging ? (camera.aspect < 0.8 ? -1.6 : -1.1) : 0.8;
+    lookY += (wantY - lookY) * (1 - Math.exp(-4 * dt));
+    hubLook.set(pw.x, pw.y + lookY, pw.z);
     camera.lookAt(hubLook);
   }
 
@@ -759,15 +827,20 @@ function step() {
 
 loadModels()
   .then(() => {
-    layoutCans();
+    // Deep links: ?mode=play|record|lounge|hideout (from the hideout's Cola Run app), ?hub=CODE (a product QR).
+    // A deep link skips the intro; a plain visit gets the game's own intro.
+    const deep = qs.get("mode") || (qs.get("hub") ? "hideout" : "");
+    game.showIntroOnLoad.value = !deep;
+    // Mattercraft finishes building the scene before the game binds its
+    // player and opens the intro; same order here.
+    ctx.markConstructed();
     log("scene ready");
     window.__lab.ready = true;
-    // Deep links: ?mode=play|record|hideout (from the hideout's Cola Run app), ?hub=CODE (a product QR).
-    const mode = qs.get("mode") || (qs.get("hub") ? "hideout" : "");
-    if (mode === "hideout") openHideout();
-    else if (mode === "play" || mode === "record") {
-      $("#play").click();
-      if (mode === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 600);
+    if (deep === "hideout") ctx.constructed.then(() => !qs.get("hub") && openHideout());
+    else if (deep === "lounge") game.enterLounge();
+    else if (deep === "play" || deep === "record") {
+      game.startGame();
+      if (deep === "record") setTimeout(() => capture.status === "idle" && capture.toggle(), 600);
     }
   })
   .catch((e) => log(`model load failed: ${e?.message || e}`));
@@ -776,15 +849,33 @@ requestAnimationFrame(step);
 /* ── test hook ── */
 window.__lab = {
   ready: false,
+  THREE,
   capture,
+  game,
+  ctx,
   DEFAULT_SETTINGS,
-  play: () => $("#play").click(),
-  collectAll: () => cans.filter((c) => !c.taken).forEach(collect),
+  play: () => game.startGame(),
+  // Collect every live can through the game's own pickup path.
+  collectAll: () => game._orbs.filter((o) => o.alive && o.active).forEach((o) => game._collect(o)),
   status: () => capture.status,
-  state: () => ({ playing, score, timeLeft, done, lounge, emote }),
-  lounge: () => enterLounge(),
-  hub,
+  state: () => ({
+    state: game._state,
+    score: game._score,
+    timeLeft: game._timeLeft,
+    lounge: game.isLounging,
+    emote,
+  }),
+  lounge: () => game.enterLounge(),
+  mode,
+  anchor,
+  get hub() {
+    return hub;
+  },
   hideout: () => openHideout(),
+  setPlaceScale: (v) => (placeScale = v),
+  phone,
+  resetPhone,
+  stepPhone,
   walkTo: (x, z) => player.position.set(x, 0, z),
   player,
   emote: (n) => setEmote(n),
