@@ -50,10 +50,19 @@ const BRIDGE_GYRO_MS = 1500, BRIDGE_HOLD_MS = 400;
 // picture, and its own saved painting. The cat's back picture is the print seen through the acrylic (mirrored),
 // so the canvas is flipped there; the can's back picture shows the same can body, so the canvas is only moved
 // onto it (the offset comes with the can's outline file, from scripts/build-spray-bobo/build_stencil.py).
+// Optional per piece (so a new print is only data): tdir: where its image targets and layout.json live (default:
+// Off the Chain's); view: the height (m) it is drawn at in AR (a big print is drawn at charm size, so the sticker,
+// hover and hops keep their look; the camera has no sense of real size anyway); sprayK: a wider spray on a big
+// print; near: past this many cm the hint says come closer; them: him / her / it in the tips; ask: the decal question.
 const PIECES = {
-  bobo: { k: 'bobo', name: 'Bobo', title: 'MY BOBO', art: 'cat', print: 'kc-bobo.jpg', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, mirrorPair: true, key: 'current', found: 'Found Bobo! Tap the spray can', back: 'Your Bobo is back', line: 'Sprayed on my EVADE keychain' },
-  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: {}, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain' },
+  bobo: { k: 'bobo', name: 'Bobo', title: 'MY BOBO', art: 'cat', print: 'kc-bobo.jpg', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, mirrorPair: true, key: 'current', found: 'Found Bobo! Tap the spray can', back: 'Your Bobo is back', line: 'Sprayed on my EVADE keychain', them: 'him', ask: 'Dress up Bobo?', seek: 'Bobo' },
+  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: {}, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain', them: 'it', ask: 'Deck out your can?', seek: 'the can' },
+  // the Sukeban tee: the whole print (teal panel too) is tracked, only the character is the canvas (build_sukeban.py)
+  sukeban: { k: 'sukeban', name: 'Sukeban', title: 'MY SUKEBAN', art: 'sukeban', print: 'tee-sukeban.jpg', targets: ['tee-sukeban'], flip: {}, mirrorPair: false, key: 'sukeban', found: 'Found Sukeban! Tap the spray can', back: 'Your Sukeban is back', line: 'Sprayed on my Sukeban tee', them: 'her', ask: 'Dress up Sukeban?', seek: 'the Sukeban tee', evade: false,
+    tdir: HERE + 'targets/', view: 0.1, sprayK: 1.6, near: 90 },
 };
+const tdir = (P) => P.tdir || KC + 'image-targets/';
+const SEEK = ((a) => a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1])(Object.values(PIECES).map((P) => P.seek));   // "Bobo, the can or the Sukeban tee"
 const PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
 
 // ---------------------------------------------------------------- sound (made here, no files)
@@ -111,14 +120,15 @@ const sound = {
 const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 const getJson = (u) => fetch(u).then((r) => r.json());
 const assets = Promise.all([
-  getJson(KC + 'image-targets/layout.json'),
+  Promise.all([...new Set(Object.values(PIECES).map(tdir))].map((d) => getJson(d + 'layout.json')))   // every folder's sizes, in one map
+    .then((ls) => ({ targets: Object.assign({}, ...ls.map((l) => l.targets)) })),
   loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null),   // for telling the cat's two sides apart
-  Promise.all(Object.values(PIECES).flatMap((P) => P.targets).map((n) => getJson(KC + `image-targets/${n}.json`))),
+  Promise.all(Object.values(PIECES).flatMap((P) => P.targets.map((n) => getJson(tdir(P) + `${n}.json`)))),
   Promise.all(Object.values(PIECES).map((P) => Promise.all([loadImg(HERE + `art/${P.art}-mask.png`), loadImg(HERE + `art/${P.art}-lines.png`), getJson(HERE + `art/${P.art}-outline.json`)]))),
 ]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
-Promise.all([assets, xrReady, loadSaved()]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = Object.values(PIECES).some((P) => P.saved) ? 'Find my charms' : 'Start painting'; $('load').hidden = true; })
+Promise.all([assets, xrReady, loadSaved()]).then(() => { loaded = true; $('b-start').disabled = false; $('b-start').textContent = Object.values(PIECES).some((P) => P.saved) ? 'See my paintings' : 'Start painting'; $('load').hidden = true; })
   .catch((e) => { console.error(e); showError('Could not load the experience', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- the paint (a 2D canvas the AR plane shows)
@@ -224,7 +234,7 @@ async function storeSaved(rec) {
   cp.saved = rec;
   try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(rec, cp.key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch (e) { console.warn('save', e); return false; }
 }
-async function dropSaved() { try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; }
+async function dropSaved() { try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; clearDecals(cp); }
 
 // ---------------------------------------------------------------- three.js scene
 let scene, camera, renderer;
@@ -250,7 +260,8 @@ function buildScene(xr, [layout, lumImg, , arts]) {
   usePiece('bobo');
 }
 function buildPiece(P, L, [maskImg, linesImg, outline]) {
-  const W = P.W = L.widthM, H = P.H = L.heightM;
+  const vk = P.view ? P.view / L.heightM : 1;               // drawn at this share of its real size
+  const W = P.W = L.widthM * vk, H = P.H = L.heightM * vk; P.m = 1 / vk;   // P.m: AR units to real metres
   const F = P.F = new THREE.Group(); F.visible = false; A.add(F);
   P.xf = outline.sides || {};
   const paint = P.paint = makePaint(); paint.init(maskImg, linesImg);
@@ -306,6 +317,7 @@ function buildPiece(P, L, [maskImg, linesImg, outline]) {
   P.sticker.renderOrder = 12; P.stickerPivot.add(P.sticker);
   P.shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.95), new THREE.MeshBasicMaterial({ map: shadowTexture(maskImg), transparent: true, depthWrite: false, opacity: 0 }));
   P.shadow.position.z = 0.0002; P.shadow.renderOrder = 9; F.add(P.shadow);
+  P.decals = []; P.decalGroup = new THREE.Group(); P.decalGroup.visible = false; decalHost(P, 'flat');
   P.splats = makeSplats(); F.add(P.splats.points);
   P.orbit = makeOrbit(); F.add(P.orbit.mesh);
   if (DEBUG) F.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0xff00ff })));
@@ -480,8 +492,9 @@ const onT = (n) => (TS[n] && TS[n].tracked ? TS[n] : null);
 const pieceInView = (k) => PIECES[k].targets.some(onT);
 const pieceSeen = (k) => Math.max(...PIECES[k].targets.map((n) => (TS[n] ? TS[n].seen : -1e9)));
 // which charm: while painting, the one being painted; otherwise whichever is in view (the current one first)
+const busy = () => mode === 'paint' || mode === 'decal';   // working on a charm: it stays the current one
 function pickPiece(now) {
-  if (!cp || mode === 'paint' || pieceInView(cp.k)) return;
+  if (!cp || busy() || pieceInView(cp.k)) return;
   if (cp.F.visible && now - pieceSeen(cp.k) < 700) return;
   const k = Object.keys(PIECES).find(pieceInView); if (!k || k === cp.k) return;
   switchPiece(k);
@@ -501,16 +514,16 @@ function pickSide(now) {
     // the same charm, so the canvas stays put (the pose is bridged) unless it lasts: then the keychain was
     // turned over. The can's two sides are different prints, so that is a turn straight away.
     soleSince = soleSince || now;
-    if (mode !== 'paint' || now - soleSince > (cp.mirrorPair ? 1500 : 250)) { side = other(side); sideLead = 0; diag.sides++; }
+    if (!busy() || now - soleSince > (cp.mirrorPair ? 1500 : 250)) { side = other(side); sideLead = 0; diag.sides++; }
   } else soleSince = 0;
-  if (side && !onT(side) && now - TS[side].seen > 700 && mode !== 'paint') side = null;
+  if (side && !onT(side) && now - TS[side].seen > 700 && !busy()) side = null;
   if (!a && !b) return side;
   if (!side) side = a && b ? (a.foundAt <= b.foundAt ? na : nb) : a ? na : nb;
   if (cp.mirrorPair && a && b && now - sideAt > 120) {
     sideAt = now; const cam = camLuma();
     const sa = cam ? sideScore(a, cam) : null, sb = cam ? sideScore(b, cam) : null;
     if (sa != null && sb != null) sideLead = sideLead * 0.9 + (sa - sb) * 0.1;
-    const need = mode === 'paint' ? 0.15 : 0.05;             // while painting it takes a clear, lasting lead to turn the canvas over
+    const need = busy() ? 0.15 : 0.05;             // while painting it takes a clear, lasting lead to turn the canvas over
     const want = sideLead > need ? na : sideLead < -need ? nb : side;
     if (want !== side) { diag.sides++; side = want; }
   }
@@ -629,9 +642,9 @@ function aimAt(px, py) {
   _loc.copy(_hit); F.worldToLocal(_loc);
   aim.u = _loc.x / W + 0.5; aim.v = 0.5 - _loc.y / H;
   aim.on = aim.u > -0.05 && aim.u < 1.05 && aim.v > -0.05 && aim.v < 1.05;
-  aim.dist = _hit.distanceTo(camera.position) / A.scale.x;   // metres
+  aim.dist = _hit.distanceTo(camera.position) / A.scale.x;   // metres at the size the piece is drawn (real: x cp.m)
   aim.cos = Math.abs(ray.ray.direction.dot(_n));
-  const rM = aim.dist * Math.tan(NOZZLES[nozzle].a * Math.PI / 180) / Math.sqrt(Math.max(aim.cos, 0.3));
+  const rM = aim.dist * Math.tan(NOZZLES[nozzle].a * Math.PI / 180) / Math.sqrt(Math.max(aim.cos, 0.3)) * (cp.sprayK || 1);
   aim.rPx = clamp(rM / W * TW, 2.5, 150);
   // the footprint on screen: project a point one radius along the charm's x
   _sc.copy(_hit).project(camera); _sc2.set(1, 0, 0).applyQuaternion(A.quaternion).multiplyScalar(rM * A.scale.x).add(_hit).project(camera);
@@ -660,15 +673,17 @@ function setMode(m) {
   $('meter').hidden = m !== 'paint';
   previewMesh && (previewMesh.visible = m === 'ready');
   if (m !== 'paint') { stopSpray(); setCamMode(false); }
+  if (m !== 'alive') hideAsk();
+  if (m !== 'decal') { selectLayer(null); ed.pts.clear(); ed.g = null; }
+  if (!$('opts').hidden) closeOpts();
   syncRec();
 }
 // camera mode while painting: the tools step aside and the shutter takes the bottom centre; the can stays,
 // so you can film yourself spraying
 function setCamMode(on) {
-  hud.classList.toggle('cam', on); toggle('b-cam', on, on ? 'Back to the paint tools' : 'Camera: take a photo or film');
+  hud.classList.toggle('cam', on);
   if (on) hint('Tap the shutter for a photo, hold it to film. Keep spraying', 2600);
 }
-$('b-cam').onclick = () => { setCamMode(!hud.classList.contains('cam')); buzz(6); };
 $('b-back').onclick = () => { setCamMode(false); buzz(6); };
 let hintT = 0;
 function hint(text, ms = 0) { $('hint').textContent = text || ''; clearTimeout(hintT); if (ms) hintT = setTimeout(() => { if ($('hint').textContent === text) $('hint').textContent = ''; }, ms); }
@@ -692,19 +707,59 @@ setNozzle(1);
 $('b-size').onclick = () => { setNozzle((nozzle + 1) % NOZZLES.length); buzz(6); sound.tone(500, 700, 0.06, 0.05, 'triangle'); };
 function setLevel(l) { level = clamp(l, 0, 1); $('lvl').style.transform = `scaleY(${level.toFixed(3)})`; }
 setLevel(1);
-const toggle = (id, on, label) => { $(id).setAttribute('aria-pressed', String(on)); $(id).setAttribute('aria-label', label); };
-$('b-lines').onclick = () => { paint.linesOn = !paint.linesOn; paint.dirty = true; toggle('b-lines', paint.linesOn, paint.linesOn ? 'Outline on' : 'Outline off'); toast(paint.linesOn ? 'Outline on' : 'Outline off', 900); };
-$('b-primer').onclick = () => { paint.primer = !paint.primer; paint.dirty = true; toggle('b-primer', paint.primer, paint.primer ? 'White base coat on' : 'White base coat off: paint over the print'); toast(paint.primer ? 'White base' : 'Over the print', 900); };
-$('b-aim').onclick = () => { aim.finger = !aim.finger; toggle('b-aim', aim.finger, aim.finger ? 'Paint with your finger. Tap to aim with your phone instead' : 'Aim with your phone. Tap to paint with your finger instead'); hint(aim.finger ? 'Paint with your finger on the screen' : 'Aim your phone like a can and hold the can to spray', 2600); };
-toggle('b-aim', aim.finger, aim.finger ? 'Paint with your finger. Tap to aim with your phone instead' : 'Aim with your phone. Tap to paint with your finger instead');
-let clearArmed = 0;
-$('b-clear').onclick = () => {
-  if (performance.now() - clearArmed > 2500) { clearArmed = performance.now(); hint('Tap the bin again to clear your painting', 2500); return; }
-  clearArmed = 0; paint.pushUndo(); paint.clear(); sound.whoosh(); hint('Clean canvas. Undo brings it back', 2200); updateUndo();
+// ---------------------------------------------------------------- options (one sheet, with words, instead of a column of icons)
+const opts = $('opts');
+const optBtns = [...document.querySelectorAll('.opts-btn')];
+function openOpts() {
+  for (const r of opts.querySelectorAll('.opt')) r.hidden = !(r.dataset.in || '').split(' ').includes(mode);
+  disarm(); syncOpts(); opts.hidden = false; optBtns.forEach((b) => b.setAttribute('aria-expanded', 'true'));
+  opts.querySelector('.x').focus({ preventScroll: true }); buzz(6); sound.tone(520, 760, 0.08, 0.05, 'triangle');
+}
+function closeOpts() { if (opts.hidden) return; opts.hidden = true; disarm(); optBtns.forEach((b) => b.setAttribute('aria-expanded', 'false')); }
+optBtns.forEach((b) => { b.onclick = openOpts; });
+opts.querySelectorAll('[data-close]').forEach((el) => { el.onclick = closeOpts; });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !opts.hidden) closeOpts(); });
+const sw = (id, on) => $(id).setAttribute('aria-checked', String(!!on));
+function syncOpts() {
+  sw('o-lines', paint && paint.linesOn); sw('o-primer', paint && paint.primer); sw('o-sound', sound.on);
+  sw('o-phone', !aim.finger); sw('o-finger', aim.finger);
+}
+function syncToggles() { syncOpts(); }   // the outline and base coat switches show the current charm's paint
+$('o-lines').onclick = () => { paint.linesOn = !paint.linesOn; paint.dirty = true; syncOpts(); buzz(6); };
+$('o-primer').onclick = () => { paint.primer = !paint.primer; paint.dirty = true; syncOpts(); buzz(6); };
+$('o-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); syncOpts(); buzz(6); };
+function setFinger(on) {
+  aim.finger = on; syncOpts(); buzz(6);
+  hint(on ? 'Paint with your finger on the screen' : 'Aim your phone like a can and hold the can to spray', 2600);
+}
+$('o-phone').onclick = () => setFinger(false);
+$('o-finger').onclick = () => setFinger(true);
+$('o-cam').onclick = () => { closeOpts(); setCamMode(true); };
+$('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
+$('o-decals').onclick = async () => {
+  closeOpts(); paint.measure();
+  if (paint.coverage < 0.015) { toast('Spray some paint first'); return; }
+  await savePainting(); startDecals();
+};
+// two taps for the ones you can't take back: the first arms it, the second does it
+let armed = null, armT = 0;
+const ARM = { 'o-clear': ['Clear the canvas', 'Undo brings it back', 'Tap again to clear', 'Your painting is wiped, undo brings it back'], 'o-new': ['New painting', 'Start this one again from a blank canvas', 'Tap again to start over', 'Your painting and decals here go'] };
+function disarm() { clearTimeout(armT); if (!armed) return; const [t, sm] = ARM[armed]; $(armed + '-t').textContent = t; $(armed + '-s').textContent = sm; $(armed).classList.remove('armed'); armed = null; }
+function arm(id) {
+  if (armed === id) { disarm(); return true; }
+  disarm(); armed = id; $(id).classList.add('armed'); $(id + '-t').textContent = ARM[id][2]; $(id + '-s').textContent = ARM[id][3]; buzz(12);
+  armT = setTimeout(disarm, 3000); return false;
+}
+$('o-clear').onclick = () => {
+  if (!arm('o-clear')) return;
+  closeOpts(); paint.pushUndo(); paint.clear(); sound.whoosh(); hint('Clean canvas. Undo brings it back', 2200); updateUndo(); paint.measure(); updateMeter();
+};
+$('o-new').onclick = async () => {
+  if (!arm('o-new')) return;
+  closeOpts(); await dropSaved(); stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(true);
 };
 $('b-undo').onclick = () => { if (paint.popUndo()) { sound.undo(); buzz(8); } updateUndo(); };
 function updateUndo() { $('b-undo').disabled = !paint.undo.length; }
-$('b-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); toggle('b-sound', sound.on, sound.on ? 'Sound on' : 'Sound off'); };
 
 
 // ---------------------------------------------------------------- the can: tap (ready), hold to spray (paint), shake to refill
@@ -726,6 +781,7 @@ can.addEventListener('pointercancel', () => stopSpray());
 const cv = $('cam');
 const gest = { id: null, x: 0, lx: 0, t: 0, lt: 0, on: false, drag: false };
 cv.addEventListener('pointerdown', (e) => {
+  if (mode === 'decal') { try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ } decalDown(e); return; }
   if (mode === 'alive') {
     try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
     Object.assign(gest, { id: e.pointerId, x: e.clientX, lx: e.clientX, t: performance.now(), lt: performance.now(), on: hitSticker(e.clientX, e.clientY), drag: false });
@@ -737,6 +793,7 @@ cv.addEventListener('pointerdown', (e) => {
   startSpray(aim.finger ? { x: e.clientX, y: e.clientY } : null);
 });
 cv.addEventListener('pointermove', (e) => {
+  if (mode === 'decal') { decalMove(e); return; }
   if (spraying && fingerAt) { fingerAt.x = e.clientX; fingerAt.y = e.clientY; }
   if (mode === 'alive' && gest.id === e.pointerId && life.phase === 'idle') {
     const now = performance.now(), dx = e.clientX - gest.lx;
@@ -752,8 +809,8 @@ function endGesture(e) {
   else if (gest.on && life.phase === 'idle') { const sq = life.squish; life.press = false; jump(held > 260 ? 2 : 1, sq); }
   else life.press = false;
 }
-cv.addEventListener('pointerup', (e) => { stopSpray(); endGesture(e); });
-cv.addEventListener('pointercancel', (e) => { stopSpray(); endGesture(e); });
+cv.addEventListener('pointerup', (e) => { stopSpray(); endGesture(e); if (mode === 'decal') decalUp(e); });
+cv.addEventListener('pointercancel', (e) => { stopSpray(); endGesture(e); if (mode === 'decal') decalUp(e); });
 addEventListener('keydown', (e) => { if (e.code === 'Space' && mode === 'paint' && !e.repeat && document.activeElement === document.body) { e.preventDefault(); startSpray(null); } });
 addEventListener('keyup', (e) => { if (e.code === 'Space') stopSpray(); });
 let fingerAt = null, buzzT = 0, emptyNag = 0;
@@ -797,7 +854,7 @@ function startPainting(fresh = false, fly = false) {
   setMode('paint'); syncToggles();
   stickerPivot.visible = false; shadow.material.opacity = 0; orbit.mesh.visible = false; orbit.on = 0;
   const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = 0;
-  paintMesh.visible = true; paint.dirty = true; reveal = null;
+  paintMesh.visible = true; paint.dirty = true; reveal = null; decalHost(cp, 'flat');
   paint.measure(); cp.mile = MILESTONES.filter(([k]) => paint.coverage >= k).length;
   if (fly) {
     previewMesh.visible = true; previewMesh.material.opacity = 1;
@@ -852,7 +909,7 @@ $('b-done').onclick = async () => {
 };
 async function savePainting() {
   const blob = await new Promise((res) => paint.P.toBlob(res, 'image/png'));
-  saved = { paint: blob, primer: paint.primer, linesOn: paint.linesOn, colours: paint.topColours(), at: Date.now() };
+  saved = { paint: blob, primer: paint.primer, linesOn: paint.linesOn, colours: paint.topColours(), at: Date.now(), decals: serialDecals(cp) };
   const ok = await storeSaved(saved);
   diag.saves++; postEvent('custom', { action: 'spray-save', piece: cp.k, painted: Math.round(paint.coverage * 100), colours: saved.colours.length });
   if (!ok) hint('Saved for this visit (this browser would not keep it)', 2600);
@@ -861,14 +918,12 @@ async function restorePaint(rec, P) {
   const pt = P.paint; pt.primer = rec.primer !== false; pt.linesOn = rec.linesOn !== false;
   try { const bmp = await createImageBitmap(rec.paint); pt.pg.clearRect(0, 0, TW, TH); pt.pg.drawImage(bmp, 0, 0); pt.dirty = true; pt.measure(); } catch (e) { console.warn('restore', e); }
   for (const c of rec.colours || []) pt.used.set(c, 1);
-}
-function syncToggles() {   // the outline and base coat buttons show the current charm's paint
-  toggle('b-lines', paint.linesOn, paint.linesOn ? 'Outline on' : 'Outline off'); toggle('b-primer', paint.primer, paint.primer ? 'White base coat on' : 'White base coat off: paint over the print');
+  DEC.ready.then(() => { clearDecals(P); for (const d of rec.decals || []) makeLayer(P, d); });
 }
 
 async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
-  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(KC + 'image-targets/' + cp.print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
+  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(tdir(cp) + cp.print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
   paint.dirty = true; paint.composite(); g.drawImage(paint.D, 0, 0);
   // the cut: outside the stencil stays clear, the edge of the sticker is white
   g.globalCompositeOperation = 'destination-in'; g.drawImage(paint.mask, 0, 0, TW, TH); g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH);
@@ -880,15 +935,17 @@ async function bakeSticker() {   // the sticker's face: the painting; without th
 // over the gloss now and then. Tap him (hop), hold and let go (big jump), swipe (spin), shake the phone (he
 // shakes the wet paint off).
 const life = { t: 0, phase: 'off', hopAt: 4, hop: null, spin: null, lx: 0, ly: 0, uy: 0, uv: 0, dragging: false, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: 0, tip: 0 };
-const TIPS = ['Tap him to make him hop', 'Swipe to spin him', 'Hold him, then let go', 'Shake your phone', 'Tap the shutter for a photo, hold it to film'];
-async function startAlive(justSaved) {
+const TIPS = ['Tap $ to make $ hop', 'Swipe to spin $', 'Hold $, then let go', 'Shake your phone', 'Tap the shutter for a photo, hold it to film'];
+async function startAlive(justSaved, fromDecals = false) {
   await bakeSticker();
   setMode('alive');
+  decalHost(cp, justSaved ? 'flat' : 'sticker');
+  life.ask = justSaved && !params.has('noask');
   Object.assign(life, { t: 0, phase: justSaved ? 'flash' : 'lift', hop: null, spin: null, hopAt: 5 + Math.random() * 3, uy: 0, uv: 0, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: justSaved ? 3.2 : 2.4, tip: 0, burst: false });
   colourOrbit(paint.topColours(7));
   paintMesh.visible = justSaved; paintMesh.material.uniforms.uOpacity.value = 1; paintMesh.material.uniforms.uReveal.value = 1;
   stickerPivot.visible = false;
-  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else hint(cp.back, 2200);
+  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else if (fromDecals) { toast(cp.decals.length ? 'Looking good!' : 'Fresh!'); sound.sparkle(); buzz([10, 30, 10]); } else hint(cp.back, 2200);
 }
 function jump(kind, power = 0) {   // 1: a hop; 2: the big one (after holding him), with a spin and a burst
   const big = kind === 2;
@@ -910,14 +967,17 @@ function tickAlive(dt) {
     if (k >= 1) { life.phase = 'lift'; life.t = 0; life.burst = false; }
   }
   if (life.phase === 'lift') {
-    if (!stickerPivot.visible) { stickerPivot.visible = true; sound.whoosh(); setTimeout(() => sound.sparkle(), 500); }
+    if (!stickerPivot.visible) { stickerPivot.visible = true; decalHost(cp, 'sticker'); sound.whoosh(); setTimeout(() => sound.sparkle(), 500); }
     const k = clamp(life.t / 1.3, 0, 1), e = easeInOut(k);
     u.uOpacity.value = 1 - easeOut(k * 3); paintMesh.visible = u.uOpacity.value > 0.01;
     stickerPivot.position.set(0, 0, 0.0012 + HOVER * e + Math.sin(k * Math.PI) * 0.012);
     sticker.rotation.set(0, e * Math.PI * 2, 0);
     const sq = k > 0.85 ? 1 + Math.sin((k - 0.85) / 0.15 * Math.PI) * 0.06 : 1;
     sticker.scale.set(1 / sq, sq, 1);
-    if (k >= 1) { life.phase = 'idle'; life.t = 0; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1); burstSplats(paint.topColours(), 30, new THREE.Vector3(0, -H * 0.35, 0.002), 0.05); }
+    if (k >= 1) {
+      life.phase = 'idle'; life.t = 0; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1); burstSplats(paint.topColours(), 30, new THREE.Vector3(0, -H * 0.35, 0.002), 0.05);
+      if (life.ask) { life.ask = false; life.tipAt = 14; setTimeout(showAsk, 700); }
+    }
   }
   if (life.phase === 'idle') {
     const t = life.t;
@@ -949,7 +1009,7 @@ function tickAlive(dt) {
     stickerPivot.position.set(0, 0, z); sticker.rotation.set(rx, ry, rz); sticker.scale.set(1 / Math.sqrt(sy), sy, 1);
     // the shine: a flat white band across the gloss every few seconds
     if (t > life.shineAt) { const k = (t - life.shineAt) / 0.9; shine.value = -0.4 + k * 2.2; if (k >= 1) { shine.value = -1; life.shineAt = t + 3.5 + Math.random() * 2; } }
-    if (t > life.tipAt) { hint(TIPS[life.tip % TIPS.length], 2600); life.tip++; life.tipAt = t + (life.tip < TIPS.length ? 5 : 22); }
+    if (t > life.tipAt && $('ask').hidden) { hint(TIPS[life.tip % TIPS.length].replaceAll('$', cp.them || 'it'), 2600); life.tip++; life.tipAt = t + (life.tip < TIPS.length ? 5 : 22); }
   }
   shadow.material.opacity = stickerPivot.visible ? clamp(0.85 - stickerPivot.position.z * 18, 0.25, 0.8) : 0;
   const ss = 1 + stickerPivot.position.z * 6; shadow.scale.set(ss, ss, 1);
@@ -961,11 +1021,291 @@ function hitSticker(x, y) {
 }
 $('b-spin').onclick = () => { if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
 $('b-repaint').onclick = () => { stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(); };
-let newArmed = 0;
-$('b-new').onclick = async () => {
-  if (performance.now() - newArmed > 2500) { newArmed = performance.now(); hint(`Tap New again to start ${cp.name} fresh`, 2500); return; }
-  newArmed = 0; await dropSaved(); stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(true);
+$('b-decals').onclick = () => startDecals();
+// after a fresh save: "Dress up Bobo?"
+let askT = 0;
+function showAsk() {
+  if (mode !== 'alive') return;
+  $('ask-t').textContent = cp.ask;
+  $('ask').hidden = false; hud.classList.add('asking'); sound.tone(660, 990, 0.12, 0.05, 'triangle'); buzz(8);
+  clearTimeout(askT); askT = setTimeout(hideAsk, 12000);
+}
+function hideAsk() { clearTimeout(askT); $('ask').hidden = true; hud.classList.remove('asking'); }
+$('ask-yes').onclick = () => startDecals();
+$('ask-no').onclick = () => { hideAsk(); hint('Decals are here whenever you want them', 2400); };
+
+// ---------------------------------------------------------------- decals
+// A library of ready-made decals (decals/decals.json, drawn by scripts/build-spray-bobo/build_decals.py): things
+// Bobo can wear (shades, hats, collars: each one drawn on Bobo's own picture, so it lands exactly on his eyes,
+// head or neck), fun stickers, and icons from the EVADE game. Once a painting is saved, Decal mode lays the
+// painting flat on the charm again: tap a decal and it flies onto the charm; drag it, pinch or use the handle to
+// size and turn it. Done, and they ride the 3D sticker from then on, and are saved with the painting.
+// A decal is kept in the charm's picture frame (u, v: its middle as fractions of the picture, y down; w: its
+// width as a share of the picture's; r: turn, counter-clockwise; f: 1 or -1, mirrored), so it works on any charm.
+const DEC = { lib: null, by: {}, art: new Map(), cat: 'wear', ready: null };
+const MAX_DECALS = 14;
+const DEC_GEO = new THREE.PlaneGeometry(1, 1);
+DEC.ready = getJson(HERE + 'decals/decals.json').then((m) => { DEC.lib = m; for (const d of m.decals) DEC.by[d.id] = d; buildTray(); return m; })
+  .catch((e) => { console.warn('decals', e); DEC.lib = { cats: [], decals: [] }; return null; });
+// the decal's picture, drawn once into a canvas (with a white die-cut edge for the stickers) and used as a texture
+function decalArt(d) {
+  const have = DEC.art.get(d.id); if (have) return have;
+  const p = loadImg(HERE + 'decals/' + d.file).then((img) => {
+    const iw = img.naturalWidth || img.width || 256, ih = img.naturalHeight || img.height || 256, k = 512 / Math.max(iw, ih);
+    const w = Math.round(iw * k), h = Math.round(ih * k), pad = d.border ? Math.round(Math.max(w, h) * 0.05) : 2;
+    const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = h + pad * 2; const g = c.getContext('2d');
+    if (d.border) {
+      const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d');
+      tg.drawImage(img, 0, 0, w, h); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = '#ffffff'; tg.fillRect(0, 0, w, h);
+      for (let a = 0; a < 16; a++) g.drawImage(t, pad + Math.cos(a * 0.3927) * pad * 0.92, pad + Math.sin(a * 0.3927) * pad * 0.92);
+    }
+    g.drawImage(img, pad, pad, w, h);
+    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    let alpha = null;
+    return { canvas: c, tex, aspect: c.width / c.height, grow: c.width / w, solid(u, v) {   // is there art at this spot (texture uv)?
+      try { alpha = alpha || g.getImageData(0, 0, c.width, c.height).data; } catch (e) { return true; }
+      const x = clamp(Math.floor(u * c.width), 0, c.width - 1), y = clamp(Math.floor((1 - v) * c.height), 0, c.height - 1);
+      return alpha[(y * c.width + x) * 4 + 3] > 24;
+    } };
+  });
+  DEC.art.set(d.id, p); return p;
+}
+// where the decals are shown: flat on the charm (painting, placing) or riding the 3D sticker (saved)
+function decalHost(P, on) {
+  const g = P.decalGroup, parent = on === 'sticker' ? P.sticker : P.F;
+  if (g.parent !== parent) parent.add(g);
+  g.position.set(0, 0, on === 'sticker' ? 0.0018 : 0.0007); g.userData.on = on;
+}
+function makeLayer(P, s) {
+  const d = DEC.by[s.id]; if (!d) return null;
+  const L = { id: s.id, u: +s.u || 0.5, v: +s.v || 0.5, w: clamp(+s.w || 0.3, 0.04, 1.6), r: +s.r || 0, f: s.f === -1 ? -1 : 1, P, art: null, pop: null, out: null };
+  const mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
+  L.mesh = new THREE.Mesh(DEC_GEO, mat); L.mesh.visible = false; L.mesh.frustumCulled = false; P.decalGroup.add(L.mesh);
+  decalArt(d).then((a) => { L.art = a; mat.map = a.tex; mat.needsUpdate = true; L.mesh.visible = true; placeLayer(L); }).catch(() => removeLayer(L));
+  P.decals.push(L); orderLayers(P); return L;
+}
+function orderLayers(P) { P.decals.forEach((L, i) => { L.mesh.renderOrder = 20 + i; }); }
+// a decal landing: from nothing, overshoots, settles, with a little twist
+const popK = (t) => { if (t <= 0) return 0; const k = clamp(t / 0.5, 0, 1), c = 2.2, x = k - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
+function placeLayer(L) {
+  if (!L.art) return; const P = L.P, m = L.mesh;
+  let k = 1, tw = 0;
+  if (L.pop) { k = popK(L.pop.t); tw = -0.5 * (1 - easeOut(L.pop.t / 0.5)); }
+  if (L.out) { const q = clamp(L.out.t / 0.25, 0, 1); k = 1 + q * 0.25 - q * q * 1.25; tw = q * 0.9; }
+  k = Math.max(k, 1e-4); const ww = L.w * P.W * L.art.grow * k;
+  m.position.set((L.u - 0.5) * P.W, (0.5 - L.v) * P.H, 0); m.rotation.set(0, 0, L.r + tw); m.scale.set(ww * L.f, ww / L.art.aspect, 1);
+}
+function removeLayer(L, anim = false) {
+  if (anim && L.art) { L.out = { t: 0 }; sound.tone(700, 300, 0.14, 0.06, 'triangle'); return; }
+  const P = L.P, i = P.decals.indexOf(L); if (i >= 0) P.decals.splice(i, 1);
+  P.decalGroup.remove(L.mesh); L.mesh.material.dispose(); if (ed.sel === L) selectLayer(null); orderLayers(P);
+}
+function clearDecals(P) { for (const L of [...P.decals]) removeLayer(L); }
+const serialDecals = (P) => P.decals.filter((L) => !L.out).map((L) => ({ id: L.id, u: +L.u.toFixed(4), v: +L.v.toFixed(4), w: +L.w.toFixed(4), r: +L.r.toFixed(3), f: L.f }));
+function setLayerUV(L, u, v) { L.u = clamp(u, -0.1, 1.1); L.v = clamp(v, -0.1, 1.1); }
+
+// screen <-> the charm (metres, x right, y up, in the charm's own frame: the back side's mirror included)
+const _lp = new THREE.Vector3();
+function localAt(x, y) {
+  if (!pose.valid || !camera) return null;
+  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
+  _n.set(0, 0, 1).applyQuaternion(A.quaternion); _plane.setFromNormalAndCoplanarPoint(_n, A.position);
+  if (!ray.ray.intersectPlane(_plane, _hit)) return null;
+  return F.worldToLocal(_hit.clone());
+}
+function localScreen(x, y) {
+  if (!pose.valid || !camera) return null;
+  _lp.set(x, y, 0); F.localToWorld(_lp); _lp.project(camera); const r = canvas.getBoundingClientRect();
+  return [r.left + (_lp.x + 1) / 2 * r.width, r.top + (1 - _lp.y) / 2 * r.height];
+}
+// the decal under a finger: the top one with art under it, or failing that the top one whose box it's in
+function pickLayer(x, y) {
+  if (!pose.valid) return null;
+  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
+  const live = cp.decals.filter((L) => L.art && !L.out && L.mesh.visible);
+  const hits = ray.intersectObjects(live.map((L) => L.mesh), false).sort((a, b) => b.object.renderOrder - a.object.renderOrder);
+  if (!hits.length) return null;
+  const of = (h) => live.find((L) => L.mesh === h.object);
+  for (const h of hits) { const L = of(h); if (L && h.uv && L.art.solid(h.uv.x, h.uv.y)) return L; }
+  return of(hits[0]);
+}
+
+// placing: one finger drags, two fingers pinch to size and twist to turn, the yellow handle does both one-handed
+const ed = { sel: null, pts: new Map(), g: null, h: null };
+function selectLayer(L) {
+  ed.sel = L || null;
+  for (const id of ['d-flip', 'd-front', 'd-del']) $(id).disabled = !ed.sel;
+  if (!ed.sel) { $('dsel').firstElementChild.setAttribute('points', ''); $('d-handle').hidden = true; ed.h = null; }
+}
+const twoPts = () => [...ed.pts.values()].slice(0, 2).map((p) => localAt(p.x, p.y));
+const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+function beginDrag() {
+  const p = [...ed.pts.values()][0], at = p && localAt(p.x, p.y);
+  ed.g = at && ed.sel ? { kind: 'drag', at, u: ed.sel.u, v: ed.sel.v, moved: false } : null;
+}
+function beginPinch() {
+  const [a, b] = twoPts(); if (!a || !b || !ed.sel) { ed.g = null; return; }
+  ed.g = { kind: 'pinch', d: Math.max(a.distanceTo(b), 1e-4), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, w: ed.sel.w, r: ed.sel.r, u: ed.sel.u, v: ed.sel.v };
+}
+function decalDown(e) {
+  ed.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ed.pts.size === 1) {
+    const L = pickLayer(e.clientX, e.clientY);
+    if (L) { if (ed.sel !== L) { buzz(6); sound.tone(880, 1180, 0.05, 0.04, 'triangle'); } selectLayer(L); beginDrag(); }
+    else ed.g = { kind: 'tap' };
+  } else if (ed.pts.size === 2 && ed.sel) beginPinch();
+}
+function decalMove(e) {
+  if (!ed.pts.has(e.pointerId)) return; ed.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const g = ed.g, L = ed.sel; if (!g || !L) return;
+  if (g.kind === 'drag' && ed.pts.size === 1) {
+    const p = localAt(e.clientX, e.clientY); if (!p) return;
+    setLayerUV(L, g.u + (p.x - g.at.x) / W, g.v - (p.y - g.at.y) / H); g.moved = true;
+  } else if (g.kind === 'pinch' && ed.pts.size >= 2) {
+    const [a, b] = twoPts(); if (!a || !b) return;
+    L.w = clamp(g.w * a.distanceTo(b) / g.d, 0.05, 1.5); L.r = g.r + wrapA(Math.atan2(b.y - a.y, b.x - a.x) - g.ang);
+    setLayerUV(L, g.u + ((a.x + b.x) / 2 - g.mx) / W, g.v - ((a.y + b.y) / 2 - g.my) / H);
+  }
+}
+function decalUp(e) {
+  const g = ed.g; ed.pts.delete(e.pointerId);
+  if (g && g.kind === 'tap' && !ed.pts.size) selectLayer(null);
+  if (ed.pts.size === 1 && ed.sel) beginDrag(); else if (!ed.pts.size) ed.g = null;
+}
+const hd = $('d-handle');
+hd.addEventListener('pointerdown', (e) => {
+  e.preventDefault(); const L = ed.sel; if (!L) return;
+  try { hd.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
+  const p = localAt(e.clientX, e.clientY), cx = (L.u - 0.5) * W, cy = (0.5 - L.v) * H; if (!p) return;
+  ed.h = { id: e.pointerId, cx, cy, d: Math.max(Math.hypot(p.x - cx, p.y - cy), 1e-4), a: Math.atan2(p.y - cy, p.x - cx), w: L.w, r: L.r, corner: ed.corner }; buzz(6);
+});
+hd.addEventListener('pointermove', (e) => {
+  const h = ed.h, L = ed.sel; if (!h || !L || h.id !== e.pointerId) return;
+  const p = localAt(e.clientX, e.clientY); if (!p) return;
+  L.w = clamp(h.w * Math.hypot(p.x - h.cx, p.y - h.cy) / h.d, 0.05, 1.5); L.r = h.r + wrapA(Math.atan2(p.y - h.cy, p.x - h.cx) - h.a);
+});
+const hdEnd = () => { ed.h = null; };
+hd.addEventListener('pointerup', hdEnd); hd.addEventListener('pointercancel', hdEnd);
+// the selected decal's box, drawn over the camera, and the handle on its corner nearest the bottom right
+const _sq = new THREE.Vector3();
+function drawSel() {
+  const L = ed.sel, poly = $('dsel').firstElementChild;
+  if (mode !== 'decal' || !L || !L.art || !pose.valid) { if (poly.getAttribute('points')) poly.setAttribute('points', ''); hd.hidden = true; return; }
+  L.mesh.updateMatrixWorld(true); const r = canvas.getBoundingClientRect(), out = [];
+  for (const [x, y] of [[-0.5, 0.5], [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]]) {
+    _sq.set(x, y, 0).applyMatrix4(L.mesh.matrixWorld).project(camera); out.push([r.left + (_sq.x + 1) / 2 * r.width, r.top + (1 - _sq.y) / 2 * r.height]);
+  }
+  poly.setAttribute('points', out.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
+  let c = ed.h ? ed.h.corner : 0;           // while it's being dragged, the handle stays on its corner
+  if (!ed.h) { for (let i = 1; i < 4; i++) if (out[i][0] + out[i][1] > out[c][0] + out[c][1]) c = i; ed.corner = c; }
+  hd.hidden = false; hd.style.left = clamp(out[c][0], 26, innerWidth - 26) + 'px'; hd.style.top = clamp(out[c][1], 70, innerHeight - 250) + 'px';
+}
+
+// adding one: the tile flies from the tray onto the charm, then the decal pops out of it with a word and a splash
+const DEC_FLY = 0.42;
+function addDecal(d, tile) {
+  if (!d) return;
+  if (!pose.valid) { hint(`Point at ${cp.name} first`, 2000); buzz(20); return; }
+  if (cp.decals.filter((L) => !L.out).length >= MAX_DECALS) { toast('Full up!'); hint('Remove a decal to add another', 2400); return; }
+  let s, swap = null;
+  if (d.fit && cp.k === 'bobo') {          // made for Bobo: straight onto his eyes, head or neck (a new hat swaps the old one)
+    s = { id: d.id, u: d.fit.u, v: d.fit.v, w: d.fit.w, r: d.fit.r };
+    swap = cp.decals.find((L) => !L.out && DEC.by[L.id] && DEC.by[L.id].slot === d.slot);
+  } else {                                 // anything else: near the middle, a little turned, never right on top of the last one
+    const n = cp.decals.length, a = n * 2.4;
+    s = { id: d.id, u: cp.centre[0] + (n ? Math.cos(a) * 0.14 : 0), v: cp.centre[1] + (n ? Math.sin(a) * 0.12 : 0), w: d.fit ? 0.46 : 0.3, r: (Math.random() - 0.5) * 0.35 };
+  }
+  if (swap) removeLayer(swap, true);
+  const L = makeLayer(cp, s); if (!L) return;
+  L.pop = { t: tile ? -DEC_FLY : 0, fresh: true };
+  selectLayer(L);
+  if (tile) flyTile(tile, L);
+  postEvent('custom', { action: 'spray-decal', piece: cp.k, decal: d.id });
+}
+function flyTile(tile, L) {
+  const r = tile.getBoundingClientRect(), to = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H) || nozzle0();
+  const el = tile.cloneNode(true); el.classList.add('ghost'); el.removeAttribute('id'); el.setAttribute('aria-hidden', 'true');
+  Object.assign(el.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  hud.appendChild(el); sound.whoosh(); buzz(8);
+  const dx = to[0] - (r.left + r.width / 2), dy = to[1] - (r.top + r.height / 2);
+  if (!el.animate) { setTimeout(() => el.remove(), DEC_FLY * 1000); return; }
+  el.animate([
+    { transform: 'translate(0,0) rotate(0) scale(1)' },
+    { transform: `translate(${dx * 0.45}px,${dy * 0.45 - 90}px) rotate(-200deg) scale(1.35)`, offset: 0.5 },
+    { transform: `translate(${dx}px,${dy}px) rotate(-380deg) scale(.5)`, opacity: 1, offset: 0.9 },
+    { transform: `translate(${dx}px,${dy}px) rotate(-400deg) scale(.2)`, opacity: 0 },
+  ], { duration: DEC_FLY * 1000, easing: 'cubic-bezier(.4,.1,.3,1)', fill: 'forwards' }).onfinish = () => el.remove();
+  setTimeout(() => el.remove(), DEC_FLY * 1000 + 300);
+}
+function landed(L) {
+  const d = DEC.by[L.id]; sound.pop(); setTimeout(() => sound.sparkle(), 90); buzz([10, 30, 10]);
+  burstSplats(['#ffffff', '#f6c344', CAPS[capIdx].c, '#e85bd8'], 34, new THREE.Vector3((L.u - 0.5) * W, (0.5 - L.v) * H, 0.004), 0.06);
+  const at = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H); if (at && d) popWord(d.word, at[0], at[1] - 40);
+}
+function tickDecals(dt) {
+  for (const P of Object.values(PIECES)) {
+    if (!P.decals) continue;
+    for (const L of [...P.decals]) {
+      if (L.pop) { const was = L.pop.t; L.pop.t += dt; if (was < 0 && L.pop.t >= 0 && L.art) landed(L); if (L.pop.t > 0.6) L.pop = null; }
+      if (L.out) { L.out.t += dt; if (L.out.t > 0.25) { removeLayer(L); continue; } }
+      placeLayer(L);
+    }
+  }
+  if (cp && cp.decalGroup) cp.decalGroup.visible = cp.decals.length > 0 && (paintMesh.visible || stickerPivot.visible);
+  drawSel();
+}
+
+// the tray: the kinds, then a scrolling row of tiles
+function buildTray() {
+  const cats = $('dtray').querySelector('.dcats'); cats.innerHTML = '';
+  for (const c of DEC.lib.cats) {
+    const b = document.createElement('button'); b.type = 'button'; b.role = 'tab'; b.dataset.k = c.k; b.textContent = c.n;
+    b.onclick = () => { showCat(c.k); buzz(6); }; cats.appendChild(b);
+  }
+  const f = document.createElement('span'); f.className = 'fits'; cats.appendChild(f);
+  showCat(DEC.cat);
+}
+function showCat(k) {
+  DEC.cat = k; const list = $('dtray').querySelector('.dlist'); list.innerHTML = '';
+  for (const b of $('dtray').querySelectorAll('.dcats button')) b.setAttribute('aria-selected', String(b.dataset.k === k));
+  const f = $('dtray').querySelector('.fits'); if (f) f.textContent = k === 'wear' && cp && cp.k === 'bobo' ? 'Fits right on Bobo' : '';
+  for (const d of DEC.lib.decals.filter((x) => x.cat === k)) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'dtile'; b.setAttribute('aria-label', `Add ${d.name}`);
+    const im = document.createElement('img'); im.src = HERE + 'decals/' + d.file; im.alt = ''; im.loading = 'lazy'; im.decoding = 'async'; b.appendChild(im);
+    b.onclick = () => addDecal(d, b); list.appendChild(b);
+    decalArt(d);   // warm the texture so it is ready when it lands
+  }
+  list.scrollLeft = 0;
+}
+$('d-flip').onclick = () => { const L = ed.sel; if (!L) return; L.f *= -1; L.pop = { t: 0.32 }; sound.tone(600, 900, 0.08, 0.05, 'triangle'); buzz(6); };
+$('d-front').onclick = () => {
+  const L = ed.sel; if (!L) return; const P = L.P; P.decals.splice(P.decals.indexOf(L), 1); P.decals.push(L); orderLayers(P);
+  L.pop = { t: 0.32 }; sound.tone(700, 1000, 0.08, 0.05, 'triangle'); buzz(6);
 };
+$('d-del').onclick = () => { const L = ed.sel; if (!L) return; selectLayer(null); removeLayer(L, true); buzz(10); };
+$('d-done').onclick = () => finishDecals();
+let decalsSeen = false; try { decalsSeen = localStorage.getItem('spray-bobo-decals') === '1'; } catch (e) { /* none */ }
+$('b-decals').querySelector('.dot').hidden = decalsSeen;
+function startDecals() {
+  if (!saved) { toast('Save your painting first'); return; }
+  hideAsk(); setMode('decal');
+  stickerPivot.visible = false; shadow.material.opacity = 0; orbit.mesh.visible = false; orbit.on = 0; life.phase = 'off';
+  const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = 1; paintMesh.visible = true; paint.dirty = true;
+  decalHost(cp, 'flat'); selectLayer(null); ed.pts.clear(); ed.g = null;
+  if (DEC.lib) showCat(DEC.cat);
+  sound.whoosh(); buzz(10); burstSplats(['#f6c344', '#ffffff', '#e85bd8'], 30, centreLocal(0.003), 0.05);
+  hint(cp.decals.length ? 'Drag to move. Pinch, or use the yellow handle, to size and turn' : 'Tap a decal to stick it on', 3800);
+  if (!decalsSeen) { decalsSeen = true; $('b-decals').querySelector('.dot').hidden = true; try { localStorage.setItem('spray-bobo-decals', '1'); } catch (e) { /* none */ } }
+}
+async function finishDecals() {
+  selectLayer(null);
+  for (const L of [...cp.decals]) if (L.out) removeLayer(L);
+  saved = { ...(saved || {}), decals: serialDecals(cp) };
+  const ok = await storeSaved(saved);
+  if (!ok) hint('Saved for this visit (this browser would not keep it)', 2600);
+  postEvent('custom', { action: 'spray-decals-done', piece: cp.k, decals: cp.decals.length });
+  startAlive(false, true);
+}
 
 // ---------------------------------------------------------------- per frame
 const mist = { c: $('mist'), g: null, parts: [] };
@@ -983,7 +1323,7 @@ function tick(dt) {
   } else if (!pose.valid) lostFor += dt;
   hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
   const again = `Point at ${cp.name} again`;
-  if (mode === 'find' && !pose.valid) hint(everFound ? 'Point at Bobo or the can' : 'Point your camera at the Bobo or the can charm');
+  if (mode === 'find' && !pose.valid) hint((everFound ? 'Point at ' : 'Point your camera at ') + SEEK);
   else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint(again);
   else if (pose.valid && $('hint').textContent === again) hint('');
   paintMesh.material.uniforms.uTime.value = clock.t;
@@ -1009,7 +1349,7 @@ function tick(dt) {
     ret.classList.toggle('off', !aim.on);
     ret.classList.toggle('spray', spraying && aim.on);
     ret.style.setProperty('--r2', (aim.rScreen * 2).toFixed(0) + 'px');
-    const cm = Math.round(aim.dist * 100), dTxt = aim.has ? (cm > 40 ? `${cm} cm · come closer` : `${cm} cm`) : '';
+    const cm = Math.round(aim.dist * cp.m * 100), dTxt = aim.has ? (cm > (cp.near || 40) ? `${cm} cm · come closer` : `${cm} cm`) : '';
     if ($('dist').textContent !== dTxt) $('dist').textContent = dTxt;
     const empty = level <= 0.001 && !ENDLESS;
     if (spraying && !empty) {
@@ -1034,6 +1374,7 @@ function tick(dt) {
   paint.tick(dt, pose.valid ? dripDown() : null);
   if (paint.composite() && paintTex) paintTex.needsUpdate = true;
   tickAlive(dt);
+  tickDecals(dt);
   tickOrbit(dt, stickerPivot.position.z);
   if (splats) tickSplats(dt, A.scale.x);
   tickMist(dt);
@@ -1198,7 +1539,7 @@ LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/medi
 function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } }   // the spray shows in photos and clips too
 function drawWatermark(c, Wd, Hd) {
   const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
-  if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
+  if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
   if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h); }
 }
 let capture = null, recFrom = 0, shots = 0;
@@ -1269,18 +1610,26 @@ $('b-art').onclick = async () => {
     await document.fonts.load('80px "Permanent Marker"').catch(() => {});
     const Wc = 1080, Hc = 1350, c = document.createElement('canvas'); c.width = Wc; c.height = Hc; const g = c.getContext('2d');
     g.fillStyle = '#f6c344'; g.fillRect(0, 0, Wc, Hc);
-    const aw = 760, ah = aw * TH / TW, ax = (Wc - aw) / 2, ay = 230;
+    // as big as fits: a piece whose stencil reaches the bottom of its picture (the tee) is drawn smaller, clear of the caption
+    let by1 = 0; for (let i = 0; i < paint.maskSmall.length; i++) if (paint.maskSmall[i]) by1 = Math.max(by1, (Math.floor(i / 48) + 1) / 64);
+    const ay = 230, ah = Math.min(760 * TH / TW, (Hc - 150 - ay) / Math.max(by1, 0.5)), aw = ah * TW / TH, ax = (Wc - aw) / 2;
     const sil = (col, r) => { const t = document.createElement('canvas'); t.width = TW; t.height = TH; const tg = t.getContext('2d'); tg.drawImage(paint.mask, 0, 0, TW, TH); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = col; tg.fillRect(0, 0, TW, TH); for (let a = 0; a < 16; a++) g.drawImage(t, ax + Math.cos(a * 0.3927) * r, ay + Math.sin(a * 0.3927) * r, aw, ah); };
     g.save(); g.translate(Wc / 2, ay + ah / 2); g.rotate(-0.05); g.translate(-Wc / 2, -(ay + ah / 2));
     sil('#15131a', 30); sil('#ffffff', 22);
-    g.drawImage(stickerCanvas, ax, ay, aw, ah); g.restore();
+    g.drawImage(stickerCanvas, ax, ay, aw, ah);
+    for (const L of cp.decals) {   // the decals, where they sit on the charm
+      if (!L.art) continue; const ww = L.w * aw * L.art.grow, hh = ww / L.art.aspect;
+      g.save(); g.translate(ax + L.u * aw, ay + L.v * ah); g.rotate(-L.r); g.scale(L.f, 1); g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh); g.restore();
+    }
+    g.restore();
     g.fillStyle = '#15131a'; g.font = '400 92px "Permanent Marker", cursive'; g.textAlign = 'center';
     g.save(); g.translate(Wc / 2, 168); g.rotate(-0.04); g.fillText(cp.title, 0, 0); g.restore();
-    if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 46, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; g.filter = 'brightness(0)'; g.drawImage(LOGO.evade, 54, 50, w, h); g.filter = 'none'; }
+    if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 46, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; g.filter = 'brightness(0)'; g.drawImage(LOGO.evade, 54, 50, w, h); g.filter = 'none'; }
     if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 58, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; g.fillStyle = '#15131a'; g.beginPath(); g.roundRect(Wc - w - 74, Hc - h - 74, w + 40, h + 30, 20); g.fill(); g.drawImage(LOGO.act, Wc - w - 54, Hc - h - 59, w, h); }
     g.fillStyle = '#15131a'; g.font = '700 28px "Space Grotesk", sans-serif'; g.textAlign = 'left'; g.fillText(cp.line, 54, Hc - 86);
     const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
-    showFile('art', blob, `my-${cp.k}.png`, cp.k === 'can' ? 'My can' : 'My Bobo');
+    const nm = cp.k === 'can' ? 'can' : cp.name; $('art-t').textContent = 'Your ' + nm; $('art-img').alt = 'Your painted ' + nm;
+    showFile('art', blob, `my-${cp.k}.png`, 'My ' + nm);
     postEvent('share', { what: 'spray-art', piece: cp.k });
   } catch (e) { console.error(e); }
 };
@@ -1309,7 +1658,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { flu
 addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, paint, diag };
+if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, paint, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H) };
 
 // desktop: a QR to open it on the phone
 if (!TOUCH) {

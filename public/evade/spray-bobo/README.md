@@ -89,3 +89,27 @@ how steep an angle still tracks, and whether shaking to refill feels right.
 
 Test pictures: `/evade/keychain-ar/target/` has both charms' tracked pictures side by side (with a gap, true
 size to each other) or one at a time, with Flip for the other sides and full screen.
+
+## Decals and the options menu (round 3, 2026-11-13)
+- **Decals** (`decals/`, drawn by `scripts/build-spray-bobo/build_decals.py`, hand-drawn SVG): Wear (shades, hats,
+  collars: each drawn on Bobo's own picture with a `fit`, so it lands on his eyes, head or neck, and a new one
+  swaps the old one in the same `slot`), Fun stickers, and EVADE game icons. After the first Save the page asks
+  "Dress up Bobo?"; Decal mode (the Decals button) lays the painting flat again: tap a decal to fly it on, drag
+  to move, pinch or the corner handle to size and turn, Flip / To front / Remove, Done. Decals ride the 3D
+  sticker, are saved with the painting and drawn into the artwork. They are kept in picture-frame fractions, so
+  they work on any piece.
+- **Options** (bottom sheet, one button): spray with phone or finger, outline, white base coat, camera, sound,
+  how to play, clear and new painting (two taps to confirm). Replaces the unlabelled side buttons.
+
+## Pieces are data (PIECES in main.js)
+Each piece: its image targets, stencil art (`art/<art>-mask.png`, `-lines.png`, `-outline.json`), saved-painting
+key and copy. Optional: `tdir` (folder with its target files and a `layout.json`, default Off the Chain's),
+`view` (height in metres it is drawn at in AR, so a big print keeps the charm's look), `sprayK` (wider spray),
+`near` (cm before "come closer"), `them` (him/her/it in tips), `ask`, `seek`, `evade: false` (no EVADE logo on
+its photos and artwork).
+
+**Sukeban tee** (`sukeban`): `scripts/build-spray-bobo/build_sukeban.py` places the clean character art
+(`public/work/sukeban-sticker-large.webp`) onto Dapo's photo of the printed tee (`src/sukeban-tee.png`, match
+0.91) and writes `targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
+stencil. The print is assumed to be 12 in wide (`WIDTH_M`): only the cm readout uses it. Tested in the
+simulator from the tee photo itself: found, canvas lines up, paint, save, decals, artwork.

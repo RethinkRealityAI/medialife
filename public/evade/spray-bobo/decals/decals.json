@@ -1,0 +1,364 @@
+{
+ "v": 1,
+ "cats": [
+  {
+   "k": "wear",
+   "n": "Wear"
+  },
+  {
+   "k": "fun",
+   "n": "Fun"
+  },
+  {
+   "k": "game",
+   "n": "EVADE"
+  }
+ ],
+ "decals": [
+  {
+   "id": "shades",
+   "name": "Shades",
+   "cat": "wear",
+   "file": "shades.svg",
+   "aspect": 2.6154,
+   "word": "COOL!",
+   "border": false,
+   "fit": {
+    "u": 0.4401,
+    "v": 0.3643,
+    "w": 0.4427,
+    "r": 0
+   },
+   "slot": "eyes"
+  },
+  {
+   "id": "star-shades",
+   "name": "Star shades",
+   "cat": "wear",
+   "file": "star-shades.svg",
+   "aspect": 2.4286,
+   "word": "STAR!",
+   "border": false,
+   "fit": {
+    "u": 0.4401,
+    "v": 0.3604,
+    "w": 0.4427,
+    "r": 0
+   },
+   "slot": "eyes"
+  },
+  {
+   "id": "heart-shades",
+   "name": "Heart shades",
+   "cat": "wear",
+   "file": "heart-shades.svg",
+   "aspect": 2.4286,
+   "word": "LOVE IT!",
+   "border": false,
+   "fit": {
+    "u": 0.4401,
+    "v": 0.3662,
+    "w": 0.4427,
+    "r": 0
+   },
+   "slot": "eyes"
+  },
+  {
+   "id": "crown",
+   "name": "Crown",
+   "cat": "wear",
+   "file": "crown.svg",
+   "aspect": 1.6667,
+   "word": "ROYAL!",
+   "border": false,
+   "fit": {
+    "u": 0.4453,
+    "v": 0.1777,
+    "w": 0.3906,
+    "r": -0.06
+   },
+   "slot": "head"
+  },
+  {
+   "id": "beanie",
+   "name": "Beanie",
+   "cat": "wear",
+   "file": "beanie.svg",
+   "aspect": 1.6786,
+   "word": "COZY!",
+   "border": false,
+   "fit": {
+    "u": 0.4453,
+    "v": 0.2051,
+    "w": 0.612,
+    "r": 0
+   },
+   "slot": "head"
+  },
+  {
+   "id": "party-hat",
+   "name": "Party hat",
+   "cat": "wear",
+   "file": "party-hat.svg",
+   "aspect": 0.76,
+   "word": "PARTY!",
+   "border": false,
+   "fit": {
+    "u": 0.5156,
+    "v": 0.1465,
+    "w": 0.2474,
+    "r": 0.3
+   },
+   "slot": "head"
+  },
+  {
+   "id": "top-hat",
+   "name": "Top hat",
+   "cat": "wear",
+   "file": "top-hat.svg",
+   "aspect": 1.5714,
+   "word": "FANCY!",
+   "border": false,
+   "fit": {
+    "u": 0.4453,
+    "v": 0.1289,
+    "w": 0.4297,
+    "r": -0.05
+   },
+   "slot": "head"
+  },
+  {
+   "id": "headphones",
+   "name": "Headphones",
+   "cat": "wear",
+   "file": "headphones.svg",
+   "aspect": 1.6667,
+   "word": "VIBES!",
+   "border": false,
+   "fit": {
+    "u": 0.4453,
+    "v": 0.2441,
+    "w": 0.651,
+    "r": 0
+   },
+   "slot": "head"
+  },
+  {
+   "id": "spike-collar",
+   "name": "Spiked collar",
+   "cat": "wear",
+   "file": "spike-collar.svg",
+   "aspect": 1.8947,
+   "word": "TOUGH!",
+   "border": false,
+   "fit": {
+    "u": 0.4427,
+    "v": 0.5342,
+    "w": 0.4688,
+    "r": 0
+   },
+   "slot": "neck"
+  },
+  {
+   "id": "gold-chain",
+   "name": "Gold chain",
+   "cat": "wear",
+   "file": "gold-chain.svg",
+   "aspect": 1.5,
+   "word": "BLING!",
+   "border": false,
+   "fit": {
+    "u": 0.4427,
+    "v": 0.5586,
+    "w": 0.4688,
+    "r": 0
+   },
+   "slot": "neck"
+  },
+  {
+   "id": "bandana",
+   "name": "Bandana",
+   "cat": "wear",
+   "file": "bandana.svg",
+   "aspect": 1.5,
+   "word": "SWAG!",
+   "border": false,
+   "fit": {
+    "u": 0.4427,
+    "v": 0.5586,
+    "w": 0.4688,
+    "r": 0
+   },
+   "slot": "neck"
+  },
+  {
+   "id": "bow-tie",
+   "name": "Bow tie",
+   "cat": "wear",
+   "file": "bow-tie.svg",
+   "aspect": 1.6,
+   "word": "DAPPER!",
+   "border": false,
+   "fit": {
+    "u": 0.4453,
+    "v": 0.5098,
+    "w": 0.2083,
+    "r": 0
+   },
+   "slot": "neck"
+  },
+  {
+   "id": "heart",
+   "name": "Heart",
+   "cat": "fun",
+   "file": "heart.svg",
+   "aspect": 1.0,
+   "word": "LOVE!",
+   "border": true
+  },
+  {
+   "id": "star",
+   "name": "Star",
+   "cat": "fun",
+   "file": "star.svg",
+   "aspect": 1.0,
+   "word": "STAR!",
+   "border": true
+  },
+  {
+   "id": "flame",
+   "name": "Flame",
+   "cat": "fun",
+   "file": "flame.svg",
+   "aspect": 1.0,
+   "word": "FIRE!",
+   "border": true
+  },
+  {
+   "id": "bolt",
+   "name": "Lightning",
+   "cat": "fun",
+   "file": "bolt.svg",
+   "aspect": 1.0,
+   "word": "ZAP!",
+   "border": true
+  },
+  {
+   "id": "sparkles",
+   "name": "Sparkles",
+   "cat": "fun",
+   "file": "sparkles.svg",
+   "aspect": 1.0,
+   "word": "SHINY!",
+   "border": true
+  },
+  {
+   "id": "paw",
+   "name": "Paw print",
+   "cat": "fun",
+   "file": "paw.svg",
+   "aspect": 1.0,
+   "word": "MEOW!",
+   "border": true
+  },
+  {
+   "id": "fish",
+   "name": "Fish",
+   "cat": "fun",
+   "file": "fish.svg",
+   "aspect": 1.3333,
+   "word": "SNACK!",
+   "border": true
+  },
+  {
+   "id": "splat",
+   "name": "Paint splat",
+   "cat": "fun",
+   "file": "splat.svg",
+   "aspect": 1.0,
+   "word": "SPLAT!",
+   "border": true
+  },
+  {
+   "id": "meow",
+   "name": "Meow!",
+   "cat": "fun",
+   "file": "meow.svg",
+   "aspect": 1.3636,
+   "word": "MEOW!",
+   "border": true
+  },
+  {
+   "id": "wow",
+   "name": "Wow",
+   "cat": "fun",
+   "file": "wow.svg",
+   "aspect": 1.0,
+   "word": "WOW!",
+   "border": true
+  },
+  {
+   "id": "cola",
+   "name": "Cola",
+   "cat": "game",
+   "file": "cola.svg",
+   "aspect": 0.6641,
+   "word": "ZOOM!",
+   "border": true
+  },
+  {
+   "id": "jump-pad",
+   "name": "Jump pad",
+   "cat": "game",
+   "file": "jump-pad.svg",
+   "aspect": 1.28,
+   "word": "BOING!",
+   "border": true
+  },
+  {
+   "id": "speed-pad",
+   "name": "Speed pad",
+   "cat": "game",
+   "file": "speed-pad.svg",
+   "aspect": 1.5059,
+   "word": "SPEED!",
+   "border": true
+  },
+  {
+   "id": "barrier",
+   "name": "Barrier",
+   "cat": "game",
+   "file": "barrier.svg",
+   "aspect": 1.28,
+   "word": "BLOCKED!",
+   "border": true
+  },
+  {
+   "id": "sensor",
+   "name": "Sensor",
+   "cat": "game",
+   "file": "sensor.svg",
+   "aspect": 1.0,
+   "word": "BEEP BEEP!",
+   "border": true
+  },
+  {
+   "id": "teleporter",
+   "name": "Teleporter",
+   "cat": "game",
+   "file": "teleporter.svg",
+   "aspect": 1.0,
+   "word": "WHOOSH!",
+   "border": true
+  },
+  {
+   "id": "run",
+   "name": "Run!",
+   "cat": "game",
+   "file": "run.svg",
+   "aspect": 1.12,
+   "word": "RUN!",
+   "border": true
+  }
+ ]
+}
