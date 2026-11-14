@@ -54,7 +54,7 @@ export const StudioEnvironment: React.FC<{ intensity?: number }> = ({ intensity 
       scale={[16, 12, 1]}
     />
     {/* Rim accents in the app's own palette, so objects pick up brand colour. */}
-    <Lightformer form="circle" intensity={2.2} color="#ff7a4a" position={[-9, -1, -7]} scale={4} />
-    <Lightformer form="circle" intensity={1.8} color="#4ac8ff" position={[9, 1, -8]} scale={4} />
+    <Lightformer form="circle" intensity={2.2} color="#ff8a2a" position={[-9, -1, -7]} scale={4} />
+    <Lightformer form="circle" intensity={1.8} color="#8cc8f8" position={[9, 1, -8]} scale={4} />
   </Environment>
 );

@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { GlassPanel } from '../ui/Glass';
+import { ActivatedBy, EvadeLogo } from '../ui/Brand';
 
 export const AdminGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<'checking' | 'in' | 'out'>('checking');
@@ -18,25 +19,26 @@ export const AdminGate: React.FC<{ children: React.ReactNode }> = ({ children })
   if (state === 'checking')
     return (
       <div className="min-h-[100svh] stage-vignette grid place-items-center">
-        <span className="airo-breathe label-caps text-white/40">Checking sign-in…</span>
+        <span className="airo-breathe label-caps text-white/60">Checking sign-in…</span>
       </div>
     );
   const next = encodeURIComponent(window.location.pathname + window.location.search);
   return (
     <div className="min-h-[100svh] stage-vignette grid place-items-center p-6">
       <GlassPanel className="max-w-sm w-full p-7 text-center">
-        <img src="/brand/evade-logo.webp" alt="EVADE" className="h-8 mx-auto mb-5" />
+        <EvadeLogo className="h-8 w-auto mx-auto mb-5" />
         <div className="mx-auto mb-4 grid size-12 place-items-center rounded-full bg-white/10">
           <Lock className="size-5 text-white/80" aria-hidden />
         </div>
-        <h1 className="text-xl font-semibold mb-2">Spray Studio is team-only for now</h1>
-        <p className="text-sm text-white/60 mb-6">Sign in with the MEDIALIFE admin password to open the studio.</p>
+        <h1 className="paint-title text-[26px] leading-tight mb-2">Spray Studio is team-only for now</h1>
+        <p className="text-sm text-white/75 mb-6">Sign in with the MEDIALIFE admin password to open the studio.</p>
         <a
           href={`/admin/login?next=${next}`}
           className="inline-flex h-12 items-center justify-center rounded-full bg-[#f6c344] px-6 font-semibold text-[#15131a]"
         >
           Sign in
         </a>
+        <ActivatedBy className="h-8 w-auto mx-auto mt-6" />
       </GlassPanel>
     </div>
   );

@@ -7,7 +7,7 @@
  *
  * Self-contained by design: it imports nothing from the app besides its own
  * recorder module and the analytics queue, and leans only on the global
- * utilities already defined in src/index.css (`glass-strong`, `glass-sheen`,
+ * utilities already defined in src/index.css (`glass-strong`, `glass-modal`,
  * `paint-btn`, `splat-btn`, `label-caps`, `segmented`, `tap`, `airo-breathe`).
  * Mount it anywhere in the studio tree and hand it `handles`; see
  * src/showcase/README.md.
@@ -40,8 +40,8 @@ export interface ShowcasePanelProps {
 type Phase = 'idle' | 'recording' | 'ready' | 'error';
 
 const DURATIONS: { value: ShowcaseSeconds; label: string; accent: string }[] = [
-  { value: 6, label: '6 seconds', accent: '#FF4D1C' },
-  { value: 10, label: '10 seconds', accent: '#22D3EE' },
+  { value: 6, label: '6 seconds', accent: '#F6C344' },
+  { value: 10, label: '10 seconds', accent: '#8CC8F8' },
 ];
 
 const RING_SIZE = 88;
@@ -226,35 +226,25 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
               shown: { opacity: 1, scale: 1, y: 0 },
             }}
             transition={{ type: 'spring', stiffness: 380, damping: 34 }}
-            className="relative w-full max-w-sm glass-strong glass-sheen rounded-[28px] overflow-hidden flex flex-col max-h-[88vh]"
-            style={{ background: 'linear-gradient(180deg, rgba(17,17,28,0.94), rgba(8,8,14,0.96))' }}
+            className="relative w-full max-w-sm glass-modal rounded-[28px] overflow-hidden flex flex-col max-h-[88vh]"
           >
-            <div
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-24 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse 55% 100% at 20% 0%, rgba(255,77,28,0.18), transparent 70%),' +
-                  'radial-gradient(ellipse 50% 90% at 82% 0%, rgba(34,211,238,0.14), transparent 70%)',
-              }}
-            />
 
             {/* ------------------------------ header ------------------------------ */}
             <header className="relative shrink-0 px-5 pt-5 pb-4 flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[14px] bg-gradient-to-tr from-[#FF4D1C] to-[#FFB020] grid place-items-center shadow-[0_0_26px_rgba(255,77,28,0.45)] shrink-0">
-                <Clapperboard size={19} className="text-white" />
+              <div className="w-10 h-10 rounded-[14px] bg-[#F6C344] grid place-items-center shadow-[3px_3px_0_#15131a] -rotate-6 shrink-0">
+                <Clapperboard size={19} className="text-[#15131a]" />
               </div>
               <div className="flex-1 min-w-0 pt-0.5">
-                <h2 className="text-[17px] font-bold tracking-tight text-white leading-tight">Showcase</h2>
-                <p className="text-[11.5px] text-white/55 mt-0.5 leading-snug">
-                  A cinematic turntable of your piece, saved as video.
+                <h2 className="paint-title text-[24px] leading-tight">Showcase</h2>
+                <p className="text-[12px] text-white/70 mt-0.5 leading-snug">
+                  A slow spin of your piece, saved as a video.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={requestClose}
                 aria-label="Close showcase"
-                className="tap glass rounded-full w-8 h-8 grid place-items-center text-white/70 hover:text-white shrink-0"
+                className="tap glass rounded-full w-10 h-10 pointer-coarse:w-11 pointer-coarse:h-11 grid place-items-center text-white/80 hover:text-white shrink-0"
               >
                 <X size={15} />
               </button>
@@ -266,7 +256,7 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                 <div className="rounded-2xl border border-white/12 bg-white/[0.04] px-4 py-4">
                   <div className="flex items-center gap-2 mb-1.5">
                     <TriangleAlert size={14} className="text-[var(--color-airo-ember)] shrink-0" />
-                    <span className="label-caps text-white/45">Not available here</span>
+                    <span className="label-caps text-white/65">Not available here</span>
                   </div>
                   <p className="text-[12px] text-white/65 leading-relaxed">{support.reason}</p>
                   <button
@@ -281,7 +271,7 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                 <>
                   {/* --------------------------- length --------------------------- */}
                   <div className="mb-4">
-                    <div className="label-caps text-white/35 mb-2">Clip length</div>
+                    <div className="label-caps text-white/60 mb-2">Clip length</div>
                     <div className="segmented" role="radiogroup" aria-label="Clip length">
                       {DURATIONS.map((option) => {
                         const selected = option.value === seconds;
@@ -295,10 +285,8 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                             onClick={() => setSeconds(option.value)}
                             className={`tap relative z-10 flex-1 rounded-full px-3 py-1.5 text-[11px] font-semibold tracking-wide whitespace-nowrap disabled:opacity-50 ${
                               selected
-                                ? option.accent === '#22D3EE'
-                                  ? 'text-[#0B0B12]' // ink on the light aqua stroke
-                                  : 'text-white'
-                                : 'text-white/55 hover:text-white/85'
+                                ? 'text-[#15131A]' // ink on the yellow / sky stroke
+                                : 'text-white/70 hover:text-white'
                             }`}
                           >
                             {selected && (
@@ -311,14 +299,14 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                                   // (Segmented's StrokeIndicator): a sprayed streak
                                   // stencil instead of a plain pill.
                                   inset: '-46% -6%',
-                                  background: `linear-gradient(105deg, ${option.accent} 0%, ${option.accent} 58%, ${option.accent}d9 100%)`,
-                                  WebkitMaskImage: 'url(/ui/mask-stroke-2.webp)',
-                                  maskImage: 'url(/ui/mask-stroke-2.webp)',
+                                  background: option.accent,
+                                  WebkitMaskImage: 'url(/spray/ui/mask-stroke-2.webp)',
+                                  maskImage: 'url(/spray/ui/mask-stroke-2.webp)',
                                   WebkitMaskSize: '100% 100%',
                                   maskSize: '100% 100%',
                                   WebkitMaskRepeat: 'no-repeat',
                                   maskRepeat: 'no-repeat',
-                                  filter: `saturate(1.1) drop-shadow(0 5px 14px ${option.accent}80)`,
+                                  filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.45))',
                                 }}
                               />
                             )}
@@ -342,8 +330,8 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                           <ProgressRing percent={percent} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
-                              <span className="w-2 h-2 rounded-full bg-[#FF4D1C] airo-breathe shrink-0" />
-                              <span className="label-caps text-white/45">Recording</span>
+                              <span className="w-2 h-2 rounded-full bg-[#FF3B4E] airo-breathe shrink-0" />
+                              <span className="label-caps text-white/65">Recording</span>
                             </div>
                             <p className="text-[12px] text-white/65 mt-1 leading-snug">
                               Sweeping a full turn. {remaining}s left.
@@ -362,7 +350,7 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                             className="h-full rounded-full transition-[width] duration-100 ease-linear"
                             style={{
                               width: `${percent}%`,
-                              background: 'linear-gradient(90deg, #FF4D1C, #FFB020 60%, #22D3EE)',
+                              background: '#F6C344',
                             }}
                           />
                         </div>
@@ -373,7 +361,7 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                   {/* --------------------------- preview --------------------------- */}
                   {clipUrl && !recording && (
                     <div className="mb-4">
-                      <div className="label-caps text-white/35 mb-2">Your clip</div>
+                      <div className="label-caps text-white/60 mb-2">Your clip</div>
                       <video
                         key={clipUrl}
                         src={clipUrl}
@@ -392,10 +380,10 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
 
                   {/* ---------------------------- error ---------------------------- */}
                   {phase === 'error' && error && (
-                    <div className="rounded-2xl border border-[#FF4D1C]/35 bg-[#FF4D1C]/10 px-4 py-3 mb-4">
+                    <div className="rounded-2xl border border-[#FF3B4E]/50 bg-[#FF3B4E]/12 px-4 py-3 mb-4">
                       <div className="flex items-center gap-2 mb-1">
                         <TriangleAlert size={13} className="text-[var(--color-airo-ember)] shrink-0" />
-                        <span className="label-caps text-white/50">Recording failed</span>
+                        <span className="label-caps text-white/70">Recording failed</span>
                       </div>
                       <p className="text-[12px] text-white/70 leading-relaxed">{error}</p>
                     </div>
@@ -416,8 +404,8 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                       <button
                         type="button"
                         onClick={saveAgain}
-                        className="paint-btn tap w-full py-3.5 px-8 flex items-center justify-center gap-2 text-[13px] font-bold text-white"
-                        style={{ '--paint': 'linear-gradient(120deg, #22D3EE, #38BDF8 65%, #A78BFA)' } as React.CSSProperties}
+                        className="paint-btn tap w-full min-h-12 py-3.5 px-8 flex items-center justify-center gap-2 text-[14px] font-bold text-[#15131a]"
+                        style={{ '--paint': '#8CC8F8' } as React.CSSProperties}
                       >
                         <Download size={15} />
                         Save again
@@ -435,15 +423,15 @@ export const ShowcasePanel: React.FC<ShowcasePanelProps> = ({ open, onClose, han
                     <button
                       type="button"
                       onClick={start}
-                      className="paint-btn tap w-full py-3.5 px-8 flex items-center justify-center gap-2 text-[13px] font-bold text-white"
-                      style={{ '--paint': 'linear-gradient(120deg, #FF4D1C, #FF7A34 70%, #FFB020)' } as React.CSSProperties}
+                      className="paint-btn tap w-full min-h-12 py-3.5 px-8 flex items-center justify-center gap-2 text-[14px] font-bold text-[#15131a]"
+                      style={{ '--paint': '#F6C344' } as React.CSSProperties}
                     >
                       <Video size={15} />
-                      Record turntable
+                      Record a spin
                     </button>
                   )}
 
-                  <p className="text-[10.5px] text-white/30 mt-3 leading-snug text-center">
+                  <p className="text-[11px] text-white/55 mt-3 leading-snug text-center">
                     Keep this tab in front while it records.
                   </p>
                 </>
@@ -468,17 +456,10 @@ const ProgressRing: React.FC<{ percent: number }> = ({ percent }) => {
     <div className="relative shrink-0" style={{ width: RING_SIZE, height: RING_SIZE }}>
       <div
         className="splat-btn absolute inset-0 rounded-full"
-        style={{ '--paint': 'rgba(255,77,28,0.22)' } as React.CSSProperties}
+        style={{ '--paint': 'rgba(246,195,68,0.22)' } as React.CSSProperties}
         aria-hidden
       />
       <svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`} className="relative -rotate-90">
-        <defs>
-          <linearGradient id="airo-showcase-ring" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FF4D1C" />
-            <stop offset="55%" stopColor="#FFB020" />
-            <stop offset="100%" stopColor="#22D3EE" />
-          </linearGradient>
-        </defs>
         <circle
           cx={RING_SIZE / 2}
           cy={RING_SIZE / 2}
@@ -492,7 +473,7 @@ const ProgressRing: React.FC<{ percent: number }> = ({ percent }) => {
           cy={RING_SIZE / 2}
           r={RING_RADIUS}
           fill="none"
-          stroke="url(#airo-showcase-ring)"
+          stroke="#F6C344"
           strokeWidth={6}
           strokeLinecap="round"
           strokeDasharray={RING_CIRCUMFERENCE}

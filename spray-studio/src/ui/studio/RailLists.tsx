@@ -32,15 +32,15 @@ const ObjectRow: React.FC<{
       thumb={object.thumb}
       label={object.label}
       size={42}
-      accent={selected ? '#c084fc' : '#a78bfa'}
+      accent={selected ? '#f6c344' : '#8cc8f8'}
       className="rounded-full bg-black/25 ring-1 ring-white/10"
     />
     <span className="min-w-0 flex-1">
       <span className="block truncate text-[12.5px] font-semibold text-white">{object.label}</span>
-      <span className="mono-caps block mt-0.5 text-[8.5px] text-white/45 truncate">
+      <span className="mono-caps block mt-0.5 text-[8.5px] text-white/60 truncate">
         {object.category}
         <span className="mx-1.5 text-white/25">•</span>
-        {loading ? 'Loading' : object.id === 'custom3d' ? 'Upload' : 'PBR'}
+        {loading ? 'Loading' : object.paintable?.status === 'draft' ? 'Draft' : object.paintable?.client || 'Merch'}
       </span>
     </span>
     {loading ? (
@@ -48,7 +48,7 @@ const ObjectRow: React.FC<{
     ) : selected ? (
       <span
         className="h-2 w-2 rounded-full shrink-0"
-        style={{ background: '#c084fc', boxShadow: '0 0 10px #c084fc' }}
+        style={{ background: 'var(--studio-accent)' }}
       />
     ) : null}
   </button>
@@ -64,7 +64,7 @@ export const ObjectRows: React.FC<{
   <div role="listbox" aria-label="Choose a canvas" className="flex flex-col gap-3">
     {OBJECT_CATEGORIES.filter((category) => objectsInCategory(category).length > 0).map((category) => (
       <div key={category}>
-        <div className="mono-caps px-2 mb-1 text-[8.5px] text-white/35">{category}</div>
+        <div className="mono-caps px-2 mb-1 text-[8.5px] text-white/55">{category}</div>
         <div className="flex flex-col gap-0.5">
           {objectsInCategory(category).map((object) => (
             <ObjectRow
@@ -81,7 +81,7 @@ export const ObjectRows: React.FC<{
 
     {(onUpload || customName) && (
       <div>
-        <div className="mono-caps px-2 mb-1 text-[8.5px] text-white/35">Your own</div>
+        <div className="mono-caps px-2 mb-1 text-[8.5px] text-white/55">Your own</div>
         <div className="flex flex-col gap-0.5">
           {customName && (
             <ObjectRow
@@ -141,20 +141,20 @@ export const CrewRows: React.FC<{
         type="button"
         onClick={onInvite}
         title="Show a bigger code"
-        className="tap shrink-0 rounded-2xl bg-white p-1.5 shadow-[0_16px_40px_-18px_rgba(192,132,252,0.9)]"
+        className="tap shrink-0 rounded-2xl bg-white p-1.5 shadow-[4px_4px_0_var(--studio-accent)]"
       >
         <QRCodeSVG value={controllerUrl} size={76} />
       </button>
       <div className="min-w-0 flex-1">
-        <div className="mono-caps text-[8.5px] text-white/40">Room code</div>
+        <div className="mono-caps text-[8.5px] text-white/60">Room code</div>
         <div className="mt-0.5 text-[20px] font-black tracking-[0.22em] pl-[0.22em] leading-none text-white">{roomId}</div>
-        <p className="mt-1.5 text-[10px] leading-snug text-white/50">Scan with a phone camera to turn it into a spray can.</p>
+        <p className="mt-1.5 text-[10.5px] leading-snug text-white/70">Scan with your phone camera to use it as a spray can.</p>
         <button
           type="button"
           onClick={onCopyLink}
-          className="tap mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-2.5 py-1 text-[9.5px] font-semibold text-white/80 hover:bg-white/[0.14] hover:text-white"
+          className="tap mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1 text-[10px] font-semibold text-white/80 hover:bg-white/[0.14] hover:text-white"
         >
-          {copied ? <Check size={10} className="text-emerald-300" /> : <Copy size={10} />}
+          {copied ? <Check size={10} className="text-[#3ddc84]" /> : <Copy size={10} />}
           {copied ? 'Copied' : 'Copy link'}
         </button>
       </div>
@@ -167,14 +167,14 @@ export const CrewRows: React.FC<{
             key={slot}
             type="button"
             onClick={onInvite}
-            className="tap rail-row border-dashed !border-white/12 text-white/50 hover:text-white/85"
+            className="tap rail-row border-dashed !border-white/15 text-white/65 hover:text-white"
           >
             <span className="grid h-[42px] w-[42px] place-items-center rounded-full border border-dashed border-white/20">
               <QrCode size={15} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[12.5px] font-semibold">Slot {slot} open</span>
-              <span className="mono-caps block mt-0.5 text-[8.5px] text-white/35">Scan to join</span>
+              <span className="mono-caps block mt-0.5 text-[8.5px] text-white/55">Scan to join</span>
             </span>
           </button>
         );
@@ -183,20 +183,20 @@ export const CrewRows: React.FC<{
       return (
         <div key={slot} className="rail-row" data-active={player.isPainting || undefined}>
           <span
-            className={`relative grid h-[42px] w-[42px] place-items-center rounded-full text-[14px] font-black text-black/80 ${
+            className={`relative grid h-[42px] w-[42px] place-items-center rounded-full text-[14px] font-black text-[#15131a] ${
               player.isPainting ? 'airo-breathe' : ''
             }`}
-            style={{ background: player.color, boxShadow: `0 8px 22px -8px ${player.color}` }}
+            style={{ background: player.color }}
           >
             {player.name.slice(0, 1).toUpperCase()}
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[12.5px] font-semibold text-white">{player.name}</span>
-            <span className="mono-caps flex items-center gap-1.5 mt-0.5 text-[8.5px] text-white/45">
+            <span className="mono-caps flex items-center gap-1.5 mt-0.5 text-[8.5px] text-white/60">
               {player.mode === 'projection' ? <Hand size={9} /> : <Smartphone size={9} />}
               {player.mode === 'projection' ? 'Touch' : 'Motion'}
               <span className="text-white/25">•</span>
-              {player.isPainting ? <span className="text-fuchsia-300">Painting</span> : player.tool}
+              {player.isPainting ? <span className="text-[var(--studio-accent)]">Painting</span> : player.tool}
             </span>
           </span>
           <button
@@ -208,10 +208,10 @@ export const CrewRows: React.FC<{
                 ? 'This player is steering the studio camera — click to stop'
                 : "Let this player's gestures rotate the studio camera"
             }
-            className={`tap shrink-0 rounded-full px-2 py-1 border text-[8.5px] font-bold flex items-center gap-1 mono-caps ${
+            className={`tap shrink-0 rounded-full min-h-8 px-2.5 py-1 border text-[8.5px] font-bold flex items-center gap-1 mono-caps ${
               syncOn
-                ? 'bg-fuchsia-400/25 border-fuchsia-300/50 text-fuchsia-200'
-                : 'bg-white/[0.06] border-white/15 text-white/50 hover:text-white'
+                ? 'bg-[var(--studio-accent)] border-[var(--studio-accent)] text-[var(--studio-on-accent)]'
+                : 'bg-white/[0.06] border-white/15 text-white/65 hover:text-white'
             }`}
           >
             <Video size={10} />
@@ -220,7 +220,7 @@ export const CrewRows: React.FC<{
         </div>
       );
     })}
-    <p className="mono-caps mt-2 px-2 text-[8.5px] text-white/35 flex items-center gap-1.5">
+    <p className="mono-caps mt-2 px-2 text-[8.5px] text-white/55 flex items-center gap-1.5">
       <Check size={9} /> Up to four phones per studio
     </p>
   </div>

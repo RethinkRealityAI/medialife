@@ -93,7 +93,7 @@ export const ZoomSlider: React.FC<{
 
   return (
     <div className="flex items-center gap-2">
-      <span className="mono-caps text-[8.5px] text-white/45 w-9 shrink-0">Zoom</span>
+      <span className="mono-caps text-[8.5px] text-white/60 w-9 shrink-0">Zoom</span>
       <input
         ref={input}
         type="range"

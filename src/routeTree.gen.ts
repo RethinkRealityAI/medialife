@@ -27,6 +27,7 @@ import { Route as AdminLinksRouteImport } from './routes/admin.links'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMedialifeRouteImport } from './routes/admin.medialife'
 import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
+import { Route as AdminSprayRouteImport } from './routes/admin.spray'
 import { Route as AdminUgcRouteImport } from './routes/admin.ugc'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
@@ -140,6 +141,7 @@ import { Route as ApiSprayAdminCreationsRouteImport } from './routes/api.spray.a
 import { Route as ApiSprayAdminSetsRouteImport } from './routes/api.spray.admin.sets'
 import { Route as ApiSprayCreationsIdRouteImport } from './routes/api.spray.creations.$id'
 import { Route as ApiSprayFileSplatRouteImport } from './routes/api.spray.file.$'
+import { Route as ApiSpraySetsIdRouteImport } from './routes/api.spray.sets.$id'
 import { Route as ApiUgcDevSeedRouteImport } from './routes/api.ugc.dev.seed'
 import { Route as ApiUgcUploadsIdRouteImport } from './routes/api.ugc.uploads.$id'
 import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
@@ -262,6 +264,11 @@ const AdminMedialifeRoute = AdminMedialifeRouteImport.update({
 const AdminShelvesRoute = AdminShelvesRouteImport.update({
   id: '/shelves',
   path: '/shelves',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSprayRoute = AdminSprayRouteImport.update({
+  id: '/spray',
+  path: '/spray',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUgcRoute = AdminUgcRouteImport.update({
@@ -834,6 +841,11 @@ const ApiSprayFileSplatRoute = ApiSprayFileSplatRouteImport.update({
   path: '/api/spray/file/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSpraySetsIdRoute = ApiSpraySetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSpraySetsRoute,
+} as any)
 const ApiUgcDevSeedRoute = ApiUgcDevSeedRouteImport.update({
   id: '/api/ugc/dev/seed',
   path: '/api/ugc/dev/seed',
@@ -1040,6 +1052,7 @@ export interface FileRoutesByFullPath {
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
@@ -1095,7 +1108,7 @@ export interface FileRoutesByFullPath {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
-  '/api/spray/sets': typeof ApiSpraySetsRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
@@ -1153,6 +1166,7 @@ export interface FileRoutesByFullPath {
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
   '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1203,6 +1217,7 @@ export interface FileRoutesByTo {
   '/admin/links': typeof AdminLinksRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/login': typeof AdminLoginRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
@@ -1253,7 +1268,7 @@ export interface FileRoutesByTo {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
-  '/api/spray/sets': typeof ApiSpraySetsRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
@@ -1311,6 +1326,7 @@ export interface FileRoutesByTo {
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
   '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1365,6 +1381,7 @@ export interface FileRoutesById {
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
@@ -1420,7 +1437,7 @@ export interface FileRoutesById {
   '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
   '/api/spray/me': typeof ApiSprayMeRoute
   '/api/spray/qr': typeof ApiSprayQrRoute
-  '/api/spray/sets': typeof ApiSpraySetsRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
@@ -1478,6 +1495,7 @@ export interface FileRoutesById {
   '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
   '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
   '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1533,6 +1551,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
+    | '/admin/spray'
     | '/admin/ugc'
     | '/admin/login'
     | '/creator-hub'
@@ -1646,6 +1665,7 @@ export interface FileRouteTypes {
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
     | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
@@ -1696,6 +1716,7 @@ export interface FileRouteTypes {
     | '/admin/links'
     | '/admin/media'
     | '/admin/medialife'
+    | '/admin/spray'
     | '/admin/login'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
@@ -1804,6 +1825,7 @@ export interface FileRouteTypes {
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
     | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
@@ -1857,6 +1879,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
+    | '/admin/spray'
     | '/admin/ugc'
     | '/admin_/login'
     | '/creator-hub/_app'
@@ -1970,6 +1993,7 @@ export interface FileRouteTypes {
     | '/api/spray/admin/sets'
     | '/api/spray/creations/$id'
     | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/_app/products/$productId'
@@ -2060,7 +2084,7 @@ export interface RootRouteChildren {
   ApiSprayCreationsRoute: typeof ApiSprayCreationsRouteWithChildren
   ApiSprayMeRoute: typeof ApiSprayMeRoute
   ApiSprayQrRoute: typeof ApiSprayQrRoute
-  ApiSpraySetsRoute: typeof ApiSpraySetsRoute
+  ApiSpraySetsRoute: typeof ApiSpraySetsRouteWithChildren
   ApiUgcUploadsRoute: typeof ApiUgcUploadsRouteWithChildren
   MIdFilenameRoute: typeof MIdFilenameRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
@@ -2213,6 +2237,13 @@ declare module '@tanstack/react-router' {
       path: '/shelves'
       fullPath: '/admin/shelves'
       preLoaderRoute: typeof AdminShelvesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/spray': {
+      id: '/admin/spray'
+      path: '/spray'
+      fullPath: '/admin/spray'
+      preLoaderRoute: typeof AdminSprayRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ugc': {
@@ -3006,6 +3037,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSprayFileSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/spray/sets/$id': {
+      id: '/api/spray/sets/$id'
+      path: '/$id'
+      fullPath: '/api/spray/sets/$id'
+      preLoaderRoute: typeof ApiSpraySetsIdRouteImport
+      parentRoute: typeof ApiSpraySetsRoute
+    }
     '/api/ugc/dev/seed': {
       id: '/api/ugc/dev/seed'
       path: '/api/ugc/dev/seed'
@@ -3301,6 +3339,7 @@ interface AdminRouteChildren {
   AdminMediaRoute: typeof AdminMediaRoute
   AdminMedialifeRoute: typeof AdminMedialifeRoute
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
+  AdminSprayRoute: typeof AdminSprayRoute
   AdminUgcRoute: typeof AdminUgcRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
@@ -3320,6 +3359,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMediaRoute: AdminMediaRoute,
   AdminMedialifeRoute: AdminMedialifeRoute,
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
+  AdminSprayRoute: AdminSprayRoute,
   AdminUgcRoute: AdminUgcRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
@@ -3538,6 +3578,18 @@ const ApiSprayCreationsRouteChildren: ApiSprayCreationsRouteChildren = {
 const ApiSprayCreationsRouteWithChildren =
   ApiSprayCreationsRoute._addFileChildren(ApiSprayCreationsRouteChildren)
 
+interface ApiSpraySetsRouteChildren {
+  ApiSpraySetsIdRoute: typeof ApiSpraySetsIdRoute
+}
+
+const ApiSpraySetsRouteChildren: ApiSpraySetsRouteChildren = {
+  ApiSpraySetsIdRoute: ApiSpraySetsIdRoute,
+}
+
+const ApiSpraySetsRouteWithChildren = ApiSpraySetsRoute._addFileChildren(
+  ApiSpraySetsRouteChildren,
+)
+
 interface ApiUgcUploadsIdRouteChildren {
   ApiUgcUploadsIdCompleteRoute: typeof ApiUgcUploadsIdCompleteRoute
   ApiUgcUploadsIdPosterRoute: typeof ApiUgcUploadsIdPosterRoute
@@ -3691,7 +3743,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSprayCreationsRoute: ApiSprayCreationsRouteWithChildren,
   ApiSprayMeRoute: ApiSprayMeRoute,
   ApiSprayQrRoute: ApiSprayQrRoute,
-  ApiSpraySetsRoute: ApiSpraySetsRoute,
+  ApiSpraySetsRoute: ApiSpraySetsRouteWithChildren,
   ApiUgcUploadsRoute: ApiUgcUploadsRouteWithChildren,
   MIdFilenameRoute: MIdFilenameRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,

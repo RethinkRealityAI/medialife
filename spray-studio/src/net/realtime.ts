@@ -23,7 +23,7 @@ const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefine
 export const MAX_PLAYERS = 4;
 
 /** Colour assigned to each player slot, in slot order. */
-export const SLOT_COLORS = ['#FF4D1C', '#22D3EE', '#A78BFA', '#34D399'];
+export const SLOT_COLORS = ['#F6C344', '#3F9BE6', '#E85BD8', '#3DDC84'];
 
 export type AiroEvent =
   | 'motion'

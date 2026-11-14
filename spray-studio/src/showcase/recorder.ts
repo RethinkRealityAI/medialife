@@ -485,7 +485,7 @@ export function recordTurntable(
    Delivery
    ------------------------------------------------------------------ */
 
-/** `airohub-<room>-showcase.webm`, with the room slugged for filesystem safety. */
+/** `spray-studio-<room>-showcase.webm`, with the room slugged for filesystem safety. */
 export function showcaseFileName(roomId: string): string {
   const slug = String(roomId ?? '')
     .trim()
@@ -493,7 +493,7 @@ export function showcaseFileName(roomId: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40);
-  return `airohub-${slug || 'studio'}-showcase.webm`;
+  return `spray-studio-${slug || 'studio'}-showcase.webm`;
 }
 
 /**

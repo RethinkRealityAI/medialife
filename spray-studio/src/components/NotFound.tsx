@@ -1,9 +1,9 @@
 /**
  * The 404 screen.
  *
- * A mistyped room code is the likely way anyone gets here — `/canvas/ABC` is
- * one keystroke from `/canvas/ABCD` — so the page is short, admits nothing is
- * broken, and points at the two doors worth opening.
+ * A mistyped room code is the likely way anyone gets here — `/join/ABC` is
+ * one keystroke from `/join/ABCD` — so the page is short, admits nothing is
+ * broken, and points at the one door worth opening: a fresh studio (/spray/).
  *
  * **The noindex meta is not cosmetic.** This is a single-page app on Netlify:
  * the SPA fallback answers every unmatched path with `index.html` and a 200,
@@ -16,10 +16,10 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowRight, Compass, SprayCan } from 'lucide-react';
+import { ArrowRight, SprayCan } from 'lucide-react';
 import { GlassPanel } from '../ui/Glass';
 import { track } from '../analytics/track';
-import { FeedbackButton } from '../feedback/FeedbackButton';
+import { ActivatedBy, EvadeLogo } from '../ui/Brand';
 
 export default function NotFound() {
   const { pathname } = useLocation();
@@ -46,37 +46,28 @@ export default function NotFound() {
   return (
     <div className="min-h-[100svh] stage-vignette grid place-items-center px-5 text-white">
       <GlassPanel data-testid="not-found" className="w-full max-w-md p-8 text-center">
-        <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-[15px] bg-gradient-to-tr from-[#FF4D1C] to-[#FFB020] shadow-[0_0_22px_rgba(255,77,28,0.45)]">
-          <SprayCan size={20} className="text-white drop-shadow" />
+        <EvadeLogo className="h-7 w-auto mx-auto mb-5" />
+        <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-[15px] bg-[#f6c344] shadow-[3px_3px_0_#15131a] -rotate-6">
+          <SprayCan size={20} className="text-[#15131a]" />
         </span>
 
-        <h1 className="paint-title text-[26px] font-black leading-none tracking-tight">
-          Nothing here
-        </h1>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-white/55">
-          This wall is blank. If you were joining a studio, check the room code — they are four to
-          eight letters and numbers, and they are case-sensitive.
+        <h1 className="paint-title text-[34px] leading-none">Nothing here</h1>
+        <p className="mt-3 text-[13px] leading-relaxed text-white/75">
+          This wall is blank. If you were joining a studio, check the room code: it is four to eight
+          letters and numbers, and capitals matter.
         </p>
 
         <div className="mt-6 flex flex-col gap-2">
           <Link
             to="/"
-            className="tap flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FF4D1C] to-[#FF7A34] px-6 py-3 text-[12px] font-bold text-white shadow-[0_8px_24px_-6px_rgba(255,77,28,0.75)]"
+            className="tap flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#f6c344] px-6 py-3 text-[14px] font-bold text-[#15131a] shadow-[0_4px_0_#b98d1f]"
           >
-            Back to the studio
-            <ArrowRight size={14} />
-          </Link>
-          <Link
-            to="/how-it-works"
-            className="tap flex items-center justify-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-6 py-3 text-[12px] font-semibold text-white/75 hover:bg-white/[0.12] hover:text-white"
-          >
-            <Compass size={14} />
-            How it works
+            Open a studio
+            <ArrowRight size={15} />
           </Link>
         </div>
+        <ActivatedBy className="h-9 w-auto mx-auto mt-7" />
       </GlassPanel>
-
-      <FeedbackButton variant="floating" />
     </div>
   );
 }

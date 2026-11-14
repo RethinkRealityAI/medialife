@@ -33,6 +33,7 @@ import { SurfacePainter } from '../scene/SurfacePainter';
 import { GlassPanel, GlassIconButton, Segmented, Sheet } from '../ui/Glass';
 import { WelcomeGuide } from './WelcomeGuide';
 import { ColorWell } from '../ui/ColorWell';
+import { ActivatedBy, EvadeLogo } from '../ui/Brand';
 import { ObjectTrigger, ObjectPickerSheet } from '../ui/ObjectPicker';
 import { PaintSurface, CANVAS_RES } from '../paint/PaintSurface';
 import { StampBatcher, StampPacket, PaintStamp, BatchContext, packStamps, unpackStamps } from '../paint/stamps';
@@ -56,6 +57,7 @@ import { ensureCustomModels } from '../paint/customModels';
 import { AiroConnection, isRealtimeConfigured } from '../net/realtime';
 import { AimTracker, ShakeDetector } from '../utils/motion';
 import { useFlags } from '../config/flags';
+import { startSet } from '../spray/creation';
 import { track } from '../analytics/track';
 import { FeedbackButton } from '../feedback/FeedbackButton';
 import { TargetObjectType, PlayerInfo, ImageStampData } from '../types';
@@ -459,9 +461,9 @@ export default function ControllerView() {
   const [stampError, setStampError] = useState<string | null>(null);
   const stampSeq = useRef(0);
   const [tool, setTool] = useState<'spray' | 'brush'>('spray');
-  const [color, setColor] = useState('#FF4D1C');
+  const [color, setColor] = useState('#F6C344');
   const [toolSize, setToolSize] = useState(1);
-  const [objectId, setObjectId] = useState<TargetObjectType>('skateboard');
+  const [objectId, setObjectId] = useState<TargetObjectType>(startSet);
   const objectIdRef = useRef(objectId);
   useEffect(() => {
     objectIdRef.current = objectId;
@@ -478,7 +480,7 @@ export default function ControllerView() {
     id: playerIdRef.current,
     slot: 1,
     name: 'Tagger',
-    color: '#FF4D1C',
+    color: '#F6C344',
     tool: 'spray',
     mode: 'motion',
   });
@@ -1044,31 +1046,33 @@ export default function ControllerView() {
     return (
       <div className="fixed inset-0 stage-vignette text-white grid place-items-center p-6 safe-top safe-bottom">
         <GlassPanel className="w-full max-w-sm p-7 text-center">
-          <div className="w-16 h-16 mx-auto mb-5 rounded-[22px] bg-gradient-to-tr from-[#FF4D1C] to-[#FFB020] grid place-items-center shadow-[0_0_34px_rgba(255,77,28,0.5)]">
-            <SprayCan size={30} className="text-white" />
+          <EvadeLogo className="h-7 w-auto mx-auto mb-6" />
+          <div className="w-16 h-16 mx-auto mb-5 rounded-[22px] bg-[#F6C344] grid place-items-center shadow-[4px_4px_0_#15131a] -rotate-6">
+            <SprayCan size={30} className="text-[#15131a]" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight mb-1.5">Become the spray can</h1>
-          <p className="text-[12px] text-white/55 leading-relaxed mb-6">
-            Allow motion access and your phone turns into the can — point it at the studio screen,
-            hold to spray, shake to re-centre your aim.
+          <h1 className="paint-title text-[30px] leading-tight mb-2">Be the spray can</h1>
+          <p className="text-[13px] text-white/75 leading-relaxed mb-6">
+            Let the page use your phone's motion and it turns into a spray can. Point it at the big
+            screen, hold to spray, and shake to recentre.
           </p>
           <button
             onClick={requestSensors}
-            className="tap w-full py-3.5 rounded-2xl bg-gradient-to-r from-[#FF4D1C] to-[#FF7A34] text-[12px] font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_10px_28px_-8px_rgba(255,77,28,0.8)] mb-2.5"
+            className="tap w-full min-h-12 py-3.5 rounded-full bg-[#F6C344] text-[#15131a] text-[14px] font-bold flex items-center justify-center gap-2 shadow-[0_4px_0_#b98d1f] mb-3"
           >
             <Smartphone size={16} />
-            Enable motion aiming
+            Use my phone as a can
           </button>
           <button
             onClick={() => {
               setSensorState('denied');
               setMode('paint');
             }}
-            className="tap w-full py-3 rounded-2xl bg-white/[0.07] border border-white/12 text-[11px] font-semibold text-white/75"
+            className="tap w-full min-h-12 py-3 rounded-full bg-white/[0.07] border border-white/15 text-[13px] font-semibold text-white/85"
           >
             Just paint on my screen
           </button>
-          <p className="mt-4 text-[10px] font-mono text-white/30">ROOM {roomId}</p>
+          <p className="mt-4 text-[11px] font-mono tracking-[0.16em] text-white/55">ROOM {roomId}</p>
+          <ActivatedBy className="h-8 w-auto mx-auto mt-5" />
         </GlassPanel>
       </div>
     );
@@ -1078,9 +1082,9 @@ export default function ControllerView() {
   const activeObject = OBJECT_BY_ID.get(objectId);
 
   const modeOptions = [
-    { value: 'aim' as const, label: 'Aim', icon: <Crosshair size={13} />, accent: '#FF4D1C' },
-    { value: 'paint' as const, label: 'Paint', icon: <Pencil size={13} />, accent: '#22D3EE' },
-    { value: 'pad' as const, label: 'Pad', icon: <Square size={13} />, accent: '#A78BFA' },
+    { value: 'aim' as const, label: 'Aim', icon: <Crosshair size={13} />, accent: '#F6C344' },
+    { value: 'paint' as const, label: 'Paint', icon: <Pencil size={13} />, accent: '#8CC8F8' },
+    { value: 'pad' as const, label: 'Pad', icon: <Square size={13} />, accent: '#E85BD8' },
   ]
     .filter((option) => option.value !== 'aim' || sensorsReady)
     .filter((option) => option.value !== 'pad' || flags.ui.padMode);
@@ -1094,16 +1098,16 @@ export default function ControllerView() {
             setNameDraft(player.name);
             setNameSheet(true);
           }}
-          className="tap glass glass-sheen rounded-full pl-2 pr-2.5 py-1.5 flex items-center gap-1.5 min-w-0"
+          className="tap glass rounded-full min-h-11 pl-2.5 pr-3 py-1.5 flex items-center gap-1.5 min-w-0"
         >
           <span
             className={`w-2.5 h-2.5 rounded-full shrink-0 ${triggerActive ? 'airo-breathe' : ''}`}
             style={{ background: color }}
           />
-          <span className="text-[11px] font-semibold truncate max-w-[92px]">
+          <span className="text-[12px] font-semibold truncate max-w-[92px]">
             P{player.slot} {player.name}
           </span>
-          <User size={10} className="text-white/40 shrink-0" />
+          <User size={11} className="text-white/60 shrink-0" />
         </button>
 
         <div className="flex-1 flex justify-center min-w-0">
@@ -1129,7 +1133,7 @@ export default function ControllerView() {
             }
           >
             {connection === 'connected' ? (
-              <Wifi size={13} className="text-emerald-400" />
+              <Wifi size={13} className="text-[#3DDC84]" />
             ) : connection === 'reconnecting' ? (
               <RefreshCw size={13} className="animate-spin text-amber-400" />
             ) : connection === 'connecting' ? (
@@ -1138,15 +1142,16 @@ export default function ControllerView() {
               <WifiOff size={13} className="text-amber-400" />
             )}
           </span>
-          <GlassIconButton size={32} onClick={() => setGuideOpen(true)} title="How to play">
-            <HelpCircle size={13} className="text-[var(--color-airo-aqua)]" />
+          <GlassIconButton size={44} onClick={() => setGuideOpen(true)} title="How it works" aria-label="How it works">
+            <HelpCircle size={17} className="text-[#8CC8F8]" />
           </GlassIconButton>
           <GlassIconButton
-            size={32}
+            size={44}
             onClick={() => setMuted(sounds.toggleMute())}
             title={muted ? 'Unmute' : 'Mute'}
+            aria-label={muted ? 'Unmute' : 'Mute'}
           >
-            {muted ? <VolumeX size={13} /> : <Volume2 size={13} className="text-[var(--color-airo-flame)]" />}
+            {muted ? <VolumeX size={17} /> : <Volume2 size={17} className="text-[#F6C344]" />}
           </GlassIconButton>
           <FeedbackButton variant="inline" roomId={roomId} />
         </div>
@@ -1193,7 +1198,7 @@ export default function ControllerView() {
               onPointerLeave={stopTrigger}
               style={{
                 background: triggerActive
-                  ? `radial-gradient(circle at 50% 42%, ${color}30 0%, transparent 60%)`
+                  ? `${color}1f`
                   : undefined,
               }}
             >
@@ -1219,17 +1224,17 @@ export default function ControllerView() {
                 }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onPointerUp={(e) => e.stopPropagation()}
-                className="tap absolute top-3 right-3 glass glass-sheen rounded-full px-3 py-1.5 flex items-center gap-1.5 text-[10px] font-bold z-20"
+                className="tap absolute top-3 right-3 glass rounded-full min-h-11 px-4 py-1.5 flex items-center gap-1.5 text-[12px] font-bold z-20"
               >
-                <Crosshair size={12} className="text-[var(--color-airo-flame)]" />
+                <Crosshair size={14} className="text-[#F6C344]" />
                 Recentre
               </button>
 
               {dockOpen && (
                 <div className="absolute bottom-4 inset-x-0 flex justify-center px-6 pointer-events-none">
                   <div
-                    className={`glass glass-sheen rounded-full px-4 py-2 text-[10px] font-bold tracking-[0.14em] uppercase text-center transition-colors ${
-                      triggerActive ? 'text-white' : 'text-white/60'
+                    className={`glass rounded-full px-4 py-2 text-[11px] font-bold tracking-[0.12em] uppercase text-center transition-colors ${
+                      triggerActive ? 'text-white' : 'text-white/80'
                     }`}
                     style={triggerActive ? { background: `${color}33`, borderColor: `${color}88` } : undefined}
                   >
@@ -1287,9 +1292,9 @@ export default function ControllerView() {
                     sounds.playClick(1.2);
                   }}
                   options={[
-                    { value: 'paint' as const, label: 'Paint', icon: <Pencil size={11} />, accent: '#22D3EE' },
-                    { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={11} />, accent: '#FFB020' },
-                    { value: 'orbit' as const, label: 'Rotate', icon: <Rotate3d size={11} />, accent: '#FF4D1C' },
+                    { value: 'paint' as const, label: 'Paint', icon: <Pencil size={11} />, accent: '#8CC8F8' },
+                    { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={11} />, accent: '#E85BD8' },
+                    { value: 'orbit' as const, label: 'Rotate', icon: <Rotate3d size={11} />, accent: '#F6C344' },
                   ].filter((option) => option.value !== 'stamp' || flags.ui.stamps)}
                 />
                 <AnimatePresence>
@@ -1344,7 +1349,7 @@ export default function ControllerView() {
 
               {dockOpen && interaction !== 'stamp' && (
                 <div className="absolute bottom-3 inset-x-0 flex justify-center pointer-events-none z-10 px-4">
-                  <span className="glass glass-sheen rounded-full px-3.5 py-1.5 text-[9px] font-bold tracking-[0.14em] uppercase text-white/70 text-center">
+                  <span className="glass rounded-full px-3.5 py-1.5 text-[10px] font-bold tracking-[0.12em] uppercase text-white/80 text-center">
                     {interaction === 'paint'
                       ? `One finger paints · two fingers rotate & zoom`
                       : 'Drag to orbit'}
@@ -1404,8 +1409,8 @@ export default function ControllerView() {
                     sounds.stopBrush();
                   }}
                 />
-                <span className="absolute bottom-3 inset-x-0 text-center text-[9px] font-bold tracking-[0.14em] uppercase text-white/35 pointer-events-none">
-                  Flat pad · maps to the object's texture
+                <span className="absolute bottom-3 inset-x-0 text-center text-[10px] font-bold tracking-[0.12em] uppercase text-white/60 pointer-events-none">
+                  Flat pad · covers the whole piece
                 </span>
               </div>
             </motion.div>
@@ -1442,13 +1447,13 @@ export default function ControllerView() {
               });
             }}
             options={[
-              { value: 'spray', label: 'Spray', icon: <SprayCan size={13} />, accent: '#FF4D1C' },
-              { value: 'brush', label: 'Brush', icon: <Brush size={13} />, accent: '#22D3EE' },
+              { value: 'spray', label: 'Spray', icon: <SprayCan size={13} />, accent: '#F6C344' },
+              { value: 'brush', label: 'Brush', icon: <Brush size={13} />, accent: '#8CC8F8' },
             ]}
           />
 
           <div className="flex items-center gap-3 px-1">
-            <span className="label-caps text-white/40 shrink-0">Size</span>
+            <span className="label-caps text-white/65 shrink-0">Size</span>
             <input
               type="range"
               min={0.4}
@@ -1463,7 +1468,7 @@ export default function ControllerView() {
               className="airo-slider flex-1"
               aria-label="Tool size"
             />
-            <span className="text-[10px] font-mono text-white/50 w-8 text-right shrink-0">
+            <span className="text-[11px] font-mono text-white/70 w-8 text-right shrink-0">
               {toolSize.toFixed(1)}×
             </span>
           </div>
@@ -1478,10 +1483,8 @@ export default function ControllerView() {
                 navigator.vibrate?.([28, 18, 32, 14, 28]);
                 connectionRef.current?.emit('shake', { playerId: playerIdRef.current });
               }}
-              className="tap paint-btn flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white"
-              style={{ '--paint': shaking
-                  ? 'linear-gradient(135deg,#FFB020,#FF7A34)'
-                  : 'linear-gradient(135deg,rgba(255,176,32,0.55),rgba(255,122,52,0.55))' } as React.CSSProperties}
+              className="tap paint-btn flex-1 min-w-0 min-h-12 py-2 flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold text-[#15131a]"
+              style={{ '--paint': shaking ? '#FFD66E' : '#F6C344' } as React.CSSProperties}
             >
               <Sparkles size={13} />
               Shake
@@ -1489,8 +1492,8 @@ export default function ControllerView() {
 
             <button
               onClick={undoLast}
-              className="tap paint-btn-2 paint-btn flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white"
-              style={{ '--paint': 'linear-gradient(135deg,rgba(167,139,250,0.6),rgba(232,121,249,0.5))' } as React.CSSProperties}
+              className="tap paint-btn-2 paint-btn flex-1 min-w-0 min-h-12 py-2 flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold text-[#15131a]"
+              style={{ '--paint': '#8CC8F8' } as React.CSSProperties}
             >
               <Undo2 size={13} />
               Undo
@@ -1498,8 +1501,8 @@ export default function ControllerView() {
 
             <button
               onClick={redoLast}
-              className="tap paint-btn flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white"
-              style={{ '--paint': 'linear-gradient(135deg,rgba(34,211,238,0.6),rgba(52,211,153,0.5))' } as React.CSSProperties}
+              className="tap paint-btn flex-1 min-w-0 min-h-12 py-2 flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold text-[#15131a]"
+              style={{ '--paint': '#3DDC84' } as React.CSSProperties}
             >
               <Redo2 size={13} />
               Redo
@@ -1513,8 +1516,8 @@ export default function ControllerView() {
                 navigator.vibrate?.(36);
                 connectionRef.current?.emit('clear-canvas', {});
               }}
-              className="tap paint-btn-2 paint-btn flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-white"
-              style={{ '--paint': 'linear-gradient(135deg,rgba(220,38,38,0.62),rgba(255,77,28,0.55))' } as React.CSSProperties}
+              className="tap paint-btn-2 paint-btn flex-1 min-w-0 min-h-12 py-2 flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold text-[#15131a]"
+              style={{ '--paint': '#FF3B4E' } as React.CSSProperties}
             >
               <Trash2 size={13} />
               Clear
@@ -1526,11 +1529,9 @@ export default function ControllerView() {
                   setFinish((f) => (f === 'original' ? 'primer' : 'original'));
                   sounds.playClick(1.15);
                 }}
-                className="tap paint-btn flex-1 py-2.5 flex items-center justify-center gap-1.5 text-[10px] font-bold text-[#0B0B12]"
-                style={{ '--paint': finish === 'primer'
-                    ? 'linear-gradient(135deg,rgba(245,245,244,0.95),rgba(148,163,184,0.9))'
-                    : 'linear-gradient(135deg,rgba(178,190,205,0.88),rgba(236,240,244,0.82))' } as React.CSSProperties}
-                title="Toggle between the model's texture and a blank primer coat"
+                className="tap paint-btn flex-1 min-w-0 min-h-12 py-2 flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold text-[#15131a]"
+                style={{ '--paint': finish === 'primer' ? '#FFFFFF' : '#D7DEE5' } as React.CSSProperties}
+                title="Switch between the printed merch and a blank white primer coat"
               >
                 <Hand size={13} />
                 {finish === 'primer' ? 'Primer' : 'Textured'}
@@ -1551,7 +1552,7 @@ export default function ControllerView() {
               sounds.playClick(1.1);
               navigator.vibrate?.(8);
             }}
-            className="tap glass glass-sheen rounded-full h-11 pl-3.5 pr-4 flex items-center gap-1.5 text-[10px] font-bold text-white/75"
+            className="tap glass rounded-full h-11 pl-3.5 pr-4 flex items-center gap-1.5 text-[12px] font-bold text-white/85"
             title={dockOpen ? 'Hide the tool dock' : 'Show the tool dock'}
           >
             {dockOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -1560,12 +1561,12 @@ export default function ControllerView() {
             ) : (
               <>
                 {tool === 'spray' ? (
-                  <SprayCan size={13} className="text-[var(--color-airo-flame)]" />
+                  <SprayCan size={13} className="text-[#F6C344]" />
                 ) : (
-                  <Brush size={13} className="text-[var(--color-airo-aqua)]" />
+                  <Brush size={13} className="text-[#8CC8F8]" />
                 )}
                 Tools
-                <span className="text-white/40 font-mono text-[9px]">{toolSize.toFixed(1)}×</span>
+                <span className="text-white/60 font-mono text-[10px]">{toolSize.toFixed(1)}×</span>
               </>
             )}
           </button>
@@ -1611,13 +1612,13 @@ export default function ControllerView() {
           onChange={(e) => setNameDraft(e.target.value)}
           maxLength={14}
           autoFocus
-          className="w-full px-4 py-3 rounded-2xl bg-black/40 border border-white/15 text-[15px] font-semibold focus:outline-none focus:border-[var(--color-airo-aqua)] mb-3"
+          className="w-full px-4 py-3 rounded-2xl bg-black/40 border border-white/15 text-[15px] font-semibold focus:outline-none focus:border-[#F6C344] mb-3"
           placeholder="Tagger"
         />
         <div className="flex gap-2">
           <button
             onClick={() => setNameSheet(false)}
-            className="tap flex-1 py-3 rounded-2xl bg-white/[0.07] border border-white/12 text-[12px] font-semibold"
+            className="tap flex-1 min-h-12 py-3 rounded-full bg-white/[0.07] border border-white/15 text-[13px] font-semibold"
           >
             Cancel
           </button>
@@ -1634,7 +1635,7 @@ export default function ControllerView() {
               }
               setNameSheet(false);
             }}
-            className="tap flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#FF4D1C] to-[#FF7A34] text-[12px] font-bold flex items-center justify-center gap-1.5"
+            className="tap flex-1 min-h-12 py-3 rounded-full bg-[#F6C344] text-[#15131a] text-[13px] font-bold flex items-center justify-center gap-1.5"
           >
             <Check size={14} />
             Save

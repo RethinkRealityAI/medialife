@@ -1,7 +1,7 @@
 /**
  * The studio screen.
  *
- * Full-bleed 3D stage under a chosen atmosphere (a gradient sky or a flat
+ * Full-bleed 3D stage under a chosen atmosphere (a flat pattern backdrop or a flat
  * colour), with the controls on floating glass furniture that never boxes the
  * object in. Two furniture sets share one component:
  *
@@ -76,6 +76,11 @@ import { sounds } from '../utils/audio';
 import { parseUploaded3DModel } from '../utils/model3dLoader';
 import { TargetObjectType, PlayerState, Uploaded3DModelInfo, ImageStampData } from '../types';
 import { getFlags, useFlags } from '../config/flags';
+import { Camera as CameraIcon } from 'lucide-react';
+import { sprayUniforms } from '../paint/sprayModel';
+import { ShareSheet } from '../spray/ShareSheet';
+import { KioskLayer } from '../spray/KioskLayer';
+import { saveCreation, startSet, isKiosk, type SavedCreation } from '../spray/creation';
 import { track } from '../analytics/track';
 import { FeedbackButton } from '../feedback/FeedbackButton';
 
@@ -192,14 +197,14 @@ const STYLE_PRESETS = [
     name: 'Cyberpunk',
     art: '/ui/presets/preset-cyberpunk.webp',
     desc: 'Neon grids and chromatic flare.',
-    accent: '#22D3EE',
+    accent: '#8cc8f8',
   },
   {
     id: 'wildstyle80s',
     name: 'Wildstyle 84',
     art: '/ui/presets/preset-wildstyle.webp',
     desc: 'Fat caps and gravity drips.',
-    accent: '#FF4D1C',
+    accent: '#F6C344',
   },
   {
     id: 'banksy',
@@ -213,14 +218,14 @@ const STYLE_PRESETS = [
     name: 'Pop Art',
     art: '/ui/presets/preset-popart.webp',
     desc: 'Ben-Day dots, primary bursts.',
-    accent: '#FFB020',
+    accent: '#f08a3c',
   },
   {
     id: 'cosmic',
     name: 'Cosmic',
     art: '/ui/presets/preset-cosmic.webp',
     desc: 'Nebula haze and stardust.',
-    accent: '#A78BFA',
+    accent: '#9b7bea',
   },
 ];
 
@@ -228,7 +233,7 @@ const STYLE_PRESETS = [
 const AI_STAMP_UV = { u: 0.5, v: 0.35 };
 
 /** House ink for the copilot's paint-stroke buttons. */
-const AI_PAINT = 'linear-gradient(120deg, #7C3AED 0%, #A855F7 55%, #E879F9 100%)';
+const AI_PAINT = '#e85bd8';
 
 /** Hex colours an AI answer offered, cleaned up for use as swatches. */
 function paletteOf(...values: unknown[]): string[] {
@@ -273,7 +278,7 @@ const PresetCard: React.FC<{
       <span
         aria-hidden
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(180deg, rgba(6,6,12,0) 38%, rgba(6,6,12,0.82) 100%)' }}
+        style={{ background: 'rgba(15,21,25,0.35)' }}
       />
       {selected && (
         <span
@@ -370,7 +375,7 @@ const StencilPreview: React.FC<{ asset: StampAsset; tint: string; size?: number 
 );
 
 /** The swatches on the spray-can card. The full palette lives in the well. */
-const QUICK_COLORS = ['Flame', 'Ember', 'Lime', 'Aqua', 'Violet', 'Magenta']
+const QUICK_COLORS = ['EVADE yellow', 'Bobo blue', 'Sky', 'Magenta', 'Red', 'Green']
   .map((name) => PALETTE.find((swatch) => swatch.name === name)?.hex)
   .filter((hex): hex is string => Boolean(hex));
 
@@ -396,7 +401,7 @@ const StatusDot: React.FC<{ connection: ConnectionState }> = ({ connection }) =>
   ) : connection === 'connecting' ? (
     <Loader2 size={11} className="shrink-0 animate-spin text-white/70" />
   ) : (
-    <WifiOff size={11} className="shrink-0 text-fuchsia-300" />
+    <WifiOff size={11} className="shrink-0 text-[#f6c344]" />
   );
 
 const HOST_ID = 'host-local';
@@ -455,7 +460,7 @@ export default function CanvasView() {
   const paintSurface = useMemo(() => new PaintSurface(CANVAS_RES), []);
   const orbitRef = useRef<any>(null);
 
-  const [objectId, setObjectId] = useState<TargetObjectType>('skateboard');
+  const [objectId, setObjectId] = useState<TargetObjectType>(startSet);
   const objectIdRef = useRef(objectId);
   useEffect(() => {
     objectIdRef.current = objectId;
@@ -470,11 +475,20 @@ export default function CanvasView() {
   const connectedAt = useRef(Date.now());
   const canAnswerState = () =>
     roomStateKnown.current || Date.now() - connectedAt.current > 8000;
-  const [finish, setFinish] = useState<Finish>('original');
+  const [finish, setFinish] = useState<Finish>('primer');
+  // The canvas overlay's outline lines (Spray Bobo's "Outline" switch).
+  const [linesOn, setLinesOn] = useState(true);
+  useEffect(() => {
+    sprayUniforms.linesOn.value = linesOn ? 1 : 0;
+  }, [linesOn]);
+  // Saving: the painting goes to the CMS and comes back with a share link + QR.
+  const [saving, setSaving] = useState(false);
+  const [shared, setShared] = useState<SavedCreation | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [objectLoading, setObjectLoading] = useState(true);
 
   const [hostTool, setHostTool] = useState<'spray' | 'brush'>('spray');
-  const [hostColor, setHostColor] = useState('#FF4D1C');
+  const [hostColor, setHostColor] = useState('#f6c344');
   const [hostSize, setHostSize] = useState(1);
   const [stageMode, setStageMode] = useState<'paint' | 'stamp' | 'orbit'>('paint');
   // The island entry and the `s` key are gated on the flag, but a flag can flip
@@ -589,7 +603,7 @@ export default function CanvasView() {
 
   // Player roster. A ref mirrors it because the render loop mutates player
   // transforms every frame and must not trigger React re-renders.
-  const [players, setPlayers] = useState<PlayerState[]>([makeHost('#FF4D1C')]);
+  const [players, setPlayers] = useState<PlayerState[]>([makeHost('#F6C344')]);
   const playersRef = useRef<PlayerState[]>(players);
   useEffect(() => {
     playersRef.current = players;
@@ -999,7 +1013,7 @@ export default function CanvasView() {
             v: AI_STAMP_UV.v,
             radiusPx: stampRadiusPx(1.5),
             rotation: 0,
-            tint: typeof color === 'string' ? color : '#FF4D1C',
+            tint: typeof color === 'string' ? color : '#F6C344',
             stampId: stampId || `ai#${Math.random().toString(36).slice(2, 9)}`,
           })
         )
@@ -1105,6 +1119,12 @@ export default function CanvasView() {
 
   const changeObject = useCallback(
     (next: TargetObjectType) => {
+      // each piece of merch has its own canvas: a new piece starts clean
+      if (next !== objectIdRef.current) {
+        paintSurface.clear();
+        paintSurface.commit();
+        connectionRef.current?.emit('clear-canvas', {});
+      }
       setObjectId(next);
       sounds.playClick(1.3);
       roomStateKnown.current = true;
@@ -1226,14 +1246,33 @@ export default function CanvasView() {
     setReplaying(false);
   };
 
-  const saveSnapshot = () => {
+  /** The same piece in the real AR page (camera), drafts included: a full test on this device. */
+  const openCameraPreview = () => {
+    const id = OBJECT_BY_ID.get(objectId)?.paintable?.id;
+    if (!id) return;
+    sounds.playClick(1.3);
+    track('camera.preview', { objectId }, roomId);
+    window.open(`/evade/spray-bobo/?set=${encodeURIComponent(id)}&from=studio`, '_blank', 'noopener');
+  };
+
+  const saveSnapshot = async () => {
+    if (saving) return;
+    const meta = OBJECT_BY_ID.get(objectId)?.paintable;
+    if (!meta) return;
     sounds.playClick(1.6);
-    track('snapshot.save', { objectId }, roomId);
-    const link = document.createElement('a');
-    const label = OBJECT_BY_ID.get(objectId)?.label.replace(/\s+/g, '-') ?? objectId;
-    link.download = `AiroHub-${label}-${roomId || 'art'}.png`;
-    link.href = paintSurface.toExportDataURL();
-    link.click();
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const made = await saveCreation(paintSurface.canvas, meta, { primer: finish === 'primer', linesOn });
+      track('snapshot.save', { objectId, creation: made.id }, roomId);
+      sounds.playWhoosh();
+      setShared(made);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Could not save. Check the connection and try again.');
+      setTimeout(() => setSaveError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpload = async (file: File) => {
@@ -1484,8 +1523,8 @@ export default function CanvasView() {
           >
             {/* Brand + live status */}
             <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-              <div className="w-9 h-9 rounded-[13px] bg-gradient-to-tr from-[#FF4D1C] to-[#FFB020] shadow-[0_0_22px_rgba(255,77,28,0.35)] grid place-items-center shrink-0">
-                <SprayCan size={17} className="text-white drop-shadow" />
+              <div className="w-9 h-9 rounded-[13px] bg-[#f6c344] shadow-[3px_3px_0_#15131a] grid place-items-center shrink-0">
+                <SprayCan size={17} className="text-[#15131a]" />
               </div>
               {rails ? (
                 <div className="flex items-center gap-2">
@@ -1501,7 +1540,7 @@ export default function CanvasView() {
                         exit={{ opacity: 0, x: -8 }}
                         className="glass glass-sheen rounded-full pl-2.5 pr-3 py-1.5 flex items-center gap-2"
                       >
-                        <Loader2 size={11} className="animate-spin text-fuchsia-200" />
+                        <Loader2 size={11} className="animate-spin text-[#f6c344]" />
                         <span className="mono-caps text-[9px] text-white/70 whitespace-nowrap">
                           Loading {activeLabel}
                         </span>
@@ -1511,7 +1550,7 @@ export default function CanvasView() {
                 </div>
               ) : (
                 <div className="hidden sm:block leading-none">
-                  <div className="text-[15px] font-bold tracking-tight">AiroHub</div>
+                  <div className="text-[15px] font-bold tracking-tight">Spray Studio</div>
                   <div className="text-[9px] font-mono text-white/40 mt-0.5">ROOM {roomId}</div>
                 </div>
               )}
@@ -1521,7 +1560,8 @@ export default function CanvasView() {
             <div className="flex-1 flex justify-center min-w-0 overflow-hidden px-1">
               {rails ? (
                 <div className="text-center leading-none pointer-events-none">
-                  <div className="text-[13px] font-bold tracking-[0.42em] pl-[0.42em] text-white/92">AIROHUB</div>
+                  <img src="/brand/evade-logo.webp" alt="EVADE" className="mx-auto h-5 w-auto" />
+                  <div className="mt-1.5 text-[11px] font-bold tracking-[0.42em] pl-[0.42em] text-white/92">SPRAY STUDIO</div>
                   <div className="mono-caps mt-1.5 text-[8.5px] text-white/40 tracking-[0.3em] pl-[0.3em]">
                     Room {roomId}
                   </div>
@@ -1547,10 +1587,10 @@ export default function CanvasView() {
                   track('invite.open', undefined, roomId);
                 }}
                 className="tap glass glass-sheen splat-btn-2 rounded-full pl-2 pr-3 py-1.5 flex items-center gap-2"
-                style={{ '--paint': 'rgba(192,132,252,0.34)' } as React.CSSProperties}
+                style={{ '--paint': 'rgba(246,195,68,0.22)' } as React.CSSProperties}
                 title="Invite players"
               >
-                <Users size={14} className="text-fuchsia-200" />
+                <Users size={14} className="text-[#f6c344]" />
                 <div className="flex -space-x-1.5">
                   {[1, 2, 3, 4].map((slot) => {
                     const player = remotePlayers.find((p) => p.slot === slot);
@@ -1559,7 +1599,7 @@ export default function CanvasView() {
                       <span
                         key={slot}
                         className={`w-4 h-4 rounded-full border-2 ${
-                          syncOn ? 'border-fuchsia-300' : 'border-black/50'
+                          syncOn ? 'border-[#f6c344]' : 'border-black/50'
                         } ${player?.isPainting ? 'airo-breathe' : ''}`}
                         style={{ background: player ? player.color : 'rgba(255,255,255,0.14)' }}
                       />
@@ -1576,7 +1616,7 @@ export default function CanvasView() {
                 title="How it works"
                 size={38}
               >
-                <HelpCircle size={15} className="text-fuchsia-200" />
+                <HelpCircle size={15} className="text-[#f6c344]" />
               </GlassIconButton>
               <span className="hidden md:contents">
               {flags.ui.aiPanel && (
@@ -1620,12 +1660,19 @@ export default function CanvasView() {
                       <Clapperboard size={15} className="text-white/85" />
                     </GlassIconButton>
                   )}
+                  <GlassIconButton
+                    onClick={openCameraPreview}
+                    title="Camera preview: try this piece in AR on this device"
+                    size={38}
+                  >
+                    <CameraIcon size={15} className="text-white/85" />
+                  </GlassIconButton>
                   <button
                     onClick={saveSnapshot}
                     className="tap studio-cta rounded-full pl-3.5 pr-4 py-2.5 text-[11px] font-bold tracking-wide flex items-center gap-1.5"
                   >
                     <Download size={14} />
-                    <span>Save</span>
+                    <span>{saving ? 'Saving…' : 'Save & share'}</span>
                   </button>
                 </>
               )}
@@ -1774,7 +1821,7 @@ export default function CanvasView() {
                           id: 'spray' as const,
                           label: 'Spray',
                           icon: <SprayCan size={19} />,
-                          tile: `linear-gradient(150deg, ${atmosphere.deep}, ${atmosphere.accent})`,
+                          tile: atmosphere.accent,
                           glow: `${atmosphere.accent}d9`,
                           title: 'Spray can (B toggles)',
                         },
@@ -1782,7 +1829,7 @@ export default function CanvasView() {
                           id: 'brush' as const,
                           label: 'Brush',
                           icon: <Brush size={19} />,
-                          tile: `linear-gradient(150deg, ${atmosphere.accent}, ${atmosphere.hot})`,
+                          tile: atmosphere.accent,
                           glow: `${atmosphere.hot}d9`,
                           title: 'Brush (B toggles)',
                         },
@@ -1790,7 +1837,7 @@ export default function CanvasView() {
                           id: 'stamp' as const,
                           label: 'Stamp',
                           icon: <StampIcon size={19} />,
-                          tile: `linear-gradient(150deg, ${atmosphere.hot}, ${atmosphere.accent})`,
+                          tile: atmosphere.accent,
                           glow: `${atmosphere.hot}d9`,
                           title: 'Place stamps (S)',
                         },
@@ -1896,14 +1943,14 @@ export default function CanvasView() {
                 className="absolute right-5 top-[78px] bottom-5 z-30 w-[272px] flex flex-col gap-3"
               >
                 <RailCard
-                  title={railTab === 'objects' ? 'Canvas' : 'Crew'}
-                  badge={railTab === 'objects' ? `${OBJECT_COUNT} models` : `${remotePlayers.length}/4 phones`}
+                  title={railTab === 'objects' ? 'Merch' : 'Crew'}
+                  badge={railTab === 'objects' ? `${PAINTABLE_OBJECTS.length} pieces` : `${remotePlayers.length}/4 phones`}
                   grow
                   storageKey="canvas"
                   footer={
                     railTab === 'objects' ? (
-                      <div className="flex items-center gap-2 border-t border-white/10 pt-3">
-                        <span className="mono-caps shrink-0 text-[8.5px] text-white/45">Surface</span>
+                      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                        <span className="mono-caps shrink-0 text-[8.5px] text-white/45">Base</span>
                         <Segmented
                           layoutId="rail-finish"
                           size="sm"
@@ -1914,10 +1961,22 @@ export default function CanvasView() {
                             sounds.playClick(1.1);
                           }}
                           options={[
-                            { value: 'original', label: 'Textured', accent: atmosphere.accent },
-                            { value: 'primer', label: 'Primer', accent: atmosphere.hot },
+                            { value: 'original', label: 'On print', accent: atmosphere.accent },
+                            { value: 'primer', label: 'White base', accent: atmosphere.hot },
                           ]}
                         />
+                        <button
+                          type="button"
+                          aria-pressed={linesOn}
+                          onClick={() => {
+                            setLinesOn((v) => !v);
+                            sounds.playClick(1.1);
+                          }}
+                          className={`tap mono-caps shrink-0 rounded-full border px-2.5 py-1.5 text-[8.5px] ${linesOn ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 text-white/45'}`}
+                          title="Show or hide the outline over the paint"
+                        >
+                          Outline
+                        </button>
                       </div>
                     ) : undefined
                   }
@@ -1932,7 +1991,7 @@ export default function CanvasView() {
                       sounds.playClick(1.1);
                     }}
                     options={[
-                      { value: 'objects', label: 'Objects', icon: <Box size={11} />, accent: atmosphere.accent },
+                      { value: 'objects', label: 'Merch', icon: <Box size={11} />, accent: atmosphere.accent },
                       {
                         value: 'crew',
                         label: remotePlayers.length ? `Crew · ${remotePlayers.length}` : 'Crew',
@@ -1998,7 +2057,7 @@ export default function CanvasView() {
                       ...(flags.ui.stamps
                         ? [{ value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: atmosphere.hot }]
                         : []),
-                      { value: 'orbit', label: 'Orbit', icon: <Hand size={13} />, accent: '#0ea5e9' },
+                      { value: 'orbit', label: 'Orbit', icon: <Hand size={13} />, accent: '#8cc8f8' },
                     ]}
                   />
                   <span className="mx-0.5 h-5 w-px bg-white/15" />
@@ -2082,7 +2141,7 @@ export default function CanvasView() {
                         mode: 'paint',
                         icon: <MousePointer size={14} />,
                         title: 'Paint with pointer',
-                        paint: '#7c3aed',
+                        paint: '#f6c344',
                         ink: 'text-white',
                       },
                       {
@@ -2096,7 +2155,7 @@ export default function CanvasView() {
                         mode: 'orbit',
                         icon: <Hand size={14} />,
                         title: 'Orbit camera (O)',
-                        paint: '#22D3EE',
+                        paint: '#8cc8f8',
                         ink: 'text-black',
                       },
                     ] as const
@@ -2174,9 +2233,9 @@ export default function CanvasView() {
                         if (stageMode !== 'paint') setStageMode('paint');
                       }}
                       options={[
-                        { value: 'spray' as const, label: 'Spray', icon: <SprayCan size={13} />, accent: '#7c3aed' },
-                        { value: 'brush' as const, label: 'Brush', icon: <Brush size={13} />, accent: '#c026d3' },
-                        { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: '#ec4899' },
+                        { value: 'spray' as const, label: 'Spray', icon: <SprayCan size={13} />, accent: '#f6c344' },
+                        { value: 'brush' as const, label: 'Brush', icon: <Brush size={13} />, accent: '#8cc8f8' },
+                        { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: '#e85bd8' },
                       ].filter((option) => option.value !== 'stamp' || flags.ui.stamps)}
                     />
                     <ColorWell color={hostColor} onChange={handleHostColor} />
@@ -2210,10 +2269,22 @@ export default function CanvasView() {
                         sounds.playClick(1.1);
                       }}
                       options={[
-                        { value: 'original', label: 'Textured', accent: '#8b5cf6' },
-                        { value: 'primer', label: 'Primer', accent: '#f472b6' },
+                        { value: 'original', label: 'On print', accent: '#3f9be6' },
+                        { value: 'primer', label: 'White base', accent: '#f6c344' },
                       ]}
                     />
+                    <button
+                      type="button"
+                      aria-pressed={linesOn}
+                      onClick={() => {
+                        setLinesOn((v) => !v);
+                        sounds.playClick(1.1);
+                      }}
+                      className={`tap rounded-full border px-3 py-2 text-[11px] font-semibold ${linesOn ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 text-white/45'}`}
+                      title="Show or hide the outline over the paint"
+                    >
+                      Outline
+                    </button>
                   </div>
 
                   <div className="w-px h-7 bg-white/12 hidden md:block" />
@@ -2231,7 +2302,7 @@ export default function CanvasView() {
                       size={38}
                       disabled={replaying}
                     >
-                      <History size={15} className={replaying ? 'animate-spin text-fuchsia-200' : ''} />
+                      <History size={15} className={replaying ? 'animate-spin text-[#f6c344]' : ''} />
                     </GlassIconButton>
                     <GlassIconButton onClick={() => sounds.playCanRattle()} title="Shake can" size={38}>
                       <Sparkles size={15} className="text-[var(--color-airo-ember)]" />
@@ -2245,15 +2316,22 @@ export default function CanvasView() {
                         title="Showcase — record a turntable video of your piece"
                         size={38}
                       >
-                        <Clapperboard size={15} className="text-fuchsia-200" />
+                        <Clapperboard size={15} className="text-[#f6c344]" />
                       </GlassIconButton>
                     )}
+                    <GlassIconButton
+                      onClick={openCameraPreview}
+                      title="Camera preview: try this piece in AR on this device"
+                      size={38}
+                    >
+                      <CameraIcon size={15} className="text-white/85" />
+                    </GlassIconButton>
                     <button
                       onClick={saveSnapshot}
                       className="tap studio-cta rounded-full px-4 py-2 text-[11px] font-bold tracking-wide flex items-center gap-1.5"
                     >
                       <Download size={14} />
-                      <span>Save</span>
+                      <span>{saving ? 'Saving…' : 'Save & share'}</span>
                     </button>
                   </div>
                 </GlassPanel>
@@ -2304,6 +2382,28 @@ export default function CanvasView() {
         customName={customInfo?.name}
       />
 
+      <ShareSheet
+        creation={shared}
+        onClose={() => setShared(null)}
+        onNew={() => {
+          setShared(null);
+          clearCanvas();
+        }}
+      />
+      {saveError && (
+        <div role="alert" className="fixed left-1/2 top-20 z-[80] -translate-x-1/2 rounded-full bg-[#ff3b4e] px-5 py-3 text-sm font-semibold text-white shadow-xl">
+          {saveError}
+        </div>
+      )}
+      {isKiosk && (
+        <KioskLayer
+          busy={!!shared}
+          onReset={() => {
+            setShared(null);
+            clearCanvas();
+          }}
+        />
+      )}
       <ShowcasePanel
         open={showcaseOpen && flags.ui.showcase}
         onClose={() => setShowcaseOpen(false)}
@@ -2320,7 +2420,7 @@ export default function CanvasView() {
         <div className="relative mx-auto mb-3 w-fit">
           <div
             className="absolute -inset-4 splatter-accent opacity-70 pointer-events-none"
-            style={{ '--paint': '#22D3EE' } as React.CSSProperties}
+            style={{ '--paint': '#8cc8f8' } as React.CSSProperties}
           />
           <div className="relative bg-white rounded-[26px] p-5 grid place-items-center shadow-[0_28px_90px_-28px_rgba(34,211,238,0.5)]">
             <QRCodeSVG
@@ -2470,9 +2570,9 @@ export default function CanvasView() {
               sounds.playClick(1.15);
             }}
             options={[
-              { value: 'style', label: 'Style', icon: <Palette size={12} />, accent: '#A78BFA' },
+              { value: 'style', label: 'Style', icon: <Palette size={12} />, accent: '#9b7bea' },
               { value: 'concept', label: 'Concept', icon: <Sparkles size={12} />, accent: '#E879F9' },
-              { value: 'critique', label: 'Appraise', icon: <Eye size={12} />, accent: '#22D3EE' },
+              { value: 'critique', label: 'Appraise', icon: <Eye size={12} />, accent: '#8cc8f8' },
             ]}
           />
         </div>
@@ -2616,7 +2716,7 @@ export default function CanvasView() {
                     className="paint-btn paint-cta tap relative z-10 mt-4 flex w-full items-center justify-center gap-2 px-5 py-3 text-[12px] font-bold text-white"
                     style={
                       {
-                        '--paint': `linear-gradient(120deg, ${activeAiTint}, ${activeAiTint}c0)`,
+                        '--paint': activeAiTint,
                       } as React.CSSProperties
                     }
                   >

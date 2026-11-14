@@ -1,6 +1,6 @@
 /**
- * The atmosphere picker: a round trigger that wears the current sky, and a
- * popover of gradient tiles, solid dots and a custom colour. Pops relative to
+ * The atmosphere picker: a round trigger that wears the current backdrop, and
+ * a popover of flat pattern tiles, solid dots and a custom colour. Pops relative to
  * its trigger like the colour well, so it works from the header on wide
  * displays and from the view island on compact ones.
  */
@@ -11,7 +11,7 @@ import { sounds } from '../../utils/audio';
 import {
   Atmosphere,
   CUSTOM_SOLID_ID,
-  GRADIENT_ATMOSPHERES,
+  PATTERN_ATMOSPHERES,
   SOLID_ATMOSPHERES,
   atmospherePreview,
   customSolid,
@@ -65,16 +65,16 @@ export const AtmospherePicker: React.FC<{
         aria-expanded={open}
         title={`Atmosphere: ${value.name}`}
         style={{ width: size, height: size }}
-        className={`tap glass glass-sheen rounded-full grid place-items-center ${open ? 'border-white/40' : ''}`}
+        className={`tap glass rounded-full grid place-items-center ${open ? 'border-white/40' : ''}`}
       >
         <span
           aria-hidden
-          className="block rounded-full ring-1 ring-white/30"
+          className="block rounded-full"
           style={{
-            width: size * 0.5,
-            height: size * 0.5,
+            width: size * 0.56,
+            height: size * 0.56,
             background: atmospherePreview(value),
-            boxShadow: `0 0 12px -2px ${value.accent}`,
+            boxShadow: `0 0 0 2px ${value.accent}`,
           }}
         />
       </button>
@@ -93,15 +93,15 @@ export const AtmospherePicker: React.FC<{
                 ? { top: size + 10, right: 0, transformOrigin: 'top right' }
                 : { left: size + 12, bottom: 0, transformOrigin: 'bottom left' }
             }
-            className="absolute z-50 glass-modal glass-sheen rounded-[22px] p-3 w-[268px]"
+            className="absolute z-50 glass-modal rounded-[22px] p-3 w-[280px]"
           >
             <div className="mb-2 flex items-center justify-between px-0.5">
-              <span className="mono-caps text-[8.5px] text-white/45">Atmosphere</span>
-              <span className="text-[10px] font-semibold text-white/70">{value.name}</span>
+              <span className="mono-caps text-[9px] text-white/65">Backdrop</span>
+              <span className="text-[11px] font-semibold text-white/85">{value.name}</span>
             </div>
 
             <div className="grid grid-cols-3 gap-1.5">
-              {GRADIENT_ATMOSPHERES.map((atmo) => {
+              {PATTERN_ATMOSPHERES.map((atmo) => {
                 const selected = value.id === atmo.id;
                 return (
                   <button
@@ -111,15 +111,15 @@ export const AtmospherePicker: React.FC<{
                     aria-pressed={selected}
                     title={atmo.name}
                     className={`tap group relative overflow-hidden rounded-[14px] border text-left ${
-                      selected ? 'border-white/70' : 'border-white/10 hover:border-white/35'
+                      selected ? 'border-[var(--studio-accent)] border-2' : 'border-white/15 hover:border-white/40'
                     }`}
                   >
-                    <span aria-hidden className="block h-[44px] w-full" style={{ background: atmospherePreview(atmo) }} />
-                    <span className="mono-caps block px-1.5 py-1 text-[7.5px] leading-tight text-white/75 truncate bg-black/25">
+                    <span aria-hidden className="block h-[46px] w-full" style={{ background: atmospherePreview(atmo) }} />
+                    <span className="mono-caps block px-1.5 py-1 text-[8.5px] leading-tight text-white/85 truncate bg-black/40">
                       {atmo.short}
                     </span>
                     {selected && (
-                      <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-white text-black">
+                      <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center rounded-full bg-[var(--studio-accent)] text-[var(--studio-on-accent)]">
                         <Check size={9} strokeWidth={3.5} />
                       </span>
                     )}
@@ -129,21 +129,21 @@ export const AtmospherePicker: React.FC<{
             </div>
 
             <div className="mt-3 mb-1.5 flex items-center justify-between px-0.5">
-              <span className="mono-caps text-[8.5px] text-white/45">Solid</span>
+              <span className="mono-caps text-[9px] text-white/65">Solid</span>
               <button
                 type="button"
                 onClick={() => customRef.current?.click()}
-                className={`tap rounded-lg px-2 py-1 text-[9px] font-semibold flex items-center gap-1 ${
+                className={`tap rounded-full min-h-8 px-3 py-1 text-[10px] font-semibold flex items-center gap-1 ${
                   isCustom ? 'bg-white/25' : 'bg-white/10 hover:bg-white/20'
                 }`}
               >
-                <Pipette size={9} className="text-white/80" />
+                <Pipette size={11} className="text-white/85" />
                 Custom
               </button>
               <input
                 ref={customRef}
                 type="color"
-                value={value.kind === 'solid' ? value.color : '#101018'}
+                value={value.color}
                 onChange={(e) => onChange(customSolid(e.target.value))}
                 className="sr-only"
                 aria-label="Custom solid colour"
@@ -159,26 +159,26 @@ export const AtmospherePicker: React.FC<{
                     onClick={() => pick(atmo)}
                     aria-pressed={selected}
                     title={atmo.name}
-                    className={`tap grid h-8 w-8 place-items-center rounded-full border ${
-                      selected ? 'border-white ring-2 ring-white/40 ring-offset-2 ring-offset-black/50' : 'border-white/20 hover:border-white/50'
+                    className={`tap grid h-9 w-9 place-items-center rounded-full border ${
+                      selected ? 'border-[var(--studio-accent)] border-2' : 'border-white/25 hover:border-white/55'
                     }`}
                     style={{ background: atmo.color }}
                   >
-                    {selected && <Check size={11} strokeWidth={3.5} className="text-white/90" />}
+                    {selected && <Check size={11} strokeWidth={3.5} style={{ color: atmo.accent }} />}
                   </button>
                 );
               })}
               {isCustom && (
                 <span
-                  className="grid h-8 w-8 place-items-center rounded-full border border-white ring-2 ring-white/40 ring-offset-2 ring-offset-black/50"
-                  style={{ background: value.kind === 'solid' ? value.color : undefined }}
+                  className="grid h-9 w-9 place-items-center rounded-full border-2 border-[var(--studio-accent)]"
+                  style={{ background: value.color }}
                   title="Custom"
                 >
-                  <Check size={11} strokeWidth={3.5} className="text-white/90" />
+                  <Check size={11} strokeWidth={3.5} style={{ color: value.accent }} />
                 </span>
               )}
             </div>
-            <p className="mt-2.5 text-[9px] leading-snug text-white/40">
+            <p className="mt-2.5 text-[10px] leading-snug text-white/60">
               Only your screen changes — phones keep their own view. Remembered on this device.
             </p>
           </motion.div>

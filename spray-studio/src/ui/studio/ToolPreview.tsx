@@ -134,16 +134,20 @@ export const ToolPreview: React.FC<{
       className={`tap relative block w-full overflow-hidden rounded-[20px] outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${className}`}
       style={{
         height: 'var(--tool-stage, 150px)',
-        background:
-          'radial-gradient(ellipse 60% 55% at 50% 60%, color-mix(in srgb, var(--studio-accent) 28%, transparent), transparent 70%), rgba(0,0,0,0.18)',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -18px 30px -24px rgba(0,0,0,0.9)',
+        background: 'rgba(0,0,0,0.2)',
+        border: '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      {/* Soft floor under the tool. */}
+      {/* A flat accent disc the tool stands in front of, and a flat floor shadow. */}
       <span
         aria-hidden
-        className="absolute left-1/2 bottom-[14%] h-3 w-[46%] -translate-x-1/2 rounded-[100%]"
-        style={{ background: 'radial-gradient(ellipse, rgba(0,0,0,0.55), transparent 70%)' }}
+        className="absolute left-1/2 top-1/2 h-[78%] aspect-square -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: 'color-mix(in srgb, var(--studio-accent) 16%, transparent)' }}
+      />
+      <span
+        aria-hidden
+        className="absolute left-1/2 bottom-[14%] h-2.5 w-[40%] -translate-x-1/2 rounded-[100%]"
+        style={{ background: 'rgba(0,0,0,0.35)' }}
       />
       <Canvas
         dpr={[1, 1.5]}
@@ -154,7 +158,7 @@ export const ToolPreview: React.FC<{
         <PerspectiveCamera makeDefault position={[0, 0.15, 4.4]} fov={32} near={0.1} far={50} />
         <ambientLight intensity={0.45} />
         <directionalLight position={[3, 5, 4]} intensity={1.6} />
-        <directionalLight position={[-4, 2, -3]} intensity={0.5} color="#c4b5fd" />
+        <directionalLight position={[-4, 2, -3]} intensity={0.5} color="#8cc8f8" />
         <Suspense fallback={null}>
           <StudioEnvironment intensity={0.7} />
           {tool === 'stamp' && stamp ? (
@@ -164,7 +168,7 @@ export const ToolPreview: React.FC<{
           )}
         </Suspense>
       </Canvas>
-      <span className="mono-caps pointer-events-none absolute bottom-2 right-3 text-[7.5px] text-white/35">
+      <span className="mono-caps pointer-events-none absolute bottom-2 right-3 text-[8.5px] text-white/60">
         Tap to shake
       </span>
     </button>

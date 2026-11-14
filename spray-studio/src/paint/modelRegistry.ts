@@ -22,6 +22,7 @@ import { TargetObjectType } from '../types';
 import { OBJECT_BY_ID } from './objectCatalog';
 import { makeGroupPaintable, PaintUniforms, setPrimerMix } from './paintMaterial';
 import { buildSprayModel } from './sprayModel';
+import { ensurePaintable } from './customModels';
 
 export interface LoadedModel {
   id: string;
@@ -115,12 +116,12 @@ export function loadModel(
 
   // A Spray Bobo paintable from the CMS: a flat card of the merch print (paint/sprayModel.ts).
   if (String(id).startsWith('sp-')) {
-    const meta = OBJECT_BY_ID.get(id as TargetObjectType);
-    if (!meta?.paintable) return Promise.reject(new Error(`unknown paintable ${id}`));
-    const promise = buildSprayModel(meta.paintable, paintTexture, meta.targetSize).then((m) => {
-      buildRaycastAcceleration(m.root);
-      return { id, ...m } as LoadedModel;
-    });
+    const promise = ensurePaintable(String(id))
+      .then((meta) => buildSprayModel(meta.paintable!, paintTexture, meta.targetSize))
+      .then((m) => {
+        buildRaycastAcceleration(m.root);
+        return { id, ...m } as LoadedModel;
+      });
     promise.catch(() => cache.delete(id));
     cache.set(id, promise);
     return promise;

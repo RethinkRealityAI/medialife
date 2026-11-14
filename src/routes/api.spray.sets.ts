@@ -10,7 +10,8 @@ export const Route = createFileRoute("/api/spray/sets")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const all = new URL(request.url).searchParams.get("all") === "1" && (await isAdminRequest(request));
+        const all =
+          new URL(request.url).searchParams.get("all") === "1" && (await isAdminRequest(request));
         const sets = (await listPaintables(request, all)).map(withTargetData);
         return json({ sets }, 200, { "cache-control": all ? "no-store" : "public, max-age=30" });
       },

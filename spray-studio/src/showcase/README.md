@@ -1,7 +1,7 @@
 # Showcase — turntable video export
 
 Records a cinematic 360-degree orbit of the painted piece straight off the WebGL
-canvas and saves it as `airohub-<room>-showcase.webm`.
+canvas and saves it as `spray-studio-<room>-showcase.webm`.
 
 Two files, zero edits to anything existing:
 

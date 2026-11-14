@@ -1,6 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { adminWrite, deletePaintable, json, savePaintable, setPaintableStatus } from "@/lib/spray/server";
+import {
+  adminWrite,
+  deletePaintable,
+  json,
+  savePaintable,
+  setPaintableStatus,
+} from "@/lib/spray/server";
 
 // Admin: update a paintable (POST multipart, same fields as create), publish/unpublish (PATCH
 // { status }), or delete it (DELETE; refused while it has creations).

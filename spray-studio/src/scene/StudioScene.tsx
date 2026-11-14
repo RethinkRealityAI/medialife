@@ -313,7 +313,7 @@ export const StudioScene: React.FC<StudioSceneProps> = ({
       {/* No mesh in the studio casts shadow maps — grounding comes from the
           ContactShadows pass below, so this light stays a pure illuminator. */}
       <directionalLight position={[9, 14, 10]} intensity={2.1} />
-      <directionalLight position={[-11, 5, -6]} intensity={0.7} color="#7dd3fc" />
+      <directionalLight position={[-11, 5, -6]} intensity={0.7} color="#8cc8f8" />
       <spotLight position={[0, 10, 13]} angle={0.7} penumbra={0.85} intensity={1.3} color="#fff6ec" />
 
       <PaintTarget

@@ -1,8 +1,8 @@
 /**
  * Liquid-glass UI primitives.
  *
- * Every floating surface in AiroHub is one of these, so blur strength, edge
- * treatment and the specular sheen stay identical between the studio and the
+ * Every floating surface in the Spray Studio is one of these, so blur strength
+ * and edge treatment (flat tint, solid edge, no gradients) stay identical between the studio and the
  * phone controller.
  *
  * `GlassPanel` takes an opt-in `liquid` prop that adds real refraction at the
@@ -22,7 +22,7 @@ export const GlassPanel: React.FC<
   Div & { strong?: boolean; sheen?: boolean; radius?: string; liquid?: boolean }
 > = ({
   strong,
-  sheen = true,
+  sheen: _sheen,
   radius = 'rounded-[26px]',
   liquid = false,
   className = '',
@@ -33,7 +33,7 @@ export const GlassPanel: React.FC<
   return (
     <div
       ref={ref}
-      className={`${strong ? 'glass-strong' : 'glass'} ${sheen ? 'glass-sheen' : ''} ${radius} ${className}`}
+      className={`${strong ? 'glass-strong' : 'glass'} ${radius} ${className}`}
       {...rest}
     >
       {children}
@@ -49,7 +49,7 @@ export const GlassPill: React.FC<Div & { tone?: 'neutral' | 'live' }> = ({
   ...rest
 }) => (
   <div
-    className={`glass glass-sheen rounded-full px-3 py-1.5 flex items-center gap-2 ${
+    className={`glass rounded-full px-3 py-1.5 flex items-center gap-2 ${
       tone === 'live' ? 'border-white/25' : ''
     } ${className}`}
     {...rest}
@@ -61,12 +61,12 @@ export const GlassPill: React.FC<Div & { tone?: 'neutral' | 'live' }> = ({
 /** Circular glass button — the standard icon affordance. */
 export const GlassIconButton: React.FC<
   React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean; size?: number }
-> = ({ active, size = 42, className = '', children, ...rest }) => (
+> = ({ active, size = 42, className = '', children, style, ...rest }) => (
   <button
     type="button"
-    style={{ width: size, height: size }}
-    className={`tap glass glass-sheen rounded-full grid place-items-center shrink-0 ${
-      active ? 'bg-white/20 border-white/35 text-white' : 'text-white/70 hover:text-white'
+    style={{ width: size, height: size, ...style }}
+    className={`tap glass rounded-full grid place-items-center shrink-0 pointer-coarse:!min-w-11 pointer-coarse:!min-h-11 ${
+      active ? '!bg-[#f6c344] !border-[#f6c344] text-[#15131a]' : 'text-white/80 hover:text-white'
     } ${className}`}
     {...rest}
   >
@@ -87,16 +87,15 @@ export interface SegmentOption<T extends string> {
 }
 
 /** Colour a paint-stroke indicator falls back to when an option has no accent. */
-const STROKE_FALLBACK = '#FF4D1C';
+const STROKE_FALLBACK = '#F6C344';
 
 /**
  * sRGB relative luminance of a `#rrggbb` accent.
  *
- * The palette runs from deep flame red to near-white primer grey, and a label
- * has to stay readable on all of it — white type on the aqua, ember or pastel
- * violet strokes sits under 3:1. Anything above the threshold below gets ink
- * instead; only the deep flame and equally dark accents keep white type, which
- * is also how the brand's own buttons are set.
+ * The palette runs from EVADE yellow to purple and white primer, and a label
+ * has to stay readable on all of it — white type on yellow, sky or green sits
+ * well under 3:1. Anything above the threshold below gets ink instead; only
+ * the purple and equally dark accents keep white type.
  */
 function luminance(hex: string): number {
   const match = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -110,7 +109,7 @@ function luminance(hex: string): number {
 }
 
 /** Above this, a stroke is light enough that its label must switch to ink. */
-const INK_ON_PAINT = 0.3;
+const INK_ON_PAINT = 0.18;
 
 /**
  * The selection indicator, as an aerosol stroke instead of a plain pill.
@@ -129,14 +128,14 @@ const StrokeIndicator: React.FC<{ accent: string }> = ({ accent }) => (
     className="absolute pointer-events-none"
     style={{
       inset: '-46% -6%',
-      background: `linear-gradient(105deg, ${accent} 0%, ${accent} 58%, ${accent}d9 100%)`,
-      WebkitMaskImage: 'url(/ui/mask-stroke-2.webp)',
-      maskImage: 'url(/ui/mask-stroke-2.webp)',
+      background: accent,
+      WebkitMaskImage: 'url(/spray/ui/mask-stroke-2.webp)',
+      maskImage: 'url(/spray/ui/mask-stroke-2.webp)',
       WebkitMaskSize: '100% 100%',
       maskSize: '100% 100%',
       WebkitMaskRepeat: 'no-repeat',
       maskRepeat: 'no-repeat',
-      filter: `saturate(1.1) drop-shadow(0 5px 14px ${accent}80)`,
+      filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.45))',
     }}
   />
 );
@@ -169,8 +168,13 @@ export function Segmented<T extends string>({
   /** Wear a paint stroke instead of the plain white pill. */
   paint?: boolean;
 }) {
+  // Every segment is at least 44px tall on touch screens.
   const pad =
-    size === 'lg' ? 'px-5 py-2.5 text-[12px]' : size === 'sm' ? 'px-2.5 py-1 text-[10px]' : 'px-3.5 py-1.5 text-[11px]';
+    size === 'lg'
+      ? 'px-5 py-2.5 min-h-11 text-[13px]'
+      : size === 'sm'
+        ? 'px-2.5 py-1 text-[11px] pointer-coarse:min-h-11'
+        : 'px-3.5 py-1.5 text-[12px] pointer-coarse:min-h-11';
 
   return (
     <div className={`segmented ${className}`} role="tablist">
@@ -178,7 +182,8 @@ export function Segmented<T extends string>({
         const selected = option.value === value;
         const accent = option.accent || STROKE_FALLBACK;
         const onPaint = selected && paint;
-        const inkLabel = onPaint && luminance(accent) > INK_ON_PAINT;
+        // Ink on any light fill, painted stroke or flat pill alike.
+        const inkLabel = selected && (paint || !!option.accent) && luminance(accent) > INK_ON_PAINT;
         return (
           <button
             key={option.value}
@@ -187,14 +192,14 @@ export function Segmented<T extends string>({
             aria-selected={selected}
             onClick={() => onChange(option.value)}
             className={`tap relative z-10 flex-1 flex items-center justify-center gap-1.5 rounded-full font-semibold tracking-wide whitespace-nowrap ${pad} ${
-              selected ? 'text-white' : 'text-white/55 hover:text-white/85'
+              selected ? 'text-white' : 'text-white/70 hover:text-white'
             }`}
             style={
-              onPaint
-                ? inkLabel
-                  ? { color: '#0B0B12', textShadow: '0 1px 1px rgba(255,255,255,0.35)' }
-                  : { textShadow: '0 1px 3px rgba(0,0,0,0.6), 0 0 10px rgba(0,0,0,0.35)' }
-                : undefined
+              inkLabel
+                ? { color: '#15131A' }
+                : onPaint
+                  ? { textShadow: '0 1px 2px rgba(0,0,0,0.5)' }
+                  : undefined
             }
           >
             {selected &&
@@ -211,14 +216,7 @@ export function Segmented<T extends string>({
                   layoutId={layoutId}
                   transition={{ type: 'spring', stiffness: 480, damping: 38, mass: 0.7 }}
                   className="absolute inset-0 rounded-full -z-10"
-                  style={{
-                    background: option.accent
-                      ? `linear-gradient(140deg, ${option.accent}, ${option.accent}cc)`
-                      : 'rgba(255,255,255,0.22)',
-                    boxShadow: option.accent
-                      ? `0 6px 18px -4px ${option.accent}90, inset 0 1px 0 rgba(255,255,255,0.35)`
-                      : 'inset 0 1px 0 rgba(255,255,255,0.3)',
-                  }}
+                  style={{ background: option.accent ?? 'rgba(255,255,255,0.22)' }}
                 />
               ))}
             {option.icon}
@@ -272,7 +270,7 @@ export const Sheet: React.FC<{
           transition={{ type: 'spring', stiffness: 380, damping: 36 }}
           className={`relative w-full ${
             centered ? `${wide ? 'max-w-2xl' : 'max-w-lg'} m-4` : 'max-w-2xl'
-          } glass-modal glass-sheen ${
+          } glass-modal ${
             centered ? 'rounded-[28px]' : 'rounded-t-[30px] sm:rounded-[30px] sm:mb-4'
           } overflow-hidden max-h-[86vh] flex flex-col`}
         >
@@ -283,16 +281,16 @@ export const Sheet: React.FC<{
           )}
           <header className="px-5 pt-3 pb-3 flex items-start justify-between gap-4 shrink-0">
             <div className="min-w-0">
-              <h2 className="paint-title text-[15px] font-bold tracking-tight">{title}</h2>
+              <h2 className="paint-title text-[20px] leading-tight">{title}</h2>
               {subtitle && (
-                <p className="text-[11px] text-white/50 mt-0.5 leading-snug">{subtitle}</p>
+                <p className="text-[12px] text-white/65 mt-0.5 leading-snug">{subtitle}</p>
               )}
             </div>
             <button
               type="button"
               onClick={onClose}
               aria-label="Close"
-              className="tap glass rounded-full w-8 h-8 grid place-items-center text-white/70 hover:text-white shrink-0"
+              className="tap glass rounded-full w-10 h-10 pointer-coarse:w-11 pointer-coarse:h-11 grid place-items-center text-white/80 hover:text-white shrink-0"
             >
               <X size={15} />
             </button>

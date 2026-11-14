@@ -13,8 +13,11 @@ export const Route = createFileRoute("/api/spray/qr")({
         if (!/^[A-Za-z0-9]{6,40}$/.test(id)) return new Response("bad id", { status: 400 });
         const host = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || u.host;
         const proto = host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https";
-        const m = QRCode.create(`${proto}://${host}/sb/${id}`, { errorCorrectionLevel: "M" }).modules;
-        const n = m.size, q = 2;
+        const m = QRCode.create(`${proto}://${host}/sb/${id}`, {
+          errorCorrectionLevel: "M",
+        }).modules;
+        const n = m.size,
+          q = 2;
         let d = "";
         for (let y = 0; y < n; y++)
           for (let x = 0; x < n; x++) if (m.get(x, y)) d += `M${x + q} ${y + q}h1v1h-1z`;

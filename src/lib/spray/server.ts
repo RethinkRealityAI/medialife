@@ -104,7 +104,12 @@ export const BUILTINS: Paintable[] = [
     heightMm: 59.8,
     targets: [
       kcTarget("kc-can", "front", 1, 1200, 1600),
-      kcTarget("kc-can-back", "back", 1, 1200, 1600, { x: -1e-5, y: -0.001866, rz: 0.05112, s: 0.95658 }),
+      kcTarget("kc-can-back", "back", 1, 1200, 1600, {
+        x: -1e-5,
+        y: -0.001866,
+        rz: 0.05112,
+        s: 0.95658,
+      }),
     ],
     files: {
       print: `${KC}kc-can.jpg`,
@@ -197,12 +202,15 @@ function need(b: Uint8Array | null, what: string, type: Img["type"], w?: number,
   if (!b) throw new Error(`${what} is missing`);
   const s = sniff(b);
   if (!s || s.type !== type) throw new Error(`${what} must be a ${type.toUpperCase()}`);
-  if (w && h && (s.w !== w || s.h !== h)) throw new Error(`${what} must be ${w}x${h} (got ${s.w}x${s.h})`);
-  if (!w && Math.abs(s.w / s.h - 0.75) > 0.01) throw new Error(`${what} must be 3:4 (got ${s.w}x${s.h})`);
+  if (w && h && (s.w !== w || s.h !== h))
+    throw new Error(`${what} must be ${w}x${h} (got ${s.w}x${s.h})`);
+  if (!w && Math.abs(s.w / s.h - 0.75) > 0.01)
+    throw new Error(`${what} must be 3:4 (got ${s.w}x${s.h})`);
   return s;
 }
 
-const fileUrl = (id: string, name: string, rev: number) => `/api/spray/file/sets/${id}/${name}?v=${rev}`;
+const fileUrl = (id: string, name: string, rev: number) =>
+  `/api/spray/file/sets/${id}/${name}?v=${rev}`;
 
 /**
  * Create or update a paintable from the admin page's form:
@@ -233,15 +241,19 @@ export async function savePaintable(req: Request, id: string | null) {
   const st = await store(req);
   const fs = await files(req);
   const old = id ? await st.getJSON<Paintable>(`paintables/${id}`) : null;
-  if (id && BUILTINS.some((b) => b.id === id)) return json({ error: "built-in paintables are read-only" }, 400);
+  if (id && BUILTINS.some((b) => b.id === id))
+    return json({ error: "built-in paintables are read-only" }, 400);
   if (id && !old) return json({ error: "not found" }, 404);
   const pid = id ?? newId(10);
   const now = Date.now();
   const rev = now;
-  const name = String(meta.name ?? old?.name ?? "").trim().slice(0, 80);
+  const name = String(meta.name ?? old?.name ?? "")
+    .trim()
+    .slice(0, 80);
   if (!name) return json({ error: "give it a name" }, 400);
   const heightMm = Number(meta.heightMm ?? old?.heightMm ?? 0);
-  if (!(heightMm >= 10 && heightMm <= 3000)) return json({ error: "height must be 10 to 3000 mm" }, 400);
+  if (!(heightMm >= 10 && heightMm <= 3000))
+    return json({ error: "height must be 10 to 3000 mm" }, 400);
   const tMeta = (meta.targets ?? []).slice(0, 4);
   if (!tMeta.length) return json({ error: "add at least one tracking picture" }, 400);
 
@@ -274,7 +286,10 @@ export async function savePaintable(req: Request, id: string | null) {
         xf: null,
         width,
         height,
-        score: typeof m.score === "number" ? Math.max(0, Math.min(100, Math.round(m.score))) : (prev?.score ?? null),
+        score:
+          typeof m.score === "number"
+            ? Math.max(0, Math.min(100, Math.round(m.score)))
+            : (prev?.score ?? null),
         luminance,
         image,
       });
@@ -296,7 +311,12 @@ export async function savePaintable(req: Request, id: string | null) {
         !Array.isArray(pts) ||
         pts.length < 3 ||
         pts.length > 4000 ||
-        !pts.every((p) => Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === "number" && v >= -0.01 && v <= 1.01))
+        !pts.every(
+          (p) =>
+            Array.isArray(p) &&
+            p.length === 2 &&
+            p.every((v) => typeof v === "number" && v >= -0.01 && v <= 1.01),
+        )
       )
         throw new Error("outline must be 3+ points in 0..1");
       outline = new TextEncoder().encode(JSON.stringify({ points: pts }));
@@ -310,7 +330,10 @@ export async function savePaintable(req: Request, id: string | null) {
     const rec: Paintable = {
       id: pid,
       name,
-      client: String(meta.client ?? old?.client ?? "EVADE").trim().slice(0, 60) || "EVADE",
+      client:
+        String(meta.client ?? old?.client ?? "EVADE")
+          .trim()
+          .slice(0, 60) || "EVADE",
       status: meta.status === "live" ? "live" : "draft",
       builtin: false,
       heightMm,
@@ -318,7 +341,11 @@ export async function savePaintable(req: Request, id: string | null) {
       files: {
         print: targets[0].image,
         mask: mask ? fileUrl(pid, "mask.png", rev) : old!.files.mask,
-        lines: lines ? fileUrl(pid, "lines.png", rev) : clearLines ? null : (old?.files.lines ?? null),
+        lines: lines
+          ? fileUrl(pid, "lines.png", rev)
+          : clearLines
+            ? null
+            : (old?.files.lines ?? null),
         outline: outline ? fileUrl(pid, "outline.json", rev) : old!.files.outline,
         thumb: thumb ? fileUrl(pid, "thumb.jpg", rev) : old!.files.thumb,
       },
@@ -334,7 +361,8 @@ export async function savePaintable(req: Request, id: string | null) {
 }
 
 export async function setPaintableStatus(req: Request, id: string, status: string) {
-  if (BUILTINS.some((b) => b.id === id)) return json({ error: "built-in paintables are read-only" }, 400);
+  if (BUILTINS.some((b) => b.id === id))
+    return json({ error: "built-in paintables are read-only" }, 400);
   const st = await store(req);
   const p = await st.getJSON<Paintable>(`paintables/${id}`);
   if (!p) return json({ error: "not found" }, 404);
@@ -345,12 +373,14 @@ export async function setPaintableStatus(req: Request, id: string, status: strin
 }
 
 export async function deletePaintable(req: Request, id: string) {
-  if (BUILTINS.some((b) => b.id === id)) return json({ error: "built-in paintables are read-only" }, 400);
+  if (BUILTINS.some((b) => b.id === id))
+    return json({ error: "built-in paintables are read-only" }, 400);
   const st = await store(req);
   const fs = await files(req);
   if (!(await st.getJSON(`paintables/${id}`))) return json({ error: "not found" }, 404);
   const used = (await readAll<Creation>(st, "creations/")).some((c) => c.paintable === id);
-  if (used) return json({ error: "it has creations: set it to draft instead, or delete those first" }, 409);
+  if (used)
+    return json({ error: "it has creations: set it to draft instead, or delete those first" }, 409);
   for (const k of await fs.list(`sets/${id}/`)) await fs.del(k);
   await st.del(`paintables/${id}`);
   return json({ ok: true });
@@ -407,7 +437,9 @@ export async function createCreation(req: Request) {
       .split(",")
       .filter((c) => /^#[0-9a-f]{6}$/i.test(c))
       .slice(0, 12);
-    const ev = String(form.get("event") ?? "").trim().slice(0, 80);
+    const ev = String(form.get("event") ?? "")
+      .trim()
+      .slice(0, 80);
     const id = newId(10);
     const now = Date.now();
     const c: Creation = {
@@ -452,7 +484,11 @@ export async function publicCreation(req: Request, id: string) {
   // count views (best effort, not for admins)
   if (!admin)
     store(req)
-      .then((st) => st.update<Creation>(`creations/${id}`, (cur) => (cur ? { ...cur, views: (cur.views || 0) + 1 } : cur!)))
+      .then((st) =>
+        st.update<Creation>(`creations/${id}`, (cur) =>
+          cur ? { ...cur, views: (cur.views || 0) + 1 } : cur!,
+        ),
+      )
       .catch(() => {});
   return json(
     { creation: pub(c, p), paintable: withTargetData(p), status: admin ? c.status : undefined },
@@ -463,7 +499,8 @@ export async function publicCreation(req: Request, id: string) {
 
 export async function creationImage(req: Request, id: string) {
   const c = await liveCreation(req, id);
-  if (!c || (c.status === "hidden" && !(await isAdminRequest(req)))) return new Response("not found", { status: 404 });
+  if (!c || (c.status === "hidden" && !(await isAdminRequest(req))))
+    return new Response("not found", { status: 404 });
   const b = await (await files(req)).getBytes(`creations/${id}.png`);
   if (!b) return new Response("not found", { status: 404 });
   return new Response(b, {
@@ -478,9 +515,17 @@ export async function creationImage(req: Request, id: string) {
 export async function reportCreation(req: Request, id: string) {
   const c = await liveCreation(req, id);
   if (!c) return json({ error: "not found" }, 404);
-  const ip = (req.headers.get("x-nf-client-connection-ip") || req.headers.get("x-forwarded-for") || "").split(",")[0].trim();
+  const ip = (
+    req.headers.get("x-nf-client-connection-ip") ||
+    req.headers.get("x-forwarded-for") ||
+    ""
+  )
+    .split(",")[0]
+    .trim();
   const who = createHash("sha256").update(`${id}:${ip}`).digest("base64url").slice(0, 16);
-  await (await store(req)).update<Creation & { reporters?: string[] }>(`creations/${id}`, (cur) => {
+  await (
+    await store(req)
+  ).update<Creation & { reporters?: string[] }>(`creations/${id}`, (cur) => {
     if (!cur) return cur!;
     const reporters = cur.reporters ?? [];
     if (reporters.includes(who)) return cur;
@@ -512,7 +557,9 @@ export async function updateCreation(req: Request, id: string) {
   }
   const ok: CreationStatus[] = ["unlisted", "featured", "hidden"];
   if (!(await liveCreation(req, id))) return json({ error: "not found" }, 404);
-  const c = await (await store(req)).update<Creation>(`creations/${id}`, (cur) => {
+  const c = await (
+    await store(req)
+  ).update<Creation>(`creations/${id}`, (cur) => {
     if (!cur) return cur!;
     const next = { ...cur, updatedAt: Date.now() };
     if (body.status && ok.includes(body.status as CreationStatus)) {

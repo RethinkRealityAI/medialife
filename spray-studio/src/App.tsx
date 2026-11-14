@@ -25,14 +25,17 @@ export default function App() {
   return (
     <Router basename="/spray">
       <Routes>
-        <Route
-          path="/"
-          element={
-            <AdminGate>
-              <Navigate to={`/studio/${newRoom()}${window.location.search}`} replace />
-            </AdminGate>
-          }
-        />
+        {['/', '/index.html'].map((path) => (
+          <Route
+            key={path}
+            path={path}
+            element={
+              <AdminGate>
+                <Navigate to={`/studio/${newRoom()}${window.location.search}`} replace />
+              </AdminGate>
+            }
+          />
+        ))}
         <Route
           path="/studio/:roomId"
           element={

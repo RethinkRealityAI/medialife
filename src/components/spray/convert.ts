@@ -19,10 +19,20 @@ export const loadImage = (src: string | Blob) =>
   new Promise<HTMLImageElement>((res, rej) => {
     const i = new Image();
     i.decoding = "async";
-    i.onload = () => res(i);
-    i.onerror = () => rej(new Error("could not read that image"));
+    const url = typeof src === "string" ? src : URL.createObjectURL(src);
+    const done = () => {
+      if (url !== src) URL.revokeObjectURL(url);
+    };
+    i.onload = () => {
+      done();
+      res(i);
+    };
+    i.onerror = () => {
+      done();
+      rej(new Error("We couldn't open that picture. Use a JPG, PNG or WebP file."));
+    };
     i.crossOrigin = "anonymous";
-    i.src = typeof src === "string" ? src : URL.createObjectURL(src);
+    i.src = url;
   });
 
 export const canvas = (w: number, h: number) => {
@@ -33,13 +43,15 @@ export const canvas = (w: number, h: number) => {
 };
 
 export const toBlob = (c: HTMLCanvasElement, type: "image/jpeg" | "image/png", q = 0.92) =>
-  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), type, q));
+  new Promise<Blob>((res, rej) =>
+    c.toBlob((b) => (b ? res(b) : rej(new Error("encode failed"))), type, q),
+  );
 
 /** The 3:4 frame for a picture: padded (whole picture, bars added) or cropped (fills, centre kept). */
 export function frameFor(sw: number, sh: number, fit: Fit): Frame {
   const a = sw / sh;
   let w: number, h: number;
-  if ((a > 0.75) === (fit === "pad")) {
+  if (a > 0.75 === (fit === "pad")) {
     w = sw;
     h = sw / 0.75;
   } else {
@@ -50,7 +62,13 @@ export function frameFor(sw: number, sh: number, fit: Fit): Frame {
 }
 
 /** Draw an image into the frame at the given size; `bg` fills the padding (none: transparent). */
-export function drawFramed(img: CanvasImageSource, f: Frame, W: number, H: number, bg: string | null) {
+export function drawFramed(
+  img: CanvasImageSource,
+  f: Frame,
+  W: number,
+  H: number,
+  bg: string | null,
+) {
   const c = canvas(W, H);
   const g = c.getContext("2d")!;
   if (bg) {
@@ -88,7 +106,10 @@ export function edgeColour(img: HTMLImageElement): string {
       n++;
     }
   if (!n) return "#eceef0";
-  const h = (v: number) => Math.round(v / n).toString(16).padStart(2, "0");
+  const h = (v: number) =>
+    Math.round(v / n)
+      .toString(16)
+      .padStart(2, "0");
   return `#${h(r)}${h(gg)}${h(b)}`;
 }
 
@@ -100,12 +121,13 @@ export type TargetBuild = {
   track: Trackability;
 };
 
-/** A side of the merch → its tracked picture. `mirror`: the side seen through clear acrylic. */
+/** A side of the merch → its tracked picture (3:4 colour copy, the greyscale copy the engine tracks, a score). */
 export function buildTarget(img: HTMLImageElement, fit: Fit, sharpen = true): TargetBuild {
   const f = frameFor(img.naturalWidth, img.naturalHeight, fit);
   const bg = edgeColour(img);
-  const H = Math.min(PRINT_MAX_H, Math.round(f.h));
-  const colour = drawFramed(img, f, Math.round(H * 0.75), H, bg);
+  // a multiple of 4 tall, so the colour picture is exactly 3:4
+  const H = Math.max(4, Math.min(PRINT_MAX_H, Math.round(f.h / 4) * 4));
+  const colour = drawFramed(img, f, (H / 4) * 3, H, bg);
   const lum = canvas(LUM_W, LUM_H);
   const g = lum.getContext("2d", { willReadFrequently: true })!;
   g.imageSmoothingQuality = "high";
@@ -113,7 +135,9 @@ export function buildTarget(img: HTMLImageElement, fit: Fit, sharpen = true): Ta
   const d = g.getImageData(0, 0, LUM_W, LUM_H);
   let grey: Uint8Array = new Uint8Array(LUM_W * LUM_H);
   for (let i = 0; i < grey.length; i++)
-    grey[i] = Math.round(0.299 * d.data[i * 4] + 0.587 * d.data[i * 4 + 1] + 0.114 * d.data[i * 4 + 2]);
+    grey[i] = Math.round(
+      0.299 * d.data[i * 4] + 0.587 * d.data[i * 4 + 1] + 0.114 * d.data[i * 4 + 2],
+    );
   if (sharpen) grey = unsharp(grey, LUM_W, LUM_H);
   for (let i = 0; i < grey.length; i++) {
     d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = grey[i];
@@ -127,7 +151,8 @@ export function buildTarget(img: HTMLImageElement, fit: Fit, sharpen = true): Ta
 function unsharp(a: Uint8Array, w: number, h: number, amount = 0.9): Uint8Array {
   const b = boxBlur(a, w, h, 2);
   const o = new Uint8Array(a.length);
-  for (let i = 0; i < a.length; i++) o[i] = Math.max(0, Math.min(255, Math.round(a[i] + (a[i] - b[i]) * amount)));
+  for (let i = 0; i < a.length; i++)
+    o[i] = Math.max(0, Math.min(255, Math.round(a[i] + (a[i] - b[i]) * amount)));
   return o;
 }
 function boxBlur(a: Uint8Array | Float32Array, w: number, h: number, r: number): Float32Array {
@@ -174,6 +199,10 @@ export type Trackability = {
   advice: string[];
 };
 
+/** The word for a trackability score (the same cut-offs everywhere a score is shown). */
+export const scoreLabel = (score: number): Trackability["label"] =>
+  score >= 80 ? "Great" : score >= 62 ? "Good" : score >= 30 ? "Weak" : "Poor";
+
 /**
  * How well the engine is likely to hold this picture: corners (Shi-Tomasi, at half size), how evenly
  * they spread over the picture, and contrast. Calibrated on the keychain targets (which track well on
@@ -186,7 +215,11 @@ export function trackability(grey: Uint8Array, w: number, h: number): Trackabili
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++)
       s[y * W + x] =
-        (grey[2 * y * w + 2 * x] + grey[2 * y * w + 2 * x + 1] + grey[(2 * y + 1) * w + 2 * x] + grey[(2 * y + 1) * w + 2 * x + 1]) / 4;
+        (grey[2 * y * w + 2 * x] +
+          grey[2 * y * w + 2 * x + 1] +
+          grey[(2 * y + 1) * w + 2 * x] +
+          grey[(2 * y + 1) * w + 2 * x + 1]) /
+        4;
   const sm = boxBlur(s, W, H, 1);
   const xx = new Float32Array(W * H),
     yy = new Float32Array(W * H),
@@ -234,22 +267,48 @@ export function trackability(grey: Uint8Array, w: number, h: number): Trackabili
   const GX = 6,
     GY = 8,
     cells = new Uint16Array(GX * GY);
-  for (const [x, y] of pts) cells[Math.min(GY - 1, Math.floor((y / h) * GY)) * GX + Math.min(GX - 1, Math.floor((x / w) * GX))]++;
+  for (const [x, y] of pts)
+    cells[
+      Math.min(GY - 1, Math.floor((y / h) * GY)) * GX + Math.min(GX - 1, Math.floor((x / w) * GX))
+    ]++;
   let good = 0;
   for (const c of cells) if (c >= 3) good++;
   const spread = good / cells.length;
-  const nScore = Math.min(1, pts.length / 450);
+  // Calibrated on the keychain targets (120-160 corners, half the cells: phones hold them well), a
+  // simple logo on a flat background (few corners, bunched: weak) and flat colour / soft gradients
+  // (no corners: poor). The square root rewards the first corners most: going from 0 to 50 matters
+  // far more than going from 150 to 200.
+  const nScore = Math.sqrt(Math.min(1, pts.length / 200));
+  const sScore = Math.sqrt(Math.min(1, spread / 0.55));
   const cScore = Math.min(1, contrast / 45);
-  const score = Math.round(100 * (0.45 * nScore + 0.4 * spread + 0.15 * cScore));
-  const label = score >= 70 ? "Great" : score >= 50 ? "Good" : score >= 32 ? "Weak" : "Poor";
+  const score = Math.round(100 * (0.45 * nScore + 0.4 * sScore + 0.15 * cScore));
+  const label = scoreLabel(score);
   const advice: string[] = [];
-  if (pts.length < 200) advice.push("Few corners: flat colour and smooth shapes are hard to track. Pictures with lettering, outlines and texture work best.");
-  if (spread < 0.45) advice.push("Detail is bunched in one area: crop tighter to the print, or keep more of the detailed background.");
-  if (contrast < 25) advice.push("Low contrast: use a sharper, evenly lit picture of the real print.");
+  if (pts.length < 90)
+    advice.push(
+      "Not much detail: flat colour and smooth shapes are hard for the camera to follow. Pictures with lettering, outlines and texture work best.",
+    );
+  if (spread < 0.35)
+    advice.push(
+      "The detail is bunched in one area: crop closer to the print, or keep more of a detailed background.",
+    );
+  if (contrast < 25)
+    advice.push("Low contrast: use a sharper, evenly lit picture of the real print.");
   return { score, label, points: pts, spread, contrast, advice };
 }
 
 // ---------------------------------------------------------------- the canvas overlay
+/** Whether a picture has see-through parts (at least 1% of it). */
+export function hasTransparency(img: HTMLImageElement): boolean {
+  const c = canvas(128, 128);
+  const g = c.getContext("2d", { willReadFrequently: true })!;
+  g.drawImage(img, 0, 0, 128, 128);
+  const d = g.getImageData(0, 0, 128, 128).data;
+  let n = 0;
+  for (let i = 3; i < d.length; i += 4) if (d[i] < 128) n++;
+  return n > 128 * 128 * 0.01;
+}
+
 export type LinesMode = "art" | "edge" | "none" | "upload";
 
 export type CanvasBuild = {
@@ -272,26 +331,37 @@ export function buildCanvas(
 ): CanvasBuild {
   // the overlay may be a different resolution than the tracking upload: scale the frame to it
   const k = overlay.naturalWidth / frame.sw;
-  const f: Frame = { sw: overlay.naturalWidth, sh: overlay.naturalHeight, x: frame.x * k, y: frame.y * k, w: frame.w * k, h: frame.h * k };
+  const f: Frame = {
+    sw: overlay.naturalWidth,
+    sh: overlay.naturalHeight,
+    x: frame.x * k,
+    y: frame.y * k,
+    w: frame.w * k,
+    h: frame.h * k,
+  };
   const art = drawFramed(overlay, f, PAINT_W, PAINT_H, null);
   const ag = art.getContext("2d", { willReadFrequently: true })!;
   const ad = ag.getImageData(0, 0, PAINT_W, PAINT_H);
   const N = PAINT_W * PAINT_H;
   const m = new Uint8Array(N);
-  let opaque = 0,
-    on = 0;
-  for (let i = 0; i < N; i++) if (ad.data[i * 4 + 3] > 250) opaque++;
-  // a picture with no transparency: treat near-white as "not paintable" (a stencil on white)
-  const noAlpha = opaque > N * 0.98;
+  let on = 0;
+  // A picture with no transparency (a JPEG, a flattened PNG): treat near-white as "not paintable", like
+  // a stencil on white paper. Checked on the upload itself: the padding bars of the frame are always
+  // transparent, so the framed copy can't tell.
+  const noAlpha = !hasTransparency(overlay);
   for (let i = 0; i < N; i++) {
     const r = ad.data[i * 4],
       g = ad.data[i * 4 + 1],
-      b = ad.data[i * 4 + 2];
-    const v = noAlpha ? (r + g + b < 735 ? 1 : 0) : ad.data[i * 4 + 3] > 127 ? 1 : 0;
+      b = ad.data[i * 4 + 2],
+      a = ad.data[i * 4 + 3];
+    const v = a > 127 && (!noAlpha || r + g + b < 735) ? 1 : 0;
     m[i] = v;
     on += v;
   }
-  if (on < N * 0.01) throw new Error("The overlay has almost nothing paintable: it should be a PNG with the paintable part opaque and the rest transparent.");
+  if (on < N * 0.01)
+    throw new Error(
+      "The overlay has almost nothing paintable: it should be a PNG with the paintable part opaque and the rest transparent.",
+    );
   const mask = canvas(PAINT_W, PAINT_H);
   const mg = mask.getContext("2d")!;
   const md = mg.createImageData(PAINT_W, PAINT_H);
@@ -304,7 +374,20 @@ export function buildCanvas(
   let lines: HTMLCanvasElement | null = null;
   if (linesMode === "upload" && linesImg) {
     const lk = linesImg.naturalWidth / frame.sw;
-    lines = drawFramed(linesImg, { sw: linesImg.naturalWidth, sh: linesImg.naturalHeight, x: frame.x * lk, y: frame.y * lk, w: frame.w * lk, h: frame.h * lk }, PAINT_W, PAINT_H, null);
+    lines = drawFramed(
+      linesImg,
+      {
+        sw: linesImg.naturalWidth,
+        sh: linesImg.naturalHeight,
+        x: frame.x * lk,
+        y: frame.y * lk,
+        w: frame.w * lk,
+        h: frame.h * lk,
+      },
+      PAINT_W,
+      PAINT_H,
+      null,
+    );
   } else if (linesMode === "art" || linesMode === "edge") {
     lines = canvas(PAINT_W, PAINT_H);
     const lg = lines.getContext("2d")!;
@@ -334,11 +417,16 @@ export function buildCanvas(
         if (edge) ink(i);
       }
     if (linesMode === "art" && !noAlpha) {
-      // the art's own dark lines inside the shape (outlines, faces, lettering)
+      // the art's own dark lines inside the shape (outlines, faces, lettering): pixels clearly darker
+      // than their surroundings (thin strokes), or near-black. Dark filled areas (navy trousers) stay
+      // paintable instead of turning into a black blob.
+      const lum = new Float32Array(N);
+      for (let i = 0; i < N; i++)
+        lum[i] = 0.299 * ad.data[i * 4] + 0.587 * ad.data[i * 4 + 1] + 0.114 * ad.data[i * 4 + 2];
+      const local = boxBlur(lum, PAINT_W, PAINT_H, 6);
       for (let i = 0; i < N; i++) {
         if (!m[i]) continue;
-        const l = 0.299 * ad.data[i * 4] + 0.587 * ad.data[i * 4 + 1] + 0.114 * ad.data[i * 4 + 2];
-        if (l < 70) ink(i);
+        if ((lum[i] < 120 && local[i] - lum[i] > 22) || lum[i] < 28) ink(i);
       }
     }
     lg.putImageData(ld, 0, 0);
@@ -347,8 +435,9 @@ export function buildCanvas(
 }
 
 /**
- * The sticker's die-cut line: the mask's outer edge, grown a little (the white sticker border) and
- * joined up (separate bits of the art end up on one sticker), simplified. Fractions, v down.
+ * The sticker's die-cut line: the mask's outer edge, joined up (separate bits of the art end up on one
+ * sticker, gaps filled) and grown by a hair (~4 px of 768), simplified. Fractions, v down. Close to
+ * the built-in outlines (scripts/build-spray-bobo/build_stencil.py: the mask's contour).
  */
 export function traceOutline(m: Uint8Array, w: number, h: number): [number, number][] {
   const S = 4,
@@ -358,7 +447,12 @@ export function traceOutline(m: Uint8Array, w: number, h: number): [number, numb
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
       let v = 0;
-      for (let dy = 0; dy < S && !v; dy++) for (let dx = 0; dx < S; dx++) if (m[(y * S + dy) * w + x * S + dx]) { v = 1; break; }
+      for (let dy = 0; dy < S && !v; dy++)
+        for (let dx = 0; dx < S; dx++)
+          if (m[(y * S + dy) * w + x * S + dx]) {
+            v = 1;
+            break;
+          }
       g[y * W + x] = v;
     }
   const dilate = (a: Uint8Array, r: number) => {
@@ -376,7 +470,11 @@ export function traceOutline(m: Uint8Array, w: number, h: number): [number, numb
       }
     return o;
   };
+  // close gaps up to ~50 px (separate bits of the art end on one sticker), then keep a thin border:
+  // dilate 6 cells, erode 5 (erode = dilate the outside)
   g = dilate(g, 6);
+  const inv = (a: Uint8Array) => a.map((v) => (v ? 0 : 1));
+  g = inv(dilate(inv(g), 5));
   // largest component
   const lab = new Int32Array(W * H);
   let best = 0,
@@ -414,7 +512,8 @@ export function traceOutline(m: Uint8Array, w: number, h: number): [number, numb
       best = cur;
     }
   }
-  const inside = (x: number, y: number) => x >= 0 && y >= 0 && x < W && y < H && lab[y * W + x] === best;
+  const inside = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < W && y < H && lab[y * W + x] === best;
   // Moore-neighbour boundary trace
   let start = -1;
   for (let i = 0; i < g.length && start < 0; i++) if (lab[i] === best) start = i;

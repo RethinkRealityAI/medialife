@@ -1,38 +1,36 @@
 /**
  * First-join welcome guide.
  *
- * A one-shot "how to play" modal shown the first time someone lands in a
+ * A one-shot "how it works" modal shown the first time someone lands in a
  * session. Two variants share one skeleton:
  *
- *   controller — the phone. Explains the three paint modes (Aim / Paint / Pad)
- *                that live in the top segmented switch, plus a row of quick
- *                tips for the smaller affordances.
- *   studio     — the big screen. Explains mouse painting, inviting phones via
- *                the QR sheet, and the host-only room controls.
+ *   controller — the phone. Explains the ways to paint (Aim / Paint / Pad, the
+ *                last one only when its flag is on), plus a row of quick tips.
+ *   studio     — the big screen. Pick a piece of merch, spray it, bring phones
+ *                in with the QR, save to get a share link.
  *
  * The mounting side owns first-run persistence; this component only renders
  * when told to and calls `onClose` when the player is ready.
  *
- * Illustration slots: each controller card can show /ui/guide-*.png. Those
- * images are produced by a separate workstream and may not exist yet, so a
- * failed load simply removes the slot rather than leaving a broken image.
- *
- * Styling hooks for the upcoming paint-mask pass: the primary button carries
- * `paint-btn` and the tip chips carry `splat-chip`. Both have complete solid
- * styling here so nothing depends on those classes existing in CSS yet.
+ * Every card carries a small flat inline SVG illustration (no screenshots, no
+ * gradients), drawn in the card's accent with ink outlines like the Spray Bobo
+ * splash art.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Crosshair, Pencil, Square, Sparkles, Undo2, Redo2, Palette, ChevronDown,
-  Droplets, MousePointer, QrCode, Video, SprayCan, X,
+  Crosshair, Pencil, Square, Undo2, Redo2, Palette, ChevronDown, Droplets, Smartphone,
+  MousePointer, QrCode, Share2, Shirt, SprayCan, X, Keyboard,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useFlags } from '../config/flags';
+import { ActivatedBy, EvadeLogo } from '../ui/Brand';
 
 /* ------------------------------------------------------------------
    Content
    ------------------------------------------------------------------ */
+
+type Art = 'merch' | 'spray' | 'phone' | 'share' | 'aim' | 'touch' | 'pad';
 
 interface GuideCard {
   /** Small accent-coloured caps label — the mode name / step number. */
@@ -41,8 +39,7 @@ interface GuideCard {
   body: string;
   icon: LucideIcon;
   accent: string;
-  /** Optional illustration; hidden gracefully if the asset is missing. */
-  image?: string;
+  art: Art;
 }
 
 interface GuideTip {
@@ -50,67 +47,164 @@ interface GuideTip {
   label: string;
 }
 
+const YELLOW = '#F6C344';
+const BLUE = '#3F9BE6';
+const SKY = '#8CC8F8';
+const MAGENTA = '#E85BD8';
+const GREEN = '#3DDC84';
+const INK = '#15131A';
+
 const CONTROLLER_CARDS: GuideCard[] = [
   {
     tag: 'Aim',
-    headline: 'Point & spray',
-    body:
-      'Point your phone at the studio screen like a real can. Hold anywhere to spray; paint lands where you aim. Tap Recentre to zero your aim.',
+    headline: 'Your phone is the can',
+    body: 'Point your phone at the big screen and hold your thumb down to spray. The paint lands where you point. Tap Recentre if your aim drifts.',
     icon: Crosshair,
-    accent: '#FF4D1C',
-    image: '/spray/ui/guide-aim.png',
+    accent: YELLOW,
+    art: 'aim',
   },
   {
     tag: 'Paint',
-    headline: 'Touch the object itself',
-    body: 'Paint the 3D object right on your phone. One finger paints — two fingers rotate & zoom.',
+    headline: 'Paint with your finger',
+    body: 'Spray the merch right here on your phone. One finger paints, two fingers turn it and zoom.',
     icon: Pencil,
-    accent: '#22D3EE',
-    image: '/spray/ui/guide-paint.png',
+    accent: SKY,
+    art: 'touch',
   },
   {
     tag: 'Pad',
-    headline: 'Precision trackpad',
-    body: "A flat pad mapped straight onto the object's skin. Great for precise fills.",
+    headline: 'Flat pad',
+    body: 'A flat pad laid over the whole piece. Handy for neat fills.',
     icon: Square,
-    accent: '#A78BFA',
-    image: '/spray/ui/guide-pad.png',
+    accent: MAGENTA,
+    art: 'pad',
   },
 ];
 
 const CONTROLLER_TIPS: GuideTip[] = [
-  { icons: [Sparkles], label: 'Shake phone = re-centre your aim' },
-  { icons: [Undo2, Redo2], label: 'Undo / Redo' },
-  { icons: [Palette], label: 'Colour button is always on screen' },
-  { icons: [ChevronDown], label: 'Collapse the dock for full immersion' },
-  { icons: [Droplets], label: 'Spray & hold = drips' },
+  { icons: [Smartphone], label: 'Shake your phone to recentre' },
+  { icons: [Undo2, Redo2], label: 'Undo and redo' },
+  { icons: [Palette], label: 'Tap the colour button to swap caps' },
+  { icons: [ChevronDown], label: 'Hide the tools for more room' },
+  { icons: [Droplets], label: 'Hold still to make drips' },
 ];
 
 const STUDIO_CARDS: GuideCard[] = [
   {
     tag: '01',
-    headline: 'Paint with your mouse',
-    body: 'Left-drag paints, right-drag orbits. Press B to swap spray/brush.',
-    icon: MousePointer,
-    accent: '#FF4D1C',
+    headline: 'Pick your merch',
+    body: 'Choose a piece from the list. Drag with the right mouse button (or two fingers) to spin it round.',
+    icon: Shirt,
+    accent: YELLOW,
+    art: 'merch',
   },
   {
     tag: '02',
-    headline: 'Invite painters',
-    body:
-      'Open Invite and let phones scan the QR — they jump straight into this session as motion-tracked spray cans.',
-    icon: QrCode,
-    accent: '#22D3EE',
+    headline: 'Spray it',
+    body: 'Drag with your mouse or finger to spray. Pick a colour, or switch to the brush for clean lines.',
+    icon: MousePointer,
+    accent: SKY,
+    art: 'spray',
   },
   {
     tag: '03',
-    headline: 'Direct the room',
-    body:
-      'Toggle CAM on a player to let their phone rotate your view. Undo/redo any stroke (Ctrl+Z / Ctrl+Shift+Z), replay the artwork painting itself, save snapshots.',
-    icon: Video,
-    accent: '#A78BFA',
+    headline: 'Use your phone',
+    body: 'Scan the QR code with your phone camera and it turns into a spray can. Up to four friends can paint at once.',
+    icon: QrCode,
+    accent: MAGENTA,
+    art: 'phone',
+  },
+  {
+    tag: '04',
+    headline: 'Save and share',
+    body: 'Done? Tap Save & share to get a link and a QR code for your piece.',
+    icon: Share2,
+    accent: GREEN,
+    art: 'share',
   },
 ];
+
+const STUDIO_TIPS: GuideTip[] = [
+  { icons: [Undo2, Redo2], label: 'Ctrl+Z / Ctrl+Shift+Z to undo and redo' },
+  { icons: [Keyboard], label: 'Press B to swap spray and brush' },
+];
+
+/* ------------------------------------------------------------------
+   Illustrations: flat shapes, ink outlines, one accent per card.
+   ------------------------------------------------------------------ */
+
+const SPLAT = 'M0-14c4 0 4 5 8 4s5-4 7-1-2 6 0 9 6 4 4 7-7 0-9 3-1 7-5 7-3-5-6-5-6 4-9 1 1-6-1-8-7-2-7-6 6-3 6-6-4-5-1-8 6 2 7-2z';
+
+const GuideArt: React.FC<{ art: Art; accent: string }> = ({ art, accent }) => {
+  const stroke = { stroke: INK, strokeWidth: 3, strokeLinejoin: 'round' as const, strokeLinecap: 'round' as const };
+  return (
+    <svg viewBox="0 0 120 80" className="w-full h-full" aria-hidden>
+      {art === 'merch' && (
+        <>
+          <rect x="34" y="8" width="48" height="64" rx="7" fill="#fff" {...stroke} transform="rotate(-6 58 40)" />
+          <path transform="translate(56 38) scale(1.1)" d={SPLAT} fill={accent} />
+          <circle cx="74" cy="22" r="4" fill={BLUE} />
+          <path d="M92 30a14 14 0 0 1 0 22" fill="none" {...stroke} />
+          <path d="M88 50l4 3 3-4" fill="none" {...stroke} />
+        </>
+      )}
+      {art === 'spray' && (
+        <>
+          <rect x="18" y="14" width="44" height="58" rx="6" fill="#fff" {...stroke} />
+          <path d="M26 54c8-10 16 4 28-10" fill="none" stroke={accent} strokeWidth="7" strokeLinecap="round" />
+          <circle cx="58" cy="30" r="3" fill={accent} />
+          <circle cx="52" cy="24" r="2" fill={accent} />
+          <path d="M72 46l14-14 6 2 10 22-8 8-22-10z" fill={YELLOW} {...stroke} />
+          <path d="M70 46l6 6" {...stroke} />
+        </>
+      )}
+      {art === 'phone' && (
+        <>
+          <rect x="16" y="10" width="40" height="60" rx="8" fill="#fff" {...stroke} />
+          <rect x="24" y="22" width="24" height="24" fill={INK} />
+          <rect x="28" y="26" width="7" height="7" fill="#fff" />
+          <rect x="37" y="35" width="7" height="7" fill="#fff" />
+          <rect x="28" y="37" width="5" height="5" fill={accent} />
+          <rect x="72" y="20" width="26" height="48" rx="6" fill={accent} {...stroke} />
+          <rect x="78" y="12" width="14" height="10" rx="3" fill="#fff" {...stroke} />
+          <circle cx="60" cy="16" r="3" fill={accent} />
+          <circle cx="66" cy="10" r="2" fill={accent} />
+        </>
+      )}
+      {art === 'share' && (
+        <>
+          <rect x="22" y="12" width="40" height="56" rx="6" fill="#fff" {...stroke} />
+          <path transform="translate(42 40)" d={SPLAT} fill={YELLOW} />
+          <circle cx="84" cy="22" r="8" fill={accent} {...stroke} />
+          <circle cx="98" cy="52" r="8" fill={SKY} {...stroke} />
+          <circle cx="74" cy="60" r="8" fill={MAGENTA} {...stroke} />
+          <path d="M66 36l12-8M66 46l24 6M66 52l2 4" fill="none" {...stroke} />
+        </>
+      )}
+      {art === 'aim' && (
+        <>
+          <rect x="62" y="10" width="44" height="34" rx="4" fill="#fff" {...stroke} />
+          <path transform="translate(84 27) scale(.8)" d={SPLAT} fill={accent} />
+          <rect x="18" y="38" width="22" height="36" rx="6" fill={accent} {...stroke} transform="rotate(-24 29 56)" />
+          <path d="M40 40l18-10" fill="none" stroke={accent} strokeWidth="4" strokeDasharray="2 6" strokeLinecap="round" />
+        </>
+      )}
+      {art === 'touch' && (
+        <>
+          <rect x="38" y="6" width="44" height="68" rx="9" fill="#fff" {...stroke} />
+          <path transform="translate(60 38)" d={SPLAT} fill={accent} />
+          <circle cx="72" cy="52" r="9" fill={YELLOW} {...stroke} />
+        </>
+      )}
+      {art === 'pad' && (
+        <>
+          <rect x="22" y="12" width="76" height="56" rx="8" fill="#fff" {...stroke} />
+          <path d="M34 50l14-14 12 10 18-20" fill="none" stroke={accent} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+    </svg>
+  );
+};
 
 /* ------------------------------------------------------------------
    Pieces
@@ -118,75 +212,48 @@ const STUDIO_CARDS: GuideCard[] = [
 
 const cardSpring = { type: 'spring', stiffness: 420, damping: 34 } as const;
 
-/** Accent-tinted square icon chip with a soft glow — the card's identity. */
-const AccentChip: React.FC<{ icon: LucideIcon; accent: string; size?: number }> = ({
-  icon: Icon,
-  accent,
-  size = 38,
-}) => (
-  <div
-    aria-hidden
-    className="rounded-xl grid place-items-center shrink-0"
-    style={{
-      width: size,
-      height: size,
-      background: `linear-gradient(140deg, ${accent}30, ${accent}12)`,
-      border: `1px solid ${accent}55`,
-      boxShadow: `0 0 20px -4px ${accent}80, inset 0 1px 0 rgba(255,255,255,0.14)`,
-    }}
-  >
-    <Icon size={Math.round(size * 0.44)} style={{ color: accent }} />
-  </div>
-);
-
 const ModeCard: React.FC<{
   card: GuideCard;
   index: number;
   stacked: boolean;
-  imageHidden: boolean;
-  onImageError: (src: string) => void;
-}> = ({ card, index, stacked, imageHidden, onImageError }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 18, scale: 0.97 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ ...cardSpring, delay: 0.12 + index * 0.07 }}
-    className="relative rounded-2xl bg-white/[0.05] border border-white/10 p-4 overflow-hidden"
-  >
-    {/* Accent edge */}
-    <span
-      aria-hidden
-      className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full"
-      style={{ background: card.accent, boxShadow: `0 0 12px ${card.accent}aa` }}
-    />
-
-    <div className={stacked ? 'flex flex-col gap-2.5' : 'flex items-start gap-3'}>
-      <AccentChip icon={card.icon} accent={card.accent} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-2 mb-1">
+}> = ({ card, index, stacked }) => {
+  const Icon = card.icon;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ ...cardSpring, delay: 0.12 + index * 0.07 }}
+      className={`relative rounded-2xl bg-white/[0.05] border border-white/12 overflow-hidden ${
+        stacked ? 'flex flex-col' : 'flex items-stretch'
+      }`}
+    >
+      <div
+        className={`shrink-0 grid place-items-center ${stacked ? 'h-[92px] w-full' : 'w-[92px]'}`}
+        style={{ background: `${card.accent}26` }}
+      >
+        <div className={stacked ? 'h-[76px] w-[114px]' : 'h-[62px] w-[84px]'}>
+          <GuideArt art={card.art} accent={card.accent} />
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 p-3.5">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            aria-hidden
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full"
+            style={{ background: card.accent }}
+          >
+            <Icon size={13} style={{ color: INK }} />
+          </span>
           <span className="label-caps" style={{ color: card.accent }}>
             {card.tag}
           </span>
-          <span className="text-[15px] font-semibold text-white tracking-tight whitespace-nowrap">
-            {card.headline}
-          </span>
         </div>
-        <div>
-          {card.image && !imageHidden && (
-            <img
-              src={card.image}
-              alt=""
-              loading="lazy"
-              draggable={false}
-              onError={() => onImageError(card.image!)}
-              className="float-right w-20 h-20 object-contain ml-2.5 -mt-1 select-none"
-            />
-          )}
-          <p className="text-[13px] leading-relaxed text-white/65">{card.body}</p>
-        </div>
+        <h3 className="text-[15px] font-bold text-white leading-tight mb-1">{card.headline}</h3>
+        <p className="text-[13px] leading-relaxed text-white/75">{card.body}</p>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 /* ------------------------------------------------------------------
    WelcomeGuide
@@ -200,19 +267,11 @@ export const WelcomeGuide: React.FC<{
   const isStudio = role === 'studio';
   const flags = useFlags();
   // Filtered at render, not at the source: the Pad card is written and ready,
-  // and the day the owner switches Pad back on it must reappear in the guide
-  // without a deploy.
+  // and the day the owner switches Pad back on it reappears in the guide.
   const cards = (isStudio ? STUDIO_CARDS : CONTROLLER_CARDS).filter(
     (card) => card.tag !== 'Pad' || flags.ui.padMode
   );
-
-  // Illustration assets ship from another workstream and may not exist yet;
-  // a failed load hides that slot for the rest of the session.
-  const [hiddenImages, setHiddenImages] = useState<Record<string, boolean>>({});
-  const hideImage = useCallback(
-    (src: string) => setHiddenImages((prev) => (prev[src] ? prev : { ...prev, [src]: true })),
-    []
-  );
+  const tips = isStudio ? STUDIO_TIPS : CONTROLLER_TIPS;
 
   useEffect(() => {
     if (!open) return;
@@ -223,10 +282,10 @@ export const WelcomeGuide: React.FC<{
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const title = isStudio ? 'Welcome to the studio' : 'You are the spray can';
+  const title = isStudio ? 'Welcome to Spray Studio' : 'You are the spray can';
   const subtitle = isStudio
-    ? "Your screen is the wall — here's how to run the room."
-    : 'Three ways to paint. Switch any time with the top selector.';
+    ? 'Spray your own take on EVADE merch. Here is how it works.'
+    : 'Paint the big screen from your phone. Switch modes any time at the top.';
 
   return (
     <AnimatePresence>
@@ -248,8 +307,6 @@ export const WelcomeGuide: React.FC<{
             className="absolute inset-0 bg-black/70 backdrop-blur-md"
           />
 
-          {/* Panel — glass-strong with a near-opaque ink wash so the guide reads
-              as a moment of focus rather than another translucent island. */}
           <motion.div
             variants={{
               hidden: { opacity: 0, scale: 0.92, y: 18 },
@@ -257,110 +314,82 @@ export const WelcomeGuide: React.FC<{
             }}
             transition={{ type: 'spring', stiffness: 380, damping: 34 }}
             className={`relative w-full ${
-              isStudio ? 'max-w-3xl' : 'max-w-md'
-            } glass-strong glass-sheen rounded-3xl overflow-hidden flex flex-col max-h-[88vh]`}
-            style={{
-              background: 'linear-gradient(180deg, rgba(17,17,28,0.93), rgba(8,8,14,0.95))',
-            }}
+              isStudio ? 'max-w-4xl' : 'max-w-md'
+            } glass-modal rounded-3xl overflow-hidden flex flex-col max-h-[88vh]`}
           >
-            {/* Ambient accent glows along the top edge */}
-            <div
-              aria-hidden
-              className="absolute inset-x-0 top-0 h-28 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse 55% 100% at 18% 0%, rgba(255,77,28,0.16), transparent 70%),' +
-                  'radial-gradient(ellipse 45% 90% at 62% 0%, rgba(34,211,238,0.1), transparent 70%),' +
-                  'radial-gradient(ellipse 45% 90% at 95% 0%, rgba(167,139,250,0.12), transparent 70%)',
-              }}
-            />
-
             {/* ------------------------------ header ------------------------------ */}
             <header className="relative shrink-0 px-5 sm:px-6 pt-5 pb-4 flex items-start gap-3.5">
               <motion.div
                 initial={{ scale: 0.6, rotate: -14, opacity: 0 }}
-                animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                animate={{ scale: 1, rotate: -6, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 20, delay: 0.05 }}
-                className="w-11 h-11 rounded-[15px] bg-gradient-to-tr from-[#FF4D1C] to-[#FFB020] grid place-items-center shadow-[0_0_28px_rgba(255,77,28,0.5)] shrink-0"
+                className="w-11 h-11 rounded-[14px] bg-[#F6C344] grid place-items-center shadow-[3px_3px_0_#15131a] shrink-0"
               >
-                <SprayCan size={21} className="text-white drop-shadow" />
+                <SprayCan size={21} className="text-[#15131a]" />
               </motion.div>
 
               <div className="flex-1 min-w-0 pt-0.5">
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-tight">
-                  {title}
-                </h2>
-                <p className="text-[12.5px] text-white/55 mt-1 leading-snug">{subtitle}</p>
+                <EvadeLogo className="h-5 w-auto mb-1.5" />
+                <h2 className="paint-title text-[24px] sm:text-[28px] leading-tight">{title}</h2>
+                <p className="text-[13px] text-white/70 mt-1 leading-snug">{subtitle}</p>
               </div>
 
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="Close guide"
-                className="tap glass rounded-full w-8 h-8 grid place-items-center text-white/70 hover:text-white shrink-0"
+                className="tap glass rounded-full w-11 h-11 grid place-items-center text-white/80 hover:text-white shrink-0"
               >
-                <X size={15} />
+                <X size={16} />
               </button>
             </header>
 
             {/* ------------------------------ body ------------------------------ */}
             <div className="relative flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 pb-5">
-              <div className={isStudio ? 'grid gap-3 sm:grid-cols-3' : 'flex flex-col gap-3'}>
+              <div className={isStudio ? 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4' : 'flex flex-col gap-3'}>
                 {cards.map((card, index) => (
-                  <ModeCard
-                    key={card.tag}
-                    card={card}
-                    index={index}
-                    stacked={isStudio}
-                    imageHidden={!card.image || !!hiddenImages[card.image]}
-                    onImageError={hideImage}
-                  />
+                  <ModeCard key={card.tag} card={card} index={index} stacked={isStudio} />
                 ))}
               </div>
 
-              {!isStudio && (
-                <motion.div
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...cardSpring, delay: 0.12 + CONTROLLER_CARDS.length * 0.07 }}
-                  className="mt-4"
-                >
-                  <div className="label-caps text-white/35 mb-2">Quick tips</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {CONTROLLER_TIPS.map((tip) => (
-                      <span
-                        key={tip.label}
-                        className="splat-chip glass rounded-full pl-2.5 pr-3 py-1.5 flex items-center gap-1.5 text-[11.5px] font-semibold text-white/80"
-                      >
-                        {tip.icons.map((Icon, iconIndex) => (
-                          <Icon
-                            key={iconIndex}
-                            size={12}
-                            className="text-[var(--color-airo-ember)] shrink-0"
-                          />
-                        ))}
-                        {tip.label}
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...cardSpring, delay: 0.12 + cards.length * 0.07 }}
+                className="mt-4"
+              >
+                <div className="label-caps text-white/60 mb-2">Quick tips</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {tips.map((tip) => (
+                    <span
+                      key={tip.label}
+                      className="rounded-full border border-white/12 bg-white/[0.06] pl-2.5 pr-3 py-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-white/85"
+                    >
+                      {tip.icons.map((TipIcon, iconIndex) => (
+                        <TipIcon key={iconIndex} size={12} className="text-[#F6C344] shrink-0" />
+                      ))}
+                      {tip.label}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
             </div>
 
             {/* ------------------------------ footer ------------------------------ */}
-            <footer className="relative shrink-0 px-5 sm:px-6 pt-3 pb-5 safe-bottom border-t border-white/[0.07]">
+            <footer className="relative shrink-0 px-5 sm:px-6 pt-3 pb-5 safe-bottom border-t border-white/[0.08] flex flex-col sm:flex-row items-center gap-3">
               <motion.button
                 type="button"
                 onClick={onClose}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...cardSpring, delay: 0.24 }}
-                className="paint-btn tap w-full py-4 px-10 text-white text-[14px] font-bold tracking-wide flex items-center justify-center gap-2"
-                style={{ '--paint': 'linear-gradient(120deg, #FF4D1C, #FF7A34 70%, #FFB020)' } as React.CSSProperties}
+                className="paint-btn tap w-full sm:flex-1 min-h-12 py-4 px-10 text-[#15131a] text-[15px] font-bold tracking-wide flex items-center justify-center gap-2"
+                style={{ '--paint': YELLOW } as React.CSSProperties}
               >
                 <SprayCan size={16} />
                 Let's paint
               </motion.button>
+              <ActivatedBy className="h-7 sm:h-9 w-auto shrink-0" />
             </footer>
           </motion.div>
         </motion.div>

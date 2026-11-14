@@ -1,47 +1,61 @@
 @import "tailwindcss";
 
 /* ============================================================
-   AiroHub — liquid glass design system
+   Spray Studio — EVADE × MEDIALIFE glass design system
    ------------------------------------------------------------
    The whole UI is built from a small set of translucent surfaces
    that sit over the live 3D stage. Everything here is defined
    once so panels, docks, sheets and controls stay consistent
    between the studio screen and the phone controller.
+
+   Flat colours only: no gradients anywhere (platform rule). Glass is
+   a flat translucent tint with a solid edge, plus backdrop blur.
    ============================================================ */
 
 @theme {
-  --color-airo-void: #05050a;
-  --color-airo-ink: #0a0a12;
-  --color-airo-flame: #ff4d1c;
-  --color-airo-ember: #ffb020;
-  --color-airo-aqua: #22d3ee;
-  --color-airo-violet: #a78bfa;
+  /* EVADE / MEDIALIFE palette */
+  --color-evade-yellow: #f6c344;
+  --color-evade-ink: #15131a;
+  --color-evade-slate: #0f1519;
+  --color-evade-blue: #3f9be6;
+  --color-evade-sky: #8cc8f8;
+  --color-evade-magenta: #e85bd8;
+  --color-evade-red: #ff3b4e;
+  --color-evade-orange: #ff8a2a;
+  --color-evade-green: #3ddc84;
+  --color-evade-purple: #7a5cff;
+
+  /* Legacy token names from the port, still read by components; they now
+     carry the EVADE palette. */
+  --color-airo-void: #0f1519;
+  --color-airo-ink: #15131a;
+  --color-airo-flame: #f6c344;
+  --color-airo-ember: #f6c344;
+  --color-airo-aqua: #8cc8f8;
+  --color-airo-violet: #e85bd8;
 
   --radius-glass: 26px;
   --radius-glass-sm: 18px;
 
-  --font-sans: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Inter, system-ui, sans-serif;
-  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, monospace;
+  --font-sans: "Space Grotesk", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --font-display: "Permanent Marker", "Space Grotesk", cursive;
+  /* The instrument-panel captions ("mono-caps") keep their tracking but set
+     in the brand's UI face. */
+  --font-mono: "Space Grotesk", ui-monospace, Menlo, monospace;
 }
 
 :root {
-  /* Tuned so a single blur value reads correctly on both the near-black
-     studio background and the brighter 3D stage behind the controller. */
-  --glass-tint: rgba(255, 255, 255, 0.075);
-  --glass-tint-strong: rgba(255, 255, 255, 0.115);
+  --glass-tint: rgba(255, 255, 255, 0.07);
+  --glass-tint-strong: rgba(255, 255, 255, 0.11);
   --glass-edge: rgba(255, 255, 255, 0.16);
   --glass-edge-bright: rgba(255, 255, 255, 0.28);
-  --glass-blur: 30px;
-  --glass-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.85);
+  --glass-blur: 24px;
+  --glass-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.7);
 
-  /* Refraction, read by src/ui/useLiquidGlass.ts and by nothing in this file.
-     `<GlassPanel liquid>` bends the backdrop at a panel's rim on top of the
-     blur above; every rule here is the fallback for the browsers and the
-     visitors that do not get it, so it stays exactly as it is. Thickness is the
-     strength dial; the bezel is the widest that band may get — the band itself
-     is min(corner radius * 1.2, this), so a tighter corner keeps a
-     proportionally tighter band. */
+  /* Refraction, read by src/ui/useLiquidGlass.ts. `<GlassPanel liquid>` bends
+     the backdrop at a panel's rim on top of the blur; every rule here is the
+     fallback for the browsers that do not get it. */
   --glass-refract-thickness: 20px;
   --glass-refract-bezel: 24px;
   color-scheme: dark;
@@ -55,13 +69,20 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-airo-void);
-  color: #f4f4f7;
+  background: var(--color-evade-slate);
+  color: #f5f7fa;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* Controller is a fixed-viewport app surface, never a scrolling document. */
   overscroll-behavior: none;
+}
+
+/* Visible keyboard focus everywhere: a solid yellow ring on dark, ink on a
+   yellow fill. */
+:where(button, a, input, select, textarea, [role="tab"], [role="option"], [tabindex]):focus-visible {
+  outline: 2px solid var(--color-evade-yellow);
+  outline-offset: 2px;
 }
 
 /* Respect the notch / home indicator on iOS when the controller is
@@ -80,58 +101,37 @@ body {
 @utility glass {
   position: relative;
   background: var(--glass-tint);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.35);
+  box-shadow: var(--glass-shadow);
 }
 
 @utility glass-strong {
   position: relative;
   background: var(--glass-tint-strong);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  backdrop-filter: blur(32px) saturate(150%);
   border: 1px solid var(--glass-edge-bright);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4);
+  box-shadow: var(--glass-shadow);
 }
 
 /* Modal surfaces need a near-opaque base as well as blur. A purely
-   translucent panel lets whatever it covers — the controller dock especially —
-   read straight through the text sitting on it. */
+   translucent panel lets whatever it covers read straight through the text
+   sitting on it. */
 @utility glass-modal {
   position: relative;
-  background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.09),
-      rgba(255, 255, 255, 0.04)
-    ),
-    rgba(11, 11, 17, 0.965);
-  -webkit-backdrop-filter: blur(42px) saturate(190%);
-  backdrop-filter: blur(42px) saturate(190%);
+  background: rgba(21, 27, 32, 0.97);
+  -webkit-backdrop-filter: blur(32px);
+  backdrop-filter: blur(32px);
   border: 1px solid var(--glass-edge-bright);
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.92),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.9);
 }
 
-/* The specular sweep that sells the "liquid" part of liquid glass:
-   a soft light band across the top edge of a panel. */
+/* Kept as a no-op so markup that still carries it stays valid: the old
+   specular sweep was a gradient, and the flat glass has no sheen. */
 @utility glass-sheen {
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.22) 0%,
-      rgba(255, 255, 255, 0.06) 22%,
-      rgba(255, 255, 255, 0) 46%
-    );
-    mix-blend-mode: screen;
-  }
+  --glass-sheen: none;
 }
 
 /* ------------------------------------------------------------
@@ -148,8 +148,8 @@ body {
   }
 }
 
-/* iOS-style segmented control track. The moving pill itself is a
-   separate absolutely-positioned element animated by Motion. */
+/* Segmented control track. The moving pill itself is a separate
+   absolutely-positioned element animated by Motion. */
 @utility segmented {
   position: relative;
   display: flex;
@@ -157,12 +157,11 @@ body {
   padding: 4px;
   gap: 2px;
   border-radius: 9999px;
-  background: rgba(10, 10, 18, 0.55);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-    0 8px 24px -8px rgba(0, 0, 0, 0.8);
+  background: rgba(15, 21, 25, 0.6);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.7);
 }
 
 @utility label-caps {
@@ -182,27 +181,22 @@ body {
   }
 }
 
-/* Ambient colour wash behind the 3D stage. */
+/* Page ground behind gates, loaders and the phone: flat EVADE slate. */
 @utility stage-vignette {
-  background:
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255, 77, 28, 0.1), transparent 60%),
-    radial-gradient(ellipse 100% 70% at 20% 100%, rgba(34, 211, 238, 0.09), transparent 60%),
-    radial-gradient(ellipse 100% 70% at 85% 90%, rgba(167, 139, 250, 0.08), transparent 60%),
-    var(--color-airo-void);
+  background: var(--color-evade-slate);
 }
 
 input[type="range"].airo-slider {
   -webkit-appearance: none;
   appearance: none;
-  height: 30px;
+  height: 44px;
   background: transparent;
   cursor: pointer;
 }
 input[type="range"].airo-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.18);
 }
 input[type="range"].airo-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
@@ -210,22 +204,25 @@ input[type="range"].airo-slider::-webkit-slider-thumb {
   height: 24px;
   margin-top: -9px;
   border-radius: 999px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.25);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  background: var(--color-evade-yellow);
+  border: 2px solid var(--color-evade-ink);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 input[type="range"].airo-slider::-moz-range-track {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.18);
 }
 input[type="range"].airo-slider::-moz-range-thumb {
   width: 24px;
   height: 24px;
-  border: none;
+  border: 2px solid var(--color-evade-ink);
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  background: var(--color-evade-yellow);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+input[type="range"].airo-slider:focus-visible {
+  outline-offset: 0;
 }
 
 @keyframes airo-breathe {
@@ -243,30 +240,6 @@ input[type="range"].airo-slider::-moz-range-thumb {
   animation: airo-breathe 2.4s ease-in-out infinite;
 }
 
-/** Expanding ring that marks a point of interest without demanding a click.
-    Paired with a solid dot, so the motion reads as "there is something here"
-    rather than as a loading state. */
-@keyframes airo-ping {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.7;
-  }
-  70%,
-  100% {
-    transform: scale(1.9);
-    opacity: 0;
-  }
-}
-.airo-ping {
-  animation: airo-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .airo-ping {
-    animation: none;
-    opacity: 0.5;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -280,15 +253,14 @@ input[type="range"].airo-slider::-moz-range-thumb {
 /* ------------------------------------------------------------------
    Paint skin — real spray-paint artwork as UI chrome.
 
-   The masks in /ui/ are alpha-only webp stencils generated from actual
+   The masks in /spray/ui/ are alpha-only webp stencils cut from actual
    spray/brush art: the *paint layer* of a control is a ::before pseudo
-   element filled with any colour and clipped by a stencil, so every
-   button wears a genuine splat or stroke while its label stays crisp
-   on top. Panels and sheets keep the liquid-glass look; these accents
-   sit on interactive elements and titles only.
+   element filled with one flat colour and clipped by a stencil, so every
+   button wears a genuine splat or stroke while its label stays crisp on
+   top. Colour via --paint (a flat colour, never a gradient).
    ------------------------------------------------------------------ */
 
-/** Wide button whose body IS a broad paint stroke. Colour via --paint. */
+/** Wide button whose body IS a broad paint stroke. */
 @utility paint-btn {
   position: relative;
   isolation: isolate;
@@ -300,16 +272,14 @@ input[type="range"].airo-slider::-moz-range-thumb {
     position: absolute;
     inset: -14% -5%;
     z-index: -1;
-    background: var(--paint, linear-gradient(135deg, #ff4d1c, #ff7a34));
+    background: var(--paint, #f6c344);
     -webkit-mask-image: url('/spray/ui/mask-stroke-1.webp');
     mask-image: url('/spray/ui/mask-stroke-1.webp');
     -webkit-mask-size: 100% 100%;
     mask-size: 100% 100%;
     -webkit-mask-repeat: no-repeat;
     mask-repeat: no-repeat;
-    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.45));
   }
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);
 }
 
 /** Variant stroke (aerosol streak instead of dry brush). */
@@ -320,7 +290,7 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
 }
 
-/** Round control wearing a spray splat (with drips). Colour via --paint. */
+/** Round control wearing a spray splat (with drips). */
 @utility splat-btn {
   position: relative;
   isolation: isolate;
@@ -350,7 +320,7 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
 }
 
-/** Loose splatter cluster accent for panel corners. Colour via --paint. */
+/** Loose splatter cluster accent for panel corners. */
 @utility splatter-accent {
   position: relative;
 
@@ -362,8 +332,8 @@ input[type="range"].airo-slider::-moz-range-thumb {
     top: -28px;
     right: -22px;
     z-index: 0;
-    opacity: 0.5;
-    background: var(--paint, #22d3ee);
+    opacity: 0.45;
+    background: var(--paint, #8cc8f8);
     -webkit-mask-image: url('/spray/ui/mask-splatter.webp');
     mask-image: url('/spray/ui/mask-splatter.webp');
     -webkit-mask-size: contain;
@@ -374,35 +344,14 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
 }
 
-/** Display title: vivid gradient ink with a drop glow. */
+/** Display title: Permanent Marker in EVADE yellow with a hard ink offset,
+    as on the Spray Bobo splash. */
 @utility paint-title {
   position: relative;
-  background: linear-gradient(100deg, #ff4d1c 0%, #ffb020 30%, #e879f9 62%, #22d3ee 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 2px 12px rgba(255, 77, 28, 0.35));
-}
-
-/** Paint drips hanging from a top edge (title bars, hero fold). */
-@utility drip-edge {
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset-inline: 6%;
-    top: 100%;
-    height: 42px;
-    background: var(--paint, #ff4d1c);
-    -webkit-mask-image: url('/spray/ui/mask-drips.webp');
-    mask-image: url('/spray/ui/mask-drips.webp');
-    -webkit-mask-size: 100% 100%;
-    mask-size: 100% 100%;
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    pointer-events: none;
-  }
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--color-evade-yellow);
+  text-shadow: 2px 2px 0 var(--color-evade-ink);
 }
 
 /** Small chip wearing a splat instead of a circle. */
@@ -415,7 +364,7 @@ input[type="range"].airo-slider::-moz-range-thumb {
     position: absolute;
     inset: -18%;
     z-index: -1;
-    background: var(--paint, rgba(255, 77, 28, 0.9));
+    background: var(--paint, rgba(246, 195, 68, 0.14));
     -webkit-mask-image: url('/spray/ui/mask-splat-2.webp');
     mask-image: url('/spray/ui/mask-splat-2.webp');
     -webkit-mask-size: 100% 100%;
@@ -425,95 +374,38 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
 }
 
-/* ==================================================================
-   Landing hero — appended modifiers.
-
-   Everything above is untouched. These are narrow overrides of the
-   paint-skin utilities, tuned for the one place where the artwork
-   sits at hero scale over a live 3D stage. They are plain (unlayered)
-   selectors on purpose: that puts them above Tailwind's utilities
-   layer, so a modifier always wins over the utility it modifies.
-   ================================================================== */
-
-/** Slow drift across the title's own gradient — `paint-title` supplies the
-    ink, this only widens it and moves it. Reads as wet paint catching the
-    light rather than as a colour animation. */
-@keyframes airo-ink-flow {
-  from {
-    background-position: 0% 50%;
-  }
-  to {
-    background-position: 100% 50%;
-  }
-}
-.paint-title-flow {
-  /* Only half again as wide as the box: the whole ramp stays on the word, so
-     the drift re-weights the brand gradient instead of scrolling through it. */
-  background-size: 150% 100%;
-  animation: airo-ink-flow 11s ease-in-out infinite alternate;
-}
-
-/** Drip variant for the headline: shorter and softer than the panel-edge
-    default, and inset further, so the subhead below stays legible. */
-.drip-edge-soft::after {
-  height: 30px;
-  opacity: 0.62;
-  inset-inline: 12%;
-}
-
-/** Moves the splatter cluster to the opposite corner. The default corner is
-    top-right, which on the landing card lands squarely on the CTA. */
-.splatter-accent-bl::after {
-  top: auto;
-  right: auto;
-  bottom: -52px;
-  left: -46px;
-  width: 150px;
-  height: 150px;
-  opacity: 0.36;
-}
-
-/** Hover life for the hero's paint-stroke CTA. The button body IS the
-    stroke, so the hover has to happen on the paint itself — no pill, no
-    background, nothing behind the label. */
+/** Hover life for a paint-stroke CTA: the button body IS the stroke, so
+    the hover happens on the paint itself. */
 .paint-cta::before {
-  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 240ms ease;
+  transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .paint-cta:hover::before {
   transform: scale(1.035);
-  filter: drop-shadow(0 10px 26px rgba(255, 77, 28, 0.5)) saturate(1.08);
 }
 
 /* ==================================================================
-   Studio atmosphere — the /canvas route only.
+   Studio atmosphere — the studio route only.
 
-   The studio moved from a near-black void to a deep violet atmosphere with
-   floating glass rails. Everything here is scoped under `.studio-theme` so the
-   controller, landing page and admin keep the neutral glass above: the glass
-   utilities read the custom properties, so re-tinting the studio is a matter
-   of overriding the variables on the route's root element.
+   A flat backdrop colour (optionally with a sparse flat pattern) behind the
+   stage, with glass rails that take their tint from it. Everything is scoped
+   under `.studio-theme`; the root's inline style (src/ui/studio/atmospheres.ts)
+   sets the variables for the chosen atmosphere.
    ================================================================== */
 .studio-theme {
-  /* Defaults are the Violet Dusk atmosphere; the root's inline style
-     (src/ui/studio/atmospheres.ts) overrides them for every other preset. */
-  --studio-accent: #a855f7;
-  --studio-accent-deep: #7c3aed;
-  --studio-accent-hot: #ec4899;
-  --studio-on-accent: #ffffff;
-  --studio-ink: #12071f;
-  --atmo-a: #7c3aed;
-  --atmo-b: #e0409a;
-  --atmo-c: #b060ff;
-  --atmo-sky-1: #1a0b2c;
-  --atmo-sky-2: #26113f;
-  --atmo-sky-3: #170a26;
+  /* Defaults are the EVADE Slate atmosphere. */
+  --studio-accent: #f6c344;
+  --studio-accent-deep: #3f9be6;
+  --studio-accent-hot: #e85bd8;
+  --studio-on-accent: #15131a;
+  --studio-ink: #0f1519;
 
-  /* Glass takes a whisper of the accent so the furniture belongs to the sky. */
-  --glass-tint: color-mix(in srgb, var(--studio-accent) 11%, transparent);
-  --glass-tint-strong: color-mix(in srgb, var(--studio-accent) 16%, transparent);
-  --glass-edge: color-mix(in srgb, color-mix(in srgb, var(--studio-accent) 35%, white) 18%, transparent);
-  --glass-edge-bright: color-mix(in srgb, color-mix(in srgb, var(--studio-accent) 30%, white) 32%, transparent);
-  --glass-shadow: 0 24px 64px -20px color-mix(in srgb, var(--studio-ink) 92%, transparent);
+  /* Glass: the backdrop colour lifted a touch toward white, translucent, with
+     a solid edge. */
+  --glass-tint: color-mix(in srgb, color-mix(in srgb, var(--studio-ink) 88%, white) 72%, transparent);
+  --glass-tint-strong: color-mix(in srgb, color-mix(in srgb, var(--studio-ink) 84%, white) 82%, transparent);
+  --glass-edge: rgba(255, 255, 255, 0.14);
+  --glass-edge-bright: rgba(255, 255, 255, 0.24);
+  --glass-shadow: 0 20px 48px -22px rgba(0, 0, 0, 0.8);
   /* Height of the tool card's 3D stage; shorter on laptop displays so both
      left cards fit above the fold. */
   --tool-stage: 150px;
@@ -525,97 +417,37 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
 }
 
-/** The sky: layered gradients that read as a dusk landscape behind the stage.
-    Gradients only — no `filter: blur`, which would cost a full-screen raster
-    on top of the WebGL frame every time it moved. */
-.studio-aurora {
+/** The backdrop: one flat colour. */
+.studio-backdrop {
   position: absolute;
   inset: 0;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 30% 34% at 50% 50%, color-mix(in srgb, var(--atmo-c) 24%, transparent), transparent 70%),
-    radial-gradient(ellipse 70% 45% at 50% 108%, color-mix(in srgb, var(--atmo-c) 42%, transparent), transparent 62%),
-    radial-gradient(ellipse 55% 48% at 12% 18%, color-mix(in srgb, var(--atmo-a) 34%, transparent), transparent 64%),
-    radial-gradient(ellipse 50% 42% at 88% 24%, color-mix(in srgb, var(--atmo-b) 22%, transparent), transparent 64%),
-    radial-gradient(ellipse 90% 40% at 50% 100%, color-mix(in srgb, var(--studio-ink) 90%, transparent), transparent 70%),
-    linear-gradient(180deg, var(--atmo-sky-1) 0%, var(--atmo-sky-2) 46%, var(--atmo-sky-3) 100%);
+  background: var(--studio-ink);
 }
-/* A solid atmosphere is one flat colour: no light masses, no hills, no grain. */
-.studio-aurora--solid,
-.studio-aurora--solid::before,
-.studio-aurora--solid::after {
-  background: var(--atmo-sky-2);
-  animation: none;
-}
-/* Two slow drifting light masses give the sky a breath of motion. */
-.studio-aurora::before,
-.studio-aurora::after {
-  content: "";
+/** The optional flat pattern, an oversized tiled layer that drifts by exactly
+    one tile on the compositor, so the loop is seamless and costs no repaint. */
+.studio-pattern {
   position: absolute;
-  width: 70vmax;
-  height: 70vmax;
-  border-radius: 50%;
-  pointer-events: none;
+  inset: calc(var(--tile, 240px) * -1) 0 0 calc(var(--tile, 240px) * -1);
+  background-repeat: repeat;
   will-change: transform;
+  animation: studio-pattern-drift 90s linear infinite;
 }
-.studio-aurora::before {
-  left: -20vmax;
-  top: -25vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--atmo-a) 26%, transparent), transparent 62%);
-  animation: studio-drift-a 46s ease-in-out infinite alternate;
-}
-.studio-aurora::after {
-  right: -25vmax;
-  bottom: -30vmax;
-  background: radial-gradient(circle, color-mix(in srgb, var(--atmo-b) 20%, transparent), transparent 62%);
-  animation: studio-drift-b 58s ease-in-out infinite alternate;
-}
-@keyframes studio-drift-a {
+@keyframes studio-pattern-drift {
   from {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translate3d(9vmax, 6vmax, 0) scale(1.15);
-  }
-}
-@keyframes studio-drift-b {
-  from {
-    transform: translate3d(0, 0, 0) scale(1.1);
-  }
-  to {
-    transform: translate3d(-8vmax, -7vmax, 0) scale(0.95);
+    transform: translate3d(var(--tile, 240px), var(--tile, 240px), 0);
   }
 }
 
-/** Distant hills: a few dark soft silhouettes low in the frame. */
-.studio-hills {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  --hill: color-mix(in srgb, var(--studio-ink) 88%, black);
-  background:
-    radial-gradient(ellipse 60% 26% at 12% 96%, color-mix(in srgb, var(--hill) 95%, transparent), transparent 70%),
-    radial-gradient(ellipse 70% 24% at 62% 100%, color-mix(in srgb, var(--atmo-sky-3) 90%, transparent), transparent 70%),
-    radial-gradient(ellipse 45% 18% at 92% 94%, color-mix(in srgb, var(--hill) 95%, transparent), transparent 70%);
-}
-
-/** Fine film grain, so the smooth gradients do not band on wide displays. */
-.studio-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.16;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 160px 160px;
-}
-
-/** Monospace caption, the studio's secondary voice ("PBR LIGHT", "LUMEN"). */
+/** Instrument-panel caption, the studio's secondary voice. */
 @utility mono-caps {
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
@@ -624,22 +456,20 @@ input[type="range"].airo-slider::-moz-range-thumb {
   position: relative;
   border-radius: 28px;
   padding: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
-    color-mix(in srgb, var(--studio-ink) 46%, transparent);
-  -webkit-backdrop-filter: blur(34px) saturate(170%);
-  backdrop-filter: blur(34px) saturate(170%);
+  background: var(--glass-tint);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  backdrop-filter: blur(28px) saturate(140%);
   border: 1px solid var(--glass-edge);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-    inset 0 -1px 0 0 rgba(0, 0, 0, 0.3);
+  box-shadow: var(--glass-shadow);
 }
 
-/** Small mono badge that names a card's mode ("PBR LIGHT"). */
+/** Small badge that names a card's mode. */
 @utility rail-badge {
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
   padding: 5px 10px;
   border-radius: 9999px;
   border: 1px solid rgba(255, 255, 255, 0.16);
@@ -647,7 +477,7 @@ input[type="range"].airo-slider::-moz-range-thumb {
   white-space: nowrap;
 }
 
-/** Square gradient action tile (the tool picker on the spray-can card). */
+/** Square action tile (the tool picker on the spray-can card). */
 @utility tool-tile {
   position: relative;
   display: flex;
@@ -659,25 +489,25 @@ input[type="range"].airo-slider::-moz-range-thumb {
   border-radius: 18px;
   font-family: var(--font-mono);
   font-size: 9px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(255, 255, 255, 0.05);
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), background 200ms,
-    box-shadow 200ms, color 200ms, border-color 200ms;
+    color 200ms, border-color 200ms;
   &:hover {
     background: rgba(255, 255, 255, 0.1);
     color: #fff;
   }
+  /* A selected tile is the flat studio accent with its ink label. The inline
+     --tile/--tile-glow the studio sets are ignored on purpose: one flat fill. */
   &[aria-pressed="true"] {
-    border-color: rgba(255, 255, 255, 0.28);
+    border-color: var(--studio-accent);
     color: var(--studio-on-accent);
-    background: var(--tile, linear-gradient(150deg, var(--studio-accent-deep), var(--studio-accent)));
-    box-shadow: 0 14px 30px -12px var(--tile-glow, color-mix(in srgb, var(--studio-accent) 80%, transparent)),
-      inset 0 1px 0 rgba(255, 255, 255, 0.32);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    background: var(--studio-accent);
+    box-shadow: 3px 3px 0 var(--color-evade-ink);
   }
 }
 
@@ -688,6 +518,7 @@ input[type="range"].airo-slider::-moz-range-thumb {
   align-items: center;
   gap: 12px;
   width: 100%;
+  min-height: 44px;
   text-align: left;
   padding: 8px 12px 8px 8px;
   border-radius: 18px;
@@ -698,23 +529,16 @@ input[type="range"].airo-slider::-moz-range-thumb {
   }
   &[aria-selected="true"],
   &[data-active="true"] {
-    background: linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--studio-accent) 26%, transparent),
-      color-mix(in srgb, var(--studio-accent) 8%, transparent)
-    );
-    border-color: color-mix(in srgb, var(--studio-accent) 45%, transparent);
-    box-shadow: 0 10px 28px -14px color-mix(in srgb, var(--studio-accent) 90%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    background: color-mix(in srgb, var(--studio-accent) 16%, transparent);
+    border-color: color-mix(in srgb, var(--studio-accent) 60%, transparent);
   }
 }
 
-/** Primary gradient action, studio flavour. */
+/** Primary action, studio flavour: a flat accent pill with an ink label. */
 @utility studio-cta {
   color: var(--studio-on-accent);
-  background: linear-gradient(120deg, var(--studio-accent-deep) 0%, var(--studio-accent) 55%, var(--studio-accent-hot) 100%);
-  box-shadow: 0 12px 28px -10px color-mix(in srgb, var(--studio-accent) 85%, transparent),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: var(--studio-accent);
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--studio-accent) 62%, black), 0 10px 24px -10px rgba(0, 0, 0, 0.7);
 }
 
 /** Slow rotation for the "360° orbit" ring while auto-rotate is on. */
@@ -731,10 +555,10 @@ input[type="range"].airo-slider::-moz-range-thumb {
 @keyframes studio-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+    box-shadow: 0 0 0 0 rgba(61, 220, 132, 0.55);
   }
   60% {
-    box-shadow: 0 0 0 6px rgba(52, 211, 153, 0);
+    box-shadow: 0 0 0 6px rgba(61, 220, 132, 0);
   }
 }
 .studio-pulse {

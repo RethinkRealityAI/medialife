@@ -29,9 +29,8 @@ import { Sheet } from './Glass';
 /**
  * A model render, or the upload fallback.
  *
- * The renders are lit for a dark stage and sit on transparency, so they need a
- * ground of their own to read as objects rather than floating cut-outs: a soft
- * radial pool behind them does that without boxing them in.
+ * The renders sit on transparency, so they get a ground of their own to read
+ * as objects rather than floating cut-outs: a flat, faint disc of the accent.
  */
 export const ObjectThumb: React.FC<{
   thumb?: string;
@@ -41,15 +40,15 @@ export const ObjectThumb: React.FC<{
   /** Colour of the pool behind the render and of the fallback glyph. */
   accent?: string;
   className?: string;
-}> = ({ thumb, label, size = 34, accent = 'var(--color-airo-aqua)', className = '' }) => (
+}> = ({ thumb, label, size = 34, accent = 'var(--color-evade-sky)', className = '' }) => (
   <span
     className={`relative grid shrink-0 place-items-center overflow-hidden ${className}`}
     style={{ width: size, height: size }}
   >
     <span
       aria-hidden
-      className="absolute inset-0"
-      style={{ background: `radial-gradient(circle at 50% 62%, ${accent}2e, transparent 68%)` }}
+      className="absolute inset-[12%] rounded-full"
+      style={{ background: accent, opacity: 0.14 }}
     />
     {thumb ? (
       <img
@@ -83,8 +82,8 @@ export const ObjectTrigger: React.FC<{
     <button
       type="button"
       onClick={onClick}
-      className={`tap glass glass-sheen rounded-full flex items-center gap-2 ${
-        compact ? 'pl-1.5 pr-2 py-1' : 'pl-2 pr-2.5 py-1.5'
+      className={`tap glass rounded-full flex items-center gap-2 ${
+        compact ? 'pl-1.5 pr-2 py-1 pointer-coarse:min-h-11' : 'pl-2 pr-2.5 py-1.5 pointer-coarse:min-h-11'
       } text-white`}
     >
       <ObjectThumb
@@ -96,7 +95,7 @@ export const ObjectTrigger: React.FC<{
       <span className={`font-semibold tracking-tight ${compact ? 'text-[11px]' : 'text-[12px]'} truncate max-w-[130px]`}>
         {label}
       </span>
-      <ChevronDown size={13} className="text-white/50" />
+      <ChevronDown size={13} className="text-white/70" />
     </button>
   );
 };
@@ -120,27 +119,27 @@ const ObjectCard: React.FC<{
       <motion.span
         layoutId="object-card-selected"
         transition={{ type: 'spring', stiffness: 460, damping: 36 }}
-        className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-[var(--color-airo-flame)]"
+        className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-[var(--color-evade-yellow)]"
       />
     )}
 
     <div className="relative grid h-[102px] shrink-0 place-items-center px-3 pt-3">
-      <ObjectThumb thumb={object.thumb} label={object.label} size={86} accent="#FF7A34" />
+      <ObjectThumb thumb={object.thumb} label={object.label} size={86} accent="#F6C344" />
       {loading && (
         <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-black/55">
           <Loader2 size={11} className="animate-spin text-white/80" />
         </span>
       )}
       {selected && !loading && (
-        <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-[var(--color-airo-flame)]">
-          <Check size={11} className="text-white" />
+        <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-[var(--color-evade-yellow)]">
+          <Check size={11} strokeWidth={3} className="text-[#15131a]" />
         </span>
       )}
     </div>
 
     <div className="relative px-3 pb-3 pt-1.5">
       <div className="truncate text-[12px] font-semibold text-white">{object.label}</div>
-      <p className="mt-0.5 text-[10px] leading-snug text-white/45 line-clamp-2">{object.blurb}</p>
+      <p className="mt-0.5 text-[10.5px] leading-snug text-white/60 line-clamp-2">{object.blurb}</p>
     </div>
   </button>
 );
@@ -158,12 +157,12 @@ export const ObjectPickerSheet: React.FC<{
   <Sheet
     open={open}
     onClose={onClose}
-    title="Choose a canvas"
-    subtitle="Every object is a real 3D model you can paint from any angle"
+    title="Pick your merch"
+    subtitle="Choose a piece to spray. Spin it round and paint any side."
   >
     {OBJECT_CATEGORIES.filter((category) => objectsInCategory(category).length > 0).map((category) => (
       <section key={category} className="mb-5 last:mb-0">
-        <h3 className="label-caps text-white/40 mb-2 px-0.5">{category}</h3>
+        <h3 className="label-caps text-white/60 mb-2 px-0.5">{category}</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {objectsInCategory(category).map((object) => (
             <ObjectCard
@@ -183,7 +182,7 @@ export const ObjectPickerSheet: React.FC<{
 
     {onUpload && (
       <section>
-        <h3 className="label-caps text-white/40 mb-2 px-0.5">Your own</h3>
+        <h3 className="label-caps text-white/60 mb-2 px-0.5">Your own</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {customName && (
             <ObjectCard
@@ -218,9 +217,9 @@ export const ObjectPickerSheet: React.FC<{
       </section>
     )}
 
-    <p className="mt-5 text-[10px] text-white/35 flex items-center gap-1.5">
+    <p className="mt-5 text-[11px] text-white/55 flex items-center gap-1.5">
       <Box size={11} />
-      Models stream in on demand, so switching stays instant after the first load.
+      Each piece loads once, then switching back is instant.
     </p>
   </Sheet>
 );

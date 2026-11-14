@@ -1,6 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { adminRead, adminWrite, json, listPaintables, savePaintable, withTargetData } from "@/lib/spray/server";
+import {
+  adminRead,
+  adminWrite,
+  json,
+  listPaintables,
+  savePaintable,
+  withTargetData,
+} from "@/lib/spray/server";
 
 // Admin: every paintable (drafts too); POST creates one from the admin page's converted pictures.
 
