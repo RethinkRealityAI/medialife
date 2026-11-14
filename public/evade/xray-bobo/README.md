@@ -24,7 +24,7 @@ is himself. On a tee this reads as an X-ray window into the wearer.
   behind it is the back half of the can, a lathe of the same profile (`buildTube`), so its silhouette fits the print
   exactly. Inside: bare aluminium and the soda (`buildCan`: tinted wall, see-through front face, surface, bubbles).
   X-ray: dark walls with cyan bead rings, cyan soda, white bubbles. Depth: Deep = a round can; Shallow / Deeper flatten
-  or stretch it. Its reveal is a light burn, not the tiles (`makeBurn`): a pin of light, cracks running out, then the
+  or stretch it. Its reveal is a light burn, not the tiles (`makeBurn`, `OPEN_CAN_S` = 5.2 s): a pin of light, cracks running out, then the
   print burns away behind a white-hot edge with a cyan rim, only inside the can's outline. Balls float in the soda
   (buoyancy and drag in `tubeWalls`), Fizz blasts them out.
 - Pieces (`PIECES`): Bobo (`kc-bobo`, `kc-bobo-l`) with Bobo floating inside, and the Eclipse can (`kc-can`,
@@ -57,8 +57,8 @@ after 3 of its usual update gaps. Lost for 2.5 s: the box opens again with its i
   25, 50. The can's Fizz blasts every ball out at once. Shaking the phone rattles the balls.
 
 ## Controls
-View pill above the shutter: Scan / X-ray / Skin. Ball button left of the shutter, Swipe right of it (both only once
-the box is open; the Activated badge hides then). Tap the box: throw a ball. Drag: turn Bobo.
+View pill above the shutter: Scan / X-ray / Skin. Ball and Swipe stacked on the right, Ball on top, so one thumb
+reaches both while the other hand holds the keychain (both only once the box is open). Tap the box: throw a ball. Drag: turn Bobo.
 Shutter bottom centre (tap photo, hold video; the Cola Run recorder, source `xray-bobo`). Options: window shape,
 depth (Shallow / Deep / Deeper), sound, how it works, test picture link. Settings are kept in localStorage.
 

@@ -314,13 +314,13 @@ function makeShatter(tex) {
 // Flat colour steps only (print / cyan / white), no blends. uP 0..~1.25 like the break-up.
 const BURN_VS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 const BURN_FS = `
-uniform sampler2D uMap; uniform vec3 uCyan; uniform float uP, uAsp; uniform vec2 uC; uniform vec2 uProf[13];
+uniform sampler2D uMap; uniform vec3 uCyan; uniform float uP, uAsp; uniform vec2 uC; uniform vec2 uProf[41];
 varying vec2 vUv;
 // inside the can's outline? (the profile: v down the picture, half width), so the light only burns the can itself
 bool inCan(vec2 uv) {
-  float v = 1.0 - uv.y; if (v < uProf[0].x || v > uProf[12].x) return false;
+  float v = 1.0 - uv.y; if (v < uProf[0].x || v > uProf[40].x) return false;
   float hw = uProf[0].y;
-  for (int i = 1; i < 13; i++) if (v >= uProf[i - 1].x && v <= uProf[i].x) hw = mix(uProf[i - 1].y, uProf[i].y, (v - uProf[i - 1].x) / max(uProf[i].x - uProf[i - 1].x, 1e-4));
+  for (int i = 1; i < 41; i++) if (v >= uProf[i - 1].x && v <= uProf[i].x) hw = mix(uProf[i - 1].y, uProf[i].y, (v - uProf[i - 1].x) / max(uProf[i].x - uProf[i - 1].x, 1e-4));
   return abs(uv.x - uC.x) < hw;
 }
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -349,7 +349,7 @@ void main() {
 }`;
 function makeBurn(tex) {
   const m = new THREE.ShaderMaterial({
-    uniforms: { uP: { value: 0 }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uAsp: { value: W / H }, uC: { value: new THREE.Vector2(CAN_U0, 0.5 + ((tube.top + tube.bot) / 2) / H) }, uProf: { value: CAN_PROFILE.map(([v, hw]) => new THREE.Vector2(v, hw)) } },
+    uniforms: { uP: { value: 0 }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uAsp: { value: W / H }, uC: { value: new THREE.Vector2(tube.u0, 0.5 + ((tube.top + tube.bot) / 2) / H) }, uProf: { value: tube.profUv.map(([v, hw]) => new THREE.Vector2(v, hw)) } },
     vertexShader: BURN_VS, fragmentShader: BURN_FS, side: THREE.DoubleSide, toneMapped: false,
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), m); mesh.position.z = 0.0003; mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
@@ -507,17 +507,24 @@ function buildBones(list) {
 // The window is the drawn can's own outline (rim, shoulder, body, rounded base; uv of the kc-can picture, measured from
 // the print) and behind it is the back half of the can: a lathe of that same profile, so its silhouette fits the
 // print exactly and the print reads as the front half cut away. Inside: bare aluminium and the soda, no grid.
-const CAN_U0 = 0.4925;                                  // the can's middle, across the picture
-const CAN_PROFILE = [                                   // [v down the picture, half width in picture widths]
-  [0.188, 0.195], [0.200, 0.222], [0.222, 0.232], [0.250, 0.238], [0.272, 0.250], [0.292, 0.272], [0.312, 0.284],
-  [0.500, 0.287], [0.800, 0.287], [0.868, 0.284], [0.890, 0.272], [0.904, 0.248], [0.912, 0.215],
-];
 const SODA_V = 0.43;                                    // the soda's level, down the picture
+const PROF_N = 41;                                      // profile samples (the burn shader has the same array)
+// The window traces the can exactly as drawn (Spray Bobo's die-cut line: lid, pull tab, shoulders, body, base). The
+// tube behind it is a lathe whose radius at each height is the outline's widest half-width there (plus a hair), so its
+// silhouette always covers the window, pull tab included.
 function canTube() {
-  const prof = CAN_PROFILE.map(([v, hw]) => new THREE.Vector2(hw * W, (0.5 - v) * H));   // (radius, y) top to bottom
-  const R = Math.max(...prof.map((q) => q.x)), cx = (CAN_U0 - 0.5) * W;
-  const win = [...prof.map((q) => new THREE.Vector2(cx + q.x, q.y)), ...prof.slice().reverse().map((q) => new THREE.Vector2(cx - q.x, q.y))];
-  return { prof, R, cx, win, top: prof[0].y, bot: prof[prof.length - 1].y, level: (0.5 - SODA_V) * H, fit: null };
+  const pts = outlineData.points, vs = pts.map((q) => q[1]), v0 = Math.min(...vs), v1 = Math.max(...vs);
+  const across = (v) => { const xs = []; for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) { const [ua, va] = pts[i], [ub, vb] = pts[j]; if ((va > v) !== (vb > v)) xs.push(ua + (ub - ua) * (v - va) / (vb - va)); } return xs; };
+  const mid = across(lerp(v0, v1, 0.6)), u0 = (Math.min(...mid) + Math.max(...mid)) / 2;
+  const profUv = [];
+  for (let i = 0; i < PROF_N; i++) {
+    const v = lerp(v0 + 0.0015, v1 - 0.0015, i / (PROF_N - 1)), xs = across(v);
+    profUv.push([v, (xs.length ? Math.max(...xs.map((x) => Math.abs(x - u0))) : 0.01) + 0.006]);
+  }
+  const prof = profUv.map(([v, hw]) => new THREE.Vector2(hw * W, (0.5 - v) * H));   // (radius, y) top to bottom
+  const R = Math.max(...prof.map((q) => q.x)), cx = (u0 - 0.5) * W;
+  const win = pts.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H));
+  return { prof, profUv, u0, R, cx, win, top: prof[0].y, bot: prof[prof.length - 1].y, level: (0.5 - SODA_V) * H, fit: null };
 }
 function tubeR(y) {                                     // the can's radius at height y (local, metres)
   const pr = tube.prof; if (y >= pr[0].y) return pr[0].x;
@@ -530,21 +537,35 @@ function halfLathe(prof, shrink = 1) {
   const g = new THREE.LatheGeometry(pts, 40, Math.PI / 2, Math.PI); g.scale(1, 1, 1 / tube.R); return g;
 }
 function halfDisc(r, y) { const g = new THREE.CircleGeometry(r, 40, 0, Math.PI); g.rotateX(-Math.PI / 2); g.scale(1, 1, 1 / tube.R); g.translate(0, y, 0); return g; }
+// brushed aluminium: fine horizontal streaks in two flat greys (the lathe's u runs round the can, v up it)
+function brushedTex() {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d');
+  g.fillStyle = '#c9d2d9'; g.fillRect(0, 0, 64, 256);
+  for (let i = 0; i < 90; i++) { g.fillStyle = Math.random() < 0.5 ? '#c0cad2' : '#d4dce2'; g.fillRect(0, Math.random() * 256, 64, 1); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 3); return t;
+}
 function buildTube() {
   box.position.x = tube.cx;
-  const metal = new THREE.MeshStandardMaterial({ color: 0xc4cdd4, metalness: 0.9, roughness: 0.3, side: THREE.DoubleSide, clippingPlanes: [skinPlane] });
-  const dark = new THREE.MeshBasicMaterial({ color: COL.back, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [rayPlane] });
+  const metal = new THREE.MeshStandardMaterial({ color: 0xffffff, map: brushedTex(), metalness: 0.85, roughness: 0.34, side: THREE.DoubleSide, clippingPlanes: [skinPlane] });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x0d2a3a, metalness: 0.7, roughness: 0.38, side: THREE.DoubleSide, clippingPlanes: [rayPlane] });
   skinMats.push(metal); rayMats.push(dark);
   const add = (geo, mat, ro = 1) => { const m = new THREE.Mesh(geo, mat); m.renderOrder = ro; m.frustumCulled = false; box.add(m); return m; };
-  const pr = tube.prof, wall = halfLathe(pr), lidG = halfDisc(pr[0].x, tube.top), baseG = halfDisc(pr[pr.length - 1].x, tube.bot);
+  const pr = tube.prof, rb = pr[pr.length - 1].x, wall = halfLathe(pr), lidG = halfDisc(pr[0].x, tube.top);
+  // the base is domed like a real can's (it rises in the middle)
+  const dome = []; for (let i = 0; i <= 10; i++) { const t = i / 10; dome.push(new THREE.Vector2(rb * (1 - t), tube.bot + H * 0.035 * Math.sin(t * Math.PI / 2))); }
+  const baseG = new THREE.LatheGeometry(dome, 40, Math.PI / 2, Math.PI); baseG.scale(1, 1, 1 / tube.R);
   walls = {};
-  for (const [mat, k] of [[metal, 'skin'], [dark, 'ray']]) { add(wall, mat); add(lidG, mat); add(baseG, mat); }
-  // X-ray: the can's beads as cyan rings (rim, shoulder, base), nothing else
+  for (const mat of [metal, dark]) { add(wall, mat); add(lidG, mat); add(baseG, mat); }
+  // the light that shows the curve: low on the front edge of the can, just inside it (only lights this can's scene)
+  const lamp = new THREE.PointLight(0xffffff, 1.3, H * 1.6, 0); lamp.position.set(0, tube.top - H * 0.15, -tube.R * 0.15); box.add(lamp);
+  // the can's beads: soft grooves in the metal; cyan rings in X-ray
   const ringMat = new THREE.LineBasicMaterial({ color: COL.x, toneMapped: false, clippingPlanes: [rayPlane] }); rayMats.push(ringMat);
-  for (const v of [0.2, 0.25, 0.312, 0.868, 0.9]) {
+  const grooveMat = new THREE.LineBasicMaterial({ color: 0x8e9aa4, clippingPlanes: [skinPlane] }); skinMats.push(grooveMat);
+  for (const v of [0.22, 0.26, 0.312, 0.868, 0.895]) {
     const y = (0.5 - v) * H, r = tubeR(y) * 0.995, pts = [];
     for (let i = 0; i <= 40; i++) { const a = Math.PI / 2 + i / 40 * Math.PI; pts.push(new THREE.Vector3(r * Math.sin(a), y, r * Math.cos(a) / tube.R)); }
-    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat); l.renderOrder = 3; box.add(l);
+    const g = new THREE.BufferGeometry().setFromPoints(pts);
+    for (const m of [ringMat, grooveMat]) { const l = new THREE.Line(g, m); l.renderOrder = 3; box.add(l); }
   }
 }
 // the soda: the liquid fills the can to its level (a tinted back wall, a see-through front face, the surface) and
@@ -554,13 +575,13 @@ function buildCan() {
   bob = new THREE.Group(); bob.add(model); inside.add(bob); inside.position.x = tube.cx;
   const L = tube.level, pr = tube.prof, below = [new THREE.Vector2(tubeR(L), L), ...pr.filter((q) => q.y < L)];
   const soda = new THREE.Group(); box.add(soda);
-  const mk = (color, opacity, plane, list) => { const m = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [plane] }); list.push(m); return m; };
+  const mk = (color, opacity, plane, list, lit = false) => { const m = lit ? new THREE.MeshStandardMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false, side: THREE.DoubleSide, roughness: 0.12, metalness: 0.1, clippingPlanes: [plane] }) : new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [plane] }); list.push(m); return m; };
   const front = new THREE.Shape([...below.map((q) => new THREE.Vector2(q.x, q.y)), ...below.slice().reverse().map((q) => new THREE.Vector2(-q.x, q.y))]);
   const parts = [[halfLathe(below, 0.99), 4], [halfDisc(tubeR(L) * 0.99, L), 5], [new THREE.ShapeGeometry(front), 9]];
   parts[2][0].translate(0, 0, -0.002);
-  const looks = [[0x4a1230, 0.92, 0x8e2f5c, 0.85, 0x5b1835, 0.42, skinPlane, skinMats], [0x0b3a4a, 0.9, COL.x, 0.5, COL.x, 0.14, rayPlane, rayMats]];
+  const looks = [[0x6a1a44, 0.9, 0xa8406f, 0.85, 0x5b1835, 0.42, skinPlane, skinMats], [0x0b3a4a, 0.9, COL.x, 0.5, COL.x, 0.14, rayPlane, rayMats]];
   for (const [cWall, oWall, cTop, oTop, cFront, oFront, plane, list] of looks) {
-    [[cWall, oWall], [cTop, oTop], [cFront, oFront]].forEach(([c, o], i) => { const m = new THREE.Mesh(parts[i][0], mk(c, o, plane, list)); m.renderOrder = parts[i][1]; m.frustumCulled = false; soda.add(m); if (i === 1) m.userData.surface = true; });
+    [[cWall, oWall], [cTop, oTop], [cFront, oFront]].forEach(([c, o], i) => { const m = new THREE.Mesh(parts[i][0], mk(c, o, plane, list, i < 2)); m.renderOrder = parts[i][1]; m.frustumCulled = false; soda.add(m); if (i === 1) m.userData.surface = true; });
   }
   const bubbles = [], sph = new THREE.SphereGeometry(1, 10, 8);
   for (const [color, plane, list] of [[0xe9b7cf, skinPlane, skinMats], [COL.bone, rayPlane, rayMats]]) {
@@ -748,7 +769,7 @@ function tick(dt) {
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
   // the box opening: the print breaks up into digital tiles, the walls grow, then Bobo arrives
-  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.6 : OPEN_S));
+  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.6 : tube ? OPEN_CAN_S : OPEN_S));
   const k = open.k, ek = easeInOut(clamp(k / 0.7, 0, 1));
   open.depth += (open.dWant * ek - open.depth) * (k < 1 ? 1 : clamp(dt * 6, 0, 1));   // depth changes glide
   const D = Math.max(open.depth, 0.0005);
@@ -788,7 +809,7 @@ function tick(dt) {
 // - Shake the phone: the balls rattle around.
 // Each ball knocked out scores; several from one swipe is a combo. The best score is kept on the phone.
 const BALL_COLS = [0xf6c344, 0x4fd6e8, 0xe85bd8, 0xffffff, 0x3f9be6];
-const OPEN_S = 3.6;   // the digital break-up and the box opening, in seconds (Dapo: at least 3 s)
+const OPEN_S = 3.6, OPEN_CAN_S = 5.2;   // the can's light burn is slower still (Dapo)   // the digital break-up and the box opening, in seconds (Dapo: at least 3 s)
 const MAX_BALLS = 10, E_WALL = 0.62, E_LIP = 0.3, E_BOBO = 0.75;
 const balls = [], ballGroup = new THREE.Group(); F.add(ballGroup);
 let ballGeo = null, ballN = 0;
