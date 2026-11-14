@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { MonitorPlay, Paintbrush, Shapes, SprayCan } from "lucide-react";
 
 import { isUnauthorized } from "@/components/admin/format";
@@ -14,8 +14,17 @@ import {
 } from "@/components/admin/kit";
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
+import { SceneEditor } from "@/components/scene-editor";
+import { SCENE_MAX_BYTES, SCENE_MAX_ITEMS } from "@/lib/spray/model";
 
-import { listCreations, listSets, sprayKeys, type AdminPaintable } from "./api";
+import {
+  listCreations,
+  listSets,
+  saveScene,
+  sprayKeys,
+  uploadSceneAsset,
+  type AdminPaintable,
+} from "./api";
 import { CreationsGrid } from "./creations-grid";
 import { PaintableEditor } from "./paintable-editor";
 import { PaintablesList } from "./paintables-list";
@@ -38,6 +47,9 @@ export function SprayAdmin({ tab, onTab }: { tab: SprayTab; onTab: (t: SprayTab)
   });
   // null: the list; "new" or a paintable: the editor
   const [editing, setEditing] = useState<null | "new" | AdminPaintable>(null);
+  // the scene editor (things placed around the print) covers the page while open
+  const [sceneOf, setSceneOf] = useState<AdminPaintable | null>(null);
+  const qc = useQueryClient();
 
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -129,6 +141,7 @@ export function SprayAdmin({ tab, onTab }: { tab: SprayTab; onTab: (t: SprayTab)
                   creationCounts={counts}
                   onNew={() => setEditing("new")}
                   onEdit={(p) => setEditing(p)}
+                  onScene={(p) => setSceneOf(p)}
                 />
               )}
             </AdminTab>
@@ -144,6 +157,32 @@ export function SprayAdmin({ tab, onTab }: { tab: SprayTab; onTab: (t: SprayTab)
           </AdminTabs>
         )}
       </PageBody>
+      {sceneOf ? (
+        <SceneEditor
+          key={sceneOf.id}
+          title={sceneOf.name}
+          heightMm={sceneOf.heightMm}
+          heightLocked={
+            sceneOf.builtin
+              ? "Built into the site, so its print size is fixed. Everything else here can change."
+              : null
+          }
+          print={{
+            image: sceneOf.files.print,
+            mask: sceneOf.files.mask,
+            outline: sceneOf.files.outline,
+          }}
+          scene={sceneOf.scene ?? []}
+          maxItems={SCENE_MAX_ITEMS}
+          maxBytes={SCENE_MAX_BYTES}
+          upload={(file, kind, onProgress) => uploadSceneAsset(sceneOf.id, file, kind, onProgress)}
+          save={async ({ scene, heightMm }) => {
+            await saveScene(sceneOf.id, scene, sceneOf.builtin ? undefined : heightMm);
+            void qc.invalidateQueries({ queryKey: sprayKeys.sets });
+          }}
+          onClose={() => setSceneOf(null)}
+        />
+      ) : null}
     </>
   );
 }

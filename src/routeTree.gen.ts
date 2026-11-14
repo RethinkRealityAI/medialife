@@ -172,6 +172,8 @@ import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.
 import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiHubShelfAssetsIdChunksNRouteImport } from './routes/api.hub.shelf-assets.$id.chunks.$n'
 import { Route as ApiMediaUploadsIdChunksNRouteImport } from './routes/api.media.uploads.$id.chunks.$n'
+import { Route as ApiSprayAdminSetsIdAssetRouteImport } from './routes/api.spray.admin.sets.$id.asset'
+import { Route as ApiSprayAdminSetsIdSceneRouteImport } from './routes/api.spray.admin.sets.$id.scene'
 import { Route as ApiUgcFilesAssetsCampaignIdIdRouteImport } from './routes/api.ugc.files.assets.$campaignId.$id'
 import { Route as ApiUgcUploadsIdChunksNRouteImport } from './routes/api.ugc.uploads.$id.chunks.$n'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
@@ -1016,6 +1018,18 @@ const ApiMediaUploadsIdChunksNRoute =
     path: '/chunks/$n',
     getParentRoute: () => ApiMediaUploadsIdRoute,
   } as any)
+const ApiSprayAdminSetsIdAssetRoute =
+  ApiSprayAdminSetsIdAssetRouteImport.update({
+    id: '/asset',
+    path: '/asset',
+    getParentRoute: () => ApiSprayAdminSetsIdRoute,
+  } as any)
+const ApiSprayAdminSetsIdSceneRoute =
+  ApiSprayAdminSetsIdSceneRouteImport.update({
+    id: '/scene',
+    path: '/scene',
+    getParentRoute: () => ApiSprayAdminSetsIdRoute,
+  } as any)
 const ApiUgcFilesAssetsCampaignIdIdRoute =
   ApiUgcFilesAssetsCampaignIdIdRouteImport.update({
     id: '/api/ugc/files/assets/$campaignId/$id',
@@ -1193,7 +1207,7 @@ export interface FileRoutesByFullPath {
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
-  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
   '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
@@ -1204,6 +1218,8 @@ export interface FileRoutesByFullPath {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1354,7 +1370,7 @@ export interface FileRoutesByTo {
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
-  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
   '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
@@ -1365,6 +1381,8 @@ export interface FileRoutesByTo {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1524,7 +1542,7 @@ export interface FileRoutesById {
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
   '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
-  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
   '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
   '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
@@ -1535,6 +1553,8 @@ export interface FileRoutesById {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1706,6 +1726,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -1867,6 +1889,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -2036,6 +2060,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -3267,6 +3293,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMediaUploadsIdChunksNRouteImport
       parentRoute: typeof ApiMediaUploadsIdRoute
     }
+    '/api/spray/admin/sets/$id/asset': {
+      id: '/api/spray/admin/sets/$id/asset'
+      path: '/asset'
+      fullPath: '/api/spray/admin/sets/$id/asset'
+      preLoaderRoute: typeof ApiSprayAdminSetsIdAssetRouteImport
+      parentRoute: typeof ApiSprayAdminSetsIdRoute
+    }
+    '/api/spray/admin/sets/$id/scene': {
+      id: '/api/spray/admin/sets/$id/scene'
+      path: '/scene'
+      fullPath: '/api/spray/admin/sets/$id/scene'
+      preLoaderRoute: typeof ApiSprayAdminSetsIdSceneRouteImport
+      parentRoute: typeof ApiSprayAdminSetsIdRoute
+    }
     '/api/ugc/files/assets/$campaignId/$id': {
       id: '/api/ugc/files/assets/$campaignId/$id'
       path: '/api/ugc/files/assets/$campaignId/$id'
@@ -3698,12 +3738,25 @@ const ApiSprayAdminCreationsRouteWithChildren =
     ApiSprayAdminCreationsRouteChildren,
   )
 
+interface ApiSprayAdminSetsIdRouteChildren {
+  ApiSprayAdminSetsIdAssetRoute: typeof ApiSprayAdminSetsIdAssetRoute
+  ApiSprayAdminSetsIdSceneRoute: typeof ApiSprayAdminSetsIdSceneRoute
+}
+
+const ApiSprayAdminSetsIdRouteChildren: ApiSprayAdminSetsIdRouteChildren = {
+  ApiSprayAdminSetsIdAssetRoute: ApiSprayAdminSetsIdAssetRoute,
+  ApiSprayAdminSetsIdSceneRoute: ApiSprayAdminSetsIdSceneRoute,
+}
+
+const ApiSprayAdminSetsIdRouteWithChildren =
+  ApiSprayAdminSetsIdRoute._addFileChildren(ApiSprayAdminSetsIdRouteChildren)
+
 interface ApiSprayAdminSetsRouteChildren {
-  ApiSprayAdminSetsIdRoute: typeof ApiSprayAdminSetsIdRoute
+  ApiSprayAdminSetsIdRoute: typeof ApiSprayAdminSetsIdRouteWithChildren
 }
 
 const ApiSprayAdminSetsRouteChildren: ApiSprayAdminSetsRouteChildren = {
-  ApiSprayAdminSetsIdRoute: ApiSprayAdminSetsIdRoute,
+  ApiSprayAdminSetsIdRoute: ApiSprayAdminSetsIdRouteWithChildren,
 }
 
 const ApiSprayAdminSetsRouteWithChildren =

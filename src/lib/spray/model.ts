@@ -68,7 +68,11 @@ export type SceneItem = {
 };
 
 export const SCENE_MAX_ITEMS = 12;
-export const SCENE_MAX_BYTES = { model: 8 * 1024 * 1024, image: 4 * 1024 * 1024, video: 20 * 1024 * 1024 };
+export const SCENE_MAX_BYTES = {
+  model: 8 * 1024 * 1024,
+  image: 4 * 1024 * 1024,
+  video: 20 * 1024 * 1024,
+};
 
 export type Paintable = {
   id: string;

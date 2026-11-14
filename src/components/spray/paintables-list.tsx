@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, EyeOff, Layers, Lock, Pencil, Plus, SprayCan, Trash2 } from "lucide-react";
+import { Box, Eye, EyeOff, Layers, Lock, Pencil, Plus, SprayCan, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { EmptyState, Panel, Tag } from "@/components/admin/kit";
@@ -26,11 +26,14 @@ export function PaintablesList({
   creationCounts,
   onNew,
   onEdit,
+  onScene,
 }: {
   sets: AdminPaintable[];
   creationCounts: Map<string, number>;
   onNew: () => void;
   onEdit: (p: AdminPaintable) => void;
+  /** Opens the scene editor (models, pictures, video around the print). */
+  onScene: (p: AdminPaintable) => void;
 }) {
   const qc = useQueryClient();
   const [toDelete, setToDelete] = useState<AdminPaintable | null>(null);
@@ -115,11 +118,15 @@ export function PaintablesList({
                   </div>
                 </div>
                 {p.builtin ? (
-                  <p className="mt-auto pt-3 text-xs text-muted-foreground">
-                    Built into the site, so it can't be changed here.
-                  </p>
+                  <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-4">
+                    <SceneButton p={p} onScene={onScene} />
+                    <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                      Built into the site: only its scene can be changed here.
+                    </p>
+                  </div>
                 ) : (
                   <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    <SceneButton p={p} onScene={onScene} />
                     <Button
                       type="button"
                       variant="outline"
@@ -217,5 +224,28 @@ export function PaintablesList({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** "Scene" opens the scene editor; shows how many things are placed around the print. */
+function SceneButton({ p, onScene }: { p: AdminPaintable; onScene: (p: AdminPaintable) => void }) {
+  const n = p.scene?.length ?? 0;
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      className="h-11"
+      onClick={() => onScene(p)}
+      aria-label={`Scene for ${p.name}${n ? ` (${n} ${n === 1 ? "item" : "items"})` : ""}`}
+      title="Place 3D models, pictures and video around the print"
+    >
+      <Box aria-hidden />
+      Scene
+      {n ? (
+        <span className="ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f6c344] px-1.5 text-[11px] font-semibold text-black tabular-nums">
+          {n}
+        </span>
+      ) : null}
+    </Button>
   );
 }

@@ -1,4 +1,10 @@
-import type { Creation, CreationStatus, Paintable } from "@/lib/spray/model";
+import type {
+  Creation,
+  CreationStatus,
+  Paintable,
+  SceneItem,
+  SceneItemKind,
+} from "@/lib/spray/model";
 
 // The admin page's calls to the Spray Bobo API (src/routes/api.spray.*.ts). Same-origin, so the
 // /admin cookie goes along; every write also carries the x-spray header the server asks for.
@@ -78,3 +84,39 @@ export const deleteCreation = (id: string) =>
 
 export const shareUrl = (id: string) =>
   `${typeof location !== "undefined" ? location.origin : ""}/sb/${id}`;
+
+// ---- the scene editor (src/components/scene-editor): files go up in ≤4 MB pieces (SCENE_CHUNK on
+// the server), because a Netlify function takes at most 6 MB per request.
+const SCENE_CHUNK = 4 * 1024 * 1024;
+
+export async function uploadSceneAsset(
+  id: string,
+  file: Blob,
+  kind: SceneItemKind,
+  onProgress?: (fraction: number) => void,
+): Promise<{ file: string; bytes: number }> {
+  const parts = Math.max(1, Math.ceil(file.size / SCENE_CHUNK));
+  let upload = "";
+  for (let part = 0; part < parts; part++) {
+    const form = new FormData();
+    form.set("file", file.slice(part * SCENE_CHUNK, (part + 1) * SCENE_CHUNK), "piece");
+    form.set("kind", kind);
+    form.set("size", String(file.size));
+    form.set("part", String(part));
+    if (upload) form.set("upload", upload);
+    const r = await call<
+      { done: false; upload: string } | { done: true; file: string; bytes: number }
+    >(`/api/spray/admin/sets/${id}/asset`, { method: "POST", body: form });
+    onProgress?.((part + 1) / parts);
+    if (r.done) return { file: r.file, bytes: r.bytes };
+    upload = r.upload;
+  }
+  throw new SprayApiError("The upload didn't finish. Try again.", 0);
+}
+
+export const saveScene = (id: string, scene: SceneItem[], heightMm?: number) =>
+  call<{ paintable: AdminPaintable }>(`/api/spray/admin/sets/${id}/scene`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ scene, heightMm }),
+  }).then((r) => r.paintable);
