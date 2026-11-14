@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>LOOT BREAK · TBH: Task Bar Hero</title>
+		<meta name="description" content="A 60-second lunch-break raid on your desk. Activated by MEDIALIFE." />
+		<meta name="theme-color" content="#120d1f" />
+		<!-- @lab:boot -->
+		<script src="./index.ts" type="module" async></script>
+		<!-- @lab:end -->
+
+		<!-- The splash is drawn in code (CSS + the game's own pixel sprites), so it
+		     paints on the first frame with no image to download. Only the two
+		     pixel fonts come from the network; until they arrive the system
+		     monospace stands in, and nothing jumps because every size is fixed. -->
+		<!-- The two splash images: start downloading them now so they're ready
+		     before the intro reaches them. -->
+		<link rel="preload" as="image" href="__TBH_LOGO__" type="image/webp" />
+		<link rel="preload" as="image" href="__ML_BADGE__" type="image/webp" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=Silkscreen:wght@400;700&display=swap" />
+
+		<!-- @lab:analytics -->
+		<!-- Google tag: the same MEDIALIFE property as the other activations.
+		     This experience is separated in reporting by the `experience`
+		     parameter, not by a separate property. -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-CR3ZL91GLV"></script>
+		<script>
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag('js', new Date());
+			gtag('config', 'G-CR3ZL91GLV', {
+				experience: 'tbh_lootbreak',
+				page_location: 'https://medialife.ai/lootbreak',
+				page_title: 'LOOT BREAK'
+			});
+			gtag('set', { experience: 'tbh_lootbreak' });
+			window.__pageStart = Date.now();
+		</script>
+		<!-- @lab:end -->
+
+		<style>
+			html, body {
+				padding: 0;
+				margin: 0;
+				height: 100%;
+				width: 100%;
+				background: #120d1f;
+				font-family: 'Pixelify Sans', ui-monospace, monospace;
+				touch-action: pan-x pan-y;
+				/* Pull-to-refresh mid-session loses the camera and the round. */
+				overscroll-behavior: none;
+				-webkit-user-select: none;
+				user-select: none;
+				-webkit-touch-callout: none;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			/* ══ splash ══════════════════════════════════════════════════════ */
+			.splash {
+				--px: 4px;               /* one sprite pixel, set by the script */
+				--bar: 52px;             /* taskbar height */
+				--safe-b: env(safe-area-inset-bottom, 0px);
+				--safe-t: env(safe-area-inset-top, 0px);
+				--gold: #ffd35a;
+				--gold2: #b8781c;
+				--ink: #16121d;
+				--red: #c92f3c;
+				--red2: #6e121c;
+				position: fixed;
+				inset: 0;
+				z-index: 2000;
+				overflow: hidden;
+				color: #f4efe2;
+				font-variant-ligatures: none;
+				background:
+					radial-gradient(120% 70% at 50% 108%, #6a2fb0 0%, rgba(106, 47, 176, 0) 60%),
+					radial-gradient(90% 60% at 85% 0%, #1d3f7a 0%, rgba(29, 63, 122, 0) 70%),
+					linear-gradient(#0d0a1a, #1a1033 55%, #2a1650);
+			}
+			/* faint pixel grid, like a zoomed-in desktop */
+			.splash::before {
+				content: "";
+				position: absolute;
+				inset: 0;
+				background:
+					repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px),
+					repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px);
+				mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
+				-webkit-mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
+				pointer-events: none;
+			}
+			.zcomponent-launched .splash {
+				animation: splashOut .45s ease-in forwards;
+				pointer-events: none;
+			}
+			@keyframes splashOut {
+				to { opacity: 0; transform: scale(1.04); visibility: hidden; }
+			}
+
+			.boot {
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: 50%;
+				height: 2px;
+				background: #fff;
+				box-shadow: 0 0 24px 6px rgba(160, 120, 255, .9);
+				transform-origin: center;
+				opacity: 0;
+				pointer-events: none;
+				z-index: 5;
+			}
+
+			.stars i {
+				position: absolute;
+				width: var(--px);
+				height: var(--px);
+				background: #fff;
+				opacity: 0;
+				animation: twinkle 3s steps(3) infinite;
+			}
+			@keyframes twinkle {
+				0%, 100% { opacity: 0; }
+				50% { opacity: .8; }
+			}
+
+			.layout {
+				position: absolute;
+				inset: 0;
+				bottom: calc(var(--bar) + var(--safe-b));
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between;
+				padding: calc(var(--safe-t) + 4vh) 20px 3vh;
+				box-sizing: border-box;
+				text-align: center;
+			}
+
+			/* Everything that shakes. Hidden until the intro starts, so nothing
+			   flashes in its final spot while the fonts load. */
+			.quake { position: absolute; inset: 0; visibility: hidden; }
+			.splash.go .quake { visibility: visible; }
+
+			.bit {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: var(--s, 6px);
+				height: var(--s, 6px);
+				pointer-events: none;
+				z-index: 6;
+			}
+
+			/* ── logo ── */
+			.logo { position: relative; }
+			.logo .eyebrow {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				letter-spacing: .14em;
+				color: #cfc4ff;
+				margin-bottom: 10px;
+			}
+			.logo .eyebrow b { color: #fff; font-weight: 700; }
+			.logo .eyebrow .dot { width: 4px; height: 4px; background: #7d6bd0; }
+			/* TBH logo + "Hero Merch Exclusive", a pixel-framed lockup at the top. */
+			.brandbar {
+				display: inline-flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 12px;
+			}
+			.tbh-logo {
+				display: block;
+				width: 90px;
+				height: auto;
+				aspect-ratio: 360 / 204;
+				border-radius: 0;
+				box-shadow:
+					0 0 0 2px var(--ink),
+					0 0 0 4px var(--gold2),
+					0 0 0 6px var(--ink),
+					0 6px 0 4px var(--ink);
+			}
+			.brandbar .excl {
+				font-family: 'Silkscreen', monospace;
+				font-weight: 700;
+				font-size: 13px;
+				line-height: 1.25;
+				letter-spacing: .12em;
+				text-transform: uppercase;
+				text-align: left;
+				color: var(--gold);
+				text-shadow: 0 2px 0 var(--ink);
+				padding-left: 12px;
+				border-left: 2px solid rgba(207, 196, 255, .28);
+				white-space: nowrap;
+			}
+			.wordmark {
+				display: block;
+				font-family: 'Silkscreen', monospace;
+				font-weight: 700;
+				line-height: .92;
+				letter-spacing: .02em;
+				font-size: clamp(40px, min(15.5vw, 9.6vh), 92px);
+				color: var(--gold);
+				text-shadow:
+					0 4px 0 var(--gold2),
+					0 8px 0 var(--ink),
+					4px 8px 0 var(--ink),
+					-4px 8px 0 var(--ink),
+					4px 0 0 var(--ink),
+					-4px 0 0 var(--ink),
+					0 -4px 0 var(--ink),
+					0 14px 24px rgba(0, 0, 0, .55);
+			}
+			.wordmark span { display: inline-block; }
+			.wordmark .ch { display: inline-block; font-style: normal; transform-origin: 50% 90%; }
+			.wordmark .w2 { color: #fff3d0; }
+			.ribbon {
+				display: inline-block;
+				margin-top: 14px;
+				padding: 7px 26px 8px;
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: .12em;
+				color: #ffe3a0;
+				background: linear-gradient(#d83a47, #8c1823);
+				clip-path: polygon(0 50%, 12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%);
+				text-shadow: 0 2px 0 #3d0710;
+				filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5));
+			}
+
+			/* ── stage: the chest and the party ── */
+			.stage {
+				position: relative;
+				flex: 1;
+				width: 100%;
+				max-width: 520px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				min-height: calc(var(--px) * 34);
+				padding-bottom: calc(var(--px) * 7); /* room for the rarity name under the chest */
+				box-sizing: border-box;
+			}
+			.floor {
+				position: relative;
+				display: flex;
+				align-items: flex-end;
+				justify-content: center;
+				gap: 0;
+			}
+			.floor::after {
+				/* soft pool of light the party stands in */
+				content: "";
+				position: absolute;
+				left: -12%;
+				right: -12%;
+				bottom: calc(var(--px) * -3);
+				height: calc(var(--px) * 6);
+				background: radial-gradient(closest-side, rgba(255, 210, 120, .35), transparent);
+				z-index: -1;
+				opacity: 0;
+				transition: opacity .6s;
+			}
+			.splash.is-ready .floor::after { opacity: 1; }
+			.spr {
+				display: block;
+				width: calc(var(--px) * 16);
+				height: calc(var(--px) * 16);
+				image-rendering: pixelated;
+				image-rendering: crisp-edges;
+			}
+			.hero { position: relative; will-change: transform; transform-origin: 50% 100%; }
+			/* pairs overlap a little, like a party standing close */
+			.hero + .hero { margin-left: calc(var(--px) * -3); z-index: 1; }
+			.hero .spr { filter: drop-shadow(0 var(--px) 0 rgba(0, 0, 0, .35)); }
+			.hero.flip .spr { transform: scaleX(-1); }
+			.splash.is-ready .hero .spr { animation: idle 1.1s steps(2) infinite; }
+			.splash.is-ready .hero:nth-child(2) .spr { animation-delay: -.3s; }
+			.splash.is-ready .hero:nth-child(4) .spr { animation-delay: -.55s; }
+			.splash.is-ready .hero:nth-child(5) .spr { animation-delay: -.8s; }
+			@keyframes idle {
+				50% { translate: 0 calc(var(--px) * -1); }
+			}
+
+			.chest-wrap {
+				position: relative;
+				margin: 0 calc(var(--px) * 1);
+				width: calc(var(--px) * 20);
+				height: calc(var(--px) * 20);
+				display: grid;
+				place-items: end center;
+			}
+			.chest-wrap .spr {
+				width: calc(var(--px) * 20);
+				height: calc(var(--px) * 20);
+				position: relative;
+				z-index: 2;
+				opacity: 0;
+			}
+			.rays {
+				position: absolute;
+				left: 50%;
+				top: 55%;
+				width: calc(var(--px) * 90);
+				height: calc(var(--px) * 90);
+				margin: calc(var(--px) * -45) 0 0 calc(var(--px) * -45);
+				border-radius: 50%;
+				background: repeating-conic-gradient(from 0deg, var(--ray, #ffd35a) 0 7deg, transparent 7deg 22deg);
+				mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
+				-webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
+				opacity: 0;
+				z-index: 0;
+				transition: --ray .6s;
+			}
+			.splash.is-ready .rays { animation: spin 14s linear infinite; }
+			@keyframes spin { to { transform: rotate(360deg); } }
+			.glow {
+				position: absolute;
+				left: 50%;
+				top: 60%;
+				width: calc(var(--px) * 36);
+				height: calc(var(--px) * 36);
+				margin: calc(var(--px) * -18) 0 0 calc(var(--px) * -18);
+				border-radius: 50%;
+				background: radial-gradient(closest-side, var(--ray, #ffd35a), transparent);
+				opacity: 0;
+				z-index: 1;
+				filter: blur(4px);
+			}
+			.tier {
+				position: absolute;
+				left: 50%;
+				top: calc(100% + var(--px) * 4);
+				transform: translateX(-50%);
+				font-family: 'Silkscreen', monospace;
+				font-size: 12px;
+				font-weight: 700;
+				letter-spacing: .16em;
+				white-space: nowrap;
+				color: var(--ray, #ffd35a);
+				text-shadow: 0 2px 0 var(--ink), 0 0 12px var(--ray, #ffd35a);
+				opacity: 0;
+				z-index: 3;
+			}
+			.coin {
+				position: absolute;
+				left: 50%;
+				top: 40%;
+				width: calc(var(--px) * 8);
+				height: calc(var(--px) * 8);
+				margin-left: calc(var(--px) * -4);
+				image-rendering: pixelated;
+				z-index: 3;
+				opacity: 0;
+				pointer-events: none;
+			}
+
+			/* ── copy and the launch button ── */
+			.cta {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 12px;
+				width: 100%;
+				max-width: 380px;
+				opacity: 0;
+				position: relative;
+				z-index: 4;
+			}
+			.tagline {
+				margin: 0;
+				font-size: 17px;
+				line-height: 1.35;
+				color: #e9e2f5;
+				text-wrap: balance;
+			}
+			.tagline b { color: var(--gold); font-weight: 700; }
+
+			#launchButton {
+				position: relative;
+				width: 100%;
+				min-height: 60px;
+				padding: 0 24px;
+				border: 0;
+				border-radius: 12px;
+				font: 700 21px 'Pixelify Sans', ui-monospace, monospace;
+				letter-spacing: .02em;
+				color: #fff3d6;
+				background: linear-gradient(#e14552, #a5202d);
+				box-shadow:
+					inset 0 0 0 3px var(--ink),
+					inset 0 0 0 5px #ff8e93,
+					0 5px 0 var(--red2),
+					0 5px 0 3px var(--ink),
+					0 14px 30px rgba(201, 47, 60, .45);
+				text-shadow: 0 2px 0 #5a0d16;
+				cursor: pointer;
+				transition: transform .12s, filter .2s;
+				animation: breathe 2.2s ease-in-out infinite;
+				-webkit-appearance: none;
+				appearance: none;
+			}
+			#launchButton:active { transform: translateY(3px); }
+			#launchButton:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+			@keyframes breathe {
+				50% { filter: brightness(1.12); }
+			}
+			/* Still downloading: Mattercraft keeps the button disabled until the
+			   scene is ready. Show a pixel loading bar instead of a dead button. */
+			#launchButton:disabled {
+				color: transparent;
+				text-shadow: none;
+				cursor: default;
+				animation: none;
+				background: #221a30;
+				box-shadow: inset 0 0 0 3px var(--ink), inset 0 0 0 5px #4b3f5c, 0 5px 0 3px var(--ink);
+			}
+			#launchButton:disabled::before {
+				content: "";
+				position: absolute;
+				left: 14px;
+				right: 14px;
+				top: 50%;
+				height: 12px;
+				margin-top: -6px;
+				background:
+					repeating-linear-gradient(90deg, #ffd35a 0 10px, transparent 10px 14px) 0 0 / 28px 100%;
+				mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+				-webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+				animation: march .6s steps(4) infinite;
+				opacity: .9;
+			}
+			#launchButton:disabled::after {
+				content: "Loading the loot…";
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: calc(100% + 12px);
+				font: 500 13px 'Pixelify Sans', ui-monospace, monospace;
+				color: #a99cc0;
+			}
+			@keyframes march { to { background-position: 28px 0; } }
+
+			.hint {
+				margin: 0;
+				font-size: 13px;
+				line-height: 1.4;
+				color: #a99cc0;
+				transition: opacity .3s;
+			}
+			#launchButton:disabled ~ .hint { opacity: 0; }
+			/* "Activated by MEDIALIFE": the brand-kit badge, big enough to read
+			   at a glance, with a slow purple glow once the intro ends. */
+			.made {
+				display: block;
+				width: clamp(210px, 66vw, 270px);
+				height: auto;
+				aspect-ratio: 600 / 160;
+				margin-top: 4px;
+				filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45));
+			}
+			.splash.is-ready .made { animation: mlGlow 2.6s ease-in-out infinite; }
+			@keyframes mlGlow {
+				0%, 100% { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 0 rgba(176, 108, 255, 0)); }
+				50% { filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .45)) drop-shadow(0 0 14px rgba(176, 108, 255, .75)); }
+			}
+			/* Small screens: the script drops these, in this order, until the
+			   badge clears the taskbar (fit1 ribbon, fit2 camera hint, fit3 story). */
+			.fit1 .ribbon, .fit2 .hint, .fit3 .tagline { display: none; }
+			.fit2 .tagline { font-size: 15px; }
+			.fit2 .made { width: 200px; }
+			/* Safety net if the browser can't run the intro animations. */
+			.splash.is-ready :is(.brandbar, .ribbon, .ch, .cta, .made) { opacity: 1; }
+
+			/* ── the taskbar ── */
+			.taskbar {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				height: calc(var(--bar) + var(--safe-b));
+				padding-bottom: var(--safe-b);
+				box-sizing: border-box;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				padding-left: 10px;
+				padding-right: 12px;
+				background: rgba(18, 14, 28, .86);
+				-webkit-backdrop-filter: blur(14px) saturate(1.4);
+				backdrop-filter: blur(14px) saturate(1.4);
+				border-top: 1px solid rgba(255, 255, 255, .1);
+				transform: translateY(110%);
+				z-index: 4;
+			}
+			.tb-start, .tb-app {
+				position: relative;
+				width: 38px;
+				height: 38px;
+				border-radius: 8px;
+				display: grid;
+				place-items: center;
+				flex: none;
+			}
+			.tb-start i {
+				display: grid;
+				grid-template-columns: 8px 8px;
+				gap: 2px;
+			}
+			.tb-start i b { width: 8px; height: 8px; background: #6fb6ff; display: block; }
+			.tb-search {
+				flex: 0 1 150px;
+				height: 30px;
+				border-radius: 15px;
+				background: rgba(255, 255, 255, .08);
+				display: flex;
+				align-items: center;
+				padding: 0 12px;
+				font-size: 12px;
+				color: #9a90ad;
+				min-width: 0;
+				overflow: hidden;
+				white-space: nowrap;
+			}
+			.tb-app { background: rgba(255, 255, 255, .1); }
+			.tb-app::after {
+				content: "";
+				position: absolute;
+				left: 12px;
+				right: 12px;
+				bottom: 2px;
+				height: 3px;
+				border-radius: 2px;
+				background: #6fb6ff;
+			}
+			.tb-app canvas { width: 26px; height: 26px; image-rendering: pixelated; }
+			.tb-app.ping { animation: ping .5s steps(2) 4; }
+			@keyframes ping { 50% { background: rgba(255, 211, 90, .5); } }
+			.tb-tray {
+				margin-left: auto;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				font-size: 12px;
+				color: #d9d2e6;
+				text-align: right;
+				line-height: 1.15;
+				flex: none;
+			}
+			.tb-tray .ico { width: 14px; height: 10px; border: 2px solid #b9b0c9; border-radius: 2px; box-sizing: border-box; position: relative; }
+			.tb-tray .ico::after { content: ""; position: absolute; left: 1px; top: 1px; bottom: 1px; width: 60%; background: #7ee08a; }
+			.tb-clock b { display: block; font: 700 13px 'Silkscreen', monospace; color: #fff; }
+			.tb-clock.flip b { animation: flip .5s steps(2) 3; }
+			@keyframes flip { 50% { color: var(--gold); } }
+
+			/* Party walking along the top edge of the taskbar (before they jump). */
+			.lane {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: calc(var(--bar) + var(--safe-b) - 2px);
+				height: calc(var(--px) * 16);
+				z-index: 4;
+				pointer-events: none;
+			}
+			.slime {
+				position: absolute;
+				left: 0;
+				bottom: 0;
+				opacity: 0;
+			}
+			.slime .spr { width: calc(var(--px) * 12); height: calc(var(--px) * 12); }
+
+			/* Windows-style toast above the tray */
+			.toast {
+				position: absolute;
+				right: 10px;
+				bottom: calc(var(--bar) + var(--safe-b) + var(--px) * 18);
+				width: min(300px, calc(100% - 20px));
+				box-sizing: border-box;
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				padding: 12px 14px;
+				border-radius: 10px;
+				background: rgba(30, 24, 44, .94);
+				border: 1px solid rgba(255, 255, 255, .12);
+				box-shadow: 0 10px 30px rgba(0, 0, 0, .5);
+				text-align: left;
+				opacity: 0;
+				z-index: 6;
+				pointer-events: none;
+			}
+			.toast canvas { width: 32px; height: 32px; image-rendering: pixelated; flex: none; }
+			.toast small { display: block; font-size: 11px; color: #a99cc0; }
+			.toast span { display: block; font-size: 14px; color: #fff; line-height: 1.3; }
+
+			.skip {
+				position: absolute;
+				right: 12px;
+				top: calc(var(--safe-t) + 10px);
+				min-height: 32px;
+				padding: 0 12px;
+				border: 1px solid rgba(255, 255, 255, .16);
+				border-radius: 16px;
+				background: rgba(0, 0, 0, .25);
+				color: #cfc4ff;
+				font: 500 12px 'Pixelify Sans', ui-monospace, monospace;
+				z-index: 7;
+				cursor: pointer;
+			}
+			.splash.is-ready .skip { display: none; }
+
+			/* Short screens (landscape phones, small laptops): tighten up. */
+			@media (max-height: 720px) {
+				.ribbon { margin-top: 8px; }
+				.cta { gap: 8px; }
+				#launchButton { min-height: 54px; }
+				.made { width: clamp(200px, 60vw, 240px); }
+			}
+			/* Landscape phones: keep the logo, the party and the button. */
+			@media (max-height: 460px) {
+				.tagline, .hint, .logo .eyebrow { display: none; }
+				/* Landscape: the badge sits beside the button. */
+				.cta { flex-direction: row; max-width: 560px !important; gap: 16px; }
+				.made { width: 170px !important; margin: 0; flex: none; }
+				/* Landscape: the lockup moves beside the wordmark so the stage keeps its height. */
+				.logo .brandbar {
+					position: absolute;
+					right: 100%;
+					top: 4px;
+					margin: 0 28px 0 0;
+					flex-direction: column;
+					align-items: flex-end;
+					gap: 8px;
+				}
+				.logo .tbh-logo { width: 84px; }
+				.logo .brandbar .excl { font-size: 10px; padding-left: 0; border-left: 0; text-align: right; }
+				.wordmark { font-size: 15vh; }
+				#launchButton { flex: 1; }
+				.splash { --bar: 40px; }
+				.layout { padding-bottom: 8px; }
+				.stage { min-height: 0; padding-bottom: calc(var(--px) * 6); }
+				.tb-start, .tb-app { width: 32px; height: 32px; }
+				#launchButton { min-height: 46px !important; font-size: 18px; }
+			}
+			@media (max-height: 640px) {
+				.layout { padding-top: calc(var(--safe-t) + 2vh); }
+				.ribbon { display: none; }
+				.tagline { font-size: 15px; }
+				.logo .eyebrow { margin-bottom: 4px; }
+				.brandbar { margin-bottom: 6px; }
+				.tbh-logo { width: 72px; }
+				.made { width: 190px; margin-top: 0; }
+			}
+		</style>
+	</head>
+	<body>
+		<div class="splash" id="splash">
+			<div class="quake">
+			<div class="boot" aria-hidden="true"></div>
+			<div class="stars" aria-hidden="true"></div>
+
+			<div class="layout">
+				<header class="logo">
+					<div class="brandbar">
+						<img class="tbh-logo" src="__TBH_LOGO__" alt="TBH: Task Bar Hero" width="90" height="51" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
+						<span class="excl">Merch<br />Exclusive</span>
+					</div>
+					<h1 class="wordmark" aria-label="LOOT BREAK"><span class="w1">LOOT</span><br /><span class="w2">BREAK</span></h1>
+					<div class="ribbon">A 60-SECOND DESK RAID</div>
+				</header>
+
+				<div class="stage" aria-hidden="true">
+					<div class="floor">
+						<div class="hero" data-s="priest"></div>
+						<div class="hero" data-s="sorcerer"></div>
+						<div class="chest-wrap">
+							<div class="rays"></div>
+							<div class="glow"></div>
+							<div class="tier">COMMON</div>
+						</div>
+						<div class="hero flip" data-s="ranger"></div>
+						<div class="hero flip" data-s="knight"></div>
+					</div>
+				</div>
+
+				<div class="cta">
+					<p class="tagline">Your party leaves the taskbar for lunch. <b>You are the cursor.</b> Tap monsters, grab the loot, open the chest.</p>
+					<button id="launchButton" disabled>Start lunch break</button>
+					<p class="hint">You'll be asked for the camera. Point it at your desk.</p>
+					<img class="made" src="__ML_BADGE__" alt="Activated by MEDIALIFE" width="600" height="160" onerror="this.style.display='none';console.warn('LOOT BREAK splash: image not found, upload it next to index.html:', this.getAttribute('src'))" />
+				</div>
+			</div>
+
+			<div class="lane" aria-hidden="true">
+				<div class="slime" data-s="slime"></div>
+			</div>
+
+			<div class="toast" role="status" aria-live="polite">
+				<canvas data-s="chest" width="16" height="16"></canvas>
+				<div><small>TBH: Task Bar Hero · now</small><span>Lunch break! Your party just left the taskbar to hunt for loot.</span></div>
+			</div>
+
+			<nav class="taskbar" aria-hidden="true">
+				<div class="tb-start"><i><b></b><b></b><b></b><b></b></i></div>
+				<div class="tb-search">Search for loot</div>
+				<div class="tb-app"><canvas data-s="knight" width="16" height="16"></canvas></div>
+				<div class="tb-tray">
+					<span class="ico"></span>
+					<div class="tb-clock"><b>11:59</b>AM</div>
+				</div>
+			</nav>
+			</div>
+
+			<button class="skip" type="button">Skip intro</button>
+		</div>
+
+		<script>
+		/* LOOT BREAK splash. Plays once (about 4 s), tap anywhere or Skip to jump
+		   to the end. Respects reduced motion. The sprites are the same pixel
+		   grids the game draws, copied from LootBreakGame.ts. */
+		(function () {
+			var ART = __SPRITES__;
+			var TIERS = [
+				['COMMON', '#c9ced6'], ['UNCOMMON', '#6fdc5a'], ['RARE', '#4aa8ff'], ['LEGENDARY', '#ffc53d'],
+				['IMMORTAL', '#ff4d4d'], ['ARCANA', '#ff5ad1'], ['BEYOND', '#33e6e6'], ['CELESTIAL', '#f3e3a0'],
+				['DIVINE', '#ffffff'], ['COSMIC', '#c79bff']
+			];
+			var root = document.getElementById('splash');
+			var $ = function (s, el) { return (el || root).querySelector(s); };
+			var $$ = function (s, el) { return Array.prototype.slice.call((el || root).querySelectorAll(s)); };
+
+			function paint(cv, name) {
+				var rows = ART.SPRITES[name];
+				if (!rows) return cv;
+				cv.width = rows[0].length;
+				cv.height = rows.length;
+				var g = cv.getContext('2d');
+				g.clearRect(0, 0, cv.width, cv.height);
+				for (var y = 0; y < rows.length; y++)
+					for (var x = 0; x < rows[y].length; x++) {
+						var c = ART.PAL[rows[y][x]];
+						if (c) { g.fillStyle = c; g.fillRect(x, y, 1, 1); }
+					}
+				return cv;
+			}
+			function sprite(name) {
+				var cv = document.createElement('canvas');
+				cv.className = 'spr';
+				return paint(cv, name);
+			}
+
+			$$('[data-s]').forEach(function (el) {
+				if (el.tagName === 'CANVAS') paint(el, el.getAttribute('data-s'));
+				else el.appendChild(sprite(el.getAttribute('data-s')));
+			});
+			var chest = sprite('chest');
+			$('.chest-wrap').appendChild(chest);
+
+			// One sprite pixel: as big as the screen allows, always a whole number.
+			function size() {
+				var w = innerWidth, h = innerHeight;
+				// the party row is about 80 sprite pixels wide
+				var px = Math.max(3, Math.min(7, Math.floor(Math.min((w - 28) / 82, h / 190))));
+				root.style.setProperty('--px', px + 'px');
+				fit();
+			}
+			// Drop optional lines until everything fits above the taskbar.
+			function fit() {
+				var layout = $('.layout'), cta = $('.cta');
+				if (!layout || !cta) return;
+				root.classList.remove('fit1', 'fit2', 'fit3');
+				var pad = parseFloat(getComputedStyle(layout).paddingBottom) || 0;
+				for (var n = 1; n <= 3 && cta.offsetTop + cta.offsetHeight > layout.clientHeight - pad + 1; n++) {
+					root.classList.add('fit' + n);
+				}
+			}
+			size();
+			addEventListener('resize', size);
+
+			// Stars
+			var stars = $('.stars');
+			for (var i = 0; i < 26; i++) {
+				var s = document.createElement('i');
+				s.style.left = (Math.random() * 100).toFixed(1) + '%';
+				s.style.top = (Math.random() * 62).toFixed(1) + '%';
+				s.style.animationDelay = (-Math.random() * 3).toFixed(2) + 's';
+				s.style.animationDuration = (2 + Math.random() * 3).toFixed(2) + 's';
+				stars.appendChild(s);
+			}
+
+			// Phones with "Reduce Motion" (iPhone) or "Remove animations" (Android)
+			// switched on get a calm version of the intro: the same order and
+			// timing, but things fade and pop in place instead of flying in, and
+			// nothing shakes. ?motion=full forces the full intro for testing.
+			var query = location.search;
+			var forceMotion = /[?&]motion=full\b/.test(query);
+			var reduce = !forceMotion && !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+			var diag = { reduce: reduce, waapi: !!(document.body.animate), made: 0, failed: [], startedAt: null, waitedForVisible: false };
+			var anims = [];
+			var timers = [];
+			var done = false;
+			function A(el, frames, opts) {
+				if (!el || !el.animate) return null;
+				if (!opts.fill) opts.fill = 'both';
+				// One animation a browser can't run must never stop the rest.
+				try {
+					var a = el.animate(frames, opts);
+					anims.push(a);
+					diag.made++;
+					return a;
+				} catch (e) {
+					if (diag.failed.length < 3) diag.failed.push(String(e && e.message || e));
+					return null;
+				}
+			}
+			function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+
+			var heroes = $$('.hero');
+			var clock = $('.tb-clock');
+			var app = $('.tb-app');
+			var toast = $('.toast');
+			var tierEl = $('.tier');
+			var quake = $('.quake');
+			var badge = $('.made');
+
+			// Split the title into letters so each one can crash in on its own.
+			// (The h1 keeps aria-label="LOOT BREAK" for screen readers.)
+			$$('.wordmark > span').forEach(function (w) {
+				var t = w.textContent;
+				w.textContent = '';
+				for (var k = 0; k < t.length; k++) {
+					var ch = document.createElement('i');
+					ch.className = 'ch';
+					ch.textContent = t[k];
+					w.appendChild(ch);
+				}
+			});
+
+			// ── impact effects ──────────────────────────────────────────────
+			// Screen shake: small offsets in whole pixels that die away. It moves
+			// the whole splash, so the page itself seems to take the hit.
+			function shake(delay, amp, dur, tilt) {
+				if (reduce) return;
+				var f = [], n = Math.max(4, Math.round(dur / 45));
+				for (var k = 0; k <= n; k++) {
+					var d = 1 - k / n, a = amp * d * d, last = k === n;
+					var x = last ? 0 : Math.round((Math.random() * 2 - 1) * a / 2) * 2;
+					var y = last ? 0 : Math.round((Math.random() * 2 - 1) * a / 2) * 2;
+					var r = last ? 0 : (Math.random() * 2 - 1) * (tilt || 0) * d;
+					f.push({ transform: 'translate(' + x + 'px,' + y + 'px) rotate(' + r.toFixed(2) + 'deg)' });
+				}
+				A(quake, f, { duration: dur, delay: delay, easing: 'linear', fill: 'none' });
+			}
+			// Pixel dust that puffs out where a hero lands.
+			function bits(delay, x, y, n, colors, spread, size) {
+				if (reduce) return;
+				for (var k = 0; k < n; k++) {
+					var b = document.createElement('i');
+					b.className = 'bit';
+					b.style.setProperty('--s', Math.round(size * (0.7 + Math.random() * 0.6)) + 'px');
+					b.style.background = colors[k % colors.length];
+					b.style.opacity = '0';
+					quake.appendChild(b);
+					var ang = Math.random() * Math.PI * 2;
+					var v = spread * (0.4 + Math.random() * 0.6);
+					var tx = Math.cos(ang) * v, ty = Math.sin(ang) * v * 0.7 - spread * 0.3;
+					var a = A(b, [
+						{ opacity: 1, transform: 'translate(' + x + 'px,' + y + 'px)' },
+						{ opacity: 1, transform: 'translate(' + (x + tx) + 'px,' + (y + ty) + 'px) rotate(' + Math.round(Math.random() * 180) + 'deg)', offset: .45 },
+						{ opacity: 0, transform: 'translate(' + (x + tx * 1.25) + 'px,' + (y + ty + spread) + 'px) rotate(' + Math.round(Math.random() * 360) + 'deg)' }
+					], { duration: 600 + Math.random() * 300, delay: delay, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'forwards' });
+					if (a) a.onfinish = (function (el) { return function () { el.remove(); }; })(b);
+				}
+			}
+
+
+			// A letter (or the badge) crashes in from off screen, squashes, settles.
+			function slam(el, delay, dur, from) {
+				A(el, [
+					{ opacity: 0, transform: from, easing: 'cubic-bezier(.55,0,1,.45)' },
+					{ opacity: 1, transform: 'translate(0,0) rotate(0deg) scale(1.2,.76)', offset: .72, easing: 'ease-out' },
+					{ opacity: 1, transform: 'translate(0,-8%) scale(.94,1.08)', offset: .86 },
+					{ opacity: 1, transform: 'none' }
+				], { duration: dur, delay: delay });
+				return delay + dur * 0.72; // the moment of impact
+			}
+
+			function play() {
+				root.classList.add('go');
+				var px = parseFloat(getComputedStyle(root).getPropertyValue('--px')) || 4;
+				var w1 = $('.wordmark .w1'), w2 = $('.wordmark .w2');
+				var hit, k;
+
+				// 0: boot line, the taskbar slides up, the clock hits noon
+				A($('.boot'), [
+					{ opacity: 1, transform: 'scaleX(0)' },
+					{ opacity: 1, transform: 'scaleX(1)', offset: .55 },
+					{ opacity: 0, transform: 'scaleX(1) scaleY(30)' }
+				], { duration: 600, easing: 'ease-out' });
+				A(root, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, delay: 100, fill: 'backwards' });
+				A($('.taskbar'), [{ transform: 'translateY(110%)' }, { transform: 'none' }],
+					{ duration: 420, delay: 300, easing: 'cubic-bezier(.2,1.2,.4,1)' });
+				at(500, function () {
+					clock.innerHTML = '<b>12:00</b>PM';
+					clock.classList.add('flip');
+					app.classList.add('ping');
+				});
+				A(toast, [
+					{ opacity: 0, transform: 'translateX(30px)' },
+					{ opacity: 1, transform: 'none', offset: .12 },
+					{ opacity: 1, transform: 'none', offset: .85 },
+					{ opacity: 0, transform: 'translateY(8px)' }
+				], { duration: 1500, delay: 500, easing: 'ease-out' });
+				A($('.slime'), [
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.62 + 'px,0)' },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.72 + 'px,calc(var(--px) * -6))', offset: .25 },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.8 + 'px,0)', offset: .5 },
+					{ opacity: 1, transform: 'translate(' + innerWidth * 0.9 + 'px,calc(var(--px) * -6))', offset: .75 },
+					{ opacity: 1, transform: 'translate(' + (innerWidth + 60) + 'px,0)' }
+				], { duration: 1400, delay: 700, easing: 'linear', fill: 'forwards' });
+
+				// 0.7 s: LOOT crashes in letter by letter
+				var c1 = $$('.ch', w1), c2 = $$('.ch', w2);
+				function from(i, n, big) {
+					var side = i < n / 2 ? -1 : 1;
+					if (reduce) return 'scale(' + (big > 2.5 ? 1.5 : 1.35) + ')';
+					return 'translate(' + side * (14 + Math.random() * 22) + 'vw,-60vh) rotate(' + side * (18 + Math.random() * 30) + 'deg) scale(' + big + ')';
+				}
+				for (k = 0; k < c1.length; k++) {
+					hit = slam(c1[k], 700 + k * 70, 340, from(k, c1.length, 2.4));
+					shake(hit, k === c1.length - 1 ? 6 : 2, k === c1.length - 1 ? 260 : 110, 0);
+				}
+
+				// 1.35 s: BREAK lands harder, with the biggest shake
+				for (k = 0; k < c2.length; k++) {
+					hit = slam(c2[k], 1350 + k * 75, 360, from(k, c2.length, 3));
+					if (k < c2.length - 1) shake(hit, 3, 120, 0);
+				}
+				shake(hit, 10, 420, 0.5);
+
+				// 2.15 s: the party crashes down onto the stage, one after another
+				var order = ['sorcerer', 'knight', 'priest', 'ranger'];
+				heroes.forEach(function (h) {
+					var i = order.indexOf(h.getAttribute('data-s'));
+					var r = h.getBoundingClientRect();
+					var d = 2150 + i * 110, dur = 420;
+					A(h, [
+						{ opacity: reduce ? 0 : 1, transform: 'translateY(' + (reduce ? -14 : -Math.round(r.bottom + 40)) + 'px)', easing: 'cubic-bezier(.5,0,1,.6)' },
+						{ opacity: 1, transform: 'translateY(0) scale(1.25,.7)', offset: .75, easing: 'ease-out' },
+						{ transform: 'translateY(calc(var(--px) * -2)) scale(.9,1.1)', offset: .88 },
+						{ transform: 'none' }
+					], { duration: dur, delay: d });
+					var land = d + dur * 0.75;
+					shake(land, 3, 160, 0);
+					bits(land, r.left + r.width / 2, r.bottom - px, 7, ['#d8c8aa', '#9c8b74', '#efe4cd'], 30, px);
+				});
+
+				// 2.75 s: the chest slams down last. Coins, rays, the rarity
+				var chestHit = 2750 + 480 * 0.7;
+				A(chest, [
+					{ opacity: reduce ? 0 : 1, transform: reduce ? 'translateY(-14px)' : 'translateY(-70vh)', easing: 'cubic-bezier(.5,0,.75,0)' },
+					{ opacity: 1, transform: 'translateY(0) scale(1.2,.75)', offset: .7 },
+					{ opacity: 1, transform: 'translateY(calc(var(--px) * -3)) scale(.95,1.05)', offset: .85 },
+					{ opacity: 1, transform: 'none' }
+				], { duration: 480, delay: 2750 });
+				shake(chestHit, 6, 280, 0.3);
+				A($('.rays'), [{ opacity: 0, scale: .3 }, { opacity: .55, scale: 1 }], { duration: 600, delay: chestHit, easing: 'ease-out' });
+				A($('.glow'), [{ opacity: 0 }, { opacity: .8 }], { duration: 500, delay: chestHit });
+				A(tierEl, [{ opacity: 0, translate: '0 10px' }, { opacity: 1, translate: '0 0' }], { duration: 300, delay: chestHit + 150 });
+				for (var c = 0; c < 9; c++) {
+					var coin = paint(document.createElement('canvas'), 'coin');
+					coin.className = 'coin';
+					$('.chest-wrap').appendChild(coin);
+					var ang = -Math.PI / 2 + (c - 4) * 0.32;
+					var dist = 60 + Math.random() * 50;
+					var tx = Math.cos(ang) * dist, ty = Math.sin(ang) * dist;
+					A(coin, [
+						{ opacity: 1, transform: 'translate(0,0) scale(.6)' },
+						{ opacity: 1, transform: 'translate(' + tx + 'px,' + ty + 'px) scale(1)', offset: .45 },
+						{ opacity: 0, transform: 'translate(' + tx * 1.3 + 'px,' + (ty + 90) + 'px) scale(.8)' }
+					], { duration: 900, delay: chestHit + c * 25, easing: 'cubic-bezier(.2,.8,.4,1)', fill: 'forwards' });
+				}
+
+				// 3.1 s: the TBH lockup and ribbon settle in
+				A($('.brandbar'), [{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 380, delay: 3100, easing: 'cubic-bezier(.2,1,.4,1)' });
+				A($('.ribbon'), [{ opacity: 0, transform: 'scaleX(.2)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 320, delay: 3150, easing: 'cubic-bezier(.2,1.3,.4,1)' });
+
+				// 3.3 s: the call to action rises, and the MEDIALIFE badge stamps down
+				A($('.cta'), [{ opacity: 0, transform: 'translateY(24px)' }, { opacity: 1, transform: 'none' }],
+					{ duration: 420, delay: 3300, easing: 'cubic-bezier(.2,1,.4,1)' });
+				hit = slam(badge, 3550, 380, reduce ? 'scale(1.3)' : 'scale(2) rotate(-8deg)');
+				shake(hit, 3, 150, 0);
+
+				at(3950, ready);
+			}
+
+			// The chest cycles through TBH's rarities, slowly, once the intro ends.
+			var ti = 0;
+			function cycle() {
+				ti = (ti + 1) % TIERS.length;
+				root.style.setProperty('--ray', TIERS[ti][1]);
+				tierEl.textContent = TIERS[ti][0];
+				tierEl.animate && tierEl.animate([{ transform: 'translateX(-50%) scale(1.25)' }, { transform: 'translateX(-50%) scale(1)' }], { duration: 250 });
+			}
+			function ready() {
+				if (done) return;
+				done = true;
+				root.classList.add('is-ready');
+				paint(chest, 'chestOpen');
+				timers.push(setInterval(cycle, reduce ? 2600 : 1200));
+			}
+			var started = false, wantSkip = false;
+			function skip() {
+				if (done) return;
+				if (!started) { wantSkip = true; return; } // tapped before the intro began
+				timers.forEach(clearTimeout);
+				timers = [];
+				anims.forEach(function (a) { try { a.finish(); } catch (e) {} });
+				clock.innerHTML = '<b>12:00</b>PM';
+				ready();
+			}
+
+			// Tap anywhere (except the button) to skip the intro.
+			root.addEventListener('pointerdown', function (e) {
+				if (e.target && e.target.id === 'launchButton') return;
+				skip();
+			});
+			$('.skip').addEventListener('click', skip);
+
+			function start() {
+				if (started) return;
+				// Loaded in a background tab: wait until the page is on screen,
+				// so the intro isn't over before anyone sees it.
+				if (document.visibilityState === 'hidden') {
+					diag.waitedForVisible = true;
+					document.addEventListener('visibilitychange', function once() {
+						if (document.visibilityState === 'hidden') return;
+						document.removeEventListener('visibilitychange', once);
+						start();
+					});
+					return;
+				}
+				started = true;
+				diag.startedAt = Math.round(performance.now());
+				fit(); // the real fonts may have changed the line breaks
+				play();
+				if (wantSkip) skip();
+				if (/[?&]diag\b/.test(query)) setTimeout(showDiag, 300);
+			}
+			// ?diag: a small readout of what this phone reports, for debugging.
+			function showDiag() {
+				var d = document.createElement('pre');
+				d.style.cssText = 'position:fixed;left:8px;top:8px;z-index:3000;max-width:calc(100% - 16px);margin:0;padding:8px 10px;font:11px/1.35 ui-monospace,monospace;color:#fff;background:rgba(0,0,0,.82);border-radius:6px;white-space:pre-wrap;pointer-events:none';
+				d.textContent = [
+					'reduce motion: ' + diag.reduce + (forceMotion ? ' (forced off)' : ''),
+					'animate(): ' + diag.waapi,
+					'animations made: ' + diag.made + ', failed: ' + diag.failed.length + (diag.failed.length ? ' (' + diag.failed.join('; ') + ')' : ''),
+					'intro started at: ' + diag.startedAt + ' ms' + (diag.waitedForVisible ? ' (waited for tab)' : ''),
+					'skipped: ' + done,
+					'in iframe: ' + (window.self !== window.top),
+					navigator.userAgent
+				].join('\n');
+				document.body.appendChild(d);
+			}
+			// Let the fonts arrive (max 600 ms) so the logo slams in its real face.
+			if (document.fonts && document.fonts.load) {
+				var go = false;
+				var kick = function () { if (!go) { go = true; start(); } };
+				Promise.all([
+					document.fonts.load('700 40px Silkscreen'),
+					document.fonts.load('700 20px "Pixelify Sans"')
+				]).then(kick, kick);
+				setTimeout(kick, 600);
+			} else start();
+		})();
+		</script>
+
+		<!-- @lab:analytics -->
+		<!-- activate_click: the enabled Launch button was tapped. `seconds` is how
+		     long the page had been open, which shows whether the download is
+		     costing you players. -->
+		<script>
+			(function () {
+				var btn = document.getElementById('launchButton');
+				if (!btn) return;
+				var fired = false;
+				btn.addEventListener('click', function () {
+					if (this.disabled || fired) return;
+					fired = true;
+					if (window.gtag) gtag('event', 'activate_click', {
+						experience: 'tbh_lootbreak',
+						seconds: Math.round((Date.now() - (window.__pageStart || Date.now())) / 1000)
+					});
+				});
+			})();
+		</script>
+		<!-- @lab:end -->
+	</body>
+</html>
