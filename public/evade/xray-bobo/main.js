@@ -1,0 +1,784 @@
+// Bobo X-Ray: point the phone at Bobo (the EVADE cat charm, or the same picture on a tee). The print opens into a
+// box that goes back INTO the surface, and Bobo floats in the middle of it. A scanner sweeps through the box and
+// shows his bones where it has passed. On a tee it reads as an X-ray window into the wearer.
+//
+// How the hole works (no stencil buffer): an invisible "occluder" sheet lies on the print, with the window cut out
+// of it. It is drawn first and writes only depth (colorWrite off), so the camera picture still shows through it, but
+// anything behind the print plane is hidden everywhere except through the window. The box (five flat walls with a
+// grid), the X-ray film on the back wall, the floating specks and Bobo all sit behind the print plane, so you only
+// ever see them through the window, and they shift against its edge as the phone moves (that is the parallax).
+// The 8th Wall engine creates the WebGL context itself (no stencil requested), which is why it is depth-only.
+//
+// Image tracking is the open-source 8th Wall engine (MIT), self-hosted with Off the Chain in
+// /evade/keychain-ar/vendor/xr, with the same two cat targets (kc-bobo, kc-bobo-l: the charm's two sides).
+// Tracking robustness is Spray Bobo's (PR #47): the scene is only drawn where the camera sees the print now; on a
+// drop the last pose is held for a blink only while the phone is still, and a target the engine stops updating
+// counts as lost after three of its usual update gaps.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
+
+window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+const KC = '/evade/keychain-ar/';             // Off the Chain: engine, image targets
+const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
+const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = THREE.MathUtils.clamp, lerp = THREE.MathUtils.lerp;
+const easeOut = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
+const easeInOut = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
+const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* no haptics */ } };
+const store = { get(k, d) { try { const v = localStorage.getItem('xray-bobo-' + k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('xray-bobo-' + k, String(v)); } catch (e) { /* none */ } } };
+
+// ---------------------------------------------------------------- what is tracked
+const TARGETS = ['kc-bobo', 'kc-bobo-l'];      // the cat charm's front and its mirror (the print seen through the acrylic)
+const FLIP = { 'kc-bobo-l': -1 };
+// Losing the print: the last pose is held this long, and only while the phone is still (Spray Bobo's numbers)
+const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120, STILL_DEG = 25, STILL_ACC = 1.2;
+const REOPEN_AFTER_MS = 2500;                 // lost longer than this: the box opens again with its intro
+
+// ---------------------------------------------------------------- the look (flat colours, no gradients)
+const COL = {
+  x: 0x4fd6e8,                                // the scanner cyan (rim, grid, scan line, specks, ghost)
+  back: '#061019', side: '#0b2232', top: '#08192a', bottom: '#0e2a3d',   // the walls: one flat shade each
+  bone: 0xeefcff, socket: 0x061019,
+};
+const BOX = { depthK: +store.get('depth', 1) || 1, shape: store.get('win', 'box') === 'cat' ? 'cat' : 'box' };
+let view = ['scan', 'xray', 'skin'].includes(store.get('view', 'scan')) ? store.get('view', 'scan') : 'scan';
+
+// ---------------------------------------------------------------- sound (made here, no files)
+const sound = {
+  ctx: null, on: store.get('sound', '1') === '1', master: null, hum: null,
+  init() {
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume();
+      if (!this.master) { this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination); }
+      if (!this.hum) {   // the scanner hum: two low sines, opened while the box is open
+        const g = this.ctx.createGain(); g.gain.value = 0; g.connect(this.master);
+        for (const f of [55, 110.6]) { const o = this.ctx.createOscillator(); o.frequency.value = f; const og = this.ctx.createGain(); og.gain.value = f < 100 ? 1 : 0.35; o.connect(og).connect(g); o.start(); }
+        this.hum = g;
+      }
+    } catch (e) { /* no audio */ }
+  },
+  humTo(v) { if (!this.hum) return; this.hum.gain.setTargetAtTime(this.on ? v * 0.05 : 0, this.ctx.currentTime, 0.2); },
+  tone(f0, f1, dur, vol = 0.2, type = 'sine', when = 0) {
+    if (!this.ctx || !this.on) return;
+    const t = this.ctx.currentTime + when, o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  },
+  noise(dur, vol, hp, lp, when = 0) {
+    if (!this.ctx || !this.on) return;
+    const n = Math.floor(this.ctx.sampleRate * dur), b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.6);
+    const s = this.ctx.createBufferSource(); s.buffer = b; const g = this.ctx.createGain(); g.gain.value = vol;
+    const f1 = this.ctx.createBiquadFilter(); f1.type = 'highpass'; f1.frequency.value = hp;
+    const f2 = this.ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = lp;
+    s.connect(f1).connect(f2).connect(g).connect(this.master); s.start(this.ctx.currentTime + when);
+  },
+  open() { this.noise(0.9, 0.09, 200, 2200); this.tone(180, 60, 0.9, 0.14, 'sine'); this.tone(900, 1800, 0.25, 0.03, 'triangle', 0.6); },
+  beep() { this.tone(1760, 1760, 0.06, 0.035, 'square'); },
+  mew() { this.tone(620, 880, 0.14, 0.08, 'triangle'); this.tone(880, 560, 0.22, 0.08, 'triangle', 0.13); },
+  click() { this.tone(1200, 900, 0.05, 0.05, 'triangle'); },
+  shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
+};
+
+// ---------------------------------------------------------------- loading
+const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
+const assets = Promise.all([
+  new GLTFLoader().loadAsync('/evade/keychain/ar/bobo-keychain.glb'),
+  getJson(KC + 'image-targets/layout.json').then((l) => l.targets['kc-bobo']),
+  Promise.all(TARGETS.map((n) => getJson(KC + `image-targets/${n}.json`))),
+  loadImg(KC + 'image-targets/kc-bobo.jpg'),
+  getJson('/evade/spray-bobo/art/cat-outline.json'),   // the cat's die-cut line, uv of the kc-bobo picture (y down)
+]).then(([gltf, L, tdata, print, outline]) => ({ gltf, L, tdata, print, outline }));
+const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
+let loaded = false;
+Promise.all([assets, xrReady]).then(() => {
+  loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = 'Start X-ray';
+}).catch((e) => { console.error(e); showError('Could not load the experience', 'Check your connection and reload the page.'); });
+
+// ---------------------------------------------------------------- the scene
+let scene, camera, renderer;
+const A = new THREE.Group();                  // follows the print (units: metres of the real print, see onTarget)
+const F = new THREE.Group(); A.add(F);        // x flipped on the charm's other side
+let W = 0.0601, H = 0.0801;                   // the kc-bobo picture in metres (layout.json)
+let occluder, rim, box, walls = {}, lid, film, specks, scanBar, inside, bob, model, mixer, clips = {}, current = null;
+const skinPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // the skin shows below the scan line
+const rayPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);     // the X-ray shows above it
+const skinMats = [], rayMats = [];
+const open = { k: 0, target: 0, depth: 0, dWant: 1 };   // k: how far the box has opened (0..1); depth: the box's depth now (m)
+
+function buildScene(xr, data) {
+  ({ scene, camera, renderer } = xr);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.localClippingEnabled = true;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.75;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x2a4050, 1.3));
+  const key = new THREE.DirectionalLight(0xffffff, 1.4); key.position.set(1, 2.5, 4); scene.add(key);
+  camera.position.set(0, 0, 0); camera.quaternion.identity();
+  XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
+  scene.add(A); A.visible = false;
+
+  W = data.L.widthM; H = data.L.heightM;
+  open.dWant = H * BOX.depthK;
+
+  box = new THREE.Group(); F.add(box);          // walls are built one unit deep and scaled to the depth
+  buildWalls();
+  buildWindow(BOX.shape, data.outline);
+  buildLidAndFilm(data.print);
+  inside = new THREE.Group(); F.add(inside);   // Bobo and the specks: not scaled with the box
+  specks = makeSpecks(); inside.add(specks);
+  buildBobo(data.gltf);
+  scanBar = makeScanBar(); box.add(scanBar);
+  setView(view, false);
+}
+
+// a grid tile in one flat wall colour (lines on two edges, so it repeats into a grid)
+function gridTex(bg) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  g.fillStyle = bg; g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#4fd6e8'; g.globalAlpha = 0.55; g.fillRect(0, 0, 128, 3); g.fillRect(0, 0, 3, 128);
+  g.globalAlpha = 0.18; g.fillRect(0, 63, 128, 2); g.fillRect(63, 0, 2, 128);   // a fainter half-cell line
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4; return t;
+}
+const CELL = () => H / 6;                      // grid cell: a sixth of the print's height
+function buildWalls() {
+  const mk = (bg) => new THREE.MeshBasicMaterial({ map: gridTex(bg), side: THREE.DoubleSide, toneMapped: false });
+  const add = (k, geo, mat, fn) => { const m = new THREE.Mesh(geo, mat); fn(m); m.renderOrder = 1; box.add(m); walls[k] = m; };
+  add('back', new THREE.PlaneGeometry(W, H), mk(COL.back), (m) => { m.position.z = -1; });
+  add('left', new THREE.PlaneGeometry(1, H), mk(COL.side), (m) => { m.rotation.y = Math.PI / 2; m.position.set(-W / 2, 0, -0.5); });
+  add('right', new THREE.PlaneGeometry(1, H), mk(COL.side), (m) => { m.rotation.y = -Math.PI / 2; m.position.set(W / 2, 0, -0.5); });
+  add('top', new THREE.PlaneGeometry(W, 1), mk(COL.top), (m) => { m.rotation.x = Math.PI / 2; m.position.set(0, H / 2, -0.5); });
+  add('bottom', new THREE.PlaneGeometry(W, 1), mk(COL.bottom), (m) => { m.rotation.x = -Math.PI / 2; m.position.set(0, -H / 2, -0.5); });
+  repeatWalls();
+}
+function repeatWalls() {   // keep the cells square at the chosen depth
+  const c = CELL(), D = open.dWant;
+  walls.back.material.map.repeat.set(W / c, H / c);
+  walls.left.material.map.repeat.set(D / c, H / c); walls.right.material.map.repeat.set(D / c, H / c);
+  walls.top.material.map.repeat.set(W / c, D / c); walls.bottom.material.map.repeat.set(W / c, D / c);
+}
+
+// The window: its outline (a rectangle, or the cat's die-cut line), the occluder sheet with that hole, and a flat
+// cyan rim on the print around it.
+let outlineData = null;
+function windowPoints(shape) {
+  if (shape === 'cat' && outlineData) return outlineData.points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H));
+  const r = Math.min(W, H) * 0.035, pts = [], hw = W / 2, hh = H / 2;   // a rectangle with small rounded corners
+  const corner = (cx, cy, a0) => { for (let i = 0; i <= 4; i++) { const a = a0 + i * Math.PI / 8; pts.push(new THREE.Vector2(cx + Math.cos(a) * r, cy + Math.sin(a) * r)); } };
+  corner(hw - r, hh - r, 0); corner(-hw + r, hh - r, Math.PI / 2); corner(-hw + r, -hh + r, Math.PI); corner(hw - r, -hh + r, Math.PI * 1.5);
+  return pts;
+}
+function buildWindow(shape, outline) {
+  if (outline) outlineData = outline;
+  for (const o of [occluder, rim]) if (o) { F.remove(o); o.geometry.dispose(); }
+  let pts = windowPoints(shape);
+  if (THREE.ShapeUtils.isClockWise(pts)) pts = pts.slice().reverse();
+  // the occluder: a big sheet (20 prints across) with the window as a hole. Depth only, drawn before everything.
+  const R = H * 10, outer = new THREE.Shape([new THREE.Vector2(-R, -R), new THREE.Vector2(R, -R), new THREE.Vector2(R, R), new THREE.Vector2(-R, R)]);
+  outer.holes.push(new THREE.Path(pts.slice().reverse()));
+  occluder = new THREE.Mesh(new THREE.ShapeGeometry(outer), new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
+  occluder.renderOrder = -10; F.add(occluder);
+  // the rim: a flat ribbon just outside the window's edge
+  rim = new THREE.Mesh(ribbon(pts, H * 0.012), new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, side: THREE.DoubleSide, transparent: true, depthWrite: false }));
+  rim.position.z = 0.0004; rim.renderOrder = 30; F.add(rim);
+  BOX.shape = shape;
+}
+// a closed flat ribbon of width w on the outside of a counter-clockwise outline (mitred corners)
+function ribbon(pts, w) {
+  const n = pts.length, pos = [], idx = [];
+  for (let i = 0; i < n; i++) {
+    const p = pts[i], a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n];
+    const d1 = new THREE.Vector2().subVectors(p, a).normalize(), d2 = new THREE.Vector2().subVectors(b, p).normalize();
+    const n1 = new THREE.Vector2(d1.y, -d1.x), n2 = new THREE.Vector2(d2.y, -d2.x);   // outward for counter-clockwise
+    const m = n1.clone().add(n2); const ml = m.length(); if (ml < 1e-6) m.copy(n1); else m.divideScalar(ml);
+    const k = Math.min(1 / Math.max(m.dot(n1), 0.35), 2.5);
+    pos.push(p.x, p.y, 0, p.x + m.x * w * k, p.y + m.y * w * k, 0);
+  }
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n, a = i * 2, b = j * 2; idx.push(a, a + 1, b, b, a + 1, b + 1); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); return g;
+}
+
+// The lid: the print itself, which sinks back as the box opens (so the print looks pushed into the surface), then
+// fades into the X-ray film: the same print as a negative in scanner cyan (a per-pixel colour mapping, no
+// generative tools on EVADE art), on the back wall.
+function buildLidAndFilm(print) {
+  const tex = new THREE.Texture(print); tex.colorSpace = THREE.SRGBColorSpace; tex.needsUpdate = true;
+  lid = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: tex, transparent: true, toneMapped: false, depthWrite: true }));
+  lid.renderOrder = 2; F.add(lid);
+  const c = document.createElement('canvas'), w = 360, h = Math.round(w * print.naturalHeight / print.naturalWidth); c.width = w; c.height = h;
+  const g = c.getContext('2d'); g.drawImage(print, 0, 0, w, h);
+  const im = g.getImageData(0, 0, w, h), d = im.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const L = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255, inv = Math.pow(1 - L, 0.8);
+    const q = Math.round(inv * 5) / 5;            // posterised into flat steps: the film stays flat-coloured
+    d[i] = 79 * q + 40 * q * q; d[i + 1] = 214 * q + 30 * q * q; d[i + 2] = 232 * q + 20 * q * q; d[i + 3] = 255 * Math.min(1, q * 1.4);
+  }
+  g.putImageData(im, 0, 0);
+  const ft = new THREE.CanvasTexture(c); ft.colorSpace = THREE.SRGBColorSpace;
+  film = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.92, H * 0.92), new THREE.MeshBasicMaterial({ map: ft, transparent: true, opacity: 0, depthWrite: false, toneMapped: false }));
+  film.position.z = -1 + 0.002; film.renderOrder = 3; box.add(film);
+}
+
+// floating specks: depth cues that slide past each other as the phone moves
+function makeSpecks() {
+  const N = 42, geo = new THREE.BufferGeometry(), p = new Float32Array(N * 3), seed = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { seed[i * 3] = Math.random() - 0.5; seed[i * 3 + 1] = Math.random(); seed[i * 3 + 2] = 0.06 + Math.random() * 0.88; }
+  geo.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.beginPath(); g.arc(16, 16, 13, 0, 7); g.fill();
+  const m = new THREE.PointsMaterial({ color: COL.x, map: new THREE.CanvasTexture(c), size: H * 0.018, sizeAttenuation: true, transparent: true, alphaTest: 0.5, depthWrite: true, toneMapped: false });
+  const pts = new THREE.Points(geo, m); pts.frustumCulled = false; pts.renderOrder = 4; pts.userData.seed = seed; return pts;
+}
+function tickSpecks(dt) {
+  const s = specks.userData.seed, p = specks.geometry.attributes.position.array, D = open.depth;
+  for (let i = 0; i < s.length / 3; i++) {
+    s[i * 3 + 1] = (s[i * 3 + 1] + dt * (0.025 + (i % 5) * 0.006)) % 1;
+    p[i * 3] = s[i * 3] * W * 0.88; p[i * 3 + 1] = (s[i * 3 + 1] - 0.5) * H * 0.9; p[i * 3 + 2] = -s[i * 3 + 2] * D;
+  }
+  specks.geometry.attributes.position.needsUpdate = true;
+  specks.material.opacity = 1; specks.visible = open.k > 0.4;
+}
+
+// the scan line: a bright band on the side and back walls, and a faint sheet across the box at the same height
+function makeScanBar() {
+  const g = new THREE.Group(), t = H * 0.008;
+  const mat = new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, side: THREE.DoubleSide });
+  const back = new THREE.Mesh(new THREE.PlaneGeometry(W, t), mat); back.position.z = -1 + 0.001; g.add(back);
+  for (const sx of [-1, 1]) { const s = new THREE.Mesh(new THREE.PlaneGeometry(1, t), mat); s.rotation.y = Math.PI / 2; s.position.set(sx * (W / 2 - 0.0003), 0, -0.5); g.add(s); }
+  const sheet = new THREE.Mesh(new THREE.PlaneGeometry(W, 1), new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+  sheet.rotation.x = -Math.PI / 2; sheet.position.z = -0.5; g.add(sheet);
+  g.children.forEach((m) => { m.renderOrder = 5; });
+  return g;
+}
+
+// ---------------------------------------------------------------- Bobo: skin, ghost and bones
+// The skin is the Off the Chain Bobo (Blender, keychain look, original rig). In X-ray he is a see-through cyan
+// ghost (the same skinned mesh, so it moves with him) with a skeleton inside: parts sized from the vertices each
+// bone moves, parented to the bones, so the skeleton follows every animation clip.
+function buildBobo(gltf) {
+  model = gltf.scene;
+  model.traverse((o) => { if (o.name === 'Silhouette') o.visible = false; if (o.isMesh) o.frustumCulled = false; });
+  mixer = new THREE.AnimationMixer(model);
+  clips = Object.fromEntries(gltf.animations.map((c) => [c.name, c]));
+  mixer.clipAction(clips.Sit).play(); mixer.setTime(0); model.updateMatrixWorld(true);
+  const body = model.getObjectByName('Bobo') || model;   // (not the flat Silhouette card that ships in the file)
+  const bb = new THREE.Box3().setFromObject(body, true), size = bb.getSize(new THREE.Vector3()), mid = bb.getCenter(new THREE.Vector3());
+  mixer.stopAllAction();
+  const s = (H * 0.56) / size.y;               // Bobo stands a bit over half the box's height
+  model.scale.setScalar(s); model.position.set(-mid.x * s, -mid.y * s, -mid.z * s);
+  bob = new THREE.Group(); bob.add(model); inside.add(bob);
+
+  const skinned = [];
+  model.traverse((o) => {
+    if (o.isSkinnedMesh) skinned.push(o);
+    if (o.isMesh && o.name !== 'Silhouette') {
+      const ms = Array.isArray(o.material) ? o.material : [o.material];
+      ms.forEach((m) => { m.clippingPlanes = [skinPlane]; m.clipShadows = false; skinMats.push(m); });
+      o.renderOrder = 6;
+    }
+  });
+  if (!skinned.length) return;
+  // the ghost: each skinned part again in flat see-through cyan (both faces, so folds read a little brighter)
+  const ghostMat = new THREE.MeshBasicMaterial({ color: COL.x, transparent: true, opacity: 0.2, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, clippingPlanes: [rayPlane] });
+  for (const sk of skinned) {
+    if (/Outline/.test(sk.material && sk.material.name)) continue;   // the ink hull: the ghost needs no outline
+    const ghost = new THREE.SkinnedMesh(sk.geometry, ghostMat); ghost.bindMode = sk.bindMode;
+    ghost.position.copy(sk.position); ghost.quaternion.copy(sk.quaternion); ghost.scale.copy(sk.scale);
+    sk.parent.add(ghost); ghost.bind(sk.skeleton, sk.bindMatrix); ghost.frustumCulled = false; ghost.renderOrder = 8;
+  }
+  rayMats.push(ghostMat);
+  buildBones(skinned);
+  play('Sit');
+}
+function buildBones(list) {
+  const boneMat = new THREE.MeshBasicMaterial({ color: COL.bone, toneMapped: false, clippingPlanes: [rayPlane] });
+  const sockMat = new THREE.MeshBasicMaterial({ color: COL.socket, toneMapped: false, clippingPlanes: [rayPlane] });
+  rayMats.push(boneMat, sockMat);
+  const sk = list[0], bones = sk.skeleton.bones, boxes = bones.map(() => new THREE.Box3()), v = new THREE.Vector3();
+  for (const m of list) {
+    const geo = m.geometry, P = geo.attributes.position, SI = geo.attributes.skinIndex, SW = geo.attributes.skinWeight;
+    for (let i = 0; i < P.count; i++) {        // each vertex goes to the bone that moves it most
+      let bj = -1, bw = 0.4;
+      for (let k = 0; k < 4; k++) { const w = SW.getComponent(i, k); if (w > bw) { bw = w; bj = SI.getComponent(i, k); } }
+      if (bj < 0) continue;
+      const b = bones.indexOf(m.skeleton.bones[bj]); if (b < 0) continue;
+      v.fromBufferAttribute(P, i).applyMatrix4(m.bindMatrix); boxes[b].expandByPoint(v);   // model (bind) space
+    }
+  }
+  const sphere = new THREE.SphereGeometry(1, 14, 10), cyl = new THREE.CylinderGeometry(1, 1, 1, 10), cone = new THREE.ConeGeometry(1, 1, 8);
+  const part = (g, m, pos, scl, rot) => { const o = new THREE.Mesh(g, m); o.position.copy(pos); o.scale.copy(scl); if (rot) o.quaternion.copy(rot); o.renderOrder = 9; o.frustumCulled = false; return o; };
+  const along = (a, b, r, out) => {             // a cylinder from a to b, radius r, with a knob at each end
+    const d = new THREE.Vector3().subVectors(b, a), q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    out.push(part(cyl, boneMat, a.clone().add(b).multiplyScalar(0.5), new THREE.Vector3(r, d.length(), r), q));
+    out.push(part(sphere, boneMat, a, new THREE.Vector3(r * 1.6, r * 1.6, r * 1.6)), part(sphere, boneMat, b, new THREE.Vector3(r * 1.6, r * 1.6, r * 1.6)));
+  };
+  bones.forEach((bone, j) => {
+    const b = boxes[j]; if (b.isEmpty()) return;
+    const c = b.getCenter(new THREE.Vector3()), e = b.getSize(new THREE.Vector3()), out = [], n = bone.name;
+    const ax = e.x >= e.y && e.x >= e.z ? 'x' : e.y >= e.z ? 'y' : 'z', L = e[ax];
+    const lo = c.clone(), hi = c.clone(); lo[ax] -= L * 0.4; hi[ax] += L * 0.4;
+    if (n === 'CatHead') {                      // a skull: dome, eye sockets, a little jaw
+      out.push(part(sphere, boneMat, c.clone().add(new THREE.Vector3(0, e.y * 0.02, -e.z * 0.04)), new THREE.Vector3(e.x * 0.31, e.y * 0.3, e.z * 0.33)));
+      for (const sx of [-1, 1]) out.push(part(sphere, sockMat, c.clone().add(new THREE.Vector3(sx * e.x * 0.12, e.y * 0.03, e.z * 0.26)), new THREE.Vector3(e.x * 0.075, e.y * 0.085, e.z * 0.06)));
+      out.push(part(sphere, sockMat, c.clone().add(new THREE.Vector3(0, -e.y * 0.07, e.z * 0.3)), new THREE.Vector3(e.x * 0.03, e.y * 0.025, e.z * 0.03)));
+      out.push(part(sphere, boneMat, c.clone().add(new THREE.Vector3(0, -e.y * 0.17, e.z * 0.13)), new THREE.Vector3(e.x * 0.17, e.y * 0.06, e.z * 0.15)));
+    } else if (n === 'FakeTorso') {             // a spine along the body, ribs around its front half, a pelvis
+      const sp = c.clone(), r = Math.min(e.x, e.y, e.z), top = 'y' === ax ? 'z' : 'y';
+      sp[top] += e[top] * 0.18;
+      const a = sp.clone(), z = sp.clone(); a[ax] -= L * 0.45; z[ax] += L * 0.45;
+      for (let i = 0; i <= 9; i++) out.push(part(sphere, boneMat, a.clone().lerp(z, i / 9), new THREE.Vector3(r * 0.07, r * 0.07, r * 0.07)));
+      along(a, z, r * 0.025, out);
+      const ring = new THREE.TorusGeometry(1, 0.06, 6, 24, Math.PI * 1.4);
+      for (let i = 0; i < 5; i++) {
+        const at = a.clone().lerp(z, 0.42 + i * 0.1), q = new THREE.Quaternion();
+        if (ax === 'z') q.setFromEuler(new THREE.Euler(0, 0, -Math.PI * 0.2));
+        else q.setFromEuler(new THREE.Euler(Math.PI / 2, 0, -Math.PI * 0.2));
+        const rs = 1 - Math.abs(i - 2) * 0.12, ext = (k) => e[k] * 0.36 * rs;
+        const o = part(ring, boneMat, at.clone().add(new THREE.Vector3(0, ax === 'y' ? 0 : -e.y * 0.12, ax === 'y' ? e.z * 0.08 : 0)), new THREE.Vector3(ext('x'), ax === 'y' ? ext('z') : ext('y'), 1), q);
+        out.push(o);
+      }
+      out.push(part(sphere, boneMat, a.clone(), new THREE.Vector3(e.x * 0.22, r * 0.12, r * 0.14)));
+    } else if (/Leg/.test(n)) {                 // a long bone with knobs, and a paw
+      const r = Math.min(e.x, e.z) * 0.09; along(lo, hi, r, out);
+      const foot = lo.clone(); foot[ax] -= L * 0.06; out.push(part(sphere, boneMat, foot, new THREE.Vector3(r * 2.4, r * 1.3, r * 2.8)));
+    } else if (/Tail/.test(n)) {                // vertebrae
+      const r = Math.max(Math.min(e.x, e.y, e.z) * 0.18, 0.006); along(lo, hi, r * 0.45, out);
+    } else if (/Ear/.test(n)) {
+      out.push(part(cone, boneMat, c, new THREE.Vector3(e.x * 0.18, e.y * 0.55, e.z * 0.12)));
+    } else return;
+    // built in model (bind) space; this bone's inverse bind matrix takes it into the bone's own space
+    const grp = new THREE.Group(); out.forEach((o) => grp.add(o));
+    // (the skinned mesh draws a bind-space point at boneWorld x boneInverse, so the same matrix keeps them together)
+    grp.matrixAutoUpdate = false; grp.matrix.copy(sk.skeleton.boneInverses[j]);
+    bone.add(grp);
+  });
+}
+function play(name, { loop = true, fade = 0.3, onDone } = {}) {
+  const clip = clips[name]; if (!clip || !mixer) return;
+  const next = mixer.clipAction(clip);
+  next.reset(); next.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+  next.clampWhenFinished = !loop; next.enabled = true; next.setEffectiveWeight(1);
+  if (current && current !== next && fade > 0) next.crossFadeFrom(current, fade, false); else if (current && current !== next) current.stop();
+  next.play(); current = next;
+  if (onDone) { const h = (e) => { if (e.action === next) { mixer.removeEventListener('finished', h); onDone(); } }; mixer.addEventListener('finished', h); }
+}
+
+// ---------------------------------------------------------------- the view: scan sweep, full X-ray, skin only
+const scan = { y: 1, t: 0, dir: -1, pause: 0, lastBeep: 0, ping: 0 };
+function setView(v, say = true) {
+  view = v; store.set('view', v);
+  document.querySelectorAll('#views button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === v)));
+  if (say) { sound.click(); buzz(8); }
+  if (v === 'scan') { scan.y = 0.5; scan.dir = -1; scan.pause = 0; }
+}
+// the scan line's height in the box, -0.5 (bottom) .. 0.5 (top); above it: X-ray, below it: skin
+function tickScan(dt) {
+  let y;
+  if (view === 'xray') y = -10; else if (view === 'skin') y = 10;
+  else {
+    if (scan.pause > 0) scan.pause -= dt;
+    else {
+      scan.y += scan.dir * dt / 2.6;           // top to bottom in 2.6 s, then back up
+      if (scan.y < -0.56) { scan.y = -0.56; scan.dir = 1; scan.pause = 0.9; }
+      if (scan.y > 0.56) { scan.y = 0.56; scan.dir = -1; scan.pause = 0.9; }
+      if (Math.abs(scan.y) < 0.5 && clock.t - scan.lastBeep > 0.33) { scan.lastBeep = clock.t; if (A.visible && open.k > 0.9) sound.beep(); }
+    }
+    y = scan.y;
+  }
+  scanBar.visible = view === 'scan' && open.k > 0.6 && Math.abs(y) < 0.56;
+  scanBar.position.y = clamp(y, -0.5, 0.5) * H;
+  // the clipping planes live in world space: move them with the box
+  const local = new THREE.Plane(new THREE.Vector3(0, -1, 0), y * H);
+  skinPlane.copy(local).applyMatrix4(F.matrixWorld);
+  rayPlane.copy(local).negate().applyMatrix4(F.matrixWorld);
+}
+
+// ---------------------------------------------------------------- tracking
+const TS = {};
+function initTargets(targets) { for (const t of targets) TS[t.name] = { name: t.name, pr: t.properties, tracked: false, at: 0, gap: 40, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1 }; }
+function onTarget(d) {
+  const t = TS[d.name]; if (!t) return;
+  const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;          // world units per target pixel
+  t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
+  t.p.set(d.position.x, d.position.y, d.position.z);
+  t.s = t.pr.height * upp / H;                                         // world units per metre of the print
+  const now = performance.now();
+  if (!t.tracked) { diag.found++; tDiag(t.name).found++; } else t.gap += (clamp(now - t.at, 8, 400) - t.gap) * 0.2;
+  t.tracked = true; t.at = now;
+}
+function onLost(d) { const t = TS[d.name]; if (t && t.tracked) { t.tracked = false; diag.lost++; tDiag(d.name).lost++; } }
+
+// the side in view: whichever is tracked; with both, keep the current one (the box is the same either way;
+// only the cut-out window is mirrored)
+let side = null;
+function pickSide() {
+  const on = Object.values(TS).filter((t) => t.tracked);
+  if (!on.length) return side;
+  if (!side || !TS[side].tracked) side = on[0].name;
+  return side;
+}
+const motion = { seen: 0, moved: 0 };
+function onMotion(e) {
+  const r = e.rotationRate, l = e.acceleration, a = e.accelerationIncludingGravity;
+  const turn = r && r.alpha != null ? Math.hypot(r.alpha, r.beta, r.gamma) : null;
+  const push = l && l.x != null ? Math.hypot(l.x, l.y, l.z) : a && a.x != null ? Math.abs(Math.hypot(a.x, a.y, a.z) - 9.81) : null;
+  if (turn == null && push == null) return;
+  const now = performance.now(); motion.seen = now;
+  if ((turn != null && turn > STILL_DEG) || (push != null && push > STILL_ACC)) motion.moved = now;
+}
+const pose = { state: 'none', lostAt: 0, snap: true, last: null, valid: false, goneAt: 0 };
+function updatePose(now) {
+  for (const x of Object.values(TS)) if (x.tracked && now - x.at > clamp(x.gap * 3, 120, 300)) x.tracked = false;   // the engine went quiet
+  const n = pickSide(), t = n && TS[n];
+  let st;
+  if (t && t.tracked) { st = 'track'; pose.last = n; pose.lostAt = now; follow(t.p, t.q, t.s); }
+  else if (pose.last) {
+    const gone = now - pose.lostAt, sensed = now - motion.seen < 400, still = sensed ? now - motion.moved > 150 : true;
+    st = still && gone < (sensed ? HOLD_STILL_MS : HOLD_BLIND_MS) ? 'hold' : 'none';
+  } else st = 'none';
+  if (st === 'none' && pose.state !== 'none') pose.goneAt = now;
+  if (st === 'none') pose.snap = true;
+  if (st !== 'none' && pose.state === 'none') arrived(now);
+  pose.state = st; pose.valid = st !== 'none'; A.visible = pose.valid;
+  const flip = (n && FLIP[n]) || 1; if (F.scale.x !== flip) F.scale.x = flip;
+}
+// follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
+function follow(p, q, s) {
+  const aP = pose.snap ? 1 : clamp(A.position.distanceTo(p) / s / 0.0015, 0.5, 1);
+  const aR = pose.snap ? 1 : clamp(A.quaternion.angleTo(q) / 0.03, 0.5, 1);
+  const aS = pose.snap ? 1 : clamp(Math.abs(A.scale.x - s) / s / 0.02, 0.5, 1);
+  pose.snap = false;
+  A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(lerp(A.scale.x, s, aS));
+  A.updateMatrixWorld(true);
+}
+
+// ---------------------------------------------------------------- what happens
+let mode = 'find', everFound = false;
+function setMode(m) { mode = m; $('hud').dataset.mode = m; }
+function arrived(now) {
+  const away = now - (pose.goneAt || 0);
+  if (!everFound || away > REOPEN_AFTER_MS) { open.k = 0; open.target = 1; sound.open(); buzz([10, 40, 18]); if (!everFound) postEvent('found', {}); }
+  everFound = true; setMode('seen'); hint('');
+  diag.firstFoundS = diag.firstFoundS || +((now - camStartAt) / 1000).toFixed(1);
+}
+let lostFor = 0;
+function hint(text) { if ($('hint').textContent !== text) $('hint').textContent = text || ''; }
+
+// Bobo reacts to a tap; a sideways drag turns him (and he turns back)
+const life = { yaw: 0, yawV: 0, drag: false, busy: false, t: 0 };
+function poke() {
+  if (!A.visible || open.k < 0.9 || life.busy) return;
+  life.busy = true; sound.mew(); buzz(12);
+  const pick = Math.random() < 0.5 ? 'PawRaise' : 'TailWag';
+  play(pick, { loop: false, fade: 0.2, onDone: () => { life.busy = false; play('Sit', { fade: 0.35 }); } });
+  if (view === 'scan') { scan.y = 0.56; scan.dir = -1; scan.pause = 0; }   // a fresh sweep over him
+}
+const gest = { id: null, x: 0, lx: 0, t: 0, moved: 0 };
+canvas_on('pointerdown', (e) => { gest.id = e.pointerId; gest.x = gest.lx = e.clientX; gest.t = performance.now(); gest.moved = 0; life.drag = true; });
+canvas_on('pointermove', (e) => {
+  if (e.pointerId !== gest.id) return;
+  const dx = e.clientX - gest.lx; gest.lx = e.clientX; gest.moved += Math.abs(dx);
+  life.yawV = dx / innerWidth * Math.PI * 2.4 / Math.max(1 / 60, 0.016); life.yaw += dx / innerWidth * Math.PI * 2.4;
+});
+canvas_on('pointerup', (e) => { if (e.pointerId !== gest.id) return; gest.id = null; life.drag = false; if (gest.moved < 12 && performance.now() - gest.t < 400) poke(); });
+canvas_on('pointercancel', () => { gest.id = null; life.drag = false; });
+function canvas_on(ev, fn) { $('cam').addEventListener(ev, fn); }
+
+const clock = { t: 0 };
+function tick(dt) {
+  clock.t += dt;
+  const now = performance.now();
+  updatePose(now);
+  if (!pose.valid) {
+    lostFor += dt;
+    if (mode !== 'find' && lostFor > 0.6) setMode('find');
+    if (mode === 'find') hint(everFound ? 'Find Bobo again' : 'Point at Bobo on your keychain or tee');
+    sound.humTo(0);
+  } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
+
+  // the box opening: the print sinks back, the walls grow, then the film and Bobo arrive
+  if (open.k < open.target) open.k = Math.min(open.target, open.k + dt / (REDUCED ? 0.4 : 1.25));
+  const k = open.k, ek = easeInOut(clamp(k / 0.7, 0, 1));
+  open.depth += (open.dWant * ek - open.depth) * (k < 1 ? 1 : clamp(dt * 6, 0, 1));   // depth changes glide
+  const D = Math.max(open.depth, 0.0005);
+  box.scale.z = D;
+  lid.position.z = -Math.max(D - 0.003, 0.0004);
+  lid.material.opacity = 1 - easeInOut(clamp((k - 0.62) / 0.3, 0, 1));
+  lid.visible = lid.material.opacity > 0.01;
+  film.material.opacity = 0.55 * easeInOut(clamp((k - 0.62) / 0.3, 0, 1));
+  const kb = easeOut(clamp((k - 0.5) / 0.5, 0, 1));
+  inside.visible = k > 0.5;
+  // Bobo floats in the middle of the box, rising from the back wall as it opens
+  life.t += dt;
+  if (!life.drag) { life.yawV *= Math.pow(0.04, dt); life.yaw += life.yawV * dt * 0.02; life.yaw *= Math.pow(0.35, dt); }
+  bob.position.set(0, Math.sin(life.t * 1.4) * H * 0.025, -Math.min(D * lerp(0.92, 0.5, kb), D * 0.92 - H * 0.2, H * 0.6));   // the middle, but never so deep he hides behind the rim
+  bob.rotation.set(Math.sin(life.t * 0.7) * 0.05, life.yaw + Math.sin(life.t * 0.45) * 0.28, Math.sin(life.t * 0.9) * 0.03);
+  bob.scale.setScalar(lerp(0.55, 1, kb) * Math.min(1, D / (H * 0.62)) || 0.001);   // a shallow box: a smaller Bobo, so he never pokes out
+  mixer.update(dt);
+  tickSpecks(dt);
+  F.updateMatrixWorld(true);
+  tickScan(dt);
+  sound.humTo(pose.valid && k > 0.8 && view !== 'skin' ? 1 : 0);
+  recTick();
+  diag.fpsN++;
+}
+
+// ---------------------------------------------------------------- UI
+document.querySelectorAll('#views button').forEach((b) => { b.onclick = () => setView(b.dataset.v); });
+function segInit(id, cur, fn) {
+  const btns = [...document.querySelectorAll(`#${id} button`)];
+  const sync = (v) => btns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === String(v))));
+  sync(cur); btns.forEach((b) => { b.onclick = () => { sync(b.dataset.v); fn(b.dataset.v); sound.click(); }; });
+}
+segInit('seg-win', BOX.shape, (v) => { store.set('win', v); if (F.children.length) buildWindow(v); else BOX.shape = v; });
+segInit('seg-depth', String(BOX.depthK), (v) => { BOX.depthK = +v; store.set('depth', v); open.dWant = H * BOX.depthK; if (walls.back) repeatWalls(); });
+const optsEl = $('opts');
+function openOpts() { optsEl.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); optsEl.querySelector('.x').focus(); }
+function closeOpts() { optsEl.hidden = true; $('b-opts').setAttribute('aria-expanded', 'false'); $('b-opts').focus(); }
+$('b-opts').onclick = openOpts;
+optsEl.querySelectorAll('[data-close]').forEach((el) => { el.onclick = closeOpts; });
+addEventListener('keydown', (e) => { if (e.key === 'Escape' && !optsEl.hidden) closeOpts(); });
+const soundBtn = $('o-sound'); soundBtn.setAttribute('aria-checked', String(sound.on));
+soundBtn.onclick = () => { sound.on = !sound.on; store.set('sound', sound.on ? '1' : '0'); soundBtn.setAttribute('aria-checked', String(sound.on)); if (!sound.on) sound.humTo(0); };
+$('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
+$('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
+$('err-retry').onclick = () => location.reload();
+function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; }
+
+// the splash preview box tilts with the pointer (or slowly by itself)
+(() => {
+  const box = document.querySelector('#stage .box'); if (!box) return;
+  let t = 0, raf = 0, user = 0;
+  const set = (rx, ry) => { box.style.setProperty('--rx', rx.toFixed(1) + 'deg'); box.style.setProperty('--ry', ry.toFixed(1) + 'deg'); };
+  addEventListener('pointermove', (e) => { if ($('splash').hidden) return; user = performance.now(); set(-(e.clientY / innerHeight - 0.5) * 18, (e.clientX / innerWidth - 0.5) * 28); });
+  if (REDUCED) return;
+  const loop = () => { if ($('splash').hidden) return; t += 0.012; if (performance.now() - user > 2500) set(6 + Math.sin(t * 0.8) * 4, Math.sin(t) * 14); raf = requestAnimationFrame(loop); };
+  raf = requestAnimationFrame(loop);
+})();
+
+// ---------------------------------------------------------------- 8th Wall pipeline
+const canvas = $('cam');
+const DPR = clamp(+params.get('dpr') || 1, 1, 3);   // 1x by default like Off the Chain (fastest pickup); ?dpr=2 sharper
+function sizeCanvas() {
+  const dpr = Math.min(devicePixelRatio || 1, DPR), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+}
+let last = 0, camStartAt = 0, built = false;
+const appModule = (data) => ({
+  name: 'xray-bobo',
+  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); built = true; $('hud').hidden = false; setMode('find'); },
+  onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (built) tick(dt); flushDiag(false); },
+  onCameraStatusChange: ({ status, video, stream }) => {
+    camLog(status);
+    if (status === 'hasStream') { kickVideo(); noteStream(stream); }
+    if (status === 'hasVideo') {
+      hideTapCam(); camStartAt = performance.now(); tuneCamera(video);
+      $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
+      if (store.get('how', '0') !== '1') { $('how').hidden = false; $('b-go').focus(); }
+    }
+    if (status === 'requesting') hint('Allow camera access to begin');
+    if (status === 'failed') camFailed('failed');
+  },
+  onException: (e) => { console.error('XR', e); diag.errors.push('XR: ' + String((e && e.message) || e).slice(0, 200)); flushDiag(true, true); showError('Something went wrong', String((e && e.message) || e)); },
+  listeners: [
+    { event: 'reality.imagefound', process: ({ detail }) => onTarget(detail) },
+    { event: 'reality.imageupdated', process: ({ detail }) => onTarget(detail) },
+    { event: 'reality.imagelost', process: ({ detail }) => onLost(detail) },
+  ],
+});
+async function askMotion() {
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) { const r = await DeviceMotionEvent.requestPermission(); diag.motion = r; if (r !== 'granted') return; }
+    addEventListener('devicemotion', onMotion);
+  } catch (e) { diag.motion = 'error:' + (e && e.name); }
+}
+async function start() {
+  if (!loaded) return;
+  $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
+  sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
+  const data = await assets;
+  sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
+  initTargets(data.tdata);
+  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: data.tdata });
+  XR8.addCameraPipelineModules([
+    XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.XrController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(),
+    appModule(data),
+    { name: 'xr-capture', onRender: () => { if (capture) capture.frame(); } },
+  ]);
+  camLog('run'); postEvent('scan', {});
+  setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
+  XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
+}
+$('b-start').onclick = start;
+
+// ---------------------------------------------------------------- camera (the same handling as Off the Chain / Spray Bobo)
+// iPhones: ask for the multi-lens camera (close focus for a keychain) at 1920x1440; no picture in 4 s: reload once
+// with the standard camera.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const MACRO_LENSES = ['Back Triple Camera', 'Back Dual Wide Camera'];
+let iosStd = false; try { iosStd = sessionStorage.getItem('xr-ios-std') === '1'; } catch (e) { /* none */ }
+const IOS_MACRO = IOS && params.get('macro') !== '0' && !iosStd;
+if (IOS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
+  const lensId = () => (IOS_MACRO ? md.enumerateDevices().then((ds) => { for (const n of MACRO_LENSES) { const d = ds.find((x) => x.kind === 'videoinput' && x.label === n); if (d) return d.deviceId; } return null; }).catch(() => null) : Promise.resolve(null));
+  md.getUserMedia = (c) => {
+    const v = c && c.video; if (!v || v === true) return orig(c);
+    return lensId().then((id) => {
+      const nv = { ...v, width: { ...(v.width || {}), ideal: 1920 }, height: { ...(v.height || {}), ideal: 1440 } };
+      if (id) { nv.deviceId = { exact: id }; delete nv.facingMode; }
+      diag.asked = nv; return orig({ ...c, video: nv }).catch((e) => { diag.askFailed = String(e && e.name || e); return orig(c); });
+    });
+  };
+}
+function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
+function tuneCamera(video) {
+  try {
+    const tr = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!tr) return;
+    const caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes('continuous')) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+    if (IOS_MACRO && /Triple|Dual Wide/.test(tr.label) && caps.zoom) { const z = Math.min(Math.max(caps.zoom.min < 1 ? 1 : 2, caps.zoom.min), caps.zoom.max); tr.applyConstraints({ advanced: [{ zoom: z }] }).catch(() => {}); }
+    const st = tr.getSettings ? tr.getSettings() : {};
+    diag.camera = { label: tr.label, width: st.width || video.videoWidth, height: st.height || video.videoHeight, frameRate: st.frameRate, focusMode: st.focusMode, zoom: st.zoom };
+  } catch (e) { diag.errors.push('tune: ' + String(e).slice(0, 120)); }
+}
+let tapCamShown = false;
+function kickVideo() {
+  setTimeout(() => {
+    if (camStartAt) return; camLog('notPlaying');
+    if (IOS_MACRO) { try { sessionStorage.setItem('xr-ios-std', '1'); } catch (e) { /* none */ } flushDiag(true, true); location.reload(); return; }
+    showTapCam();
+  }, 4000);
+}
+function noteStream(stream) { try { const t = stream && stream.getVideoTracks()[0]; diag.stream = t ? { label: t.label, state: t.readyState } : null; } catch (e) { /* none */ } }
+function showTapCam() {
+  if (camStartAt || tapCamShown) return; tapCamShown = true;
+  const card = document.createElement('div'); card.id = 'tap-cam'; card.setAttribute('role', 'alert');
+  card.innerHTML = '<h2>Waiting for the camera</h2><p>Another app or tab may be using it. Close the Camera app, any video call and other tabs that use the camera, then tap Try again.</p><div class="row"><button type="button" class="primary" data-a="reload">Try again</button><button type="button" data-a="play">Start camera here</button></div>';
+  card.querySelector('[data-a=reload]').onclick = () => location.reload();
+  card.querySelector('[data-a=play]').onclick = () => { const v = engineVideo(); if (v) { v.muted = true; v.play().catch(() => {}); } setTimeout(() => { if (!camStartAt) camFailed('no video after tap'); }, 8000); };
+  document.body.appendChild(card); card.querySelector('button').focus();
+}
+function hideTapCam() { const el = $('tap-cam'); if (el) el.remove(); }
+function camFailed(why) {
+  if (camStartAt || diag.camFailed) return; diag.camFailed = why; flushDiag(true, true); hideTapCam();
+  if (IOS_MACRO) try { sessionStorage.setItem('xr-ios-std', '1'); } catch (e) { /* none */ }
+  showError('The camera didn\'t start', 'Another app or tab may be using it. Close the Camera app and other tabs that use the camera, then tap Try again. If it still won\'t start, allow camera access for this site in your browser settings.');
+}
+
+// ---------------------------------------------------------------- photo and video (the Cola Run recorder)
+const LOGO = { evade: new Image(), act: new Image() };
+LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
+function drawWatermark(c, Wd, Hd) {
+  const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
+  if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
+  if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h); }
+}
+let capture = null, recFrom = 0, shots = 0;
+try {
+  capture = new ColaCapture({
+    canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'xray-bobo', audioContext: null,
+    connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
+    overlay: (c, Wd, Hd) => drawWatermark(c, Wd, Hd),
+    on: (name) => { if (name === 'recordStart') { buzz(25); recUi(true); } if (name === 'recordStop' || name === 'error') recUi(false); },
+  });
+  Object.assign(capture.settings, {
+    corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#4fd6e8', maxSeconds: 30,
+    hintText: 'Film Bobo inside the box and send him to the globe', sendLabel: 'Send to Where is Bobo?',
+    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Bobo X-Ray clip', filePrefix: 'bobo-xray', backLabel: 'Back to the camera',
+  });
+  capture.apply(); capture.setVisible(false);
+} catch (e) { console.warn('recorder', e); capture = null; }
+function recUi(on) {
+  $('b-shutter').classList.toggle('rec', on); $('rec-time').hidden = !on;
+  $('b-shutter').setAttribute('aria-label', on ? 'Stop recording' : 'Take a photo. Press and hold to film');
+  recFrom = on ? performance.now() : 0; if (!on) $('rec-prog').style.strokeDashoffset = '207';
+}
+function recTick() {
+  if (!recFrom) return;
+  const sec = (performance.now() - recFrom) / 1000, max = (capture && capture.settings.maxSeconds) || 30;
+  $('rec-prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
+  const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
+}
+async function takePhoto() {
+  try {
+    sound.shutter(); buzz(20); const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
+    const b64 = await XR8.CanvasScreenshot.takeScreenshot();
+    const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawWatermark(g, c.width, c.height);
+    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.92));
+    const file = new File([blob], `bobo-xray-${++shots}.jpg`, { type: 'image/jpeg' }), url = URL.createObjectURL(blob);
+    $('shot-img').src = url; $('shot-save').href = url; $('shot-save').download = file.name; $('shot-save').hidden = false;
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo X-Ray' }).catch(() => {});
+    $('shot').hidden = false; postEvent('share', { what: 'xray-photo', view });
+  } catch (e) { console.error(e); }
+}
+const HOLD_MS = 320; let holding = false, holdT = 0;
+const sh = $('b-shutter');
+sh.addEventListener('contextmenu', (e) => e.preventDefault());
+sh.addEventListener('pointerdown', (e) => {
+  if (e.button > 0) return;
+  if (capture && capture.status === 'recording') { holding = false; return; }
+  holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
+  clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) capture.start(); }, HOLD_MS);
+});
+sh.addEventListener('pointerup', () => {
+  if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
+  if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
+});
+sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
+sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); takePhoto(); } });
+$('shot-close').onclick = () => { $('shot').hidden = true; };
+
+// ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
+const SID = 'xr-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+function postEvent(type, props) {
+  if (params.has('nolog')) return;
+  try { fetch('/api/bobo/events', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, source: 'xray-bobo', sessionId: SID, props }) }).catch(() => {}); } catch (e) { /* offline */ }
+}
+
+// ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
+// Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'xray-bobo').
+const diag = { page: 'xray-bobo', sid: SID, found: 0, lost: 0, fpsN: 0, errors: [], steps: [], targets: {} };
+function tDiag(n) { return diag.targets[n] || (diag.targets[n] = { found: 0, lost: 0 }); }
+function camLog(s) { diag.steps.push([s, Math.round(performance.now())]); if (diag.steps.length > 40) diag.steps.shift(); }
+let flushAt = 0;
+function flushDiag(force, always = false) {
+  const now = performance.now(); if (!force && now - flushAt < 10000) return; flushAt = now;
+  if ((!camStartAt && !always) || params.has('nolog') || (LIVE_SITE && !params.has('diag'))) return;
+  const body = JSON.stringify({ ...diag, secs: Math.round((now - (camStartAt || now)) / 1000), fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0, view, shape: BOX.shape, depthK: BOX.depthK, screen: [innerWidth, innerHeight, devicePixelRatio] });
+  try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
+}
+addEventListener('pagehide', () => flushDiag(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushDiag(true); });
+addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
+
+// automated tests (?test)
+if (params.has('test')) window.__xr = {
+  get pose() { return pose.state; }, get mode() { return mode; }, get open() { return open.k; }, get depth() { return open.depth; }, get side() { return side; },
+  get view() { return view; }, setView, poke, diag,
+  target: () => { const t = side && TS[side]; return t ? { name: side, tracked: t.tracked, p: t.p.toArray(), s: t.s } : null; },
+  // the screen box of the window's corners and of Bobo (to check he stays inside the window)
+  screen: () => {
+    if (!A.visible) return null;
+    const pr = (v) => { const p = v.clone().project(camera); return [(p.x + 1) / 2 * innerWidth, (1 - p.y) / 2 * innerHeight]; };
+    const win = [[-W / 2, -H / 2], [W / 2, -H / 2], [W / 2, H / 2], [-W / 2, H / 2]].map(([x, y]) => pr(F.localToWorld(new THREE.Vector3(x, y, 0))));
+    const bb = new THREE.Box3().setFromObject(model.getObjectByName('Bobo') || model, true), c = bb.getCenter(new THREE.Vector3());
+    return { win, bobo: pr(c), boboBox: [pr(bb.min), pr(bb.max)] };
+  },
+  fake: (name, d) => onTarget({ name, position: d.position, rotation: d.rotation, scale: d.scale, scaledHeight: d.scaledHeight || 1 }),
+};
+
+// desktop: a QR to open it on the phone
+if (!TOUCH) {
+  $('desk').hidden = false;
+  try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
+}
