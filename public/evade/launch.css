@@ -667,3 +667,15 @@
   .tw-switch button { padding: 2px 16px; font-size: 12px; min-height: 40px; }
   .tw-long { display: none; }   /* "Cola Run" / "Off the Chain": a short switch that clears the side nav button */
 }
+
+/* screen recordings under "1 keychain, 2 experiences": three phones, a little larger than the fan reel */
+.reel--screens .clip { flex-basis: clamp(170px, 17vw, 250px); }
+.reel--screens .clip:nth-child(1) { transform: translateY(18px) rotate(-4deg); }
+.reel--screens .clip:nth-child(2) { transform: translateY(-8px); }
+.reel--screens .clip:nth-child(3) { transform: translateY(18px) rotate(4deg); }
+.reel--screens .clip:hover { transform: translateY(-14px) scale(1.04); }
+@media (max-width: 899px) {
+  .reel--screens .clip { flex-basis: min(46vw, 230px); }
+  .reel--screens .clip:nth-child(n) { transform: none; }
+  .reel--screens .clip:nth-child(even) { transform: translateY(14px); }
+}

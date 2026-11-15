@@ -302,8 +302,8 @@ qrSvg()
 // Each clip loads when it first nears the viewport and only plays while it is on screen,
 // so a phone never decodes four videos it can't see. Reduced motion: posters + controls, no autoplay.
 (() => {
-  const reel = $("#reel");
-  if (!reel) return;
+  const reels = $$(".reel");
+  if (!reels.length) return;
   let tracked = false;
   const io = new IntersectionObserver(
     (entries) => {
@@ -327,7 +327,7 @@ qrSvg()
     },
     { threshold: 0.35 },
   );
-  $$("video", reel).forEach((v) => io.observe(v));
+  reels.forEach((reel) => $$("video", reel).forEach((v) => io.observe(v)));
 })();
 
 /* ---------------------------------------------------------------- perks: pointer spotlight */
