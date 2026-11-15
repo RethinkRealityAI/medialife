@@ -859,6 +859,16 @@ curl -H "Authorization: Bearer $MEDIA_API_TOKEN" -OJ \
   "https://medialife.ai/api/media/files/<id>?download=1"
 ```
 
+Or use the helper, which reads `MEDIA_API_TOKEN` from the environment:
+
+```sh
+node scripts/media-pull.mjs type=video client=EVADE             # list
+node scripts/media-pull.mjs type=video --download out/videos    # list and download
+```
+
+The Media Library is the source of truth for videos and content the team uploads.
+Agents pull from it rather than asking for links.
+
 On web pages, use `publicUrl` (or `embedHtml`). It needs no auth and caches well. A private
 file has `publicUrl: null`, so ask an admin to make it public rather than embedding
 `downloadUrl`. Always respect `rights`, `usageNotes` and `clientPolicy`.
