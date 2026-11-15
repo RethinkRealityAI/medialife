@@ -668,14 +668,17 @@
   .tw-long { display: none; }   /* "Cola Run" / "Off the Chain": a short switch that clears the side nav button */
 }
 
-/* screen recordings under "1 keychain, 2 experiences": three phones, a little larger than the fan reel */
-.reel--screens .clip { flex-basis: clamp(170px, 17vw, 250px); }
-.reel--screens .clip:nth-child(1) { transform: translateY(18px) rotate(-4deg); }
-.reel--screens .clip:nth-child(2) { transform: translateY(-8px); }
-.reel--screens .clip:nth-child(3) { transform: translateY(18px) rotate(4deg); }
-.reel--screens .clip:hover { transform: translateY(-14px) scale(1.04); }
+/* screen recordings under "1 keychain, 2 experiences": three phones, each with the experience name under it */
+.reel--screens { margin-top: clamp(40px, 6vw, 72px); align-items: flex-start; }
+.reel--screens .scr { flex: 0 0 clamp(170px, 17vw, 250px); display: flex; flex-direction: column; align-items: center; gap: 14px; transition: transform 0.6s var(--ease); }
+.reel--screens .clip { flex: none; width: 100%; transform: none; }
+.reel--screens .clip:hover { transform: translateY(-8px) scale(1.03); }
+.reel--screens .scr:nth-child(1) { transform: translateY(18px) rotate(-4deg); }
+.reel--screens .scr:nth-child(2) { transform: translateY(-8px); }
+.reel--screens .scr:nth-child(3) { transform: translateY(18px) rotate(4deg); }
+.scr-name { margin: 0; text-align: center; font-size: clamp(15px, 1.3vw, 18px); font-weight: 600; color: var(--text, #fff); }
 @media (max-width: 899px) {
-  .reel--screens .clip { flex-basis: min(46vw, 230px); }
-  .reel--screens .clip:nth-child(n) { transform: none; }
-  .reel--screens .clip:nth-child(even) { transform: translateY(14px); }
+  .reel--screens { margin-top: 28px; }
+  .reel--screens .scr { flex-basis: min(46vw, 230px); scroll-snap-align: start; }
+  .reel--screens .scr:nth-child(n) { transform: none; }
 }
