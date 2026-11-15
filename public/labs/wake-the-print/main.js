@@ -1,7 +1,7 @@
 // Wake the Print (POC): image-tracked AR on the open-source 8th Wall engine (@8thwall/engine 0.1.0, MIT) + plain
 // three.js, built from the immersive skill's 8th Wall template. Engine boot, pose maths, follow(), grace/stale
 // handling, canvas sizing, photo, test log and error sheets are the template's, unchanged. The CONTENT is Spark:
-//   - pops out of the print the first time it is found (spark.js), hovers over it
+//   - pops out of the print the first time it is found (mascot.js: the Meshy mascot, with spark.js as the fallback), stands over it
 //   - "sees" the room on the phone (senses.js: MediaPipe object detector, brightness, main colour)
 //   - talks by voice (voice.js: ElevenLabs agent with four client tools: act, look_around, set_color, remember)
 //   - hops onto an open palm (senses.js: MediaPipe hand landmarker) and back onto the print
@@ -12,7 +12,7 @@
 // level (not under the anchor) so it can travel between the print and the palm; its world transform is computed
 // from the anchor (or the palm) every frame.
 import * as THREE from 'three';
-import { createSpark, SPARK_COLORS } from './spark.js';
+import { createSpark, SPARK_COLORS } from './mascot.js';
 import { createSenses } from './senses.js';
 import { createVoice } from './voice.js';
 
