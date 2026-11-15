@@ -27,6 +27,7 @@ const REVIEW_TITLE: Record<string, string> = {
   "cola-run": "New Cola Run clip",
   "keychain-ar": "New keychain AR clip",
   "spray-bobo": "New Spray Bobo clip",
+  "xray-bobo": "New Bobo X-Ray clip",
 };
 
 /** A game clip waiting for review: enough for a pin, nothing that shows the clip. */
