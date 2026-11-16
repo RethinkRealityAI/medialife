@@ -99,12 +99,25 @@ diag.wtp = {
   gestures: {},         // samples per gesture name the model reported (any score)
   fired: {},            // actions fired by gestures
   lostWithHand: 0,      // print losses while a real hand was in view
+  handDelegate: null,   // 'GPU' | 'CPU': the hand model's delegate now
+  handCanary: [],       // one entry per hand model tried: { model, delegate, ok, hands, gesture, score, ms[, error] }
+  handSwitched: false,  // the GPU watchdog switched to CPU (no hand in the first 60 video runs)
 };
 
 // ---------------------------------------------------------------- Spark, senses, voice
 const spark = createSpark();
 spark.root.visible = false;
-const senses = createSenses({ onStatus: (s) => { diag.wtp.senses = s; if (s.objects === 'ready' && firstLookDone) doLook(false); } });
+// ?hand=cpu|gpu forces the hand model's delegate (compare on a phone). Test only: ?canaryfail=gesture-GPU,... makes those
+// canary runs report no hands; ?handwatch=n fires the GPU watchdog after n runs (see senses.js).
+const senses = createSenses({
+  hand: params.get('hand'),
+  test: params.has('test') ? { canaryFail: (params.get('canaryfail') || '').split(',').filter(Boolean), watchRuns: parseInt(params.get('handwatch'), 10) || 0 } : null,
+  onStatus: (s) => {
+    const { handCanary, handSwitched, ...rest } = s;
+    diag.wtp.senses = rest; diag.wtp.handDelegate = s.handDelegate; diag.wtp.handCanary = handCanary; diag.wtp.handSwitched = handSwitched;
+    if (s.objects === 'ready' && firstLookDone) doLook(false);
+  },
+});
 let seenText = '', firstLookDone = false;
 
 const tools = {

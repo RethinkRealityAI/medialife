@@ -24,6 +24,8 @@ To test without the tee, open `target/` on a laptop screen and point the phone a
 | `?test` | Exposes `window.__ar` (template) and `window.__wtp` for the simulator: `{ spark, senses, voice, tools, mem, getVars, describe, perch, camera, printShown, handInfo, lose(), fakeHand(...) }`. See **Test hooks**. |
 | `?nolog` / `?diag` | Test log off / on (on by default on localhost and deploy previews). Records have `page: 'wake-the-print'` and a `wtp` block, see **Test log**. |
 | `?dpr=2` | Draw at 2x (sharper, slower pickup). |
+| `?hand=cpu` / `?hand=gpu` | Forces the hand model's delegate, to compare on a phone: no fallback to the other delegate and no watchdog. The canary still runs and is logged (the model is used even if it fails). |
+| `?canaryfail=gesture-GPU,...` / `?handwatch=<n>` | Test only (with `?test`): those canary runs report no hands / the GPU watchdog fires after n runs, counting every run as handless. |
 
 ## Files
 - `index.html`: all DOM and CSS (flat colours; shutter bottom centre, mic left of it, menu right of it).
@@ -32,6 +34,7 @@ To test without the tee, open `target/` on a laptop screen and point the phone a
   senses wiring, the agent tools, captions, memory, menu and `?test` hooks.
 - `spark.js`: the character (placeholder until a designed mascot is picked). `root`, `update`, `act`, `setColor`,
   `setMouth`, `setListening`, `setLook`, `pop`, `arrive`.
+- `hand-check.jpg`: the hand canary, a real thumbs-up photo (MediaPipe sample asset, 382x406, 33 KB).
 - `senses.js`: MediaPipe Gesture Recognizer (~12 Hz; falls back to the Hand Landmarker if it does not load) and
   Object Detector (on demand), `@mediapipe/tasks-vision@0.10.14` from jsDelivr, models from Google storage, loaded
   after the camera starts; never blocks Start. `senses.hand` = `{ seen, at, open, cx, cy, palmPx, landmarks, gesture, score }`.
@@ -75,6 +78,19 @@ never while another action is playing (a gesture still held then fires when it m
 - The time windows stretch on a phone whose hand model runs slowly (gap allowance 1.5x, "in view" 2.5x the measured
   time between samples).
 
+## Hand model: canary and watchdog
+On a real Samsung phone (Samsung Browser 31 / Chrome 148) the GPU delegate created fine, ran at ~23 ms a call and
+returned no hands at all (`handSeen: 0` in 611 and 869 runs), while the CPU object detector on the same video worked.
+Creating without an error is not proof that a delegate works, so:
+- **Canary**: every hand model, once created, is run on `hand-check.jpg`. It is used only if a hand comes back. Order:
+  gesture GPU, gesture CPU, landmarker GPU, landmarker CPU; the first that passes wins; none -> `hands: 'failed'`. A
+  model that fails is closed. The canary call uses the same rising timestamp clock as the video frames (VIDEO mode).
+- **Watchdog**: a GPU model with no hand at all in its first 60 video runs (~5 s) is closed and rebuilt on CPU
+  (canary again), once; it never flips back. Note: a print with no hands in it and no fan hand for 12 s also trips it
+  (harmless, just slower).
+- **CPU input**: on CPU the model gets a 384 px (long side) copy of the frame at 8 Hz, timed from the END of the last
+  call so slow calls never pile up. Landmarks are 0..1, so `palmPx` is still worked out in real video pixels.
+
 ## How Spark moves
 - On the print: scene-level object placed every frame from the print anchor. Height = 0.32 x print height; it sits
   `H*0.08 + popLift*H*0.6` out from the print (pressed flat at the start of the pop, then springs up).
@@ -92,11 +108,13 @@ never while another action is playing (a gesture still held then fires when it m
 - `__wtp.handInfo`: the last sample's verdict (`cls`: real / art / unknown), screen point, `onScreen`, `inQuad`,
   `depthRatio` (hand distance / print distance), the print's outline on screen, the current gesture and hold.
 - `__wtp.lose()`: the same path as an engine `imagelost` event (the engine's next update finds the print again).
-- `__wtp.senses.setPaused(true)` stops the hand model (the simulator's CPU model is slow);
+- `__wtp.senses.setPaused(true)` stops the hand model (it is slow in the simulator);
   `__wtp.senses.analyse(imageOrCanvas)` runs the hand model once on a picture as if it were the camera frame.
 
 ## Test log
-`wtp` block: `senses` (status incl. `handModel`: gesture / landmarker), `hand` (model Hz, ms per run, runs), `perch`
+`wtp` block: `senses` (status incl. `handModel`: gesture / landmarker, `handDelegate`, `handForced`), `hand` (model Hz,
+ms per run, runs, `handErrors`: failed calls), `handDelegate` (GPU / CPU now), `handCanary` (one entry per model tried:
+`{ model, delegate, ok, hands, gesture, score, ms, error? }`), `handSwitched` (the watchdog moved GPU -> CPU), `perch`
 (times Spark landed on a palm), tool call counts, voice state changes with reasons, visits, last look, and the hand
 counters: `handSeen` (samples with a hand; a fake hand gives one per frame), `handOpen`, `handAccepted` (real),
 `handRejected` (read as the artwork), `handNoPrint` (no print pose to judge by), `handOverPrint` (centre inside the
@@ -111,9 +129,36 @@ day, 3 at once) and each visit is capped by Spark's energy. **Before any client 
 from a Netlify function (key in Netlify env).**
 
 ## Tested / Not tested
+### Hand canary round (2026-11-16)
+Real phone, before this round (Samsung Browser 31 and Chrome 148 on Android, two sessions): the gesture model on the
+**GPU delegate** loaded with no error, ran 611 / 869 times at ~23 ms and returned **no hands** (`handSeen: 0`), although
+the print's drawn hands are found in most frames in the simulator. The CPU object detector found a person on the same
+video. This round adds the canary, the watchdog and the CPU input (see **Hand model** above).
+
+Tested, headless simulator only (same setup as below; note its "GPU" delegate is SwiftShader software GL, which
+works, so the real phone's GPU failure could only be simulated):
+- Earlier checks still pass (a-d on the static video, a + gestures on the moving print).
+- Canary: GPU gesture model passes (Thumb_Up 0.74). `?hand=cpu` uses CPU only and passes (Thumb_Up 0.74). With a
+  test hook making canaries fail, the next candidate is used and every attempt is in `handCanary`; all four failing
+  gives `hands: 'failed'`. `?hand=gpu` keeps GPU even when its canary fails.
+- Watchdog (test hook: threshold 10 runs, every run counted as handless): exactly one switch to CPU,
+  `handSwitched: true`, and the CPU model then found the print's drawn hands (handSeen 4 -> 40). `?hand=gpu` never
+  switches. No timestamp / run errors, no console errors.
+- CPU timing (isolated calls, 960x720 video): ~75 ms with palm detection at either size, tracking ~45 ms full size
+  vs ~35 ms at 384 px. So the downscale saves little in the model itself (MediaPipe resizes to fixed tensor sizes);
+  inside the sim's render loop each call took ~300 ms because the page competes for the same CPU.
+
+Not tested (needs the real phone):
+- Whether the canary catches this phone's GPU failure. The canary feeds a still photo (an `<img>`), the camera feeds a
+  `<video>`; if the phone's GPU path breaks only on video frames the canary passes and the watchdog has to catch it
+  (~12 s with no hand). Compare `?hand=gpu` and `?hand=cpu` on the phone and read `wtp.handCanary`, `handSwitched`,
+  `handSeen` and `hand.handMsAvg`.
+- CPU speed on the phone with the 384 px input, and the frame rate (`fpsAvg`) with it running.
+
 ### Gestures round (2026-11-16), headless simulator only
 Same simulator (Chromium + SwiftShader, 390x844, fake camera from y4m videos of the print: a static one and a moving
-and rotating one). The CPU hand model ran at ~0.5 s a call there, so the fake-hand checks pause it.
+and rotating one). The hand model ran at ~0.5 s a call there (GPU delegate on SwiftShader software GL), so the
+fake-hand checks pause it.
 
 Tested:
 - The gesture model (`gesture_recognizer.task`, HTTP 200) loads through the proxy and runs on the print video with no
@@ -140,7 +185,8 @@ Not tested (needs a real phone):
 - Whether the ART_NEAR (0.8) and PERCH_NEAR (0.92) depth rules hold for real hands and real palm sizes. Check
   `wtp.depthOverPrint`, `handRejected` vs `handAccepted` and `perchTooFar` in the phone log.
 - Gesture model speed on phones (MediaPipe logs that the gesture classifier runs on CPU / XNNPACK even with the GPU
-  delegate). Check `wtp.hand.handMsAvg`.
+  delegate). Check `wtp.hand.handMsAvg`. (Later on a real Samsung phone: GPU ran at ~23 ms but found no hands, see
+  the hand canary round.)
 - How often a hand beside the print still makes tracking drop (`lostWithHand`), and how the chips and the hint read
   on a real screen, in landscape and with reduced motion.
 
@@ -168,6 +214,7 @@ Not tested:
 - Any real phone (Android Chrome, iPhone Safari), glare, focus, real hands, real palm distances.
 - Voice with a microphone (WebRTC), lip sync from real audio, the energy timeout and goodbye.
 - Frame rate on phones with the hand model running: in the simulator the hand model ran at ~410 ms a call (2 Hz,
-  software GL) inside the render loop, and everything slowed (the 0.8 s hop took ~4 s). Phones should get the GPU
-  delegate; a phone that falls back to CPU will stutter. Check `fpsAvg` and `wtp.hand.handMsAvg` in the phone log.
+  software GL) inside the render loop, and everything slowed (the 0.8 s hop took ~4 s). (Correction: the simulator
+  runs the GPU delegate on SwiftShader software GL, not the CPU delegate. On a real Samsung phone the GPU delegate was
+  fast but returned no hands; see the hand canary round.) Check `fpsAvg` and `wtp.hand.handMsAvg` in the phone log.
 - Landscape layout, reduced motion, photo save/share, storage blocked (private mode).

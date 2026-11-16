@@ -2,6 +2,9 @@
 //   - hands (MediaPipe Gesture Recognizer) at ~12 Hz: palm position, open/closed, and a gesture name
 //     (Thumb_Up, Victory, Pointing_Up, ILoveYou, Closed_Fist, Thumb_Down, Open_Palm) -> gestures + palm perch.
 //     If the gesture model does not load, the Hand Landmarker is used instead (no gesture names, perch still works).
+//     Each model must find the hand in hand-check.jpg (the canary) before it is used; order gesture GPU, gesture CPU,
+//     landmarker GPU, landmarker CPU. A GPU model that sees no hand in its first 60 video runs is swapped for CPU
+//     once. On CPU the model gets a 384 px copy of the frame at 8 Hz.
 //   - object detection (MediaPipe Object Detector, 80 everyday classes) on demand      -> "what Spark sees"
 //   - brightness + main colour from a 32 px copy of the frame
 // 8th Wall stays the source of truth for where the print is; these only add understanding.
@@ -10,12 +13,23 @@ const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const GESTURE_MODEL = 'https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task';
 const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
 const OBJ_MODEL = 'https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/int8/1/efficientdet_lite0.tflite';
-const HAND_HZ = 12;
+const HAND_HZ = 12, HAND_HZ_CPU = 8;   // CPU: fewer runs a second so the phone keeps its frame rate
+const CPU_SIDE = 384;                   // CPU: the model gets a copy of the frame with this long side (landmarks are 0..1)
+const WATCH_RUNS = 60;                  // GPU: no hand in this many video runs -> switch to CPU once
+// The canary: a real photo of a hand. Each new hand model must find a hand in it before it is used, because on some
+// phones the GPU delegate creates fine, runs fast and silently returns no hands (Samsung, 2026-11-16).
+const CANARY = new URL('./hand-check.jpg', import.meta.url).href;
 
-export function createSenses({ onStatus } = {}) {
+// opts.hand: 'cpu' | 'gpu' forces the delegate (no fallback to the other one, no watchdog; the canary still runs and
+// is logged). opts.test (only with ?test): { canaryFail: ['gesture-GPU', ...] -> that attempt's canary reports no
+// hands; watchRuns: n -> watchdog after n runs, counting every run as handless }.
+export function createSenses({ onStatus, hand: force = null, test = null } = {}) {
   let video = null, hands = null, detector = null, lib = null, fileset = null, paused = false, lastTs = 0;
-  let lastHandAt = 0, handRuns = 0, handMs = 0;
-  const status = { hands: 'off', objects: 'off', handModel: null };   // handModel: 'gesture' | 'landmarker'
+  let lastHandAt = 0, handRuns = 0, handMs = 0, handErrors = 0, gpuRuns = 0, gpuSeen = 0, switching = false;
+  force = force === 'cpu' ? 'CPU' : force === 'gpu' ? 'GPU' : null;
+  // handModel: 'gesture' | 'landmarker'; handDelegate: 'GPU' | 'CPU'; handCanary: one entry per model tried
+  const status = { hands: 'off', objects: 'off', handModel: null, handDelegate: null, handForced: force, handCanary: [], handSwitched: false };
+  const small = document.createElement('canvas'), sctx = small.getContext('2d');   // CPU input, reused
   // gesture: MediaPipe category name (null for none / 'None' / landmarker fallback); score: its confidence 0..1
   const hand = { seen: false, at: 0, open: false, cx: 0, cy: 0, palmPx: 0, landmarks: null, gesture: null, score: 0 };
   const tiny = document.createElement('canvas'); tiny.width = tiny.height = 32;
@@ -28,21 +42,57 @@ export function createSenses({ onStatus } = {}) {
       fileset = await lib.FilesetResolver.forVisionTasks(`${MP}/wasm`);
     } catch (e) { say('hands', 'failed'); say('objects', 'failed'); console.warn('senses: library', e); return; }
     say('hands', 'loading');
-    const opts = (model, delegate) => ({
-      baseOptions: { modelAssetPath: model, delegate }, runningMode: 'VIDEO', numHands: 1,
-      minHandDetectionConfidence: 0.55, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5,
-    });
-    // GPU first, then CPU; the gesture model first, then the plain hand model
-    const tries = [
-      ['gesture', () => lib.GestureRecognizer.createFromOptions(fileset, opts(GESTURE_MODEL, 'GPU'))],
-      ['gesture', () => lib.GestureRecognizer.createFromOptions(fileset, opts(GESTURE_MODEL, 'CPU'))],
-      ['landmarker', () => lib.HandLandmarker.createFromOptions(fileset, opts(HAND_MODEL, 'GPU'))],
-      ['landmarker', () => lib.HandLandmarker.createFromOptions(fileset, opts(HAND_MODEL, 'CPU'))],
-    ];
-    for (const [kind, mk] of tries) {
-      try { hands = await mk(); status.handModel = kind; say('hands', 'ready'); return; } catch (e) { console.warn(`senses: ${kind}`, e); }
+    // gesture GPU, gesture CPU, landmarker GPU, landmarker CPU (only the forced delegate with ?hand=)
+    const order = [['gesture', 'GPU'], ['gesture', 'CPU'], ['landmarker', 'GPU'], ['landmarker', 'CPU']].filter(([, d]) => !force || d === force);
+    if (!(await pick(order, !!force))) say('hands', 'failed');
+  }
+  const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = rej; i.src = src; });
+  let canaryImg = null;
+  // Try each [model, delegate] in turn; use the first whose canary finds a hand. anyOk: use the first that creates
+  // even if its canary fails (forced delegate). Returns true when a model is in use.
+  async function pick(order, anyOk) {
+    if (!canaryImg) canaryImg = await loadImg(CANARY).then((i) => i.decode().then(() => i)).catch((e) => { console.warn('senses: canary photo', e); return null; });
+    for (const [kind, delegate] of order) {
+      const entry = { model: kind, delegate, ok: false, hands: 0, gesture: null, score: 0, ms: null };
+      let m = null;
+      try {
+        const Task = kind === 'gesture' ? lib.GestureRecognizer : lib.HandLandmarker;
+        m = await Task.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: kind === 'gesture' ? GESTURE_MODEL : HAND_MODEL, delegate }, runningMode: 'VIDEO', numHands: 1,
+          minHandDetectionConfidence: 0.55, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5,
+        });
+      } catch (e) { entry.error = String((e && e.message) || e).slice(0, 120); status.handCanary.push(entry); say('handCanary', status.handCanary); console.warn(`senses: ${kind} ${delegate}`, e); continue; }
+      if (canaryImg) {
+        // VIDEO mode: the canary takes a timestamp from the same rising clock as the video frames (see stamp())
+        try {
+          const t0 = performance.now(); let res = null;
+          for (let i = 0; i < 2 && !(res && res.landmarks && res.landmarks.length); i++) res = infer(m, kind, canaryImg, stamp(performance.now()));
+          entry.ms = Math.round(performance.now() - t0);
+          if (test && test.canaryFail && test.canaryFail.includes(`${kind}-${delegate}`)) res = { landmarks: [], gestures: [] };   // test: a broken delegate
+          const g = res && res.gestures && res.gestures[0] && res.gestures[0][0];
+          entry.hands = (res && res.landmarks && res.landmarks.length) || 0; entry.ok = entry.hands > 0;
+          if (g) { entry.gesture = g.categoryName; entry.score = +(g.score || 0).toFixed(2); }
+        } catch (e) { entry.error = String((e && e.message) || e).slice(0, 120); }
+      } else entry.error = 'no canary photo';
+      status.handCanary.push(entry); say('handCanary', status.handCanary);
+      if (entry.ok || anyOk || !canaryImg) {   // no photo (offline?): nothing to judge by, take the model
+        hands = m; gpuRuns = gpuSeen = 0; status.handModel = kind; status.handDelegate = delegate; say('hands', 'ready');
+        return true;
+      }
+      try { m.close(); } catch (e) { /* already gone */ }
     }
-    say('hands', 'failed');
+    return false;
+  }
+  // Runtime watchdog: a GPU model with no hand in its first WATCH_RUNS video runs is swapped for CPU, once.
+  async function toCpu() {
+    switching = true;
+    const old = hands, kind = status.handModel; hands = null; hand.seen = false;
+    try { old.close(); } catch (e) { /* ignore */ }
+    console.warn(`senses: no hand in ${gpuRuns} GPU runs, switching to CPU`);
+    status.handSwitched = true;
+    const order = [[kind, 'CPU'], ...(kind === 'gesture' ? [['landmarker', 'CPU']] : [])];
+    if (!(await pick(order, false))) say('hands', 'failed'); else say('handSwitched', true);
+    switching = false;
   }
   async function loadDetector() {
     if (detector || !lib || status.objects === 'loading') return;
@@ -58,24 +108,40 @@ export function createSenses({ onStatus } = {}) {
   function setVideo(v) { video = v; }
   const ready = () => video && video.readyState >= 2 && video.videoWidth > 0;
 
-  // one model run on a video frame (or, for tests, any image/canvas); fills `hand`
-  function run(src, now, sw, sh) {
-    const ts = Math.max(now, lastTs + 1); lastTs = ts;   // VIDEO mode needs rising timestamps
+  // VIDEO mode needs rising timestamps: one clock for the canary, the video frames and test pictures
+  const stamp = (now) => (lastTs = Math.max(now, lastTs + 1));
+  const infer = (m, kind, src, ts) => (kind === 'gesture' ? m.recognizeForVideo(src, ts) : m.detectForVideo(src, ts));
+  // one model run on a video frame (or, for tests, any image/canvas); fills `hand`. fromVideo: counts for the watchdog.
+  function run(src, now, sw, sh, fromVideo) {
+    const ts = stamp(now);
     let res; const t0 = performance.now();
-    try { res = status.handModel === 'gesture' ? hands.recognizeForVideo(src, ts) : hands.detectForVideo(src, ts); } catch (e) { return false; }
+    try { res = infer(hands, status.handModel, src, ts); } catch (e) { if (++handErrors <= 3) console.warn('senses: hand run', e); return false; }
     handMs += performance.now() - t0; handRuns++;
     const lm = res && res.landmarks && res.landmarks[0];
+    if (fromVideo && status.handDelegate === 'GPU' && !force && !status.handSwitched) {
+      gpuRuns++; if (lm && !(test && test.watchRuns)) gpuSeen++;
+      if (!gpuSeen && gpuRuns >= ((test && test.watchRuns) || WATCH_RUNS)) { toCpu(); return true; }
+    }
     if (!lm) { hand.seen = false; hand.gesture = null; hand.score = 0; return true; }
     const g = res.gestures && res.gestures[0] && res.gestures[0][0];
     // hand.at = when the result is ready (not when the frame was taken), so freshness checks hold on a slow phone too
     setHand(lm, performance.now(), g && g.categoryName && g.categoryName !== 'None' ? g.categoryName : null, g ? g.score || 0 : 0, sw, sh);
     return true;
   }
-  // called every frame; runs the hand model at HAND_HZ
+  // called every frame; runs the hand model at HAND_HZ (HAND_HZ_CPU on CPU). The calls are synchronous, so the next
+  // one is timed from when this one ENDS: a slow CPU call cannot make runs pile up frame after frame.
   function tick(now) {
-    if (!hands || paused || !ready() || now - lastHandAt < 1000 / HAND_HZ) return;
-    lastHandAt = now;
-    run(video, now);
+    const cpu = status.handDelegate === 'CPU';
+    if (!hands || switching || paused || !ready() || now - lastHandAt < 1000 / (cpu ? HAND_HZ_CPU : HAND_HZ)) return;
+    let src = video;
+    if (cpu) {   // CPU: a downscaled copy of the frame, same aspect ratio
+      const vw = video.videoWidth, vh = video.videoHeight, k = Math.min(1, CPU_SIDE / Math.max(vw, vh));
+      const w = Math.round(vw * k), h = Math.round(vh * k);
+      if (small.width !== w || small.height !== h) { small.width = w; small.height = h; }
+      try { sctx.drawImage(video, 0, 0, w, h); src = small; } catch (e) { src = video; }
+    }
+    run(src, now, 0, 0, true);   // sw/sh 0: palmPx etc. use the real video size (landmarks are 0..1)
+    lastHandAt = performance.now();
   }
   // test hook: run the hand model once on an image / canvas, as if it were the camera frame. palmPx is scaled to
   // video pixels (as if the picture were stretched to the video's width). Returns a copy of `hand`.
@@ -140,8 +206,8 @@ export function createSenses({ onStatus } = {}) {
 
   return {
     load, loadDetector, setVideo, tick, look, hand, status, setHand, analyse,
-    setPaused(v) { paused = !!v; if (paused) hand.seen = false; },   // tests: stop the model (the sim's CPU model is slow)
-    stats: () => ({ handHz: handRuns ? +(1000 / Math.max(1, (performance.now() - (stats0 || performance.now())) / handRuns)).toFixed(1) : 0, handMsAvg: handRuns ? +(handMs / handRuns).toFixed(1) : null, handRuns }),
+    setPaused(v) { paused = !!v; if (paused) hand.seen = false; },   // tests: stop the model (slow in the simulator)
+    stats: () => ({ handHz: handRuns ? +(1000 / Math.max(1, (performance.now() - (stats0 || performance.now())) / handRuns)).toFixed(1) : 0, handMsAvg: handRuns ? +(handMs / handRuns).toFixed(1) : null, handRuns, handErrors }),
   };
 }
 const stats0 = performance.now();
