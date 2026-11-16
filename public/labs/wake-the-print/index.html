@@ -48,17 +48,21 @@
     #hud{position:fixed;inset:0;z-index:5;pointer-events:none}
     #hud > *{pointer-events:auto}
     /* what Spark says (and what it heard): top of the screen, never over the controls */
-    #cap{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));margin:0 auto;max-width:520px;background:var(--glass);border:1px solid var(--line);
+    /* top stack: the caption, then the chip row under it (the row moves down with a longer caption, never under it) */
+    #top{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+    #cap{width:100%;max-width:520px;background:var(--glass);border:1px solid var(--line);
       border-radius:18px;padding:12px 16px;font-size:16px;font-weight:600;pointer-events:none}
     #cap b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:2px}
     #cap.you b{color:var(--mag)} #cap.system b{color:var(--muted)}
     #energy{position:absolute;left:16px;right:16px;bottom:0;height:3px;border-radius:3px;background:var(--line);overflow:hidden}
     #energy i{display:block;height:100%;width:100%;background:var(--blue);transform-origin:left;transition:transform .5s linear}
     #cap .wrap{position:relative;padding-bottom:8px}
-    #sees{position:absolute;left:12px;right:12px;top:calc(104px + env(safe-area-inset-top));display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:none}
+    #sees{width:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:none}
     #sees span{background:var(--mag);color:#fff;font-size:13px;font-weight:800;border-radius:999px;padding:5px 12px}
     #sees span.q{background:var(--glass);border:1px solid var(--line);color:var(--muted)}
-    #hint{position:absolute;left:50%;bottom:calc(118px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100% - 32px);
+    /* the hand chip: "Hand seen" (.q) or the gesture's name (.g) */
+    #sees span.g{background:var(--blue);color:#06141d}
+    #hint{position:absolute;left:50%;bottom:calc(118px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);
       background:var(--blue);color:#06141d;font-weight:800;border-radius:999px;padding:10px 18px;font-size:15px;text-align:center;pointer-events:none}
     /* The shutter is ALWAYS bottom centre, never overlapped. Mic left of it, menu right of it: one thumb. */
     #shutter{position:absolute;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);width:76px;height:76px;border-radius:50%;
@@ -102,7 +106,7 @@
     <div>
       <h1>Wake<br>the <span>Print</span></h1>
       <p>Someone lives in this print. Point your camera at it, then say hello.</p>
-      <div class="tagrow"><span>Sees your room</span><span>Talks with you</span><span>Hops on your hand</span><span>Remembers you</span></div>
+      <div class="tagrow"><span>Sees your room</span><span>Talks with you</span><span>Reacts to your hand</span><span>Remembers you</span></div>
       <button id="start" class="primary" disabled>Loading…</button>
       <small>Uses your camera. The microphone is only used if you tap the mic to talk.</small>
     </div>
@@ -110,8 +114,10 @@
   </section>
 
   <div id="hud" hidden>
-    <div id="cap" hidden role="status" aria-live="polite"><div class="wrap"><b id="cap-who">Spark</b><span id="cap-text"></span><div id="energy" hidden><i></i></div></div></div>
-    <div id="sees" aria-live="polite"></div>
+    <div id="top">
+      <div id="cap" hidden role="status" aria-live="polite"><div class="wrap"><b id="cap-who">Spark</b><span id="cap-text"></span><div id="energy" hidden><i></i></div></div></div>
+      <div id="sees" aria-live="polite"></div>
+    </div>
     <div id="hint" role="status" aria-live="polite">Point your camera at the print</div>
     <form id="typebar" hidden><input id="type-in" type="text" autocomplete="off" enterkeyhint="send" placeholder="Type to Spark" aria-label="Type to Spark"><button>Send</button></form>
     <button id="mic" class="round" data-s="off" aria-label="Talk to Spark" disabled>

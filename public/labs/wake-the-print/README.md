@@ -5,7 +5,8 @@ out and hovers over it. Spark:
 - **sees the room**: object detection, brightness and main colour, all worked out on the phone (MediaPipe)
 - **talks by voice**: an ElevenLabs agent with four client tools the page implements (`act`, `look_around`,
   `set_color`, `remember`)
-- **hops onto your open palm**: MediaPipe hand tracking, then back onto the print when the hand goes away
+- **reacts to your hand**: MediaPipe Gesture Recognizer on the back camera. Gestures held beside the print make Spark
+  act; an open palm held still makes it hop onto your hand, and back onto the print when the hand goes away
 - **remembers you between visits**: localStorage, keyed by `?item=`
 
 Image tracking is the open-source 8th Wall engine (vendored at `/evade/keychain-ar/vendor/xr/`) with three.js r180,
@@ -20,8 +21,8 @@ To test without the tee, open `target/` on a laptop screen and point the phone a
 | `?item=<id>` | Which piece of merch this is. Memory is stored per item (`wtp:<id>`, letters/digits/`_`/`-`, max 40). Default `demo`. |
 | `?text` | Mic sessions are text-only (no microphone, no audio) and the typing bar shows from the start. |
 | `?debug` | Draws the target frame on the print (alignment check). |
-| `?test` | Exposes `window.__ar` (template) and `window.__wtp` for the simulator: `{ spark, senses, voice, tools, mem, getVars, describe, perch, camera, printShown, fakeHand(cx, cy, palmPx, open = true) }`. `fakeHand(null)` stops the fake hand. |
-| `?nolog` / `?diag` | Test log off / on (on by default on localhost and deploy previews). Records have `page: 'wake-the-print'` and a `wtp` block: senses status, hand stats, perch count, rejected hand samples, tool call counts, voice state changes with reasons, visits, last look. |
+| `?test` | Exposes `window.__ar` (template) and `window.__wtp` for the simulator: `{ spark, senses, voice, tools, mem, getVars, describe, perch, camera, printShown, handInfo, lose(), fakeHand(...) }`. See **Test hooks**. |
+| `?nolog` / `?diag` | Test log off / on (on by default on localhost and deploy previews). Records have `page: 'wake-the-print'` and a `wtp` block, see **Test log**. |
 | `?dpr=2` | Draw at 2x (sharper, slower pickup). |
 
 ## Files
@@ -31,23 +32,78 @@ To test without the tee, open `target/` on a laptop screen and point the phone a
   senses wiring, the agent tools, captions, memory, menu and `?test` hooks.
 - `spark.js`: the character (placeholder until a designed mascot is picked). `root`, `update`, `act`, `setColor`,
   `setMouth`, `setListening`, `setLook`, `pop`, `arrive`.
-- `senses.js`: MediaPipe Hand Landmarker (~12 Hz) and Object Detector (on demand), loaded from jsDelivr / Google
-  storage after the camera starts; never blocks Start.
+- `senses.js`: MediaPipe Gesture Recognizer (~12 Hz; falls back to the Hand Landmarker if it does not load) and
+  Object Detector (on demand), `@mediapipe/tasks-vision@0.10.14` from jsDelivr, models from Google storage, loaded
+  after the camera starts; never blocks Start. `senses.hand` = `{ seen, at, open, cx, cy, palmPx, landmarks, gesture, score }`.
 - `voice.js`: the ElevenLabs agent session (WebRTC voice with WebSocket fallback, or WebSocket text-only), energy
   limit (180 s per visit), scene events.
 - `vendor/elevenlabs-client.js`: the bundled ElevenLabs client SDK.
 - `target/`: the test picture page.
+
+## Hand gestures
+Hold a gesture **beside the print** (not over it) for about 0.4 s. It fires once; then nothing fires for 2.5 s, and
+never while another action is playing (a gesture still held then fires when it may).
+
+| Gesture (MediaPipe name) | Spark | Chip |
+|---|---|---|
+| Thumb_Up | `confetti` | Thumbs up |
+| Victory | `dance` | Peace sign |
+| Pointing_Up | `jump` | Pointing up |
+| ILoveYou | `spin` | Love you sign |
+| Closed_Fist | `nod` | Fist |
+| Thumb_Down | `shake` | Thumbs down |
+| Open palm moving side to side (2 direction changes in 1.2 s, at least 8% of the frame width) | `wave` | Wave |
+| Open palm held still 0.7 s (on screen, nearer than the print) | hops onto the palm | Open hand |
+
+- Score must be at least 0.6. A wave always wins over the perch: any movement over 5% of the frame restarts the
+  0.7 s still timer, and a wave that fires while Spark is still hopping on cancels the hop.
+- Each fired gesture also sends the voice agent a short scene event ("The fan gave you a thumbs up"), rate limited.
+- While a real hand is in view Spark looks toward it (unless it is standing on it), otherwise at the phone.
+- The `#sees` row shows a chip: "Hand seen" while a real hand is in view, replaced by the gesture's name while one is
+  recognised. Once per page load, 6 s after the pop, the hint says "Show Spark a thumbs up beside the print"
+  (skipped if a gesture has already fired).
+- **Real hand or the artwork?** The Sukeban art has two drawn hands and the model finds them. A hand whose centre is
+  inside the print's on-screen outline (the whole 3:4 target frame, projected from the anchor each sample) is the
+  artwork unless its size says it is clearly nearer than the print (< 0.8 x the print's distance). A hand whose
+  centre is outside the outline is real at any distance: that is a hand held beside the print. The perch keeps the
+  stricter rule on top: nearer than 0.92 x the print's distance and on screen. With no print pose from the last
+  second (and Spark not on the hand) nothing is judged and nothing fires.
+- **Short print losses with a hand in view**: the house rule stays (Spark shows only while the print is tracked now,
+  plus the template's 120 ms grace, or on a fresh palm). A gesture's hold is not reset by the loss and fires when
+  Spark shows again, and when the print is found again within 1.5 s with a real hand in view Spark does not replay
+  the climb out of the print.
+- The time windows stretch on a phone whose hand model runs slowly (gap allowance 1.5x, "in view" 2.5x the measured
+  time between samples).
 
 ## How Spark moves
 - On the print: scene-level object placed every frame from the print anchor. Height = 0.32 x print height; it sits
   `H*0.08 + popLift*H*0.6` out from the print (pressed flat at the start of the pop, then springs up).
 - On the palm: the hand centre from MediaPipe is mapped to the screen (camera feed drawn "cover"), its distance comes
   from the palm's width in the video (a palm is about 75 mm wide), and Spark is 75 mm tall there, facing the phone.
-  An open hand for 350 ms after the pop moves Spark on; no hand for 700 ms moves it back. Spark only shows while the
-  print is tracked now, or while it is on a hand seen in the last 700 ms.
-- **Drawn hands are ignored**: a hand whose distance (from its size) is not nearer than the print is dropped. The
-  Sukeban art has two drawn hands and the real hand model finds them; without this check Spark hopped onto the
-  artwork in the simulator.
+  An open palm held still for 700 ms after the pop moves Spark on; no hand for 700 ms moves it back. Spark only
+  shows while the print is tracked now, or while it is on a hand seen in the last 700 ms.
+- **Drawn hands are ignored**: see "Real hand or the artwork?" above.
+
+## Test hooks (`?test`)
+- `__wtp.fakeHand(cx, cy, palmPx, open = true)`: feeds `senses.hand` every frame (cx, cy in 0..1 of the video frame,
+  palmPx in video pixels). `fakeHand(cx, cy, palmPx, { gesture: 'Thumb_Up', score: 0.9, open: false })` also sets
+  the gesture; `open` defaults to true for no gesture or `Open_Palm`, false otherwise; `score` defaults to 0.9.
+  `fakeHand(null)` stops.
+- `__wtp.handInfo`: the last sample's verdict (`cls`: real / art / unknown), screen point, `onScreen`, `inQuad`,
+  `depthRatio` (hand distance / print distance), the print's outline on screen, the current gesture and hold.
+- `__wtp.lose()`: the same path as an engine `imagelost` event (the engine's next update finds the print again).
+- `__wtp.senses.setPaused(true)` stops the hand model (the simulator's CPU model is slow);
+  `__wtp.senses.analyse(imageOrCanvas)` runs the hand model once on a picture as if it were the camera frame.
+
+## Test log
+`wtp` block: `senses` (status incl. `handModel`: gesture / landmarker), `hand` (model Hz, ms per run, runs), `perch`
+(times Spark landed on a palm), tool call counts, voice state changes with reasons, visits, last look, and the hand
+counters: `handSeen` (samples with a hand; a fake hand gives one per frame), `handOpen`, `handAccepted` (real),
+`handRejected` (read as the artwork), `handNoPrint` (no print pose to judge by), `handOverPrint` (centre inside the
+print's outline), `depthOverPrint` ([min, max] of hand distance / print distance over the print), `perchTooFar`
+(real, on screen, but not near enough to perch), `palmPxMin` / `palmPxMax`, `gestures` (samples per gesture name, any
+score), `fired` (actions fired by gestures), `lostWithHand` (print losses, from `imagelost` or the stale check, while
+a real hand was in view; `targets.*.lost` counts `imagelost` events only).
 
 ## Caveat: the agent is public
 The agent id is in the page with no key (see `voice.js`). It is capped on the ElevenLabs side (100 conversations a
@@ -55,6 +111,40 @@ day, 3 at once) and each visit is capped by Spark's energy. **Before any client 
 from a Netlify function (key in Netlify env).**
 
 ## Tested / Not tested
+### Gestures round (2026-11-16), headless simulator only
+Same simulator (Chromium + SwiftShader, 390x844, fake camera from y4m videos of the print: a static one and a moving
+and rotating one). The CPU hand model ran at ~0.5 s a call there, so the fake-hand checks pause it.
+
+Tested:
+- The gesture model (`gesture_recognizer.task`, HTTP 200) loads through the proxy and runs on the print video with no
+  console errors. With the model blocked, the Hand Landmarker fallback loads and the perch still works.
+- The drawn hands on the Sukeban art, 10 s of the real model on the moving print: every hand sample was read as
+  artwork (inside the outline, 1.6-3.6 x the print's distance). No gesture name was reported, nothing fired, no perch.
+- Real photos from MediaPipe's sample assets through the real model on the page: thumb_up.jpg -> Thumb_Up 0.70,
+  thumbs_up.jpg -> Thumb_Up 0.73, victory.jpg -> Victory 0.78, pointing_up.jpg -> Pointing_Up 0.85. Fed as frames
+  through the whole page, the thumbs-up photo fired `confetti` and showed the "Thumbs up" chip.
+- Fake hands (`fakeHand` with a gesture) beside the print: each of the six gestures fired its action exactly once
+  with the right chip. Score 0.5 and a 200 ms flash did not fire. A 6.5 s hold fired once. The second gesture waited
+  for the 2.5 s cooldown, and a gesture shown during an action waited for it to end. A wave fired `wave` and did not
+  perch. A still open palm perched ("Open hand" chip). A still palm off the screen crop did not perch. Going from
+  beside to over the art mid-hold fired nothing. A hand over the print but clearly nearer fired. Chips appear and go
+  away. Spark looks left / right / up toward the hand and back at the phone after it leaves. A print loss with a hand
+  in view counts in `lostWithHand` and does not replay the climb-out. The gesture hint shows once, 6 s after the pop.
+  Chips sit under a two-line caption and the hint sits above the buttons at 390x844.
+- Earlier checks still pass (found, pop, tools, memory, perch placement and size, look). The perch timeout in the
+  test was raised for the 700 ms hold.
+
+Not tested (needs a real phone):
+- A real hand in front of a real back camera: gesture scores in real light, at arm's length beside the print, side
+  on, with motion blur; whether 0.6 / 0.4 s feel right; the wave thresholds with a real wave at ~10 Hz.
+- Whether the ART_NEAR (0.8) and PERCH_NEAR (0.92) depth rules hold for real hands and real palm sizes. Check
+  `wtp.depthOverPrint`, `handRejected` vs `handAccepted` and `perchTooFar` in the phone log.
+- Gesture model speed on phones (MediaPipe logs that the gesture classifier runs on CPU / XNNPACK even with the GPU
+  delegate). Check `wtp.hand.handMsAvg`.
+- How often a hand beside the print still makes tracking drop (`lostWithHand`), and how the chips and the hint read
+  on a real screen, in landscape and with reduced motion.
+
+### First round (2026-11-15)
 Tested 2026-11-15 in the headless camera simulator only (Chromium + SwiftShader, fake camera from a y4m of
 `tee-sukeban.jpg`, 390x844 phone viewport). Not yet on a real phone.
 
@@ -66,7 +156,7 @@ Tested (simulator):
 - Tools called directly: `act` (incl. unknown action message), `set_color` (incl. unknown colour), `remember`
   (trim, dedupe, newest 8, 120 chars). Memory survives a reload, `getVars()` reflects it, menu sheet text, Forget me
   clears it and says so, the typing bar toggles from the menu.
-- Palm perch with `__wtp.fakeHand(0.5, 0.6, 180)`: perch reaches 1, Spark lands exactly over the hand's screen point
+- Palm perch with `__wtp.fakeHand(0.5, 0.6, 180)` (then a 350 ms hold): perch reaches 1, Spark lands exactly over the hand's screen point
   with an on-screen height equal to the palm width (0.075 m), "Spark is on your hand" hint, a closer hand gives a
   bigger Spark, `fakeHand(null)` returns it to the print, a closed hand does not perch.
 - Real MediaPipe (hands + object detector) downloaded and ran through the sandbox proxy: the detector reported
