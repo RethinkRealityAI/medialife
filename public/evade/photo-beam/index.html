@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#0f1519">
   <title>Photo Beam · EVADE AR</title>
-  <meta name="description" content="Photo Beam: take a picture and beam it onto your EVADE keychain. It lands on Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, printed right on the charm.">
+  <meta name="description" content="Photo Beam: snap a selfie and beam it onto your EVADE keychain. It lands on Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, printed right on the charm.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,7 +41,7 @@
     <div class="copy">
       <p class="kicker">EVADE · Activated AR</p>
       <h1 id="title">Photo <span>Beam</span></h1>
-      <p class="lead">Take a picture and beam it onto your keychain. It lands on Bobo's visor or the Eclipse can, printed right on the charm.</p>
+      <p class="lead">Snap a selfie, point at your keychain and lock on. Beam it onto Bobo's visor, the Eclipse can or Roblox Bobo's cap, printed right on the charm.</p>
       <div id="desk" hidden>
         <div id="qr" aria-label="QR code that opens this page on your phone"></div>
         <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
@@ -70,29 +70,32 @@
 
     <!-- once a charm wears a photo -->
     <div id="chips" hidden>
-      <button type="button" id="c-change" aria-label="Change the photo">Change</button>
-      <button type="button" id="c-other" aria-label="Beam this photo to your other charms">Beam to others</button>
+      <button type="button" id="c-again" aria-label="Aim the same photo at another charm">Beam again</button>
       <button type="button" id="c-remove" aria-label="Remove the photo">Remove</button>
     </div>
 
-    <!-- Snap: the viewfinder, cut in the slot's shape -->
-    <div id="finder" hidden>
-      <div id="finder-win"><canvas id="finder-freeze" hidden></canvas></div>
-      <p id="finder-t">Frame your shot, then press the shutter</p>
-      <button type="button" id="finder-x">Cancel</button>
+    <!-- aiming: a ray from the photo card to the reticle; it locks onto a glowing spot -->
+    <div id="aim" hidden aria-hidden="true">
+      <svg id="aim-svg"><polygon id="ray-o" points="0,0"/><polygon id="ray-i" points="0,0"/>
+        <g id="reticle"><path id="rt-tl"/><path id="rt-tr"/><path id="rt-br"/><path id="rt-bl"/><circle id="rt-dot" r="3"/></g></svg>
     </div>
+    <p id="aim-t" hidden role="status" aria-live="assertive"></p>
 
     <!-- bottom row: Photo left, the shutter always in the bottom centre, the badge right -->
     <div id="bottom">
       <div class="b-left">
-        <button id="b-photo" class="act" type="button" aria-label="Add a photo to the charm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>
-          <span id="b-photo-t">Photo</span>
+        <button id="b-photo" class="act" type="button" aria-label="Take a new photo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <span id="b-photo-t">New photo</span>
         </button>
       </div>
       <div id="shoot">
         <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
           <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
+        </button>
+        <button id="b-beam" type="button" hidden disabled aria-label="Beam your photo. Aim at a glowing spot first">
+          <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/></svg>
+          <svg class="bolt" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 5 13h6l-1 9 8-11h-6z"/></svg>
         </button>
         <small id="shoot-t">Tap: photo · Hold: video</small>
         <span id="rec-time" hidden>0:00</span>
@@ -106,28 +109,34 @@
   <!-- the photo flying off to the charm -->
   <div id="beamcard" hidden aria-hidden="true"><canvas id="beamcard-cv"></canvas></div>
 
-  <!-- add a photo: Snap or Choose -->
-  <div id="add" class="bs" hidden role="dialog" aria-modal="true" aria-labelledby="add-t">
-    <div class="scrim" data-close></div>
-    <div class="panel">
-      <div class="grab" aria-hidden="true"></div>
-      <header><h2 id="add-t">Add your photo</h2>
-        <button type="button" class="x" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      </header>
-      <p class="sub" id="add-sub">It lands on Bobo's visor.</p>
-      <div class="two">
-        <button type="button" class="big" id="a-snap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
-          <b>Snap</b><small>Take it with this camera</small>
-        </button>
-        <button type="button" class="big" id="a-choose">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
-          <b>Choose</b><small>From your photos</small>
-        </button>
-      </div>
-      <p class="priv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Your photo stays on your phone.</p>
+  <!-- capture: our own selfie camera, before the AR camera starts -->
+  <section id="capture" hidden aria-label="Take your photo">
+    <video id="cap-video" playsinline muted autoplay></video>
+    <div id="cap-guide" aria-hidden="true"><i></i></div>
+    <div class="cap-top">
+      <button type="button" id="cap-x" class="ib" aria-label="Back to the camera" hidden><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <p id="cap-t">Frame your face, then press the shutter</p>
+      <button type="button" id="cap-timer" class="ib" aria-pressed="false" aria-label="3 second timer"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg><b>3s</b></button>
     </div>
-  </div>
+    <div id="cap-count" hidden aria-live="assertive"></div>
+    <div class="cap-bottom">
+      <button type="button" id="cap-lib" class="cap-side" aria-label="Choose a photo from your library">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg><span>Library</span>
+      </button>
+      <button type="button" id="cap-shutter" aria-label="Take the photo"><i></i></button>
+      <button type="button" id="cap-flip" class="cap-side" aria-label="Switch camera" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-3l2 2M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M20 4v4h-4M4 20v-4h4"/></svg><span>Switch</span>
+      </button>
+    </div>
+    <p class="priv cap-priv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Your photo stays on your phone.</p>
+    <div id="cap-err" class="sheet-wrap" hidden role="alert">
+      <div class="sheet">
+        <h2 id="cap-err-t">The front camera didn't open</h2>
+        <p id="cap-err-b"></p>
+        <div class="row"><button type="button" class="primary" id="cap-err-lib">Choose from library</button><button type="button" id="cap-err-retry">Try again</button></div>
+      </div>
+    </div>
+  </section>
   <input id="file" type="file" accept="image/*" hidden>
 
   <!-- the editor -->
@@ -136,12 +145,11 @@
     <div class="panel">
       <div class="grab" aria-hidden="true"></div>
       <header>
-        <canvas id="ed-thumb" width="88" height="88" aria-hidden="true"></canvas>
         <h2 id="edit-t">Make it yours</h2>
-        <button type="button" class="x" id="ed-x" aria-label="Close the editor"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <button type="button" class="x" id="ed-x" aria-label="Retake the photo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
-      <div id="ed-wrap"><canvas id="ed-cv" aria-label="Your photo in the shape of the spot on the charm. Drag to move it, pinch to zoom."></canvas></div>
-      <p class="tip">Drag to move · Pinch to zoom</p>
+      <div id="ed-wrap"><canvas id="ed-cv" aria-label="Your photo. Drag to move it, pinch to zoom."></canvas></div>
+      <p class="tip">Drag to move · Pinch to zoom · It fits whichever spot you beam it to</p>
       <div class="seg" role="radiogroup" aria-label="Style" id="ed-style">
         <button type="button" role="radio" data-v="photo" aria-checked="true">Photo</button>
         <button type="button" role="radio" data-v="print" aria-checked="false">Screen print</button>
@@ -151,8 +159,8 @@
       <div id="ed-stickers" role="radiogroup" aria-label="Sticker"></div>
       <p class="priv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Your photo stays on your phone. Nothing is uploaded.</p>
       <div class="row">
-        <button type="button" id="ed-back">New photo</button>
-        <button type="button" class="primary" id="ed-go">Beam it</button>
+        <button type="button" id="ed-back">Retake</button>
+        <button type="button" class="primary" id="ed-go">Ready to beam</button>
       </div>
     </div>
   </div>
@@ -199,10 +207,10 @@
       <div class="how-pics"><img class="how-pic" src="/evade/spray-bobo/art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="/evade/spray-bobo/art/can-lines.png" alt="" width="768" height="1024"></div>
       <h2 id="how-t">Beam a photo</h2>
       <ol class="how-steps">
-        <li><b>Point at a charm.</b> Bobo, the Eclipse can or Roblox Bobo, about a hand from the camera. Either side works.</li>
-        <li><b>Tap the glowing spot.</b> Bobo's visor, the can's label or the cap. Or press Photo, left of the shutter.</li>
-        <li><b>Snap or choose a picture,</b> give it a style, and press Beam it. Keep the charm in view while it flies in.</li>
-        <li><b>It stays on.</b> Each charm keeps its own photo on this phone. Drag across the can to spin the label.</li>
+        <li><b>Snap a selfie</b> (or switch camera, or pick one from your library), give it a style and press Ready to beam.</li>
+        <li><b>Point at a charm.</b> Bobo, the Eclipse can or Roblox Bobo, about a hand from the camera. Its photo spot glows.</li>
+        <li><b>Aim and lock on.</b> Move the centre of the screen onto the glowing spot (or tap it). It turns yellow: Beam ready.</li>
+        <li><b>Press Beam.</b> It flies in and stays on that charm, on this phone. Beam again to put it on another one.</li>
       </ol>
       <button id="b-go" class="primary">Got it</button>
     </div>

@@ -1,8 +1,10 @@
-// Photo Beam: take a picture and beam it onto the EVADE keychain. Point the phone at a charm, tap its glowing "photo
-// slot" (Bobo's visor, the Eclipse can's label, Roblox Bobo's cap), snap or choose a picture, give it a style, and
-// press Beam it: the photo shrinks into a glowing card, a beam of light shoots from the phone to the charm, the photo
-// breaks into a few thousand pixels that stream down the beam and land on their own spot, and a materialise sweep
-// prints it on. The photo then stays on that charm (this phone only, IndexedDB) and re-materialises when it is found.
+// Photo Beam: snap a selfie and beam it onto the EVADE keychain. Start opens our own front camera (not the AR
+// engine yet): snap (or switch camera, or pick from the library), give it a style, press Ready to beam. Then the
+// selfie stream is stopped and the AR engine starts on the rear camera; the photo waits in a card at the bottom and an
+// aiming ray runs from it to a reticle at the centre of the screen. Every photo slot (Bobo's visor, the Eclipse can's
+// label, Roblox Bobo's cap) on a tracked charm glows; aim the centre at one (or tap it) and the ray locks on, turns
+// yellow, buzzes: Beam ready. Press Beam: the photo becomes a few thousand pixels that stream down a beam of light and
+// land on their own spot, and a materialise sweep prints it on. It stays on that charm (this phone only, IndexedDB).
 //
 // The slots are measured from the target pictures (scripts/build-photo-beam/build_slots.py -> slots/slots.json):
 // each picture has its own slot in its own uv, so a photo reads the right way round on both sides of a charm.
@@ -17,6 +19,8 @@ import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
+// the browser's own camera call, taken before the iPhone lens patch below wraps it (that patch is for the AR camera)
+const GUM = navigator.mediaDevices && navigator.mediaDevices.getUserMedia ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices) : null;
 const params = new URLSearchParams(location.search);
 const KC = '/evade/keychain-ar/';             // Off the Chain: engine, image targets
 const HERE = '/evade/photo-beam/';
@@ -32,16 +36,17 @@ const store = { get(k, d) { try { const v = localStorage.getItem('photo-beam-' +
 // ---------------------------------------------------------------- what is tracked
 // Each charm is a piece with its two pictures; each picture has its own slot. pal: whose palette Screen print uses.
 const PIECES = {
-  bobo: { k: 'bobo', name: 'Bobo', where: "Bobo's visor", targets: ['kc-bobo', 'kc-bobo-l'], pal: 'kc-bobo' },
-  can: { k: 'can', name: 'the can', where: "the can's label", targets: ['kc-can', 'kc-can-back'], pal: 'kc-can-back' },
-  old: { k: 'old', name: 'Roblox Bobo', where: "Bobo's cap", targets: ['kc-old', 'kc-old-l'], pal: 'kc-old' },
+  bobo: { k: 'bobo', name: 'Bobo', where: "Bobo's visor", spot: "Bobo's visor", targets: ['kc-bobo', 'kc-bobo-l'], pal: 'kc-bobo' },
+  can: { k: 'can', name: 'the can', where: "the can's label", spot: 'the Eclipse can', targets: ['kc-can', 'kc-can-back'], pal: 'kc-can-back' },
+  old: { k: 'old', name: 'Roblox Bobo', where: "Bobo's cap", spot: "Roblox Bobo's cap", targets: ['kc-old', 'kc-old-l'], pal: 'kc-old' },
 };
 const PIECE_OF = {}; for (const P of Object.values(PIECES)) { for (const n of P.targets) PIECE_OF[n] = P; Object.assign(P, { status: 'empty', src: null, params: null, label: null, tex: null, spin: 0, spinV: 0 }); }
 const TARGETS = Object.keys(PIECE_OF);
 // Losing the print: the last pose is held this long, and only while the phone is still (Spray Bobo's numbers)
 const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120, STILL_DEG = 25, STILL_ACC = 1.2;
 const REOPEN_AFTER_MS = 2500;                 // lost longer than this: the photo re-materialises when found
-const COL = { x: 0x4fd6e8, xs: '#4fd6e8', ink: '#0f1519' };
+const COL = { x: 0x4fd6e8, xs: '#4fd6e8', y: 0xf6c344, ys: '#f6c344', ink: '#0f1519' };
+const ED_ASP = 1.4;                           // the editor's neutral shape (the photo fits whichever slot it is beamed to)
 const LOOKS = { soft: 0.35, printed: 0.7, bold: 1 };
 let look = LOOKS[store.get('look', 'printed')] != null ? store.get('look', 'printed') : 'printed';
 const BULGE = 0.09;                           // the visor's bulge out of the print, a share of its width
@@ -95,6 +100,8 @@ const sound = {
   chime() { [1047, 1319, 1568, 2093].forEach((f, i) => this.tone(f, f, 0.55, 0.045, 'triangle', i * 0.07)); },
   pop() { this.tone(900, 1800, 0.14, 0.035, 'triangle'); this.shimmer(4); },
   click() { this.tone(1200, 900, 0.05, 0.05, 'triangle'); },
+  lock() { this.tone(1200, 900, 0.04, 0.06, 'square'); this.tone(880, 1760, 0.1, 0.05, 'triangle', 0.04); this.tone(1760, 1760, 0.14, 0.04, 'triangle', 0.12); },
+  unlock() { this.tone(700, 420, 0.08, 0.03, 'triangle'); },
   shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
 };
 
@@ -236,7 +243,7 @@ void main() {
   gl_Position = projectionMatrix * mv;
 }`;
 const SLOT_FS = `
-uniform sampler2D uMap, uShade, uMask; uniform vec3 uCyan; uniform float uHas, uP, uStr, uPulse, uSpin, uCan, uAsp, uUseMask;
+uniform sampler2D uMap, uShade, uMask; uniform vec3 uCyan, uFill; uniform float uFillA, uHas, uP, uStr, uPulse, uSpin, uCan, uAsp, uUseMask;
 varying vec2 vUv, vBox; varying vec3 vN, vV;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -245,7 +252,7 @@ float fbm(vec2 p) { return vnoise(p) * 0.55 + vnoise(p * 2.1 + 7.3) * 0.3 + vnoi
 void main() {
   if (uUseMask > 0.5 && texture2D(uMask, vBox).r < 0.5) discard;
   if (uHas < 0.5) {
-    gl_FragColor = vec4(uCyan, 0.16 + 0.2 * uPulse);
+    gl_FragColor = vec4(uFill, uFillA);
     #include <colorspace_fragment>
     return;
   }
@@ -274,7 +281,7 @@ const blankTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); bl
 function slotMaterial(S) {
   return new THREE.ShaderMaterial({
     uniforms: {
-      uMap: { value: blankTex }, uShade: { value: S.rec.shadeTex }, uMask: { value: S.rec.maskTex }, uCyan: { value: new THREE.Color(COL.x) },
+      uMap: { value: blankTex }, uShade: { value: S.rec.shadeTex }, uMask: { value: S.rec.maskTex }, uCyan: { value: new THREE.Color(COL.x) }, uFill: { value: new THREE.Color(COL.x) }, uFillA: { value: 0.2 },
       uHas: { value: 0 }, uP: { value: 0 }, uStr: { value: LOOKS[look] }, uPulse: { value: 0 }, uSpin: { value: 0 },
       uCan: { value: S.rec.kind === 'can' ? 1 : 0 }, uAsp: { value: S.aspect }, uUseMask: { value: S.rec.kind === 'band' ? 1 : 0 },
     },
@@ -442,7 +449,7 @@ function updatePose(now) {
   const fresh = st !== 'none' && pose.state === 'none';
   if (fresh) arrived(now);
   pose.state = st; pose.valid = st !== 'none';
-  A.visible = pose.valid && mode !== 'snap';
+  A.visible = pose.valid && mode !== 'capture';
   for (const S of Object.values(SLOT)) S.g.visible = S.name === n;
 }
 // follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
@@ -457,8 +464,17 @@ function follow(p, q, s) {
 const cur = () => (pose.valid && side && SLOT[side]) || null;
 
 // ---------------------------------------------------------------- what happens
+// modes: capture (our selfie camera), find / seen (AR, no photo waiting), aim (a photo waits: aim and lock on), beam
 let mode = 'find', everFound = false, lastP = null;
-function setMode(m) { mode = m; $('hud').dataset.mode = m; }
+const HELD = { src: null, params: null };     // the photo waiting to be beamed (it stays for Beam again)
+function setMode(m) {
+  mode = m; $('hud').dataset.mode = m;
+  const aiming = m === 'aim' || m === 'beam';
+  $('b-shutter').hidden = aiming; $('b-beam').hidden = !aiming;
+  $('shoot-t').textContent = aiming ? (m === 'beam' ? 'Beaming…' : 'Lock on, then Beam') : 'Tap: photo · Hold: video';
+  if (m === 'aim') { showCard(); if (!aim.S) $('aim-t').textContent = 'AIM AT A GLOWING SPOT'; } else if (m !== 'beam') { $('beamcard').hidden = true; $('beamcard').classList.remove('hold', 'lock', 'wait'); }
+  if (m !== 'aim') setLock(null, false, true);
+}
 function arrived(now) {
   const away = now - (pose.goneAt || 0);
   if (!everFound || away > REOPEN_AFTER_MS) for (const S of Object.values(SLOT)) S.matP = 0;   // the photo re-materialises
@@ -469,7 +485,7 @@ function arrived(now) {
 let lostFor = 0, toastT = 0;
 function hint(text) { if ($('hint').textContent !== text) $('hint').textContent = text || ''; }
 function toast(text, ms = 2600) { const el = $('toast'); el.textContent = text; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { el.hidden = true; }, ms); }
-const sheetOpen = () => !$('add').hidden || !$('edit').hidden || !$('opts').hidden || !$('how').hidden || !$('shot').hidden;
+const sheetOpen = () => !$('edit').hidden || !$('opts').hidden || !$('how').hidden || !$('shot').hidden || CAP.open;
 
 const clock = { t: 0 };
 function tick(dt) {
@@ -478,60 +494,152 @@ function tick(dt) {
   updatePose(now);
   const S = cur(), P = S && S.P;
   if (P) lastP = P;
+  $('hud').classList.toggle('lost', !pose.valid);
   if (!pose.valid) {
     lostFor += dt;
     if (mode === 'seen' && lostFor > 0.6) setMode('find');
     if (mode === 'find') hint(everFound ? 'Find a charm again' : 'Point at Bobo or the can on your keychain');
+    if (mode === 'aim' && lostFor > 0.4) hint('Point at Bobo, the can or Roblox Bobo');
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
-  // the slot in view
-  const pulse = 0.5 + 0.5 * Math.sin(clock.t * (REDUCED ? 2.2 : 4.2));
+  // the slot in view. It glows (flat cyan outline and fill) while it can take the photo; yellow once locked on.
+  const pulse = REDUCED ? 0.6 : 0.5 + 0.5 * Math.sin(clock.t * 4.2);
   if (S) {
-    const m = S.mat.uniforms, inBeam = beam && beam.P === P && beam.t >= 0;
+    const m = S.mat.uniforms, inBeam = beam && beam.P === P && beam.t >= 0, locked = mode === 'aim' && aim.S === S;
     if (P.status === 'shown' && !inBeam) {
       if (S.matP === 0) sound.pop();
       S.matP = Math.min(1, S.matP + dt / REMAT_S);
       m.uHas.value = 1; m.uP.value = S.matP;
     } else if (!inBeam) { m.uHas.value = 0; m.uP.value = 0; }
     m.uPulse.value = pulse; m.uStr.value = LOOKS[look];
-    S.outline.visible = m.uHas.value < 0.5;
-    S.outline.material.opacity = 0.55 + 0.45 * pulse;
+    const col = locked ? COL.y : COL.x;
+    S.outline.visible = !inBeam && (mode === 'aim' || m.uHas.value < 0.5);
+    S.outline.material.color.setHex(col); m.uFill.value.setHex(col);
+    S.outline.material.opacity = locked ? 1 : 0.55 + 0.45 * pulse;
+    m.uFillA.value = locked ? 0.32 : mode === 'aim' ? 0.14 + 0.2 * pulse : 0.1 + 0.12 * pulse;
     // the can's label spins with inertia
     if (P.k === 'can') {
       if (!spin.drag) { P.spin += P.spinV * dt; P.spinV *= Math.pow(0.12, dt); }
       m.uSpin.value = P.spin;
     }
-    if (mode === 'seen' && !beam) {
-      if (P.status === 'shown') hint(P.k === 'can' ? 'Drag across the can to spin your photo' : 'Press the shutter to keep a picture');
-      else hint('Tap the glowing spot to add your photo');
-    }
-    // a photo beamed to this charm from another one: it flies in now
-    if (P.status === 'pending' && !beam && !sheetOpen() && mode === 'seen') startBeam(P, false);
+    if (mode === 'seen' && !beam) hint(P.status === 'shown' ? (P.k === 'can' ? 'Drag across the can to spin your photo' : 'Press the shutter to keep a picture') : 'Press New photo to beam a selfie here');
+    if (mode === 'aim') hint('');
   }
+  tickAim(dt, S);
   tickBeam(dt, S);
   tickFx(dt);
-  // chips and the Photo button
   const showChips = !!(S && P.status === 'shown' && !beam && mode === 'seen');
   if ($('chips').hidden === showChips) $('chips').hidden = !showChips;
-  const pt = (S ? P : lastP) && (S ? P : lastP).status === 'shown' ? 'Change' : 'Photo';
-  if ($('b-photo-t').textContent !== pt) $('b-photo-t').textContent = pt;
+  $('c-again').hidden = !HELD.src;
   recTick();
   diag.fpsN++;
+}
+
+// ---------------------------------------------------------------- AIMING: the ray, the reticle, the lock
+// The ray runs from the photo card (bottom centre) to a reticle at the centre of the screen. The centre ray is
+// tested against the tracked slot's mesh (with a forgiving box around it). Locking needs a short steady hit;
+// once locked, a wider box keeps it and it only lets go after a short miss, so it does not flicker.
+const aim = { S: null, drawn: false, tap: false, candT: 0, missT: 0, k: 1, x: -1, y: -1, bx: 0, by: 0, bw: 64, bh: 64, shown: null };
+const ACQ_S = REDUCED ? 0 : 0.12, LOSE_S = 0.35;
+let testAim = null;                           // ?test only: aim somewhere other than the screen centre
+const aimPoint = () => testAim || [innerWidth / 2, innerHeight / 2];
+function setLock(S, tap = false, quiet = false) {
+  const was = aim.S; aim.S = S; aim.tap = !!(S && tap); aim.candT = 0; aim.missT = 0;
+  if (S === was) return;
+  const b = $('b-beam'); b.disabled = !S;
+  b.setAttribute('aria-label', S ? `Beam your photo onto ${S.P.spot}` : 'Beam your photo. Aim at a glowing spot first');
+  $('aim').classList.toggle('lock', !!S); $('aim-t').classList.toggle('lock', !!S); $('beamcard').classList.toggle('lock', !!S);
+  if (S) {
+    aim.k = REDUCED ? 1 : 0; b.classList.remove('arm'); void b.offsetWidth; b.classList.add('arm');
+    $('aim-t').textContent = `BEAM READY · ${S.P.spot.toUpperCase()}`;
+    showCard(S.P); sound.lock(); buzz([14, 40, 14]); diag.locks++;
+  } else {
+    $('aim-t').textContent = 'AIM AT A GLOWING SPOT';
+    if (!quiet) { if (mode === 'aim') showCard(); if (was) { sound.unlock(); buzz(6); } }
+  }
+}
+function tickAim(dt, S) {
+  // a one-frame tracking drop keeps the last drawing (and the lock) instead of blinking
+  const on = mode === 'aim' && (!!S || (aim.drawn && lostFor < 0.4));
+  if ($('aim').hidden === on) { $('aim').hidden = !on; $('aim-t').hidden = !on; }
+  if (mode !== 'aim') { aim.drawn = false; return; }
+  if (!S) { if (aim.S && lostFor > LOSE_S) setLock(null); if (!on) aim.drawn = false; return; }
+  aim.drawn = true;
+  if (aim.S && aim.S !== S) setLock(null);
+  const [cx, cy] = aimPoint();
+  if (aim.S) {
+    if (aim.tap || hitSlot(S, cx, cy, 0.6)) aim.missT = 0;
+    else if ((aim.missT += dt) > LOSE_S) setLock(null);
+  } else if (hitSlot(S, cx, cy, 0.2)) { if ((aim.candT += dt) >= ACQ_S) setLock(S); }
+  else aim.candT = 0;
+  drawAim(dt, S);
+}
+const _pp = new THREE.Vector3();
+function toScreen(S, v) { const p = S.g.localToWorld(_pp.copy(v)).project(camera); return [(p.x + 1) / 2 * innerWidth, (1 - p.y) / 2 * innerHeight]; }
+function drawAim(dt, S) {
+  const [cx, cy] = aimPoint(), L = aim.S === S;
+  let tx = cx, ty = cy, bw = 64, bh = 64;
+  if (L) {                                   // the slot's box on the screen
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (let i = 0; i <= 4; i++) for (let j = 0; j <= 4; j++) {
+      if (!inLabel(S, i / 4, j / 4) && i % 4 && j % 4) continue;
+      const [x, y] = toScreen(S, fromLabel(S, i / 4, j / 4, _w)); x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+    [tx, ty] = toScreen(S, S.land); bw = Math.max(x1 - x0 + 20, 56); bh = Math.max(y1 - y0 + 20, 56);
+    tx = (x0 + x1) / 2; ty = (y0 + y1) / 2;
+    aim.k = Math.min(1, aim.k + dt / 0.28);
+  }
+  const f = REDUCED || aim.x < 0 ? 1 : 1 - Math.exp(-dt * 20);
+  aim.x = lerp(aim.x < 0 ? tx : aim.x, tx, f); aim.y = lerp(aim.y < 0 ? ty : aim.y, ty, f);
+  aim.bw = lerp(aim.bw, bw, f); aim.bh = lerp(aim.bh, bh, f);
+  // the lock-on: the brackets close in from wide; unlocked they breathe a little
+  const close = L ? 1 + 0.7 * Math.pow(1 - aim.k, 2) : 1 + (REDUCED ? 0 : 0.08 * Math.sin(clock.t * 4.2));
+  const w = aim.bw * close, h = aim.bh * close, x = aim.x, y = aim.y, l = Math.min(w, h) * 0.3, X0 = x - w / 2, X1 = x + w / 2, Y0 = y - h / 2, Y1 = y + h / 2;
+  $('rt-tl').setAttribute('d', `M${X0} ${Y0 + l}V${Y0}H${X0 + l}`); $('rt-tr').setAttribute('d', `M${X1 - l} ${Y0}H${X1}V${Y0 + l}`);
+  $('rt-br').setAttribute('d', `M${X1} ${Y1 - l}V${Y1}H${X1 - l}`); $('rt-bl').setAttribute('d', `M${X0 + l} ${Y1}H${X0}V${Y1 - l}`);
+  $('rt-dot').setAttribute('cx', x); $('rt-dot').setAttribute('cy', y);
+  // the ray: from the card's top to the reticle, wide at the phone, thin at the far end (two flat layers)
+  // from the card's edge that faces the scene: its top, or (landscape, card at the right) its left side
+  const r = $('beamcard').getBoundingClientRect(), onR = r.left + r.width / 2 > innerWidth * 0.7;
+  const ox = onR ? r.left + 2 : r.left + r.width / 2, oy = onR ? r.top + r.height / 2 : r.top + 2, ex = x, ey = L || onR ? y : y + h / 2 + 4;
+  const ray = (id, w0, w1) => {
+    const dx = ex - ox, dy = ey - oy, n = Math.hypot(dx, dy) || 1, nx = -dy / n, ny = dx / n;
+    $(id).setAttribute('points', `${ox + nx * w0},${oy + ny * w0} ${ex + nx * w1},${ey + ny * w1} ${ex - nx * w1},${ey - ny * w1} ${ox - nx * w0},${oy - ny * w0}`);
+  };
+  const fl = L && !REDUCED ? 1 + 0.15 * Math.sin(clock.t * 40) : 1;
+  ray('ray-o', 16 * fl, L ? 7 : 4); ray('ray-i', 3.5, L ? 2.5 : 1.2);
+  const at = $('aim-t'), above = Y0 - 44 > 64;   // above the brackets (clear of the charm's face), else below
+  at.style.top = (above ? Y0 - 44 : Math.min(Y1 + 14, r.top - 44)) + 'px';
+}
+// the card holds the waiting photo: in the neutral shape, or (locked) cut to that slot's shape
+function showCard(P) {
+  if (!HELD.src) return;
+  const cv = $('beamcard-cv'), asp = P ? P.aspect : ED_ASP, w = 320;
+  renderLabel(HELD.src, HELD.params, asp, (P || PIECES.bobo).palette, w, cv);
+  const card = $('beamcard'); card.classList.add('hold'); card.classList.remove('go', 'wait'); card.hidden = false;
 }
 
 // ---------------------------------------------------------------- THE BEAM
 let beam = null;
 const _v = new THREE.Vector3(), _w = new THREE.Vector3(), _nd = new THREE.Vector2(), _ray = new THREE.Raycaster(), _q = new THREE.Quaternion(), _up = new THREE.Vector3(0, 1, 0);
-function startBeam(P, fromEditor) {
+function startBeam(P) {
   if (beam) endBeam(true);
   P.spin = 0; P.spinV = 0; P.status = 'beaming';
-  const card = $('beamcard'), cv = $('beamcard-cv'), w = 320, h = Math.max(24, Math.round(w / P.aspect));
+  const cv = $('beamcard-cv'), w = 320, h = Math.max(24, Math.round(w / P.aspect));
   cv.width = w; cv.height = h; cv.getContext('2d').drawImage(P.label, 0, 0, w, h);
-  card.classList.remove('go', 'wait'); card.hidden = false;
-  if (fromEditor) { void card.offsetWidth; requestAnimationFrame(() => card.classList.add('go')); } else card.classList.add('go');
-  beam = { P, pending: !fromEditor, t: -1, armAt: performance.now() + BT.card * 1000 + (fromEditor ? 60 : 0), S: null, landed: false, retracted: false, sx: 0, sy: 0, cw: 96, ch: 30 };
-  setMode('beam'); hint('');
+  const card = $('beamcard'); card.classList.add('hold'); card.classList.remove('lock'); card.hidden = false;
+  beam = { P, t: -1, armAt: performance.now() + (REDUCED ? 60 : 140), S: null, landed: false, retracted: false, sx: 0, sy: 0, cw: 84, ch: 30 };
+  setMode('beam'); $('b-beam').disabled = true; hint('');
   diag.beams++;
+}
+// Beam: the locked slot takes the waiting photo (replacing any photo it had) and the beam fires
+function fire() {
+  const S = aim.S; if (!S || !HELD.src || beam || mode !== 'aim') return;
+  const P = S.P; sound.init();
+  P.src = HELD.src; P.params = { ...HELD.params }; setLabel(P);
+  savePhoto(P).then(syncRemove);
+  for (const n of P.targets) if (SLOT[n]) SLOT[n].matP = 0;
+  startBeam(P);
 }
 function launch(S) {
   const r = $('beamcard').getBoundingClientRect();
@@ -542,7 +650,7 @@ function launch(S) {
 }
 function tickBeam(dt, S) {
   if (!beam) { if (fx.beamG) fx.beamG.visible = false; return; }
-  const ok = !!(S && S.P === beam.P && mode !== 'snap');
+  const ok = !!(S && S.P === beam.P);
   if (beam.t < 0) {                           // the card is shrinking, or waiting for the charm
     const ready = performance.now() >= beam.armAt;
     if (!ready || !ok) {
@@ -599,7 +707,6 @@ function endBeam(abort) {
   if (b.P.status === 'beaming') b.P.status = b.P.src ? 'shown' : 'empty';
   if (abort) return;
   if (b.S) b.S.matP = 1;
-  if (b.pending) savePhoto(b.P, false);
   sound.chime(); buzz([12, 40, 22]); setMode(pose.valid ? 'seen' : 'find');
   postEvent('custom', { action: 'photo-beam-beamed', piece: b.P.k, style: b.P.params && b.P.params.style });
   diag.beamsDone++;
@@ -640,11 +747,13 @@ canvas.addEventListener('pointerup', (e) => {
 });
 canvas.addEventListener('pointercancel', () => { spin.id = null; spin.drag = false; });
 function tapAt(x, y) {
-  const S = cur(); if (!S || beam || mode === 'snap' || sheetOpen()) return;
-  if (hitSlot(S, x, y)) { sound.click(); buzz(8); openAdd(S.P); }
-  else if (S.P.status !== 'shown') { hint('Tap the glowing spot to add your photo'); }
+  const S = cur(); if (!S || beam || sheetOpen()) return;
+  if (!hitSlot(S, x, y, 0.25)) { if (mode === 'aim') hint('Aim the centre at a glowing spot, or tap it'); return; }
+  sound.click(); buzz(8);
+  if (mode === 'aim') setLock(S, true);       // tapping a glowing spot locks it (no aiming needed)
+  else openCapture();                        // no photo waiting: take one for it
 }
-function hitSlot(S, x, y) {
+function hitSlot(S, x, y, grow = 0.25) {
   const r = canvas.getBoundingClientRect(); _nd.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
   _ray.setFromCamera(_nd, camera); A.updateMatrixWorld(true);
   if (_ray.intersectObject(S.mesh, false).length) return true;
@@ -652,7 +761,7 @@ function hitSlot(S, x, y) {
   const o = S.g.worldToLocal(_ray.ray.origin.clone()), d = S.g.worldToLocal(_ray.ray.origin.clone().add(_ray.ray.direction)).sub(o);
   if (Math.abs(d.z) < 1e-9) return false;
   const k = -o.z / d.z; if (k < 0) return false;
-  const p = o.addScaledVector(d, k), u = p.x / S.W + 0.5, v = 0.5 - p.y / S.H, b = S.rec.box, gu = (b[2] - b[0]) * 0.25, gv = (b[3] - b[1]) * 0.25;
+  const p = o.addScaledVector(d, k), u = p.x / S.W + 0.5, v = 0.5 - p.y / S.H, b = S.rec.box, gu = (b[2] - b[0]) * grow, gv = (b[3] - b[1]) * grow;
   return u > b[0] - gu && u < b[2] + gu && v > b[1] - gv && v < b[3] + gv;
 }
 
@@ -746,7 +855,7 @@ async function loadSaved() {
       if (!rec || !rec.src) continue;
       try {
         if (rec.params && rec.params.sticker) await stickerArt(rec.params.sticker.id);
-        P.src = await decodeImage(rec.src); P.params = { ...defaultParams(), ...rec.params }; setLabel(P); P.status = rec.pending ? 'pending' : 'shown';
+        P.src = await decodeImage(rec.src); P.params = { ...defaultParams(), ...rec.params }; setLabel(P); P.status = 'shown';
       } catch (e) { console.warn('saved photo', e); }
     }
   } catch (e) { /* none saved */ }
@@ -759,7 +868,6 @@ async function savePhoto(P, pending = false) {
     return true;
   } catch (e) { console.warn('save', e); return false; }
 }
-async function markShown(P) { if (P.src) savePhoto(P, false); }
 async function removePhoto(P) {
   if (!P) return;
   if (beam && beam.P === P) endBeam(true);
@@ -795,113 +903,156 @@ function buildStickers() {
   mk('', '<span>None</span>', 'No sticker').classList.add('none');
   for (const d of STK.lib) mk(d.id, `<img src="/evade/spray-bobo/decals/${d.file}" alt="" loading="lazy">`, d.name + ' sticker');
   el.onclick = async (e) => {
-    const b = e.target.closest('button'); if (!b || !ED.P) return;
+    const b = e.target.closest('button'); if (!b || !ED.src) return;
     const id = b.dataset.id; sound.click();
     if (!id) ED.params.sticker = null;
-    else { await stickerArt(id).catch(() => null); ED.params.sticker = { id, u: 0.78, v: 0.62, s: ED.P.aspect > 2 ? 0.8 : 0.42 }; }
+    else { await stickerArt(id).catch(() => null); ED.params.sticker = { id, u: 0.78, v: 0.66, s: 0.42 }; }
     syncStickers(); drawEditor();
   };
 }
 function syncStickers() { const id = (ED.params && ED.params.sticker && ED.params.sticker.id) || ''; document.querySelectorAll('#ed-stickers button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === id))); }
 
-// ---------------------------------------------------------------- sheets: add (Snap / Choose) and the editor
+// ---------------------------------------------------------------- sheets
 function openSheet(id) { $(id).hidden = false; const f = $(id).querySelector('.x, button'); if (f) f.focus(); }
 function closeSheet(id) { $(id).hidden = true; }
-let addFor = null;
-function openAdd(P) {
-  if (!P) { toast('Point at a charm first'); return; }
-  if (beam) return;
-  addFor = P;
-  $('add-t').textContent = P.status === 'shown' ? 'Change your photo' : 'Add your photo';
-  $('add-sub').textContent = `It lands on ${P.where}.`;
-  openSheet('add');
-}
 document.querySelectorAll('[data-close]').forEach((el) => { el.addEventListener('click', () => { const bs = el.closest('.bs'); if (bs) { bs.hidden = true; if (bs.id === 'opts') $('b-opts').setAttribute('aria-expanded', 'false'); } }); });
-addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; for (const id of ['opts', 'add']) if (!$(id).hidden) closeSheet(id); if (!$('edit').hidden) closeEditor(); if (mode === 'snap') stopSnap(); });
+addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('opts').hidden) closeSheet('opts'); else if (!$('edit').hidden) retake(); });
 
-// Snap: the live AR camera frame, through a viewfinder in the slot's shape
-let snapFor = null;
-function startSnap(P) {
-  snapFor = P; closeSheet('add'); setMode('snap'); diag.snaps++;
-  const asp = P.aspect, maxW = Math.min(innerWidth * 0.88, 520), maxH = innerHeight * 0.42, w = Math.min(maxW, maxH * asp), h = w / asp;
-  const win = $('finder-win'); win.style.width = w + 'px'; win.style.height = h + 'px';
-  $('finder').style.setProperty('--fh', h + 'px');
-  win.style.borderRadius = P.k === 'can' ? '22px' : (h / 2.2) + 'px ' + (h / 2.2) + 'px 12px 12px';
-  $('finder-freeze').hidden = true; $('finder').hidden = false;
-  $('shoot-t').textContent = 'Tap to take it'; $('b-shutter').setAttribute('aria-label', 'Take the picture for your charm');
+// ---------------------------------------------------------------- CAPTURE: our own camera, the front one first
+// Not the AR engine: a plain getUserMedia stream (the raw call, before the iPhone lens patch). The preview is
+// mirrored for the front camera and the photo is saved mirrored, as the person saw it. Before the AR camera starts
+// (or resumes), every track is stopped and the video emptied, and iPhones get a moment to let the camera go.
+const CAP = { open: false, stream: null, facing: 'user', mirror: true, cams: 0, timer: store.get('timer', '0') === '1', counting: false, gen: 0 };
+const engine = { started: false, paused: false };
+async function openCapture() {
+  if (beam) endBeam(true);
+  if (engine.started && !engine.paused) { try { XR8.pause(); } catch (e) { diag.errors.push('pause: ' + String(e).slice(0, 80)); } engine.paused = true; camLog('pause'); }
+  if (!$('edit').hidden) closeEditor();
+  CAP.open = true; $('capture').hidden = false; $('hud').hidden = true; $('cap-x').hidden = !engine.started;
+  syncTimer(); setMode('capture'); diag.captures++;
+  await camOpen(CAP.facing);
 }
-function stopSnap() {
-  $('finder').hidden = true; snapFor = null; setMode(pose.valid ? 'seen' : 'find');
-  $('shoot-t').textContent = 'Tap: photo · Hold: video'; $('b-shutter').setAttribute('aria-label', 'Take a photo. Press and hold to film');
+function camLive() { const t = CAP.stream && CAP.stream.getVideoTracks()[0]; return !!(t && t.readyState === 'live'); }
+function camStop() {
+  if (CAP.stream) { for (const t of CAP.stream.getTracks()) { try { t.stop(); } catch (e) { /* gone */ } } CAP.stream = null; }
+  const v = $('cap-video'); try { v.pause(); } catch (e) { /* none */ } v.srcObject = null;
 }
-async function snapFrame() {
-  const P = snapFor, v = engineVideo(); if (!P) return;
-  const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60); sound.shutter(); buzz(20);
-  try {
-    if (!v || !v.videoWidth) throw new Error('no video');
-    const cr = canvas.getBoundingClientRect(), wr = $('finder-win').getBoundingClientRect(), vw = v.videoWidth, vh = v.videoHeight;
-    const sc = Math.max(cr.width / vw, cr.height / vh), ox = cr.left + (cr.width - vw * sc) / 2, oy = cr.top + (cr.height - vh * sc) / 2;
-    const sx = (wr.left - ox) / sc, sy = (wr.top - oy) / sc, sw = wr.width / sc, sh = wr.height / sc, k = Math.min(1, LABEL_MAX / Math.max(sw, sh));
-    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
-    c.getContext('2d').drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    const fz = $('finder-freeze'); fz.width = c.width; fz.height = c.height; fz.getContext('2d').drawImage(c, 0, 0); fz.hidden = false;
-    await wait(420);
-    stopSnap(); openEditor(P, c);
-  } catch (e) { console.warn('snap', e); stopSnap(); toast('Couldn\'t grab the camera picture. Try Choose instead.'); }
+async function camOpen(facing, exact = false) {
+  const gen = ++CAP.gen; camStop(); $('cap-err').hidden = true;
+  if (!GUM) { capErr('NotSupportedError'); return false; }
+  const base = { width: { ideal: 1280 }, height: { ideal: 960 } };
+  let st = null, err = null;
+  for (const fm of exact ? [{ exact: facing }, { ideal: facing }] : [{ ideal: facing }]) {
+    try { st = await GUM({ audio: false, video: { ...base, facingMode: fm } }); break; } catch (e) { err = e; if (e && e.name === 'NotAllowedError') break; }
+  }
+  if (gen !== CAP.gen || !CAP.open) { if (st) st.getTracks().forEach((t) => t.stop()); return false; }
+  if (!st) { capErr(err && err.name); return false; }
+  CAP.stream = st; const v = $('cap-video'); v.muted = true; v.srcObject = st;
+  try { await v.play(); } catch (e) { /* autoplay: muted inline plays */ }
+  const tr = st.getVideoTracks()[0], set = (tr && tr.getSettings && tr.getSettings()) || {};
+  CAP.facing = set.facingMode === 'environment' ? 'environment' : set.facingMode === 'user' ? 'user' : facing;
+  CAP.mirror = set.facingMode ? set.facingMode === 'user' : facing === 'user';
+  v.classList.toggle('mirror', CAP.mirror);
+  try { const ds = await navigator.mediaDevices.enumerateDevices(); CAP.cams = ds.filter((d) => d.kind === 'videoinput').length; } catch (e) { CAP.cams = 1; }
+  $('cap-flip').hidden = CAP.cams < 2;
+  diag.selfie = { facing: CAP.facing, mirror: CAP.mirror, cams: CAP.cams, label: tr && tr.label, w: set.width, h: set.height };
+  return true;
 }
+function capErr(name) {
+  diag.capErr = name || 'unknown';
+  const body = name === 'NotAllowedError' ? 'Camera access is off for this site. Pick a photo from your library instead, or allow the camera in your browser settings and try again.'
+    : name === 'NotFoundError' || name === 'OverconstrainedError' ? 'We couldn\'t find a camera to take your photo. Pick one from your library instead.'
+      : name === 'NotReadableError' ? 'Another app may be using the camera. Close it and try again, or pick a photo from your library.'
+        : name === 'NotSupportedError' ? 'This browser can\'t open the camera here. Pick a photo from your library instead.'
+          : 'Something stopped the camera. Try again, or pick a photo from your library.';
+  $('cap-err-b').textContent = body; $('cap-err').hidden = false; $('cap-err-lib').focus();
+}
+// leave capture for the AR camera: stop every track, empty the video, give the camera a moment to be free
+async function leaveCapture() {
+  CAP.gen++; CAP.counting = false; $('cap-count').hidden = true; $('cap-shutter').classList.remove('counting');
+  camStop(); CAP.open = false; $('capture').hidden = true; $('cap-err').hidden = true;
+  await wait(IOS ? 450 : 150);
+}
+async function flipCam() {
+  const v = $('cap-video'); sound.click(); buzz(8);
+  if (!REDUCED) { v.classList.add('flip'); await wait(170); }
+  await camOpen(CAP.facing === 'user' ? 'environment' : 'user', true);
+  v.classList.remove('flip');
+}
+function syncTimer() { $('cap-timer').setAttribute('aria-pressed', String(CAP.timer)); $('cap-timer').setAttribute('aria-label', CAP.timer ? '3 second timer on' : '3 second timer off'); }
+async function shoot(noTimer = false) {
+  if (CAP.counting || !camLive()) return;
+  const v = $('cap-video');
+  if (CAP.timer && !noTimer) {
+    CAP.counting = true; $('cap-shutter').classList.add('counting'); const el = $('cap-count'); el.hidden = false;
+    for (let n = 3; n > 0; n--) {
+      if (!CAP.counting) return;
+      el.textContent = String(n); el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick'); sound.click(); buzz(6);
+      await wait(1000);
+    }
+    el.hidden = true; $('cap-shutter').classList.remove('counting');
+    if (!CAP.counting) return; CAP.counting = false;
+  }
+  for (let i = 0; i < 15 && !v.videoWidth; i++) await wait(100);   // the stream just opened: wait for its first frame
+  if (!v.videoWidth) { toast('The camera isn\'t ready yet'); return; }
+  // what was on the screen: the cover crop of the video, mirrored as shown
+  const W = innerWidth, H = innerHeight, vw = v.videoWidth, vh = v.videoHeight, sc = Math.max(W / vw, H / vh);
+  const sw = W / sc, sh = H / sc, sx = (vw - sw) / 2, sy = (vh - sh) / 2, k = Math.min(1, LABEL_MAX / Math.max(sw, sh));
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+  const g = c.getContext('2d'); if (CAP.mirror) { g.translate(c.width, 0); g.scale(-1, 1); }
+  g.drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 80); sound.init(); sound.shutter(); buzz(20);
+  diag.snaps++; openEditor(c);
+}
+$('cap-shutter').onclick = () => { if (CAP.counting) { CAP.counting = false; $('cap-count').hidden = true; $('cap-shutter').classList.remove('counting'); return; } shoot(); };
+$('cap-flip').onclick = flipCam;
+$('cap-timer').onclick = () => { CAP.timer = !CAP.timer; store.set('timer', CAP.timer ? '1' : '0'); syncTimer(); sound.click(); };
+$('cap-x').onclick = async () => { await leaveCapture(); await backToAr(); };
+$('cap-err-retry').onclick = () => camOpen(CAP.facing);
 
-// Choose: the phone's picker. Phones can pause or drop our camera while it is open, so check it after.
+// Library: the phone's picker. Phones can pause or drop a camera while it is open, so check it after.
 let picking = false;
-$('a-snap').onclick = () => { if (addFor) startSnap(addFor); };
-$('a-choose').onclick = () => { closeSheet('add'); picking = true; diag.picks++; $('file').value = ''; $('file').click(); };
+function openLibrary() { picking = true; diag.picks++; $('file').value = ''; $('file').click(); }
+$('cap-lib').onclick = openLibrary; $('cap-err-lib').onclick = openLibrary;
 $('file').addEventListener('change', async () => {
-  const f = $('file').files && $('file').files[0]; picking = false; ensureCamera('picker');
-  if (!f || !addFor) return;
-  try { const c = await decodeImage(f); openEditor(addFor, c); }
+  const f = $('file').files && $('file').files[0]; picking = false; afterPicker('picker');
+  if (!f) return;
+  try { openEditor(await decodeImage(f)); }
   catch (e) { console.warn('decode', e); diag.errors.push('decode: ' + String(e).slice(0, 80)); toast('Couldn\'t open that photo. Try another one.'); }
 });
-$('file').addEventListener('cancel', () => { picking = false; ensureCamera('cancel'); });
-addEventListener('focus', () => { if (picking) setTimeout(() => { if (picking) { picking = false; ensureCamera('focus'); } }, 600); });
-document.addEventListener('visibilitychange', () => { if (!document.hidden && camStartAt) setTimeout(() => ensureCamera('visible'), 400); });
+$('file').addEventListener('cancel', () => { picking = false; afterPicker('cancel'); });
+addEventListener('focus', () => { if (picking) setTimeout(() => { if (picking) { picking = false; afterPicker('focus'); } }, 600); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(() => afterPicker('visible'), 400); });
+function afterPicker(why) {
+  if (CAP.open) { if (!camLive() && $('edit').hidden && $('cap-err').hidden) camOpen(CAP.facing); return; }
+  if (camStartAt) ensureCamera(why);
+}
 
-// The editor: drag to pan, pinch / wheel to zoom, a style, a sticker. Its preview is the label itself with the
-// slot's shape cut out of a flat dark surround.
-const ED = { P: null, src: null, params: null, ptrs: new Map(), pinch: 0, mode: null, raf: 0 };
-function openEditor(P, src, prm) {
-  ED.P = P; ED.src = src; ED.params = prm ? { ...prm } : defaultParams();
+// The editor: drag to pan, pinch / wheel to zoom, a style, a sticker, in a neutral rounded shape (the slot is
+// chosen later, by aiming). The photo is cut to the slot's own shape when it is beamed.
+const ED = { src: null, params: null, ptrs: new Map(), pinch: 0, mode: null, raf: 0 };
+function openEditor(src, prm) {
+  ED.src = src; ED.params = prm ? { ...prm } : HELD.params ? { ...HELD.params, zoom: 1, px: 0, py: 0 } : defaultParams();
   document.querySelectorAll('#ed-style button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === ED.params.style)));
-  syncStickers(); drawThumb(P);
+  syncStickers();
   $('edit').hidden = false; drawEditor(); $('ed-go').focus();
 }
-function closeEditor() { $('edit').hidden = true; ED.P = null; ED.src = null; }
-function edSlot(P) { return SLOT[side] && SLOT[side].P === P ? SLOT[side] : SLOT[P.targets[0]] || { rec: SL.targets[P.targets[0]], lb: labelBox(SL.targets[P.targets[0]]) }; }
+function closeEditor() { $('edit').hidden = true; ED.src = null; }
+function retake() { closeEditor(); if (CAP.open && !camLive()) camOpen(CAP.facing); }
 function drawEditor() {
-  if (!ED.P) return;
+  if (!ED.src) return;
   cancelAnimationFrame(ED.raf);
   ED.raf = requestAnimationFrame(() => {
-    if (!ED.P) return;
-    const P = ED.P, cv = $('ed-cv');
-    renderLabel(ED.src, ED.params, P.aspect, P.palette, 640, cv);
-    const g = cv.getContext('2d'), w = cv.width, h = cv.height, S = edSlot(P);
-    // the slot's shape: for a band, its outline in label space; the can's label is the whole rectangle
-    g.save(); g.beginPath();
-    if (S.rec.kind === 'band') {
-      const lb = S.lb, X = (u) => (u - lb.ua) / (lb.ub - lb.ua) * w, Y = (v) => (v - lb.va) / (lb.vb - lb.va) * h;
-      S.rec.poly.forEach(([u, v], i) => (i ? g.lineTo(X(u), Y(v)) : g.moveTo(X(u), Y(v)))); g.closePath();
-      g.rect(0, 0, w, h); g.fillStyle = 'rgba(11,18,22,.78)'; g.fill('evenodd');
-      g.beginPath(); S.rec.poly.forEach(([u, v], i) => (i ? g.lineTo(X(u), Y(v)) : g.moveTo(X(u), Y(v)))); g.closePath();
-    } else { const r = Math.min(w, h) * 0.06; g.roundRect ? g.roundRect(2, 2, w - 4, h - 4, r) : g.rect(2, 2, w - 4, h - 4); }
+    if (!ED.src) return;
+    const cv = $('ed-cv');
+    renderLabel(ED.src, ED.params, ED_ASP, PIECES.bobo.palette || ['#06185f', '#8bc7fc', '#d5ebfe'], 640, cv);
+    const g = cv.getContext('2d'), w = cv.width, h = cv.height, r = Math.min(w, h) * 0.12;
+    g.save(); g.beginPath(); g.rect(0, 0, w, h);
+    if (g.roundRect) g.roundRect(3, 3, w - 6, h - 6, r); else g.rect(3, 3, w - 6, h - 6);
+    g.fillStyle = '#0b1216'; g.fill('evenodd');
+    g.beginPath(); if (g.roundRect) g.roundRect(3, 3, w - 6, h - 6, r); else g.rect(3, 3, w - 6, h - 6);
     g.lineWidth = Math.max(3, w / 160); g.strokeStyle = COL.xs; g.stroke(); g.restore();
   });
-}
-function drawThumb(P) {
-  const c = $('ed-thumb'), g = c.getContext('2d'), n = SLOT[side] && SLOT[side].P === P ? side : P.targets[0], rec = SL.targets[n];
-  g.fillStyle = '#0b1216'; g.fillRect(0, 0, c.width, c.height);
-  loadImg(KC + `image-targets/${n}_thumbnail.jpg`).then((img) => {
-    const k = Math.min(c.width / img.width, c.height / img.height), w = img.width * k, h = img.height * k, x = (c.width - w) / 2, y = (c.height - h) / 2;
-    g.drawImage(img, x, y, w, h); g.beginPath(); rec.poly.forEach(([u, v], i) => (i ? g.lineTo(x + u * w, y + v * h) : g.moveTo(x + u * w, y + v * h))); g.closePath();
-    g.fillStyle = COL.xs; g.fill();
-  }).catch(() => {});
 }
 const edCv = $('ed-cv');
 function edLocal(e) { const r = edCv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, r]; }
@@ -916,7 +1067,7 @@ edCv.addEventListener('pointerdown', (e) => {
   if (ED.ptrs.size === 2) { const [a, b] = [...ED.ptrs.values()]; ED.pinch = Math.hypot(a.x - b.x, a.y - b.y); ED.mode = 'pinch'; }
 });
 edCv.addEventListener('pointermove', (e) => {
-  const p = ED.ptrs.get(e.pointerId); if (!p || !ED.P) return;
+  const p = ED.ptrs.get(e.pointerId); if (!p || !ED.src) return;
   const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
   const r = edCv.getBoundingClientRect(), prm = ED.params;
   if (ED.mode === 'pinch' && ED.ptrs.size >= 2) {
@@ -934,30 +1085,31 @@ edCv.addEventListener('pointermove', (e) => {
 });
 const edUp = (e) => { ED.ptrs.delete(e.pointerId); if (ED.ptrs.size < 2) ED.pinch = 0; if (!ED.ptrs.size) ED.mode = null; };
 edCv.addEventListener('pointerup', edUp); edCv.addEventListener('pointercancel', edUp);
-edCv.addEventListener('wheel', (e) => { e.preventDefault(); if (!ED.P) return; ED.params.zoom = clamp(ED.params.zoom * Math.exp(-e.deltaY * 0.0015), 1, 5); drawEditor(); }, { passive: false });
+edCv.addEventListener('wheel', (e) => { e.preventDefault(); if (!ED.src) return; ED.params.zoom = clamp(ED.params.zoom * Math.exp(-e.deltaY * 0.0015), 1, 5); drawEditor(); }, { passive: false });
 document.querySelectorAll('#ed-style button').forEach((b) => { b.onclick = () => { ED.params.style = b.dataset.v; document.querySelectorAll('#ed-style button').forEach((x) => x.setAttribute('aria-checked', String(x === b))); sound.click(); drawEditor(); }; });
-$('ed-x').onclick = closeEditor;
-$('ed-back').onclick = () => { const P = ED.P; closeEditor(); openAdd(P); };
-$('ed-go').onclick = () => beamIt();
-async function beamIt() {
-  const P = ED.P; if (!P) return;
+$('ed-x').onclick = retake;
+$('ed-back').onclick = retake;
+$('ed-go').onclick = () => readyToBeam();
+// Ready to beam: the photo waits; the selfie camera goes, the AR camera comes (started, or resumed)
+async function readyToBeam() {
+  if (!ED.src) return;
   sound.init();
-  P.src = ED.src; P.params = { ...ED.params }; setLabel(P); closeEditor();
-  savePhoto(P).then(syncRemove);
-  for (const n of P.targets) if (SLOT[n]) SLOT[n].matP = 0;
-  startBeam(P, true);
+  HELD.src = ED.src; HELD.params = { ...ED.params }; closeEditor();
+  postEvent('custom', { action: 'photo-beam-ready', style: HELD.params.style });
+  await leaveCapture();
+  await backToAr();
+}
+async function backToAr() {
+  if (!engine.started) { await startEngine(); return; }   // its onStart shows the HUD in the right mode
+  $('hud').hidden = false; setMode(HELD.src ? 'aim' : pose.valid ? 'seen' : 'find');
+  await resumeEngine();
 }
 
 // ---------------------------------------------------------------- HUD buttons and options
-$('b-photo').onclick = () => { sound.init(); const S = cur(); openAdd(S ? S.P : lastP); };
-$('c-change').onclick = () => { const S = cur(); if (S) openAdd(S.P); };
+$('b-photo').onclick = () => { sound.init(); openCapture(); };
 $('c-remove').onclick = () => { const S = cur(); if (S) removePhoto(S.P); };
-$('c-other').onclick = () => {
-  const S = cur(); if (!S || !S.P.src) return;
-  const others = Object.values(PIECES).filter((Q) => Q !== S.P);
-  for (const Q of others) { Q.src = S.P.src; Q.params = { ...S.P.params, zoom: 1, px: 0, py: 0 }; setLabel(Q); Q.status = 'pending'; for (const n of Q.targets) if (SLOT[n]) SLOT[n].matP = 0; savePhoto(Q, true); }
-  sound.click(); buzz(10); toast(`Point at ${others.map((Q) => Q.name).join(' or ')} and it beams over`, 3200); syncRemove();
-};
+$('c-again').onclick = () => { if (!HELD.src) return; sound.click(); buzz(8); setMode('aim'); };
+$('b-beam').onclick = () => fire();
 function segInit(id, curV, fn) {
   const btns = [...document.querySelectorAll(`#${id} button`)];
   const sync = (v) => btns.forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === String(v))));
@@ -972,7 +1124,6 @@ $('o-remove').onclick = () => { const P = PIECES[$('o-remove').dataset.k]; close
 $('o-how').onclick = () => { closeSheet('opts'); $('how').hidden = false; $('b-go').focus(); };
 $('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
 $('err-retry').onclick = () => location.reload();
-$('finder-x').onclick = () => { stopSnap(); };
 function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; }
 
 // ---------------------------------------------------------------- 8th Wall pipeline
@@ -991,15 +1142,13 @@ function rebind() {
 }
 const appModule = () => ({
   name: 'photo-beam',
-  onStart: () => { if (built) { rebind(); return; } buildScene(XR8.Threejs.xrScene()); built = true; $('hud').hidden = false; setMode('find'); },
+  onStart: () => { if (built) { rebind(); return; } buildScene(XR8.Threejs.xrScene()); built = true; if (!CAP.open) { $('hud').hidden = false; setMode(HELD.src ? 'aim' : 'find'); } },
   onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (built) tick(dt); flushDiag(false); },
   onCameraStatusChange: ({ status, video, stream }) => {
     camLog(status);
     if (status === 'hasStream') { kickVideo(); noteStream(stream); }
     if (status === 'hasVideo') {
       hideTapCam(); if (!camStartAt) camStartAt = performance.now(); tuneCamera(video);
-      $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      if (store.get('how', '0') !== '1' && !params.has('test')) { $('how').hidden = false; $('b-go').focus(); }
     }
     if (status === 'requesting') hint('Allow camera access to begin');
     if (status === 'failed') camFailed('failed');
@@ -1018,10 +1167,18 @@ async function askMotion() {
   } catch (e) { diag.motion = 'error:' + (e && e.name); }
 }
 const runConfig = () => ({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
+// Start: the splash goes and capture opens (our own front camera). The AR engine starts later, at Ready to beam.
 async function start() {
   if (!loaded) return;
   $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
   sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
+  postEvent('scan', {});
+  $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
+  await openCapture();
+}
+$('b-start').onclick = start;
+async function startEngine() {
+  if (engine.started) return; engine.started = true;
   const data = await assets;
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
   initTargets(data.tdata);
@@ -1031,18 +1188,34 @@ async function start() {
     appModule(),
     { name: 'pb-capture', onRender: () => { if (capture) capture.frame(); } },
   ]);
-  camLog('run'); postEvent('scan', {});
+  camLog('run');
   setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
   XR8.run(runConfig());
 }
-$('b-start').onclick = start;
+// back from capture: resume the engine (it re-opens the rear camera) and check that frames flow again; if not,
+// the restart path (pause, resume, play the video until it moves)
+async function resumeEngine() {
+  for (const t of Object.values(TS)) t.tracked = false;
+  pose.snap = true; diag.resumes++; camLog('resume');
+  try { XR8.resume(); } catch (e) { diag.errors.push('resume: ' + String(e).slice(0, 120)); }
+  engine.paused = false;
+  let t0 = -1;
+  for (let i = 0; i < 10; i++) {
+    await wait(300);
+    if (CAP.open) return;                     // gone back to capture meanwhile
+    const v = engineVideo(), tr = v && v.srcObject && v.srcObject.getVideoTracks()[0];
+    if (v && v.srcObject && v.paused) { v.muted = true; v.play().catch(() => {}); }
+    if (v && tr && tr.readyState === 'live' && !v.paused) { if (t0 >= 0 && v.currentTime > t0) { camLog('resumed'); return; } t0 = v.currentTime; }
+  }
+  restartCamera('resume');
+}
 
 // After the photo picker (or a trip to another app) the camera may be paused or gone: if the engine's video is not
 // advancing, play it; if that does not help, pause and resume the engine (its resume re-opens the camera when the
 // stream's tracks are no longer live; XR8.stop() + XR8.run() throws "No valid session manager" in this build).
 let restarting = false;
 async function ensureCamera(why) {
-  if (!camStartAt || restarting) return;
+  if (!camStartAt || restarting || CAP.open || engine.paused) return;
   const v = engineVideo(); if (!v) return;
   const t0 = v.currentTime; await wait(900);
   const v2 = engineVideo(); if (v2 && v2 === v && v.currentTime !== t0 && !v.paused) return;
@@ -1086,7 +1259,7 @@ if (IOS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     });
   };
 }
-function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
+function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject && v.id !== 'cap-video') || null; }
 function tuneCamera(video) {
   try {
     const tr = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!tr) return;
@@ -1175,18 +1348,16 @@ const sh = $('b-shutter');
 sh.addEventListener('contextmenu', (e) => e.preventDefault());
 sh.addEventListener('pointerdown', (e) => {
   if (e.button > 0) return;
-  if (mode === 'snap') { holding = false; return; }
   if (capture && capture.status === 'recording') { holding = false; return; }
   holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
   clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) capture.start(); }, HOLD_MS);
 });
 sh.addEventListener('pointerup', () => {
-  if (mode === 'snap') { snapFrame(); return; }
   if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
   if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
 });
 sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
-sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (mode === 'snap') snapFrame(); else takePhoto(); } });
+sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); takePhoto(); } });
 $('shot-close').onclick = () => { $('shot').hidden = true; };
 
 // ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous; never the photo)
@@ -1198,7 +1369,7 @@ function postEvent(type, props) {
 
 // ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
 // Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'photo-beam').
-const diag = { page: 'photo-beam', sid: SID, found: 0, lost: 0, fpsN: 0, beams: 0, beamsDone: 0, snaps: 0, picks: 0, restarts: 0, rebinds: 0, errors: [], steps: [], targets: {} };
+const diag = { page: 'photo-beam', sid: SID, found: 0, lost: 0, fpsN: 0, beams: 0, beamsDone: 0, captures: 0, snaps: 0, picks: 0, locks: 0, resumes: 0, restarts: 0, rebinds: 0, errors: [], steps: [], targets: {} };
 function tDiag(n) { return diag.targets[n] || (diag.targets[n] = { found: 0, lost: 0 }); }
 function camLog(s) { diag.steps.push([s, Math.round(performance.now())]); if (diag.steps.length > 40) diag.steps.shift(); }
 let flushAt = 0;
@@ -1212,33 +1383,34 @@ addEventListener('pagehide', () => flushDiag(true));
 document.addEventListener('visibilitychange', () => { if (document.hidden) flushDiag(true); });
 addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
 
-// automated tests (?test): inject a photo without the picker, run the beam, read the state
+// automated tests (?test): drive capture, the editor, aiming and the beam; read the state
 if (params.has('test')) window.__pb = {
   TS, diag, PIECES, SLOT,
-  state: () => ({
-    pose: pose.state, mode, side, piece: side && PIECE_OF[side] ? PIECE_OF[side].k : null,
-    pieces: Object.fromEntries(Object.values(PIECES).map((P) => [P.k, { status: P.status, spin: +P.spin.toFixed(3), aspect: +(P.aspect || 0).toFixed(3) }])),
-    beam: beam ? { piece: beam.P.k, t: +beam.t.toFixed(3), landed: beam.landed, particles: fx.pts ? fx.pts.userData.n : 0 } : null,
-    slots: Object.fromEntries(Object.values(SLOT).map((S) => [S.name, { has: S.mat.uniforms.uHas.value, p: +S.mat.uniforms.uP.value.toFixed(3), outline: S.outline.visible, visible: S.g.visible }])),
-    sheets: { add: !$('add').hidden, edit: !$('edit').hidden, opts: !$('opts').hidden },
-  }),
-  // decode a picture (data URL) and beam it onto a piece, as if "Beam it" was pressed in the editor
-  async setPhoto(k, url, prm = {}) {
-    const P = PIECES[k], blob = await (await fetch(url)).blob(), src = await decodeImage(blob);
-    if (prm.sticker) await stickerArt(prm.sticker.id);
-    ED.P = P; ED.src = src; ED.params = { ...defaultParams(), ...prm };
-    await beamIt(); return true;
+  state: () => {
+    const v = $('cap-video');
+    return {
+      pose: pose.state, mode, side, piece: side && PIECE_OF[side] ? PIECE_OF[side].k : null, held: !!HELD.src,
+      pieces: Object.fromEntries(Object.values(PIECES).map((P) => [P.k, { status: P.status, spin: +P.spin.toFixed(3), aspect: +(P.aspect || 0).toFixed(3) }])),
+      beam: beam ? { piece: beam.P.k, t: +beam.t.toFixed(3), landed: beam.landed, particles: fx.pts ? fx.pts.userData.n : 0 } : null,
+      slots: Object.fromEntries(Object.values(SLOT).map((S) => [S.name, { has: S.mat.uniforms.uHas.value, p: +S.mat.uniforms.uP.value.toFixed(3), outline: S.outline.visible, visible: S.g.visible }])),
+      capture: { open: CAP.open, live: camLive(), facing: CAP.facing, mirror: CAP.mirror, cams: CAP.cams, video: [v.videoWidth, v.videoHeight], flip: !$('cap-flip').hidden, err: $('cap-err').hidden ? null : diag.capErr },
+      engine: { ...engine, xrPaused: engine.started ? XR8.isPaused() : null, video: (() => { const e = engineVideo(); const t = e && e.srcObject && e.srcObject.getVideoTracks()[0]; return e ? { paused: e.paused, t: +e.currentTime.toFixed(2), track: t && t.readyState } : null; })() },
+      aim: { visible: !$('aim').hidden, locked: aim.S ? aim.S.name : null, tap: aim.tap, ready: !$('b-beam').disabled, label: $('aim-t').textContent },
+      sheets: { edit: !$('edit').hidden, opts: !$('opts').hidden },
+    };
   },
-  beam(k) { const P = PIECES[k]; if (!P.src) return false; startBeam(P, false); return true; },
-  async openEditor(k, url, prm = {}) { const P = PIECES[k], src = await decodeImage(await (await fetch(url)).blob()); if (prm.sticker) await stickerArt(prm.sticker.id); openEditor(P, src, { ...defaultParams(), ...prm }); return true; },
-  openAdd: (k) => openAdd(PIECES[k]), startSnap: (k) => startSnap(PIECES[k]), snap: () => snapFrame(),
+  openCapture: () => openCapture(), shoot: () => shoot(true), flip: () => flipCam(), retake: () => retake(),
+  async library(url, prm) { openEditor(await decodeImage(await (await fetch(url)).blob()), prm ? { ...defaultParams(), ...prm } : null); return true; },
+  style: (v) => { const b = document.querySelector(`#ed-style button[data-v="${v}"]`); if (b) b.click(); },
+  ready: () => readyToBeam(), fire: () => fire(), again: () => $('c-again').click(), lock: (n) => { const S = SLOT[n]; if (S) setLock(S, true); },
   remove: (k) => removePhoto(PIECES[k]), restartCamera: () => restartCamera('test'), ensureCamera: () => ensureCamera('test'),
   // the slot's box corners on the screen (to aim taps in tests)
   slotScreen(n) {
     const S = SLOT[n || side]; if (!S || !A.visible) return null;
-    const pr = (v) => { const p = S.g.localToWorld(v.clone()).project(camera); return [(p.x + 1) / 2 * innerWidth, (1 - p.y) / 2 * innerHeight]; };
+    const pr = (v) => toScreen(S, v);
     return { centre: pr(S.land), corners: [[0, 0], [1, 0], [1, 1], [0, 1]].map(([s, t]) => pr(fromLabel(S, s, t))) };
   },
+  aimAt: (x, y) => { testAim = x == null ? null : [x, y]; },
   tap: (x, y) => tapAt(x, y), blind: (on) => { testBlind = !!on; },
   fake: (name, d) => onTarget({ name, position: d.position, rotation: d.rotation, scale: d.scale, scaledHeight: d.scaledHeight || 1 }),
 };

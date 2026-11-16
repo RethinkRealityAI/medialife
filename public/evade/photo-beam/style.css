@@ -73,6 +73,7 @@ h1 span{color:var(--x)}
 #bottom .b-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:12px}
 .act{flex-direction:column;gap:2px;width:64px;height:64px;min-height:64px;padding:0;margin:0;border-radius:50%;font-size:11px;letter-spacing:.02em;pointer-events:auto;transition:opacity .25s,transform .12s}
 .act svg{width:24px;height:24px}
+#b-photo{font-size:10px;letter-spacing:0}
 .act:active{transform:scale(.9)}
 #hud[data-mode=find] .act{opacity:0;pointer-events:none}
 .crc-anchor{display:none!important}
@@ -166,17 +167,10 @@ h1 span{color:var(--x)}
 /* chips above the shutter once the charm wears a photo */
 #chips{position:absolute;left:50%;bottom:calc(124px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:6px;padding:4px;border-radius:999px;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);max-width:calc(100% - 24px)}
 #chips button{min-height:44px;padding:0 12px;border:0;background:rgba(255,255,255,.08);border-radius:999px;font-size:13px;white-space:nowrap;backdrop-filter:none;-webkit-backdrop-filter:none}
-#chips #c-other{background:var(--x);color:var(--xd)}
-#hud[data-mode=find] #chips,#hud[data-mode=snap] #chips,#hud[data-mode=beam] #chips{display:none}
+#chips #c-again{background:var(--x);color:var(--xd)}
+#hud[data-mode=find] #chips,#hud[data-mode=aim] #chips,#hud[data-mode=beam] #chips{display:none}
 #hud:has(#chips:not([hidden])) #hint{bottom:calc(182px + env(safe-area-inset-bottom))}
 
-/* Snap: the viewfinder. A window in the slot's shape; the rest of the camera dimmed with one flat colour */
-#finder{position:absolute;inset:0;pointer-events:none!important}
-#finder-win{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);border:3px solid var(--x);border-radius:16px;box-shadow:0 0 0 200vmax rgba(10,14,17,.6);overflow:hidden}
-#finder-win canvas{width:100%;height:100%;display:block}
-#finder-t{position:absolute;left:50%;top:calc(42% - var(--fh,80px) / 2 - 52px);transform:translateX(-50%);margin:0;background:var(--x);color:var(--xd);font-size:13px;font-weight:700;padding:8px 15px;border-radius:999px;white-space:nowrap}
-#finder-x{position:absolute;left:calc(14px + env(safe-area-inset-left));bottom:calc(26px + env(safe-area-inset-bottom));pointer-events:auto}
-#hud[data-mode=snap] .b-left,#hud[data-mode=snap] .b-right,#hud[data-mode=snap] #hint,#hud[data-mode=snap] #guide{visibility:hidden}
 #hud[data-mode=beam] #b-photo{opacity:.35;pointer-events:none}
 
 /* the card the photo shrinks into: flat cyan frame, two flat see-through rings for the glow */
@@ -187,19 +181,11 @@ h1 span{color:var(--x)}
 @keyframes wait{50%{box-shadow:0 0 0 8px rgba(79,214,232,.6),0 0 0 18px rgba(79,214,232,.25)}}
 @media (min-aspect-ratio:1/1) and (max-height:520px){#beamcard.go{top:50%;left:auto;right:calc(110px + env(safe-area-inset-right));transform:translate(0,-50%)}}
 
-/* bottom sheets: add and edit */
-.bs .sub{margin:-4px 2px 12px;color:var(--muted)}
-.bs .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bs .big{flex-direction:column;gap:4px;min-height:118px;border-radius:20px;background:rgba(255,255,255,.06);padding:14px 10px;backdrop-filter:none;-webkit-backdrop-filter:none}
-.bs .big svg{width:34px;height:34px;color:var(--x)}
-.bs .big b{font:900 italic 22px/1 "Exo 2",sans-serif}
-.bs .big small{font-size:12px;color:var(--muted);font-weight:500}
-.bs .big:active{transform:scale(.97)}
+/* bottom sheets */
 .priv{display:flex;align-items:center;gap:8px;margin:12px 2px 0;font-size:13px;color:var(--muted)}
 .priv svg{width:18px;height:18px;flex:none;color:var(--x)}
 #edit header{gap:10px;justify-content:flex-start}
 #edit header h2{flex:1}
-#ed-thumb{width:44px;height:44px;border-radius:10px;background:#0b1216}
 #ed-wrap{display:grid;place-items:center;background:#0b1216;border-radius:18px;padding:12px;min-height:120px}
 #ed-cv{display:block;max-width:100%;max-height:34vh;border-radius:6px;touch-action:none;cursor:grab}
 .tip{margin:6px 0 10px;text-align:center;font-size:12px;color:var(--muted)}
@@ -230,3 +216,63 @@ h1 span{color:var(--x)}
   h1{font-size:36px}
   .act-by{height:30px;margin-top:8px}
 }
+
+/* ---------------------------------------------------------------- capture: the selfie camera (before the AR camera) */
+#capture{position:fixed;inset:0;z-index:28;background:#000;overflow:hidden}
+#cap-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .35s cubic-bezier(.3,.8,.3,1),opacity .2s}
+#cap-video.mirror{transform:scaleX(-1)}
+#cap-video.flip{transform:scaleX(-1) rotateY(90deg);opacity:0}
+#cap-video.mirror.flip{transform:rotateY(90deg)}
+#cap-guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:min(64vw,300px,46vh);aspect-ratio:3/4;pointer-events:none}
+#cap-guide i{position:absolute;inset:0;border:3px solid rgba(255,255,255,.85);border-radius:50% 50% 46% 46%/42% 42% 58% 58%;box-shadow:0 0 0 200vmax rgba(8,12,15,.38)}
+#capture .cap-top{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:46px 1fr 46px;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))}
+#cap-t{grid-column:2;margin:0;justify-self:center;background:var(--x);color:var(--xd);font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;text-align:center}
+#cap-x{grid-column:1} #cap-timer{grid-column:3;position:relative}
+#cap-timer b{position:absolute;right:-4px;bottom:-4px;font-size:10px;line-height:1;padding:3px 4px;border-radius:6px;background:rgba(255,255,255,.2);color:#fff}
+#cap-timer[aria-pressed=true]{background:var(--y);border-color:var(--y)} #cap-timer[aria-pressed=true] svg{stroke:var(--ink)} #cap-timer[aria-pressed=true] b{background:var(--ink);color:var(--y)}
+#cap-count{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:900 italic 140px/1 "Exo 2",sans-serif;color:#fff;text-shadow:0 4px 30px rgba(0,0,0,.5);pointer-events:none}
+#cap-count.tick{animation:count .9s ease-out both}
+@keyframes count{from{transform:translate(-50%,-50%) scale(1.5);opacity:0}25%{opacity:1}to{transform:translate(-50%,-50%) scale(.9);opacity:.85}}
+#capture .cap-bottom{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:0 calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+.cap-side{flex-direction:column;gap:2px;width:64px;height:64px;min-height:64px;padding:0;border-radius:50%;font-size:11px}
+.cap-side svg{width:24px;height:24px}
+#cap-lib{justify-self:start} #cap-flip{justify-self:end;grid-column:3}
+#cap-shutter{grid-column:2;position:relative;width:80px;height:80px;min-height:80px;padding:0;border-radius:50%;border:5px solid #fff;background:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#cap-shutter i{position:absolute;inset:6px;border-radius:50%;background:#fff;transition:transform .1s}
+#cap-shutter:active i{transform:scale(.88)}
+#cap-shutter.counting i{background:var(--y)}
+.cap-priv{position:absolute;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));justify-content:center;margin:0;font-size:12px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+#cap-err{z-index:2}
+@media (min-aspect-ratio:1/1) and (max-height:520px){
+  #capture .cap-bottom{left:auto;top:0;grid-template-columns:auto;grid-template-rows:1fr auto 1fr;padding:0 calc(16px + env(safe-area-inset-right)) 0 0}
+  #cap-lib{grid-row:1;align-self:end;justify-self:center} #cap-shutter{grid-column:1;grid-row:2} #cap-flip{grid-column:1;grid-row:3;align-self:start;justify-self:center}
+  #cap-guide{width:min(36vh,200px)}
+}
+@media (prefers-reduced-motion:reduce){#cap-video{transition:none}#cap-count.tick{animation:none}}
+
+/* ---------------------------------------------------------------- aiming: the ray, the reticle, Beam ready */
+#aim{position:absolute;inset:0;pointer-events:none!important}
+#aim-svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+#ray-o{fill:var(--x);opacity:.28} #ray-i{fill:#fff;opacity:.9}
+#reticle path{fill:none;stroke:var(--x);stroke-width:4;stroke-linecap:round;stroke-linejoin:round}
+#rt-dot{fill:#fff}
+#aim.lock #ray-o{fill:var(--y);opacity:.4} #aim.lock #reticle path{stroke:var(--y)} #aim.lock #rt-dot{fill:var(--y)}
+#aim-t{position:absolute;left:50%;transform:translateX(-50%);margin:0;padding:7px 13px;border-radius:999px;background:var(--panel);color:#fff;font-size:12px;font-weight:800;letter-spacing:.08em;white-space:nowrap;pointer-events:none!important;border:1px solid var(--line)}
+#aim-t.lock{background:var(--y);color:var(--ink);border-color:var(--y)}
+#hud[data-mode=aim] #hint{bottom:calc(214px + env(safe-area-inset-bottom))}
+#hud[data-mode=aim] #b-photo{background:var(--panel);color:var(--text);border-color:var(--line)}
+/* the Beam button: the bottom centre while a photo waits (the photo shutter comes back after) */
+#b-beam{position:relative;width:76px;height:76px;min-height:76px;padding:0;border-radius:50%;border:0;background:#2a343b;backdrop-filter:none;-webkit-backdrop-filter:none;transition:background .15s,transform .1s}
+#b-beam svg{position:absolute;inset:0;width:100%;height:100%}
+#b-beam .ring{fill:none;stroke:rgba(255,255,255,.35);stroke-width:4}
+#b-beam .bolt{inset:20px;width:auto;height:auto;fill:rgba(255,255,255,.5)}
+#b-beam:disabled{opacity:1}
+#b-beam:not(:disabled){background:var(--y);box-shadow:0 0 0 7px rgba(246,195,68,.35),0 0 0 15px rgba(246,195,68,.14)}
+#b-beam:not(:disabled) .ring{stroke:#fff} #b-beam:not(:disabled) .bolt{fill:var(--ink)}
+#b-beam:not(:disabled):active{transform:scale(.93)}
+#b-beam.arm{animation:arm .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes arm{from{transform:scale(.8)}}
+#beamcard.hold{top:calc(100% - 166px - env(safe-area-inset-bottom));width:84px;transition:none}
+#beamcard.hold.lock{border-color:var(--y);box-shadow:0 0 0 6px rgba(246,195,68,.4),0 0 0 14px rgba(246,195,68,.16)}
+@media (min-aspect-ratio:1/1) and (max-height:520px){#beamcard.hold{top:50%;left:auto;right:calc(110px + env(safe-area-inset-right));transform:translate(0,-50%)}}
+@media (prefers-reduced-motion:reduce){#b-beam.arm{animation:none}}
