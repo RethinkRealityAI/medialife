@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0f1519">
+  <title>Photo Beam · EVADE AR</title>
+  <meta name="description" content="Photo Beam: take a picture and beam it onto your EVADE keychain. It lands on Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, printed right on the charm.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/roblox/creators/vendor/three/build/three.module.js",
+        "three/addons/": "/roblox/creators/vendor/three/jsm/"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <!-- ---------------------------------------------------------------- splash -->
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/evade-logo.webp" alt="EVADE" width="132" height="38">
+    <!-- a preview of the effect: a photo card at the bottom, a beam of light up to Bobo's visor, the photo landing on it -->
+    <div class="hero" aria-hidden="true">
+      <div class="stage">
+        <img class="cat" src="/evade/spray-bobo/art/cat-lines.png" alt="" width="768" height="1024">
+        <i class="visor"><b></b><b></b><b></b><b></b></i>
+        <i class="beam"><s></s></i>
+        <i class="dots"><u></u><u></u><u></u><u></u><u></u><u></u></i>
+        <i class="card"><b></b><b></b><b></b><b></b></i>
+        <i class="ring"></i>
+      </div>
+    </div>
+    <div class="copy">
+      <p class="kicker">EVADE · Activated AR</p>
+      <h1 id="title">Photo <span>Beam</span></h1>
+      <p class="lead">Take a picture and beam it onto your keychain. It lands on Bobo's visor or the Eclipse can, printed right on the charm.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+        <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- in camera -->
+  <div id="hud" hidden data-mode="find">
+    <div class="tl">
+      <img class="evade" src="/brand/evade-logo.webp" alt="EVADE" width="104" height="30">
+      <span class="tag">PHOTO BEAM</span>
+    </div>
+    <div id="side">
+      <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </div>
+
+    <!-- what to point at -->
+    <div id="guide" aria-hidden="true"><img src="/evade/spray-bobo/art/cat-lines.png" alt=""><img src="/evade/spray-bobo/art/can-lines.png" alt=""></div>
+    <p id="hint" role="status" aria-live="polite"></p>
+
+    <!-- once a charm wears a photo -->
+    <div id="chips" hidden>
+      <button type="button" id="c-change" aria-label="Change the photo">Change</button>
+      <button type="button" id="c-other" aria-label="Beam this photo to your other charms">Beam to others</button>
+      <button type="button" id="c-remove" aria-label="Remove the photo">Remove</button>
+    </div>
+
+    <!-- Snap: the viewfinder, cut in the slot's shape -->
+    <div id="finder" hidden>
+      <div id="finder-win"><canvas id="finder-freeze" hidden></canvas></div>
+      <p id="finder-t">Frame your shot, then press the shutter</p>
+      <button type="button" id="finder-x">Cancel</button>
+    </div>
+
+    <!-- bottom row: Photo left, the shutter always in the bottom centre, the badge right -->
+    <div id="bottom">
+      <div class="b-left">
+        <button id="b-photo" class="act" type="button" aria-label="Add a photo to the charm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>
+          <span id="b-photo-t">Photo</span>
+        </button>
+      </div>
+      <div id="shoot">
+        <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
+          <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
+        </button>
+        <small id="shoot-t">Tap: photo · Hold: video</small>
+        <span id="rec-time" hidden>0:00</span>
+      </div>
+      <div class="b-right">
+        <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+      </div>
+    </div>
+  </div>
+
+  <!-- the photo flying off to the charm -->
+  <div id="beamcard" hidden aria-hidden="true"><canvas id="beamcard-cv"></canvas></div>
+
+  <!-- add a photo: Snap or Choose -->
+  <div id="add" class="bs" hidden role="dialog" aria-modal="true" aria-labelledby="add-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header><h2 id="add-t">Add your photo</h2>
+        <button type="button" class="x" data-close aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <p class="sub" id="add-sub">It lands on Bobo's visor.</p>
+      <div class="two">
+        <button type="button" class="big" id="a-snap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          <b>Snap</b><small>Take it with this camera</small>
+        </button>
+        <button type="button" class="big" id="a-choose">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>
+          <b>Choose</b><small>From your photos</small>
+        </button>
+      </div>
+      <p class="priv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Your photo stays on your phone.</p>
+    </div>
+  </div>
+  <input id="file" type="file" accept="image/*" hidden>
+
+  <!-- the editor -->
+  <div id="edit" class="bs" hidden role="dialog" aria-modal="true" aria-labelledby="edit-t">
+    <div class="scrim"></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header>
+        <canvas id="ed-thumb" width="88" height="88" aria-hidden="true"></canvas>
+        <h2 id="edit-t">Make it yours</h2>
+        <button type="button" class="x" id="ed-x" aria-label="Close the editor"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div id="ed-wrap"><canvas id="ed-cv" aria-label="Your photo in the shape of the spot on the charm. Drag to move it, pinch to zoom."></canvas></div>
+      <p class="tip">Drag to move · Pinch to zoom</p>
+      <div class="seg" role="radiogroup" aria-label="Style" id="ed-style">
+        <button type="button" role="radio" data-v="photo" aria-checked="true">Photo</button>
+        <button type="button" role="radio" data-v="print" aria-checked="false">Screen print</button>
+        <button type="button" role="radio" data-v="dots" aria-checked="false">Halftone</button>
+        <button type="button" role="radio" data-v="mono" aria-checked="false">Mono</button>
+      </div>
+      <div id="ed-stickers" role="radiogroup" aria-label="Sticker"></div>
+      <p class="priv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Your photo stays on your phone. Nothing is uploaded.</p>
+      <div class="row">
+        <button type="button" id="ed-back">New photo</button>
+        <button type="button" class="primary" id="ed-go">Beam it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- options: a bottom sheet -->
+  <div id="opts" class="bs" hidden role="dialog" aria-modal="true" aria-labelledby="opts-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header><h2 id="opts-t">Options</h2>
+        <button type="button" class="x" data-close aria-label="Close options"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="opt seg-row">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 15l4-4 4 4 3-3 5 5"/></svg></span>
+        <span class="ol"><b>Print look</b><small>How much of the charm's shading shows through</small></span>
+        <div class="seg" role="radiogroup" aria-label="Print look" id="seg-look">
+          <button type="button" role="radio" data-v="soft" aria-checked="false">Soft</button>
+          <button type="button" role="radio" data-v="printed" aria-checked="true">Printed</button>
+          <button type="button" role="radio" data-v="bold" aria-checked="false">Bold</button>
+        </div>
+      </div>
+      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>
+        <span class="ol"><b>Sound</b><small>The beam, the shimmer and the landing chime</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-remove">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+        <span class="ol"><b>Remove photo</b><small id="o-remove-s">Nothing to remove yet</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-how">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
+        <span class="ol"><b>How it works</b><small>What to point at, and what to try</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <a class="opt" href="/evade/keychain-ar/target/" target="_blank" rel="noopener">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
+        <span class="ol"><b>No keychain with you?</b><small>Open the charm pictures on another screen</small></span><i class="go" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- what to point at (once, over the camera) -->
+  <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
+    <div class="sheet">
+      <div class="how-pics"><img class="how-pic" src="/evade/spray-bobo/art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="/evade/spray-bobo/art/can-lines.png" alt="" width="768" height="1024"></div>
+      <h2 id="how-t">Beam a photo</h2>
+      <ol class="how-steps">
+        <li><b>Point at a charm.</b> Bobo, the Eclipse can or Roblox Bobo, about a hand from the camera. Either side works.</li>
+        <li><b>Tap the glowing spot.</b> Bobo's visor, the can's label or the cap. Or press Photo, left of the shutter.</li>
+        <li><b>Snap or choose a picture,</b> give it a style, and press Beam it. Keep the charm in view while it flies in.</li>
+        <li><b>It stays on.</b> Each charm keeps its own photo on this phone. Drag across the can to spin the label.</li>
+      </ol>
+      <button id="b-go" class="primary">Got it</button>
+    </div>
+  </div>
+
+  <!-- photo -->
+  <div id="shot" class="sheet-wrap" hidden role="dialog" aria-labelledby="shot-t">
+    <div class="sheet">
+      <h2 id="shot-t">Your beam</h2>
+      <img id="shot-img" alt="Your photo of the charm wearing your picture">
+      <div class="row">
+        <button id="shot-share" class="primary" hidden>Share</button>
+        <a id="shot-save" class="btn" hidden>Save</a>
+        <button id="shot-close">Back to camera</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="error" class="sheet-wrap" hidden role="alert">
+    <div class="sheet">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+  </div>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+  <div id="flashw" aria-hidden="true"></div>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
