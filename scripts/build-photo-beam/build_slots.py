@@ -14,6 +14,15 @@ Slots:
   kc-old, kc-old-l     the blue cap of the Roblox Bobo (blue near the head; the light-blue shirt is below the box)
   kc-can, kc-can-back  the can's body (the label): the saturated print inside the acrylic, rows where the can is at
                        its full width (below the shoulder, above the base)
+  tee-sukeban          two slots on one target (Spray Bobo's tee picture, loaded from spray-bobo/targets/):
+    face               kind 'face': her face skin (the largest pink skin blob round the face), filled across each row
+                       with her eyes, nose and mouth, so a selfie face replaces hers; the fringe above the eye line,
+                       the side hair, the earrings and both hands (the other skin blobs, grown over the red nails) are
+                       left out so they sit on top of the selfie; grown a little below the jaw so a chin joins. Flat.
+    top                kind 'band': the white tube top with the red lettering (white or red, strokes closed, holes
+                       filled), cut below the tattooed skin, with the pendant and chain left out (in front of the photo).
+                       Wraps like the visor (a bulge across), shading keeps the fold lines (the letters are in-painted).
+  Slot files are named by slot id (the target name for the keychain's single slots).
 
 Run:  python3 scripts/build-photo-beam/build_slots.py [--overlay DIR]   (DIR: write overlay PNGs to check by eye)
 """
@@ -27,6 +36,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / 'public/evade/keychain-ar/image-targets'
+SRC_TEE = ROOT / 'public/evade/spray-bobo/targets'
 OUT = ROOT / 'public/evade/photo-beam/slots'
 
 # search boxes (fractions of the picture: u0, v0, u1, v1) and colour rules (PIL HSV, all 0..255)
@@ -38,7 +48,11 @@ SLOTS = {
     'kc-can':      dict(kind='can', box=(0.08, 0.05, 0.92, 0.97), outline='spray-bobo/art/can-outline.json'),   # a photo with
     # dark brown acrylic round a grey print: colour cannot split them, so the can's drawn outline (Spray Bobo / X-Ray) is used
     'kc-can-back': dict(kind='can', box=(0.08, 0.05, 0.92, 0.97), sat=48, val=40),
+    # two slots on the Sukeban tee: (target, piece key) given per slot id; box in pixels of the 1200x1600 picture
+    'tee-sukeban-face': dict(kind='face', target='tee-sukeban', piece='sukeface', src='tee', box=(400, 480, 880, 960), bulge=0, shadeK=0.45),
+    'tee-sukeban-top':  dict(kind='band', custom='top', target='tee-sukeban', piece='suketop', src='tee', box=(260, 1000, 1020, 1580), bulge=0.12, shadeK=1.6),
 }
+PIECE = {'kc-bobo': 'bobo', 'kc-bobo-l': 'bobo', 'kc-old': 'old', 'kc-old-l': 'old', 'kc-can': 'can', 'kc-can-back': 'can'}
 N_COLS = 48          # band: columns sampled along it
 N_ROWS = 40          # can: rows sampled down it
 
@@ -78,6 +92,223 @@ def close(m, r):
                 out = (out | s) if op == 'or' else (out & s)
         return out
     return shift_or(shift_or(m, r, 'or'), r, 'and')
+
+
+def grow(m, r):
+    return np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * r + 1))) > 0
+
+
+def shrink(m, r):
+    return np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(2 * r + 1))) > 0
+
+
+def soften(m, r):
+    """round off stair steps: blur and threshold"""
+    return np.asarray(Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(r))) > 128
+
+
+def labels(m):
+    """4-connected components: label image and sizes (index 0 unused)"""
+    h, w = m.shape
+    lab = np.zeros((h, w), np.int32)
+    sizes = [0]
+    for y in range(h):
+        for x in range(w):
+            if m[y, x] and not lab[y, x]:
+                cur = len(sizes)
+                n = 0
+                q = deque([(y, x)])
+                lab[y, x] = cur
+                while q:
+                    cy, cx = q.popleft()
+                    n += 1
+                    for ny, nx in ((cy + 1, cx), (cy - 1, cx), (cy, cx + 1), (cy, cx - 1)):
+                        if 0 <= ny < h and 0 <= nx < w and m[ny, nx] and not lab[ny, nx]:
+                            lab[ny, nx] = cur
+                            q.append((ny, nx))
+                sizes.append(n)
+    return lab, sizes
+
+
+def fill_holes(m):
+    lab, _ = labels(~m)
+    edge = set(lab[0, :]) | set(lab[-1, :]) | set(lab[:, 0]) | set(lab[:, -1])
+    return m | (~m & ~np.isin(lab, list(edge)))
+
+
+def up2(m, k, shape):
+    return np.kron(m, np.ones((k, k), bool))[:shape[0], :shape[1]]
+
+
+def skin_of(H, S, V):
+    return ((H <= 14) | (H >= 245)) & (S >= 25) & (S <= 80) & (V >= 180)
+
+
+def face_mask(img):
+    """Sukeban's face: see the module notes. Returns the mask in the box, the eye line (box px) and the skin mask."""
+    hsv = np.asarray(img.convert('HSV')).astype(int)
+    H, S, V = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    k = 2
+    skin = skin_of(H, S, V)
+    lab, sz = labels(skin[::k, ::k])
+    big = int(np.argmax(sz))
+    F = lab == big
+    S0 = np.zeros_like(F)                      # the face's own span, to tell the tongue (inside) from fingers (outside)
+    for y in np.where(F.any(1))[0]:
+        xs = np.where(F[y])[0]
+        S0[y, xs.min():xs.max() + 1] = True
+    hands = np.zeros_like(F)
+    for i, n in enumerate(sz):
+        if i and i != big and n > 150 and ((lab == i) & S0).sum() < 0.5 * n:
+            hands |= lab == i
+    shape = skin.shape
+    F, hands = up2(F, k, shape), grow(up2(hands, k, shape), 10)
+    rows = np.where(F.any(1))[0]
+    cy = (rows.min() + rows.max()) // 2
+    fx0, fx1 = np.where(F.any(0))[0][[0, -1]]
+    white = (V > 225) & (S < 25)
+    up = slice(max(rows.min(), cy - 140), cy)
+    wys = np.where(white[up, fx0:fx1])[0] + up.start
+    yE = int(np.percentile(wys, 3))            # the top of the eye whites
+    yC = int(np.median(wys))                   # the eye line (middle of the whites)
+    eye = np.zeros_like(F)
+    band = slice(yE - 6, cy)
+    eye[band, fx0:fx1] = (white | ((S > 90) & (V > 60) & (V < 235)))[band, fx0:fx1]
+    G = (F | eye) & ~hands
+    M = np.zeros_like(F)
+    for y in range(max(0, yE - 30), shape[0]):
+        xs = np.where(G[y])[0]
+        if len(xs):
+            M[y, xs.min():xs.max() + 1] = True
+    yb = rows.max()                            # the chin: grow the lower face down a little, over the jaw line
+    low = M.copy()
+    low[:yb - 70, :] = False
+    for dy in range(1, 24):
+        M[dy:, :] |= low[:-dy, :]
+    M = soften(M, 6)
+    hair = V < 110
+    hair[yE - 12:, :] = False                  # the fringe above the eye line stays on top
+    return M & ~hair & ~hands, yC, skin
+
+
+def top_mask(img):
+    hsv = np.asarray(img.convert('HSV')).astype(int)
+    H, S, V = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    white = (S < 30) & (V > 150)
+    red = ((H <= 16) | (H >= 240)) & (S > 110) & (V > 120)
+    k = 2
+    f = shrink(grow((white | red)[::k, ::k], 3), 3)   # close the fold strokes and the letters' edges
+    lab, sz = labels(f)
+    f = fill_holes(lab == int(np.argmax(sz)))
+    M = soften(up2(f, k, V.shape), 4)
+    # the pendant and chain stay in front: dark lines at the top centre, grown, holes filled
+    win = np.zeros_like(M)
+    win[:200, 290:420] = True
+    M &= ~fill_holes(grow((V < 110) & win, 2))
+    # above the fabric is tattooed skin: per column, cut above its lowest pink pixel (top rows only)
+    skin = skin_of(H, S, V)
+    cut = np.array([(np.where(skin[:100, x])[0].max() + 4) if skin[:100, x].any() else 0 for x in range(M.shape[1])], float)
+    cut = np.array([cut[max(0, i - 8):i + 9].max() for i in range(len(cut))])     # below the skin everywhere near
+    cut = np.array([cut[max(0, i - 10):i + 11].mean() for i in range(len(cut))])  # then a smooth hem line
+    for x in range(M.shape[1]):
+        M[:int(cut[x]), x] = False
+    lab, sz = labels(M[::2, ::2])
+    M &= up2(lab == int(np.argmax(sz)), 2, M.shape)
+    return M, white & ~grow(red, 4)          # clean fabric for the shading: away from the letters' edges
+
+
+def measure_custom(sid, cfg, overlay_dir=None):
+    """a slot measured as a pixel mask (face, the tee top): geo per column from the mask, the mask kept as drawn"""
+    img = Image.open(SRC_TEE / f"{cfg['target']}.jpg").convert('RGB')
+    W, H = img.size
+    bx = cfg['box']
+    crop = img.crop(bx)
+    extra = {}
+    if cfg['kind'] == 'face':
+        M, yC, clean = face_mask(crop)
+        extra['eye'] = round((bx[1] + yC) / H, 5)   # the eye line, to line a selfie's eyes up with hers
+    else:
+        M, clean = top_mask(crop)
+    ys, xs = np.where(M)
+    # the slot's columns: top and bottom of the mask (the label covers their box; the mask cuts it)
+    ca, cb = xs.min(), xs.max()
+    n = 96
+    cols = np.linspace(ca + 0.5, cb + 0.5, n)
+    half = (cb - ca) / (n - 1)
+    top, bot = [], []
+    for x in cols:                             # the whole window round each column, so the mesh covers the mask
+        win = M[:, max(0, int(x - half)):min(M.shape[1], int(x + half) + 1)]
+        c = np.where(win.any(1))[0]
+        top.append(c.min() if len(c) else np.nan)
+        bot.append(c.max() + 1 if len(c) else np.nan)
+    top, bot = np.array(top, float), np.array(bot, float)
+    ok = ~np.isnan(top)
+    top, bot = np.interp(cols, cols[ok], top[ok]), np.interp(cols, cols[ok], bot[ok])
+    geo = [[round(float((bx[0] + x) / W), 5), round(float((bx[1] + t) / H), 5), round(float((bx[1] + b) / H), 5)] for x, t, b in zip(cols, top, bot)]
+    poly = [[g[0], g[1]] for g in geo] + [[g[0], g[2]] for g in reversed(geo)]
+    # the box: the mask's extent plus 3 %
+    mu, mv = (xs.max() - xs.min()) * 0.03, (ys.max() - ys.min()) * 0.03
+    px = [int(max(0, bx[0] + xs.min() - mu)), int(max(0, bx[1] + ys.min() - mv)), int(min(W, bx[0] + xs.max() + 1 + mu)), int(min(H, bx[1] + ys.max() + 1 + mv))]
+    bb = [px[0] / W, px[1] / H, px[2] / W, px[3] / H]
+    full = np.zeros((H, W), bool)
+    full[bx[1]:bx[1] + M.shape[0], bx[0]:bx[0] + M.shape[1]] = M
+    bw, bh = px[2] - px[0], px[3] - px[1]
+    s = 512 / max(bw, bh)                      # mask and shade up to 512 px (hair strands and fingers)
+    ow, oh = max(8, round(bw * s)), max(8, round(bh * s))
+    mk = Image.fromarray((full[px[1]:px[3], px[0]:px[2]] * 255).astype(np.uint8)).resize((ow, oh), Image.LANCZOS)
+    mk.save(OUT / f'{sid}-mask.png', optimize=True)
+    # shade: the luminance, blurred only over the clean pixels (normalised convolution): her skin for the face (near
+    # flat, the fringe's shadow stays), the fabric without the red letters for the top (the fold lines stay)
+    lum = np.asarray(img.convert('L'), float)
+    wgt = np.zeros((H, W), float)
+    wgt[bx[1]:bx[1] + clean.shape[0], bx[0]:bx[0] + clean.shape[1]] = clean
+    lum, wgt = lum[px[1]:px[3], px[0]:px[2]], wgt[px[1]:px[3], px[0]:px[2]]
+    def bl(a, r):                              # a separable Gaussian (float, numpy only)
+        kern = np.exp(-0.5 * (np.arange(-int(3 * r), int(3 * r) + 1) / r) ** 2)
+        kern /= kern.sum()
+        a = np.apply_along_axis(lambda v: np.convolve(np.pad(v, len(kern) // 2, mode='edge'), kern, 'valid'), 1, a)
+        return np.apply_along_axis(lambda v: np.convolve(np.pad(v, len(kern) // 2, mode='edge'), kern, 'valid'), 0, a)
+    r = 6 if cfg['kind'] == 'face' else 2.5
+    num, den = bl(lum * wgt, r), bl(wgt, r)
+    numL, denL = bl(lum * wgt, 14), bl(wgt, 14)   # wide: fills where the clean pixels are far (inside the letters)
+    near = np.clip((den - 0.2) / 0.4, 0, 1)
+    sh = near * num / np.maximum(den, 1e-6) + (1 - near) * np.where(denL > 0.01, numL / np.maximum(denL, 1e-6), np.nan)
+    mm = full[px[1]:px[3], px[0]:px[2]]
+    ref = np.nanmedian(sh[mm]) if mm.any() else 200
+    sh = np.nan_to_num(sh, nan=ref)
+    shade = Image.fromarray(np.clip(sh / max(ref, 1) * 128, 0, 255).astype(np.uint8)).resize((ow, oh), Image.LANCZOS)
+    shade.save(OUT / f'{sid}-shade.png', optimize=True)
+    # palette: for the face, her ink and two flat pinks (Ink style, Match skin); for the top, as the others
+    arr = np.asarray(img)
+    if cfg['kind'] == 'face':
+        hsv = np.asarray(img.convert('HSV')).astype(int)
+        sk = skin_of(hsv[..., 0], hsv[..., 1], hsv[..., 2]) & full
+        light = np.median(arr[sk], axis=0)
+        pinkish = ((hsv[..., 0] <= 14) | (hsv[..., 0] >= 245)) & (hsv[..., 1] >= 40) & (hsv[..., 1] <= 120) & (hsv[..., 2] >= 120) & (hsv[..., 2] < 205) & full
+        mid = np.median(arr[pinkish], axis=0) if pinkish.sum() > 50 else light * 0.82
+        cols = [np.array([26, 18, 20]), mid, light]
+        pal = ['#%02x%02x%02x' % tuple(int(round(c)) for c in col) for col in cols]
+        extra['skin'] = pal[2]
+    else:
+        pal = palette(arr, full)
+    rec = {'id': sid, 'piece': cfg['piece'], 'kind': cfg['kind'], 'box': [round(x, 5) for x in bb], 'poly': [[round(a, 5), round(b, 5)] for a, b in poly],
+           'geo': geo, 'palette': pal, 'mask': f'{sid}-mask.png', 'shade': f'{sid}-shade.png', 'px': [W, H], 'bulge': cfg['bulge'], 'shadeK': cfg['shadeK'], **extra}
+    if overlay_dir:
+        ov = img.convert('RGBA')
+        g = np.zeros((H, W, 4), np.uint8)
+        g[full] = (0, 255, 80, 100)
+        edge = full ^ np.roll(full, 1, 0) | full ^ np.roll(full, 1, 1)
+        g[grow(edge, 1)] = (255, 0, 90, 255)
+        ov = Image.alpha_composite(ov, Image.fromarray(g))
+        d = ImageDraw.Draw(ov)
+        d.rectangle([px[0], px[1], px[2], px[3]], outline=(255, 255, 0, 255), width=3)
+        if 'eye' in extra:
+            d.line([px[0], extra['eye'] * H, px[2], extra['eye'] * H], fill=(0, 160, 255, 255), width=3)
+        for i, c in enumerate(pal):
+            d.rectangle([20 + i * 90, 20, 100 + i * 90, 100], fill=c, outline='black')
+        ov.crop((max(0, px[0] - 80), max(0, px[1] - 80), min(W, px[2] + 80), min(H, px[3] + 80))).save(Path(overlay_dir) / f'{sid}-overlay.png')
+        Image.fromarray(np.asarray(shade)).save(Path(overlay_dir) / f'{sid}-shade-check.png')
+    return rec
 
 
 def smooth(a, k=2):
@@ -201,7 +432,7 @@ def measure(name, cfg, overlay_dir=None):
     pal = palette(full_px, full)
 
     # the slot's real size share, for the aspect the photo is cut to
-    rec = {'kind': cfg['kind'], 'box': [round(x, 5) for x in bb], 'poly': [[round(a, 5), round(b, 5)] for a, b in poly],
+    rec = {'id': name, 'piece': PIECE[name], 'kind': cfg['kind'], 'bulge': 0.09 if cfg['kind'] == 'band' else 0, 'shadeK': 1, 'box': [round(x, 5) for x in bb], 'poly': [[round(a, 5), round(b, 5)] for a, b in poly],
            'geo': geo, 'palette': pal, 'mask': f'{name}-mask.png', 'shade': f'{name}-shade.png', 'px': [W, H]}
 
     if overlay_dir:
@@ -223,12 +454,13 @@ def main():
         Path(overlay).mkdir(parents=True, exist_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
     out = {'note': 'Photo Beam slots, measured by scripts/build-photo-beam/build_slots.py from the target pictures. '
-                   'uv of each picture (x right, y down). band geo: [u, vTop, vBot] per column; can geo: [v, uLeft, uRight] per row.',
+                   'uv of each picture (x right, y down). targets: per target picture, a list of slots. band / face geo: '
+                   '[u, vTop, vBot] per column; can geo: [v, uLeft, uRight] per row. bulge: share of the width; shadeK: shading strength.',
            'targets': {}}
-    for name, cfg in SLOTS.items():
-        out['targets'][name] = measure(name, cfg, overlay)
-        r = out['targets'][name]
-        print(name, r['kind'], 'box', r['box'], 'palette', r['palette'])
+    for sid, cfg in SLOTS.items():
+        r = measure_custom(sid, cfg, overlay) if cfg.get('custom') or cfg['kind'] == 'face' else measure(sid, cfg, overlay)
+        out['targets'].setdefault(cfg.get('target', sid), []).append(r)
+        print(sid, r['kind'], 'box', r['box'], 'palette', r['palette'], 'eye', r.get('eye'))
     (OUT / 'slots.json').write_text(json.dumps(out, separators=(',', ':')))
 
 

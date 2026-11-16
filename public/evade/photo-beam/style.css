@@ -48,12 +48,12 @@ h1 span{color:var(--x)}
 #side{position:absolute;right:calc(14px + env(safe-area-inset-right));top:calc(14px + env(safe-area-inset-top))}
 .ib{width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;display:grid;place-items:center;background:var(--panel)}
 .ib:active{transform:scale(.92)} .ib svg{width:22px;height:22px}
-#guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:min(80vw,380px);aspect-ratio:3/2;gap:6%;grid-template-columns:1fr 1fr;padding:0 6%;opacity:0;transition:opacity .35s;pointer-events:none!important;border:2px dashed rgba(79,214,232,.75);border-radius:18px;display:grid;place-items:center}
+#guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:min(86vw,420px);aspect-ratio:2/1;gap:4%;grid-template-columns:1fr 1fr 1fr;padding:0 6%;opacity:0;transition:opacity .35s;pointer-events:none!important;border:2px dashed rgba(79,214,232,.75);border-radius:18px;display:grid;place-items:center}
 #guide img{width:100%;height:auto;opacity:.6;filter:brightness(0) invert(1)}
 #hud[data-mode=find] #guide{opacity:1}
 #hint{position:absolute;left:50%;bottom:calc(172px + env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;background:var(--x);color:var(--xd);font-size:13px;font-weight:700;padding:8px 15px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:min(330px,calc(100% - 40px));text-align:center;pointer-events:none!important;transition:opacity .25s}
 #hint:empty{opacity:0}
-#hud[data-mode=find] #hint{bottom:auto;top:calc(44% + min(80vw,380px) * .333 + 16px)}
+#hud[data-mode=find] #hint{bottom:auto;top:calc(44% + min(86vw,420px) * .25 + 16px)}
 /* bottom row: Photo left, shutter centre, badge right */
 #bottom{position:absolute;left:0;right:0;bottom:0;padding:0 calc(12px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:10px;pointer-events:none!important}
 #bottom>*{pointer-events:auto}
@@ -223,8 +223,13 @@ h1 span{color:var(--x)}
 #cap-video.mirror{transform:scaleX(-1)}
 #cap-video.flip{transform:scaleX(-1) rotateY(90deg);opacity:0}
 #cap-video.mirror.flip{transform:rotateY(90deg)}
-#cap-guide{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);width:min(64vw,300px,46vh);aspect-ratio:3/4;pointer-events:none}
-#cap-guide i{position:absolute;inset:0;border:3px solid rgba(255,255,255,.85);border-radius:50% 50% 46% 46%/42% 42% 58% 58%;box-shadow:0 0 0 200vmax rgba(8,12,15,.38)}
+/* the guide has the shape of Sukeban's face slot (--ga, its aspect) and her eye line (--ge), set from slots.json */
+#cap-guide{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:min(76vw,330px,54vh);aspect-ratio:var(--ga,1.2);pointer-events:none}
+#cap-guide i{position:absolute;inset:0;border:3px solid rgba(255,255,255,.85);border-radius:46% 46% 50% 50%/34% 34% 66% 66%;box-shadow:0 0 0 200vmax rgba(8,12,15,.38)}
+#cap-guide i{overflow:hidden}
+#cap-guide u{position:absolute;left:var(--fl,11%);width:var(--fw,78%);top:var(--ft,-24%);height:var(--fh,118%);border:2.5px solid rgba(79,214,232,.95);border-radius:50%;box-sizing:border-box}
+#cap-guide b{position:absolute;left:12%;right:12%;top:var(--ge,30%);height:0;border-top:2px dashed rgba(79,214,232,.9)}
+#cap-guide b span{position:absolute;right:-6px;top:-9px;transform:translateX(100%);font:700 10px "Space Grotesk",sans-serif;color:var(--x);text-shadow:0 1px 3px rgba(0,0,0,.8)}
 #capture .cap-top{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:46px 1fr 46px;align-items:center;gap:10px;padding:calc(14px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))}
 #cap-t{grid-column:2;margin:0;justify-self:center;background:var(--x);color:var(--xd);font-size:13px;font-weight:700;padding:8px 14px;border-radius:999px;text-align:center}
 #cap-x{grid-column:1} #cap-timer{grid-column:3;position:relative}
@@ -276,3 +281,15 @@ h1 span{color:var(--x)}
 #beamcard.hold.lock{border-color:var(--y);box-shadow:0 0 0 6px rgba(246,195,68,.4),0 0 0 14px rgba(246,195,68,.16)}
 @media (min-aspect-ratio:1/1) and (max-height:520px){#beamcard.hold{top:50%;left:auto;right:calc(110px + env(safe-area-inset-right));transform:translate(0,-50%)}}
 @media (prefers-reduced-motion:reduce){#b-beam.arm{animation:none}}
+
+/* the editor's preview switch (any spot / on Sukeban) and Match skin */
+.ed-top{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.ed-top .seg{flex:1;display:flex;padding:3px;border-radius:999px;background:rgba(0,0,0,.3)}
+.ed-top .seg button{font-size:13px}
+#ed-match{min-height:44px;padding:0 12px;font-size:13px;border-radius:999px;background:rgba(255,255,255,.06);backdrop-filter:none;-webkit-backdrop-filter:none;white-space:nowrap}
+#ed-match[hidden],.ed-face[hidden]{display:none}
+.ed-face{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.ed-face>span{font-size:12.5px;font-weight:700;white-space:nowrap;opacity:.85}
+.ed-face .seg{flex:1;margin:0!important}
+#ed-match[aria-checked=true]{background:var(--x);border-color:var(--x);color:var(--xd)}
+#edit .seg button{font-size:12.5px}

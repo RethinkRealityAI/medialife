@@ -1,7 +1,7 @@
 # EVADE AR: Photo Beam
 
-`/evade/photo-beam/`: snap a selfie, point the phone at a charm on the EVADE keychain, lock on to a glowing photo spot
-and beam it on. The photo becomes a few thousand pixels that stream down a beam of light and land on their own spot,
+`/evade/photo-beam/`: snap a selfie, point the phone at a charm on the EVADE keychain or at the Sukeban tee, lock on to
+a glowing photo spot and beam it on. The photo becomes a few thousand pixels that stream down a beam of light and land on their own spot,
 and a materialise sweep prints it on. It stays on that charm (this phone only) and re-materialises whenever the charm
 is found again.
 Dapo's brief: "users take a picture and have it beam and appear in a magical way on the assets we're tracking".
@@ -35,10 +35,35 @@ Base: Bobo X-Ray (`/evade/xray-bobo/`): engine, tracking rules (Spray Bobo PR #4
    capture too.
 Reduced motion: no pulsing, instant lock, no bracket close-in, shorter beam (the materialise sweep stays).
 
+## The Sukeban tee (round 3)
+The tee is Spray Bobo's target `tee-sukeban` (loaded from `/evade/spray-bobo/targets/`, not copied; print 0.3048 x
+0.4064 m), so the page tracks 9 pictures. It carries two slots, each its own piece (own photo, own IndexedDB key):
+- **Sukeban's face** (`sukeface`, kind `face`, flat). The mask is her face skin (the largest pink skin blob round the
+  face), filled across each row with her eyes, nose and mouth; the fringe above the eye line, the side hair, the
+  earrings and both hands (the other skin blobs, grown over the red nails) are left out, so they sit on top of the selfie
+  like the art; grown a little below the jaw so a chin joins. Shading is her skin's luminance only, at 0.45 strength.
+  The capture guide has this slot's shape (aspect 1.21, set from slots.json as `--ga`) and her eye line (`--ge`, 25.6 %
+  down); a photo taken through the guide is fitted so the guide's box lands on the slot (`faceFromGuide`), and the
+  editor's **On Sukeban** preview shows the selfie inside her hair and fingers (pan and zoom there set the face fit
+  only). Library photos start centred.
+- **Sukeban's top** (`suketop`, kind `band`, bulge 12 %): the white tube top with the red lettering (white or red,
+  strokes closed, holes filled), cut below the tattooed skin, with the pendant and chain left out (in front). Shading
+  keeps the fold lines (the letters are in-painted out of it) at 1.6x strength so the folds show at Printed.
+- Lock-on picks between the two by the centre ray (mesh first, then the nearest box); both glow; tapping either locks it.
+- Styles for the drawing: **Ink** (her ink and two flat pinks from the tee, plus black lines where the photo has edges,
+  Sobel) and **Match skin** (per-channel gains from the middle of the photo toward her skin, at 70 %). Pixel maths only.
+- Her face is wider than a real one, so in her face the selfie is cut to a real-face oval (width : height 0.8 : 1,
+  eyes 42 % down it on her eye line, its chin on her chin, reaching up under the fringe) with a soft edge of a few px;
+  the rest of her face is her flat skin pink from the tee (Ink lines still draw over it). Match skin is on by default
+  for her face. "On Sukeban" shows Match skin and **Face width** (Narrow / Normal / Wide = 0.72 / 0.8 / 0.9). The
+  capture guide draws the same inner oval (Normal) inside the outer guide, so people frame their face to it.
+- Masks for these two are 512 px with a one or two pixel soft edge (the shader takes the mask as alpha).
+
 ## The slots (measured, not drawn)
 `scripts/build-photo-beam/build_slots.py` (PIL + numpy) segments each target picture in
 `/evade/keychain-ar/image-targets/` and writes `slots/`: a mask and a shading map per picture, and `slots.json`
-(bounding box, outline polygon, per-column / per-row geometry, a 3-colour palette; uv of that picture, y down).
+(per target picture, a list of slots: id, piece, bounding box, outline polygon, per-column / per-row geometry, a
+3-colour palette, bulge, shading strength, for the face its eye line and skin colour; uv of that picture, y down).
 
 | Piece | Targets | Slot | How it was measured |
 |---|---|---|---|
@@ -100,7 +125,12 @@ Beam -> photo wraps the can. Switch (environment, unmirrored, and back), camera 
 freezes and resumes, reduced motion at 360x740, 390x844, 844x390, desktop 1280x800 (single webcam, no Switch); no
 console errors (SwiftShader's readback performance warnings aside). Round 1 checks (kc-can-back, kc-old, reload
 re-materialise, paused/killed streams) still apply.
-**Not yet on a real phone**: iOS Safari front -> rear hand-over (the 450 ms gap; whether `XR8.resume()` gets the macro
+Round 3 (Sukeban tee, simulator, 390x844): the tee found; both slots glow; the centre ray locks her face, Beam, the
+drawn test face sits under the fringe with her fingers and side hair on top; Beam again locks her top, Beam, a striped
+test card wraps it with the pendant in front and the folds showing; both hold photos at once; keychain round trip
+re-run; no console errors.
+**Not yet on a real phone**: the tee at 40-60 cm (tracking range, ray steadiness), a real selfie through the guide,
+iOS Safari front -> rear hand-over (the 450 ms gap; whether `XR8.resume()` gets the macro
 lens back every time), Android Chrome switching, the picker suspending the selfie camera, real front/rear facing
 reports and two-camera Switch, aiming steadiness by hand, haptics, HEIC, frame rate on mid phones, the look under real
 light, the mirrored sides (`kc-bobo-l`, `kc-old-l`) on their own.

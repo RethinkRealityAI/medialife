@@ -34,14 +34,20 @@ const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (
 const store = { get(k, d) { try { const v = localStorage.getItem('photo-beam-' + k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('photo-beam-' + k, String(v)); } catch (e) { /* none */ } } };
 
 // ---------------------------------------------------------------- what is tracked
-// Each charm is a piece with its two pictures; each picture has its own slot. pal: whose palette Screen print uses.
+// A piece is one photo holder (one photo, one IndexedDB key) and the target pictures it shows on; a picture can carry
+// several slots (the Sukeban tee: her face and her top, each its own piece). pal: the slot whose palette the styles use.
 const PIECES = {
   bobo: { k: 'bobo', name: 'Bobo', where: "Bobo's visor", spot: "Bobo's visor", targets: ['kc-bobo', 'kc-bobo-l'], pal: 'kc-bobo' },
   can: { k: 'can', name: 'the can', where: "the can's label", spot: 'the Eclipse can', targets: ['kc-can', 'kc-can-back'], pal: 'kc-can-back' },
   old: { k: 'old', name: 'Roblox Bobo', where: "Bobo's cap", spot: "Roblox Bobo's cap", targets: ['kc-old', 'kc-old-l'], pal: 'kc-old' },
+  sukeface: { k: 'sukeface', name: 'Sukeban', where: "Sukeban's face", spot: "Sukeban's face", targets: ['tee-sukeban'], pal: 'tee-sukeban-face', face: true },
+  suketop: { k: 'suketop', name: 'Sukeban', where: "Sukeban's top", spot: "Sukeban's top", targets: ['tee-sukeban'], pal: 'tee-sukeban-top' },
 };
-const PIECE_OF = {}; for (const P of Object.values(PIECES)) { for (const n of P.targets) PIECE_OF[n] = P; Object.assign(P, { status: 'empty', src: null, params: null, label: null, tex: null, spin: 0, spinV: 0 }); }
-const TARGETS = Object.keys(PIECE_OF);
+for (const P of Object.values(PIECES)) Object.assign(P, { status: 'empty', src: null, params: null, label: null, tex: null, spin: 0, spinV: 0, slots: [] });
+const TARGETS = [...new Set(Object.values(PIECES).flatMap((P) => P.targets))];   // 9 pictures (the engine's limit is 10)
+// where each target's files are: the keychain's, or Spray Bobo's tee (loaded from there, not copied)
+const TEE = '/evade/spray-bobo/targets/';
+const TDIR = (n) => (n === 'tee-sukeban' ? TEE : KC + 'image-targets/');
 // Losing the print: the last pose is held this long, and only while the phone is still (Spray Bobo's numbers)
 const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120, STILL_DEG = 25, STILL_ACC = 1.2;
 const REOPEN_AFTER_MS = 2500;                 // lost longer than this: the photo re-materialises when found
@@ -49,7 +55,7 @@ const COL = { x: 0x4fd6e8, xs: '#4fd6e8', y: 0xf6c344, ys: '#f6c344', ink: '#0f1
 const ED_ASP = 1.4;                           // the editor's neutral shape (the photo fits whichever slot it is beamed to)
 const LOOKS = { soft: 0.35, printed: 0.7, bold: 1 };
 let look = LOOKS[store.get('look', 'printed')] != null ? store.get('look', 'printed') : 'printed';
-const BULGE = 0.09;                           // the visor's bulge out of the print, a share of its width
+const BULGE = 0.09;                           // the visor's bulge out of the print, a share of its width (slots.json may set its own)
 const CAN_Z = 0.5;                            // the can's label stands this share of its radius proud of the print
 const CAN_WRAP = 1.25;                        // the label's width over the can's drawn width (it wraps round)
 const LABEL_MAX = 1024;                       // the printed photo's long side, px
@@ -111,21 +117,36 @@ const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.statu
 const texLoader = new THREE.TextureLoader();
 const loadTex = (u) => new Promise((res, rej) => texLoader.load(u, res, undefined, rej));
 let SL = null, LAYOUT = null;
+const SLREC = {};                             // every slot record by id
 const assets = Promise.all([
-  getJson(KC + 'image-targets/layout.json'),
-  Promise.all(TARGETS.map((n) => getJson(KC + `image-targets/${n}.json`))),
+  getJson(KC + 'image-targets/layout.json'), getJson(TEE + 'layout.json'),
+  Promise.all(TARGETS.map((n) => getJson(TDIR(n) + `${n}.json`))),
   getJson(HERE + 'slots/slots.json'),
-]).then(async ([layout, tdata, slots]) => {
+]).then(async ([layout, teeLayout, tdata, slots]) => {
+  layout.targets = { ...layout.targets, ...teeLayout.targets };
   LAYOUT = layout; SL = slots;
-  const tex = await Promise.all(TARGETS.map((n) => Promise.all([loadTex(HERE + 'slots/' + slots.targets[n].mask), loadTex(HERE + 'slots/' + slots.targets[n].shade)])));
-  TARGETS.forEach((n, i) => { slots.targets[n].maskTex = tex[i][0]; slots.targets[n].shadeTex = tex[i][1]; });
+  const recs = TARGETS.flatMap((n) => slots.targets[n].map((r) => Object.assign(r, { target: n })));
+  const tex = await Promise.all(recs.map((r) => Promise.all([loadTex(HERE + 'slots/' + r.mask), loadTex(HERE + 'slots/' + r.shade)])));
+  recs.forEach((r, i) => { r.maskTex = tex[i][0]; r.shadeTex = tex[i][1]; SLREC[r.id] = r; });
   for (const P of Object.values(PIECES)) {
-    const rec = slots.targets[P.targets[0]], L = layout.targets[P.targets[0]];
+    const rec = recOf(P, P.targets[0]), L = layout.targets[P.targets[0]];
     P.aspect = labelAspect(rec, L.widthM, L.heightM);
-    P.palette = slots.targets[P.pal].palette;
+    P.palette = SLREC[P.pal].palette;
   }
+  // the capture guide has the face slot's shape, with her eye line, so a face framed in it fits her face
+  const F = PIECES.sukeface, fr = recOf(F, 'tee-sukeban'), lb = labelBox(fr);
+  F.eyeT = (fr.eye - lb.va) / (lb.vb - lb.va);
+  // her chin: the lowest point of the face mask near the middle (the mask runs a little over the jaw)
+  const mid = fr.geo.filter((c) => Math.abs(c[0] - (lb.ua + lb.ub) / 2) < (lb.ub - lb.ua) * 0.12);
+  F.chinT = clamp((Math.max(...mid.map((c) => c[2])) - lb.va) / (lb.vb - lb.va) - 0.03, 0.7, 0.98);
+  const ds = document.documentElement.style, o = faceOval(FACE_W.normal);
+  ds.setProperty('--ga', String(F.aspect));
+  ds.setProperty('--ge', (F.eyeT * 100).toFixed(1) + '%');
+  ds.setProperty('--fl', ((o.cx - o.rx) * 100).toFixed(1) + '%'); ds.setProperty('--fw', (o.rx * 200).toFixed(1) + '%');
+  ds.setProperty('--ft', ((o.cy - o.ry) * 100).toFixed(1) + '%'); ds.setProperty('--fh', (o.ry * 200).toFixed(1) + '%');
   return { tdata };
 });
+function recOf(P, n) { return SL.targets[n].find((r) => r.piece === P.k); }
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
@@ -138,12 +159,12 @@ const savedReady = assets.then(loadSaved).catch(() => {});
 // half of the can, s round it (left to right), t down it.
 function labelBox(rec) {
   const g = rec.geo;
-  if (rec.kind === 'band') return { ua: g[0][0], ub: g[g.length - 1][0], va: Math.min(...g.map((c) => c[1])), vb: Math.max(...g.map((c) => c[2])) };
+  if (rec.kind !== 'can') return { ua: g[0][0], ub: g[g.length - 1][0], va: Math.min(...g.map((c) => c[1])), vb: Math.max(...g.map((c) => c[2])) };
   return { va: g[0][0], vb: g[g.length - 1][0], ua: Math.min(...g.map((r) => r[1])), ub: Math.max(...g.map((r) => r[2])) };
 }
 function labelAspect(rec, W, H) {
   const b = labelBox(rec);
-  if (rec.kind === 'band') return ((b.ub - b.ua) * W) / ((b.vb - b.va) * H);
+  if (rec.kind !== 'can') return ((b.ub - b.ua) * W) / ((b.vb - b.va) * H);
   const hw = rec.geo.reduce((a, r) => a + (r[2] - r[1]) / 2, 0) / rec.geo.length;
   return (2 * hw * W * CAN_WRAP) / ((b.vb - b.va) * H);
 }
@@ -155,21 +176,21 @@ function interp(arr, key, x, cols) {   // linear in a sorted table: arr rows, ke
 // a point of the print's picture (u, v) on the slot's surface
 function surf(S, u, v, out = new THREE.Vector3()) {
   const { W, H, rec, lb } = S;
-  if (rec.kind === 'band') {
+  if (rec.kind !== 'can') {
     const x = clamp((u - (lb.ua + lb.ub) / 2) / ((lb.ub - lb.ua) / 2), -1, 1);
-    return out.set((u - 0.5) * W, (0.5 - v) * H, BULGE * (lb.ub - lb.ua) * W * (1 - x * x) + 0.0004);
+    return out.set((u - 0.5) * W, (0.5 - v) * H, (rec.bulge != null ? rec.bulge : BULGE) * (lb.ub - lb.ua) * W * (1 - x * x) + 0.0004);
   }
   return out.set((u - 0.5) * W, (0.5 - v) * H, 0.0004);
 }
 // a point of the label (s across, t down) on the slot
 function fromLabel(S, s, t, out = new THREE.Vector3()) {
   const { W, H, rec, lb } = S;
-  if (rec.kind === 'band') return surf(S, lerp(lb.ua, lb.ub, s), lerp(lb.va, lb.vb, t), out);
+  if (rec.kind !== 'can') return surf(S, lerp(lb.ua, lb.ub, s), lerp(lb.va, lb.vb, t), out);
   const v = lerp(lb.va, lb.vb, t), [uL, uR] = interp(rec.geo, 0, v, [1, 2]), c = (uL + uR) / 2, hw = (uR - uL) / 2, th = (s - 0.5) * Math.PI;
   return out.set((c + hw * Math.sin(th) - 0.5) * W, (0.5 - v) * H, hw * W * Math.cos(th) * CAN_Z + 0.0004);
 }
 function inLabel(S, s, t) {
-  if (S.rec.kind !== 'band') return true;
+  if (S.rec.kind === 'can') return true;
   const { lb, rec } = S, u = lerp(lb.ua, lb.ub, s), v = lerp(lb.va, lb.vb, t), [a, b] = interp(rec.geo, 0, u, [1, 2]);
   return v >= a && v <= b;
 }
@@ -177,7 +198,7 @@ function slotGeometry(S) {
   const { rec, lb } = S, pos = [], uv = [], box = [], idx = [], p = new THREE.Vector3();
   const bx = rec.box, boxUv = (u, v) => [(u - bx[0]) / (bx[2] - bx[0]), 1 - (v - bx[1]) / (bx[3] - bx[1])];
   let NI, NJ;
-  if (rec.kind === 'band') {
+  if (rec.kind !== 'can') {
     NI = rec.geo.length; NJ = 14;
     for (const [u, a, b] of rec.geo) for (let j = 0; j <= NJ; j++) {
       const v = lerp(a, b, j / NJ); surf(S, u, v, p); pos.push(p.x, p.y, p.z);
@@ -191,7 +212,7 @@ function slotGeometry(S) {
     }
   }
   // counter-clockwise seen from the front: the band's grid runs across then down, the can's down then across
-  const band = rec.kind === 'band';
+  const band = rec.kind !== 'can';
   for (let i = 0; i < NI - 1; i++) for (let j = 0; j < NJ; j++) { const a = i * (NJ + 1) + j, b = a + NJ + 1; if (band) idx.push(a, a + 1, b, a + 1, b + 1, b); else idx.push(a, b, a + 1, a + 1, b, b + 1); }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
@@ -201,7 +222,7 @@ function slotGeometry(S) {
 // the slot's edge in 3D (counter-clockwise seen from the front)
 function slotEdge(S) {
   const { rec, lb } = S, pts = [];
-  if (rec.kind === 'band') {
+  if (rec.kind !== 'can') {
     for (const [u, a] of rec.geo) pts.push(surf(S, u, a));
     for (const [u, , b] of rec.geo.slice().reverse()) pts.push(surf(S, u, b));
   } else {
@@ -250,9 +271,11 @@ float vnoise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 *
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
 float fbm(vec2 p) { return vnoise(p) * 0.55 + vnoise(p * 2.1 + 7.3) * 0.3 + vnoise(p * 4.3 + 1.7) * 0.15; }
 void main() {
-  if (uUseMask > 0.5 && texture2D(uMask, vBox).r < 0.5) discard;
+  float mk = uUseMask > 0.5 ? texture2D(uMask, vBox).r : 1.0;
+  if (mk < 0.12) discard;
+  float ma = clamp((mk - 0.12) / 0.5, 0.0, 1.0);   // a one or two pixel soft edge (hair strands, fingers)
   if (uHas < 0.5) {
-    gl_FragColor = vec4(uFill, uFillA);
+    gl_FragColor = vec4(uFill, uFillA * ma);
     #include <colorspace_fragment>
     return;
   }
@@ -274,7 +297,7 @@ void main() {
   if (e < 0.03) col = vec3(1.0);                        // white-hot edge
   else if (e < 0.07) col = uCyan;                       // its cyan rim
   else if (e < 0.11) col = mix(col, uCyan, 0.4);        // one flat tint band
-  gl_FragColor = vec4(col, 1.0);
+  gl_FragColor = vec4(col, ma);
   #include <colorspace_fragment>
 }`;
 const blankTex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1); blankTex.needsUpdate = true;
@@ -283,7 +306,7 @@ function slotMaterial(S) {
     uniforms: {
       uMap: { value: blankTex }, uShade: { value: S.rec.shadeTex }, uMask: { value: S.rec.maskTex }, uCyan: { value: new THREE.Color(COL.x) }, uFill: { value: new THREE.Color(COL.x) }, uFillA: { value: 0.2 },
       uHas: { value: 0 }, uP: { value: 0 }, uStr: { value: LOOKS[look] }, uPulse: { value: 0 }, uSpin: { value: 0 },
-      uCan: { value: S.rec.kind === 'can' ? 1 : 0 }, uAsp: { value: S.aspect }, uUseMask: { value: S.rec.kind === 'band' ? 1 : 0 },
+      uCan: { value: S.rec.kind === 'can' ? 1 : 0 }, uAsp: { value: S.aspect }, uUseMask: { value: S.rec.kind !== 'can' ? 1 : 0 },
     },
     vertexShader: SLOT_VS, fragmentShader: SLOT_FS, side: THREE.DoubleSide, transparent: true, toneMapped: false,
   });
@@ -292,7 +315,9 @@ function slotMaterial(S) {
 // ---------------------------------------------------------------- the scene
 let scene, camera, renderer;
 const A = new THREE.Group();                  // follows the print (units: metres of the real print)
-const SLOT = {};                              // per target picture: its slot
+const SLOT = {};                              // every slot by id
+const TSL = {};                               // per target picture: its slots
+const TG = {};                                // per target picture: its group
 const fx = { beamG: null, pts: null, layers: [] };
 function buildScene(xr) {
   ({ scene, camera, renderer } = xr);
@@ -301,9 +326,10 @@ function buildScene(xr) {
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
   scene.add(A); A.visible = false;
   for (const n of TARGETS) {
-    const L = LAYOUT.targets[n], rec = SL.targets[n], P = PIECE_OF[n];
-    const S = { name: n, P, W: L.widthM, H: L.heightM, rec, lb: labelBox(rec), aspect: labelAspect(rec, L.widthM, L.heightM), matP: 0, g: new THREE.Group() };
-    S.g.visible = false; A.add(S.g);
+    const L = LAYOUT.targets[n], g = TG[n] = new THREE.Group(); g.visible = false; A.add(g); TSL[n] = [];
+    for (const rec of SL.targets[n]) {
+    const P = PIECES[rec.piece];
+    const S = { name: rec.id, target: n, P, W: L.widthM, H: L.heightM, rec, lb: labelBox(rec), aspect: labelAspect(rec, L.widthM, L.heightM), matP: 0, g };
     S.mat = slotMaterial(S);
     S.mesh = new THREE.Mesh(slotGeometry(S), S.mat); S.mesh.renderOrder = 4; S.mesh.frustumCulled = false; S.g.add(S.mesh);
     S.outline = new THREE.Mesh(ribbon(slotEdge(S), S.H * 0.008), new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, side: THREE.DoubleSide, transparent: true, depthWrite: false }));
@@ -314,9 +340,10 @@ function buildScene(xr) {
     S.ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({ color: COL.x, toneMapped: false, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     S.ring.position.copy(S.land).setZ(S.land.z + 0.0008); S.ring.visible = false; S.ring.renderOrder = 8; S.g.add(S.ring);
     S.sparks = makeSparks(); S.sparks.position.copy(S.land); S.g.add(S.sparks);
-    SLOT[n] = S;
-    if (P.tex) bindTex(P);
+    SLOT[rec.id] = S; TSL[n].push(S); P.slots.push(rec.id);
+    }
   }
+  for (const P of Object.values(PIECES)) if (P.tex) bindTex(P);
   buildBeam();
 }
 // sparkles: 70 flat squares (white and cyan) bursting from the landing point
@@ -337,7 +364,7 @@ function buildBeam() {
     m.userData.k = k; m.renderOrder = 20; m.frustumCulled = false; fx.beamG.add(m); return m;
   });
 }
-function bindTex(P) { for (const n of P.targets) { const S = SLOT[n]; if (S) S.mat.uniforms.uMap.value = P.tex || blankTex; } }
+function bindTex(P) { for (const id of P.slots) SLOT[id].mat.uniforms.uMap.value = P.tex || blankTex; }
 
 // ---------------------------------------------------------------- the pixels that fly (one Points draw)
 // Each pixel starts at its spot on the card (at the bottom of the screen, a little in front of the phone), streams
@@ -450,7 +477,7 @@ function updatePose(now) {
   if (fresh) arrived(now);
   pose.state = st; pose.valid = st !== 'none';
   A.visible = pose.valid && mode !== 'capture';
-  for (const S of Object.values(SLOT)) S.g.visible = S.name === n;
+  for (const k in TG) TG[k].visible = k === n;
 }
 // follow real movement at once, only smooth sub-millimetre jitter (Spray Bobo's follow)
 function follow(p, q, s) {
@@ -461,12 +488,23 @@ function follow(p, q, s) {
   A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(lerp(A.scale.x, s, aS));
   A.updateMatrixWorld(true);
 }
-const cur = () => (pose.valid && side && SLOT[side]) || null;
+// the slots in view (one picture can carry several), and the one the person means: under the aim point, else the
+// one nearest the centre of the screen
+const curSlots = () => (pose.valid && side && TSL[side]) || [];
+function focusSlot(list) {
+  if (list.length < 2) return list[0] || null;
+  const [cx, cy] = aimPoint();
+  return pickHit(list, cx, cy, 0) || list.reduce((a, b) => (dist2(a, cx, cy) <= dist2(b, cx, cy) ? a : b));
+}
+function dist2(S, x, y) { const [sx, sy] = toScreen(S, S.land); return (sx - x) ** 2 + (sy - y) ** 2; }
+const cur = () => focusSlot(curSlots());
 
 // ---------------------------------------------------------------- what happens
 // modes: capture (our selfie camera), find / seen (AR, no photo waiting), aim (a photo waits: aim and lock on), beam
 let mode = 'find', everFound = false, lastP = null;
-const HELD = { src: null, params: null };     // the photo waiting to be beamed (it stays for Beam again)
+const HELD = { src: null, params: null, face: null };   // the photo waiting to be beamed (it stays for Beam again)
+// the photo's settings for a piece: Sukeban's face has its own fit (from the face guide, or set in its preview)
+const paramsFor = (P, H = HELD) => (P && P.face && H.face ? { ...H.params, ...H.face } : { ...H.params });
 function setMode(m) {
   mode = m; $('hud').dataset.mode = m;
   const aiming = m === 'aim' || m === 'beam';
@@ -492,41 +530,43 @@ function tick(dt) {
   clock.t += dt;
   const now = performance.now();
   updatePose(now);
-  const S = cur(), P = S && S.P;
+  const list = curSlots(), S = focusSlot(list), P = S && S.P;
   if (P) lastP = P;
   $('hud').classList.toggle('lost', !pose.valid);
   if (!pose.valid) {
     lostFor += dt;
     if (mode === 'seen' && lostFor > 0.6) setMode('find');
-    if (mode === 'find') hint(everFound ? 'Find a charm again' : 'Point at Bobo or the can on your keychain');
-    if (mode === 'aim' && lostFor > 0.4) hint('Point at Bobo, the can or Roblox Bobo');
+    if (mode === 'find') hint(everFound ? 'Find a charm again' : 'Point at your keychain or the Sukeban tee');
+    if (mode === 'aim' && lostFor > 0.4) hint('Point at a keychain charm or the Sukeban tee');
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
-  // the slot in view. It glows (flat cyan outline and fill) while it can take the photo; yellow once locked on.
+  // the slots in view. Each glows (flat cyan outline and fill) while it can take the photo; yellow once locked on.
   const pulse = REDUCED ? 0.6 : 0.5 + 0.5 * Math.sin(clock.t * 4.2);
-  if (S) {
-    const m = S.mat.uniforms, inBeam = beam && beam.P === P && beam.t >= 0, locked = mode === 'aim' && aim.S === S;
-    if (P.status === 'shown' && !inBeam) {
-      if (S.matP === 0) sound.pop();
-      S.matP = Math.min(1, S.matP + dt / REMAT_S);
-      m.uHas.value = 1; m.uP.value = S.matP;
+  for (const Q of list) {
+    const QP = Q.P, m = Q.mat.uniforms, inBeam = beam && beam.P === QP && beam.t >= 0, locked = mode === 'aim' && aim.S === Q;
+    if (QP.status === 'shown' && !inBeam) {
+      if (Q.matP === 0) sound.pop();
+      Q.matP = Math.min(1, Q.matP + dt / REMAT_S);
+      m.uHas.value = 1; m.uP.value = Q.matP;
     } else if (!inBeam) { m.uHas.value = 0; m.uP.value = 0; }
-    m.uPulse.value = pulse; m.uStr.value = LOOKS[look];
+    m.uPulse.value = pulse; m.uStr.value = LOOKS[look] * (Q.rec.shadeK != null ? Q.rec.shadeK : 1);
     const col = locked ? COL.y : COL.x;
-    S.outline.visible = !inBeam && (mode === 'aim' || m.uHas.value < 0.5);
-    S.outline.material.color.setHex(col); m.uFill.value.setHex(col);
-    S.outline.material.opacity = locked ? 1 : 0.55 + 0.45 * pulse;
+    Q.outline.visible = !inBeam && (mode === 'aim' || m.uHas.value < 0.5);
+    Q.outline.material.color.setHex(col); m.uFill.value.setHex(col);
+    Q.outline.material.opacity = locked ? 1 : 0.55 + 0.45 * pulse;
     m.uFillA.value = locked ? 0.32 : mode === 'aim' ? 0.14 + 0.2 * pulse : 0.1 + 0.12 * pulse;
     // the can's label spins with inertia
-    if (P.k === 'can') {
-      if (!spin.drag) { P.spin += P.spinV * dt; P.spinV *= Math.pow(0.12, dt); }
-      m.uSpin.value = P.spin;
+    if (QP.k === 'can') {
+      if (!spin.drag) { QP.spin += QP.spinV * dt; QP.spinV *= Math.pow(0.12, dt); }
+      m.uSpin.value = QP.spin;
     }
+  }
+  if (S) {
     if (mode === 'seen' && !beam) hint(P.status === 'shown' ? (P.k === 'can' ? 'Drag across the can to spin your photo' : 'Press the shutter to keep a picture') : 'Press New photo to beam a selfie here');
     if (mode === 'aim') hint('');
   }
-  tickAim(dt, S);
-  tickBeam(dt, S);
+  tickAim(dt, list);
+  tickBeam(dt, list);
   tickFx(dt);
   const showChips = !!(S && P.status === 'shown' && !beam && mode === 'seen');
   if ($('chips').hidden === showChips) $('chips').hidden = !showChips;
@@ -539,7 +579,7 @@ function tick(dt) {
 // The ray runs from the photo card (bottom centre) to a reticle at the centre of the screen. The centre ray is
 // tested against the tracked slot's mesh (with a forgiving box around it). Locking needs a short steady hit;
 // once locked, a wider box keeps it and it only lets go after a short miss, so it does not flicker.
-const aim = { S: null, drawn: false, tap: false, candT: 0, missT: 0, k: 1, x: -1, y: -1, bx: 0, by: 0, bw: 64, bh: 64, shown: null };
+const aim = { S: null, cand: null, drawn: false, tap: false, candT: 0, missT: 0, k: 1, x: -1, y: -1, bx: 0, by: 0, bw: 64, bh: 64, shown: null };
 const ACQ_S = REDUCED ? 0 : 0.12, LOSE_S = 0.35;
 let testAim = null;                           // ?test only: aim somewhere other than the screen centre
 const aimPoint = () => testAim || [innerWidth / 2, innerHeight / 2];
@@ -558,21 +598,26 @@ function setLock(S, tap = false, quiet = false) {
     if (!quiet) { if (mode === 'aim') showCard(); if (was) { sound.unlock(); buzz(6); } }
   }
 }
-function tickAim(dt, S) {
+function tickAim(dt, list) {
   // a one-frame tracking drop keeps the last drawing (and the lock) instead of blinking
-  const on = mode === 'aim' && (!!S || (aim.drawn && lostFor < 0.4));
+  const on = mode === 'aim' && (list.length > 0 || (aim.drawn && lostFor < 0.4));
   if ($('aim').hidden === on) { $('aim').hidden = !on; $('aim-t').hidden = !on; }
   if (mode !== 'aim') { aim.drawn = false; return; }
-  if (!S) { if (aim.S && lostFor > LOSE_S) setLock(null); if (!on) aim.drawn = false; return; }
+  if (!list.length) { if (aim.S && lostFor > LOSE_S) setLock(null); if (!on) aim.drawn = false; return; }
   aim.drawn = true;
-  if (aim.S && aim.S !== S) setLock(null);
+  if (aim.S && !list.includes(aim.S)) setLock(null);
   const [cx, cy] = aimPoint();
+  // several slots on one picture (the tee): the ray picks the one it is on (the mesh first, then the nearest box)
+  const hit = pickHit(list, cx, cy, aim.S ? 0.6 : 0.2);
   if (aim.S) {
-    if (aim.tap || hitSlot(S, cx, cy, 0.6)) aim.missT = 0;
+    const other = pickHit(list, cx, cy, 0);    // squarely on another slot: move the lock there
+    if (other && other !== aim.S && !aim.tap) { if ((aim.candT += dt) >= ACQ_S + 0.1) setLock(other); }
+    else aim.candT = 0;
+    if (aim.tap || hit === aim.S || hitSlot(aim.S, cx, cy, 0.6)) aim.missT = 0;
     else if ((aim.missT += dt) > LOSE_S) setLock(null);
-  } else if (hitSlot(S, cx, cy, 0.2)) { if ((aim.candT += dt) >= ACQ_S) setLock(S); }
+  } else if (hit) { if (aim.cand !== hit) { aim.cand = hit; aim.candT = 0; } if ((aim.candT += dt) >= ACQ_S) setLock(hit); }
   else aim.candT = 0;
-  drawAim(dt, S);
+  drawAim(dt, aim.S || list[0]);
 }
 const _pp = new THREE.Vector3();
 function toScreen(S, v) { const p = S.g.localToWorld(_pp.copy(v)).project(camera); return [(p.x + 1) / 2 * innerWidth, (1 - p.y) / 2 * innerHeight]; }
@@ -615,7 +660,7 @@ function drawAim(dt, S) {
 function showCard(P) {
   if (!HELD.src) return;
   const cv = $('beamcard-cv'), asp = P ? P.aspect : ED_ASP, w = 320;
-  renderLabel(HELD.src, HELD.params, asp, (P || PIECES.bobo).palette, w, cv);
+  renderLabel(HELD.src, paramsFor(P), asp, (P || PIECES.bobo).palette, w, cv);
   const card = $('beamcard'); card.classList.add('hold'); card.classList.remove('go', 'wait'); card.hidden = false;
 }
 
@@ -636,9 +681,9 @@ function startBeam(P) {
 function fire() {
   const S = aim.S; if (!S || !HELD.src || beam || mode !== 'aim') return;
   const P = S.P; sound.init();
-  P.src = HELD.src; P.params = { ...HELD.params }; setLabel(P);
+  P.src = HELD.src; P.params = paramsFor(P); setLabel(P);
   savePhoto(P).then(syncRemove);
-  for (const n of P.targets) if (SLOT[n]) SLOT[n].matP = 0;
+  for (const id of P.slots) SLOT[id].matP = 0;
   startBeam(P);
 }
 function launch(S) {
@@ -648,9 +693,10 @@ function launch(S) {
   buildParticles(beam.P, S); beam.S = S; beam.t = 0;
   sound.whoosh(); buzz(15);
 }
-function tickBeam(dt, S) {
+function tickBeam(dt, list) {
+  const S = beam ? list.find((Q) => Q.P === beam.P) || null : null;
   if (!beam) { if (fx.beamG) fx.beamG.visible = false; return; }
-  const ok = !!(S && S.P === beam.P);
+  const ok = !!S;
   if (beam.t < 0) {                           // the card is shrinking, or waiting for the charm
     const ready = performance.now() >= beam.armAt;
     if (!ready || !ok) {
@@ -747,11 +793,25 @@ canvas.addEventListener('pointerup', (e) => {
 });
 canvas.addEventListener('pointercancel', () => { spin.id = null; spin.drag = false; });
 function tapAt(x, y) {
-  const S = cur(); if (!S || beam || sheetOpen()) return;
-  if (!hitSlot(S, x, y, 0.25)) { if (mode === 'aim') hint('Aim the centre at a glowing spot, or tap it'); return; }
+  const list = curSlots(); if (!list.length || beam || sheetOpen()) return;
+  const S = pickHit(list, x, y, 0.25);
+  if (!S) { if (mode === 'aim') hint('Aim the centre at a glowing spot, or tap it'); return; }
   sound.click(); buzz(8);
   if (mode === 'aim') setLock(S, true);       // tapping a glowing spot locks it (no aiming needed)
   else openCapture();                        // no photo waiting: take one for it
+}
+// the slot under a screen point: a mesh hit wins (nearest), else a hit on a slot's box grown by `grow` (nearest centre)
+function pickHit(list, x, y, grow = 0.25) {
+  let best = null, bd = Infinity;
+  for (const S of list) { const d = meshHit(S, x, y); if (d != null && d < bd) { bd = d; best = S; } }
+  if (best || !grow) return best;
+  for (const S of list) if (hitSlot(S, x, y, grow)) { const d = dist2(S, x, y); if (d < bd) { bd = d; best = S; } }
+  return best;
+}
+function meshHit(S, x, y) {
+  const r = canvas.getBoundingClientRect(); _nd.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
+  _ray.setFromCamera(_nd, camera); A.updateMatrixWorld(true);
+  const h = _ray.intersectObject(S.mesh, false); return h.length ? h[0].distance : null;
 }
 function hitSlot(S, x, y, grow = 0.25) {
   const r = canvas.getBoundingClientRect(); _nd.set((x - r.left) / r.width * 2 - 1, -((y - r.top) / r.height) * 2 + 1);
@@ -786,6 +846,28 @@ async function decodeImage(blob) {
   const c = fitCanvas(bmp, LABEL_MAX); try { bmp.close && bmp.close(); } catch (e) { /* none */ }
   return c;
 }
+// Sukeban's face is wider than a real one, so the selfie is cut to a real-face oval (width : height = faceW : 1) in
+// her face: its eyes on her eye line, its chin on her chin; the rest of her face is her own flat skin pink.
+// The oval is in label units (0..1 across and down), so it reaches above the label, under her fringe.
+const FACE_W = { narrow: 0.72, normal: 0.8, wide: 0.9 };
+function faceOval(fw) {
+  const F = PIECES.sukeface, eye = F.eyeT || 0.26, chin = F.chinT || 0.94, he = (chin - eye) / 0.58;   // eyes 42 % down a face
+  return { cx: 0.5, cy: eye - 0.42 * he + he / 2, rx: fw * he / (F.aspect || 1.2) / 2, ry: he / 2 };
+}
+function faceClip(g, w, h, fw) {
+  const rec = SLREC['tee-sukeban-face'], sk = hexRgb((rec && rec.skin) || '#edc8c2'), o = faceOval(fw);
+  const img = g.getImageData(0, 0, w, h), d = img.data, cx = o.cx * w, cy = o.cy * h, rx = o.rx * w, ry = o.ry * h;
+  const feather = Math.max(2, w * 0.012) / rx;    // a few px at the slot's own size: a soft edge, not a band
+  for (let y = 0; y < h; y++) {
+    const dy = (y + 0.5 - cy) / ry;
+    for (let x = 0; x < w; x++) {
+      const dx = (x + 0.5 - cx) / rx, r = Math.sqrt(dx * dx + dy * dy), a = clamp((r - 1 + feather) / feather, 0, 1);
+      if (a <= 0) continue;
+      const i = (y * w + x) * 4; d[i] += (sk[0] - d[i]) * a; d[i + 1] += (sk[1] - d[i + 1]) * a; d[i + 2] += (sk[2] - d[i + 2]) * a;
+    }
+  }
+  g.putImageData(img, 0, 0);
+}
 const hexRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 // the photo cut to the slot's aspect (pan and zoom), in a style, with a sticker on top
 function renderLabel(src, prm, aspect, pal, maxSide, out) {
@@ -797,16 +879,56 @@ function renderLabel(src, prm, aspect, pal, maxSide, out) {
   const fx = dw - Lw, fy = dh - Lh;
   g.imageSmoothingQuality = 'high';
   g.drawImage(src, -fx / 2 + prm.px * fx / 2, -fy / 2 + prm.py * fy / 2, dw, dh);
-  stylise(g, Lw, Lh, prm.style, pal);
+  if (prm.match) matchSkin(g, Lw, Lh);
+  if (prm.faceW) faceClip(g, Lw, Lh, prm.faceW);
+  stylise(g, Lw, Lh, prm.style, prm.style === 'ink' ? INK_PAL() : pal);
   if (prm.sticker && STK.art[prm.sticker.id]) {
     const a = STK.art[prm.sticker.id], h = Math.min(Lw, Lh) * prm.sticker.s, w = h * a.width / a.height;
     g.drawImage(a, prm.sticker.u * Lw - w / 2, prm.sticker.v * Lh - h / 2, w, h);
   }
   return c;
 }
-// pixel filters only: Screen print (3 flat colours from the slot), Halftone dots, Mono. No generative anything.
+// Match skin: shift the photo's tones toward Sukeban's skin (sampled from the tee): per-channel gains from the median
+// colour of the middle of the photo (where the face is) to her skin, applied at 70 %. Pixel maths only.
+const hexRgbA = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+function matchSkin(g, w, h) {
+  const rec = SLREC['tee-sukeban-face']; if (!rec || !rec.skin) return;
+  const to = hexRgbA(rec.skin), img = g.getImageData(0, 0, w, h), d = img.data, ch = [[], [], []];
+  for (let y = Math.floor(h * 0.3); y < h * 0.7; y += 3) for (let x = Math.floor(w * 0.35); x < w * 0.65; x += 3) { const o = (y * w + x) * 4; ch[0].push(d[o]); ch[1].push(d[o + 1]); ch[2].push(d[o + 2]); }
+  const med = ch.map((a) => { a.sort((p, q) => p - q); return Math.max(a[a.length >> 1] || 1, 1); });
+  const k = med.map((m, i) => 1 + (clamp(to[i] / m, 0.6, 1.7) - 1) * 0.7);
+  for (let i = 0; i < d.length; i += 4) { d[i] = Math.min(255, d[i] * k[0]); d[i + 1] = Math.min(255, d[i + 1] * k[1]); d[i + 2] = Math.min(255, d[i + 2] * k[2]); }
+  g.putImageData(img, 0, 0);
+}
+// Ink: the tee's own look: her ink and two flat pinks, plus black ink lines where the photo has edges (Sobel)
+const INK_PAL = () => (SLREC['tee-sukeban-face'] ? SLREC['tee-sukeban-face'].palette : ['#1a1214', '#ae8d89', '#edc8c2']);
+function inkStyle(g, w, h, pal) {
+  const img = g.getImageData(0, 0, w, h), d = img.data, n = w * h, L = new Float32Array(n), B = new Float32Array(n), hist = new Uint32Array(256);
+  for (let i = 0; i < n; i++) { const l = (d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114) / 255; L[i] = l; hist[Math.round(l * 255)]++; }
+  let lo = 0, hi = 1, acc = 0; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc < n * 0.02) lo = i / 255; if (acc <= n * 0.98) hi = i / 255; }
+  const span = Math.max(hi - lo, 0.05), r = Math.max(1, Math.round(Math.max(w, h) / 400));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {   // a small box blur so the lines follow shapes, not grain
+    let s = 0, c = 0; for (let j = -r; j <= r; j += r) for (let i = -r; i <= r; i += r) { const xx = clamp(x + i, 0, w - 1), yy = clamp(y + j, 0, h - 1); s += L[yy * w + xx]; c++; }
+    B[y * w + x] = s / c;
+  }
+  const M = new Float32Array(n), mh = new Uint32Array(256);
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, gx = B[i - w + 1] + 2 * B[i + 1] + B[i + w + 1] - B[i - w - 1] - 2 * B[i - 1] - B[i + w - 1], gy = B[i + w - 1] + 2 * B[i + w] + B[i + w + 1] - B[i - w - 1] - 2 * B[i - w] - B[i - w + 1];
+    M[i] = Math.hypot(gx, gy); mh[Math.min(255, Math.round(M[i] * 160))]++;
+  }
+  let t = 0; acc = 0; for (let i = 0; i < 256; i++) { acc += mh[i]; if (acc > n * 0.9) { t = i / 160; break; } }
+  t = Math.max(t, 0.12);
+  const P = pal.map(hexRgb);
+  for (let i = 0; i < n; i++) {
+    const l = clamp((L[i] - lo) / span, 0, 1), c = M[i] > t || l < 0.16 ? P[0] : l < 0.55 ? P[1] : P[2];
+    d[i * 4] = c[0]; d[i * 4 + 1] = c[1]; d[i * 4 + 2] = c[2];
+  }
+  g.putImageData(img, 0, 0);
+}
+// pixel filters only: Screen print (3 flat colours from the slot), Halftone dots, Mono, Ink. No generative anything.
 function stylise(g, w, h, style, pal) {
   if (style === 'photo') return;
+  if (style === 'ink') { inkStyle(g, w, h, pal); return; }
   const img = g.getImageData(0, 0, w, h), d = img.data, n = w * h;
   if (style === 'mono' || style === 'print') {
     const L = new Float32Array(n); let lo = 1, hi = 0;
@@ -839,7 +961,7 @@ function setLabel(P) {
   if (!P.tex) { P.tex = new THREE.CanvasTexture(P.label); P.tex.colorSpace = THREE.SRGBColorSpace; P.tex.wrapS = THREE.RepeatWrapping; P.tex.anisotropy = 4; }
   P.tex.image = P.label; P.tex.needsUpdate = true; bindTex(P);
 }
-const defaultParams = () => ({ zoom: 1, px: 0, py: 0, style: 'photo', sticker: null });
+const defaultParams = () => ({ zoom: 1, px: 0, py: 0, style: 'photo', sticker: null, match: false });
 
 // ---------------------------------------------------------------- saved photos (IndexedDB, on this phone only)
 function idb() {
@@ -873,7 +995,7 @@ async function removePhoto(P) {
   if (beam && beam.P === P) endBeam(true);
   try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(P.k); } catch (e) { /* none */ }
   P.status = 'empty'; P.src = null; P.params = null; P.spin = P.spinV = 0;
-  for (const n of P.targets) if (SLOT[n]) { SLOT[n].mat.uniforms.uHas.value = 0; SLOT[n].matP = 0; }
+  for (const id of P.slots) { SLOT[id].mat.uniforms.uHas.value = 0; SLOT[id].matP = 0; }
   syncRemove(); toast(`Photo removed from ${P.name}`); sound.click();
 }
 function syncRemove() {
@@ -1001,8 +1123,10 @@ async function shoot(noTimer = false) {
   const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
   const g = c.getContext('2d'); if (CAP.mirror) { g.translate(c.width, 0); g.scale(-1, 1); }
   g.drawImage(v, sx, sy, sw, sh, 0, 0, c.width, c.height);
+  // where the face guide was in the picture (it is centred, so mirroring keeps it in place)
+  const gr = $('cap-guide').getBoundingClientRect(), guide = { x0: gr.left / W, y0: gr.top / H, x1: gr.right / W, y1: gr.bottom / H };
   const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 80); sound.init(); sound.shutter(); buzz(20);
-  diag.snaps++; openEditor(c);
+  diag.snaps++; openEditor(c, null, guide);
 }
 $('cap-shutter').onclick = () => { if (CAP.counting) { CAP.counting = false; $('cap-count').hidden = true; $('cap-shutter').classList.remove('counting'); return; } shoot(); };
 $('cap-flip').onclick = flipCam;
@@ -1030,21 +1154,77 @@ function afterPicker(why) {
 
 // The editor: drag to pan, pinch / wheel to zoom, a style, a sticker, in a neutral rounded shape (the slot is
 // chosen later, by aiming). The photo is cut to the slot's own shape when it is beamed.
-const ED = { src: null, params: null, ptrs: new Map(), pinch: 0, mode: null, raf: 0 };
-function openEditor(src, prm) {
+const ED = { src: null, params: null, face: null, view: 'any', ptrs: new Map(), pinch: 0, mode: null, raf: 0 };
+// The face guide on the capture screen has the shape of Sukeban's face slot, with her eye line: by default the part
+// of the photo inside the guide is what lands in her face (cover fit, zoomed and panned to the guide's box).
+function faceFromGuide(src, guide) {
+  const F = PIECES.sukeface, base = { faceW: FACE_W.normal, match: true };   // Match skin on for her face: no seam
+  if (!guide || !F.aspect) return { zoom: 1, px: 0, py: 0, ...base };
+  const Lw = 1000, Lh = Lw / F.aspect, sw = src.width, sh = src.height, sc0 = Math.max(Lw / sw, Lh / sh);
+  const gw = (guide.x1 - guide.x0) * sw, gcx = (guide.x0 + guide.x1) / 2 * sw, gcy = (guide.y0 + guide.y1) / 2 * sh;
+  const zoom = clamp(Lw / gw / sc0, 1, 5), sc = sc0 * zoom, fx = sw * sc - Lw, fy = sh * sc - Lh;
+  const left = gcx - Lw / sc / 2, top = gcy - Lh / sc / 2;
+  return { zoom, px: fx > 0.5 ? clamp(1 - 2 * left * sc / fx, -1, 1) : 0, py: fy > 0.5 ? clamp(1 - 2 * top * sc / fy, -1, 1) : 0, ...base };
+}
+function openEditor(src, prm, guide) {
   ED.src = src; ED.params = prm ? { ...prm } : HELD.params ? { ...HELD.params, zoom: 1, px: 0, py: 0 } : defaultParams();
+  ED.face = faceFromGuide(src, guide);
+  if (HELD.face && HELD.face.faceW) { ED.face.faceW = HELD.face.faceW; ED.face.match = HELD.face.match; }
   document.querySelectorAll('#ed-style button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === ED.params.style)));
-  syncStickers();
+  syncStickers(); syncView();
   $('edit').hidden = false; drawEditor(); $('ed-go').focus();
 }
 function closeEditor() { $('edit').hidden = true; ED.src = null; }
 function retake() { closeEditor(); if (CAP.open && !camLive()) camOpen(CAP.facing); }
+// On Sukeban shows her face controls: Match skin and the face width (both apply to her face only)
+function syncView() {
+  document.querySelectorAll('#ed-view button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === ED.view)));
+  const on = ED.view === 'face'; $('ed-face').hidden = !on; $('ed-match').hidden = !on;
+  if (!ED.face) return;
+  $('ed-match').setAttribute('aria-checked', String(!!ED.face.match));
+  document.querySelectorAll('#ed-fw button').forEach((b) => b.setAttribute('aria-checked', String(FACE_W[b.dataset.v] === ED.face.faceW)));
+}
+// the preview's geometry: which settings the gestures move, the label's size, and its rectangle on the canvas
+function edGeom() {
+  const cv = $('ed-cv');
+  if (ED.view !== 'face') return { prm: ED.params, Lw: cv.width, Lh: cv.height, rect: [0, 0, cv.width, cv.height] };
+  const F = PIECES.sukeface, rec = SLREC['tee-sukeban-face'], lb = labelBox(rec), b = rec.box, bw = b[2] - b[0], bh = b[3] - b[1];
+  const Lw = 640, Lh = Math.round(640 / F.aspect);
+  return { prm: ED.face, Lw, Lh, rect: [(lb.ua - b[0]) / bw * cv.width, (lb.va - b[1]) / bh * cv.height, (lb.ub - lb.ua) / bw * cv.width, (lb.vb - lb.va) / bh * cv.height] };
+}
+// Sukeban's face preview: the tee's art round the slot, the selfie cut by the slot's mask, so her fringe, hair,
+// earrings and fingers sit on top of it as they will on the tee
+const SUKE = { art: null, mask: null };
+function sukeAssets() {
+  if (SUKE.art) return Promise.resolve();
+  const rec = SLREC['tee-sukeban-face'];
+  return Promise.all([loadImg(TEE + 'tee-sukeban.jpg'), loadImg(HERE + 'slots/' + rec.mask)]).then(([art, mk]) => {
+    const c = document.createElement('canvas'); c.width = mk.width; c.height = mk.height; const g = c.getContext('2d');
+    g.drawImage(mk, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
+    for (let i = 0; i < d.data.length; i += 4) { const a = d.data[i]; d.data[i] = d.data[i + 1] = d.data[i + 2] = 255; d.data[i + 3] = a; }
+    g.putImageData(d, 0, 0); SUKE.art = art; SUKE.mask = c;
+  });
+}
+const edTmp = document.createElement('canvas'), edLab = document.createElement('canvas');
 function drawEditor() {
   if (!ED.src) return;
   cancelAnimationFrame(ED.raf);
   ED.raf = requestAnimationFrame(() => {
     if (!ED.src) return;
     const cv = $('ed-cv');
+    if (ED.view === 'face' && SUKE.art) {
+      const rec = SLREC['tee-sukeban-face'], b = rec.box, F = PIECES.sukeface, aw = SUKE.art.width, ah = SUKE.art.height;
+      const bw = (b[2] - b[0]) * aw, bh = (b[3] - b[1]) * ah, k = 640 / Math.max(bw, bh);
+      cv.width = Math.round(bw * k); cv.height = Math.round(bh * k);
+      const g = cv.getContext('2d'); g.drawImage(SUKE.art, b[0] * aw, b[1] * ah, bw, bh, 0, 0, cv.width, cv.height);
+      const geo = edGeom(), [rx, ry, rw, rh] = geo.rect;
+      renderLabel(ED.src, { ...ED.params, ...ED.face }, F.aspect, F.palette, 640, edLab);
+      edTmp.width = cv.width; edTmp.height = cv.height; const t = edTmp.getContext('2d');
+      t.clearRect(0, 0, cv.width, cv.height); t.drawImage(edLab, rx, ry, rw, rh);
+      t.globalCompositeOperation = 'destination-in'; t.drawImage(SUKE.mask, 0, 0, cv.width, cv.height); t.globalCompositeOperation = 'source-over';
+      g.drawImage(edTmp, 0, 0);
+      return;
+    }
     renderLabel(ED.src, ED.params, ED_ASP, PIECES.bobo.palette || ['#06185f', '#8bc7fc', '#d5ebfe'], 640, cv);
     const g = cv.getContext('2d'), w = cv.width, h = cv.height, r = Math.min(w, h) * 0.12;
     g.save(); g.beginPath(); g.rect(0, 0, w, h);
@@ -1054,10 +1234,13 @@ function drawEditor() {
     g.lineWidth = Math.max(3, w / 160); g.strokeStyle = COL.xs; g.stroke(); g.restore();
   });
 }
+document.querySelectorAll('#ed-view button').forEach((b) => { b.onclick = async () => { ED.view = b.dataset.v; syncView(); sound.click(); if (ED.view === 'face') await sukeAssets().catch(() => {}); drawEditor(); }; });
+$('ed-match').onclick = () => { if (!ED.face) return; ED.face.match = !ED.face.match; syncView(); sound.click(); drawEditor(); };
+document.querySelectorAll('#ed-fw button').forEach((b) => { b.onclick = () => { if (!ED.face) return; ED.face.faceW = FACE_W[b.dataset.v]; syncView(); sound.click(); drawEditor(); }; });
 const edCv = $('ed-cv');
 function edLocal(e) { const r = edCv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height, r]; }
 function onSticker(u, v) {
-  const s = ED.params.sticker; if (!s || !STK.art[s.id]) return false;
+  const s = ED.params.sticker; if (ED.view === 'face' || !s || !STK.art[s.id]) return false;
   const a = STK.art[s.id], cw = edCv.width, ch = edCv.height, h = Math.min(cw, ch) * s.s, w = h * a.width / a.height;
   return Math.abs(u * cw - s.u * cw) < w / 2 && Math.abs(v * ch - s.v * ch) < h / 2;
 }
@@ -1069,15 +1252,15 @@ edCv.addEventListener('pointerdown', (e) => {
 edCv.addEventListener('pointermove', (e) => {
   const p = ED.ptrs.get(e.pointerId); if (!p || !ED.src) return;
   const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
-  const r = edCv.getBoundingClientRect(), prm = ED.params;
+  const r = edCv.getBoundingClientRect(), geo = edGeom(), prm = geo.prm;
   if (ED.mode === 'pinch' && ED.ptrs.size >= 2) {
     const [a, b] = [...ED.ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
     if (ED.pinch > 0) prm.zoom = clamp(prm.zoom * d / ED.pinch, 1, 5); ED.pinch = d;
   } else if (ED.mode === 'sticker') {
     prm.sticker.u = clamp(prm.sticker.u + dx / r.width, 0, 1); prm.sticker.v = clamp(prm.sticker.v + dy / r.height, 0, 1);
   } else {                                     // pan: the free space the zoomed photo has beyond the label, each way
-    const src = ED.src, Lw = edCv.width, Lh = edCv.height, sc = Math.max(Lw / src.width, Lh / src.height) * prm.zoom;
-    const fxp = src.width * sc - Lw, fyp = src.height * sc - Lh, kx = Lw / r.width, ky = Lh / r.height;
+    const src = ED.src, { Lw, Lh } = geo, sc = Math.max(Lw / src.width, Lh / src.height) * prm.zoom;
+    const fxp = src.width * sc - Lw, fyp = src.height * sc - Lh, kx = Lw / (geo.rect[2] * r.width / edCv.width), ky = Lh / (geo.rect[3] * r.height / edCv.height);
     if (fxp > 0.5) prm.px = clamp(prm.px + 2 * dx * kx / fxp, -1, 1);
     if (fyp > 0.5) prm.py = clamp(prm.py + 2 * dy * ky / fyp, -1, 1);
   }
@@ -1085,7 +1268,7 @@ edCv.addEventListener('pointermove', (e) => {
 });
 const edUp = (e) => { ED.ptrs.delete(e.pointerId); if (ED.ptrs.size < 2) ED.pinch = 0; if (!ED.ptrs.size) ED.mode = null; };
 edCv.addEventListener('pointerup', edUp); edCv.addEventListener('pointercancel', edUp);
-edCv.addEventListener('wheel', (e) => { e.preventDefault(); if (!ED.src) return; ED.params.zoom = clamp(ED.params.zoom * Math.exp(-e.deltaY * 0.0015), 1, 5); drawEditor(); }, { passive: false });
+edCv.addEventListener('wheel', (e) => { e.preventDefault(); if (!ED.src) return; const p = edGeom().prm; p.zoom = clamp(p.zoom * Math.exp(-e.deltaY * 0.0015), 1, 5); drawEditor(); }, { passive: false });
 document.querySelectorAll('#ed-style button').forEach((b) => { b.onclick = () => { ED.params.style = b.dataset.v; document.querySelectorAll('#ed-style button').forEach((x) => x.setAttribute('aria-checked', String(x === b))); sound.click(); drawEditor(); }; });
 $('ed-x').onclick = retake;
 $('ed-back').onclick = retake;
@@ -1094,7 +1277,7 @@ $('ed-go').onclick = () => readyToBeam();
 async function readyToBeam() {
   if (!ED.src) return;
   sound.init();
-  HELD.src = ED.src; HELD.params = { ...ED.params }; closeEditor();
+  HELD.src = ED.src; HELD.params = { ...ED.params }; HELD.face = { ...ED.face }; closeEditor();
   postEvent('custom', { action: 'photo-beam-ready', style: HELD.params.style });
   await leaveCapture();
   await backToAr();
@@ -1389,7 +1572,7 @@ if (params.has('test')) window.__pb = {
   state: () => {
     const v = $('cap-video');
     return {
-      pose: pose.state, mode, side, piece: side && PIECE_OF[side] ? PIECE_OF[side].k : null, held: !!HELD.src,
+      pose: pose.state, mode, side, piece: (() => { const S = cur(); return S ? S.P.k : null; })(), held: !!HELD.src,
       pieces: Object.fromEntries(Object.values(PIECES).map((P) => [P.k, { status: P.status, spin: +P.spin.toFixed(3), aspect: +(P.aspect || 0).toFixed(3) }])),
       beam: beam ? { piece: beam.P.k, t: +beam.t.toFixed(3), landed: beam.landed, particles: fx.pts ? fx.pts.userData.n : 0 } : null,
       slots: Object.fromEntries(Object.values(SLOT).map((S) => [S.name, { has: S.mat.uniforms.uHas.value, p: +S.mat.uniforms.uP.value.toFixed(3), outline: S.outline.visible, visible: S.g.visible }])),
@@ -1400,13 +1583,15 @@ if (params.has('test')) window.__pb = {
     };
   },
   openCapture: () => openCapture(), shoot: () => shoot(true), flip: () => flipCam(), retake: () => retake(),
-  async library(url, prm) { openEditor(await decodeImage(await (await fetch(url)).blob()), prm ? { ...defaultParams(), ...prm } : null); return true; },
+  async library(url, prm, guide) { openEditor(await decodeImage(await (await fetch(url)).blob()), prm ? { ...defaultParams(), ...prm } : null, guide); return true; },
+  view: (v) => { const b = document.querySelector(`#ed-view button[data-v="${v}"]`); if (b) b.click(); }, match: () => $('ed-match').click(), faceWidth: (v) => { const b = document.querySelector(`#ed-fw button[data-v="${v}"]`); if (b) b.click(); }, face: () => ({ ...ED.face }),
+  guideRect: () => { const r = $('cap-guide').getBoundingClientRect(); return { x0: r.left / innerWidth, y0: r.top / innerHeight, x1: r.right / innerWidth, y1: r.bottom / innerHeight, eye: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ge')) / 100 }; },
   style: (v) => { const b = document.querySelector(`#ed-style button[data-v="${v}"]`); if (b) b.click(); },
   ready: () => readyToBeam(), fire: () => fire(), again: () => $('c-again').click(), lock: (n) => { const S = SLOT[n]; if (S) setLock(S, true); },
   remove: (k) => removePhoto(PIECES[k]), restartCamera: () => restartCamera('test'), ensureCamera: () => ensureCamera('test'),
   // the slot's box corners on the screen (to aim taps in tests)
   slotScreen(n) {
-    const S = SLOT[n || side]; if (!S || !A.visible) return null;
+    const S = SLOT[n] || cur(); if (!S || !A.visible) return null;
     const pr = (v) => toScreen(S, v);
     return { centre: pr(S.land), corners: [[0, 0], [1, 0], [1, 1], [0, 1]].map(([s, t]) => pr(fromLabel(S, s, t))) };
   },
