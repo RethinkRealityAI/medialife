@@ -26,11 +26,13 @@ const CAM_H = 1.3; // camera start height in world units (sets the scale of the 
 const SPAWN_MIN = 2.5,
   SPAWN_MAX = 10,
   ARENA = 11; // game units (the board is ~22 units across)
-const SIZE_MIN = 0.04,
-  SIZE_MAX = 0.4;
-let size = Math.min(SIZE_MAX, Math.max(SIZE_MIN, Number(qs.get("scale")) || 0.2)); // Bobo ~22 cm, board ~4.4 m across on the floor
+const SIZE_MIN = 0.1,
+  SIZE_MAX = 0.6;
+let size = Math.min(SIZE_MAX, Math.max(SIZE_MIN, Number(qs.get("scale")) || 0.25)); // Bobo ~28 cm, board ~5.5 m across on the floor
 const BOBO_URL = "/roblox/activated-retail/models/catrun.glb?v=2";
-const COLA_URL = "/roblox/activated-retail/models/cola.glb?v=2";
+// The static Blender Eclipse can (cola.glb is rigged: its clones all render at the original's skeleton, which
+// put one giant can at the player's feet).
+const COLA_URL = "/evade/keychain/ar/eclipse-can.glb";
 
 /* ── tiny observable, duck-typed like Mattercraft's (what the game reads off a Placement Anchor) ── */
 function obs(v) {
@@ -70,7 +72,7 @@ function drawDiag() {
   el.textContent =
     `engine: ${window.XR8 ? XR8.version?.() || "loaded" : "loading"}\n` +
     `camera: ${diag.status}  tracking: ${diag.tracking}\n` +
-    `fps: ${diag.fps.toFixed(0)}  size: ${size.toFixed(3)}  placed: ${game?.isPlaced ? "yes" : "no"}\n` +
+    `fps: ${diag.fps.toFixed(0)}  board: ${(ARENA * 2 * size).toFixed(1)} m (${size.toFixed(2)})  placed: ${game?.isPlaced ? "yes" : "no"}\n` +
     (diag.errors.length ? `err: ${diag.errors.slice(-2).join(" | ")}` : "");
 }
 
@@ -336,18 +338,7 @@ function followFloor(dt) {
     }
     reticle.visible = ok;
     anchor.scale.setScalar(size);
-    const introOpen = !!document
-      .querySelector(".ohg-intro")
-      ?.closest(".ohg-layer")
-      ?.classList.contains("on");
-    if (!game.isPlaced)
-      hint(
-        introOpen
-          ? null
-          : ok
-            ? "Pinch to resize, then tap Place"
-            : "Point at the floor or a table and move your phone slowly",
-      );
+    // No hint pill here: the game shows its own placement hint above Place (Dapo).
   } else reticle.visible = false;
   placeAnchor.placementValid.value = !placing || ok;
 }
@@ -436,8 +427,7 @@ const app = {
         ),
       );
     drawDiag();
-    if (status === "requesting") hint("Allow camera and motion access");
-    else if (status === "hasVideo") {
+    if (status === "hasVideo") {
       $("splash").hidden = true;
       hint(null);
     } else if (status === "failed")
@@ -456,6 +446,21 @@ const app = {
     },
   ],
 };
+
+// The engine draws into the canvas at its own width/height: without this it stays 300x150 and the camera
+// looks stretched and blurry. CSS pins it to the screen; this sets the drawing size.
+const DRAW_DPR = Math.min(devicePixelRatio || 1, Number(qs.get("dpr")) || 2);
+function sizeCanvas() {
+  const w = Math.round(innerWidth * DRAW_DPR);
+  const h = Math.round(innerHeight * DRAW_DPR);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+}
+sizeCanvas();
+addEventListener("resize", sizeCanvas);
+addEventListener("orientationchange", () => setTimeout(sizeCanvas, 300));
 
 startBtn.addEventListener("click", () => {
   startBtn.disabled = true;
