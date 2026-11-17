@@ -7,7 +7,7 @@
        before any public use. -->
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="theme-color" content="#0b1a33">
-  <title>Fanatics Booth · concept demo</title>
+  <title>Fanatics Merch Try-On · concept demo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,12 +27,37 @@
 
   <!-- ---------------------------------------------------------------- splash -->
   <section id="splash" aria-labelledby="title">
+    <!-- faint sports silhouettes behind everything (line drawings, one flat colour, no team marks) -->
+    <svg class="sports" aria-hidden="true" focusable="false">
+      <defs>
+        <g id="sp-bball"><circle cx="0" cy="0" r="22"/><path d="M0-22V22M-22 0H22M-15-16a22 22 0 0 1 0 32M15-16a22 22 0 0 0 0 32"/></g>
+        <g id="sp-football"><path d="M-26 0C-16-16 16-16 26 0C16 16-16 16-26 0Z"/><path d="M-10 0H10M-6-4v8M-2-4v8M2-4v8M6-4v8"/></g>
+        <g id="sp-baseball"><circle cx="0" cy="0" r="16"/><path d="M-10-12a16 16 0 0 1 0 24M10-12a16 16 0 0 0 0 24"/><path d="M14 18 40 44l5-5L19 13"/></g>
+        <g id="sp-hockey"><path d="M-6-30 4 18h18v6H-2l-12-54Z"/><ellipse cx="-16" cy="26" rx="9" ry="4"/></g>
+        <g id="sp-soccer"><circle cx="0" cy="0" r="20"/><path d="M0-8 8-2 5 8H-5L-8-2Z"/><path d="M0-8V-20M8-2 19-6M5 8l7 10M-5 8l-7 10M-8-2-19-6"/></g>
+        <g id="sp-sneaker"><path d="M-28 10V-8l10-2 6 6 14-10 8 2 4 10 14 6v8Z"/><path d="M-28 12H28M-6-2l4 4M0-6l4 4"/></g>
+        <g id="sp-trophy"><path d="M-14-20H14V-6A14 14 0 0 1-14-6Z"/><path d="M-14-16H-22V-10A8 8 0 0 0-12 -2M14-16H22V-10A8 8 0 0 1 12-2M0 8V16M-10 22H10V16H-10Z"/></g>
+        <g id="sp-whistle"><path d="M-20-8H8a12 12 0 1 1-12 12H-20Z"/><circle cx="8" cy="4" r="4"/><path d="M-20-8v-6"/></g>
+        <g id="sp-cap"><path d="M-20 6A20 20 0 0 1 20 6Z"/><path d="M20 6H34A6 6 0 0 1 28 12H-20V6"/><circle cx="0" cy="-15" r="2"/></g>
+        <pattern id="sp-tile" width="300" height="300" patternUnits="userSpaceOnUse">
+          <use href="#sp-bball" transform="translate(50 52) rotate(-12)"/>
+          <use href="#sp-football" transform="translate(152 40) rotate(24)"/>
+          <use href="#sp-baseball" transform="translate(238 66) rotate(-8)"/>
+          <use href="#sp-sneaker" transform="translate(62 152) rotate(8)"/>
+          <use href="#sp-cap" transform="translate(160 150) rotate(-14)"/>
+          <use href="#sp-hockey" transform="translate(250 160) rotate(12)"/>
+          <use href="#sp-trophy" transform="translate(48 250) rotate(-6)"/>
+          <use href="#sp-soccer" transform="translate(150 250) rotate(18)"/>
+          <use href="#sp-whistle" transform="translate(246 252) rotate(-20)"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#sp-tile)"/>
+    </svg>
     <span class="wordmark" aria-hidden="true">FANATICS</span>
     <div class="hero" aria-hidden="true"><canvas id="hero3d"></canvas></div>
     <div class="copy">
       <p class="kicker">Philadelphia 76ers · Try on in AR</p>
-      <h1 id="title">Fanatics <span>Booth</span></h1>
-      <p class="lead">Try on six 76ers caps and beanies on your own head, add game-day face paint, then snap a photo, film a clip or shoot a 4-picture strip.</p>
+      <h1 id="title">Fanatics <span>Merch Try-On</span></h1>
       <div id="desk" hidden>
         <div id="qr" aria-label="QR code that opens this page on your phone"></div>
         <p><b>Best on your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
@@ -48,7 +73,7 @@
   <div id="hud" hidden data-mode="find">
     <div class="tl">
       <span class="wordmark">FANATICS</span>
-      <span class="tag">BOOTH</span>
+      <span class="tag">TRY-ON</span>
     </div>
     <div id="side">
       <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
@@ -65,6 +90,16 @@
       <button id="b-cancel" type="button">Cancel</button>
     </div>
     <p id="toast" role="status" aria-live="polite"></p>
+    <!-- tips when the camera opens (like the Bobo Booth): the face gesture first, then the controls -->
+    <div id="coach" hidden role="note" aria-labelledby="coach-t">
+      <b id="coach-t">How to try on</b>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7.5l3-1.2M14 6.3l3 1.2M8.5 10.5h.01M15.5 10.5h.01M9 15.5h6"/></svg>Raise your eyebrows: next hat</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="16" r="3"/><circle cx="18" cy="16" r="3"/><path d="M8 6h8M13 3l3 3-3 3"/></svg>Swipe the circles: try another</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/></svg>Tap: photo · Hold: video</li>
+      </ul>
+      <button type="button" id="b-coach">Got it</button>
+    </div>
 
     <!-- the dock: what you are wearing, categories, the lens row, then the camera controls (always there) -->
     <div id="dock">
@@ -107,6 +142,10 @@
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>
         <span class="ol"><b>Sound</b><small>The shutter and the countdown</small></span><i class="sw" aria-hidden="true"></i>
       </button>
+      <button type="button" class="opt" id="o-brows" role="switch" aria-checked="true">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9.5"/><path d="M7 7.5l3-1.2M14 6.3l3 1.2M8.5 10.5h.01M15.5 10.5h.01M9 15.5h6"/></svg></span>
+        <span class="ol"><b>Eyebrow raise</b><small>Raise both eyebrows for the next hat</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
       <button type="button" class="opt" id="o-how">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
         <span class="ol"><b>How it works</b><small>Try on, shoot, shop</small></span><i class="go" aria-hidden="true"></i>
@@ -120,10 +159,10 @@
 
   <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
     <div class="sheet">
-      <h2 id="how-t">Welcome to the booth</h2>
+      <h2 id="how-t">How the try-on works</h2>
       <ol class="how-steps">
         <li><b>Face the camera.</b> Hold your phone at arm's length in good light. A friend can squeeze in too.</li>
-        <li><b>Swipe to try on.</b> Whatever sits in the circle is what you wear. Pick Face paint for game-day stripes.</li>
+        <li><b>Swipe to try on.</b> Whatever sits in the circle is what you wear, or raise both eyebrows for the next hat. Pick Face paint for game-day stripes.</li>
         <li><b>Shoot.</b> Tap the white button for a photo, hold it to film. Turn on Strip for four shots on a countdown.</li>
         <li><b>Like it?</b> Tap Shop to see that hat.</li>
       </ol>
@@ -148,13 +187,13 @@
   <div id="shot" class="sheet-wrap" hidden role="dialog" aria-labelledby="shot-t">
     <div class="sheet">
       <h2 id="shot-t">Your look</h2>
-      <img id="shot-img" alt="Your photo from the Fanatics Booth">
+      <img id="shot-img" alt="Your photo from the Fanatics Merch Try-On">
       <div class="row">
         <button id="shot-share" class="primary" hidden>Share</button>
         <a id="shot-save" class="btn" hidden>Save</a>
         <button id="shot-shop" type="button">Shop this hat</button>
       </div>
-      <button id="shot-close" class="link">Back to the booth</button>
+      <button id="shot-close" class="link">Back to the try-on</button>
     </div>
   </div>
 

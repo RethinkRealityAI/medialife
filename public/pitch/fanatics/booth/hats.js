@@ -6,14 +6,22 @@ import * as THREE from 'three';
 
 export const MM = 1 / 139;
 const BASE = './models/';
-// how each style sits on a head. `width` = the crown's width across the head (FU, a real cap is ~1.45 FU wide on an
-// average head); y/z = where the crown's bottom centre sits; tilt = front up the forehead, back down to the nape.
-// The crown's own centre and bottom are measured from each model when it loads (fitOf).
+// How each style sits on a head (Dapo round 3: caps sat short at the back and hair showed behind them on a side
+// turn). The crown is fitted on its own measured band, not the model's box:
+// - width / depth: the crown's inside at the band, across and front to back (FU). Heads are longer than wide
+//   (about 1.25:1 with hair) but Meshy crowns are almost round, so depth is scaled on its own.
+// - height: extra stretch of the crown upwards, so hair can't poke over the top.
+// - y: the band's height over the face's forehead point; the band's FRONT sits on the forehead skin (measured from
+//   the live face mesh every frame), so the crown reaches as far back as the head does.
+// - tilt: the back of the band drops toward the nape (positive = back down), like a real cap.
+// All of it is for a reference face 1.18 FU wide (cheek to cheek); each wearer's face scales it (main.js).
 export const FIT = {
-  flat:   { width: 1.44, y: 0.17, z: 0.0,  tilt: 0.0 },
-  curved: { width: 1.40, y: 0.04, z: 0.0,  tilt: -0.06 },
-  beanie: { width: 1.42, y: 0.12, z: 0.0,  tilt: 0.24 },
+  flat:   { width: 1.42, depth: 1.66, height: 1.10, y: 0.16, tilt: 0.05 },
+  curved: { width: 1.38, depth: 1.64, height: 1.10, y: 0.08, tilt: 0.08 },
+  beanie: { width: 1.36, depth: 1.60, height: 1.00, y: 0.12, tilt: 0.26 },
 };
+// the reference head that FIT is tuned on, in FU: face width (vertices 234-454) and the skull the occluder stands for
+export const HEAD = { faceW: 1.18, rx: 0.62, ry: 0.86, rz: 0.72, cy: 0.06, inset: 0.1 };
 // the six products (photos from the Fanatics 76ers headwear page)
 export const HATS = [
   { id: 'blue76',  style: 'flat',   img: 'hat5', name: '76ers Blue 59FIFTY',          sub: 'Flat brim · Fitted' },
@@ -47,19 +55,24 @@ export async function loadHats(gltfLoader, first = []) {
   await Promise.all(first.map(loadHat));
   (async () => { for (const h of HATS) await loadHat(h.id).catch((e) => console.warn('hat', h.id, e)); })();
 }
-// measure the crown in the model's own space (front = +z): width across, its bottom, and the centre of its top half
-// front to back (the brim stays out of it: it is low)
+// Measure the crown in the model's own space (front = +z, the brim side). The brim is kept out of it: the bottom is
+// taken from the back half, the width and back from a band slice, the front from a slice above any brim.
 function fitOf(scene) {
   scene.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(scene), v = new THREE.Vector3();
-  const yMid = box.min.y + (box.max.y - box.min.y) * 0.55; let z0 = Infinity, z1 = -Infinity;
+  const box = new THREE.Box3().setFromObject(scene), v = new THREE.Vector3(), pts = [];
   scene.traverse((o) => {
     if (!o.isMesh) return; const p = o.geometry.attributes.position;
-    for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (v.y > yMid) { if (v.z < z0) z0 = v.z; if (v.z > z1) z1 = v.z; } }
+    for (let i = 0; i < p.count; i += 2) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); pts.push(v.x, v.y, v.z); }
   });
-  return { half: (box.max.x - box.min.x) / 2, bottom: box.min.y, zc: (z0 + z1) / 2 };
+  let bottom = Infinity; for (let i = 0; i < pts.length; i += 3) if (pts[i + 2] < 0 && pts[i + 1] < bottom) bottom = pts[i + 1];
+  const H = box.max.y - bottom; let half = 0, back = Infinity, front = -Infinity;
+  for (let i = 0; i < pts.length; i += 3) {
+    const x = pts[i], y = (pts[i + 1] - bottom) / H, z = pts[i + 2];
+    if (y > 0.12 && y < 0.45) { half = Math.max(half, Math.abs(x)); back = Math.min(back, z); }
+    if (y > 0.38 && y < 0.52) front = Math.max(front, z);
+  }
+  return { half, bottom, back, front, height: H };
 }
-
 // One hat, ready to wear: a frame on the head with the model inside, fitted to FIT. Returned group's userData has
 // `inner` (the part the entrance animation moves). Null if the model hasn't loaded yet.
 export function buildHat(id) {
@@ -75,27 +88,36 @@ export function buildHat(id) {
     if (!m.roughnessMap) m.roughness = 0.85;
     m.side = THREE.FrontSide; o.material = m;
   });
-  const k = f.width / (fit.half * 2);
+  const kx = f.width / (fit.half * 2), kz = f.depth / (fit.front - fit.back), ky = kx * f.height;
   const inner = new THREE.Group(); inner.add(model);
-  model.rotation.y = Math.PI;                         // brim to the face's front (-z)
-  model.scale.setScalar(k);
-  model.position.set(0, -fit.bottom * k, fit.zc * k); // crown centre over the origin, bottom of the crown at y 0
-  const frame = new THREE.Group(); frame.position.set(0, f.y, f.z); frame.rotation.x = f.tilt; frame.add(inner);
+  model.rotation.y = Math.PI;                              // brim to the face's front (-z)
+  model.scale.set(kx, ky, kz);
+  model.position.set(0, -fit.bottom * ky, fit.front * kz); // the band's front-bottom on the frame's origin
+  const frame = new THREE.Group(); frame.position.set(0, f.y, 0); frame.rotation.x = f.tilt; frame.add(inner);
   const root = new THREE.Group(); root.name = 'hat:' + id; root.add(frame);
   root.userData = { id, inner, base: h.style };
   return root;
 }
 
 // ---------------------------------------------------------------- head occluder (no stencil: depth only)
-export function buildHeadOccluder() {
-  const mat = new THREE.MeshBasicMaterial({ colorWrite: false });
+// The engine tracks the face only (no full-head mesh), so the rest of the head is an ellipsoid sized from the
+// wearer's face and kept INSIDE the hat's crown (an occluder poking out of the crown cuts the hat's back off on a
+// side turn). It hides what the real head would: the hat's inside and anything behind the head. `debug` paints it.
+export function buildHeadOccluder(debug) {
+  const mat = debug ? new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true }) : new THREE.MeshBasicMaterial({ colorWrite: false });
   const g = new THREE.Group();
-  const head = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 24), mat); head.scale.set(0.56, 0.82, 0.62); head.position.set(0, 0.06, 0.06);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), mat); head.name = 'skull';
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.44, 1.6, 24), mat); neck.position.set(0, -1.1, 0.16);
-  g.add(head, neck); g.traverse((o) => { o.renderOrder = -10; });
+  g.add(head, neck); g.traverse((o) => { o.renderOrder = -10; o.frustumCulled = false; });
+  g.userData.head = head; fitHeadOccluder(g, 1, -0.6);
   return g;
 }
-
+// r = this face's size over the reference face; frontZ = the forehead skin (FU)
+export function fitHeadOccluder(g, r, frontZ) {
+  const h = g.userData.head;
+  h.scale.set(HEAD.rx * r, HEAD.ry * r, HEAD.rz * r);
+  h.position.set(0, HEAD.cy, frontZ + HEAD.inset + HEAD.rz * r);
+}
 // ---------------------------------------------------------------- entrance and exit
 // Caps drop onto the head and settle with a small bounce; the beanie pulls down over the head. Exit: a flick up.
 const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);

@@ -1,10 +1,11 @@
-// Fanatics Booth: a pitch demo for Fanatics. Try 76ers headwear on your own head with the open-source 8th Wall
+// Fanatics Merch Try-On (folder booth/): a pitch demo for Fanatics. Try 76ers headwear on your own head with the open-source 8th Wall
 // engine's FACE tracking (MIT, self-hosted in /evade/keychain-ar/vendor/xr with the face chunk + models), add
 // game-day face paint, shoot a photo / video / 4-shot strip, and Shop the hat you are wearing.
 //
 // Built from the Bobo Booth (/evade/bobo-booth/), trimmed for a retail try-on:
 // - six hats on four Meshy models (hats.js); face paint on the live face mesh; up to 2 faces.
-// - no face-gesture tricks and no beeps (Dapo 2026-11-17: Bobo Booth's fizz + beep fired on ordinary head moves).
+// - one face gesture only, a deliberate eyebrow raise for the next hat; no beeps (Dapo 2026-11-17: Bobo Booth's fizz
+//   + beep fired on ordinary head moves).
 // - the splash 3D canvas is hidden BEFORE its renderer is freed (Bobo Booth showed a white box while "Starting").
 // - no EVADE globe events; test logs (kc-diag, page 'fanatics-booth') on previews only.
 // Pitch only: unlisted, noindex. The team marks need licensing before any public use.
@@ -65,18 +66,19 @@ const assets = Promise.all([H.loadHats(gl, firstHats), document.fonts ? document
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
-  loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = 'Open the booth';
+  loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = 'Start the try-on';
   hero.init(); buildTray(); hero.start();
-}).catch((e) => { console.error(e); showError('Could not load the booth', 'Check your connection and reload the page.'); });
+}).catch((e) => { console.error(e); showError('Could not load the try-on', 'Check your connection and reload the page.'); });
 
-// ---------------------------------------------------------------- splash hero + item thumbnails (one small renderer)
-// A display head that changes hats every few seconds; stills for the carousel. The canvas is HIDDEN first, then the
-// renderer is freed when the camera starts (freeing it while visible left a white box on some phones).
+// ---------------------------------------------------------------- splash hero: the real 3D hats on a display stand
+// No head (Dapo round 3): each hat sits on a flat retail puck and turns slowly; a new one drops on every few seconds.
+// The canvas is HIDDEN first, then the renderer is freed when the camera starts (freeing it while visible left a white
+// box on some phones).
 const hero = {
   r: null, scene: null, cam: null, rig: null, raf: 0, hat: null, hatI: 0,
   init() {
     if (this.r) return true;
-    try { this.r = new THREE.WebGLRenderer({ canvas: $('hero3d'), antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch (e) { return false; }
+    try { this.r = new THREE.WebGLRenderer({ canvas: $('hero3d'), antialias: true, alpha: true }); } catch (e) { return false; }
     this.r.outputColorSpace = THREE.SRGBColorSpace; this.r.toneMapping = THREE.NeutralToneMapping; this.r.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     this.r.setClearColor(0x000000, 0);
     this.scene = new THREE.Scene();
@@ -85,54 +87,42 @@ const hero = {
     this.cam = new THREE.PerspectiveCamera(30, 1, 0.01, 50);
     return true;
   },
-  bust() {
-    const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: '#1c2f4f', roughness: 0.75 });
-    const h = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 30), m); h.scale.set(0.57, 0.84, 0.66); h.position.set(0, 0.0, 0.05); g.add(h);
-    const n = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.42, 0.9, 30), m); n.position.set(0, -0.95, 0.12); g.add(n);
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.26, 16), m); nose.rotation.x = -Math.PI / 2 - 0.3; nose.position.set(0, -0.2, -0.66); g.add(nose);
-    return g;
+  stand() {   // a flat puck in Sixers navy with a red rim (flat colours)
+    const g = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 0.1, 64), new THREE.MeshStandardMaterial({ color: '#14305a', roughness: 0.7 }));
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(1.08, 1.08, 0.05, 64), new THREE.MeshStandardMaterial({ color: '#ed174c', roughness: 0.6 }));
+    top.position.y = -0.05; rim.position.y = -0.125; g.add(top, rim); return g;
   },
-  frame(w, h) { this.cam.aspect = w / h; this.cam.position.set(0, 0.55, -4.9); this.cam.lookAt(0, 0.22, 0); this.cam.updateProjectionMatrix(); },
+  frame(w, h) { this.cam.aspect = w / h; const d = w / h < 0.95 ? 5.0 : 6.6; this.cam.position.set(0, d * 0.36, -d); this.cam.lookAt(0, 0.38, 0); this.cam.updateProjectionMatrix(); },
   resize() { const c = $('hero3d'), w = c.clientWidth || 300, h = c.clientHeight || 300; this.r.setSize(w, h, false); this.frame(w, h); },
+  // a worn hat's origin is the band's front; on the stand the crown's middle sits over the centre
+  place(hat) { const f = H.FIT[hat.userData.base]; hat.children[0].rotation.x = 0; hat.position.set(0, -f.y, -f.depth / 2); return hat; },
   swap() {
     const ready = H.HATS.filter((h) => H.isLoaded(h.id));   // they stream in after the first
     if (!ready.length || (this.hat && ready.length === 1)) return;
     const id = ready[this.hatI++ % ready.length].id;
     if (this.hat && this.hat.userData.id === id) return;
     const old = this.hat; if (old) { this.anim.push({ o: old, dir: -1, t: 0 }); }
-    this.hat = H.buildHat(id); this.rig.add(this.hat); this.anim.push({ o: this.hat, dir: 1, t: 0 }); H.animFrame(this.hat, 1, 0, REDUCED);
+    this.hat = this.place(H.buildHat(id)); this.spin.add(this.hat); this.anim.push({ o: this.hat, dir: 1, t: 0 }); H.animFrame(this.hat, 1, 0, REDUCED);
   },
   start() {
     if (!this.init()) return;
-    this.rig = new THREE.Group(); this.scene.add(this.rig); this.rig.add(this.bust()); this.anim = [];
+    this.rig = new THREE.Group(); this.scene.add(this.rig); this.rig.add(this.stand());
+    this.spin = new THREE.Group(); this.rig.add(this.spin); this.anim = [];
     this.swap(); this.resize(); this.onResize = () => this.r && this.resize(); addEventListener('resize', this.onResize);
-    let t = 0, next = 2.6; const clock = new THREE.Clock();
+    let t = 0, next = 2.8; const clock = new THREE.Clock();
     const loop = () => {
       if (!this.r) return;
       const dt = Math.min(clock.getDelta(), 0.05); t += dt;
-      if (t > next) { next = t + 2.6; this.swap(); }
+      if (t > next) { next = t + 2.8; this.swap(); }
       for (let i = this.anim.length - 1; i >= 0; i--) {
         const a = this.anim[i]; a.t = Math.min(1, a.t + dt / (a.dir > 0 ? H.DUR.in : H.DUR.out)); H.animFrame(a.o, a.dir, a.t, REDUCED);
-        if (a.t >= 1) { this.anim.splice(i, 1); if (a.dir < 0) this.rig.remove(a.o); }
+        if (a.t >= 1) { this.anim.splice(i, 1); if (a.dir < 0) this.spin.remove(a.o); }
       }
-      this.rig.rotation.y = Math.PI * 0.18 + Math.sin(t * 0.5) * (REDUCED ? 0.15 : 0.55);
+      this.spin.rotation.y = REDUCED ? Math.PI * 0.15 + Math.sin(t * 0.4) * 0.2 : Math.PI * 0.15 + t * 0.45;
       this.r.render(this.scene, this.cam); this.raf = requestAnimationFrame(loop);
     };
     loop();
-  },
-  thumb(item) {
-    if (!this.init()) return '';
-    const prevRig = this.rig; if (prevRig) prevRig.visible = false;
-    const g = new THREE.Group(); g.add(this.bust()); const hat = H.buildHat(item.id); g.add(hat); this.scene.add(g);
-    const c = this.r.domElement, keep = [c.clientWidth || 300, c.clientHeight || 300]; this.r.setSize(160, 160, false);
-    this.cam.aspect = 1; this.cam.position.set(0, 0.75, -3.0); this.cam.lookAt(0, 0.42, 0); this.cam.updateProjectionMatrix();
-    g.rotation.y = 0.55;
-    this.r.render(this.scene, this.cam);
-    const url = c.toDataURL('image/png');
-    this.scene.remove(g);
-    this.r.setSize(keep[0], keep[1], false); this.frame(keep[0], keep[1]);
-    if (prevRig) prevRig.visible = true;
-    return url;
   },
   stop() {
     $('hero3d').style.visibility = 'hidden';   // hide first: freeing a visible WebGL canvas can flash white
@@ -209,9 +199,14 @@ const MAX_FACES = clamp(Math.round(+params.get('faces') || 2), 1, 3);
 const rigs = new Map();
 const AP_DEFAULT = { forehead: [0, 0.278, -0.615] };
 const tmpV = new THREE.Vector3();
+// test hooks: ?occ=show paints the occluders; ?yaw=0.9 (or __fb.setYaw) turns the tracked head to check side views;
+// ?smooth=0 turns the pose filter off (its still-head cut-off in Hz, default 4)
+const OCC_SHOW = params.get('occ') === 'show';
+let testYaw = +params.get('yaw') || 0; const yawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), testYaw);
+const SMOOTH = params.has('smooth') ? Math.max(0, +params.get('smooth') || 0) : 4;
 function ap(d, n) { const p = d.attachmentPoints && d.attachmentPoints[n]; return p && p.position ? tmpV.set(p.position.x, p.position.y, p.position.z) : tmpV.set(...AP_DEFAULT[n]); }
-// ?fit=y,z,tilt,width nudges every hat's fit (simulator / phone tuning without a redeploy)
-if (params.get('fit')) { const [y, z, t, w] = params.get('fit').split(',').map(Number); for (const f of Object.values(H.FIT)) { if (isFinite(y)) f.y += y; if (isFinite(z)) f.z += z; if (isFinite(t)) f.tilt += t; if (isFinite(w)) f.width *= w; } }
+// ?fit=y,tilt,width,depth nudges every hat's fit (y/tilt added, width/depth multiplied) for tuning without a redeploy
+if (params.get('fit')) { const [y, t, w, dp] = params.get('fit').split(',').map(Number); for (const f of Object.values(H.FIT)) { if (isFinite(y)) f.y += y; if (isFinite(t)) f.tilt += t; if (isFinite(w) && w) f.width *= w; if (isFinite(dp) && dp) f.depth *= dp; } }
 function buildScene(xr) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
@@ -232,7 +227,9 @@ class Rig {
   constructor(id) {
     this.id = id; this.tracked = false; this.at = 0; this.s = 0.139;
     this.anchor = new THREE.Group(); this.anchor.visible = false; scene.add(this.anchor);
-    this.anchor.add(H.buildHeadOccluder());
+    this.skull = H.buildHeadOccluder(OCC_SHOW); this.anchor.add(this.skull);
+    this.r = 1; this.frontZ = -0.6;   // this face's size over the reference face; the forehead skin (FU)
+    this.P = new THREE.Vector3(); this.Q = new THREE.Quaternion();
     this.slot = new THREE.Group(); this.anchor.add(this.slot);
     this.forehead = new THREE.Vector3(...AP_DEFAULT.forehead);
     this.paintId = null;
@@ -241,7 +238,7 @@ class Rig {
   makeMeshes() {
     if (this.occ || !faceIdx) return;
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); geo.setIndex(faceIdx.idx);
-    this.occ = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false })); this.occ.renderOrder = -10; this.occ.frustumCulled = false; this.anchor.add(this.occ);
+    this.occ = new THREE.Mesh(geo, OCC_SHOW ? new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true }) : new THREE.MeshBasicMaterial({ colorWrite: false })); this.occ.renderOrder = -10; this.occ.frustumCulled = false; this.anchor.add(this.occ);
     const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); pg.setIndex(faceIdx.idx);
     if (faceUvs) pg.setAttribute('uv', new THREE.BufferAttribute(faceUvs, 2));
     this.paint = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, opacity: 0 }));
@@ -249,10 +246,24 @@ class Rig {
   }
   update(d) {
     const t = d.transform; if (!t) return;
-    this.anchor.position.set(t.position.x, t.position.y, t.position.z);
-    this.anchor.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
-    this.anchor.scale.setScalar(t.scale); this.s = t.scale;
+    // Steady but not laggy: adaptive smoothing (One Euro style). Still: a light filter takes out jitter; moving:
+    // the cut-off rises with speed so the hat stays on the head (the pose already arrives ~2 frames late).
+    const now = performance.now(), dt = clamp((now - (this.at || now)) / 1000, 1 / 120, 0.1);
+    const P = this.P.set(t.position.x, t.position.y, t.position.z), Q = this.Q.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+    if (testYaw) Q.multiply(yawQ);
+    const a = this.anchor;
+    if (!this.live || SMOOTH === 0) { a.position.copy(P); a.quaternion.copy(Q); a.scale.setScalar(t.scale); }
+    else {
+      const k = (fc) => 1 - Math.exp(-2 * Math.PI * fc * dt);
+      const v = a.position.distanceTo(P) / dt / Math.max(t.scale, 0.05);   // face widths per second
+      const w = a.quaternion.angleTo(Q) / dt;                              // radians per second
+      a.position.lerp(P, k(SMOOTH + 6 * v)); a.quaternion.slerp(Q, k(SMOOTH + 5 * w));
+      a.scale.setScalar(a.scale.x + (t.scale - a.scale.x) * k(SMOOTH + 6 * v));
+    }
+    this.s = t.scale;
     this.forehead.lerp(ap(d, 'forehead'), 0.4);
+    if (d.vertices) { this.v = d.vertices; this.measureHead(d.vertices); }
+    brows.check(this, d, now);
     if (d.vertices && this.occ) {
       const a = this.occ.geometry.attributes.position, b = this.paint.geometry.attributes.position, n = Math.min(a.count, d.vertices.length);
       for (let i = 0; i < n; i++) { const v = d.vertices[i]; a.setXYZ(i, v.x, v.y, v.z + 0.012); b.setXYZ(i, v.x, v.y, v.z); }
@@ -261,6 +272,17 @@ class Rig {
     }
     if (!this.tracked) { this.tracked = true; diag.found++; if (!diag.firstFoundS) diag.firstFoundS = +((performance.now() - camStartAt) / 1000).toFixed(1); arrived(this); }
     this.at = performance.now();
+  }
+  // Size and place the hat from THIS face: its width cheek to cheek (vertices 234-454) against the reference face,
+  // and where the forehead skin is at the hat band's height (midline vertices 10, 151, 9). Both smoothed.
+  measureHead(v) {
+    const L = v[234], R = v[454], top = v[10], mid = v[151], low = v[9]; if (!L || !R || !top || !mid || !low) return;
+    const fw = Math.hypot(L.x - R.x, L.y - R.y, L.z - R.z);
+    const r = clamp(fw / H.HEAD.faceW, 0.9, 1.12);
+    const y = this.forehead.y + 0.12, A = y > mid.y ? mid : low, B = y > mid.y ? top : mid;
+    const z = A.z + (B.z - A.z) * (y - A.y) / ((B.y - A.y) || 1);
+    const first = !this.measured; this.measured = true;
+    this.r += (r - this.r) * (first ? 1 : 0.05); this.frontZ += (z - this.frontZ) * (first ? 1 : 0.2);
   }
   get live() { return this.tracked && performance.now() - this.at < 400; }
   apply(anim) {
@@ -288,8 +310,9 @@ class Rig {
   }
   tick(dt) {
     this.anchor.visible = this.live;
-    // the hat follows the measured forehead (smoothed) so it sits on this face's hairline, not an average one
-    this.slot.position.set(0, this.forehead.y - AP_DEFAULT.forehead[1], this.forehead.z - AP_DEFAULT.forehead[2]);
+    // the band's front sits on this face's forehead (a few mm of fabric off the skin); sized to this face
+    this.slot.position.set(0, this.forehead.y, this.frontZ - 0.035); this.slot.scale.setScalar(this.r);
+    H.fitHeadOccluder(this.skull, this.r, this.frontZ);
     if (this.paintFade && this.paint) {
       const m = this.paint.material, f = this.paintFade; m.opacity += Math.sign(f.to - m.opacity) * Math.min(Math.abs(f.to - m.opacity), dt / (REDUCED ? 0.15 : 0.45));
       if (m.opacity === f.to) { this.paint.visible = f.to > 0; this.paintFade = null; }
@@ -378,6 +401,37 @@ function paintThumb(id) {
   return c.toDataURL('image/png');
 }
 
+// ---------------------------------------------------------------- eyebrow raise: next hat
+// Only a deliberate raise counts (Dapo: Bobo Booth's tricks fired on ordinary head moves): BOTH brows up and held for
+// 400 ms, then it re-arms only after the brows come back down, with a 2.5 s rest between changes. Not during a strip
+// countdown or with a sheet open. Can be switched off in Options.
+const brows = {
+  on: store.get('brows', '1') === '1', at: 0,
+  check(rig, d, now) {
+    if (!this.on || !d || d.leftEyebrowRaised === undefined) return;
+    const up = !!(d.leftEyebrowRaised && d.rightEyebrowRaised), T = rig.brow || (rig.brow = { since: 0, armed: true });
+    if (!up) { if (!T.down) T.down = now; if (now - T.down >= 250) T.armed = true; T.since = 0; return; }
+    T.down = 0; if (!T.since) T.since = now;
+    const open = !$('shot').hidden || !$('shop').hidden || !optsEl.hidden || !$('how').hidden;
+    if (T.armed && now - T.since >= 400 && now - this.at > 2500 && !strip && !open) { T.armed = false; this.at = now; nextHat(); }
+  },
+};
+function nextHat() {
+  const hats = ITEMS.hat.filter((h) => h.id !== 'none');
+  let i = hats.findIndex((h) => h.id === wear.hat);
+  for (let k = 1; k <= hats.length; k++) { const h = hats[(i + k) % hats.length]; if (H.isLoaded(h.id)) { i = (i + k) % hats.length; break; } }
+  const h = hats[i]; if (!h || h.id === wear.hat) return;
+  wear.hat = h.id; store.set('wear', JSON.stringify(wear)); applyWear(true); shopState();
+  if (cat === 'hat') { const at = ITEMS.hat.indexOf(h); carouselLock = true; centred = at; scrollToLens(at, true); paintCentre(at); setTimeout(() => { carouselLock = false; }, 600); }
+  toast(`Eyebrows up: ${h.name}`); buzz([10, 40, 10]); diag.brows = (diag.brows || 0) + 1;
+}
+// the tips card: every time the booth opens (a demo phone gets handed round), gone after 8 s or on Got it
+function showCoach() {
+  const c = $('coach'); c.querySelector('li').hidden = !brows.on;
+  setTimeout(() => { c.hidden = false; clearTimeout(c._t); c._t = setTimeout(() => { c.hidden = true; }, 8000); }, 1200);
+}
+$('b-coach').onclick = () => { $('coach').hidden = true; };
+
 // ---------------------------------------------------------------- per frame
 function tick(dt) {
   diag.fpsN++;
@@ -392,7 +446,7 @@ function tick(dt) {
 let mode = 'find';
 function setMode(m) { if (mode !== m) { mode = m; $('hud').dataset.mode = m; } }
 let arrivedOnce = false;
-function arrived() { if (arrivedOnce && rigs.size > 1) toast('Friend joined the booth'); arrivedOnce = true; buzz(8); }
+function arrived() { if (arrivedOnce && rigs.size > 1) toast('Friend joined the try-on'); arrivedOnce = true; buzz(8); }
 function hint(text) { if ($('hint').textContent !== text) $('hint').textContent = text || ''; }
 let toastT = 0;
 function toast(text) { const el = $('toast'); el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1800); }
@@ -410,6 +464,8 @@ let stripMode = store.get('strip', '0') === '1';
 function setStrip(on) { stripMode = on; store.set('strip', on ? '1' : '0'); $('b-strip').setAttribute('aria-pressed', String(on)); $('b-shutter').classList.toggle('strip', on); $('shoot-hint').textContent = on ? 'Tap: 4-shot strip · Hold: video' : 'Tap: photo · Hold: video'; }
 $('b-strip').onclick = () => { setStrip(!stripMode); buzz(8); };
 setStrip(stripMode);
+const browsBtn = $('o-brows'); browsBtn.setAttribute('aria-checked', String(brows.on));
+browsBtn.onclick = () => { brows.on = !brows.on; store.set('brows', brows.on ? '1' : '0'); browsBtn.setAttribute('aria-checked', String(brows.on)); if (!brows.on) $('coach').hidden = true; };
 $('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
 $('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
 $('err-retry').onclick = () => location.reload();
@@ -441,7 +497,7 @@ const appModule = () => ({
     if (status === 'hasVideo') {
       hideTapCam(); camStartAt = performance.now(); noteVideo(video);
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      if (store.get('how', '0') !== '1') { $('how').hidden = false; $('b-go').focus(); }
+      showCoach();
     }
     if (status === 'requesting') hint('Allow camera access to begin');
     if (status === 'failed') camFailed('failed');
@@ -501,7 +557,7 @@ LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
 function drawWatermark(c, Wd, Hd) {
   const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
   c.save(); c.font = `900 italic ${Math.round(30 * u)}px "Exo 2", sans-serif`; c.textBaseline = 'top'; c.fillStyle = '#ffffff';
-  c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 8 * u; c.fillText('FANATICS BOOTH', pad, pad); c.restore();
+  c.shadowColor = 'rgba(0,0,0,.5)'; c.shadowBlur = 8 * u; c.fillText('FANATICS MERCH TRY-ON', pad, pad); c.restore();
   if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h); }
 }
 let capture = null, recFrom = 0, shots = 0;
@@ -514,8 +570,8 @@ try {
   });
   Object.assign(capture.settings, {
     corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#ed174c', maxSeconds: 30, sendEnabled: false,
-    brandTitle: 'FANATICS BOOTH', brandTagline: 'Philadelphia 76ers', hintText: 'Film your game-day look',
-    keepTitle: 'Keep your clip?', clipTitle: 'Fanatics Booth clip', filePrefix: 'fanatics-booth', backLabel: 'Back to the booth',
+    brandTitle: 'FANATICS MERCH TRY-ON', brandTagline: 'Philadelphia 76ers', hintText: 'Film your game-day look',
+    keepTitle: 'Keep your clip?', clipTitle: 'Fanatics Merch Try-On clip', filePrefix: 'fanatics-try-on', backLabel: 'Back to the try-on',
   });
   capture.apply(); capture.setVisible(false);
 } catch (e) { console.warn('recorder', e); capture = null; }
@@ -541,7 +597,7 @@ async function showResult(c, name, title, what) {
   $('shot-t').textContent = title; $('shot-img').src = url; $('shot').classList.toggle('strip', what === 'strip');
   $('shot-save').href = url; $('shot-save').download = file.name; $('shot-save').hidden = false;
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-  $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Fanatics Booth' }).catch(() => {});
+  $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Fanatics Merch Try-On' }).catch(() => {});
   $('shot-shop').hidden = wear.hat === 'none';
   $('shot').hidden = false; $('shot-close').focus(); diag.shots = (diag.shots || 0) + 1;
 }
@@ -552,7 +608,7 @@ async function takePhoto() {
     sound.shutter(); buzz(20); flash();
     const img = await grab(), c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
     const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawWatermark(g, c.width, c.height);
-    await showResult(c, `fanatics-booth-${++shots}.jpg`, 'Your game-day look', 'photo');
+    await showResult(c, `fanatics-try-on-${++shots}.jpg`, 'Your game-day look', 'photo');
   } catch (e) { console.error(e); diag.errors.push('photo: ' + String(e).slice(0, 120)); }
   busy = false;
 }
@@ -589,13 +645,13 @@ async function finishStrip() {
       g.drawImage(img, sx, sy, sw, sh, M, y, FW, FH);
     });
     const fy = M + STRIP_N * FH + (STRIP_N - 1) * GAP;
-    g.fillStyle = '#ffffff'; g.font = '900 italic 58px "Exo 2", sans-serif'; g.textBaseline = 'top'; g.fillText('FANATICS BOOTH', M, fy + 50);
+    g.fillStyle = '#ffffff'; g.font = '900 italic 44px "Exo 2", sans-serif'; g.textBaseline = 'top'; g.fillText('FANATICS MERCH TRY-ON', M, fy + 50);
     g.fillStyle = '#ed174c'; g.font = '700 26px "Space Grotesk", sans-serif'; g.fillText('PHILADELPHIA 76ERS · GAME DAY', M, fy + 122);
     g.fillStyle = '#b8c2cc'; g.font = '700 22px "Space Grotesk", sans-serif';
     g.fillText(new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }), M, fy + 166);
     if (LOGO.act.naturalWidth) { const h = 70, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; g.drawImage(LOGO.act, Wd - M - w, fy + 130, w, h); }
     busy = false;
-    await showResult(c, `fanatics-booth-strip-${++shots}.jpg`, 'Your game-day strip', 'strip');
+    await showResult(c, `fanatics-try-on-strip-${++shots}.jpg`, 'Your game-day strip', 'strip');
   } catch (e) { console.error(e); diag.errors.push('strip: ' + String(e).slice(0, 120)); }
   busy = false;
 }
@@ -636,12 +692,15 @@ if (params.has('test')) window.__fb = {
   get rig() { return [...rigs.values()][0] || null; },
   get face() { const r = this.rig; return r ? { tracked: r.tracked, live: r.live, s: r.s, faces: rigs.size } : { tracked: false }; },
   get mode() { return mode; }, get wear() { return { ...wear }; }, diag, paintUV: () => paintUV,
+  setYaw(a) { testYaw = a; yawQ.setFromAxisAngle(new THREE.Vector3(0, 1, 0), a); },
   setWear(o) { Object.assign(wear, o); applyWear(false); renderTray(); shopState(); },
   screen() {
     const r = this.rig; if (!r || !r.anchor.visible) return null;
     const pr = (v) => { const p = v.clone().project(camera); return [Math.round((p.x + 1) / 2 * innerWidth), Math.round((1 - p.y) / 2 * innerHeight)]; };
     return { forehead: pr(r.worldOf(r.forehead)), chin: pr(r.worldOf(new THREE.Vector3(0, -0.95, -0.45))) };
   },
+  measure() { const r = this.rig; if (!r || !r.v) return null; const o = {}; for (const i of [10, 151, 9, 8, 168, 6, 234, 454, 127, 356, 162, 389, 21, 251, 103, 332, 152]) { const v = r.v[i]; o[i] = [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)]; } let zx = -9, zn = 9, yx = -9; for (const v of r.v) { zx = Math.max(zx, v.z); zn = Math.min(zn, v.z); yx = Math.max(yx, v.y); } o.range = { zmin: zn, zmax: zx, ymax: yx }; o.fh = r.forehead.toArray(); o.s = r.s; return o; },
+  brows: () => nextHat(),
   photo: () => takePhoto(), strip: () => startStrip(), shop: () => openShop(),
 };
 
