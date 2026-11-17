@@ -31,6 +31,7 @@ import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
 import { Route as AdminSprayRouteImport } from './routes/admin.spray'
 import { Route as AdminUgcRouteImport } from './routes/admin.ugc'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
+import { Route as ApiShowcaseDotjsonRouteImport } from './routes/api.showcase[.]json'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
 import { Route as CreatorHubAppRouteImport } from './routes/creator-hub._app'
 import { Route as CreatorHubForgotPasswordRouteImport } from './routes/creator-hub.forgot-password'
@@ -301,6 +302,11 @@ const AdminUgcRoute = AdminUgcRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin_/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShowcaseDotjsonRoute = ApiShowcaseDotjsonRouteImport.update({
+  id: '/api/showcase.json',
+  path: '/api/showcase.json',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
@@ -1163,6 +1169,7 @@ export interface FileRoutesByFullPath {
   '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1344,6 +1351,7 @@ export interface FileRoutesByTo {
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/spray': typeof AdminSprayRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1526,6 +1534,7 @@ export interface FileRoutesById {
   '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1713,6 +1722,7 @@ export interface FileRouteTypes {
     | '/admin/spray'
     | '/admin/ugc'
     | '/admin/login'
+    | '/api/showcase.json'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1894,6 +1904,7 @@ export interface FileRouteTypes {
     | '/admin/medialife'
     | '/admin/spray'
     | '/admin/login'
+    | '/api/showcase.json'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -2075,6 +2086,7 @@ export interface FileRouteTypes {
     | '/admin/spray'
     | '/admin/ugc'
     | '/admin_/login'
+    | '/api/showcase.json'
     | '/creator-hub/_app'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -2250,6 +2262,7 @@ export interface RootRouteChildren {
   InsightsRoute: typeof InsightsRoute
   LiveRoute: typeof LiveRoute
   AdminLoginRoute: typeof AdminLoginRoute
+  ApiShowcaseDotjsonRoute: typeof ApiShowcaseDotjsonRoute
   CreatorHubAppRoute: typeof CreatorHubAppRouteWithChildren
   CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
   CreatorHubJoinRoute: typeof CreatorHubJoinRoute
@@ -2483,6 +2496,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/showcase.json': {
+      id: '/api/showcase.json'
+      path: '/api/showcase.json'
+      fullPath: '/api/showcase.json'
+      preLoaderRoute: typeof ApiShowcaseDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/creator-hub/': {
@@ -4080,6 +4100,7 @@ const rootRouteChildren: RootRouteChildren = {
   InsightsRoute: InsightsRoute,
   LiveRoute: LiveRoute,
   AdminLoginRoute: AdminLoginRoute,
+  ApiShowcaseDotjsonRoute: ApiShowcaseDotjsonRoute,
   CreatorHubAppRoute: CreatorHubAppRouteWithChildren,
   CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
   CreatorHubJoinRoute: CreatorHubJoinRoute,
