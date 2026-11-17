@@ -792,7 +792,6 @@ const appModule = (data) => ({
     if (status === 'hasVideo') {
       camStartAt = performance.now();
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      if (store.get('how', '0') !== '1') { $('how').hidden = false; $('b-go').focus(); }
     }
     if (status === 'requesting') hint('Allow camera and motion access to begin');
     if (status === 'failed') camFailed('failed');
