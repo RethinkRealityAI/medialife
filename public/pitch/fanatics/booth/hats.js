@@ -1,65 +1,88 @@
-// Fanatics Booth hats: four Meshy models (flat brim, curved brim, the A-frame ball cap, cuffed pom beanie), six products.
-// Each product is a texture on one of the three bases (scripts/build-fanatics: texel_map.py + recolor.py + pack.py),
-// so the page loads 4 meshes, not 6 (the A-frame got its own: the curved model carries the Sixers script
-// embroidery as raised geometry, which shows through any other texture). Units: the 8th Wall face's own units ("FU", ~139 mm); x = wearer's left, y up,
-// z = back of the head (the face looks down -z). Flat colours only.
+// Fanatics Booth hats: one Meshy 7 model per product (meshy-7.1 geometry, meshy-7 PBR textures from 4K, packed by
+// scripts/build-fanatics/pack_hq.py), so every stitch, eyelet and patch is the product's own. Models load on demand:
+// the worn hat first, the rest in the background. Units: the 8th Wall face's own units ("FU", ~139 mm); x = wearer's
+// left, y up, z = back of the head (the face looks down -z). Flat colours only.
 import * as THREE from 'three';
 
 export const MM = 1 / 139;
 const BASE = './models/';
-// how each base sits on a head. The Meshy models face +z with y up; `zc` = the crown's centre (model units),
-// `bottom` = the bottom of the crown wall, `width` = the crown's target width across the head (FU).
-// The band is tilted so the front rides up the forehead and the back drops to the nape, like a cap is worn.
+// how each style sits on a head. `width` = the crown's width across the head (FU, a real cap is ~1.45 FU wide on an
+// average head); y/z = where the crown's bottom centre sits; tilt = front up the forehead, back down to the nape.
+// The crown's own centre and bottom are measured from each model when it loads (fitOf).
 export const FIT = {
-  flat:   { file: 'flat.glb',   zc: -0.28, bottom: -0.43, half: 0.72, width: 1.30, y: 0.25, z: -0.02, tilt: 0.06 },
-  curved: { file: 'curved.glb', zc: -0.21, bottom: -0.43, half: 0.59, width: 1.26, y: 0.06, z: -0.02, tilt: -0.04 },
-  ball:   { file: 'ball.glb',   zc: -0.21, bottom: -0.41, half: 0.59, width: 1.26, y: 0.06, z: -0.02, tilt: -0.04 },
-  beanie: { file: 'beanie.glb', zc: 0.0,   bottom: -0.95, half: 0.75, width: 1.30, y: 0.15, z: -0.01, tilt: 0.26 },
+  flat:   { width: 1.44, y: 0.17, z: 0.0,  tilt: 0.0 },
+  curved: { width: 1.40, y: 0.04, z: 0.0,  tilt: -0.06 },
+  beanie: { width: 1.42, y: 0.12, z: 0.0,  tilt: 0.24 },
 };
-// the six products. `tex` null = the base model's own texture (the photo Meshy built it from).
+// the six products (photos from the Fanatics 76ers headwear page)
 export const HATS = [
-  { id: 'blue76',  base: 'flat',   tex: null,      img: 'hat5', name: '76ers Blue 59FIFTY',          sub: 'Flat brim · Fitted' },
-  { id: 'black76', base: 'flat',   tex: 'black76', img: 'hat3', name: '76ers Black 59FIFTY',         sub: 'Flat brim · Fitted' },
-  { id: 'sixers',  base: 'flat',   tex: 'sixers',  img: 'hat2', name: 'Sixers Black/Red 9FIFTY',      sub: 'Flat brim · Snapback' },
-  { id: 'ball',    base: 'ball',   tex: null,     img: 'hat1', name: '76ers Blue/Red A-Frame',       sub: 'Curved brim · Snapback' },
-  { id: 'script',  base: 'curved', tex: null,      img: 'hat4', name: 'Sixers Red Script',            sub: 'Curved brim · Snapback' },
-  { id: 'beanie',  base: 'beanie', tex: null,      img: 'hat6', name: '76ers Striped Pom Knit',       sub: 'Cuffed knit with pom' },
+  { id: 'blue76',  style: 'flat',   img: 'hat5', name: '76ers Blue 59FIFTY',          sub: 'Flat brim · Fitted' },
+  { id: 'black76', style: 'flat',   img: 'hat3', name: '76ers Black 59FIFTY',         sub: 'Flat brim · Fitted' },
+  { id: 'sixers',  style: 'flat',   img: 'hat2', name: 'Sixers Black/Red 9FIFTY',      sub: 'Flat brim · Snapback' },
+  { id: 'ball',    style: 'curved', img: 'hat1', name: '76ers Blue/Red A-Frame',       sub: 'Curved brim · Snapback' },
+  { id: 'script',  style: 'curved', img: 'hat4', name: 'Sixers Red Script',            sub: 'Curved brim · Snapback' },
+  { id: 'beanie',  style: 'beanie', img: 'hat6', name: '76ers Striped Pom Knit',       sub: 'Cuffed knit with pom' },
 ];
 
-const gltfs = {}, texs = {};
-export async function loadHats(loader) {
-  const tl = new THREE.TextureLoader();
-  await Promise.all([
-    ...Object.entries(FIT).map(async ([k, f]) => { gltfs[k] = await loader.loadAsync(BASE + f.file); }),
-    ...HATS.filter((h) => h.tex).map(async (h) => {
-      const t = await tl.loadAsync(BASE + 'tex/' + h.tex + '.jpg'); t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; texs[h.tex] = t;
-    }),
-  ]);
+const gltfs = {}, pending = {};
+let loader = null;
+export const isLoaded = (id) => !!gltfs[id];
+// load one hat (once); resolves to true when it can be built
+export function loadHat(id) {
+  if (gltfs[id]) return Promise.resolve(true);
+  if (!pending[id]) pending[id] = loader.loadAsync(BASE + id + '.glb').then((g) => { noMips(g.scene); gltfs[id] = { scene: g.scene, fit: fitOf(g.scene) }; return true; });
+  return pending[id];
+}
+// Meshy packs UV islands edge to edge with no gutter, so mipmaps average neighbouring islands and draw white "lint"
+// lines along every seam. A hat on a face is shown near full texture size, so plain linear filtering looks sharp.
+function noMips(scene) {
+  scene.traverse((o) => {
+    if (!o.isMesh) return;
+    for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'aoMap']) { const t = o.material[k]; if (t) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; t.needsUpdate = true; } }
+  });
+}
+// first the hats needed now, then the rest one at a time (keeps the first try-on fast on mobile data)
+export async function loadHats(gltfLoader, first = []) {
+  loader = gltfLoader;
+  await Promise.all(first.map(loadHat));
+  (async () => { for (const h of HATS) await loadHat(h.id).catch((e) => console.warn('hat', h.id, e)); })();
+}
+// measure the crown in the model's own space (front = +z): width across, its bottom, and the centre of its top half
+// front to back (the brim stays out of it: it is low)
+function fitOf(scene) {
+  scene.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(scene), v = new THREE.Vector3();
+  const yMid = box.min.y + (box.max.y - box.min.y) * 0.55; let z0 = Infinity, z1 = -Infinity;
+  scene.traverse((o) => {
+    if (!o.isMesh) return; const p = o.geometry.attributes.position;
+    for (let i = 0; i < p.count; i += 3) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (v.y > yMid) { if (v.z < z0) z0 = v.z; if (v.z > z1) z1 = v.z; } }
+  });
+  return { half: (box.max.x - box.min.x) / 2, bottom: box.min.y, zc: (z0 + z1) / 2 };
 }
 
 // One hat, ready to wear: a frame on the head with the model inside, fitted to FIT. Returned group's userData has
-// `inner` (the part the entrance animation moves).
+// `inner` (the part the entrance animation moves). Null if the model hasn't loaded yet.
 export function buildHat(id) {
-  const h = HATS.find((x) => x.id === id); if (!h) return null;
-  const f = FIT[h.base], src = gltfs[h.base].scene;
+  const h = HATS.find((x) => x.id === id); if (!h || !gltfs[id]) return null;
+  const f = FIT[h.style], m0 = gltfs[id], src = m0.scene, fit = m0.fit;
   const model = src.clone(true);
   model.traverse((o) => {
     if (!o.isMesh) return;
     o.frustumCulled = false;
     const m = o.material.clone();
-    if (h.tex) m.map = texs[h.tex];
-    // Meshy materials can come in shiny or with emission: fabric is matt
-    m.roughness = 0.88; m.metalness = 0; if (m.emissive) m.emissive.setRGB(0, 0, 0); m.emissiveMap = null;
+    // fabric is matt; keep Meshy's normal + roughness maps (they carry the stitching), cap the shine
+    m.metalness = 0; m.metalnessMap = null; if (m.emissive) m.emissive.setRGB(0, 0, 0); m.emissiveMap = null;
+    if (!m.roughnessMap) m.roughness = 0.85;
     m.side = THREE.FrontSide; o.material = m;
   });
-  const k = f.width / (f.half * 2);
+  const k = f.width / (fit.half * 2);
   const inner = new THREE.Group(); inner.add(model);
-  model.rotation.y = Math.PI;                       // brim to the face's front (-z)
+  model.rotation.y = Math.PI;                         // brim to the face's front (-z)
   model.scale.setScalar(k);
-  model.position.set(0, -f.bottom * k, f.zc * k);   // crown centre over the origin, bottom of the crown at y 0
+  model.position.set(0, -fit.bottom * k, fit.zc * k); // crown centre over the origin, bottom of the crown at y 0
   const frame = new THREE.Group(); frame.position.set(0, f.y, f.z); frame.rotation.x = f.tilt; frame.add(inner);
   const root = new THREE.Group(); root.name = 'hat:' + id; root.add(frame);
-  root.userData = { id, inner, base: h.base };
+  root.userData = { id, inner, base: h.style };
   return root;
 }
 

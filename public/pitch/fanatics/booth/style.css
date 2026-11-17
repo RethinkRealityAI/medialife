@@ -74,6 +74,7 @@ h1 span{color:var(--x)}
 #lenses{display:flex;align-items:center;gap:12px;height:100%;padding:0 calc(50% - 29px);width:max-content}
 .lens{flex:none;width:58px;height:58px;min-height:58px;padding:0;border-radius:50%;scroll-snap-align:center;background:rgba(15,21,25,.6);border:2px solid rgba(255,255,255,.45);overflow:hidden;transform:scale(.84);opacity:.85;transition:transform .25s cubic-bezier(.2,.9,.25,1.2),border-color .2s,opacity .2s;backdrop-filter:none;-webkit-backdrop-filter:none}
 .lens img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.lens img.photo{object-fit:contain;background:#fff;padding:5px}
 .lens .none{width:24px;height:24px;border-radius:50%;border:3px solid #fff;position:relative;display:block}
 .lens .none::after{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:3px;background:#fff;transform:translateX(-50%) rotate(45deg)}
 .lens .dot{width:14px;height:14px;border-radius:50%;background:var(--x)}

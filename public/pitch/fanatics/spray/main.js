@@ -15,6 +15,9 @@ const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
 const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+// world tracking runs on phones and tablets only: a touchscreen laptop passes TOUCH but the engine refuses it
+// ("No valid session manager to handle this session"), so decide by the device, not by touch
+const PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const HERE = './';
 const clamp = THREE.MathUtils.clamp;
@@ -921,6 +924,8 @@ const appModule = () => ({
   onException: (e) => {
     diag.errors.push('XR: ' + (typeof e === 'object' ? JSON.stringify(e) : String(e)).slice(0, 200)); flushDiag(true, true);
     if (e && e.type === 'permission') return showError('Motion access is needed', 'Sixers Spray uses your phone\'s motion sensors to keep your art on the wall. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again.');
+    const msg = String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e));
+    if (/session manager|not supported|unsupported|device/i.test(msg) && !camStartAt) { try { XR8.stop(); } catch (er) { /* not running */ } return openOnPhone(); }
     if (!camStartAt) showError('Something went wrong', String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e)));
   },
   listeners: [{ event: 'reality.trackingstatus', process: ({ detail }) => noteTracking(detail.status, detail.reason) }],
@@ -935,12 +940,7 @@ function start() {
   if (!loaded || started) return; started = true;
   $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
   sound.init();
-  if (!TOUCH && !params.has('desktop')) {
-    showError('Open this on your phone', 'Sixers Spray needs your phone\'s camera and motion sensors to find your walls. Scan this to open it there.');
-    try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) { $('qr').innerHTML = svg; $('qr').hidden = false; } }); } catch (e) { /* no QR */ }
-    $('err-retry').textContent = 'Close'; $('err-retry').onclick = () => { $('error').hidden = true; started = false; $('b-start').disabled = false; $('b-start').textContent = 'Start'; };
-    return;
-  }
+  if (!PHONE && !params.has('desktop')) return openOnPhone();
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
   XR8.XrController.configure({ disableWorldTracking: false, scale: 'responsive' });
   XR8.addCameraPipelineModules([XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.XrController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(), appModule()]);
@@ -953,6 +953,12 @@ function start() {
   });
 }
 $('b-start').onclick = () => { askMotion(); start(); };
+// not a phone (or the engine says so): a QR to carry on there, never a raw engine error
+function openOnPhone() {
+  showError('Open this on your phone', 'Sixers Spray needs a phone\'s camera and motion sensors to find your walls. Scan this to open it there.');
+  try { window.QRCode && QRCode.toString(location.href.replace(/[?&](test|desktop)\b[^&]*/g, ''), { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) { $('qr').innerHTML = svg; $('qr').hidden = false; } }); } catch (e) { /* no QR */ }
+  $('err-retry').textContent = 'Close'; $('err-retry').onclick = () => { $('error').hidden = true; started = false; $('b-start').disabled = false; $('b-start').textContent = 'Start'; };
+}
 function camFailed(why) {
   if (camStartAt || diag.camFailed) return; diag.camFailed = why; flushDiag(true, true);
   showError('The camera didn\'t start', 'Allow camera and motion access for this site, and close the Camera app or other tabs that use the camera, then tap Try again.');

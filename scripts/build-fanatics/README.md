@@ -1,28 +1,19 @@
 # Fanatics Booth hat pipeline
 
-Builds the hats for `/pitch/fanatics/booth/` from four Meshy image-to-3D models (latest, textured, remeshed to
-20k triangles, 30 credits each; task ids in the project files `fanatics/meshy/tasks.json`):
+**Round 2 (current, 2026-11-17):** one Meshy model per product, so every stitch, eyelet and patch is the product's own.
+`meshy_image_to_3d` with `ai_model: meshy-7.1`, `texture_model: meshy-7`, `texture_resolution: 4k`, `enable_pbr: true`,
+`geometry_resolution: 2k`, remesh to 50k triangles: 35 credits each, 210 for six (task ids in the project files
+`fanatics/meshy/tasks-hq.json`). Then:
 
-| Model | Made from | Products on it |
-|---|---|---|
-| `flat.glb` | blue 76 59FIFTY photo | blue 76 (own texture), black 76 + Sixers black/red (recoloured textures) |
-| `curved.glb` | red Sixers script photo | Sixers red script (own texture) |
-| `ball.glb` | blue/red ball A-frame photo | the A-frame (own texture) |
-| `beanie.glb` | grey striped pom knit photo | the knit (own texture) |
+    python pack_hq.py <meshy model.glb> public/pitch/fanatics/booth/models/<id>.glb
 
-The A-frame has its own model because Meshy builds embroidery as raised geometry: on the curved model the Sixers
-script stands out of the front panel, so any other logo textured onto it shows the script through it. Smoothing
-the relief away tore the UV mapping, so a 4th model (30 credits) was the clean fix. Recolouring works on the flat
-model because its 76 is low.
+`pack_hq.py` fills the space around the UV islands with each island's own colour, re-encodes base colour and normal
+at 2048 px and metal/roughness at 1024 px as JPEG, drops the emission (Meshy wires the base colour into it, which
+looks unlit), and rewrites the GLB by hand (no npm tools). About 3 to 4 MB a cap, 7 MB for the knit.
 
-Steps (Python 3 with numpy, scipy, Pillow):
+Meshy packs UV islands edge to edge, so mipmaps draw white "lint" lines along every seam: the page turns mipmaps
+off for these textures (`hats.js`, `noMips`). A hat on a face is shown near full texture size, so it stays sharp.
 
-1. `python texel_map.py flat.glb /tmp/flat.npz 1024`: rasterises the UV layout to a 3D position and normal per
-   texel.
-2. `python recolor.py` with `specs.json`: per variant, classifies crown / brim / underbrim / button / inside from
-   the texel positions, finds the old logo by colour distance, fills it, recolours with the original shading, and
-   projects the new logo crop (`src/`) onto the front panel. Writes `t_<variant>.jpg`.
-3. `python pack.py <meshy dir> public/pitch/fanatics/booth/models <tmp>`: 1024 px JPEG textures embedded, GLBs
-   rewritten by hand (no gltf-transform needed), variant textures to `models/tex/`.
-
-Paths in `specs.json` point at a scratch folder; edit them for your machine.
+**Round 1 (kept for reference):** three base models and recoloured textures (`texel_map.py`, `recolor.py`,
+`specs.json`, `pack.py`). Cheaper (90 credits) but recolouring loses the stitching, and Meshy builds raised
+embroidery into the mesh, so a big raised logo shows through any other texture.

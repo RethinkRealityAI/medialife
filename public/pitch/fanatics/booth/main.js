@@ -60,12 +60,13 @@ let cat = 'hat';
 
 // ---------------------------------------------------------------- loading
 const gl = new GLTFLoader();
-const assets = Promise.all([H.loadHats(gl), document.fonts ? document.fonts.load('900 italic 40px "Exo 2"').catch(() => {}) : null]);
+const firstHats = [...new Set([wear.hat !== 'none' ? wear.hat : 'blue76', 'blue76'])];
+const assets = Promise.all([H.loadHats(gl, firstHats), document.fonts ? document.fonts.load('900 italic 40px "Exo 2"').catch(() => {}) : null]);
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
   loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = 'Open the booth';
-  hero.init(); prerenderThumbs(); buildTray(); hero.start();
+  hero.init(); buildTray(); hero.start();
 }).catch((e) => { console.error(e); showError('Could not load the booth', 'Check your connection and reload the page.'); });
 
 // ---------------------------------------------------------------- splash hero + item thumbnails (one small renderer)
@@ -94,7 +95,10 @@ const hero = {
   frame(w, h) { this.cam.aspect = w / h; this.cam.position.set(0, 0.55, -4.9); this.cam.lookAt(0, 0.22, 0); this.cam.updateProjectionMatrix(); },
   resize() { const c = $('hero3d'), w = c.clientWidth || 300, h = c.clientHeight || 300; this.r.setSize(w, h, false); this.frame(w, h); },
   swap() {
-    const id = H.HATS[this.hatI++ % H.HATS.length].id;
+    const ready = H.HATS.filter((h) => H.isLoaded(h.id));   // they stream in after the first
+    if (!ready.length || (this.hat && ready.length === 1)) return;
+    const id = ready[this.hatI++ % ready.length].id;
+    if (this.hat && this.hat.userData.id === id) return;
     const old = this.hat; if (old) { this.anim.push({ o: old, dir: -1, t: 0 }); }
     this.hat = H.buildHat(id); this.rig.add(this.hat); this.anim.push({ o: this.hat, dir: 1, t: 0 }); H.animFrame(this.hat, 1, 0, REDUCED);
   },
@@ -154,8 +158,7 @@ function buildTray() {
   if ('onscrollend' in window) car.addEventListener('scrollend', () => { if (!carouselLock) { clearTimeout(settleT); markCentre(true); } });
   renderTray();
 }
-function prerenderThumbs() { for (const it of H.HATS) thumbFor('hat', it); }
-function thumbFor(c, item) { const key = c + ':' + item.id; if (!(key in thumbs)) thumbs[key] = c === 'paint' ? paintThumb(item.id) : hero.r ? hero.thumb(item) : ''; return thumbs[key]; }
+function thumbFor(c, item) { const key = c + ':' + item.id; if (!(key in thumbs)) thumbs[key] = c === 'paint' ? paintThumb(item.id) : `img/${item.img}.webp`; return thumbs[key]; }   // hats: the product photo, like a shop swatch
 const list = () => ITEMS[cat];
 function renderTray() {
   document.querySelectorAll('#tabs button').forEach((b) => { const on = b.dataset.c === cat; b.setAttribute('aria-selected', String(on)); });
@@ -164,7 +167,7 @@ function renderTray() {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'lens'; b.dataset.i = i;
     b.setAttribute('aria-label', it.name);
     if (it.id === 'none') b.innerHTML = '<i class="none" aria-hidden="true"></i>';
-    else { const src = thumbFor(cat, it); b.innerHTML = src ? `<img src="${src}" alt="" draggable="false">` : '<i class="dot" aria-hidden="true"></i>'; }
+    else { const src = thumbFor(cat, it); b.innerHTML = src ? `<img src="${src}" alt="" draggable="false"${cat === 'hat' ? ' class="photo"' : ''}>` : '<i class="dot" aria-hidden="true"></i>'; }
     b.onclick = () => { scrollToLens(i, true); };
     row.appendChild(b);
   });
@@ -268,8 +271,13 @@ class Rig {
         old.userData.leaving = true;
         if (anim) animate(old, -1, () => slot.remove(old)); else slot.remove(old);
       }
-      const hat = wear.hat !== 'none' ? H.buildHat(wear.hat) : null;
-      if (hat) { slot.add(hat); if (anim) animate(hat, 1); else H.animFrame(hat, 1, 1, REDUCED); }
+      if (wear.hat !== 'none' && !H.isLoaded(wear.hat)) {   // still streaming in: wear it as soon as it lands
+        slot.userData.id = null; const want = wear.hat;
+        H.loadHat(want).then(() => { if (wear.hat === want) applyWear(true); }).catch(() => toast('That hat didn\'t load. Check your connection.'));
+      } else {
+        const hat = wear.hat !== 'none' ? H.buildHat(wear.hat) : null;
+        if (hat) { slot.add(hat); if (anim) animate(hat, 1); else H.animFrame(hat, 1, 1, REDUCED); }
+      }
     }
     if (this.paint && paintUV && this.paintId !== wear.paint) {
       this.paintId = wear.paint; const tex = paintTexture(wear.paint);
