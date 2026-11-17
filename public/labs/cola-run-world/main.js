@@ -23,8 +23,11 @@ const qs = new URLSearchParams(location.search);
 const DIAG = qs.has("diag") || /^(localhost$|127\.|deploy-preview-)/.test(location.hostname);
 
 const CAM_H = 1.3; // camera start height in world units (sets the scale of the world)
-const SPAWN_MIN = 2.5, SPAWN_MAX = 10, ARENA = 11; // game units (the board is ~22 units across)
-const SIZE_MIN = 0.04, SIZE_MAX = 0.4;
+const SPAWN_MIN = 2.5,
+  SPAWN_MAX = 10,
+  ARENA = 11; // game units (the board is ~22 units across)
+const SIZE_MIN = 0.04,
+  SIZE_MAX = 0.4;
 let size = Math.min(SIZE_MAX, Math.max(SIZE_MIN, Number(qs.get("scale")) || 0.2)); // Bobo ~22 cm, board ~4.4 m across on the floor
 const BOBO_URL = "/roblox/activated-retail/models/catrun.glb?v=2";
 const COLA_URL = "/roblox/activated-retail/models/cola.glb?v=2";
@@ -33,15 +36,25 @@ const COLA_URL = "/roblox/activated-retail/models/cola.glb?v=2";
 function obs(v) {
   const fns = new Set();
   return {
-    get value() { return v; },
-    set value(x) { if (x === v) return; v = x; fns.forEach((f) => f(x)); },
+    get value() {
+      return v;
+    },
+    set value(x) {
+      if (x === v) return;
+      v = x;
+      fns.forEach((f) => f(x));
+    },
     addListener: (f) => fns.add(f),
     removeListener: (f) => fns.delete(f),
   };
 }
 
 /* ── UI helpers ── */
-function hint(text) { const el = $("hint"); el.hidden = !text; if (text) el.textContent = text; }
+function hint(text) {
+  const el = $("hint");
+  el.hidden = !text;
+  if (text) el.textContent = text;
+}
 function showError(title, body) {
   $("err-title").textContent = title;
   $("err-body").textContent = body;
@@ -63,33 +76,55 @@ function drawDiag() {
 
 /* ── load models + engine before Start (Start must open the camera in the same tap) ── */
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const xrReady = new Promise((res) => (window.XR8 ? res() : addEventListener("xrloaded", res, { once: true })));
+const xrReady = new Promise((res) =>
+  window.XR8 ? res() : addEventListener("xrloaded", res, { once: true }),
+);
 const boboReady = loader.loadAsync(BOBO_URL);
 const startBtn = $("start");
 Promise.all([xrReady, boboReady])
-  .then(() => { startBtn.disabled = false; startBtn.textContent = "Start"; drawDiag(); })
+  .then(() => {
+    startBtn.disabled = false;
+    startBtn.textContent = "Start";
+    drawDiag();
+  })
   .catch((e) => showError("Couldn't load the game", String(e?.message || e)));
-setTimeout(() => { if (!window.XR8) showError("The AR engine didn't load", "Check your connection and try again."); }, 25000);
+setTimeout(() => {
+  if (!window.XR8) showError("The AR engine didn't load", "Check your connection and try again.");
+}, 25000);
 
 /* ── audio (resumed on the first tap, as Mattercraft does) ── */
 const ac = new (window.AudioContext || window.webkitAudioContext)();
 const gameBus = ac.createGain();
 gameBus.connect(ac.destination);
-addEventListener("pointerdown", () => ac.state === "suspended" && ac.resume().catch(() => {}), { capture: true });
+addEventListener("pointerdown", () => ac.state === "suspended" && ac.resume().catch(() => {}), {
+  capture: true,
+});
 
 /* ── joystick (stands in for EVADE's JoystickController) ── */
 const stick = $("stick");
 const knob = stick.querySelector("span");
 const stickV = new THREE.Vector2();
 let stickId = null;
-stick.addEventListener("pointerdown", (e) => { stickId = e.pointerId; stick.setPointerCapture(e.pointerId); moveStick(e); });
+stick.addEventListener("pointerdown", (e) => {
+  stickId = e.pointerId;
+  stick.setPointerCapture(e.pointerId);
+  moveStick(e);
+});
 stick.addEventListener("pointermove", (e) => e.pointerId === stickId && moveStick(e));
-const endStick = (e) => { if (e.pointerId !== stickId) return; stickId = null; stickV.set(0, 0); knob.style.transform = ""; };
+const endStick = (e) => {
+  if (e.pointerId !== stickId) return;
+  stickId = null;
+  stickV.set(0, 0);
+  knob.style.transform = "";
+};
 stick.addEventListener("pointerup", endStick);
 stick.addEventListener("pointercancel", endStick);
 function moveStick(e) {
   const r = stick.getBoundingClientRect();
-  stickV.set((e.clientX - (r.left + r.width / 2)) / (r.width / 2), (e.clientY - (r.top + r.height / 2)) / (r.height / 2));
+  stickV.set(
+    (e.clientX - (r.left + r.width / 2)) / (r.width / 2),
+    (e.clientY - (r.top + r.height / 2)) / (r.height / 2),
+  );
   if (stickV.length() > 1) stickV.normalize();
   knob.style.transform = `translate(${stickV.x * 34}px,${stickV.y * 34}px)`;
 }
@@ -118,7 +153,10 @@ canvas.addEventListener("pointermove", (e) => {
     size = Math.min(SIZE_MAX, Math.max(SIZE_MIN, pinch0.size * (d / Math.max(20, pinch0.d))));
   }
 });
-const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) pinch0 = null; };
+const endTouch = (e) => {
+  touches.delete(e.pointerId);
+  if (touches.size < 2) pinch0 = null;
+};
 canvas.addEventListener("pointerup", endTouch);
 canvas.addEventListener("pointercancel", endTouch);
 
@@ -164,13 +202,24 @@ async function buildScene(xr) {
   // 8th Wall needs to know where the three.js camera starts: its height above the floor sets the scale.
   camera.position.set(0, CAM_H, 0);
   camera.quaternion.identity();
-  XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
+  XR8.XrController.updateCameraProjectionMatrix({
+    origin: camera.position,
+    facing: camera.quaternion,
+  });
 
   // Reticle: flat white ring + dot, shown on the floor while placing.
-  const ringM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
+  const ringM = new THREE.MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 48), ringM);
   const dot = new THREE.Mesh(new THREE.CircleGeometry(0.12, 24), ringM);
-  for (const m of [ring, dot]) { m.rotation.x = -Math.PI / 2; reticle.add(m); }
+  for (const m of [ring, dot]) {
+    m.rotation.x = -Math.PI / 2;
+    reticle.add(m);
+  }
   reticle.visible = false;
   scene.add(reticle);
 
@@ -179,7 +228,12 @@ async function buildScene(xr) {
   scene.add(anchor);
   const edge = new THREE.Mesh(
     new THREE.RingGeometry(ARENA - 0.15, ARENA, 96),
-    new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.55, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      color: 0x4fd6e8,
+      transparent: true,
+      opacity: 0.55,
+      depthWrite: false,
+    }),
   );
   edge.rotation.x = -Math.PI / 2;
   edge.position.y = 0.01;
@@ -187,7 +241,12 @@ async function buildScene(xr) {
   anchor.add(player);
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(0.55, 32),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }),
+    new THREE.MeshBasicMaterial({
+      color: 0x000000,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+    }),
   );
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.005;
@@ -200,11 +259,21 @@ async function buildScene(xr) {
   runAct = clip("Run") && mixer.clipAction(clip("Run"));
   idleAct = clip("Idle") && mixer.clipAction(clip("Idle"));
   idleAct?.play();
-  if (runAct) { runAct.play(); runAct.weight = 0; }
+  if (runAct) {
+    runAct.play();
+    runAct.weight = 0;
+  }
 
   // The real game, in a stand-in Mattercraft context, with the EVADE scene's settings.
   ctx = new LabContext({
-    overlay: $("zcomponent-overlay"), camera, canvas, audioContext: ac, audioLayer: gameBus, loader, renderer, scene,
+    overlay: $("zcomponent-overlay"),
+    camera,
+    canvas,
+    audioContext: ac,
+    audioLayer: gameBus,
+    loader,
+    renderer,
+    scene,
   });
   ctx.addNode("player", player);
   ctx.addComponent("anchor", placeAnchor);
@@ -218,10 +287,27 @@ async function buildScene(xr) {
   game.placementAnchor.value = "anchor";
   game.logoImage.value = "/brand/medialife-wordmark.webp";
   game.introImage.value = "/evade/cola-run-lab/assets/cola-run-intro.webp";
-  game.onPlace.addListener(() => { stick.hidden = false; hint(null); });
-  game.onResetPlacement.addListener(() => { stick.hidden = true; player.position.set(0, 0, 0); });
+  game.onPlace.addListener(() => {
+    stick.hidden = false;
+    hint(null);
+  });
+  game.onResetPlacement.addListener(() => {
+    stick.hidden = true;
+    player.position.set(0, 0, 0);
+  });
   ctx.markConstructed();
-  window.__crw = { game, anchor, player, camera, get size() { return size; }, set size(v) { size = v; } };
+  window.__crw = {
+    game,
+    anchor,
+    player,
+    camera,
+    get size() {
+      return size;
+    },
+    set size(v) {
+      size = v;
+    },
+  };
 }
 
 /* ── placing: the board follows the floor in the middle of the screen ── */
@@ -239,7 +325,10 @@ function followFloor(dt) {
       const first = !anchor.visible;
       anchor.position.lerp(hit, first ? 1 : 1 - Math.exp(-14 * dt));
       // Face the board's front (+z) toward the player.
-      const yaw = Math.atan2(camera.position.x - anchor.position.x, camera.position.z - anchor.position.z);
+      const yaw = Math.atan2(
+        camera.position.x - anchor.position.x,
+        camera.position.z - anchor.position.z,
+      );
       anchor.rotation.y = yaw;
       reticle.position.copy(anchor.position).setY(0.002);
       reticle.scale.setScalar(size * 1.4);
@@ -247,8 +336,18 @@ function followFloor(dt) {
     }
     reticle.visible = ok;
     anchor.scale.setScalar(size);
-    const introOpen = !!document.querySelector(".ohg-intro")?.closest(".ohg-layer")?.classList.contains("on");
-    if (!game.isPlaced) hint(introOpen ? null : ok ? "Pinch to resize, then tap Place" : "Point at the floor or a table and move your phone slowly");
+    const introOpen = !!document
+      .querySelector(".ohg-intro")
+      ?.closest(".ohg-layer")
+      ?.classList.contains("on");
+    if (!game.isPlaced)
+      hint(
+        introOpen
+          ? null
+          : ok
+            ? "Pinch to resize, then tap Place"
+            : "Point at the floor or a table and move your phone slowly",
+      );
   } else reticle.visible = false;
   placeAnchor.placementValid.value = !placing || ok;
 }
@@ -256,7 +355,10 @@ function followFloor(dt) {
 /* ── Bobo: camera-relative joystick, run/idle blend ── */
 let moving = 0;
 function moveBobo(dt) {
-  if (!game.isPlaced) { moving = 0; return; }
+  if (!game.isPlaced) {
+    moving = 0;
+    return;
+  }
   const mv = new THREE.Vector2(stickV.x, stickV.y);
   if (keys.has("arrowleft") || keys.has("a")) mv.x -= 1;
   if (keys.has("arrowright") || keys.has("d")) mv.x += 1;
@@ -270,7 +372,7 @@ function moveBobo(dt) {
     fwd.normalize();
     right.set(-fwd.z, 0, fwd.x);
     tmp.copy(right).multiplyScalar(mv.x).addScaledVector(fwd, -mv.y); // world direction
-    tmp.applyAxisAngle(THREE.Object3D.DEFAULT_UP, -anchor.rotation.y);  // into the board's frame
+    tmp.applyAxisAngle(THREE.Object3D.DEFAULT_UP, -anchor.rotation.y); // into the board's frame
     const speed = 5.2; // game units per second, as in the Mattercraft scene
     player.position.x += tmp.x * speed * dt;
     player.position.z += tmp.z * speed * dt;
@@ -282,16 +384,25 @@ function moveBobo(dt) {
     player.rotation.y += dy * (1 - Math.exp(-12 * dt));
   }
   moving += ((mv.lengthSq() > 0.01 ? 1 : 0) - moving) * (1 - Math.exp(-10 * dt));
-  if (runAct && idleAct) { runAct.weight = moving; idleAct.weight = 1 - moving; }
+  if (runAct && idleAct) {
+    runAct.weight = moving;
+    idleAct.weight = 1 - moving;
+  }
 }
 
 /* ── the 8th Wall pipeline ── */
-let lastT = 0, built = false, frames = 0, fpsT = 0;
+let lastT = 0,
+  built = false,
+  frames = 0,
+  fpsT = 0;
 const app = {
   name: "cola-run-world",
   onStart: () => {
     buildScene(XR8.Threejs.xrScene())
-      .then(() => { built = true; hint(null); })
+      .then(() => {
+        built = true;
+        hint(null);
+      })
       .catch((e) => showError("Couldn't start the game", String(e?.message || e)));
   },
   onUpdate: ({ processCpuResult }) => {
@@ -299,9 +410,15 @@ const app = {
     const dt = Math.min(0.1, lastT ? (now - lastT) / 1000 : 0.016);
     lastT = now;
     frames++;
-    if (now - fpsT > 1000) { diag.fps = (frames * 1000) / (now - fpsT); frames = 0; fpsT = now; drawDiag(); }
+    if (now - fpsT > 1000) {
+      diag.fps = (frames * 1000) / (now - fpsT);
+      frames = 0;
+      fpsT = now;
+      drawDiag();
+    }
     const r = processCpuResult?.reality;
-    if (r?.trackingStatus) diag.tracking = `${r.trackingStatus}${r.trackingReason ? ` (${r.trackingReason})` : ""}`;
+    if (r?.trackingStatus)
+      diag.tracking = `${r.trackingStatus}${r.trackingReason ? ` (${r.trackingReason})` : ""}`;
     if (!built) return;
     followFloor(dt);
     moveBobo(dt);
@@ -311,15 +428,32 @@ const app = {
   onCameraStatusChange: (ev) => {
     const { status } = ev;
     diag.status = status;
-    if (status === "failed") diag.errors.push(`camera: ${ev.reason || ev.config ? JSON.stringify({ reason: ev.reason, config: ev.config }) : ""}`.slice(0, 300));
+    if (status === "failed")
+      diag.errors.push(
+        `camera: ${ev.reason || ev.config ? JSON.stringify({ reason: ev.reason, config: ev.config }) : ""}`.slice(
+          0,
+          300,
+        ),
+      );
     drawDiag();
     if (status === "requesting") hint("Allow camera and motion access");
-    else if (status === "hasVideo") { $("splash").hidden = true; hint(null); }
-    else if (status === "failed") showError("The camera didn't start", "Allow camera access for this site, close other apps using the camera, then try again.");
+    else if (status === "hasVideo") {
+      $("splash").hidden = true;
+      hint(null);
+    } else if (status === "failed")
+      showError(
+        "The camera didn't start",
+        "Allow camera access for this site, close other apps using the camera, then try again.",
+      );
   },
   listeners: [
     // 8th Wall loses the floor when the view is blank or moves too fast; it keeps the board where it was.
-    { event: "reality.trackingstatus", process: ({ detail }) => { diag.tracking = `${detail.status}${detail.reason ? ` (${detail.reason})` : ""}`; } },
+    {
+      event: "reality.trackingstatus",
+      process: ({ detail }) => {
+        diag.tracking = `${detail.status}${detail.reason ? ` (${detail.reason})` : ""}`;
+      },
+    },
   ],
 };
 
@@ -338,13 +472,22 @@ startBtn.addEventListener("click", () => {
     XR8.addCameraPipelineModule({
       name: "errors",
       onException: (e) => {
-        if (e?.type === "permission") return showError("Motion access is needed", "World tracking uses your phone's motion sensors. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again. A laptop can't run this one.");
-        showError("AR stopped", e?.message || (typeof e === "object" ? JSON.stringify(e) : String(e)));
+        if (e?.type === "permission")
+          return showError(
+            "Motion access is needed",
+            "World tracking uses your phone's motion sensors. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again. A laptop can't run this one.",
+          );
+        showError(
+          "AR stopped",
+          e?.message || (typeof e === "object" ? JSON.stringify(e) : String(e)),
+        );
       },
     });
     XR8.run({
       canvas,
-      allowedDevices: qs.has("desktop") ? XR8.XrConfig.device().ANY : XR8.XrConfig.device().MOBILE_AND_HEADSETS,
+      allowedDevices: qs.has("desktop")
+        ? XR8.XrConfig.device().ANY
+        : XR8.XrConfig.device().MOBILE_AND_HEADSETS,
       cameraConfig: { direction: XR8.XrConfig.camera().BACK },
       verbose: qs.has("verbose"),
     });
@@ -352,5 +495,11 @@ startBtn.addEventListener("click", () => {
     showError("AR couldn't start", String(e?.message || e));
   }
   // iOS sometimes never reports "failed".
-  setTimeout(() => { if (diag.status !== "hasVideo" && $("error").hidden) showError("The camera didn't start", "Allow camera and motion access, close other apps using the camera, then try again."); }, 15000);
+  setTimeout(() => {
+    if (diag.status !== "hasVideo" && $("error").hidden)
+      showError(
+        "The camera didn't start",
+        "Allow camera and motion access, close other apps using the camera, then try again.",
+      );
+  }, 15000);
 });
