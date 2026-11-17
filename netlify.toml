@@ -82,6 +82,12 @@
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 
+# Client pitch demos (team marks not licensed for public use): never indexed, never archived.
+[[headers]]
+  for = "/pitch/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
 # Security headers for STATIC responses only. Netlify does not merge these onto
 # responses from the SSR function, so every HTML page gets them from
 # src/server.ts instead. Keep the two lists in sync.

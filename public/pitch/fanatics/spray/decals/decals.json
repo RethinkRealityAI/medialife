@@ -1,0 +1,11 @@
+{ "decals": [
+  { "id": "game-day", "name": "Game day", "file": "game-day.svg" },
+  { "id": "basketball", "name": "Basketball", "file": "basketball.svg" },
+  { "id": "stars-ring", "name": "Ring of stars", "file": "stars-ring.svg" },
+  { "id": "philly", "name": "Philly", "file": "philly.svg" },
+  { "id": "lets-go", "name": "Let's go", "file": "lets-go.svg" },
+  { "id": "foam-finger", "name": "Number one fan", "file": "foam-finger.svg" },
+  { "id": "splat", "name": "Splat", "file": "splat.svg" },
+  { "id": "star", "name": "Star", "file": "star.svg" },
+  { "id": "crown", "name": "Crown", "file": "crown.svg" }
+] }
