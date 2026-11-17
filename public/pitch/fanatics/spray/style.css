@@ -11,9 +11,31 @@ button.primary:active{transform:translateY(4px);box-shadow:0 4px 0 #a50f33,0 8px
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:3px}
 
-/* ---------------------------------------------------------------- splash: the Start button only */
-#splash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:var(--slate);transition:opacity .5s ease}
+/* ---------------------------------------------------------------- splash: wordmark, hero, title, lead, Start, badge */
+#splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:max(66px,calc(env(safe-area-inset-top) + 60px)) 22px max(20px,env(safe-area-inset-bottom));background:var(--slate);transition:opacity .5s ease;overflow:hidden}
 #splash.gone{opacity:0;pointer-events:none}
+#splash .wordmark{position:absolute;top:max(22px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);font-size:22px}
+#splash .hero{position:relative;flex:1 1 auto;width:min(100%,340px);min-height:200px;max-height:400px;margin-bottom:8px}
+#splash .wall{position:absolute;left:4%;top:52%;height:min(92%,350px);aspect-ratio:3/4;transform:translateY(-50%) rotate(-4deg);background:#002b5c;border-radius:20px;box-shadow:0 0 0 5px #fff,0 22px 50px rgba(0,0,0,.45);overflow:hidden;animation:wallin .8s cubic-bezier(.2,.9,.25,1.2) both}
+#splash .wall svg{position:absolute;inset:0;width:100%;height:100%}
+#splash .splats>*{transform-origin:center;transform-box:fill-box;animation:splat .5s cubic-bezier(.2,.9,.3,1.4) both}
+#splash .splats :nth-child(1){animation-delay:.8s}#splash .splats :nth-child(2){animation-delay:.95s}#splash .splats :nth-child(3){animation-delay:1.2s}#splash .splats :nth-child(4){animation-delay:1.45s}#splash .splats :nth-child(n+5){animation-delay:1.6s}#splash .splats text{animation-delay:1.9s}
+#splash .can-hero{position:absolute;right:0;top:0;width:27%;max-width:92px;transform:rotate(24deg);transform-origin:50% 0;animation:canshake 2.8s ease-in-out 1s infinite}
+#splash .can-hero svg{width:100%;display:block;filter:drop-shadow(0 12px 18px rgba(0,0,0,.45))}
+@keyframes wallin{from{opacity:0;transform:translateY(-44%) rotate(-12deg) scale(.9)}}
+@keyframes splat{from{opacity:0;transform:scale(.2)}}
+@keyframes canshake{0%,60%,100%{transform:rotate(24deg)}66%{transform:rotate(14deg)}72%{transform:rotate(30deg)}78%{transform:rotate(18deg)}84%{transform:rotate(26deg)}}
+#splash .copy{display:flex;flex-direction:column;align-items:center;max-width:430px}
+#splash .kicker{margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--y)}
+#splash h1{margin:0 0 8px;font:900 italic 52px/.95 "Exo 2",system-ui,sans-serif;color:#fff}
+#splash h1 span{color:var(--y)}
+#splash .lead{margin:0 auto 18px;max-width:34ch;color:var(--muted)}
+#splash #b-start{min-width:220px}
+#splash .act-by{height:42px;width:auto;margin-top:16px}
+#splash .fine{margin:10px auto 0;max-width:40ch;font-size:11.5px;line-height:1.35;color:var(--muted);opacity:.85}
+@media (max-height:640px){#splash h1{font-size:40px}#splash .act-by{height:34px;margin-top:10px}#splash .fine{display:none}}
+@media (min-width:900px) and (min-aspect-ratio:4/3){#splash{flex-direction:row;justify-content:center;align-items:center;gap:64px;text-align:left}#splash .hero{flex:0 0 380px;height:440px;max-height:none;margin:0}#splash .copy{width:420px;align-items:flex-start}#splash .lead,#splash .fine{margin-left:0}}
+@media (prefers-reduced-motion:reduce){#splash .wall,#splash .splats>*,#splash .can-hero{animation:none!important}}
 .big{min-height:64px;padding:0 44px;font-size:20px}
 
 /* ---------------------------------------------------------------- HUD */

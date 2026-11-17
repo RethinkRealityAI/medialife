@@ -28,9 +28,44 @@
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
 
-  <!-- splash: the Start button, nothing else (house rule for world-tracked pages) -->
-  <section id="splash" aria-label="Sixers Spray">
-    <button id="b-start" class="primary big" disabled>Loading…</button>
+  <!-- ---------------------------------------------------------------- splash: wordmark, hero, title, one-line lead,
+       Start, Activated by MEDIALIFE. A full branded splash on every experience; what stays off it is an instructions
+       overlay and licence text (licences live in Options). -->
+  <section id="splash" aria-labelledby="title">
+    <span class="wordmark" aria-hidden="true">FANATICS</span>
+    <div class="hero" aria-hidden="true">
+      <div class="wall">
+        <svg class="splats" viewBox="0 0 300 400">
+          <path fill="#ed174c" d="M58 250c-6-30 14-58 44-60 22-2 34 14 52 10s30-22 52-12c26 12 26 46 8 64-12 12-10 30-2 44 6 10-4 22-16 16-10-5-12-16-24-14-14 3-12 22-28 22-14 0-14-16-28-18-18-2-30 10-44 0-14-10-10-30-14-52z"/>
+          <path fill="#ed174c" d="M96 318c0 18-2 34 4 48 2 6 10 6 12 0 4-14 0-30-2-46z"/>
+          <path fill="#006bb6" d="M86 128c4-22 30-30 46-20 10 6 22 4 32-2 18-10 44 0 46 22 2 16-12 26-26 26-12 0-20 10-34 10-16 0-22-10-36-10-18 0-30-10-28-26z"/>
+          <path fill="#ffffff" d="M200 294c14-8 34 0 36 16 2 14-12 22-22 20-14-2-26-24-14-36z"/>
+          <circle fill="#ffffff" cx="248" cy="290" r="6"/><circle fill="#006bb6" cx="74" cy="104" r="5"/><circle fill="#ed174c" cx="40" cy="232" r="7"/>
+          <circle fill="#ed174c" cx="252" cy="272" r="4"/><circle fill="#006bb6" cx="230" cy="110" r="4"/>
+          <text x="146" y="252" text-anchor="middle" font-family="Permanent Marker, cursive" font-size="54" fill="#ffffff" transform="rotate(-7 146 240)">PHILLY</text>
+        </svg>
+      </div>
+      <div class="can-hero">
+        <svg viewBox="0 0 100 220">
+          <rect x="44" y="4" width="12" height="11" rx="2" fill="#15131a"/><circle cx="50" cy="9" r="2.2" fill="#ed174c"/>
+          <path d="M28 46V30c0-10 10-17 22-17s22 7 22 17v16z" fill="#ed174c" stroke="#15131a" stroke-width="3.5"/>
+          <path d="M22 66c0-11 12-20 28-20s28 9 28 20z" fill="#15131a"/>
+          <rect x="14" y="62" width="72" height="146" rx="12" fill="#ffffff" stroke="#15131a" stroke-width="3.5"/>
+          <rect x="14" y="104" width="72" height="62" fill="#006bb6"/>
+          <text x="48" y="146" text-anchor="middle" font-family="Permanent Marker, cursive" font-size="30" fill="#ffffff" transform="rotate(-6 48 140)">76</text>
+          <rect x="22" y="72" width="7" height="122" rx="3.5" fill="#c4ced4" opacity=".6"/>
+          <rect x="14" y="196" width="72" height="12" rx="4" fill="#15131a"/>
+        </svg>
+      </div>
+    </div>
+    <div class="copy">
+      <p class="kicker">Philadelphia 76ers · Spray in AR</p>
+      <h1 id="title">Sixers <span>Spray</span></h1>
+      <p class="lead">Hang 76ers art on your wall, stamp it on anything, or spray game-day graffiti in team colours.</p>
+      <button id="b-start" class="primary big" disabled>Loading…</button>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+      <p class="fine">Concept demo made by MEDIALIFE for Fanatics. Team names and logos belong to their owners; not for public release.</p>
+    </div>
   </section>
 
   <!-- ---------------------------------------------------------------- in camera -->
