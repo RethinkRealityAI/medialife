@@ -30,9 +30,62 @@
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
 
-  <!-- splash: the yellow Start button, nothing else (Dapo's rule for world-tracked pages) -->
-  <section id="splash" aria-label="Spray Bobo Street">
-    <button id="b-start" class="primary big" disabled>Loading…</button>
+  <!-- splash: a FULL branded splash (logo, hero art, title, one-line lead, yellow Start, Activated by MEDIALIFE).
+       Dapo's "just the Start button" (Cola Run, 2026-11-17) meant no overlay or instructions ON TOP of the splash art,
+       never a bare screen. Licences live in Options > Licences, not here. -->
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/evade-logo.webp" alt="EVADE" width="132" height="38">
+    <!-- a preview of the experience: a Bobo poster hung on a brick wall, graffiti splats sprayed around it (flat SVG/CSS) -->
+    <div class="hero" aria-hidden="true">
+      <svg class="wall" viewBox="0 0 300 400" preserveAspectRatio="xMidYMid slice">
+        <rect width="300" height="400" fill="#2a2f36"/>
+        <g fill="#353b44" stroke="#22262c" stroke-width="3">
+          <rect x="-30" y="0" width="80" height="34"/><rect x="50" y="0" width="80" height="34"/><rect x="130" y="0" width="80" height="34"/><rect x="210" y="0" width="80" height="34"/><rect x="290" y="0" width="80" height="34"/>
+          <rect x="-70" y="34" width="80" height="34"/><rect x="10" y="34" width="80" height="34"/><rect x="90" y="34" width="80" height="34"/><rect x="170" y="34" width="80" height="34"/><rect x="250" y="34" width="80" height="34"/>
+          <rect x="-30" y="68" width="80" height="34"/><rect x="50" y="68" width="80" height="34"/><rect x="130" y="68" width="80" height="34"/><rect x="210" y="68" width="80" height="34"/><rect x="290" y="68" width="80" height="34"/>
+          <rect x="-70" y="102" width="80" height="34"/><rect x="10" y="102" width="80" height="34"/><rect x="90" y="102" width="80" height="34"/><rect x="170" y="102" width="80" height="34"/><rect x="250" y="102" width="80" height="34"/>
+          <rect x="-30" y="136" width="80" height="34"/><rect x="50" y="136" width="80" height="34"/><rect x="130" y="136" width="80" height="34"/><rect x="210" y="136" width="80" height="34"/><rect x="290" y="136" width="80" height="34"/>
+          <rect x="-70" y="170" width="80" height="34"/><rect x="10" y="170" width="80" height="34"/><rect x="90" y="170" width="80" height="34"/><rect x="170" y="170" width="80" height="34"/><rect x="250" y="170" width="80" height="34"/>
+          <rect x="-30" y="204" width="80" height="34"/><rect x="50" y="204" width="80" height="34"/><rect x="130" y="204" width="80" height="34"/><rect x="210" y="204" width="80" height="34"/><rect x="290" y="204" width="80" height="34"/>
+          <rect x="-70" y="238" width="80" height="34"/><rect x="10" y="238" width="80" height="34"/><rect x="90" y="238" width="80" height="34"/><rect x="170" y="238" width="80" height="34"/><rect x="250" y="238" width="80" height="34"/>
+          <rect x="-30" y="272" width="80" height="34"/><rect x="50" y="272" width="80" height="34"/><rect x="130" y="272" width="80" height="34"/><rect x="210" y="272" width="80" height="34"/><rect x="290" y="272" width="80" height="34"/>
+          <rect x="-70" y="306" width="80" height="34"/><rect x="10" y="306" width="80" height="34"/><rect x="90" y="306" width="80" height="34"/><rect x="170" y="306" width="80" height="34"/><rect x="250" y="306" width="80" height="34"/>
+        </g>
+        <rect y="340" width="300" height="60" fill="#1b1f24"/>
+        <rect y="338" width="300" height="4" fill="#15131a"/>
+      </svg>
+      <svg class="splats" viewBox="0 0 300 400">
+        <path fill="#e85bd8" d="M30 70c8-18 34-20 44-6 8 10 22 8 30 2 14-10 34-2 32 16-2 14-16 18-28 16-10-2-18 6-30 6-14 0-20-8-32-8-16 0-22-12-16-26z"/>
+        <path fill="#e85bd8" d="M70 96c0 16-2 30 2 40 2 5 8 5 9 0 3-11 0-24-2-38z"/>
+        <path fill="#3f9be6" d="M206 286c10-16 36-16 46-2 6 8 18 10 26 4 12-8 26 4 18 18-6 10-18 10-28 14-12 4-20 14-36 12-18-2-36-26-26-46z"/>
+        <path fill="#3f9be6" d="M232 318c0 14-1 22 3 30 2 4 7 4 8 0 2-8 0-18-2-30z"/>
+        <circle fill="#f6c344" cx="40" cy="300" r="8"/><circle fill="#e85bd8" cx="270" cy="70" r="5"/><circle fill="#3f9be6" cx="22" cy="150" r="5"/>
+        <circle fill="#f6c344" cx="262" cy="248" r="4"/><circle fill="#f6c344" cx="120" cy="30" r="4"/>
+      </svg>
+      <div class="poster"><img src="../art/cat-lines.png" alt="" width="768" height="1024"><i class="tape t1"></i><i class="tape t2"></i></div>
+      <div class="can-hero">
+        <svg viewBox="0 0 100 220">
+          <rect x="44" y="4" width="12" height="11" rx="2" fill="#15131a"/>
+          <circle cx="50" cy="9" r="2.2" fill="#f6c344"/>
+          <path d="M28 46V30c0-10 10-17 22-17s22 7 22 17v16z" fill="#e85bd8" stroke="#15131a" stroke-width="3.5"/>
+          <path d="M22 66c0-11 12-20 28-20s28 9 28 20z" fill="#15131a"/>
+          <rect x="14" y="62" width="72" height="146" rx="12" fill="#f6c344" stroke="#15131a" stroke-width="3.5"/>
+          <rect x="14" y="104" width="72" height="62" fill="#15131a"/>
+          <text x="48" y="146" text-anchor="middle" font-family="Permanent Marker, cursive" font-size="26" fill="#f6c344" transform="rotate(-6 48 140)">BOBO</text>
+          <rect x="22" y="72" width="7" height="122" rx="3.5" fill="#fff" opacity=".5"/>
+          <rect x="14" y="196" width="72" height="12" rx="4" fill="#15131a"/>
+        </svg>
+      </div>
+      <i class="mist m1"></i><i class="mist m2"></i><i class="mist m3"></i><i class="mist m4"></i><i class="mist m5"></i>
+    </div>
+    <div class="copy">
+      <p class="kicker">EVADE · Activated AR</p>
+      <h1 id="title">Spray Bobo <span>Street</span></h1>
+      <p class="lead">Hang your Spray Bobo art on your wall, stamp it on anything, or spray graffiti straight onto the walls around you.</p>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
   </section>
 
   <!-- ---------------------------------------------------------------- in camera -->

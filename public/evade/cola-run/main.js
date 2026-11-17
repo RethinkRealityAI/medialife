@@ -631,6 +631,7 @@ const app = {
 };
 
 startBtn.addEventListener("click", () => {
+  if (!PHONE && !qs.has("desktop")) return openOnPhone();
   startBtn.disabled = true;
   startBtn.textContent = "Starting camera…";
   unlockAudio();
@@ -649,6 +650,15 @@ startBtn.addEventListener("click", () => {
               "Motion access is needed",
               "Cola Run uses your phone's motion sensors to keep Bobo on the floor. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again.",
             );
+          const msg = String(e?.message || (typeof e === "object" ? JSON.stringify(e) : e));
+          if (/session manager|not supported|unsupported|device/i.test(msg) && diag.status !== "hasVideo") {
+            try {
+              XR8.stop();
+            } catch {
+              /* not running */
+            }
+            return openOnPhone();
+          }
           showError(
             "AR stopped",
             e?.message || (typeof e === "object" ? JSON.stringify(e) : String(e)),
@@ -674,10 +684,34 @@ startBtn.addEventListener("click", () => {
   }, 15000);
 });
 
-// Phones only: say so on a laptop instead of failing after Start.
-if (!/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) && !(navigator.maxTouchPoints > 1)) {
-  startBtn.insertAdjacentHTML(
-    "afterend",
-    '<p style="margin:10px 0 0;color:#ffd977;font-size:13px">Open this on your phone: Cola Run uses your phone\'s camera and motion sensors.</p>',
+// Phones only, by device (not touch: touchscreen laptops pass a touch check, then the engine fails with
+// "No valid session manager"). On a computer, Start shows a QR to carry on on the phone; ?desktop skips it.
+const PHONE =
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function openOnPhone() {
+  showError(
+    "Open this on your phone",
+    "Cola Run needs your phone's camera and motion sensors to put Bobo on your floor. Scan this to open it there.",
   );
+  try {
+    window.QRCode?.toString(
+      location.href.replace(/[?&](test|desktop)\b[^&]*/g, ""),
+      { type: "svg", margin: 0, errorCorrectionLevel: "M" },
+      (err, svg) => {
+        if (!err) {
+          $("qr").innerHTML = svg;
+          $("qr").hidden = false;
+        }
+      },
+    );
+  } catch {
+    /* no QR */
+  }
+  $("err-retry").textContent = "Close";
+  $("err-retry").onclick = () => {
+    $("error").hidden = true;
+    startBtn.disabled = false;
+    startBtn.textContent = "Start";
+  };
 }

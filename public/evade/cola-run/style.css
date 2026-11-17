@@ -245,3 +245,4 @@ body .mlh-btn.pri {
 body .mlh-act {
   background: rgb(var(--ha));
 }
+#qr svg{display:block;width:100%;height:100%}

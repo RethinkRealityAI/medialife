@@ -11,10 +11,48 @@ button.primary:active{transform:translateY(4px);box-shadow:0 4px 0 #b98d1f,0 8px
 button:disabled{opacity:.5;cursor:default}
 button:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:3px}
 
-/* ---------------------------------------------------------------- splash: the Start button only */
-#splash{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:var(--slate);transition:opacity .5s ease}
-#splash.gone{opacity:0;pointer-events:none}
-.big{min-height:64px;padding:0 44px;font-size:20px}
+/* ---------------------------------------------------------------- splash: FULL branded splash (house rule), same
+   layout as Spray Bobo / Bobo Hoops / Bobo Booth: logo, hero art, kicker, title, lead, yellow Start, Activated by */
+#splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:max(70px,calc(env(safe-area-inset-top) + 64px)) 22px max(22px,env(safe-area-inset-bottom));background:var(--slate);transition:opacity .6s ease,transform .6s ease;overflow:hidden}
+#splash.gone{opacity:0;transform:scale(1.05);pointer-events:none}
+#splash .brand{position:absolute;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);height:34px;width:auto}
+#splash .hero{position:relative;flex:1 1 auto;width:min(100%,360px);min-height:220px;max-height:440px;margin-bottom:8px}
+#splash .wall{position:absolute;inset:4% 0 0;width:100%;height:96%;border-radius:22px;box-shadow:0 0 0 6px var(--ink),0 22px 50px rgba(0,0,0,.45)}
+#splash .splats{position:absolute;inset:4% 0 0;width:100%;height:96%}
+#splash .splats path,#splash .splats circle{transform-origin:center;transform-box:fill-box;animation:splat .5s cubic-bezier(.2,.9,.3,1.4) both}
+#splash .splats :nth-child(1){animation-delay:1s}#splash .splats :nth-child(2){animation-delay:1.1s}#splash .splats :nth-child(3){animation-delay:1.4s}#splash .splats :nth-child(4){animation-delay:1.5s}
+#splash .splats :nth-child(n+5){animation-delay:1.7s}
+#splash .poster{position:absolute;left:44%;top:14%;height:72%;width:auto;aspect-ratio:3/4;translate:-50% 0;background:#fff;border-radius:6px;box-shadow:0 0 0 4px var(--ink),0 14px 30px rgba(0,0,0,.5);transform:rotate(-4deg);animation:hangin .8s cubic-bezier(.2,.9,.25,1.25) .2s both}
+#splash .poster img{position:absolute;inset:6%;width:88%;height:88%;object-fit:contain}
+#splash .tape{position:absolute;top:-10px;width:44px;height:18px;background:var(--y);opacity:.92;box-shadow:0 0 0 2px var(--ink)}
+#splash .tape.t1{left:-12px;transform:rotate(-30deg)}#splash .tape.t2{right:-12px;transform:rotate(28deg)}
+#splash .can-hero{position:absolute;right:2%;top:2%;width:22%;max-width:84px;transform:rotate(24deg);transform-origin:50% 0;animation:canshake 2.8s ease-in-out 1s infinite}
+#splash .can-hero svg{width:100%;display:block;filter:drop-shadow(0 12px 18px rgba(0,0,0,.45))}
+#splash .mist{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--y);right:24%;top:8%;opacity:0;animation:mist 2.8s ease-out infinite}
+#splash .mist.m2{background:var(--cap);animation-delay:.25s}#splash .mist.m3{background:#e85bd8;animation-delay:.5s;width:7px;height:7px}#splash .mist.m4{animation-delay:.8s;width:6px;height:6px}#splash .mist.m5{background:#fff;animation-delay:1.1s;width:5px;height:5px}
+@keyframes hangin{from{opacity:0;transform:translateY(-30px) rotate(-12deg) scale(.9)}}
+@keyframes splat{from{transform:scale(0)}}
+@keyframes canshake{0%,60%,100%{transform:rotate(24deg)}66%{transform:rotate(16deg)}72%{transform:rotate(30deg)}78%{transform:rotate(18deg)}84%{transform:rotate(27deg)}}
+@keyframes mist{0%{opacity:0;transform:translate(0,0) scale(.6)}10%{opacity:1}100%{opacity:0;transform:translate(-120px,70px) scale(2.4)}}
+#splash .kicker{margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+#splash h1{font:400 clamp(40px,11.5vw,68px)/.95 "Permanent Marker",cursive;margin:4px 0 10px;color:#fff;transform:rotate(-3deg);text-shadow:4px 4px 0 var(--ink)}
+#splash h1 span{color:var(--y)}
+#splash .lead{margin:0 auto 18px;max-width:32ch;color:var(--text);font-size:16px}
+#b-start{width:min(100%,340px);min-height:58px;font-size:18px}
+#load{height:4px;width:min(100%,340px);border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:12px}
+#load i{display:block;height:100%;width:40%;background:var(--y);border-radius:4px;animation:ld 1.1s ease-in-out infinite}
+@keyframes ld{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+#splash.ready #load{visibility:hidden}
+#splash .act-by{display:block;height:50px;width:auto;margin:18px auto 0}
+#splash .copy{display:flex;flex-direction:column;align-items:center;width:100%}
+@media (max-height:640px){#splash .brand{height:26px}#splash .kicker{display:none}#splash h1{font-size:38px}#splash .act-by{height:36px;margin-top:10px}#splash .hero{min-height:160px}#splash .lead{margin-bottom:12px}}
+@media (min-width:900px){
+  #splash{flex-direction:row;justify-content:center;align-items:center;gap:64px;text-align:left}
+  #splash .hero{flex:0 0 380px;height:460px;max-height:none;margin:0}
+  #splash .copy{width:420px;align-items:flex-start}
+  #splash .lead,#splash .act-by{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){#splash .can-hero,#splash .mist{animation:none!important}#splash .mist{display:none}}
 
 /* ---------------------------------------------------------------- HUD */
 #hud{position:fixed;inset:0;z-index:10;pointer-events:none}
