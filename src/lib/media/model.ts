@@ -457,6 +457,18 @@ export const MEDIA_PRESET_TAGS: Record<string, string[]> = {
   Product: ["Merch", "Keychain", "Apparel", "Plush", "Packaging", "Mockup"],
   Format: ["Vertical", "Horizontal", "Transparent", "Loop", "Thumbnail", "Hero", "Poster"],
   Status: ["Final", "Draft", "Approved", "Needs review"],
+  // "Showcase" + an experience name puts a public video on that site card (src/lib/interactions.ts)
+  "Site showcase": [
+    "Showcase",
+    "Off the Chain",
+    "Spray Bobo",
+    "Bobo X-Ray",
+    "Photo Beam",
+    "Bobo Booth",
+    "Wake the Print",
+    "Spray Studio",
+    "Where is Bobo?",
+  ],
 };
 const ALL_PRESET_TAGS = Object.values(MEDIA_PRESET_TAGS).flat();
 

@@ -14,6 +14,8 @@ import {
   TEXT,
 } from "@/components/site/kit";
 import { TECH_STACKS } from "@/lib/tech-stacks";
+import { InteractionGrid } from "@/components/site/Interactions";
+import { INTERACTIONS } from "@/lib/interactions";
 
 export const Route = createFileRoute("/technology/")({
   head: () => ({
@@ -244,6 +246,28 @@ function Technology() {
             </Reveal>
           ))}
         </ul>
+      </section>
+
+      {/* the interaction library: newer experiences, each one tryable (QR + the picture to point at) */}
+      <section
+        id="interactions"
+        aria-labelledby="interactions-title"
+        className={`${SECTION} scroll-mt-20 pb-24 lg:pb-32`}
+      >
+        <SectionHead
+          id="interactions-title"
+          hue="magenta"
+          eyebrow="Interaction library"
+          title={
+            <>
+              {INTERACTIONS.length} things fans can do.{" "}
+              <span className={TEXT.magenta}>Try them.</span>
+            </>
+          }
+          lead="Built and live on real products. Each one can be reskinned for your IP. Tap Try it now for a QR code and the picture to point your phone at."
+          className="mb-12"
+        />
+        <InteractionGrid />
       </section>
 
       {/* what one scan records */}
