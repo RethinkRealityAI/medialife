@@ -18,12 +18,13 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { addArcadeCabinet } from "./arcade-cabinet.js?v=1";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
   CollectorHubMode,
   LabContext,
-} from "/evade/cola-run-lab/assets/orb-hunt-game.js?v=8";
+} from "/evade/cola-run-lab/assets/orb-hunt-game.js?v=9";
 
 window.THREE = THREE; // XR8.Threejs.pipelineModule() looks for a global THREE
 
@@ -182,7 +183,7 @@ canvas.addEventListener("pointerup", endTouch);
 canvas.addEventListener("pointercancel", endTouch);
 
 /* ── scene objects (filled in onStart, inside 8th Wall's three.js scene) ── */
-let scene, camera, renderer, game, ctx, mode, hub, capture, mixer, runAct, idleAct;
+let scene, camera, renderer, game, ctx, mode, hub, capture, mixer, runAct, idleAct, cabinet;
 const emoteActs = {};
 let emote = null;
 const anchor = new THREE.Group(); // everything the game and the hideout own
@@ -342,6 +343,11 @@ async function buildScene(xr) {
   game.placementAnchor.value = "anchor";
   game.logoImage.value = "/brand/medialife-wordmark.webp";
   game.introImage.value = "/evade/cola-run-lab/assets/cola-run-intro.webp";
+  game.licencesUrl.value = "/evade/licences/";
+  // Bottom row (Dapo, 2026-11-17): Reset placement bottom left (always on), joystick centred, record + Bobo's
+  // actions bottom right. The quick mute would share the bottom-left corner: Music / Sound stay in the menu.
+  game.resetCorner.value = "bottomLeft";
+  game.soundToggleEnabled.value = false;
   game.lounge1Timeline.value = "lounge-sleep";
   game.lounge2Timeline.value = "lounge-excited";
   game.lounge3Timeline.value = "lounge-purr";
@@ -432,6 +438,19 @@ async function buildScene(xr) {
   mode.roomTimeline.value = "lounge-purr";
   ctx.constructed.then(() => {
     hub = mode.hub;
+    // The arcade machine in Bobo's Hideout: walk Bobo up to it (or tap it) to open Bobo's Arcade.
+    if (hub)
+      cabinet = addArcadeCabinet({
+        hub,
+        player,
+        camera,
+        canvas,
+        open: () => {
+          hub.prompt(null);
+          hub.openArcade();
+          platformEvent("custom", { action: "arcade_open", from: "cabinet" });
+        },
+      });
   });
 
   // Deep links: ?mode=arcade|play|record|lounge|hideout, ?hub=CODE (merch QR).
@@ -587,6 +606,7 @@ const app = {
     moveBobo(dt);
     mixer?.update(dt);
     ctx.step(dt); // triggers, then the game's and the hideout's onBeforeRender
+    cabinet?.update(dt);
   },
   // Right after XR8.Threejs draws: the recorder copies the frame (as Mattercraft's onAfterRender).
   onRender: () => built && capture?.frame(),

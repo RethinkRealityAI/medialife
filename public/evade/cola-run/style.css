@@ -26,15 +26,32 @@ button {
   cursor: pointer;
 }
 .primary {
-  background: #e3243a;
-  color: #fff;
-  font-weight: 800;
+  background: #f6c344;
+  color: #15131a;
+  font:
+    900 20px/1 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   border-radius: 999px;
-  min-height: 56px;
+  min-height: 60px;
   padding: 0 28px;
-  width: min(100%, 340px);
-  font-size: 18px;
-  letter-spacing: 0.02em;
+  width: min(100%, 320px);
+  box-shadow:
+    0 8px 0 #b98d1f,
+    0 14px 30px rgba(0, 0, 0, 0.35);
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
+}
+.primary:active {
+  transform: translateY(4px);
+  box-shadow:
+    0 4px 0 #b98d1f,
+    0 8px 18px rgba(0, 0, 0, 0.35);
 }
 .primary:disabled {
   opacity: 0.6;
@@ -59,21 +76,12 @@ button {
   object-fit: cover;
   object-position: center 20%;
 }
-/* A flat dark band behind the text, not a gradient. */
-#splash .shade {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: min(30%, 250px);
-  background: rgba(13, 15, 19, 0.82);
-}
 #splash .bottom {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 44px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -154,4 +162,86 @@ button {
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── bottom row (Dapo, 2026-11-17) ──────────────────────────────────────────
+   Reset placement bottom left (the game's own button, always on), joystick in the middle (a little left of
+   centre so the right column breathes), record + Bobo's actions stacked bottom right. Page-level overrides
+   of the shared Mattercraft/lab CSS, so the Mattercraft build keeps its own layout. */
+#zcomponent-overlay .lab-stick {
+  right: auto;
+  left: calc(50% - 56px - 20px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  width: 112px;
+  height: 112px;
+}
+#zcomponent-overlay .lab-stick span {
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+}
+#zcomponent-overlay .crc-anchor.crc-bc {
+  left: auto;
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  transform: none;
+  width: 56px;
+}
+#zcomponent-overlay .crc-bc .crc-rec {
+  width: 56px;
+  height: 56px;
+}
+#zcomponent-overlay .crc-bc .crc-dot {
+  width: 40px;
+  height: 40px;
+}
+#zcomponent-overlay .crc-bc.crc-on .crc-dot {
+  width: 22px;
+  height: 22px;
+}
+#zcomponent-overlay .crc-bc .crc-ring {
+  width: 62px;
+  height: 62px;
+}
+#zcomponent-overlay .crc-bc .crc-hint,
+#zcomponent-overlay .crc-bc .crc-hint.crc-show {
+  left: auto;
+  right: 0;
+  bottom: 68px;
+  transform: none;
+  text-align: right;
+}
+#zcomponent-overlay .crc-bc .crc-hint::before {
+  left: auto;
+  right: 23px;
+}
+body .mlh-hdock,
+body .mlh-hdock.l {
+  left: auto;
+  right: calc(env(safe-area-inset-right, 0px) + 15px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 22px + 56px + 14px);
+  flex-direction: column-reverse;
+  align-items: center;
+}
+body .mlh-act {
+  width: 52px;
+  height: 52px;
+}
+body .mlh-act svg {
+  width: 24px;
+  height: 24px;
+}
+/* The hub's Skip and its prompts (room loading, the arcade machine's Play) sit above the centred joystick. */
+body .mlh-skip,
+body .mlh-prompt {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 150px);
+}
+/* Flat colours on the hub's most visible buttons (house rule: no gradients); a full flatten pass of the hub
+   CSS is still to do. */
+body .mlh-btn.pri {
+  background: #4fd6e8;
+  color: #04131c;
+}
+body .mlh-act {
+  background: rgb(var(--ha));
 }
