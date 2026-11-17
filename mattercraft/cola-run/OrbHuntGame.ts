@@ -60,7 +60,10 @@ import {
 import { Audio } from "@zcomponent/core/lib/components/Audio";
 // The synth routes into Mattercraft's audio layer so per-layer volume and
 // muting apply to built-in cues exactly as they do to file playback.
-import { AudioContextContext, useAudioContext } from "@zcomponent/core/lib/contexts/audiocontextcontext";
+import {
+  AudioContextContext,
+  useAudioContext,
+} from "@zcomponent/core/lib/contexts/audiocontextcontext";
 import { Group } from "@zcomponent/three/lib/components/Group";
 import { GLTF } from "@zcomponent/three/lib/components/models/GLTF";
 import { Image as ZImage } from "@zcomponent/three/lib/components/Image";
@@ -569,7 +572,8 @@ function annulusRadius(rnd: () => number, minR: number, maxR: number): number {
  * accent an author picks then works, including the ones nobody tested.
  */
 export function shadeForWhiteText(
-  rgb: [number, number, number], target = 4.8,
+  rgb: [number, number, number],
+  target = 4.8,
 ): [number, number, number] {
   const lin = (c: number) => {
     const s = c / 255;
@@ -577,7 +581,7 @@ export function shadeForWhiteText(
   };
   const ratio = (c: [number, number, number]) => {
     const l = 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
-    return 1.05 / (l + 0.05);                     // white against this colour
+    return 1.05 / (l + 0.05); // white against this colour
   };
   let out: [number, number, number] = [rgb[0], rgb[1], rgb[2]];
   // 60 steps of 5% reaches black from any starting colour, so this always
@@ -597,7 +601,7 @@ export function bestTextOn(rgb: [number, number, number]) {
   const l = 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
   // Contrast against white vs against near-black; pick the winner rather than
   // assuming the accent is light. Authors pick accents for glow, not legibility.
-  return (1.05 / (l + 0.05)) >= ((l + 0.05) / 0.06) ? "#fff" : "#04121b";
+  return 1.05 / (l + 0.05) >= (l + 0.05) / 0.06 ? "#fff" : "#04121b";
 }
 
 /** The slice of a GLTF component the lounge animation watchdog needs. */
@@ -703,7 +707,7 @@ export function fitToDiameter(obj: THREE.Object3D, diameter: number): number {
   const rel = new THREE.Matrix4();
   const box = new THREE.Box3();
   const bb = new THREE.Box3();
-  obj.traverse(c => {
+  obj.traverse((c) => {
     const geom = (c as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
     if (!geom) return;
     if (!geom.boundingBox) geom.computeBoundingBox();
@@ -739,7 +743,13 @@ function clampInt(v: number, lo: number, hi: number): number {
  */
 function rgbChannels(hex: string, fallback: string): string {
   const h = (hex || "").trim().replace(/^#/, "");
-  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
   if (!/^[0-9a-fA-F]{6}$/.test(full)) return fallback;
   const n = parseInt(full, 16);
   return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
@@ -758,8 +768,8 @@ interface OrbSlot {
   home: THREE.Vector3;
   phase: number;
   alive: boolean;
-  active: boolean;   // part of the current round at all
-  burst: number;     // collect animation 0..1, 0 = not bursting
+  active: boolean; // part of the current round at all
+  burst: number; // collect animation 0..1, 0 = not bursting
 }
 
 /* ════════════════════════════════════════════════════════════════════════
@@ -779,7 +789,12 @@ interface OrbSlot {
    ════════════════════════════════════════════════════════════════════════ */
 
 /** Am — F — C — G, in semitones from A2. Warm, unhurried, loops forever. */
-const MUSIC_CHORDS: number[][] = [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]];
+const MUSIC_CHORDS: number[][] = [
+  [0, 3, 7],
+  [-4, 0, 3],
+  [3, 7, 10],
+  [-2, 2, 5],
+];
 const MUSIC_ARP: number[] = [0, -1, 1, 2, -1, 1, 0, -1];
 
 interface NoteOpts {
@@ -821,7 +836,9 @@ class GameAudio {
     this._nextBeat = ctx.currentTime + 0.1;
   }
 
-  public setMasterVolume(v: number) { this._master.gain.value = v; }
+  public setMasterVolume(v: number) {
+    this._master.gain.value = v;
+  }
 
   public setSfx(on: boolean) {
     this.sfxOn = on;
@@ -835,7 +852,10 @@ class GameAudio {
     const t = this._ctx.currentTime;
     this._music.gain.cancelScheduledValues(t);
     this._music.gain.setValueAtTime(Math.max(0.0001, this._music.gain.value), t);
-    this._music.gain.linearRampToValueAtTime(on ? Math.max(0.0001, this.musicLevel) : 0.0001, t + (on ? 1.4 : 0.6));
+    this._music.gain.linearRampToValueAtTime(
+      on ? Math.max(0.0001, this.musicLevel) : 0.0001,
+      t + (on ? 1.4 : 0.6),
+    );
   }
 
   private _note(bus: AudioNode, o: NoteOpts) {
@@ -870,7 +890,14 @@ class GameAudio {
   public collect(streak: number, step: number) {
     if (!this.sfxOn) return;
     const f = 523.25 * Math.pow(1 + step, Math.min(Math.max(streak, 1) - 1, 12));
-    this._note(this._sfx, { freq: f, dur: 0.26, type: "triangle", gain: 0.24, slideTo: f * 1.5, attack: 0.006 });
+    this._note(this._sfx, {
+      freq: f,
+      dur: 0.26,
+      type: "triangle",
+      gain: 0.24,
+      slideTo: f * 1.5,
+      attack: 0.006,
+    });
     this._note(this._sfx, { freq: f * 2, dur: 0.17, type: "sine", gain: 0.1, attack: 0.004 });
   }
 
@@ -878,10 +905,32 @@ class GameAudio {
     if (!this.sfxOn) return;
     const t = this._ctx.currentTime;
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-      this._note(this._sfx, { freq: f, dur: 0.7, type: "sine", gain: 0.19, attack: 0.012, at: t + i * 0.09 });
-      this._note(this._sfx, { freq: f / 2, dur: 0.85, type: "triangle", gain: 0.07, attack: 0.02, at: t + i * 0.09 });
+      this._note(this._sfx, {
+        freq: f,
+        dur: 0.7,
+        type: "sine",
+        gain: 0.19,
+        attack: 0.012,
+        at: t + i * 0.09,
+      });
+      this._note(this._sfx, {
+        freq: f / 2,
+        dur: 0.85,
+        type: "triangle",
+        gain: 0.07,
+        attack: 0.02,
+        at: t + i * 0.09,
+      });
     });
-    this._note(this._sfx, { freq: 110, dur: 1.5, type: "sine", gain: 0.15, slideTo: 220, attack: 0.3, at: t });
+    this._note(this._sfx, {
+      freq: 110,
+      dur: 1.5,
+      type: "sine",
+      gain: 0.15,
+      slideTo: 220,
+      attack: 0.3,
+      at: t,
+    });
   }
 
   /**
@@ -897,18 +946,41 @@ class GameAudio {
     // rather than an organ.
     [1, 2.02, 2.99, 4.21, 5.43].forEach((r, i) => {
       this._note(this._sfx, {
-        freq: 880 * r, dur: 1.6 - i * 0.2, type: "sine",
-        gain: 0.14 / (i + 1.4), attack: 0.006, at: t,
+        freq: 880 * r,
+        dur: 1.6 - i * 0.2,
+        type: "sine",
+        gain: 0.14 / (i + 1.4),
+        attack: 0.006,
+        at: t,
       });
     });
     // Swell underneath, arriving late so the bell lands first.
     this._note(this._sfx, {
-      freq: 220, dur: 1.4, type: "triangle", gain: 0.12,
-      slideTo: 440, attack: 0.25, at: t + 0.04,
+      freq: 220,
+      dur: 1.4,
+      type: "triangle",
+      gain: 0.12,
+      slideTo: 440,
+      attack: 0.25,
+      at: t + 0.04,
     });
     // Two-note confirm on the tail.
-    this._note(this._sfx, { freq: 1318.5, dur: 0.5, type: "sine", gain: 0.1, attack: 0.008, at: t + 0.42 });
-    this._note(this._sfx, { freq: 1760, dur: 0.7, type: "sine", gain: 0.09, attack: 0.008, at: t + 0.58 });
+    this._note(this._sfx, {
+      freq: 1318.5,
+      dur: 0.5,
+      type: "sine",
+      gain: 0.1,
+      attack: 0.008,
+      at: t + 0.42,
+    });
+    this._note(this._sfx, {
+      freq: 1760,
+      dur: 0.7,
+      type: "sine",
+      gain: 0.09,
+      attack: 0.008,
+      at: t + 0.58,
+    });
   }
 
   public warn() {
@@ -918,7 +990,14 @@ class GameAudio {
 
   public fail() {
     if (!this.sfxOn) return;
-    this._note(this._sfx, { freq: 300, dur: 0.8, type: "sawtooth", gain: 0.13, slideTo: 80, filter: 900 });
+    this._note(this._sfx, {
+      freq: 300,
+      dur: 0.8,
+      type: "sawtooth",
+      gain: 0.13,
+      slideTo: 80,
+      filter: 900,
+    });
     this._note(this._sfx, { freq: 150, dur: 0.9, type: "sine", gain: 0.1, slideTo: 45 });
   }
 
@@ -933,7 +1012,7 @@ class GameAudio {
       f.frequency.value = 460;
       f.Q.value = 3.5;
       f.connect(g);
-      const oscs = [-9, 0, 7].map(d => {
+      const oscs = [-9, 0, 7].map((d) => {
         const o = this._ctx.createOscillator();
         o.type = "sawtooth";
         o.frequency.value = 82.4;
@@ -959,7 +1038,7 @@ class GameAudio {
       h.g.gain.setValueAtTime(Math.max(0.0001, h.g.gain.value), t);
       h.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
       const stopAt = t + 0.7;
-      h.oscs.forEach(o => o.stop(stopAt));
+      h.oscs.forEach((o) => o.stop(stopAt));
       h.lfo.stop(stopAt);
     }
   }
@@ -981,8 +1060,14 @@ class GameAudio {
       if (b % 16 === 0) {
         chord.forEach((semi, i) =>
           this._note(this._music, {
-            freq: 110 * Math.pow(2, semi / 12), dur: 8.6, type: "sine",
-            gain: 0.075, attack: 2.4, at: t, detune: (i - 1) * 7, filter: 850,
+            freq: 110 * Math.pow(2, semi / 12),
+            dur: 8.6,
+            type: "sine",
+            gain: 0.075,
+            attack: 2.4,
+            at: t,
+            detune: (i - 1) * 7,
+            filter: 850,
           }),
         );
       }
@@ -991,8 +1076,13 @@ class GameAudio {
         const octave = b % 8 === 4 ? 24 : 12;
         const semi = chord[step % chord.length] + octave;
         this._note(this._music, {
-          freq: 110 * Math.pow(2, semi / 12), dur: 1.15, type: "triangle",
-          gain: 0.05, attack: 0.02, at: t, filter: 2400,
+          freq: 110 * Math.pow(2, semi / 12),
+          dur: 1.15,
+          type: "triangle",
+          gain: 0.05,
+          attack: 0.02,
+          at: t,
+          filter: 2400,
         });
       }
       this._beat++;
@@ -1002,7 +1092,11 @@ class GameAudio {
 
   public dispose() {
     this.portalHum(false);
-    try { this._master.disconnect(); } catch { /* already gone */ }
+    try {
+      this._master.disconnect();
+    } catch {
+      /* already gone */
+    }
   }
 }
 
@@ -1126,7 +1220,6 @@ interface ConstructorProps {
    * @zvalues files *.+(mp3|wav|ogg|m4a)
    */
   portalHumSound: string;
-
 }
 
 /**
@@ -1143,7 +1236,6 @@ interface ConstructorProps {
  * @zparents three/Object3D/Group/**
  */
 export class OrbHuntGame extends Group {
-
   /* ══ Setup ══════════════════════════════════════════════════════════ */
 
   /**
@@ -1199,11 +1291,11 @@ export class OrbHuntGame extends Group {
    * @zpriority 75
    * @zdefault 0.9
    */
-  public playerHeightOffset = new Observable(0.9, v => {
+  public playerHeightOffset = new Observable(0.9, (v) => {
     const n = Math.max(0, Math.min(5, v));
     if (n !== v) this.playerHeightOffset.value = n;
     this._sizePlayerTrigger();
-    this._layout();     // the reachable height band moved with it
+    this._layout(); // the reachable height band moved with it
   });
 
   /**
@@ -1238,7 +1330,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 104
    * @zdefault 1
    */
-  public pickupScale = new Observable(1, v => {
+  public pickupScale = new Observable(1, (v) => {
     const n = Math.max(0.1, Math.min(5, v));
     if (n !== v) this.pickupScale.value = n;
     this._fitPickup();
@@ -1270,7 +1362,7 @@ export class OrbHuntGame extends Group {
    */
   public orbPickupRadius = new Observable(1.8, () => {
     this._sizeOrbTriggers();
-    this._layout();     // reach depends on this too
+    this._layout(); // reach depends on this too
   });
 
   /**
@@ -1390,7 +1482,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 58
    * @zdefault 1.5
    */
-  public spawnClearance = new Observable(1.5, v => {
+  public spawnClearance = new Observable(1.5, (v) => {
     const n = Math.max(0, Math.min(20, v));
     if (n !== v) this.spawnClearance.value = n;
     this._layout();
@@ -1564,7 +1656,6 @@ export class OrbHuntGame extends Group {
    */
   public resetDelay = new Observable(2);
 
-
   /* ══ Placement ══════════════════════════════════════════════════════ */
 
   /**
@@ -1713,7 +1804,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 36
    * @zdefault 18
    */
-  public placeHintLift = new Observable(18, v => {
+  public placeHintLift = new Observable(18, (v) => {
     const n = Math.max(0, Math.min(240, v));
     if (n !== v) this.placeHintLift.value = n;
     this._syncPlacement();
@@ -1753,7 +1844,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 100
    * @zdefault [0, 1.7, -14]
    */
-  public portalPosition = new Observable<[number, number, number]>([0, 1.7, -14], v => {
+  public portalPosition = new Observable<[number, number, number]>([0, 1.7, -14], (v) => {
     this._portal.position.set(v[0], v[1], v[2]);
   });
 
@@ -1767,7 +1858,7 @@ export class OrbHuntGame extends Group {
    * @ztype angle-degrees
    * @zdefault 0
    */
-  public portalRotationY = new Observable(0, v => {
+  public portalRotationY = new Observable(0, (v) => {
     this._portal.rotation.y = (v * Math.PI) / 180;
   });
 
@@ -1816,7 +1907,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.81, 0.91, 1]
    */
-  public portalColorEdge = new Observable<[number, number, number]>([0.81, 0.91, 1], v => {
+  public portalColorEdge = new Observable<[number, number, number]>([0.81, 0.91, 1], (v) => {
     setColor(this._portalU.uColorEdge.value, v);
   });
 
@@ -1830,7 +1921,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.11, 0.44, 0.94]
    */
-  public portalColorMid = new Observable<[number, number, number]>([0.11, 0.44, 0.94], v => {
+  public portalColorMid = new Observable<[number, number, number]>([0.11, 0.44, 0.94], (v) => {
     setColor(this._portalU.uColorMid.value, v);
   });
 
@@ -1844,7 +1935,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.08, 0.82, 0.76]
    */
-  public portalColorInner = new Observable<[number, number, number]>([0.08, 0.82, 0.76], v => {
+  public portalColorInner = new Observable<[number, number, number]>([0.08, 0.82, 0.76], (v) => {
     setColor(this._portalU.uColorInner.value, v);
   });
 
@@ -1857,7 +1948,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 20
    * @zdefault 1.05
    */
-  public portalBrightness = new Observable(1.05, v => { this._portalU.uBrightness.value = v; });
+  public portalBrightness = new Observable(1.05, (v) => {
+    this._portalU.uBrightness.value = v;
+  });
 
   /* ══ Orb look ═══════════════════════════════════════════════════════ */
 
@@ -1886,7 +1979,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.87, 0.95, 1]
    */
-  public orbColorEdge = new Observable<[number, number, number]>([0.87, 0.95, 1], v => {
+  public orbColorEdge = new Observable<[number, number, number]>([0.87, 0.95, 1], (v) => {
     setColor(this._orbU.uColorEdge.value, v);
   });
 
@@ -1900,7 +1993,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.11, 0.44, 0.94]
    */
-  public orbColorMid = new Observable<[number, number, number]>([0.11, 0.44, 0.94], v => {
+  public orbColorMid = new Observable<[number, number, number]>([0.11, 0.44, 0.94], (v) => {
     setColor(this._orbU.uColorMid.value, v);
     setColor(this._glowU.uColor.value, v);
   });
@@ -1915,7 +2008,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.09, 0.8, 0.84]
    */
-  public orbColorInner = new Observable<[number, number, number]>([0.09, 0.8, 0.84], v => {
+  public orbColorInner = new Observable<[number, number, number]>([0.09, 0.8, 0.84], (v) => {
     setColor(this._orbU.uColorInner.value, v);
   });
 
@@ -1928,7 +2021,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 60
    * @zdefault 1
    */
-  public orbBrightness = new Observable(1, v => { this._orbU.uBrightness.value = v; });
+  public orbBrightness = new Observable(1, (v) => {
+    this._orbU.uBrightness.value = v;
+  });
 
   /**
    * How fast the plasma churns across each orb.
@@ -1939,7 +2034,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 50
    * @zdefault 0.3
    */
-  public orbSpeed = new Observable(0.3, v => { this._orbU.uSpeed.value = v; });
+  public orbSpeed = new Observable(0.3, (v) => {
+    this._orbU.uSpeed.value = v;
+  });
 
   /**
    * How far each orb bobs up and down as it idles.
@@ -1950,7 +2047,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 40
    * @zdefault 0.12
    */
-  public orbBob = new Observable(0.12, () => this._layout());   // moves the spawn ceiling
+  public orbBob = new Observable(0.12, () => this._layout()); // moves the spawn ceiling
 
   /* ══ Beacon ═════════════════════════════════════════════════════════ */
 
@@ -1975,7 +2072,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 90
    * @zdefault 2.4
    */
-  public beaconSize = new Observable(2.4, v => {
+  public beaconSize = new Observable(2.4, (v) => {
     for (const o of this._orbs) o.beacon.scale.setScalar(v);
   });
 
@@ -1989,7 +2086,7 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.12, 0.73, 0.94]
    */
-  public beaconColor = new Observable<[number, number, number]>([0.12, 0.73, 0.94], v => {
+  public beaconColor = new Observable<[number, number, number]>([0.12, 0.73, 0.94], (v) => {
     setColor(this._beaconU.uColor.value, v);
   });
 
@@ -2002,7 +2099,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 70
    * @zdefault 0.85
    */
-  public beaconIntensity = new Observable(0.85, v => { this._beaconU.uIntensity.value = v; });
+  public beaconIntensity = new Observable(0.85, (v) => {
+    this._beaconU.uIntensity.value = v;
+  });
 
   /**
    * Thickness of the ring's outline.
@@ -2014,7 +2113,9 @@ export class OrbHuntGame extends Group {
    * @ztype proportion
    * @zdefault 0.09
    */
-  public beaconRingWidth = new Observable(0.09, v => { this._beaconU.uRingWidth.value = v; });
+  public beaconRingWidth = new Observable(0.09, (v) => {
+    this._beaconU.uRingWidth.value = v;
+  });
 
   /**
    * How strongly the middle of the ring is filled in.
@@ -2026,7 +2127,9 @@ export class OrbHuntGame extends Group {
    * @ztype proportion
    * @zdefault 0.16
    */
-  public beaconPool = new Observable(0.16, v => { this._beaconU.uPoolStrength.value = v; });
+  public beaconPool = new Observable(0.16, (v) => {
+    this._beaconU.uPoolStrength.value = v;
+  });
 
   /**
    * Speed of the pulse travelling outward through the ring.
@@ -2037,7 +2140,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 40
    * @zdefault 0.5
    */
-  public beaconWaveSpeed = new Observable(0.5, v => { this._beaconU.uWaveSpeed.value = v; });
+  public beaconWaveSpeed = new Observable(0.5, (v) => {
+    this._beaconU.uWaveSpeed.value = v;
+  });
 
   /* ══ Interface ══════════════════════════════════════════════════════ */
 
@@ -2107,7 +2212,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 74
    * @zdefault 10
    */
-  public hudGap = new Observable(10, v => {
+  public hudGap = new Observable(10, (v) => {
     const n = Math.max(0, Math.min(120, v));
     if (n !== v) this.hudGap.value = n;
     this._applyHudStack();
@@ -2133,9 +2238,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 75
    * @zdefault 2
    */
-  public timerOffset = new Observable(2, v => {
+  public timerOffset = new Observable(2, (v) => {
     const n = Math.max(0, Math.min(40, v));
-    if (n !== v) this.timerOffset.value = n;   // snap the field to what's used
+    if (n !== v) this.timerOffset.value = n; // snap the field to what's used
     this._applyTimerOffset();
     // The column's spacing is measured, so it has to be re-measured after the
     // column moves — otherwise the count keeps the offset it had at the old
@@ -2154,8 +2259,9 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.31, 0.84, 0.91]
    */
-  public uiAccent = new Observable<[number, number, number]>([0.31, 0.84, 0.91],
-    () => this._applyMode());
+  public uiAccent = new Observable<[number, number, number]>([0.31, 0.84, 0.91], () =>
+    this._applyMode(),
+  );
 
   /**
    * The interface colour while Lounge mode is open.
@@ -2173,10 +2279,15 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [1, 0.36, 0.71]
    */
-  public loungeAccent = new Observable<[number, number, number]>([1, 0.36, 0.71],
+  public loungeAccent = new Observable<[number, number, number]>(
+    [1, 0.36, 0.71],
     // The reward panel's lounge row wears it too, so that row stays
     // recognisable as the same destination the menu offers.
-    () => { this._applyMode(); this._syncRewardModalTheme(); });
+    () => {
+      this._applyMode();
+      this._syncRewardModalTheme();
+    },
+  );
 
   /**
    * Title shown at the top of the menu.
@@ -2344,7 +2455,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 80
    * @zdefault 22
    */
-  public logoSize = new Observable(22, v => {
+  public logoSize = new Observable(22, (v) => {
     const n = Math.max(4, Math.min(60, v));
     if (n !== v) this.logoSize.value = n;
     this._applyLogo();
@@ -2360,7 +2471,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 70
    * @zdefault 160
    */
-  public logoMaxWidth = new Observable(160, v => {
+  public logoMaxWidth = new Observable(160, (v) => {
     const n = Math.max(24, Math.min(600, v));
     if (n !== v) this.logoMaxWidth.value = n;
     this._applyLogo();
@@ -2377,7 +2488,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 60
    * @zdefault 14
    */
-  public logoOffsetX = new Observable(14, v => {
+  public logoOffsetX = new Observable(14, (v) => {
     const n = Math.max(0, Math.min(200, v));
     if (n !== v) this.logoOffsetX.value = n;
     this._applyLogo();
@@ -2393,7 +2504,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 50
    * @zdefault 14
    */
-  public logoOffsetY = new Observable(14, v => {
+  public logoOffsetY = new Observable(14, (v) => {
     const n = Math.max(0, Math.min(200, v));
     if (n !== v) this.logoOffsetY.value = n;
     this._applyLogo();
@@ -2437,7 +2548,7 @@ export class OrbHuntGame extends Group {
    * @ztype proportion
    * @zdefault 0.7
    */
-  public volume = new Observable(0.7, v => {
+  public volume = new Observable(0.7, (v) => {
     this._sfxCollect.volume.value = v;
     this._sfxWin.volume.value = v;
     this._sfxReward.volume.value = v;
@@ -2470,7 +2581,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 80
    * @zdefault true
    */
-  public soundEnabled = new Observable(true, v => {
+  public soundEnabled = new Observable(true, (v) => {
     this._audio?.setSfx(v);
     this._syncToggles();
   });
@@ -2484,7 +2595,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 70
    * @zdefault true
    */
-  public musicEnabled = new Observable(true, v => {
+  public musicEnabled = new Observable(true, (v) => {
     this._audio?.setMusic(v);
     this._applyMusicSource();
     this._syncToggles();
@@ -2513,8 +2624,8 @@ export class OrbHuntGame extends Group {
    */
   public musicStart = new Observable(MusicStart.OnGameStart, () => this._applyMusicSource());
 
-  public musicVolume = new Observable(0.5, v => {
-    if (this._audio){
+  public musicVolume = new Observable(0.5, (v) => {
+    if (this._audio) {
       this._audio.musicLevel = v;
       if (this.musicEnabled.value) this._audio.setMusic(true);
     }
@@ -2597,6 +2708,23 @@ export class OrbHuntGame extends Group {
    */
   public introImage = new Observable("", () => this._applyIntroImage());
 
+  /**
+   * Link to the licences page (engine credits etc.). Shown as a small "Licences" link at the foot of the
+   * game menu, so credits stay off the splash. Empty hides it.
+   * @zui
+   * @zgroup Game Intro
+   * @zpriority 59
+   */
+  public licencesUrl = new Observable("", () => this._applyLicences());
+
+  private _applyLicences() {
+    const a = this._menu?.querySelector(".ohg-legal") as HTMLAnchorElement | null;
+    if (!a) return;
+    const url = this.licencesUrl.value;
+    a.hidden = !url;
+    if (url) a.href = url;
+  }
+
   /* ── Legend row 1 ── */
 
   /**
@@ -2646,7 +2774,10 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.
    */
-  public legend1Text = new Observable("Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.", () => this._syncIntro());
+  public legend1Text = new Observable(
+    "Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.",
+    () => this._syncIntro(),
+  );
 
   /* ── Legend row 2 ── */
 
@@ -2697,7 +2828,10 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault How many you've gathered, and how many you still need.
    */
-  public legend2Text = new Observable("How many you've gathered, and how many you still need.", () => this._syncIntro());
+  public legend2Text = new Observable(
+    "How many you've gathered, and how many you still need.",
+    () => this._syncIntro(),
+  );
 
   /* ── Legend row 3 ── */
 
@@ -2748,7 +2882,10 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault Seconds remaining. It turns orange when you're running out.
    */
-  public legend3Text = new Observable("Seconds remaining. It turns orange when you're running out.", () => this._syncIntro());
+  public legend3Text = new Observable(
+    "Seconds remaining. It turns orange when you're running out.",
+    () => this._syncIntro(),
+  );
 
   /* ── Legend row 4 ── */
 
@@ -2799,7 +2936,10 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault Tap the glowing button in the corner for play, pause, restart and sound.
    */
-  public legend4Text = new Observable("Tap the glowing button in the corner for play, pause, restart and sound.", () => this._syncIntro());
+  public legend4Text = new Observable(
+    "Tap the glowing button in the corner for play, pause, restart and sound.",
+    () => this._syncIntro(),
+  );
 
   /* ── Legend row 5 ── */
 
@@ -2835,7 +2975,7 @@ export class OrbHuntGame extends Group {
    * @zgroup Intro Legend 5
    * @zgrouppriority 120
    * @zpriority 80
-   * @zdefault 
+   * @zdefault
    */
   public legend5Title = new Observable("", () => this._syncIntro());
 
@@ -2848,7 +2988,7 @@ export class OrbHuntGame extends Group {
    * @zgrouppriority 120
    * @zpriority 70
    * @ztype text-multiline
-   * @zdefault 
+   * @zdefault
    */
   public legend5Text = new Observable("", () => this._syncIntro());
 
@@ -2886,7 +3026,7 @@ export class OrbHuntGame extends Group {
    * @zgroup Intro Legend 6
    * @zgrouppriority 119
    * @zpriority 80
-   * @zdefault 
+   * @zdefault
    */
   public legend6Title = new Observable("", () => this._syncIntro());
 
@@ -2899,7 +3039,7 @@ export class OrbHuntGame extends Group {
    * @zgrouppriority 119
    * @zpriority 70
    * @ztype text-multiline
-   * @zdefault 
+   * @zdefault
    */
   public legend6Text = new Observable("", () => this._syncIntro());
 
@@ -2937,7 +3077,7 @@ export class OrbHuntGame extends Group {
    * @zgroup Intro Legend 7
    * @zgrouppriority 118
    * @zpriority 80
-   * @zdefault 
+   * @zdefault
    */
   public legend7Title = new Observable("", () => this._syncIntro());
 
@@ -2950,10 +3090,9 @@ export class OrbHuntGame extends Group {
    * @zgrouppriority 118
    * @zpriority 70
    * @ztype text-multiline
-   * @zdefault 
+   * @zdefault
    */
   public legend7Text = new Observable("", () => this._syncIntro());
-
 
   /* ══ Digital Exclusive ══════════════════════════════════════════════
      The reward moment: a celebration when the target is reached, and a
@@ -2986,7 +3125,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 25
    * @zdefault 6
    */
-  public portalHumSeconds = new Observable(6, v => {
+  public portalHumSeconds = new Observable(6, (v) => {
     const n = Math.max(0, Math.min(120, v));
     if (n !== v) this.portalHumSeconds.value = n;
   });
@@ -3005,7 +3144,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 24
    * @zdefault 0
    */
-  public portalHideAfter = new Observable(0, v => {
+  public portalHideAfter = new Observable(0, (v) => {
     const n = Math.max(0, Math.min(300, v));
     if (n !== v) this.portalHideAfter.value = n;
   });
@@ -3072,8 +3211,9 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault You've unlocked your digital exclusive.
    */
-  public rewardMessage = new Observable(
-    "You've unlocked your digital exclusive.", () => this._syncReward());
+  public rewardMessage = new Observable("You've unlocked your digital exclusive.", () =>
+    this._syncReward(),
+  );
 
   /**
    * Emblem shown on the badge and above the wordmark.
@@ -3147,7 +3287,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 60
    * @zdefault 0.45
    */
-  public rewardDelay = new Observable(0.45, v => {
+  public rewardDelay = new Observable(0.45, (v) => {
     const n = Math.max(0, Math.min(5, v));
     if (n !== v) this.rewardDelay.value = n;
   });
@@ -3163,7 +3303,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 56
    * @zdefault 3.4
    */
-  public rewardDuration = new Observable(3.4, v => {
+  public rewardDuration = new Observable(3.4, (v) => {
     const n = Math.max(1, Math.min(20, v));
     if (n !== v) this.rewardDuration.value = n;
   });
@@ -3205,8 +3345,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 100
    * @zdefault reward
    */
-  public rewardModalContent = new Observable(RewardModalContent.Reward,
-    () => this._syncRewardModal());
+  public rewardModalContent = new Observable(RewardModalContent.Reward, () =>
+    this._syncRewardModal(),
+  );
 
   /**
    * Heading on the How To Claim screen.
@@ -3217,8 +3358,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 95
    * @zdefault How to claim your item
    */
-  public instructionsTitle = new Observable("How to claim your item",
-    () => this._syncInstructions());
+  public instructionsTitle = new Observable("How to claim your item", () =>
+    this._syncInstructions(),
+  );
 
   /**
    * Label on the menu row that opens the How To Claim screen. Blank hides
@@ -3230,8 +3372,10 @@ export class OrbHuntGame extends Group {
    * @zpriority 90
    * @zdefault How to claim
    */
-  public instructionsMenuLabel = new Observable("How to claim",
-    () => { this._syncInstructions(); this._syncMenu(); });
+  public instructionsMenuLabel = new Observable("How to claim", () => {
+    this._syncInstructions();
+    this._syncMenu();
+  });
 
   /**
    * Label on the button that closes the How To Claim screen.
@@ -3242,8 +3386,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 85
    * @zdefault Got it
    */
-  public instructionsCloseLabel = new Observable("Got it",
-    () => this._syncInstructions());
+  public instructionsCloseLabel = new Observable("Got it", () => this._syncInstructions());
 
   /**
    * What a screen reader announces for a step's screenshot.
@@ -3259,8 +3402,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 80
    * @zdefault View image full screen
    */
-  public imageViewerOpenLabel = new Observable("View image full screen",
-    () => this._syncInstructions());
+  public imageViewerOpenLabel = new Observable("View image full screen", () =>
+    this._syncInstructions(),
+  );
 
   /**
    * Step 1. A step with no text is skipped entirely, so blank the ones you
@@ -3273,8 +3417,7 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault Join Evade on Roblox.
    */
-  public step1Text = new Observable("Join Evade on Roblox.",
-    () => this._syncInstructions());
+  public step1Text = new Observable("Join Evade on Roblox.", () => this._syncInstructions());
 
   /**
    * Screenshot shown under step 1. Pick a project file or paste a URL.
@@ -3298,8 +3441,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 80
    * @zdefault https://www.roblox.com/games/9872472334/Evade
    */
-  public step1Link = new Observable("https://www.roblox.com/games/9872472334/Evade",
-    () => this._syncInstructions());
+  public step1Link = new Observable("https://www.roblox.com/games/9872472334/Evade", () =>
+    this._syncInstructions(),
+  );
 
   /**
    * Label on step 1's link button.
@@ -3310,8 +3454,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 70
    * @zdefault Open Evade on Roblox
    */
-  public step1LinkLabel = new Observable("Open Evade on Roblox",
-    () => this._syncInstructions());
+  public step1LinkLabel = new Observable("Open Evade on Roblox", () => this._syncInstructions());
 
   /**
    * Step 2.
@@ -3325,7 +3468,8 @@ export class OrbHuntGame extends Group {
    */
   public step2Text = new Observable(
     "Open the Codes panel — it's the bird icon on the right of the main menu.",
-    () => this._syncInstructions());
+    () => this._syncInstructions(),
+  );
 
   /**
    * Screenshot shown under step 2.
@@ -3348,9 +3492,9 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault Enter BOBO_COLA_RDC26 to claim your free UGC item.
    */
-  public step3Text = new Observable(
-    "Enter BOBO_COLA_RDC26 to claim your free UGC item.",
-    () => this._syncInstructions());
+  public step3Text = new Observable("Enter BOBO_COLA_RDC26 to claim your free UGC item.", () =>
+    this._syncInstructions(),
+  );
 
   /**
    * Screenshot shown under step 3.
@@ -3440,8 +3584,9 @@ export class OrbHuntGame extends Group {
    * @ztype text-multiline
    * @zdefault You didn't collect enough cans in time.
    */
-  public timeoutBody = new Observable(
-    "You didn't collect enough cans in time.", () => this._syncTimeoutModal());
+  public timeoutBody = new Observable("You didn't collect enough cans in time.", () =>
+    this._syncTimeoutModal(),
+  );
 
   /**
    * Label on the primary button, which starts a fresh round.
@@ -3464,8 +3609,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 60
    * @zdefault Go to lounge mode
    */
-  public timeoutLoungeLabel = new Observable("Go to lounge mode",
-    () => this._syncTimeoutModal());
+  public timeoutLoungeLabel = new Observable("Go to lounge mode", () => this._syncTimeoutModal());
 
   /**
    * Seconds between the clock hitting zero and the panel appearing. A short
@@ -3478,7 +3622,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 50
    * @zdefault 0.8
    */
-  public timeoutDelay = new Observable(0.8, v => {
+  public timeoutDelay = new Observable(0.8, (v) => {
     const n = Math.max(0, Math.min(10, v));
     if (n !== v) this.timeoutDelay.value = n;
   });
@@ -3523,7 +3667,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 98
    * @zdefault 0.35
    */
-  public rewardModalDelay = new Observable(0.35, v => {
+  public rewardModalDelay = new Observable(0.35, (v) => {
     const n = Math.max(0, Math.min(30, v));
     if (n !== v) this.rewardModalDelay.value = n;
   });
@@ -3548,7 +3692,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 92
    * @zdefault Evade Exclusive Unlocked
    */
-  public rewardModalTitle = new Observable("Evade Exclusive Unlocked", () => this._syncRewardModal());
+  public rewardModalTitle = new Observable("Evade Exclusive Unlocked", () =>
+    this._syncRewardModal(),
+  );
 
   /**
    * Body copy under the heading. Keep it to a line or two — this is a moment,
@@ -3563,7 +3709,8 @@ export class OrbHuntGame extends Group {
    */
   public rewardModalBody = new Observable(
     "You've earned it. Claim your digital exclusive to keep it.",
-    () => this._syncRewardModal());
+    () => this._syncRewardModal(),
+  );
 
   /**
    * What the modal's primary button does.
@@ -3587,8 +3734,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 86
    * @zdefault instructions
    */
-  public rewardModalButtonAction = new Observable(RewardClaimAction.Instructions,
-    () => this._syncRewardModal());
+  public rewardModalButtonAction = new Observable(RewardClaimAction.Instructions, () =>
+    this._syncRewardModal(),
+  );
 
   /**
    * Label on the modal's primary button. Blank hides the button entirely,
@@ -3600,8 +3748,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 84
    * @zdefault How to Claim
    */
-  public rewardModalButtonLabel = new Observable("How to Claim",
-    () => this._syncRewardModal());
+  public rewardModalButtonLabel = new Observable("How to Claim", () => this._syncRewardModal());
 
   /**
    * Offer another round straight from the reward panel.
@@ -3631,8 +3778,7 @@ export class OrbHuntGame extends Group {
    * @zpriority 82
    * @zdefault Replay
    */
-  public rewardModalReplayLabel = new Observable("Replay",
-    () => this._syncRewardModal());
+  public rewardModalReplayLabel = new Observable("Replay", () => this._syncRewardModal());
 
   /**
    * Offer the lounge from the reward panel too.
@@ -3677,8 +3823,9 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [0.55, 0.82, 0.98]
    */
-  public rewardModalClaimColor = new Observable<[number, number, number]>(
-    [0.55, 0.82, 0.98], () => this._syncRewardModalTheme());
+  public rewardModalClaimColor = new Observable<[number, number, number]>([0.55, 0.82, 0.98], () =>
+    this._syncRewardModalTheme(),
+  );
 
   /**
    * Label on the modal's dismiss button. Blank to hide it — but leave a way
@@ -3800,7 +3947,6 @@ export class OrbHuntGame extends Group {
    */
   public claimNewTab = new Observable(true);
 
-
   /* ══ Lounge Mode ════════════════════════════════════════════════════
      A no-pressure mode reached from the intro's secondary button. No clock,
      no orbs, no score — just the character and a row of things to ask them
@@ -3819,9 +3965,12 @@ export class OrbHuntGame extends Group {
    * @zdefault true
    */
   public loungeEnabled = new Observable(true, () => {
-    this._syncIntro(); this._syncLounge(); this._syncTimeoutModal();
+    this._syncIntro();
+    this._syncLounge();
+    this._syncTimeoutModal();
     // The reward panel offers the lounge too, so it has to hear about this.
-    this._syncMenu(); this._syncRewardModal();
+    this._syncMenu();
+    this._syncRewardModal();
   });
 
   /**
@@ -3833,10 +3982,16 @@ export class OrbHuntGame extends Group {
    * @zpriority 90
    * @zdefault Lounge with Bobo Cat
    */
-  public loungeButtonLabel = new Observable("Lounge with Bobo Cat",
+  public loungeButtonLabel = new Observable(
+    "Lounge with Bobo Cat",
     // Three places wear this label now — the intro, the menu row and the
     // reward panel — because one destination gets one set of words.
-    () => { this._syncIntro(); this._syncMenu(); this._syncRewardModal(); });
+    () => {
+      this._syncIntro();
+      this._syncMenu();
+      this._syncRewardModal();
+    },
+  );
 
   /**
    * Timeline or state played when Lounge mode opens — the character settling
@@ -3898,9 +4053,9 @@ export class OrbHuntGame extends Group {
    * @zpriority 58
    * @zdefault 30
    */
-  public loungeOffset = new Observable(30, v => {
+  public loungeOffset = new Observable(30, (v) => {
     const n = Math.max(0, Math.min(70, v));
-    if (n !== v) this.loungeOffset.value = n;   // snap the field to what's used
+    if (n !== v) this.loungeOffset.value = n; // snap the field to what's used
     this._applyLoungeOffset();
   });
 
@@ -4040,7 +4195,7 @@ export class OrbHuntGame extends Group {
    * @zgroup Lounge Action 4
    * @zgrouppriority 154
    * @zpriority 100
-   * @zdefault 
+   * @zdefault
    */
   public lounge4Label = new Observable("", () => this._syncLounge());
 
@@ -4085,7 +4240,8 @@ export class OrbHuntGame extends Group {
    * @zdefault false
    */
   public hideoutEnabled = new Observable(false, () => {
-    this._syncIntro(); this._syncMenu();
+    this._syncIntro();
+    this._syncMenu();
   });
 
   /**
@@ -4097,8 +4253,10 @@ export class OrbHuntGame extends Group {
    * @zpriority 90
    * @zdefault Visit Bobo's Hideout
    */
-  public hideoutButtonLabel = new Observable("Visit Bobo's Hideout",
-    () => { this._syncIntro(); this._syncMenu(); });
+  public hideoutButtonLabel = new Observable("Visit Bobo's Hideout", () => {
+    this._syncIntro();
+    this._syncMenu();
+  });
 
   /**
    * The interface colour while the hideout is open, and the colour of the
@@ -4112,8 +4270,9 @@ export class OrbHuntGame extends Group {
    * @ztype color-norm-rgb
    * @zdefault [1, 0.77, 0.18]
    */
-  public hideoutAccent = new Observable<[number, number, number]>([1, 0.77, 0.18],
-    () => this._applyMode());
+  public hideoutAccent = new Observable<[number, number, number]>([1, 0.77, 0.18], () =>
+    this._applyMode(),
+  );
 
   /* ══ Timelines ══════════════════════════════════════════════════════ */
 
@@ -4250,7 +4409,9 @@ export class OrbHuntGame extends Group {
   /* ══ Public API — call these from a behaviour or a Call Function track ══ */
 
   /** Start (or restart) a round. @zui */
-  public startGame() { this._beginRound(); }
+  public startGame() {
+    this._beginRound();
+  }
   /** Pause a running round. @zui */
   public pauseGame() {
     if (this._cdLeft > 0) this._cdHeld = true; // the countdown waits too
@@ -4262,41 +4423,73 @@ export class OrbHuntGame extends Group {
     if (this._state === GameState.Paused) this._setState(GameState.Playing);
   }
   /** Reset the board to idle without starting. @zui */
-  public resetGame() { this._reset(); }
+  public resetGame() {
+    this._reset();
+  }
   /** Open the how-to-play modal. @zui */
-  public showIntro() { this._openIntro(); }
+  public showIntro() {
+    this._openIntro();
+  }
   /** Open the game menu. @zui */
-  public showMenu() { this._openMenu(); }
+  public showMenu() {
+    this._openMenu();
+  }
   /** Confirm placement, as if the player tapped Place. @zui */
-  public place() { this._place(); }
+  public place() {
+    this._place();
+  }
   /** Return to placement mode, as if the player tapped Reset. @zui */
-  public resetPlacement() { this._resetPlacement(); }
+  public resetPlacement() {
+    this._resetPlacement();
+  }
   /** Play the digital-exclusive celebration now, without winning. @zui */
-  public showReward() { this._showReward(); }
+  public showReward() {
+    this._showReward();
+  }
   /** Hide the celebration immediately. @zui */
-  public hideReward() { this._hideReward(true); }
+  public hideReward() {
+    this._hideReward(true);
+  }
   /** Close the portal now, with its opening animation reversed. @zui */
   public closePortal() {
     if (this._state === GameState.Won && this._portal.visible) this._portalClosing = true;
   }
   /** Open the reward modal now. @zui */
-  public showRewardModal() { this._openRewardModal(); }
+  public showRewardModal() {
+    this._openRewardModal();
+  }
   /** Close the reward modal. @zui */
-  public hideRewardModal() { this._closeRewardModal(false); }
+  public hideRewardModal() {
+    this._closeRewardModal(false);
+  }
   /** Trigger the claim action, as if the button were tapped. @zui */
-  public claim() { this._claim(); }
+  public claim() {
+    this._claim();
+  }
   /** Open Lounge mode. @zui */
-  public enterLounge() { this._enterLounge(); }
+  public enterLounge() {
+    this._enterLounge();
+  }
   /** Leave Lounge mode without starting a round. @zui */
-  public exitLounge() { this._exitLounge(); }
+  public exitLounge() {
+    this._exitLounge();
+  }
   /** True while Lounge mode is open. */
-  public get isLounging() { return this._lounge; }
+  public get isLounging() {
+    return this._lounge;
+  }
   /** Open Bobo's Hideout mode (placement first, if the scene isn't placed yet). @zui */
-  public enterHideout() { this._enterHideout(); }
+  public enterHideout() {
+    this._enterHideout();
+  }
   /** Leave Bobo's Hideout mode without starting a round or the lounge. @zui */
-  public exitHideout() { this._exitHideout(); }
+  public exitHideout() {
+    this._exitHideout();
+  }
   /** True while Bobo's Hideout mode is open. */
-  public get isInHideout() { return this._hideout; }
+  public get isInHideout() {
+    return this._hideout;
+  }
   /**
    * Which Bobo's Hideout release this game file belongs to (CollectorHubMode
    * checks it matches its own HubCore.ts).
@@ -4323,37 +4516,58 @@ export class OrbHuntGame extends Group {
     this._applyUiVisibility();
   }
 
-  public get hasShell() { return !!this._shell; }
+  public get hasShell() {
+    return !!this._shell;
+  }
 
   /** Bobo's moves (the lounge actions) for an action button of the host's own. */
   public get loungeMoves() {
     return this._loungeSlots()
-      .filter(a => a.label.trim() || a.icon !== LoungeIcon.None)
-      .map(a => ({ id: String(a.n), label: a.label.trim() || `Move ${a.n}`, svg: this._loungeSvg(a.icon) }));
+      .filter((a) => a.label.trim() || a.icon !== LoungeIcon.None)
+      .map((a) => ({
+        id: String(a.n),
+        label: a.label.trim() || `Move ${a.n}`,
+        svg: this._loungeSvg(a.icon),
+      }));
   }
 
-  public loungeMove(id: string) { this._loungeAction(Number(id)); }
+  public loungeMove(id: string) {
+    this._loungeAction(Number(id));
+  }
 
   /** For the home sheet's status line. */
   public get roundStatus() {
     const target = clampInt(this.targetCount.value, 1, 999);
-    return { score: this._score, target, left: Math.max(0, target - this._score), time: this.timeRemaining };
+    return {
+      score: this._score,
+      target,
+      left: Math.max(0, target - this._score),
+      time: this.timeRemaining,
+    };
   }
 
   // eslint-disable-next-line @typescript-eslint/member-ordering -- grouped with setShell
   private _shell: { openHome(): void } | null = null;
 
   /** True during the 3-2-1 before a round (see Countdown). */
-  public get isCountingDown() { return this._cdLeft > 0; }
+  public get isCountingDown() {
+    return this._cdLeft > 0;
+  }
   /** True while a menu is holding the countdown. */
-  public get isCountdownHeld() { return this._cdLeft > 0 && this._cdHeld; }
+  public get isCountdownHeld() {
+    return this._cdLeft > 0 && this._cdHeld;
+  }
 
   /**
    * True once this device has won the digital exclusive (remembered), so a
    * home screen can always lead back to How to claim.
    */
   public get rewardEarned() {
-    try { return localStorage.getItem("ohg-reward-earned") === "1"; } catch { return this._earned; }
+    try {
+      return localStorage.getItem("ohg-reward-earned") === "1";
+    } catch {
+      return this._earned;
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/member-ordering -- the countdown's state
@@ -4379,9 +4593,13 @@ export class OrbHuntGame extends Group {
    * takes over. Bobo's Hideout uses it for his build-in and room animations.
    * Needs Lounge Character set. @zui
    */
-  public playCharacterClip(id?: string) { this._playLoungeClip(id); }
+  public playCharacterClip(id?: string) {
+    this._playLoungeClip(id);
+  }
   /** True while the intro / how-to-play card is open. */
-  public get isIntroOpen() { return !!this._introWrap?.classList.contains("on"); }
+  public get isIntroOpen() {
+    return !!this._introWrap?.classList.contains("on");
+  }
 
   /**
    * Log what the custom-pickup path actually did, in your scene.
@@ -4403,19 +4621,23 @@ export class OrbHuntGame extends Group {
     const src = this._pickupSource();
     const P = "[OrbHuntGame]";
 
-    console.log(`${P} Pickup Kind: ${kind} | Pickup Model prop: ` +
-      `${this.constructorProps.pickupModel || "(empty)"} | Pickup Image prop: ` +
-      `${this.constructorProps.pickupImage || "(empty)"}`);
+    console.log(
+      `${P} Pickup Kind: ${kind} | Pickup Model prop: ` +
+        `${this.constructorProps.pickupModel || "(empty)"} | Pickup Image prop: ` +
+        `${this.constructorProps.pickupImage || "(empty)"}`,
+    );
 
     if (kind === PickupKind.Orb) {
       console.log(`${P} Pickup Kind is Orb — the shader orb is showing by design.`);
       return;
     }
     if (!src) {
-      console.warn(`${P} DIAGNOSIS: the source never arrived. Either the file ` +
-        `is still loading, the prop is empty, or the load threw — look further ` +
-        `up the console for a "failed to load" line. Orbs are showing as the ` +
-        `fallback, which is why you still see orbs.`);
+      console.warn(
+        `${P} DIAGNOSIS: the source never arrived. Either the file ` +
+          `is still loading, the prop is empty, or the load threw — look further ` +
+          `up the console for a "failed to load" line. Orbs are showing as the ` +
+          `fallback, which is why you still see orbs.`,
+      );
       return;
     }
 
@@ -4423,10 +4645,12 @@ export class OrbHuntGame extends Group {
     const d = this._describePickupSource(src);
     console.log(`${P} source: ${d.text}`);
     if (d.meshes === 0) {
-      console.warn(`${P} DIAGNOSIS: the loaded object contains no meshes, so ` +
-        `every clone is empty and nothing can render. The load succeeded — ` +
-        `this is what the file has in it. Open the same file in any glTF ` +
-        `viewer and you will see the same thing.`);
+      console.warn(
+        `${P} DIAGNOSIS: the loaded object contains no meshes, so ` +
+          `every clone is empty and nothing can render. The load succeeded — ` +
+          `this is what the file has in it. Open the same file in any glTF ` +
+          `viewer and you will see the same thing.`,
+      );
       return;
     }
 
@@ -4437,7 +4661,8 @@ export class OrbHuntGame extends Group {
       const fit = o.custom.children[0];
       const clone = fit?.children[0];
       o.group.getWorldPosition(gp);
-      if (clone) clone.getWorldPosition(cp); else cp.set(NaN, NaN, NaN);
+      if (clone) clone.getWorldPosition(cp);
+      else cp.set(NaN, NaN, NaN);
       return {
         i,
         active: o.active,
@@ -4450,48 +4675,63 @@ export class OrbHuntGame extends Group {
         driftFromOrb: clone ? +cp.distanceTo(gp).toFixed(3) : null,
       };
     });
-    const live = rows.filter(r => r.active);
+    const live = rows.filter((r) => r.active);
     console.table(live);
 
     /* Each of these is a different bug with a different fix, so say which. */
-    const built = live.filter(r => r.cloneBuilt);
+    const built = live.filter((r) => r.cloneBuilt);
     if (!built.length) {
-      console.warn(`${P} DIAGNOSIS: the source loaded but no clones were built. ` +
-        `_applyPickupKind ran before the orb pool existed, or hasn't run since ` +
-        `the file arrived.`);
+      console.warn(
+        `${P} DIAGNOSIS: the source loaded but no clones were built. ` +
+          `_applyPickupKind ran before the orb pool existed, or hasn't run since ` +
+          `the file arrived.`,
+      );
       return;
     }
     if (built.length < live.length) {
-      console.warn(`${P} DIAGNOSIS: only ${built.length} of ${live.length} live ` +
-        `pickups have a model. The rest are empty slots.`);
+      console.warn(
+        `${P} DIAGNOSIS: only ${built.length} of ${live.length} live ` +
+          `pickups have a model. The rest are empty slots.`,
+      );
     }
-    const zeroScale = built.filter(r => !r.fitScale);
+    const zeroScale = built.filter((r) => !r.fitScale);
     if (zeroScale.length) {
-      console.warn(`${P} DIAGNOSIS: ${zeroScale.length} pickup(s) have a zero ` +
-        `fit scale — fitToDiameter found no measurable geometry, so the model ` +
-        `is there but has no size.`);
+      console.warn(
+        `${P} DIAGNOSIS: ${zeroScale.length} pickup(s) have a zero ` +
+          `fit scale — fitToDiameter found no measurable geometry, so the model ` +
+          `is there but has no size.`,
+      );
     }
     // The signature of "one model at the centre that never moves": every clone
     // in the same place. N models stacked on the origin look like one.
-    const spots = new Set(built.map(r => r.modelAt));
+    const spots = new Set(built.map((r) => r.modelAt));
     if (spots.size === 1 && built.length > 1) {
-      console.warn(`${P} DIAGNOSIS: all ${built.length} pickups are at the same ` +
-        `world position (${built[0].modelAt}). That is why you see one model ` +
-        `that never moves — they are stacked. The orbs' own positions are ` +
-        `${new Set(built.map(r => r.orbAt)).size === 1 ? "ALSO identical, so the " +
-        "layout never ran" : "spread out, so the models are not following " +
-        "their orbs"}.`);
+      console.warn(
+        `${P} DIAGNOSIS: all ${built.length} pickups are at the same ` +
+          `world position (${built[0].modelAt}). That is why you see one model ` +
+          `that never moves — they are stacked. The orbs' own positions are ` +
+          `${
+            new Set(built.map((r) => r.orbAt)).size === 1
+              ? "ALSO identical, so the " + "layout never ran"
+              : "spread out, so the models are not following " + "their orbs"
+          }.`,
+      );
       return;
     }
-    const drifted = built.filter(r => (r.driftFromOrb ?? 0) > this.orbSize.value * 2);
+    const drifted = built.filter((r) => (r.driftFromOrb ?? 0) > this.orbSize.value * 2);
     if (drifted.length) {
-      console.warn(`${P} DIAGNOSIS: ${drifted.length} model(s) sit more than ` +
-        `two orb-widths from the orb they belong to, so the pickup and its ` +
-        `ground ring are in different places:`, drifted);
+      console.warn(
+        `${P} DIAGNOSIS: ${drifted.length} model(s) sit more than ` +
+          `two orb-widths from the orb they belong to, so the pickup and its ` +
+          `ground ring are in different places:`,
+        drifted,
+      );
       return;
     }
-    console.log(`${P} pickups look correct: ${built.length} model(s), each on ` +
-      `its own orb, spread across ${spots.size} position(s).`);
+    console.log(
+      `${P} pickups look correct: ${built.length} model(s), each on ` +
+        `its own orb, spread across ${spots.size} position(s).`,
+    );
     return rows;
   }
 
@@ -4517,18 +4757,20 @@ export class OrbHuntGame extends Group {
       trigger: o.trigger ? (o.trigger.enabled.value ? "enabled" : "DISABLED") : "none",
       withinReach: o.home.y + Math.abs(this.orbBob.value) <= reach,
     }));
-    const live = rows.filter(r => r.active);
+    const live = rows.filter((r) => r.active);
     console.log(
       `[OrbHuntGame] round seed ${this._roundSeed}` +
-      `${this.randomizeEachRound.value ? " (randomised each round)" : " (fixed by the Seed prop)"}`);
+        `${this.randomizeEachRound.value ? " (randomised each round)" : " (fixed by the Seed prop)"}`,
+    );
     console.log(
       `[OrbHuntGame] player reach ${reach.toFixed(2)} = offset ` +
-      `${this.playerHeightOffset.value} + radius ${this.playerRadius.value} + orb ` +
-      `${this._orbRadius().toFixed(2)} | mode ${this.collisionMode.value} | ` +
-      `player node ${this._playerObj ? "bound" : "NOT BOUND"} | ` +
-      `player trigger ${this._playerTrigger ? "present" : "none"}`);
+        `${this.playerHeightOffset.value} + radius ${this.playerRadius.value} + orb ` +
+        `${this._orbRadius().toFixed(2)} | mode ${this.collisionMode.value} | ` +
+        `player node ${this._playerObj ? "bound" : "NOT BOUND"} | ` +
+        `player trigger ${this._playerTrigger ? "present" : "none"}`,
+    );
     console.table(live);
-    const bad = live.filter(r => !r.withinReach || (r.alive && r.trigger === "DISABLED"));
+    const bad = live.filter((r) => !r.withinReach || (r.alive && r.trigger === "DISABLED"));
     if (bad.length) {
       console.warn(`[OrbHuntGame] ${bad.length} orb(s) cannot be collected:`, bad);
     } else {
@@ -4537,20 +4779,30 @@ export class OrbHuntGame extends Group {
     return rows;
   }
   /** True once the scene has been placed. */
-  public get isPlaced() { return this._placed; }
+  public get isPlaced() {
+    return this._placed;
+  }
   /**
    * The seed that produced the current layout. With Randomize Each Round on
    * this changes every round — read it back to reproduce a board a player
    * reported, by pasting it into Seed and turning randomising off.
    */
-  public get roundSeed() { return this._roundSeed; }
+  public get roundSeed() {
+    return this._roundSeed;
+  }
 
   /** Current score. */
-  public get score() { return this._score; }
+  public get score() {
+    return this._score;
+  }
   /** Seconds remaining, or Infinity when the timer is off. */
-  public get timeRemaining() { return this.timerEnabled.value ? this._timeLeft : Infinity; }
+  public get timeRemaining() {
+    return this.timerEnabled.value ? this._timeLeft : Infinity;
+  }
   /** Where the round is up to. */
-  public get gameState() { return this._state; }
+  public get gameState() {
+    return this._state;
+  }
 
   /* ══ Internals ══════════════════════════════════════════════════════ */
 
@@ -4762,13 +5014,18 @@ export class OrbHuntGame extends Group {
   private _lounge = false;
   private _hideout = false;
   /** Neither mode has a round: no orbs, no clock, no score. */
-  private get _noRound() { return this._lounge || this._hideout; }
+  private get _noRound() {
+    return this._lounge || this._hideout;
+  }
   private _loungeWrap!: HTMLDivElement;
 
   private readonly _v1 = new THREE.Vector3();
   private readonly _v2 = new THREE.Vector3();
 
-  constructor(contextManager: ContextManager, public constructorProps: ConstructorProps) {
+  constructor(
+    contextManager: ContextManager,
+    public constructorProps: ConstructorProps,
+  ) {
     super(contextManager, constructorProps);
 
     /* ── materials ────────────────────────────────────────────────────
@@ -4866,7 +5123,9 @@ export class OrbHuntGame extends Group {
     // WebXR swaps it), so track the observable rather than reading it once.
     const cam = useCamera(contextManager);
     this._camera = cam.value;
-    this.register(cam, c => { this._camera = c; });
+    this.register(cam, (c) => {
+      this._camera = c;
+    });
 
     this._buildUi(contextManager);
     this._layout();
@@ -4905,7 +5164,7 @@ export class OrbHuntGame extends Group {
     });
 
     // dt arrives in milliseconds.
-    this.register(useOnBeforeRender(contextManager), dt => this._tick(dt * 0.001));
+    this.register(useOnBeforeRender(contextManager), (dt) => this._tick(dt * 0.001));
   }
 
   /* ── construction helpers ─────────────────────────────────────────── */
@@ -4940,9 +5199,17 @@ export class OrbHuntGame extends Group {
     this.element.add(group);
 
     return {
-      group, inner, mesh, glow, beacon, custom,
-      home: new THREE.Vector3(), phase: 0,
-      alive: false, active: false, burst: 0,
+      group,
+      inner,
+      mesh,
+      glow,
+      beacon,
+      custom,
+      home: new THREE.Vector3(),
+      phase: 0,
+      alive: false,
+      active: false,
+      burst: 0,
     };
   }
 
@@ -4964,18 +5231,26 @@ export class OrbHuntGame extends Group {
       const gltf = new GLTF(mgr, { source: modelSrc, frustumCulled: false });
       this._pickupGltf = gltf;
       gltf.loaded
-        .then(() => { this._pickupModel = gltf.element; this._applyPickupKind(); })
+        .then(() => {
+          this._pickupModel = gltf.element;
+          this._applyPickupKind();
+        })
         .catch((e: unknown) =>
-          console.warn(`[OrbHuntGame] Pickup Model failed to load (${modelSrc}):`, e));
+          console.warn(`[OrbHuntGame] Pickup Model failed to load (${modelSrc}):`, e),
+        );
     }
     if (imageSrc) {
       const img = new ZImage(mgr, { source: imageSrc, transparent: true });
       this._pickupImage = img;
       // Image exposes its load as a method rather than a promise property.
       Promise.resolve(img._load())
-        .then(() => { this._pickupImageObj = img.element; this._applyPickupKind(); })
+        .then(() => {
+          this._pickupImageObj = img.element;
+          this._applyPickupKind();
+        })
         .catch((e: unknown) =>
-          console.warn(`[OrbHuntGame] Pickup Image failed to load (${imageSrc}):`, e));
+          console.warn(`[OrbHuntGame] Pickup Image failed to load (${imageSrc}):`, e),
+        );
     }
   }
 
@@ -4996,10 +5271,11 @@ export class OrbHuntGame extends Group {
    * three Empties and a camera in it".
    */
   private _describePickupSource(src: THREE.Object3D) {
-    let meshes = 0, nodes = 0;
+    let meshes = 0,
+      nodes = 0;
     const kinds = new Map<string, number>();
     const names: string[] = [];
-    src.traverse(c => {
+    src.traverse((c) => {
       nodes++;
       kinds.set(c.type, (kinds.get(c.type) ?? 0) + 1);
       if ((c as THREE.Mesh).geometry) meshes++;
@@ -5026,9 +5302,12 @@ export class OrbHuntGame extends Group {
   /** Which source object the current Pickup Kind wants, if it has arrived. */
   private _pickupSource() {
     switch (this.pickupKind.value) {
-      case PickupKind.Model: return this._pickupModel;
-      case PickupKind.Image: return this._pickupImageObj;
-      default: return undefined;
+      case PickupKind.Model:
+        return this._pickupModel;
+      case PickupKind.Image:
+        return this._pickupImageObj;
+      default:
+        return undefined;
     }
   }
 
@@ -5041,12 +5320,16 @@ export class OrbHuntGame extends Group {
       // Either the file is still loading or none was set. Stay on orbs rather
       // than showing an empty board, and say which it is.
       const prop = kind === PickupKind.Model ? "Pickup Model" : "Pickup Image";
-      const set = kind === PickupKind.Model
-        ? this.constructorProps.pickupModel : this.constructorProps.pickupImage;
+      const set =
+        kind === PickupKind.Model
+          ? this.constructorProps.pickupModel
+          : this.constructorProps.pickupImage;
       if (!set && !this._warnedPickup) {
         this._warnedPickup = true;
-        console.warn(`[OrbHuntGame] Pickup Kind is ${kind} but no ${prop} is set — ` +
-                     `showing orbs. Pick a file in Constructor Props.`);
+        console.warn(
+          `[OrbHuntGame] Pickup Kind is ${kind} but no ${prop} is set — ` +
+            `showing orbs. Pick a file in Constructor Props.`,
+        );
       }
     }
 
@@ -5061,7 +5344,9 @@ export class OrbHuntGame extends Group {
         // Sharing any two of those means one silently overwrites the other.
         const fit = new THREE.Group();
         const clone = src!.clone(true);
-        clone.traverse(c => { c.raycast = () => undefined; });
+        clone.traverse((c) => {
+          c.raycast = () => undefined;
+        });
         fit.add(clone);
         o.custom.add(fit);
       }
@@ -5091,12 +5376,16 @@ export class OrbHuntGame extends Group {
   private _warnSkinned(src: THREE.Object3D) {
     if (this._warnedSkinned) return;
     let skinned = false;
-    src.traverse(c => { if ((c as THREE.SkinnedMesh).isSkinnedMesh) skinned = true; });
+    src.traverse((c) => {
+      if ((c as THREE.SkinnedMesh).isSkinnedMesh) skinned = true;
+    });
     if (!skinned) return;
     this._warnedSkinned = true;
-    console.warn("[OrbHuntGame] The pickup model is rigged. Clones share the " +
-                 "original skeleton, so every pickup renders in bind pose and " +
-                 "none of them animate. Export a static mesh for pickups.");
+    console.warn(
+      "[OrbHuntGame] The pickup model is rigged. Clones share the " +
+        "original skeleton, so every pickup renders in bind pose and " +
+        "none of them animate. Export a static mesh for pickups.",
+    );
   }
 
   /* ── triggers ─────────────────────────────────────────────────────── */
@@ -5112,7 +5401,7 @@ export class OrbHuntGame extends Group {
     for (const o of this._orbs) {
       if (wantTriggers && !o.trigger) {
         const t = new SphereTrigger(this.contextManager, {});
-        t.isTrigger.value = true;                // orbs are the triggers…
+        t.isTrigger.value = true; // orbs are the triggers…
         t.tags.value = [this.triggerTag.value];
         o.group.add(t.element);
         o.onHit = (evt: CollisionEvent) => {
@@ -5135,7 +5424,7 @@ export class OrbHuntGame extends Group {
 
     if (wantTriggers && !this._playerTrigger && this._playerObj) {
       const t = new SphereTrigger(this.contextManager, {});
-      t.isTrigger.value = false;               // …and the player is the collider
+      t.isTrigger.value = false; // …and the player is the collider
       t.tags.value = [this.triggerTag.value];
       this._playerObj.add(t.element);
       this._playerTrigger = t;
@@ -5250,8 +5539,10 @@ export class OrbHuntGame extends Group {
     const sep2 = this.minSeparation.value * this.minSeparation.value;
     // A cohesion cap below the separation floor is unsatisfiable, so raise it
     // rather than spin through 40 doomed samples per orb.
-    const cohere = this.maxSpacing.value > 0
-      ? Math.max(this.maxSpacing.value, this.minSeparation.value * 1.15) : 0;
+    const cohere =
+      this.maxSpacing.value > 0
+        ? Math.max(this.maxSpacing.value, this.minSeparation.value * 1.15)
+        : 0;
     const cohere2 = cohere * cohere;
     const placed: THREE.Vector3[] = [];
     const reach = this._spawnCeiling();
@@ -5277,7 +5568,10 @@ export class OrbHuntGame extends Group {
        * that fits — with a cohesion cap, first-fit degenerates to "whatever
        * the 40th sample was", which is the one place the field looks worst.
        */
-      let px = 0, pz = 0, py = 0, bestScore = -Infinity;
+      let px = 0,
+        pz = 0,
+        py = 0,
+        bestScore = -Infinity;
       for (let attempt = 0; attempt < 40; attempt++) {
         const ang = rnd() * Math.PI * 2;
         const area = this.spawnArea.value;
@@ -5298,8 +5592,8 @@ export class OrbHuntGame extends Group {
         }
         // 1 means "satisfied"; below 1 says how badly it misses.
         const sepOk = placed.length === 0 || sep2 <= 0 ? 1 : nearest2 / sep2;
-        const cohOk = placed.length === 0 || cohere2 <= 0 ? 1
-          : Math.min(1, cohere2 / Math.max(nearest2, 1e-6));
+        const cohOk =
+          placed.length === 0 || cohere2 <= 0 ? 1 : Math.min(1, cohere2 / Math.max(nearest2, 1e-6));
         /*
          * Clearing the player is worth more than spacing.
          *
@@ -5308,10 +5602,17 @@ export class OrbHuntGame extends Group {
          * can short for no visible reason — so when the two constraints fight,
          * this is the one that wins. Weighted x3 against separation's x2.
          */
-        const plrOk = keepOut2 === null ? 1 : Math.min(1,
-          ((cx - this._v1.x) ** 2 + (cz - this._v1.z) ** 2) / keepOut2);
+        const plrOk =
+          keepOut2 === null
+            ? 1
+            : Math.min(1, ((cx - this._v1.x) ** 2 + (cz - this._v1.z) ** 2) / keepOut2);
         const score = Math.min(sepOk, 1) * 2 + cohOk + plrOk * 3;
-        if (score > bestScore) { bestScore = score; px = cx; pz = cz; py = cy; }
+        if (score > bestScore) {
+          bestScore = score;
+          px = cx;
+          pz = cz;
+          py = cy;
+        }
         if (sepOk >= 1 && cohOk >= 1 && plrOk >= 1) break;
       }
 
@@ -5358,10 +5659,11 @@ export class OrbHuntGame extends Group {
       this._warnedReach = true;
       console.warn(
         `[OrbHuntGame] Some orbs spawned above the player's reach (${reach.toFixed(2)}) ` +
-        `and were lowered. Reach = Player Height Offset (${this.playerHeightOffset.value}) ` +
-        `+ Player Pickup Radius (${this.playerRadius.value}) + orb radius ` +
-        `(${this._orbRadius().toFixed(2)}). Lower Spawn Height / Spawn Height Jitter, ` +
-        `or raise one of those, to place them where you intended.`);
+          `and were lowered. Reach = Player Height Offset (${this.playerHeightOffset.value}) ` +
+          `+ Player Pickup Radius (${this.playerRadius.value}) + orb radius ` +
+          `(${this._orbRadius().toFixed(2)}). Lower Spawn Height / Spawn Height Jitter, ` +
+          `or raise one of those, to place them where you intended.`,
+      );
     }
 
     this._sizeOrbTriggers();
@@ -5388,19 +5690,22 @@ export class OrbHuntGame extends Group {
     // used to hardcode its own 1.5 and the two could drift apart.
     const keepOut2 = this._playerKeepOut(this._v1);
 
-    let bestX = 0, bestZ = 0, bestPy = this.spawnHeight.value, bestScore = -Infinity;
+    let bestX = 0,
+      bestZ = 0,
+      bestPy = this.spawnHeight.value,
+      bestScore = -Infinity;
     for (let attempt = 0; attempt < 14; attempt++) {
       const ang = rnd() * Math.PI * 2;
-      const rad = this.spawnArea.value === SpawnArea.Ring
-        ? maxR : annulusRadius(rnd, minR, maxR);
-      const px = Math.cos(ang) * rad, pz = Math.sin(ang) * rad;
+      const rad = this.spawnArea.value === SpawnArea.Ring ? maxR : annulusRadius(rnd, minR, maxR);
+      const px = Math.cos(ang) * rad,
+        pz = Math.sin(ang) * rad;
       const py = this.spawnHeight.value + (rnd() - 0.5) * 2 * this.spawnHeightJitter.value;
 
       // Infinity, not 0, when there is nobody to avoid: this term is a MIN
       // over constraints, so an unsatisfiable-looking 0 would pin every score
       // at zero and the best-of-N would collapse to the first sample.
-      const plr = keepOut2 === null ? Infinity
-        : ((px - this._v1.x) ** 2 + (pz - this._v1.z) ** 2) / keepOut2;
+      const plr =
+        keepOut2 === null ? Infinity : ((px - this._v1.x) ** 2 + (pz - this._v1.z) ** 2) / keepOut2;
       let dOrb = Infinity;
       for (const q of this._orbs) {
         if (q === o || !q.active || !q.alive) continue;
@@ -5409,26 +5714,25 @@ export class OrbHuntGame extends Group {
       // Score a candidate by how comfortably it clears every constraint, and
       // keep the best. First-fit would fall back to the LAST sample when every
       // one clashes, which on a crowded board is the worst of them.
-      const cohere = this.maxSpacing.value > 0
-        ? Math.max(this.maxSpacing.value, this.minSeparation.value * 1.15) : 0;
-      const cohesion = cohere > 0 && isFinite(dOrb)
-        ? Math.min(1, (cohere * cohere) / Math.max(dOrb, 1e-6)) : 1;
-      const score = Math.min(
-        plr,
-        sep2 > 0 ? dOrb / sep2 : Infinity,
-        cohesion,
-      );
-      if (score > bestScore) { bestScore = score; bestX = px; bestZ = pz; bestPy = py; }
+      const cohere =
+        this.maxSpacing.value > 0
+          ? Math.max(this.maxSpacing.value, this.minSeparation.value * 1.15)
+          : 0;
+      const cohesion =
+        cohere > 0 && isFinite(dOrb) ? Math.min(1, (cohere * cohere) / Math.max(dOrb, 1e-6)) : 1;
+      const score = Math.min(plr, sep2 > 0 ? dOrb / sep2 : Infinity, cohesion);
+      if (score > bestScore) {
+        bestScore = score;
+        bestX = px;
+        bestZ = pz;
+        bestPy = py;
+      }
       if (score >= 1) break;
     }
 
-    o.home.set(
-      bestX,
-      Math.max(0.05, Math.min(bestPy, this._spawnCeiling())),
-      bestZ,
-    );
+    o.home.set(bestX, Math.max(0.05, Math.min(bestPy, this._spawnCeiling())), bestZ);
     o.group.position.copy(o.home);
-    o.active = true;              // a respawn must restore every flag _layout sets
+    o.active = true; // a respawn must restore every flag _layout sets
     o.alive = true;
     o.burst = 0;
     o.group.visible = !this._noRound;
@@ -5548,8 +5852,12 @@ export class OrbHuntGame extends Group {
       ? `Grab ${target} ${what} in ${Math.round(this.roundTime.value)} seconds`
       : `Grab ${target} ${what}`;
     if (go)
-      this._play(this._sfxCollect, this.constructorProps.collectSound,
-                 () => this._audio?.collect(4, this.collectPitchStep.value), 1.3);
+      this._play(
+        this._sfxCollect,
+        this.constructorProps.collectSound,
+        () => this._audio?.collect(4, this.collectPitchStep.value),
+        1.3,
+      );
     else this._play(this._sfxWarn, this.constructorProps.warningSound, () => this._audio?.warn());
   }
 
@@ -5580,7 +5888,7 @@ export class OrbHuntGame extends Group {
   private _newRoundSeed() {
     this._roundSeed = this.randomizeEachRound.value
       ? (Math.random() * 4294967296) >>> 0
-      : (this.seed.value | 0);
+      : this.seed.value | 0;
     this._rng = mulberry32(this._roundSeed ^ 0x9e3779b9);
   }
 
@@ -5603,8 +5911,9 @@ export class OrbHuntGame extends Group {
     this._layout();
     this._applyPortalVisibility();
     // Back to Placing if the scene still needs placing, otherwise Idle.
-    this._setState(this.placementEnabled.value && !this._placed
-      ? GameState.Placing : GameState.Idle);
+    this._setState(
+      this.placementEnabled.value && !this._placed ? GameState.Placing : GameState.Idle,
+    );
     this.onGameReset.emit();
   }
 
@@ -5618,8 +5927,12 @@ export class OrbHuntGame extends Group {
 
     const step = this.collectPitchStep.value;
     const speed = 1 + step * Math.min(this._streak - 1, 12);
-    this._play(this._sfxCollect, this.constructorProps.collectSound,
-               () => this._audio?.collect(this._streak, step), speed);
+    this._play(
+      this._sfxCollect,
+      this.constructorProps.collectSound,
+      () => this._audio?.collect(this._streak, step),
+      speed,
+    );
 
     this.onOrbCollected.emit({ score: this._score, target: this.targetCount.value });
     this._syncHud();
@@ -5632,7 +5945,11 @@ export class OrbHuntGame extends Group {
     this._setState(GameState.Won);
     if (this.rewardEnabled.value) {
       this._earned = true;
-      try { localStorage.setItem("ohg-reward-earned", "1"); } catch { /* private mode */ }
+      try {
+        localStorage.setItem("ohg-reward-earned", "1");
+      } catch {
+        /* private mode */
+      }
     }
     this._play(this._sfxWin, this.constructorProps.winSound, () => this._audio?.win());
     this._portalHum(true);
@@ -5685,9 +6002,12 @@ export class OrbHuntGame extends Group {
       // screen, and overlapping them there reads as a layout bug.
       this._rwBadgeHideAt = this._time + dur + 4.25;
       this._rwBadge.classList.remove("on");
-      window.setTimeout(() => {
-        if (this._rwBadgeHideAt > 0) this._rwBadge.classList.add("on");
-      }, Math.round(dur * 1000 + 250));
+      window.setTimeout(
+        () => {
+          if (this._rwBadgeHideAt > 0) this._rwBadge.classList.add("on");
+        },
+        Math.round(dur * 1000 + 250),
+      );
     }
 
     /*
@@ -5702,8 +6022,7 @@ export class OrbHuntGame extends Group {
       this._rwModalAt = this._time + runsFirst + gap;
     }
 
-    this._play(this._sfxReward, this.constructorProps.rewardSound,
-               () => this._audio?.reward());
+    this._play(this._sfxReward, this.constructorProps.rewardSound, () => this._audio?.reward());
     this._playClip(this.rewardTimeline.value);
     this.onRewardShown.emit();
   }
@@ -5729,33 +6048,42 @@ export class OrbHuntGame extends Group {
     const link = this.step1Link.value.trim();
     const code = this.claimCode.value.trim();
     let n = 0;
-    return steps.filter(([t, img]) => t.trim() || img.trim()).map(([text, img], i) => {
-      n++;
-      const isFirst = i === 0;
-      // The code goes with whichever step actually names it, so moving the
-      // wording between steps doesn't strand the chip on the wrong one.
-      const showsCode = !!code && text.includes(code);
-      const body = showsCode
-        ? E(text).replace(E(code),
-            `<button class="ohg-stepCode" type="button" data-code="1">${E(code)}</button>`)
-        : E(text);
-      return `<li class="ohg-step">
+    return steps
+      .filter(([t, img]) => t.trim() || img.trim())
+      .map(([text, img], i) => {
+        n++;
+        const isFirst = i === 0;
+        // The code goes with whichever step actually names it, so moving the
+        // wording between steps doesn't strand the chip on the wrong one.
+        const showsCode = !!code && text.includes(code);
+        const body = showsCode
+          ? E(text).replace(
+              E(code),
+              `<button class="ohg-stepCode" type="button" data-code="1">${E(code)}</button>`,
+            )
+          : E(text);
+        return `<li class="ohg-step">
           <span class="ohg-stepNum" aria-hidden="true">${n}</span>
           <div class="ohg-stepBody">
             <p class="ohg-stepText">${body}</p>
-            ${isFirst && link
-              ? `<a class="ohg-stepLink" href="${E(link)}" target="_blank" rel="noopener">` +
-                `${E(this.step1LinkLabel.value.trim() || "Open link")}</a>` : ""}
-            ${img.trim()
-              // A button, not a bare <img>: the screenshots carry the detail
-              // people came for (a menu corner, a code field) and at step
-              // width they're too small to read, so tapping one has to open
-              // it. Making the wrapper a real control gets keyboard focus,
-              // Enter/Space and a screen-reader name for free — a click
-              // handler on an <img> gets none of those.
-              ? `<button class="ohg-shot" type="button" data-shot="${E(img)}"
-                         aria-label="${E(this.imageViewerOpenLabel.value.trim()
-                                        || "View image full screen")}">
+            ${
+              isFirst && link
+                ? `<a class="ohg-stepLink" href="${E(link)}" target="_blank" rel="noopener">` +
+                  `${E(this.step1LinkLabel.value.trim() || "Open link")}</a>`
+                : ""
+            }
+            ${
+              img.trim()
+                ? // A button, not a bare <img>: the screenshots carry the detail
+                  // people came for (a menu corner, a code field) and at step
+                  // width they're too small to read, so tapping one has to open
+                  // it. Making the wrapper a real control gets keyboard focus,
+                  // Enter/Space and a screen-reader name for free — a click
+                  // handler on an <img> gets none of those.
+                  `<button class="ohg-shot" type="button" data-shot="${E(img)}"
+                         aria-label="${E(
+                           this.imageViewerOpenLabel.value.trim() || "View image full screen",
+                         )}">
                    <img class="ohg-stepImg" src="${E(img)}" alt="" loading="lazy" />
                    <span class="ohg-shotHint" aria-hidden="true">
                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -5763,10 +6091,13 @@ export class OrbHuntGame extends Group {
                        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/>
                      </svg>
                    </span>
-                 </button>` : ""}
+                 </button>`
+                : ""
+            }
           </div>
         </li>`;
-    }).join("");
+      })
+      .join("");
   }
 
   /**
@@ -5784,7 +6115,7 @@ export class OrbHuntGame extends Group {
 
   /** Copy the claim code, and say so — a silent copy reads as a dead button. */
   private _bindStepCodes(root: HTMLElement) {
-    root.querySelectorAll<HTMLButtonElement>(".ohg-stepCode").forEach(btn => {
+    root.querySelectorAll<HTMLButtonElement>(".ohg-stepCode").forEach((btn) => {
       btn.addEventListener("click", () => {
         const code = this.claimCode.value.trim();
         const done = () => {
@@ -5810,7 +6141,7 @@ export class OrbHuntGame extends Group {
 
   /** Every step screenshot opens the viewer. */
   private _bindStepShots(root: HTMLElement) {
-    root.querySelectorAll<HTMLButtonElement>(".ohg-shot").forEach(btn => {
+    root.querySelectorAll<HTMLButtonElement>(".ohg-shot").forEach((btn) => {
       btn.addEventListener("click", () => this._openImage(btn.dataset.shot ?? "", btn));
     });
   }
@@ -5857,8 +6188,10 @@ export class OrbHuntGame extends Group {
       zoom.setAttribute("aria-pressed", String(on));
       zoom.setAttribute("aria-label", on ? "Fit image to screen" : "Zoom in");
     }
-    if (frame && !on) { frame.scrollLeft = 0; frame.scrollTop = 0; }
-    else if (frame && on) {
+    if (frame && !on) {
+      frame.scrollLeft = 0;
+      frame.scrollTop = 0;
+    } else if (frame && on) {
       // Zooming to the top-left corner of a screenshot is disorienting.
       // Centre it, and let the reader scroll out to whichever edge they want.
       frame.scrollLeft = (frame.scrollWidth - frame.clientWidth) / 2;
@@ -5933,10 +6266,14 @@ export class OrbHuntGame extends Group {
   }
 
   /** Open the How To Claim screen. @zui */
-  public showInstructions() { this._openInstructions(); }
+  public showInstructions() {
+    this._openInstructions();
+  }
 
   /** Close the How To Claim screen. @zui */
-  public hideInstructions() { this._closeInstructions(); }
+  public hideInstructions() {
+    this._closeInstructions();
+  }
 
   /** True while the How To Claim screen is on. @zui */
   public instructionsOpen() {
@@ -5997,10 +6334,14 @@ export class OrbHuntGame extends Group {
   }
 
   /** Show the timeout panel now, without losing a round. @zui */
-  public showTimeoutModal() { this._openTimeout(); }
+  public showTimeoutModal() {
+    this._openTimeout();
+  }
 
   /** Hide the timeout panel immediately. @zui */
-  public hideTimeoutModal() { this._closeTimeout(); }
+  public hideTimeoutModal() {
+    this._closeTimeout();
+  }
 
   private _openRewardModal() {
     if (!this._rwModalWrap || !this.uiEnabled.value) return;
@@ -6028,8 +6369,7 @@ export class OrbHuntGame extends Group {
 
   private _syncRewardModal() {
     if (!this._rwModalWrap) return;
-    const q = <T extends HTMLElement>(sel: string) =>
-      this._rwModalWrap.querySelector(sel) as T;
+    const q = <T extends HTMLElement>(sel: string) => this._rwModalWrap.querySelector(sel) as T;
     const set = (sel: string, text: string) => {
       const el = q<HTMLElement>(sel);
       el.textContent = text;
@@ -6083,22 +6423,19 @@ export class OrbHuntGame extends Group {
     // Gated on Lounge Mode itself as well as its own toggle: a row leading to
     // a mode that doesn't exist is worse than no row.
     lounge.style.display =
-      this.rewardModalLounge.value && this.loungeEnabled.value && loungeLabel
-        ? "" : "none";
+      this.rewardModalLounge.value && this.loungeEnabled.value && loungeLabel ? "" : "none";
 
     const replay = q<HTMLButtonElement>(".ohg-rwmReplay");
     const replayLabel = this.rewardModalReplayLabel.value.trim();
     replay.textContent = replayLabel;
-    replay.style.display =
-      this.rewardModalReplay.value && replayLabel ? "" : "none";
+    replay.style.display = this.rewardModalReplay.value && replayLabel ? "" : "none";
 
     const claim = q<HTMLButtonElement>(".ohg-rwmClaim");
-    const redundant = asSteps &&
-      this.rewardModalButtonAction.value === RewardClaimAction.Instructions;
+    const redundant =
+      asSteps && this.rewardModalButtonAction.value === RewardClaimAction.Instructions;
     (claim.querySelector(".ohg-claimLbl") as HTMLElement).textContent =
       this.rewardModalButtonLabel.value;
-    claim.style.display =
-      !redundant && this.rewardModalButtonLabel.value.trim() ? "" : "none";
+    claim.style.display = !redundant && this.rewardModalButtonLabel.value.trim() ? "" : "none";
   }
 
   private _syncRewardModalTheme() {
@@ -6138,9 +6475,8 @@ export class OrbHuntGame extends Group {
       Math.round(Math.max(0, Math.min(1, claim[1])) * 255),
       Math.round(Math.max(0, Math.min(1, claim[2])) * 255),
     ];
-    const lift = (k: number) =>
-      cr.map(v => Math.round(v + (255 - v) * k)).join(",");
-    const sink = (k: number) => cr.map(v => Math.round(v * k)).join(",");
+    const lift = (k: number) => cr.map((v) => Math.round(v + (255 - v) * k)).join(",");
+    const sink = (k: number) => cr.map((v) => Math.round(v * k)).join(",");
     st.setProperty("--ohg-rwmClaimRgb", cr.join(","));
     st.setProperty("--ohg-rwmClaimLight", `rgb(${lift(0.22)})`);
     st.setProperty("--ohg-rwmClaimDeep", `rgb(${sink(0.86)})`);
@@ -6150,11 +6486,14 @@ export class OrbHuntGame extends Group {
     st.setProperty("--ohg-rwmClaimOn", bestTextOn(cr));
 
     const lounge = this.loungeAccent.value;
-    st.setProperty("--ohg-rwmLoungeRgb", [
-      Math.round(Math.max(0, Math.min(1, lounge[0])) * 255),
-      Math.round(Math.max(0, Math.min(1, lounge[1])) * 255),
-      Math.round(Math.max(0, Math.min(1, lounge[2])) * 255),
-    ].join(","));
+    st.setProperty(
+      "--ohg-rwmLoungeRgb",
+      [
+        Math.round(Math.max(0, Math.min(1, lounge[0])) * 255),
+        Math.round(Math.max(0, Math.min(1, lounge[1])) * 255),
+        Math.round(Math.max(0, Math.min(1, lounge[2])) * 255),
+      ].join(","),
+    );
 
     this._rwModalWrap.classList.toggle("ohg-rwmSpinning", this.rewardModalAnimate.value);
     this._rwModalWrap.classList.toggle("ohg-rwmFrosted", this.rewardModalGlass.value);
@@ -6228,7 +6567,7 @@ export class OrbHuntGame extends Group {
   };
 
   private _duckHud(on: boolean) {
-    [this._scoreWrap, this._timeWrap].forEach(e => e?.classList.toggle("ohg-ducked", on));
+    [this._scoreWrap, this._timeWrap].forEach((e) => e?.classList.toggle("ohg-ducked", on));
   }
 
   private _hideReward(immediate = false) {
@@ -6246,7 +6585,7 @@ export class OrbHuntGame extends Group {
     if (immediate) {
       // Skip the exit transition entirely — used by reset, where the next
       // round shouldn't inherit a fading celebration.
-      [this._rwWord, this._rwBadge].forEach(e => {
+      [this._rwWord, this._rwBadge].forEach((e) => {
         e.classList.add("ohg-noAnim");
         void e.offsetWidth;
         e.classList.remove("ohg-noAnim");
@@ -6293,14 +6632,15 @@ export class OrbHuntGame extends Group {
     if (!this._rwWord) return;
     const t = this._rewardWrap.querySelector(".ohg-rwTitle") as HTMLElement | null;
     if (!t || !t.textContent) return;
-    if (this._rwWord.clientWidth <= 0) return;     // not laid out yet
+    if (this._rwWord.clientWidth <= 0) return; // not laid out yet
     // Iterative, because the plate's padding is in em: shrinking the type also
     // shrinks the box around it, so one division lands a few pixels out. Two
     // passes is normally enough; four is the safety net.
     let scale = 1;
     this._rwWord.style.setProperty("--ohg-rwScale", "1");
     for (let i = 0; i < 4; i++) {
-      const avail = t.clientWidth, need = t.scrollWidth;
+      const avail = t.clientWidth,
+        need = t.scrollWidth;
       if (!need || !avail || need <= avail) break;
       scale = Math.max(0.18, scale * (avail / need) * 0.985);
       this._rwWord.style.setProperty("--ohg-rwScale", scale.toFixed(4));
@@ -6328,27 +6668,38 @@ export class OrbHuntGame extends Group {
       ` stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     switch (i) {
       case RewardIcon.Trophy:
-        return S(`<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/>` +
-                 `<path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M12 14v3"/><path d="M9 20h6"/>` +
-                 `<path d="M10 17h4l1 3H9l1-3z"/>`);
+        return S(
+          `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/>` +
+            `<path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M12 14v3"/><path d="M9 20h6"/>` +
+            `<path d="M10 17h4l1 3H9l1-3z"/>`,
+        );
       case RewardIcon.Medal:
-        return S(`<circle cx="12" cy="14.5" r="5.5"/><path d="m8.5 9.5-3-6.5h5l2 4"/>` +
-                 `<path d="m15.5 9.5 3-6.5h-5l-2 4"/><path d="m12 12 .9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1` +
-                 `.4-2L8.7 14.2l2-.3L12 12z"/>`);
+        return S(
+          `<circle cx="12" cy="14.5" r="5.5"/><path d="m8.5 9.5-3-6.5h5l2 4"/>` +
+            `<path d="m15.5 9.5 3-6.5h-5l-2 4"/><path d="m12 12 .9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1` +
+            `.4-2L8.7 14.2l2-.3L12 12z"/>`,
+        );
       case RewardIcon.Star:
-        return S(`<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`);
+        return S(
+          `<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`,
+        );
       case RewardIcon.Bolt:
         return S(`<path d="M13.5 2 4 13.5h6L9.5 22 20 10.5h-6.5L13.5 2z"/>`);
       case RewardIcon.Orb:
         return `<span class="ohg-rwOrb" aria-hidden="true"></span>`;
       case RewardIcon.Gift:
-        return S(`<rect x="3" y="9" width="18" height="12" rx="1.6"/><path d="M3 13.5h18"/>` +
-                 `<path d="M12 9v12"/><path d="M12 9S10.5 3 8 3a2.4 2.4 0 0 0 0 6"/>` +
-                 `<path d="M12 9s1.5-6 4-6a2.4 2.4 0 0 1 0 6"/>`);
+        return S(
+          `<rect x="3" y="9" width="18" height="12" rx="1.6"/><path d="M3 13.5h18"/>` +
+            `<path d="M12 9v12"/><path d="M12 9S10.5 3 8 3a2.4 2.4 0 0 0 0 6"/>` +
+            `<path d="M12 9s1.5-6 4-6a2.4 2.4 0 0 1 0 6"/>`,
+        );
       case RewardIcon.Sparkle:
-        return S(`<path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5L3.5 11 10 9l2-6.5z"/>` +
-                 `<path d="M19 3.5 19.8 6l2.5.8-2.5.8L19 10l-.8-2.4L15.7 6.8 18.2 6 19 3.5z"/>`);
-      default: return "";
+        return S(
+          `<path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5L3.5 11 10 9l2-6.5z"/>` +
+            `<path d="M19 3.5 19.8 6l2.5.8-2.5.8L19 10l-.8-2.4L15.7 6.8 18.2 6 19 3.5z"/>`,
+        );
+      default:
+        return "";
     }
   }
 
@@ -6456,8 +6807,11 @@ export class OrbHuntGame extends Group {
     if (on === this._humPlaying) return;
     this._humPlaying = on;
     if (this.constructorProps.portalHumSound) {
-      if (on) { this._sfxHum.loop.value = true; this._sfxHum.seek(0); this._sfxHum.play(); }
-      else this._sfxHum.stop();
+      if (on) {
+        this._sfxHum.loop.value = true;
+        this._sfxHum.seek(0);
+        this._sfxHum.play();
+      } else this._sfxHum.stop();
     } else {
       this._audio?.portalHum(on);
     }
@@ -6465,13 +6819,16 @@ export class OrbHuntGame extends Group {
 
   /** Music comes from a file when one is supplied, otherwise from the synth. */
   private _applyMusicSource() {
-    const gate = this.musicStart.value === MusicStart.OnLoad
-      || (this._state !== GameState.Idle && this._state !== GameState.Placing);
+    const gate =
+      this.musicStart.value === MusicStart.OnLoad ||
+      (this._state !== GameState.Idle && this._state !== GameState.Placing);
     const on = this.musicEnabled.value && gate;
     if (this.constructorProps.musicTrack) {
       this._audio?.setMusic(false);
-      if (on) { this._sfxMusic.loop.value = true; this._sfxMusic.play({ loop: true }); }
-      else this._sfxMusic.stop();
+      if (on) {
+        this._sfxMusic.loop.value = true;
+        this._sfxMusic.play({ loop: true });
+      } else this._sfxMusic.stop();
     } else {
       this._sfxMusic.stop();
       this._audio?.setMusic(on);
@@ -6577,8 +6934,8 @@ export class OrbHuntGame extends Group {
     this._loungeClipId = id;
     this._playClip(id);
     const after = runningAnimKeys(models);
-    this._loungeAnims = new Set([...after].filter(k => !before.has(k)));
-    this._loungeAmbient = new Set([...before].filter(k => after.has(k)));
+    this._loungeAnims = new Set([...after].filter((k) => !before.has(k)));
+    this._loungeAmbient = new Set([...before].filter((k) => after.has(k)));
     this._loungeClipStreams = this._clipStreamObjects(id);
   }
 
@@ -6616,7 +6973,12 @@ export class OrbHuntGame extends Group {
       if (!running.has(k)) this._loungeAmbient.delete(k);
     }
     const external = firstExternalAnim(
-      running, this._loungeAnims, this._loungeAmbient, this._loungeClipStreams, models);
+      running,
+      this._loungeAnims,
+      this._loungeAmbient,
+      this._loungeClipStreams,
+      models,
+    );
     if (external !== undefined) this.releaseLoungePose();
   }
 
@@ -6751,8 +7113,7 @@ export class OrbHuntGame extends Group {
           // angle to the floor reads as broken rather than as facing you.
           this._camera.getWorldPosition(this._v2);
           o.custom.getWorldPosition(this._v1);
-          o.custom.rotation.set(0, Math.atan2(this._v2.x - this._v1.x,
-                                              this._v2.z - this._v1.z), 0);
+          o.custom.rotation.set(0, Math.atan2(this._v2.x - this._v1.x, this._v2.z - this._v1.z), 0);
         } else if (spin !== 0) {
           o.custom.rotation.y += dt * spin * Math.PI * 2;
         }
@@ -6798,7 +7159,10 @@ export class OrbHuntGame extends Group {
     if (this._state === GameState.Won && this._portalClosing) {
       // Closing runs the opening curve backwards, at the same rate, so the
       // portal leaves the way it arrived rather than blinking out.
-      this._portalOpen = Math.max(0, this._portalOpen - dt / Math.max(0.05, this.portalOpenTime.value));
+      this._portalOpen = Math.max(
+        0,
+        this._portalOpen - dt / Math.max(0.05, this.portalOpenTime.value),
+      );
       const e = 1 - Math.pow(1 - this._portalOpen, 3);
       this._portal.scale.setScalar(this.portalSize.value * (0.15 + 0.85 * e));
       this._portalU.uOpacity.value = e;
@@ -6813,11 +7177,14 @@ export class OrbHuntGame extends Group {
         this.onPortalClosed.emit();
       }
     } else if (this._state === GameState.Won && this._portalOpen < 1) {
-      this._portalOpen = Math.min(1, this._portalOpen + dt / Math.max(0.05, this.portalOpenTime.value));
-      const e = 1 - Math.pow(1 - this._portalOpen, 3);          // ease-out cubic
+      this._portalOpen = Math.min(
+        1,
+        this._portalOpen + dt / Math.max(0.05, this.portalOpenTime.value),
+      );
+      const e = 1 - Math.pow(1 - this._portalOpen, 3); // ease-out cubic
       this._portal.scale.setScalar(this.portalSize.value * (0.15 + 0.85 * e));
       this._portalU.uOpacity.value = e;
-      this._portalU.uSpeed.value = 0.16 + (1 - e) * 1.6;        // spins down as it settles
+      this._portalU.uSpeed.value = 0.16 + (1 - e) * 1.6; // spins down as it settles
       if (this._portalOpen >= 1 && !this._portalDone) {
         this._portalDone = true;
         this.onPortalOpen.emit();
@@ -6837,8 +7204,8 @@ export class OrbHuntGame extends Group {
   private _applyPortalVisibility() {
     // Nothing from the round survives into the lounge — including a portal
     // left standing open from the win the player just had.
-    const show = !this._noRound &&
-      (this.portalVisibleFromStart.value || this._state === GameState.Won);
+    const show =
+      !this._noRound && (this.portalVisibleFromStart.value || this._state === GameState.Won);
     this._portal.visible = show;
     if (this.portalVisibleFromStart.value && this._state !== GameState.Won) {
       this._portalU.uOpacity.value = 1;
@@ -6929,13 +7296,16 @@ export class OrbHuntGame extends Group {
           <span class="ohg-claimGlow" aria-hidden="true"></span>
           <span class="ohg-claimLbl">Claim Digital Exclusive</span>
         </button>
+        <a class="ohg-legal" href="#" target="_blank" rel="noopener" hidden>Licences</a>
       </div>`;
     this._menu = this._menuWrap.querySelector(".ohg-menu") as HTMLDivElement;
+    this._applyLicences();
     this._titleEl = this._menuWrap.querySelector(".ohg-title") as HTMLDivElement;
     this._statusEl = this._menuWrap.querySelector(".ohg-status") as HTMLDivElement;
     this._msgEl = this._menuWrap.querySelector(".ohg-msg") as HTMLDivElement;
-    (this._menuWrap.querySelector(".ohg-scrim") as HTMLDivElement)
-      .addEventListener("click", () => this._dismissMenu());
+    (this._menuWrap.querySelector(".ohg-scrim") as HTMLDivElement).addEventListener("click", () =>
+      this._dismissMenu(),
+    );
 
     /* ---- intro / how-to-play ---- */
     this._introWrap = document.createElement("div");
@@ -6957,8 +7327,9 @@ export class OrbHuntGame extends Group {
     this._introImg = this._introWrap.querySelector(".ohg-hero img") as HTMLImageElement;
     this._introH1 = this._introWrap.querySelector(".ohg-h1") as HTMLElement;
     this._introLead = this._introWrap.querySelector(".ohg-lead") as HTMLElement;
-    (this._introWrap.querySelector(".ohg-scrim") as HTMLDivElement)
-      .addEventListener("click", () => this._closeIntro());
+    (this._introWrap.querySelector(".ohg-scrim") as HTMLDivElement).addEventListener("click", () =>
+      this._closeIntro(),
+    );
 
     /* ---- digital-exclusive celebration ----
        Purely decorative, so the whole layer stays pointer-transparent: core
@@ -7024,10 +7395,13 @@ export class OrbHuntGame extends Group {
         <ol class="ohg-steps"></ol>
         <button class="ohg-btn ohg-primary ohg-insClose" type="button"></button>
       </div>`;
-    (this._insWrap.querySelector(".ohg-scrim") as HTMLDivElement)
-      .addEventListener("click", () => this._closeInstructions());
-    (this._insWrap.querySelector(".ohg-insClose") as HTMLButtonElement)
-      .addEventListener("click", () => this._closeInstructions());
+    (this._insWrap.querySelector(".ohg-scrim") as HTMLDivElement).addEventListener("click", () =>
+      this._closeInstructions(),
+    );
+    (this._insWrap.querySelector(".ohg-insClose") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._closeInstructions(),
+    );
 
     /* ---- image viewer ----
        Its own layer rather than a box inside the instructions sheet: the
@@ -7073,24 +7447,29 @@ export class OrbHuntGame extends Group {
      * here as a click — dismissing the image someone was in the middle of
      * reading is the worst possible response to that.
      */
-    this._lightWrap.addEventListener("click", e => {
+    this._lightWrap.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
-      const background = t.classList.contains("ohg-lightScrim") ||
-                         t.classList.contains("ohg-lightBox") ||
-                         t.classList.contains("ohg-lightFrame");
+      const background =
+        t.classList.contains("ohg-lightScrim") ||
+        t.classList.contains("ohg-lightBox") ||
+        t.classList.contains("ohg-lightFrame");
       if (!background) return;
       if (this._lightWrap.classList.contains("ohg-zoomed")) return;
       this._closeImage();
     });
-    (this._lightWrap.querySelector(".ohg-lightX") as HTMLButtonElement)
-      .addEventListener("click", () => this._closeImage());
-    (this._lightWrap.querySelector(".ohg-lightZoom") as HTMLButtonElement)
-      .addEventListener("click", () =>
-        this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")));
+    (this._lightWrap.querySelector(".ohg-lightX") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._closeImage(),
+    );
+    (this._lightWrap.querySelector(".ohg-lightZoom") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")),
+    );
     // Tapping the picture itself is the gesture people try first, and it's a
     // far bigger target than the corner button.
     this._lightImg.addEventListener("click", () =>
-      this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")));
+      this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")),
+    );
 
     /* ---- timeout panel ----
        Deliberately the SAME shell as the reward modal: same glass, bevel,
@@ -7120,10 +7499,20 @@ export class OrbHuntGame extends Group {
           <button class="ohg-btn ohg-ghost ohg-toLounge" type="button"></button>
         </div>
       </div>`;
-    (this._toWrap.querySelector(".ohg-toRetry") as HTMLButtonElement)
-      .addEventListener("click", () => { this._closeTimeout(); this.startGame(); });
-    (this._toWrap.querySelector(".ohg-toLounge") as HTMLButtonElement)
-      .addEventListener("click", () => { this._closeTimeout(); this._enterLounge(); });
+    (this._toWrap.querySelector(".ohg-toRetry") as HTMLButtonElement).addEventListener(
+      "click",
+      () => {
+        this._closeTimeout();
+        this.startGame();
+      },
+    );
+    (this._toWrap.querySelector(".ohg-toLounge") as HTMLButtonElement).addEventListener(
+      "click",
+      () => {
+        this._closeTimeout();
+        this._enterLounge();
+      },
+    );
     /*
      * The scrim does NOT dismiss this one, unlike the reward modal.
      * Losing is a fork in the road, not a notification: tapping the backdrop
@@ -7153,30 +7542,40 @@ export class OrbHuntGame extends Group {
           <button class="ohg-btn ohg-ghost ohg-rwmClose" type="button"></button>
         </div>
       </div>`;
-    (this._rwModalWrap.querySelector(".ohg-scrim") as HTMLDivElement)
-      .addEventListener("click", () => this._closeRewardModal(true));
-    (this._rwModalWrap.querySelector(".ohg-rwmClose") as HTMLButtonElement)
-      .addEventListener("click", () => this._closeRewardModal(true));
-    (this._rwModalWrap.querySelector(".ohg-rwmReplay") as HTMLButtonElement)
-      .addEventListener("click", () => this._replay());
-    (this._rwModalWrap.querySelector(".ohg-rwmLounge") as HTMLButtonElement)
-      .addEventListener("click", () => {
+    (this._rwModalWrap.querySelector(".ohg-scrim") as HTMLDivElement).addEventListener(
+      "click",
+      () => this._closeRewardModal(true),
+    );
+    (this._rwModalWrap.querySelector(".ohg-rwmClose") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._closeRewardModal(true),
+    );
+    (this._rwModalWrap.querySelector(".ohg-rwmReplay") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._replay(),
+    );
+    (this._rwModalWrap.querySelector(".ohg-rwmLounge") as HTMLButtonElement).addEventListener(
+      "click",
+      () => {
         this._closeRewardModal(false);
         this._enterLounge();
-      });
-    (this._rwModalWrap.querySelector(".ohg-rwmClaim") as HTMLButtonElement)
-      .addEventListener("click", () => this._rewardModalClaim());
+      },
+    );
+    (this._rwModalWrap.querySelector(".ohg-rwmClaim") as HTMLButtonElement).addEventListener(
+      "click",
+      () => this._rewardModalClaim(),
+    );
 
     /* ---- button + toggle wiring (shared across both modals) ---- */
     // ".ohg-btn, [data-a]" rather than just ".ohg-btn": the corner close is a
     // deliberately un-button-shaped control, so binding by shape alone left
     // it inert — it carried a data-a nobody was listening for.
-    [this._menuWrap, this._introWrap].forEach(w =>
-      w.querySelectorAll<HTMLButtonElement>("[data-a]").forEach(b =>
-        b.addEventListener("click", () => this._uiAction(b.dataset.a ?? "")),
-      ),
+    [this._menuWrap, this._introWrap].forEach((w) =>
+      w
+        .querySelectorAll<HTMLButtonElement>("[data-a]")
+        .forEach((b) => b.addEventListener("click", () => this._uiAction(b.dataset.a ?? ""))),
     );
-    this._menuWrap.querySelectorAll<HTMLDivElement>(".ohg-toggle").forEach(row => {
+    this._menuWrap.querySelectorAll<HTMLDivElement>(".ohg-toggle").forEach((row) => {
       row.addEventListener("click", () => {
         const on = !row.querySelector(".ohg-sw")!.classList.contains("on");
         if (row.dataset.t === "music") this.musicEnabled.value = on;
@@ -7200,8 +7599,7 @@ export class OrbHuntGame extends Group {
           </svg><span class="ohg-placeLbl">Place</span>
         </button>
       </div>`;
-    this._placeWrap.querySelector(".ohg-place")!
-      .addEventListener("click", () => this._place());
+    this._placeWrap.querySelector(".ohg-place")!.addEventListener("click", () => this._place());
 
     /* ---- placement: circular Reset ---- */
     this._resetWrap = document.createElement("div");
@@ -7215,7 +7613,8 @@ export class OrbHuntGame extends Group {
         </button>
         <span class="ohg-roundLbl"></span>
       </div>`;
-    this._resetWrap.querySelector(".ohg-round")!
+    this._resetWrap
+      .querySelector(".ohg-round")!
       .addEventListener("click", () => this._resetPlacement());
 
     /* ---- lounge mode: exit link + a row of action buttons ----
@@ -7227,8 +7626,10 @@ export class OrbHuntGame extends Group {
         <button class="ohg-loungeExit" type="button"></button>
         <div class="ohg-loungeRow"></div>
       </div>`;
-    this._loungeWrap.querySelector(".ohg-loungeExit")!
-      .addEventListener("click", () => { this._exitLounge(); this.startGame(); });
+    this._loungeWrap.querySelector(".ohg-loungeExit")!.addEventListener("click", () => {
+      this._exitLounge();
+      this.startGame();
+    });
 
     /* ---- logo watermark ---- */
     this._logoWrap = document.createElement("div");
@@ -7298,34 +7699,73 @@ export class OrbHuntGame extends Group {
 
     const overlayObs = useOverlay(mgr);
     attach(overlayObs.value);
-    this.register(overlayObs, o => {
-      [this._logoWrap, this._scoreWrap, this._timeWrap, this._root, this._placeWrap,
-       this._resetWrap, this._soundWrap, this._loungeWrap, this._rewardWrap,
-       this._rwModalWrap, this._toWrap, this._insWrap, this._menuWrap,
-       this._introWrap, this._lightWrap].forEach(e => e.remove());
+    this.register(overlayObs, (o) => {
+      [
+        this._logoWrap,
+        this._scoreWrap,
+        this._timeWrap,
+        this._root,
+        this._placeWrap,
+        this._resetWrap,
+        this._soundWrap,
+        this._loungeWrap,
+        this._rewardWrap,
+        this._rwModalWrap,
+        this._toWrap,
+        this._insWrap,
+        this._menuWrap,
+        this._introWrap,
+        this._lightWrap,
+      ].forEach((e) => e.remove());
       attach(o);
     });
   }
 
   private _uiAction(a: string) {
     switch (a) {
-      case "restart": this.startGame(); this._closeMenu(); break;
+      case "restart":
+        this.startGame();
+        this._closeMenu();
+        break;
       // Claiming closes the menu: on mobile the new tab takes focus anyway, and
       // returning to a still-open menu over the AR view reads as stuck.
-      case "claim": this._claim(); this._closeMenu(); break;
+      case "claim":
+        this._claim();
+        this._closeMenu();
+        break;
       // One button, both directions. In a round it offers the lounge; in the
       // lounge it offers the round — a control that only works one way leaves
       // the player hunting for the way back.
       // Two rows now, one destination each, rather than one row that changed
       // meaning depending on where you were. A control whose label flips is a
       // control people have to read before every press.
-      case "lounge": this._enterLounge(); this._closeMenu(); break;
-      case "start":  this.startGame(); this._closeMenu(); break;
-      case "hideout": this._closeMenu(); this._enterHideout(); break;
-      case "introHideout": this._closeIntro(); this._enterHideout(); break;
-      case "howclaim": this._closeMenu(); this._openInstructions(); break;
-      case "howto": this._closeMenu(); this._openIntro(); break;
-      case "close": this._dismissMenu(); break;
+      case "lounge":
+        this._enterLounge();
+        this._closeMenu();
+        break;
+      case "start":
+        this.startGame();
+        this._closeMenu();
+        break;
+      case "hideout":
+        this._closeMenu();
+        this._enterHideout();
+        break;
+      case "introHideout":
+        this._closeIntro();
+        this._enterHideout();
+        break;
+      case "howclaim":
+        this._closeMenu();
+        this._openInstructions();
+        break;
+      case "howto":
+        this._closeMenu();
+        this._openIntro();
+        break;
+      case "close":
+        this._dismissMenu();
+        break;
       case "introPlay":
         this._closeIntro();
         // With placement on, the intro hands off to Place rather than starting.
@@ -7421,7 +7861,8 @@ export class OrbHuntGame extends Group {
     // Placing while lounging drops the scene into the room and stops there —
     // Start Round On Place is about starting the hunt, and the whole point of
     // the lounge is that nobody asked for the hunt.
-    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound) this._beginRound();
+    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound)
+      this._beginRound();
     else this._setState(GameState.Idle);
   }
 
@@ -7445,7 +7886,9 @@ export class OrbHuntGame extends Group {
     }
     this._anchorComp = comp?.placementMode?.value !== undefined ? comp : null;
     if (id && !this._anchorComp)
-      console.warn("[OrbHuntGame] Placement Anchor has no placement mode; pick an Instant World Tracker or a User Placement Anchor Group");
+      console.warn(
+        "[OrbHuntGame] Placement Anchor has no placement mode; pick an Instant World Tracker or a User Placement Anchor Group",
+      );
     // A World Tracker anchor knows when it's pointing at a real floor: Place waits for that.
     const valid = this._anchorComp?.placementValid;
     if (valid?.addListener) {
@@ -7520,8 +7963,11 @@ export class OrbHuntGame extends Group {
    * matched the stylesheet.
    */
   private _applyMode() {
-    const v = this._hideout ? this.hideoutAccent.value
-      : this._lounge ? this.loungeAccent.value : this.uiAccent.value;
+    const v = this._hideout
+      ? this.hideoutAccent.value
+      : this._lounge
+        ? this.loungeAccent.value
+        : this.uiAccent.value;
     const rgb: [number, number, number] = [
       Math.round(Math.max(0, Math.min(1, v[0])) * 255),
       Math.round(Math.max(0, Math.min(1, v[1])) * 255),
@@ -7533,15 +7979,19 @@ export class OrbHuntGame extends Group {
     // enough for white and let the glow carry the hue instead.
     const deep = shadeForWhiteText(rgb);
     const deeper = shadeForWhiteText(rgb, 6.5);
-    const scale = (c: [number, number, number], k: number): [number, number, number] =>
-      [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)];
-    const lighten = (c: [number, number, number], k: number): [number, number, number] =>
-      [Math.round(c[0] + (255 - c[0]) * k),
-       Math.round(c[1] + (255 - c[1]) * k),
-       Math.round(c[2] + (255 - c[2]) * k)];
+    const scale = (c: [number, number, number], k: number): [number, number, number] => [
+      Math.round(c[0] * k),
+      Math.round(c[1] * k),
+      Math.round(c[2] * k),
+    ];
+    const lighten = (c: [number, number, number], k: number): [number, number, number] => [
+      Math.round(c[0] + (255 - c[0]) * k),
+      Math.round(c[1] + (255 - c[1]) * k),
+      Math.round(c[2] + (255 - c[2]) * k),
+    ];
     const other = this._lounge ? this.uiAccent.value : this.loungeAccent.value;
     const to255 = (c: [number, number, number]) =>
-      c.map(x => Math.round(Math.max(0, Math.min(1, x)) * 255)).join(",");
+      c.map((x) => Math.round(Math.max(0, Math.min(1, x)) * 255)).join(",");
     const alt = to255(other).split(",").map(Number);
 
     for (const el of this._modeLayers()) {
@@ -7573,10 +8023,24 @@ export class OrbHuntGame extends Group {
 
   /** Every overlay child that declares its own accent, so all of them move. */
   private _modeLayers(): (HTMLElement | undefined)[] {
-    return [this._root, this._scoreWrap, this._timeWrap, this._placeWrap,
-            this._resetWrap, this._soundWrap, this._loungeWrap, this._logoWrap,
-            this._rewardWrap, this._rwModalWrap, this._toWrap, this._insWrap,
-            this._menuWrap, this._introWrap, this._lightWrap, this._cdWrap];
+    return [
+      this._root,
+      this._scoreWrap,
+      this._timeWrap,
+      this._placeWrap,
+      this._resetWrap,
+      this._soundWrap,
+      this._loungeWrap,
+      this._logoWrap,
+      this._rewardWrap,
+      this._rwModalWrap,
+      this._toWrap,
+      this._insWrap,
+      this._menuWrap,
+      this._introWrap,
+      this._lightWrap,
+      this._cdWrap,
+    ];
   }
 
   /**
@@ -7610,8 +8074,14 @@ export class OrbHuntGame extends Group {
     // The celebration passes over the HUD but under anything you can press.
     put(this._rewardWrap, 50);
     put(this._cdWrap, 50);
-    for (const el of [this._rwModalWrap, this._toWrap, this._insWrap,
-                      this._menuWrap, this._introWrap]) put(el, modal);
+    for (const el of [
+      this._rwModalWrap,
+      this._toWrap,
+      this._insWrap,
+      this._menuWrap,
+      this._introWrap,
+    ])
+      put(el, modal);
     // The viewer opens FROM a dialog, so it has to clear the one it came from.
     put(this._lightWrap, modal + 1);
   }
@@ -7621,16 +8091,21 @@ export class OrbHuntGame extends Group {
     if (this._resetWrap)
       this._resetWrap.className = "ohg-anchor " + OrbHuntGame._cornerClass(this.resetCorner.value);
     if (this._soundWrap)
-      this._soundWrap.className = "ohg-anchor " + OrbHuntGame._cornerClass(this.soundToggleCorner.value);
+      this._soundWrap.className =
+        "ohg-anchor " + OrbHuntGame._cornerClass(this.soundToggleCorner.value);
     if (this._placeWrap)
-      this._placeWrap.className = "ohg-anchor ohg-placeAnchor " +
+      this._placeWrap.className =
+        "ohg-anchor ohg-placeAnchor " +
         classNameForAlignment(HorizontalAlignment.center, VerticalAlignment.bottomSafe);
     if (this._loungeWrap) {
-      const h = this.loungeAlign.value === LoungeAlign.Left ? HorizontalAlignment.leftSafe
-              : this.loungeAlign.value === LoungeAlign.Right ? HorizontalAlignment.rightSafe
-              : HorizontalAlignment.center;
-      this._loungeWrap.className = "ohg-anchor ohg-loungeAnchor " +
-        classNameForAlignment(h, VerticalAlignment.bottomSafe);
+      const h =
+        this.loungeAlign.value === LoungeAlign.Left
+          ? HorizontalAlignment.leftSafe
+          : this.loungeAlign.value === LoungeAlign.Right
+            ? HorizontalAlignment.rightSafe
+            : HorizontalAlignment.center;
+      this._loungeWrap.className =
+        "ohg-anchor ohg-loungeAnchor " + classNameForAlignment(h, VerticalAlignment.bottomSafe);
       this._applyLoungeOffset();
     }
   }
@@ -7653,13 +8128,11 @@ export class OrbHuntGame extends Group {
   private _applyLogo() {
     if (!this._logoWrap) return;
     const src = this.logoImage.value.trim();
-    this._logoWrap.className = "ohg-anchor ohg-logo " +
-      OrbHuntGame._cornerClass(this.logoCorner.value);
+    this._logoWrap.className =
+      "ohg-anchor ohg-logo " + OrbHuntGame._cornerClass(this.logoCorner.value);
     this._logoWrap.style.display = src ? "" : "none";
-    this._logoWrap.style.margin =
-      `${this.logoOffsetY.value}px ${this.logoOffsetX.value}px`;
-    this._logoImg.style.width =
-      `min(${this.logoSize.value}vmin, ${this.logoMaxWidth.value}px)`;
+    this._logoWrap.style.margin = `${this.logoOffsetY.value}px ${this.logoOffsetX.value}px`;
+    this._logoImg.style.width = `min(${this.logoSize.value}vmin, ${this.logoMaxWidth.value}px)`;
     this._logoImg.style.opacity = String(Math.max(0, Math.min(1, this.logoOpacity.value)));
 
     const link = this._logoWrap.querySelector<HTMLAnchorElement>(".ohg-logoLink");
@@ -7696,8 +8169,10 @@ export class OrbHuntGame extends Group {
     const c = this.logoCorner.value;
     const logoTop = c === MenuCorner.TopLeft || c === MenuCorner.TopRight;
     const hudTop = this.hudPosition.value !== HudPosition.Bottom;
-    const shown = this.logoImage.value.trim() !== "" &&
-      this._logoWrap.style.display !== "none" && this._logoWrap.offsetParent !== null;
+    const shown =
+      this.logoImage.value.trim() !== "" &&
+      this._logoWrap.style.display !== "none" &&
+      this._logoWrap.offsetParent !== null;
 
     /*
      * Two questions, and the HUD only moves if both answer yes.
@@ -7736,9 +8211,12 @@ export class OrbHuntGame extends Group {
      * corner always "reached" it and the whole HUD was pushed down for a
      * collision that never happens.
      */
-    const hits = (b: DOMRect) => b.width > 0 &&
-      lBox.right > b.left - 8 && lBox.left < b.right + 8 &&
-      lBox.bottom > b.top - 8 && lBox.top < b.bottom + 8;
+    const hits = (b: DOMRect) =>
+      b.width > 0 &&
+      lBox.right > b.left - 8 &&
+      lBox.left < b.right + 8 &&
+      lBox.bottom > b.top - 8 &&
+      lBox.top < b.bottom + 8;
     const reaches = shown && (hits(sBox) || hits(tBox));
 
     /*
@@ -7787,17 +8265,25 @@ export class OrbHuntGame extends Group {
      * two would drift apart or overlap depending on which way it moved.
      */
     const a = this.hudAlign.value;
-    const hz = a === HudAlign.Left ? HorizontalAlignment.leftSafe
-             : a === HudAlign.Right ? HorizontalAlignment.rightSafe
-             : HorizontalAlignment.center;
+    const hz =
+      a === HudAlign.Left
+        ? HorizontalAlignment.leftSafe
+        : a === HudAlign.Right
+          ? HorizontalAlignment.rightSafe
+          : HorizontalAlignment.center;
     // The block's own contents line up with the side it's on, or a
     // left-anchored column reads as centred text pushed into a corner.
-    const side = a === HudAlign.Left ? "ohg-hudLeft "
-               : a === HudAlign.Right ? "ohg-hudRight " : "";
-    this._scoreWrap.className = "ohg-anchor ohg-timeAnchor ohg-hudStack " + side +
-      (bottom ? "ohg-fromBottom " : "") + classNameForAlignment(hz, v);
-    this._timeWrap.className = "ohg-anchor ohg-timeAnchor " + side +
-      (bottom ? "ohg-fromBottom " : "") + classNameForAlignment(hz, v);
+    const side = a === HudAlign.Left ? "ohg-hudLeft " : a === HudAlign.Right ? "ohg-hudRight " : "";
+    this._scoreWrap.className =
+      "ohg-anchor ohg-timeAnchor ohg-hudStack " +
+      side +
+      (bottom ? "ohg-fromBottom " : "") +
+      classNameForAlignment(hz, v);
+    this._timeWrap.className =
+      "ohg-anchor ohg-timeAnchor " +
+      side +
+      (bottom ? "ohg-fromBottom " : "") +
+      classNameForAlignment(hz, v);
     this._applyTimerOffset();
     this._applyHudStack();
     this._applyLogoClearance();
@@ -7837,8 +8323,8 @@ export class OrbHuntGame extends Group {
    */
   private _applyHudStack() {
     if (!this._scoreWrap || !this._timeWrap) return;
-    const timerShown = this._timeWrap.style.display !== "none" &&
-      this._timeWrap.offsetParent !== null;
+    const timerShown =
+      this._timeWrap.style.display !== "none" && this._timeWrap.offsetParent !== null;
     if (!timerShown) {
       this._scoreWrap.style.setProperty("--ohg-hudStack", "0px");
       return;
@@ -7899,7 +8385,7 @@ export class OrbHuntGame extends Group {
     // written back to the prop, so rotating back to portrait restores the
     // author's setting instead of silently keeping the squeezed one.
     const box = this._loungeWrap.getBoundingClientRect();
-    const overlayH = (this._loungeWrap.parentElement?.clientHeight) || 0;
+    const overlayH = this._loungeWrap.parentElement?.clientHeight || 0;
     if (overlayH > 0 && box.height > 0) {
       const maxPct = ((overlayH - box.height - 8) / overlayH) * 100;
       n = Math.max(0, Math.min(n, maxPct));
@@ -7908,7 +8394,10 @@ export class OrbHuntGame extends Group {
   }
 
   /** Re-measure the stack whenever the clock's box could have changed. */
-  private _restackHud() { this._applyHudStack(); this._applyLogoClearance(); }
+  private _restackHud() {
+    this._applyHudStack();
+    this._applyLogoClearance();
+  }
 
   private _applyTimerOffset() {
     if (!this._timeWrap) return;
@@ -7935,18 +8424,21 @@ export class OrbHuntGame extends Group {
     this._timeWrap.style.display = hud && !this._noRound && this.timerEnabled.value ? "" : "none";
     // The score sits under the clock, so it has to know when there isn't one.
     this._applyHudStack();
-    this._soundWrap.style.display = on && this.soundToggleEnabled.value && !this._shell ? "" : "none";
+    this._soundWrap.style.display =
+      on && this.soundToggleEnabled.value && !this._shell ? "" : "none";
     // Logo In Game off means "brand the moments, not the playfield": it shows
     // through the intro, the menu, the lounge and placement, and steps out
     // while a round is actually being played.
     const playing = this._state === GameState.Playing && !this._lounge;
     // The hideout has its own title bar where the logo would sit.
-    const logoOn = on && !!this.logoImage.value.trim() && !this._hideout &&
-      (this.logoInGame.value || !playing);
+    const logoOn =
+      on && !!this.logoImage.value.trim() && !this._hideout && (this.logoInGame.value || !playing);
     if (this._logoWrap) this._logoWrap.style.display = logoOn ? "" : "none";
     if (!on) {
-      this._closeMenu(); this._closeIntro();
-      this._closeRewardModal(false); this._closeTimeout();
+      this._closeMenu();
+      this._closeIntro();
+      this._closeRewardModal(false);
+      this._closeTimeout();
       this._closeInstructions();
     }
     this._applyPlacementUi();
@@ -7962,11 +8454,15 @@ export class OrbHuntGame extends Group {
     const on = this.uiEnabled.value && this.placementEnabled.value;
     const placing = on && !this._placed && !this._introWrap.classList.contains("on");
     this._placeWrap.style.display = placing ? "" : "none";
-    // BOBO OS has Move scene in its sheet: one fewer button over the view.
-    this._resetWrap.style.display = on && this._placed && !this._shell ? "" : "none";
+    // Dapo's rule (2026-11-17) for every world-tracked experience: Reset placement is always on screen once
+    // placed, even with BOBO OS (which also has Move scene), so a fan can move the scene at any moment.
+    this._resetWrap.style.display = on && this._placed ? "" : "none";
     // The lounge row waits for placement for the same reason Place does:
     // asking Bobo to nap before the scene exists in the room is meaningless.
-    const loungeReady = this.uiEnabled.value && this._lounge && !this._shell &&
+    const loungeReady =
+      this.uiEnabled.value &&
+      this._lounge &&
+      !this._shell &&
       !this._introWrap.classList.contains("on") &&
       (!this.placementEnabled.value || this._placed);
     this._loungeWrap.style.display = loungeReady ? "" : "none";
@@ -7985,9 +8481,10 @@ export class OrbHuntGame extends Group {
       const tip = hint.querySelector<HTMLSpanElement>(".ohg-hintTip");
       const mainTxt = this.placeHintText.value;
       // With BOBO OS as home, Reset placement lives in its sheet (Move scene).
-      const tipTxt = this._shell && this.placeHintTip.value.trim()
-        ? "Lose tracking later? Open BOBO OS and tap Move scene."
-        : this.placeHintTip.value;
+      const tipTxt =
+        this._shell && this.placeHintTip.value.trim()
+          ? "Lose tracking later? Open BOBO OS and tap Move scene."
+          : this.placeHintTip.value;
       if (main) {
         main.textContent = mainTxt;
         main.style.display = mainTxt.trim() ? "" : "none";
@@ -8011,7 +8508,7 @@ export class OrbHuntGame extends Group {
     }
   }
 
-/* ── lounge mode ───────────────────────────────────────────────────── */
+  /* ── lounge mode ───────────────────────────────────────────────────── */
 
   private _enterLounge() {
     if (this._lounge) return;
@@ -8050,7 +8547,7 @@ export class OrbHuntGame extends Group {
     this.onLoungeExit.emit();
   }
 
-/* ── Bobo's Hideout mode ───────────────────────────────────────────── */
+  /* ── Bobo's Hideout mode ───────────────────────────────────────────── */
 
   /**
    * The hideout is a mode like the lounge: no clock, no orbs, the HUD off.
@@ -8113,8 +8610,9 @@ export class OrbHuntGame extends Group {
     // placement turned off would never satisfy it and the rings would be
     // hidden for the whole experience. Same idiom as _applyPlacementUi.
     const settled = !this.placementEnabled.value || this._placed;
-    return this.beaconEnabled.value && !this._noRound &&
-      this._state !== GameState.Placing && settled;
+    return (
+      this.beaconEnabled.value && !this._noRound && this._state !== GameState.Placing && settled
+    );
   }
 
   private _applyLoungeBoard() {
@@ -8139,10 +8637,30 @@ export class OrbHuntGame extends Group {
 
   private _loungeSlots() {
     return [
-      { n: 1, label: this.lounge1Label.value, icon: this.lounge1Icon.value, clip: this.lounge1Timeline.value },
-      { n: 2, label: this.lounge2Label.value, icon: this.lounge2Icon.value, clip: this.lounge2Timeline.value },
-      { n: 3, label: this.lounge3Label.value, icon: this.lounge3Icon.value, clip: this.lounge3Timeline.value },
-      { n: 4, label: this.lounge4Label.value, icon: this.lounge4Icon.value, clip: this.lounge4Timeline.value },
+      {
+        n: 1,
+        label: this.lounge1Label.value,
+        icon: this.lounge1Icon.value,
+        clip: this.lounge1Timeline.value,
+      },
+      {
+        n: 2,
+        label: this.lounge2Label.value,
+        icon: this.lounge2Icon.value,
+        clip: this.lounge2Timeline.value,
+      },
+      {
+        n: 3,
+        label: this.lounge3Label.value,
+        icon: this.lounge3Icon.value,
+        clip: this.lounge3Timeline.value,
+      },
+      {
+        n: 4,
+        label: this.lounge4Label.value,
+        icon: this.lounge4Icon.value,
+        clip: this.lounge4Timeline.value,
+      },
     ];
   }
 
@@ -8155,23 +8673,28 @@ export class OrbHuntGame extends Group {
 
     // A slot with neither a label nor an icon is an empty slot, not a blank
     // button: rebuild the row rather than leaving holes in it.
-    const live = this._loungeSlots().filter(a => a.label.trim() || a.icon !== LoungeIcon.None);
+    const live = this._loungeSlots().filter((a) => a.label.trim() || a.icon !== LoungeIcon.None);
     const row = this._loungeWrap.querySelector(".ohg-loungeRow") as HTMLDivElement;
-    row.innerHTML = live.map(a => `
+    row.innerHTML = live
+      .map(
+        (a) => `
       <div class="ohg-loungeItem">
         <button class="ohg-round ohg-loungeBtn" type="button" data-la="${a.n}"
                 aria-label="${(a.label || `Action ${a.n}`).replace(/"/g, "&quot;")}">
           ${this._loungeSvg(a.icon)}
         </button>
         <span class="ohg-roundLbl">${a.label.replace(/</g, "&lt;")}</span>
-      </div>`).join("");
-    row.querySelectorAll<HTMLButtonElement>(".ohg-loungeBtn").forEach(b =>
-      b.addEventListener("click", () => this._loungeAction(Number(b.dataset.la))));
-    this._applyLoungeOffset();   // the row's height just changed
+      </div>`,
+      )
+      .join("");
+    row
+      .querySelectorAll<HTMLButtonElement>(".ohg-loungeBtn")
+      .forEach((b) => b.addEventListener("click", () => this._loungeAction(Number(b.dataset.la))));
+    this._applyLoungeOffset(); // the row's height just changed
   }
 
   private _loungeAction(n: number) {
-    const slot = this._loungeSlots().find(a => a.n === n);
+    const slot = this._loungeSlots().find((a) => a.n === n);
     if (!slot) return;
     this._playLoungeClip(slot.clip);
     this.onLoungeAction.emit({ action: n, label: slot.label });
@@ -8182,7 +8705,8 @@ export class OrbHuntGame extends Group {
       `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}"` +
       ` stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     // The paw is drawn with filled pads: at 24px a stroked paw turns to mush.
-    const PAW = `<g fill="currentColor" stroke="none">` +
+    const PAW =
+      `<g fill="currentColor" stroke="none">` +
       `<ellipse cx="7.6" cy="10.4" rx="1.75" ry="2.25"/>` +
       `<ellipse cx="12" cy="9.1" rx="1.8" ry="2.35"/>` +
       `<ellipse cx="16.4" cy="10.4" rx="1.75" ry="2.25"/>` +
@@ -8193,35 +8717,48 @@ export class OrbHuntGame extends Group {
         // Paw plus drifting z's. The paw is shifted down-left and shrunk to
         // make room for z's big enough to read at 24px — with small ones this
         // was indistinguishable from the plain Paw icon sitting next to it.
-        return S(`<g transform="translate(-2.1 1.6) scale(0.84)">${PAW}</g>` +
-                 `<path d="M14.4 2.6h5l-5 5.4h5" stroke-width="2"/>` +
-                 `<path d="M19.6 9.6h3.1l-3.1 3.3h3.1" stroke-width="1.8"/>`);
+        return S(
+          `<g transform="translate(-2.1 1.6) scale(0.84)">${PAW}</g>` +
+            `<path d="M14.4 2.6h5l-5 5.4h5" stroke-width="2"/>` +
+            `<path d="M19.6 9.6h3.1l-3.1 3.3h3.1" stroke-width="1.8"/>`,
+        );
       case LoungeIcon.Paw:
         return S(PAW);
       case LoungeIcon.Excited:
         // A four-point sparkle with a smaller one trailing it, plus radiating
         // ticks — the visual shorthand for "energy" rather than "star rating".
-        return S(`<path d="M10.5 2.6 12.2 7.5l4.9 1.7-4.9 1.7-1.7 4.9-1.7-4.9L3.9 9.2l4.9-1.7 1.7-4.9z"/>` +
-                 `<path d="M18 13.4l.9 2.5 2.5.9-2.5.9-.9 2.5-.9-2.5-2.5-.9 2.5-.9.9-2.5z"/>` +
-                 `<path d="M3.2 16.6h2.2M4.9 20.1l1.6-1.5M8.7 21.4v-2.1" stroke-width="1.6"/>`);
+        return S(
+          `<path d="M10.5 2.6 12.2 7.5l4.9 1.7-4.9 1.7-1.7 4.9-1.7-4.9L3.9 9.2l4.9-1.7 1.7-4.9z"/>` +
+            `<path d="M18 13.4l.9 2.5 2.5.9-2.5.9-.9 2.5-.9-2.5-2.5-.9 2.5-.9.9-2.5z"/>` +
+            `<path d="M3.2 16.6h2.2M4.9 20.1l1.6-1.5M8.7 21.4v-2.1" stroke-width="1.6"/>`,
+        );
       case LoungeIcon.Heart:
-        return S(`<path d="M12 20.3s-7.4-4.6-7.4-9.6A4.2 4.2 0 0 1 12 8.2a4.2 4.2 0 0 1 7.4 2.5` +
-                 `c0 5-7.4 9.6-7.4 9.6z"/>`);
+        return S(
+          `<path d="M12 20.3s-7.4-4.6-7.4-9.6A4.2 4.2 0 0 1 12 8.2a4.2 4.2 0 0 1 7.4 2.5` +
+            `c0 5-7.4 9.6-7.4 9.6z"/>`,
+        );
       case LoungeIcon.Play:
         return S(`<path d="M8 5.5 18.5 12 8 18.5V5.5z"/>`);
       case LoungeIcon.Star:
-        return S(`<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`);
+        return S(
+          `<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`,
+        );
       case LoungeIcon.Bolt:
         return S(`<path d="M13.5 2 4 13.5h6L9.5 22 20 10.5h-6.5L13.5 2z"/>`);
       case LoungeIcon.Fish:
-        return S(`<path d="M15.5 12c0 3-3.1 5.4-6.6 5.4S3 15 3 12s2.4-5.4 5.9-5.4S15.5 9 15.5 12z"/>` +
-                 `<path d="m15.5 12 5.5-3.6v7.2L15.5 12z"/><path d="M7 11.4h.01" stroke-width="2.4"/>`);
+        return S(
+          `<path d="M15.5 12c0 3-3.1 5.4-6.6 5.4S3 15 3 12s2.4-5.4 5.9-5.4S15.5 9 15.5 12z"/>` +
+            `<path d="m15.5 12 5.5-3.6v7.2L15.5 12z"/><path d="M7 11.4h.01" stroke-width="2.4"/>`,
+        );
       case LoungeIcon.Ball:
-        return S(`<circle cx="12" cy="12" r="8.4"/><path d="M4.4 9.4c5 .6 9.8 3.4 12.6 7.6"/>` +
-                 `<path d="M7.2 5.2c3.6 2.6 6.2 6.5 7.2 10.9"/><path d="M19.6 14.6c-4.3-.9-8.9.1-12.4 2.8"/>`);
+        return S(
+          `<circle cx="12" cy="12" r="8.4"/><path d="M4.4 9.4c5 .6 9.8 3.4 12.6 7.6"/>` +
+            `<path d="M7.2 5.2c3.6 2.6 6.2 6.5 7.2 10.9"/><path d="M19.6 14.6c-4.3-.9-8.9.1-12.4 2.8"/>`,
+        );
       case LoungeIcon.Orb:
         return `<span class="ohg-rwOrb" aria-hidden="true"></span>`;
-      default: return "";
+      default:
+        return "";
     }
   }
 
@@ -8239,15 +8776,20 @@ export class OrbHuntGame extends Group {
     if (!this._introWrap) return;
     const src = this.introImage.value;
     const hero = this._introWrap.querySelector<HTMLDivElement>(".ohg-hero");
-    if (src) { this._introImg.src = src; if (hero) hero.style.display = ""; }
-    else if (hero) hero.style.display = "none";
+    if (src) {
+      this._introImg.src = src;
+      if (hero) hero.style.display = "";
+    } else if (hero) hero.style.display = "none";
     this._introEl?.classList.toggle("ohg-noHero", !src);
   }
 
   /** Escape prop text before it goes near innerHTML. */
   private static _esc(v: string) {
-    return v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+    return v
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   /**
@@ -8261,29 +8803,75 @@ export class OrbHuntGame extends Group {
     const E = OrbHuntGame._esc;
 
     const rows: Array<[LegendIcon, string, string, string]> = [
-      [this.legend1Icon.value, this.legend1IconImage.value, this.legend1Title.value, this.legend1Text.value],
-      [this.legend2Icon.value, this.legend2IconImage.value, this.legend2Title.value, this.legend2Text.value],
-      [this.legend3Icon.value, this.legend3IconImage.value, this.legend3Title.value, this.legend3Text.value],
-      [this.legend4Icon.value, this.legend4IconImage.value, this.legend4Title.value, this.legend4Text.value],
-      [this.legend5Icon.value, this.legend5IconImage.value, this.legend5Title.value, this.legend5Text.value],
-      [this.legend6Icon.value, this.legend6IconImage.value, this.legend6Title.value, this.legend6Text.value],
-      [this.legend7Icon.value, this.legend7IconImage.value, this.legend7Title.value, this.legend7Text.value],
+      [
+        this.legend1Icon.value,
+        this.legend1IconImage.value,
+        this.legend1Title.value,
+        this.legend1Text.value,
+      ],
+      [
+        this.legend2Icon.value,
+        this.legend2IconImage.value,
+        this.legend2Title.value,
+        this.legend2Text.value,
+      ],
+      [
+        this.legend3Icon.value,
+        this.legend3IconImage.value,
+        this.legend3Title.value,
+        this.legend3Text.value,
+      ],
+      [
+        this.legend4Icon.value,
+        this.legend4IconImage.value,
+        this.legend4Title.value,
+        this.legend4Text.value,
+      ],
+      [
+        this.legend5Icon.value,
+        this.legend5IconImage.value,
+        this.legend5Title.value,
+        this.legend5Text.value,
+      ],
+      [
+        this.legend6Icon.value,
+        this.legend6IconImage.value,
+        this.legend6Title.value,
+        this.legend6Text.value,
+      ],
+      [
+        this.legend7Icon.value,
+        this.legend7IconImage.value,
+        this.legend7Title.value,
+        this.legend7Text.value,
+      ],
     ];
 
     const glyph = (icon: LegendIcon, img: string) => {
       if (img) return `<img class="ohg-legImg" src="${E(img)}" alt="" />`;
       switch (icon) {
-        case LegendIcon.Orb:      return `<span class="ohg-legOrb"></span>`;
-        case LegendIcon.Can:      return `<span class="ohg-legCan"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse class="ohg-cb" cx="12" cy="18.5" rx="4.5" ry="1.7"/><rect class="ohg-cb" x="7.5" y="7.9" width="9" height="10.6"/><path class="ohg-cb" d="M8.6 5.4h6.8l1.1 2.5H7.5z"/><rect class="ohg-cd" x="7.5" y="10.7" width="9" height="3.4"/><ellipse class="ohg-cl" cx="12" cy="5.4" rx="3.4" ry="1.28"/><ellipse class="ohg-cr" cx="12" cy="5.4" rx="2.2" ry="0.8"/><rect class="ohg-cs" x="9.1" y="9" width="1.3" height="7.6" rx="0.65"/></svg></span>`;
-        case LegendIcon.Menu:     return `<span class="ohg-legMenu"><i></i><i></i><i></i></span>`;
-        case LegendIcon.Joystick: return `<span class="ohg-legPad"></span>`;
-        case LegendIcon.Portal:   return `<span class="ohg-legPortal"></span>`;
-        case LegendIcon.Score:    return `<span class="ohg-legNum">0/${target}</span>`;
-        case LegendIcon.Timer:    return `<span class="ohg-legNum">${secs}</span>`;
-        case LegendIcon.Star:     return `<span class="ohg-legGlyph">&#9733;</span>`;
-        case LegendIcon.Clock:    return `<span class="ohg-legGlyph">&#9201;</span>`;
-        case LegendIcon.Bolt:     return `<span class="ohg-legGlyph">&#9889;</span>`;
-        default:                  return "";
+        case LegendIcon.Orb:
+          return `<span class="ohg-legOrb"></span>`;
+        case LegendIcon.Can:
+          return `<span class="ohg-legCan"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse class="ohg-cb" cx="12" cy="18.5" rx="4.5" ry="1.7"/><rect class="ohg-cb" x="7.5" y="7.9" width="9" height="10.6"/><path class="ohg-cb" d="M8.6 5.4h6.8l1.1 2.5H7.5z"/><rect class="ohg-cd" x="7.5" y="10.7" width="9" height="3.4"/><ellipse class="ohg-cl" cx="12" cy="5.4" rx="3.4" ry="1.28"/><ellipse class="ohg-cr" cx="12" cy="5.4" rx="2.2" ry="0.8"/><rect class="ohg-cs" x="9.1" y="9" width="1.3" height="7.6" rx="0.65"/></svg></span>`;
+        case LegendIcon.Menu:
+          return `<span class="ohg-legMenu"><i></i><i></i><i></i></span>`;
+        case LegendIcon.Joystick:
+          return `<span class="ohg-legPad"></span>`;
+        case LegendIcon.Portal:
+          return `<span class="ohg-legPortal"></span>`;
+        case LegendIcon.Score:
+          return `<span class="ohg-legNum">0/${target}</span>`;
+        case LegendIcon.Timer:
+          return `<span class="ohg-legNum">${secs}</span>`;
+        case LegendIcon.Star:
+          return `<span class="ohg-legGlyph">&#9733;</span>`;
+        case LegendIcon.Clock:
+          return `<span class="ohg-legGlyph">&#9201;</span>`;
+        case LegendIcon.Bolt:
+          return `<span class="ohg-legGlyph">&#9889;</span>`;
+        default:
+          return "";
       }
     };
 
@@ -8296,12 +8884,14 @@ export class OrbHuntGame extends Group {
       })
       .map(([icon, img, title, text]) => {
         const g = glyph(icon, img);
-        return `<div class="ohg-row">` +
+        return (
+          `<div class="ohg-row">` +
           (g ? `<span class="ohg-ic">${g}</span>` : `<span class="ohg-ic ohg-noIc"></span>`) +
           `<div>` +
-            (title.trim() ? `<strong>${E(title)}</strong>` : "") +
-            (text.trim() ? `<span>${E(text)}</span>` : "") +
-          `</div></div>`;
+          (title.trim() ? `<strong>${E(title)}</strong>` : "") +
+          (text.trim() ? `<span>${E(text)}</span>` : "") +
+          `</div></div>`
+        );
       })
       .join("");
   }
@@ -8373,13 +8963,17 @@ export class OrbHuntGame extends Group {
      * its own hint, so the pill was a third thing saying the same thing —
      * and it pushed the actual controls further down the sheet.
      */
-    const status =
-      this._lounge ? "Lounging"
-      : this._hideout ? "In Bobo's Hideout"
-      : s === GameState.Paused ? "Paused"
-      : s === GameState.Won ? "Portal open"
-      : s === GameState.Failed ? "Out of time"
-      : "";
+    const status = this._lounge
+      ? "Lounging"
+      : this._hideout
+        ? "In Bobo's Hideout"
+        : s === GameState.Paused
+          ? "Paused"
+          : s === GameState.Won
+            ? "Portal open"
+            : s === GameState.Failed
+              ? "Out of time"
+              : "";
     this._statusEl.classList.toggle("ohg-on", !!status);
     this._statusEl.classList.toggle("ohg-warn", s === GameState.Failed);
     this._statusEl.classList.toggle("ohg-good", s === GameState.Won);
@@ -8402,8 +8996,7 @@ export class OrbHuntGame extends Group {
     if (loungeBtn) {
       // Hidden rather than disabled when the mode is off: a permanently dead
       // row in a short menu is just noise.
-      loungeBtn.style.display =
-        this.loungeEnabled.value && !this._lounge ? "" : "none";
+      loungeBtn.style.display = this.loungeEnabled.value && !this._lounge ? "" : "none";
       loungeBtn.textContent = this.loungeButtonLabel.value.trim() || "Lounge";
     }
 
@@ -8416,16 +9009,23 @@ export class OrbHuntGame extends Group {
 
     const target = clampInt(this.targetCount.value, 1, 999);
     const noun = (this.scoreLabel.value.trim() || "orbs").toLowerCase();
-    this._msgEl.textContent =
-      this._lounge ? "Hanging out. No clock, nothing to collect."
-      : this._hideout && s === GameState.Placing ? "Tap Place, and Bobo's room opens where you put him."
-      : this._hideout ? "Bobo's room. Reset placement to move it, or pick another mode."
-      : s === GameState.Placing ? "Tap Place to drop the game into your space."
-      : s === GameState.Idle ? `Collect the ${noun} before the clock runs out.`
-      : s === GameState.Paused ? `The clock is stopped. ${Math.max(0, target - this._score)} ${noun} left to find.`
-      : s === GameState.Playing ? `Find ${Math.max(0, target - this._score)} more.`
-      : s === GameState.Won ? "You made it. The portal is open."
-      : "The clock beat you. Try again?";
+    this._msgEl.textContent = this._lounge
+      ? "Hanging out. No clock, nothing to collect."
+      : this._hideout && s === GameState.Placing
+        ? "Tap Place, and Bobo's room opens where you put him."
+        : this._hideout
+          ? "Bobo's room. Reset placement to move it, or pick another mode."
+          : s === GameState.Placing
+            ? "Tap Place to drop the game into your space."
+            : s === GameState.Idle
+              ? `Collect the ${noun} before the clock runs out.`
+              : s === GameState.Paused
+                ? `The clock is stopped. ${Math.max(0, target - this._score)} ${noun} left to find.`
+                : s === GameState.Playing
+                  ? `Find ${Math.max(0, target - this._score)} more.`
+                  : s === GameState.Won
+                    ? "You made it. The portal is open."
+                    : "The clock beat you. Try again?";
     this._syncToggles();
   }
 
@@ -8437,7 +9037,7 @@ export class OrbHuntGame extends Group {
     const timed = this.timerEnabled.value;
     this._timeEl.textContent = timed ? this._timeLeft.toFixed(1) : "∞";
     this._timeEl.classList.toggle("ohg-warn", timed && this._timeLeft <= this.warningTime.value);
-    const hide = (this._state === GameState.Idle || this._state === GameState.Placing) ? "0" : "1";
+    const hide = this._state === GameState.Idle || this._state === GameState.Placing ? "0" : "1";
     this._scoreWrap.style.opacity = hide;
     this._timeWrap.style.opacity = hide;
   }
@@ -8599,6 +9199,8 @@ export class OrbHuntGame extends Group {
 .ohg-modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   max-height:calc(100% - 28px);overflow-y:auto;-webkit-overflow-scrolling:touch;
   border-radius:20px;border:1px solid #2a2f38;box-shadow:0 26px 80px rgba(0,0,0,.72);color:#e8ecf2}
+.ohg-legal{display:block;margin:14px auto 0;width:max-content;font-size:12px;color:rgba(255,255,255,.55);text-decoration:underline;text-underline-offset:2px}
+.ohg-legal[hidden]{display:none}
 .ohg-menu{position:relative;width:min(340px,calc(100% - 40px));padding:24px 22px 20px;
   display:flex;flex-direction:column;gap:9px;overflow:hidden;
   background:
@@ -9463,8 +10065,9 @@ export class OrbHuntGame extends Group {
     this._sfxMusic.dispose();
     this._audio?.dispose();
 
-    [this._root, this._scoreWrap, this._timeWrap, this._menuWrap, this._introWrap]
-      .forEach(e => e?.remove());
+    [this._root, this._scoreWrap, this._timeWrap, this._menuWrap, this._introWrap].forEach((e) =>
+      e?.remove(),
+    );
 
     return super.dispose();
   }

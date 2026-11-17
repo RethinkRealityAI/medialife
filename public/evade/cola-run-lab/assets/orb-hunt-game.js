@@ -742,7 +742,12 @@ function rgbChannels(hex, fallback) {
   const n = parseInt(full, 16);
   return `${n >> 16 & 255},${n >> 8 & 255},${n & 255}`;
 }
-var MUSIC_CHORDS = [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]];
+var MUSIC_CHORDS = [
+  [0, 3, 7],
+  [-4, 0, 3],
+  [3, 7, 10],
+  [-2, 2, 5]
+];
 var MUSIC_ARP = [0, -1, 1, 2, -1, 1, 0, -1];
 var GameAudio = class {
   constructor(ctx, out) {
@@ -782,7 +787,10 @@ var GameAudio = class {
     const t = this._ctx.currentTime;
     this._music.gain.cancelScheduledValues(t);
     this._music.gain.setValueAtTime(Math.max(1e-4, this._music.gain.value), t);
-    this._music.gain.linearRampToValueAtTime(on ? Math.max(1e-4, this.musicLevel) : 1e-4, t + (on ? 1.4 : 0.6));
+    this._music.gain.linearRampToValueAtTime(
+      on ? Math.max(1e-4, this.musicLevel) : 1e-4,
+      t + (on ? 1.4 : 0.6)
+    );
   }
   _note(bus, o) {
     const t0 = o.at ?? this._ctx.currentTime;
@@ -815,17 +823,46 @@ var GameAudio = class {
   collect(streak, step) {
     if (!this.sfxOn) return;
     const f = 523.25 * Math.pow(1 + step, Math.min(Math.max(streak, 1) - 1, 12));
-    this._note(this._sfx, { freq: f, dur: 0.26, type: "triangle", gain: 0.24, slideTo: f * 1.5, attack: 6e-3 });
+    this._note(this._sfx, {
+      freq: f,
+      dur: 0.26,
+      type: "triangle",
+      gain: 0.24,
+      slideTo: f * 1.5,
+      attack: 6e-3
+    });
     this._note(this._sfx, { freq: f * 2, dur: 0.17, type: "sine", gain: 0.1, attack: 4e-3 });
   }
   win() {
     if (!this.sfxOn) return;
     const t = this._ctx.currentTime;
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
-      this._note(this._sfx, { freq: f, dur: 0.7, type: "sine", gain: 0.19, attack: 0.012, at: t + i * 0.09 });
-      this._note(this._sfx, { freq: f / 2, dur: 0.85, type: "triangle", gain: 0.07, attack: 0.02, at: t + i * 0.09 });
+      this._note(this._sfx, {
+        freq: f,
+        dur: 0.7,
+        type: "sine",
+        gain: 0.19,
+        attack: 0.012,
+        at: t + i * 0.09
+      });
+      this._note(this._sfx, {
+        freq: f / 2,
+        dur: 0.85,
+        type: "triangle",
+        gain: 0.07,
+        attack: 0.02,
+        at: t + i * 0.09
+      });
     });
-    this._note(this._sfx, { freq: 110, dur: 1.5, type: "sine", gain: 0.15, slideTo: 220, attack: 0.3, at: t });
+    this._note(this._sfx, {
+      freq: 110,
+      dur: 1.5,
+      type: "sine",
+      gain: 0.15,
+      slideTo: 220,
+      attack: 0.3,
+      at: t
+    });
   }
   /**
    * The unlock sting. Deliberately different in character from `win()` — that
@@ -854,8 +891,22 @@ var GameAudio = class {
       attack: 0.25,
       at: t + 0.04
     });
-    this._note(this._sfx, { freq: 1318.5, dur: 0.5, type: "sine", gain: 0.1, attack: 8e-3, at: t + 0.42 });
-    this._note(this._sfx, { freq: 1760, dur: 0.7, type: "sine", gain: 0.09, attack: 8e-3, at: t + 0.58 });
+    this._note(this._sfx, {
+      freq: 1318.5,
+      dur: 0.5,
+      type: "sine",
+      gain: 0.1,
+      attack: 8e-3,
+      at: t + 0.42
+    });
+    this._note(this._sfx, {
+      freq: 1760,
+      dur: 0.7,
+      type: "sine",
+      gain: 0.09,
+      attack: 8e-3,
+      at: t + 0.58
+    });
   }
   warn() {
     if (!this.sfxOn) return;
@@ -863,7 +914,14 @@ var GameAudio = class {
   }
   fail() {
     if (!this.sfxOn) return;
-    this._note(this._sfx, { freq: 300, dur: 0.8, type: "sawtooth", gain: 0.13, slideTo: 80, filter: 900 });
+    this._note(this._sfx, {
+      freq: 300,
+      dur: 0.8,
+      type: "sawtooth",
+      gain: 0.13,
+      slideTo: 80,
+      filter: 900
+    });
     this._note(this._sfx, { freq: 150, dur: 0.9, type: "sine", gain: 0.1, slideTo: 45 });
   }
   /** Low detuned drone while the portal stands open. Fades, never clicks. */
@@ -2325,6 +2383,14 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zvalues files *.+(jpg|jpeg|png|webp)
      */
     __publicField(this, "introImage", new Observable("", () => this._applyIntroImage()));
+    /**
+     * Link to the licences page (engine credits etc.). Shown as a small "Licences" link at the foot of the
+     * game menu, so credits stay off the splash. Empty hides it.
+     * @zui
+     * @zgroup Game Intro
+     * @zpriority 59
+     */
+    __publicField(this, "licencesUrl", new Observable("", () => this._applyLicences()));
     /* ── Legend row 1 ── */
     /**
      * Row 1 of the intro legend.
@@ -2370,7 +2436,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @ztype text-multiline
      * @zdefault Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.
      */
-    __publicField(this, "legend1Text", new Observable("Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.", () => this._syncIntro()));
+    __publicField(this, "legend1Text", new Observable(
+      "Walk into a can to pick it up. Look for the ring of light on the ground beneath each one.",
+      () => this._syncIntro()
+    ));
     /* ── Legend row 2 ── */
     /**
      * Row 2 of the intro legend.
@@ -2416,7 +2485,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @ztype text-multiline
      * @zdefault How many you've gathered, and how many you still need.
      */
-    __publicField(this, "legend2Text", new Observable("How many you've gathered, and how many you still need.", () => this._syncIntro()));
+    __publicField(this, "legend2Text", new Observable(
+      "How many you've gathered, and how many you still need.",
+      () => this._syncIntro()
+    ));
     /* ── Legend row 3 ── */
     /**
      * Row 3 of the intro legend.
@@ -2462,7 +2534,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @ztype text-multiline
      * @zdefault Seconds remaining. It turns orange when you're running out.
      */
-    __publicField(this, "legend3Text", new Observable("Seconds remaining. It turns orange when you're running out.", () => this._syncIntro()));
+    __publicField(this, "legend3Text", new Observable(
+      "Seconds remaining. It turns orange when you're running out.",
+      () => this._syncIntro()
+    ));
     /* ── Legend row 4 ── */
     /**
      * Row 4 of the intro legend.
@@ -2508,7 +2583,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @ztype text-multiline
      * @zdefault Tap the glowing button in the corner for play, pause, restart and sound.
      */
-    __publicField(this, "legend4Text", new Observable("Tap the glowing button in the corner for play, pause, restart and sound.", () => this._syncIntro()));
+    __publicField(this, "legend4Text", new Observable(
+      "Tap the glowing button in the corner for play, pause, restart and sound.",
+      () => this._syncIntro()
+    ));
     /* ── Legend row 5 ── */
     /**
      * A spare row. Give it a title or some text and it appears in the intro; leave both blank and it stays hidden.
@@ -2540,7 +2618,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgroup Intro Legend 5
      * @zgrouppriority 120
      * @zpriority 80
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend5Title", new Observable("", () => this._syncIntro()));
     /**
@@ -2552,7 +2630,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgrouppriority 120
      * @zpriority 70
      * @ztype text-multiline
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend5Text", new Observable("", () => this._syncIntro()));
     /* ── Legend row 6 ── */
@@ -2586,7 +2664,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgroup Intro Legend 6
      * @zgrouppriority 119
      * @zpriority 80
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend6Title", new Observable("", () => this._syncIntro()));
     /**
@@ -2598,7 +2676,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgrouppriority 119
      * @zpriority 70
      * @ztype text-multiline
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend6Text", new Observable("", () => this._syncIntro()));
     /* ── Legend row 7 ── */
@@ -2632,7 +2710,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgroup Intro Legend 7
      * @zgrouppriority 118
      * @zpriority 80
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend7Title", new Observable("", () => this._syncIntro()));
     /**
@@ -2644,7 +2722,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgrouppriority 118
      * @zpriority 70
      * @ztype text-multiline
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "legend7Text", new Observable("", () => this._syncIntro()));
     /* ══ Digital Exclusive ══════════════════════════════════════════════
@@ -2907,13 +2985,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 90
      * @zdefault How to claim
      */
-    __publicField(this, "instructionsMenuLabel", new Observable(
-      "How to claim",
-      () => {
-        this._syncInstructions();
-        this._syncMenu();
-      }
-    ));
+    __publicField(this, "instructionsMenuLabel", new Observable("How to claim", () => {
+      this._syncInstructions();
+      this._syncMenu();
+    }));
     /**
      * Label on the button that closes the How To Claim screen.
      *
@@ -2923,10 +2998,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 85
      * @zdefault Got it
      */
-    __publicField(this, "instructionsCloseLabel", new Observable(
-      "Got it",
-      () => this._syncInstructions()
-    ));
+    __publicField(this, "instructionsCloseLabel", new Observable("Got it", () => this._syncInstructions()));
     /**
      * What a screen reader announces for a step's screenshot.
      *
@@ -2956,10 +3028,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @ztype text-multiline
      * @zdefault Join Evade on Roblox.
      */
-    __publicField(this, "step1Text", new Observable(
-      "Join Evade on Roblox.",
-      () => this._syncInstructions()
-    ));
+    __publicField(this, "step1Text", new Observable("Join Evade on Roblox.", () => this._syncInstructions()));
     /**
      * Screenshot shown under step 1. Pick a project file or paste a URL.
      *
@@ -2994,10 +3063,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 70
      * @zdefault Open Evade on Roblox
      */
-    __publicField(this, "step1LinkLabel", new Observable(
-      "Open Evade on Roblox",
-      () => this._syncInstructions()
-    ));
+    __publicField(this, "step1LinkLabel", new Observable("Open Evade on Roblox", () => this._syncInstructions()));
     /**
      * Step 2.
      *
@@ -3141,10 +3207,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 60
      * @zdefault Go to lounge mode
      */
-    __publicField(this, "timeoutLoungeLabel", new Observable(
-      "Go to lounge mode",
-      () => this._syncTimeoutModal()
-    ));
+    __publicField(this, "timeoutLoungeLabel", new Observable("Go to lounge mode", () => this._syncTimeoutModal()));
     /**
      * Seconds between the clock hitting zero and the panel appearing. A short
      * pause lets the fail sound and the fail timeline land first — arriving on
@@ -3221,7 +3284,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 92
      * @zdefault Evade Exclusive Unlocked
      */
-    __publicField(this, "rewardModalTitle", new Observable("Evade Exclusive Unlocked", () => this._syncRewardModal()));
+    __publicField(this, "rewardModalTitle", new Observable(
+      "Evade Exclusive Unlocked",
+      () => this._syncRewardModal()
+    ));
     /**
      * Body copy under the heading. Keep it to a line or two — this is a moment,
      * not a page.
@@ -3273,10 +3339,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 84
      * @zdefault How to Claim
      */
-    __publicField(this, "rewardModalButtonLabel", new Observable(
-      "How to Claim",
-      () => this._syncRewardModal()
-    ));
+    __publicField(this, "rewardModalButtonLabel", new Observable("How to Claim", () => this._syncRewardModal()));
     /**
      * Offer another round straight from the reward panel.
      *
@@ -3304,10 +3367,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 82
      * @zdefault Replay
      */
-    __publicField(this, "rewardModalReplayLabel", new Observable(
-      "Replay",
-      () => this._syncRewardModal()
-    ));
+    __publicField(this, "rewardModalReplayLabel", new Observable("Replay", () => this._syncRewardModal()));
     /**
      * Offer the lounge from the reward panel too.
      *
@@ -3694,7 +3754,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zgroup Lounge Action 4
      * @zgrouppriority 154
      * @zpriority 100
-     * @zdefault 
+     * @zdefault
      */
     __publicField(this, "lounge4Label", new Observable("", () => this._syncLounge()));
     /**
@@ -3747,13 +3807,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
      * @zpriority 90
      * @zdefault Visit Bobo's Hideout
      */
-    __publicField(this, "hideoutButtonLabel", new Observable(
-      "Visit Bobo's Hideout",
-      () => {
-        this._syncIntro();
-        this._syncMenu();
-      }
-    ));
+    __publicField(this, "hideoutButtonLabel", new Observable("Visit Bobo's Hideout", () => {
+      this._syncIntro();
+      this._syncMenu();
+    }));
     /**
      * The interface colour while the hideout is open, and the colour of the
      * buttons that lead there. EVADE yellow by default, so the three modes are
@@ -4251,6 +4308,13 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     });
     this.register(useOnBeforeRender(contextManager), (dt) => this._tick(dt * 1e-3));
   }
+  _applyLicences() {
+    const a = this._menu?.querySelector(".ohg-legal");
+    if (!a) return;
+    const url = this.licencesUrl.value;
+    a.hidden = !url;
+    if (url) a.href = url;
+  }
   /* ══ Public API — call these from a behaviour or a Call Function track ══ */
   /** Start (or restart) a round. @zui */
   startGame() {
@@ -4357,7 +4421,11 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   }
   /** Bobo's moves (the lounge actions) for an action button of the host's own. */
   get loungeMoves() {
-    return this._loungeSlots().filter((a) => a.label.trim() || a.icon !== "none" /* None */).map((a) => ({ id: String(a.n), label: a.label.trim() || `Move ${a.n}`, svg: this._loungeSvg(a.icon) }));
+    return this._loungeSlots().filter((a) => a.label.trim() || a.icon !== "none" /* None */).map((a) => ({
+      id: String(a.n),
+      label: a.label.trim() || `Move ${a.n}`,
+      svg: this._loungeSvg(a.icon)
+    }));
   }
   loungeMove(id) {
     this._loungeAction(Number(id));
@@ -4365,7 +4433,12 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   /** For the home sheet's status line. */
   get roundStatus() {
     const target = clampInt(this.targetCount.value, 1, 999);
-    return { score: this._score, target, left: Math.max(0, target - this._score), time: this.timeRemaining };
+    return {
+      score: this._score,
+      target,
+      left: Math.max(0, target - this._score),
+      time: this.timeRemaining
+    };
   }
   /** True during the 3-2-1 before a round (see Countdown). */
   get isCountingDown() {
@@ -4418,19 +4491,25 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const kind = this.pickupKind.value;
     const src = this._pickupSource();
     const P = "[OrbHuntGame]";
-    console.log(`${P} Pickup Kind: ${kind} | Pickup Model prop: ${this.constructorProps.pickupModel || "(empty)"} | Pickup Image prop: ${this.constructorProps.pickupImage || "(empty)"}`);
+    console.log(
+      `${P} Pickup Kind: ${kind} | Pickup Model prop: ${this.constructorProps.pickupModel || "(empty)"} | Pickup Image prop: ${this.constructorProps.pickupImage || "(empty)"}`
+    );
     if (kind === "orb" /* Orb */) {
       console.log(`${P} Pickup Kind is Orb \u2014 the shader orb is showing by design.`);
       return;
     }
     if (!src) {
-      console.warn(`${P} DIAGNOSIS: the source never arrived. Either the file is still loading, the prop is empty, or the load threw \u2014 look further up the console for a "failed to load" line. Orbs are showing as the fallback, which is why you still see orbs.`);
+      console.warn(
+        `${P} DIAGNOSIS: the source never arrived. Either the file is still loading, the prop is empty, or the load threw \u2014 look further up the console for a "failed to load" line. Orbs are showing as the fallback, which is why you still see orbs.`
+      );
       return;
     }
     const d = this._describePickupSource(src);
     console.log(`${P} source: ${d.text}`);
     if (d.meshes === 0) {
-      console.warn(`${P} DIAGNOSIS: the loaded object contains no meshes, so every clone is empty and nothing can render. The load succeeded \u2014 this is what the file has in it. Open the same file in any glTF viewer and you will see the same thing.`);
+      console.warn(
+        `${P} DIAGNOSIS: the loaded object contains no meshes, so every clone is empty and nothing can render. The load succeeded \u2014 this is what the file has in it. Open the same file in any glTF viewer and you will see the same thing.`
+      );
       return;
     }
     this.element.updateMatrixWorld(true);
@@ -4458,27 +4537,40 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     console.table(live);
     const built = live.filter((r) => r.cloneBuilt);
     if (!built.length) {
-      console.warn(`${P} DIAGNOSIS: the source loaded but no clones were built. _applyPickupKind ran before the orb pool existed, or hasn't run since the file arrived.`);
+      console.warn(
+        `${P} DIAGNOSIS: the source loaded but no clones were built. _applyPickupKind ran before the orb pool existed, or hasn't run since the file arrived.`
+      );
       return;
     }
     if (built.length < live.length) {
-      console.warn(`${P} DIAGNOSIS: only ${built.length} of ${live.length} live pickups have a model. The rest are empty slots.`);
+      console.warn(
+        `${P} DIAGNOSIS: only ${built.length} of ${live.length} live pickups have a model. The rest are empty slots.`
+      );
     }
     const zeroScale = built.filter((r) => !r.fitScale);
     if (zeroScale.length) {
-      console.warn(`${P} DIAGNOSIS: ${zeroScale.length} pickup(s) have a zero fit scale \u2014 fitToDiameter found no measurable geometry, so the model is there but has no size.`);
+      console.warn(
+        `${P} DIAGNOSIS: ${zeroScale.length} pickup(s) have a zero fit scale \u2014 fitToDiameter found no measurable geometry, so the model is there but has no size.`
+      );
     }
     const spots = new Set(built.map((r) => r.modelAt));
     if (spots.size === 1 && built.length > 1) {
-      console.warn(`${P} DIAGNOSIS: all ${built.length} pickups are at the same world position (${built[0].modelAt}). That is why you see one model that never moves \u2014 they are stacked. The orbs' own positions are ${new Set(built.map((r) => r.orbAt)).size === 1 ? "ALSO identical, so the layout never ran" : "spread out, so the models are not following their orbs"}.`);
+      console.warn(
+        `${P} DIAGNOSIS: all ${built.length} pickups are at the same world position (${built[0].modelAt}). That is why you see one model that never moves \u2014 they are stacked. The orbs' own positions are ${new Set(built.map((r) => r.orbAt)).size === 1 ? "ALSO identical, so the layout never ran" : "spread out, so the models are not following their orbs"}.`
+      );
       return;
     }
     const drifted = built.filter((r) => (r.driftFromOrb ?? 0) > this.orbSize.value * 2);
     if (drifted.length) {
-      console.warn(`${P} DIAGNOSIS: ${drifted.length} model(s) sit more than two orb-widths from the orb they belong to, so the pickup and its ground ring are in different places:`, drifted);
+      console.warn(
+        `${P} DIAGNOSIS: ${drifted.length} model(s) sit more than two orb-widths from the orb they belong to, so the pickup and its ground ring are in different places:`,
+        drifted
+      );
       return;
     }
-    console.log(`${P} pickups look correct: ${built.length} model(s), each on its own orb, spread across ${spots.size} position(s).`);
+    console.log(
+      `${P} pickups look correct: ${built.length} model(s), each on its own orb, spread across ${spots.size} position(s).`
+    );
     return rows;
   }
   /**
@@ -4601,7 +4693,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       gltf.loaded.then(() => {
         this._pickupModel = gltf.element;
         this._applyPickupKind();
-      }).catch((e) => console.warn(`[OrbHuntGame] Pickup Model failed to load (${modelSrc}):`, e));
+      }).catch(
+        (e) => console.warn(`[OrbHuntGame] Pickup Model failed to load (${modelSrc}):`, e)
+      );
     }
     if (imageSrc) {
       const img = new Image(mgr, { source: imageSrc, transparent: true });
@@ -4609,7 +4703,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       Promise.resolve(img._load()).then(() => {
         this._pickupImageObj = img.element;
         this._applyPickupKind();
-      }).catch((e) => console.warn(`[OrbHuntGame] Pickup Image failed to load (${imageSrc}):`, e));
+      }).catch(
+        (e) => console.warn(`[OrbHuntGame] Pickup Image failed to load (${imageSrc}):`, e)
+      );
     }
   }
   /**
@@ -4665,7 +4761,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       const set = kind === "model" /* Model */ ? this.constructorProps.pickupModel : this.constructorProps.pickupImage;
       if (!set && !this._warnedPickup) {
         this._warnedPickup = true;
-        console.warn(`[OrbHuntGame] Pickup Kind is ${kind} but no ${prop} is set \u2014 showing orbs. Pick a file in Constructor Props.`);
+        console.warn(
+          `[OrbHuntGame] Pickup Kind is ${kind} but no ${prop} is set \u2014 showing orbs. Pick a file in Constructor Props.`
+        );
       }
     }
     const useCustom = !!src;
@@ -4705,7 +4803,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     });
     if (!skinned) return;
     this._warnedSkinned = true;
-    console.warn("[OrbHuntGame] The pickup model is rigged. Clones share the original skeleton, so every pickup renders in bind pose and none of them animate. Export a static mesh for pickups.");
+    console.warn(
+      "[OrbHuntGame] The pickup model is rigged. Clones share the original skeleton, so every pickup renders in bind pose and none of them animate. Export a static mesh for pickups."
+    );
   }
   /* ── triggers ─────────────────────────────────────────────────────── */
   /**
@@ -4860,10 +4960,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
         }
         const sepOk = placed.length === 0 || sep2 <= 0 ? 1 : nearest2 / sep2;
         const cohOk = placed.length === 0 || cohere2 <= 0 ? 1 : Math.min(1, cohere2 / Math.max(nearest2, 1e-6));
-        const plrOk = keepOut2 === null ? 1 : Math.min(
-          1,
-          ((cx - this._v1.x) ** 2 + (cz - this._v1.z) ** 2) / keepOut2
-        );
+        const plrOk = keepOut2 === null ? 1 : Math.min(1, ((cx - this._v1.x) ** 2 + (cz - this._v1.z) ** 2) / keepOut2);
         const score = Math.min(sepOk, 1) * 2 + cohOk + plrOk * 3;
         if (score > bestScore) {
           bestScore = score;
@@ -4932,11 +5029,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       }
       const cohere = this.maxSpacing.value > 0 ? Math.max(this.maxSpacing.value, this.minSeparation.value * 1.15) : 0;
       const cohesion = cohere > 0 && isFinite(dOrb) ? Math.min(1, cohere * cohere / Math.max(dOrb, 1e-6)) : 1;
-      const score = Math.min(
-        plr,
-        sep2 > 0 ? dOrb / sep2 : Infinity,
-        cohesion
-      );
+      const score = Math.min(plr, sep2 > 0 ? dOrb / sep2 : Infinity, cohesion);
       if (score > bestScore) {
         bestScore = score;
         bestX = px;
@@ -4945,11 +5038,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       }
       if (score >= 1) break;
     }
-    o.home.set(
-      bestX,
-      Math.max(0.05, Math.min(bestPy, this._spawnCeiling())),
-      bestZ
-    );
+    o.home.set(bestX, Math.max(0.05, Math.min(bestPy, this._spawnCeiling())), bestZ);
     o.group.position.copy(o.home);
     o.active = true;
     o.alive = true;
@@ -5107,7 +5196,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._portalU.uOpacity.value = 0;
     this._layout();
     this._applyPortalVisibility();
-    this._setState(this.placementEnabled.value && !this._placed ? "placing" /* Placing */ : "idle" /* Idle */);
+    this._setState(
+      this.placementEnabled.value && !this._placed ? "placing" /* Placing */ : "idle" /* Idle */
+    );
     this.onGameReset.emit();
   }
   _collect(o) {
@@ -5174,20 +5265,19 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     } else if (badge && word) {
       this._rwBadgeHideAt = this._time + dur + 4.25;
       this._rwBadge.classList.remove("on");
-      window.setTimeout(() => {
-        if (this._rwBadgeHideAt > 0) this._rwBadge.classList.add("on");
-      }, Math.round(dur * 1e3 + 250));
+      window.setTimeout(
+        () => {
+          if (this._rwBadgeHideAt > 0) this._rwBadge.classList.add("on");
+        },
+        Math.round(dur * 1e3 + 250)
+      );
     }
     if (this.rewardModal.value) {
       const gap = Math.max(0, Math.min(30, this.rewardModalDelay.value));
       const runsFirst = word ? dur : 0;
       this._rwModalAt = this._time + runsFirst + gap;
     }
-    this._play(
-      this._sfxReward,
-      this.constructorProps.rewardSound,
-      () => this._audio?.reward()
-    );
+    this._play(this._sfxReward, this.constructorProps.rewardSound, () => this._audio?.reward());
     this._playClip(this.rewardTimeline.value);
     this.onRewardShown.emit();
   }
@@ -5224,8 +5314,17 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
           <div class="ohg-stepBody">
             <p class="ohg-stepText">${body}</p>
             ${isFirst && link ? `<a class="ohg-stepLink" href="${E(link)}" target="_blank" rel="noopener">${E(this.step1LinkLabel.value.trim() || "Open link")}</a>` : ""}
-            ${img.trim() ? `<button class="ohg-shot" type="button" data-shot="${E(img)}"
-                         aria-label="${E(this.imageViewerOpenLabel.value.trim() || "View image full screen")}">
+            ${img.trim() ? (
+        // A button, not a bare <img>: the screenshots carry the detail
+        // people came for (a menu corner, a code field) and at step
+        // width they're too small to read, so tapping one has to open
+        // it. Making the wrapper a real control gets keyboard focus,
+        // Enter/Space and a screen-reader name for free — a click
+        // handler on an <img> gets none of those.
+        `<button class="ohg-shot" type="button" data-shot="${E(img)}"
+                         aria-label="${E(
+          this.imageViewerOpenLabel.value.trim() || "View image full screen"
+        )}">
                    <img class="ohg-stepImg" src="${E(img)}" alt="" loading="lazy" />
                    <span class="ohg-shotHint" aria-hidden="true">
                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -5233,7 +5332,8 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
                        <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/>
                      </svg>
                    </span>
-                 </button>` : ""}
+                 </button>`
+      ) : ""}
           </div>
         </li>`;
     }).join("");
@@ -5506,11 +5606,14 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     st.setProperty("--ohg-rwmClaimDeep", `rgb(${sink(0.86)})`);
     st.setProperty("--ohg-rwmClaimOn", bestTextOn(cr));
     const lounge = this.loungeAccent.value;
-    st.setProperty("--ohg-rwmLoungeRgb", [
-      Math.round(Math.max(0, Math.min(1, lounge[0])) * 255),
-      Math.round(Math.max(0, Math.min(1, lounge[1])) * 255),
-      Math.round(Math.max(0, Math.min(1, lounge[2])) * 255)
-    ].join(","));
+    st.setProperty(
+      "--ohg-rwmLoungeRgb",
+      [
+        Math.round(Math.max(0, Math.min(1, lounge[0])) * 255),
+        Math.round(Math.max(0, Math.min(1, lounge[1])) * 255),
+        Math.round(Math.max(0, Math.min(1, lounge[2])) * 255)
+      ].join(",")
+    );
     this._rwModalWrap.classList.toggle("ohg-rwmSpinning", this.rewardModalAnimate.value);
     this._rwModalWrap.classList.toggle("ohg-rwmFrosted", this.rewardModalGlass.value);
   }
@@ -5635,19 +5738,29 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
     switch (i) {
       case "trophy" /* Trophy */:
-        return S(`<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M12 14v3"/><path d="M9 20h6"/><path d="M10 17h4l1 3H9l1-3z"/>`);
+        return S(
+          `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M12 14v3"/><path d="M9 20h6"/><path d="M10 17h4l1 3H9l1-3z"/>`
+        );
       case "medal" /* Medal */:
-        return S(`<circle cx="12" cy="14.5" r="5.5"/><path d="m8.5 9.5-3-6.5h5l2 4"/><path d="m15.5 9.5 3-6.5h-5l-2 4"/><path d="m12 12 .9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1.4-2L8.7 14.2l2-.3L12 12z"/>`);
+        return S(
+          `<circle cx="12" cy="14.5" r="5.5"/><path d="m8.5 9.5-3-6.5h5l2 4"/><path d="m15.5 9.5 3-6.5h-5l-2 4"/><path d="m12 12 .9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1.4-2L8.7 14.2l2-.3L12 12z"/>`
+        );
       case "star" /* Star */:
-        return S(`<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`);
+        return S(
+          `<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`
+        );
       case "bolt" /* Bolt */:
         return S(`<path d="M13.5 2 4 13.5h6L9.5 22 20 10.5h-6.5L13.5 2z"/>`);
       case "orb" /* Orb */:
         return `<span class="ohg-rwOrb" aria-hidden="true"></span>`;
       case "gift" /* Gift */:
-        return S(`<rect x="3" y="9" width="18" height="12" rx="1.6"/><path d="M3 13.5h18"/><path d="M12 9v12"/><path d="M12 9S10.5 3 8 3a2.4 2.4 0 0 0 0 6"/><path d="M12 9s1.5-6 4-6a2.4 2.4 0 0 1 0 6"/>`);
+        return S(
+          `<rect x="3" y="9" width="18" height="12" rx="1.6"/><path d="M3 13.5h18"/><path d="M12 9v12"/><path d="M12 9S10.5 3 8 3a2.4 2.4 0 0 0 0 6"/><path d="M12 9s1.5-6 4-6a2.4 2.4 0 0 1 0 6"/>`
+        );
       case "sparkle" /* Sparkle */:
-        return S(`<path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5L3.5 11 10 9l2-6.5z"/><path d="M19 3.5 19.8 6l2.5.8-2.5.8L19 10l-.8-2.4L15.7 6.8 18.2 6 19 3.5z"/>`);
+        return S(
+          `<path d="M12 2.5 14 9l6.5 2-6.5 2-2 6.5-2-6.5L3.5 11 10 9l2-6.5z"/><path d="M19 3.5 19.8 6l2.5.8-2.5.8L19 10l-.8-2.4L15.7 6.8 18.2 6 19 3.5z"/>`
+        );
       default:
         return "";
     }
@@ -5997,10 +6110,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
         if (billboard && this._camera) {
           this._camera.getWorldPosition(this._v2);
           o.custom.getWorldPosition(this._v1);
-          o.custom.rotation.set(0, Math.atan2(
-            this._v2.x - this._v1.x,
-            this._v2.z - this._v1.z
-          ), 0);
+          o.custom.rotation.set(0, Math.atan2(this._v2.x - this._v1.x, this._v2.z - this._v1.z), 0);
         } else if (spin !== 0) {
           o.custom.rotation.y += dt * spin * Math.PI * 2;
         }
@@ -6033,7 +6143,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       this._portalHum(false);
     }
     if (this._state === "won" /* Won */ && this._portalClosing) {
-      this._portalOpen = Math.max(0, this._portalOpen - dt / Math.max(0.05, this.portalOpenTime.value));
+      this._portalOpen = Math.max(
+        0,
+        this._portalOpen - dt / Math.max(0.05, this.portalOpenTime.value)
+      );
       const e = 1 - Math.pow(1 - this._portalOpen, 3);
       this._portal.scale.setScalar(this.portalSize.value * (0.15 + 0.85 * e));
       this._portalU.uOpacity.value = e;
@@ -6046,7 +6159,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
         this.onPortalClosed.emit();
       }
     } else if (this._state === "won" /* Won */ && this._portalOpen < 1) {
-      this._portalOpen = Math.min(1, this._portalOpen + dt / Math.max(0.05, this.portalOpenTime.value));
+      this._portalOpen = Math.min(
+        1,
+        this._portalOpen + dt / Math.max(0.05, this.portalOpenTime.value)
+      );
       const e = 1 - Math.pow(1 - this._portalOpen, 3);
       this._portal.scale.setScalar(this.portalSize.value * (0.15 + 0.85 * e));
       this._portalU.uOpacity.value = e;
@@ -6142,12 +6258,17 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
           <span class="ohg-claimGlow" aria-hidden="true"></span>
           <span class="ohg-claimLbl">Claim Digital Exclusive</span>
         </button>
+        <a class="ohg-legal" href="#" target="_blank" rel="noopener" hidden>Licences</a>
       </div>`;
     this._menu = this._menuWrap.querySelector(".ohg-menu");
+    this._applyLicences();
     this._titleEl = this._menuWrap.querySelector(".ohg-title");
     this._statusEl = this._menuWrap.querySelector(".ohg-status");
     this._msgEl = this._menuWrap.querySelector(".ohg-msg");
-    this._menuWrap.querySelector(".ohg-scrim").addEventListener("click", () => this._dismissMenu());
+    this._menuWrap.querySelector(".ohg-scrim").addEventListener(
+      "click",
+      () => this._dismissMenu()
+    );
     this._introWrap = document.createElement("div");
     this._introWrap.className = "ohg-layer";
     this._introWrap.innerHTML = `
@@ -6167,7 +6288,10 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._introImg = this._introWrap.querySelector(".ohg-hero img");
     this._introH1 = this._introWrap.querySelector(".ohg-h1");
     this._introLead = this._introWrap.querySelector(".ohg-lead");
-    this._introWrap.querySelector(".ohg-scrim").addEventListener("click", () => this._closeIntro());
+    this._introWrap.querySelector(".ohg-scrim").addEventListener(
+      "click",
+      () => this._closeIntro()
+    );
     this._rewardWrap = document.createElement("div");
     this._rewardWrap.className = "ohg-rwLayer";
     this._rewardWrap.innerHTML = `
@@ -6213,8 +6337,14 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
         <ol class="ohg-steps"></ol>
         <button class="ohg-btn ohg-primary ohg-insClose" type="button"></button>
       </div>`;
-    this._insWrap.querySelector(".ohg-scrim").addEventListener("click", () => this._closeInstructions());
-    this._insWrap.querySelector(".ohg-insClose").addEventListener("click", () => this._closeInstructions());
+    this._insWrap.querySelector(".ohg-scrim").addEventListener(
+      "click",
+      () => this._closeInstructions()
+    );
+    this._insWrap.querySelector(".ohg-insClose").addEventListener(
+      "click",
+      () => this._closeInstructions()
+    );
     this._lightWrap = document.createElement("div");
     this._lightWrap.className = "ohg-layer ohg-lightLayer";
     this._lightWrap.innerHTML = `
@@ -6246,9 +6376,18 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       if (this._lightWrap.classList.contains("ohg-zoomed")) return;
       this._closeImage();
     });
-    this._lightWrap.querySelector(".ohg-lightX").addEventListener("click", () => this._closeImage());
-    this._lightWrap.querySelector(".ohg-lightZoom").addEventListener("click", () => this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")));
-    this._lightImg.addEventListener("click", () => this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed")));
+    this._lightWrap.querySelector(".ohg-lightX").addEventListener(
+      "click",
+      () => this._closeImage()
+    );
+    this._lightWrap.querySelector(".ohg-lightZoom").addEventListener(
+      "click",
+      () => this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed"))
+    );
+    this._lightImg.addEventListener(
+      "click",
+      () => this._setImageZoom(!this._lightWrap.classList.contains("ohg-zoomed"))
+    );
     this._toWrap = document.createElement("div");
     this._toWrap.className = "ohg-layer ohg-toLayer ohg-rwmSpinning ohg-rwmFrosted";
     this._toWrap.innerHTML = `
@@ -6271,14 +6410,20 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
           <button class="ohg-btn ohg-ghost ohg-toLounge" type="button"></button>
         </div>
       </div>`;
-    this._toWrap.querySelector(".ohg-toRetry").addEventListener("click", () => {
-      this._closeTimeout();
-      this.startGame();
-    });
-    this._toWrap.querySelector(".ohg-toLounge").addEventListener("click", () => {
-      this._closeTimeout();
-      this._enterLounge();
-    });
+    this._toWrap.querySelector(".ohg-toRetry").addEventListener(
+      "click",
+      () => {
+        this._closeTimeout();
+        this.startGame();
+      }
+    );
+    this._toWrap.querySelector(".ohg-toLounge").addEventListener(
+      "click",
+      () => {
+        this._closeTimeout();
+        this._enterLounge();
+      }
+    );
     this._rwModalWrap.innerHTML = `
       <div class="ohg-scrim"></div>
       <div class="ohg-rwmShell" role="dialog" aria-modal="true">
@@ -6300,18 +6445,31 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
           <button class="ohg-btn ohg-ghost ohg-rwmClose" type="button"></button>
         </div>
       </div>`;
-    this._rwModalWrap.querySelector(".ohg-scrim").addEventListener("click", () => this._closeRewardModal(true));
-    this._rwModalWrap.querySelector(".ohg-rwmClose").addEventListener("click", () => this._closeRewardModal(true));
-    this._rwModalWrap.querySelector(".ohg-rwmReplay").addEventListener("click", () => this._replay());
-    this._rwModalWrap.querySelector(".ohg-rwmLounge").addEventListener("click", () => {
-      this._closeRewardModal(false);
-      this._enterLounge();
-    });
-    this._rwModalWrap.querySelector(".ohg-rwmClaim").addEventListener("click", () => this._rewardModalClaim());
+    this._rwModalWrap.querySelector(".ohg-scrim").addEventListener(
+      "click",
+      () => this._closeRewardModal(true)
+    );
+    this._rwModalWrap.querySelector(".ohg-rwmClose").addEventListener(
+      "click",
+      () => this._closeRewardModal(true)
+    );
+    this._rwModalWrap.querySelector(".ohg-rwmReplay").addEventListener(
+      "click",
+      () => this._replay()
+    );
+    this._rwModalWrap.querySelector(".ohg-rwmLounge").addEventListener(
+      "click",
+      () => {
+        this._closeRewardModal(false);
+        this._enterLounge();
+      }
+    );
+    this._rwModalWrap.querySelector(".ohg-rwmClaim").addEventListener(
+      "click",
+      () => this._rewardModalClaim()
+    );
     [this._menuWrap, this._introWrap].forEach(
-      (w) => w.querySelectorAll("[data-a]").forEach(
-        (b) => b.addEventListener("click", () => this._uiAction(b.dataset.a ?? ""))
-      )
+      (w) => w.querySelectorAll("[data-a]").forEach((b) => b.addEventListener("click", () => this._uiAction(b.dataset.a ?? "")))
     );
     this._menuWrap.querySelectorAll(".ohg-toggle").forEach((row) => {
       row.addEventListener("click", () => {
@@ -6551,7 +6709,8 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._playClip(this.placeTimeline.value);
     this.onPlace.emit();
     this._applyPlacementUi();
-    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound) this._beginRound();
+    if ((this.startRoundOnPlace.value || this._roundAfterPlace) && !this._noRound)
+      this._beginRound();
     else this._setState("idle" /* Idle */);
   }
   _bindPlacementAnchor() {
@@ -6566,7 +6725,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     }
     this._anchorComp = comp?.placementMode?.value !== void 0 ? comp : null;
     if (id && !this._anchorComp)
-      console.warn("[OrbHuntGame] Placement Anchor has no placement mode; pick an Instant World Tracker or a User Placement Anchor Group");
+      console.warn(
+        "[OrbHuntGame] Placement Anchor has no placement mode; pick an Instant World Tracker or a User Placement Anchor Group"
+      );
     const valid = this._anchorComp?.placementValid;
     if (valid?.addListener) {
       const fn = () => this._syncPlaceReady();
@@ -6641,7 +6802,11 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const channels = rgb.join(",");
     const deep = shadeForWhiteText(rgb);
     const deeper = shadeForWhiteText(rgb, 6.5);
-    const scale = (c, k) => [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)];
+    const scale = (c, k) => [
+      Math.round(c[0] * k),
+      Math.round(c[1] * k),
+      Math.round(c[2] * k)
+    ];
     const lighten = (c, k) => [
       Math.round(c[0] + (255 - c[0]) * k),
       Math.round(c[1] + (255 - c[1]) * k),
@@ -6723,7 +6888,8 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
       this._insWrap,
       this._menuWrap,
       this._introWrap
-    ]) put(el, modal);
+    ])
+      put(el, modal);
     put(this._lightWrap, modal + 1);
   }
   _applyCorner() {
@@ -6959,7 +7125,7 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const on = this.uiEnabled.value && this.placementEnabled.value;
     const placing = on && !this._placed && !this._introWrap.classList.contains("on");
     this._placeWrap.style.display = placing ? "" : "none";
-    this._resetWrap.style.display = on && this._placed && !this._shell ? "" : "none";
+    this._resetWrap.style.display = on && this._placed ? "" : "none";
     const loungeReady = this.uiEnabled.value && this._lounge && !this._shell && !this._introWrap.classList.contains("on") && (!this.placementEnabled.value || this._placed);
     this._loungeWrap.style.display = loungeReady ? "" : "none";
     this._syncPlacement();
@@ -7100,10 +7266,30 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
   }
   _loungeSlots() {
     return [
-      { n: 1, label: this.lounge1Label.value, icon: this.lounge1Icon.value, clip: this.lounge1Timeline.value },
-      { n: 2, label: this.lounge2Label.value, icon: this.lounge2Icon.value, clip: this.lounge2Timeline.value },
-      { n: 3, label: this.lounge3Label.value, icon: this.lounge3Icon.value, clip: this.lounge3Timeline.value },
-      { n: 4, label: this.lounge4Label.value, icon: this.lounge4Icon.value, clip: this.lounge4Timeline.value }
+      {
+        n: 1,
+        label: this.lounge1Label.value,
+        icon: this.lounge1Icon.value,
+        clip: this.lounge1Timeline.value
+      },
+      {
+        n: 2,
+        label: this.lounge2Label.value,
+        icon: this.lounge2Icon.value,
+        clip: this.lounge2Timeline.value
+      },
+      {
+        n: 3,
+        label: this.lounge3Label.value,
+        icon: this.lounge3Icon.value,
+        clip: this.lounge3Timeline.value
+      },
+      {
+        n: 4,
+        label: this.lounge4Label.value,
+        icon: this.lounge4Icon.value,
+        clip: this.lounge4Timeline.value
+      }
     ];
   }
   _syncLounge() {
@@ -7114,14 +7300,16 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     exit.style.display = this.showLoungeExit.value && label ? "" : "none";
     const live = this._loungeSlots().filter((a) => a.label.trim() || a.icon !== "none" /* None */);
     const row = this._loungeWrap.querySelector(".ohg-loungeRow");
-    row.innerHTML = live.map((a) => `
+    row.innerHTML = live.map(
+      (a) => `
       <div class="ohg-loungeItem">
         <button class="ohg-round ohg-loungeBtn" type="button" data-la="${a.n}"
                 aria-label="${(a.label || `Action ${a.n}`).replace(/"/g, "&quot;")}">
           ${this._loungeSvg(a.icon)}
         </button>
         <span class="ohg-roundLbl">${a.label.replace(/</g, "&lt;")}</span>
-      </div>`).join("");
+      </div>`
+    ).join("");
     row.querySelectorAll(".ohg-loungeBtn").forEach((b) => b.addEventListener("click", () => this._loungeAction(Number(b.dataset.la))));
     this._applyLoungeOffset();
   }
@@ -7136,23 +7324,35 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const PAW = `<g fill="currentColor" stroke="none"><ellipse cx="7.6" cy="10.4" rx="1.75" ry="2.25"/><ellipse cx="12" cy="9.1" rx="1.8" ry="2.35"/><ellipse cx="16.4" cy="10.4" rx="1.75" ry="2.25"/><path d="M12 12.9c3 0 5.2 2 5.2 4.3 0 1.9-1.7 3-3.6 3h-3.2c-1.9 0-3.6-1.1-3.6-3 0-2.3 2.2-4.3 5.2-4.3z"/></g>`;
     switch (i) {
       case "sleep" /* Sleep */:
-        return S(`<g transform="translate(-2.1 1.6) scale(0.84)">${PAW}</g><path d="M14.4 2.6h5l-5 5.4h5" stroke-width="2"/><path d="M19.6 9.6h3.1l-3.1 3.3h3.1" stroke-width="1.8"/>`);
+        return S(
+          `<g transform="translate(-2.1 1.6) scale(0.84)">${PAW}</g><path d="M14.4 2.6h5l-5 5.4h5" stroke-width="2"/><path d="M19.6 9.6h3.1l-3.1 3.3h3.1" stroke-width="1.8"/>`
+        );
       case "paw" /* Paw */:
         return S(PAW);
       case "excited" /* Excited */:
-        return S(`<path d="M10.5 2.6 12.2 7.5l4.9 1.7-4.9 1.7-1.7 4.9-1.7-4.9L3.9 9.2l4.9-1.7 1.7-4.9z"/><path d="M18 13.4l.9 2.5 2.5.9-2.5.9-.9 2.5-.9-2.5-2.5-.9 2.5-.9.9-2.5z"/><path d="M3.2 16.6h2.2M4.9 20.1l1.6-1.5M8.7 21.4v-2.1" stroke-width="1.6"/>`);
+        return S(
+          `<path d="M10.5 2.6 12.2 7.5l4.9 1.7-4.9 1.7-1.7 4.9-1.7-4.9L3.9 9.2l4.9-1.7 1.7-4.9z"/><path d="M18 13.4l.9 2.5 2.5.9-2.5.9-.9 2.5-.9-2.5-2.5-.9 2.5-.9.9-2.5z"/><path d="M3.2 16.6h2.2M4.9 20.1l1.6-1.5M8.7 21.4v-2.1" stroke-width="1.6"/>`
+        );
       case "heart" /* Heart */:
-        return S(`<path d="M12 20.3s-7.4-4.6-7.4-9.6A4.2 4.2 0 0 1 12 8.2a4.2 4.2 0 0 1 7.4 2.5c0 5-7.4 9.6-7.4 9.6z"/>`);
+        return S(
+          `<path d="M12 20.3s-7.4-4.6-7.4-9.6A4.2 4.2 0 0 1 12 8.2a4.2 4.2 0 0 1 7.4 2.5c0 5-7.4 9.6-7.4 9.6z"/>`
+        );
       case "play" /* Play */:
         return S(`<path d="M8 5.5 18.5 12 8 18.5V5.5z"/>`);
       case "star" /* Star */:
-        return S(`<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`);
+        return S(
+          `<path d="m12 3 2.7 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.3 6.5 20.2l1.1-6.2L3 9.6l6.3-.9L12 3z"/>`
+        );
       case "bolt" /* Bolt */:
         return S(`<path d="M13.5 2 4 13.5h6L9.5 22 20 10.5h-6.5L13.5 2z"/>`);
       case "fish" /* Fish */:
-        return S(`<path d="M15.5 12c0 3-3.1 5.4-6.6 5.4S3 15 3 12s2.4-5.4 5.9-5.4S15.5 9 15.5 12z"/><path d="m15.5 12 5.5-3.6v7.2L15.5 12z"/><path d="M7 11.4h.01" stroke-width="2.4"/>`);
+        return S(
+          `<path d="M15.5 12c0 3-3.1 5.4-6.6 5.4S3 15 3 12s2.4-5.4 5.9-5.4S15.5 9 15.5 12z"/><path d="m15.5 12 5.5-3.6v7.2L15.5 12z"/><path d="M7 11.4h.01" stroke-width="2.4"/>`
+        );
       case "ball" /* Ball */:
-        return S(`<circle cx="12" cy="12" r="8.4"/><path d="M4.4 9.4c5 .6 9.8 3.4 12.6 7.6"/><path d="M7.2 5.2c3.6 2.6 6.2 6.5 7.2 10.9"/><path d="M19.6 14.6c-4.3-.9-8.9.1-12.4 2.8"/>`);
+        return S(
+          `<circle cx="12" cy="12" r="8.4"/><path d="M4.4 9.4c5 .6 9.8 3.4 12.6 7.6"/><path d="M7.2 5.2c3.6 2.6 6.2 6.5 7.2 10.9"/><path d="M19.6 14.6c-4.3-.9-8.9.1-12.4 2.8"/>`
+        );
       case "orb" /* Orb */:
         return `<span class="ohg-rwOrb" aria-hidden="true"></span>`;
       default:
@@ -7192,13 +7392,48 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     const secs = String(Math.round(this.roundTime.value));
     const E = _OrbHuntGame._esc;
     const rows = [
-      [this.legend1Icon.value, this.legend1IconImage.value, this.legend1Title.value, this.legend1Text.value],
-      [this.legend2Icon.value, this.legend2IconImage.value, this.legend2Title.value, this.legend2Text.value],
-      [this.legend3Icon.value, this.legend3IconImage.value, this.legend3Title.value, this.legend3Text.value],
-      [this.legend4Icon.value, this.legend4IconImage.value, this.legend4Title.value, this.legend4Text.value],
-      [this.legend5Icon.value, this.legend5IconImage.value, this.legend5Title.value, this.legend5Text.value],
-      [this.legend6Icon.value, this.legend6IconImage.value, this.legend6Title.value, this.legend6Text.value],
-      [this.legend7Icon.value, this.legend7IconImage.value, this.legend7Title.value, this.legend7Text.value]
+      [
+        this.legend1Icon.value,
+        this.legend1IconImage.value,
+        this.legend1Title.value,
+        this.legend1Text.value
+      ],
+      [
+        this.legend2Icon.value,
+        this.legend2IconImage.value,
+        this.legend2Title.value,
+        this.legend2Text.value
+      ],
+      [
+        this.legend3Icon.value,
+        this.legend3IconImage.value,
+        this.legend3Title.value,
+        this.legend3Text.value
+      ],
+      [
+        this.legend4Icon.value,
+        this.legend4IconImage.value,
+        this.legend4Title.value,
+        this.legend4Text.value
+      ],
+      [
+        this.legend5Icon.value,
+        this.legend5IconImage.value,
+        this.legend5Title.value,
+        this.legend5Text.value
+      ],
+      [
+        this.legend6Icon.value,
+        this.legend6IconImage.value,
+        this.legend6Title.value,
+        this.legend6Text.value
+      ],
+      [
+        this.legend7Icon.value,
+        this.legend7IconImage.value,
+        this.legend7Title.value,
+        this.legend7Text.value
+      ]
     ];
     const glyph = (icon, img) => {
       if (img) return `<img class="ohg-legImg" src="${E(img)}" alt="" />`;
@@ -7341,7 +7576,9 @@ var _OrbHuntGame = class _OrbHuntGame extends Group2 {
     this._sfxHum.dispose();
     this._sfxMusic.dispose();
     this._audio?.dispose();
-    [this._root, this._scoreWrap, this._timeWrap, this._menuWrap, this._introWrap].forEach((e) => e?.remove());
+    [this._root, this._scoreWrap, this._timeWrap, this._menuWrap, this._introWrap].forEach(
+      (e) => e?.remove()
+    );
     return super.dispose();
   }
 };
@@ -7502,6 +7739,8 @@ __publicField(_OrbHuntGame, "_CSS", `
 .ohg-modal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
   max-height:calc(100% - 28px);overflow-y:auto;-webkit-overflow-scrolling:touch;
   border-radius:20px;border:1px solid #2a2f38;box-shadow:0 26px 80px rgba(0,0,0,.72);color:#e8ecf2}
+.ohg-legal{display:block;margin:14px auto 0;width:max-content;font-size:12px;color:rgba(255,255,255,.55);text-decoration:underline;text-underline-offset:2px}
+.ohg-legal[hidden]{display:none}
 .ohg-menu{position:relative;width:min(340px,calc(100% - 40px));padding:24px 22px 20px;
   display:flex;flex-direction:column;gap:9px;overflow:hidden;
   background:
@@ -8482,6 +8721,15 @@ var ICON = {
   )
 };
 var APPS = [
+  // Flat tile (no gradients, house rule): both stops are the same colour.
+  {
+    id: "arcade",
+    name: "Bobo's Arcade",
+    color: "#ff5b5b",
+    g: ["#e3243a", "#e3243a"],
+    w: 560,
+    h: 680
+  },
   { id: "alerts", name: "Alerts", color: "#ff4fa3", g: ["#ff7ab8", "#c2186a"], w: 420, h: 520 },
   {
     id: "globe",
@@ -8526,6 +8774,10 @@ var DEFS = `<svg class="mlh-defs" width="0" height="0" aria-hidden="true" focusa
 var OS_MARK = `<svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mlhg-mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df2ff"/><stop offset="1" stop-color="#ff5fb1"/></linearGradient></defs><path d="M6 9 4 3l7 4h10l7-4-2 6c1.3 1.8 2 4 2 6.4C28 22.4 22.6 28 16 28S4 22.4 4 15.4C4 13 4.7 10.8 6 9z" fill="url(#mlhg-mk)"/><circle cx="11.5" cy="15.5" r="2" fill="#061024"/><circle cx="20.5" cy="15.5" r="2" fill="#061024"/><path d="M14 20.5c1.2 1 2.8 1 4 0" stroke="#061024" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>`;
 var g3 = (d) => `<svg viewBox="0 0 48 48" class="g3" aria-hidden="true">${d}</svg>`;
 var ICON3D = {
+  // Arcade cabinet, flat colours.
+  arcade: g3(
+    '<path d="M14 6h20l2 8v28H12V14z" fill="#1c2340"/><path d="M14 6h20l2 8H12z" fill="#ffc42e"/><rect x="16" y="16" width="16" height="11" rx="2" fill="#36e3ff"/><path d="M19 23.5l3-3 2.5 2 3.5-4" stroke="#0b1f6b" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="29" width="24" height="5" fill="#2a3360"/><circle cx="19" cy="31.5" r="2" fill="#ff4b5c"/><path d="M19 31.5v-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="27" cy="31.5" r="1.6" fill="#36e3ff"/><circle cx="31" cy="31.5" r="1.6" fill="#ffc42e"/>'
+  ),
   alerts: g3(
     '<path d="M24 7c-6.6 0-11 5-11 11.5v6.8c0 2-1 3.6-2.6 5L9 31.6c-.9.9-.3 2.4 1 2.4h28c1.3 0 1.9-1.5 1-2.4l-1.4-1.3c-1.6-1.4-2.6-3-2.6-5v-6.8C35 12 30.6 7 24 7z" fill="url(#mlhg-w)"/><path d="M15.5 19c.4-4.4 3.4-8 8.5-8.6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".9"/><ellipse cx="24" cy="38.5" rx="4.6" ry="3.4" fill="url(#mlhg-gold)"/><circle cx="35" cy="12" r="5" fill="#ff2d6f" stroke="#fff" stroke-width="2"/>'
   ),
@@ -9257,6 +9509,28 @@ html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var
 .mlh-hs-modes button.cur{border-color:rgb(var(--c));box-shadow:0 0 0 1px rgb(var(--c)) inset,0 0 18px rgba(var(--c),.22)}
 .mlh-hs-modes button.cur::after{content:"Now";position:absolute;top:10px;right:10px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#101215;background:rgb(var(--c))}
 .mlh-hs-h{margin:16px 2px 8px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7d8696}
+.mlh-hs-arcade{display:flex;align-items:center;gap:12px;width:100%;margin:12px 0 0;padding:10px 12px;min-height:68px;border-radius:16px;border:1px solid rgba(255,91,91,.55);background:rgba(227,36,58,.14);color:#fff;text-align:left;font:inherit}
+.mlh-hs-arcade .mlh-tile{width:46px;height:46px;border-radius:13px;background:#e3243a}
+.mlh-hs-arcade span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:2px}
+.mlh-hs-arcade b{font-size:15.5px}
+.mlh-hs-arcade small{font-size:12px;color:#c9b8bd}
+.mlh-hs-arcade>svg{width:18px;height:18px;opacity:.7}
+.mlh-arc-note{margin:0 0 12px;padding:8px 12px;border-radius:12px;background:rgba(255,196,46,.12);border:1px solid rgba(255,196,46,.4);color:#ffd977;font-size:12.5px;font-weight:600}
+.mlh-arc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mlh-arc button{position:relative;display:flex;flex-direction:column;padding:0;border-radius:14px;overflow:hidden;border:1px solid #2a2f38;background:#15181d;color:#eef3f6;text-align:left;font:inherit;cursor:pointer}
+.mlh-arc button:active{transform:scale(.98)}
+.mlh-arc img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:#000}
+.mlh-arc .tx{display:flex;flex-direction:column;gap:3px;padding:9px 10px 10px}
+.mlh-arc b{font-size:14px;line-height:1.2}
+.mlh-arc small{font-size:11.5px;line-height:1.3;color:#98a2b1}
+.mlh-arc .need{color:#8fd8e6}
+.mlh-arc .st{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:#101215;color:#fff}
+.mlh-arc .st.here{background:#36e3ff;color:#06222b}
+.mlh-arc button.locked img,.mlh-arc button.soon img{filter:grayscale(1) brightness(.45)}
+.mlh-arc button.locked .st{background:#ffc42e;color:#2a1d00}
+.mlh-arc button.locked .lock{display:flex;gap:6px;align-items:flex-start;color:#ffd977}
+.mlh-arc button.locked .lock svg{flex:none;width:14px;height:14px;margin-top:1px}
+.mlh-arc button[disabled]{cursor:default}
 .mlh-hs-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}
 .mlh-hs-apps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 6px;border:0;border-radius:14px;background:none;font-size:12.5px;font-weight:600;color:#dfe5ee;line-height:1.25;text-align:center}
 .mlh-hs-apps button:active{background:rgba(255,255,255,.06)}
@@ -9634,9 +9908,16 @@ var CollectorHub = class {
     /** How far the last placeAround pushed the room back from Bobo's spot (parent units). */
     __publicField(this, "lastPush", new THREE3.Vector3());
     __publicField(this, "_floorPlane", new THREE3.Plane());
+    /** Which page of the home sheet is showing: the main one, or Bobo's Arcade. */
+    __publicField(this, "_homeView", "main");
     __publicField(this, "_solidCache", {});
     __publicField(this, "_ray", new THREE3.Raycaster());
     __publicField(this, "_ndc", new THREE3.Vector2());
+    /* ── Bobo's Arcade: jump to any EVADE experience ──
+       The catalogue is a JSON file (arcadeUrl), so games can be added, locked or opened without a rebuild.
+       Unlocks are checked on this device for now (a localStorage flag the experience sets when its task is
+       done); "testing": true opens everything. Later: the Activation API decides per fan. */
+    __publicField(this, "_arcade", null);
     this.opts = { lights: true, room: "evade", exitLabel: "Exit", ...opts };
     this.roomId = this.opts.room || "evade";
     this._ac = opts.audioContext ?? null;
@@ -10305,6 +10586,7 @@ var CollectorHub = class {
     const el = this._el.home;
     if (!el?.classList.contains("open")) return;
     el.classList.remove("open");
+    this._homeView = "main";
     this._syncModal();
     this._el.homeb.classList.remove("on");
     this._el.homeb.setAttribute("aria-expanded", "false");
@@ -10458,10 +10740,40 @@ var CollectorHub = class {
       setTimeout(() => items[0]?.focus({ preventScroll: true }), 60);
     } else if (focusBack) this._el.act.focus({ preventScroll: true });
   }
+  /**
+   * Open Bobo's Arcade: as a page of the home sheet when BOBO OS is the host's home (works before the room
+   * is unlocked: games are gated by tasks, not by the merch code), else as a BOBO OS app in the room.
+   */
+  openArcade() {
+    if (this._home) {
+      this._homeView = "arcade";
+      if (this.homeOpen) this._renderHome();
+      else this.openHome();
+      return;
+    }
+    this.openOS("arcade");
+  }
   _renderHome() {
     const h = this._home;
     const box = this._el.hs;
     if (!h || !box) return;
+    if (this._homeView === "arcade") {
+      box.innerHTML = `
+<div class="mlh-hs-grab" aria-hidden="true"></div>
+<div class="mlh-hs-head">
+  <button type="button" class="mlh-hs-x" data-hback aria-label="Back to BOBO OS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="t"><b>Bobo's Arcade</b><small>Every EVADE experience</small></div>
+  <button type="button" class="mlh-hs-x" data-hx aria-label="Close">${ICON.close}</button>
+</div>
+<div data-arc></div>`;
+      box.querySelector("[data-hback]").addEventListener("click", () => {
+        this._homeView = "main";
+        this._renderHome();
+      });
+      box.querySelector("[data-hx]").addEventListener("click", () => this.closeHome());
+      void this._appArcade(box.querySelector("[data-arc]"));
+      return;
+    }
     const mode = h.mode();
     const au = h.audio();
     const join = h.join();
@@ -10485,7 +10797,7 @@ var CollectorHub = class {
       },
       { go: "room", name: "My Room", sub: "Bobo's Hideout", icon: ICON.home, cur: mode === "room" }
     ];
-    const apps = APPS.filter((a) => a.id !== "colarun");
+    const apps = APPS.filter((a) => a.id !== "colarun" && a.id !== "arcade");
     box.innerHTML = `
 <div class="mlh-hs-grab" aria-hidden="true"></div>
 <div class="mlh-hs-head">
@@ -10497,6 +10809,7 @@ ${mode === "paused" ? `<div class="mlh-hs-resume"><button type="button" data-go=
 <div class="mlh-hs-modes" role="group" aria-label="Modes">${modes.map(
       (m) => `<button type="button" data-go="${m.go}" class="${m.cur ? "cur" : ""}"${m.cur ? ' aria-current="true"' : ""}><i>${m.icon}</i><b>${m.name}</b><small>${m.sub}</small></button>`
     ).join("")}</div>
+<button type="button" class="mlh-hs-arcade" data-arcade><span class="mlh-tile">${ICON3D.arcade}</span><span><b>Bobo's Arcade</b><small>Jump into every EVADE experience</small></span>${ICON.chev}</button>
 <div class="mlh-hs-h" id="mlh-hs-apps">Apps</div>
 <div class="mlh-hs-apps" role="group" aria-labelledby="mlh-hs-apps">${apps.map(
       (a) => `<button type="button" data-app="${a.id}">${tileFor(a, a.id === "alerts")}<span>${esc(a.name)}</span></button>`
@@ -10526,6 +10839,10 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     }
     for (const b of box.querySelectorAll("[data-app]"))
       b.addEventListener("click", () => this.openOS(b.dataset.app));
+    box.querySelector("[data-arcade]")?.addEventListener("click", () => {
+      this._sfx("click");
+      this.openArcade();
+    });
     for (const b of box.querySelectorAll("[data-q]"))
       b.addEventListener("click", () => {
         const q = b.dataset.q;
@@ -12339,6 +12656,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
   }
   _renderApp(id, body, highlight) {
     switch (id) {
+      case "arcade":
+        return this._appArcade(body);
       case "alerts":
         return this._appAlerts(body, highlight);
       case "globe":
@@ -12395,6 +12714,64 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
         return;
       }
     }
+  }
+  _loadArcade() {
+    const url = this.opts.arcadeUrl || `${this.opts.api || ""}/evade/arcade/games.json`;
+    this._arcade || (this._arcade = fetch(url, { cache: "no-cache" }).then((r) => r.ok ? r.json() : null).catch(() => null));
+    return this._arcade;
+  }
+  _arcadeOpen(cat, g) {
+    if (g.soon) return false;
+    if (cat.testing || !g.unlock) return true;
+    try {
+      return !!(g.unlock.key && localStorage.getItem(g.unlock.key));
+    } catch {
+      return false;
+    }
+  }
+  async _appArcade(body) {
+    body.innerHTML = `<p style="color:var(--muted)">Loading the arcade\u2026</p>`;
+    const cat = await this._loadArcade();
+    if (!cat) {
+      body.innerHTML = `<p>The arcade couldn't load. Check your connection and open it again.</p>`;
+      return;
+    }
+    const lockSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+    const cards = cat.games.map((g) => {
+      const here = g.id === cat.self;
+      const open = this._arcadeOpen(cat, g);
+      const cls = g.soon ? "soon" : open ? "" : "locked";
+      const st = here ? '<span class="st here">Playing</span>' : g.soon ? '<span class="st">Soon</span>' : open ? "" : '<span class="st">Locked</span>';
+      const line = !open && !g.soon && g.unlock ? `<small class="lock">${lockSvg}${esc(g.unlock.task)}</small>` : `<small>${esc(g.sub)}</small>`;
+      const need = g.needs && open ? `<small class="need">Needs: ${esc(g.needs)}</small>` : "";
+      return `<button type="button" class="${cls}" data-g="${esc(g.id)}"${g.soon ? " disabled" : ""}><img src="${esc(g.img)}" alt="" loading="lazy">${st}<span class="tx"><b>${esc(g.name)}</b>${line}${need}</span></button>`;
+    });
+    body.innerHTML = `${cat.testing ? '<div class="mlh-arc-note">Test mode: every game is open. At launch some open only after a task.</div>' : ""}<div class="mlh-arc">${cards.join("")}</div>`;
+    for (const b of body.querySelectorAll("[data-g]"))
+      b.addEventListener("click", () => {
+        const g = cat.games.find((x) => x.id === b.dataset.g);
+        if (g.id === cat.self) {
+          this.closeHome(true);
+          return this._play2(false);
+        }
+        if (!this._arcadeOpen(cat, g)) {
+          this._sfx("click");
+          b.animate?.(
+            [
+              { transform: "translateX(0)" },
+              { transform: "translateX(-6px)" },
+              { transform: "translateX(6px)" },
+              { transform: "translateX(0)" }
+            ],
+            { duration: 260 }
+          );
+          return;
+        }
+        const url = g.url + (g.url.includes("?") ? "&" : "?") + "from=hub";
+        this._emit("launch", { id: g.id, url });
+        this._sfx("click");
+        setTimeout(() => location.assign(url), 120);
+      });
   }
   _play2(record) {
     this.closeOS();
@@ -13437,6 +13814,17 @@ var CollectorHubMode = class extends Group2 {
      */
     __publicField(this, "globeUrl", new Observable("https://medialife.ai/evade/where-is-bobo/"));
     /**
+     * Bobo's Arcade catalogue (JSON): the EVADE experiences BOBO OS can jump to.
+     * Empty = the site's /evade/arcade/games.json.
+     *
+     * @zui
+     * @zgroup Site
+     * @zgrouppriority 100
+     * @zpriority 79
+     * @ztype url
+     */
+    __publicField(this, "arcadeUrl", new Observable(""));
+    /**
      * Print the shared test code under the unlock form. For test builds only:
      * the code is switched off on medialife.ai unless the team turns it on.
      *
@@ -13545,6 +13933,7 @@ var CollectorHubMode = class extends Group2 {
         api: this.endpoint.value,
         modelUrl: this.modelUrl.value,
         globeUrl: this.globeUrl.value,
+        arcadeUrl: this.arcadeUrl.value || void 0,
         testHint: this.showTestCode.value ? "BOBO-TEST-CATS" : null,
         hubCode: qs.get("hub"),
         exitLabel: "Back to Cola Run",
@@ -13684,9 +14073,10 @@ var CollectorHubMode = class extends Group2 {
     this._groundY = player.position.y;
     this._glide.set(hub.lastPush.x, -drop, hub.lastPush.z);
     this._glideBase.copy(hub.root.position).sub(this._glide);
+    this._glideBase.y = hub.root.position.y;
     this._baseYaw = hub.root.rotation.y;
     this._baseScale = hub.root.scale.x || 1;
-    this._pivot.copy(hub.root.position);
+    this._pivot.copy(this._glideBase).add(this._glide);
     this._boboUnit = unit;
     this._glideK = 0;
     this._glideTo = 1;
