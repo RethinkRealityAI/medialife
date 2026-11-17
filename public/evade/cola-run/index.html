@@ -55,9 +55,11 @@
     <div id="error" hidden role="alertdialog" aria-labelledby="err-title">
       <h2 id="err-title">Something went wrong</h2>
       <p id="err-body"></p>
+      <div id="qr" hidden aria-label="QR code that opens this page on your phone" style="width:150px;height:150px;margin:0 auto 16px;background:#fff;border-radius:12px;padding:10px"></div>
       <button id="err-retry" class="primary">Try again</button>
     </div>
 
+    <script src="/vendor/ar-kit/qrcode.min.js"></script>
     <script
       src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js"
       async
