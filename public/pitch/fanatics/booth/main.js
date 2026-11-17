@@ -96,7 +96,7 @@ const hero = {
   frame(w, h) { this.cam.aspect = w / h; const d = w / h < 0.95 ? 5.0 : 6.6; this.cam.position.set(0, d * 0.36, -d); this.cam.lookAt(0, 0.38, 0); this.cam.updateProjectionMatrix(); },
   resize() { const c = $('hero3d'), w = c.clientWidth || 300, h = c.clientHeight || 300; this.r.setSize(w, h, false); this.frame(w, h); },
   // a worn hat's origin is the band's front; on the stand the crown's middle sits over the centre
-  place(hat) { const f = H.FIT[hat.userData.base]; hat.children[0].rotation.x = 0; hat.position.set(0, -f.y, -f.depth / 2); return hat; },
+  place(hat) { const f = H.fitFor(hat.userData.id); hat.children[0].rotation.x = 0; hat.position.set(0, -f.y, -f.depth / 2 - (f.z || 0)); return hat; },
   swap() {
     const ready = H.HATS.filter((h) => H.isLoaded(h.id));   // they stream in after the first
     if (!ready.length || (this.hat && ready.length === 1)) return;
@@ -201,12 +201,11 @@ const AP_DEFAULT = { forehead: [0, 0.278, -0.615] };
 const tmpV = new THREE.Vector3();
 // test hooks: ?occ=show paints the occluders; ?yaw=0.9 (or __fb.setYaw) turns the tracked head to check side views;
 // ?smooth=0 turns the pose filter off (its still-head cut-off in Hz, default 4)
-const OCC_SHOW = params.get('occ') === 'show';
+let occShow = params.get('occ') === 'show';
+function paintOcc(rig) { for (const g of [rig.skull, rig.occ]) if (g) g.traverse((o) => { if (!o.isMesh) return; const m = o.material; m.colorWrite = occShow; m.wireframe = occShow; m.color.set(o === rig.occ ? 0x00ffff : 0xff00ff); }); }
 let testYaw = +params.get('yaw') || 0; const yawQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), testYaw);
 const SMOOTH = params.has('smooth') ? Math.max(0, +params.get('smooth') || 0) : 4;
 function ap(d, n) { const p = d.attachmentPoints && d.attachmentPoints[n]; return p && p.position ? tmpV.set(p.position.x, p.position.y, p.position.z) : tmpV.set(...AP_DEFAULT[n]); }
-// ?fit=y,tilt,width,depth nudges every hat's fit (y/tilt added, width/depth multiplied) for tuning without a redeploy
-if (params.get('fit')) { const [y, t, w, dp] = params.get('fit').split(',').map(Number); for (const f of Object.values(H.FIT)) { if (isFinite(y)) f.y += y; if (isFinite(t)) f.tilt += t; if (isFinite(w) && w) f.width *= w; if (isFinite(dp) && dp) f.depth *= dp; } }
 function buildScene(xr) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
@@ -227,22 +226,23 @@ class Rig {
   constructor(id) {
     this.id = id; this.tracked = false; this.at = 0; this.s = 0.139;
     this.anchor = new THREE.Group(); this.anchor.visible = false; scene.add(this.anchor);
-    this.skull = H.buildHeadOccluder(OCC_SHOW); this.anchor.add(this.skull);
+    this.skull = H.buildHeadOccluder(false); this.anchor.add(this.skull);
     this.r = 1; this.frontZ = -0.6;   // this face's size over the reference face; the forehead skin (FU)
     this.P = new THREE.Vector3(); this.Q = new THREE.Quaternion();
     this.slot = new THREE.Group(); this.anchor.add(this.slot);
     this.forehead = new THREE.Vector3(...AP_DEFAULT.forehead);
     this.paintId = null;
-    this.makeMeshes(); this.apply(false);
+    this.makeMeshes(); paintOcc(this); this.apply(false);
   }
   makeMeshes() {
     if (this.occ || !faceIdx) return;
     const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); geo.setIndex(faceIdx.idx);
-    this.occ = new THREE.Mesh(geo, OCC_SHOW ? new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true }) : new THREE.MeshBasicMaterial({ colorWrite: false })); this.occ.renderOrder = -10; this.occ.frustumCulled = false; this.anchor.add(this.occ);
+    this.occ = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false })); this.occ.renderOrder = -10; this.occ.frustumCulled = false; this.anchor.add(this.occ);
     const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); pg.setIndex(faceIdx.idx);
     if (faceUvs) pg.setAttribute('uv', new THREE.BufferAttribute(faceUvs, 2));
     this.paint = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, opacity: 0 }));
     this.paint.renderOrder = 1; this.paint.frustumCulled = false; this.paint.visible = false; this.anchor.add(this.paint);
+    paintOcc(this);
   }
   update(d) {
     const t = d.transform; if (!t) return;
@@ -412,17 +412,20 @@ const brows = {
     const up = !!(d.leftEyebrowRaised && d.rightEyebrowRaised), T = rig.brow || (rig.brow = { since: 0, armed: true });
     if (!up) { if (!T.down) T.down = now; if (now - T.down >= 250) T.armed = true; T.since = 0; return; }
     T.down = 0; if (!T.since) T.since = now;
-    const open = !$('shot').hidden || !$('shop').hidden || !optsEl.hidden || !$('how').hidden;
+    const open = !$('shot').hidden || !$('shop').hidden || !optsEl.hidden || !$('how').hidden || !$('tune').hidden;
     if (T.armed && now - T.since >= 400 && now - this.at > 2500 && !strip && !open) { T.armed = false; this.at = now; nextHat(); }
   },
 };
+function setHat(h) {
+  wear.hat = h.id; store.set('wear', JSON.stringify(wear)); applyWear(true); shopState();
+  if (cat === 'hat') { const at = ITEMS.hat.indexOf(h); carouselLock = true; centred = at; scrollToLens(at, true); paintCentre(at); setTimeout(() => { carouselLock = false; }, 600); }
+}
 function nextHat() {
   const hats = ITEMS.hat.filter((h) => h.id !== 'none');
   let i = hats.findIndex((h) => h.id === wear.hat);
   for (let k = 1; k <= hats.length; k++) { const h = hats[(i + k) % hats.length]; if (H.isLoaded(h.id)) { i = (i + k) % hats.length; break; } }
   const h = hats[i]; if (!h || h.id === wear.hat) return;
-  wear.hat = h.id; store.set('wear', JSON.stringify(wear)); applyWear(true); shopState();
-  if (cat === 'hat') { const at = ITEMS.hat.indexOf(h); carouselLock = true; centred = at; scrollToLens(at, true); paintCentre(at); setTimeout(() => { carouselLock = false; }, 600); }
+  setHat(h);
   toast(`Eyebrows up: ${h.name}`); buzz([10, 40, 10]); diag.brows = (diag.brows || 0) + 1;
 }
 // the tips card: every time the booth opens (a demo phone gets handed round), gone after 8 s or on Got it
@@ -431,6 +434,78 @@ function showCoach() {
   setTimeout(() => { c.hidden = false; clearTimeout(c._t); c._t = setTimeout(() => { c.hidden = true; }, 8000); }, 1200);
 }
 $('b-coach').onclick = () => { $('coach').hidden = true; };
+
+// ---------------------------------------------------------------- Adjust fit: live tuning on the phone
+// Options > Adjust fit (or ?tune): sliders for the hat being worn, applied as you drag and kept on this phone.
+// Copy values puts every changed hat's numbers on the clipboard to send back, to be baked into hats.js.
+const FU_CM = 11.8;   // one face unit is ~118 mm on an adult (hats.js)
+const TUNE_KEY = 'tune4';
+try { const t = JSON.parse(store.get(TUNE_KEY, '{}')); if (t && t.hats) Object.assign(H.TUNE.hats, t.hats); if (t && t.head > 0) H.TUNE.head = t.head; } catch (e) { /* defaults */ }
+const cm = (v) => (v * FU_CM).toFixed(1) + ' cm', scm = (v) => (v > 0 ? '+' : '') + (v * FU_CM).toFixed(1) + ' cm';
+const TROWS = [
+  { k: 'width',  label: 'Width',        min: 1.1,  max: 2.0, step: 0.01,  fmt: cm },
+  { k: 'depth',  label: 'Length',       min: 1.3,  max: 2.5, step: 0.01,  fmt: cm },
+  { k: 'height', label: 'Height',       min: 0.7,  max: 1.6, step: 0.01,  fmt: (v) => Math.round(v * 100) + '%' },
+  { k: 'y',      label: 'Up / down',    min: -0.5, max: 0.5, step: 0.01,  fmt: scm },
+  { k: 'z',      label: 'Forward / back', min: -0.4, max: 0.4, step: 0.01, fmt: (v) => (v === 0 ? '0 cm' : (Math.abs(v) * FU_CM).toFixed(1) + (v < 0 ? ' cm forward' : ' cm back')) },
+  { k: 'tilt',   label: 'Tilt back',    min: -0.3, max: 0.6, step: 0.01,  fmt: (v) => Math.round(v * 180 / Math.PI) + '°' },
+  { k: 'head',   label: 'Hidden head',  min: 0.7,  max: 1.4, step: 0.01,  fmt: (v) => Math.round(v * 100) + '%', global: true },
+];
+const tune = {
+  built: false,
+  hat() { return wear.hat !== 'none' ? wear.hat : null; },
+  val(row) { if (row.global) return H.TUNE.head; const f = this.hat() && H.fitFor(this.hat()); return f ? (f[row.k] || 0) : 0; },
+  set(row, v) {
+    v = clamp(Math.round(v / row.step) * row.step, row.min, row.max);
+    if (row.global) H.TUNE.head = v; else { const id = this.hat(); if (!id) return; (H.TUNE.hats[id] || (H.TUNE.hats[id] = {}))[row.k] = +v.toFixed(3); }
+    store.set(TUNE_KEY, JSON.stringify(H.TUNE)); this.paint(); if (!row.global) refreshHats();
+  },
+  build() {
+    if (this.built) return; this.built = true;
+    const box = $('t-rows');
+    for (const row of TROWS) {
+      const el = document.createElement('div'); el.className = 'trow';
+      el.innerHTML = `<label for="t-${row.k}">${row.label}<small></small></label><button type="button" aria-label="${row.label}: less">−</button><input type="range" id="t-${row.k}" min="${row.min}" max="${row.max}" step="${row.step}"><button type="button" aria-label="${row.label}: more">+</button>`;
+      const [less, range, more] = [el.children[1], el.children[2], el.children[3]];
+      range.oninput = () => this.set(row, +range.value);
+      less.onclick = () => this.set(row, this.val(row) - row.step); more.onclick = () => this.set(row, this.val(row) + row.step);
+      row.el = el; box.appendChild(el);
+    }
+    $('t-prev').onclick = () => this.step(-1); $('t-next').onclick = () => this.step(1);
+    $('t-done').onclick = () => this.close();
+    $('t-reset').onclick = () => { const id = this.hat(); if (id) delete H.TUNE.hats[id]; H.TUNE.head = 1; store.set(TUNE_KEY, JSON.stringify(H.TUNE)); this.paint(); refreshHats(); toast('Back to the built-in fit'); };
+    $('t-occ').onclick = () => { occShow = !occShow; $('t-occ').setAttribute('aria-checked', String(occShow)); for (const r of rigs.values()) paintOcc(r); };
+    $('t-copy').onclick = () => this.copy();
+  },
+  paint() {
+    const id = this.hat(), h = H.HATS.find((x) => x.id === id);
+    $('t-name').textContent = h ? h.name : 'Pick a hat first';
+    for (const row of TROWS) { const v = this.val(row); row.el.querySelector('input').value = v; row.el.querySelector('small').textContent = row.fmt(v); row.el.querySelector('input').setAttribute('aria-valuetext', row.fmt(v)); }
+    $('t-occ').setAttribute('aria-checked', String(occShow));
+  },
+  step(d) {
+    const hats = H.HATS; let i = hats.findIndex((h) => h.id === wear.hat);
+    for (let k = 1; k <= hats.length; k++) { const h = hats[(i + d * k + hats.length * k) % hats.length]; if (H.isLoaded(h.id)) { setHat(h); break; } }
+    this.paint();
+  },
+  values() {
+    const out = { hats: {}, head: H.TUNE.head };
+    for (const id of Object.keys(H.TUNE.hats)) out.hats[id] = H.fitFor(id);
+    const r = [...rigs.values()][0]; if (r) out.face = +r.r.toFixed(3);
+    return 'Fanatics fit ' + JSON.stringify(out);
+  },
+  async copy() {
+    const text = this.values(); let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (e) { /* show it instead */ }
+    const out = $('t-out'); out.value = text; out.hidden = ok;
+    if (ok) toast('Copied. Paste it in the chat'); else { out.focus(); out.select(); toast('Select the text and copy it'); }
+  },
+  open() { this.build(); if (!optsEl.hidden) closeOpts(); if (wear.hat === 'none') setHat(H.HATS[0]); $('tune').hidden = false; $('hud').classList.add('tuning'); this.paint(); },
+  close() { $('tune').hidden = true; $('t-out').hidden = true; $('hud').classList.remove('tuning'); },
+};
+// rebuild the worn hat on every face with the new numbers (no entrance animation)
+function refreshHats() { for (const r of rigs.values()) { for (const c of [...r.slot.children]) r.slot.remove(c); r.slot.userData.id = null; r.apply(false); } }
+$('o-tune').onclick = () => tune.open();
 
 // ---------------------------------------------------------------- per frame
 function tick(dt) {
@@ -497,7 +572,7 @@ const appModule = () => ({
     if (status === 'hasVideo') {
       hideTapCam(); camStartAt = performance.now(); noteVideo(video);
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      showCoach();
+      if (params.has('tune')) tune.open(); else showCoach();
     }
     if (status === 'requesting') hint('Allow camera access to begin');
     if (status === 'failed') camFailed('failed');
@@ -700,7 +775,7 @@ if (params.has('test')) window.__fb = {
     return { forehead: pr(r.worldOf(r.forehead)), chin: pr(r.worldOf(new THREE.Vector3(0, -0.95, -0.45))) };
   },
   measure() { const r = this.rig; if (!r || !r.v) return null; const o = {}; for (const i of [10, 151, 9, 8, 168, 6, 234, 454, 127, 356, 162, 389, 21, 251, 103, 332, 152]) { const v = r.v[i]; o[i] = [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)]; } let zx = -9, zn = 9, yx = -9; for (const v of r.v) { zx = Math.max(zx, v.z); zn = Math.min(zn, v.z); yx = Math.max(yx, v.y); } o.range = { zmin: zn, zmax: zx, ymax: yx }; o.fh = r.forehead.toArray(); o.s = r.s; return o; },
-  brows: () => nextHat(),
+  brows: () => nextHat(), tune,
   photo: () => takePhoto(), strip: () => startStrip(), shop: () => openShop(),
 };
 

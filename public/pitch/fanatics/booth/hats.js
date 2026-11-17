@@ -6,22 +6,29 @@ import * as THREE from 'three';
 
 export const MM = 1 / 139;
 const BASE = './models/';
-// How each style sits on a head (Dapo round 3: caps sat short at the back and hair showed behind them on a side
-// turn). The crown is fitted on its own measured band, not the model's box:
-// - width / depth: the crown's inside at the band, across and front to back (FU). Heads are longer than wide
-//   (about 1.25:1 with hair) but Meshy crowns are almost round, so depth is scaled on its own.
-// - height: extra stretch of the crown upwards, so hair can't poke over the top.
-// - y: the band's height over the face's forehead point; the band's FRONT sits on the forehead skin (measured from
-//   the live face mesh every frame), so the crown reaches as far back as the head does.
-// - tilt: the back of the band drops toward the nape (positive = back down), like a real cap.
-// All of it is for a reference face 1.18 FU wide (cheek to cheek); each wearer's face scales it (main.js).
+// How each style sits on a head. Sized from standard adult head measurements, not from one test face (round 4:
+// on Dapo's head the round 3 hats sat ~1.5 cm high and stopped short of the back). In face units (FU): the face
+// mesh is ~1.18 FU cheek to cheek (vertices 234-454), about 140 mm on an adult, so 1 FU is ~118 mm. An average
+// adult head is ~195 mm long and ~153 mm wide (57 cm round) = 1.65 x 1.29 FU; a cap goes round that plus hair.
+// - width / depth: the crown at the band, across and front to back. Meshy crowns are almost round, heads are not,
+//   so each axis is scaled on its own (the brim keeps the width's scale, so it doesn't stretch).
+// - height: extra stretch of the crown upwards.
+// - y: the band's height over the face's forehead point (caps: ~2.5 cm above the brows; the beanie comes down to
+//   the brows and the top of the ears). z: forward (-) / back (+) from the forehead skin.
+// - tilt: the back of the band drops toward the nape (positive = back down).
+// Every value can be changed live in Options > Adjust fit; values Dapo sends back get baked in here or in TUNED.
 export const FIT = {
-  flat:   { width: 1.42, depth: 1.66, height: 1.10, y: 0.16, tilt: 0.05 },
-  curved: { width: 1.38, depth: 1.64, height: 1.10, y: 0.08, tilt: 0.08 },
-  beanie: { width: 1.36, depth: 1.60, height: 1.00, y: 0.12, tilt: 0.26 },
+  flat:   { width: 1.48, depth: 1.84, height: 1.08, y: 0.10,  z: 0, tilt: 0.07 },
+  curved: { width: 1.46, depth: 1.82, height: 1.08, y: 0.05,  z: 0, tilt: 0.08 },
+  beanie: { width: 1.50, depth: 1.84, height: 1.00, y: -0.03, z: 0, tilt: 0.14 },
 };
-// the reference head that FIT is tuned on, in FU: face width (vertices 234-454) and the skull the occluder stands for
-export const HEAD = { faceW: 1.18, rx: 0.62, ry: 0.86, rz: 0.72, cy: 0.06, inset: 0.1 };
+// per-hat values baked in from phone tuning (hat id -> any of the FIT keys)
+export const TUNED = {};
+// live overrides from the Adjust fit panel (kept on this phone); `head` scales the hidden head shape
+export const TUNE = { hats: {}, head: 1 };
+export const fitFor = (id) => { const h = HATS.find((x) => x.id === id); return h ? { ...FIT[h.style], ...(TUNED[id] || {}), ...(TUNE.hats[id] || {}) } : null; };
+// the reference head, in FU: face width and the skull the occluder stands for (half width, half height, half length)
+export const HEAD = { faceW: 1.18, rx: 0.645, ry: 0.92, rz: 0.835, cy: 0.06, inset: 0.08 };
 // the six products (photos from the Fanatics 76ers headwear page)
 export const HATS = [
   { id: 'blue76',  style: 'flat',   img: 'hat5', name: '76ers Blue 59FIFTY',          sub: 'Flat brim · Fitted' },
@@ -59,9 +66,9 @@ export async function loadHats(gltfLoader, first = []) {
 // taken from the back half, the width and back from a band slice, the front from a slice above any brim.
 function fitOf(scene) {
   scene.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(scene), v = new THREE.Vector3(), pts = [];
+  const box = new THREE.Box3().setFromObject(scene), v = new THREE.Vector3(), pts = [], I = new THREE.Matrix4(); let plain = true;
   scene.traverse((o) => {
-    if (!o.isMesh) return; const p = o.geometry.attributes.position;
+    if (!o.isMesh) return; const p = o.geometry.attributes.position; if (!o.matrixWorld.equals(I)) plain = false;
     for (let i = 0; i < p.count; i += 2) { v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); pts.push(v.x, v.y, v.z); }
   });
   let bottom = Infinity; for (let i = 0; i < pts.length; i += 3) if (pts[i + 2] < 0 && pts[i + 1] < bottom) bottom = pts[i + 1];
@@ -71,13 +78,14 @@ function fitOf(scene) {
     if (y > 0.12 && y < 0.45) { half = Math.max(half, Math.abs(x)); back = Math.min(back, z); }
     if (y > 0.38 && y < 0.52) front = Math.max(front, z);
   }
-  return { half, bottom, back, front, height: H };
+  return { half, bottom, back, front, height: H, plain };
 }
 // One hat, ready to wear: a frame on the head with the model inside, fitted to FIT. Returned group's userData has
 // `inner` (the part the entrance animation moves). Null if the model hasn't loaded yet.
 export function buildHat(id) {
   const h = HATS.find((x) => x.id === id); if (!h || !gltfs[id]) return null;
-  const f = FIT[h.style], m0 = gltfs[id], src = m0.scene, fit = m0.fit;
+  const f = fitFor(id), m0 = gltfs[id], src = m0.scene, fit = m0.fit;
+  const kx = f.width / (fit.half * 2), kz = f.depth / (fit.front - fit.back), ky = kx * f.height;
   const model = src.clone(true);
   model.traverse((o) => {
     if (!o.isMesh) return;
@@ -87,16 +95,31 @@ export function buildHat(id) {
     m.metalness = 0; m.metalnessMap = null; if (m.emissive) m.emissive.setRGB(0, 0, 0); m.emissiveMap = null;
     if (!m.roughnessMap) m.roughness = 0.85;
     m.side = THREE.FrontSide; o.material = m;
+    if (fit.plain) o.geometry = brimGeo(id, o, fit.front, kx / kz);   // only when the mesh sits in the model's own space
   });
-  const kx = f.width / (fit.half * 2), kz = f.depth / (fit.front - fit.back), ky = kx * f.height;
   const inner = new THREE.Group(); inner.add(model);
   model.rotation.y = Math.PI;                              // brim to the face's front (-z)
   model.scale.set(kx, ky, kz);
   model.position.set(0, -fit.bottom * ky, fit.front * kz); // the band's front-bottom on the frame's origin
-  const frame = new THREE.Group(); frame.position.set(0, f.y, 0); frame.rotation.x = f.tilt; frame.add(inner);
+  const frame = new THREE.Group(); frame.position.set(0, f.y, f.z || 0); frame.rotation.x = f.tilt; frame.add(inner);
   const root = new THREE.Group(); root.name = 'hat:' + id; root.add(frame);
   root.userData = { id, inner, base: h.style };
   return root;
+}
+
+// The crown is stretched front to back more than across; the brim (everything ahead of the crown's front) is pulled
+// back by the same ratio so it keeps its real length. One geometry per hat mesh and ratio, cached.
+const brimCache = new Map();
+function brimGeo(id, mesh, front, ratio) {
+  if (Math.abs(ratio - 1) < 0.01) return mesh.geometry;
+  const src = mesh.geometry, key = id + ':' + src.uuid + ':' + ratio.toFixed(2);
+  let g = brimCache.get(key);
+  if (!g) {
+    g = src.clone(); const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) { const z = p.getZ(i); if (z > front) p.setZ(i, front + (z - front) * ratio); }
+    p.needsUpdate = true; if (brimCache.size > 40) brimCache.clear(); brimCache.set(key, g);
+  }
+  return g;
 }
 
 // ---------------------------------------------------------------- head occluder (no stencil: depth only)
@@ -115,8 +138,9 @@ export function buildHeadOccluder(debug) {
 // r = this face's size over the reference face; frontZ = the forehead skin (FU)
 export function fitHeadOccluder(g, r, frontZ) {
   const h = g.userData.head;
-  h.scale.set(HEAD.rx * r, HEAD.ry * r, HEAD.rz * r);
-  h.position.set(0, HEAD.cy, frontZ + HEAD.inset + HEAD.rz * r);
+  const k = r * TUNE.head;
+  h.scale.set(HEAD.rx * k, HEAD.ry * k, HEAD.rz * k);
+  h.position.set(0, HEAD.cy, frontZ + HEAD.inset + HEAD.rz * k);
 }
 // ---------------------------------------------------------------- entrance and exit
 // Caps drop onto the head and settle with a small bounce; the beanie pulls down over the head. Exit: a flick up.

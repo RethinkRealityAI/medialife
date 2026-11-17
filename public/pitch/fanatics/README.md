@@ -36,9 +36,20 @@ The engine tracks the face only (no full-head mesh), so the rest of the head is 
   occluder and a neck cylinder it hides what a real head would;
 - the head pose gets adaptive (One Euro style) smoothing: still = steady, moving = no lag.
 
-`?test` exposes `window.__fb` (setWear, setYaw, brows, measure, face, screen, photo, strip, shop).
-`?fit=y,tilt,width,depth` nudges every hat's fit on a phone (y/tilt added, width/depth multiplied). `?occ=show` paints
-the occluders, `?yaw=0.9` turns the tracked head for side views, `?smooth=0` turns the pose filter off.
+### Round 4: real-head sizes and Adjust fit
+On Dapo's head the round 3 hats sat about 1.5 cm high and stopped short of the back, so FIT is now derived from
+standard adult head sizes (about 195 mm long, 153 mm wide, 57 cm round; 1 FU is about 118 mm) plus hair, and the brim
+keeps the width's scale so the longer crown doesn't stretch it.
+
+**Options > Adjust fit** (or `?tune`) opens live sliders over the camera for the hat being worn: Width, Length,
+Height, Up/down, Forward/back, Tilt back, and Hidden head (the occluder, all hats). Arrows change hat, Show head
+paints the occluders, Reset hat goes back to the built-in fit, values stay on that phone (localStorage
+`fanatics-booth-tune4`). **Copy values** copies `Fanatics fit {...}` to paste back; bake those numbers into
+`TUNED` (per hat) or `FIT` (per style) in `hats.js`, then bump the storage key so old phone values don't linger.
+
+`?test` exposes `window.__fb` (setWear, setYaw, brows, tune, measure, face, screen, photo, strip, shop).
+`?occ=show` paints the occluders, `?yaw=0.9` turns the tracked head for side views, `?smooth=0` turns the pose
+filter off.
 
 ## Sixers Spray (`spray/`)
 
