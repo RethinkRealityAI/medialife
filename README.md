@@ -1007,6 +1007,23 @@ City data: GeoNames (CC BY 4.0) and Natural Earth via `world-atlas`, rebuilt wit
 `node scripts/build-bobo-geo.mjs` into `src/lib/bobo/*.json`, `assets/data/globe.bin`
 (dots, outlines) and `assets/data/land.bin` (the raised continent mesh, ~240 KB).
 
+## Interaction library (`/technology#interactions`, homepage rail)
+
+The newer experiences as cards: data in `src/lib/interactions.ts`, UI in
+`src/components/site/Interactions.tsx`. Each full card on `/technology` has a
+**Try it now** panel (native `<dialog>`): a QR to the production URL (hidden on
+touch screens, which get "Open it on this device") and the image target to point
+the phone at. `/technology#try-<slug>` opens a card's panel; the homepage rail
+links there. Add a card whenever a new experience ships (and a Labs card).
+
+Videos: each card plays its bundled phone recording (`public/evade/video/`) until
+a Media Library upload replaces it. To put a video on a card, upload it in
+Admin > Media Library, make it **public**, and tag it `Showcase` plus the
+experience name (`Bobo Booth`, `Photo Beam`, ...; presets under "Site showcase"),
+or use the name as its collection. `/api/showcase.json` (public, CDN-cached 5 min)
+returns the newest match per card. Export H.264 MP4, vertical, ideally under
+10 MB: a file the browser can't play falls back to the bundled clip / still.
+
 ## Site design kit (all public pages)
 
 Every public page uses `src/components/site/kit.tsx` so the site reads as one

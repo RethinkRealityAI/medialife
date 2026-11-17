@@ -12,6 +12,7 @@ import { LogoBand, type PartnerLogo } from "@/components/home/LogoBand";
 import { InViewVideo } from "@/components/home/InViewVideo";
 import { MarketingCollage } from "@/components/home/MarketingCollage";
 import { EYEBROW, SECTION, H2, TEXT, HEX, Eyebrow, type Hue } from "@/components/site/kit";
+import { InteractionRail } from "@/components/site/Interactions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -791,6 +792,27 @@ function Home() {
             </Reveal>
           ))}
         </ul>
+
+        {/* the newer interactions, compact; each opens its Try it panel on /technology */}
+        <Reveal className="mt-10">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h3 className={EYEBROW}>
+              <span
+                className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-accent align-middle"
+                aria-hidden
+              />
+              New interactions
+            </h3>
+            <Link
+              to="/technology"
+              hash="interactions"
+              className="inline-flex items-center gap-2 text-sm text-primary hover:underline underline-offset-4"
+            >
+              Try them all <span aria-hidden>→</span>
+            </Link>
+          </div>
+          <InteractionRail />
+        </Reveal>
 
         <div className="mt-3 grid gap-3 lg:grid-cols-12">
           <Reveal delay={120} className="lg-card rounded-[28px] p-6 sm:p-8 lg:col-span-7">
