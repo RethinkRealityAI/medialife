@@ -803,9 +803,25 @@ function recTick() {
   const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
 }
 function flash() { const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60); }
-async function grab() {   // one frame of camera + wearables as an Image
+async function grab() {   // one frame of camera + wearables as an Image (with where the faces are, for Beam)
+  const box = faceBox();
   const b64 = await XR8.CanvasScreenshot.takeScreenshot();
-  const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode(); return img;
+  const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode(); img.faceBox = box; return img;
+}
+// The faces on screen (CSS px), hat to chin and ear to ear, with room around them: Beam crops the shot to this so the
+// visor / can / cap / Sukeban get your face and look, not the room. Null when no face is tracked.
+function faceBox() {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const r of rigs.values()) {
+    if (!r.live) continue;
+    for (const p of [[0, 1.0, -0.3], [0, -0.95, -0.45], [0.7, -0.2, 0], [-0.7, -0.2, 0]]) {
+      const v = r.worldOf(tmpV.set(...p)).project(camera), x = (v.x + 1) / 2 * innerWidth, y = (1 - v.y) / 2 * innerHeight;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+    }
+  }
+  if (x1 < x0) return null;
+  const pad = 0.12 * Math.max(x1 - x0, y1 - y0);
+  return { x0: x0 - pad, y0: y0 - pad, x1: x1 + pad, y1: y1 + pad };
 }
 async function showResult(c, name, title, what) {
   const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.92));
@@ -814,14 +830,59 @@ async function showResult(c, name, title, what) {
   $('shot-save').href = url; $('shot-save').download = file.name; $('shot-save').hidden = false;
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
   $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo Booth' }).catch(() => {});
+  beamPick = 0; renderBeamPick();
   $('shot').hidden = false; $('shot-close').focus(); postEvent('share', { what, look: JSON.stringify(wear) });
 }
+
+// ---------------------------------------------------------------- Beam it onto your merch (Photo Beam, /evade/photo-beam/)
+// The clean shot (no watermark), cropped round the faces, is left in Photo Beam's IndexedDB as 'handoff'; Photo Beam
+// opens straight into Make it yours with it, then you aim at a charm or the Sukeban tee and beam it on. Same origin,
+// on this phone only: nothing is uploaded. From a strip you pick which of the four shots to beam.
+let beamable = [], beamPick = 0;
+function renderBeamPick() {
+  const row = $('beam-pick'); row.innerHTML = ''; row.hidden = beamable.length < 2;
+  beamable.forEach((img, i) => {
+    const b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(i === beamPick));
+    b.setAttribute('aria-label', `Shot ${i + 1}`); const c = beamCrop(img, 120); c.setAttribute('aria-hidden', 'true'); b.appendChild(c);
+    b.onclick = () => { beamPick = i; sound.pick(); row.querySelectorAll('button').forEach((x, j) => x.setAttribute('aria-checked', String(j === i))); };
+    row.appendChild(b);
+  });
+}
+function beamCrop(img, max = 1024) {
+  const iw = img.naturalWidth, ih = img.naturalHeight, k = iw / innerWidth;
+  let { x0, y0, x1, y1 } = img.faceBox || { x0: 0, y0: innerHeight * 0.1, x1: innerWidth, y1: innerHeight * 0.1 + innerWidth };
+  let w = (x1 - x0) * k, h = (y1 - y0) * k, cx = (x0 + x1) / 2 * k, cy = (y0 + y1) / 2 * k;
+  w = Math.min(Math.max(w, h * 0.8), iw); h = Math.min(Math.max(h, w * 0.8), ih);   // never thinner than 4:5 either way
+  const sx = clamp(cx - w / 2, 0, iw - w), sy = clamp(cy - h / 2, 0, ih - h), sc = Math.min(1, max / Math.max(w, h));
+  const c = document.createElement('canvas'); c.width = Math.round(w * sc); c.height = Math.round(h * sc);
+  c.getContext('2d').drawImage(img, sx, sy, w, h, 0, 0, c.width, c.height); return c;
+}
+function beamDb() {
+  return new Promise((res, rej) => { try { const r = indexedDB.open('photo-beam', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
+}
+async function beamIt() {
+  const img = beamable[beamPick] || beamable[0]; if (!img) return;
+  const btn = $('shot-beam'); btn.disabled = true; btn.textContent = 'Opening Photo Beam…';
+  try {
+    const blob = await new Promise((res) => beamCrop(img).toBlob(res, 'image/jpeg', 0.92));
+    const db = await beamDb();
+    await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put({ src: blob, from: PAGE, look: { ...wear }, at: Date.now() }, 'handoff'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    postEvent('custom', { what: 'beam', look: JSON.stringify(wear) }); flushDiag(true);
+    sound.pop(); buzz(12);
+    location.href = '/evade/photo-beam/?from=booth' + (params.has('test') ? '&test' : '') + (params.has('nolog') ? '&nolog' : '');
+  } catch (e) {
+    console.warn('beam', e); diag.errors.push('beam: ' + String(e).slice(0, 80));
+    btn.disabled = false; btn.textContent = 'Beam it onto your merch'; toast('Couldn\'t open Photo Beam. Try again.');
+  }
+}
+$('shot-beam').onclick = beamIt;
 let busy = false;
 async function takePhoto() {
   if (busy) return; busy = true;
   try {
     sound.shutter(); buzz(20); flash();
     const img = await grab(), c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    beamable = [img];
     const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawWatermark(g, c.width, c.height);
     await showResult(c, `bobo-booth-${++shots}.jpg`, 'Your Bobo look', 'booth-photo');
   } catch (e) { console.error(e); diag.errors.push('photo: ' + String(e).slice(0, 120)); }
@@ -851,7 +912,7 @@ function startStrip() {
 }
 function endStrip() { strip = null; busy = false; $('countdown').hidden = true; $('count').textContent = ''; $('hud').classList.remove('counting'); }
 async function finishStrip() {
-  const frames = strip.frames; endStrip(); busy = true;
+  const frames = strip.frames; endStrip(); busy = true; beamable = frames.slice();
   try {
     // 720 wide: four square frames (centre crop of the screen shots), then the EVADE footer. Flat colours only.
     const Wd = 720, M = 28, FW = Wd - M * 2, FH = FW, GAP = 18, FOOT = 230;

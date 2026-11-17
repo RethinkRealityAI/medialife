@@ -41,10 +41,14 @@
     <div class="copy">
       <p class="kicker">EVADE · Activated AR</p>
       <h1 id="title">Photo <span>Beam</span></h1>
-      <p class="lead">Snap a selfie, point at your keychain or the Sukeban tee and lock on. Beam it onto Bobo's visor, the Eclipse can, Roblox Bobo's cap, or Sukeban's face and top.</p>
+      <p class="lead" id="lead">Snap a selfie, point at your keychain or the Sukeban tee and lock on. Beam it onto Bobo's visor, the Eclipse can, Roblox Bobo's cap, or Sukeban's face and top.</p>
       <div id="desk" hidden>
         <div id="qr" aria-label="QR code that opens this page on your phone"></div>
         <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
+      </div>
+      <div id="booth" hidden>
+        <canvas id="booth-shot" aria-label="Your photo from the Bobo Booth"></canvas>
+        <a href="/evade/bobo-booth/">Back to the booth</a>
       </div>
       <button id="b-start" class="primary" disabled>Loading…</button>
       <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
@@ -210,6 +214,10 @@
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
         <span class="ol"><b>How it works</b><small>What to point at, and what to try</small></span><i class="go" aria-hidden="true"></i>
       </button>
+      <a class="opt" id="o-booth" href="/evade/bobo-booth/" hidden>
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+        <span class="ol"><b>Back to the Bobo Booth</b><small>Try on another look and shoot again</small></span><i class="go" aria-hidden="true"></i>
+      </a>
       <a class="opt" href="/evade/keychain-ar/target/" target="_blank" rel="noopener">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
         <span class="ol"><b>No keychain with you?</b><small>Open the charm pictures on another screen</small></span><i class="go" aria-hidden="true"></i>

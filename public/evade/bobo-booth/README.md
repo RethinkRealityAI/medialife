@@ -31,6 +31,13 @@ EVADE selfie photo booth on the open-source 8th Wall engine's **face tracking** 
   sparkles burst where a piece lands. Reduced motion: short scale fades only.
 - Capture: tap = photo, hold = video (shared Cola Run recorder, can be sent to the Where is Bobo? globe),
   **Strip** toggle = 3-2-1 countdown then four shots laid out as a booth strip with the EVADE footer.
+- **Beam it onto your merch** (2026-11-17, Dapo): the photo / strip sheet hands the shot to Photo Beam
+  (`/evade/photo-beam/`). The clean frame (no watermark) is cropped round the tracked faces (hat to chin, ear to ear,
+  never thinner than 4:5; `faceBox()` at grab time), written to Photo Beam's IndexedDB (`photo-beam` / `kv`, key
+  `handoff`: `{ src: Blob, from, look, at }`), then the page opens `/evade/photo-beam/?from=booth`. Photo Beam takes it
+  once, deletes it, says "Beam your booth photo" on its splash with the shot, and its Start opens Make it yours
+  directly (Retake = back to the booth); then the usual aim, lock on and Beam onto any charm or the Sukeban tee.
+  From a strip you pick which of the four shots to beam. Nothing is uploaded.
 - Events: `/api/bobo/events` with source `bobo-booth` (scan, play, custom look, share). Test log `/api/ar/kc-diag`
   (page `bobo-booth`) on previews/local or `?diag`. `?test` exposes `window.__bb`.
 

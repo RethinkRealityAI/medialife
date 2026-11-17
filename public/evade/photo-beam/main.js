@@ -150,9 +150,35 @@ function recOf(P, n) { return SL.targets[n].find((r) => r.piece === P.k); }
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
-  loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = 'Start';
+  loaded = true; $('load').hidden = true; $('b-start').disabled = false; $('b-start').textContent = boothSrc ? 'Make it yours' : 'Start';
 }).catch((e) => { console.error(e); showError('Could not load the experience', 'Check your connection and reload the page.'); });
 const savedReady = assets.then(loadSaved).catch(() => {});
+// From the Bobo Booth (/evade/bobo-booth/, "Beam it onto your merch"): the booth leaves its photo in this page's
+// IndexedDB under 'handoff' and opens ?from=booth. We take it once (then delete it) and open Make it yours with it,
+// skipping the selfie step. Older than 30 minutes is ignored.
+const FROM_BOOTH = params.get('from') === 'booth';
+const handoff = FROM_BOOTH ? (async () => {
+  try {
+    const db = await idb();
+    const rec = await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get('handoff'); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
+    db.transaction('kv', 'readwrite').objectStore('kv').delete('handoff');
+    if (!rec || !rec.src || Date.now() - (rec.at || 0) > 30 * 60 * 1000) return null;
+    return await decodeImage(rec.src);
+  } catch (e) { console.warn('handoff', e); return null; }
+})() : Promise.resolve(null);
+let boothSrc = null;
+handoff.then((src) => {
+  if (!src) { if (FROM_BOOTH) history.replaceState(null, '', location.pathname + location.search.replace(/([?&])from=booth&?/, '$1').replace(/[?&]$/, '')); return; }
+  boothSrc = src; diag.booth = 1;
+  $('o-booth').hidden = false; $('ed-back').textContent = 'Back to the booth';   // came from the booth: that is where a retake happens
+  // the splash says what is about to happen, with the photo itself
+  const th = $('booth-shot'); th.width = 132; th.height = Math.round(132 * src.height / src.width);
+  th.getContext('2d').drawImage(src, 0, 0, th.width, th.height);
+  $('booth').hidden = false; $('splash').classList.add('from-booth');
+  $('title').innerHTML = 'Beam your <span>booth photo</span>';
+  $('lead').textContent = 'Style it, then point at your keychain or the Sukeban tee and lock on. It beams onto Bobo\'s visor, the Eclipse can, Roblox Bobo\'s cap, or Sukeban\'s face and top.';
+  if (loaded) $('b-start').textContent = 'Make it yours';
+});
 
 // ---------------------------------------------------------------- slot geometry (metres of the print, y up, z out)
 // band: the label (photo) covers the band's bounding box and the band's shape cuts it; can: the label wraps the front
@@ -1175,7 +1201,7 @@ function openEditor(src, prm, guide) {
   $('edit').hidden = false; drawEditor(); $('ed-go').focus();
 }
 function closeEditor() { $('edit').hidden = true; ED.src = null; }
-function retake() { closeEditor(); if (CAP.open && !camLive()) camOpen(CAP.facing); }
+function retake() { if (FROM_BOOTH && !CAP.open && !engine.started) { location.href = '/evade/bobo-booth/'; return; } closeEditor(); if (!CAP.open && !engine.started) { openCapture(); return; } if (CAP.open && !camLive()) camOpen(CAP.facing); }
 // On Sukeban shows her face controls: Match skin and the face width (both apply to her face only)
 function syncView() {
   document.querySelectorAll('#ed-view button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === ED.view)));
@@ -1357,6 +1383,7 @@ async function start() {
   sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
   postEvent('scan', {});
   $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
+  if (boothSrc) { const src = boothSrc; boothSrc = null; postEvent('custom', { action: 'photo-beam-from-booth' }); openEditor(src); return; }
   await openCapture();
 }
 $('b-start').onclick = start;

@@ -115,7 +115,19 @@ h1 span{color:var(--x)}
 #strip-dots i{width:12px;height:12px;border-radius:50%;border:2px solid #fff;display:block}
 #strip-dots i.on{background:var(--x);border-color:var(--x)}
 #b-cancel{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));pointer-events:auto}
-#shot.strip #shot-img{max-height:62vh}
+#shot.strip #shot-img{max-height:46vh}
+/* Beam: hand the shot to Photo Beam */
+.beam{width:100%;display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:12px;border-radius:18px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.beam-t{margin:0;display:flex;flex-direction:column;text-align:left;gap:2px;line-height:1.25}
+.beam-t b{font-size:15px;color:var(--text)} .beam-t small{font-size:12.5px;color:var(--muted)}
+#shot-beam{background:var(--v);color:var(--xd);border:0;font-weight:800}
+#shot-beam svg{width:20px;height:20px}
+#beam-pick{display:flex;gap:8px;justify-content:center}
+#beam-pick button{width:58px;height:58px;min-height:58px;padding:0;border-radius:12px;overflow:hidden;border:3px solid transparent;background:#000;backdrop-filter:none;-webkit-backdrop-filter:none}
+#beam-pick button[aria-checked=true]{border-color:var(--x)}
+#beam-pick canvas{width:100%;height:100%;object-fit:cover;display:block}
+button.link{background:none;border:0;min-height:44px;text-decoration:underline;text-underline-offset:3px;backdrop-filter:none;-webkit-backdrop-filter:none}
+#shot .sheet{max-height:calc(100dvh - 24px);overflow:auto}
 .crc-anchor{display:none!important}
 .crc-layer{--safe-area-inset-top:env(safe-area-inset-top);--safe-area-inset-bottom:env(safe-area-inset-bottom);--safe-area-inset-right:env(safe-area-inset-right);--safe-area-inset-left:env(safe-area-inset-left)}
 #flashw{position:fixed;inset:0;z-index:50;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
@@ -139,7 +151,7 @@ h1 span{color:var(--x)}
 .how-pic{width:80px;height:auto;filter:brightness(0) invert(1);opacity:.85}
 .how-steps{margin:0;padding:0 0 0 20px;text-align:left;color:var(--muted);display:flex;flex-direction:column;gap:8px}
 .how-steps b{color:var(--text)}
-#shot-img{width:100%;max-height:52vh;object-fit:contain;border-radius:14px;background:#000}
+#shot-img{width:100%;max-height:42vh;object-fit:contain;border-radius:14px;background:#000}
 #tap-cam{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:45;width:min(92%,380px);background:#182127;border:1px solid var(--line);border-radius:22px;padding:20px;text-align:center}
 #tap-cam h2{margin:0 0 6px;font:900 italic 24px/1.1 "Exo 2",sans-serif;color:var(--x)}
 #tap-cam p{margin:0 0 14px;color:var(--muted)}

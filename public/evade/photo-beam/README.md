@@ -35,6 +35,12 @@ Base: Bobo X-Ray (`/evade/xray-bobo/`): engine, tracking rules (Spray Bobo PR #4
    capture too.
 Reduced motion: no pulsing, instant lock, no bracket close-in, shorter beam (the materialise sweep stays).
 
+## From the Bobo Booth (2026-11-17)
+`?from=booth`: the booth (`/evade/bobo-booth/`) left a cropped photo in IndexedDB under `handoff` (`{ src: Blob, from,
+look, at }`, ignored after 30 min, deleted once read). The splash shows it ("Beam your booth photo", Back to the booth);
+Start skips capture and opens Make it yours with it; Retake there goes back to the booth; Options gains "Back to the
+Bobo Booth". Everything after (aim, lock on, Beam, saved per charm) is unchanged.
+
 ## The Sukeban tee (round 3)
 The tee is Spray Bobo's target `tee-sukeban` (loaded from `/evade/spray-bobo/targets/`, not copied; print 0.3048 x
 0.4064 m), so the page tracks 9 pictures. It carries two slots, each its own piece (own photo, own IndexedDB key):
