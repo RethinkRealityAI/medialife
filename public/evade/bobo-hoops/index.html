@@ -25,7 +25,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="./style.css?v=1">
+  <link rel="stylesheet" href="./style.css?v=2">
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -92,7 +92,12 @@
         <!-- balls left: the basket -->
         <div id="rack" hidden aria-label="Balls left"></div>
       </div>
-      <div class="b-right"></div>
+      <div class="b-right">
+        <button id="b-move-can" class="ib move" type="button" hidden aria-label="Move the can (starts a new game)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>
+          <span>Move</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -173,6 +178,6 @@
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
   <!-- 8th Wall distributed engine binary (image targets + SLAM), unmodified, pinned. -->
   <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
-  <script type="module" src="./main.js?v=1"></script>
+  <script type="module" src="./main.js?v=2"></script>
 </body>
 </html>

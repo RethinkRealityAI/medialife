@@ -151,3 +151,8 @@ h1 span{color:var(--x)}
 #board b{white-space:nowrap}
 /* narrow phones: the wide action button takes the bottom row, the badge steps aside */
 @media (max-width:480px){#bottom:has(.big:not([hidden])) .b-left{visibility:hidden}}
+/* Move the can: always available once placed, bottom right */
+#bottom .b-right{display:flex;justify-content:flex-end;align-items:flex-end}
+#b-move-can{pointer-events:auto;display:flex;align-items:center;justify-content:center;width:58px;height:58px;min-height:58px;flex-direction:column;gap:1px;font-size:10px;margin-bottom:6px}
+#b-move-can svg{width:20px;height:20px}
+@media (min-aspect-ratio:1/1) and (max-height:520px){#bottom .b-right{grid-row:3;align-items:flex-start;padding-top:12px}}

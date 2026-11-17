@@ -305,7 +305,7 @@ function follow(t) {
 
 // ---------------------------------------------------------------- the flow
 let mode = 'find';
-function setMode(m) { mode = m; $('hud').dataset.mode = m; diag.steps.push([m, Math.round(performance.now())]); }
+function setMode(m) { mode = m; $('hud').dataset.mode = m; $('b-move-can').hidden = !(m === 'play' || m === 'drop'); diag.steps.push([m, Math.round(performance.now())]); }
 const reveal = { t: -1 };
 function arrived(now) {
   if (mode === 'find' || (mode === 'ready' && now - pose.goneAt > 2500)) {
@@ -418,11 +418,12 @@ function placeCan() {
   sound.click(); store.set('hoop', hoopH.toFixed(2));
   hoop.pos.copy(reticle.position); hoop.pos.y = 0; hoop.s = hoopH / 0.99;
   hoop.yaw = Math.atan2(camera.position.x - hoop.pos.x, camera.position.z - hoop.pos.z);
-  drop.from.copy(canRoot.position); drop.q0 = canRoot.quaternion.clone(); drop.t = 0;
+  drop.from.copy(canRoot.position); drop.q0 = canRoot.quaternion.clone(); drop.t = 0; drop.landed = false;
   $('b-place').hidden = true; $('size').hidden = true; hint('');
   setMode('drop');
 }
 const DROP_S = 0.42, LID_S = 0.7;
+let topOff = false;
 function tickDrop(dt) {
   if (mode !== 'drop') return;
   drop.t += dt; const t = drop.t;
@@ -434,10 +435,11 @@ function tickDrop(dt) {
     if (!drop.landed) {
       drop.landed = true; sound.thud(); buzz([30, 30, 20]);
       dust.visible = true; dust.position.copy(hoop.pos); dust.position.y = 0.003; dust.userData.t = 0;
-      resetCanPose(); setOpenTop(true);
-      clipTop.constant = hoop.pos.y + TOP_Y * hoop.s - 0.002 * hoop.s;
-      lidFly.visible = true; lidFly.position.set(0, TOP_Y + 0.01, 0); lidFly.rotation.set(0, 0, 0); lidFly.userData.v = new THREE.Vector3(0.25, 2.2, 0.6); lidFly.userData.t = 0;
-      sound.lid();
+      if (!topOff) {   // the lid pops off once: the can stays open-topped from then on, even when it is moved
+        topOff = true; resetCanPose(); setOpenTop(true);
+        lidFly.visible = true; lidFly.position.set(0, TOP_Y + 0.01, 0); lidFly.rotation.set(0, 0, 0); lidFly.userData.v = new THREE.Vector3(0.25, 2.2, 0.6); lidFly.userData.t = 0;
+        sound.lid();
+      }
     }
     const k = clamp((t - DROP_S) / 0.28, 0, 1);   // squash and stretch on landing
     const sq = 1 - 0.14 * Math.sin(k * Math.PI);
@@ -715,7 +717,7 @@ function resetToPlacing() {
   $('end').hidden = true; game.on = false;
   for (const b of balls) scene.remove(b.m); balls.length = 0; if (held) { scene.remove(held.m); held = null; }
   $('board').hidden = true; $('rack').hidden = true; placeBobo(false);
-  setOpenTop(false); lidFly.visible = false; playCan('Idle');
+  lidFly.visible = false;   // the top stays off (Dapo): no setOpenTop(false), no Idle clip
   setMode('placing');
 }
 $('b-play').onclick = takeOffCharm;
@@ -731,6 +733,7 @@ function tick(dt) {
   if (aWanted) updatePose(now); else A.visible = false;
   if (canMixer && (mode === 'reveal' || mode === 'ready' || mode === 'grow' || mode === 'placing')) canMixer.update(dt);
   if (boboMixer && bobo && bobo.visible) boboMixer.update(dt);
+  if (topOff) clipTop.constant = canRoot.position.y + (TOP_Y - 0.002) * canRoot.scale.y;   // the cut follows the can wherever it goes
   tickReveal(dt); tickFloor(dt); tickGrow(dt); tickDrop(dt); tickFx(dt);
   tickHeld(dt); tickBalls(dt); tickDist();
   // the world: tracking lost for a while -> say how to get it back (only once we're on the floor)
@@ -761,6 +764,8 @@ const soundBtn = $('o-sound'); soundBtn.setAttribute('aria-checked', String(soun
 soundBtn.onclick = () => { sound.on = !sound.on; store.set('sound', sound.on ? '1' : '0'); soundBtn.setAttribute('aria-checked', String(sound.on)); sound.click(); };
 $('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
 $('o-move').onclick = () => { closeOpts(); if (['play', 'drop'].includes(mode) || !$('end').hidden) resetToPlacing(); };
+// Move the can: always on screen once it is placed (house rule for world-tracked experiences), bottom right
+$('b-move-can').onclick = () => { sound.click(); if (['play', 'drop'].includes(mode) || !$('end').hidden) resetToPlacing(); };
 $('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
 function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; diag.errors.push(`${title}: ${body}`.slice(0, 200)); }
 $('err-retry').onclick = () => location.reload();
@@ -860,7 +865,7 @@ function drawDiag(now) {
 // automated tests (?test)
 if (params.has('test')) window.__bh = {
   get mode() { return mode; }, get pose() { return pose.state; }, get game() { return { ...game, balls: balls.length, inside: balls.filter((b) => b.inside).length }; },
-  get tracking() { return lastTrack; }, scene: () => scene, get endShown() { return !$('end').hidden; },
+  get tracking() { return lastTrack; }, scene: () => scene, get topOff() { return topOff && inner.visible && canMats.every((m) => m.clippingPlanes && m.clippingPlanes.length); }, get endShown() { return !$('end').hidden; },
   balls: () => balls.map((b) => ({ p: b.p.toArray().map((x) => +x.toFixed(3)), inside: b.inside, scored: !!b.scored, done: b.done, rim: b.rim, wall: b.wall, rest: +b.rest.toFixed(2), age: +b.age.toFixed(1) })), diag, TS, hoop, camera: () => camera,
   play: takeOffCharm, place: placeCan,
   // the power that lands exactly at the can's rim (for the shot test)

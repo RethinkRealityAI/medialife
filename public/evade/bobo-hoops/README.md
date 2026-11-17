@@ -15,6 +15,9 @@
 5. **Drop**: it slams down (squash, dust ring, thud) and its lid pops off: an open-top can.
 6. **Play**: 10 balls (the basket is the dot row at the bottom; the 10th is the cyan money ball). Bobo sits beside the can
    and reacts (PawRaise on a make, TailWag + mew on a swish).
+7. **Move** (bottom right, always there once the can is down, not only at the end): back to Place with the can
+   hovering over the floor ring. It starts a new game. The lid only comes off once per session (`topOff`): every later
+   placement keeps the open top, and the clip plane follows the can's height and size.
 
 ## The shooting mechanic
 - **Swipe up** from anywhere on the screen. The camera is the aim: where you point is the direction, and how far up or
@@ -51,5 +54,6 @@ Platform events: source `bobo-hoops` (`scan`, `found`, `custom` hoops-play / hoo
 ## Tested
 Headless Chromium with a fake 3:4 portrait camera of the kc-can picture and faked motion sensors: the engine binary
 finds the can charm while world tracking reports NORMAL, the reveal, Play Some Hoops, grow, placement (test hook),
-drop, and shots across the power range (see the PR for numbers). **Not yet tried on a phone**: real floor tracking,
-the handoff feel, and how the swipe power feels at real distances all need Dapo's phone test.
+drop, and shots across the power range (see the PR for numbers). Phone-tested by Dapo on 2026-11-17: the image target to
+world tracking handoff works well. Round 2 fixed the lid coming back after Move the can and added the always-on Move
+button.
