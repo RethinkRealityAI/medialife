@@ -32,7 +32,7 @@
   ball (balls pile up in the can). No physics engine: the scene is one can and 10 spheres.
 
 ## One engine for both kinds of tracking
-`@8thwall/engine-binary@1.0.0` (Niantic Spatial licence, loaded unmodified from jsDelivr, credited on /evade/licences/, linked from Options > Licences; the splash is title + Start only):
+`@8thwall/engine-binary@1.0.0` (Niantic Spatial licence, loaded unmodified from jsDelivr, credited on /evade/licences/, linked from Options > Licences; the splash keeps logo, art, title, a one-line lead, Start and Activated by):
 `XR8.XrController.configure({ disableWorldTracking: false, scale: 'responsive', imageTargetData })` runs the image
 targets AND SLAM at once, and reports the image target pose in the same world frame as the floor. The handoff is just
 taking the can's world transform off the charm (`scene.attach`) and animating it on in world space.
