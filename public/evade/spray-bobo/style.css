@@ -281,3 +281,7 @@ html[data-viewer] #hud[data-mode=find] #hint{bottom:auto}
 
 /* ?c=<id>&go=1: straight to the camera, so the splash is only a short "opening the camera" note */
 html[data-go] #splash .hero,html[data-go] #b-start{display:none!important}
+
+/* Hang it (opens Spray Bobo Street) and the fade out on the way there */
+.tool.hang span{color:var(--y)}
+body.leaving #hud,body.leaving #cam{transition:opacity .35s;opacity:0}

@@ -186,3 +186,8 @@ from the list and as a draft through `?set=` found, painted (scene items fade), 
 items placed within 0.1 % of the expected position and size (as fractions of the engine's target height); broken
 and hidden items skipped; viewer mode for a Bobo and a CMS creation, 404, 410; IndexedDB left untouched in viewer
 mode. `node` checks for `cms.js` (mapping, limit, fetch fallbacks, time-out). Not tried on a phone.
+
+**Street** (`street/`, its own README): "Hang it" in the alive bar and Options > "Graffiti mode" open the
+world-tracked page where the art can be hung, stamped or sprayed as graffiti anywhere in the room. When a painting
+comes alive, a die-cut PNG of it is written to IndexedDB `street:<piece>` for that page (not in viewer mode).
+Spin moved into Options.

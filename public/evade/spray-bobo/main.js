@@ -1040,6 +1040,42 @@ async function restorePaint(rec, P) {
   DEC.ready.then(() => { clearDecals(P); for (const d of rec.decals || []) makeLayer(P, d); });
 }
 
+// Spray Bobo Street (./street/: Hang, Stamp, Graffiti on the engine binary's world tracking) reads your paintings from
+// here: the die-cut painting with a white border and its decals, cropped, under 'street:<piece>' in the same store.
+let streetArt = null;
+async function writeStreetArt() {
+  if (VIEWER || cp.shared || !paint || !stickerCanvas) return false;
+  try {
+    const pad = 180, Wc = TW + pad * 2, Hc = TH + pad * 2, c = document.createElement('canvas'); c.width = Wc; c.height = Hc; const g = c.getContext('2d');
+    const t = document.createElement('canvas'); t.width = TW; t.height = TH; const tg = t.getContext('2d');
+    tg.drawImage(paint.mask, 0, 0, TW, TH); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = '#ffffff'; tg.fillRect(0, 0, TW, TH);
+    for (let a = 0; a < 16; a++) g.drawImage(t, pad + Math.cos(a * 0.3927) * 20, pad + Math.sin(a * 0.3927) * 20);   // the white die-cut edge
+    tg.globalCompositeOperation = 'copy'; tg.drawImage(stickerCanvas, 0, 0); tg.globalCompositeOperation = 'destination-in'; tg.drawImage(paint.mask, 0, 0, TW, TH);
+    g.drawImage(t, pad, pad);
+    for (const L of cp.decals) {   // the decals, where they sit on the piece
+      if (!L.art || L.out) continue; const ww = L.w * TW * L.art.grow, hh = ww / L.art.aspect;
+      g.save(); g.translate(pad + L.u * TW, pad + L.v * TH); g.rotate(-L.r); g.scale(L.f, 1); g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh); g.restore();
+    }
+    // crop to what's there
+    const sw = 120, sh = Math.round(sw * Hc / Wc), sc = document.createElement('canvas'); sc.width = sw; sc.height = sh;
+    const sg = sc.getContext('2d', { willReadFrequently: true }); sg.drawImage(c, 0, 0, sw, sh); const d = sg.getImageData(0, 0, sw, sh).data;
+    let x0 = sw, y0 = sh, x1 = 0, y1 = 0; for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (d[(y * sw + x) * 4 + 3] > 8) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+    if (x1 <= x0) return false;
+    const kx = Wc / sw, ky = Hc / sh, cx = Math.max(0, Math.floor((x0 - 1) * kx)), cy = Math.max(0, Math.floor((y0 - 1) * ky)), cw = Math.min(Wc - cx, Math.ceil((x1 - x0 + 3) * kx)), ch = Math.min(Hc - cy, Math.ceil((y1 - y0 + 3) * ky));
+    const o = document.createElement('canvas'); o.width = cw; o.height = ch; o.getContext('2d').drawImage(c, cx, cy, cw, ch, 0, 0, cw, ch);
+    const png = await new Promise((res) => o.toBlob(res, 'image/png'));
+    const db = await idb(); const nm = cp.k === 'can' ? 'can' : cp.name;
+    await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put({ png, k: cp.k, title: 'My ' + nm, at: Date.now() }, 'street:' + cp.k); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+    return true;
+  } catch (e) { console.warn('street art', e); return false; }
+}
+// Hang it: the sticker flies at the phone, then Spray Bobo Street opens with this painting ready to hang
+async function goStreet(m) {
+  if (mode === 'alive' && streetArt) await streetArt;
+  postEvent('custom', { action: 'spray-to-street', mode: m, piece: cp && cp.k });
+  sound.whoosh(); buzz(12); document.body.classList.add('leaving');
+  setTimeout(() => { location.href = HERE + 'street/?mode=' + m + (m !== 'graffiti' && cp ? '&art=' + encodeURIComponent(cp.k) : '') + '&go=1'; }, 380);
+}
 async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
   if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(artUrls(cp).print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
@@ -1058,6 +1094,7 @@ const TIPS = ['Tap $ to make $ hop', 'Swipe to spin $', 'Hold $, then let go', '
 async function startAlive(justSaved, fromDecals = false) {
   if (cp.restoring) await cp.restoring;                 // a painting from storage or a share link, still being drawn in
   await bakeSticker();
+  streetArt = writeStreetArt();
   setMode('alive');
   decalHost(cp, justSaved ? 'flat' : 'sticker');
   life.ask = justSaved && !params.has('noask');
@@ -1140,7 +1177,9 @@ function hitSticker(x, y) {
   toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
   return ray.intersectObject(sticker, false).length > 0;
 }
-$('b-spin').onclick = () => { if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
+$('o-spin').onclick = () => { closeOpts(); if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
+$('b-hang').onclick = () => goStreet('hang');
+$('o-graffiti').onclick = () => { closeOpts(); goStreet('graffiti'); };
 $('b-repaint').onclick = () => { stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(); };
 $('b-decals').onclick = () => startDecals();
 // after a fresh save: "Dress up Bobo?"

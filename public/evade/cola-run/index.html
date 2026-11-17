@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Cola Run (EVADE) on 8th Wall world tracking. Replaces the Zappar Mattercraft build: the game, Bobo's
+     Hideout and the recorder are the same TypeScript files (mattercraft/cola-run/*.ts), bundled by
+     scripts/build-cola-capture.mjs, running on our own page with 8th Wall's SLAM.
+     World tracking: 8th Wall distributed engine binary (@8thwall/engine-binary 1.0.0), Copyright (c) 2026
+     Niantic Spatial, Inc., XR Engine License Agreement https://github.com/8thwall/engine/blob/main/LICENSE ,
+     loaded unmodified from jsDelivr as the licence asks. -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#0d0f13" />
+    <title>Cola Run · EVADE</title>
+    <meta
+      name="description"
+      content="Put Bobo on your floor and grab every Eclipse can before time runs out. Then visit Bobo's Hideout and jump into every EVADE experience from Bobo's Arcade."
+    />
+    <link rel="preload" as="image" href="/evade/creators/assets/img/cola-run-splash.webp" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/evade/cola-run-lab/assets/lab.css?v=8" />
+    <link rel="stylesheet" href="./style.css?v=4" />
+  </head>
+  <body>
+    <canvas id="cam" aria-label="Your camera with Cola Run in your room"></canvas>
+    <div id="zcomponent-overlay">
+      <div class="lab-stick" id="stick" aria-label="Joystick: move Bobo" hidden><span></span></div>
+    </div>
+    <pre id="diag" hidden></pre>
+
+    <section id="splash" aria-labelledby="splash-title">
+      <img
+        class="art"
+        src="/evade/creators/assets/img/cola-run-splash.webp"
+        alt=""
+        width="1080"
+        height="1934"
+      />
+      <div class="bottom">
+        <h1 id="splash-title" class="sr-only">EVADE Cola Run</h1>
+        <button id="start" class="primary" disabled>Loading…</button>
+      </div>
+    </section>
+
+    <div id="error" hidden role="alertdialog" aria-labelledby="err-title">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js"
+      async
+      crossorigin="anonymous"
+      data-preload-chunks="slam"
+    ></script>
+    <script type="module" src="./main.js?v=2"></script>
+  </body>
+</html>
