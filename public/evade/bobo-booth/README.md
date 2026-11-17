@@ -31,13 +31,17 @@ EVADE selfie photo booth on the open-source 8th Wall engine's **face tracking** 
   sparkles burst where a piece lands. Reduced motion: short scale fades only.
 - Capture: tap = photo, hold = video (shared Cola Run recorder, can be sent to the Where is Bobo? globe),
   **Strip** toggle = 3-2-1 countdown then four shots laid out as a booth strip with the EVADE footer.
-- **Beam it onto your merch** (2026-11-17, Dapo): the photo / strip sheet hands the shot to Photo Beam
-  (`/evade/photo-beam/`). The clean frame (no watermark) is cropped round the tracked faces (hat to chin, ear to ear,
-  never thinner than 4:5; `faceBox()` at grab time), written to Photo Beam's IndexedDB (`photo-beam` / `kv`, key
-  `handoff`: `{ src: Blob, from, look, at }`), then the page opens `/evade/photo-beam/?from=booth`. Photo Beam takes it
-  once, deletes it, says "Beam your booth photo" on its splash with the shot, and its Start opens Make it yours
-  directly (Retake = back to the booth); then the usual aim, lock on and Beam onto any charm or the Sukeban tee.
-  From a strip you pick which of the four shots to beam. Nothing is uploaded.
+- **Beam it onto your merch, in the booth** (2026-11-17, Dapo: "one continuous, seamless flow"): Photo Beam runs
+  inside the booth in a full-screen frame (`/evade/photo-beam/?embed=booth`), loaded in the background after the
+  first shot. Beam: the clean frame (no watermark), cropped round the tracked faces (`faceBox()` at grab time), drops
+  to the bottom ("Switching to the back camera"), the booth pauses its face engine (`XR8.pause()` frees the front
+  camera), and posts `{ type: 'pb-beam', blob, delay }` (450 ms iOS camera hand-over). The frame starts (first time)
+  or resumes its image-tracking engine on the back camera with the photo waiting to aim, posts `pb-live`, and fades in.
+  Style (bottom right) opens Make it yours; Booth (bottom left) or Options > Back to the Bobo Booth pauses it and posts
+  `pb-back`; the booth resumes its front camera (checked: frames advancing, play-kick, one pause + resume).
+  Two documents because this engine build can't stop and re-run (`No valid session manager`) nor run face and image
+  tracking together. From a strip you pick which shot. Nothing is uploaded. Fallback if the frame can't load in 20 s:
+  the old page hand-over (IndexedDB `handoff` + `/evade/photo-beam/?from=booth`).
 - Events: `/api/bobo/events` with source `bobo-booth` (scan, play, custom look, share). Test log `/api/ar/kc-diag`
   (page `bobo-booth`) on previews/local or `?diag`. `?test` exposes `window.__bb`.
 

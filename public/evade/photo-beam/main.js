@@ -157,6 +157,10 @@ const savedReady = assets.then(loadSaved).catch(() => {});
 // IndexedDB under 'handoff' and opens ?from=booth. We take it once (then delete it) and open Make it yours with it,
 // skipping the selfie step. Older than 30 minutes is ignored.
 const FROM_BOOTH = params.get('from') === 'booth';
+// Inside the Bobo Booth (?embed=booth): the booth loads this page in a full-screen frame and hands over its photo by
+// postMessage; there is no splash and no selfie step: the photo goes straight to aiming. See "embedded" below.
+const EMBED = params.get('embed') === 'booth' && window.parent !== window;
+if (EMBED) document.documentElement.classList.add('embed');
 const handoff = FROM_BOOTH ? (async () => {
   try {
     const db = await idb();
@@ -538,6 +542,7 @@ function setMode(m) {
   $('shoot-t').textContent = aiming ? (m === 'beam' ? 'Beaming…' : 'Lock on, then Beam') : 'Tap: photo · Hold: video';
   if (m === 'aim') { showCard(); if (!aim.S) $('aim-t').textContent = 'AIM AT A GLOWING SPOT'; } else if (m !== 'beam') { $('beamcard').hidden = true; $('beamcard').classList.remove('hold', 'lock', 'wait'); }
   if (m !== 'aim') setLock(null, false, true);
+  syncEmbed();
 }
 function arrived(now) {
   const away = now - (pose.goneAt || 0);
@@ -1201,7 +1206,7 @@ function openEditor(src, prm, guide) {
   $('edit').hidden = false; drawEditor(); $('ed-go').focus();
 }
 function closeEditor() { $('edit').hidden = true; ED.src = null; }
-function retake() { if (FROM_BOOTH && !CAP.open && !engine.started) { location.href = '/evade/bobo-booth/'; return; } closeEditor(); if (!CAP.open && !engine.started) { openCapture(); return; } if (CAP.open && !camLive()) camOpen(CAP.facing); }
+function retake() { if (EMBED) { closeEditor(); setMode(HELD.src ? 'aim' : pose.valid ? 'seen' : 'find'); return; } if (FROM_BOOTH && !CAP.open && !engine.started) { location.href = '/evade/bobo-booth/'; return; } closeEditor(); if (!CAP.open && !engine.started) { openCapture(); return; } if (CAP.open && !camLive()) camOpen(CAP.facing); }
 // On Sukeban shows her face controls: Match skin and the face width (both apply to her face only)
 function syncView() {
   document.querySelectorAll('#ed-view button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.v === ED.view)));
@@ -1304,6 +1309,7 @@ async function readyToBeam() {
   if (!ED.src) return;
   sound.init();
   HELD.src = ED.src; HELD.params = { ...ED.params }; HELD.face = { ...ED.face }; closeEditor();
+  if (EMBED && engine.started && !engine.paused) { setMode('aim'); syncEmbed(); return; }   // styled in the booth: straight back to aiming
   postEvent('custom', { action: 'photo-beam-ready', style: HELD.params.style });
   await leaveCapture();
   await backToAr();
@@ -1315,7 +1321,55 @@ async function backToAr() {
 }
 
 // ---------------------------------------------------------------- HUD buttons and options
-$('b-photo').onclick = () => { sound.init(); openCapture(); };
+$('b-photo').onclick = () => { sound.init(); if (EMBED) { toBooth(); return; } openCapture(); };
+
+// ---------------------------------------------------------------- embedded in the Bobo Booth (?embed=booth)
+// The booth (parent, same origin) pauses its face camera and posts { type: 'pb-beam', blob, delay }; we wait out the
+// camera hand-over delay, then start (first time) or resume the rear-camera engine with the photo waiting to aim.
+// 'pb-live' tells the booth the camera is up (it fades this frame in); Booth (bottom left) / Options > Back to the
+// Bobo Booth pause our engine and post 'pb-back'. Style (bottom right) opens Make it yours on the waiting photo.
+function toParent(msg) { try { window.parent.postMessage(msg, location.origin); } catch (e) { /* gone */ } }
+function syncEmbed() { if (EMBED) $('b-style').hidden = !HELD.src || mode === 'beam'; }
+async function waitLive(ms = 8000) {
+  const t0 = performance.now(); let ct = -1;
+  while (performance.now() - t0 < ms) {
+    const v = engineVideo(); if (v && v.srcObject && !v.paused) { if (ct >= 0 && v.currentTime > ct) return true; ct = v.currentTime; }
+    await wait(150);
+  }
+  return false;
+}
+async function fromBooth(blob, delay) {
+  if (beam) endBeam(true);
+  const src = await decodeImage(blob);
+  HELD.src = src; HELD.params = defaultParams(); HELD.face = faceFromGuide(src, null);
+  diag.booth = (diag.booth || 0) + 1; postEvent('custom', { action: 'photo-beam-from-booth' });
+  await wait(delay);
+  if (!engine.started) await startEngine();
+  else { $('hud').hidden = false; setMode('aim'); await resumeEngine(); }
+  syncEmbed();
+  toParent({ type: 'pb-live', ok: await waitLive() });
+}
+async function toBooth() {
+  if (beam) endBeam(true);
+  closeEditor(); closeSheet('opts');
+  if (engine.started && !engine.paused) { try { XR8.pause(); } catch (e) { /* not running */ } engine.paused = true; camLog('pause'); }
+  setMode('find'); $('hud').hidden = true;
+  toParent({ type: 'pb-back' });
+}
+if (EMBED) {
+  $('splash').hidden = true;
+  $('b-photo-t').textContent = 'Booth'; document.querySelector('#hud .tl .tag').textContent = 'BOOTH · BEAM'; $('b-photo').setAttribute('aria-label', 'Back to the Bobo Booth');
+  $('o-booth').hidden = false; $('o-booth').onclick = (e) => { e.preventDefault(); toBooth(); };
+  $('ed-back').textContent = 'Cancel'; $('ed-go').textContent = 'Done';
+  $('b-style').onclick = () => { if (!HELD.src || beam) return; sound.init(); sound.click(); openEditor(HELD.src, HELD.params); };
+  addEventListener('pointerdown', () => sound.init(), { once: true, capture: true });
+  addEventListener('devicemotion', onMotion);   // the booth asked for motion permission on its Beam tap
+  addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data) return;
+    if (e.data.type === 'pb-beam' && e.data.blob) fromBooth(e.data.blob, e.data.delay || 150).catch((err) => { console.error(err); diag.errors.push('booth: ' + String(err).slice(0, 80)); toParent({ type: 'pb-live', ok: false }); });
+  });
+  Promise.all([assets, xrReady]).then(() => toParent({ type: 'pb-ready' })).catch(() => toParent({ type: 'pb-failed' }));
+}
 $('c-remove').onclick = () => { const S = cur(); if (S) removePhoto(S.P); };
 $('c-again').onclick = () => { if (!HELD.src) return; sound.click(); buzz(8); setMode('aim'); };
 $('b-beam').onclick = () => fire();

@@ -297,3 +297,11 @@ h1 span{color:var(--x)}
 .ed-face .seg{flex:1;margin:0!important}
 #ed-match[aria-checked=true]{background:var(--x);border-color:var(--x);color:var(--xd)}
 #edit .seg button{font-size:12.5px}
+
+/* inside the Bobo Booth (?embed=booth): no splash, the booth button always there, Style instead of the badge */
+html.embed #splash{display:none!important}
+html.embed #hud .act{opacity:1!important;pointer-events:auto!important}
+html.embed #bottom .b-right{pointer-events:none}
+html.embed #bottom .b-right .act{pointer-events:auto}
+html.embed .actby{display:none}
+@media (min-aspect-ratio:1/1) and (max-height:520px){html.embed #bottom .b-right{display:flex;grid-row:3;align-self:start;padding-top:12px}}

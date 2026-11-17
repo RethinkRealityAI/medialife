@@ -35,6 +35,12 @@ Base: Bobo X-Ray (`/evade/xray-bobo/`): engine, tracking rules (Spray Bobo PR #4
    capture too.
 Reduced motion: no pulsing, instant lock, no bracket close-in, shorter beam (the materialise sweep stays).
 
+## Inside the Bobo Booth (`?embed=booth`, 2026-11-17)
+The booth loads this page in a full-screen frame. No splash, no selfie step: `pb-ready` when loaded, then the booth's
+`pb-beam` message (photo Blob + camera hand-over delay) starts or resumes the engine with the photo waiting to aim
+(`pb-live` once frames flow). Bottom left is **Booth** (pause, `pb-back`), bottom right **Style** (Make it yours on
+the waiting photo; Done returns to aiming, Cancel too). Tag reads BOOTH · BEAM; the badge is hidden.
+
 ## From the Bobo Booth (2026-11-17)
 `?from=booth`: the booth (`/evade/bobo-booth/`) left a cropped photo in IndexedDB under `handoff` (`{ src: Blob, from,
 look, at }`, ignored after 30 min, deleted once read). The splash shows it ("Beam your booth photo", Back to the booth);

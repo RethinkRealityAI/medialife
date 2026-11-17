@@ -830,7 +830,7 @@ async function showResult(c, name, title, what) {
   $('shot-save').href = url; $('shot-save').download = file.name; $('shot-save').hidden = false;
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
   $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'Bobo Booth' }).catch(() => {});
-  beamPick = 0; renderBeamPick();
+  beamPick = 0; renderBeamPick(); ensureBeamFrame().catch(() => {});   // Photo Beam loads in the background
   $('shot').hidden = false; $('shot-close').focus(); postEvent('share', { what, look: JSON.stringify(wear) });
 }
 
@@ -860,19 +860,94 @@ function beamCrop(img, max = 1024) {
 function beamDb() {
   return new Promise((res, rej) => { try { const r = indexedDB.open('photo-beam', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
 }
+// One app (Dapo 2026-11-17: "one continuous, seamless flow"): Photo Beam runs INSIDE the booth, in a full-screen
+// frame (/evade/photo-beam/?embed=booth) that is loaded in the background after your first shot. Beam: the booth
+// pauses its face camera (front), the photo card drops to the bottom while the frame starts its image-tracking
+// engine on the back camera with your photo waiting to aim; the frame fades in once its camera is live. Its Booth
+// button pauses it and brings the booth back (front camera resumed). Two documents because this engine build can't
+// stop and re-run, nor run face and image tracking together; Photo Beam stays its own page too.
+// If the frame can't load, the old hand-over (IndexedDB 'handoff' + a page change) is the fallback.
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const PB = { frame: null, ready: null, live: null, on: false };
+const pbUrl = () => '/evade/photo-beam/?embed=booth' + (params.has('test') ? '&test' : '') + (params.has('nolog') ? '&nolog' : '') + (params.has('diag') ? '&diag' : '');
+function ensureBeamFrame() {
+  if (PB.ready) return PB.ready;
+  const f = document.createElement('iframe'); f.id = 'beamframe'; f.title = 'Photo Beam: beam your photo onto your merch';
+  f.allow = 'camera; microphone; autoplay; fullscreen; accelerometer; gyroscope; xr-spatial-tracking';
+  f.setAttribute('aria-hidden', 'true'); f.tabIndex = -1; f.src = pbUrl(); document.body.appendChild(f); PB.frame = f;
+  PB.ready = new Promise((res, rej) => { PB.readyRes = res; PB.readyRej = rej; setTimeout(() => rej(new Error('frame timeout')), 25000); });
+  PB.ready.catch(() => { PB.ready = null; if (PB.frame) { PB.frame.remove(); PB.frame = null; } });
+  return PB.ready;
+}
+addEventListener('message', (e) => {
+  if (e.origin !== location.origin || !PB.frame || e.source !== PB.frame.contentWindow || !e.data) return;
+  const t = e.data.type;
+  if (t === 'pb-ready' && PB.readyRes) PB.readyRes();
+  if (t === 'pb-failed' && PB.readyRej) PB.readyRej(new Error('frame failed'));
+  if (t === 'pb-live' && PB.liveRes) PB.liveRes(e.data.ok);
+  if (t === 'pb-back') leaveBeam();
+});
+const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms));
 async function beamIt() {
   const img = beamable[beamPick] || beamable[0]; if (!img) return;
-  const btn = $('shot-beam'); btn.disabled = true; btn.textContent = 'Opening Photo Beam…';
+  // motion permission (iOS) must be asked inside this tap; the frame uses the steadiness reading for its lock-on
+  try { if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) { /* none */ }
+  sound.pop(); buzz(12);
+  const btn = $('shot-beam'); btn.disabled = true; btn.lastChild.textContent = ' Getting the beam ready…';
+  // the hand-over: the shot drops to where Photo Beam holds it, the booth's camera lets go, the frame takes over
+  $('shot').hidden = true; transit(beamCrop(img, 480), true);
+  const blob = await new Promise((res) => beamCrop(img).toBlob(res, 'image/jpeg', 0.92));
+  try { await Promise.race([ensureBeamFrame(), timeout(20000)]); }
+  catch (e) { diag.errors.push('beamframe: ' + String(e).slice(0, 80)); return beamByPage(blob); }
+  postEvent('custom', { what: 'beam', look: JSON.stringify(wear) }); diag.beams = (diag.beams || 0) + 1;
+  if (capture && capture.status === 'recording') capture.stop();
+  try { XR8.pause(); } catch (e) { /* not running */ }
+  boothPaused = true; camLog('pause');
+  const live = new Promise((res) => { PB.liveRes = res; });
+  PB.frame.contentWindow.postMessage({ type: 'pb-beam', blob, delay: IOS ? 450 : 150 }, location.origin);
+  const ok = await Promise.race([live, timeout(16000).catch(() => false)]);
+  PB.frame.classList.add('on'); PB.frame.removeAttribute('aria-hidden'); PB.frame.tabIndex = 0; PB.on = true;
+  $('hud').hidden = true; transit(null, false);
+  try { PB.frame.focus(); } catch (e) { /* none */ }
+  btn.disabled = false; btn.lastChild.textContent = ' Beam it onto your merch';
+  if (!ok) diag.errors.push('beam: frame camera not live in 16 s');
+}
+// the photo card while the cameras swap (a second or so): it settles at the bottom centre where Photo Beam shows it
+function transit(cv, on) {
+  const el = $('beamgo');
+  if (!on) { el.classList.add('out'); setTimeout(() => { el.hidden = true; el.classList.remove('out', 'go'); }, 350); return; }
+  const box = $('beamgo-card'); box.innerHTML = ''; box.appendChild(cv); el.hidden = false; void el.offsetWidth; el.classList.add('go');
+}
+// back from Photo Beam: the frame has paused its engine; resume the face camera and check frames flow again
+let boothPaused = false;
+async function leaveBeam() {
+  if (!PB.on) return; PB.on = false;
+  PB.frame.classList.remove('on'); PB.frame.setAttribute('aria-hidden', 'true'); PB.frame.tabIndex = -1;
+  $('hud').hidden = false; for (const r of rigs.values()) r.tracked = false;
+  await new Promise((r) => setTimeout(r, IOS ? 450 : 150));
+  try { XR8.resume(); } catch (e) { diag.errors.push('resume: ' + String(e).slice(0, 80)); }
+  boothPaused = false; camLog('resume');
+  for (let k = 0; k < 2; k++) {   // the same check as Photo Beam: play-kick, then one pause + resume
+    let t0 = -1;
+    for (let i = 0; i < 10; i++) {
+      await new Promise((r) => setTimeout(r, 300));
+      const v = engineVideo(); if (v && v.srcObject && v.paused) { v.muted = true; v.play().catch(() => {}); }
+      if (v && !v.paused) { if (t0 >= 0 && v.currentTime > t0) { camLog('resumed'); return; } t0 = v.currentTime; }
+    }
+    camLog('restart'); try { XR8.pause(); } catch (e) { /* none */ } await new Promise((r) => setTimeout(r, 300)); try { XR8.resume(); } catch (e) { /* none */ }
+  }
+}
+// fallback: the old hand-over by page
+async function beamByPage(blob) {
+  const btn = $('shot-beam');
   try {
-    const blob = await new Promise((res) => beamCrop(img).toBlob(res, 'image/jpeg', 0.92));
     const db = await beamDb();
     await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put({ src: blob, from: PAGE, look: { ...wear }, at: Date.now() }, 'handoff'); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
-    postEvent('custom', { what: 'beam', look: JSON.stringify(wear) }); flushDiag(true);
-    sound.pop(); buzz(12);
+    postEvent('custom', { what: 'beam', look: JSON.stringify(wear), page: 1 }); flushDiag(true);
     location.href = '/evade/photo-beam/?from=booth' + (params.has('test') ? '&test' : '') + (params.has('nolog') ? '&nolog' : '');
   } catch (e) {
     console.warn('beam', e); diag.errors.push('beam: ' + String(e).slice(0, 80));
-    btn.disabled = false; btn.textContent = 'Beam it onto your merch'; toast('Couldn\'t open Photo Beam. Try again.');
+    btn.disabled = false; btn.lastChild.textContent = ' Beam it onto your merch'; toast('Couldn\'t open the beam. Try again.');
   }
 }
 $('shot-beam').onclick = beamIt;

@@ -182,3 +182,16 @@ button.link{background:none;border:0;min-height:44px;text-decoration:underline;t
 .seg button{flex:1;min-height:40px;border:0;background:none;border-radius:999px;font-size:14px;padding:0 8px;backdrop-filter:none;-webkit-backdrop-filter:none}
 .seg button[aria-checked=true]{background:var(--x);color:var(--xd)}
 @media (prefers-reduced-motion:reduce){#opts .panel,#opts .scrim{animation:none}}
+
+/* Beam inside the booth: Photo Beam in a full-screen frame, and the card that drops while the cameras swap */
+#beamframe{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:58;opacity:0;pointer-events:none;background:transparent;transition:opacity .35s}
+#beamframe.on{opacity:1;pointer-events:auto}
+#beamgo{position:fixed;inset:0;z-index:57;background:var(--slate);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;opacity:0;transition:opacity .25s}
+#beamgo.go{opacity:1}
+#beamgo.out{opacity:0}
+#beamgo-card{width:min(48vw,200px);border-radius:16px;overflow:hidden;border:3px solid var(--x);box-shadow:0 16px 40px rgba(0,0,0,.5);transform:translateY(0) scale(1);transition:transform .9s cubic-bezier(.5,0,.2,1) .15s}
+#beamgo.go #beamgo-card{transform:translateY(24vh) scale(.5)}
+#beamgo-card canvas{display:block;width:100%;height:auto;max-height:38vh;object-fit:cover}
+#beamgo p{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;color:var(--muted);font-size:14px;order:-1}
+#beamgo p b{font:900 italic 22px/1.1 "Exo 2",sans-serif;color:var(--x)}
+@media (prefers-reduced-motion:reduce){#beamgo-card{transition:none}#beamframe{transition:none}}
