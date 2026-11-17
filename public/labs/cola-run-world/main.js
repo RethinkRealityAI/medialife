@@ -14,7 +14,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { OrbHuntGame, LabContext } from "/evade/cola-run-lab/assets/orb-hunt-game.js?v=7";
+import { OrbHuntGame, LabContext } from "/evade/cola-run-lab/assets/orb-hunt-game.js?v=8";
 
 window.THREE = THREE; // XR8.Threejs.pipelineModule() looks for a global THREE
 

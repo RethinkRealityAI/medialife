@@ -578,6 +578,18 @@ export class CollectorHubMode extends Group {
   public globeUrl = new Observable("https://medialife.ai/evade/where-is-bobo/");
 
   /**
+   * Bobo's Arcade catalogue (JSON): the EVADE experiences BOBO OS can jump to.
+   * Empty = the site's /evade/arcade/games.json.
+   *
+   * @zui
+   * @zgroup Site
+   * @zgrouppriority 100
+   * @zpriority 79
+   * @ztype url
+   */
+  public arcadeUrl = new Observable("");
+
+  /**
    * Print the shared test code under the unlock form. For test builds only:
    * the code is switched off on medialife.ai unless the team turns it on.
    *
@@ -663,6 +675,7 @@ export class CollectorHubMode extends Group {
         api: this.endpoint.value,
         modelUrl: this.modelUrl.value,
         globeUrl: this.globeUrl.value,
+        arcadeUrl: this.arcadeUrl.value || undefined,
         testHint: this.showTestCode.value ? "BOBO-TEST-CATS" : null,
         hubCode: qs.get("hub"),
         exitLabel: "Back to Cola Run",
