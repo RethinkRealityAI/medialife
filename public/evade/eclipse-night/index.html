@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0d0b2b">
+  <title>Eclipse Night · EVADE AR</title>
+  <meta name="description" content="Eclipse Night: hold your EVADE Eclipse can charm up, then point your phone at the sky. Your real sky turns into EVADE's night, the can eclipses the moon and Bobo's constellation wakes up.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/roblox/creators/vendor/three/build/three.module.js",
+        "three/addons/": "/roblox/creators/vendor/three/jsm/"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <!-- ---------------------------------------------------------------- splash -->
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/evade-logo.webp" alt="EVADE" width="132" height="38">
+    <!-- a preview of the moment: a night sky over a skyline, the Eclipse can sliding over the moon -->
+    <div class="hero" aria-hidden="true">
+      <div class="nightbox">
+        <i class="st s1"></i><i class="st s2"></i><i class="st s3"></i><i class="st s4"></i><i class="st s5"></i><i class="st s6"></i><i class="st s7"></i><i class="st s8"></i>
+        <i class="ring r3"></i><i class="ring r2"></i><i class="ring r1"></i>
+        <i class="moon"></i>
+        <img class="can" src="/evade/keychain/ar/silhouette-eclipse.png" alt="">
+        <i class="city"></i>
+      </div>
+    </div>
+    <div class="copy">
+      <p class="kicker">EVADE · Activated AR</p>
+      <h1 id="title">Eclipse <span>Night</span></h1>
+      <p class="lead">Hold up your Eclipse can charm, then point your phone at the sky. Your real sky turns into EVADE's night, the can eclipses the moon and Bobo's stars wake up.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+        <p><b>Made for your phone, outside.</b> Scan to open it there. It works best under an open sky.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- in camera -->
+  <div id="hud" hidden data-mode="charge">
+    <div class="tl">
+      <img class="evade" src="/brand/evade-logo.webp" alt="EVADE" width="104" height="30">
+      <span class="tag">ECLIPSE</span>
+    </div>
+    <div id="stars-n" hidden aria-live="polite"><b id="stars-k">0</b><span>/ <i id="stars-t">11</i> stars</span></div>
+    <div id="side">
+      <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </div>
+
+    <!-- step 1: the charm -->
+    <div id="guide" aria-hidden="true"><img src="/evade/spray-bobo/art/can-lines.png" alt=""></div>
+    <!-- step 2: look up (an arrow that points to the sky) -->
+    <div id="lookup" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 40V10M12 22 24 10l12 12" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <!-- step 3: the aiming ring for the constellation -->
+    <div id="reticle" aria-hidden="true"><svg viewBox="0 0 64 64"><circle class="o" cx="32" cy="32" r="26"/><circle id="ret-p" class="p" cx="32" cy="32" r="26"/><circle class="c" cx="32" cy="32" r="3"/></svg></div>
+    <p id="hint" role="status" aria-live="polite"></p>
+    <button id="b-skip" type="button" hidden>No charm with me</button>
+    <button id="b-night" type="button" hidden>No sky here? Make it night anyway</button>
+
+    <!-- bottom row: badge left, the shutter always in the bottom centre -->
+    <div id="bottom">
+      <div class="b-left">
+        <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+      </div>
+      <div id="shoot">
+        <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
+          <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
+        </button>
+        <small>Tap: photo · Hold: video</small>
+        <span id="rec-time" hidden>0:00</span>
+      </div>
+      <div class="b-right">
+        <button id="b-fizz" class="act" type="button" aria-label="Launch a fizz firework into the sky" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+          <span>Fizz</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- options: a bottom sheet -->
+  <div id="opts" hidden role="dialog" aria-modal="true" aria-labelledby="opts-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header><h2 id="opts-t">Options</h2>
+        <button type="button" class="x" data-close aria-label="Close options"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="opt seg-row">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18M6 17l3-5 3 3 4-7 3 9"/><circle cx="17" cy="5" r="1.5"/></svg></span>
+        <span class="ol"><b>Where the night goes</b><small>Only the real sky, or everything above you (indoors)</small></span>
+        <div class="seg" role="radiogroup" aria-label="Where the night goes" id="seg-sky">
+          <button type="button" role="radio" data-v="real" aria-checked="true">Real sky</button>
+          <button type="button" role="radio" data-v="dome" aria-checked="false">Everything above</button>
+        </div>
+      </div>
+      <button type="button" class="opt" id="o-replay">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg></span>
+        <span class="ol"><b>Play the eclipse again</b><small>The can crosses the moon once more, right where you look</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>
+        <span class="ol"><b>Sound</b><small>The eclipse hum, star pings and fizz</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-how">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
+        <span class="ol"><b>How it works</b><small>The three steps, and what to try</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <a class="opt" href="/evade/keychain-ar/target/" target="_blank" rel="noopener">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
+        <span class="ol"><b>No keychain with you?</b><small>Open the can picture on another screen</small></span><i class="go" aria-hidden="true"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- the three steps (once, over the camera) -->
+  <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
+    <div class="sheet">
+      <div class="how-pics"><img class="how-pic" src="/evade/spray-bobo/art/can-lines.png" alt="" width="768" height="1024"></div>
+      <h2 id="how-t">Three steps to night</h2>
+      <ol class="how-steps">
+        <li><b>Charge the can.</b> Hold your Eclipse can charm about a hand from the camera, either side.</li>
+        <li><b>Look up.</b> Point your phone at the open sky. Your real sky turns to night and the can eclipses the moon.</li>
+        <li><b>Wake Bobo's stars.</b> Hold the ring over each glowing star until it lights. Join them all and Bobo comes out to play.</li>
+      </ol>
+      <p class="how-note">Best outside or at a window. Indoors, choose "Everything above" in Options and the ceiling becomes the sky.</p>
+      <button id="b-go" class="primary">Got it</button>
+    </div>
+  </div>
+
+  <!-- the reward -->
+  <div id="won" class="sheet-wrap" hidden role="dialog" aria-labelledby="won-t">
+    <div class="sheet">
+      <h2 id="won-t">Bobo is out tonight</h2>
+      <p>You woke Bobo's constellation. Take a photo of your sky, or tap anywhere in it to launch fizz fireworks.</p>
+      <button id="b-won" class="primary">Keep playing</button>
+    </div>
+  </div>
+
+  <!-- photo -->
+  <div id="shot" class="sheet-wrap" hidden role="dialog" aria-labelledby="shot-t">
+    <div class="sheet">
+      <h2 id="shot-t">Your Eclipse Night</h2>
+      <img id="shot-img" alt="Your photo of the night sky with the Eclipse">
+      <div class="row">
+        <button id="shot-share" class="primary" hidden>Share</button>
+        <a id="shot-save" class="btn" hidden>Save</a>
+        <button id="shot-close">Back to the sky</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="error" class="sheet-wrap" hidden role="alert">
+    <div class="sheet">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+  </div>
+  <div id="flashw" aria-hidden="true"></div>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
