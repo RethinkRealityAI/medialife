@@ -1,9 +1,10 @@
 // Bobo Booth: an EVADE selfie photo booth on the open-source 8th Wall engine's FACE tracking (MIT, self-hosted with
 // Off the Chain in /evade/keychain-ar/vendor/xr, face chunk + models vendored there too).
 //
-// Put on Bobo: the Bobo cat hat or the BOBO visor, Bobo shades (a tiny 3D Bobo sits on the frames, Bobo is printed on
-// the lenses), earrings that hang from your real ear lobes and swing as you move (the real Eclipse can GLB, gold hoops,
-// Bobo's collar bell, star studs) and nose rings. Photo, video (hold) or a 4-shot photo strip.
+// Put on Bobo: the Bobo cat hat (a tiny 3D Bobo sits on top) or the BOBO visor, Bobo shades (frame tips shaped like
+// Bobo's ears), face paint drawn on the live face mesh, earrings that hang from your real ear lobes and swing as you move (the real Eclipse can GLB, gold hoops,
+// Bobo's collar bell, star studs) and nose rings. Face tricks: open your mouth (cola fizz), raise your eyebrows (next
+// look), wink (Bobo waves). Up to 2 faces at once. Photo, video (hold) or a 4-shot photo strip.
 //
 // Face local units (see wearables.js): ~139 mm per unit, x = wearer's left, y up, z = back of the head. The face's
 // anchor gets the engine's transform (position, rotation, scale) so everything under it is in those units.
@@ -50,6 +51,7 @@ const sound = {
   tick() { this.tone(1320, 1320, 0.07, 0.06, 'square'); },
   shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
   mew() { this.tone(620, 880, 0.14, 0.08, 'triangle'); this.tone(880, 560, 0.22, 0.08, 'triangle', 0.13); },
+  fizz() { this.noise(0.6, 0.12, 3000, 12000); this.tone(1400, 2600, 0.12, 0.03, 'sine', 0.05); this.tone(1900, 3200, 0.1, 0.025, 'sine', 0.2); },
   jingle() { [2637, 3136, 2637].forEach((f, i) => this.tone(f, f * 0.98, 0.18, 0.03, 'sine', i * 0.06)); },
 };
 
@@ -61,18 +63,19 @@ const CATS = [
   { k: 'shades', label: 'Shades' },
   { k: 'ears', label: 'Earrings' },
   { k: 'nose', label: 'Nose' },
+  { k: 'paint', label: 'Face paint' },
 ];
 const ITEMS = {
   hat: [
     { id: 'none', name: 'No hat' },
-    { id: 'cathat', name: 'Bobo cat hat', make: () => W.buildCatHat() },
+    { id: 'cathat', name: 'Bobo cat hat', make: () => W.buildCatHat(A.mini()) },
     { id: 'visor', name: 'BOBO visor', make: () => W.buildVisor() },
   ],
   shades: [
     { id: 'none', name: 'No shades' },
-    { id: 'bobo', name: 'Bobo shades', make: () => W.buildShades({ frame: 'gold', tint: 'rgba(63,155,230,0.58)', decal: A.decal, ears: true, bobo: A.mini() }) },
-    { id: 'night', name: 'Night shades', make: () => W.buildShades({ frame: 'blue', tint: 'rgba(15,21,25,0.72)', decal: A.decal, ears: true }) },
-    { id: 'gold', name: 'Gold cat-eyes', make: () => W.buildShades({ frame: 'gold', tint: 'rgba(246,195,68,0.42)', decal: null, ears: false }) },
+    { id: 'bobo', name: 'Bobo shades', make: () => W.buildShades({ frame: 'gold', tint: 'rgba(63,155,230,0.58)', ears: 'bobo' }) },
+    { id: 'night', name: 'Night shades', make: () => W.buildShades({ frame: 'blue', tint: 'rgba(15,21,25,0.72)', ears: 'bobo' }) },
+    { id: 'gold', name: 'Gold cat-eyes', make: () => W.buildShades({ frame: 'gold', tint: 'rgba(246,195,68,0.42)', ears: 'spike' }) },
   ],
   ears: [
     { id: 'none', name: 'No earrings' },
@@ -88,17 +91,24 @@ const ITEMS = {
     { id: 'hoop', name: 'Nose hoop', make: () => W.buildNose('hoop') },
     { id: 'stud', name: 'Star stud', make: () => W.buildNose('stud') },
   ],
+  // drawn on the live face mesh (standard face UVs), so it follows every expression
+  paint: [
+    { id: 'none', name: 'No face paint' },
+    { id: 'whiskers', name: 'Bobo whiskers' },
+    { id: 'tabby', name: 'Tabby Bobo' },
+    { id: 'eclipse', name: 'Eclipse game day' },
+  ],
 };
 const LOOKS = [
-  { id: 'full', name: 'Full Bobo', set: { hat: 'cathat', shades: 'bobo', ears: 'canhoop', nose: 'septum' } },
-  { id: 'fizz', name: 'Eclipse fizz', set: { hat: 'visor', shades: 'night', ears: 'cans', nose: 'stud' } },
-  { id: 'gold', name: 'Gold rush', set: { hat: 'none', shades: 'gold', ears: 'hoops', nose: 'hoop' } },
-  { id: 'cat', name: 'Just the cat', set: { hat: 'cathat', shades: 'none', ears: 'bells', nose: 'none' } },
-  { id: 'clear', name: 'Clear all', set: { hat: 'none', shades: 'none', ears: 'none', nose: 'none' } },
+  { id: 'full', name: 'Full Bobo', set: { hat: 'cathat', shades: 'bobo', ears: 'canhoop', nose: 'septum', paint: 'none' } },
+  { id: 'fizz', name: 'Eclipse fizz', set: { hat: 'visor', shades: 'night', ears: 'cans', nose: 'stud', paint: 'eclipse' } },
+  { id: 'gold', name: 'Gold rush', set: { hat: 'none', shades: 'gold', ears: 'hoops', nose: 'hoop', paint: 'none' } },
+  { id: 'cat', name: 'Be Bobo', set: { hat: 'cathat', shades: 'none', ears: 'bells', nose: 'none', paint: 'tabby' } },
+  { id: 'clear', name: 'Clear all', set: { hat: 'none', shades: 'none', ears: 'none', nose: 'none', paint: 'none' } },
 ];
-const wear = { hat: 'cathat', shades: 'bobo', ears: 'canhoop', nose: 'septum' };
+const wear = { hat: 'cathat', shades: 'bobo', ears: 'canhoop', nose: 'septum', paint: 'none' };
 try { Object.assign(wear, JSON.parse(store.get('wear', '{}'))); } catch (e) { /* defaults */ }
-for (const k of Object.keys(wear)) if (!ITEMS[k].some((i) => i.id === wear[k])) wear[k] = 'none';
+for (const k of Object.keys(wear)) if (!ITEMS[k] || !ITEMS[k].some((i) => i.id === wear[k])) wear[k] = 'none';
 let cat = 'looks';
 
 // ---------------------------------------------------------------- loading
@@ -112,7 +122,7 @@ const assets = Promise.all([
   document.fonts ? document.fonts.load('900 italic 40px "Exo 2"').catch(() => {}) : null,
 ]).then(([bobo, can, charm]) => {
   A.bobo = bobo; A.can = can.scene; A.decal = W.boboFaceDecal(charm);
-  A.mini = () => W.miniBobo(A.bobo, 40);
+  A.mini = () => W.miniBobo(A.bobo, 64);
 });
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -148,12 +158,12 @@ const hero = {
     if (!this.init()) return;
     this.rig = new THREE.Group(); this.scene.add(this.rig);
     this.rig.add(this.bust());
-    const hat = W.buildCatHat(), sh = ITEMS.shades[1].make(), sep = W.buildNose('septum');
+    const hat = W.buildCatHat(A.mini()), sh = ITEMS.shades[1].make(), sep = W.buildNose('septum');
     sep.position.set(0, -0.26, -0.74);
     this.rig.add(hat, sh, sep);
     for (const s of [1, -1]) { const e = W.buildEarring(s > 0 ? 'can' : 'hoop', A.can); e.position.set(s * 0.6, -0.22, 0.1); this.rig.add(e); }
     this.mini = sh.getObjectByName('shades') ? null : null;
-    sh.traverse((o) => { if (o.userData && o.userData.mixer) this.mix = o.userData; });
+    hat.traverse((o) => { if (o.userData && o.userData.mixer) this.mix = o.userData; });
     if (this.mix && this.mix.clips.Sit) this.mix.clips.Sit.play();
     const resize = () => {
       const c = $('hero3d'), w = c.clientWidth || 300, h = c.clientHeight || 300; this.r.setSize(w, h, false);
@@ -198,13 +208,14 @@ const hero = {
 function addTo(g, c, id) {   // for the thumbnails: put an item on the display bust at rest positions
   const it = ITEMS[c].find((i) => i.id === id); if (!it || it.id === 'none') return;
   if (c === 'ears') { for (const s of [1, -1]) { const e = W.buildEarring(s > 0 ? it.l : it.r, A.can); e.position.set(s * 0.6, -0.22, 0.1); g.add(e); } return; }
+  if (!it.make) return;
   const o = it.make(); if (c === 'nose') o.position.set(0, -0.26, -0.74); g.add(o);
 }
 
 // ---------------------------------------------------------------- the lens carousel (Snapchat / Instagram style)
 // Category chips on top; below them one row of round thumbnails that scrolls sideways and snaps. Whatever sits in the
-// shutter ring (bottom centre) is what you wear, applied as it snaps into place; tap a thumbnail to glide it into the
-// ring. The shutter stays the ring: tap = photo (or strip), hold = video.
+// gold circle is what you wear, applied as it snaps into place; tap a thumbnail to glide it there. The camera button is
+// its own control below the row (Dapo, round 2: always there, never the carousel): tap = photo (or strip), hold = video.
 const thumbs = {};
 let carouselLock = false, settleT = 0, centred = -1;
 function buildTray() {
@@ -222,7 +233,7 @@ function buildTray() {
 function prerenderThumbs() {   // every thumbnail now, while the splash renderer exists (it is freed at Start)
   for (const c of CATS) for (const it of (c.k === 'looks' ? LOOKS : ITEMS[c.k])) if (it.id !== 'none' && it.id !== 'clear') thumbFor(c.k, it);
 }
-function thumbFor(c, item) { const key = c + ':' + item.id; if (!(key in thumbs)) thumbs[key] = hero.r ? hero.thumb(c, item) : ''; return thumbs[key]; }
+function thumbFor(c, item) { const key = c + ':' + item.id; if (!(key in thumbs)) thumbs[key] = c === 'paint' ? paintThumb(item.id) : hero.r ? hero.thumb(c, item) : ''; return thumbs[key]; }
 function list() { return cat === 'looks' ? LOOKS : ITEMS[cat]; }
 function isOn(it) { return cat === 'looks' ? Object.entries(it.set).every(([k, v]) => wear[k] === v) : wear[cat] === it.id; }
 function renderTray() {
@@ -270,11 +281,17 @@ function choose(i) {
 }
 
 // ---------------------------------------------------------------- the scene
+// One "rig" per tracked face (friends mode: up to MAX_FACES faces, each wearing the same look).
 let scene, camera, renderer;
-const anchor = new THREE.Group();              // the face (FU)
-const slots = { hat: new THREE.Group(), shades: new THREE.Group(), nose: new THREE.Group() };
-const earSlots = { l: null, r: null };         // world-space earrings with a swing
-let faceMesh = null, faceIdx = null;
+let faceIdx = null, faceUvs = null, paintUV = null;
+const MAX_FACES = clamp(Math.round(+params.get('faces') || 2), 1, 3);
+const rigs = new Map();
+const AP_DEFAULT = {
+  leftLobe: [0.636, -0.212, 0.123], rightLobe: [-0.636, -0.212, 0.123], noseTip: [0, -0.256, -0.744], noseBridge: [0, -0.034, -0.626],
+  forehead: [0, 0.278, -0.615], mouth: [0, -0.518, -0.551], leftEye: [0.227, 0.017, -0.486], rightEye: [-0.226, 0.016, -0.487],
+};
+const tmpV = new THREE.Vector3();
+function ap(d, n) { const p = d.attachmentPoints && d.attachmentPoints[n]; return p && p.position ? tmpV.set(p.position.x, p.position.y, p.position.z) : tmpV.set(...AP_DEFAULT[n]); }
 function buildScene(xr) {
   ({ scene, camera, renderer } = xr);
   renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
@@ -282,27 +299,160 @@ function buildScene(xr) {
   scene.environmentIntensity = 0.85;
   const dl = new THREE.DirectionalLight(0xffffff, 1.1); dl.position.set(0.3, 1, 1); scene.add(dl);
   scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-  anchor.visible = false; anchor.matrixAutoUpdate = true; scene.add(anchor);
-  anchor.add(W.buildHeadOccluder());
-  for (const s of Object.values(slots)) anchor.add(s);
-  if (faceIdx) makeFaceMesh();
   camera.position.set(0, 0, 0); camera.quaternion.identity();
-  applyWear(false);
-}
-function makeFaceMesh() {
-  if (faceMesh || !scene) return;
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3));
-  geo.setIndex(faceIdx.idx);
-  faceMesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false })); faceMesh.renderOrder = -10; faceMesh.frustumCulled = false;
-  anchor.add(faceMesh);
 }
 function onFaceLoading(d) {
   const idx = []; for (const t of d.indices) { if (typeof t === 'number') idx.push(t); else idx.push(t.a, t.b, t.c); }
-  faceIdx = { idx, n: d.pointsPerDetection }; makeFaceMesh();
+  faceIdx = { idx, n: d.pointsPerDetection };
+  if (d.uvs && d.uvs.length) { faceUvs = new Float32Array(d.uvs.length * 2); d.uvs.forEach((t, i) => { faceUvs[i * 2] = t.u; faceUvs[i * 2 + 1] = t.v; }); }
+  for (const r of rigs.values()) r.makeMeshes();
 }
-let mini = null, miniNext = 0;
+
+class Rig {
+  constructor(id) {
+    this.id = id; this.tracked = false; this.at = 0; this.s = 0.139;
+    this.anchor = new THREE.Group(); this.anchor.visible = false; scene.add(this.anchor);
+    this.anchor.add(W.buildHeadOccluder());
+    this.slots = { hat: new THREE.Group(), shades: new THREE.Group(), nose: new THREE.Group() };
+    for (const s of Object.values(this.slots)) this.anchor.add(s);
+    this.ears = { l: null, r: null }; this.leaving = [];
+    this.sm = {}; for (const [k, n] of Object.entries({ bridge: 'noseBridge', tip: 'noseTip', forehead: 'forehead', lobeL: 'leftLobe', lobeR: 'rightLobe', mouth: 'mouth', eyeL: 'leftEye', eyeR: 'rightEye' })) this.sm[k] = new THREE.Vector3(...AP_DEFAULT[n]);
+    this.mini = null; this.miniNext = 0; this.paintId = null;
+    this.trig = { mouth: false, brows: 0, mouthT: 0 };
+    this.makeMeshes(); this.apply(false);
+  }
+  makeMeshes() {
+    if (this.occ || !faceIdx) return;
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); geo.setIndex(faceIdx.idx);
+    this.occ = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ colorWrite: false })); this.occ.renderOrder = -10; this.occ.frustumCulled = false; this.anchor.add(this.occ);
+    // face paint: the same mesh, drawn with a texture in the face's standard UVs
+    const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(faceIdx.n * 3), 3)); pg.setIndex(faceIdx.idx);
+    if (faceUvs) pg.setAttribute('uv', new THREE.BufferAttribute(faceUvs, 2));
+    this.paint = new THREE.Mesh(pg, new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, opacity: 0 }));
+    this.paint.renderOrder = 1; this.paint.frustumCulled = false; this.paint.visible = false; this.anchor.add(this.paint);
+  }
+  update(d) {
+    const t = d.transform; if (!t) return;
+    this.anchor.position.set(t.position.x, t.position.y, t.position.z);
+    this.anchor.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
+    this.anchor.scale.setScalar(t.scale); this.s = t.scale;
+    const sm = this.sm;   // attachment points, smoothed a little (they jitter by a millimetre or two)
+    sm.bridge.lerp(ap(d, 'noseBridge'), 0.5); sm.tip.lerp(ap(d, 'noseTip'), 0.5); sm.forehead.lerp(ap(d, 'forehead'), 0.4);
+    sm.mouth.lerp(ap(d, 'mouth'), 0.6); sm.eyeL.lerp(ap(d, 'leftEye'), 0.5); sm.eyeR.lerp(ap(d, 'rightEye'), 0.5);
+    const ok = (n, found) => found || !(d.attachmentPoints && d.attachmentPoints[n]);
+    sm.lobeL.lerp(ok('leftLobe', d.leftLobeFound) ? ap(d, 'leftLobe') : tmpV.set(...AP_DEFAULT.leftLobe), 0.5);
+    sm.lobeR.lerp(ok('rightLobe', d.rightLobeFound) ? ap(d, 'rightLobe') : tmpV.set(...AP_DEFAULT.rightLobe), 0.5);
+    this.earL = !!d.leftEarFound; this.earR = !!d.rightEarFound;
+    if (d.vertices && this.occ) {
+      const a = this.occ.geometry.attributes.position, b = this.paint.geometry.attributes.position, n = Math.min(a.count, d.vertices.length);
+      for (let i = 0; i < n; i++) { const v = d.vertices[i]; a.setXYZ(i, v.x, v.y, v.z + 0.012); b.setXYZ(i, v.x, v.y, v.z); }   // occluder a hair back: studs on the skin stay visible
+      a.needsUpdate = true; b.needsUpdate = true;
+      if (!paintUV && faceUvs) { paintUV = measurePaintUV(d); for (const r of rigs.values()) r.apply(false); }   // paint can be drawn now
+    }
+    if (!this.tracked) { this.tracked = true; diag.found++; if (!diag.firstFoundS) diag.firstFoundS = +((performance.now() - camStartAt) / 1000).toFixed(1); arrived(this); }
+    this.at = performance.now();
+    triggers.face(this, d);
+  }
+  get live() { return this.tracked && performance.now() - this.at < 400; }
+  apply(anim) {
+    for (const k of ['hat', 'shades', 'nose']) {
+      const slot = this.slots[k], it = ITEMS[k].find((i) => i.id === wear[k]);
+      if (slot.userData.id === wear[k]) continue;
+      slot.userData.id = wear[k];
+      for (const old of slot.children.filter((c) => !c.userData.leaving)) {   // out with its own exit
+        old.userData.leaving = true;
+        if (anim) animate(old, old.userData.anim, -1, () => { slot.remove(old); disposeTree(old); });
+        else { slot.remove(old); disposeTree(old); }
+      }
+      if (it && it.make) {
+        const w = W.wrap(it.make(), k, it.id); slot.add(w);
+        if (anim) animate(w, w.userData.anim, 1); else W.animFrame(w, w.userData.anim, 1, 1, REDUCED);
+      }
+    }
+    this.mini = null; this.slots.hat.traverse((o) => { if (o.userData && o.userData.mixer && !leavingUp(o)) this.mini = o.userData; });
+    if (this.mini && this.mini.clips.Sit) { this.mini.clips.Sit.reset().play(); this.miniNext = performance.now() + 3500; }
+    // earrings (world space, they swing): the wrapper inside each one animates
+    const e = ITEMS.ears.find((i) => i.id === wear.ears);
+    for (const side of ['l', 'r']) {
+      const kind = e && e.id !== 'none' ? e[side] : null, cur = this.ears[side];
+      if (cur && cur.kind === kind) continue;
+      if (cur) {
+        const obj = cur.obj; this.ears[side] = null; this.leaving.push(cur);
+        const done = () => { scene.remove(obj); disposeTree(obj); this.leaving.splice(this.leaving.indexOf(cur), 1); };
+        if (anim) animate(obj.userData.w, obj.userData.w.userData.anim, -1, done); else done();
+      }
+      if (kind) {
+        const w = W.wrap(W.buildEarring(kind, A.can), 'ears', kind), obj = new THREE.Group(); obj.add(w);
+        obj.userData = { w, len: w.userData.len, fixed: w.userData.fixed }; obj.visible = false; scene.add(obj);
+        this.ears[side] = { kind, obj, side, bob: null, prev: null, kick: anim ? (side === 'l' ? 1 : -1) : 0 };
+        if (anim) animate(w, w.userData.anim, 1); else W.animFrame(w, w.userData.anim, 1, 1, REDUCED);
+      }
+    }
+    // face paint: fades in / out
+    if (this.paint && paintUV && this.paintId !== wear.paint) {
+      this.paintId = wear.paint; const tex = paintTexture(wear.paint);
+      if (tex) { this.paint.material.map = tex; this.paint.material.needsUpdate = true; this.paint.visible = true; }
+      this.paintFade = { to: tex ? 1 : 0, anim };
+      if (!anim) { this.paint.material.opacity = tex ? 1 : 0; this.paint.visible = !!tex; }
+      else if (tex) sparkles.burst(this.paint, ['#f4a3a8', '#ffffff', '#f3ab5e']);
+    }
+  }
+  tick(dt, now) {
+    const live = this.live; this.anchor.visible = live;
+    const sm = this.sm;
+    this.slots.hat.position.set(0, sm.forehead.y - AP_DEFAULT.forehead[1], sm.forehead.z - AP_DEFAULT.forehead[2]);
+    this.slots.shades.position.set(sm.bridge.x, sm.bridge.y - AP_DEFAULT.noseBridge[1], sm.bridge.z - AP_DEFAULT.noseBridge[2]);
+    this.slots.nose.position.copy(sm.tip);
+    if (this.paintFade && this.paint) {
+      const m = this.paint.material, f = this.paintFade; m.opacity += Math.sign(f.to - m.opacity) * Math.min(Math.abs(f.to - m.opacity), dt / (REDUCED ? 0.15 : 0.45));
+      if (m.opacity === f.to) { this.paint.visible = f.to > 0; this.paintFade = null; }
+    }
+    const mini = this.mini;
+    if (mini) {
+      mini.mixer.update(dt);
+      if (now > this.miniNext && !REDUCED) { this.miniDo(Math.random() < 0.5 ? 'TailWag' : 'PawRaise'); this.miniNext = now + 6000 + Math.random() * 5000; }
+    }
+    // earrings: verlet pendulum in world metres from the lobe
+    this.anchor.updateMatrixWorld(true); this.anchor.getWorldQuaternion(qA);
+    const list = [[sm.lobeL, this.ears.l], [sm.lobeR, this.ears.r], ...this.leaving.map((e) => [e.side === 'l' ? sm.lobeL : sm.lobeR, e])];
+    for (const [lobe, e] of list) {
+      if (!e) continue;
+      e.obj.visible = live;
+      if (!live) { e.bob = null; continue; }
+      const pivot = this.anchor.localToWorld(vA.copy(lobe));
+      const len = (e.obj.userData.len || 0) * this.s;
+      e.obj.position.copy(pivot); e.obj.scale.setScalar(this.s);
+      if (e.obj.userData.fixed || len <= 0) { e.obj.quaternion.copy(qA); continue; }
+      if (!e.bob) { e.bob = pivot.clone().addScaledVector(down, len); e.prev = e.bob.clone(); }
+      if (e.kick) { e.prev.addScaledVector(vB.set(1, 0, 0).applyQuaternion(qA), -e.kick * len * 0.09); e.kick = 0; }   // a swing
+      const h = Math.min(dt, 1 / 30), vel = vB.copy(e.bob).sub(e.prev).multiplyScalar(REDUCED ? 0.9 : 0.975);
+      e.prev.copy(e.bob); e.bob.add(vel).addScaledVector(down, 9.8 * h * h);
+      const dir = vB.copy(e.bob).sub(pivot); if (dir.lengthSq() < 1e-10) dir.copy(down);
+      dir.normalize(); e.bob.copy(pivot).addScaledVector(dir, len);
+      const headDown = vA.copy(down).applyQuaternion(qA);   // the head's rotation, swung onto the pendulum
+      qTmp.setFromUnitVectors(headDown, dir); e.obj.quaternion.copy(qTmp).multiply(qA);
+    }
+  }
+  miniDo(name) {   // the tiny Bobo on the hat: play a clip once, then back to sitting
+    const mini = this.mini, a = mini && mini.clips[name]; if (!a || !mini.clips.Sit) return false;
+    a.reset().setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = false; mini.clips.Sit.crossFadeTo(a, 0.2, false); a.play();
+    clearTimeout(this.miniT); this.miniT = setTimeout(() => { if (this.mini === mini) { mini.clips.Sit.reset().play(); a.crossFadeTo(mini.clips.Sit, 0.3, false); } }, (a.getClip().duration || 1.5) * 1000 - 300);
+    return true;
+  }
+  kickEars(k = 1) { for (const e of [this.ears.l, this.ears.r]) if (e) e.kick = (Math.random() < 0.5 ? -1 : 1) * k; }
+  worldOf(v) { this.anchor.updateMatrixWorld(true); return this.anchor.localToWorld(v.clone()); }
+  dispose() {
+    for (const e of [this.ears.l, this.ears.r, ...this.leaving]) if (e) { scene.remove(e.obj); disposeTree(e.obj); }
+    scene.remove(this.anchor); disposeTree(this.anchor);
+  }
+}
+function leavingUp(o) { for (let p = o; p; p = p.parent) if (p.userData && p.userData.leaving) return true; return false; }
 function disposeTree(o) { o.traverse((x) => { if (x.geometry) x.geometry.dispose(); }); }
+function rigFor(id) { let r = rigs.get(id); if (!r && scene) { if (rigs.size >= MAX_FACES) return null; r = new Rig(id); rigs.set(id, r); } return r; }
+function onFace(d) { const r = rigFor(d.id); if (r) r.update(d); }
+function onFaceLost(d) { const r = rigs.get(d && d.id); if (r && r.tracked) { r.tracked = false; diag.lost++; } }
+function applyWear(anim) { if (!scene) return; for (const r of rigs.values()) r.apply(anim); }
+
 // Every piece arrives and leaves in its own way (W.ANIM in wearables.js); a sparkle burst lands with it.
 const live = [];                              // { w: wrapper, a: anim spec, dir: 1 in / -1 out, t, dur, onDone, burst }
 function animate(w, spec, dir, onDone) {
@@ -319,44 +469,149 @@ function tickAnims(dt) {
     if (L.t >= 1) { live.splice(i, 1); if (L.onDone) L.onDone(); }
   }
 }
-function applyWear(anim) {
-  if (!scene) return;
-  for (const k of ['hat', 'shades', 'nose']) {
-    const slot = slots[k], it = ITEMS[k].find((i) => i.id === wear[k]);
-    if (slot.userData.id === wear[k]) continue;
-    slot.userData.id = wear[k];
-    for (const old of slot.children.filter((c) => !c.userData.leaving)) {   // out with its own exit
-      old.userData.leaving = true;
-      if (anim) animate(old, old.userData.anim, -1, () => { slot.remove(old); disposeTree(old); });
-      else { slot.remove(old); disposeTree(old); }
-    }
-    if (it && it.make) {
-      const w = W.wrap(it.make(), k, it.id); slot.add(w);
-      if (anim) animate(w, w.userData.anim, 1); else W.animFrame(w, w.userData.anim, 1, 1, REDUCED);
-    }
+
+// ---------------------------------------------------------------- face paint (on the live face mesh, standard UVs)
+// Where the nose, cheeks, eyes and mouth sit in the face's UV layout is measured once from the first tracked frame
+// (nearest mesh vertex to each attachment point), so the art follows the real UV layout without hand-tuned numbers.
+function measurePaintUV(d) {
+  const want = ['noseTip', 'leftCheek', 'rightCheek', 'leftEye', 'rightEye', 'forehead', 'mouthLeftCorner', 'mouthRightCorner', 'upperLip', 'chin', 'leftEyebrowOuter', 'rightEyebrowOuter'];
+  const out = {};
+  for (const n of want) {
+    const p = d.attachmentPoints && d.attachmentPoints[n] && d.attachmentPoints[n].position; if (!p) continue;
+    let best = -1, bd = 1e9;
+    const nUv = faceUvs.length / 2;   // the iris points come after the mesh: their UVs are a (1, 0) placeholder
+    d.vertices.forEach((v, i) => { if (i >= nUv || (faceUvs[i * 2] >= 0.999 && faceUvs[i * 2 + 1] <= 0.001)) return; const dd = (v.x - p.x) ** 2 + (v.y - p.y) ** 2 + (v.z - p.z) ** 2; if (dd < bd) { bd = dd; best = i; } });
+    if (best >= 0) out[n] = [faceUvs[best * 2], faceUvs[best * 2 + 1]];
   }
-  mini = null; slots.shades.traverse((o) => { if (o.userData && o.userData.mixer && !o.parent.userData.leaving) mini = o.userData; });
-  if (mini && mini.clips.Sit) { mini.clips.Sit.reset().play(); miniNext = performance.now() + 2500; }
-  // earrings (world space, they swing): the wrapper inside each one animates
-  const e = ITEMS.ears.find((i) => i.id === wear.ears);
-  for (const side of ['l', 'r']) {
-    const kind = e && e.id !== 'none' ? e[side] : null, cur = earSlots[side];
-    if (cur && cur.kind === kind) continue;
-    if (cur) {
-      const obj = cur.obj; earSlots[side] = null; leavingEars.push(cur);
-      if (anim) animate(obj.userData.w, obj.userData.w.userData.anim, -1, () => { scene.remove(obj); disposeTree(obj); leavingEars.splice(leavingEars.indexOf(cur), 1); });
-      else { scene.remove(obj); disposeTree(obj); leavingEars.splice(leavingEars.indexOf(cur), 1); }
-    }
-    if (kind) {
-      const w = W.wrap(W.buildEarring(kind, A.can), 'ears', kind), obj = new THREE.Group(); obj.add(w);
-      obj.userData = { w, len: w.userData.len, fixed: w.userData.fixed }; obj.visible = false; scene.add(obj);
-      const slotE = { kind, obj, bob: null, prev: null, kick: anim ? (side === 'l' ? 1 : -1) : 0 };
-      earSlots[side] = slotE;
-      if (anim) animate(w, w.userData.anim, 1); else W.animFrame(w, w.userData.anim, 1, 1, REDUCED);
-    }
+  // the UV layout is symmetric: average each left/right pair so the art comes out even
+  for (const [L, R] of [['leftEye', 'rightEye'], ['leftCheek', 'rightCheek'], ['mouthLeftCorner', 'mouthRightCorner'], ['leftEyebrowOuter', 'rightEyebrowOuter']]) {
+    const l = out[L], r = out[R]; if (!l || !r) continue;
+    const du = (Math.abs(l[0] - 0.5) + Math.abs(r[0] - 0.5)) / 2, v = (l[1] + r[1]) / 2;
+    out[L] = [0.5 + Math.sign(l[0] - 0.5) * du, v]; out[R] = [0.5 + Math.sign(r[0] - 0.5) * du, v];
   }
+  diag.paintUV = Object.keys(out).length;
+  return out;
 }
-const leavingEars = [];
+const paintCache = {};
+function paintTexture(id) {
+  if (!id || id === 'none' || !paintUV || !paintUV.noseTip) return null;
+  if (paintCache[id]) return paintCache[id];
+  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+  const P = (n) => { const t = paintUV[n]; return t ? [t[0] * S, (1 - t[1]) * S] : null; };
+  const nose = P('noseTip'), cl = P('leftCheek'), cr = P('rightCheek'), fh = P('forehead'), el = P('leftEye'), er = P('rightEye');
+  let eyeD = el && er ? Math.hypot(el[0] - er[0], el[1] - er[1]) : 0;   // the art's unit
+  if (!(eyeD > S * 0.08)) eyeD = cl && cr ? Math.hypot(cl[0] - cr[0], cl[1] - cr[1]) * 0.6 : S * 0.25;
+  const line = (x0, y0, x1, y1, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); };
+  const dot = (x, y, r, col) => { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); };
+  if (id === 'whiskers' || id === 'tabby') {
+    // Bobo: pink nose, whiskers, blush; tabby adds his forehead stripes and cheek stripes
+    for (const [ch, sgn] of [[cl, 1], [cr, -1]]) {
+      if (!ch) continue;
+      const dirx = Math.sign(ch[0] - nose[0]) || sgn;
+      dot(ch[0], ch[1] + eyeD * 0.02, eyeD * 0.16, 'rgba(244,163,168,0.55)');
+      for (let k = -1; k <= 1; k++) {
+        const y = ch[1] + eyeD * (0.04 + k * 0.1);
+        line(ch[0] - dirx * eyeD * 0.12, y, ch[0] + dirx * eyeD * 0.62, y + k * eyeD * 0.14 - eyeD * 0.04, eyeD * 0.028, '#15131a');
+      }
+      if (id === 'tabby') for (let k = 0; k < 3; k++) {
+        const x = ch[0] + dirx * eyeD * (0.32 + k * 0.12), y = ch[1] - eyeD * 0.2;
+        g.fillStyle = '#d8762c'; g.beginPath(); g.moveTo(x, y - eyeD * 0.16); g.lineTo(x + dirx * eyeD * 0.05, y); g.lineTo(x - dirx * eyeD * 0.05, y); g.closePath(); g.fill();
+      }
+    }
+    // the pink nose (a rounded triangle) and the little mouth line under it
+    g.fillStyle = '#f4a3a8'; g.strokeStyle = '#15131a'; g.lineWidth = eyeD * 0.025;
+    const nw = eyeD * 0.13, nh = eyeD * 0.09; g.beginPath(); g.moveTo(nose[0] - nw, nose[1] - nh * 0.6); g.quadraticCurveTo(nose[0], nose[1] - nh * 1.0, nose[0] + nw, nose[1] - nh * 0.6); g.quadraticCurveTo(nose[0] + nw * 0.4, nose[1] + nh * 0.7, nose[0], nose[1] + nh * 0.8); g.quadraticCurveTo(nose[0] - nw * 0.4, nose[1] + nh * 0.7, nose[0] - nw, nose[1] - nh * 0.6); g.fill(); g.stroke();
+    if (id === 'tabby' && fh) {   // the "M" on the forehead
+      g.strokeStyle = '#d8762c'; g.lineWidth = eyeD * 0.07; g.lineJoin = 'round'; g.lineCap = 'round';
+      const w = eyeD * 0.36, top = fh[1] - eyeD * 0.1, bot = fh[1] + eyeD * 0.18;
+      g.beginPath(); g.moveTo(fh[0] - w, bot); g.lineTo(fh[0] - w * 0.55, top); g.lineTo(fh[0], bot - eyeD * 0.06); g.lineTo(fh[0] + w * 0.55, top); g.lineTo(fh[0] + w, bot); g.stroke();
+    }
+  } else if (id === 'eclipse') {
+    // EVADE game-day paint: gold eye-black stripes under each eye and a blue crescent (the Eclipse) on one cheek
+    for (const e of [el, er]) if (e) { g.fillStyle = '#f6c344'; g.fillRect(e[0] - eyeD * 0.17, e[1] + eyeD * 0.15, eyeD * 0.34, eyeD * 0.06); g.fillRect(e[0] - eyeD * 0.13, e[1] + eyeD * 0.25, eyeD * 0.26, eyeD * 0.045); }
+    if (cl) { const r = eyeD * 0.16; dot(cl[0], cl[1], r, '#3f9be6'); g.globalCompositeOperation = 'destination-out'; dot(cl[0] + r * 0.45, cl[1] - r * 0.25, r * 0.85, '#000'); g.globalCompositeOperation = 'source-over'; }
+    if (cr) { g.fillStyle = '#ffffff'; g.font = `900 italic ${Math.round(eyeD * 0.14)}px "Exo 2", sans-serif`; g.textAlign = 'center'; g.fillText('EVADE', cr[0], cr[1]); }
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  paintCache[id] = t; return t;
+}
+// a 2D thumbnail for paint (no face mesh exists before the camera starts)
+function paintThumb(id) {
+  const c = document.createElement('canvas'); c.width = c.height = 160; const g = c.getContext('2d');
+  g.fillStyle = '#26323b'; g.beginPath(); g.ellipse(80, 84, 52, 66, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#0f1519'; g.beginPath(); g.ellipse(60, 70, 7, 9, 0, 0, Math.PI * 2); g.ellipse(100, 70, 7, 9, 0, 0, Math.PI * 2); g.fill();
+  const line = (a, b, cc, d, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'round'; g.beginPath(); g.moveTo(a, b); g.lineTo(cc, d); g.stroke(); };
+  if (id === 'whiskers' || id === 'tabby') {
+    g.fillStyle = 'rgba(244,163,168,0.6)'; g.beginPath(); g.arc(52, 100, 11, 0, 7); g.arc(108, 100, 11, 0, 7); g.fill();
+    for (const k of [-1, 0, 1]) { line(60, 104 + k * 6, 24, 98 + k * 12, 3, '#fff'); line(100, 104 + k * 6, 136, 98 + k * 12, 3, '#fff'); }
+    g.fillStyle = '#f4a3a8'; g.beginPath(); g.moveTo(70, 90); g.lineTo(90, 90); g.lineTo(80, 101); g.closePath(); g.fill();
+    if (id === 'tabby') { g.strokeStyle = '#f3ab5e'; g.lineWidth = 5; g.lineJoin = 'round'; g.beginPath(); g.moveTo(64, 50); g.lineTo(70, 34); g.lineTo(80, 46); g.lineTo(90, 34); g.lineTo(96, 50); g.stroke(); }
+  } else if (id === 'eclipse') {
+    g.fillStyle = '#f6c344'; g.fillRect(48, 84, 24, 5); g.fillRect(88, 84, 24, 5); g.fillRect(51, 92, 18, 4); g.fillRect(91, 92, 18, 4);
+    g.fillStyle = '#3f9be6'; g.beginPath(); g.arc(112, 110, 10, 0, 7); g.fill(); g.fillStyle = '#26323b'; g.beginPath(); g.arc(116, 107, 8.5, 0, 7); g.fill();
+  }
+  return c.toDataURL('image/png');
+}
+
+// ---------------------------------------------------------------- face triggers (round 2)
+// Open your mouth: cola fizz pours out. Raise both eyebrows: next look. Wink: the tiny Bobo waves (or a sparkle).
+const triggers = {
+  on: store.get('triggers', '1') === '1', lookAt: 0, mewAt: 0, coachShown: false,
+  face(r, d) {
+    if (!this.on) { r.trig.mouth = false; return; }
+    const now = performance.now(), T = r.trig;
+    const mouth = !!d.mouthOpen;
+    if (mouth && !T.mouth) { T.mouthT = now; fizz.burst(r); sound.fizz(); buzz(12); r.kickEars(1.5); if (now - this.mewAt > 4000 && r.miniDo('PawRaise')) { this.mewAt = now; } postEvent('custom', { what: 'trigger', id: 'mouth' }); diag.trig.mouth = (diag.trig.mouth || 0) + 1; }
+    T.mouth = mouth;
+    const brows = !!(d.leftEyebrowRaised && d.rightEyebrowRaised);
+    if (brows) { if (!T.brows) T.brows = now; else if (now - T.brows > 250 && now - this.lookAt > 2200 && !busy && !strip) { this.lookAt = now; T.brows = now + 1e9; nextLook(); diag.trig.brows = (diag.trig.brows || 0) + 1; } }
+    else T.brows = 0;
+  },
+  wink(id) {
+    if (!this.on) return; const r = rigs.get(id); if (!r || !r.live) return;
+    diag.trig.wink = (diag.trig.wink || 0) + 1;
+    if (!r.miniDo('PawRaise')) { const e = r.worldOf(r.sm.eyeL); sparkles.burstAt(e, r.s * 0.4, ['#f6c344', '#ffffff', '#f4a3a8']); }
+    else sparkles.burstAt(r.worldOf(new THREE.Vector3(0, 1.05, 0.1)), r.s * 0.5, ['#f6c344', '#ffffff', '#f4a3a8']);
+    sound.mew(); buzz(8);
+  },
+};
+function nextLook() {
+  const i = (LOOKS.findIndex((L) => Object.entries(L.set).every(([k, v]) => wear[k] === v)) + 1) % (LOOKS.length - 1);   // skip "Clear all"
+  Object.assign(wear, LOOKS[i].set); store.set('wear', JSON.stringify(wear)); applyWear(true); renderTray();
+  toast(`Eyebrows up: ${LOOKS[i].name}`); sound.pop(); buzz([10, 40, 10]); postEvent('custom', { what: 'trigger', id: 'brows', look: LOOKS[i].id });
+}
+let toastT = 0;
+function toast(text) { const el = $('toast'); el.textContent = text; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1800); }
+// cola fizz: flat round bubbles (one colour each) pour from the mouth, drift forward and up, then pop
+const fizz = {
+  pool: [], tex: null,
+  init() { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 30, 0, 7); g.fill(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(24, 22, 8, 0, 7); g.fill(); this.tex = new THREE.CanvasTexture(c); this.tex.colorSpace = THREE.SRGBColorSpace; },
+  spawn(r, n, speed) {
+    if (!this.tex) this.init();
+    r.anchor.updateMatrixWorld(true);
+    const o = r.anchor.localToWorld(r.sm.mouth.clone().add(tmpV.set(0, 0, -0.05)));
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(r.anchor.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const cols = ['#3f9be6', '#ffffff', '#8cc8f8', '#f6c344', '#ffffff'];
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex, color: cols[(Math.random() * cols.length) | 0], transparent: true, depthWrite: false }));
+      m.position.copy(o).add(tmpV.set((Math.random() - 0.5) * 0.02, (Math.random() - 0.5) * 0.01, 0)); m.renderOrder = 15; scene.add(m);
+      const v = fwd.clone().multiplyScalar(speed * (0.5 + Math.random() * 0.6)).add(tmpV.set((Math.random() - 0.5) * 0.1, 0.03 + Math.random() * 0.08, 0));
+      this.pool.push({ m, v, t: 0, life: 0.8 + Math.random() * 0.7, s: 0.0025 + Math.random() * 0.005 });
+    }
+  },
+  burst(r) { this.spawn(r, REDUCED ? 6 : 18, 0.2); },
+  tick(dt) {
+    for (const r of rigs.values()) if (r.live && r.trig.mouth && this.on()) { r.fizzAcc = (r.fizzAcc || 0) + dt * (REDUCED ? 4 : 14); while (r.fizzAcc >= 1) { r.fizzAcc--; this.spawn(r, 1, 0.14); } }
+    for (let i = this.pool.length - 1; i >= 0; i--) {
+      const p = this.pool[i]; p.t += dt; const k = p.t / p.life;
+      if (k >= 1) { scene.remove(p.m); p.m.material.dispose(); this.pool.splice(i, 1); continue; }
+      p.v.y += 0.12 * dt; p.v.multiplyScalar(1 - 1.4 * dt); p.m.position.addScaledVector(p.v, dt);
+      p.m.scale.setScalar(p.s * (0.5 + k) * (k > 0.88 ? 1 + (k - 0.88) * 6 : 1)); p.m.material.opacity = k > 0.88 ? 1 - (k - 0.88) / 0.12 : 1;
+    }
+  },
+  on: () => triggers.on,
+};
+
 // sparkles: flat four-point stars (one colour each, no gradient) bursting from where a piece lands
 const sparkles = {
   pool: [], tex: null,
@@ -365,10 +620,12 @@ const sparkles = {
     g.beginPath(); g.moveTo(32, 0); g.lineTo(38, 26); g.lineTo(64, 32); g.lineTo(38, 38); g.lineTo(32, 64); g.lineTo(26, 38); g.lineTo(0, 32); g.lineTo(26, 26); g.closePath(); g.fill();
     this.tex = new THREE.CanvasTexture(c); this.tex.colorSpace = THREE.SRGBColorSpace;
   },
-  burst(w, colors = ['#f6c344', '#ffffff', '#8cc8f8']) {
-    if (!this.tex) this.init();
+  burst(w, colors) {
     const box = new THREE.Box3().setFromObject(w, true); if (box.isEmpty()) return;
-    const c = box.getCenter(new THREE.Vector3()), r = box.getSize(new THREE.Vector3()).length() * 0.45;
+    this.burstAt(box.getCenter(new THREE.Vector3()), box.getSize(new THREE.Vector3()).length() * 0.45, colors);
+  },
+  burstAt(c, r, colors = ['#f6c344', '#ffffff', '#8cc8f8']) {
+    if (!this.tex) this.init();
     for (let i = 0; i < 12; i++) {
       const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex, color: colors[i % colors.length], transparent: true, depthTest: false, depthWrite: false }));
       const d = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.3, (Math.random() - 0.5) * 0.4).normalize();
@@ -386,82 +643,29 @@ const sparkles = {
   },
 };
 
-// ---------------------------------------------------------------- face tracking
-const face = { tracked: false, at: 0, s: 0.139, pts: {}, earL: false, earR: false, mouth: false };
-const AP_DEFAULT = { leftLobe: [0.636, -0.212, 0.123], rightLobe: [-0.636, -0.212, 0.123], noseTip: [0, -0.256, -0.744], noseBridge: [0, -0.034, -0.626], forehead: [0, 0.278, -0.615] };
-const sm = { bridge: new THREE.Vector3(...AP_DEFAULT.noseBridge), tip: new THREE.Vector3(...AP_DEFAULT.noseTip), forehead: new THREE.Vector3(...AP_DEFAULT.forehead), lobeL: new THREE.Vector3(...AP_DEFAULT.leftLobe), lobeR: new THREE.Vector3(...AP_DEFAULT.rightLobe) };
-const tmpV = new THREE.Vector3();
-function ap(d, n) { const p = d.attachmentPoints && d.attachmentPoints[n]; return p && p.position ? tmpV.set(p.position.x, p.position.y, p.position.z) : tmpV.set(...AP_DEFAULT[n]); }
-function onFace(d, found) {
-  const t = d.transform; if (!t) return;
-  anchor.position.set(t.position.x, t.position.y, t.position.z);
-  anchor.quaternion.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
-  anchor.scale.setScalar(t.scale); face.s = t.scale;
-  // attachment points (smoothed a little: they jitter by a millimetre or two frame to frame)
-  sm.bridge.lerp(ap(d, 'noseBridge'), 0.5); sm.tip.lerp(ap(d, 'noseTip'), 0.5); sm.forehead.lerp(ap(d, 'forehead'), 0.4);
-  const lobeK = 0.5;
-  sm.lobeL.lerp(d.leftLobeFound || !d.attachmentPoints.leftLobe ? ap(d, 'leftLobe') : tmpV.set(...AP_DEFAULT.leftLobe), lobeK);
-  sm.lobeR.lerp(d.rightLobeFound || !d.attachmentPoints.rightLobe ? ap(d, 'rightLobe') : tmpV.set(...AP_DEFAULT.rightLobe), lobeK);
-  face.earL = !!d.leftEarFound; face.earR = !!d.rightEarFound; face.mouth = !!d.mouthOpen;
-  if (faceMesh && d.vertices) {
-    const a = faceMesh.geometry.attributes.position, n = Math.min(a.count, d.vertices.length);
-    for (let i = 0; i < n; i++) { const v = d.vertices[i]; a.setXYZ(i, v.x, v.y, v.z + 0.012); }   // a hair back: studs on the skin stay visible
-    a.needsUpdate = true;
-  }
-  if (!face.tracked) { face.tracked = true; diag.found++; if (!diag.firstFoundS) diag.firstFoundS = +((performance.now() - camStartAt) / 1000).toFixed(1); arrived(); }
-  face.at = performance.now();
-}
-function onFaceLost() { if (face.tracked) { face.tracked = false; diag.lost++; } }
-
 // ---------------------------------------------------------------- per frame
 const qTmp = new THREE.Quaternion(), qA = new THREE.Quaternion(), vA = new THREE.Vector3(), vB = new THREE.Vector3(), down = new THREE.Vector3(0, -1, 0);
 function tick(dt) {
   const now = performance.now();
   diag.fpsN++;
-  const live = face.tracked && now - face.at < 400;
-  anchor.visible = live;
-  setMode(live ? 'wear' : 'find');
-  hint(live ? '' : (camStartAt && now - camStartAt > 1200 ? 'Look straight at the camera' : ''));
-  tickAnims(dt); sparkles.tick(dt);
-  // slots follow the attachment points (the hat the forehead, shades the nose bridge, nose pieces the tip)
-  slots.hat.position.set(0, sm.forehead.y - AP_DEFAULT.forehead[1], sm.forehead.z - AP_DEFAULT.forehead[2]);
-  slots.shades.position.set(sm.bridge.x, sm.bridge.y - AP_DEFAULT.noseBridge[1], sm.bridge.z - AP_DEFAULT.noseBridge[2]);
-  slots.nose.position.copy(sm.tip);
-  if (mini) {
-    mini.mixer.update(dt);
-    if (now > miniNext && !REDUCED) {   // now and then: a tail wag or a paw raise, then back to sitting
-      const pick = Math.random() < 0.5 ? 'TailWag' : 'PawRaise', a = mini.clips[pick];
-      if (a && mini.clips.Sit) { a.reset().setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = false; mini.clips.Sit.crossFadeTo(a, 0.25, false); a.play(); setTimeout(() => { if (mini && mini.clips.Sit) { mini.clips.Sit.reset().play(); a.crossFadeTo(mini.clips.Sit, 0.3, false); } }, (a.getClip().duration || 1.5) * 1000 - 300); }
-      miniNext = now + 6000 + Math.random() * 5000;
-    }
-  }
-  // earrings: verlet pendulum in world metres from the lobe
-  anchor.updateMatrixWorld(true); anchor.getWorldQuaternion(qA);
-  const ears = [['l', sm.lobeL, earSlots.l], ['r', sm.lobeR, earSlots.r], ...leavingEars.map((e) => [e.side || 'l', e.lobe || sm.lobeL, e])];
-  for (const [side, lobe, e] of ears) {
-    if (!e) continue; e.side = side; e.lobe = lobe;
-    e.obj.visible = live;
-    if (!live) { e.bob = null; continue; }
-    const pivot = anchor.localToWorld(vA.copy(lobe));
-    const len = (e.obj.userData.len || 0) * face.s, sc = face.s;
-    e.obj.position.copy(pivot); e.obj.scale.setScalar(sc);
-    if (e.obj.userData.fixed || len <= 0) { e.obj.quaternion.copy(qA); continue; }
-    if (!e.bob) { e.bob = pivot.clone().addScaledVector(down, len); e.prev = e.bob.clone(); }
-    if (e.kick) { e.prev.addScaledVector(vB.set(1, 0, 0).applyQuaternion(qA), -e.kick * len * 0.09); e.kick = 0; }   // arrives with a swing
-    const h = Math.min(dt, 1 / 30), vel = vB.copy(e.bob).sub(e.prev).multiplyScalar(REDUCED ? 0.9 : 0.975);
-    e.prev.copy(e.bob); e.bob.add(vel).addScaledVector(down, 9.8 * h * h);
-    const dir = vB.copy(e.bob).sub(pivot); if (dir.lengthSq() < 1e-10) dir.copy(down);
-    dir.normalize(); e.bob.copy(pivot).addScaledVector(dir, len);
-    // orient: the head's rotation, then swing its "down" onto the pendulum's direction
-    const headDown = vA.copy(down).applyQuaternion(qA);
-    qTmp.setFromUnitVectors(headDown, dir); e.obj.quaternion.copy(qTmp).multiply(qA);
-  }
+  let any = false, n = 0; for (const r of rigs.values()) if (r.live) { any = true; n++; }
+  diag.maxFaces = Math.max(diag.maxFaces || 0, n);
+  setMode(any ? 'wear' : 'find');
+  hint(any ? '' : (camStartAt && now - camStartAt > 1200 ? 'Look straight at the camera' : ''));
+  tickAnims(dt); sparkles.tick(dt); fizz.tick(dt);
+  for (const r of rigs.values()) r.tick(dt, now);
   recTick(); stripTick();
 }
 let mode = 'find';
 function setMode(m) { if (mode !== m) { mode = m; $('hud').dataset.mode = m; } }
 let arrivedOnce = false;
-function arrived() { if (!arrivedOnce) { arrivedOnce = true; sound.mew(); postEvent('play', { look: JSON.stringify(wear) }); } buzz(8); }
+function arrived(r) {
+  if (!arrivedOnce) {
+    arrivedOnce = true; sound.mew(); postEvent('play', { look: JSON.stringify(wear) });
+    if (triggers.on && store.get('coach', '0') !== '1') setTimeout(() => { $('coach').hidden = false; setTimeout(() => { $('coach').hidden = true; store.set('coach', '1'); }, 7000); }, 1500);
+  } else if (rigs.size > 1) toast('Friend joined the booth');
+  buzz(8);
+}
 function hint(text) { if ($('hint').textContent !== text) $('hint').textContent = text || ''; }
 
 // ---------------------------------------------------------------- UI
@@ -474,14 +678,18 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape' && !optsEl.hidden) c
 const soundBtn = $('o-sound'); soundBtn.setAttribute('aria-checked', String(sound.on));
 soundBtn.onclick = () => { sound.on = !sound.on; store.set('sound', sound.on ? '1' : '0'); soundBtn.setAttribute('aria-checked', String(sound.on)); };
 let stripMode = store.get('strip', '0') === '1';
-function setStrip(on) { stripMode = on; store.set('strip', on ? '1' : '0'); $('b-strip').setAttribute('aria-pressed', String(on)); $('shoot-hint').textContent = on ? 'Tap: 4-shot strip · Hold: video' : 'Tap: photo · Hold: video'; }
+function setStrip(on) { stripMode = on; store.set('strip', on ? '1' : '0'); $('b-strip').setAttribute('aria-pressed', String(on)); $('b-shutter').classList.toggle('strip', on); $('shoot-hint').textContent = on ? 'Tap: 4-shot strip · Hold: video' : 'Tap: photo · Hold: video'; }
 $('b-strip').onclick = () => { setStrip(!stripMode); sound.pick(); buzz(8); };
 setStrip(stripMode);
 $('b-shuffle').onclick = () => {
   for (const k of Object.keys(wear)) { const opts = ITEMS[k].filter((i) => i.id !== 'none'); wear[k] = opts[Math.floor(Math.random() * opts.length)].id; }
   if (Math.random() < 0.3) wear.hat = 'none';
+  if (Math.random() < 0.5) wear.paint = 'none';
   store.set('wear', JSON.stringify(wear)); applyWear(true); renderTray(); sound.pop(); buzz(12);
 };
+const trigBtn = $('o-triggers'); trigBtn.setAttribute('aria-checked', String(triggers.on));
+trigBtn.onclick = () => { triggers.on = !triggers.on; store.set('triggers', triggers.on ? '1' : '0'); trigBtn.setAttribute('aria-checked', String(triggers.on)); if (!triggers.on) $('coach').hidden = true; };
+$('b-coach').onclick = () => { $('coach').hidden = true; store.set('coach', '1'); };
 $('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
 $('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
 $('err-retry').onclick = () => location.reload();
@@ -510,9 +718,11 @@ const appModule = () => ({
   onException: (e) => { console.error('XR', e); diag.errors.push('XR: ' + String((e && e.message) || e).slice(0, 200)); flushDiag(true, true); showError('Something went wrong', String((e && e.message) || e)); },
   listeners: [
     { event: 'facecontroller.faceloading', process: ({ detail }) => onFaceLoading(detail) },
-    { event: 'facecontroller.facefound', process: ({ detail }) => onFace(detail, true) },
-    { event: 'facecontroller.faceupdated', process: ({ detail }) => onFace(detail, false) },
-    { event: 'facecontroller.facelost', process: () => onFaceLost() },
+    { event: 'facecontroller.facefound', process: ({ detail }) => onFace(detail) },
+    { event: 'facecontroller.faceupdated', process: ({ detail }) => onFace(detail) },
+    { event: 'facecontroller.facelost', process: ({ detail }) => onFaceLost(detail) },
+    { event: 'facecontroller.lefteyewinked', process: ({ detail }) => triggers.wink(detail && detail.id) },
+    { event: 'facecontroller.righteyewinked', process: ({ detail }) => triggers.wink(detail && detail.id) },
     { event: 'facecontroller.earfound', process: ({ detail }) => { diag.ears[detail.ear] = (diag.ears[detail.ear] || 0) + 1; } },
   ],
 });
@@ -525,7 +735,7 @@ async function start() {
   XR8.FaceController.configure({
     meshGeometry: [XR8.FaceController.MeshGeometry.FACE],
     coordinates: { mirroredDisplay: true },   // a selfie looks like a mirror; photos are saved as seen
-    enableEars: true, maxDetections: 1,
+    enableEars: true, maxDetections: MAX_FACES,   // friends can squeeze in: each face gets its own set
   });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.FaceController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(),
@@ -693,7 +903,7 @@ function postEvent(type, props) {
 
 // ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
 // Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'bobo-booth').
-const diag = { page: PAGE, sid: SID, found: 0, lost: 0, fpsN: 0, errors: [], steps: [], ears: {}, targets: {} };
+const diag = { page: PAGE, sid: SID, found: 0, lost: 0, fpsN: 0, errors: [], steps: [], ears: {}, trig: {} };
 function camLog(s) { diag.steps.push([s, Math.round(performance.now())]); if (diag.steps.length > 40) diag.steps.shift(); }
 let flushAt = 0;
 function flushDiag(force, always = false) {
@@ -708,15 +918,17 @@ addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 2
 
 // automated tests (?test)
 if (params.has('test')) window.__bb = {
-  get face() { return { tracked: face.tracked, s: face.s, earL: face.earL, earR: face.earR, mouth: face.mouth }; },
-  get mode() { return mode; }, get wear() { return { ...wear }; }, diag,
+  get rig() { return [...rigs.values()][0] || null; },
+  get face() { const r = this.rig; return r ? { tracked: r.tracked, live: r.live, s: r.s, earL: r.earL, earR: r.earR, mouth: r.trig.mouth, faces: rigs.size } : { tracked: false }; },
+  get mode() { return mode; }, get wear() { return { ...wear }; }, diag, triggers, paintUV: () => paintUV,
   setWear(o) { Object.assign(wear, o); applyWear(false); renderTray(); },
+  fire(name) { const r = this.rig; if (!r) return; if (name === 'wink') triggers.wink(r.id); else if (name === 'brows') nextLook(); else if (name === 'mouth') { fizz.burst(r); sound.fizz(); } },
   // screen positions of key points (to check the pieces sit on the face)
   screen() {
-    if (!anchor.visible) return null;
+    const r = this.rig; if (!r || !r.anchor.visible) return null;
     const pr = (v) => { const p = v.clone().project(camera); return [Math.round((p.x + 1) / 2 * innerWidth), Math.round((1 - p.y) / 2 * innerHeight)]; };
-    const out = { bridge: pr(anchor.localToWorld(sm.bridge.clone())), tip: pr(anchor.localToWorld(sm.tip.clone())) };
-    for (const s of ['l', 'r']) if (earSlots[s]) out['ear_' + s] = pr(earSlots[s].obj.position.clone());
+    const out = { bridge: pr(r.worldOf(r.sm.bridge)), tip: pr(r.worldOf(r.sm.tip)), mouth: pr(r.worldOf(r.sm.mouth)), forehead: pr(r.worldOf(r.sm.forehead)) };
+    for (const sd of ['l', 'r']) if (r.ears[sd]) out['ear_' + sd] = pr(r.ears[sd].obj.position.clone());
     return out;
   },
   photo: () => takePhoto(), strip: () => startStrip(),

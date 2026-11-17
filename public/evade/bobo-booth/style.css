@@ -68,27 +68,43 @@ h1 span{color:var(--x)}
 #tabs::-webkit-scrollbar{display:none}
 #tabs button{min-height:36px;padding:0 14px;font-size:13px;border-radius:999px;background:var(--panel);flex:none}
 #tabs button[aria-selected=true]{background:#fff;color:var(--ink);border-color:#fff}
-#carwrap{position:relative;width:100%;height:86px}
+#carwrap{position:relative;width:100%;height:74px}
 #carousel{position:absolute;inset:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;touch-action:pan-x;-webkit-overflow-scrolling:touch}
 #carousel::-webkit-scrollbar{display:none}
-#lenses{display:flex;align-items:center;gap:14px;height:100%;padding:0 calc(50% - 30px);width:max-content}
-.lens{flex:none;width:60px;height:60px;min-height:60px;padding:0;border-radius:50%;scroll-snap-align:center;background:rgba(15,21,25,.6);border:2px solid rgba(255,255,255,.55);overflow:hidden;transform:scale(.86);transition:transform .25s cubic-bezier(.2,.9,.25,1.2),border-color .2s,opacity .2s;backdrop-filter:none;-webkit-backdrop-filter:none}
+#lenses{display:flex;align-items:center;gap:12px;height:100%;padding:0 calc(50% - 29px);width:max-content}
+.lens{flex:none;width:58px;height:58px;min-height:58px;padding:0;border-radius:50%;scroll-snap-align:center;background:rgba(15,21,25,.6);border:2px solid rgba(255,255,255,.45);overflow:hidden;transform:scale(.84);opacity:.85;transition:transform .25s cubic-bezier(.2,.9,.25,1.2),border-color .2s,opacity .2s;backdrop-filter:none;-webkit-backdrop-filter:none}
 .lens img{width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
-.lens .none{width:26px;height:26px;border-radius:50%;border:3px solid #fff;position:relative;display:block}
+.lens .none{width:24px;height:24px;border-radius:50%;border:3px solid #fff;position:relative;display:block}
 .lens .none::after{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;width:3px;background:#fff;transform:translateX(-50%) rotate(45deg)}
 .lens .dot{width:14px;height:14px;border-radius:50%;background:var(--x)}
-.lens.on{transform:scale(1.04);border-color:transparent}
-#shoot{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:80px;height:80px;pointer-events:none}
-#b-shutter{position:absolute;inset:0;width:80px;height:80px;min-height:80px;padding:0;border-radius:50%;border:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;touch-action:none;-webkit-touch-callout:none;pointer-events:auto}
+.lens.on{transform:scale(1);opacity:1;border-color:transparent}
+/* the selection circle: marks the centre of the row (it is not a button, the shutter is below) */
+#car-ring{position:absolute;left:50%;top:50%;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;border:3px solid var(--x);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+/* camera controls: always there, the shutter bottom centre */
+#controls{display:flex;align-items:center;justify-content:center;gap:34px;margin-top:2px}
+#controls .ib{width:48px;height:48px;min-height:48px}
+#controls .ib[aria-pressed=true]{background:var(--x);border-color:var(--x)}
+#controls .ib[aria-pressed=true] svg{stroke:var(--xd)}
+#b-shutter{position:relative;width:76px;height:76px;min-height:76px;padding:0;border-radius:50%;border:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;touch-action:none;-webkit-touch-callout:none;flex:none}
 #b-shutter svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
 #b-shutter .ring{fill:none;stroke:#fff;stroke-width:5}
 #b-shutter .prog{fill:none;stroke:#ff3b4e;stroke-width:5;stroke-linecap:round;stroke-dasharray:207;stroke-dashoffset:207;opacity:0}
 #b-shutter.rec .prog{opacity:1}
-#b-shutter i{position:absolute;inset:30px;border-radius:50%;background:transparent;transition:inset .2s,border-radius .2s,background .2s}
-#b-shutter.rec i{inset:26px;border-radius:8px;background:#ff3b4e}
-#b-shutter:active svg{transform:rotate(-90deg) scale(.93)}
+#b-shutter i{position:absolute;inset:9px;border-radius:50%;background:#fff;transition:inset .2s,border-radius .2s,background .2s,transform .12s}
+#b-shutter:active i{transform:scale(.9)}
+#b-shutter.rec i{inset:24px;border-radius:8px;background:#ff3b4e}
+#b-shutter.strip i{background:var(--x)}
 .under{display:flex;align-items:center;gap:8px;min-height:20px}
 #shoot-hint{font-size:10.5px;font-weight:700;color:#fff;opacity:.85;text-shadow:0 1px 4px rgba(0,0,0,.8);white-space:nowrap}
+#toast{position:absolute;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translate(-50%,-8px);margin:0;background:var(--x);color:var(--xd);font-size:14px;font-weight:700;padding:9px 16px;border-radius:999px;box-shadow:0 6px 20px rgba(0,0,0,.3);max-width:calc(100% - 40px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none!important;transition:opacity .25s,transform .25s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#coach{position:absolute;left:50%;top:calc(68px + env(safe-area-inset-top));transform:translateX(-50%);z-index:2;width:min(320px,calc(100% - 32px));background:rgba(15,21,25,.9);border:1px solid var(--line);border-left:4px solid var(--x);border-radius:18px;padding:12px 14px 12px;display:flex;flex-direction:column;gap:8px;animation:coachIn .45s cubic-bezier(.2,.9,.25,1.2) both}
+#coach b{font:900 italic 18px/1 "Exo 2",sans-serif;color:var(--x)}
+#coach ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:14px}
+#coach li{display:flex;align-items:center;gap:10px}
+#coach li svg{width:22px;height:22px;flex:none;color:var(--x)}
+#coach button{align-self:flex-end;min-height:40px;padding:0 16px;font-size:14px}
+@keyframes coachIn{from{opacity:0;transform:translate(-50%,-14px)}}
 #rec-time{font-size:12px;font-weight:800;color:#fff;background:#ff3b4e;border-radius:999px;padding:2px 9px;font-variant-numeric:tabular-nums}
 #hud.counting #dock{opacity:.25;pointer-events:none!important} #hud.counting #dock *{pointer-events:none!important}
 #countdown{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;pointer-events:none!important}
@@ -104,11 +120,12 @@ h1 span{color:var(--x)}
 .crc-layer{--safe-area-inset-top:env(safe-area-inset-top);--safe-area-inset-bottom:env(safe-area-inset-bottom);--safe-area-inset-right:env(safe-area-inset-right);--safe-area-inset-left:env(safe-area-inset-left)}
 #flashw{position:fixed;inset:0;z-index:50;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 #flashw.on{opacity:.85;transition:none}
-@media (prefers-reduced-motion:reduce){#count:not(:empty),#lens-name.show{animation:none}.lens{transition:none}}
+@media (prefers-reduced-motion:reduce){#count:not(:empty),#lens-name.show,#coach{animation:none}.lens,#toast{transition:none}}
 /* landscape phones: the dock moves to the right edge, the shutter in the middle of it */
 @media (min-aspect-ratio:1/1) and (max-height:520px){
   #dock{left:auto;top:0;width:min(46vw,360px);justify-content:center;padding:0 calc(10px + env(safe-area-inset-right)) 0 0}
   #side{right:auto;left:calc(14px + env(safe-area-inset-left));top:calc(56px + env(safe-area-inset-top))}
+  #coach{left:calc(14px + env(safe-area-inset-left));top:auto;bottom:calc(14px + env(safe-area-inset-bottom));transform:none;animation:none}
 }
 
 /* ---------------------------------------------------------------- sheets */

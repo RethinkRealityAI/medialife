@@ -3,17 +3,28 @@
 EVADE selfie photo booth on the open-source 8th Wall engine's **face tracking** (MIT). Built 2026-11-16.
 
 ## What it does
-- Front camera, mirrored like a selfie. One face at a time (`maxDetections: 1`), ear tracking on (`enableEars`).
+- Front camera, mirrored like a selfie. Up to **2 faces** (`maxDetections`, `?faces=1..3`), one `Rig` per face id, each
+  wearing the same look ("Friend joined the booth"). Ear tracking on (`enableEars`).
 - Wearables, all made in code (`wearables.js`) or from EVADE's real GLBs, no generative tools:
-  - Hat: **Bobo cat hat** (tabby beanie, cat ears, BOBO visor band), **BOBO visor**.
-  - Shades: **Bobo shades** (gold cat-eye frames with ear points, Bobo printed on the blue lenses, a tiny animated
-    Bobo from `bobo-keychain.glb` sitting on the bridge), **Night shades** (blue frames, dark lenses), **Gold cat-eyes**.
+  - Hat: **Bobo cat hat** (tabby beanie, cat ears, BOBO visor band, a tiny animated Bobo from `bobo-keychain.glb`
+    sitting on top, ~64 mm), **BOBO visor**.
+  - Shades: **Bobo shades** (gold cat-eye frames, plain blue lenses, frame tips shaped as Bobo's ears: ink outline,
+    tabby outer, pink inner), **Night shades** (blue frames and ears, dark lenses), **Gold cat-eyes** (spike tips).
   - Earrings (hang from the real ear lobes, verlet swing): **Eclipse cans** (`eclipse-can.glb`, ~24 mm), Can + hoop,
     Gold hoops, **Bobo bells** (the collar bell), Star studs.
-  - Nose: septum ring, nose hoop, star stud.
-  - Looks: Full Bobo, Eclipse fizz, Gold rush, Just the cat, Clear all. Shuffle button for a random look.
-- Switching works like Snapchat/Instagram lenses: category chips, then a row of round thumbnails that snaps into the
-  shutter ring (bottom centre). What sits in the ring is worn; tap a thumbnail to glide it in.
+  - Nose: septum ring (a closed clicker ring whose top sits inside the nose, so only the lower arc and bead show),
+    nose hoop, star stud.
+  - **Face paint** (drawn on the live face mesh in the engine's standard face UVs, so it follows every expression):
+    Bobo whiskers, Tabby Bobo (adds the forehead "M" and cheek stripes), Eclipse game day (gold eye-black, blue
+    crescent, EVADE on the cheek). Feature positions in UV space are measured from the first tracked frame.
+  - Looks: Full Bobo, Eclipse fizz, Gold rush, Be Bobo, Clear all. Shuffle button for a random look.
+- Switching works like Snapchat/Instagram lenses: category chips, then a row of round thumbnails that snaps into a gold
+  circle. What sits in the circle is worn; tap a thumbnail to glide it in. The **camera button is its own control,
+  always at bottom centre below the row** (Dapo, round 2), with Strip on its left and Shuffle on its right.
+- **Face tricks** (8th Wall face events; Options > Face tricks turns them off; a tips card shows once):
+  open your mouth (`mouthOpen`) = cola fizz pours out (flat bubbles), the earrings swing and the tiny Bobo paws;
+  raise both eyebrows for 250 ms (`leftEyebrowRaised && rightEyebrowRaised`) = next look (2.2 s cooldown, not while
+  shooting); wink (`facecontroller.lefteyewinked` / `righteyewinked`) = the tiny Bobo waves, with a mew.
 - Each piece has its own entrance and exit (`ANIM` in `wearables.js`): the cat hat drops and bounces and its ears
   spring up, the visor spins on, Bobo shades flip down off the forehead and the tiny Bobo hops on, Night shades slide
   in from the side, gold cat-eyes zoom in, earrings drop and swing, nose pieces twist/twinkle in. Flat four-point
@@ -34,10 +45,13 @@ EVADE selfie photo booth on the open-source 8th Wall engine's **face tracking** 
 - Occlusion (no stencil buffer): the live face mesh (depth only, nudged back a hair) + an ellipsoid head and neck.
 
 ## Tested / not tested
-- Tested in the headless camera simulator with a stock face photo (not committed): face found in ~3 s, both ears
-  found, every piece placed and animated, carousel swipe/snap, photo and strip, no console errors.
+- Tested in the headless camera simulator with stock face photos (not committed): face found in ~3 s, ears found,
+  every piece placed and animated, carousel swipe/snap, photo and strip, face paint on the mesh, mouth trigger fizz,
+  wink and eyebrow tricks (fired from `__bb.fire`), two faces at once, no console errors.
 - **Not tested on a real phone yet**: fps on mid-range Android, iPhone Safari front camera, real ear-lobe tracking
   under hair, video recording audio, landscape.
 
-## Round 2 (planned, after Dapo's phone test)
-Face triggers: open mouth = cola fizz burst, raised eyebrows = next look, blink = the tiny Bobo reacts.
+## Rounds
+- Round 1 (2026-11-16): pieces, lens carousel, animations, strip.
+- Round 2 (2026-11-17, Dapo's feedback): septum turned right, no lens decals, Bobo-ear frame tips, tiny Bobo on the
+  hat, separate always-there shutter, face tricks, face paint, friends mode.

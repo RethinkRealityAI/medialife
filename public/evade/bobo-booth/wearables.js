@@ -115,7 +115,7 @@ function catEar(side) {
   g.rotation.set(-0.12, -side * 0.35, -side * 0.38);
   return g;
 }
-export function buildCatHat() {
+export function buildCatHat(bobo = null) {
   const root = new THREE.Group(); root.name = 'catHat';
   const f = capFrame(); root.add(f);
   const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40, 0, Math.PI * 2, 0, CAP.theta),
@@ -125,7 +125,9 @@ export function buildCatHat() {
   f.add(band(1.035, 1.03, RIM_Y - 0.01, RIM_Y + 0.11, 1.95, Math.PI * 2 - 1.95, new THREE.MeshStandardMaterial({ color: COL.cream, roughness: 0.9, side: THREE.DoubleSide })));
   f.add(visorBand(false));
   f.add(catEar(1), catEar(-1));
-  // a pompom-free top, but Bobo's collar bell on a short cord at the back for a bit of swing
+  if (bobo) {   // the tiny Bobo sits on the crown, upright (undo the hat's tilt), between the ears
+    bobo.position.set(0, CAP.ry * 0.96, 0.06); bobo.rotation.x = -CAP.tilt; bobo.userData.baseY = bobo.position.y; f.add(bobo);
+  }
   return root;
 }
 export function buildVisor() {
@@ -175,14 +177,14 @@ function planeUVs(geo, pts) {
   for (let i = 0; i < p.count; i++) uv.push((p.getX(i) - bb.min.x) / sz.x, (p.getY(i) - bb.min.y) / sz.y);
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
 }
-export function buildShades({ frame = 'gold', tint = 'rgba(63,155,230,0.55)', decal = null, ears = true, bobo = null } = {}) {
+export function buildShades({ frame = 'gold', tint = 'rgba(63,155,230,0.55)', decal = null, ears = 'bobo', bobo = null } = {}) {
   const m = materials(), root = new THREE.Group(); root.name = 'shades';
   const W = 0.40, H = 0.27, UP = 0.07, CX = 0.235, Z = -0.70, RIMW = 0.045, DEPTH = 0.035;
   const frameMat = frame === 'blue' ? m.frameBlue : m.frameGold;
   for (const side of [1, -1]) {
     const L = new THREE.Group(); L.position.set(side * CX, 0.015, Z); L.rotation.y = -side * 0.14;
     let inner = lensPts(W, H, UP), outer = grow(inner, RIMW);
-    if (ears) {   // cat-ear points on the top outer corner of each lens frame
+    if (ears === 'spike') {   // plain cat-eye points on the top outer corner of each lens frame
       const i0 = 5, i1 = 10; const a = outer[i0], b = outer[i1];
       outer.splice(i0 + 1, i1 - i0 - 1, new THREE.Vector2((a.x + b.x) / 2 + 0.02, (a.y + b.y) / 2 + 0.085));
     }
@@ -197,6 +199,7 @@ export function buildShades({ frame = 'gold', tint = 'rgba(63,155,230,0.55)', de
     // shine: one flat white sliver (no gradient)
     const sh = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 0.16), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false }));
     sh.position.set(-0.08 * side, 0.02, -0.004); sh.rotation.z = side * 0.6; sh.renderOrder = 3; L.add(sh);
+    if (ears === 'bobo') L.add(boboEar(side, frame));
     root.add(L);
     // temple arm back to the ear (hidden by the head occluder behind the face)
     const tx0 = side * (CX + W / 2 + 0.01), arm = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.045, 0.64), frameMat);
@@ -210,6 +213,27 @@ export function buildShades({ frame = 'gold', tint = 'rgba(63,155,230,0.55)', de
     bobo.position.set(0, 0.105, Z - 0.03); root.add(bobo);
   }
   return root;
+}
+
+// Bobo's ear on the top outer corner of a lens: a rounded triangle with his pink inside and the charm's ink outline,
+// tipped outward like his ears on the keychain
+function earShape(w, h, r) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2, 0); s.lineTo(-r * 0.6, h - r); s.quadraticCurveTo(0, h + r * 0.4, r * 0.6, h - r); s.lineTo(w / 2, 0);
+  s.quadraticCurveTo(0, -h * 0.12, -w / 2, 0); return s;
+}
+function boboEar(side, frame) {
+  const g = new THREE.Group(); g.name = 'boboEar';
+  const outerCol = frame === 'blue' ? COL.hoodie : COL.tabby, innerCol = frame === 'blue' ? COL.visor : COL.earPink;
+  const ex = (shape, d) => new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2, curveSegments: 10 });
+  const ink = new THREE.Mesh(ex(earShape(0.2, 0.19, 0.035), 0.026), new THREE.MeshStandardMaterial({ color: COL.ink, roughness: 0.5 }));
+  ink.position.z = 0.006;
+  const outer = new THREE.Mesh(ex(earShape(0.17, 0.165, 0.03), 0.03), new THREE.MeshStandardMaterial({ color: outerCol, roughness: 0.55 }));
+  const inner = new THREE.Mesh(ex(earShape(0.095, 0.1, 0.022), 0.012), new THREE.MeshStandardMaterial({ color: innerCol, roughness: 0.6 }));
+  outer.position.set(0, 0.012, -0.004); inner.position.set(0, 0.03, -0.022);
+  g.add(ink, outer, inner);
+  g.position.set(side * 0.13, 0.115, -0.012); g.rotation.z = -side * 0.42;
+  return g;
 }
 
 // a die-cut sticker of Bobo's face from the real charm art, for the lenses
@@ -274,12 +298,12 @@ export function starGeo(R, r, d) {
 export function buildNose(kind) {
   const m = materials(), g = new THREE.Group(); g.name = kind;
   if (kind === 'septum') {
-    // a horseshoe through the septum: the gap goes up inside the nose
-    const r = new THREE.Mesh(new THREE.TorusGeometry(0.052, 0.01, 10, 40, Math.PI * 1.55), m.gold);
-    r.rotation.z = -Math.PI / 2 - Math.PI * 1.55 / 2 + Math.PI; r.position.set(0, -0.085, 0.055); r.rotation.x = 0.35;
-    const b1 = new THREE.Mesh(new THREE.SphereGeometry(0.014, 12, 10), m.gold), b2 = b1.clone();
-    b1.position.set(0.043, -0.06, 0.055); b2.position.set(-0.043, -0.06, 0.055);
-    g.add(r, b1, b2);
+    // a closed clicker ring through the septum: its top half sits up inside the nose (the face mesh hides it), so only
+    // the smooth curve shows under the nose, with a small bead at the bottom
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.0105, 12, 48), m.gold);
+    const ring = new THREE.Group(); ring.position.set(0, -0.06, 0.08); ring.rotation.x = 0.5; ring.add(r);
+    const bead = new THREE.Mesh(new THREE.SphereGeometry(0.017, 16, 12), m.gold); bead.position.set(0, -0.05, 0); ring.add(bead);
+    g.add(ring);
   } else if (kind === 'hoop') {
     // a small hoop through the wearer's left nostril wing
     const r = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 10, 36), m.gold);
@@ -342,6 +366,7 @@ export function animFrame(w, spec, dir, t, reduced) {
       const k = bounce(Math.min(e / 0.75, 1)); w.position.y += (1 - k) * 1.3; w.rotation.z = (1 - k) * 0.35;
       const sq = Math.sin(sub(e, 0.3, 0.6) * Math.PI) * 0.12; w.scale.set(1 + sq, 1 - sq, 1 + sq); s = null;
       w.traverse((o) => { if (o.name === 'catEar') o.scale.setScalar(Math.max(0.0001, easeOutBack(sub(e, 0.45, 1), 3))); });
+      if (parts.mini) { const m = sub(e, 0.6, 1); parts.mini.scale.setScalar(Math.max(0.0001, easeOutBack(m, 2.4))); parts.mini.position.y = parts.mini.userData.baseY + Math.sin(m * Math.PI) * 0.25; }
       break;
     }
     case 'yeet': { const k = easeInCubic(e); w.position.y += k * 1.4; w.rotation.y = k * 2.4; w.rotation.z = -k * 0.5; s = 1 - k * 0.7; break; }
@@ -350,10 +375,10 @@ export function animFrame(w, spec, dir, t, reduced) {
     case 'flipDown': {   // slides down off the forehead, flips onto the nose; the tiny Bobo hops on last
       const k = easeOutBack(sub(e, 0, 0.7), 1.4); w.position.y += (1 - k) * 0.5; w.position.z += (1 - k) * -0.12; w.rotation.x = (1 - k) * -1.5;
       s = Math.min(1, sub(e, 0, 0.25) * 1.2 + 0.0001);
-      if (parts.mini) { const m = sub(e, 0.55, 1); parts.mini.scale.setScalar(Math.max(0.0001, easeOutBack(m, 2.4))); parts.mini.position.y = 0.105 + Math.sin(m * Math.PI) * 0.12; }
+      w.traverse((o) => { if (o.name === 'boboEar') o.scale.setScalar(Math.max(0.0001, easeOutBack(sub(e, 0.5, 0.95), 3))); });
       break;
     }
-    case 'flipUp': { const k = easeInCubic(e); w.position.y += k * 0.6; w.rotation.x = -k * 1.6; s = 1 - k; if (parts.mini) parts.mini.position.y = 0.105 + k * 0.4; break; }
+    case 'flipUp': { const k = easeInCubic(e); w.position.y += k * 0.6; w.rotation.x = -k * 1.6; s = 1 - k; break; }
     case 'slideIn': { const k = easeOutBack(e, 1.3); w.position.x += (1 - k) * 1.8; w.rotation.y = (1 - k) * 1.3; w.rotation.z = (1 - k) * -0.4; break; }
     case 'slideOut': { const k = easeInCubic(e); w.position.x -= k * 1.8; w.rotation.y = -k * 1.3; s = 1 - k * 0.3; break; }
     case 'zoom': { const k = easeOutCubic(e); w.position.z += (1 - k) * -2.4; w.rotation.z = (1 - k) * Math.PI * 0.8; s = 1 + (1 - easeOutBack(e, 1.5)) * 0.6; break; }

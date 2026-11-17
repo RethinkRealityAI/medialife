@@ -31,7 +31,7 @@
     <div class="copy">
       <p class="kicker">EVADE · Activated AR</p>
       <h1 id="title">Bobo <span>Booth</span></h1>
-      <p class="lead">Put on the Bobo cat hat, Bobo shades and Eclipse can earrings, then snap a photo, film a clip or shoot a 4-picture strip.</p>
+      <p class="lead">Put on the Bobo cat hat, Bobo shades, Eclipse can earrings and Bobo face paint, pull a face for a surprise, then snap a photo, film a clip or shoot a 4-picture strip.</p>
       <div id="desk" hidden>
         <div id="qr" aria-label="QR code that opens this page on your phone"></div>
         <p><b>Best on your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
@@ -52,14 +52,6 @@
       <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
       </button>
-      <button id="b-strip" class="ib" aria-pressed="false" aria-label="Photo strip: four shots on a countdown">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="1.5"/><path d="M7 7.3h10M7 12h10M7 16.7h10"/></svg>
-        <span>Strip</span>
-      </button>
-      <button id="b-shuffle" class="ib" aria-label="Random look">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
-        <span>Shuffle</span>
-      </button>
     </div>
 
     <!-- face guide while no face is found -->
@@ -73,17 +65,38 @@
       <button id="b-cancel" type="button">Cancel</button>
     </div>
 
-    <!-- the lens carousel: categories, then a row of pieces that snaps into the shutter ring -->
+    <!-- face trigger tips (once) and short notices -->
+    <p id="toast" role="status" aria-live="polite"></p>
+    <div id="coach" hidden role="note" aria-label="Face tricks">
+      <b>Face tricks</b>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 10h.01M15.5 10h.01"/><ellipse cx="12" cy="15.5" rx="2" ry="2.4"/></svg>Open your mouth: cola fizz</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7.5l3-1.2M14 6.3l3 1.2M8.5 10.5h.01M15.5 10.5h.01M9 15.5h6"/></svg>Raise your eyebrows: next look</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 10h.01M14 10.2h3M8.5 14.5a4 4 0 0 0 7 0"/></svg>Wink: Bobo waves</li>
+      </ul>
+      <button type="button" id="b-coach">Got it</button>
+    </div>
+
+    <!-- the dock: what you are wearing, categories, the lens row, then the camera controls (always there) -->
     <div id="dock">
       <p id="lens-name" aria-live="polite"></p>
       <div id="tabs" role="tablist" aria-label="What to try on"></div>
       <div id="carwrap">
         <div id="carousel" aria-label="Pieces: swipe to try one on"><div id="lenses"></div></div>
-        <div id="shoot">
-          <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
-            <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
-          </button>
-        </div>
+        <i id="car-ring" aria-hidden="true"></i>
+      </div>
+      <div id="controls">
+        <button id="b-strip" class="ib" aria-pressed="false" aria-label="Photo strip: four shots on a countdown">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="1.5"/><path d="M7 7.3h10M7 12h10M7 16.7h10"/></svg>
+          <span>Strip</span>
+        </button>
+        <button id="b-shutter" aria-label="Take a photo. Press and hold to film">
+          <svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i>
+        </button>
+        <button id="b-shuffle" class="ib" aria-label="Random look">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          <span>Shuffle</span>
+        </button>
       </div>
       <div class="under">
         <small id="shoot-hint">Tap: photo · Hold: video</small>
@@ -104,6 +117,10 @@
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>
         <span class="ol"><b>Sound</b><small>Clicks, the countdown and Bobo's mew</small></span><i class="sw" aria-hidden="true"></i>
       </button>
+      <button type="button" class="opt" id="o-triggers" role="switch" aria-checked="true">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 9.5h.01M15.5 9.5h.01"/><ellipse cx="12" cy="15.5" rx="2.2" ry="1.8"/></svg></span>
+        <span class="ol"><b>Face tricks</b><small>Mouth open: fizz · Eyebrows up: next look · Wink: Bobo waves</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
       <button type="button" class="opt" id="o-how">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
         <span class="ol"><b>How it works</b><small>Try on, shoot, share</small></span><i class="go" aria-hidden="true"></i>
@@ -120,9 +137,10 @@
     <div class="sheet">
       <h2 id="how-t">Welcome to the booth</h2>
       <ol class="how-steps">
-        <li><b>Face the camera.</b> Hold your phone at arm's length in good light.</li>
-        <li><b>Swipe to try on.</b> Pick Hat, Shades, Earrings or Nose, then swipe the row: whatever sits in the ring is what you wear. Looks puts a whole outfit on at once.</li>
-        <li><b>Shoot.</b> Tap the ring for a photo, hold it to film. Turn on Strip for four shots on a countdown, like a real photo booth.</li>
+        <li><b>Face the camera.</b> Hold your phone at arm's length in good light. Friends can squeeze in too.</li>
+        <li><b>Swipe to try on.</b> Pick Looks, Hat, Shades, Earrings, Nose or Face paint, then swipe the row: whatever sits in the circle is what you wear.</li>
+        <li><b>Face tricks.</b> Open your mouth for cola fizz, raise your eyebrows for the next look, wink and Bobo waves.</li>
+        <li><b>Shoot.</b> Tap the white button for a photo, hold it to film. Turn on Strip for four shots on a countdown.</li>
       </ol>
       <button id="b-go" class="primary">Let's go</button>
     </div>
