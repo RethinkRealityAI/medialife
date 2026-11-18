@@ -21,11 +21,19 @@
 //     persistent roots (lights, worldRoot = reticle + stage, faceRoot) and re-adds them, frees GPU copies on the old
 //     renderer before the stop, and re-anchors a placed stage at the same spot relative to the phone (SLAM restarts
 //     from zero on every run). Flat cover while the camera switches; Flip button bottom left.
+//   world health (/evade/xr/world-health.js, tracking-robustness.md section 6): adaptive pixel ratio, settle gate,
+//     phone log. Place (and putting a placed stage back after a swap) waits until SLAM has settled ("Hold still a
+//     moment, finding the floor…"): placing while SLAM is still starting, or while the phone is still turning from the
+//     face to the floor after a flip, bakes in a bad scale and the content flies away (Android, Wear It, Meet It).
+//     No heavy work at world start: the environment map is built ONCE (on the selfie camera, or after the first
+//     settle) and its GL texture, like our other static textures, is handed to each new renderer (same GL context);
+//     shaders compile asynchronously while SLAM settles and the content stays hidden.
 // No 8th Wall / Niantic names are shown to users: licences only behind the menu's Licences link.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { worldHealth } from '/evade/xr/world-health.js';
 
 window.THREE = THREE; // XR8.Threejs.pipelineModule() looks for a global THREE
 export { THREE };
@@ -265,9 +273,21 @@ export function createDemo(cfg) {
   }).catch((e) => showError('Couldn\'t load the demo', String((e && e.message) || e)));
   setTimeout(() => { if (!window.XR8) showError('The AR engine didn\'t load', 'Check your connection and try again.'); }, 30000);
 
-  // ---------- canvas drawing size (unsized = stretched blurry 300x150 camera)
+  // ---------- canvas drawing size (unsized = stretched blurry 300x150 camera); world pages: world health sizes it
   const DPR = clamp(+qs.get('dpr') || 1.5, 1, 3);
+  let wh = null;
+  const HOLD = 'Hold still a moment, finding the floor…';
+  // SLAM settled for this run (world pages). Latched: a later stall must not flick Place off under a finger. The first
+  // settle builds the environment map (once per session) and the latch waits for the settle after that stall.
+  let settledRun = false;
+  const ready = () => {
+    if (!wh || settledRun) return true;
+    if (!wh.settled()) return false;
+    if (!envRT) { ensureEnv(); return false; }
+    return (settledRun = true);
+  };
   function sizeCanvas() {
+    if (wh) return wh.sizeCanvas();
     const dpr = Math.min(devicePixelRatio || 1, DPR), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
   }
@@ -301,7 +321,7 @@ export function createDemo(cfg) {
   const aimHit = new THREE.Vector3();
   let aimOk = false, placedOnce = false;
   function place() {
-    if (demo.state !== 'placing' || !aimOk) return false;
+    if (demo.state !== 'placing' || !aimOk || !ready()) return false;
     demo.state = 'placed';
     demo.stage.position.copy(aimHit);
     demo.stage.visible = true; demo.reticle.visible = false;
@@ -328,8 +348,14 @@ export function createDemo(cfg) {
 
   function tickPlacement(dt) {
     if (!isWorld()) return;
+    if (demo.state === 'restoring') { demo.reticle.visible = false; if (ready() && demo.camera) restoreStage(); else hint(HOLD); return; }
     const placing = demo.state === 'placing' || (P === 'custom' && demo.state === 'placed' && cfg.reticleAlways);
     if (!placing) { demo.reticle.visible = false; return; }
+    if (!ready()) { // no reticle, no Place until SLAM has settled
+      aimOk = false; demo.reticle.visible = false;
+      if (P === 'stage') { demo.act.disabled = true; if (!placedOnce) demo.stage.visible = false; }
+      hint(HOLD); return;
+    }
     const h = floorHit(demo.aimNdc, aimHit);
     aimOk = !!h;
     if (aimOk) {
@@ -382,6 +408,7 @@ export function createDemo(cfg) {
   canvas.addEventListener('pointerup', endTouch);
   canvas.addEventListener('pointercancel', endTouch);
   function onTap(e) {
+    if (isWorld() && (!ready() || demo.state === 'restoring')) { hint(HOLD); return; }
     const ndc = ndcFromEvent(e, new THREE.Vector2());
     if (cfg.onTap && cfg.onTap(ndc, demo, e)) return;
     if (P === 'stage' && demo.state === 'placing') place();
@@ -427,17 +454,42 @@ export function createDemo(cfg) {
 
   // ---------- the scene (inside the engine's three.js scene)
   // Called on every engine start. One start in world / face mode; in swap mode every XR8.run() hands over a NEW
-  // scene, camera and renderer, so the persistent roots move across and the environment map is rebuilt.
-  let envTex = null, stageRel = null;
+  // scene, camera and renderer (same GL context), so the persistent roots move across and the GL textures are handed on.
+  let envRT = null, stageRel = null;
+  // the environment map, built once (PMREM is a burst of shader compiles and renders: never at world start)
+  function ensureEnv() {
+    if (envRT || !demo.renderer) return;
+    wh && wh.busy('env');
+    const pm = new THREE.PMREMGenerator(demo.renderer);
+    envRT = pm.fromScene(new RoomEnvironment(), 0.04); pm.dispose(); glTidy(demo.renderer);
+    wh && wh.busy();
+    demo.scene.environment = envRT.texture; demo.scene.environmentIntensity = 0.6;
+  }
+  // Hand GL textures from the dropped renderer to the new one (same context): no re-upload, no leak. Static
+  // textures keep their version, so three just binds the handle; the uploader's dispose listener still frees it.
+  function adoptTextures(from, to) {
+    if (!from || from === to) return 0;
+    let n = 0; const seen = new Set();
+    const one = (t) => {
+      if (!t || !t.isTexture || seen.has(t)) return; seen.add(t);
+      const a = from.properties.get(t); if (!a.__webglTexture) return;
+      const b = to.properties.get(t); if (b.__webglTexture) return;
+      b.__webglTexture = a.__webglTexture; b.__webglInit = true; b.__version = a.__version; n++;
+    };
+    if (envRT) one(envRT.texture);
+    for (const root of [demo.lights, demo.worldRoot, demo.faceRoot]) root.traverse((o) => {
+      for (const m of [].concat(o.material || [])) for (const k in m) one(m[k]);
+    });
+    return n;
+  }
   function buildScene({ scene, camera, renderer }) {
-    const first = !demo.scene;
+    const first = !demo.scene, prev = demo.renderer;
     Object.assign(demo, { scene, camera, renderer });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NeutralToneMapping;
-    const pm = new THREE.PMREMGenerator(renderer);
-    envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); glTidy(renderer);
-    scene.environment = envTex;
-    scene.environmentIntensity = 0.6;
+    if (!first) demo.diag.adopted = adoptTextures(prev, renderer);
+    if (envRT) { scene.environment = envRT.texture; scene.environmentIntensity = 0.6; }
+    else if (!isWorld()) ensureEnv(); // face camera: no SLAM to disturb
     if (first) {
       demo.lights.add(new THREE.HemisphereLight(0xffffff, 0x5a5048, 1.3));
       const sun = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -462,13 +514,30 @@ export function createDemo(cfg) {
       camera.position.set(0, CAM_H, 0);
       camera.quaternion.identity();
       XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
-      if (stageRel) { // back from the selfie camera: same spot relative to the phone (SLAM restarted at zero)
-        demo.stage.position.set(stageRel.x, 0, stageRel.z); demo.stage.rotation.y = stageRel.ry; stageRel = null;
-      }
     }
     else { camera.position.set(0, 0, 0); camera.quaternion.identity(); } // face: the camera sits at the origin (Bobo Booth)
     if (first) cfg.build && cfg.build(demo);
     else cfg.onScene && cfg.onScene(demo);
+    // compile this camera's shaders now (parallel where the browser can), while SLAM settles and content is hidden
+    // (no parallel-compile extension: compile now anyway, right after the first frames and before SLAM settles)
+    if (mode !== 'face') {
+      const root = isWorld() ? demo.worldRoot : demo.faceRoot;
+      try {
+        if (renderer.extensions.has('KHR_parallel_shader_compile')) renderer.compileAsync(root, camera, scene).then(() => glTidy(renderer)).catch(() => {});
+        else { renderer.compile(root, camera, scene); glTidy(renderer); }
+      } catch (e) { /* compiles on first draw instead */ }
+    }
+  }
+  // back from the selfie camera, once SLAM has settled: the stage goes back at the same spot relative to the phone's
+  // pose NOW (not the pose at run start, while the phone was still turning from the face to the floor)
+  function restoreStage() {
+    if (stageRel) {
+      const yaw = demo.camYaw(), c = demo.camera.position;
+      const v = new THREE.Vector3(stageRel.x, 0, stageRel.z).applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+      demo.stage.position.set(c.x + v.x, 0, c.z + v.z); demo.stage.rotation.y = stageRel.ry + yaw; stageRel = null;
+    }
+    demo.state = 'placed'; demo.stage.visible = true; moveBtn.hidden = false; hint('');
+    cfg.onSwapped && cfg.onSwapped(demo, 'back');
   }
 
   // ---------- engine pipeline
@@ -543,8 +612,13 @@ export function createDemo(cfg) {
     if (needsPhone && !PHONE && !qs.has('desktop')) return openOnPhone();
     hero && hero.stop(); hero = null;
     cfg.onStartTap && cfg.onStartTap(demo);
-    sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-    const mods = [XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), tracker(isWorld()), XR8.CanvasScreenshot.pipelineModule(), appModule];
+    addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
+    // before XR8.run (camera wrap). Phone logs go to /api/ar/kc-diag on deploy previews or with ?diag (testing.md):
+    // production and static/local servers post nothing, so a missing endpoint is never hit.
+    const postLog = /deploy-preview|netlify\.app/.test(location.hostname) || qs.has('diag');
+    if (needsPhone) { wh = worldHealth({ page: cfg.slug, canvas, baseDpr: 1.5, post: postLog }); demo.wh = wh; }
+    sizeCanvas();
+    const mods = [XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), tracker(isWorld()), ...(isWorld() ? [wh.module] : []), XR8.CanvasScreenshot.pipelineModule(), appModule];
     try {
       XR8.addCameraPipelineModules(mods);
       setTimeout(() => { if (!camStartAt) camFailed(); }, 15000);
@@ -579,8 +653,8 @@ export function createDemo(cfg) {
   swapLabel();
   swapBtn.onclick = () => swap();
   if (SWAP) { demo.left.appendChild(swapBtn); demo.swapBtn = swapBtn; demo.diag.swaps = []; }
-  // free our GPU copies on the renderer that is about to be dropped (the next one uploads them again on first use;
-  // ImageBitmaps and canvases stay in memory, so nothing is lost)
+  // free the dropped renderer's buffers, programs and bone textures (the next renderer builds its own); the GL
+  // textures are NOT freed: buildScene hands them to the next renderer (adoptTextures)
   // The engine shares three's GL context and restores the program it found bound: never leave a deleted program
   // bound (unbind through three's state cache so three stays in sync), and leave the pixel-store flags at their
   // defaults (three's canvas textures set UNPACK_FLIP_Y; the face chunk then fails to upload its 3D textures).
@@ -593,17 +667,14 @@ export function createDemo(cfg) {
   }
   function releaseGpu() {
     const seen = new Set();
-    const tex = (t) => { if (t && t.isTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
     for (const root of [demo.lights, demo.worldRoot, demo.faceRoot]) root.traverse((o) => {
       if (o.geometry && !seen.has(o.geometry)) { seen.add(o.geometry); o.geometry.dispose(); }
       if (o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose();
       for (const m of [].concat(o.material || [])) {
         if (seen.has(m)) continue; seen.add(m);
-        for (const k in m) tex(m[k]);
         m.dispose();
       }
     });
-    if (envTex) { envTex.dispose(); envTex = null; }
     glTidy(demo.renderer);
   }
   function swap(to) {
@@ -626,10 +697,11 @@ export function createDemo(cfg) {
     releaseGpu();
     try {
       XR8.stop();
-      XR8.removeCameraPipelineModules([demo.facing === 'back' ? 'reality' : 'facecontroller']);
+      XR8.removeCameraPipelineModules(demo.facing === 'back' ? ['reality', 'world-health'] : ['facecontroller']);
       demo.facing = to; demo.state = 'swapping'; demo.tracking = '-';
-      XR8.addCameraPipelineModule(tracker(isWorld()));
+      XR8.addCameraPipelineModules(isWorld() ? [tracker(true), wh.module] : [tracker(false)]);
       XR8.run(runOpts());
+      if (isWorld()) { wh.restart(); settledRun = false; } // SLAM starts over: settle again before anything is placed
     } catch (e) { demo.diag.errors.push('swap: ' + String((e && e.message) || e)); swapFailed(); return false; }
     clearTimeout(swapTimer); swapTimer = setTimeout(() => { if (swapping) swapFailed(); }, 15000);
     return true;
@@ -639,9 +711,12 @@ export function createDemo(cfg) {
     swapping = 0; clearTimeout(swapTimer);
     $('swapv').hidden = true; swapBtn.disabled = false; swapLabel(); hint('');
     if (isWorld()) {
-      demo.state = worldState === 'placed' ? 'placed' : 'placing';
-      if (demo.state === 'placed') { moveBtn.hidden = false; demo.stage.visible = true; }
-      else if (P === 'stage') { demo.act.hidden = false; demo.act.textContent = cfg.placeLabel || 'Place here'; }
+      if (worldState === 'placed') { // hidden and un-placed until SLAM settles, then restoreStage() (onSwapped then)
+        demo.state = 'restoring'; demo.stage.visible = false; moveBtn.hidden = true; hint(HOLD);
+        return;
+      }
+      demo.state = 'placing';
+      if (P === 'stage') { demo.act.hidden = false; demo.act.disabled = true; demo.act.textContent = cfg.placeLabel || 'Place here'; }
     } else demo.state = 'live';
     cfg.onSwapped && cfg.onSwapped(demo, demo.facing);
   }

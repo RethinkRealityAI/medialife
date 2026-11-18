@@ -13,8 +13,11 @@ chunks, so the shell does:
 `XR8.stop()` -> `XR8.removeCameraPipelineModules(['reality'])` (or `['facecontroller']`) ->
 `XR8.XrController.configure(...)` or `XR8.FaceController.configure(...)` -> `XR8.addCameraPipelineModule(<the other tracker>)` ->
 `XR8.run({ ..., cameraConfig: { direction: BACK | FRONT } })`.
-Every run hands over a new three.js scene, camera and renderer; the shell moves its persistent content across and puts a
-placed cube back at the same spot relative to the phone (world tracking restarts from zero on each run).
+Every run hands over a new three.js scene, camera and renderer (same GL context); the shell moves its persistent
+content across and hands on the GL textures. After a flip back, world tracking restarts from zero: the cube stays
+hidden ("Hold still a moment, finding the floor…") until SLAM has settled (`wh.settled()`, world-health.js), then goes
+back at the same spot relative to the phone's pose at that moment. (Android phone test of Wear It, Meet It: restoring
+or placing before the settle made content fly away.)
 
 Assets (in `../media/`): stereo-glasses.glb, head-occluder.glb, face-alpha.png. Cube and face paint art are our own flat
 canvas designs (the sample's were the engine maker's logo, from its CDN, which is gone).

@@ -14,6 +14,7 @@ const COLOURS = [
   { n: 'Amber', c: 0xf0a030 }, { n: 'Cyan', c: 0x4fd6e8 }, { n: 'Lime', c: 0xc9f25a }, { n: 'Coral', c: 0xff6b5e }, { n: 'Violet', c: 0xad50ff },
 ];
 const ROBOT_H = 1.4;            // life-size, metres (pinch while placing: 0.4x to 1.3x)
+const ROBOT_X = -0.26, FRAME_X = 0.4; // metres from the placed spot (the frame is 0.48 wide)
 const PHOTO_W = 0.4, PHOTO_H = PHOTO_W * 4 / 3;
 const EMOTES = ['Wave', 'Yes', 'ThumbsUp', 'Dance', 'Jump'];
 const UP = new THREE.Vector3(0, 1, 0);
@@ -60,18 +61,19 @@ const demo = createDemo({
   build(d) {
     // ---- world: the robot, life-size, with the floating frame (aim a little higher: a person-sized robot wants room)
     d.aimNdc.set(0, -0.08);
-    robot = new THREE.Group(); d.stage.add(robot);
+    // robot + frame are centred on the placed spot together, so the frame stays on screen beside the robot
+    robot = new THREE.Group(); robot.position.x = ROBOT_X; d.stage.add(robot);
     const body = gltf.scene; fitTo(body, ROBOT_H); robot.add(body);
     body.traverse((o) => {
       if (!o.isMesh) return; o.frustumCulled = false;
       if (o.material.name === 'Main') { if (!mainMat) { mainMat = o.material; accentMats.push(mainMat); } o.material = mainMat; }
     });
-    d.stage.add(contactShadow(0.45, 0.42));
+    const rs = contactShadow(0.45, 0.42); rs.position.x = ROBOT_X; d.stage.add(rs);
     mixer = new THREE.AnimationMixer(body);
     idle = mixer.clipAction(clip('Idle')); idle.play();
     mixer.addEventListener('finished', (e) => { if (e.action === oneShot) { oneShot = null; oneShotName = ''; idle.fadeIn(0.25); } });
-    frame = buildFrame(false); frame.position.set(0.66, 1.08, 0.12); d.stage.add(frame);
-    const fs = contactShadow(0.22, 0.2); fs.position.set(0.66, 0.003, 0.12); d.stage.add(fs);
+    frame = buildFrame(false); frame.position.set(FRAME_X, 1.08, 0.12); d.stage.add(frame);
+    const fs = contactShadow(0.22, 0.2); fs.position.set(FRAME_X, 0.003, 0.12); d.stage.add(fs);
     // ---- face: the visor + antenna rig on the shell's faceRoot
     rig = new Rig(d.faceRoot);
     // ---- UI: colour chips, selfie thumbnail (front, bottom right), Meet button (the shell's action button)

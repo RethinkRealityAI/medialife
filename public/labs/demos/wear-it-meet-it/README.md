@@ -10,6 +10,9 @@ The example use of the camera swap: **wear it, then meet it.**
 3. Shutter again: one branded photo of the room scene. Flip goes back for a new selfie or colour; the robot keeps its
    spot (Move, bottom right, moves it), and the new selfie and colour are waiting on it when you come back.
 
+After each flip to the room, Place (or putting the robot back) waits until world tracking has settled, about 1.5 s
+in the simulator. The first Android phone test, before this gate, had the robot fly away after the flip.
+
 State that survives every swap: selfie, colour, placement, robot. Built on the shared shell's swap mode (see
 `../camera-swap/README.md` for the exact XR8 calls).
 

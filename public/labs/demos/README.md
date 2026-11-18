@@ -48,8 +48,14 @@ jsDelivr package), so ONE session can flip cameras, exactly as the sample does. 
   a flat "Switching camera" cover. Content lives in `demo.stage` (world, under `demo.worldRoot`) and `demo.faceRoot`
   (face): every `XR8.run()` hands over a NEW scene/camera/renderer and the shell re-adds these roots, rebuilds the
   environment map, frees GPU copies on the old renderer, and puts a placed stage back at the same spot relative to the
-  phone (SLAM restarts at zero). Hooks: `onSwapOut(demo, to)`, `onSwapped(demo, facing)`, `onScene(demo)`,
+  phone (SLAM restarts at zero) once SLAM has settled. Hooks: `onSwapOut(demo, to)`, `onSwapped(demo, facing)`, `onScene(demo)`,
   `onShutter(demo)` (return true to replace the default photo), `demo.swap(to)`, `demo.facing`, `demo.grabShot()`.
+
+- World health (`/evade/xr/world-health.js`, world and swap pages): adaptive pixel ratio, stall/fps/tracking log
+  (posted to `/api/ar/kc-diag` on deploy previews or with `?diag`), and a settle gate: Place, the reticle, taps and
+  the post-swap restore wait for SLAM to settle ("Hold still a moment, finding the floor…"), latched per run. The
+  environment map is built once (selfie camera, or at the first settle) and its GL texture is handed to each new
+  renderer with our other static textures; shaders compile while SLAM settles.
 
 All colours are flat; there are no gradients. Each demo is `createDemo({...})` in its `main.js`.
 
