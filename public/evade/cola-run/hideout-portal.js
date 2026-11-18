@@ -15,10 +15,20 @@
 //  - puts the door where Bobo was standing, facing you, and hides the board while you're in the hideout.
 // The classic hideout is untouched: Cola Run with ?hideout=classic, and the lab /labs/collector-hub/.
 //
-// Portal technique: /labs/portal-kit/portal.js (depth-only wall with a door hole + clip plane + crossing toggle).
+// Portal technique: /labs/portal-kit/portal.js (depth-only wall with a door hole + crossing toggle).
+//
+// Phone safety (round 2, after Dapo's phone test: black camera, smearing, tracking lost when the hideout opened):
+//  - NO clipping planes here. Clipping changes every room material's shader, which threw away the shaders
+//    HubCore had already compiled (hub.warm) and recompiled ~60 materials at the moment the door opened: a
+//    multi-second GPU stall on a phone, while the 8th Wall engine needs every frame. Instead every piece of the
+//    world stays behind the door plane (z < 0), so the depth-only wall alone hides it from outside.
+//  - NO new lights: the hub's own point lights are moved and resized, so the light count (part of every lit
+//    shader) never changes.
+//  - Laid out and compiled at load, right after hub.warm(), with textures uploaded one per frame.
+//  - Small textures (no 2048 sky, no texture clones, no mipmaps on canvas screens).
 import * as THREE from 'three';
-import { Portal } from '/labs/portal-kit/portal.js?v=1';
-import { flatSky, drawStars, label, faceTowards, easeOutBack } from '/labs/portal-kit/toolkit.js?v=1';
+import { Portal } from '/labs/portal-kit/portal.js?v=2';
+import { drawStars, label, faceTowards, easeOutBack } from '/labs/portal-kit/toolkit.js?v=1';
 import { buildCabinet } from './arcade-cabinet.js?v=2';
 
 const R = 3.8; // floor radius (m): 7.6 m across
@@ -160,15 +170,19 @@ function glyph(g, id, x, y, s) {
 }
 
 function makeBigScreen(hub) {
+  // Drawn in 1600 x 900 "design" units onto a 1024 x 576 canvas (about 2.4 MB on the GPU, no mipmaps).
   const W = 1600;
   const Hh = 900;
+  const PX = 1024 / W;
   const c = document.createElement('canvas');
-  c.width = W;
-  c.height = Hh;
+  c.width = 1024;
+  c.height = 576;
   const g = c.getContext('2d');
+  g.setTransform(PX, 0, 0, PX, 0, 0);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
   const SW = 3.6;
   const SH = SW * (Hh / W);
   const group = new THREE.Group();
@@ -278,6 +292,8 @@ function cabinetScreen(game) {
   const g = c.getContext('2d');
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
   const paint = (img) => {
     g.fillStyle = '#0a1c2a';
     g.fillRect(0, 0, 384, 288);
@@ -318,20 +334,22 @@ function cabinetScreen(game) {
   return tex;
 }
 
-export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onEvent = () => {} }) {
+export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onEvent = () => {}, onDiag = () => {} }) {
   const portal = new Portal({ renderer, width: DOOR.w, height: DOOR.h, colors: [CYAN, PINK, '#ffffff'], frame: '#1b2552', trim: CYAN });
   portal.group.visible = false;
   const scene = anchor.parent;
   scene.add(portal.group);
 
   let laid = false;
+  let prepping = null; // the load-time layout + shader warm-up (a promise once started)
+  let cabinetsReady = Promise.resolve();
+  let anchorWas = false; // the board's visibility before the door came out (restored on close)
   let active = false; // the door is out (opening, open, or closing)
   let closing = false;
   let wasLive = false;
   let welcomed = false;
   let told = false;
   let t = 0;
-  let regT = 0;
   let boboMixer = null;
   let boboSit = null;
   let boboOnce = null;
@@ -352,9 +370,8 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     room.scale.setScalar(1);
     const N = (n) => room.getObjectByName(n);
 
-    // the old two-storey can goes: walls, loft, ladder, its floor and lights
+    // the old two-storey can goes: walls, loft, ladder and its floor
     for (const n of ['Can_House', 'hub_ladder']) if (N(n)) N(n).visible = false;
-    for (const l of hub._lights || []) if (l.isPointLight) l.visible = false;
 
     // borrow the hideout's own looks for the new shell
     const mats = {};
@@ -397,28 +414,41 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       relayout(tab, { from: [-1.6, -0.93], to: -120, r: HOLE + 0.25, dy: H - 3.52 + 0.04 });
       hub._pullRest = tab.rotation.z;
     }
-    // fizz bubbles fill the bigger room
+    // fizz bubbles fill the bigger room (kept inside the wall: nothing of the world may reach the door plane)
     room.children.forEach((o) => {
-      if (/^Fizz_/.test(o.name)) o.position.set(o.position.x * 1.9, o.position.y, o.position.z * 1.9);
+      if (!/^Fizz_/.test(o.name)) return;
+      o.position.set(o.position.x * 1.9, o.position.y, o.position.z * 1.9);
+      const r = Math.hypot(o.position.x, o.position.z);
+      if (r > R - 0.5) o.position.multiplyScalar((R - 0.5) / r);
     });
 
     /* the shell */
     const shell = new THREE.Group();
     shell.name = 'PortalShell';
     room.add(shell);
+    // The floor shares the hideout's wood texture (no clone: a clone is a second GPU upload); the planks are
+    // tiled by the UVs instead (glTF textures repeat by default).
     const floorMat = plain('Wood_Floor', '#8a5a3b');
-    if (floorMat.map) {
-      floorMat.map = floorMat.map.clone();
-      floorMat.map.wrapS = floorMat.map.wrapT = THREE.RepeatWrapping;
-      floorMat.map.repeat.set((2 * R) / 3.8, (2 * R) / 3.8);
-      floorMat.map.needsUpdate = true;
-    }
     floorMat.normalMap = null;
     floorMat.roughnessMap = null;
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 0.02, 96), floorMat);
+    const planar = (geo) => {
+      const pos = geo.attributes.position;
+      const uv = geo.attributes.uv;
+      const k = (2 * R) / 3.8; // the old floor was ~3.8 m across: same plank size
+      for (let i = 0; i < pos.count; i++) uv.setXY(i, (pos.getX(i) / (2 * R) + 0.5) * k, (pos.getY(i) / (2 * R) + 0.5) * k);
+      uv.needsUpdate = true;
+      return geo;
+    };
+    const floor = new THREE.Mesh(planar(new THREE.CircleGeometry(R, 96)), floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.name = 'PortalFloor';
     shell.add(floor);
+    // the circle only touches the door plane at one point: fill the doorway's corners up to it
+    const sill = new THREE.Mesh(planar(new THREE.PlaneGeometry(DOOR.w + 0.5, 0.5).translate(0, -(R - 0.255), 0)), floorMat.clone());
+    sill.material.polygonOffset = true;
+    sill.material.polygonOffsetFactor = -1;
+    sill.rotation.x = -Math.PI / 2;
+    shell.add(sill);
     const wallMat = plain('Wall_Inside_Navy', '#1b2552');
     wallMat.normalMap = null;
     wallMat.roughnessMap = null;
@@ -452,7 +482,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       shell.add(u);
     }
     // ceiling with the can's opening, and the night sky through it
-    const ceil = new THREE.Mesh(new THREE.RingGeometry(HOLE, R + 0.02, 96, 1), plain('Diorama_Rim', '#0b1230'));
+    const ceil = new THREE.Mesh(new THREE.RingGeometry(HOLE, R, 96, 1), plain('Diorama_Rim', '#0b1230'));
     ceil.material.side = THREE.DoubleSide;
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = H;
@@ -461,12 +491,21 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     lip.rotation.x = Math.PI / 2;
     lip.position.y = H;
     shell.add(lip);
-    const sky = flatSky((g, w, h) => {
-      g.fillStyle = '#070b1f';
-      g.fillRect(0, 0, w, h);
-      drawStars(g, w, h, 700, ['#ffffff', '#ffe9a8', '#bfe6ff'], 0, 0.5);
-    }, { radius: 9 });
-    sky.position.y = 1;
+    // A small dome over the opening only (a big sky sphere would reach past the door into the real room).
+    const skyC = document.createElement('canvas');
+    skyC.width = 512;
+    skyC.height = 256;
+    const sg = skyC.getContext('2d');
+    sg.fillStyle = '#070b1f';
+    sg.fillRect(0, 0, 512, 256);
+    drawStars(sg, 512, 256, 160, ['#ffffff', '#ffe9a8', '#bfe6ff'], 0, 1);
+    const skyT = new THREE.CanvasTexture(skyC);
+    skyT.colorSpace = THREE.SRGBColorSpace;
+    skyT.generateMipmaps = false;
+    skyT.minFilter = THREE.LinearFilter;
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(HOLE + 0.7, 32, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ map: skyT, side: THREE.BackSide }));
+    sky.position.y = H - 0.02;
+    sky.name = 'PortalSky';
     shell.add(sky);
     // string lights under the ceiling, swagging between the uprights
     const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(0.035, 10, 8), new THREE.MeshBasicMaterial({ color: '#ffe2a6' }), 84);
@@ -495,7 +534,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
 
     /* the arcade zone: a machine for every experience in Bobo's Arcade, on the left */
     const arcadeUrl = '/evade/arcade/games.json';
-    fetch(arcadeUrl, { cache: 'no-cache' })
+    cabinetsReady = fetch(arcadeUrl, { cache: 'no-cache' })
       .then((r) => (r.ok ? r.json() : null))
       .then((cat) => {
         const games = (cat?.games || []).filter((g) => g.id !== cat.self).slice(0, 7);
@@ -516,18 +555,27 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
         room.add(sign2);
         hub._pickables?.push(...cabinets.flatMap((c) => c.children.filter((o) => o.isMesh)));
         addSpot("Bobo's Arcade", YELLOW, cabinets[Math.floor(cabinets.length / 2)], 1.25, 'hub_trophy_colarun', () => openGame(null));
-        portal.register(room);
       })
       .catch(() => undefined);
 
-    /* lights for the bigger room (the old ones were sized for the can) */
-    const add = (l, x, y, z) => {
-      l.position.set(x, y, z);
-      room.add(l);
-    };
-    add(new THREE.PointLight('#ffd7b0', 7, 11, 1.2), 0, 2.9, 0.2);
-    add(new THREE.PointLight('#9fe9ff', 4, 7, 1.2), 0, 2.4, -2.4);
-    add(new THREE.PointLight('#ff6fb8', 3, 6, 1.2), -2.4, 2.2, -0.4);
+    /* light the bigger room with the hideout's OWN point lights, moved and resized. Adding lights instead would
+       change the light count, which is part of every lit shader in the scene: all of them would recompile. */
+    const LIT = [
+      ['#ffd7b0', 7, 11, [0, 2.9, 0.2]],
+      ['#9fe9ff', 4, 7, [0, 2.4, -2.4]],
+      ['#ff6fb8', 3, 6, [-2.4, 2.2, -0.4]],
+    ];
+    (hub._lights || [])
+      .filter((l) => l.isPointLight)
+      .forEach((l, i) => {
+        const [c, intensity, distance, p] = LIT[i % LIT.length];
+        delete l.userData.mlhBase; // HubCore's room-size scaling leaves it alone (this room is life size)
+        l.color.set(c);
+        l.intensity = intensity;
+        l.distance = distance;
+        l.decay = 1.2;
+        l.position.set(...p);
+      });
 
     // Bobo is the room's own here (the game's Bobo stays on the board): his own mixer, sitting in his bed
     const bobo = hub._bobo;
@@ -557,9 +605,66 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     if (lamp && hub._lampPos) new THREE.Box3().setFromObject(lamp).getCenter(hub._lampPos).applyMatrix4(inv);
     // the hotspot dots follow their nodes; give the big screen one too
     addSpot('Big screen', CYAN, screen.group, 0.9, 'hub_computer', () => hub.openOS());
-    portal.register(room);
     return true;
   }
+
+  /* ── at load (after hub.warm): lay out, compile every shader of the door and the room, upload textures one per
+     frame. Opening the door is then just a visibility change: no compile, no upload, no stall. ── */
+  function prep() {
+    if (prepping) return prepping;
+    if (!hub._room) return Promise.resolve();
+    prepping = (async () => {
+      const t0 = performance.now();
+      layout();
+      await cabinetsReady;
+      const flipped = [];
+      const keep = new Set([hub._room.getObjectByName('Can_House'), hub._room.getObjectByName('hub_ladder')]);
+      portal.group.traverse((o) => {
+        if (keep.has(o)) return;
+        if (!o.visible) {
+          flipped.push(o);
+          o.visible = true;
+        }
+      });
+      let done = null;
+      // Compiled OUT of the scene, against the scene: three.js counts the lights of the target scene AND of the
+      // object compiled, so an object that is also in the target has its lights counted twice, and every
+      // shader comes out for the wrong light count (useless: recompiled when the door opens). Detached, the
+      // lights are the scene's plus the hideout's, exactly as with the door open.
+      const parent = portal.group.parent;
+      parent?.remove(portal.group);
+      portal.group.updateMatrixWorld(true);
+      try {
+        done = typeof renderer.compileAsync === 'function' ? renderer.compileAsync(portal.group, camera, scene) : (renderer.compile(portal.group, camera, scene), null);
+      } catch (e) {
+        console.warn('[hideout-portal] shader warm-up skipped', e);
+      }
+      parent?.add(portal.group);
+      for (const o of flipped) o.visible = false;
+      await done?.catch?.(() => undefined);
+      if (typeof renderer.initTexture !== 'function') return;
+      const seen = new Set();
+      portal.group.traverse((o) => {
+        for (const m of o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [])
+          for (const k of Object.keys(m)) if (m[k]?.isTexture && !m[k].isRenderTargetTexture) seen.add(m[k]);
+      });
+      for (const tx of seen) {
+        try {
+          renderer.initTexture(tx);
+        } catch {
+          /* uploads on first use instead */
+        }
+        await new Promise((r) => requestAnimationFrame(() => r()));
+      }
+      onDiag('hideout_ready', { textures: seen.size, ms: Math.round(performance.now() - t0) });
+    })();
+    return prepping;
+  }
+  const origWarm = hub.warm.bind(hub);
+  hub.warm = async (...a) => {
+    await origWarm(...a);
+    await prep();
+  };
 
   function addSpot(text, color, node, lift, iconFrom, onClick) {
     const box = hub._el?.spots;
@@ -623,10 +728,12 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     portal.setInside(false);
     portal.wasOutside = true;
     portal.openTarget = 1;
+    if (!active) anchorWas = anchor.visible;
     active = true;
     closing = false;
     anchor.visible = false;
     onActive?.(true);
+    onDiag('door_open', { prepped: !!prepping });
     hub._sfx?.('whoosh');
     if (!told) {
       told = true;
@@ -646,7 +753,9 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     closing = false;
     portal.group.visible = false;
     portal.open = 0;
-    anchor.visible = true;
+    // The board comes back as it was (a board still being placed stays with the reticle, which re-shows it).
+    anchor.visible = anchorWas;
+    onDiag('door_closed', {});
     if (hub._bobo) hub._bobo.visible = false;
     onActive?.(false);
   }
@@ -654,6 +763,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
   portal.onCross = (inside) => {
     hub._sfx?.('whoosh');
     onEvent('custom', { action: inside ? 'hideout_portal_in' : 'hideout_portal_out' });
+    onDiag(inside ? 'walked_in' : 'walked_out', {});
     if (inside && !welcomed) {
       welcomed = true;
       hub.toast('Welcome to Bobo’s Hideout');
@@ -737,6 +847,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     update(dt) {
       t += dt;
       patchHome();
+      if (!prepping && hub.loaded && t > 8) prep();
       if (!portal.group.visible) return;
       portal.update(dt, camera, t);
       if (closing && portal.open < 0.02) finishClose();
@@ -761,16 +872,12 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       if (hub._bed && hub._bedScale) hub._bed.scale.setScalar(hub._bedScale);
       wasLive = live;
       screen?.draw(dt);
-      regT += dt;
-      if (regT > 1) {
-        regT = 0;
-        if (hub._room) portal.register(hub._room); // materials HubCore swaps in later (collection holograms)
-      }
     },
     // test hooks (?test): walk through without walking
     test: {
       open,
       close,
+      prep,
       stepIn(d = 1.2) {
         // move the door past the camera so the camera crosses the opening
         const cam = camera.getWorldPosition(v1);

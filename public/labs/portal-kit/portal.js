@@ -176,7 +176,9 @@ export class Portal {
     this.near = THREE.MathUtils.clamp(1 - (d - 0.5) / 1.5, 0, 1);
     this.camLocal = lp;
 
-    const showWorld = this.open > 0.02;
+    // Outside but round the back of the door (walked round the frame, or tracking slid you past it): the world
+    // would be all around you with nothing in front to hide it, so it isn't drawn until you're back in front.
+    const showWorld = this.open > 0.02 && (this.inside || outsideNow);
     this.world.visible = showWorld;
     this.wallOut.visible = !this.inside;
     this.wallIn.visible = this.inside && !outsideNow;

@@ -21,7 +21,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { addArcadeCabinet } from "./arcade-cabinet.js?v=2";
-import { setupHideoutPortal } from "./hideout-portal.js?v=1";
+import { setupHideoutPortal } from "./hideout-portal.js?v=2";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
@@ -66,6 +66,53 @@ function obs(v) {
 
 /* ── errors + test readout ── */
 const diag = { status: "loading", tracking: "-", fps: 0, errors: [] };
+// Phone test log (previews and local dev, or ?diag; never with ?nolog): one record per page session, sent every
+// 10 s and when the page is hidden, readable on the preview at /api/ar/kc-diag?limit=40. It answers "what was
+// the phone doing" without anyone having to describe it: frame stalls, tracking, the hideout door, GPU resets.
+const LOG = DIAG && !qs.has("nolog");
+const tlog = { steps: [], stalls: [], fpsLog: [], ctxLost: 0, t0: performance.now() };
+function step(name, extra) {
+  if (tlog.steps.length > 80) tlog.steps.splice(0, 20);
+  tlog.steps.push({ t: +((performance.now() - tlog.t0) / 1000).toFixed(1), s: name, ...extra });
+}
+let flushAt = 0;
+function flushLog(force = false) {
+  const now = performance.now();
+  if (!LOG || diag.status === "loading" || (!force && now - flushAt < 10000)) return;
+  flushAt = now;
+  const info = renderer?.info;
+  const body = JSON.stringify({
+    page: "cola-run",
+    sid: SID,
+    note: qs.get("note") || "",
+    hideout: PORTAL_HIDEOUT ? "portal" : "classic",
+    secs: Math.round((now - tlog.t0) / 1000),
+    camera: diag.status,
+    tracking: diag.tracking,
+    fps: +diag.fps.toFixed(1),
+    placed: !!game?.isPlaced,
+    hub: hub?.state || "-",
+    door: hideoutPortal ? { active: hideoutPortal.active, inside: hideoutPortal.inside } : null,
+    gpu: info ? { programs: info.programs?.length, textures: info.memory?.textures, geometries: info.memory?.geometries, calls: info.render?.calls } : null,
+    ctxLost: tlog.ctxLost,
+    stalls: tlog.stalls.slice(-20),
+    fpsLog: tlog.fpsLog.slice(-90),
+    steps: tlog.steps.slice(-60),
+    errors: diag.errors.slice(-10),
+    screen: [innerWidth, innerHeight, devicePixelRatio],
+    ua: navigator.userAgent,
+  });
+  try {
+    if (!(navigator.sendBeacon && navigator.sendBeacon("/api/ar/kc-diag", new Blob([body], { type: "application/json" }))))
+      fetch("/api/ar/kc-diag", { method: "POST", body, keepalive: true }).catch(() => {});
+  } catch {
+    /* offline */
+  }
+}
+addEventListener("pagehide", () => flushLog(true));
+document.addEventListener("visibilitychange", () => document.hidden && flushLog(true));
+addEventListener("error", (e) => diag.errors.push(`js: ${String(e.message).slice(0, 160)}`));
+addEventListener("unhandledrejection", (e) => diag.errors.push(`promise: ${String(e.reason?.message || e.reason).slice(0, 160)}`));
 function showError(title, body) {
   $("err-title").textContent = title;
   $("err-body").textContent = body;
@@ -77,9 +124,12 @@ function drawDiag() {
   if (!DIAG) return;
   const el = $("diag");
   el.hidden = false;
+  const door = hideoutPortal?.active ? (hideoutPortal.inside ? "inside" : "open") : "shut";
   el.textContent =
     `camera: ${diag.status}  tracking: ${diag.tracking}  fps: ${diag.fps.toFixed(0)}\n` +
     `board: ${(ARENA * 2 * size).toFixed(1)} m  placed: ${game?.isPlaced ? "yes" : "no"}  hub: ${hub?.state || "-"}` +
+    (PORTAL_HIDEOUT ? `  door: ${door}  shaders: ${renderer?.info?.programs?.length ?? "-"}` : "") +
+    (tlog.ctxLost ? `  GPU resets: ${tlog.ctxLost}` : "") +
     (diag.errors.length ? `\nerr: ${diag.errors.slice(-1)[0].slice(0, 120)}` : "");
 }
 
@@ -155,6 +205,18 @@ function sizeCanvas() {
 }
 sizeCanvas();
 addEventListener("resize", sizeCanvas);
+// The phone's GPU reset (driver watchdog or memory): the 8th Wall engine's camera and tracking don't come back
+// after that, whatever three.js restores, so a black, smearing screen is all that's left. Say so and restart.
+canvas.addEventListener(
+  "webglcontextlost",
+  () => {
+    tlog.ctxLost++;
+    step("gpu_reset", { hub: hub?.state || "-", door: !!hideoutPortal?.active });
+    flushLog(true);
+    showError("The graphics restarted", "Your phone restarted its graphics, so the camera stopped. Tap Try again to carry on.");
+  },
+  false,
+);
 addEventListener("orientationchange", () => setTimeout(sizeCanvas, 300));
 
 /* ── pinch to size the board while placing (not while the hub owns two-finger gestures) ── */
@@ -186,6 +248,7 @@ canvas.addEventListener("pointerup", endTouch);
 canvas.addEventListener("pointercancel", endTouch);
 
 /* ── scene objects (filled in onStart, inside 8th Wall's three.js scene) ── */
+let replacing = false; // placement was reset and the board isn't placed again yet
 let scene, camera, renderer, game, ctx, mode, hub, capture, mixer, runAct, idleAct, cabinet, hideoutPortal;
 const emoteActs = {};
 let emote = null;
@@ -391,11 +454,14 @@ async function buildScene(xr) {
     pushHud();
   });
   game.onPlace.addListener(() => {
-    stick.hidden = false;
+    replacing = false;
+    stick.hidden = !!hideoutPortal?.active;
     platformEvent("scan", { placed: true });
   });
   game.onResetPlacement.addListener(() => {
     player.position.set(0, 0, 0);
+    replacing = true;
+    stick.hidden = true; // back to placing: Place takes the bottom centre (the joystick returns on Place)
   });
 
   // The recorder as CollectorHubMode sees it in Mattercraft (it moves it, hides it in the room).
@@ -454,8 +520,10 @@ async function buildScene(xr) {
         anchor,
         player,
         onEvent: platformEvent,
+        onDiag: step,
         onActive: (on) => {
-          stick.hidden = on || !game.isPlaced;
+          // Closing because placement was reset: back to placing, so Place keeps the bottom centre.
+          stick.hidden = on || !game.isPlaced || replacing;
           capture.setVisible(true);
         },
       });
@@ -500,6 +568,8 @@ async function buildScene(xr) {
     player,
     camera,
     scene,
+    renderer,
+    tlog,
     capture,
     get hub() {
       return hub;
@@ -601,6 +671,7 @@ function moveBobo(dt) {
 }
 
 /* ── the 8th Wall pipeline ── */
+let lastHub = "";
 let lastT = 0,
   built = false,
   frames = 0,
@@ -616,16 +687,28 @@ const app = {
   },
   onUpdate: () => {
     const now = performance.now();
-    const dt = Math.min(0.1, lastT ? (now - lastT) / 1000 : 0.016);
+    const gap = lastT ? now - lastT : 16;
+    const dt = Math.min(0.1, gap / 1000);
     lastT = now;
     frames++;
+    // A frame that took over half a second: a shader compile or texture upload stalled the GPU (the engine
+    // loses tracking when this happens). Logged with what the hideout was doing at the time.
+    if (gap > 500 && tlog.stalls.length < 200)
+      tlog.stalls.push({ t: +((now - tlog.t0) / 1000).toFixed(1), ms: Math.round(gap), hub: hub?.state || "-", door: hideoutPortal ? `${hideoutPortal.active ? 1 : 0}${hideoutPortal.inside ? "i" : ""}` : "-", programs: renderer?.info?.programs?.length });
     if (now - fpsT > 1000) {
       diag.fps = (frames * 1000) / (now - fpsT);
       frames = 0;
       fpsT = now;
+      if (tlog.fpsLog.length > 300) tlog.fpsLog.splice(0, 100);
+      tlog.fpsLog.push(Math.round(diag.fps));
       drawDiag();
+      flushLog();
     }
     if (!built) return;
+    if (hub && hub.state !== lastHub) {
+      step("hub", { s2: hub.state });
+      lastHub = hub.state;
+    }
     followFloor(dt);
     moveBobo(dt);
     mixer?.update(dt);
@@ -637,6 +720,7 @@ const app = {
   onRender: () => built && capture?.frame(),
   onCameraStatusChange: (ev) => {
     diag.status = ev.status;
+    step("camera", { status: ev.status });
     drawDiag();
     if (ev.status === "hasVideo") $("splash").hidden = true;
     else if (ev.status === "failed")
@@ -649,7 +733,9 @@ const app = {
     {
       event: "reality.trackingstatus",
       process: ({ detail }) => {
-        diag.tracking = `${detail.status}${detail.reason ? ` (${detail.reason})` : ""}`;
+        const tr = `${detail.status}${detail.reason ? ` (${detail.reason})` : ""}`;
+        if (tr !== diag.tracking) step("tracking", { s2: tr });
+        diag.tracking = tr;
       },
     },
   ],
