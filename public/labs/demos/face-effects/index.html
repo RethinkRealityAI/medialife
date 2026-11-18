@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- MEDIALIFE Labs tech demo: selfie face effects: 3D shades, face paint and a mask on up to three faces.
+       Face tracking comes from the open-source 8th Wall engine (MIT), vendored once in medialife at
+       /evade/keychain-ar/vendor/xr/ (xr.js + the face chunk), as Bobo Booth loads it.
+       Licences are shown to users only behind the menu's Licences link (/evade/licences/). -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0f1114">
+  <title>Face FX · MEDIALIFE Labs</title>
+  <meta name="description" content="Selfie face effects: try on 3D shades, face paint and a mask, with friends.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="../shared/shell.css?v=1">
+  <link rel="stylesheet" href="./style.css?v=1">
+</head>
+<body>
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam,face"></script>
+  <script type="module" src="./main.js?v=1"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+/* Robot Run: Jump / Wave stacked above the shutter, bottom right (house rule for joystick games) */
+#bar .b-right{flex-direction:column;align-items:flex-end;gap:10px}
+.acts{display:flex;gap:8px}
+.acts .tool{width:56px;height:56px;min-height:56px}
