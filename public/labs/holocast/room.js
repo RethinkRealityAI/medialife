@@ -80,7 +80,11 @@ export class Room {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const v = await res.json();
         this.fails = 0;
-        if (v.same) { if (this.state && v.watching !== this.state.watching) { this.state.watching = v.watching; this.emit('presence'); } }
+        if (v.now) this.skew = Date.now() - v.now;
+        if (v.same) {
+          if (this.state && v.watching !== this.state.watching) { this.state.watching = v.watching; this.emit('presence'); }
+          if (this.state && this.state.live && v.lb) this.state.live.beat = v.lb;
+        }
         else this.take(v);
         if (this.fails === 0 && this.offline) { this.offline = false; this.emit('online'); }
       } catch (e) {
@@ -88,7 +92,7 @@ export class Room {
         if (this.fails === 3) { this.offline = true; this.emit('offline'); }
       } finally { this.inFlight = false; }
       const now = performance.now();
-      if (now - this.pingAt > 8000) { this.pingAt = now; this.send({ op: 'ping', role: this.role }, { quiet: true }); }
+      if (now - this.pingAt > 8000) { this.pingAt = now; this.send({ op: 'ping', role: this.role, live: this.liveId || undefined }, { quiet: true }); }
     }
     const fast = performance.now() < this.fastUntil;
     const wait = this.fails ? Math.min(8000, 1000 * 2 ** this.fails) : fast ? 450 : 1200;
@@ -117,6 +121,7 @@ export class Room {
     if (prev.pulse !== v.pulse) changed.add('pulse');
     if (JSON.stringify(prev.poll) !== JSON.stringify(v.poll)) changed.add('poll');
     if (JSON.stringify(prev.caption) !== JSON.stringify(v.caption)) changed.add('caption');
+    if (JSON.stringify(prev.live || null) !== JSON.stringify(v.live || null)) changed.add('live');
     const lastR = (s) => (s.reactions.length ? s.reactions[s.reactions.length - 1].at : 0);
     if (lastR(v) > lastR(prev)) changed.add('reactions');
     if (prev.watching !== v.watching || prev.controlling !== v.controlling) changed.add('presence');
@@ -147,6 +152,26 @@ export class Room {
     this.take(v); this.hurry();
     return v;
   }
+  /** The live feed if it is really live (its control room pinged in the last 25 s), else null. */
+  liveNow() {
+    const l = this.state && this.state.live; if (!l) return null;
+    return Date.now() - (this.skew || 0) - l.beat < 25000 ? l : null;
+  }
+  /** WebRTC signalling (see live.js). */
+  async rtcGet(who, after, ice) {
+    const res = await fetch(`${API}/${this.code}/rtc?for=${encodeURIComponent(who)}&after=${after || 0}${ice ? '&ice=1' : ''}`, { cache: 'no-store', headers: who === 'host' ? { 'x-holo-key': this.key } : {} });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+  async rtcPost(msg) {
+    const res = await fetch(`${API}/${this.code}/rtc`, { method: 'POST', headers: { 'content-type': 'application/json', ...(this.key ? { 'x-holo-key': this.key } : {}) }, body: JSON.stringify(msg) });
+    return res.ok;
+  }
+  async sendFrame(blob) {
+    const res = await fetch(`${API}/${this.code}/frame`, { method: 'POST', headers: { 'content-type': blob.type, 'x-holo-key': this.key }, body: blob });
+    return res.ok;
+  }
+  frameUrl() { return `${API}/${this.code}/frame?t=${Date.now()}`; }
   photoUrl(id) { return `${API}/${this.code}/photo/${id}`; }
 }
 

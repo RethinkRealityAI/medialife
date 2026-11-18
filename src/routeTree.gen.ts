@@ -144,7 +144,9 @@ import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$s
 import { Route as ApiBoboClipsIdRouteImport } from './routes/api.bobo.clips.$id'
 import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
 import { Route as ApiGiveawayDiscordCallbackRouteImport } from './routes/api.giveaway.discord.callback'
+import { Route as ApiHolocastCodeFrameRouteImport } from './routes/api.holocast.$code.frame'
 import { Route as ApiHolocastCodePhotoRouteImport } from './routes/api.holocast.$code.photo'
+import { Route as ApiHolocastCodeRtcRouteImport } from './routes/api.holocast.$code.rtc'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
 import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
@@ -880,9 +882,19 @@ const ApiGiveawayDiscordCallbackRoute =
     path: '/callback',
     getParentRoute: () => ApiGiveawayDiscordRoute,
   } as any)
+const ApiHolocastCodeFrameRoute = ApiHolocastCodeFrameRouteImport.update({
+  id: '/frame',
+  path: '/frame',
+  getParentRoute: () => ApiHolocastCodeRoute,
+} as any)
 const ApiHolocastCodePhotoRoute = ApiHolocastCodePhotoRouteImport.update({
   id: '/photo',
   path: '/photo',
+  getParentRoute: () => ApiHolocastCodeRoute,
+} as any)
+const ApiHolocastCodeRtcRoute = ApiHolocastCodeRtcRouteImport.update({
+  id: '/rtc',
+  path: '/rtc',
   getParentRoute: () => ApiHolocastCodeRoute,
 } as any)
 const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
@@ -1306,7 +1318,9 @@ export interface FileRoutesByFullPath {
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1488,7 +1502,9 @@ export interface FileRoutesByTo {
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1679,7 +1695,9 @@ export interface FileRoutesById {
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1871,7 +1889,9 @@ export interface FileRouteTypes {
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -2053,7 +2073,9 @@ export interface FileRouteTypes {
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -2243,7 +2265,9 @@ export interface FileRouteTypes {
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
     | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -3339,11 +3363,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGiveawayDiscordCallbackRouteImport
       parentRoute: typeof ApiGiveawayDiscordRoute
     }
+    '/api/holocast/$code/frame': {
+      id: '/api/holocast/$code/frame'
+      path: '/frame'
+      fullPath: '/api/holocast/$code/frame'
+      preLoaderRoute: typeof ApiHolocastCodeFrameRouteImport
+      parentRoute: typeof ApiHolocastCodeRoute
+    }
     '/api/holocast/$code/photo': {
       id: '/api/holocast/$code/photo'
       path: '/photo'
       fullPath: '/api/holocast/$code/photo'
       preLoaderRoute: typeof ApiHolocastCodePhotoRouteImport
+      parentRoute: typeof ApiHolocastCodeRoute
+    }
+    '/api/holocast/$code/rtc': {
+      id: '/api/holocast/$code/rtc'
+      path: '/rtc'
+      fullPath: '/api/holocast/$code/rtc'
+      preLoaderRoute: typeof ApiHolocastCodeRtcRouteImport
       parentRoute: typeof ApiHolocastCodeRoute
     }
     '/api/hub/auth/discord': {
@@ -3948,11 +3986,15 @@ const ApiHolocastCodePhotoRouteWithChildren =
   ApiHolocastCodePhotoRoute._addFileChildren(ApiHolocastCodePhotoRouteChildren)
 
 interface ApiHolocastCodeRouteChildren {
+  ApiHolocastCodeFrameRoute: typeof ApiHolocastCodeFrameRoute
   ApiHolocastCodePhotoRoute: typeof ApiHolocastCodePhotoRouteWithChildren
+  ApiHolocastCodeRtcRoute: typeof ApiHolocastCodeRtcRoute
 }
 
 const ApiHolocastCodeRouteChildren: ApiHolocastCodeRouteChildren = {
+  ApiHolocastCodeFrameRoute: ApiHolocastCodeFrameRoute,
   ApiHolocastCodePhotoRoute: ApiHolocastCodePhotoRouteWithChildren,
+  ApiHolocastCodeRtcRoute: ApiHolocastCodeRtcRoute,
 }
 
 const ApiHolocastCodeRouteWithChildren = ApiHolocastCodeRoute._addFileChildren(

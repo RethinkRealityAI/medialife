@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./control.css?v=1">
+  <link rel="stylesheet" href="./control.css?v=2">
 </head>
 <body>
   <header class="top">
@@ -43,13 +43,14 @@
   </main>
 
   <main id="app" class="app" hidden>
-    <p class="ro" id="readonly" hidden>This link can watch the room but not change it. Ask whoever made it for the control link (scan the QR floating in the hologram).</p>
+    <p class="ro" id="readonly" hidden>This link can watch the room but not change it. Ask whoever made it for the control link.</p>
 
     <!-- what viewers are sending back from the hologram -->
     <div class="react-strip" id="reacts" aria-live="polite" aria-label="Reactions from the hologram"></div>
 
     <nav class="tabs" role="tablist" aria-label="What to send">
       <button role="tab" id="t-notice" aria-controls="p-notice" aria-selected="true">Notice board</button>
+      <button role="tab" id="t-cam" aria-controls="p-cam" aria-selected="false"><span class="rec-dot" aria-hidden="true"></span>Go live</button>
       <button role="tab" id="t-draw" aria-controls="p-draw" aria-selected="false">Draw</button>
       <button role="tab" id="t-photo" aria-controls="p-photo" aria-selected="false">Photos</button>
       <button role="tab" id="t-live" aria-controls="p-live" aria-selected="false">Poll &amp; voice</button>
@@ -79,6 +80,26 @@
       </div>
       <h2 class="sub">On the board</h2>
       <ul class="notices" id="n-list"></ul>
+    </section>
+
+    <!-- live video -->
+    <section class="panel" id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden>
+      <div class="card cam">
+        <div class="cam-box" id="cam-box">
+          <video id="cam-v" playsinline muted autoplay></video>
+          <div class="cam-idle" id="cam-idle"><b>Stream your camera into the hologram</b><span>While you're live, the other screens fold away and one big holo screen shows your feed on every phone watching. Hold your phone sideways for a wide screen.</span></div>
+          <span class="cam-badge" id="cam-badge" hidden>LIVE</span>
+        </div>
+        <p class="cam-status" id="cam-status" aria-live="polite">Not live</p>
+        <div class="row wrap cam-acts">
+          <button type="button" class="primary big golive" id="cam-go">Go live</button>
+          <button type="button" class="secondary" id="cam-flip" hidden>Flip camera</button>
+          <label class="check"><input type="checkbox" id="cam-audio" checked> Include sound</label>
+        </div>
+        <p class="small" id="cam-other" hidden></p>
+        <p class="small" id="cam-none" hidden>This browser can't stream video. Try Chrome, Edge or Safari.</p>
+      </div>
+      <p class="hint">Your camera goes straight to each phone watching. If a phone can't connect directly, it gets a lighter picture-by-picture feed without sound. Keep this tab open while you're live.</p>
     </section>
 
     <!-- live sketch -->
@@ -189,6 +210,6 @@
   <footer class="foot"><img src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" height="28"></footer>
 
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
-  <script type="module" src="./control.js?v=1"></script>
+  <script type="module" src="./control.js?v=2"></script>
 </body>
 </html>

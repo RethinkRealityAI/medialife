@@ -1,6 +1,7 @@
 // MEDIALIFE Holocast control room: everything typed, drawn, dropped, asked or said here beams into the AR
 // hologram (/labs/holocast/) through the room API (src/lib/holocast/server.ts, client in ../room.js).
-import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from '../room.js?v=1';
+import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from '../room.js?v=2';
+import { LiveHost, canStream } from '../live.js?v=1';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -65,13 +66,14 @@ function onRoom(what) {
   if (all || what === 'theme') renderThemes();
   if (all || what === 'title') { if (document.activeElement !== $('h-title')) $('h-title').value = s.title; }
   if (all || what === 'poll') renderPoll();
+  if (all || what === 'live') renderLive();
   if (what === 'reactions') showReactions(arguments[2]);
   if (all) { renderStats(); $('watching').textContent = s.watching; }
   else renderStats();
 }
 
 // ---------------------------------------------------------------- tabs
-const TABS = ['notice', 'draw', 'photo', 'live', 'holo'];
+const TABS = ['notice', 'cam', 'draw', 'photo', 'live', 'holo'];
 function tab(name) {
   for (const t of TABS) { $('t-' + t).setAttribute('aria-selected', String(t === name)); $('p-' + t).hidden = t !== name; }
   try { sessionStorage.setItem('holocast-tab', name); } catch (e) { /* none */ }
@@ -306,9 +308,25 @@ async function say(text, final) {
   }
 }
 function micUi(on) { talking = on; $('v-mic').setAttribute('aria-pressed', String(on)); $('v-mic-t').textContent = on ? 'Stop talking' : 'Start talking'; }
-$('v-mic').onclick = () => {
+const MIC_ERR = {
+  'not-allowed': 'The microphone is blocked. Allow it for this site in your browser settings, then tap Start talking again.',
+  'service-not-allowed': 'Speech-to-text is turned off on this device. On iPhone: Settings > General > Keyboard > Enable Dictation.',
+  'audio-capture': 'No microphone found. Check one is plugged in and not used by another app.',
+  network: 'Speech-to-text needs an internet connection. Check you are online and try again.',
+  'language-not-supported': 'This browser can\'t do speech-to-text in your language yet.',
+};
+let micOk = false;
+// ask for the mic ourselves first: it brings up the browser's permission prompt reliably (speech recognition alone
+// often fails silently), and gives a clear message when it's blocked
+async function askMic() {
+  if (micOk || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+  try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach((t) => t.stop()); micOk = true; return true; }
+  catch (e) { toast(e && e.name === 'NotFoundError' ? MIC_ERR['audio-capture'] : MIC_ERR['not-allowed'], 6000); return false; }
+}
+$('v-mic').onclick = async () => {
   if (!room || !room.canWrite) return;
   if (talking) { try { rec.stop(); } catch (e) { /* stopped */ } micUi(false); return; }
+  $('v-mic').disabled = true; const ok = await askMic(); $('v-mic').disabled = false; if (!ok) return;
   rec = new SR(); rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || 'en-US';
   let finalText = '';
   rec.onresult = (e) => {
@@ -319,10 +337,98 @@ $('v-mic').onclick = () => {
     clearTimeout(sayT);
     if (isFinal) say(text, true); else sayT = setTimeout(() => say(text, false), 180);
   };
-  rec.onerror = (e) => { if (e.error === 'not-allowed') toast('Allow the microphone to speak it in'); micUi(false); };
+  rec.onerror = (e) => { if (e.error === 'no-speech' || e.error === 'aborted') return; toast(MIC_ERR[e.error] || 'The mic stopped (' + e.error + '). Tap Start talking to try again.', 6000); micUi(false); };
   rec.onend = () => { if (talking) { try { rec.start(); } catch (e) { micUi(false); } } };
   try { rec.start(); micUi(true); buzz(10); } catch (e) { toast('The mic didn\'t start'); }
 };
+
+// ---------------------------------------------------------------- go live (the camera, streamed into the hologram)
+let cam = null;   // { stream, host, id, facing }
+let camFacing = 'user';
+if (!canStream()) { $('cam-go').hidden = true; $('cam-none').hidden = false; }
+function camStatus(t, on) { $('cam-status').textContent = t; $('cam-status').classList.toggle('on', !!on); }
+async function getCam(facing, audio) {
+  return navigator.mediaDevices.getUserMedia({
+    video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } },
+    audio: audio ? { echoCancellation: true, noiseSuppression: true } : false,
+  });
+}
+function showCam(stream, facing) {
+  const v = $('cam-v'); v.srcObject = stream; v.play().catch(() => {});
+  $('cam-box').classList.add('on'); $('cam-box').classList.toggle('mirror', facing === 'user');
+}
+const camAspect = () => { const v = $('cam-v'); return v.videoWidth && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9; };
+async function goLive() {
+  if (!room || !room.canWrite || cam) return;
+  $('cam-go').disabled = true; camStatus('Starting your camera…');
+  let stream;
+  try { stream = await getCam(camFacing, $('cam-audio').checked); }
+  catch (e) {
+    $('cam-go').disabled = false;
+    camStatus('Not live');
+    toast(e && e.name === 'NotAllowedError' ? 'The camera is blocked. Allow it for this site in your browser settings, then try again.' : e && e.name === 'NotFoundError' ? 'No camera found on this device.' : 'The camera didn\'t start. Close other apps using it and try again.', 6000);
+    return;
+  }
+  showCam(stream, camFacing);
+  await new Promise((r) => { const v = $('cam-v'); if (v.videoWidth) r(); else { v.onloadedmetadata = () => r(); setTimeout(r, 1500); } });
+  const v = await room.send({ op: 'live', on: true, aspect: camAspect(), audio: $('cam-audio').checked, from: from() });
+  if (!v || !v.live) { stream.getTracks().forEach((t) => t.stop()); $('cam-box').classList.remove('on'); $('cam-go').disabled = false; camStatus('Couldn\'t go live. Try again.'); return; }
+  cam = { stream, id: v.live.id, host: new LiveHost(room, $('cam-v'), { onStatus: liveStatus }) };
+  room.liveId = cam.id;
+  cam.host.start(cam.id, stream);
+  $('cam-go').disabled = false; buzz([15, 40, 15]); toast('You\'re live in the hologram');
+  renderLive();
+}
+async function endLive(id) {
+  const mine = cam && (!id || id === cam.id);
+  if (mine) { cam.host.stop(); cam.stream.getTracks().forEach((t) => t.stop()); $('cam-v').srcObject = null; $('cam-box').classList.remove('on'); id = cam.id; cam = null; room.liveId = null; }
+  await room.send({ op: 'live', on: false, id });
+  renderLive();
+}
+function liveStatus({ peers, relay }) {
+  if (!cam) return;
+  const n = peers + relay;
+  camStatus(n ? `Live · ${n} ${n === 1 ? 'phone' : 'phones'} watching${relay ? ` (${relay} on the light feed)` : ''}` : 'Live · waiting for a phone to tune in', true);
+}
+function renderLive() {
+  const l = room && room.liveNow ? room.liveNow() : null;
+  const mineOn = !!cam;
+  $('cam-go').textContent = mineOn ? 'End live' : 'Go live';
+  $('cam-go').classList.toggle('stop', mineOn);
+  $('cam-flip').hidden = !mineOn;
+  $('cam-badge').hidden = !mineOn;
+  $('cam-audio').disabled = mineOn || !(room && room.canWrite);
+  $('t-cam').classList.toggle('is-live', mineOn);
+  const other = l && !mineOn;
+  $('cam-other').hidden = !other;
+  if (other) {
+    $('cam-other').innerHTML = '';
+    const t = document.createElement('span'); t.textContent = `${l.from} is live from another device. Going live here takes over. `;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'secondary warn'; b.textContent = 'End their feed'; b.onclick = () => endLive(l.id);
+    $('cam-other').append(t, b);
+  }
+  if (!mineOn) camStatus(other ? 'Someone else is live' : 'Not live');
+  // someone else took over from this device
+  if (mineOn && room.state && room.state.live && room.state.live.id !== cam.id) { toast('Someone else went live, so your feed stopped', 4000); endLive(cam.id); }
+  if (mineOn && room.state && !room.state.live) { cam.host.stop(); cam.stream.getTracks().forEach((t) => t.stop()); $('cam-v').srcObject = null; $('cam-box').classList.remove('on'); cam = null; room.liveId = null; renderLive(); toast('The live feed was ended'); }
+}
+$('cam-go').onclick = () => (cam ? endLive() : goLive());
+$('cam-flip').onclick = async () => {
+  if (!cam) return;
+  const next = camFacing === 'user' ? 'environment' : 'user';
+  try {
+    const s = await getCam(next, $('cam-audio').checked);
+    cam.stream.getTracks().forEach((t) => t.stop());
+    camFacing = next; cam.stream = s; cam.host.setStream(s); showCam(s, next);
+    setTimeout(() => room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: $('cam-audio').checked }, { quiet: true }), 900);
+  } catch (e) { toast('Couldn\'t switch cameras'); }
+};
+$('cam-v').addEventListener('resize', () => { if (cam) room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: $('cam-audio').checked }, { quiet: true }); });
+// closing the tab ends the feed for everyone straight away (otherwise it times out after 25 s)
+addEventListener('pagehide', () => {
+  if (!cam || !room) return;
+  try { navigator.sendBeacon(`/api/holocast/${room.code}`, new Blob([JSON.stringify({ op: 'live', on: false, id: cam.id, k: room.key, sid: room.sid })], { type: 'application/json' })); } catch (e) { /* gone */ }
+});
 
 // ---------------------------------------------------------------- hologram settings
 function renderThemes() {

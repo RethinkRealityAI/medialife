@@ -9,6 +9,8 @@
 //   captions      the control room's mic, typed across a ribbon as they speak
 //   reactions     tap one (right edge): it floats up out of the projector on every phone watching, and
 //                 shows up in the control room
+//   live          the control room's camera (Go live): every other screen folds away and one big holo screen
+//                 shows the feed (WebRTC, ./live.js), with scanlines, flicker and the theme tint
 //   ticker        a ring round the projector with real MEDIALIFE activity (scans across our experiences)
 //
 // Data: one room record on the server (src/lib/holocast/server.ts) polled by ./room.js. Things sent with a
@@ -19,7 +21,8 @@
 // responsive scale (camera starts CAM_H above the floor plane y = 0), floor = ray from the screen to y = 0.
 import * as THREE from 'three';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
-import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from './room.js?v=1';
+import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from './room.js?v=2';
+import { LiveViewer } from './live.js?v=1';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
@@ -124,7 +127,7 @@ function onRoom(what, r, prev) {
   if (what === 'error') return;
   if (!s) return;
   setRoomChip();
-  if (what === 'init') { applyTheme(s.theme, true); drawAll(); return; }
+  if (what === 'init') { applyTheme(s.theme, true); drawAll(); syncLive(); return; }
   if (what === 'theme') { applyTheme(s.theme); toast(`Colour: ${theme.name}`); return; }
   if (what === 'title') { drawTitle(); return; }
   if (what === 'pulse') { if (placed) pulseBeam(); return; }
@@ -158,6 +161,7 @@ function onRoom(what, r, prev) {
     return;
   }
   if (what === 'caption') { onCaption(); return; }
+  if (what === 'live') { syncLive(); return; }
 }
 
 // ---------------------------------------------------------------- scene
@@ -174,6 +178,7 @@ function applyTheme(name, quiet) {
   theme = THEMES[name] || THEMES.cyan; const c = col();
   for (const m of mats.theme) m.color.copy(c);
   for (const m of mats.themeLine) m.color.copy(c);
+  if (live.mat) live.mat.uniforms.uTint.value.copy(c);
   document.documentElement.style.setProperty('--h', theme.c);
   if (!quiet) { drawAll(); if (placed) pulseBeam(0.6); }
 }
@@ -538,8 +543,15 @@ function openPlace(key) {
   const m = pl.place.media && pl.place.media[0];
   closeVideo();
   if (m && m.kind === 'video') {
-    const v = document.createElement('video'); v.src = m.url; v.crossOrigin = 'anonymous'; v.playsInline = true; v.loop = true; v.muted = !sound.on; v.setAttribute('playsinline', '');
-    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    // iOS: crossOrigin / playsinline / muted must be set BEFORE src (else the load is non-CORS and the texture stays
+    // black, or it jumps to fullscreen), and the element has to be in the document for WebGL to get frames
+    const v = document.createElement('video');
+    v.crossOrigin = 'anonymous'; v.muted = true; v.defaultMuted = true; v.playsInline = true; v.loop = true; v.preload = 'auto';
+    v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('muted', '');
+    v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1';
+    document.body.appendChild(v);
+    v.src = m.url;
+    v.play().then(() => { if (sound.on) v.muted = false; }).catch(() => { v.muted = true; v.play().catch(() => {}); });
     const tex = new THREE.VideoTexture(v); tex.colorSpace = THREE.SRGBColorSpace;
     const ar = (m.width && m.height) ? m.width / m.height : 9 / 16, h = 0.4, w = h * ar;
     const g = new THREE.Group(); const q = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false })); q.renderOrder = 6; g.add(q);
@@ -549,7 +561,7 @@ function openPlace(key) {
   }
   drawGlobeLabel();
 }
-function closeVideo() { if (globe.video) { globe.video.pause(); globe.video.removeAttribute('src'); globe.video.load(); globe.video = null; } if (globe.vPanel) { globe.vPanel.g.parent.remove(globe.vPanel.g); globe.vPanel = null; } }
+function closeVideo() { if (globe.video) { globe.video.pause(); globe.video.removeAttribute('src'); globe.video.load(); globe.video.remove(); globe.video = null; } if (globe.vPanel) { globe.vPanel.g.parent.remove(globe.vPanel.g); globe.vPanel = null; } }
 function closePlace() { globe.open = null; closeVideo(); drawGlobeLabel(); }
 
 // ---------------------------------------------------------------- the ticker ring (real MEDIALIFE activity)
@@ -570,14 +582,167 @@ function buildTicker() {
   setInterval(loadFeed, 60000);
 }
 
+// ---------------------------------------------------------------- live: the control room's camera on one big holo screen
+const live = { on: false, k: 0, viewer: null, id: null, aspect: 16 / 9, video: null, tex: null, frameTex: null, state: 'idle', g: null, mat: null, hit: null, sound: false, glitch: 0 };
+const LIVE_Y = 1.22;
+const HOLO_VS = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
+const HOLO_FS = `
+uniform sampler2D map; uniform float uHas, uT, uOn, uGlitch; uniform vec3 uTint; varying vec2 vUv;
+float h1(float n){ return fract(sin(n) * 43758.5453); }
+float h2(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+void main(){
+  vec2 uv = vUv;
+  float row = floor(uv.y * 90.0);
+  float gl = uGlitch * step(0.72, h1(row + floor(uT * 24.0)));
+  uv.x += (h1(row * 1.7 + floor(uT * 30.0)) - 0.5) * 0.07 * gl;
+  float roll = step(0.975, fract(uv.y * 1.3 - uT * 0.32));      // a bright band rolling up the screen
+  uv.x += roll * 0.005;
+  vec3 c;
+  if (uHas > 0.5) {
+    float ab = 0.0022 + gl * 0.012;                              // a touch of colour split, more when glitching
+    c = vec3(texture2D(map, uv + vec2(ab, 0.0)).r, texture2D(map, uv).g, texture2D(map, uv - vec2(ab, 0.0)).b);
+  } else {
+    c = vec3(h2(floor(uv * vec2(160.0, 90.0)) + floor(uT * 20.0)) * 0.45);   // static while it tunes in
+  }
+  float l = dot(c, vec3(0.299, 0.587, 0.114));
+  vec3 holo = mix(c, uTint * (l * 1.3 + 0.06), 0.4);
+  float scan = 0.8 + 0.2 * step(0.5, fract(vUv.y * 150.0 + uT * 1.5));
+  float flick = 0.94 + 0.06 * step(0.55, h1(floor(uT * 15.0)));
+  vec3 col = holo * scan * flick + uTint * roll * 0.22;
+  float edge = clamp(step(vUv.x, 0.005) + step(0.995, vUv.x) + step(vUv.y, 0.009) + step(0.991, vUv.y), 0.0, 1.0);
+  col = mix(col, uTint, edge * 0.85);
+  gl_FragColor = vec4(col, (0.84 * scan + edge * 0.16) * uOn);
+  gl_FragColor = linearToOutputTexel(gl_FragColor);
+}`;
+function liveSize() { const a = live.aspect || 16 / 9; return a >= 1 ? { w: Math.min(1.3, 0.85 * a), h: Math.min(1.3, 0.85 * a) / a } : { w: 0.95 * a, h: 0.95 }; }
+function buildLive() {
+  const g = live.g = new THREE.Group(); g.position.set(0, LIVE_Y, -0.05); g.visible = false; rig.add(g);
+  const inner = live.inner = new THREE.Group(); g.add(inner);
+  live.mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: null }, uHas: { value: 0 }, uT: { value: 0 }, uOn: { value: 0 }, uGlitch: { value: 1 }, uTint: { value: col() } },
+    vertexShader: HOLO_VS, fragmentShader: HOLO_FS, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  live.screen = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), live.mat); live.screen.renderOrder = 6; inner.add(live.screen);
+  live.back = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x03080d, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide }));
+  live.back.position.z = -0.004; live.back.renderOrder = 5; inner.add(live.back);
+  const br = []; for (const [sx, sy] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const x = sx * 0.5, y = sy * 0.5, k = 0.08; br.push(x, y - sy * k, 0, x, y, 0, x, y, 0, x - sx * k, y, 0); }
+  const bgeo = new THREE.BufferGeometry(); bgeo.setAttribute('position', new THREE.Float32BufferAttribute(br, 3));
+  live.brackets = new THREE.LineSegments(bgeo, themeLine(1)); live.brackets.position.z = 0.004; inner.add(live.brackets);
+  live.hit = new THREE.Mesh(new THREE.PlaneGeometry(1.06, 1.1), new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })); live.hit.userData.live = true; inner.add(live.hit);
+  // the label above it
+  live.lc = document.createElement('canvas'); live.lc.width = 1200; live.lc.height = 100;
+  live.ltex = new THREE.CanvasTexture(live.lc); live.ltex.colorSpace = THREE.SRGBColorSpace;
+  live.label = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.085), new THREE.MeshBasicMaterial({ map: live.ltex, transparent: true, depthWrite: false })); live.label.renderOrder = 7; inner.add(live.label);
+  // the projection: light from the lens to the screen's corners (flat colour, additive)
+  live.cone = new THREE.Mesh(new THREE.BufferGeometry(), themeMat({ opacity: 0.05, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); live.cone.renderOrder = 2; rig.add(live.cone);
+  live.coneLines = new THREE.LineSegments(new THREE.BufferGeometry(), themeLine(0.35)); rig.add(live.coneLines);
+  live.cone.visible = live.coneLines.visible = false;
+  sizeLive();
+}
+function sizeLive() {
+  if (!live.g) return;
+  const { w, h } = liveSize(); live.w = w; live.h = h;
+  for (const m of [live.screen, live.back]) m.scale.set(w, h, 1);
+  live.brackets.scale.set(w, h, 1); live.hit.scale.set(w, h, 1);
+  live.label.scale.set(w, 1, 1); live.label.position.y = h / 2 + 0.06;
+  // the cone, in rig space (the group faces the viewer, so take its corners through its transform)
+  live.g.updateMatrix();
+  const lensP = V(0, EMIT_Y, 0), cs = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => V(x * w / 2, y * h / 2, 0).applyMatrix4(live.g.matrix));
+  const tri = []; for (let i = 0; i < 4; i++) { const a = cs[i], b = cs[(i + 1) % 4]; tri.push(lensP.x, lensP.y, lensP.z, a.x, a.y, a.z, b.x, b.y, b.z); }
+  live.cone.geometry.setAttribute('position', new THREE.Float32BufferAttribute(tri, 3));
+  const ln = []; for (const c of cs) ln.push(lensP.x, lensP.y, lensP.z, c.x, c.y, c.z);
+  live.coneLines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(ln, 3));
+  drawLiveLabel();
+}
+function drawLiveLabel() {
+  if (!live.lc) return;
+  const c = live.lc.getContext('2d'), W = live.lc.width, H = live.lc.height; c.clearRect(0, 0, W, H);
+  const l = room && room.liveNow();
+  c.font = `700 40px ${MONO}`; c.textBaseline = 'middle';
+  c.fillStyle = '#ff2fae'; c.beginPath(); c.arc(26, H / 2, 13, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#ffffff'; c.fillText('LIVE', 52, H / 2);
+  const st = live.state === 'live' ? (l && l.audio ? (live.sound ? 'SOUND ON · TAP TO MUTE' : 'TAP FOR SOUND') : '') : live.state === 'relay' ? 'LIGHT FEED · NO SOUND' : 'TUNING IN…';
+  c.fillStyle = theme.c; c.fillText(((l ? ' · ' + l.from.toUpperCase() : '')).slice(0, 30), 52 + c.measureText('LIVE').width, H / 2);
+  c.font = `500 34px ${MONO}`; c.textAlign = 'right'; c.globalAlpha = 0.85; c.fillText(st, W - 6, H / 2); c.globalAlpha = 1; c.textAlign = 'left';
+  live.ltex.needsUpdate = true;
+}
+// start / stop following the room's live feed
+function syncLive() {
+  if (!room) return;
+  const l = room.liveNow();
+  const want = l && placedOnce;
+  if (l && Math.abs(l.aspect - live.aspect) > 0.01) { live.aspect = l.aspect; sizeLive(); }
+  if (want && live.id !== l.id) {
+    stopLive(true);
+    live.id = l.id; live.on = true; live.glitch = 1;
+    unfocus(true); closePlace();
+    if (!live.viewer) live.viewer = new LiveViewer(room, { onStream: liveStream, onFrame: liveFrame, onState: (st) => { live.state = st; drawLiveLabel(); if (st === 'live' || st === 'relay') { live.glitch = 1; sound.arrive(); } } });
+    live.viewer.start(l.id);
+    if (placed) { sound.whoosh(); pulseBeam(0.7); toast(`${l.from} is live`); }
+    postEvent('custom', { what: 'holocast-live' });
+    drawLiveLabel();
+  } else if (!l && live.id) {
+    stopLive(true); if (placed) toast('The live feed ended');
+  }
+}
+function stopLive(quiet) {
+  if (live.viewer) live.viewer.stop(quiet);
+  if (live.video) { live.video.pause(); live.video.srcObject = null; live.video.remove(); live.video = null; }
+  if (live.tex) { live.tex.dispose(); live.tex = null; }
+  if (live.mat) { live.mat.uniforms.map.value = live.frameTex; live.mat.uniforms.uHas.value = 0; }
+  live.id = null; live.on = false; live.sound = false; live.state = 'idle';
+}
+function liveStream(stream) {
+  let v = live.video;
+  if (!v) {
+    v = live.video = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.autoplay = true; v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+    v.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;z-index:-1';
+    document.body.appendChild(v);
+  }
+  v.srcObject = stream; v.muted = !live.sound; v.play().catch(() => { v.muted = true; live.sound = false; v.play().catch(() => {}); });
+  if (!live.tex) { live.tex = new THREE.VideoTexture(v); live.tex.colorSpace = THREE.SRGBColorSpace; live.tex.minFilter = THREE.LinearFilter; live.tex.generateMipmaps = false; }
+  live.mat.uniforms.map.value = live.tex; live.mat.uniforms.uHas.value = 1;
+  v.onresize = () => { if (v.videoWidth && v.videoHeight) { const a = v.videoWidth / v.videoHeight; if (Math.abs(a - live.aspect) > 0.02) { live.aspect = a; sizeLive(); } } };
+}
+function liveFrame(img) {
+  if (live.video) return;
+  if (!live.frameTex) { live.frameTex = new THREE.Texture(img); live.frameTex.colorSpace = THREE.SRGBColorSpace; live.frameTex.minFilter = THREE.LinearFilter; live.frameTex.generateMipmaps = false; }
+  live.frameTex.image = img; live.frameTex.needsUpdate = true;
+  live.mat.uniforms.map.value = live.frameTex; live.mat.uniforms.uHas.value = 1;
+  const a = img.naturalWidth / img.naturalHeight; if (a && Math.abs(a - live.aspect) > 0.02) { live.aspect = a; sizeLive(); }
+}
+function liveTap() {
+  const l = room && room.liveNow();
+  if (!live.video || !l || !l.audio) { live.glitch = 0.6; sound.pop(); return; }
+  live.sound = !live.sound; live.video.muted = !live.sound; if (live.sound) live.video.play().catch(() => {});
+  buzz(10); drawLiveLabel();
+}
+let liveCheckT = 0;
+function tickLive(dt) {
+  if (!live.g) return;
+  liveCheckT += dt; if (liveCheckT > 1) { liveCheckT = 0; if (live.id || (room && room.state && room.state.live)) syncLive(); }
+  const want = live.on && booted ? 1 : 0;
+  live.k += (want - live.k) * Math.min(1, dt * (want ? 3 : 7));
+  if (live.k < 0.01 && !want) { live.k = 0; live.g.visible = live.cone.visible = live.coneLines.visible = false; return; }
+  live.g.visible = true; live.cone.visible = live.coneLines.visible = live.k > 0.2;
+  live.inner.scale.set(Math.max(0.001, easeOut(live.k * 1.2)), Math.max(0.001, backOut(live.k)), 1);
+  live.glitch = Math.max(0, live.glitch - dt * 0.9);
+  const u = live.mat.uniforms; u.uT.value = tAll; u.uOn.value = live.k; u.uGlitch.value = Math.min(1, live.glitch + (live.state === 'connecting' ? 0.4 : 0) + (Math.random() < 0.004 ? 0.8 : 0));
+  live.cone.material.opacity = 0.04 + Math.sin(tAll * 3) * 0.01 + pulseK * 0.08;
+  live.g.position.y = LIVE_Y + Math.sin(tAll * 0.9) * 0.006;
+}
+
 // ---------------------------------------------------------------- the rig
 function buildRig() {
   proj = buildProjector(false); rig.add(proj);
   buildBeam();
   for (const n of Object.keys(LAYOUT)) makePanel(n);
   buildGlobe();
+  buildLive();
   // the screens face a point in front of the projector (where the viewer stood)
   for (const P of Object.values(PANELS)) { P.g.lookAt(V(P.L.p.x * 0.25, P.L.p.y - 0.15, 2.2)); P.home.q.copy(P.g.quaternion); }
+  live.g.lookAt(V(0, LIVE_Y - 0.2, 2.2)); sizeLive();
   makeFx();
 }
 function drawTitle() { /* the title shows in the control room and the room sheet */ }
@@ -668,7 +833,7 @@ function buildReactBar() {
 }
 
 // ---------------------------------------------------------------- placing on the floor
-let mode = 'placing', placed = false, booted = false, bootT = 0;
+let mode = 'placing', placed = false, placedOnce = false, booted = false, bootT = 0;
 let scaleK = clamp(+store.get('scale', SCALE.def) || SCALE.def, SCALE.min, SCALE.max);
 const ray = new THREE.Raycaster(), floorPlane = new THREE.Plane(V(0, 1, 0), 0), floorHit = V(), _ndc = new THREE.Vector2();
 let floorOk = false, testFloor = null;
@@ -682,7 +847,7 @@ function faceCamYaw(at) { const d = V().subVectors(camera.position, at); return 
 function place() {
   if (!floorOk) return;
   rig.position.copy(floorHit); rig.rotation.set(0, faceCamYaw(floorHit), 0); rig.scale.setScalar(scaleK);
-  placed = true; mode = 'live'; ghost.visible = false; rig.visible = true;
+  placed = true; placedOnce = true; mode = 'live'; ghost.visible = false; rig.visible = true;
   store.set('scale', scaleK.toFixed(3));
   boot();
   syncUi();
@@ -760,7 +925,7 @@ function frame(dt) {
     if (ticker) ticker.material.map.offset.x = (ticker.material.map.offset.x + dt * 0.02) % 1;
     // screens: unfold, flicker on arrival, gentle bob
     for (const P of Object.values(PANELS)) {
-      const want = P.show && (booted || P.bootIn) ? 1 : 0;
+      const want = P.show && !live.on && (booted || P.bootIn) ? 1 : 0;
       P.on += (want - P.on) * Math.min(1, dt * (want ? 5 : 8));
       if (P.on < 0.01 && !want) { P.g.visible = false; P.on = 0; } else if (want) P.g.visible = true;
       const sy = backOut(P.on); P.flick = Math.max(0, P.flick - dt * 2.2);
@@ -779,6 +944,7 @@ function frame(dt) {
       }
       updateRay(P);
     }
+    tickLive(dt);
     // the globe spins; drag adds spin, a tap brings a place round
     if (globe.spin) {
       if (globe.spinTarget != null && !drag) { const d = Math.atan2(Math.sin(globe.spinTarget - globe.spin.rotation.y), Math.cos(globe.spinTarget - globe.spin.rotation.y)); globe.spin.rotation.y += d * Math.min(1, dt * 3); if (Math.abs(d) < 0.01) globe.spinTarget = null; }
@@ -853,6 +1019,7 @@ function pick(x, y) {
   for (const b of poll.bars) if (PANELS.poll.g.visible) objs.push(b.hit);
   for (const p of globe.pins) if (PANELS.globe.g.visible) objs.push(p.hit);
   for (const P of Object.values(PANELS)) if (P.g.visible && P.on > 0.5) objs.push(P.hit);
+  if (live.g && live.g.visible && live.k > 0.5) objs.push(live.hit);
   const h = hitRay.intersectObjects(objs, false);
   return h[0] ? h[0].object.userData : null;
 }
@@ -877,6 +1044,7 @@ const endPtr = (e) => {
   if (moved > 14 || !quick || e.type === 'pointercancel') return;
   const u = pick(e.clientX, e.clientY);
   if (!u) { if (focused) unfocus(); return; }
+  if (u.live) return liveTap();
   if (u.vote != null) return vote(u.vote);
   if (u.place) return openPlace(u.place);
   if (u.panel === 'photo' && room && room.state && room.state.photos.length > 1 && focused === PANELS.photo) { photoIdx++; drawPhoto(); sound.pop(); return; }
@@ -1118,6 +1286,6 @@ if (params.has('test')) window.__hc = {
   get mode() { return mode; }, get placed() { return placed; }, get booted() { return booted; }, get room() { return room; }, get tracking() { return lastTrack; },
   PANELS, globe, poll, camera: () => camera, rig,
   floorAt(dz = 1.8) { const f = V(); camera.getWorldDirection(f); f.y = 0; f.normalize(); testFloor = camera.position.clone().addScaledVector(f, dz).setY(0); },
-  place: () => { updateFloor(); place(); }, move: moveRig, focus: (n) => focusPanel(PANELS[n]), unfocus: () => unfocus(), vote, react, openPlace, pulseBeam,
+  place: () => { updateFloor(); place(); }, move: moveRig, focus: (n) => focusPanel(PANELS[n]), unfocus: () => unfocus(), vote, react, openPlace, pulseBeam, live: () => ({ on: live.on, state: live.state, id: live.id, aspect: live.aspect, k: live.k }),
   setScale(s) { scaleK = s; },
 };

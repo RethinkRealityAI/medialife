@@ -14,6 +14,7 @@ answer: how do we transmit data live from different sources straight into an AR 
 | Live poll | question + 2-4 answers from the control room | 3D bars grow with the votes; tap a bar to vote (one per phone, can change) |
 | Captions | the control room's mic (the browser's own speech-to-text) | types across a ribbon as they speak |
 | Ticker ring | recent MEDIALIFE platform events (same feed) | runs round the projector |
+| Live video | the control room's camera (Go live tab), with sound | every other screen folds away; one big rectangular holo screen (scanlines, flicker, theme tint, light cone from the lens) shows the feed; tap it for sound |
 | Reactions | tapped on the right edge of any phone watching | float up out of the projector everywhere + show in the control room |
 
 Delivery: every update rides up the beam as a packet of light and the screen flickers in. Swipe a notice or photo
@@ -44,6 +45,22 @@ the live site yet). Keep the stored record as the source of truth.
 Limits: notices 160 chars (24 kept, pinned one never dropped), 500 strokes / 40k points, 6 photos at <= 900 KB,
 polls 2-4 answers (5000 voters), captions 220 chars.
 
+## Live video
+`live.js`. Go live in the control room starts the camera (and mic), sets `room.live` (op `live`), and the control
+room becomes a WebRTC hub: one peer connection per phone watching. Signalling is `/api/holocast/<CODE>/rtc`
+(polled, no trickle ICE: join -> offer -> answer, ~5-9 s to tune in). The feed stays live while the control room's
+presence ping carries its id (beat); phones drop it after 25 s without one, and closing the tab ends it at once
+(sendBeacon). Phones that can't connect directly (strict mobile NAT, no TURN) ask for the relay: the control room
+posts a 480 px JPEG ~2x a second to `/api/holocast/<CODE>/frame` and they show that, without sound.
+**TURN:** set `HOLOCAST_ICE_SERVERS` (JSON RTCIceServer[]) or Cloudflare TURN keys `HOLOCAST_CF_TURN_KEY_ID` +
+`HOLOCAST_CF_TURN_TOKEN` on the site and every phone gets the real stream. `?relay` on the AR page forces the relay
+(testing).
+
+## Mic and camera permissions
+The site's `Permissions-Policy` (netlify.toml + src/server.ts, keep in sync) must allow `microphone=(self)` or the
+browser never shows the mic prompt (it was `microphone=()` until 2026-11-18). The control room asks with
+getUserMedia before starting speech-to-text so the prompt shows reliably, and explains each error.
+
 ## World tracking
 `@8thwall/engine-binary@1.0.0` (Niantic Spatial licence, unmodified from jsDelivr, credited under Options >
 Licences), responsive scale, floor = ray to y = 0 (Bobo Hoops / Spray Bobo Street set-up). Pinch while placing
@@ -53,7 +70,7 @@ camera at a distance where it fills ~80% of the view (world space, not screen-lo
 
 ## Switches
 `?room=CODE`, `?test` (`window.__hc`: `floorAt(dz)`, `place()`, `move()`, `focus(name)`, `vote(i)`, `react(e)`,
-`openPlace(key)`, `pulseBeam()`), `?diag`, `?nolog`, `?desktop`, `?dpr=2`, `?verbose`. Test logs go to
+`openPlace(key)`, `pulseBeam()`, `live()`), `?diag`, `?nolog`, `?desktop`, `?dpr=2`, `?verbose`. Test logs go to
 `/api/ar/kc-diag` (`page: 'holocast'`) on previews.
 
 ## Tested

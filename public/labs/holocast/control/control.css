@@ -145,3 +145,20 @@ label { font-size: 14px; color: var(--mute); }
 .mic[aria-pressed="true"] .dot { animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .2; } }
 .caption-prev { margin: 0; min-height: 1.5em; color: var(--holo); font-size: 18px; }
+
+/* go live */
+.rec-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--mag); margin-right: 7px; vertical-align: 1px; }
+.cam-box { position: relative; aspect-ratio: 16 / 9; background: #000; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; place-items: center; }
+.cam-box video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: none; }
+.cam-box.on video { display: block; }
+.cam-box.mirror video { transform: scaleX(-1); }
+.cam-idle { display: flex; flex-direction: column; gap: 6px; padding: 18px; text-align: center; color: var(--mute); max-width: 440px; font-size: 14px; }
+.cam-idle b { color: var(--ink); font-size: 16px; }
+.cam-box.on .cam-idle { display: none; }
+.cam-badge { position: absolute; top: 10px; left: 10px; background: var(--mag); color: #fff; font: 700 12px/1 'JetBrains Mono', monospace; letter-spacing: .08em; padding: 6px 9px; border-radius: 6px; }
+.cam-status { margin: 0; font-weight: 700; }
+.cam-status.on { color: var(--mag); }
+.cam-acts { align-items: center; }
+.golive { background: var(--mag); }
+.golive:hover { background: #ff4dbb; }
+.golive.stop { background: #2a3443; color: var(--ink); }

@@ -101,6 +101,15 @@ export interface Caption {
   final: boolean;
   from: string;
 }
+/** The control room's camera, live in the hologram (WebRTC, with a slow JPEG relay as the fallback). */
+export interface Live {
+  id: string;
+  from: string;
+  at: number;
+  beat: number; // the streaming control room's last heartbeat (its presence ping)
+  aspect: number; // width / height of the feed
+  audio: boolean;
+}
 export interface Reaction {
   e: string;
   at: number;
@@ -121,6 +130,7 @@ interface RoomRecord {
   reactions: Reaction[];
   poll: Poll | null;
   caption: Caption | null;
+  live?: Live | null;
   viewers: Record<string, number>; // session id -> last seen (ms)
   controllers: Record<string, number>;
   stats: { notices: number; strokes: number; photos: number; reactions: number };
@@ -205,6 +215,7 @@ function view(r: RoomRecord, s: number | null) {
     reactions: r.reactions.slice(-12),
     poll: pollView(r.poll),
     caption: r.caption ?? null,
+    live: r.live ?? null,
     watching: live(r.viewers, now),
     controlling: live(r.controllers, now),
     stats: r.stats,
@@ -248,7 +259,13 @@ export async function getRoom(req: Request, code: string): Promise<Response> {
   if (!r) return json({ error: "no such room" }, 404);
   const rev = Number(url.searchParams.get("r"));
   if (Number.isFinite(rev) && rev === r.rev) {
-    return json({ same: true, rev: r.rev, watching: live(r.viewers, Date.now()), now: Date.now() });
+    return json({
+      same: true,
+      rev: r.rev,
+      watching: live(r.viewers, Date.now()),
+      lb: r.live?.beat ?? 0,
+      now: Date.now(),
+    });
   }
   const s = url.searchParams.has("s") ? Number(url.searchParams.get("s")) : null;
   return json(view(r, Number.isFinite(s as number) ? s : null));
@@ -270,6 +287,7 @@ const OPEN_OPS = new Set(["react", "ping", "vote"]);
  *   poll   { q, options: [2..4] } / endpoll    ask a live poll / close it (key)
  *   vote   { option, sid }                     a viewer's vote, one per session, can change (no key)
  *   say    { text, final, from }               live captions from the control room's mic (key)
+ *   live   { on, id?, aspect, audio, from }    start / update / stop the control room's camera feed (key)
  */
 export async function postRoom(req: Request, code: string): Promise<Response> {
   if (!CODE_RE.test(code)) return json({ error: "bad code" }, 400);
@@ -283,11 +301,10 @@ export async function postRoom(req: Request, code: string): Promise<Response> {
   const st = await store(req);
   const cur = await load(st, code);
   if (!cur) return json({ error: "no such room" }, 404);
-  if (!OPEN_OPS.has(op)) {
-    const k = typeof b.k === "string" ? b.k : (req.headers.get("x-holo-key") ?? "");
-    if (!k || !sameHash(hash(k), cur.keyHash))
-      return json({ error: "this link can't change the room" }, 403);
-  }
+  const k = typeof b.k === "string" ? b.k : (req.headers.get("x-holo-key") ?? "");
+  const keyOk = !!k && sameHash(hash(k), cur.keyHash);
+  if (!OPEN_OPS.has(op) && !keyOk) return json({ error: "this link can't change the room" }, 403);
+  b.keyOk = keyOk;
   let err: string | null = null;
   const next = await st.update<RoomRecord>(roomKey(code), (r) => {
     if (!r) return cur; // gone between reads: write it back as it was
@@ -306,6 +323,8 @@ function apply(r: RoomRecord, op: string, b: Body): string | null {
     case "ping": {
       if (!sid) return "sid needed";
       (b.role === "control" ? r.controllers : r.viewers)[sid] = now;
+      // the streaming control room's ping keeps its live feed alive (viewers drop a feed with no beat for 25 s)
+      if (b.keyOk === true && r.live && b.live === r.live.id) r.live.beat = now;
       prune(r.viewers, now);
       prune(r.controllers, now);
       return null; // presence does not bump rev (viewers would refetch for nothing)
@@ -466,6 +485,27 @@ function apply(r: RoomRecord, op: string, b: Body): string | null {
       };
       break;
     }
+    case "live": {
+      if (!b.on) {
+        if (!b.id || !r.live || b.id === r.live.id) r.live = null;
+        break;
+      }
+      const aspect = Math.max(0.3, Math.min(3, Number(b.aspect) || 16 / 9));
+      if (r.live && b.id === r.live.id) {
+        r.live.aspect = aspect;
+        r.live.beat = now;
+        break;
+      }
+      r.live = {
+        id: newId(),
+        from: clean(b.from, LIMITS.fromChars) || "Control room",
+        at: now,
+        beat: now,
+        aspect,
+        audio: !!b.audio,
+      };
+      break;
+    }
     default:
       return "unknown op";
   }
@@ -527,4 +567,164 @@ export async function getPhoto(req: Request, code: string, id: string): Promise<
   return new Response(bytes, {
     headers: { "content-type": p.type, "cache-control": "public, max-age=31536000, immutable" },
   });
+}
+
+/* ── live video: WebRTC signalling + a JPEG relay for when peers can't connect ─────────────────────────────
+ *
+ * The control room's camera goes to each phone watching over its own WebRTC peer connection (the control room
+ * is the hub; fine for a room of a few phones). Signalling rides this store, polled, without trickle ICE:
+ *   viewer -> host  join            "I'm watching, send me an offer"
+ *   host -> viewer  offer {sdp}     (candidates gathered into the SDP)
+ *   viewer -> host  answer {sdp}
+ *   viewer -> host  relay           "no direct path (strict NAT, no TURN): send frames instead"
+ *   viewer -> host  leave / host -> viewer bye
+ * Messages live 45 s in rtc/<CODE>. The relay is one JPEG at frames/<CODE>, overwritten ~2x a second, only
+ * while someone asked for it in the last 15 s.
+ *
+ * ICE servers: Google STUN, plus TURN when HOLOCAST_ICE_SERVERS (a JSON RTCIceServer[]) or Cloudflare TURN
+ * keys (HOLOCAST_CF_TURN_KEY_ID + HOLOCAST_CF_TURN_TOKEN) are set on the site. With TURN nobody needs the relay.
+ */
+export interface RtcMsg {
+  n: number;
+  to: string; // "host" or a viewer session id
+  from: string;
+  kind: "join" | "answer" | "relay" | "leave" | "offer" | "bye";
+  live: string; // the live id it belongs to
+  sdp?: string;
+  at: number;
+}
+interface RtcBox {
+  seq: number;
+  msgs: RtcMsg[];
+}
+const rtcKey = (code: string) => `rtc/${code}`;
+const VIEWER_KINDS = new Set(["join", "answer", "relay", "leave"]);
+const HOST_KINDS = new Set(["offer", "bye"]);
+const SID_RE = /^[A-Za-z0-9]{4,40}$/;
+
+async function iceServers(): Promise<unknown[]> {
+  const out: unknown[] = [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+  ];
+  const env = (k: string) => (typeof process !== "undefined" ? process.env[k] : undefined);
+  const raw = env("HOLOCAST_ICE_SERVERS");
+  if (raw) {
+    try {
+      const extra = JSON.parse(raw);
+      if (Array.isArray(extra)) out.push(...extra);
+    } catch {
+      /* ignore a bad value */
+    }
+  }
+  const id = env("HOLOCAST_CF_TURN_KEY_ID");
+  const tok = env("HOLOCAST_CF_TURN_TOKEN");
+  if (id && tok) {
+    try {
+      const r = await fetch(
+        `https://rtc.live.cloudflare.com/v1/turn/keys/${id}/credentials/generate-ice-servers`,
+        {
+          method: "POST",
+          headers: { authorization: `Bearer ${tok}`, "content-type": "application/json" },
+          body: JSON.stringify({ ttl: 6 * 3600 }),
+        },
+      );
+      const j = (await r.json()) as { iceServers?: unknown };
+      if (Array.isArray(j.iceServers)) out.push(...j.iceServers);
+      else if (j.iceServers) out.push(j.iceServers);
+    } catch {
+      /* STUN only */
+    }
+  }
+  return out;
+}
+
+/** GET /api/holocast/<CODE>/rtc?for=<sid|host>&after=<n>[&ice=1]: messages for me (host needs the key). */
+export async function getRtc(req: Request, code: string): Promise<Response> {
+  if (!CODE_RE.test(code)) return json({ error: "bad code" }, 400);
+  const url = new URL(req.url);
+  const who = url.searchParams.get("for") ?? "";
+  const after = Number(url.searchParams.get("after")) || 0;
+  const st = await store(req);
+  if (who === "host") {
+    const r = await load(st, code);
+    if (!r) return json({ error: "no such room" }, 404);
+    const k = req.headers.get("x-holo-key") ?? "";
+    if (!k || !sameHash(hash(k), r.keyHash)) return json({ error: "control link only" }, 403);
+  } else if (!SID_RE.test(who)) return json({ error: "bad id" }, 400);
+  const box = await st.getJSON<RtcBox>(rtcKey(code));
+  const now = Date.now();
+  const msgs = (box?.msgs ?? []).filter((m) => m.to === who && m.n > after && now - m.at < 45000);
+  const out: Record<string, unknown> = { msgs, seq: box?.seq ?? 0, now };
+  if (url.searchParams.get("ice") === "1") out.ice = await iceServers();
+  return json(out);
+}
+
+/** POST /api/holocast/<CODE>/rtc { kind, to?, from?, live, sdp? } (offer / bye need x-holo-key). */
+export async function postRtc(req: Request, code: string): Promise<Response> {
+  if (!CODE_RE.test(code)) return json({ error: "bad code" }, 400);
+  let b: Body;
+  try {
+    b = (await req.json()) as Body;
+  } catch {
+    return json({ error: "bad json" }, 400);
+  }
+  const kind = String(b.kind ?? "") as RtcMsg["kind"];
+  const st = await store(req);
+  const r = await load(st, code);
+  if (!r) return json({ error: "no such room" }, 404);
+  if (!r.live || b.live !== r.live.id) return json({ error: "not live" }, 409);
+  let to: string;
+  let from: string;
+  if (HOST_KINDS.has(kind)) {
+    const k = req.headers.get("x-holo-key") ?? "";
+    if (!k || !sameHash(hash(k), r.keyHash)) return json({ error: "control link only" }, 403);
+    to = String(b.to ?? "");
+    from = "host";
+    if (!SID_RE.test(to)) return json({ error: "bad id" }, 400);
+  } else if (VIEWER_KINDS.has(kind)) {
+    to = "host";
+    from = String(b.from ?? "");
+    if (!SID_RE.test(from)) return json({ error: "bad id" }, 400);
+  } else return json({ error: "unknown kind" }, 400);
+  const sdp = typeof b.sdp === "string" ? b.sdp : undefined;
+  if ((kind === "offer" || kind === "answer") && (!sdp || sdp.length > 20000))
+    return json({ error: "bad sdp" }, 400);
+  const now = Date.now();
+  const live = r.live.id;
+  const box = await st.update<RtcBox>(rtcKey(code), (cur) => {
+    const x: RtcBox = cur ?? { seq: 0, msgs: [] };
+    x.msgs = x.msgs.filter((m) => now - m.at < 45000 && m.live === live);
+    // one pending message of a kind per pair is enough (a re-join replaces the old one)
+    x.msgs = x.msgs.filter((m) => !(m.to === to && m.from === from && m.kind === kind));
+    x.seq++;
+    x.msgs.push({ n: x.seq, to, from, kind, live, sdp, at: now });
+    if (x.msgs.length > 120) x.msgs.splice(0, x.msgs.length - 120);
+    return x;
+  });
+  return json({ ok: true, n: box.seq });
+}
+
+const FRAME_TYPES = new Set(["image/jpeg", "image/webp"]);
+/** POST /api/holocast/<CODE>/frame (raw JPEG, x-holo-key): the relay frame. GET: the latest one. */
+export async function postFrame(req: Request, code: string): Promise<Response> {
+  if (!CODE_RE.test(code)) return json({ error: "bad code" }, 400);
+  const type = (req.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (!FRAME_TYPES.has(type)) return json({ error: "JPEG or WebP only" }, 415);
+  const st = await store(req);
+  const r = await load(st, code);
+  if (!r) return json({ error: "no such room" }, 404);
+  const k = req.headers.get("x-holo-key") ?? "";
+  if (!k || !sameHash(hash(k), r.keyHash)) return json({ error: "control link only" }, 403);
+  if (!r.live) return json({ error: "not live" }, 409);
+  const buf = await req.arrayBuffer();
+  if (!buf.byteLength || buf.byteLength > 200 * 1024) return json({ error: "bad size" }, 413);
+  await st.setBytes(`frames/${code}`, buf, { type, at: String(Date.now()), live: r.live.id });
+  return json({ ok: true });
+}
+export async function getFrame(req: Request, code: string): Promise<Response> {
+  if (!CODE_RE.test(code)) return new Response("not found", { status: 404 });
+  const st = await store(req);
+  const bytes = await st.getBytes(`frames/${code}`);
+  if (!bytes) return new Response("not found", { status: 404, headers: noStore });
+  return new Response(bytes, { headers: { "content-type": "image/jpeg", ...noStore } });
 }
