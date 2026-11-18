@@ -1,0 +1,19 @@
+{
+ "name": "redbunny1",
+ "type": "PLANAR",
+ "properties": {
+  "top": 111,
+  "left": 27,
+  "width": 1330,
+  "height": 1773,
+  "isRotated": false,
+  "originalWidth": 1383,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/demo-reel/image-targets/redbunny1_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "redbunny1_luminance.png",
+  "originalImage": "redbunny1.jpg"
+ }
+}

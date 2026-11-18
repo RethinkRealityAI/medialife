@@ -1,0 +1,19 @@
+{
+ "name": "Sakamoto",
+ "type": "PLANAR",
+ "properties": {
+  "top": 21,
+  "left": 0,
+  "width": 1136,
+  "height": 1515,
+  "isRotated": false,
+  "originalWidth": 1136,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/sakamoto-anime-expo/image-targets/sakamoto_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sakamoto_luminance.png",
+  "originalImage": "sakamoto.jpg"
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "Money-Trigger",
+ "type": "PLANAR",
+ "properties": {
+  "top": 124,
+  "left": 0,
+  "width": 1000,
+  "height": 1333,
+  "isRotated": false,
+  "originalWidth": 1000,
+  "originalHeight": 1579
+ },
+ "imagePath": "/labs/x/bunny-girls/image-targets/money-trigger_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "money-trigger_luminance.png",
+  "originalImage": "money-trigger.jpg"
+ }
+}

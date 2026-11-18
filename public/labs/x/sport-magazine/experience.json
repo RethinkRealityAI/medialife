@@ -1,0 +1,41 @@
+{
+ "slug": "sport-magazine",
+ "title": "SPORT Magazine",
+ "client": "Sport Magazine",
+ "wordmark": "SPORT",
+ "accent": "#d7262e",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the cover and Pete Rose slides into home.",
+ "hint": "Point your camera at the SPORT cover",
+ "hero": "hero.jpg",
+ "heroAspect": "986/1000",
+ "targets": [
+  {
+   "name": "Sticker Graphic",
+   "label": "SPORT cover",
+   "what": "Magazine cover",
+   "json": "image-targets/sticker-graphic.json",
+   "picture": "image-targets/sticker-graphic.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/pr-animation1-b40ec9df.mp4",
+     "scale": [
+      1.05,
+      1.05
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Subscribe now",
+   "url": "https://sportmagazine.beehiiv.com/subscribe"
+  }
+ ]
+}

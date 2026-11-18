@@ -1,0 +1,19 @@
+{
+ "name": "cat-girl",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/bunny-girls/image-targets/cat-girl_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "cat-girl_luminance.png",
+  "originalImage": "cat-girl.jpg"
+ }
+}

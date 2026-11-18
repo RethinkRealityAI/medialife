@@ -1,0 +1,19 @@
+{
+ "name": "leftpocket",
+ "type": "PLANAR",
+ "properties": {
+  "top": 275,
+  "left": 139,
+  "width": 1255,
+  "height": 1673,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/ces-2026/image-targets/leftpocket_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "leftpocket_luminance.jpeg",
+  "originalImage": "leftpocket.jpg"
+ }
+}

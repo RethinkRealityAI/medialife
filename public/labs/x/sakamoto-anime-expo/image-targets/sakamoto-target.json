@@ -1,0 +1,19 @@
+{
+ "name": "Sakamoto_target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 35,
+  "width": 497,
+  "height": 662,
+  "isRotated": false,
+  "originalWidth": 567,
+  "originalHeight": 662
+ },
+ "imagePath": "/labs/x/sakamoto-anime-expo/image-targets/sakamoto-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sakamoto-target_luminance.jpeg",
+  "originalImage": "sakamoto-target.jpg"
+ }
+}

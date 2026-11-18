@@ -1,0 +1,29 @@
+{
+ "slug": "violence-family",
+ "title": "Violence Family",
+ "client": "MEDIALIFE",
+ "wordmark": "MEDIALIFE",
+ "accent": "#f6c344",
+ "onAccent": "#111111",
+ "lead": "Point your phone at the Violence Family sticker and the rider tears off it.",
+ "hint": "Point your camera at the sticker",
+ "targets": [
+  {
+   "name": "violence-family",
+   "label": "Violence Family",
+   "what": "Sticker",
+   "json": "image-targets/violence-family.json",
+   "picture": "image-targets/violence-family.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/violence-family1-59c1843a.mp4",
+     "width": 0.9,
+     "height": 1.1,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": []
+}

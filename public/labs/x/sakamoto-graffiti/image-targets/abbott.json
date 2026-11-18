@@ -1,0 +1,19 @@
+{
+ "name": "abbott",
+ "type": "PLANAR",
+ "properties": {
+  "top": 553,
+  "left": 252,
+  "width": 992,
+  "height": 1323,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/sakamoto-graffiti/image-targets/abbott_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "abbott_luminance.jpeg",
+  "originalImage": "abbott.jpg"
+ }
+}
