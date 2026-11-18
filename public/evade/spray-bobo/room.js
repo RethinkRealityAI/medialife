@@ -1,6 +1,4 @@
-// Spray Bobo Street: your Spray Bobo painting, out in the room. World tracking (SLAM) from 8th Wall's engine
-// binary; no image target needed.
-//
+// Spray Bobo's room modes: your painting, out in the room (world tracking on the 8th Wall engine binary).
 //   Hang      your painting (or a sticker) goes up as a poster on a wall, or stands up as a cut-out on the floor.
 //   Stamp     tap any surface to stamp your art on it, ink and all.
 //   Graffiti  spray straight onto walls and floors: the footprint grows with distance, wet paint drips down.
@@ -12,22 +10,17 @@
 // plane y = 0 (responsive scale, camera starts at CAM_H). A plain wall with too few points still gets a depth
 // (the engine fills it in from nearby detail), and then it is taken as a wall facing the phone.
 //
-// Paintings come from the Spray Bobo page: each time a painting is saved it writes a die-cut picture of it
-// (decals included) to IndexedDB 'spray-bobo' / 'kv' under 'street:<piece>'.
-//
-// Placed things never sit at the camera: "Move" (bottom right, always on screen) picks up the last one, paint,
-// size and turn included, and puts it down somewhere else.
+// Spray Bobo (main.js) owns the camera session, the shutter, the options sheet and the sound context; this
+// module owns the room HUD (#room, ids r-*) and everything placed in the room. Things placed stay in the room
+// when you go back to the merch, and are still there when you come back.
 import * as THREE from 'three';
-import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 
-window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
-const $ = (id) => document.getElementById(id);
+export const CAM_H = 1.3;                     // camera start height: ~1 unit = 1 m on a floor (responsive scale)
+
+export function createRoom(api) {
+const $ = (id) => document.getElementById('r-' + id);
+const root = document.getElementById('room');
 const params = new URLSearchParams(location.search);
-const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
-// a phone by device, not by touch: touchscreen laptops pass a touch check and then the engine fails with
-// "No valid session manager" (found on Sixers Spray, 2026-11-17)
-const PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const HERE = '/evade/spray-bobo/';
 const clamp = THREE.MathUtils.clamp;
 const easeOut = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
@@ -36,7 +29,6 @@ const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v)
 const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* no haptics */ } };
 const store = { get(k, d) { try { const v = localStorage.getItem('sbs-' + k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('sbs-' + k, v); } catch (e) { /* none */ } } };
 
-const CAM_H = 1.3;                            // camera start height: ~1 unit = 1 m on a floor (responsive scale)
 const CAPS = [                                // the colours ("caps"), the same as Spray Bobo
   { c: '#f6c344', n: 'EVADE yellow' }, { c: '#3f9be6', n: 'Bobo blue' }, { c: '#8cc8f8', n: 'Sky' }, { c: '#e85bd8', n: 'Magenta' },
   { c: '#ff3b4e', n: 'Red' }, { c: '#ff8a2a', n: 'Orange' }, { c: '#3ddc84', n: 'Green' }, { c: '#7a5cff', n: 'Purple' },
@@ -48,22 +40,22 @@ const PANEL_M = 3.2, PANEL_PX = 1280;         // a graffiti wall: 3.2 m square a
 const MAX_PANELS = 6, MAX_STAMPS = 40, MAX_HUNG = 12;
 const SIZE = { hang: [0.15, 2.5, 0.55], stamp: [0.06, 1.2, 0.28] };   // min, max, default height (m)
 
-// ---------------------------------------------------------------- sound (made here, no files)
+// sound: made here (no files), on Spray Bobo's audio context, through its master (so clips record it)
 const sound = {
-  ctx: null, on: store.get('sound', '1') !== '0', master: null, hiss: null,
+  ctx: null, master: null, hiss: null,
+  get on() { return api.soundOn(); },
   init() {
     try {
-      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume();
-      if (!this.master) { this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination); }
-      if (!this.hiss) {
-        const n = this.ctx.sampleRate * 2, b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0);
-        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-        const s = this.ctx.createBufferSource(); s.buffer = b; s.loop = true;
-        const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200;
-        const bp = this.ctx.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 6500; bp.gain.value = 8;
-        const g = this.ctx.createGain(); g.gain.value = 0;
-        s.connect(hp).connect(bp).connect(g).connect(this.master); s.start(); this.hiss = g;
-      }
+      if (this.master || !api.audio()) return;
+      const { ctx, dest } = api.audio(); this.ctx = ctx;
+      this.master = ctx.createGain(); this.master.connect(dest);
+      const n = ctx.sampleRate * 2, b = ctx.createBuffer(1, n, ctx.sampleRate), d = b.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const s = ctx.createBufferSource(); s.buffer = b; s.loop = true;
+      const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200;
+      const bp = ctx.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 6500; bp.gain.value = 8;
+      const g = ctx.createGain(); g.gain.value = 0;
+      s.connect(hp).connect(bp).connect(g).connect(this.master); s.start(); this.hiss = g;
     } catch (e) { /* no audio */ }
   },
   spray(level) { if (!this.hiss) return; this.hiss.gain.setTargetAtTime(this.on ? level * 0.16 : 0, this.ctx.currentTime, level ? 0.025 : 0.06); },
@@ -160,13 +152,13 @@ async function loadDecals() {
   } catch (e) { console.warn('decals', e); }
 }
 // the tray steps aside once something is up (the Art button brings it back), so the room is in view
-function trayAway() { if (!hud.classList.contains('tray-off')) { hud.classList.add('tray-off'); $('b-art').setAttribute('aria-expanded', 'false'); } }
+function trayAway() { if (!root.classList.contains('tray-off')) { root.classList.add('tray-off'); $('b-art').setAttribute('aria-expanded', 'false'); } }
 function selectArt(it) {
   LIB.sel = it; renderTray(); ghostArt();
 }
 function renderTray() {
-  document.querySelectorAll('.tcats button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.c === LIB.cat)));
-  const L = document.querySelector('#tray .tlist'); L.innerHTML = '';
+  root.querySelectorAll('.tcats button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.c === LIB.cat)));
+  const L = $('tray').querySelector('.tlist'); L.innerHTML = '';
   const list = LIB.cat === 'mine' ? LIB.mine : LIB.decals;
   if (LIB.cat === 'mine' && !list.length) {
     const p = document.createElement('p'); p.className = 'tempty'; p.textContent = 'No paintings yet on this phone.'; L.appendChild(p);
@@ -179,38 +171,24 @@ function renderTray() {
     L.appendChild(b);
   }
   if (LIB.cat === 'mine') {
-    const a = document.createElement('a'); a.className = 'tile paint btn'; a.href = HERE; a.innerHTML = '<b>+</b><span>Paint one</span>'; a.setAttribute('aria-label', 'Paint a new one in Spray Bobo'); L.appendChild(a);
+    const a = document.createElement('button'); a.type = 'button'; a.className = 'tile paint'; a.innerHTML = '<b>+</b><span>Paint one</span>'; a.setAttribute('aria-label', 'Paint a new one: back to your merch'); a.onclick = () => api.leave(); L.appendChild(a);
   }
 }
-document.querySelectorAll('.tcats button').forEach((b) => { b.onclick = () => { LIB.cat = b.dataset.c; renderTray(); }; });
-
-// ---------------------------------------------------------------- loading
-const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
-const libReady = Promise.all([loadMine(), loadDecals()]).then(() => {
-  const want = params.get('art');
-  LIB.sel = (want && LIB.mine.find((m) => m.k === want)) || LIB.mine[0] || LIB.decals.find((d) => d.id === 'decal:splat') || LIB.decals[0] || null;
-  if (!LIB.mine.length) LIB.cat = 'decals';
-});
-let loaded = false;
-Promise.all([libReady, xrReady]).then(() => {
-  loaded = true; $('b-start').disabled = false; $('b-start').textContent = 'Start'; $('splash').classList.add('ready');
-  if (params.get('go') === '1' && !IOS) start();     // from Spray Bobo's "Hang it" on Android: straight in (iPhone needs the tap for motion)
-}).catch((e) => showError('Couldn\'t load Spray Bobo Street', String((e && e.message) || e)));
-setTimeout(() => { if (!window.XR8) showError('The AR engine didn\'t load', 'Check your connection and try again.'); }, 30000);
+root.querySelectorAll('.tcats button').forEach((b) => { b.onclick = () => { LIB.cat = b.dataset.c; renderTray(); }; });
 
 // ---------------------------------------------------------------- scene
-let scene, camera, renderer;
+let scene = null, camera = null;
 const world = new THREE.Group();              // everything placed
 const ghost = new THREE.Group();              // what you are about to place, on the surface under the aim
 let ghostRing, ghostArtMesh, ghostShadow, ghostCarry = null;
 const V = () => new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
-function buildScene(xr) {
-  ({ scene, camera, renderer } = xr);
-  renderer.outputColorSpace = THREE.SRGBColorSpace;
-  camera.position.set(0, CAM_H, 0); camera.quaternion.identity();
-  XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
+let built = false;
+// (re)attach to the engine's scene: the engine makes a new scene and camera each time the session restarts
+function attach(sc, cam) {
+  scene = sc; camera = cam;
   scene.add(world); scene.add(ghost);
+  if (built) return; built = true;
   // the reticle: a ring lying on the surface + the art about to go up
   ghostRing = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.085, 0.1, 48), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false }));
@@ -348,7 +326,7 @@ function makeSplats() {
   const mesh = new THREE.InstancedMesh(geo, mat, N); mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage); mesh.frustumCulled = false; mesh.renderOrder = 45;
   splats = { mesh, N, parts: [], m: new THREE.Matrix4(), c: new THREE.Color() };
   for (let i = 0; i < N; i++) { mesh.setMatrixAt(i, new THREE.Matrix4().makeScale(0, 0, 0)); mesh.setColorAt(i, new THREE.Color(1, 1, 1)); }
-  scene.add(mesh);
+  world.add(mesh);
 }
 // flecks fly out along the surface from `at` and stick (n = surface normal)
 function burst(at, n, cols, count = 24, reach = 0.25, size = 0.012) {
@@ -423,7 +401,7 @@ function hangHere() {
   const pose = hangPose(kind, { p: V(), q: new THREE.Quaternion() });
   world.add(item.g); ITEMS.push(item); trim('hang');
   flyIn(item, pose); trayAway();
-  postEvent('custom', { action: 'street-hang', on: kind, art: it.kind === 'mine' ? it.k : 'sticker' });
+  api.postEvent('custom', { action: 'street-hang', on: kind, art: it.kind === 'mine' ? it.k : 'sticker' });
 }
 // the throw: from just in front of the phone onto the surface, a spin, a slap and a squash
 function flyIn(item, pose) {
@@ -508,7 +486,7 @@ function stampHere() {
   ghost.userData.press = 0.0001;
   sound.thunk(); buzz(22); trayAway();
   burst(SURF.p.clone(), SURF.n.clone(), [it.colour, it.colour, '#15131a'], 10, h * 0.6, h * 0.018);
-  postEvent('custom', { action: 'street-stamp', on: SURF.kind, art: it.kind === 'mine' ? it.k : 'sticker' });
+  api.postEvent('custom', { action: 'street-stamp', on: SURF.kind, art: it.kind === 'mine' ? it.k : 'sticker' });
 }
 function tickStamps(dt) {
   for (const it of ITEMS) {
@@ -672,7 +650,7 @@ function startSpray(from) {
 }
 function stopSpray() {
   if (!spraying) return; spraying = false; strokeOpen = false; sound.spray(0); $('can').dataset.state = mode === 'graffiti' ? 'idle' : 'away'; $('aim').classList.remove('spray');
-  if (sprayS > 0.3) postEvent('custom', { action: 'street-spray', secs: Math.round(sprayS) }); sprayS = 0;
+  if (sprayS > 0.3) api.postEvent('custom', { action: 'street-spray', secs: Math.round(sprayS) }); sprayS = 0;
 }
 function undo() {
   const u = undoStack.pop(); if (!u) return;
@@ -761,18 +739,19 @@ function putCarry() {
   burst(it.g.position.clone(), n, [it.art ? it.art.colour : CAPS[capIdx].c, '#ffffff'], 16, 0.25, 0.01);
   if (it.type === 'poster' || it.type === 'standee') it.anim = { landed: true, t: 0 };
   syncUi(); ghostArt();
-  postEvent('custom', { action: 'street-move', what: it.type });
+  api.postEvent('custom', { action: 'street-move', what: it.type });
 }
 
+
 // ---------------------------------------------------------------- modes and UI
-let mode = ['hang', 'stamp', 'graffiti'].includes(params.get('mode')) ? params.get('mode') : 'hang';
-const hud = $('hud');
+let mode = ['hang', 'stamp', 'graffiti'].includes(store.get('mode', 'hang')) ? store.get('mode', 'hang') : 'hang';
+let active = false;                           // the room HUD is up (things placed keep living when it isn't)
 function setMode(m) {
   if (carry) dropCarry(true);
-  stopSpray(); mode = m; hud.dataset.mode = m;
-  document.querySelectorAll('#modes button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.m === m)));
+  stopSpray(); mode = m; root.dataset.mode = m;
+  root.querySelectorAll('#r-modes button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.m === m)));
   $('can').dataset.state = m === 'graffiti' ? 'idle' : 'away';
-  closeOpts(); syncUi(); hint(modeHint(), 2400);
+  api.closeOpts(); syncUi(); hint(modeHint(), 2400);
   store.set('mode', m);
 }
 function modeHint() {
@@ -788,7 +767,7 @@ function syncUi() {
   $('b-move').classList.toggle('carry', !!carry);
   $('b-move-t').textContent = carry ? 'Cancel' : mode === 'graffiti' ? 'Move art' : 'Move';
   $('b-move').setAttribute('aria-label', carry ? 'Put it back where it was' : 'Move the last thing you put up');
-  hud.classList.toggle('carry', !!carry);
+  root.classList.toggle('carry', !!carry);
   $('b-undo').hidden = mode !== 'graffiti'; $('b-undo').disabled = !undoStack.length;
 }
 let hintT = 0;
@@ -804,19 +783,22 @@ function buildCaps() {
   const s = document.createElement('i'); s.className = 'sep'; s.setAttribute('aria-hidden', 'true'); el.appendChild(s);
   NOZZLES.forEach((z, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'noz'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', 'Nozzle: ' + z.n); b.setAttribute('aria-checked', String(i === nozzle)); b.innerHTML = `<i style="width:${z.dot}px;height:${z.dot}px;margin:auto"></i>`; b.onclick = () => setNozzle(i); el.appendChild(b); });
 }
-function setCap(i) { capIdx = i; document.documentElement.style.setProperty('--cap', CAPS[i].c); document.querySelectorAll('.cap').forEach((b, j) => b.setAttribute('aria-checked', String(j === i))); sound.rattle(); buzz(8); }
-function setNozzle(i) { nozzle = i; document.querySelectorAll('.noz').forEach((b, j) => b.setAttribute('aria-checked', String(j === i))); sound.click(); }
+function setCap(i) { capIdx = i; root.style.setProperty('--cap', CAPS[i].c); root.querySelectorAll('.cap').forEach((b, j) => b.setAttribute('aria-checked', String(j === i))); sound.rattle(); buzz(8); }
+function setNozzle(i) { nozzle = i; root.querySelectorAll('.noz').forEach((b, j) => b.setAttribute('aria-checked', String(j === i))); sound.click(); }
 buildCaps(); setCap(0);
 
+
 // ---------------------------------------------------------------- input
-const cam = $('cam');
+const cam = document.getElementById('cam');
 const touches = new Map(); let gest = null, tapStart = null;
 cam.addEventListener('pointerdown', (e) => {
+  if (!active) return;
   touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); try { cam.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
   if (touches.size === 1) { tapStart = { x: e.clientX, y: e.clientY, t: performance.now() }; if (mode === 'graffiti' && !carry) startSpray('finger'); }
   if (touches.size === 2) { stopSpray(); tapStart = null; const [a, b] = [...touches.values()]; gest = { d: Math.hypot(a.x - b.x, a.y - b.y), a: Math.atan2(b.y - a.y, b.x - a.x), size: mode === 'stamp' ? SIZES.stamp : SIZES.hang, tw: twist }; }
 });
 cam.addEventListener('pointermove', (e) => {
+  if (!active) return;
   if (!touches.has(e.pointerId)) return; touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (gest && touches.size >= 2 && mode !== 'graffiti') {
     const [a, b] = [...touches.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x);
@@ -827,6 +809,7 @@ cam.addEventListener('pointermove', (e) => {
   }
 });
 const endPtr = (e) => {
+  if (!active) { touches.clear(); gest = null; tapStart = null; return; }
   touches.delete(e.pointerId);
   if (touches.size < 2 && gest) { gest = null; store.set('hang', SIZES.hang.toFixed(2)); store.set('stamp', SIZES.stamp.toFixed(2)); setTimeout(() => { $('size').hidden = true; }, 900); }
   if (!touches.size) {
@@ -838,7 +821,7 @@ const endPtr = (e) => {
 cam.addEventListener('pointerup', endPtr); cam.addEventListener('pointercancel', endPtr);
 function showSize() { const s = mode === 'stamp' ? SIZES.stamp : SIZES.hang; $('size').hidden = false; $('size').textContent = `${Math.round(s * 100)} cm${Math.abs(twist) > 0.03 ? ` · ${Math.round(-twist * 57.3)}°` : ''}`; }
 function act() {
-  if (!$('opts').hidden) return;
+  if (!active || api.optsOpen()) return;
   if (carry) { if (canPlace()) putCarry(); else hint(pointHint(), 1600); return; }
   if (mode === 'hang') hangHere(); else if (mode === 'stamp') stampHere();
 }
@@ -849,35 +832,17 @@ can.addEventListener('pointerdown', (e) => { e.preventDefault(); try { can.setPo
 can.addEventListener('pointerup', stopSpray); can.addEventListener('pointercancel', stopSpray);
 $('b-undo').onclick = undo;
 $('b-move').onclick = pickUp;
-$('b-art').onclick = () => { const off = hud.classList.toggle('tray-off'); $('b-art').setAttribute('aria-expanded', String(!off)); };
-$('b-colour').onclick = () => { const off = hud.classList.toggle('caps-off'); $('b-colour').setAttribute('aria-expanded', String(!off)); };
-document.querySelectorAll('#modes button').forEach((b) => { b.onclick = () => { if (b.dataset.m !== mode) { sound.click(); setMode(b.dataset.m); } }; });
+$('b-art').onclick = () => { const off = root.classList.toggle('tray-off'); $('b-art').setAttribute('aria-expanded', String(!off)); };
+$('b-colour').onclick = () => { const off = root.classList.toggle('caps-off'); $('b-colour').setAttribute('aria-expanded', String(!off)); };
+root.querySelectorAll('#r-modes button').forEach((b) => { b.onclick = () => { if (b.dataset.m !== mode) { sound.click(); setMode(b.dataset.m); } }; });
 
-// options
-const opts = $('opts');
-function openOpts() { stopSpray(); opts.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); syncOpts(); }
-function closeOpts() { if (opts.hidden) return; opts.hidden = true; $('b-opts').setAttribute('aria-expanded', 'false'); disarm(); }
-function syncOpts() { $('o-sound').setAttribute('aria-checked', String(sound.on)); $('o-drips').setAttribute('aria-checked', String(drips)); }
-$('b-opts').onclick = openOpts;
-opts.querySelectorAll('[data-close]').forEach((el) => { el.onclick = closeOpts; });
-$('o-sound').onclick = () => { sound.on = !sound.on; store.set('sound', sound.on ? '1' : '0'); if (!sound.on) sound.spray(0); syncOpts(); };
-$('o-drips').onclick = () => { drips = !drips; store.set('drips', drips ? '1' : '0'); syncOpts(); };
-let armed = false, armT = 0;
-function disarm() { clearTimeout(armT); armed = false; $('o-clear').classList.remove('armed'); $('o-clear-t').textContent = 'Clear everything'; $('o-clear-s').textContent = 'Takes down all art, stamps and paint'; }
-$('o-clear').onclick = () => {
-  if (!armed) { armed = true; $('o-clear').classList.add('armed'); $('o-clear-t').textContent = 'Tap again to clear'; $('o-clear-s').textContent = 'This can\'t be undone'; clearTimeout(armT); armT = setTimeout(disarm, 3500); return; }
-  if (carry) dropCarry(true);
-  for (const it of [...ITEMS]) removeItem(it); undoStack.length = 0; disarm(); closeOpts(); syncUi(); toast('Clean wall!');
-};
-$('o-how').onclick = () => { closeOpts(); $('how').hidden = false; };
-$('b-go').onclick = () => { $('how').hidden = true; store.set('how', '1'); };
-$('o-lic').onclick = () => { closeOpts(); $('lic').hidden = false; };
-$('lic-close').onclick = () => { $('lic').hidden = true; };
-addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeOpts(); $('how').hidden = true; $('lic').hidden = true; $('shot').hidden = true; } });
 
 // ---------------------------------------------------------------- per frame
-let lastTrack = '', limitedSince = 0;
+let limitedSince = 0;
+let enteredAt = 0;
 function tick(dt) {
+  if (!built) return;
+  if (!active) { ghost.visible = false; tickItems(dt); tickStamps(dt); tickPanels(dt); tickSplats(dt); tickMist(dt); return; }
   const now = performance.now();
   updateSurface(dt);
   // the ghost: the reticle ring on the surface, and (Hang, Stamp) the art about to go up
@@ -914,190 +879,65 @@ function tick(dt) {
   const lbl = SURF.ok ? `${{ floor: 'Floor', table: 'Table', wall: 'Wall', slope: 'Surface' }[SURF.kind]} · ${SURF.dist < 1 ? Math.round(SURF.dist * 100) + ' cm' : SURF.dist.toFixed(1) + ' m'}` : '';
   if ($('surf-t').textContent !== lbl) $('surf-t').textContent = lbl;
   // tracking: limited for a while -> say how to get it back
-  if (lastTrack === 'LIMITED') { if (!limitedSince) limitedSince = now; } else limitedSince = 0;
+  if (api.tracking() === 'LIMITED') { if (!limitedSince) limitedSince = now; } else limitedSince = 0;
   if (limitedSince && now - limitedSince > 1500) hint('Move your phone slowly so it can see the room again');
-  else if (!SURF.ok && !spraying && !$('hint').textContent && now - camStartAt > 2500) hint(pointHint());
+  else if (!SURF.ok && !spraying && !$('hint').textContent && now - enteredAt > 2500) hint(pointHint());
   if (mode === 'graffiti') sprayTick(dt); else { aim.has = false; sound.spray(0); }
   tickCarry(dt); tickItems(dt); tickStamps(dt); tickPanels(dt); tickSplats(dt); tickMist(dt);
-  recTick();
-  if (params.has('diag') || (!LIVE_SITE && params.has('test'))) drawDiag(now);
-  diag.fpsN++;
+  if (api.diagOn()) drawDiag(now);
 }
 
-// ---------------------------------------------------------------- 8th Wall pipeline
-const canvas = cam;
-const DPR = clamp(+params.get('dpr') || 1.5, 1, 3);
-function sizeCanvas() {   // unsized, the engine draws a stretched 300x150 picture (Cola Run World phone test)
-  const dpr = Math.min(devicePixelRatio || 1, DPR), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-}
-let last = 0, camStartAt = 0, built = false;
-const appModule = () => ({
-  name: 'spray-bobo-street',
-  onStart: () => { buildScene(XR8.Threejs.xrScene()); built = true; hud.hidden = false; renderTray(); setMode(mode); },
-  onUpdate: ({ processCpuResult }) => {
-    const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now;
-    const r = processCpuResult && processCpuResult.reality; if (r && r.trackingStatus) noteTracking(r.trackingStatus, r.trackingReason);
-    if (built) tick(dt); flushDiag(false);
-  },
-  onCameraStatusChange: ({ status }) => {
-    diag.steps.push(['cam:' + status, Math.round(performance.now())]);
-    if (status === 'hasVideo') {
-      camStartAt = performance.now();
-      $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 500);
-      if (store.get('how', '0') !== '1') $('how').hidden = false;
-    }
-    if (status === 'requesting') hint('Allow camera and motion access to begin');
-    if (status === 'failed') camFailed('failed');
-  },
-  onException: (e) => {
-    diag.errors.push('XR: ' + (typeof e === 'object' ? JSON.stringify(e) : String(e)).slice(0, 200)); flushDiag(true, true);
-    if (e && e.type === 'permission') return showError('Motion access is needed', 'Spray Bobo Street uses your phone\'s motion sensors to keep your art on the wall. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again.');
-    const msg = String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e));
-    if (/session manager|not supported|unsupported|device/i.test(msg) && !camStartAt) { try { XR8.stop(); } catch (er) { /* not running */ } return openOnPhone(); }
-    if (!camStartAt) showError('Something went wrong', msg);
-  },
-  listeners: [{ event: 'reality.trackingstatus', process: ({ detail }) => noteTracking(detail.status, detail.reason) }],
-});
-function noteTracking(st, why) { if (st !== lastTrack) { lastTrack = st; diag.tracking.push([st + (why && why !== 'UNSPECIFIED' ? ' ' + why : ''), Math.round(performance.now())]); if (diag.tracking.length > 30) diag.tracking.shift(); } }
-function askMotion() {   // iPhone: must be asked inside the tap, before anything async
-  try { if (window.DeviceMotionEvent && DeviceMotionEvent.requestPermission) DeviceMotionEvent.requestPermission().catch(() => {}); } catch (e) { /* none */ }
-  try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) DeviceOrientationEvent.requestPermission().catch(() => {}); } catch (e) { /* none */ }
-}
-let started = false;
-function start() {
-  if (!loaded || started) return; started = true;
-  $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
-  sound.init();
-  if (!PHONE && !params.has('desktop')) return openOnPhone();
-  sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  XR8.XrController.configure({ disableWorldTracking: false, scale: 'responsive' });
-  XR8.addCameraPipelineModules([XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.XrController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(), appModule()]);
-  postEvent('scan', { mode });
-  setTimeout(() => { if (!camStartAt) camFailed('no video after 15 s'); }, 15000);
-  XR8.run({
-    canvas,
-    allowedDevices: params.has('desktop') ? XR8.XrConfig.device().ANY : XR8.XrConfig.device().MOBILE_AND_HEADSETS,
-    cameraConfig: { direction: XR8.XrConfig.camera().BACK }, verbose: params.has('verbose'),
-  });
-}
-$('b-start').onclick = () => { askMotion(); start(); };
-// not a phone (or the engine says so): a QR to carry on there, never a raw engine error
-function openOnPhone() {
-  showError('Open this on your phone', 'Spray Bobo Street needs your phone\'s camera and motion sensors to find your walls. Scan this to open it there.');
-  try { window.QRCode && QRCode.toString(location.href.replace(/[?&](test|desktop)\b[^&]*/g, ''), { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) { $('qr').innerHTML = svg; $('qr').hidden = false; } }); } catch (e) { /* no QR */ }
-  $('err-retry').textContent = 'Close'; $('err-retry').onclick = () => { $('error').hidden = true; started = false; $('b-start').disabled = false; $('b-start').textContent = 'Start'; };
-}
-function camFailed(why) {
-  if (camStartAt || diag.camFailed) return; diag.camFailed = why; flushDiag(true, true);
-  showError('The camera didn\'t start', 'Allow camera and motion access for this site, and close the Camera app or other tabs that use the camera, then tap Try again.');
-}
-function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; diag.errors.push(`${title}: ${body}`.slice(0, 200)); }
-$('err-retry').onclick = () => location.reload();
-
-// ---------------------------------------------------------------- photo, video (the Cola Run recorder)
-const LOGO = { evade: new Image(), act: new Image() };
-LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
-function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } }
-function drawWatermark(c, Wd, Hd) {
-  const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
-  if (LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
-  if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h); }
-}
-let capture = null, recFrom = 0, shots = 0;
-try {
-  capture = new ColaCapture({
-    canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'spray-bobo', audioContext: null,
-    connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
-    overlay: (c, Wd, Hd) => { drawMist(c, Wd, Hd); drawWatermark(c, Wd, Hd); },
-    on: (name) => { if (name === 'recordStart') { buzz(25); recUi(true); } if (name === 'recordStop' || name === 'error') recUi(false); },
-  });
-  Object.assign(capture.settings, {
-    corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#f6c344', maxSeconds: 30,
-    hintText: 'Film your wall and send it to the globe', sendLabel: 'Send to Where is Bobo?',
-    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Spray Bobo Street clip', filePrefix: 'spray-bobo-street', backLabel: 'Back to the camera',
-  });
-  capture.apply(); capture.setVisible(false);
-} catch (e) { console.warn('recorder', e); capture = null; }
-function recUi(on) {
-  $('b-shutter').classList.toggle('rec', on); $('rec-time').hidden = !on;
-  $('b-shutter').setAttribute('aria-label', on ? 'Stop recording' : 'Take a photo. Press and hold to film');
-  recFrom = on ? performance.now() : 0; if (!on) $('rec-prog').style.strokeDashoffset = '207';
-}
-function recTick() {
-  if (!recFrom) return;
-  const sec = (performance.now() - recFrom) / 1000, max = (capture && capture.settings.maxSeconds) || 30;
-  $('rec-prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
-  const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
-}
-async function takePhoto() {
-  try {
-    sound.shutter(); buzz(20); const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
-    const b64 = await XR8.CanvasScreenshot.takeScreenshot();
-    const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
-    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawMist(g, c.width, c.height); drawWatermark(g, c.width, c.height);
-    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.92));
-    const file = new File([blob], `spray-bobo-street-${++shots}.jpg`, { type: 'image/jpeg' }), url = URL.createObjectURL(blob);
-    $('shot-img').src = url; $('shot-save').href = url; $('shot-save').download = file.name; $('shot-save').hidden = false;
-    const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-    $('shot-share').hidden = !canShare; $('shot-share').onclick = () => navigator.share({ files: [file], title: 'My Spray Bobo wall' }).catch(() => {});
-    $('shot').hidden = false;
-    postEvent('share', { what: 'street-photo', mode });
-  } catch (e) { console.error(e); }
-}
-$('shot-close').onclick = () => { $('shot').hidden = true; };
-const HOLD_MS = 320; let holding = false, holdT = 0;
-const sh = $('b-shutter');
-sh.addEventListener('contextmenu', (e) => e.preventDefault());
-sh.addEventListener('pointerdown', (e) => {
-  if (e.button > 0) return;
-  if (capture && capture.status === 'recording') { holding = false; return; }
-  holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-  clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) capture.start(); }, HOLD_MS);
-});
-sh.addEventListener('pointerup', () => {
-  if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
-  if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
-});
-sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
-sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); takePhoto(); } });
-
-// ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
-const SID = 'sbs-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
-function postEvent(type, props) {
-  if (params.has('nolog')) return;
-  try { fetch('/api/bobo/events', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, source: 'spray-bobo', sessionId: SID, props: { ...props, page: 'street' } }) }).catch(() => {}); } catch (e) { /* offline */ }
-}
-
-// ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
-// Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'spray-bobo-street').
-const diag = { page: 'spray-bobo-street', sid: SID, fpsN: 0, errors: [], steps: [], tracking: [], surf: {}, note: params.get('note') || '' };
-let flushAt = 0;
-function flushDiag(force, always = false) {
-  const now = performance.now(); if (!force && now - flushAt < 10000) return; flushAt = now;
-  if ((!camStartAt && !always) || params.has('nolog') || (LIVE_SITE && !params.has('diag'))) return;
-  const counts = ITEMS.reduce((a, i) => { a[i.type] = (a[i.type] || 0) + 1; return a; }, {});
-  const body = JSON.stringify({ ...diag, mode, items: counts, secs: Math.round((now - (camStartAt || now)) / 1000), fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0, screen: [innerWidth, innerHeight, devicePixelRatio], ua: navigator.userAgent });
-  try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
-}
-addEventListener('pagehide', () => flushDiag(true));
-document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDiag(true); stopSpray(); } });
-addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
-// surface stats for the test log: how often each kind is seen and how the fit went
+// ---------------------------------------------------------------- test-log surface stats
 let surfAt = 0;
 function drawDiag(now) {
-  if (now - surfAt > 500) { surfAt = now; const s = diag.surf; const k = SURF.ok ? SURF.kind + '/' + SURF.src : 'none'; s[k] = (s[k] || 0) + 1; }
+  const d = api.diag(); d.surf = d.surf || {};
+  if (now - surfAt > 500) { surfAt = now; const k = SURF.ok ? SURF.kind + '/' + SURF.src : 'none'; d.surf[k] = (d.surf[k] || 0) + 1; }
   const el = $('diagp'); el.hidden = false;
-  const fps = camStartAt ? diag.fpsN / Math.max((now - camStartAt) / 1000, 1) : 0;
-  el.textContent = `${mode} · track ${lastTrack || '-'} · fps ${fps.toFixed(0)}\nsurf ${SURF.ok ? SURF.kind + ' (' + SURF.src + ')' : '-'} ${SURF.dist.toFixed(2)} m · n ${SURF.n.toArray().map((v) => v.toFixed(2)).join(',')} · pts ${SURF.npts} rms ${(SURF.rms * 100).toFixed(1)} cm`;
+  el.textContent = `${mode} · track ${api.tracking() || '-'}\nsurf ${SURF.ok ? SURF.kind + ' (' + SURF.src + ')' : '-'} ${SURF.dist.toFixed(2)} m · n ${SURF.n.toArray().map((v) => v.toFixed(2)).join(',')} · pts ${SURF.npts} rms ${(SURF.rms * 100).toFixed(1)} cm`;
 }
 
-// automated tests (?test)
+// ---------------------------------------------------------------- what Spray Bobo calls
+let libP = null;
+function loadLib() {
+  if (!libP) libP = loadDecals();
+  return libP;
+}
+// reload this phone's paintings (Spray Bobo writes 'street:<piece>' each time one comes alive); select `k` if given
+async function refreshMine(k) {
+  for (const it of LIB.mine) it.tex.dispose();
+  LIB.mine = []; await loadMine();
+  const want = k && LIB.mine.find((m) => m.k === k);
+  if (want) { LIB.sel = want; LIB.cat = 'mine'; }
+  else if (!LIB.sel || (LIB.sel.kind === 'mine' && !LIB.mine.includes(LIB.sel))) { LIB.sel = LIB.mine[0] || LIB.decals.find((d) => d.id === 'decal:splat') || LIB.decals[0] || null; LIB.cat = LIB.mine.length ? 'mine' : 'decals'; }
+  if (built) { renderTray(); ghostArt(); }
+}
+let capsBuilt = false;
+async function enter(m, k) {
+  sound.init();
+  if (!capsBuilt) { capsBuilt = true; buildCaps(); setCap(0); }
+  active = true; root.hidden = false; enteredAt = performance.now();
+  root.classList.remove('tray-off'); $('b-art').setAttribute('aria-expanded', 'true');
+  PTS.length = 0; SURF.ok = false; SURF.kind = '';
+  setMode(['hang', 'stamp', 'graffiti'].includes(m) ? m : mode);
+  await loadLib(); await refreshMine(k);           // the HUD is up already; the tray fills in when this lands
+  if (active) hint(modeHint(), 2400);
+}
+function exit() {
+  if (carry) dropCarry(true);
+  stopSpray(); active = false; root.hidden = true; ghost.visible = false; hint('');
+  $('aim').classList.remove('on'); sound.spray(0);
+}
+function clearAll() { if (carry) dropCarry(true); for (const it of [...ITEMS]) removeItem(it); undoStack.length = 0; syncUi(); toast('Clean wall!'); }
+function setDrips(on) { drips = on; store.set('drips', on ? '1' : '0'); }
+const api2 = {
+  attach, tick, enter, exit, clearAll, setDrips, loadLib,
+  get active() { return active; }, get mode() { return mode; }, get drips() { return drips; }, get count() { return ITEMS.length; },
+  drawMist(c, Wd, Hd) { if (active && mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } },
+  stopSpray,
+};
 if (params.has('test')) window.__st = {
-  get mode() { return mode; }, setMode, get tracking() { return lastTrack; }, SURF, ITEMS, LIB, get carry() { return carry; }, camera: () => camera,
+  get mode() { return mode; }, setMode, get tracking() { return api.tracking(); }, SURF, ITEMS, LIB, get carry() { return carry; }, camera: () => camera, get active() { return active; },
   surf: () => ({ ok: SURF.ok, kind: SURF.kind, src: SURF.src, dist: +SURF.dist.toFixed(3), p: SURF.p.toArray().map((v) => +v.toFixed(3)), n: SURF.n.toArray().map((v) => +v.toFixed(3)), npts: SURF.npts, rms: +SURF.rms.toFixed(4) }),
-  // put a surface in front of the camera: kind 'wall' (d metres ahead, facing the phone) or 'floor' (d ahead on y = 0)
   fakeSurf(kind, d) {
     if (!kind) { testSurf = null; return; }
     const f = V(); camera.getWorldDirection(f); f.y = 0; f.normalize();
@@ -1106,9 +946,9 @@ if (params.has('test')) window.__st = {
   },
   act, pickUp, undo, startSpray: () => startSpray('can'), stopSpray, selectArt: (i) => selectArt(LIB.decals[i] || LIB.mine[i]),
   paintCoverage(i = 0) { const P = ITEMS.filter((x) => x.type === 'panel')[i]; if (!P) return 0; const d = P.gx.getImageData(0, 0, PANEL_PX, PANEL_PX).data; let n = 0; for (let j = 3; j < d.length; j += 64) if (d[j] > 40) n++; return n / (d.length / 64); },
-  drips: () => ITEMS.filter((x) => x.type === 'panel').map((P) => P.drips.length), diag,
-  // hold the spray on one spot of the first panel for `secs` (drip test: wet paint has to build up in one place)
-  // spray along a path of [u, v] points on panel i (thumbnail / drawing tests)
+  drips: () => ITEMS.filter((x) => x.type === 'panel').map((P) => P.drips.length),
   sprayPath(path, rPx = 18, cap = 0, i = 0) { const P = ITEMS.filter((x) => x.type === 'panel')[i]; if (!P) return false; for (let j = 1; j < path.length; j++) { const [u0, v0] = path[j - 1], [u1, v1] = path[j]; const n = Math.ceil(Math.hypot(u1 - u0, v1 - v0) * PANEL_PX / (rPx * 0.4)); for (let k = 0; k <= n; k++) sprayPanel(P, u0 + (u1 - u0) * k / n, v0 + (v1 - v0) * k / n, rPx, CAPS[cap].c, 1 / 60, 1); } return true; },
   sprayAt(u, v, secs, rPx = 30) { const P = ITEMS.find((x) => x.type === 'panel'); if (!P) return -1; for (let t = 0; t < secs; t += 1 / 30) sprayPanel(P, u, v, rPx, CAPS[capIdx].c, 1 / 30, 1); return P.drips.length; },
 };
+return api2;
+}

@@ -23,6 +23,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 import { readCms, plan, MAX_TARGETS } from './cms.js';
 import { makeScene, tickScene, measureScene } from './scene.js';
+import { createRoom, CAM_H } from './room.js';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
@@ -640,7 +641,7 @@ const onT = (n) => (live(TS[n]) ? TS[n] : null);
 const pieceInView = (k) => PIECES[k].targets.some(onT);
 const pieceSeen = (k) => Math.max(...PIECES[k].targets.map((n) => (TS[n] ? TS[n].seen : -1e9)));
 // which charm: while painting, the one being painted; otherwise whichever is in view (the current one first)
-const busy = () => mode === 'paint' || mode === 'decal';   // working on a charm: it stays the current one
+const busy = () => mode === 'paint' || mode === 'decal' || mode === 'room';   // working on a charm (or in the room): it stays the current one
 function pickPiece(now) {
   if (!cp || busy() || pieceInView(cp.k)) return;
   if (cp.F.visible && now - pieceSeen(cp.k) < 700) return;
@@ -840,7 +841,7 @@ const sw = (id, on) => $(id).setAttribute('aria-checked', String(!!on));
 function syncOpts() {
   sw('o-lines', paint && paint.linesOn); sw('o-primer', paint && paint.primer); sw('o-sound', sound.on);
   $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound-t').textContent = sound.on ? 'Sound on' : 'Sound off';
-  sw('o-phone', !aim.finger); sw('o-finger', aim.finger);
+  sw('o-phone', !aim.finger); sw('o-finger', aim.finger); sw('o-drips', room.drips);
 }
 function syncToggles() { syncOpts(); }   // the outline and base coat switches show the current charm's paint
 $('o-lines').onclick = () => { paint.linesOn = !paint.linesOn; paint.dirty = true; syncOpts(); buzz(6); };
@@ -862,7 +863,7 @@ $('o-decals').onclick = async () => {
 };
 // two taps for the ones you can't take back: the first arms it, the second does it
 let armed = null, armT = 0;
-const ARM = { 'o-clear': ['Clear the canvas', 'Undo brings it back', 'Tap again to clear', 'Your painting is wiped, undo brings it back'], 'o-new': ['New painting', 'Start this one again from a blank canvas', 'Tap again to start over', 'Your painting and decals here go'] };
+const ARM = { 'o-clear': ['Clear the canvas', 'Undo brings it back', 'Tap again to clear', 'Your painting is wiped, undo brings it back'], 'o-new': ['New painting', 'Start this one again from a blank canvas', 'Tap again to start over', 'Your painting and decals here go'], 'o-rclear': ['Clear the room', 'Takes down all art, stamps and paint', 'Tap again to clear', 'This can\'t be undone'] };
 function disarm() { clearTimeout(armT); if (!armed) return; const [t, sm] = ARM[armed]; $(armed + '-t').textContent = t; $(armed + '-s').textContent = sm; $(armed).classList.remove('armed'); armed = null; }
 function arm(id) {
   if (armed === id) { disarm(); return true; }
@@ -877,6 +878,8 @@ $('o-new').onclick = async () => {
   if (!arm('o-new')) return;
   closeOpts(); await dropSaved(); stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(true);
 };
+$('o-drips').onclick = () => { room.setDrips(!room.drips); syncOpts(); buzz(6); };
+$('o-rclear').onclick = () => { if (!arm('o-rclear')) return; closeOpts(); room.clearAll(); };
 $('b-undo').onclick = () => { if (paint.popUndo()) { sound.undo(); buzz(8); } updateUndo(); };
 function updateUndo() { $('b-undo').disabled = !paint.undo.length; }
 
@@ -1040,8 +1043,7 @@ async function restorePaint(rec, P) {
   DEC.ready.then(() => { clearDecals(P); for (const d of rec.decals || []) makeLayer(P, d); });
 }
 
-// Spray Bobo Street (./street/: Hang, Stamp, Graffiti on the engine binary's world tracking) reads your paintings from
-// here: the die-cut painting with a white border and its decals, cropped, under 'street:<piece>' in the same store.
+// The room (room.js) reads your paintings from here: the die-cut painting with a white border and its decals, cropped, under 'street:<piece>' in the same store.
 let streetArt = null;
 async function writeStreetArt() {
   if (VIEWER || cp.shared || !paint || !stickerCanvas) return false;
@@ -1069,12 +1071,62 @@ async function writeStreetArt() {
     return true;
   } catch (e) { console.warn('street art', e); return false; }
 }
-// Hang it: the sticker flies at the phone, then Spray Bobo Street opens with this painting ready to hang
-async function goStreet(m) {
-  if (mode === 'alive' && streetArt) await streetArt;
-  postEvent('custom', { action: 'spray-to-street', mode: m, piece: cp && cp.k });
-  sound.whoosh(); buzz(12); document.body.classList.add('leaving');
-  setTimeout(() => { location.href = HERE + 'street/?mode=' + m + (m !== 'graffiti' && cp ? '&art=' + encodeURIComponent(cp.k) : '') + '&go=1'; }, 380);
+// ---------------------------------------------------------------- the room (room.js): Hang, Stamp, Graffiti
+// One page, one camera session. Painting runs image tracking only (and the iPhone close-focus camera); the first
+// time you go into the room the session restarts once with world tracking on (the engine can't switch it on
+// mid-session), and stays that way: the merch is still found in it, so going back and forth is instant after that.
+// Things you put up stay in the room while you paint.
+let slam = ['hang', 'stamp', 'graffiti'].includes(params.get('room'));   // ?room=<mode>: straight into the room
+let roomCam = slam;                            // the plain back camera (SLAM can't use the iPhone multi-lens camera)
+let lastTrack = '', switchDone = null, switching = false;
+const room = createRoom({
+  postEvent: (t, p) => postEvent(t, { ...p, page: 'room' }),
+  tracking: () => lastTrack,
+  diagOn: () => params.has('diag') || (!LIVE_SITE && params.has('test')),
+  diag: () => diag,
+  soundOn: () => sound.on,
+  audio: () => (sound.ctx && sound.master ? { ctx: sound.ctx, dest: sound.master } : null),
+  closeOpts: () => closeOpts(), optsOpen: () => !opts.hidden,
+  leave: () => leaveRoom(),
+});
+function noteTracking(st) { if (st && st !== lastTrack) { lastTrack = st; diag.steps.push(['track:' + st, Math.round(performance.now())]); } }
+function drawSwitchArt() {
+  const c = $('switch-art'), g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+  const src = mode === 'alive' && stickerCanvas ? stickerCanvas : null;
+  if (!src) return;
+  const k = Math.min(c.width / src.width, c.height / src.height) * 0.9;
+  g.drawImage(src, (c.width - src.width * k) / 2, (c.height - src.height * k) / 2, src.width * k, src.height * k);
+}
+async function enterRoom(m) {
+  if (switching || VIEWER || mode === 'room') return;
+  closeOpts(); stopSpray();
+  const k = mode === 'alive' && cp && !cp.shared ? cp.k : null;
+  postEvent('custom', { action: 'spray-to-room', mode: m, piece: cp && cp.k });
+  sound.whoosh(); buzz(12);
+  if (!slam) { drawSwitchArt(); $('switch').classList.add('on'); }   // at once, before anything async
+  setMode('room');
+  const restart = slam ? null : restartWithSlam();
+  if (k && streetArt) await streetArt;                  // the die-cut picture of this painting, for the tray
+  if (restart) await restart;
+  diag.steps.push(['room-in', Math.round(performance.now())]);
+  await room.enter(m, k);
+}
+function leaveRoom() {
+  if (mode !== 'room') return;
+  room.exit(); sound.whoosh(); buzz(8);
+  life.phase = 'off'; stickerPivot.visible = false; shadow.material.opacity = 0;   // he lifts off the charm again when it's found
+  setMode('find');
+}
+function restartWithSlam() {
+  return new Promise((res) => {
+    switching = true; slam = true; roomCam = true; $('switch').classList.add('on');
+    switchDone = () => { switchDone = null; switching = false; setTimeout(() => $('switch').classList.remove('on'), 700); res(); };
+    diag.steps.push(['slam-restart', Math.round(performance.now())]);
+    try { XR8.stop(); } catch (e) { /* not running */ }
+    XR8.XrController.configure({ disableWorldTracking: false });
+    XR8.run(runOpts());
+    setTimeout(() => { if (switchDone) { diag.errors.push('slam restart: no video after 15 s'); switchDone(); } }, 15000);
+  });
 }
 async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
@@ -1178,8 +1230,9 @@ function hitSticker(x, y) {
   return ray.intersectObject(sticker, false).length > 0;
 }
 $('o-spin').onclick = () => { closeOpts(); if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
-$('b-hang').onclick = () => goStreet('hang');
-$('o-graffiti').onclick = () => { closeOpts(); goStreet('graffiti'); };
+$('b-hang').onclick = () => enterRoom('hang');
+$('o-graffiti').onclick = () => enterRoom('graffiti');
+$('r-back').onclick = () => leaveRoom();
 $('b-repaint').onclick = () => { stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(); };
 $('b-decals').onclick = () => startDecals();
 // after a fresh save: "Dress up Bobo?"
@@ -1484,7 +1537,7 @@ function tick(dt) {
   hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
   const again = `Point at ${cp.name} again`;
   if (mode === 'find' && !pose.valid) hint((everFound ? 'Point at ' : 'Point your camera at ') + SEEK);
-  else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint(again);
+  else if (mode !== 'find' && mode !== 'room' && !pose.valid && lostFor > 1.2) hint(again);
   else if (pose.valid && $('hint').textContent === again) hint('');
   paintMesh.material.uniforms.uTime.value = clock.t;
   if (mode === 'ready' && previewMesh) previewMesh.material.opacity = 0.65 + Math.sin(now / 260) * 0.35;
@@ -1590,14 +1643,28 @@ function sizeCanvas() {
 let last = 0, camStartAt = 0, runAt = 0;
 const appModule = (data) => ({
   name: 'spray-bobo',
-  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); hud.hidden = false; setMode('find'); },
-  onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); flushDiag(false); },
+  onStart: () => {
+    const xr = XR8.Threejs.xrScene();
+    if (!scene) { buildScene(xr, data); hud.hidden = false; if (mode !== 'room') setMode('find'); } else rehome(xr);   // ?room= may already be in
+    if (slam) {   // world tracking: the floor is y = 0, the phone starts CAM_H above it (~1 unit = 1 m)
+      camera.position.set(0, CAM_H, 0); camera.quaternion.identity();
+      XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
+    }
+    room.attach(scene, camera);
+  },
+  onUpdate: ({ processCpuResult }) => {
+    const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now;
+    const r = processCpuResult && processCpuResult.reality; if (r && r.trackingStatus) noteTracking(r.trackingStatus);
+    if (scene) { tick(dt); room.tick(dt); } flushDiag(false);
+  },
   onCameraStatusChange: ({ status, video, stream }) => {
     camLog(status);
     if (status === 'hasStream') { kickVideo(); noteStream(stream); }
+    if (status === 'hasVideo' && switchDone) { tuneCamera(video); switchDone(); return; }   // back from the switch to world tracking
     if (status === 'hasVideo') {
       hideTapCam(); camStartAt = performance.now(); tuneCamera(video);
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
+      if (slam && ROOM_START) { setTimeout(() => enterRoom(ROOM_START), 50); syncRec(); return; }
       let seen = false; try { seen = localStorage.getItem('spray-bobo-how') === '1'; } catch (e) { /* none */ }
       if (!seen && !VIEWER) { $('how').hidden = false; $('b-go').focus(); }
       syncRec();
@@ -1610,6 +1677,7 @@ const appModule = (data) => ({
     { event: 'reality.imagefound', process: ({ detail }) => onTarget(detail) },
     { event: 'reality.imageupdated', process: ({ detail }) => onTarget(detail) },
     { event: 'reality.imagelost', process: ({ detail }) => onLost(detail) },
+    { event: 'reality.trackingstatus', process: ({ detail }) => noteTracking(detail.status) },
   ],
 });
 
@@ -1624,10 +1692,11 @@ async function start() {
   $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
   sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
   const data = await assets;
+  room.loadLib();                               // the sticker library for the room, in the background
   sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
   const targets = Object.values(PIECES).flatMap((P) => P.tdata).filter((t) => !params.get('only') || t.name === params.get('only'));   // at most MAX_TARGETS (cms.js plan)
   initTargets(targets);
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: targets });
+  XR8.XrController.configure({ disableWorldTracking: !slam, imageTargetData: targets });
   XR8.addCameraPipelineModules([
     XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.XrController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(),
     appModule(data),
@@ -1635,7 +1704,18 @@ async function start() {
   ]);
   runAt = performance.now(); camLog('run'); postEvent('scan', {});
   setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
-  XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
+  XR8.run(runOpts());
+}
+function runOpts() { return { canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK }, verbose: params.has('verbose') }; }
+const ROOM_START = slam ? params.get('room') : null;
+// the engine's scene and camera are new after a restart: move everything over (lights, the charms, the room)
+function rehome(xr) {
+  const old = scene, oldCam = camera;
+  ({ scene, camera, renderer } = xr);
+  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
+  for (const o of [...old.children]) if (o !== oldCam) scene.add(o);
+  const pmrem = new THREE.PMREMGenerator(renderer);   // the old environment map lived on the old renderer
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.7;
 }
 $('b-start').onclick = () => { if (VIEWER && !cmsInfo.viewer) { location.href = HERE; return; } start(); };
 // ---------------------------------------------------------------- viewer mode (?c=): the splash
@@ -1680,7 +1760,7 @@ let iosStd = false; try { iosStd = sessionStorage.getItem('sb-ios-std') === '1';
 const IOS_MACRO = IOS && params.get('macro') !== '0' && !iosStd;
 if (IOS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
   const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
-  const lensId = () => (IOS_MACRO ? md.enumerateDevices().then((ds) => { for (const n of MACRO_LENSES) { const d = ds.find((x) => x.kind === 'videoinput' && x.label === n); if (d) return d.deviceId; } return null; }).catch(() => null) : Promise.resolve(null));
+  const lensId = () => (IOS_MACRO && !roomCam ? md.enumerateDevices().then((ds) => { for (const n of MACRO_LENSES) { const d = ds.find((x) => x.kind === 'videoinput' && x.label === n); if (d) return d.deviceId; } return null; }).catch(() => null) : Promise.resolve(null));
   md.getUserMedia = (c) => {
     const v = c && c.video; if (!v || v === true) return orig(c);
     return lensId().then((id) => {
@@ -1704,7 +1784,7 @@ let tapCamShown = false;
 function kickVideo() {
   setTimeout(() => {
     if (camStartAt) return; camLog('notPlaying');
-    if (IOS_MACRO) { try { sessionStorage.setItem('sb-ios-std', '1'); } catch (e) { /* none */ } flushDiag(true, true); location.reload(); return; }
+    if (IOS_MACRO && !roomCam) { try { sessionStorage.setItem('sb-ios-std', '1'); } catch (e) { /* none */ } flushDiag(true, true); location.reload(); return; }
     showTapCam();
   }, 4000);
 }
@@ -1727,7 +1807,7 @@ function camFailed(why) {
 // ---------------------------------------------------------------- photo, video (the Cola Run recorder), artwork
 const LOGO = { evade: new Image(), act: new Image() };
 LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
-function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } }   // the spray shows in photos and clips too
+function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } room.drawMist(c, Wd, Hd); }   // the spray shows in photos and clips too
 function drawWatermark(c, Wd, Hd) {
   const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
   if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
