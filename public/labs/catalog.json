@@ -968,8 +968,8 @@
   },
   {
     "slug": "robot-chat",
-    "title": "Robot Chat",
-    "lead": "Place Misa the robot in your room and chat with her; she answers and reacts.",
+    "title": "Talk to Misa",
+    "lead": "A chat character stands on your floor, answers and breaks into keyword dances.",
     "url": "/labs/demos/robot-chat/",
     "extraLinks": [],
     "thumb": "/labs/img/robot-chat.webp",
@@ -984,13 +984,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Robot Chat tech demo"
   },
   {
     "slug": "joystick-robot",
-    "title": "Joystick Robot",
-    "lead": "Drive a character around your floor with an on-screen joystick: hop, ride and explore.",
+    "title": "Robot Run",
+    "lead": "Drive a robot around your room with a joystick; it walks, runs, jumps and waves.",
     "url": "/labs/demos/joystick-robot/",
     "extraLinks": [],
     "thumb": "/labs/img/joystick-robot.webp",
@@ -1006,13 +1006,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Joystick Robot tech demo"
   },
   {
     "slug": "float-notes",
     "title": "Float Notes",
-    "lead": "Leave floating notes in the air around you and walk around them.",
+    "lead": "Leave notes floating in the air that you can edit, move and drop.",
     "url": "/labs/demos/float-notes/",
     "extraLinks": [],
     "thumb": "/labs/img/float-notes.webp",
@@ -1026,13 +1026,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Float Notes tech demo"
   },
   {
     "slug": "tap-to-place",
-    "title": "Tap to Place",
-    "lead": "The basic world-tracking pattern: tap the floor to place a 3D model, then move or reset it.",
+    "title": "Street Kit",
+    "lead": "Pick a bench, bin or lamp from a tray and tap the floor to build a street scene.",
     "url": "/labs/demos/tap-to-place/",
     "extraLinks": [],
     "thumb": "/labs/img/tap-to-place.webp",
@@ -1046,13 +1046,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Tap to Place tech demo"
   },
   {
     "slug": "physics",
-    "title": "Physics Playground",
-    "lead": "Throw and stack objects that collide and fall with real physics on your floor.",
+    "title": "Pin Bowl",
+    "lead": "Tap to throw a ball at bowling pins with real collisions.",
     "url": "/labs/demos/physics/",
     "extraLinks": [],
     "thumb": "/labs/img/physics.webp",
@@ -1067,13 +1067,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Physics Playground tech demo"
   },
   {
     "slug": "nav-mesh",
-    "title": "Nav Mesh",
-    "lead": "Tap anywhere on the floor and a character walks there, finding its way around obstacles.",
+    "title": "Robot Path",
+    "lead": "Tap a spot and the robot finds its own way over ramps and bridges.",
     "url": "/labs/demos/nav-mesh/",
     "extraLinks": [],
     "thumb": "/labs/img/nav-mesh.webp",
@@ -1088,13 +1088,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Nav Mesh tech demo"
   },
   {
     "slug": "moon-shop",
     "title": "Moon Shop",
-    "lead": "Step through a portal into a shop on the moon, in your room.",
+    "lead": "A portal opens in your room and you walk through it onto the moon.",
     "url": "/labs/demos/moon-shop/",
     "extraLinks": [],
     "thumb": "/labs/img/moon-shop.webp",
@@ -1109,13 +1109,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Moon Shop tech demo"
   },
   {
     "slug": "product-viewer",
     "title": "Product Viewer",
-    "lead": "Look at a product in 3D or place it in AR, and switch its colours live.",
+    "lead": "A car in your room with colour swatches and a switch between AR and a 3D viewer.",
     "url": "/labs/demos/product-viewer/",
     "extraLinks": [],
     "thumb": "/labs/img/product-viewer.webp",
@@ -1132,13 +1132,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Product Viewer tech demo"
   },
   {
     "slug": "occlusion-floor",
-    "title": "Occlusion Floor",
-    "lead": "Objects hide behind the real floor edge and come up through it, using a hider material.",
+    "title": "Floor Lift",
+    "lead": "A pillar rises out of your real floor and sinks back into it.",
     "url": "/labs/demos/occlusion-floor/",
     "extraLinks": [],
     "thumb": "/labs/img/occlusion-floor.webp",
@@ -1152,13 +1152,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Occlusion Floor tech demo"
   },
   {
     "slug": "face-effects",
-    "title": "Face Effects",
-    "lead": "Masks, paint and accessories that follow your face, ready for branded selfie filters.",
+    "title": "Face FX",
+    "lead": "Shades, face paint and a mask on up to three faces, with a branded photo.",
     "url": "/labs/demos/face-effects/",
     "extraLinks": [],
     "thumb": "/labs/img/face-effects.webp",
@@ -1173,13 +1173,13 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Face Effects tech demo"
   },
   {
     "slug": "image-to-world",
-    "title": "Image to World",
-    "lead": "Start on a printed image, then the scene hands off to world tracking and stays in the room.",
+    "title": "Picture to Room",
+    "lead": "Point at a picture and a sand castle appears on the floor and stays in the room.",
     "url": "/labs/demos/image-to-world/",
     "extraLinks": [],
     "thumb": "/labs/img/image-to-world.webp",
@@ -1194,29 +1194,7 @@
     "status": "lab",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Image to World tech demo"
-  },
-  {
-    "slug": "camera-swap",
-    "title": "Camera Swap",
-    "lead": "Switch between the front and back camera mid-experience: face effects one side, world AR the other.",
-    "url": "/labs/demos/camera-swap/",
-    "extraLinks": [],
-    "thumb": "/labs/img/camera-swap.webp",
-    "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "capture"
-    ],
-    "tech": [
-      "face",
-      "world"
-    ],
-    "status": "lab",
-    "year": 2026,
-    "featured": false,
-    "tested": "not yet",
-    "alt": "Camera Swap tech demo"
   }
 ]
