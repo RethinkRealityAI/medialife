@@ -24,7 +24,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="./style.css?v=1">
+  <link rel="stylesheet" href="./style.css?v=2">
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -109,7 +109,7 @@
 
     <div id="bottom">
       <div class="b-left">
-        <button id="b-invite" class="ib lab" type="button" hidden aria-label="Invite someone to control the hologram">
+        <button id="b-invite" class="ib lab" type="button" hidden aria-haspopup="dialog" aria-label="Invite a friend">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><path d="M18 8v6M15 11h6"/></svg>
           <span>Invite</span>
         </button>
@@ -139,7 +139,7 @@
         <button type="button" class="x" data-close aria-label="Close options"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
       <button type="button" class="opt" id="o-invite">
-        <span class="ol"><b>Invite someone to control it</b><small>Sends the control room link from your phone's share sheet</small></span><i class="go" aria-hidden="true"></i>
+        <span class="ol"><b>Invite a friend</b><small>A QR on your screen to watch with you or control it</small></span><i class="go" aria-hidden="true"></i>
       </button>
       <button type="button" class="opt" id="o-watch">
         <span class="ol"><b>Share the watch link</b><small>Another phone sees the same hologram, live</small></span><i class="go" aria-hidden="true"></i>
@@ -165,12 +165,30 @@
     <div class="sheet">
       <h2 id="how-t">Your room is live</h2>
       <ol class="how-steps">
-        <li><b>Place it.</b> Point at the floor or a table. Pinch to size the projector, then tap Place.</li>
+        <li><b>Place it.</b> Point at the floor or a table. Pinch to size the projector, then tap Place. Pinch again any time to make it bigger or smaller.</li>
         <li><b>Watch it fill.</b> Anything sent from the control room beams up into the screens: notices, live drawing, photos, polls and spoken captions.</li>
         <li><b>Tap things.</b> Tap a screen to pull it closer, spin the globe and tap a pin to play Bobo's clip, tap a poll bar to vote, and send reactions from the right.</li>
-        <li><b>Invite</b> (bottom left) sends a friend the control link, so they can beam things in from their own phone.</li>
+        <li><b>Invite</b> (bottom left) shows a QR a friend can scan from your screen, to watch with you or to beam things in from their own phone.</li>
       </ol>
       <button id="b-go" class="primary">Got it</button>
+    </div>
+  </div>
+
+  <!-- invite: a QR on this phone's screen for a friend standing next to you, plus the share sheet -->
+  <div id="invite" class="sheet-wrap" hidden role="dialog" aria-modal="true" aria-labelledby="inv-t">
+    <div class="sheet">
+      <h2 id="inv-t">Invite a friend</h2>
+      <div class="seg" id="inv-seg" role="radiogroup" aria-label="What they can do">
+        <button type="button" role="radio" data-k="watch" aria-checked="true">Watch</button>
+        <button type="button" role="radio" data-k="control" aria-checked="false">Control</button>
+      </div>
+      <div class="qrbox big" id="inv-qr" role="img" aria-label="QR code for the invite link"></div>
+      <p id="inv-body">They scan this with their camera and see the same hologram, live.</p>
+      <p class="mono" id="inv-url"></p>
+      <div class="row">
+        <button id="inv-share" class="primary">Share link</button>
+        <button id="inv-close">Done</button>
+      </div>
     </div>
   </div>
 
@@ -180,7 +198,7 @@
       <h2 id="room-h">Room <span id="rs-code"></span></h2>
       <p id="rs-body"></p>
       <div class="row">
-        <button id="rs-invite" class="primary">Invite to control</button>
+        <button id="rs-invite" class="primary">Invite a friend</button>
         <button id="rs-close">Close</button>
       </div>
     </div>
@@ -224,6 +242,6 @@
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
   <!-- the engine binary (SLAM): unmodified, pinned, from jsDelivr (licence: distribute in original form) -->
   <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
-  <script type="module" src="./main.js?v=2"></script>
+  <script type="module" src="./main.js?v=3"></script>
 </body>
 </html>

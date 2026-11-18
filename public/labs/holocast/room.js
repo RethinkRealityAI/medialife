@@ -122,6 +122,7 @@ export class Room {
     if (JSON.stringify(prev.poll) !== JSON.stringify(v.poll)) changed.add('poll');
     if (JSON.stringify(prev.caption) !== JSON.stringify(v.caption)) changed.add('caption');
     if (JSON.stringify(prev.live || null) !== JSON.stringify(v.live || null)) changed.add('live');
+    if (JSON.stringify(prev.hide || []) !== JSON.stringify(v.hide || [])) changed.add('hide');
     const lastR = (s) => (s.reactions.length ? s.reactions[s.reactions.length - 1].at : 0);
     if (lastR(v) > lastR(prev)) changed.add('reactions');
     if (prev.watching !== v.watching || prev.controlling !== v.controlling) changed.add('presence');

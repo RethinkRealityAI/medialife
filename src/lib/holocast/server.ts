@@ -59,6 +59,16 @@ export const LIMITS = {
 };
 export const THEMES = ["cyan", "magenta", "gold", "lime", "white"] as const;
 export const COLOURS = /^#[0-9a-f]{6}$/i;
+export const SCREENS = [
+  "notice",
+  "globe",
+  "sketch",
+  "photo",
+  "poll",
+  "caption",
+  "ticker",
+  "reacts",
+] as const;
 export const REACTIONS = ["fire", "heart", "wow", "clap", "lol", "100"] as const;
 
 /* ── the record ─────────────────────────────────────────────────────────── */
@@ -131,6 +141,7 @@ interface RoomRecord {
   poll: Poll | null;
   caption: Caption | null;
   live?: Live | null;
+  hide?: string[]; // screens switched off for everyone (see SCREENS)
   viewers: Record<string, number>; // session id -> last seen (ms)
   controllers: Record<string, number>;
   stats: { notices: number; strokes: number; photos: number; reactions: number };
@@ -216,6 +227,7 @@ function view(r: RoomRecord, s: number | null) {
     poll: pollView(r.poll),
     caption: r.caption ?? null,
     live: r.live ?? null,
+    hide: r.hide ?? [],
     watching: live(r.viewers, now),
     controlling: live(r.controllers, now),
     stats: r.stats,
@@ -287,6 +299,7 @@ const OPEN_OPS = new Set(["react", "ping", "vote"]);
  *   poll   { q, options: [2..4] } / endpoll    ask a live poll / close it (key)
  *   vote   { option, sid }                     a viewer's vote, one per session, can change (no key)
  *   say    { text, final, from }               live captions from the control room's mic (key)
+ *   hide   { hide: [screen...] }              switch screens off for every viewer (key)
  *   live   { on, id?, aspect, audio, from }    start / update / stop the control room's camera feed (key)
  */
 export async function postRoom(req: Request, code: string): Promise<Response> {
@@ -483,6 +496,11 @@ function apply(r: RoomRecord, op: string, b: Body): string | null {
         final: !!b.final,
         from: clean(b.from, LIMITS.fromChars) || "Control room",
       };
+      break;
+    }
+    case "hide": {
+      const want = Array.isArray(b.hide) ? b.hide.map(String) : [];
+      r.hide = (SCREENS as readonly string[]).filter((n) => want.includes(n));
       break;
     }
     case "live": {

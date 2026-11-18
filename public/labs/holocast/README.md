@@ -27,8 +27,11 @@ room can also change the hologram's colour and fire a beam pulse on every phone 
 - Watch link `/labs/holocast/?room=CODE`: any phone sees the same hologram. Control link
   `/labs/holocast/control/?room=CODE#k=KEY`: can change it. The key never goes in the address bar after load
   (it's kept in localStorage per device).
-- In AR, Invite (bottom left) opens the phone's share sheet with the control link (no QR in the hologram: Dapo,
-  2026-11-18, a friend can't scan a QR through your phone).
+- In AR, Invite (bottom left) opens a sheet with a QR on the phone's screen (Watch or Control) for a friend standing
+  next to you, plus Share link. Never a QR inside the hologram (Dapo, 2026-11-18: a friend can't scan it through
+  your phone).
+- Control room > Hologram > What viewers see switches screens off for everyone (op `hide`: notice, globe, sketch,
+  photo, poll, caption, ticker, reacts).
 - Everything persists in the room (Netlify Blobs). Options > Start a fresh room makes a new one.
 
 ## Data layer
@@ -63,8 +66,8 @@ getUserMedia before starting speech-to-text so the prompt shows reliably, and ex
 
 ## World tracking
 `@8thwall/engine-binary@1.0.0` (Niantic Spatial licence, unmodified from jsDelivr, credited under Options >
-Licences), responsive scale, floor = ray to y = 0 (Bobo Hoops / Spray Bobo Street set-up). Pinch while placing
-sizes the whole rig (0.3x-1.4x, default 0.8: screens at ~0.7-1.3 m on the floor; shrink for a desk). Move (bottom
+Licences), responsive scale, floor = ray to y = 0 (Bobo Hoops / Spray Bobo Street set-up). Pinch while placing, or any
+time after, sizes the whole rig (0.3x-2.4x, default 0.8, so up to 3x the default: screens at ~0.7-1.3 m on the floor; shrink for a desk). Move (bottom
 right) is always on screen once placed and keeps every screen's content. Tapping a screen pulls it in front of the
 camera at a distance where it fills ~80% of the view (world space, not screen-locked); tap again sends it back.
 

@@ -38,7 +38,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem('hc-' + k); ret
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const FONT = '"Space Grotesk", system-ui, sans-serif', MONO = '"JetBrains Mono", ui-monospace, monospace';
 const CAM_H = 1.3;
-const SCALE = { min: 0.3, max: 1.4, def: 0.8 };   // the whole rig; 1 = screens at 0.9-1.7 m (floor), ~0.4 on a desk
+const SCALE = { min: 0.3, max: 2.4, def: 0.8 };   // the whole rig; 1 = screens at 0.9-1.7 m (floor), ~0.4 on a desk; max = 3x the default (Dapo: near human size)
 
 // ---------------------------------------------------------------- sound (made here, no files)
 const sound = {
@@ -118,6 +118,9 @@ function setRoomChip() {
   $('room-t').textContent = room.offline ? `${room.code} · offline` : s ? `${room.code} · ${s.watching || 1} watching` : room.code;
 }
 
+// screens the control room switched off for everyone ('notice', 'globe', 'sketch', 'photo', 'poll', 'caption',
+// 'ticker', 'reacts')
+const hiddenScreen = (n) => !!(room && room.state && Array.isArray(room.state.hide) && room.state.hide.includes(n));
 // what changed in the room -> what moves in the hologram
 const panelOf = { notices: 'notice', sketch: 'sketch', 'sketch-reset': 'sketch', photos: 'photo', poll: 'poll', caption: 'caption' };
 function onRoom(what, r, prev) {
@@ -127,7 +130,7 @@ function onRoom(what, r, prev) {
   if (what === 'error') return;
   if (!s) return;
   setRoomChip();
-  if (what === 'init') { applyTheme(s.theme, true); drawAll(); syncLive(); return; }
+  if (what === 'init') { applyTheme(s.theme, true); drawAll(); syncLive(); syncUi(); return; }
   if (what === 'theme') { applyTheme(s.theme); toast(`Colour: ${theme.name}`); return; }
   if (what === 'title') { drawTitle(); return; }
   if (what === 'pulse') { if (placed) pulseBeam(); return; }
@@ -162,6 +165,7 @@ function onRoom(what, r, prev) {
   }
   if (what === 'caption') { onCaption(); return; }
   if (what === 'live') { syncLive(); return; }
+  if (what === 'hide') { if (focused && hiddenScreen(focused.name)) unfocus(); if (globe.open && hiddenScreen('globe')) closePlace(); syncUi(); return; }
 }
 
 // ---------------------------------------------------------------- scene
@@ -774,7 +778,7 @@ function packetTo(name, delay = 0, fn) {
 // deliver new content: a packet (or a flung card) first, then redraw the screen
 function deliver(name, fling, draw) {
   const P = PANELS[name];
-  if (!placed || !booted || !P) { draw(); return; }
+  if (!placed || !booted || !P || hiddenScreen(name) || live.on) { draw(); return; }
   if (name !== 'poll' && name !== 'caption') showPanel(name);
   if (fling) return flingTo(name, draw);
   packetTo(name, 0, () => { draw(); P.flick = 1; sound.arrive(); });
@@ -922,10 +926,12 @@ function frame(dt) {
     }
     segs.forEach((m, i) => { const ph = (tAll * 6 - i) % 16; m.material.opacity = 0.25 + (ph > 0 && ph < 3 ? 0.75 : 0) + pulseK * 0.5; });
     if (lens) lens.material.opacity = 0.75 + Math.sin(tAll * 8) * 0.1 + pulseK * 0.25;
+    { const cs = rig.scale.x; if (Math.abs(cs - scaleK) > 0.0005) rig.scale.setScalar(cs + (scaleK - cs) * Math.min(1, dt * 12)); }
+    if (ticker) { ticker.visible = !hiddenScreen('ticker'); }
     if (ticker) ticker.material.map.offset.x = (ticker.material.map.offset.x + dt * 0.02) % 1;
     // screens: unfold, flicker on arrival, gentle bob
     for (const P of Object.values(PANELS)) {
-      const want = P.show && !live.on && (booted || P.bootIn) ? 1 : 0;
+      const want = P.show && !live.on && !hiddenScreen(P.name) && (booted || P.bootIn) ? 1 : 0;
       P.on += (want - P.on) * Math.min(1, dt * (want ? 5 : 8));
       if (P.on < 0.01 && !want) { P.g.visible = false; P.on = 0; } else if (want) P.g.visible = true;
       const sy = backOut(P.on); P.flick = Math.max(0, P.flick - dt * 2.2);
@@ -1025,7 +1031,8 @@ function pick(x, y) {
 }
 cam.addEventListener('pointerdown', (e) => {
   touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  if (mode === 'placing' && touches.size === 2) { const [a, b] = [...touches.values()]; pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), s: scaleK }; return; }
+  // pinch sizes the rig while placing AND after it is placed (it grows round the spot it stands on)
+  if (touches.size === 2 && (mode === 'placing' || mode === 'live')) { const [a, b] = [...touches.values()]; pinch0 = { d: Math.hypot(a.x - b.x, a.y - b.y), s: scaleK }; tap0 = null; drag = null; return; }
   if (touches.size !== 1 || mode !== 'live') return;
   tap0 = { x: e.clientX, y: e.clientY, t: performance.now() };
   const u = pick(e.clientX, e.clientY);
@@ -1037,7 +1044,8 @@ cam.addEventListener('pointermove', (e) => {
   if (drag) { const dx = e.clientX - drag.last; drag.last = e.clientX; drag.moved += Math.abs(dx); globe.spin.rotation.y += dx * 0.012; globe.spinTarget = null; const dtt = Math.max(1, performance.now() - drag.t) / 1000; globe.yawV = clamp(dx * 0.012 / dtt, -6, 6); drag.t = performance.now(); }
 });
 const endPtr = (e) => {
-  touches.delete(e.pointerId); if (touches.size < 2) pinch0 = null;
+  touches.delete(e.pointerId);
+  if (touches.size < 2 && pinch0) { pinch0 = null; store.set('scale', scaleK.toFixed(3)); tap0 = null; return; }
   const wasDrag = drag && drag.moved > 12; drag = null;
   if (mode !== 'live' || !tap0 || wasDrag) { tap0 = null; return; }
   const moved = Math.hypot(e.clientX - tap0.x, e.clientY - tap0.y), quick = performance.now() - tap0.t < 450; tap0 = null;
@@ -1065,8 +1073,8 @@ function syncUi() {
   $('b-place').hidden = mode !== 'placing';
   $('b-shutter').hidden = mode !== 'live';
   $('b-move').hidden = !placed;                // house rule: Move always on screen once placed
-  $('b-invite').hidden = !placed || !room || !room.canWrite;
-  $('reacts').hidden = !placed;
+  $('b-invite').hidden = !placed || !room;
+  $('reacts').hidden = !placed || hiddenScreen('reacts');
   if (capture) capture.setVisible(false);
 }
 $('b-place').onclick = () => { sound.init(); place(); };
@@ -1075,19 +1083,34 @@ async function share(url, text) {
   try { if (navigator.share) { await navigator.share({ title: 'MEDIALIFE Holocast', text, url }); return true; } } catch (e) { if (e && e.name === 'AbortError') return false; }
   try { await navigator.clipboard.writeText(url); toast('Link copied'); return true; } catch (e) { prompt('Copy this link', url); return false; }
 }
-const invite = () => { if (!room) return; if (!room.canWrite) { share(viewUrl(room.code), 'Watch my hologram live'); return; } share(controlUrl(room.code, room.key), 'Beam something into my hologram: type, draw, drop a photo'); postEvent('custom', { what: 'holocast-invite' }); };
+// Invite: a QR on this phone's screen (a friend next to you scans it), Watch or Control, plus the share sheet.
+// (Never a QR inside the hologram: Dapo, 2026-11-18.)
+let invKind = 'watch';
+const invUrl = () => (invKind === 'control' && room.canWrite ? controlUrl(room.code, room.key) : viewUrl(room.code));
+function drawInvite() {
+  const url = invUrl();
+  $('inv-seg').hidden = !room.canWrite;
+  for (const b of $('inv-seg').children) b.setAttribute('aria-checked', String(b.dataset.k === invKind));
+  $('inv-body').textContent = invKind === 'control' ? 'They scan this and get the control room: type, draw, drop photos and go live into your hologram.' : 'They scan this with their camera, tap Start and see the same hologram, live.';
+  $('inv-url').textContent = url.replace(/#k=.*/, '#k=…');
+  try { window.QRCode && QRCode.toString(url, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('inv-qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
+}
+const invite = () => { if (!room) return; if (!room.canWrite) invKind = 'watch'; drawInvite(); $('invite').hidden = false; sound.pop(); postEvent('custom', { what: 'holocast-invite' }); };
+for (const b of $('inv-seg').children) b.onclick = () => { invKind = b.dataset.k; drawInvite(); buzz(6); };
+$('inv-share').onclick = () => share(invUrl(), invKind === 'control' ? 'Beam something into my hologram: type, draw, drop a photo, go live' : 'Watch my hologram live');
+$('inv-close').onclick = () => { $('invite').hidden = true; };
 $('b-invite').onclick = invite; $('o-invite').onclick = () => { closeOpts(); invite(); }; $('rs-invite').onclick = () => { $('roomsheet').hidden = true; invite(); };
 $('o-watch').onclick = () => { closeOpts(); room && share(viewUrl(room.code), 'Watch my hologram live'); };
 $('b-room').onclick = () => {
   if (!room) return; const s = room.state;
   $('rs-code').textContent = room.code;
   $('rs-body').textContent = s ? `${s.title}. ${s.watching || 1} watching now. ${s.stats.notices} notices, ${s.stats.strokes} strokes, ${s.stats.photos} photos and ${s.stats.reactions} reactions so far. Everything stays in this room until you start a fresh one.` : 'Connecting…';
-  $('rs-invite').textContent = room.canWrite ? 'Invite to control' : 'Share the watch link';
+  $('rs-invite').textContent = 'Invite a friend';
   $('roomsheet').hidden = false;
 };
 $('rs-close').onclick = () => { $('roomsheet').hidden = true; };
 const opts = $('opts');
-function openOpts() { opts.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); $('o-sound').setAttribute('aria-checked', String(sound.on)); $('o-invite').hidden = !(room && room.canWrite); }
+function openOpts() { opts.hidden = false; $('b-opts').setAttribute('aria-expanded', 'true'); $('o-sound').setAttribute('aria-checked', String(sound.on)); }
 function closeOpts() { opts.hidden = true; $('b-opts').setAttribute('aria-expanded', 'false'); disarm(); }
 $('b-opts').onclick = openOpts; opts.querySelectorAll('[data-close]').forEach((el) => { el.onclick = closeOpts; });
 $('o-sound').onclick = () => { sound.init(); sound.setOn(!sound.on); $('o-sound').setAttribute('aria-checked', String(sound.on)); if (globe.video) globe.video.muted = !sound.on; };

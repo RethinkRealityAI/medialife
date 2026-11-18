@@ -131,3 +131,10 @@ h1 span{color:var(--h)}
 .opt[aria-checked=true] .sw{background:var(--btn)}
 .opt[aria-checked=true] .sw::after{left:21px}
 .opt.armed{border-color:#ff5a5f;color:#ff8a8d}
+
+/* invite sheet */
+.qrbox.big{width:min(240px,62vw);height:min(240px,62vw);padding:14px}
+.seg{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.04)}
+.seg button{min-height:40px;padding:0 18px;border:0;border-radius:999px;background:transparent;color:var(--muted);font:700 15px "Space Grotesk",sans-serif}
+.seg button[aria-checked="true"]{background:var(--h);color:#05070c}
+.sheet .mono{font:500 12px "JetBrains Mono",monospace;word-break:break-all;opacity:.7}

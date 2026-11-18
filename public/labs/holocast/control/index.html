@@ -13,16 +13,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./control.css?v=2">
+  <link rel="stylesheet" href="./control.css?v=3">
 </head>
 <body>
   <header class="top">
     <a class="brand" href="/labs/holocast/" aria-label="MEDIALIFE Holocast"><img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="18"><span>Holocast</span></a>
     <div class="room" id="room-chip" hidden>
       <span class="code" id="room-code">······</span>
-      <span class="live" id="live"><i></i><b id="watching">0</b> watching</span>
+      <span class="live" id="live"><i></i><b id="watching">0</b><span class="wl"> watching</span></span>
     </div>
-    <button type="button" class="ghost" id="b-show" hidden aria-haspopup="dialog"><span class="long">Open the hologram</span><span class="short">Open AR</span></button>
+    <button type="button" class="hbtn" id="b-show" hidden aria-haspopup="dialog" aria-label="Open the hologram on a phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="long">Open AR</span></button>
+    <button type="button" class="hbtn" id="t-holo" hidden aria-controls="p-holo" aria-selected="false" aria-label="Hologram settings: screens, colour, share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span class="long">Hologram</span></button>
   </header>
 
   <!-- no room yet: start one or join one -->
@@ -48,14 +49,6 @@
     <!-- what viewers are sending back from the hologram -->
     <div class="react-strip" id="reacts" aria-live="polite" aria-label="Reactions from the hologram"></div>
 
-    <nav class="tabs" role="tablist" aria-label="What to send">
-      <button role="tab" id="t-notice" aria-controls="p-notice" aria-selected="true">Notice board</button>
-      <button role="tab" id="t-cam" aria-controls="p-cam" aria-selected="false"><span class="rec-dot" aria-hidden="true"></span>Go live</button>
-      <button role="tab" id="t-draw" aria-controls="p-draw" aria-selected="false">Draw</button>
-      <button role="tab" id="t-photo" aria-controls="p-photo" aria-selected="false">Photos</button>
-      <button role="tab" id="t-live" aria-controls="p-live" aria-selected="false">Poll &amp; voice</button>
-      <button role="tab" id="t-holo" aria-controls="p-holo" aria-selected="false">Hologram</button>
-    </nav>
 
     <!-- notice board -->
     <section class="panel" id="p-notice" role="tabpanel" aria-labelledby="t-notice">
@@ -82,24 +75,29 @@
       <ul class="notices" id="n-list"></ul>
     </section>
 
-    <!-- live video -->
-    <section class="panel" id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden>
-      <div class="card cam">
-        <div class="cam-box" id="cam-box">
-          <video id="cam-v" playsinline muted autoplay></video>
-          <div class="cam-idle" id="cam-idle"><b>Stream your camera into the hologram</b><span>While you're live, the other screens fold away and one big holo screen shows your feed on every phone watching. Hold your phone sideways for a wide screen.</span></div>
-          <span class="cam-badge" id="cam-badge" hidden>LIVE</span>
+    <!-- live video: a full-screen viewfinder, camera-app style -->
+    <section class="panel cam-panel" id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden>
+      <div class="cam-box" id="cam-box">
+        <video id="cam-v" playsinline muted autoplay></video>
+        <div class="cam-idle" id="cam-idle">
+          <span class="cam-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 8v8l-5-2.5"/></svg></span>
+          <b>Go live in the hologram</b>
+          <span>Your camera streams into every phone watching. The other screens fold away and one big holo screen shows you. Hold your phone sideways for a wide screen.</span>
+          <span class="small" id="cam-none" hidden>This browser can't stream video. Try Chrome, Edge or Safari.</span>
         </div>
-        <p class="cam-status" id="cam-status" aria-live="polite">Not live</p>
-        <div class="row wrap cam-acts">
-          <button type="button" class="primary big golive" id="cam-go">Go live</button>
-          <button type="button" class="secondary" id="cam-flip" hidden>Flip camera</button>
-          <label class="check"><input type="checkbox" id="cam-audio" checked> Include sound</label>
+        <div class="cam-top">
+          <p class="cam-status" id="cam-status" aria-live="polite"><i aria-hidden="true"></i><span id="cam-status-t">Not live</span></p>
+          <div class="cam-tools">
+            <button type="button" class="round" id="cam-audio" role="switch" aria-checked="true" aria-label="Include sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><s aria-hidden="true"></s></button>
+            <button type="button" class="round" id="cam-flip" hidden aria-label="Flip camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15"/><path d="M4 20v-5h5"/></svg></button>
+          </div>
         </div>
-        <p class="small" id="cam-other" hidden></p>
-        <p class="small" id="cam-none" hidden>This browser can't stream video. Try Chrome, Edge or Safari.</p>
+        <p class="cam-other" id="cam-other" hidden></p>
+        <div class="cam-go">
+          <button type="button" class="shutter" id="cam-go" aria-label="Go live"><i aria-hidden="true"></i></button>
+          <span id="cam-go-t">Go live</span>
+        </div>
       </div>
-      <p class="hint">Your camera goes straight to each phone watching. If a phone can't connect directly, it gets a lighter picture-by-picture feed without sound. Keep this tab open while you're live.</p>
     </section>
 
     <!-- live sketch -->
@@ -169,6 +167,12 @@
 
     <!-- hologram -->
     <section class="panel" id="p-holo" role="tabpanel" aria-labelledby="t-holo" hidden>
+      <h1 class="ptitle">Hologram</h1>
+      <div class="card">
+        <h2 class="sub0">What viewers see</h2>
+        <p class="small">Switch screens off for every phone watching. Content stays saved, so switching one back on brings it right back.</p>
+        <div class="switches" id="screens"></div>
+      </div>
       <div class="card">
         <h2 class="sub0">Colour</h2>
         <div class="themes" id="themes" role="radiogroup" aria-label="Hologram colour"></div>
@@ -194,6 +198,18 @@
     </section>
   </main>
 
+
+  <!-- the floating dock (the platform's phone tab bar) -->
+  <nav class="dock" id="dock" hidden aria-label="What to send">
+    <div class="dock-in" role="tablist" aria-label="What to send">
+      <button role="tab" id="t-notice" aria-controls="p-notice" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Notices</span></button>
+      <button role="tab" id="t-draw" aria-controls="p-draw" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20c2 0 3-1 4-3l9-9a2.1 2.1 0 0 0-3-3l-9 9c-2 1-3 2-3 4"/><path d="M13 6l3 3"/></svg><span>Draw</span></button>
+      <button role="tab" id="t-cam" class="hl" aria-controls="p-cam" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 8v8l-5-2.5"/></svg><span>Go live</span></button>
+      <button role="tab" id="t-photo" aria-controls="p-photo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg><span>Photos</span></button>
+      <button role="tab" id="t-live" aria-controls="p-live" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Poll</span></button>
+    </div>
+  </nav>
+
   <!-- open the hologram on a phone -->
   <div class="sheet-wrap" id="show" hidden role="dialog" aria-labelledby="show-t">
     <div class="sheet">
@@ -210,6 +226,6 @@
   <footer class="foot"><img src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" height="28"></footer>
 
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
-  <script type="module" src="./control.js?v=2"></script>
+  <script type="module" src="./control.js?v=3"></script>
 </body>
 </html>

@@ -41,7 +41,7 @@ $('join').onsubmit = (e) => {
 
 function open(code, key) {
   room = new Room(code, key, { role: 'control' });
-  $('app').hidden = false; $('room-chip').hidden = false; $('b-show').hidden = false;
+  $('app').hidden = false; $('room-chip').hidden = false; $('b-show').hidden = false; $('dock').hidden = false; $('t-holo').hidden = false;
   $('room-code').textContent = code;
   $('readonly').hidden = room.canWrite;
   document.querySelectorAll('#app form button, #app .panel button, #app input, #app textarea').forEach((el) => { if (!room.canWrite && !el.closest('.tabs')) el.disabled = true; });
@@ -67,23 +67,29 @@ function onRoom(what) {
   if (all || what === 'title') { if (document.activeElement !== $('h-title')) $('h-title').value = s.title; }
   if (all || what === 'poll') renderPoll();
   if (all || what === 'live') renderLive();
+  if (all || what === 'hide') renderScreens();
   if (what === 'reactions') showReactions(arguments[2]);
   if (all) { renderStats(); $('watching').textContent = s.watching; }
   else renderStats();
 }
 
 // ---------------------------------------------------------------- tabs
-const TABS = ['notice', 'cam', 'draw', 'photo', 'live', 'holo'];
+const TABS = ['notice', 'draw', 'cam', 'photo', 'live', 'holo'];
+const DOCK = TABS.slice(0, 5);                 // the floating dock; 'holo' is the header's Hologram button
+let curTab = 'notice';
 function tab(name) {
+  curTab = name;
   for (const t of TABS) { $('t-' + t).setAttribute('aria-selected', String(t === name)); $('p-' + t).hidden = t !== name; }
+  document.body.classList.toggle('cam-mode', name === 'cam');
   try { sessionStorage.setItem('holocast-tab', name); } catch (e) { /* none */ }
   if (name === 'draw') drawRemote(true);
+  if (name !== 'cam') scrollTo(0, 0);
 }
-TABS.forEach((t) => { $('t-' + t).onclick = () => tab(t); });
-$('t-notice').parentElement.addEventListener('keydown', (e) => {
+TABS.forEach((t) => { $('t-' + t).onclick = () => tab(t === 'holo' && curTab === 'holo' ? 'notice' : t); });
+$('dock').addEventListener('keydown', (e) => {
   if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-  const i = TABS.findIndex((t) => $('t-' + t).getAttribute('aria-selected') === 'true');
-  const n = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length]; tab(n); $('t-' + n).focus();
+  const i = Math.max(0, DOCK.indexOf(curTab));
+  const n = DOCK[(i + (e.key === 'ArrowRight' ? 1 : DOCK.length - 1)) % DOCK.length]; tab(n); $('t-' + n).focus();
 });
 try { const t = sessionStorage.getItem('holocast-tab'); if (TABS.includes(t)) tab(t); } catch (e) { /* none */ }
 
@@ -346,7 +352,9 @@ $('v-mic').onclick = async () => {
 let cam = null;   // { stream, host, id, facing }
 let camFacing = 'user';
 if (!canStream()) { $('cam-go').hidden = true; $('cam-none').hidden = false; }
-function camStatus(t, on) { $('cam-status').textContent = t; $('cam-status').classList.toggle('on', !!on); }
+function camStatus(t, on) { $('cam-status-t').textContent = t; $('cam-status').classList.toggle('on', !!on); }
+const audioOn = () => $('cam-audio').getAttribute('aria-checked') === 'true';
+$('cam-audio').onclick = () => { if (cam) return; const on = !audioOn(); $('cam-audio').setAttribute('aria-checked', String(on)); $('cam-audio').setAttribute('aria-label', on ? 'Sound on: tap to go live without sound' : 'Sound off: tap to include sound'); toast(on ? 'Your sound goes live too' : 'Going live without sound'); };
 async function getCam(facing, audio) {
   return navigator.mediaDevices.getUserMedia({
     video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 24, max: 30 } },
@@ -362,7 +370,7 @@ async function goLive() {
   if (!room || !room.canWrite || cam) return;
   $('cam-go').disabled = true; camStatus('Starting your camera…');
   let stream;
-  try { stream = await getCam(camFacing, $('cam-audio').checked); }
+  try { stream = await getCam(camFacing, audioOn()); }
   catch (e) {
     $('cam-go').disabled = false;
     camStatus('Not live');
@@ -371,7 +379,7 @@ async function goLive() {
   }
   showCam(stream, camFacing);
   await new Promise((r) => { const v = $('cam-v'); if (v.videoWidth) r(); else { v.onloadedmetadata = () => r(); setTimeout(r, 1500); } });
-  const v = await room.send({ op: 'live', on: true, aspect: camAspect(), audio: $('cam-audio').checked, from: from() });
+  const v = await room.send({ op: 'live', on: true, aspect: camAspect(), audio: audioOn(), from: from() });
   if (!v || !v.live) { stream.getTracks().forEach((t) => t.stop()); $('cam-box').classList.remove('on'); $('cam-go').disabled = false; camStatus('Couldn\'t go live. Try again.'); return; }
   cam = { stream, id: v.live.id, host: new LiveHost(room, $('cam-v'), { onStatus: liveStatus }) };
   room.liveId = cam.id;
@@ -388,22 +396,24 @@ async function endLive(id) {
 function liveStatus({ peers, relay }) {
   if (!cam) return;
   const n = peers + relay;
-  camStatus(n ? `Live · ${n} ${n === 1 ? 'phone' : 'phones'} watching${relay ? ` (${relay} on the light feed)` : ''}` : 'Live · waiting for a phone to tune in', true);
+  camStatus(n ? `Live · ${n} ${n === 1 ? 'phone' : 'phones'} watching${relay ? ` (${relay} on the light feed)` : ''}` : 'Live · waiting for viewers', true);
 }
 function renderLive() {
   const l = room && room.liveNow ? room.liveNow() : null;
   const mineOn = !!cam;
-  $('cam-go').textContent = mineOn ? 'End live' : 'Go live';
+  $('cam-go-t').textContent = mineOn ? 'End live' : 'Go live';
+  $('cam-go').setAttribute('aria-label', mineOn ? 'End live' : 'Go live');
   $('cam-go').classList.toggle('stop', mineOn);
+  $('cam-box').classList.toggle('is-live', mineOn);
   $('cam-flip').hidden = !mineOn;
-  $('cam-badge').hidden = !mineOn;
+  $('cam-audio').hidden = mineOn;
   $('cam-audio').disabled = mineOn || !(room && room.canWrite);
   $('t-cam').classList.toggle('is-live', mineOn);
   const other = l && !mineOn;
   $('cam-other').hidden = !other;
   if (other) {
     $('cam-other').innerHTML = '';
-    const t = document.createElement('span'); t.textContent = `${l.from} is live from another device. Going live here takes over. `;
+    const t = document.createElement('span'); t.textContent = `${l.from} is live from another device. Going live here takes over.`;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'secondary warn'; b.textContent = 'End their feed'; b.onclick = () => endLive(l.id);
     $('cam-other').append(t, b);
   }
@@ -417,18 +427,43 @@ $('cam-flip').onclick = async () => {
   if (!cam) return;
   const next = camFacing === 'user' ? 'environment' : 'user';
   try {
-    const s = await getCam(next, $('cam-audio').checked);
+    const s = await getCam(next, audioOn());
     cam.stream.getTracks().forEach((t) => t.stop());
     camFacing = next; cam.stream = s; cam.host.setStream(s); showCam(s, next);
-    setTimeout(() => room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: $('cam-audio').checked }, { quiet: true }), 900);
+    setTimeout(() => room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: audioOn() }, { quiet: true }), 900);
   } catch (e) { toast('Couldn\'t switch cameras'); }
 };
-$('cam-v').addEventListener('resize', () => { if (cam) room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: $('cam-audio').checked }, { quiet: true }); });
+$('cam-v').addEventListener('resize', () => { if (cam) room.send({ op: 'live', on: true, id: cam.id, aspect: camAspect(), audio: audioOn() }, { quiet: true }); });
 // closing the tab ends the feed for everyone straight away (otherwise it times out after 25 s)
 addEventListener('pagehide', () => {
   if (!cam || !room) return;
   try { navigator.sendBeacon(`/api/holocast/${room.code}`, new Blob([JSON.stringify({ op: 'live', on: false, id: cam.id, k: room.key, sid: room.sid })], { type: 'application/json' })); } catch (e) { /* gone */ }
 });
+
+// ---------------------------------------------------------------- what viewers see (screens on / off for everyone)
+const SCREENS = [
+  ['notice', 'Notice board'], ['globe', 'Where is Bobo? globe'], ['sketch', 'Live sketch'], ['photo', 'Photo drop'],
+  ['poll', 'Live poll'], ['caption', 'Captions'], ['ticker', 'Activity ring'], ['reacts', 'Emoji reactions'],
+];
+function renderScreens() {
+  const box = $('screens'), hide = (room.state && room.state.hide) || [];
+  if (!box.children.length) {
+    for (const [k, label] of SCREENS) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sw-row'; b.setAttribute('role', 'switch'); b.dataset.k = k;
+      b.innerHTML = '<span></span><i aria-hidden="true"></i>'; b.firstChild.textContent = label;
+      b.disabled = !room.canWrite;
+      b.onclick = async () => {
+        const cur = new Set((room.state && room.state.hide) || []);
+        if (cur.has(k)) cur.delete(k); else cur.add(k);
+        b.setAttribute('aria-checked', String(!cur.has(k)));
+        const ok = await room.send({ op: 'hide', hide: [...cur] });
+        if (ok) toast(`${label} ${cur.has(k) ? 'hidden' : 'showing'} for everyone`); else renderScreens();
+      };
+      box.appendChild(b);
+    }
+  }
+  for (const b of box.children) b.setAttribute('aria-checked', String(!hide.includes(b.dataset.k)));
+}
 
 // ---------------------------------------------------------------- hologram settings
 function renderThemes() {
