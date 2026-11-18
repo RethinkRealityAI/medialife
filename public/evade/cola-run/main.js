@@ -13,12 +13,15 @@
 //
 // URL options: ?mode=play|record|lounge|hideout (deep links, e.g. back from Bobo's Arcade), ?hub=CODE (merch
 // QR), ?home=always|afterActivation|off (BOBO OS as home; default always while testing), ?scale=0.25,
-// ?stick=left, ?test (test code under the unlock form), ?diag (status readout; on by default on previews).
+// ?stick=left, ?test (test code under the unlock form), ?diag (status readout; on by default on previews),
+// ?hideout=classic (the two-storey hideout built round Bobo on the board instead of the walk-in portal one).
+const PORTAL_HIDEOUT = new URLSearchParams(location.search).get("hideout") !== "classic";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { addArcadeCabinet } from "./arcade-cabinet.js?v=1";
+import { addArcadeCabinet } from "./arcade-cabinet.js?v=2";
+import { setupHideoutPortal } from "./hideout-portal.js?v=1";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
@@ -183,7 +186,7 @@ canvas.addEventListener("pointerup", endTouch);
 canvas.addEventListener("pointercancel", endTouch);
 
 /* ── scene objects (filled in onStart, inside 8th Wall's three.js scene) ── */
-let scene, camera, renderer, game, ctx, mode, hub, capture, mixer, runAct, idleAct, cabinet;
+let scene, camera, renderer, game, ctx, mode, hub, capture, mixer, runAct, idleAct, cabinet, hideoutPortal;
 const emoteActs = {};
 let emote = null;
 const anchor = new THREE.Group(); // everything the game and the hideout own
@@ -412,7 +415,8 @@ async function buildScene(xr) {
     element: new THREE.Group(),
     children: [],
     onRecordStart: { addListener() {}, removeListener() {} },
-    buttonVisible: lobs(true, (v) => capture.setVisible(v)),
+    // The walk-in hideout keeps the shutter (bottom centre): filming the trip through the door is the point.
+    buttonVisible: lobs(true, (v) => capture.setVisible(v || !!hideoutPortal?.active)),
     corner: lobs(capture.settings.corner, (v) => {
       capture.settings.corner = v;
       capture.apply();
@@ -434,12 +438,29 @@ async function buildScene(xr) {
   // Fans who haven't unlocked the room land in Cola Run (the room asks for a merch code). ?start=myRoom|lounge.
   mode.startIn.value = qs.get("start") || "colaRun";
   mode.roomFit.value = "bothFloors";
+  // Walk-in hideout: life size, so no pinch/twist resizing of the room.
+  if (PORTAL_HIDEOUT) mode.allowAdjust.value = false;
   mode.buildTimeline.value = "lounge-excited";
   mode.roomTimeline.value = "lounge-purr";
   ctx.constructed.then(() => {
     hub = mode.hub;
-    // The arcade machine in Bobo's Hideout: walk Bobo up to it (or tap it) to open Bobo's Arcade.
-    if (hub)
+    // Walk-in hideout (default): a door opens where Bobo stands; through it, the one-storey hideout.
+    if (hub && PORTAL_HIDEOUT)
+      hideoutPortal = setupHideoutPortal({
+        hub,
+        camera,
+        renderer,
+        canvas,
+        anchor,
+        player,
+        onEvent: platformEvent,
+        onActive: (on) => {
+          stick.hidden = on || !game.isPlaced;
+          capture.setVisible(true);
+        },
+      });
+    // Classic hideout: the arcade machine in the room. Walk Bobo up to it (or tap it) to open Bobo's Arcade.
+    else if (hub)
       cabinet = addArcadeCabinet({
         hub,
         player,
@@ -470,6 +491,9 @@ async function buildScene(xr) {
   }
 
   window.__cr = {
+    get hideoutPortal() {
+      return hideoutPortal;
+    },
     game,
     mode,
     anchor,
@@ -607,6 +631,7 @@ const app = {
     mixer?.update(dt);
     ctx.step(dt); // triggers, then the game's and the hideout's onBeforeRender
     cabinet?.update(dt);
+    hideoutPortal?.update(dt);
   },
   // Right after XR8.Threejs draws: the recorder copies the frame (as Mattercraft's onAfterRender).
   onRender: () => built && capture?.frame(),

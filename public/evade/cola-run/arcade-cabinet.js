@@ -51,7 +51,7 @@ function marqueeTexture() {
 }
 
 /** A cabinet ~1.1 units tall, front facing +z, standing on y = 0. */
-function buildCabinet() {
+export function buildCabinet() {
   const g = new THREE.Group();
   g.name = "BobosArcadeCabinet";
   const mat = (color, extra = {}) =>

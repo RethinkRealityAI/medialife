@@ -22,3 +22,7 @@ the kit does the rest.
   inside view, look-back through the door, taps, counters, finales; splash at 390x844, 375x667, 1366x800.
 - Not tested yet: a real phone (tracking drift while walking, frame rate on mid-range Android, iOS motion prompt,
   video capture of the portal).
+
+## Also used by
+- **Cola Run's walk-in Bobo's Hideout** (`/evade/cola-run/hideout-portal.js`, 2026-11-18): HubCore's own room is
+  moved into a Portal's world and laid out on one floor; `?hideout=classic` keeps the old two-storey room.
