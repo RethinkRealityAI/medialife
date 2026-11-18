@@ -30,6 +30,8 @@ the kit does the rest.
 ## Also used by
 - **Cola Run's walk-in Bobo's Hideout** (`/evade/cola-run/hideout-portal.js`, 2026-11-18): HubCore's own room is
   moved into a Portal's world and laid out on one floor; `?hideout=classic` keeps the old two-storey room.
+  Round 3: the door has its own floor placement (aim, Place, "large space" note) after the code; Reset placement
+  becomes "Move door" while the hideout is out and keeps the room.
   Round 2 (after the first phone test went black): no clipping, no new lights, everything laid out and compiled at
   load (0 shaders compile when the door opens, was 25), small canvas textures, a "graphics restarted" sheet on a
   WebGL context loss, and a phone test log (`/api/ar/kc-diag` on previews: stalls, tracking, door steps, GPU resets).

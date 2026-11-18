@@ -12,7 +12,10 @@
 //    furniture out again on one big floor (rotated about the room's centre and pushed out to the new wall);
 //  - adds the new shell (floor, wall, ceiling with the can's opening, string lights), the big screen and the
 //    arcade machines;
-//  - puts the door where Bobo was standing, facing you, and hides the board while you're in the hideout.
+//  - places the door with its own floor placement, like the portal app (round 3, Dapo 2026-11-18): after the code
+//    (or whenever the hideout opens) you aim at the floor and tap Place; the door is a fixed walk-through size
+//    and stays anchored in the world. Reset placement ("Move door") picks the door up again and keeps the room;
+//    the Cola Run board is only re-placed when you're back on the board. The board is hidden meanwhile.
 // The classic hideout is untouched: Cola Run with ?hideout=classic, and the lab /labs/collector-hub/.
 //
 // Portal technique: /labs/portal-kit/portal.js (depth-only wall with a door hole + crossing toggle).
@@ -334,7 +337,7 @@ function cabinetScreen(game) {
   return tex;
 }
 
-export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onEvent = () => {}, onDiag = () => {} }) {
+export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, onEvent = () => {}, onDiag = () => {} }) {
   const portal = new Portal({ renderer, width: DOOR.w, height: DOOR.h, colors: [CYAN, PINK, '#ffffff'], frame: '#1b2552', trim: CYAN });
   portal.group.visible = false;
   const scene = anchor.parent;
@@ -708,45 +711,167 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
   }
 
   /* ── the door ── */
-  function placeDoor() {
-    const cam = camera.getWorldPosition(v1);
-    // Straight ahead, two steps away, facing you: in view and in reach (Bobo may be anywhere on the board).
-    const floorY = anchor.getWorldPosition(v2).y;
-    camera.getWorldDirection(v2);
-    v2.y = 0;
-    if (v2.lengthSq() < 1e-4) v2.set(0, 0, -1);
-    v2.normalize();
-    const p = new THREE.Vector3(cam.x + v2.x * 2.0, floorY, cam.z + v2.z * 2.0);
-    portal.group.position.copy(p);
-    portal.group.rotation.set(0, Math.atan2(cam.x - p.x, cam.z - p.z), 0);
-    portal.group.updateMatrixWorld(true);
+  /* ── placing the door: its own floor placement, like the portal app (aim at the floor, Place) ── */
+  // The door is placed where you point, on the floor, facing you, at a fixed walk-through size, and then stays
+  // put in the world (8th Wall's SLAM space), whatever the Cola Run board does.
+  const FLOOR = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const aimRay = new THREE.Raycaster();
+  const aimHit = new THREE.Vector3();
+  const CENTRE = new THREE.Vector2(0, 0);
+  let aiming = false;
+  let aimOk = false;
+  let pendingEnter = null; // HubCore's enter() options, waiting for the door to be placed
+  let testHit = null;
+
+  const reticle = new THREE.Group();
+  {
+    const rm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.56, 48), rm);
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(DOOR.w, 0.05), rm);
+    const arrow = new THREE.Mesh(new THREE.CircleGeometry(0.08, 3), rm);
+    arrow.rotation.z = -Math.PI / 2;
+    arrow.position.y = -0.34; // after the -90° tilt below, this points at the camera (the door's front)
+    for (const m of [ring, bar, arrow]) reticle.add(m);
+    reticle.rotation.order = 'YXZ';
+    reticle.visible = false;
+    scene.add(reticle);
   }
 
-  function open() {
-    placeDoor();
+  // the placing UI: a note at the top, Place at the bottom centre (the shutter is bottom right), Back under it
+  const ui = document.createElement('div');
+  ui.className = 'hp-aim';
+  ui.hidden = true;
+  ui.innerHTML = `
+    <div class="hp-note" role="status" aria-live="polite"><b>Place the door to Bobo’s Hideout</b><span>Make sure you’re in a large space you can walk around.</span></div>
+    <div class="hp-bottom">
+      <button type="button" class="hp-place" disabled>Point at the floor…</button>
+      <button type="button" class="hp-back">Back to Cola Run</button>
+    </div>`;
+  const css = document.createElement('style');
+  css.textContent = `
+    .hp-aim{position:fixed;inset:0;pointer-events:none;z-index:60;font-family:system-ui,-apple-system,sans-serif}
+    .hp-aim[hidden]{display:none!important}
+    .hp-note{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 74px);width:min(340px,calc(100% - 32px));
+      padding:12px 16px;border-radius:16px;background:#0d1533;border:1px solid #2a3a78;color:#fff;text-align:center;display:grid;gap:4px}
+    .hp-note b{font-size:15px;font-weight:800}
+    .hp-note span{font-size:13.5px;color:#c9d6ff}
+    .hp-bottom{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:grid;justify-items:center;gap:6px}
+    .hp-place{pointer-events:auto;min-width:200px;min-height:52px;padding:0 24px;border:0;border-radius:999px;background:#f6c344;color:#15131a;font-family:inherit;font-weight:800;font-size:17px;line-height:1}
+    .hp-place:disabled{background:#3a3f55;color:#c3c8da}
+    .hp-back{pointer-events:auto;min-height:40px;padding:0 16px;border:1px solid #2a3a78;border-radius:999px;background:#0d1533;color:#fff;font-family:inherit;font-weight:700;font-size:14px;line-height:1}
+  `;
+  document.head.appendChild(css);
+  document.body.appendChild(ui);
+  const placeBtn = ui.querySelector('.hp-place');
+  const backBtn = ui.querySelector('.hp-back');
+  placeBtn.addEventListener('click', () => placeHere());
+  backBtn.addEventListener('click', () => {
+    hub._sfx?.('click');
+    onCancel?.();
+  });
+
+  function startAim() {
+    aiming = true;
+    aimOk = false;
+    portal.setInside(false);
+    portal.openTarget = 0;
+    portal.open = 0; // the room hides at once: it doesn't slide along with the door
+    portal.group.visible = false; // shows on the first floor hit
+    placeBtn.disabled = true;
+    placeBtn.textContent = 'Point at the floor…';
+    ui.hidden = false;
+    hub.prompt?.(null);
+    if (hub._el?.spots) hub._el.spots.style.visibility = 'hidden'; // the room's dots, while the room is away
+    onAim?.(true);
+    onDiag('door_aim', {});
+  }
+  function endAim() {
+    if (!aiming) return;
+    aiming = false;
+    reticle.visible = false;
+    ui.hidden = true;
+    if (hub._el?.spots) hub._el.spots.style.visibility = '';
+    onAim?.(false);
+  }
+  function tickAim(dt) {
+    aimRay.setFromCamera(CENTRE, camera);
+    let ok = false;
+    const cam = camera.getWorldPosition(v1);
+    if (aimRay.ray.intersectPlane(FLOOR, aimHit)) {
+      const d = Math.hypot(aimHit.x - cam.x, aimHit.z - cam.z);
+      ok = d > 0.8 && d < 6;
+    }
+    if (testHit) {
+      ok = true;
+      aimHit.copy(testHit);
+    }
+    const g = portal.group;
+    if (ok) {
+      const first = !g.visible;
+      g.position.lerp(aimHit, first ? 1 : 1 - Math.exp(-14 * dt));
+      g.position.y = 0;
+      g.rotation.set(0, Math.atan2(cam.x - g.position.x, cam.z - g.position.z), 0);
+      g.visible = true;
+      reticle.position.copy(g.position).setY(0.003);
+      reticle.rotation.set(-Math.PI / 2, g.rotation.y, 0);
+    }
+    reticle.visible = ok;
+    if (ok !== aimOk) {
+      aimOk = ok;
+      placeBtn.disabled = !ok;
+      placeBtn.textContent = ok ? 'Place the door' : 'Point at the floor…';
+    }
+  }
+  function placeHere() {
+    if (!aiming || !aimOk) return;
+    endAim();
+    testHit = null;
+    portal.group.updateMatrixWorld(true);
     portal.group.visible = true;
     portal.setInside(false);
     portal.wasOutside = true;
     portal.openTarget = 1;
+    hub._sfx?.('whoosh');
+    onDiag('door_placed', {});
+    onEvent('custom', { action: 'hideout_door_placed' });
+    if (pendingEnter) {
+      // first time in: the wireframe build-in races out from the doorway into the room
+      const opts = pendingEnter;
+      pendingEnter = null;
+      portal.group.localToWorld(v1.set(0, 0, -0.4));
+      origEnter({ ...opts, origin: v1.clone() });
+    }
+    if (!told) {
+      told = true;
+      setTimeout(() => active && !aiming && !portal.inside && hub.toast('Walk through the door into Bobo’s Hideout'), 1800);
+    }
+  }
+
+  /** Bring the door out and start placing it. */
+  function open() {
     if (!active) anchorWas = anchor.visible;
     active = true;
     closing = false;
     anchor.visible = false;
     onActive?.(true);
     onDiag('door_open', { prepped: !!prepping });
-    hub._sfx?.('whoosh');
-    if (!told) {
-      told = true;
-      setTimeout(() => active && !portal.inside && hub.toast('Walk through the door into Bobo’s Hideout'), 1800);
-    }
+    startAim();
+  }
+  /** Reset placement / Move while the hideout is open: pick the door up, the room keeps its state. */
+  function move() {
+    if (!active || closing) return false;
+    if (!aiming) startAim();
+    return true;
   }
 
   function close(instant = false) {
     if (!active) return;
+    endAim();
+    pendingEnter = null;
     closing = true;
     portal.openTarget = 0;
     portal.setInside(false);
-    if (instant) finishClose();
+    if (instant || !portal.group.visible) finishClose();
   }
   function finishClose() {
     active = false;
@@ -774,10 +899,10 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
   const origEnter = hub.enter.bind(hub);
   hub.enter = (opts = {}) => {
     if (!layout()) return origEnter(opts);
+    if (hub.state === 'building' || hub.state === 'live') return; // already in (HubCore ignores it too)
+    // After the code (or any time the hideout opens): place the door first; the room builds once it's down.
+    pendingEnter = opts;
     open();
-    // the wireframe build-in races out from the doorway into the room
-    portal.group.localToWorld(v1.set(0, 0, -0.4));
-    return origEnter({ ...opts, origin: v1.clone() });
   };
   const origLeave = hub.leave.bind(hub);
   hub.leave = (opts = {}) => {
@@ -790,6 +915,9 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     close(true);
     return origPreview();
   };
+  // While the door is being placed the room is away: taps don't reach it.
+  const origTap = hub.tap.bind(hub);
+  hub.tap = (x, y) => (aiming ? true : origTap(x, y));
   const origHide = hub.hide.bind(hub);
   hub.hide = () => {
     close(true);
@@ -821,7 +949,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
   canvas.addEventListener('pointerup', (e) => {
     const d = down;
     down = null;
-    if (!d || !active || hub.state !== 'live') return;
+    if (!d || !active || aiming || hub.state !== 'live') return;
     if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 10 || performance.now() - d.t > 450) return;
     if (typeof hub._layerOpen === 'function' && hub._layerOpen()) return;
     const r = canvas.getBoundingClientRect();
@@ -844,10 +972,15 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     get inside() {
       return portal.inside;
     },
+    get aiming() {
+      return aiming;
+    },
+    move,
     update(dt) {
       t += dt;
       patchHome();
       if (!prepping && hub.loaded && t > 8) prep();
+      if (aiming) tickAim(dt);
       if (!portal.group.visible) return;
       portal.update(dt, camera, t);
       if (closing && portal.open < 0.02) finishClose();
@@ -878,6 +1011,17 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       open,
       close,
       prep,
+      /** place the door at (dx right, dz ahead) of the camera, on the floor */
+      placeAt(dx = 0, dz = 2) {
+        const v = new THREE.Vector3();
+        camera.getWorldDirection(v);
+        v.y = 0;
+        v.normalize();
+        const c = camera.getWorldPosition(new THREE.Vector3());
+        testHit = new THREE.Vector3(c.x + v.x * dz - v.z * dx, 0, c.z + v.z * dz + v.x * dx);
+        tickAim(1);
+        placeHere();
+      },
       stepIn(d = 1.2) {
         // move the door past the camera so the camera crosses the opening
         const cam = camera.getWorldPosition(v1);

@@ -21,7 +21,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { addArcadeCabinet } from "./arcade-cabinet.js?v=2";
-import { setupHideoutPortal } from "./hideout-portal.js?v=2";
+import { setupHideoutPortal } from "./hideout-portal.js?v=3";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
@@ -521,13 +521,22 @@ async function buildScene(xr) {
         player,
         onEvent: platformEvent,
         onDiag: step,
+        // Placing the door: Place is bottom centre, the shutter stays bottom right (filming the door going down
+        // is part of the fun); the joystick is already away in the hideout.
+        onCancel: () => mode.leave(),
         onActive: (on) => {
           // Closing because placement was reset: back to placing, so Place keeps the bottom centre.
           stick.hidden = on || !game.isPlaced || replacing;
           capture.setVisible(true);
         },
       });
-    // Classic hideout: the arcade machine in the room. Walk Bobo up to it (or tap it) to open Bobo's Arcade.
+    // Reset placement (the game's button, and BOBO OS > Move scene) moves the DOOR while the hideout is out,
+    // and keeps the room as it is; the Cola Run board is only re-placed when you're on the board.
+    if (hideoutPortal) {
+      const resetBoard = game._resetPlacement.bind(game);
+      game._resetPlacement = () => (hideoutPortal.active && hideoutPortal.move() ? undefined : resetBoard());
+    }
+    // Classic hideout (no door): the arcade machine in the room. Walk Bobo up to it (or tap it) to open Bobo's Arcade.
     else if (hub)
       cabinet = addArcadeCabinet({
         hub,
@@ -705,6 +714,15 @@ const app = {
       flushLog();
     }
     if (!built) return;
+    // The bottom-left button says what it moves.
+    if (hideoutPortal) {
+      const lbl = document.querySelector(".ohg-resetBox .ohg-roundLbl");
+      const want = hideoutPortal.active ? "Move door" : String(game.resetButtonLabel?.value ?? "");
+      if (lbl && want && lbl.textContent !== want) {
+        lbl.textContent = want;
+        lbl.style.display = "";
+      }
+    }
     if (hub && hub.state !== lastHub) {
       step("hub", { s2: hub.state });
       lastHub = hub.state;
