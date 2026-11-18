@@ -337,7 +337,7 @@ function cabinetScreen(game) {
   return tex;
 }
 
-export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, busy = () => false, onEvent = () => {}, onDiag = () => {} }) {
+export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, busy = () => false, maxTex = 2048, onEvent = () => {}, onDiag = () => {} }) {
   const portal = new Portal({ renderer, width: DOOR.w, height: DOOR.h, colors: [CYAN, PINK, '#ffffff'], frame: '#1b2552', trim: CYAN });
   portal.group.visible = false;
   const scene = anchor.parent;
@@ -663,8 +663,44 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     })();
     return prepping;
   }
+  /* Texture memory: the room's textures are up to 4096 px (the can label alone is ~28 MB on the GPU). Phones with
+     tight WebGL memory (iPhone Safari kills the tab) get them capped at maxTex px, drawn down once on a canvas. */
+  let shrunk = false;
+  function shrinkTextures() {
+    if (shrunk || !hub._room) return;
+    shrunk = true;
+    const seen = new Set();
+    let saved = 0;
+    hub._room.traverse((o) => {
+      for (const m of o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [])
+        for (const k of Object.keys(m)) {
+          const tx = m[k];
+          if (!tx?.isTexture || tx.isRenderTargetTexture || tx.isCanvasTexture || seen.has(tx)) continue;
+          seen.add(tx);
+          const im = tx.image;
+          const w = im?.width || 0;
+          const h = im?.height || 0;
+          if (!w || !h || Math.max(w, h) <= maxTex) continue;
+          const k2 = maxTex / Math.max(w, h);
+          const c = document.createElement('canvas');
+          c.width = Math.max(1, Math.round(w * k2));
+          c.height = Math.max(1, Math.round(h * k2));
+          try {
+            c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+          } catch {
+            continue;
+          }
+          saved += (w * h - c.width * c.height) * 4 * 1.33;
+          im.close?.(); // an ImageBitmap's memory goes now
+          tx.image = c;
+          tx.needsUpdate = true;
+        }
+    });
+    onDiag('textures_capped', { max: maxTex, savedMB: Math.round(saved / 1e6) });
+  }
   const origWarm = hub.warm.bind(hub);
   hub.warm = async (...a) => {
+    shrinkTextures(); // before HubCore uploads them
     await origWarm(...a);
     // never mid-round: a compile can still hitch a frame on some phones, so it waits for a quiet moment
     while (busy()) await new Promise((r) => setTimeout(r, 500));
@@ -761,9 +797,26 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     .hp-place{pointer-events:auto;min-width:200px;min-height:52px;padding:0 24px;border:0;border-radius:999px;background:#f6c344;color:#15131a;font-family:inherit;font-weight:800;font-size:17px;line-height:1}
     .hp-place:disabled{background:#3a3f55;color:#c3c8da}
     .hp-back{pointer-events:auto;min-height:40px;padding:0 16px;border:1px solid #2a3a78;border-radius:999px;background:#0d1533;color:#fff;font-family:inherit;font-weight:700;font-size:14px;line-height:1}
+    .hp-track{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 74px);width:min(340px,calc(100% - 32px));z-index:61;
+      padding:12px 16px;border-radius:16px;background:#0d1533;border:1px solid #f6c344;color:#fff;text-align:center;display:grid;gap:4px;pointer-events:none;
+      font-family:system-ui,-apple-system,sans-serif}
+    .hp-track[hidden]{display:none!important}
+    .hp-track b{font-size:15px;font-weight:800}
+    .hp-track span{font-size:13.5px;color:#c9d6ff}
   `;
   document.head.appendChild(css);
   document.body.appendChild(ui);
+  // Tracking lost: the phone only knows which way it points, not where it is, so the room travels with it.
+  // Say so, and how to get it back, instead of leaving the fan to think the room is broken.
+  const trackUi = document.createElement('div');
+  trackUi.className = 'hp-track';
+  trackUi.hidden = true;
+  trackUi.setAttribute('role', 'status');
+  trackUi.setAttribute('aria-live', 'polite');
+  trackUi.innerHTML = '<b>Finding the room again…</b><span>Hold still for a moment, then move slowly and point at the floor and nearby things.</span>';
+  document.body.appendChild(trackUi);
+  let trackStatus = 'NORMAL';
+  let limitedSince = 0;
   const placeBtn = ui.querySelector('.hp-place');
   const backBtn = ui.querySelector('.hp-back');
   placeBtn.addEventListener('click', () => placeHere());
@@ -979,11 +1032,22 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       return aiming;
     },
     move,
+    /** The engine's tracking status (NORMAL / LIMITED), for the "finding the room" note. */
+    tracking(status) {
+      if (status === trackStatus) return;
+      trackStatus = status;
+      limitedSince = status === 'LIMITED' ? performance.now() : 0;
+    },
     update(dt) {
       t += dt;
       patchHome();
       if (!prepping && hub.loaded && t > 8 && !busy()) prep();
       if (aiming) tickAim(dt);
+      const lost = active && trackStatus === 'LIMITED' && limitedSince && performance.now() - limitedSince > 1500;
+      if (trackUi.hidden === !!lost) {
+        trackUi.hidden = !lost;
+        if (lost) onDiag('track_hint', { inside: portal.inside });
+      }
       if (!portal.group.visible) return;
       portal.update(dt, camera, t);
       if (closing && portal.open < 0.02) finishClose();

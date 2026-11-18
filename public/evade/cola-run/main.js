@@ -21,7 +21,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { addArcadeCabinet } from "./arcade-cabinet.js?v=2";
-import { setupHideoutPortal } from "./hideout-portal.js?v=3";
+import { setupHideoutPortal } from "./hideout-portal.js?v=5";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
@@ -35,6 +35,29 @@ const $ = (id) => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
 const DIAG = qs.has("diag") || /^(localhost$|127\.|deploy-preview-)/.test(location.hostname);
 const SOURCE = "cola-run"; // platform events / clip uploads
+const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+// No page zoom: iOS ignores user-scalable=no, so pinches and double taps would zoom the whole page (and the camera
+// with it). Two-finger gestures still reach the game (pinch to size the board) through pointer events.
+document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
+document.addEventListener(
+  "touchmove",
+  (e) => {
+    if (e.touches.length > 1 || (e.scale !== undefined && e.scale !== 1)) e.preventDefault();
+  },
+  { passive: false },
+);
+let lastTouchEnd = 0;
+document.addEventListener(
+  "touchend",
+  (e) => {
+    const now = performance.now();
+    if (now - lastTouchEnd < 300 && e.target === document.getElementById("cam")) e.preventDefault(); // double-tap zoom
+    lastTouchEnd = now;
+  },
+  { passive: false },
+);
 
 const CAM_H = 1.3;
 const SPAWN_MIN = 2.5,
@@ -70,10 +93,11 @@ const diag = { status: "loading", tracking: "-", fps: 0, errors: [] };
 // 10 s and when the page is hidden, readable on the preview at /api/ar/kc-diag?limit=40. It answers "what was
 // the phone doing" without anyone having to describe it: frame stalls, tracking, the hideout door, GPU resets.
 const LOG = DIAG && !qs.has("nolog");
-const tlog = { steps: [], stalls: [], fpsLog: [], ctxLost: 0, t0: performance.now() };
+const tlog = { steps: [], stalls: [], fpsLog: [], walk: [], ctxLost: 0, t0: performance.now() };
 function step(name, extra) {
   if (tlog.steps.length > 80) tlog.steps.splice(0, 20);
   tlog.steps.push({ t: +((performance.now() - tlog.t0) / 1000).toFixed(1), s: name, ...extra });
+  saveCrumbs();
 }
 let flushAt = 0;
 function flushLog(force = false) {
@@ -97,6 +121,7 @@ function flushLog(force = false) {
     ctxLost: tlog.ctxLost,
     stalls: tlog.stalls.slice(-20),
     fpsLog: tlog.fpsLog.slice(-90),
+    walk: tlog.walk.slice(-120),
     steps: tlog.steps.slice(-60),
     errors: diag.errors.slice(-10),
     screen: [innerWidth, innerHeight, devicePixelRatio],
@@ -109,7 +134,35 @@ function flushLog(force = false) {
     /* offline */
   }
 }
-addEventListener("pagehide", () => flushLog(true));
+addEventListener("pagehide", () => {
+  flushLog(true);
+  try {
+    localStorage.setItem("cr-crumbs", ""); // a clean exit: nothing to report next time
+  } catch {
+    /* private mode */
+  }
+});
+// Crash breadcrumbs: if the tab dies (iPhone Safari kills it when WebGL memory runs out) nothing gets sent, so the
+// last few steps are kept in localStorage and sent by the next visit, marked as a crash.
+function saveCrumbs() {
+  if (!LOG) return;
+  try {
+    localStorage.setItem("cr-crumbs", JSON.stringify({ sid: SID, at: Date.now(), hub: hub?.state || "-", door: hideoutPortal ? { active: hideoutPortal.active, aiming: hideoutPortal.aiming, inside: hideoutPortal.inside } : null, fps: Math.round(diag.fps), camera: diag.status, gpu: renderer?.info ? { programs: renderer.info.programs?.length, textures: renderer.info.memory?.textures } : null, steps: tlog.steps.slice(-25), stalls: tlog.stalls.slice(-5) }));
+  } catch {
+    /* full or private */
+  }
+}
+try {
+  const prev = LOG && localStorage.getItem("cr-crumbs");
+  if (prev) {
+    const c = JSON.parse(prev);
+    const body = JSON.stringify({ page: "cola-run-crash", sid: "x" + String(c.sid || "unknown").slice(0, 30), crashed: true, ageS: Math.round((Date.now() - c.at) / 1000), last: c, ua: navigator.userAgent });
+    fetch("/api/ar/kc-diag", { method: "POST", body, keepalive: true }).catch(() => {});
+    localStorage.setItem("cr-crumbs", "");
+  }
+} catch {
+  /* nothing to send */
+}
 document.addEventListener("visibilitychange", () => document.hidden && flushLog(true));
 addEventListener("error", (e) => diag.errors.push(`js: ${String(e.message).slice(0, 160)}`));
 addEventListener("unhandledrejection", (e) => diag.errors.push(`promise: ${String(e.reason?.message || e.reason).slice(0, 160)}`));
@@ -194,7 +247,9 @@ addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 
 /* ── canvas: the engine draws at the canvas's own size (300x150 unless set) ── */
 const canvas = $("cam");
-const DRAW_DPR = Math.min(devicePixelRatio || 1, Number(qs.get("dpr")) || 2);
+// 1.5x on every phone, as the portal kit: still sharp on a camera feed, and it leaves the GPU room for the engine's
+// own camera processing (a GPU-bound frame starves tracking) and iPhone Safari's tight WebGL memory.
+const DRAW_DPR = Math.min(devicePixelRatio || 1, Number(qs.get("dpr")) || 1.5);
 function sizeCanvas() {
   const w = Math.round(innerWidth * DRAW_DPR);
   const h = Math.round(innerHeight * DRAW_DPR);
@@ -524,6 +579,7 @@ async function buildScene(xr) {
         // Placing the door: Place is bottom centre, the shutter stays bottom right (filming the door going down
         // is part of the fun); the joystick is already away in the hideout.
         onCancel: () => mode.leave(),
+        maxTex: IOS ? 512 : 2048,
         busy: () => game.gameState === "playing" || !!game.isCountingDown,
         onActive: (on) => {
           // Closing because placement was reset: back to placing, so Place keeps the bottom centre.
@@ -711,10 +767,21 @@ const app = {
       fpsT = now;
       if (tlog.fpsLog.length > 300) tlog.fpsLog.splice(0, 100);
       tlog.fpsLog.push(Math.round(diag.fps));
+      // While the door is out: where the phone is (world units) and the door's distance, once a second, so a
+      // test shows whether walking really moved the camera (tracking) or the room drifted (it never should).
+      if (hideoutPortal?.active && camera) {
+        const g = hideoutPortal.portal.group.position;
+        const c = camera.position;
+        if (tlog.walk.length > 300) tlog.walk.splice(0, 100);
+        tlog.walk.push([+((now - tlog.t0) / 1000).toFixed(0), +c.x.toFixed(2), +c.y.toFixed(2), +c.z.toFixed(2), +Math.hypot(c.x - g.x, c.z - g.z).toFixed(2), diag.tracking[0], hideoutPortal.inside ? 1 : 0]);
+      }
+      if (frames === 0 && Math.round(now / 1000) % 3 === 0) saveCrumbs();
       drawDiag();
       flushLog();
     }
     if (!built) return;
+    // ?test only: walk the camera without walking (the simulator's feed can't move), before anything reads it.
+    if (window.__camWalk && qs.has("test")) camera.position.add(window.__camWalk);
     // The bottom-left button says what it moves.
     if (hideoutPortal) {
       const lbl = document.querySelector(".ohg-resetBox .ohg-roundLbl");
@@ -755,6 +822,7 @@ const app = {
         const tr = `${detail.status}${detail.reason ? ` (${detail.reason})` : ""}`;
         if (tr !== diag.tracking) step("tracking", { s2: tr });
         diag.tracking = tr;
+        hideoutPortal?.tracking?.(detail.status);
       },
     },
   ],
