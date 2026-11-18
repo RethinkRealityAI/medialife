@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- MEDIALIFE Holocast: a holo projector on your floor or table, beaming live screens into the room. Whatever is
+       typed, drawn, dropped, asked or said in the control room (/labs/holocast/control/) shows up here, live, and
+       stays in the room. World tracking comes from 8th Wall's distributed engine binary
+       (@8thwall/engine-binary 1.0.0, Copyright (c) 2026 Niantic Spatial, Inc., XR Engine License Agreement:
+       https://github.com/8thwall/engine/blob/main/LICENSE), loaded unmodified from jsDelivr as the licence asks. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#05070c">
+  <title>Holocast · MEDIALIFE AR</title>
+  <meta name="description" content="MEDIALIFE Holocast: put a holo projector in your room and watch live messages, drawings, photos and polls beam into its floating screens.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/roblox/creators/vendor/three/build/three.module.js",
+        "three/addons/": "/roblox/creators/vendor/three/jsm/"
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="./style.css?v=1">
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <!-- ---------------------------------------------------------------- splash (full, branded: house rule 1) -->
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="22">
+    <!-- a preview: the projector beaming three live screens (flat SVG, animated with CSS) -->
+    <div class="hero" aria-hidden="true">
+      <svg viewBox="0 0 360 420" class="holo">
+        <g class="beam"><path d="M180 336 L40 120 L320 120 Z" fill="#3fe6ff" opacity=".07"/></g>
+        <g class="rays" stroke="#3fe6ff" stroke-width="1.5" opacity=".55">
+          <line x1="180" y1="330" x2="78" y2="152"/><line x1="180" y1="330" x2="180" y2="112"/><line x1="180" y1="330" x2="282" y2="152"/>
+        </g>
+        <!-- screen 1: notice board -->
+        <g class="scr s1">
+          <rect x="18" y="74" width="120" height="82" rx="6" fill="#04161d" stroke="#3fe6ff" stroke-width="2"/>
+          <rect x="28" y="84" width="40" height="6" rx="3" fill="#3fe6ff"/>
+          <rect x="28" y="102" width="98" height="9" rx="2" fill="#c9fbff"/><rect x="28" y="116" width="76" height="9" rx="2" fill="#c9fbff"/>
+          <rect x="28" y="136" width="54" height="5" rx="2" fill="#3fe6ff" opacity=".6"/>
+        </g>
+        <!-- screen 2: the globe -->
+        <g class="scr s2">
+          <circle cx="180" cy="66" r="44" fill="#04161d" stroke="#3fe6ff" stroke-width="2"/>
+          <g class="spin" fill="#3fe6ff">
+            <circle cx="160" cy="52" r="3"/><circle cx="170" cy="46" r="3"/><circle cx="176" cy="58" r="3"/><circle cx="190" cy="50" r="3"/><circle cx="198" cy="64" r="3"/>
+            <circle cx="166" cy="74" r="3"/><circle cx="184" cy="80" r="3"/><circle cx="200" cy="84" r="3"/><circle cx="152" cy="66" r="3"/>
+          </g>
+          <circle cx="190" cy="50" r="5" fill="#ff2fae"/><line x1="190" y1="50" x2="190" y2="34" stroke="#ff2fae" stroke-width="2"/>
+        </g>
+        <!-- screen 3: live sketch -->
+        <g class="scr s3">
+          <rect x="222" y="74" width="120" height="82" rx="6" fill="#04161d" stroke="#3fe6ff" stroke-width="2"/>
+          <path class="draw" d="M236 140 C250 96 268 150 284 108 S318 120 328 92" fill="none" stroke="#ff2fae" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <!-- a packet travelling up the beam -->
+        <rect class="pkt" x="176" y="300" width="8" height="8" fill="#ffffff"/>
+        <!-- the projector -->
+        <ellipse cx="180" cy="372" rx="92" ry="18" fill="#000" opacity=".35"/>
+        <path d="M100 344 h160 l-12 26 h-136 z" fill="#1b2331"/>
+        <rect x="112" y="332" width="136" height="14" rx="4" fill="#2a3446"/>
+        <g class="ring"><rect x="122" y="336" width="18" height="6" rx="2" fill="#3fe6ff"/><rect x="152" y="336" width="18" height="6" rx="2" fill="#3fe6ff"/><rect x="190" y="336" width="18" height="6" rx="2" fill="#3fe6ff"/><rect x="220" y="336" width="18" height="6" rx="2" fill="#3fe6ff"/></g>
+        <rect x="158" y="318" width="44" height="16" rx="4" fill="#2a3446"/>
+        <ellipse cx="180" cy="318" rx="22" ry="5" fill="#3fe6ff"/>
+      </svg>
+    </div>
+    <div class="copy">
+      <p class="kicker">MEDIALIFE Labs · Live AR</p>
+      <h1 id="title">Holo<span>cast</span></h1>
+      <p class="lead">Put a holo projector in your room. Messages, drawings, photos and polls from any phone or laptop beam into its floating screens, live.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens Holocast on your phone"></div>
+        <p><b>The hologram runs on your phone.</b> Scan to open it there. You can run the control room right here.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <a id="b-ctl-desk" class="btn" href="/labs/holocast/control/" hidden>Open the control room here</a>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- in camera -->
+  <div id="hud" hidden data-mode="placing">
+    <div class="tl">
+      <img class="ml" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="16">
+      <button type="button" id="b-room" class="chip" aria-haspopup="dialog" aria-label="Room details">
+        <span class="dot" aria-hidden="true"></span><span id="room-t">Connecting…</span>
+      </button>
+    </div>
+    <div id="side">
+      <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+    </div>
+
+    <!-- reactions: sent to the room, and float up out of the projector on every phone watching -->
+    <div id="reacts" role="group" aria-label="Send a reaction" hidden></div>
+
+    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="size" hidden aria-live="polite"></p>
+    <p id="toast" role="status" aria-live="polite"></p>
+
+    <div id="bottom">
+      <div class="b-left">
+        <button id="b-invite" class="ib lab" type="button" hidden aria-label="Invite someone to control the hologram">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 19c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><path d="M18 8v6M15 11h6"/></svg>
+          <span>Invite</span>
+        </button>
+      </div>
+      <div id="act">
+        <button id="b-place" class="primary big" disabled>Place the projector</button>
+        <button id="b-shutter" type="button" hidden aria-label="Take a photo. Press and hold to film">
+          <svg viewBox="0 0 76 76" aria-hidden="true"><circle cx="38" cy="38" r="33" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="5"/><circle id="rec-prog" cx="38" cy="38" r="33" fill="none" stroke="#ff2fae" stroke-width="5" stroke-dasharray="207" stroke-dashoffset="207" transform="rotate(-90 38 38)"/><circle class="core" cx="38" cy="38" r="26" fill="#fff"/></svg>
+          <span id="rec-time" hidden>0:00</span>
+        </button>
+      </div>
+      <div class="b-right">
+        <button id="b-move" class="ib lab" type="button" hidden aria-label="Move the projector">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>
+          <span>Move</span>
+        </button>
+      </div>
+    </div>
+    <pre id="diagp" hidden></pre>
+  </div>
+
+  <!-- options: a bottom sheet -->
+  <div id="opts" hidden role="dialog" aria-modal="true" aria-labelledby="opts-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <header><h2 id="opts-t">Options</h2>
+        <button type="button" class="x" data-close aria-label="Close options"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <button type="button" class="opt" id="o-invite">
+        <span class="ol"><b>Invite someone to control it</b><small>Sends the control room link from your phone's share sheet</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-watch">
+        <span class="ol"><b>Share the watch link</b><small>Another phone sees the same hologram, live</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <a class="opt" id="o-control" href="/labs/holocast/control/" target="_blank" rel="noopener">
+        <span class="ol"><b>Open the control room</b><small>Type, draw, drop photos, run a poll, speak it in</small></span><i class="go" aria-hidden="true"></i>
+      </a>
+      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true">
+        <span class="ol"><b>Sound</b><small>Hum, beeps and arrivals</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-new">
+        <span class="ol"><b id="o-new-t">Start a fresh room</b><small id="o-new-s">A new, empty hologram with its own links</small></span>
+      </button>
+      <button type="button" class="opt" id="o-how">
+        <span class="ol"><b>How it works</b><small>Place, watch, react, invite</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt small" id="o-lic"><span class="ol"><b>Licences</b></span></button>
+    </div>
+  </div>
+
+  <!-- how it works -->
+  <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
+    <div class="sheet">
+      <h2 id="how-t">Your room is live</h2>
+      <ol class="how-steps">
+        <li><b>Place it.</b> Point at the floor or a table. Pinch to size the projector, then tap Place.</li>
+        <li><b>Watch it fill.</b> Anything sent from the control room beams up into the screens: notices, live drawing, photos, polls and spoken captions.</li>
+        <li><b>Tap things.</b> Tap a screen to pull it closer, spin the globe and tap a pin to play Bobo's clip, tap a poll bar to vote, and send reactions from the right.</li>
+        <li><b>Invite</b> (bottom left) sends a friend the control link, so they can beam things in from their own phone.</li>
+      </ol>
+      <button id="b-go" class="primary">Got it</button>
+    </div>
+  </div>
+
+  <!-- room details -->
+  <div id="roomsheet" class="sheet-wrap" hidden role="dialog" aria-labelledby="room-h">
+    <div class="sheet">
+      <h2 id="room-h">Room <span id="rs-code"></span></h2>
+      <p id="rs-body"></p>
+      <div class="row">
+        <button id="rs-invite" class="primary">Invite to control</button>
+        <button id="rs-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- licences -->
+  <div id="lic" class="sheet-wrap" hidden role="dialog" aria-labelledby="lic-t">
+    <div class="sheet">
+      <h2 id="lic-t">Licences</h2>
+      <p>World tracking by 8th Wall, © 2026 Niantic Spatial, Inc., used under the
+        <a href="https://github.com/8thwall/engine/blob/main/LICENSE" target="_blank" rel="noopener">8th Wall Engine licence</a>, provided as is, without warranty.</p>
+      <p>three.js, MIT licence.</p>
+      <button id="lic-close" class="primary">Close</button>
+    </div>
+  </div>
+
+  <!-- photo -->
+  <div id="shot" class="sheet-wrap" hidden role="dialog" aria-labelledby="shot-t">
+    <div class="sheet">
+      <h2 id="shot-t">Your photo</h2>
+      <img id="shot-img" alt="Your photo">
+      <div class="row">
+        <button id="shot-share" class="primary" hidden>Share</button>
+        <a id="shot-save" class="btn" hidden>Save</a>
+        <button id="shot-close">Back to camera</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="error" class="sheet-wrap" hidden role="alert">
+    <div class="sheet">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <div id="err-qr" class="qrbox" hidden aria-label="QR code that opens Holocast on your phone"></div>
+      <a id="err-ctl" class="btn" href="/labs/holocast/control/" hidden>Open the control room here</a>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+  </div>
+  <div id="flashw" aria-hidden="true"></div>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <!-- the engine binary (SLAM): unmodified, pinned, from jsDelivr (licence: distribute in original form) -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js?v=1"></script>
+</body>
+</html>
