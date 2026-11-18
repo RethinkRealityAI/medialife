@@ -1,0 +1,5 @@
+/* Camera Swap: colour swatches above the shutter (flat) */
+.swatches{justify-content:center}
+.chip.sw{width:48px;min-width:48px;padding:0;display:grid;place-items:center}
+.chip.sw i{display:block;width:26px;height:26px;border-radius:50%;background:var(--c);border:2px solid rgba(255,255,255,.7)}
+.chip.sw[aria-pressed=true]{background:rgba(255,255,255,.18);border-color:#fff}

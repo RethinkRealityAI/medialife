@@ -1,6 +1,6 @@
 # Labs tech demos (world and face)
 
-Eleven small MEDIALIFE tech demos rebuilt from legacy 8th Wall sample projects. They use plain three.js r180 (no
+Thirteen small MEDIALIFE tech demos rebuilt from legacy 8th Wall sample projects. They use plain three.js r180 (no
 A-Frame) on one shared shell. Each demo's own README names its source sample and asset credits. Each `main.js`
 starts with a comment listing what was kept from the sample and what changed.
 
@@ -22,10 +22,13 @@ before it goes live.
 | nav-mesh | Robot Path | Tap a spot and the robot finds its way over ramps and bridges | nav-mesh | world |
 | occlusion-floor | Floor Lift | A pillar rises out of your floor and sinks back (depth-only hider) | hidermaterial | world |
 | image-to-world | Picture to Room | Point at a picture; a sand castle appears on the floor and stays | image-slam | world + image target |
+| camera-swap | Camera Swap | A cube on your floor, shades on your face, one Flip button between the cameras | swap-camera | world + face, one session |
+| wear-it-meet-it | Wear It, Meet It | Wear the robot's visor for a selfie, flip, and the life-size robot holds it up in your room | (new, uses the swap) | world + face, one session |
 
-Not built: `camera-swap` (swap-camera sample). It switches one engine between back-camera world tracking and
-front-camera face tracking. It is left out because the face engine (MIT vendored build) and the world engine
-(engine binary) are different builds, and the shared shell runs one mode per page.
+Camera swap (2026-11-18): the engine binary ships the face chunk as well as slam (`xr-face.js` + face models in the
+jsDelivr package), so ONE session can flip cameras, exactly as the sample does. The shell's `mode: 'swap'` does
+`XR8.stop()` -> `XR8.removeCameraPipelineModules(['reality' | 'facecontroller'])` -> configure + add the other tracker ->
+`XR8.run()` with `cameraConfig.direction` BACK or FRONT. See "Swap mode" below.
 
 ## Shared shell (`shared/`)
 
@@ -41,12 +44,20 @@ front-camera face tracking. It is left out because the face engine (MIT vendored
 - The shutter bottom centre, giving a branded photo with a share or save sheet.
 - A menu with How it works, Start again, More demos and Licences (`/evade/licences/`).
 
+- Swap mode (`mode: 'swap'`, `startFacing: 'back' | 'front'`): one engine binary session, a Flip button bottom left,
+  a flat "Switching camera" cover. Content lives in `demo.stage` (world, under `demo.worldRoot`) and `demo.faceRoot`
+  (face): every `XR8.run()` hands over a NEW scene/camera/renderer and the shell re-adds these roots, rebuilds the
+  environment map, frees GPU copies on the old renderer, and puts a placed stage back at the same spot relative to the
+  phone (SLAM restarts at zero). Hooks: `onSwapOut(demo, to)`, `onSwapped(demo, facing)`, `onScene(demo)`,
+  `onShutter(demo)` (return true to replace the default photo), `demo.swap(to)`, `demo.facing`, `demo.grabShot()`.
+
 All colours are flat; there are no gradients. Each demo is `createDemo({...})` in its `main.js`.
 
 Engines:
 
 - World: 8th Wall engine binary 1.0.0, loaded unmodified from jsDelivr.
 - Face: the MIT open-source engine vendored at `/evade/keychain-ar/vendor/xr/`.
+- Swap (world + face): the engine binary 1.0.0 with `data-preload-chunks="slam,face"`.
 
 No engine maker names or logos are shown to users. The licences are on the Licences page only.
 

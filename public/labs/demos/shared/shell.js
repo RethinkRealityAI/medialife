@@ -14,6 +14,13 @@
 //   HUD: wordmark + tag top left, menu top right (How it works, Restart, More demos, Licences -> /evade/licences/),
 //     hint pill, toast, bottom dock (demo panel, action button, bar with the shutter bottom centre).
 //   photo: XR8.CanvasScreenshot + MEDIALIFE marks, share/save sheet.
+//   swap (mode 'swap', from the 8th Wall "swap-camera" sample): ONE engine binary session that flips between the
+//     back camera with world tracking and the front camera with face tracking: XR8.stop() -> remove the tracker
+//     module ('reality' | 'facecontroller') -> configure + add the other -> XR8.run() with the other direction.
+//     Every XR8.run() gives a NEW three.js scene/camera/renderer (onStart again): the shell keeps its content in
+//     persistent roots (lights, worldRoot = reticle + stage, faceRoot) and re-adds them, frees GPU copies on the old
+//     renderer before the stop, and re-anchors a placed stage at the same spot relative to the phone (SLAM restarts
+//     from zero on every run). Flat cover while the camera switches; Flip button bottom left.
 // No 8th Wall / Niantic names are shown to users: licences only behind the menu's Licences link.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -37,6 +44,7 @@ export const CAM_H = 1.3; // camera start height: with responsive scale 1 unit i
 const DIAG = qs.has('diag');
 const ICONS = {
   menu: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  flip: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><path d="M9 13a3 3 0 0 1 5.2-2M15 13a3 3 0 0 1-5.2 2M14.5 9.5v1.8h-1.8M9.5 16.5v-1.8h1.8"/></svg>',
   move: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>',
 };
 
@@ -90,7 +98,7 @@ function buildDom(cfg) {
       <p class="lead">${cfg.lead}</p>
       <div id="desk" hidden>
         <div class="qr" id="qr-splash" aria-label="QR code that opens this page on your phone"></div>
-        <p><b>Made for your phone.</b> ${cfg.mode === 'face' ? 'It works best with your phone\'s selfie camera.' : 'It needs your phone\'s camera and motion sensors to find your floor.'} Scan to open it there.</p>
+        <p><b>Made for your phone.</b> ${cfg.mode === 'face' ? 'It works best with your phone\'s selfie camera.' : cfg.mode === 'swap' ? 'It uses both of your phone\'s cameras and its motion sensors.' : 'It needs your phone\'s camera and motion sensors to find your floor.'} Scan to open it there.</p>
       </div>
       <button id="b-start" class="primary" disabled>Loading…</button>
       <div id="load" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"><i></i></div>
@@ -141,6 +149,7 @@ function buildDom(cfg) {
       <button id="err-retry" class="primary">Try again</button>
     </div>
   </div>
+  <div id="swapv" hidden role="status" aria-live="polite"><div>${ICONS.flip}<p>Switching camera…</p></div></div>
   <div id="flashw" aria-hidden="true"></div>`;
   while (app.firstChild) document.body.appendChild(app.firstChild);
 }
@@ -156,6 +165,7 @@ function qrInto(el) {
 export function createDemo(cfg) {
   buildDom(cfg);
   const mode = cfg.mode || 'world';
+  const SWAP = mode === 'swap';
   const canvas = $('cam');
   const demo = {
     cfg, mode, canvas, THREE,
@@ -169,13 +179,19 @@ export function createDemo(cfg) {
     panel: $('panel'), act: $('b-act'),
     left: document.querySelector('#bar .b-left'), mid: document.querySelector('#bar .b-mid'), right: document.querySelector('#bar .b-right'),
     hint, toast, showError, loadGLB, texture, progress, diag: { errors: [], steps: [], fps: 0 },
-    floorHit, ndcFromEvent, place, startMove, takePhoto, flash, sun: null,
+    floorHit, ndcFromEvent, place, startMove, takePhoto, grabShot, flash, sun: null,
+    // swap mode: which camera is live now ('back' = world tracking, 'front' = face tracking)
+    facing: SWAP ? (cfg.startFacing || 'back') : mode === 'face' ? 'front' : 'back',
+    lights: new THREE.Group(), worldRoot: new THREE.Group(), faceRoot: new THREE.Group(),
+    swap, swapping: () => !!swapping,
   };
+  const isWorld = () => mode === 'world' || (SWAP && demo.facing === 'back');
+  const needsPhone = mode !== 'face';
   window.__demo = demo;
   demo.stage.visible = false;
 
   // ---------- splash: QR on computers, loading progress
-  if (!PHONE && !qs.has('desktop') && mode === 'world') { $('desk').hidden = false; qrInto($('qr-splash')); }
+  if (!PHONE && !qs.has('desktop') && needsPhone) { $('desk').hidden = false; qrInto($('qr-splash')); }
   let loadP = 0;
   function progress(f) { loadP = Math.max(loadP, clamp(f, 0, 1)); $('load').firstElementChild.style.width = (loadP * 100).toFixed(0) + '%'; $('load').setAttribute('aria-valuenow', Math.round(loadP * 100)); }
   progress(0.08);
@@ -193,6 +209,7 @@ export function createDemo(cfg) {
   function openOnPhone() {
     showError('Open this on your phone', mode === 'face'
       ? `${cfg.title.replace(/<[^>]+>/g, '')} works best with your phone's selfie camera. Scan this to open it there.`
+      : SWAP ? `${cfg.title.replace(/<[^>]+>/g, '')} uses both of your phone's cameras and its motion sensors. Scan this to open it there.`
       : `${cfg.title.replace(/<[^>]+>/g, '')} needs your phone's camera and motion sensors to find your floor. Scan this to open it there.`);
     qrInto($('qr'));
     $('err-retry').textContent = 'Close';
@@ -310,7 +327,7 @@ export function createDemo(cfg) {
   demo.act.onclick = () => { if (P === 'stage') place(); };
 
   function tickPlacement(dt) {
-    if (mode !== 'world') return;
+    if (!isWorld()) return;
     const placing = demo.state === 'placing' || (P === 'custom' && demo.state === 'placed' && cfg.reticleAlways);
     if (!placing) { demo.reticle.visible = false; return; }
     const h = floorHit(demo.aimNdc, aimHit);
@@ -375,18 +392,22 @@ export function createDemo(cfg) {
   if (cfg.shutter !== false) {
     const sh = document.createElement('button');
     sh.id = 'b-shutter'; sh.type = 'button'; sh.setAttribute('aria-label', 'Take a photo'); sh.innerHTML = '<i></i>';
-    sh.onclick = () => takePhoto();
+    sh.onclick = () => { if (!(cfg.onShutter && cfg.onShutter(demo))) takePhoto(); };
     (cfg.layout === 'joystick' ? demo.right : demo.mid).appendChild(sh);
   }
   (cfg.layout === 'joystick' ? demo.left : demo.right).appendChild(moveBtn);
   const marks = { w: new Image(), a: new Image() };
   marks.w.src = '/brand/medialife-wordmark.webp'; marks.a.src = '/activated-merch/media/ar/activated-by.webp';
   function flash() { const f = $('flashw'); f.style.opacity = '0.85'; setTimeout(() => { f.style.opacity = '0'; }, 90); }
+  async function grabShot() { // camera + 3D as drawn, no marks
+    const b64 = await XR8.CanvasScreenshot.takeScreenshot();
+    const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
+    return img;
+  }
   async function takePhoto() {
     flash();
     try {
-      const b64 = await XR8.CanvasScreenshot.takeScreenshot();
-      const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
+      const img = await grabShot();
       const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
       const g = c.getContext('2d'); g.drawImage(img, 0, 0);
       const u = Math.min(c.width, c.height) / 720, pad = 26 * u;
@@ -405,33 +426,49 @@ export function createDemo(cfg) {
   $('shot-close').onclick = () => { $('shot').hidden = true; };
 
   // ---------- the scene (inside the engine's three.js scene)
+  // Called on every engine start. One start in world / face mode; in swap mode every XR8.run() hands over a NEW
+  // scene, camera and renderer, so the persistent roots move across and the environment map is rebuilt.
+  let envTex = null, stageRel = null;
   function buildScene({ scene, camera, renderer }) {
+    const first = !demo.scene;
     Object.assign(demo, { scene, camera, renderer });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.NeutralToneMapping;
     const pm = new THREE.PMREMGenerator(renderer);
-    scene.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+    envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture; pm.dispose(); glTidy(renderer);
+    scene.environment = envTex;
     scene.environmentIntensity = 0.6;
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x5a5048, 1.3));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
-    sun.position.set(1.5, 4, 2); scene.add(sun); scene.add(sun.target); demo.sun = sun;
-    if (mode === 'world') {
+    if (first) {
+      demo.lights.add(new THREE.HemisphereLight(0xffffff, 0x5a5048, 1.3));
+      const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+      sun.position.set(1.5, 4, 2); demo.lights.add(sun, sun.target); demo.sun = sun;
+      if (mode !== 'face') {
+        // reticle: flat ring + dot (accent colour)
+        const m = new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 48), m);
+        const tick = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 48, 1, 0, Math.PI * 0.5), m);
+        const dot = new THREE.Mesh(new THREE.CircleGeometry(0.1, 20), m);
+        for (const x of [ring, tick, dot]) { x.rotation.x = -Math.PI / 2; demo.reticle.add(x); }
+        demo.reticle.visible = false; demo.reticle.renderOrder = 2;
+        demo.stage.scale.setScalar(demo.size);
+        demo.worldRoot.add(demo.reticle, demo.stage);
+      }
+    }
+    scene.add(demo.lights);
+    if (mode !== 'face') scene.add(demo.worldRoot);
+    if (SWAP) scene.add(demo.faceRoot);
+    demo.worldRoot.visible = isWorld(); demo.faceRoot.visible = !isWorld();
+    if (isWorld()) {
       camera.position.set(0, CAM_H, 0);
       camera.quaternion.identity();
       XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
-      // reticle: flat ring + dot (accent colour)
-      const m = new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, opacity: 0.95, depthWrite: false, side: THREE.DoubleSide });
-      const ring = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 48), m);
-      const tick = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.62, 48, 1, 0, Math.PI * 0.5), m);
-      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.1, 20), m);
-      for (const x of [ring, tick, dot]) { x.rotation.x = -Math.PI / 2; demo.reticle.add(x); }
-      demo.reticle.visible = false; demo.reticle.renderOrder = 2;
-      scene.add(demo.reticle);
-      demo.stage.scale.setScalar(demo.size);
-      scene.add(demo.stage);
+      if (stageRel) { // back from the selfie camera: same spot relative to the phone (SLAM restarted at zero)
+        demo.stage.position.set(stageRel.x, 0, stageRel.z); demo.stage.rotation.y = stageRel.ry; stageRel = null;
+      }
     }
     else { camera.position.set(0, 0, 0); camera.quaternion.identity(); } // face: the camera sits at the origin (Bobo Booth)
-    cfg.build && cfg.build(demo);
+    if (first) cfg.build && cfg.build(demo);
+    else cfg.onScene && cfg.onScene(demo);
   }
 
   // ---------- engine pipeline
@@ -442,38 +479,42 @@ export function createDemo(cfg) {
       try { buildScene(XR8.Threejs.xrScene()); built = true; $('hud').hidden = false; }
       catch (e) { console.error(e); showError('Couldn\'t start the demo', String((e && e.message) || e)); }
     },
+    onRender: () => { if (SWAP && demo.renderer) { const gl = demo.renderer.getContext(); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false); } },
     onUpdate: ({ processCpuResult }) => {
       const now = performance.now(), dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016); last = now;
       frames++; if (now - fpsT > 1000) { demo.diag.fps = frames * 1000 / (now - fpsT); frames = 0; fpsT = now; drawDiag(); }
       const r = processCpuResult && processCpuResult.reality;
       if (r && r.trackingStatus) demo.tracking = r.trackingStatus;
       if (!built) return;
-      if (mode === 'world' && demo.state === 'placed' && demo.tracking === 'LIMITED') { if (!limitedSince) limitedSince = now; } else limitedSince = 0;
+      if (isWorld() && demo.state === 'placed' && demo.tracking === 'LIMITED') { if (!limitedSince) limitedSince = now; } else limitedSince = 0;
       if (limitedSince && now - limitedSince > 1500) hint('Move your phone slowly so it can see the floor again');
       tickPlacement(dt);
-      if (demo.sun && mode === 'world') { demo.sun.target.position.copy(demo.stage.position); demo.sun.position.copy(demo.stage.position).add(new THREE.Vector3(1.5, 4, 2)); }
+      if (demo.sun && isWorld()) { demo.sun.target.position.copy(demo.stage.position); demo.sun.position.copy(demo.stage.position).add(new THREE.Vector3(1.5, 4, 2)); }
       cfg.update && cfg.update(dt, demo, now);
     },
     onCameraStatusChange: ({ status }) => {
       demo.diag.steps.push('cam:' + status);
-      if (status === 'requesting') hint(mode === 'world' ? 'Allow camera and motion access to begin' : 'Allow camera access to begin');
+      if (status === 'requesting') hint(isWorld() ? 'Allow camera and motion access to begin' : 'Allow camera access to begin');
+      if (status === 'hasVideo' && swapping) { finishSwap(); return; }
       if (status === 'hasVideo' && camStartAt) { cfg.onResume && cfg.onResume(demo); return; } // XR8.resume(): keep the state
       if (status === 'hasVideo') {
         camStartAt = performance.now();
         $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-        if (mode === 'world' && P === 'stage') { demo.state = 'placing'; demo.act.hidden = false; demo.act.textContent = cfg.placeLabel || 'Place here'; }
-        else demo.state = mode === 'world' ? 'placed' : 'live';
+        if (isWorld() && P === 'stage') { demo.state = 'placing'; demo.act.hidden = false; demo.act.textContent = cfg.placeLabel || 'Place here'; }
+        else demo.state = isWorld() ? 'placed' : 'live';
+        if (SWAP) swapBtn.hidden = false;
         hint('');
         let seen = false; try { seen = localStorage.getItem('labs-how-' + cfg.slug) === '1'; } catch (e) { /* none */ }
         if (!seen && !qs.has('test') && cfg.how && cfg.how.length) $('how').hidden = false;
         cfg.onLive && cfg.onLive(demo);
       }
-      if (status === 'failed') camFailed();
+      if (status === 'failed') { if (swapping) swapFailed(); else camFailed(); }
     },
     onException: (e) => {
       const msg = String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e));
       demo.diag.errors.push('XR: ' + msg.slice(0, 200));
       if (e && e.type === 'permission') return showError('Motion access is needed', 'This demo uses your phone\'s motion sensors to keep things on your floor. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again.');
+      if (swapping) return; // the swap watchdog decides
       if (/session manager|not supported|unsupported|device/i.test(msg) && !camStartAt) { try { XR8.stop(); } catch (er) { /* not running */ } return openOnPhone(); }
       if (!camStartAt) showError('Something went wrong', msg);
     },
@@ -484,12 +525,12 @@ export function createDemo(cfg) {
   };
   function camFailed() {
     if (camStartAt) return;
-    showError('The camera didn\'t start', 'Allow camera' + (mode === 'world' ? ' and motion' : '') + ' access for this site, close other apps or tabs that use the camera, then tap Try again.');
+    showError('The camera didn\'t start', 'Allow camera' + (needsPhone ? ' and motion' : '') + ' access for this site, close other apps or tabs that use the camera, then tap Try again.');
   }
   function drawDiag() {
     if (!DIAG) return;
     const el = $('diagp'); el.hidden = false;
-    el.textContent = `cam ${demo.diag.steps.slice(-1)[0] || '-'}  track ${demo.tracking}  ${demo.state}  fps ${demo.diag.fps.toFixed(0)}` + (demo.diag.errors.length ? `\nerr ${demo.diag.errors.slice(-1)[0]}` : '');
+    el.textContent = `cam ${demo.diag.steps.slice(-1)[0] || '-'}  ${demo.facing}  track ${demo.tracking}  ${demo.state}  fps ${demo.diag.fps.toFixed(0)}` + (demo.diag.swaps ? `  swap ${demo.diag.swaps.slice(-1)[0] || '-'} ms` : '') + (demo.diag.errors.length ? `\nerr ${demo.diag.errors.slice(-1)[0]}` : '');
   }
 
   function askMotion() { // iPhone: must be asked inside the tap, before anything async. Ask, never return early.
@@ -499,31 +540,121 @@ export function createDemo(cfg) {
   function start() {
     if (!loaded || started) return; started = true;
     $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
-    if (mode === 'world' && !PHONE && !qs.has('desktop')) return openOnPhone();
+    if (needsPhone && !PHONE && !qs.has('desktop')) return openOnPhone();
     hero && hero.stop(); hero = null;
     cfg.onStartTap && cfg.onStartTap(demo);
     sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-    const mods = [XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule()];
-    if (mode === 'world') {
-      XR8.XrController.configure(Object.assign({ disableWorldTracking: false, scale: 'responsive' }, cfg.xrConfig || {}));
-      mods.push(XR8.XrController.pipelineModule());
-    } else {
-      XR8.FaceController.configure(Object.assign({ meshGeometry: [XR8.FaceController.MeshGeometry.FACE], coordinates: { mirroredDisplay: true }, maxDetections: 1 }, cfg.faceConfig || {}));
-      mods.push(XR8.FaceController.pipelineModule());
-    }
-    mods.push(XR8.CanvasScreenshot.pipelineModule(), appModule);
+    const mods = [XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), tracker(isWorld()), XR8.CanvasScreenshot.pipelineModule(), appModule];
     try {
       XR8.addCameraPipelineModules(mods);
       setTimeout(() => { if (!camStartAt) camFailed(); }, 15000);
-      XR8.run({
-        canvas,
-        allowedDevices: mode === 'face' || qs.has('desktop') ? XR8.XrConfig.device().ANY : XR8.XrConfig.device().MOBILE_AND_HEADSETS,
-        cameraConfig: { direction: mode === 'face' ? XR8.XrConfig.camera().FRONT : XR8.XrConfig.camera().BACK },
-        verbose: qs.has('verbose'),
-      });
+      XR8.run(runOpts());
     } catch (e) { showError('AR couldn\'t start', String((e && e.message) || e)); }
   }
-  $('b-start').onclick = () => { if (mode === 'world') askMotion(); start(); };
+  // the tracker module for a camera: configure, then hand back a fresh module (names: 'reality' | 'facecontroller')
+  function tracker(world) {
+    if (world) {
+      XR8.XrController.configure(Object.assign({ disableWorldTracking: false, scale: 'responsive' }, cfg.xrConfig || {}));
+      return XR8.XrController.pipelineModule();
+    }
+    XR8.FaceController.configure(Object.assign({ meshGeometry: [XR8.FaceController.MeshGeometry.FACE], coordinates: { mirroredDisplay: true }, maxDetections: 1 }, cfg.faceConfig || {}));
+    return XR8.FaceController.pipelineModule();
+  }
+  function runOpts() {
+    return {
+      canvas,
+      allowedDevices: mode === 'face' || qs.has('desktop') ? XR8.XrConfig.device().ANY : XR8.XrConfig.device().MOBILE_AND_HEADSETS,
+      cameraConfig: { direction: demo.facing === 'front' ? XR8.XrConfig.camera().FRONT : XR8.XrConfig.camera().BACK },
+      verbose: qs.has('verbose'),
+    };
+  }
+  $('b-start').onclick = () => { if (isWorld()) askMotion(); start(); };
+
+  // ---------- swap mode: one engine session, two cameras (the swap-camera sample's swapCamera())
+  let swapping = 0, swapTimer = 0, worldState = null;
+  const swapBtn = document.createElement('button');
+  swapBtn.id = 'b-swap'; swapBtn.className = 'tool'; swapBtn.type = 'button'; swapBtn.hidden = true;
+  swapBtn.innerHTML = `${ICONS.flip}<span>Flip</span>`;
+  const swapLabel = () => swapBtn.setAttribute('aria-label', demo.facing === 'back' ? 'Switch to the selfie camera' : 'Switch to the back camera');
+  swapLabel();
+  swapBtn.onclick = () => swap();
+  if (SWAP) { demo.left.appendChild(swapBtn); demo.swapBtn = swapBtn; demo.diag.swaps = []; }
+  // free our GPU copies on the renderer that is about to be dropped (the next one uploads them again on first use;
+  // ImageBitmaps and canvases stay in memory, so nothing is lost)
+  // The engine shares three's GL context and restores the program it found bound: never leave a deleted program
+  // bound (unbind through three's state cache so three stays in sync), and leave the pixel-store flags at their
+  // defaults (three's canvas textures set UNPACK_FLIP_Y; the face chunk then fails to upload its 3D textures).
+  function glTidy(r) {
+    if (!r) return;
+    try {
+      r.state.useProgram(null);
+      const gl = r.getContext(); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    } catch (e) { /* lost context */ }
+  }
+  function releaseGpu() {
+    const seen = new Set();
+    const tex = (t) => { if (t && t.isTexture && !seen.has(t)) { seen.add(t); t.dispose(); } };
+    for (const root of [demo.lights, demo.worldRoot, demo.faceRoot]) root.traverse((o) => {
+      if (o.geometry && !seen.has(o.geometry)) { seen.add(o.geometry); o.geometry.dispose(); }
+      if (o.skeleton && o.skeleton.boneTexture) o.skeleton.dispose();
+      for (const m of [].concat(o.material || [])) {
+        if (seen.has(m)) continue; seen.add(m);
+        for (const k in m) tex(m[k]);
+        m.dispose();
+      }
+    });
+    if (envTex) { envTex.dispose(); envTex = null; }
+    glTidy(demo.renderer);
+  }
+  function swap(to) {
+    if (!SWAP || swapping || !camStartAt) return false;
+    to = to || (demo.facing === 'back' ? 'front' : 'back');
+    if (to === demo.facing) return false;
+    if (to === 'back') askMotion(); // inside the tap (iPhone)
+    swapping = performance.now();
+    $('swapv').hidden = false; swapBtn.disabled = true; hint('');
+    cfg.onSwapOut && cfg.onSwapOut(demo, to);
+    if (demo.facing === 'back') {
+      worldState = demo.state;
+      if (demo.state === 'placed' && demo.camera) { // keep where the stage is, relative to the phone's heading
+        const yaw = demo.camYaw();
+        const d = demo.stage.position.clone().sub(demo.camera.position); d.y = 0; d.applyAxisAngle(new THREE.Vector3(0, 1, 0), -yaw);
+        stageRel = { x: d.x, z: d.z, ry: demo.stage.rotation.y - yaw };
+      }
+    }
+    demo.act.hidden = true; moveBtn.hidden = true; demo.reticle.visible = false;
+    releaseGpu();
+    try {
+      XR8.stop();
+      XR8.removeCameraPipelineModules([demo.facing === 'back' ? 'reality' : 'facecontroller']);
+      demo.facing = to; demo.state = 'swapping'; demo.tracking = '-';
+      XR8.addCameraPipelineModule(tracker(isWorld()));
+      XR8.run(runOpts());
+    } catch (e) { demo.diag.errors.push('swap: ' + String((e && e.message) || e)); swapFailed(); return false; }
+    clearTimeout(swapTimer); swapTimer = setTimeout(() => { if (swapping) swapFailed(); }, 15000);
+    return true;
+  }
+  function finishSwap() {
+    demo.diag.swaps.push(Math.round(performance.now() - swapping));
+    swapping = 0; clearTimeout(swapTimer);
+    $('swapv').hidden = true; swapBtn.disabled = false; swapLabel(); hint('');
+    if (isWorld()) {
+      demo.state = worldState === 'placed' ? 'placed' : 'placing';
+      if (demo.state === 'placed') { moveBtn.hidden = false; demo.stage.visible = true; }
+      else if (P === 'stage') { demo.act.hidden = false; demo.act.textContent = cfg.placeLabel || 'Place here'; }
+    } else demo.state = 'live';
+    cfg.onSwapped && cfg.onSwapped(demo, demo.facing);
+  }
+  function swapFailed() {
+    showError('The camera didn\'t switch', 'Close other apps or tabs that use the camera, allow camera access for this site, then tap Try again.');
+    $('err-retry').textContent = 'Try again';
+    $('err-retry').onclick = () => {
+      $('error').hidden = true; swapping = performance.now();
+      try { XR8.stop(); } catch (e) { /* not running */ }
+      try { XR8.run(runOpts()); } catch (e) { /* the watchdog shows this sheet again */ }
+      clearTimeout(swapTimer); swapTimer = setTimeout(() => { if (swapping) swapFailed(); }, 15000);
+    };
+  }
   return demo;
 }
 

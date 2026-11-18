@@ -1177,6 +1177,51 @@
     "alt": "Face Effects tech demo"
   },
   {
+    "slug": "camera-swap",
+    "title": "Camera Swap",
+    "lead": "A cube on your floor, shades on your face: one tap flips between your phone's two cameras.",
+    "url": "/labs/demos/camera-swap/",
+    "extraLinks": [],
+    "thumb": "/labs/img/camera-swap.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "capture"
+    ],
+    "tech": [
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Camera Swap tech demo: shades on a face and a cube on the floor"
+  },
+  {
+    "slug": "wear-it-meet-it",
+    "title": "Wear It, Meet It",
+    "lead": "Wear the robot's visor for a selfie, then flip your camera: the robot is in your room, holding your photo.",
+    "url": "/labs/demos/wear-it-meet-it/",
+    "extraLinks": [],
+    "thumb": "/labs/img/wear-it-meet-it.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "capture",
+      "3d-character"
+    ],
+    "tech": [
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Wear It, Meet It: a robot antenna on a selfie, and the life-size robot holding the selfie in a room"
+  },
+  {
     "slug": "image-to-world",
     "title": "Picture to Room",
     "lead": "Point at a picture and a sand castle appears on the floor and stays in the room.",
