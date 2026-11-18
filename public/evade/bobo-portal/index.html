@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Bobo's Portal: a walk-through doorway into Bobo's world (Eclipse Plaza), world-tracked AR.
+       World tracking: 8th Wall distributed engine binary (@8thwall/engine-binary 1.0.0, Copyright (c) 2026 Niantic
+       Spatial, Inc., XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE), loaded
+       unmodified from jsDelivr as the licence asks. Shared runtime: /labs/portal-kit/. EVADE assets only, no generative AI. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0f1519">
+  <title>Bobo's Portal · EVADE AR</title>
+  <meta name="description" content="Put a door on your floor, walk through it into Bobo's world under the eclipse, and find the 8 floating Eclipse cans.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="/labs/portal-kit/kit.css?v=2">
+  <style>
+    :root{--acc:#f6c344;--acc-ink:#15131a;--acc-sh:#b98d1f;--acc2:#e85bd8;--bg:#0f1519;--card:#182127;--head:"Exo 2",system-ui,sans-serif}
+    #splash h1,.sheet h2,#opts h2,#toast{font-style:italic;font-weight:900}
+    .door{--d-in:#151034;--d-frame:#2a2338}
+    .door .eclipse{position:absolute;left:50%;top:12%;width:42%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;background:#0a0812;box-shadow:0 0 0 6px #fff2c4,0 0 0 12px #f6c344,0 0 0 18px #ff8a3d}
+    .door .city{position:absolute;left:0;right:0;bottom:22%;height:22%;display:flex;align-items:flex-end;gap:3%}
+    .door .city i{flex:1;background:#2b2147;position:relative}
+    .door .city i::after{content:"";position:absolute;left:30%;top:20%;width:18%;height:12%;background:#f6c344;box-shadow:0 18px 0 #f6c344}
+    .door .plaza{position:absolute;left:0;right:0;bottom:0;height:22%;background:#1d1a26;border-top:3px solid #f6c344}
+    .door .bobo{position:absolute;left:6%;bottom:12%;width:48%;filter:invert(1);animation:hop 1.4s ease-in-out infinite}
+    .door .can{position:absolute;right:6%;bottom:30%;width:30%;filter:invert(1);animation:float 2.2s ease-in-out infinite}
+    @keyframes hop{50%{transform:translateY(-7%)}}
+    @keyframes float{50%{transform:translateY(-12%) rotate(10deg)}}
+  </style>
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/evade-logo.webp" alt="EVADE" width="132" height="38" style="height:34px">
+    <!-- a preview: the door open on Bobo's world under the eclipse (flat CSS + EVADE's own line art) -->
+    <div class="hero" aria-hidden="true">
+      <div class="door">
+        <div class="arch">
+          <span class="eclipse"></span>
+          <i class="glint" style="left:14%;top:8%"></i><i class="glint" style="left:80%;top:40%;animation-delay:.7s"></i><i class="glint" style="left:20%;top:44%;animation-delay:1.1s"></i>
+          <div class="city"><i style="height:60%"></i><i style="height:100%"></i><i style="height:45%"></i><i style="height:80%"></i><i style="height:55%"></i></div>
+          <span class="plaza"></span>
+          <img class="bobo" src="/evade/spray-bobo/art/cat-lines.png" alt="">
+          <img class="can" src="/evade/spray-bobo/art/can-lines.png" alt="">
+          <i class="band" style="--c:#f6c344;--i:0;--dl:0s"></i><i class="band" style="--c:#e85bd8;--i:0;--dl:.8s"></i><i class="band" style="--c:#ffffff;--i:0;--dl:1.6s"></i>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <p class="kicker">EVADE · Activated AR</p>
+      <h1 id="title">Bobo's <span>Portal</span></h1>
+      <p class="lead">Put a door on your floor and walk through it into Bobo's world under the eclipse. Find the 8 floating cans.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+        <p><b>Made for your phone.</b> It needs your phone's camera and motion sensors to put the door on your floor. Scan to open it there.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <!-- 8th Wall distributed engine binary (SLAM), unmodified, pinned. -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script type="module">
+    import { runPortal } from '/labs/portal-kit/app.js?v=1';
+    import { preload, makeWorld } from './world.js?v=2';
+    let data = null;
+    runPortal({
+      id: 'bobo-portal', source: 'bobo-portal', title: "Bobo's Portal", doneFlag: 'evade-done-bobo-portal',
+      brandLogo: '/brand/evade-logo.webp', brandName: 'EVADE',
+      door: { width: 1.0, height: 2.1, colors: ['#f6c344', '#e85bd8', '#ffffff'], frame: '#2a2338', trim: '#f6c344' },
+      openChord: [196, 247, 294, 392],
+      copy: { inside: 'Find the floating cans' },
+      soundLabel: 'Fizz, pops and the night music',
+      howTitle: "Into Bobo's world",
+      howSteps: [
+        '<b>Point at the floor</b> and move your phone slowly until the door appears. Pinch to size it, then tap <b>Place the door</b>.',
+        '<b>Walk through the door</b> into Eclipse Plaza. Turn round: your room is still there, through the door.',
+        '<b>Find the 8 floating Eclipse cans</b> and tap them to crack them open. Tap Bobo, the giant can, the charms and the floor too.',
+        '<b>Move</b> (bottom right) puts the door somewhere else and keeps every can you found.',
+      ],
+      links: [{ href: '/evade/cola-run/?mode=arcade', title: "Bobo's Arcade", sub: 'Every EVADE experience in one place' }],
+      licencesUrl: '/evade/licences/',
+      capture: { sendEnabled: true, accent: '#f6c344', brandTitle: "BOBO'S PORTAL", brandTagline: 'Where is Bobo? · EVADE', sheetTitle: 'Send your portal clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: "Bobo's Portal clip", filePrefix: 'bobo-portal', hintText: "Film your trip into Bobo's world", sendLabel: 'Send to Where is Bobo?', globeUrl: '/evade/where-is-bobo/' },
+      preload: (loader) => preload(loader).then((d) => (data = d)),
+      build: (ctx) => makeWorld(data)(ctx),
+    });
+  </script>
+  <script src="/evade/arcade/back.js" defer></script>
+</body>
+</html>
