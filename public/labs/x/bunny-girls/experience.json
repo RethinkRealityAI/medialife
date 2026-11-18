@@ -1,0 +1,71 @@
+{
+ "slug": "bunny-girls",
+ "title": "Bunny Girls",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "Three Afterhours prints, three bunny girls who come out to play.",
+ "hint": "Point your camera at an Afterhours print",
+ "targets": [
+  {
+   "name": "cat-girl",
+   "label": "Cat girl",
+   "what": "Sticker",
+   "json": "image-targets/cat-girl.json",
+   "picture": "image-targets/cat-girl.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/cat-girl1-6d00b2ba.mp4",
+     "width": 0.9,
+     "height": 1.4,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "Money-Trigger",
+   "label": "Money Trigger",
+   "what": "Afterhours card",
+   "json": "image-targets/money-trigger.json",
+   "picture": "image-targets/money-trigger.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/bunny-final-2f182dbc.mp4",
+     "width": 1.0,
+     "height": 1.4,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "bunny-final",
+   "label": "Tri-bunny",
+   "what": "Afterhours print",
+   "json": "image-targets/bunny-final.json",
+   "picture": "image-targets/bunny-final.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/tribunny1-bad6687c.mp4",
+     "width": 1.03,
+     "height": 1.04,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Enter $300 giveaway",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "@Animebae.co",
+   "url": "https://www.instagram.com/animebae.co/"
+  }
+ ]
+}

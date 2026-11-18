@@ -1,0 +1,19 @@
+{
+ "name": "sakamoto-noodles",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 435,
+  "width": 1130,
+  "height": 1506,
+  "isRotated": false,
+  "originalWidth": 2000,
+  "originalHeight": 1506
+ },
+ "imagePath": "/labs/x/sakamoto-anime-expo/image-targets/sakamoto-noodles_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sakamoto-noodles_luminance.png",
+  "originalImage": "sakamoto-noodles.jpg"
+ }
+}

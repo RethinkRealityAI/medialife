@@ -1,0 +1,39 @@
+{
+ "slug": "vvbg-comic",
+ "title": "Sharpe & Rabbit",
+ "client": "VVBG Comics",
+ "wordmark": "VVBG Comics",
+ "accent": "#c8202f",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the bookmark and the comic plays out above it.",
+ "hint": "Point your camera at the bookmark",
+ "heroAspect": "714/2000",
+ "targets": [
+  {
+   "name": "vvbg-target",
+   "label": "Sharpe & Rabbit bookmark",
+   "what": "Bookmark",
+   "json": "image-targets/vvbg-target.json",
+   "picture": "image-targets/vvbg-target.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/vvbg-comic-v4-d8b9e2aa.mp4",
+     "scale": [
+      1.02,
+      2.125
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Join the club",
+   "url": "https://www.vvbgcomics.com/sharpe-rabbit-updates-club"
+  }
+ ]
+}

@@ -1,0 +1,141 @@
+{
+ "slug": "ces-2026",
+ "title": "MEDIALIFE at CES 2026",
+ "client": "MEDIALIFE",
+ "wordmark": "MEDIALIFE",
+ "accent": "#f6c344",
+ "onAccent": "#111111",
+ "lead": "The CES 2026 merch wall: tees, pockets, cards and covers that play when you point at them.",
+ "hint": "Point your camera at any of the prints",
+ "targets": [
+  {
+   "name": "back",
+   "label": "Back print",
+   "what": "Tee back print",
+   "json": "image-targets/back.json",
+   "picture": "image-targets/back.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/back-4c04bca7.mp4",
+     "width": 0.75,
+     "height": 1,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "sukeban",
+   "label": "Sukeban",
+   "what": "Tee print",
+   "json": "image-targets/sukeban.json",
+   "picture": "image-targets/sukeban.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Sukeban-Cherry_Blossom-20eb71db.mp4",
+     "width": 0.75,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "AB_trainframe",
+   "label": "Train frame",
+   "what": "Framed print",
+   "json": "image-targets/ab-trainframe.json",
+   "picture": "image-targets/ab-trainframe.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/AB_Train1-01403ca8.mp4",
+     "scale": [
+      1,
+      1.0
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "rightpocket",
+   "label": "Right pocket",
+   "what": "Tee pocket print",
+   "json": "image-targets/rightpocket.json",
+   "picture": "image-targets/rightpocket.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/rightpocket-b30e7ee0.mp4",
+     "width": 0.52,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "leftpocket",
+   "label": "Left pocket",
+   "what": "Tee pocket print",
+   "json": "image-targets/leftpocket.json",
+   "picture": "image-targets/leftpocket.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/leftpocket-86bb78fe.mp4",
+     "width": 0.97,
+     "height": 0.43,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "Sticker Graphic",
+   "label": "SPORT cover",
+   "what": "Magazine cover",
+   "json": "image-targets/sticker-graphic.json",
+   "picture": "image-targets/sticker-graphic.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/pr-animation1-b40ec9df.mp4",
+     "scale": [
+      1.04,
+      0.99
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "brooklyn",
+   "label": "Afterhours V.I.P",
+   "what": "Card",
+   "json": "image-targets/brooklyn.json",
+   "picture": "image-targets/brooklyn.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/pr-animation1-3c5d9652.mp4",
+     "width": 0.92,
+     "height": 1.25,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "More info",
+   "url": "https://www.medialife.ai/"
+  }
+ ]
+}

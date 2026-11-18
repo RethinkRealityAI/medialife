@@ -1,0 +1,19 @@
+{
+ "name": "hod-badge",
+ "type": "PLANAR",
+ "properties": {
+  "top": 611,
+  "left": 442,
+  "width": 589,
+  "height": 785,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/heart-of-darkness/image-targets/hod-badge_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "hod-badge_luminance.jpeg",
+  "originalImage": "hod-badge.jpg"
+ }
+}

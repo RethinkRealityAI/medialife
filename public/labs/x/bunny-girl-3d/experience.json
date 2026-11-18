@@ -1,0 +1,74 @@
+{
+ "slug": "bunny-girl-3d",
+ "title": "Bunny Girl 3D",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "The bunny girl stands up off the rug or the card in 3D. Drag to turn her.",
+ "hint": "Point your camera at the bunny rug or the Afterhours card",
+ "targets": [
+  {
+   "name": "bunny-rug",
+   "label": "Bunny rug",
+   "what": "Rug print",
+   "json": "image-targets/bunny-rug.json",
+   "picture": "image-targets/bunny-rug.jpg",
+   "content": [
+    {
+     "type": "model",
+     "src": "/labs/x/media/b3d-f641d4af.glb",
+     "rotation": [
+      90,
+      0,
+      0
+     ],
+     "modelScale": [
+      0.914,
+      0.914,
+      0.914
+     ],
+     "rotate": {
+      "factor": 3
+     }
+    }
+   ]
+  },
+  {
+   "name": "bunny-target",
+   "label": "Afterhours card",
+   "what": "Card print",
+   "json": "image-targets/bunny-target.json",
+   "picture": "image-targets/bunny-target.jpg",
+   "content": [
+    {
+     "type": "model",
+     "src": "/labs/x/media/bunny-89a00300.glb",
+     "rotation": [
+      90,
+      0,
+      0
+     ],
+     "modelScale": [
+      0.5,
+      0.5,
+      0.5
+     ],
+     "rotate": {
+      "factor": 3
+     }
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Enter $300 giveaway",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "Activate in 2D",
+   "url": "/labs/x/moneymaker-bunny/"
+  }
+ ]
+}

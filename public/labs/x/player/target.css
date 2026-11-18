@@ -1,0 +1,22 @@
+/* Test pictures page (flat colours only) */
+:root{--bg:#f0eeea;--ink:#1b1d22;--muted:#4a4f58;--card:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{max-width:1100px;margin:0 auto;padding:24px 16px 8px}
+h1{font-size:22px;margin:0 0 6px}
+header p{margin:0;color:var(--muted);max-width:70ch}
+a{color:var(--ink);font-weight:700}
+main{max-width:1100px;margin:0 auto;padding:16px 16px 40px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.card{all:unset;cursor:pointer;display:flex;flex-direction:column;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px #0002}
+.card:focus-visible{outline:3px solid #2f6fed;outline-offset:2px}
+.card img{width:100%;aspect-ratio:3/4;object-fit:contain;display:block;background:#ddd}
+.card b{padding:10px 12px 2px}
+.card span{padding:0 12px 12px;color:var(--muted);font-size:13px}
+#view{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:5}
+#view[hidden]{display:none}
+#view img{flex:1;min-height:0;width:100%;object-fit:contain;cursor:zoom-in}
+#view.big img{object-fit:cover;cursor:zoom-out}
+#bar{display:flex;align-items:center;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#111;color:#eee}
+#bar p{flex:1;margin:0;font-size:14px}
+#bar button{background:#2a2d33;color:#fff;border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:600;min-width:44px;min-height:44px;cursor:pointer}

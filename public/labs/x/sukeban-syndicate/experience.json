@@ -1,0 +1,54 @@
+{
+ "slug": "sukeban-syndicate",
+ "title": "Sukeban Syndicate",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the Sukeban or Syndicate print and the girls step out of it.",
+ "hint": "Point your camera at the Sukeban or Syndicate print",
+ "targets": [
+  {
+   "name": "sukeban",
+   "label": "Sukeban",
+   "what": "Sukeban tee print",
+   "json": "image-targets/sukeban.json",
+   "picture": "image-targets/sukeban.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Sukeban-Cherry_Blossom-20eb71db.mp4",
+     "width": 0.75,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "Syndicate",
+   "label": "Syndicate",
+   "what": "Syndicate print",
+   "json": "image-targets/syndicate.json",
+   "picture": "image-targets/syndicate.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Syndicate-9f783191.mp4",
+     "width": 0.75,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Win $300",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "Follow IG",
+   "url": "https://www.instagram.com/animebae.co/"
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "slug": "bushido-can",
+ "title": "Bushido Sake",
+ "client": "Bushido",
+ "wordmark": "Bushido",
+ "accent": "#e2582c",
+ "onAccent": "#ffffff",
+ "background": "#141414",
+ "lead": "Point your phone at the can and the label comes alive all the way round.",
+ "hint": "Point your camera at the Bushido can",
+ "heroAspect": "700/758",
+ "targets": [
+  {
+   "name": "bushido target",
+   "label": "Bushido can label",
+   "what": "Can (curved label)",
+   "json": "image-targets/bushido-target.json",
+   "picture": "image-targets/bushido-target.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/bushido-14f86fe8.mp4",
+     "scale": [
+      1,
+      1
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Sake 101",
+   "url": "https://drinkbushido.com/pages/sake-101",
+   "whileTracked": true
+  },
+  {
+   "label": "More sake",
+   "url": "https://drinkbushido.com/collections/all",
+   "whileTracked": true
+  }
+ ]
+}
