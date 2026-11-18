@@ -337,7 +337,7 @@ function cabinetScreen(game) {
   return tex;
 }
 
-export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, onEvent = () => {}, onDiag = () => {} }) {
+export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, busy = () => false, onEvent = () => {}, onDiag = () => {} }) {
   const portal = new Portal({ renderer, width: DOOR.w, height: DOOR.h, colors: [CYAN, PINK, '#ffffff'], frame: '#1b2552', trim: CYAN });
   portal.group.visible = false;
   const scene = anchor.parent;
@@ -666,6 +666,8 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
   const origWarm = hub.warm.bind(hub);
   hub.warm = async (...a) => {
     await origWarm(...a);
+    // never mid-round: a compile can still hitch a frame on some phones, so it waits for a quiet moment
+    while (busy()) await new Promise((r) => setTimeout(r, 500));
     await prep();
   };
 
@@ -901,6 +903,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     if (!layout()) return origEnter(opts);
     if (hub.state === 'building' || hub.state === 'live') return; // already in (HubCore ignores it too)
     // After the code (or any time the hideout opens): place the door first; the room builds once it's down.
+    prep(); // normally done at load; if not, it runs while the door is being placed (the room is away)
     pendingEnter = opts;
     open();
   };
@@ -979,7 +982,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     update(dt) {
       t += dt;
       patchHome();
-      if (!prepping && hub.loaded && t > 8) prep();
+      if (!prepping && hub.loaded && t > 8 && !busy()) prep();
       if (aiming) tickAim(dt);
       if (!portal.group.visible) return;
       portal.update(dt, camera, t);

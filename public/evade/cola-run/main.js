@@ -524,6 +524,7 @@ async function buildScene(xr) {
         // Placing the door: Place is bottom centre, the shutter stays bottom right (filming the door going down
         // is part of the fun); the joystick is already away in the hideout.
         onCancel: () => mode.leave(),
+        busy: () => game.gameState === "playing" || !!game.isCountingDown,
         onActive: (on) => {
           // Closing because placement was reset: back to placing, so Place keeps the bottom centre.
           stick.hidden = on || !game.isPlaced || replacing;
