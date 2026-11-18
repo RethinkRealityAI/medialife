@@ -20,10 +20,10 @@
       "sky",
       "image-target"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": true,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation"
   },
   {
@@ -50,10 +50,10 @@
     "tech": [
       "world"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": true,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Cola Run splash art with Bobo the cat",
     "notes": [
       "Phone only"
@@ -81,10 +81,10 @@
       "image-target",
       "world"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": true,
-    "tested": "not yet",
+    "tested": "phone",
     "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top"
   },
   {
@@ -107,10 +107,10 @@
     "tech": [
       "world"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Spray Bobo Street in the camera: a sticker hung on a brick wall, stamps, and a BOBO tag sprayed on the wall with drips"
   },
   {
@@ -134,10 +134,10 @@
     "tech": [
       "image-target"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": true,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Wake the Print in the camera: Spark, a small blue robot, standing on the Sukeban tee print",
     "notes": [
       "Voice AI"
@@ -227,10 +227,10 @@
     "tech": [
       "image-target"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton"
   },
   {
@@ -248,10 +248,10 @@
     "tech": [
       "face"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "simulator",
     "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring"
   },
   {
@@ -274,10 +274,10 @@
     "tech": [
       "image-target"
     ],
-    "status": "preview",
+    "status": "live",
     "year": 2026,
     "featured": false,
-    "tested": "not yet",
+    "tested": "phone",
     "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain"
   },
   {
