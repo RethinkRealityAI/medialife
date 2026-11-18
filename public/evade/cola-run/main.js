@@ -21,7 +21,8 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { addArcadeCabinet } from "./arcade-cabinet.js?v=2";
-import { setupHideoutPortal } from "./hideout-portal.js?v=5";
+import { setupHideoutPortal } from "./hideout-portal.js?v=6";
+import { worldHealth } from "/evade/xr/world-health.js?v=1";
 import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js?v=4";
 import {
   OrbHuntGame,
@@ -122,6 +123,7 @@ function flushLog(force = false) {
     stalls: tlog.stalls.slice(-20),
     fpsLog: tlog.fpsLog.slice(-90),
     walk: tlog.walk.slice(-120),
+    health: wh.snapshot(),
     steps: tlog.steps.slice(-60),
     errors: diag.errors.slice(-10),
     screen: [innerWidth, innerHeight, devicePixelRatio],
@@ -247,18 +249,15 @@ addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
 
 /* ── canvas: the engine draws at the canvas's own size (300x150 unless set) ── */
 const canvas = $("cam");
-// 1.5x on every phone, as the portal kit: still sharp on a camera feed, and it leaves the GPU room for the engine's
-// own camera processing (a GPU-bound frame starves tracking) and iPhone Safari's tight WebGL memory.
-const DRAW_DPR = Math.min(devicePixelRatio || 1, Number(qs.get("dpr")) || 1.5);
-function sizeCanvas() {
-  const w = Math.round(innerWidth * DRAW_DPR);
-  const h = Math.round(innerHeight * DRAW_DPR);
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-  }
-}
+// World-tracking health (shared /evade/xr/world-health.js): draws at 1.5x and drops toward 1x when the frame
+// rate falls under 40 fps (SLAM needs every camera frame: slow frames and stalls make the room slide with the
+// phone), says when tracking has settled (Place the door waits for it), logs fps / tracking / stalls / camera.
+// Created before XR8.run: it wraps getUserMedia to record the camera the engine really got.
+const wh = worldHealth({ page: "cola-run", canvas, baseDpr: 1.5 });
+const sizeCanvas = () => wh.sizeCanvas();
 sizeCanvas();
+// The hideout room (~5 MB) comes down while the splash is up, so its load later is a cache hit, not a download.
+if (PORTAL_HIDEOUT) fetch("/hub/evade/room.glb", { priority: "low" }).catch(() => {});
 addEventListener("resize", sizeCanvas);
 // The phone's GPU reset (driver watchdog or memory): the 8th Wall engine's camera and tracking don't come back
 // after that, whatever three.js restores, so a black, smearing screen is all that's left. Say so and restart.
@@ -565,6 +564,7 @@ async function buildScene(xr) {
   mode.roomTimeline.value = "lounge-purr";
   ctx.constructed.then(() => {
     hub = mode.hub;
+    if (hub && PORTAL_HIDEOUT) gateHubLoad(hub);
     // Walk-in hideout (default): a door opens where Bobo stands; through it, the one-storey hideout.
     if (hub && PORTAL_HIDEOUT)
       hideoutPortal = setupHideoutPortal({
@@ -575,11 +575,15 @@ async function buildScene(xr) {
         anchor,
         player,
         onEvent: platformEvent,
-        onDiag: step,
+        onDiag: (name, extra) => {
+          if (name === "hideout_ready") wh.busy(""); // the heavy part is over
+          step(name, extra);
+        },
         // Placing the door: Place is bottom centre, the shutter stays bottom right (filming the door going down
         // is part of the fun); the joystick is already away in the hideout.
         onCancel: () => mode.leave(),
         maxTex: IOS ? 512 : 2048,
+        ready: () => wh.settled(),
         busy: () => game.gameState === "playing" || !!game.isCountingDown,
         onActive: (on) => {
           // Closing because placement was reset: back to placing, so Place keeps the bottom centre.
@@ -660,6 +664,34 @@ function platformEvent(kind, extra = {}) {
   } catch {
     /* offline */
   }
+}
+
+/* ── the hideout's heavy loading waits for a quiet moment ── */
+// Loading the room, decoding its textures and compiling its shaders stall the page for seconds, and SLAM loses
+// the room when it misses frames (Samsung: minutes of LIMITED; iPhone: the camera path ran away 14 m while the
+// room loaded during the first seconds). So it waits until tracking has settled and no round is running, or
+// until the fan asks for the room (its "Getting Bobo's room ready…" prompt lets it go at once).
+function gateHubLoad(h) {
+  const load = h.load.bind(h);
+  let release;
+  const go = new Promise((r) => (release = r));
+  const prompt = h.prompt.bind(h);
+  h.prompt = (t, ...a) => {
+    if (t) release();
+    return prompt(t, ...a);
+  };
+  const t0 = performance.now();
+  const iv = setInterval(() => {
+    const quiet = game.gameState !== "playing" && !game.isCountingDown;
+    const waited = performance.now() - t0;
+    if (quiet && ((wh.settled() && waited > 4000) || waited > 45000)) release();
+  }, 500);
+  go.then(() => {
+    clearInterval(iv);
+    wh.busy("hideout");
+    step("hub_load", { settled: wh.settled() });
+  });
+  h.load = (...a) => go.then(() => load(...a));
 }
 
 /* ── placing: the board follows the floor in the middle of the screen ── */
@@ -839,6 +871,7 @@ startBtn.addEventListener("click", () => {
       XR8.GlTextureRenderer.pipelineModule(),
       XR8.Threejs.pipelineModule(),
       XR8.XrController.pipelineModule(),
+      wh.module,
       app,
       {
         name: "errors",

@@ -337,7 +337,7 @@ function cabinetScreen(game) {
   return tex;
 }
 
-export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, busy = () => false, maxTex = 2048, onEvent = () => {}, onDiag = () => {} }) {
+export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, player, onActive, onAim, onCancel, busy = () => false, ready = () => true, maxTex = 2048, onEvent = () => {}, onDiag = () => {} }) {
   const portal = new Portal({ renderer, width: DOOR.w, height: DOOR.h, colors: [CYAN, PINK, '#ffffff'], frame: '#1b2552', trim: CYAN });
   portal.group.visible = false;
   const scene = anchor.parent;
@@ -388,6 +388,20 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       delete m.userData.mlhReveal; // clone() drops the build-in shader: the shell is there from the start
       return m;
     };
+    // The big surfaces (floor, walls, ceiling) fill the screen once you're inside: lit per pixel with PBR, three
+    // point lights and the env map, they cost the frame rate that world tracking needs (Samsung: 60 -> 25-45 fps
+    // with the room live, then minutes of LIMITED tracking). Lambert keeps the look under the same lights for a
+    // fraction of the cost; PBR stays on the hero pieces only.
+    const cheap = (name, fallback) => {
+      const src = plain(name, fallback);
+      const m = new THREE.MeshLambertMaterial({
+        name: src.name, color: src.color, map: src.map, emissive: src.emissive, emissiveMap: src.emissiveMap,
+        emissiveIntensity: src.emissiveIntensity, normalMap: src.normalMap, normalScale: src.normalScale, aoMap: src.aoMap,
+        transparent: src.transparent, opacity: src.opacity, side: src.side, alphaTest: src.alphaTest, vertexColors: src.vertexColors,
+      });
+      src.dispose();
+      return m;
+    };
 
     /* the furniture, on one floor (angles from the door, clockwise seen from above; the big screen is at 180) */
     // Bobo's desk + computer (from the loft) on the right
@@ -431,7 +445,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     room.add(shell);
     // The floor shares the hideout's wood texture (no clone: a clone is a second GPU upload); the planks are
     // tiled by the UVs instead (glTF textures repeat by default).
-    const floorMat = plain('Wood_Floor', '#8a5a3b');
+    const floorMat = cheap('Wood_Floor', '#8a5a3b');
     floorMat.normalMap = null;
     floorMat.roughnessMap = null;
     const planar = (geo) => {
@@ -452,7 +466,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     sill.material.polygonOffsetFactor = -1;
     sill.rotation.x = -Math.PI / 2;
     shell.add(sill);
-    const wallMat = plain('Wall_Inside_Navy', '#1b2552');
+    const wallMat = cheap('Wall_Inside_Navy', '#1b2552');
     wallMat.normalMap = null;
     wallMat.roughnessMap = null;
     wallMat.side = THREE.BackSide;
@@ -460,7 +474,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     wall.position.y = H / 2;
     wall.name = 'PortalWall';
     shell.add(wall);
-    const wainMat = plain('Wall_Wainscot', '#0d1533');
+    const wainMat = cheap('Wall_Wainscot', '#0d1533');
     wainMat.normalMap = null;
     wainMat.roughnessMap = null;
     wainMat.side = THREE.BackSide;
@@ -468,7 +482,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
     wain.position.y = 0.425;
     shell.add(wain);
     // door jambs: the wall's cut edges, so the gap reads as a doorway in the can
-    const jambMat = plain('Wall_Wainscot', '#0d1533');
+    const jambMat = cheap('Wall_Wainscot', '#0d1533');
     for (const s of [-1, 1]) {
       const j = new THREE.Mesh(new THREE.BoxGeometry(0.1, H, 0.14), jambMat);
       j.position.set(s * Math.sin(GAP) * R, H / 2, Math.cos(GAP) * R - 0.03);
@@ -485,7 +499,7 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       shell.add(u);
     }
     // ceiling with the can's opening, and the night sky through it
-    const ceil = new THREE.Mesh(new THREE.RingGeometry(HOLE, R, 96, 1), plain('Diorama_Rim', '#0b1230'));
+    const ceil = new THREE.Mesh(new THREE.RingGeometry(HOLE, R, 96, 1), cheap('Diorama_Rim', '#0b1230'));
     ceil.material.side = THREE.DoubleSide;
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = H;
@@ -871,10 +885,15 @@ export function setupHideoutPortal({ hub, camera, renderer, canvas, anchor, play
       reticle.rotation.set(-Math.PI / 2, g.rotation.y, 0);
     }
     reticle.visible = ok;
-    if (ok !== aimOk) {
-      aimOk = ok;
-      placeBtn.disabled = !ok;
-      placeBtn.textContent = ok ? 'Place the door' : 'Point at the floor…';
+    // Tracking must have settled (NORMAL, no recent stall) before the door goes down: a door placed while the
+    // map is still forming slides with it. testHit (?test) skips the wait.
+    const steady = !!testHit || ready();
+    const can = ok && steady;
+    const label = !ok ? 'Point at the floor…' : steady ? 'Place the door' : 'Hold still a moment…';
+    if (can !== aimOk || placeBtn.textContent !== label) {
+      aimOk = can;
+      placeBtn.disabled = !can;
+      placeBtn.textContent = label;
     }
   }
   function placeHere() {
