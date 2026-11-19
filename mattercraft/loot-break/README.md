@@ -6,9 +6,48 @@ party (Knight, Ranger, Sorcerer, Priest), the monsters, the boss, the loot
 chest and the screen UI. All pixel art is drawn in code, so there are no
 assets to upload.
 
-**Try it first in the browser:** `/labs/loot-break/` runs this exact file
-(bundled by `node scripts/build-loot-break.mjs`, with
-`mattercraft/lab-shim/zcomponent.ts` standing in for Mattercraft).
+**Play it on a phone:** `/labs/loot-break/` runs this exact file on 8th Wall
+world tracking, hosted on medialife.ai (see "8th Wall version" below).
+**Try it in a desktop browser:** `/labs/loot-break/desk.html` (a three.js desk,
+no camera). Both are bundled by `node scripts/build-loot-break.mjs`, with
+`mattercraft/lab-shim/zcomponent.ts` standing in for Mattercraft.
+
+## 8th Wall version (2026-11-19)
+
+`public/labs/loot-break/index.html` (generated from `index.src.html`, same
+splash) + `assets/ar.js` + `assets/ar.css`. The 8th Wall engine binary
+(`@8thwall/engine-binary@1.0.0`, SLAM, from jsDelivr, unmodified; credits in
+`licences.html`, linked from the in-game menu) replaces Zappar's Instant World
+Tracker. `ar.js` hands the game a placement group with `placementMode` and
+`placementValid`, like Cola Run on 8th Wall.
+
+- **Splash**: the same animated TBH splash. Start opens the camera in the same
+  tap; on a computer it shows an "Open this on your phone" QR instead
+  (`?desktop` skips that, for the simulator).
+- **Placing**: the lane follows the desk under the middle of the screen. Desk
+  height = the engine's feature points under the reticle (the binary has no
+  plane events), else the floor. The lane is sized from the distance (about
+  95 % of the view across), so it fits on a desk or a floor whatever SLAM's
+  scale is; pinch while placing to resize. **Place waits** for a surface and
+  settled tracking (`/evade/xr/world-health.js`: NORMAL for 1.2 s, no stall),
+  and says "Scanning your desk" meanwhile.
+- **Move** (bottom right, always on once placed): pauses the round, the lane
+  follows the phone again, "Put it here" drops it and a 3-2-1 picks the round
+  up where it stopped. Nothing is lost.
+- **Record** (bottom centre): the Cola Run recorder (CaptureCore) with LOOT
+  BREAK branding and the score on the video, sound included. Save / share
+  only; clips are not uploaded anywhere. Hidden while placing and behind cards.
+- **Menu** (top right): Sound, How to play (between rounds), Licences.
+- **Rewards**: unchanged, against the page's own origin (`/api/lootbreak`), so
+  Admin > LOOT BREAK keeps working; a deploy preview tests its own codes.
+- **Analytics**: the same GA events as `index.ts`, plus `record`.
+- **Tracking health**: adaptive pixel ratio, stall log and phone logs to
+  `/api/ar/kc-diag` (page `loot-break`). `?diag` shows a readout (on by default
+  on previews); `?dpr=`, `?adapt=0`, `?cam=720` are the A/B knobs.
+
+Simulator-tested only (headless Chromium, fake 4:3 camera + faked motion):
+splash, QR, placing, settle gate, Move mid-round, resume, results. Not yet on a
+real phone.
 
 ## Files
 
@@ -83,7 +122,7 @@ Those round fields are there to tune difficulty from real players. `index.ts` im
 `./Scene.zcomp`; if the project's scene file has another name, change that
 import.
 
-## Placement (Place and Re-place buttons)
+## Placement (Place and Move buttons)
 
 Works like EVADE: **no round starts until the player taps Place.** There is no
 surface detection step; the player points the phone wherever they want the lane
@@ -103,10 +142,13 @@ How it plays:
   on the desk under it. **Place on desk** is always enabled.
 - **Place on desk** sets `placementMode` to false (the lane locks where it
   is), plays `placeTimeline`, fires `onPlace`, then the 3-2-1 countdown starts.
-- **Re-place** (top right, under the speaker, during a round) drops the round
-  (no score, no chest), turns `placementMode` back on (on an anchor group, its
-  own restart, so its Restart Placement Mode still applies), plays
-  `resetTimeline`, fires `onResetPlacement` and goes back to placing.
+- **Move** (bottom right, always on screen once the lane is down) pauses
+  the round and turns `placementMode` back on, plays `resetTimeline` and fires
+  `onResetPlacement` and `onPause(true)`. **Put it here** places it again and a
+  3-2-1 resumes the round where it stopped (`onPause(false)`). With
+  `moveKeepsRound` off it drops the round instead, as the first build did.
+- If the tracker has a `placementValid` observable (the 8th Wall page does),
+  Place stays disabled with `placeWaitHint` until it's true.
 - **Play again** goes straight to the countdown while the lane is placed.
 - If something else changes `placementMode` (a template button left in, or the
   anchor group's long-press move), the game follows it.
@@ -118,7 +160,7 @@ How it plays:
 iOS only starts web audio inside a real tap, so the game unlocks it on the
 first tap (Start, Place, or any touch). `playOnSilent` (on by default) lets the
 sound play with the iPhone's silent switch on, as games usually do; players
-can still mute with the speaker button. Turn it off to follow the switch.
+can still mute with Sound in the menu. Turn it off to follow the switch.
 
 ## How a round plays
 
@@ -227,11 +269,15 @@ to open the player's codes from a timeline.
 | Screens | `title`, `subtitle`, `footer` | | Text on the cards. |
 | Screens | `shareUrl`, `redeemUrl`, `redeemLabel` | | Buttons on the results card. Redeem only shows when a link is set. |
 | Screens | `sound` | on | The synthesised sound effects. |
-| Screens | `playOnSilent` | on | iPhone: play even with the silent switch on (speaker button still mutes). |
-| Placement | `placementEnabled` | on | Use the game's Place and Re-place buttons. |
+| Screens | `playOnSilent` | on | iPhone: play even with the silent switch on (Sound in the menu still mutes). |
+| Screens | `licencesUrl` | empty | "Licences" in the menu. Empty hides it. |
+| Screens | `reserveShutter` | off | Keep the bottom centre free for a record button; the hero buttons move up a row. |
+| Placement | `placementEnabled` | on | Use the game's Place and Move buttons. |
 | Placement | `placementGroup` | empty | The Instant World Tracker or anchor group to drive. Empty = the one the game sits in. |
 | Placement | `placeHint`, `placeButtonLabel`, `replaceButtonLabel` | | Placement copy. |
-| Placement | `placeTimeline`, `resetTimeline` | | Timelines played on Place and Re-place. |
+| Placement | `placeTimeline`, `resetTimeline` | | Timelines played on Place and Move. |
+| Placement | `moveKeepsRound` | on | Move pauses the round and resumes it after a 3-2-1 once it's put down. Off = Move drops the round (the first build). |
+| Placement | `placeWaitHint` | | Shown while the tracker's `placementValid` is false (Place is disabled then). |
 | Rewards | `rewardsEnabled` | on | Discount codes and the bonus quest. Off hides them. |
 | Rewards | `rewardsApi` | https://medialife.ai | The site that makes and checks codes. A deploy preview's address tests against that preview's codes. |
 

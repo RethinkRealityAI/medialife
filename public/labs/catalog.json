@@ -513,12 +513,16 @@
   },
   {
     "slug": "loot-break",
-    "title": "LOOT BREAK: TBH desk raid",
-    "lead": "A 60-second lunch-break raid for TBH: Task Bar Hero. Your party marches along a taskbar on the desk, you are the cursor, and at 12:59 the chest opens.",
-    "url": "/labs/loot-break/splash.html",
+    "title": "LOOT BREAK on our own world tracking",
+    "lead": "A 60-second lunch-break raid for TBH: Task Bar Hero, now on our own world tracking. Your party marches along a taskbar on your real desk, you are the cursor, and at 12:59 the chest opens.",
+    "url": "/labs/loot-break/",
     "extraLinks": [
       {
-        "label": "Watch a phone recording",
+        "label": "Desk test (no camera)",
+        "url": "/labs/loot-break/desk.html"
+      },
+      {
+        "label": "Mattercraft recording",
         "url": "/labs/video/loot-break.mp4"
       }
     ],
@@ -529,17 +533,16 @@
       "game"
     ],
     "tech": [
-      "mattercraft"
+      "world"
     ],
     "status": "lab",
     "year": 2026,
-    "featured": false,
-    "tested": "phone",
+    "featured": true,
+    "tested": "simulator",
     "alt": "Pixel heroes on a taskbar lane fighting a skeleton king that steps out of a purple portal",
     "notes": [
       "Concept build, not client-approved"
-    ],
-    "source": "mattercraft/loot-break/"
+    ]
   },
   {
     "slug": "sukeban-syndicate",
