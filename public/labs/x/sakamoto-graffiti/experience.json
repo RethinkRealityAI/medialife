@@ -1,0 +1,59 @@
+{
+ "slug": "sakamoto-graffiti",
+ "title": "Sakamoto Days Graffiti",
+ "client": "Netflix",
+ "wordmark": "Netflix · Sakamoto Days",
+ "accent": "#efb419",
+ "onAccent": "#111111",
+ "lead": "Point your phone at the Abbott Elementary poster and Sakamoto tags it. Tap for a photo, hold for a video.",
+ "hint": "Point at the poster",
+ "targets": [
+  {
+   "name": "abbott",
+   "label": "Abbott Elementary poster",
+   "what": "Poster",
+   "json": "image-targets/abbott.json",
+   "picture": "image-targets/abbott.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/graffiti-be7b908f.mp4",
+     "width": 1.45,
+     "height": 1.3,
+     "loop": true,
+     "offset": [
+      -0.08,
+      -0.05,
+      0
+     ],
+     "chroma": {
+      "color": "#f1bd1e",
+      "spill": 0.1
+     }
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Watch trailer",
+   "url": "https://youtu.be/y-PdMVbil3o?feature=shared"
+  }
+ ],
+ "capture": {
+  "photo": true,
+  "video": true,
+  "filePrefix": "sakamoto-days",
+  "watermark": [
+   {
+    "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+    "pos": "bottom",
+    "w": 0.62
+   }
+  ]
+ },
+ "banner": {
+  "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+  "alt": "Now playing on Netflix"
+ }
+}

@@ -1,0 +1,19 @@
+{
+ "name": "vvbg-target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 524,
+  "left": 0,
+  "width": 714,
+  "height": 952,
+  "isRotated": false,
+  "originalWidth": 714,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/vvbg-comic/image-targets/vvbg-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "vvbg-target_luminance.jpeg",
+  "originalImage": "vvbg-target.jpg"
+ }
+}

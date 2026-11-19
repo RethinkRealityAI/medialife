@@ -332,8 +332,9 @@ const hero = {
     });
     if (this.mix && this.mix.clips.Sit) this.mix.clips.Sit.play();
     const resize = () => {
-      const c = $("hero3d"),
-        w = c.clientWidth || 300,
+      const c = $("hero3d");
+      if (!this.r || !c) return;
+      const w = c.clientWidth || 300,
         h = c.clientHeight || 300;
       this.r.setSize(w, h, false);
       this.cam.aspect = w / h;
@@ -415,11 +416,25 @@ const hero = {
   },
   stop() {
     cancelAnimationFrame(this.raf);
-    if (this.r) {
-      this.r.dispose();
-      this.r.forceContextLoss();
-      this.r = null;
+    if (!this.r) return;
+    // freeze the last frame as a picture first: disposing the renderer blanks the canvas, which showed as an empty
+    // white box under "Starting…" until the camera came up (Dapo, 2026-11-17)
+    try {
+      const c = $("hero3d"),
+        url = c.toDataURL("image/png");
+      const img = new Image();
+      img.src = url;
+      img.alt = "";
+      img.className = "hero-still";
+      img.width = c.clientWidth;
+      img.height = c.clientHeight;
+      c.replaceWith(img);
+    } catch (e) {
+      /* none */
     }
+    this.r.dispose();
+    this.r.forceContextLoss();
+    this.r = null;
   },
 };
 function addTo(g, c, id) {
@@ -772,6 +787,7 @@ class Rig {
     }
     if (!this.tracked) {
       this.tracked = true;
+      this.foundAt = performance.now();
       diag.found++;
       if (!diag.firstFoundS)
         diag.firstFoundS = +((performance.now() - camStartAt) / 1000).toFixed(1);
@@ -1001,6 +1017,14 @@ function disposeTree(o) {
 function rigFor(id) {
   let r = rigs.get(id);
   if (!r && scene) {
+    // a face lost and found again can come back with a new id: drop rigs not seen for a while, so stale ones never
+    // block a real face (or count as a friend)
+    const now = performance.now();
+    for (const [k, o] of rigs)
+      if (!o.live && now - o.at > 1500) {
+        o.dispose();
+        rigs.delete(k);
+      }
     if (rigs.size >= MAX_FACES) return null;
     r = new Rig(id);
     rigs.set(id, r);
@@ -1298,25 +1322,57 @@ function paintThumb(id) {
   return c.toDataURL("image/png");
 }
 
-// ---------------------------------------------------------------- face triggers (round 2)
-// Open your mouth: cola fizz pours out. Raise both eyebrows: next look. Wink: the tiny Bobo waves (or a sparkle).
+// ---------------------------------------------------------------- face triggers (round 2, tuned after Dapo's phone test)
+// Open your mouth WIDE and hold it: cola fizz pours out (silently). Raise both eyebrows and hold: next look. Wink: the
+// tiny Bobo waves. The engine's own flags fire on talking and head shakes (Dapo, 2026-11-17), so each trick also needs:
+// the face found for 1.5 s, the head steady (turning slower than ~60 deg/s), and for the mouth a real gap between the
+// lips (upperLip to lowerLip, in face units: 1 FU ~ 139 mm) held for 350 ms.
+const MOUTH_GAP = clamp(+params.get("mouthgap") || 0.2, 0.05, 0.6); // ~28 mm: a wide "O", not talking (~5-15 mm)
+const STEADY_RAD_S = 1.05,
+  WARM_MS = 1500;
 const triggers = {
   on: store.get("triggers", "1") === "1",
   lookAt: 0,
   mewAt: 0,
   coachShown: false,
   face(r, d) {
-    if (!this.on) {
-      r.trig.mouth = false;
-      return;
-    }
     const now = performance.now(),
       T = r.trig;
-    const mouth = !!d.mouthOpen;
+    // head turn speed (smoothed), from the face's rotation between updates
+    const q = d.transform && d.transform.rotation;
+    if (q) {
+      if (T.q && T.qt) {
+        const dot = Math.abs(T.q[0] * q.x + T.q[1] * q.y + T.q[2] * q.z + T.q[3] * q.w),
+          ang = 2 * Math.acos(Math.min(1, dot)),
+          dt = Math.max((now - T.qt) / 1000, 1 / 120);
+        T.spin = (T.spin || 0) * 0.6 + (ang / dt) * 0.4;
+      }
+      T.q = [q.x, q.y, q.z, q.w];
+      T.qt = now;
+    }
+    const lp = (n) => d.attachmentPoints && d.attachmentPoints[n] && d.attachmentPoints[n].position;
+    const ul = lp("upperLip"),
+      ll = lp("lowerLip"),
+      gap = ul && ll ? Math.hypot(ul.x - ll.x, ul.y - ll.y, ul.z - ll.z) : 0;
+    T.gap = T.gap == null ? gap : T.gap * 0.5 + gap * 0.5;
+    diag.gapMax = Math.max(diag.gapMax || 0, +T.gap.toFixed(3));
+    if (!this.on) {
+      T.mouth = false;
+      T.openAt = 0;
+      T.brows = 0;
+      return;
+    }
+    const steady = (T.spin || 0) < STEADY_RAD_S,
+      warm = now - (r.foundAt || now) > WARM_MS;
+    T.steady = steady && warm;
+    // mouth: wide (with a little hysteresis once on) and held
+    const wide = !!d.mouthOpen && T.gap > (T.mouth ? MOUTH_GAP * 0.75 : MOUTH_GAP);
+    if (wide && T.steady) {
+      if (!T.openAt) T.openAt = now;
+    } else if (!wide) T.openAt = 0;
+    const mouth = !!T.openAt && now - T.openAt > 350 && (T.mouth || T.steady);
     if (mouth && !T.mouth) {
-      T.mouthT = now;
       fizz.burst(r);
-      sound.fizz();
       buzz(12);
       r.kickEars(1.5);
       if (now - this.mewAt > 4000 && r.miniDo("PawRaise")) {
@@ -1326,10 +1382,10 @@ const triggers = {
       diag.trig.mouth = (diag.trig.mouth || 0) + 1;
     }
     T.mouth = mouth;
-    const brows = !!(d.leftEyebrowRaised && d.rightEyebrowRaised);
+    const brows = !!(d.leftEyebrowRaised && d.rightEyebrowRaised) && T.steady;
     if (brows) {
       if (!T.brows) T.brows = now;
-      else if (now - T.brows > 250 && now - this.lookAt > 2200 && !busy && !strip) {
+      else if (now - T.brows > 450 && now - this.lookAt > 2200 && !busy && !strip) {
         this.lookAt = now;
         T.brows = now + 1e9;
         nextLook();
@@ -1340,7 +1396,7 @@ const triggers = {
   wink(id) {
     if (!this.on) return;
     const r = rigs.get(id);
-    if (!r || !r.live) return;
+    if (!r || !r.live || !r.trig.steady || r.trig.mouth) return; // a blink during a head turn is not a wink
     diag.trig.wink = (diag.trig.wink || 0) + 1;
     if (!r.miniDo("PawRaise")) {
       const e = r.worldOf(r.sm.eyeL);
@@ -1591,7 +1647,8 @@ function arrived(r) {
           store.set("coach", "1");
         }, 7000);
       }, 1500);
-  } else if (rigs.size > 1) toast("Friend joined the booth");
+  } else if ([...rigs.values()].filter((o) => o !== r && o.live).length)
+    toast("Friend joined the booth");
   buzz(8);
 }
 function hint(text) {
@@ -2600,10 +2657,7 @@ if (params.has("test"))
       if (!r) return;
       if (name === "wink") triggers.wink(r.id);
       else if (name === "brows") nextLook();
-      else if (name === "mouth") {
-        fizz.burst(r);
-        sound.fizz();
-      }
+      else if (name === "mouth") fizz.burst(r);
     },
     // screen positions of key points (to check the pieces sit on the face)
     screen() {

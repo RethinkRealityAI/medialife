@@ -1,0 +1,4 @@
+/* Pin Bowl: the score pill (flat) */
+.score{position:absolute;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px;pointer-events:none!important;white-space:nowrap}
+.score b{color:var(--x);font-size:17px}
+@media (max-width:420px){.score{top:calc(66px + env(safe-area-inset-top))}}

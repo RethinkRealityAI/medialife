@@ -1,0 +1,19 @@
+{
+ "name": "Sticker Graphic",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 66,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1623,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/ces-2026/image-targets/sticker-graphic_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sticker-graphic_luminance.jpeg",
+  "originalImage": "sticker-graphic.jpg"
+ }
+}

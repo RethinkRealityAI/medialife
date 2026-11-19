@@ -1,0 +1,19 @@
+{
+ "name": "bunny-rug",
+ "type": "PLANAR",
+ "properties": {
+  "top": 67,
+  "left": 37,
+  "width": 1425,
+  "height": 1900,
+  "isRotated": false,
+  "originalWidth": 1499,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/bunny-girl-3d/image-targets/bunny-rug_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "bunny-rug_luminance.png",
+  "originalImage": "bunny-rug.jpg"
+ }
+}

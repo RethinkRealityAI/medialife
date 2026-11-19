@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- MEDIALIFE AR Player page. Everything about this experience lives in ./experience.json; the runtime is
+       /labs/x/player/ (see /labs/x/README.md). -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0f1519">
+  <title>Heart of Darkness · MEDIALIFE Labs</title>
+  <meta name="description" content="Point your phone at the Heart of Darkness badge to reveal its artwork.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="/labs/x/player/player.css">
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+  <section id="splash" aria-labelledby="title"></section>
+  <div id="hud" hidden></div>
+  <div id="flash" aria-hidden="true"></div>
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="/labs/x/player/player.js"></script>
+</body>
+</html>

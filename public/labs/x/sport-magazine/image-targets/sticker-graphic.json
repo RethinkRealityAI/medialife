@@ -1,0 +1,19 @@
+{
+ "name": "Sticker Graphic",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 15,
+  "width": 1200,
+  "height": 1600,
+  "isRotated": false,
+  "originalWidth": 1230,
+  "originalHeight": 1600
+ },
+ "imagePath": "/labs/x/sport-magazine/image-targets/sticker-graphic_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sticker-graphic_luminance.jpeg",
+  "originalImage": "sticker-graphic.jpg"
+ }
+}

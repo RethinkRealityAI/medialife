@@ -1,0 +1,19 @@
+{
+ "name": "bunny-target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/bunny-girl-3d/image-targets/bunny-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "bunny-target_luminance.jpeg",
+  "originalImage": "bunny-target.jpg"
+ }
+}

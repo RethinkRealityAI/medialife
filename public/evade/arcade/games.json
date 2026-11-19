@@ -52,6 +52,14 @@
       "unlock": { "task": "Take a photo in Bobo Booth", "key": "evade-done-bobo-booth" }
     },
     {
+      "id": "bobo-portal",
+      "name": "Bobo's Portal",
+      "sub": "Walk through a door into Bobo's world",
+      "img": "/labs/img/bobo-portal.webp",
+      "url": "/evade/bobo-portal/",
+      "needs": "Space to walk"
+    },
+    {
       "id": "eclipse-night",
       "name": "Eclipse Night",
       "sub": "Turn the real sky into EVADE's night",

@@ -75,21 +75,15 @@
 				overflow: hidden;
 				color: #f4efe2;
 				font-variant-ligatures: none;
-				background:
-					radial-gradient(120% 70% at 50% 108%, #6a2fb0 0%, rgba(106, 47, 176, 0) 60%),
-					radial-gradient(90% 60% at 85% 0%, #1d3f7a 0%, rgba(29, 63, 122, 0) 70%),
-					linear-gradient(#0d0a1a, #1a1033 55%, #2a1650);
+				/* Flat colours only (house rule: no gradients). */
+				background: #1a1033;
 			}
 			/* faint pixel grid, like a zoomed-in desktop */
 			.splash::before {
 				content: "";
 				position: absolute;
 				inset: 0;
-				background:
-					repeating-linear-gradient(0deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px),
-					repeating-linear-gradient(90deg, rgba(255, 255, 255, .035) 0 1px, transparent 1px 8px);
-				mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
-				-webkit-mask-image: radial-gradient(80% 60% at 50% 55%, #000, transparent);
+				background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%278%27 height=%278%27%3E%3Cpath d=%27M0 0h8v1H0zM0 1h1v7H0z%27 fill=%27%23fff%27 fill-opacity=%27.035%27/%3E%3C/svg%3E");
 				pointer-events: none;
 			}
 			.zcomponent-launched .splash {
@@ -232,7 +226,7 @@
 				font-weight: 700;
 				letter-spacing: .12em;
 				color: #ffe3a0;
-				background: linear-gradient(#d83a47, #8c1823);
+				background: #b52a36;
 				clip-path: polygon(0 50%, 12px 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 12px 100%);
 				text-shadow: 0 2px 0 #3d0710;
 				filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5));
@@ -266,7 +260,8 @@
 				right: -12%;
 				bottom: calc(var(--px) * -3);
 				height: calc(var(--px) * 6);
-				background: radial-gradient(closest-side, rgba(255, 210, 120, .35), transparent);
+				background: rgba(255, 210, 120, .2);
+				border-radius: 50%;
 				z-index: -1;
 				opacity: 0;
 				transition: opacity .6s;
@@ -315,9 +310,10 @@
 				height: calc(var(--px) * 90);
 				margin: calc(var(--px) * -45) 0 0 calc(var(--px) * -45);
 				border-radius: 50%;
-				background: repeating-conic-gradient(from 0deg, var(--ray, #ffd35a) 0 7deg, transparent 7deg 22deg);
-				mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
-				-webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 72%);
+				/* flat wedges (an SVG mask over the tier colour), no gradients */
+				background: var(--ray, #ffd35a);
+				-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Cpath d=%27M50 50L50.00 0.00L56.09 0.37ZM50 50L69.13 3.81L74.62 6.48ZM50 50L85.36 14.64L89.40 19.22ZM50 50L96.19 30.87L98.18 36.64ZM50 50L100.00 50.00L99.63 56.09ZM50 50L96.19 69.13L93.52 74.62ZM50 50L85.36 85.36L80.78 89.40ZM50 50L69.13 96.19L63.36 98.18ZM50 50L50.00 100.00L43.91 99.63ZM50 50L30.87 96.19L25.38 93.52ZM50 50L14.64 85.36L10.60 80.78ZM50 50L3.81 69.13L1.82 63.36ZM50 50L0.00 50.00L0.37 43.91ZM50 50L3.81 30.87L6.48 25.38ZM50 50L14.64 14.64L19.22 10.60ZM50 50L30.87 3.81L36.64 1.82Z%27/%3E%3C/svg%3E") center / contain no-repeat;
+				mask: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Cpath d=%27M50 50L50.00 0.00L56.09 0.37ZM50 50L69.13 3.81L74.62 6.48ZM50 50L85.36 14.64L89.40 19.22ZM50 50L96.19 30.87L98.18 36.64ZM50 50L100.00 50.00L99.63 56.09ZM50 50L96.19 69.13L93.52 74.62ZM50 50L85.36 85.36L80.78 89.40ZM50 50L69.13 96.19L63.36 98.18ZM50 50L50.00 100.00L43.91 99.63ZM50 50L30.87 96.19L25.38 93.52ZM50 50L14.64 85.36L10.60 80.78ZM50 50L3.81 69.13L1.82 63.36ZM50 50L0.00 50.00L0.37 43.91ZM50 50L3.81 30.87L6.48 25.38ZM50 50L14.64 14.64L19.22 10.60ZM50 50L30.87 3.81L36.64 1.82Z%27/%3E%3C/svg%3E") center / contain no-repeat;
 				opacity: 0;
 				z-index: 0;
 				transition: --ray .6s;
@@ -332,10 +328,14 @@
 				height: calc(var(--px) * 36);
 				margin: calc(var(--px) * -18) 0 0 calc(var(--px) * -18);
 				border-radius: 50%;
-				background: radial-gradient(closest-side, var(--ray, #ffd35a), transparent);
+				/* a flat pixel halo (two rings), not a soft gradient glow */
+				background: transparent;
+				box-shadow:
+					0 0 0 var(--px) var(--ray, #ffd35a),
+					0 0 0 calc(var(--px) * 3) rgba(255, 211, 90, .25);
+				transform: scale(.82);
 				opacity: 0;
 				z-index: 1;
-				filter: blur(4px);
 			}
 			.tier {
 				position: absolute;
@@ -396,7 +396,7 @@
 				font: 700 21px 'Pixelify Sans', ui-monospace, monospace;
 				letter-spacing: .02em;
 				color: #fff3d6;
-				background: linear-gradient(#e14552, #a5202d);
+				background: #c9323f;
 				box-shadow:
 					inset 0 0 0 3px var(--ink),
 					inset 0 0 0 5px #ff8e93,
@@ -433,10 +433,7 @@
 				top: 50%;
 				height: 12px;
 				margin-top: -6px;
-				background:
-					repeating-linear-gradient(90deg, #ffd35a 0 10px, transparent 10px 14px) 0 0 / 28px 100%;
-				mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
-				-webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent);
+				background: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2728%27 height=%2712%27%3E%3Cpath d=%27M0 0h10v12H0zM14 0h10v12H14z%27 fill=%27%23ffd35a%27/%3E%3C/svg%3E") 0 0 / 28px 100% repeat-x;
 				animation: march .6s steps(4) infinite;
 				opacity: .9;
 			}

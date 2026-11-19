@@ -28,7 +28,8 @@ const params = new URLSearchParams(location.search);
 const KC = '/evade/keychain-ar/';             // Off the Chain: image targets
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
 const SHOW_DIAG = params.has('diag') || /^(localhost$|127\.|deploy-preview-)/.test(location.hostname);
-const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+// phones and tablets only: a touchscreen laptop is NOT a phone (the engine refuses it with "No valid session manager")
+const PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clamp = THREE.MathUtils.clamp, lerp = THREE.MathUtils.lerp;
 const easeOut = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
@@ -781,7 +782,7 @@ function sizeCanvas() {
 let last = 0, camStartAt = 0, built = false;
 const appModule = (data) => ({
   name: 'bobo-hoops',
-  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); built = true; $('hud').hidden = false; setMode('find'); hint('Point at the Eclipse can on your keychain'); },
+  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); built = true; $('hud').hidden = false; setMode('find'); hint('Point at the Eclipse can'); },
   onUpdate: ({ processCpuResult }) => {
     const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now;
     const r = processCpuResult && processCpuResult.reality; if (r && r.trackingStatus) noteTracking(r.trackingStatus, r.trackingReason);
@@ -792,13 +793,14 @@ const appModule = (data) => ({
     if (status === 'hasVideo') {
       camStartAt = performance.now();
       $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      if (store.get('how', '0') !== '1') { $('how').hidden = false; $('b-go').focus(); }
     }
     if (status === 'requesting') hint('Allow camera and motion access to begin');
     if (status === 'failed') camFailed('failed');
   },
   onException: (e) => {
     diag.errors.push('XR: ' + (typeof e === 'object' ? JSON.stringify(e) : String(e)).slice(0, 200)); flushDiag(true, true);
+    const msg = String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e));
+    if (!camStartAt && /session manager|not supported|unsupported|device/i.test(msg)) return openOnPhone();
     if (e && e.type === 'permission') return showError('Motion access is needed', 'Bobo Hoops uses your phone\'s motion sensors to keep the can on your floor. Allow motion and orientation access (on iPhone, tap Allow when asked), then try again.');
     showError('Something went wrong', String((e && e.message) || (typeof e === 'object' ? JSON.stringify(e) : e)));
   },
@@ -883,7 +885,13 @@ if (params.has('test')) window.__bh = {
 };
 
 // desktop: a QR to open it on the phone
-if (!TOUCH) {
-  $('desk').hidden = false;
-  try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
+function qrInto(el) { try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) el.innerHTML = svg; }); } catch (e) { /* no QR */ } }
+if (!PHONE) { $('desk').hidden = false; qrInto($('qr')); }
+// this device can't run world tracking (e.g. a touchscreen laptop): stop the engine, offer the phone instead of a raw error
+function openOnPhone() {
+  try { window.XR8 && XR8.stop(); } catch (e) { /* already stopped */ }
+  $('err-title').textContent = 'Open Bobo Hoops on your phone';
+  $('err-body').textContent = 'This device can\'t put the can on your floor. Scan the code with your phone\'s camera to play there.';
+  $('err-qr').hidden = false; qrInto($('err-qr')); $('err-retry').hidden = true; $('error').hidden = false;
+  $('splash').hidden = false; $('splash').classList.remove('gone');
 }

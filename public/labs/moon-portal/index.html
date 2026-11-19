@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Moon Portal: 8th Wall's own "World Tracking Portal" sample (A-Frame), exported from 8th Wall and run on
+       medialife.ai unchanged except for: our splash + open-on-phone QR, the scene is added on Start (so the camera
+       and motion prompts come from the Start tap), and the engine loads from jsDelivr.
+       Sample code + models: Copyright (c) 2023 8th Wall, Inc., MIT (LICENSE-8thwall-sample). xrextras: Niantic
+       Spatial, MIT (vendor/xrextras-LICENSE). Models credited in the sample README (Sketchfab / CGTrader authors).
+       World tracking: 8th Wall distributed engine binary (@8thwall/engine-binary 1.0.0, Copyright (c) 2026 Niantic
+       Spatial, Inc., XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE), loaded
+       unmodified from jsDelivr as the licence asks. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#050509">
+  <title>Moon Portal (8th Wall sample) · MEDIALIFE Labs</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Contrail+One&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#050509;--card:#101118;--text:#eef3f6;--muted:#97a2ad;--blue:#19affe;--mag:#ff2fae;color-scheme:dark}
+    html,body{margin:0;height:100%;background:#000;color:var(--text);font:500 16px/1.4 "Space Grotesk",system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+    button{font:inherit}
+    #splash{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:max(70px,calc(env(safe-area-inset-top) + 64px)) 22px max(22px,env(safe-area-inset-bottom));background:var(--bg);transition:opacity .5s}
+    #splash.gone{opacity:0;pointer-events:none}
+    #splash .brand{position:absolute;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);height:26px;width:auto}
+    .hero{position:relative;flex:1 1 auto;width:min(100%,340px);min-height:200px;max-height:400px;margin-bottom:10px}
+    .hero svg{position:absolute;inset:0;width:100%;height:100%}
+    .hero .rim{transform-box:view-box;transform-origin:150px 170px;animation:spin 9s linear infinite}
+    .hero .open{transform-box:view-box;transform-origin:150px 170px;animation:open 1.6s cubic-bezier(.2,1.4,.4,1) .3s both}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes open{from{transform:scale(.05)}to{transform:scale(1)}}
+    .kicker{margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+    h1{font:400 clamp(40px,12vw,64px)/.95 "Contrail One",system-ui;margin:2px 0 10px}
+    h1 span{color:var(--blue)}
+    .lead{margin:0 auto 18px;max-width:32ch;color:#c9d2da}
+    .primary{appearance:none;border:0;border-radius:999px;background:var(--blue);color:#02121c;font-weight:700;font-size:18px;padding:16px 46px;min-width:220px;cursor:pointer}
+    .primary:disabled{opacity:.55}
+    #load{height:4px;width:min(100%,320px);border-radius:4px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:12px}
+    #load i{display:block;height:100%;width:40%;background:var(--blue);animation:ld 1.1s ease-in-out infinite}
+    @keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+    #splash.ready #load{visibility:hidden}
+    .act-by{display:block;height:44px;width:auto;margin:16px auto 0}
+    .note{font-size:12px;color:var(--muted);margin:10px 0 0}
+    .sheet-wrap{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(0,0,0,.6);padding:20px}
+    .sheet-wrap[hidden]{display:none}
+    .sheet{background:var(--card);border-radius:20px;padding:22px;max-width:360px;width:100%;text-align:center}
+    .sheet h2{margin:0 0 8px}
+    #qr{width:180px;height:180px;margin:12px auto;background:#fff;padding:10px;border-radius:12px}
+    #qr svg,#qr2 svg{width:100%;height:100%}
+    #qr2{width:180px;height:180px;margin:12px auto;background:#fff;padding:10px;border-radius:12px}
+    #qr2[hidden]{display:none}
+    /* the sample's own UI (unchanged) */
+    .absolute-fill{z-index:10;position:absolute;top:0;left:0;bottom:0;right:0;pointer-events:none}
+    #recenterButton{position:absolute;z-index:5;left:2vh;bottom:max(2vh,env(safe-area-inset-bottom));max-width:50px;pointer-events:auto}
+    #promptText{font:400 8vw "Contrail One",system-ui;text-align:center;color:#fff;text-shadow:2px 2px 8px purple;position:absolute;width:100%;bottom:12vh;left:50%;transform:translate(-50%,0)}
+    .fly-in{animation:fly-in 1.5s ease-out both}
+    @keyframes fly-in{0%{transform:translate(-100%,0);opacity:0}70%{opacity:1}100%{transform:translate(-50%,0);opacity:1}}
+    .fly-out{animation:fly-out 1.5s ease-out both}
+    @keyframes fly-out{0%{transform:translate(-50%,0);opacity:1}70%{opacity:0}100%{transform:translate(0,0);opacity:0}}
+    .pulse-once{animation:pulse-once .2s cubic-bezier(.785,.135,.15,.86) both}
+    @keyframes pulse-once{0%{transform:scale(1)}50%{transform:scale(.8)}100%{transform:scale(1)}}
+    #diagp{position:fixed;top:env(safe-area-inset-top);left:0;right:0;z-index:20;margin:0;padding:4px 8px;font:11px/1.3 ui-monospace,monospace;color:#9f9;background:rgba(0,0,0,.45);pointer-events:none;white-space:pre-wrap}
+  </style>
+  <script crossorigin="anonymous" src="./vendor/8frame-1.2.0.min.js"></script>
+  <script crossorigin="anonymous" src="./vendor/xrextras.js"></script>
+  <script crossorigin="anonymous" src="./vendor/aframe-chromakey-material-1.1.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.0.0/dist/aframe-extras.min.js"></script>
+</head>
+<body>
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="26">
+    <div class="hero" aria-hidden="true">
+      <svg viewBox="0 0 300 340">
+        <circle cx="236" cy="62" r="26" fill="#d9dde3"/><circle cx="228" cy="56" r="6" fill="#b9bfc8"/><circle cx="246" cy="72" r="4" fill="#b9bfc8"/>
+        <g fill="#fff"><circle cx="30" cy="40" r="1.6"/><circle cx="80" cy="90" r="1.2"/><circle cx="270" cy="150" r="1.4"/><circle cx="40" cy="190" r="1.2"/><circle cx="160" cy="30" r="1.4"/><circle cx="120" cy="70" r="1"/></g>
+        <g class="open">
+          <circle cx="150" cy="170" r="96" fill="#0b0e1c"/>
+          <circle cx="150" cy="170" r="96" fill="none" stroke="#7b5cff" stroke-width="8"/>
+          <circle cx="150" cy="170" r="80" fill="none" stroke="#19affe" stroke-width="3"/>
+          <path d="M60 230 Q150 196 240 230 L240 270 L60 270Z" fill="#9aa1ab"/>
+          <circle cx="120" cy="226" r="7" fill="#7e858f"/><circle cx="182" cy="232" r="5" fill="#7e858f"/>
+          <path d="M156 214 V160" stroke="#fff" stroke-width="3"/><path d="M156 160 h26 v14 h-26z" fill="#ff2fae"/>
+          <g class="rim"><rect x="146" y="68" width="8" height="18" rx="3" fill="#7b5cff"/><rect x="146" y="254" width="8" height="18" rx="3" fill="#7b5cff"/><rect x="48" y="166" width="18" height="8" rx="3" fill="#7b5cff"/><rect x="234" y="166" width="18" height="8" rx="3" fill="#7b5cff"/></g>
+        </g>
+        <rect x="0" y="300" width="300" height="40" fill="#14161d"/>
+      </svg>
+    </div>
+    <p class="kicker">MEDIALIFE Labs · 8th Wall sample</p>
+    <h1 id="title">Moon <span>Portal</span></h1>
+    <p class="lead">Tap to drop a portal on your floor, then walk through it onto the moon. Turn around inside to see your room through the door.</p>
+    <div id="desk" hidden><div id="qr" aria-label="QR code that opens this page on your phone"></div><p class="note"><b>Made for your phone.</b> Scan to open it there.</p></div>
+    <button id="b-start" class="primary" disabled>Loading…</button>
+    <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+    <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" height="44">
+  </section>
+
+  <div id="error" class="sheet-wrap" hidden role="alert"><div class="sheet"><h2 id="err-title"></h2><p id="err-body"></p><div id="qr2" hidden></div><button id="err-retry" class="primary">Try again</button></div></div>
+  <pre id="diagp" hidden></pre>
+
+  <!-- the scene, exactly as exported (body.html), added on Start -->
+  <template id="scene-tpl">
+    <div id="overlay" style="display: none" class="absolute-fill">
+      <img id="recenterButton" src="./assets/textures/recenter.png" alt="Recenter">
+      <span id="promptText"></span>
+    </div>
+    <a-scene
+      responsive-immersive
+      renderer="colorManagement: true;"
+      xrweb="allowedDevices: any; disableDefaultEnvironment: true;">
+      <a-assets>
+        <a-asset-item id="portal-rim-model" src="./assets/models/portal.glb"></a-asset-item>
+        <a-asset-item id="moon-model" src="./assets/models/moon-ground.glb"></a-asset-item>
+        <a-asset-item id="platform-model" src="./assets/models/platform.glb"></a-asset-item>
+        <a-asset-item id="flag-model" src="./assets/models/flag.glb"></a-asset-item>
+        <a-asset-item id="rocks-model" src="./assets/models/rocks.glb"></a-asset-item>
+        <img id="skybox-img" src="./assets/textures/skybox.jpg">
+        <img id="blob-shadow-img" src="./assets/textures/blob-shadow.png">
+        <img id="satellite-img" src="./assets/textures/satellite.png">
+        <video id="portal-video" muted autoplay playsinline crossorigin="anonymous" loop="true" src="./assets/textures/portal-video.mp4"></video>
+      </a-assets>
+      <a-camera id="camera" position="0 9 11"></a-camera>
+      <xrextras-opaque-background remove="true">
+        <a-entity id="hider-walls">
+          <a-box scale="100 1 100" position="0 -1 49" xrextras-hider-material></a-box>
+          <a-box scale="100 100 1" position="0 50 75" xrextras-hider-material></a-box>
+          <a-box scale="100 1 100" position="0 100 49" xrextras-hider-material></a-box>
+          <a-box scale="1 100 100" position="-30 50 50" xrextras-hider-material></a-box>
+          <a-box scale="1 100 100" position="30 50 50" xrextras-hider-material></a-box>
+          <a-ring id="portalHiderRing" radius-inner="0.001" radius-outer="100" position="0 7.5 -0.2" xrextras-hider-material></a-ring>
+        </a-entity>
+        <a-entity id="portal-wall">
+          <a-circle radius="5.2" rotation="0 180 0" position="0 7.5 0" scale="0.8 0.8 0" xrextras-hider-material></a-circle>
+          <a-circle radius="5.2" rotation="0 180 0" position="0 7.5 0.25" scale="0.8 0.8 0" xrextras-hider-material></a-circle>
+        </a-entity>
+      </xrextras-opaque-background>
+      <a-entity light="type: directional; castShadow: true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop: 35; shadowCameraBottom: -20; shadowCameraRight: 40; shadowCameraLeft: -10; target: #portalRim" xrextras-attach="target: portalRim; offset: 18 7 14" shadow></a-entity>
+      <a-light type="ambient" intensity="0.3"></a-light>
+      <a-entity id="portal-contents">
+        <a-entity gltf-model="#moon-model" rotation="0 90 0" position="8 -0.5 -5" scale="0.5 0.5 0.5" shadow="cast: false"></a-entity>
+        <a-entity gltf-model="#platform-model" rotation="0 -90 0" position="-0.4 0 -10" scale="9 9 9" shadow="receive: false"></a-entity>
+        <a-plane material="src: #satellite-img; transparent: true; roughness: 0.8; metalness: 0" rotation="0 30 0" position="-200 150 -250" scale="120 80 1" shadow="receive: false"></a-plane>
+        <a-entity gltf-model="#flag-model" rotation="0 30 0" position="-14 0 -43" scale="5 5 5" shadow="receive: false"></a-entity>
+        <a-entity gltf-model="#rocks-model" position="-14 -1 -42" scale="0.75 0.25 0.75" shadow="receive: false"></a-entity>
+        <a-sky src="#skybox-img" rotation="0 7 0"></a-sky>
+      </a-entity>
+      <a-entity id="portalRim" gltf-model="#portal-rim-model" spin="axis: x; speed: 14000" position="0 7.5 0" rotation="90 -90 -90" scale="0.001 0.001 0.001" shadow="receive: false"></a-entity>
+      <a-entity id="portalVideo" auto-play-video="video: #portal-video" material="shader: chromakey; src: #portal-video; color: 0 0 0; blending: additive; side: front" geometry="primitive: plane; height: 1; width: 1;" position="0 7.5 0.1" scale="0.001 0.001 0.001"></a-entity>
+      <a-circle id="portalShadow" radius="0.5" material="src: #blob-shadow-img; opacity: 0.65; roughness: 0.8; metalness: 0" position="0 0.01 1.25" rotation="-90 0 0" scale="0.001 0.001 0.001"></a-circle>
+    </a-scene>
+  </template>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <!-- 8th Wall distributed engine binary (SLAM), unmodified, pinned (the sample's own export is this engine). -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

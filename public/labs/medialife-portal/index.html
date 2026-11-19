@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- MEDIALIFE Portal: a walk-through doorway into the MEDIALIFE Activation Floor (world-tracked AR).
+       World tracking: 8th Wall distributed engine binary (@8thwall/engine-binary 1.0.0, Copyright (c) 2026 Niantic
+       Spatial, Inc., XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE), loaded
+       unmodified from jsDelivr as the licence asks. Shared runtime: /labs/portal-kit/. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#050509">
+  <title>MEDIALIFE Portal · Activated AR</title>
+  <meta name="description" content="Put a glowing doorway on your floor, walk through it, and wake up a collection of activated merch on the MEDIALIFE Activation Floor.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="/labs/portal-kit/kit.css?v=2">
+  <style>
+    :root{--acc:#19affe;--acc-ink:#02121c;--acc-sh:#0a6c9f;--acc2:#ff2fae;--bg:#050509;--card:#10121b}
+    .door{--d-in:#0b0e1a;--d-frame:#1a1f33}
+    .door .stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff}
+    .door .planet{position:absolute;border-radius:50%}
+    .door .spark{position:absolute;left:50%;bottom:9%;width:28%;transform:translateX(-50%);animation:hop 1.6s ease-in-out infinite}
+    @keyframes hop{50%{transform:translate(-50%,-8%)}}
+    .door .tee{position:absolute;width:15%;bottom:16%;animation:float 2.6s ease-in-out infinite}
+    @keyframes float{50%{transform:translateY(-10%) rotate(6deg)}}
+  </style>
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <section id="splash" aria-labelledby="title">
+    <img class="brand" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="30">
+    <!-- a preview: the glowing doorway, the Activation Floor inside it (flat CSS/SVG) -->
+    <div class="hero" aria-hidden="true">
+      <div class="stars">
+        <i style="left:8%;top:12%"></i><i style="left:20%;top:40%"></i><i style="left:88%;top:18%"></i><i style="left:92%;top:52%"></i><i style="left:6%;top:70%"></i><i style="left:76%;top:6%"></i>
+      </div>
+      <div class="door">
+        <div class="arch">
+          <span class="planet" style="left:12%;top:10%;width:26%;aspect-ratio:1;background:#19affe"></span>
+          <span class="planet" style="right:14%;top:22%;width:12%;aspect-ratio:1;background:#ff2fae"></span>
+          <i class="glint" style="left:60%;top:8%"></i><i class="glint" style="left:30%;top:36%;animation-delay:.6s"></i>
+          <svg class="spark" viewBox="0 0 60 80"><ellipse cx="30" cy="76" rx="18" ry="4" fill="#000" opacity=".4"/><circle cx="30" cy="34" r="22" fill="#ffd34d"/><circle cx="22" cy="30" r="4" fill="#070812"/><circle cx="38" cy="30" r="4" fill="#070812"/><path d="M22 42q8 7 16 0" stroke="#070812" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M30 12 L34 2 L26 8Z" fill="#ff2fae"/><rect x="20" y="56" width="7" height="16" rx="3" fill="#ffd34d"/><rect x="33" y="56" width="7" height="16" rx="3" fill="#ffd34d"/></svg>
+          <svg class="tee" style="left:8%" viewBox="0 0 40 40"><path d="M12 4l-10 7 5 7 4-3v21h18V15l4 3 5-7-10-7c-2 4-14 4-16 0z" fill="#19affe"/><circle cx="20" cy="18" r="4" fill="#fff"/></svg>
+          <svg class="tee" style="right:8%;animation-delay:.8s" viewBox="0 0 40 40"><path d="M12 4l-10 7 5 7 4-3v21h18V15l4 3 5-7-10-7c-2 4-14 4-16 0z" fill="#ff2fae"/><circle cx="20" cy="18" r="4" fill="#fff"/></svg>
+          <span class="floor"></span>
+          <i class="band" style="--c:#19affe;--i:0;--dl:0s"></i><i class="band" style="--c:#ff2fae;--i:0;--dl:.8s"></i><i class="band" style="--c:#ffffff;--i:0;--dl:1.6s"></i>
+        </div>
+      </div>
+    </div>
+    <div class="copy">
+      <p class="kicker">MEDIALIFE · Activated AR</p>
+      <h1 id="title">Step into <span>MEDIALIFE</span></h1>
+      <p class="lead">Put a glowing door on your floor and walk through it. Inside, wake up a collection of activated merch with Spark.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+        <p><b>Made for your phone.</b> It needs your phone's camera and motion sensors to put the door on your floor. Scan to open it there.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <!-- 8th Wall distributed engine binary (SLAM), unmodified, pinned. -->
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script type="module">
+    import { runPortal } from '/labs/portal-kit/app.js?v=1';
+    import { preload, makeWorld } from './world.js?v=2';
+    let data = null;
+    runPortal({
+      id: 'medialife-portal', source: null, title: 'MEDIALIFE Portal',
+      brandLogo: '/brand/medialife-wordmark.webp', brandName: 'MEDIALIFE',
+      door: { width: 1.0, height: 2.1, colors: ['#19affe', '#ff2fae', '#ffffff'], frame: '#141826', trim: '#19affe' },
+      openChord: [262, 330, 392, 523],
+      copy: { inside: 'Tap a piece of merch to activate it' },
+      soundLabel: 'Music and effects in the portal',
+      howTitle: 'Step into MEDIALIFE',
+      howSteps: [
+        '<b>Point at the floor</b> and move your phone slowly until the door appears. Pinch to size it, then tap <b>Place the door</b>.',
+        '<b>Walk through the door.</b> You are on the MEDIALIFE Activation Floor. Turn round: your room is still there, through the door.',
+        '<b>Tap the merch</b> to activate it and watch real fans\' AR moments. Activate all five. Tap Spark, the shapes and the floor too.',
+        '<b>Move</b> (bottom right) puts the door somewhere else and keeps everything you activated.',
+      ],
+      links: [{ href: '/activated-merch/', title: 'Activated Merch', sub: 'How MEDIALIFE turns merch into experiences' }],
+      licencesUrl: '/evade/licences/',
+      capture: { sendEnabled: false, accent: '#19affe', brandTitle: 'MEDIALIFE PORTAL', brandTagline: 'Activated by MEDIALIFE', keepTitle: 'Keep your clip?', clipTitle: 'MEDIALIFE Portal clip', filePrefix: 'medialife-portal', hintText: 'Film your trip through the portal' },
+      preload: (loader) => preload(loader).then((d) => (data = d)),
+      build: (ctx) => makeWorld(data)(ctx),
+    });
+  </script>
+</body>
+</html>

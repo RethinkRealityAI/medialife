@@ -1,0 +1,28 @@
+{
+ "slug": "heart-of-darkness",
+ "title": "Heart of Darkness",
+ "client": "MEDIALIFE",
+ "wordmark": "MEDIALIFE",
+ "accent": "#d33a3a",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the Heart of Darkness badge to reveal its artwork.",
+ "hint": "Point at the badge",
+ "targets": [
+  {
+   "name": "hod-badge",
+   "label": "Heart of Darkness badge",
+   "what": "Badge",
+   "json": "image-targets/hod-badge.json",
+   "picture": "image-targets/hod-badge.jpg",
+   "content": [
+    {
+     "type": "image",
+     "src": "/labs/x/media/hod-badge-art.jpg",
+     "width": 0.8,
+     "height": 0.8
+    }
+   ]
+  }
+ ],
+ "cta": []
+}
