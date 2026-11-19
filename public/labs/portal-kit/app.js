@@ -50,7 +50,7 @@ export function runPortal(cfg) {
     <div id="count" hidden aria-live="polite"><span id="count-l"></span><span class="pips" id="pips"></span></div>
     <div id="side"><button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">${svg(ICON.opts)}</button></div>
     <p id="size" hidden aria-live="polite"></p>
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
     <div id="toast" aria-live="polite"></div>
     <div id="bottom">
       <div class="b-left"><img src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="102" height="40"></div>

@@ -1,3 +1,4 @@
+@import url("/vendor/ar-kit/hint.css?v=1");
 /* Portal kit: shared styles for the walk-through portal experiences (MEDIALIFE Portal, Bobo's Portal).
    Flat colours only: no gradients anywhere (Dapo's platform rule). Each page sets the theme variables. */
 :root{--acc:#19affe;--acc-ink:#02121c;--acc-sh:#0b6fa6;--acc2:#ff2fae;--bg:#050509;--card:#11131b;--panel:rgba(10,12,18,.72);--line:rgba(255,255,255,.16);--text:#f5f7fa;--muted:#aab4bf;--head:"Space Grotesk",system-ui,sans-serif;color-scheme:dark}
