@@ -25,6 +25,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css?v=2">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -103,7 +104,7 @@
     <!-- reactions: sent to the room, and float up out of the projector on every phone watching -->
     <div id="reacts" role="group" aria-label="Send a reaction" hidden></div>
 
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
     <p id="size" hidden aria-live="polite"></p>
     <p id="toast" role="status" aria-live="polite"></p>
 

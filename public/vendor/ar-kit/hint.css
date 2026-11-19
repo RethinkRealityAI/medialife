@@ -1,0 +1,65 @@
+/* MEDIALIFE AR hint pill: the one look for every "Point at the print" style status line in our AR pages.
+
+   White text on translucent black glass, hairline edge, soft shadow. No brand colour, no gradient (house rule).
+   It only styles the LOOK. Each page keeps its own position (top/bottom/left/transform), so moving the pill
+   around the shutter or a mode panel stays in that page's CSS.
+
+   Use: <link rel="stylesheet" href="/vendor/ar-kit/hint.css"> after the page's own CSS, then add
+   class="ml-hint" to the status element (<p id="hint" class="ml-hint" role="status" aria-live="polite">).
+   An empty pill fades out by itself. Keep the copy short: one line, about 5 words ("Point at the print").
+
+   The look properties are !important on purpose: older pages style #hint by id (and some with mode rules),
+   and this file must win over all of them without anyone touching their selectors. */
+
+.ml-hint {
+  box-sizing: border-box !important;
+  width: max-content;
+  max-width: min(340px, calc(100% - 48px)) !important;
+  margin: 0 !important;
+  padding: 9px 16px !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(8, 8, 10, 0.56) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(150%) !important;
+  backdrop-filter: blur(18px) saturate(150%) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  color: #fff !important;
+  font-family: inherit;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  font-style: normal !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.01em !important;
+  text-transform: none !important;
+  text-align: center !important;
+  text-shadow: none !important;
+  white-space: normal !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease, top 0.35s ease, bottom 0.35s ease;
+}
+.ml-hint:empty {
+  opacity: 0 !important;
+}
+.ml-hint b,
+.ml-hint strong {
+  font-weight: 650;
+}
+
+/* Without blur the tint alone must still read on a bright camera feed. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ml-hint {
+    background: rgba(8, 8, 10, 0.8) !important;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .ml-hint {
+    background: rgba(8, 8, 10, 0.88) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ml-hint {
+    transition: none;
+  }
+}
