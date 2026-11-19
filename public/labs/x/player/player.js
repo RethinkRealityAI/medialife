@@ -43,20 +43,27 @@ const CK_VERT = 'varying vec2 vUv;\nvoid main(){ vUv = uv; gl_Position = project
 const CK_FRAG = `uniform sampler2D tex; uniform vec3 keyColor; uniform float similarity; uniform float smoothness; uniform float spill; uniform float opacity;
 varying vec2 vUv;
 vec2 RGBtoUV(vec3 rgb){ return vec2(rgb.r*-0.169+rgb.g*-0.331+rgb.b*0.5+0.5, rgb.r*0.5+rgb.g*-0.419+rgb.b*-0.081+0.5); }
+// The original campaigns keyed on the video's raw sRGB values (no colour management). three now hands the shader
+// LINEAR samples from an sRGB texture, and in linear light the same similarity / smoothness numbers key far more of
+// the picture (footage goes see-through). So: back to sRGB first, key exactly as the originals did, and write the
+// sRGB result straight out (no colorspace_fragment).
+vec3 toSRGB(vec3 c){ return mix(c * 12.92, pow(max(c, vec3(0.0)), vec3(1.0/2.4)) * 1.055 - 0.055, step(vec3(0.0031308), c)); }
 void main(){
   vec4 rgba = texture2D(tex, vUv);
+  rgba.rgb = toSRGB(rgba.rgb);
   float chromaDist = distance(RGBtoUV(rgba.rgb), RGBtoUV(keyColor));
   float baseMask = chromaDist - similarity;
   float fullMask = pow(clamp(baseMask / smoothness, 0., 1.), 1.5);
   float spillVal = pow(clamp(baseMask / spill, 0., 1.), 1.5);
   float desat = clamp(rgba.r*0.2126 + rgba.g*0.7152 + rgba.b*0.0722, 0., 1.);
   gl_FragColor = vec4(mix(vec3(desat), rgba.rgb, spillVal), fullMask * opacity);
-  #include <colorspace_fragment>
 }`;
+// keyColor is the raw sRGB value from the original project (never converted to linear).
+const rawColor = (hex) => { const n = parseInt(String(hex).replace('#', ''), 16); return new THREE.Vector3(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); };
 function chromaMaterial(tex, ck = {}) {
   return new THREE.ShaderMaterial({
     uniforms: {
-      tex: { value: tex }, keyColor: { value: new THREE.Color(ck.color || '#19ae31') }, opacity: { value: 1 },
+      tex: { value: tex }, keyColor: { value: rawColor(ck.color || '#19ae31') }, opacity: { value: 1 },
       similarity: { value: ck.similarity ?? 0.159 }, smoothness: { value: ck.smoothness ?? 0.082 }, spill: { value: ck.spill ?? 0.214 },
     },
     vertexShader: CK_VERT, fragmentShader: CK_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide,
