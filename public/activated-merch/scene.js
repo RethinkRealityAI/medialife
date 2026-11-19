@@ -838,14 +838,11 @@ function haloTexture() {
   c.width = c.height = N;
   const x = c.getContext("2d");
   const h = N / 2;
-  // Glow: cool blue at the heart, a hint of pink at the rim, gone by the edge.
-  const g = x.createRadialGradient(h, h, 0, h, h, h);
-  g.addColorStop(0, "rgba(63,120,255,0.32)");
-  g.addColorStop(0.45, "rgba(63,120,255,0.12)");
-  g.addColorStop(0.75, "rgba(255,61,154,0.05)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  x.fillStyle = g;
-  x.fillRect(0, 0, N, N);
+  // Flat glow disc (no gradients): one soft blue fill inside the orbit.
+  x.fillStyle = "rgba(63,120,255,0.12)";
+  x.beginPath();
+  x.arc(h, h, h * 0.72, 0, Math.PI * 2);
+  x.fill();
   // One thin ring, broken into a few arcs so it reads as a HUD orbit.
   x.lineWidth = 1.5;
   x.strokeStyle = "rgba(150,190,255,0.35)";
@@ -867,12 +864,11 @@ function radialTexture() {
   const c = document.createElement("canvas");
   c.width = c.height = 128;
   const x = c.getContext("2d");
-  const g = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-  g.addColorStop(0, "rgba(255,255,255,1)");
-  g.addColorStop(0.35, "rgba(255,255,255,0.35)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  x.fillStyle = g;
-  x.fillRect(0, 0, 128, 128);
+  // flat dot (no gradient falloff)
+  x.fillStyle = "#fff";
+  x.beginPath();
+  x.arc(64, 64, 40, 0, Math.PI * 2);
+  x.fill();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
