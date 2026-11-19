@@ -1,0 +1,19 @@
+{
+ "name": "DOG image target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 2,
+  "left": 0,
+  "width": 1468,
+  "height": 1957,
+  "isRotated": false,
+  "originalWidth": 1471,
+  "originalHeight": 1961
+ },
+ "imagePath": "/labs/x/dentsu-products/image-targets/dog-image-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "dog-image-target_luminance.jpeg",
+  "originalImage": "dog-image-target.jpg"
+ }
+}

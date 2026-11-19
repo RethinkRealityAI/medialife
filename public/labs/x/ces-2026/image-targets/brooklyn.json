@@ -1,0 +1,19 @@
+{
+ "name": "brooklyn",
+ "type": "PLANAR",
+ "properties": {
+  "top": 115,
+  "left": 0,
+  "width": 1321,
+  "height": 1761,
+  "isRotated": false,
+  "originalWidth": 1321,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/ces-2026/image-targets/brooklyn_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "brooklyn_luminance.jpeg",
+  "originalImage": "brooklyn.jpg"
+ }
+}

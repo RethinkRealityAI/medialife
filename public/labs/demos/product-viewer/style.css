@@ -1,0 +1,9 @@
+/* Product Viewer: AR / 3D switch, swatches, the 3D view canvas (flat) */
+#viewer{position:fixed;inset:0;width:100%;height:100%;z-index:5;display:block;touch-action:none}
+.pv{display:flex;align-items:center;gap:12px;padding:8px 10px}
+.seg{display:flex;background:rgba(255,255,255,.08);border-radius:999px;padding:3px}
+.seg button{min-height:40px;min-width:52px;padding:0 14px;border:0;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none}
+.seg button[aria-checked=true]{background:var(--x);color:var(--xd)}
+.sws{display:flex;gap:8px}
+.sw{width:38px;height:38px;min-height:38px;padding:0;border-radius:50%;background:var(--c);border:3px solid rgba(255,255,255,.35);backdrop-filter:none;-webkit-backdrop-filter:none}
+.sw[aria-checked=true]{border-color:#fff;outline:2px solid var(--x);outline-offset:2px}

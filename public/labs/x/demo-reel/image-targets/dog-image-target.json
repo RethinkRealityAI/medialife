@@ -1,0 +1,19 @@
+{
+ "name": "DOG image target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1471,
+  "height": 1961,
+  "isRotated": false,
+  "originalWidth": 1471,
+  "originalHeight": 1961
+ },
+ "imagePath": "/labs/x/demo-reel/image-targets/dog-image-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "dog-image-target_luminance.jpeg",
+  "originalImage": "dog-image-target.jpg"
+ }
+}

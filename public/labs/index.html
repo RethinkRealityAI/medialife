@@ -5,260 +5,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>MEDIALIFE Labs</title>
-<meta name="description" content="MEDIALIFE's new AR experiences and browser test versions of our Mattercraft features.">
-<meta name="theme-color" content="#0f1114">
+<meta name="description" content="Every MEDIALIFE AR and immersive experience in one place, filterable by client, category, tech and status.">
+<meta name="theme-color" content="#05060c">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<style>
-  :root{--bg:#0f1114;--card:#171a1f;--line:rgba(255,255,255,.09);--text:#eef3f6;--muted:#97a2ad;--accent:#4fd6e8;color-scheme:dark}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.55 ui-sans-serif,-apple-system,"SF Pro Text",Inter,"Segoe UI",Roboto,sans-serif}
-  main{max-width:960px;margin:0 auto;padding:clamp(28px,6vw,64px) 16px 64px}
-  .kicker{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
-  h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:8px 0 10px}
-  .lead{color:var(--muted);max-width:640px;margin:0 0 32px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-  .card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-  .card img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center 30%;background:#000}
-  .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
-  .card h2{font-size:18px;margin:0}
-  .card p{margin:0;color:var(--muted);font-size:14px}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(79,214,232,.1);color:#bdeff6}
-  .tag.warn{background:rgba(255,200,80,.1);color:#ffe2a3}
-  .actions{margin-top:auto;display:flex;gap:8px;padding-top:6px}
-  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;
-    background:var(--accent);color:#06141a;font-weight:800;text-decoration:none}
-  .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
-  .src{font-size:12.5px;color:var(--muted)}
-  code{font-size:12.5px;color:#cfe9ee}
-  footer{margin-top:40px;color:var(--muted);font-size:13px}
-  .section{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px}
-  .section h2{font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;margin:0}
-  .section p{margin:0;color:var(--muted);font-size:13.5px}
-  .grid + .section{margin-top:48px}
-  .tag.live{background:rgba(110,231,150,.12);color:#bff5cf}
-  .actions{flex-wrap:wrap}
-  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-  .btn.ghost:hover{border-color:rgba(255,255,255,.3)}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site-nav/site-nav.css">
+<link rel="stylesheet" href="/labs/labs.css?v=1">
 </head>
 <body>
-<main>
-  <div class="kicker">MEDIALIFE Labs</div>
-  <h1>Our newest AR experiences, in one place</h1>
-  <p class="lead">The new experiences we've shipped, plus the test versions of Mattercraft features that run on any phone or laptop before they go into the project. This page isn't linked from the site and is hidden from search.</p>
+<a class="skip" href="#results">Skip to experiences</a>
 
-  <div class="section">
-    <h2>New experiences</h2>
-    <p>Live on medialife.ai. Open AR ones on your phone, or use the test pictures on a second screen.</p>
-  </div>
-  <div class="grid">
-    <article class="card">
-      <img src="/labs/img/holocast.webp" alt="Holocast: a holo projector beaming a notice board, a Where is Bobo? globe and a live sketch screen above it" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Holocast</h2>
-        <p>Put a holo projector on your floor or table and its floating screens fill with live data: notices typed in the control room, a sketch that streams in as someone draws it, photo drops, a live poll with 3D bars people vote on, spoken captions, the Where is Bobo? globe and reactions from everyone watching. It all stays in the room.</p>
-        <div class="tags">
-          <span class="tag">Test</span><span class="tag">MEDIALIFE</span><span class="tag">World tracking</span><span class="tag">Live data</span>
-        </div>
-        <div class="actions"><a class="btn" href="/labs/holocast/">Open it</a> <a class="btn ghost" href="/labs/holocast/control/">Control room</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/eclipse-night.webp" alt="Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon inside rings of light, and Bobo walking out of his constellation" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Eclipse Night</h2>
-        <p>Hold up the Eclipse can charm to charge it, then point the phone at the sky. Only the real sky turns into EVADE's night (buildings and trees stay), the giant can eclipses the moon, and you join Bobo's constellation until he walks out across your sky. Indoors, the ceiling becomes the sky.</p>
-        <div class="tags">
-          <span class="tag">Test</span><span class="tag">EVADE</span><span class="tag">Sky AR</span><span class="tag">Keychain</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/eclipse-night/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="Cola Run splash art with Bobo the cat" loading="lazy" width="540" height="967">
-      <div class="body">
-        <h2>Cola Run on our own world tracking</h2>
-        <p>The full Cola Run on 8th Wall world tracking, hosted on medialife.ai with no Mattercraft: same splash, game, record button and Bobo's Hideout, plus Bobo's Arcade in BOBO OS to jump into every EVADE experience. The first quick test build is kept as a fallback.</p>
-        <div class="tags">
-          <span class="tag">Test</span><span class="tag">EVADE</span><span class="tag">World tracking</span>
-          <span class="tag warn">Phone only</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/cola-run/">Open it</a> <a class="btn ghost" href="/evade/cola-run/?mode=arcade">Open Bobo's Arcade</a> <a class="btn ghost" href="/labs/cola-run-world/">First test build</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/bobo-hoops.webp" alt="Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Bobo Hoops</h2>
-        <p>Point at the Eclipse can on the keychain: it pops out of the charm, then Play Some Hoops grows it into a giant open-top can on your floor. Swipe up to shoot 10 balls in. Our first image target to world tracking handoff, on one engine.</p>
-        <div class="tags">
-          <span class="tag">Test</span><span class="tag">EVADE</span><span class="tag">Image target + world tracking</span><span class="tag">Game</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/bobo-hoops/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/wake-the-print.webp" alt="Wake the Print in the camera: Spark, a small blue robot, standing on the Sukeban tee print" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Wake the Print</h2>
-        <p>Point at the print and Spark climbs out. Tap the mic to talk: it sees your room, does what you ask, hops onto your open hand and remembers you next time. MEDIALIFE's AI showcase, proof of concept.</p>
-        <div class="tags">
-          <span class="tag">Preview</span><span class="tag">MEDIALIFE</span><span class="tag">Image-tracked AR</span><span class="tag">Voice AI</span>
-        </div>
-        <div class="actions"><a class="btn" href="/labs/wake-the-print/">Open it</a> <a class="btn ghost" href="/labs/wake-the-print/target/">Test picture</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/off-the-chain.webp" alt="Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Bobo Off the Chain</h2>
-        <p>Point the camera at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D. Feed Bobo, go Super Bobo, take photos or video, and jump into Cola Run.</p>
-        <div class="tags">
-          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Image-tracked AR</span><span class="tag">Keychain</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/keychain-ar/">Open it</a> <a class="btn ghost" href="/evade/video/otc-bobo.mp4">Watch a phone recording</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/spray-bobo.webp" alt="Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Spray Bobo</h2>
-        <p>Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and your painting becomes a 3D sticker on the merch. Then take it into the room without leaving: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.</p>
-        <div class="tags">
-          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">AR painting</span><span class="tag">Keychain + tee</span><span class="tag">World-tracked AR</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/spray-bobo/">Open it</a> <a class="btn ghost" href="/evade/spray-bobo/?room=graffiti">Graffiti mode</a> <a class="btn ghost" href="/evade/video/spray-bobo.mp4">Watch a phone recording</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/xray-bobo.webp" alt="Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton, half scanned, and as himself" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Bobo X-Ray</h2>
-        <p>Point at Bobo on the keychain or a tee: the print opens into a box that goes back into the surface, Bobo floats inside, and a scanner shows his bones. On a tee it reads as an X-ray into the wearer.</p>
-        <div class="tags">
-          <span class="tag">Preview</span><span class="tag">EVADE</span><span class="tag">Image-tracked AR</span><span class="tag">Depth portal</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/xray-bobo/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/bobo-booth.webp" alt="Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades with Bobo-ear frame tips and a tiny Bobo on the hat, an Eclipse can earring and a septum ring" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Bobo Booth</h2>
-        <p>A selfie photo booth on 8th Wall face tracking. Swipe to try on the Bobo cat hat, Bobo shades, Eclipse can earrings that swing from your real ears, nose rings and Bobo face paint, pull a face for a surprise, then take a photo, a video or a 4-shot photo strip and beam it onto your merch.</p>
-        <div class="tags">
-          <span class="tag">Preview</span><span class="tag">EVADE</span><span class="tag">Face tracking</span><span class="tag">Photo booth</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/bobo-booth/">Open it</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/photo-beam.webp" alt="Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain, the photo streaming down it as pixels and printing onto the visor" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Photo Beam</h2>
-        <p>Snap a selfie, aim at the EVADE keychain until it locks on, and beam it: it flies down a beam of light as pixels and prints onto Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, and stays there. The photo never leaves the phone.</p>
-        <div class="tags">
-          <span class="tag">Preview</span><span class="tag">EVADE</span><span class="tag">Image-tracked AR</span><span class="tag">Your photo</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/photo-beam/">Open it</a> <a class="btn ghost" href="/evade/keychain-ar/target/">Test pictures</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/spray-studio.webp" alt="Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Spray Studio</h2>
-        <p>Spray Bobo without a camera, for touchscreens at pop-ups and home computers. Up to four phones join as spray cans, and Save &amp; share gives a link and QR code to the finished piece, with View on merch in AR.</p>
-        <div class="tags">
-          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Kiosk mode</span>
-          <span class="tag warn">Team sign-in for now</span>
-        </div>
-        <div class="actions"><a class="btn" href="/spray/">Open it</a> <a class="btn ghost" href="/spray/?kiosk=1">Kiosk mode</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/where-is-bobo.webp" alt="Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Where is Bobo?</h2>
-        <p>A live 3D globe of Bobo sightings around the world. Every pin is a real scan, clip or play from fans, creators and activated merch.</p>
-        <div class="tags">
-          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">3D globe</span><span class="tag">Fan clips</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/where-is-bobo/">Open it</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/vault.webp" alt="EVADE Digital Collection vault: the charm set collected in the middle case, hoodie and other pieces still holograms, Bobo standing in front" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>EVADE Digital Collection</h2>
-        <p>Every piece of activated merch a fan owns shows up here as a digital collectible; the rest stay holograms until they activate one. It's the same vault that opens inside Bobo's Hideout.</p>
-        <div class="tags">
-          <span class="tag live">Live</span><span class="tag">EVADE</span><span class="tag">Collectibles</span>
-        </div>
-        <div class="actions"><a class="btn" href="/evade/vault/">Open it</a> <a class="btn ghost" href="/evade/vault/?owned=keychain">As an owner</a></div>
-      </div>
-    </article>
-  </div>
+<!-- The main medialife.ai navigation (public/site-nav/, items from src/lib/site-nav.json). -->
+<header class="mlnav" id="site-nav"></header>
+<script src="/site-nav/site-nav.js"></script>
 
-  <div class="section">
-    <h2>Mattercraft test versions</h2>
-    <p>Plain three.js copies running the same code as the Mattercraft components.</p>
-  </div>
-  <div class="grid">
-    <article class="card">
-      <img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="Cola Run splash art with Bobo the cat" loading="lazy" width="540" height="967">
-      <div class="body">
-        <h2>Cola Run: record button</h2>
-        <p>Record a run or a lounge session with Bobo, watch it back, and send it to the Where is Bobo? globe or save it.</p>
-        <div class="tags">
-          <span class="tag">EVADE</span><span class="tag">Recording</span><span class="tag">Lounge mode</span>
-          <span class="tag warn">Sent clips go to this site's Media Library</span>
-        </div>
-        <p class="src">Mattercraft source: <code>mattercraft/cola-run/</code></p>
-        <div class="actions"><a class="btn" href="/evade/cola-run-lab/index.html">Open the lab</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/collector-hub.webp" alt="Bobo's room built inside a giant Eclipse can, with a Go home portal out front" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Collector Hub: Bobo's Hideout</h2>
-        <p>The EVADE room for owners of activated merch. Tap Go home to walk Bobo through the portal and watch the room build in, then tap anything inside: Bobo, the keychain, the BOBO OS computer.</p>
-        <div class="tags">
-          <span class="tag">EVADE</span><span class="tag">Collector Hub</span><span class="tag">3D room</span>
-          <span class="tag warn">Demo data, no sign-in yet</span>
-        </div>
-        <p class="src">Room source: <code>art/collector-hub/</code></p>
-        <div class="actions"><a class="btn" href="/labs/collector-hub/index.html">Open the lab</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/keychain-pop.webp" alt="Bobo and the Eclipse can standing on glowing pads after popping out of the EVADE keychain" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>EVADE keychain: Off the Chain (lab)</h2>
-        <p>Scan the keychain and Bobo and the Eclipse can jump out of their charms in 3D. Tap Bobo to wave, tap the can to spin it, or try his tail wag and the original walk cycle on the new model.</p>
-        <div class="tags">
-          <span class="tag">EVADE</span><span class="tag">Keychain</span><span class="tag">Blender, no gen AI</span>
-        </div>
-        <p class="src">Mattercraft source: <code>mattercraft/keychain-pop/</code></p>
-        <div class="actions"><a class="btn" href="/labs/keychain-pop/index.html">Open the lab</a> <a class="btn" href="/evade/keychain-ar/">Open Off the Chain</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/loot-break.webp" alt="Pixel heroes on a taskbar lane fighting a skeleton king that steps out of a purple portal" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>LOOT BREAK: TBH desk raid</h2>
-        <p>A 60-second lunch-break raid for TBH: Task Bar Hero. Your party marches along a taskbar on the desk, you are the cursor, and at 12:59 the chest opens on one of TBH's ten rarities, Common to Cosmic. It opens on the animated splash screen players see first. In the game, try Auto-play in the Lab panel to watch a full round.</p>
-        <div class="tags">
-          <span class="tag">TBH</span><span class="tag">Mini game</span><span class="tag">Pixel art</span>
-          <span class="tag warn">Concept build, not client-approved</span>
-        </div>
-        <p class="src">Source: <code>mattercraft/loot-break/</code></p>
-        <div class="actions"><a class="btn" href="/labs/loot-break/splash.html">Open the lab</a> <a class="btn ghost" href="/labs/video/loot-break.mp4">Watch a phone recording</a></div>
-      </div>
-    </article>
-  </div>
+<!-- Every card on this page comes from /labs/catalog.json (see public/labs/README.md):
+     add an experience by adding one object there. -->
+<div class="hero">
+  <div class="kicker"><i aria-hidden="true"></i>MEDIALIFE Labs</div>
+  <h1>Every experience we've built, <em>in one place</em></h1>
+  <p>AR on merch and print, place-in-room games, face effects, sky AR and web 3D, for every client. Search or filter, open one on your phone, or use the test pictures on a second screen. This page isn't linked from the site and is hidden from search.</p>
+  <ul class="stats" id="stats" aria-label="Catalogue size"></ul>
+</div>
 
-  <footer>Clips sent from a deploy preview stay in that preview's Media Library (private, "Needs review").</footer>
-</main>
+<div class="layout">
+  <aside class="dock" id="dock" aria-label="Find an experience">
+    <div class="dock-grab" aria-hidden="true"></div>
+    <div class="dock-head">
+      <h2 id="dockTitle">Find an experience</h2>
+      <button type="button" class="dock-close" id="dockClose" aria-label="Close filters">&times;</button>
+    </div>
+    <form class="search" id="search" role="search">
+      <label class="sr-only" for="q">Search experiences</label>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></g></svg>
+      <input type="search" id="q" name="q" placeholder="Search title, client, tag…" autocomplete="off" spellcheck="false">
+      <button type="button" class="search-x" id="qx" aria-label="Clear search" hidden>&times;</button>
+    </form>
+    <div class="summary">
+      <span id="count" role="status" aria-live="polite">Loading…</span>
+      <button type="button" class="clear" id="clear" hidden>Clear <span class="n" id="clearN">0</span></button>
+    </div>
+    <nav class="jump" id="jump" aria-label="Jump to a section">
+      <h3 class="grp-t">Jump to</h3>
+      <ul id="jumps"></ul>
+    </nav>
+    <div id="groups"></div>
+  </aside>
+
+  <main class="results" id="results" tabindex="-1">
+    <noscript><p>This catalogue needs JavaScript. The raw list is at <a href="/labs/catalog.json">/labs/catalog.json</a>.</p></noscript>
+  </main>
+</div>
+
+<p class="foot">Clips sent from a deploy preview stay in that preview's Media Library (private, "Needs review"). Tested = someone has run it on a real phone (or the simulator) since it was built or converted.</p>
+
+<button type="button" class="pill" id="pill" aria-controls="dock" aria-expanded="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 6h16M7 12h10M10 18h4"/></svg>
+  <span id="pillLabel">Filter &amp; jump</span>
+  <span class="pill-n" id="pillN">0</span>
+</button>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<script src="/vendor/ar-kit/qrcode.min.js" defer></script>
+<script src="/labs/labs.js?v=1" defer></script>
 </body>
 </html>

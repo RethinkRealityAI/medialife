@@ -1,0 +1,19 @@
+{
+ "name": "bunny-final",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1499,
+  "height": 1999,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/moneymaker-bunny/image-targets/bunny-final_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "bunny-final_luminance.jpeg",
+  "originalImage": "bunny-final.jpg"
+ }
+}

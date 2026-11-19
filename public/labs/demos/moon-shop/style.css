@@ -1,0 +1,4 @@
+/* Moon Shop: the product card (flat) */
+.pcard{position:absolute;left:50%;top:calc(70px + env(safe-area-inset-top));transform:translateX(-50%);width:min(320px,calc(100% - 32px));display:flex;flex-direction:column;gap:2px;text-align:center;pointer-events:none!important}
+.pcard b{color:var(--x);font-size:17px}
+.pcard span{color:var(--muted);font-size:14px}

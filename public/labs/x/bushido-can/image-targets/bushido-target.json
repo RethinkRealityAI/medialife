@@ -1,0 +1,26 @@
+{
+ "name": "bushido target",
+ "type": "CYLINDER",
+ "properties": {
+  "top": 0,
+  "left": 70,
+  "width": 569,
+  "height": 758,
+  "isRotated": false,
+  "originalWidth": 700,
+  "originalHeight": 758,
+  "cylinderCircumferenceTop": 100,
+  "cylinderCircumferenceBottom": 100,
+  "targetCircumferenceTop": 50,
+  "cylinderSideLength": 54.14,
+  "inputMode": "BASIC",
+  "coniness": 0,
+  "arcAngle": 180
+ },
+ "imagePath": "/labs/x/bushido-can/image-targets/bushido-target_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "bushido-target_luminance.jpeg",
+  "originalImage": "bushido-target.jpg"
+ }
+}

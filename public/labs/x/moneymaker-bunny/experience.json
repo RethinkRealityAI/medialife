@@ -1,0 +1,44 @@
+{
+ "slug": "moneymaker-bunny",
+ "title": "Moneymaker Bunny",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "Tap to activate: the Afterhours V.I.P card plays its animation right on the print.",
+ "hint": "Point at the Afterhours card",
+ "hero": "hero.jpg",
+ "heroAspect": "872/1000",
+ "targets": [
+  {
+   "name": "bunny-final",
+   "label": "Afterhours V.I.P card",
+   "what": "Card print",
+   "json": "image-targets/bunny-final.json",
+   "picture": "image-targets/bunny-final.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/bunny-final-2f182dbc.mp4",
+     "scale": [
+      1,
+      1.02
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Activate in 3D",
+   "url": "/labs/x/bunny-girl-3d/"
+  },
+  {
+   "label": "Enter $300 giveaway",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+/* Float Notes: the editor and the note buttons (flat) */
+.note-row{display:flex;gap:10px;align-items:center;justify-content:center}
+#b-new{min-height:54px;min-width:180px;font-size:16px}
+.note-row .tool{width:58px;height:58px;min-height:58px}
+.editor{width:100%;display:flex;flex-direction:column;gap:10px;padding:14px}
+.ed-t{font-weight:700;color:var(--x);font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+#note-in{min-height:50px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--text);padding:0 14px;font:500 17px "Space Grotesk",system-ui,sans-serif}
+.ed-row{display:flex;gap:8px;justify-content:flex-end}
+.ed-row button{min-height:46px}
+.ed-del{color:var(--warn);margin-right:auto}

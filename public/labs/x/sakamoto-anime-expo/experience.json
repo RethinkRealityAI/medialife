@@ -1,0 +1,112 @@
+{
+ "slug": "sakamoto-anime-expo",
+ "title": "Sakamoto Days at Anime Expo",
+ "client": "Netflix",
+ "wordmark": "Netflix · Sakamoto Days",
+ "accent": "#efb419",
+ "onAccent": "#111111",
+ "lead": "Find Sakamoto on the posters and standee at the booth. Tap for a photo, hold for a video.",
+ "hint": "Point at a Sakamoto Days poster or the standee",
+ "targets": [
+  {
+   "name": "Sakamoto_target",
+   "label": "Sakamoto Days poster",
+   "what": "Poster",
+   "json": "image-targets/sakamoto-target.json",
+   "picture": "image-targets/sakamoto-target.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/sakamoto-supermarket-anim-1f4783a5.mp4",
+     "width": 2.16,
+     "height": 1.37,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "sakamoto-noodles",
+   "label": "Noodles poster",
+   "what": "Poster",
+   "json": "image-targets/sakamoto-noodles.json",
+   "picture": "image-targets/sakamoto-noodles.jpg",
+   "content": [
+    {
+     "type": "image",
+     "src": "/labs/x/media/sakamoto-noodles-mask-2000.png",
+     "width": 1.58,
+     "height": 1.0,
+     "offset": [
+      0,
+      0,
+      -0.01
+     ]
+    },
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/sakamoto-supermarket-anim-1f4783a5.mp4",
+     "width": 1.58,
+     "height": 1.0,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "Sakamoto",
+   "label": "Sakamoto standee",
+   "what": "Standee",
+   "json": "image-targets/sakamoto.json",
+   "picture": "image-targets/sakamoto.jpg",
+   "content": [
+    {
+     "type": "image",
+     "src": "/labs/x/media/Sakamoto-Comic-Mask-0a958444.png",
+     "width": 2.18,
+     "height": 1.5,
+     "offset": [
+      0.12,
+      -0.05,
+      -0.01
+     ]
+    },
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/sakamoto-supermarket-anim-1f4783a5.mp4",
+     "width": 2.18,
+     "height": 1.5,
+     "loop": true,
+     "offset": [
+      0.12,
+      -0.05,
+      0
+     ],
+     "sound": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Watch trailer",
+   "url": "https://youtu.be/y-PdMVbil3o?feature=shared"
+  }
+ ],
+ "capture": {
+  "photo": true,
+  "video": true,
+  "filePrefix": "sakamoto-days",
+  "watermark": [
+   {
+    "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+    "pos": "bottom",
+    "w": 0.62
+   }
+  ]
+ },
+ "banner": {
+  "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+  "alt": "Now playing on Netflix"
+ }
+}
