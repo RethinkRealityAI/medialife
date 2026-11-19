@@ -29,6 +29,9 @@ are for anyone (human or agent) adding or changing an AR / immersive experience 
 7. **EVADE:** no user-facing generative AI; no generative or image-to-3D tools on EVADE's own assets.
 8. **Pitch demos** (`/pitch/*`): unlisted (noindex, robots Disallow), never linked from the site, nav or Labs;
    text wordmarks instead of client logos.
-9. Add a card to `public/labs/index.html` when an experience ships. Previews first; Dapo approves production merges.
+9. **Hint pill = one shared look.** Status lines like "Point at the print" use `/vendor/ar-kit/hint.css`
+   (link it after the page CSS, add `class="ml-hint"` to the element): white text on translucent black glass,
+   no brand colour, no blue. Pages only set its position. Copy: one short line, about 5 words.
+10. Add a card to `public/labs/index.html` when an experience ships. Previews first; Dapo approves production merges.
 
 The full playbook (engines, pitfalls, patterns) is the "immersive" skill; its house rules mirror this list.

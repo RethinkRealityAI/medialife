@@ -26,6 +26,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css?v=1">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -109,7 +110,7 @@
     <div id="aim" aria-hidden="true"><i class="ring"></i><i class="dot"></i><b id="surf-t"></b></div>
     <canvas id="mist" aria-hidden="true"></canvas>
 
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
     <div id="toast" aria-hidden="true"></div>
     <p id="size" hidden aria-live="polite"></p>
 

@@ -20,6 +20,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -56,7 +57,7 @@
 
     <!-- face guide while no face is found -->
     <div id="guide" aria-hidden="true"><i></i></div>
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
 
     <!-- countdown for the photo strip -->
     <div id="countdown" hidden>

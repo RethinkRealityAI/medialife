@@ -533,7 +533,7 @@ function flash(text, ms) { flashText = text; flashUntil = performance.now() + ms
 function updateHint(visible, now) {
   if (!started) return;
   if (visible && gestureHintAt && now >= gestureHintAt && !gestureHintDone) { gestureHintDone = true; flash('Show Spark a thumbs up beside the print', 6000); }
-  if (!visible) hint('Point your camera at the print');
+  if (!visible) hint('Point at the print');
   else if (now < flashUntil) hint(flashText);
   else if (!$('mic').disabled && !micUsed) hint('Tap the mic to talk to Spark');
   else hint(null);
@@ -634,7 +634,7 @@ function sizeCanvas() {
 }
 const appModule = () => ({
   name: PAGE,
-  onStart: () => { buildScene(XR8.Threejs.xrScene()); started = true; $('hud').hidden = false; hint('Point your camera at the print'); },
+  onStart: () => { buildScene(XR8.Threejs.xrScene()); started = true; $('hud').hidden = false; hint('Point at the print'); },
   onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); flushDiag(false); },
   onCameraStatusChange: ({ status, video: v }) => {
     if (status === 'requesting') hint('Allow camera access to begin');

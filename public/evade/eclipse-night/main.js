@@ -402,7 +402,7 @@ function setMode(m) {
   $('stars-n').hidden = !(m === 'trace' || (m === 'free' && won));
   $('b-fizz').hidden = !(m === 'free' || m === 'trace');
   if (m === 'charge') hint('Hold your Eclipse can charm up to the camera');
-  if (m === 'look') hint(charged ? 'Charged! Now point your phone at the sky' : 'Point your phone at the sky');
+  if (m === 'look') hint(charged ? 'Charged. Now point at the sky' : 'Point at the sky');
   if (m === 'trace') hint('Hold the ring on the glowing star');
   if (m === 'free') hint(won ? 'Tap the sky for fizz fireworks' : 'Scan your Eclipse can charm to wake Bobo\'s stars');
 }
