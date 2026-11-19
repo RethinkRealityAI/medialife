@@ -26,6 +26,74 @@
     "tested": "phone"
   },
   {
+    "slug": "bobo-portal",
+    "title": "Bobo's Portal",
+    "lead": "Put a door on your floor and walk through it into Bobo's world under the eclipse: a night city, the giant Eclipse can, Bobo running laps and 8 floating cans to crack open. Turn round and your room is still there through the door.",
+    "url": "/evade/bobo-portal/",
+    "thumb": "/labs/img/bobo-portal.webp",
+    "alt": "Bobo's Portal: a yellow, magenta and white door on the floor opening onto Eclipse Plaza at night, with the giant Eclipse can inside",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "showcase"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "phone",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "medialife-portal",
+    "title": "MEDIALIFE Portal",
+    "lead": "Walk through a glowing door into the MEDIALIFE world. Spark waves you in, five pieces of activated merch wait on plinths: tap one to wake it up and a real fan clip plays above it.",
+    "url": "/labs/medialife-portal/",
+    "thumb": "/labs/img/medialife-portal.webp",
+    "alt": "MEDIALIFE Portal: a blue, magenta and white door on the floor with Spark the mascot waving inside a starry stage",
+    "client": "MEDIALIFE",
+    "categories": [
+      "showcase",
+      "apparel"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "moon-portal",
+    "title": "Moon Portal (sample)",
+    "lead": "The world-tracking portal sample running on medialife.ai: drop a portal on your floor, walk through it onto the moon, and turn round to see your room through the door. The starting point for our portals.",
+    "url": "/labs/moon-portal/",
+    "thumb": "/labs/img/moon-portal.webp",
+    "alt": "Moon Portal in the camera: a round sci-fi portal on the floor showing the moon's surface and a landing platform through it",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
     "slug": "eclipse-night",
     "title": "Eclipse Night",
     "lead": "Charge the Eclipse can charm, then point at the sky: the real sky turns into EVADE's night, the giant can eclipses the moon and Bobo walks out of his constellation.",
@@ -65,6 +133,10 @@
       {
         "label": "First test build",
         "url": "/labs/cola-run-world/"
+      },
+      {
+        "label": "Classic hideout",
+        "url": "/evade/cola-run/?hideout=classic"
       }
     ],
     "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
