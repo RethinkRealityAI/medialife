@@ -6,7 +6,7 @@
  "accent": "#c8202f",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the bookmark and the comic plays out above it.",
- "hint": "Point your camera at the bookmark",
+ "hint": "Point at the bookmark",
  "heroAspect": "714/2000",
  "targets": [
   {

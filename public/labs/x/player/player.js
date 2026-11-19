@@ -224,7 +224,7 @@ function tick(dt) {
     if (v.want && v.el.paused) { v.el.muted = !(soundOn && v.sound); v.el.play().catch(() => {}); }
     else if (!v.want && !v.el.paused) v.el.pause();
   }
-  hint(anyShown ? null : (X.hint || 'Point your camera at the print'));
+  hint(anyShown ? null : (X.hint || 'Point at the print'));
   $('sound').hidden = !soundVisible;
   const ctas = $('ctas'); if (ctas.dataset.tracked === '1') ctas.classList.toggle('off', !anyShown);
   if (rec && rec.recording) rec.frame();
@@ -272,7 +272,7 @@ function renderShell() {
   hud.innerHTML = `
     <div class="hud-top">${wordmarkHtml()}<button class="ib menu-btn" aria-haspopup="dialog" aria-label="Menu">${ICON_MENU}</button></div>
     <button id="sound" hidden aria-pressed="false">${ICON_SOUND}<span>Tap for sound</span></button>
-    <p id="hint" role="status" aria-live="polite" hidden></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite" hidden></p>
     ${X.banner ? `<img id="banner" src="${esc(url(X.banner.src))}" alt="${esc(X.banner.alt || '')}">` : ''}
     <div id="ctas" data-tracked="${(X.cta || []).some((c) => c.whileTracked) ? 1 : 0}">${(X.cta || []).map((c, i) => `<a class="btn${i === 0 ? ' primary' : ''}" href="${esc(c.url)}" target="${c.url.startsWith('/') ? '_self' : '_blank'}" rel="noopener">${esc(c.label)}</a>`).join('')}</div>
     ${cap ? `<p id="cap-tip">${X.capture.video ? 'Tap for photo · Hold for video' : 'Tap for a photo'}</p><span id="rec-time" hidden>0:00</span>

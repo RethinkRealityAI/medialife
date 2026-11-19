@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the Hell's Revengers or the train print to bring it to life.",
- "hint": "Point your camera at the Hell's Revengers or train print",
+ "hint": "Point at the Hell's Revengers or train print",
  "targets": [
   {
    "name": "hellsrevengers",

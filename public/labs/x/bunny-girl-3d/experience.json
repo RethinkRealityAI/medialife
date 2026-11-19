@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "The bunny girl stands up off the rug or the card in 3D. Drag to turn her.",
- "hint": "Point your camera at the bunny rug or the Afterhours card",
+ "hint": "Point at the bunny rug or the Afterhours card",
  "targets": [
   {
    "name": "bunny-rug",

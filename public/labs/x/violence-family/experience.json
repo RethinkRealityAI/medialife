@@ -6,7 +6,7 @@
  "accent": "#f6c344",
  "onAccent": "#111111",
  "lead": "Point your phone at the Violence Family sticker and the rider tears off it.",
- "hint": "Point your camera at the sticker",
+ "hint": "Point at the sticker",
  "targets": [
   {
    "name": "violence-family",

@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the Animebae train print and watch the ride start.",
- "hint": "Point your camera at the train print",
+ "hint": "Point at the train print",
  "targets": [
   {
    "name": "AB_trainframe",

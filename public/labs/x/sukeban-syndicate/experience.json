@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the Sukeban or Syndicate print and the girls step out of it.",
- "hint": "Point your camera at the Sukeban or Syndicate print",
+ "hint": "Point at the Sukeban or Syndicate print",
  "targets": [
   {
    "name": "sukeban",

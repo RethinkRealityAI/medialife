@@ -6,7 +6,7 @@
  "accent": "#efb419",
  "onAccent": "#111111",
  "lead": "Point your phone at the Sakamoto standee or the magazine. Tap for a photo, hold for a video.",
- "hint": "Point your camera at the Sakamoto standee or magazine",
+ "hint": "Point at the Sakamoto standee or magazine",
  "targets": [
   {
    "name": "Sakamoto Standee Final",

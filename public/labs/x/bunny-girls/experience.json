@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "Three Afterhours prints, three bunny girls who come out to play.",
- "hint": "Point your camera at an Afterhours print",
+ "hint": "Point at an Afterhours print",
  "targets": [
   {
    "name": "cat-girl",

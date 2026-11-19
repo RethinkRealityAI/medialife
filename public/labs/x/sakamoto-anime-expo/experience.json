@@ -6,7 +6,7 @@
  "accent": "#efb419",
  "onAccent": "#111111",
  "lead": "Find Sakamoto on the posters and standee at the booth. Tap for a photo, hold for a video.",
- "hint": "Point your camera at a Sakamoto Days poster or the standee",
+ "hint": "Point at a Sakamoto Days poster or the standee",
  "targets": [
   {
    "name": "Sakamoto_target",

@@ -6,7 +6,7 @@
  "accent": "#e8313a",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the Dashie sticker and she rides off the page.",
- "hint": "Point your camera at the Dashie sticker",
+ "hint": "Point at the Dashie sticker",
  "targets": [
   {
    "name": "dashie-target",

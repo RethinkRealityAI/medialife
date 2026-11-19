@@ -116,7 +116,7 @@ function buildDom(cfg) {
   <div id="hud" hidden>
     <div class="tl"><img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="96" height="16"><span class="tag">${cfg.tag || 'Labs'}</span></div>
     <div id="side"><button id="b-menu" class="ib" aria-haspopup="dialog" aria-controls="menu" aria-label="Menu">${ICONS.menu}</button></div>
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
     <div id="toast" aria-hidden="true"></div>
     <div id="dock">
       <div id="panel"></div>

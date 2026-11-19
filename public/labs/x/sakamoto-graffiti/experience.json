@@ -6,7 +6,7 @@
  "accent": "#efb419",
  "onAccent": "#111111",
  "lead": "Point your phone at the Abbott Elementary poster and Sakamoto tags it. Tap for a photo, hold for a video.",
- "hint": "Point your camera at the poster",
+ "hint": "Point at the poster",
  "targets": [
   {
    "name": "abbott",

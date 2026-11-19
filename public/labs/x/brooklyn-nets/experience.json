@@ -7,7 +7,7 @@
  "onAccent": "#111111",
  "background": "#111111",
  "lead": "Point your phone at the trading card and the Brooklyn artwork plays out on it.",
- "hint": "Point your camera at the card or the Sukeban print",
+ "hint": "Point at the card or the Sukeban print",
  "hero": "/labs/x/media/brooklyn-art.jpg",
  "targets": [
   {

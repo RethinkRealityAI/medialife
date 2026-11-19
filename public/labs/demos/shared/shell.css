@@ -1,3 +1,4 @@
+@import url("/vendor/ar-kit/hint.css?v=1");
 /* MEDIALIFE Labs tech demos: one shared shell (splash, HUD, menu, sheets). Flat colours only: no gradients anywhere.
    Base styles follow Bobo Hoops / Spray Bobo Street. */
 :root{--bg:#0f1114;--card:#171a1f;--ink:#0a1c2a;--panel:rgba(15,17,20,.74);--line:rgba(255,255,255,.16);--text:#f2f5f7;--muted:#a9b3bd;--x:#4fd6e8;--xd:#0a1c2a;--x2:#c9f25a;--warn:#ff6b5e;color-scheme:dark}

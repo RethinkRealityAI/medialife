@@ -6,7 +6,7 @@
  "accent": "#d33a3a",
  "onAccent": "#ffffff",
  "lead": "Point your phone at the Heart of Darkness badge to reveal its artwork.",
- "hint": "Point your camera at the badge",
+ "hint": "Point at the badge",
  "targets": [
   {
    "name": "hod-badge",

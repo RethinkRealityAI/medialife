@@ -6,7 +6,7 @@
  "accent": "#f6c344",
  "onAccent": "#111111",
  "lead": "The CES 2026 merch wall: tees, pockets, cards and covers that play when you point at them.",
- "hint": "Point your camera at any of the prints",
+ "hint": "Point at any of the prints",
  "targets": [
   {
    "name": "back",
