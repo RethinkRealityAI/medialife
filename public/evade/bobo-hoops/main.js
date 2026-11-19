@@ -781,7 +781,7 @@ function sizeCanvas() {
 let last = 0, camStartAt = 0, built = false;
 const appModule = (data) => ({
   name: 'bobo-hoops',
-  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); built = true; $('hud').hidden = false; setMode('find'); hint('Point at the Eclipse can on your keychain'); },
+  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); built = true; $('hud').hidden = false; setMode('find'); hint('Point at the Eclipse can'); },
   onUpdate: ({ processCpuResult }) => {
     const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now;
     const r = processCpuResult && processCpuResult.reality; if (r && r.trackingStatus) noteTracking(r.trackingStatus, r.trackingReason);

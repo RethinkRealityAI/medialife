@@ -97,6 +97,7 @@
     #error{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
     @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   </style>
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam"></canvas>
@@ -118,7 +119,7 @@
       <div id="cap" hidden role="status" aria-live="polite"><div class="wrap"><b id="cap-who">Spark</b><span id="cap-text"></span><div id="energy" hidden><i></i></div></div></div>
       <div id="sees" aria-live="polite"></div>
     </div>
-    <div id="hint" role="status" aria-live="polite">Point your camera at the print</div>
+    <div id="hint" class="ml-hint" role="status" aria-live="polite">Point at the print</div>
     <form id="typebar" hidden><input id="type-in" type="text" autocomplete="off" enterkeyhint="send" placeholder="Type to Spark" aria-label="Type to Spark"><button>Send</button></form>
     <button id="mic" class="round" data-s="off" aria-label="Talk to Spark" disabled>
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>

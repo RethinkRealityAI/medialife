@@ -1483,7 +1483,7 @@ function tick(dt) {
   } else if (!pose.valid) lostFor += dt;
   hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
   const again = `Point at ${cp.name} again`;
-  if (mode === 'find' && !pose.valid) hint((everFound ? 'Point at ' : 'Point your camera at ') + SEEK);
+  if (mode === 'find' && !pose.valid) hint('Point at ' + SEEK);
   else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint(again);
   else if (pose.valid && $('hint').textContent === again) hint('');
   paintMesh.material.uniforms.uTime.value = clock.t;

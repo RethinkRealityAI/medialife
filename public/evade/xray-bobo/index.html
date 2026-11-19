@@ -20,6 +20,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -68,7 +69,7 @@
 
     <!-- what to point at -->
     <div id="guide" aria-hidden="true"><img src="/evade/spray-bobo/art/cat-lines.png" alt=""><img src="/evade/spray-bobo/art/can-lines.png" alt=""></div>
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
 
     <!-- the view: scan sweep / full X-ray / plain skin -->
     <div id="views" role="radiogroup" aria-label="View">

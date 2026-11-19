@@ -775,7 +775,7 @@ function tick(dt) {
   if (!pose.valid) {
     lostFor += dt;
     if (mode !== 'find' && lostFor > 0.6) setMode('find');
-    if (mode === 'find') hint(everFound ? 'Find Bobo or the can again' : 'Point at Bobo or the can on your keychain');
+    if (mode === 'find') hint(everFound ? 'Find Bobo or the can again' : 'Point at Bobo or the can');
     sound.humTo(0);
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 

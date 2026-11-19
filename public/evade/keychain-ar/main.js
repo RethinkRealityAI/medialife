@@ -2435,7 +2435,7 @@ function settle() {
   }
 }
 
-const HINT_FIND = "Point the camera at Bobo, the Eclipse can, or both together";
+const HINT_FIND = "Point at Bobo or the Eclipse can";
 function onScreen(ch, m = 0.7) {
   const n = ch.frame.getWorldPosition(_v).project(camera);
   return n.z < 1 && Math.abs(n.x) < m && Math.abs(n.y) < m;
@@ -2507,7 +2507,7 @@ function tick(dt) {
     ui.hint(seen ? "Found it. Hold still…" : HINT_FIND);
   } else {
     const PULL = "Move back a little to see them",
-      KEEP = "Point at Bobo or the can to bring them back";
+      KEEP = "Point at Bobo or the can again";
     ui.guide(!present);
     let off = false;
     for (const ch of [B, C])
