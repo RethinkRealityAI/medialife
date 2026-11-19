@@ -123,7 +123,7 @@
   {
     "slug": "cola-run",
     "title": "Cola Run on our own world tracking",
-    "lead": "The full Cola Run game on world tracking, hosted on medialife.ai with no Mattercraft: splash, game, record button, Bobo's Hideout and Bobo's Arcade.",
+    "lead": "The full Cola Run game on world tracking, hosted on medialife.ai with no Mattercraft: splash, game, record button, Bobo's Arcade, and a life-size Bobo's Hideout you walk into through a door.",
     "url": "/evade/cola-run/",
     "extraLinks": [
       {
@@ -133,10 +133,6 @@
       {
         "label": "First test build",
         "url": "/labs/cola-run-world/"
-      },
-      {
-        "label": "Classic hideout",
-        "url": "/evade/cola-run/?hideout=classic"
       }
     ],
     "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
