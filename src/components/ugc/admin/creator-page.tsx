@@ -79,6 +79,7 @@ import {
   adminResendUgcJoinLink,
   adminSetUgcStatus,
 } from "@/lib/ugc/admin.functions";
+import { parseCount } from "@/lib/ugc/import";
 import {
   UGC_PLATFORM_LABELS,
   UGC_PLATFORMS,
@@ -87,8 +88,13 @@ import {
   UGC_TEE_SIZES,
   UGC_TRANSITIONS,
   canSignIn,
+  UGC_FOLLOWER_NOUN,
   formatBytes,
+  formatCount,
+  ugcTotalReach,
   type ShippingAddress,
+  type UgcChannelStat,
+  type UgcChannelStats,
   type UgcPlatform,
   type UgcStatus,
   type UgcTeeSize,
@@ -435,12 +441,57 @@ function DeletionBanner({ data }: { data: CreatorDetail }) {
   );
 }
 
+/** "38.2K followers · 812 videos", with when it was checked; falls back to the form's band. */
+function ChannelStat({
+  stat,
+  platform,
+  band,
+}: {
+  stat: UgcChannelStat | undefined;
+  platform: UgcPlatform;
+  band: string | undefined;
+}) {
+  if (!stat) return <span className="text-xs text-sky-200">{band ?? ""}</span>;
+  const extra = [
+    stat.posts != null
+      ? `${formatCount(stat.posts)} ${platform === "youtube" || platform === "tiktok" ? "videos" : "posts"}`
+      : null,
+    stat.likes != null ? `${formatCount(stat.likes)} likes` : null,
+  ].filter(Boolean);
+  const title = [
+    stat.followers != null
+      ? `${stat.followers.toLocaleString()} ${UGC_FOLLOWER_NOUN[platform]}`
+      : null,
+    `Checked ${formatDate(stat.checkedAt)}${stat.source === "manual" ? " (typed in)" : ""}`,
+    stat.note,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <span className="text-right text-xs leading-tight" title={title}>
+      <span className="block text-sky-200 tabular-nums">
+        {stat.followers != null
+          ? `${formatCount(stat.followers)} ${UGC_FOLLOWER_NOUN[platform]}`
+          : "No count"}
+      </span>
+      {extra.length || stat.note ? (
+        <span className="block text-muted-foreground">
+          {extra.length ? extra.join(" · ") : stat.note}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 /* ── Overview ─────────────────────────────────────────────────────────────── */
 
 function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: PipelineCampaign[] }) {
   const c = data.creator;
   const [edit, setEdit] = useState(false);
-  const platforms = UGC_PLATFORMS.filter((p) => c.platforms.includes(p) || c.handles[p]);
+  const platforms = UGC_PLATFORMS.filter(
+    (p) => c.platforms.includes(p) || c.handles[p] || c.channelStats?.[p],
+  );
+  const reach = ugcTotalReach(c.channelStats);
   const src = c.source;
   const utm = Object.entries(src.utm)
     .map(([k, v]) => `${k}=${v}`)
@@ -515,7 +566,11 @@ function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: Pipe
             icon={Globe2}
             tone="violet"
             title="Platforms"
-            sub="Handles link to their profiles."
+            sub={
+              reach != null
+                ? `${formatCount(reach)} total reach (followers + subscribers). Handles link to their profiles.`
+                : "Handles link to their profiles. Add follower counts with Edit or Import → Channel stats."
+            }
           />
           {platforms.length ? (
             <ul className="mt-3 divide-y divide-white/[0.06]">
@@ -536,7 +591,7 @@ function OverviewTab({ data, campaigns }: { data: CreatorDetail; campaigns: Pipe
                       <Blank>No handle</Blank>
                     )}
                   </span>
-                  <span className="text-xs text-sky-200">{c.audiences[p] ?? ""}</span>
+                  <ChannelStat stat={c.channelStats?.[p]} platform={p} band={c.audiences[p]} />
                 </li>
               ))}
             </ul>
@@ -850,6 +905,7 @@ function EditProfileDialog({
                     email: f.email,
                     country: f.country,
                     handles: f.handles,
+                    followers: followersPatch(c.channelStats, f.followers),
                     mainPlatform: f.mainPlatform || null,
                     teeSize: f.teeSize || null,
                   },
@@ -914,9 +970,12 @@ function EditProfileDialog({
             </Field>
           </div>
           <fieldset className="space-y-2.5">
-            <legend className="text-sm font-medium">Handles</legend>
+            <legend className="text-sm font-medium">Handles and follower counts</legend>
             {UGC_PLATFORMS.map((p) => (
-              <div key={p} className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-3">
+              <div
+                key={p}
+                className="grid grid-cols-[6rem_minmax(0,1fr)_6.5rem] items-center gap-3"
+              >
                 <Label
                   htmlFor={`${uid}-h-${p}`}
                   className="text-sm font-normal text-muted-foreground"
@@ -928,6 +987,14 @@ function EditProfileDialog({
                   value={f.handles[p] ?? ""}
                   onChange={(e) => set("handles", { ...f.handles, [p]: e.target.value })}
                   placeholder="@handle or link"
+                />
+                <Input
+                  inputMode="numeric"
+                  aria-label={`${UGC_PLATFORM_LABELS[p]} ${UGC_FOLLOWER_NOUN[p]}`}
+                  value={f.followers[p] ?? ""}
+                  onChange={(e) => set("followers", { ...f.followers, [p]: e.target.value })}
+                  placeholder={UGC_FOLLOWER_NOUN[p]}
+                  className="tabular-nums"
                 />
               </div>
             ))}
@@ -971,9 +1038,31 @@ const profileForm = (d: CreatorDetail) => ({
   email: d.creator.email,
   country: d.creator.country,
   handles: { ...d.creator.handles } as Partial<Record<UgcPlatform, string>>,
+  followers: Object.fromEntries(
+    Object.entries(d.creator.channelStats ?? {}).map(([p, st]) => [
+      p,
+      st?.followers?.toString() ?? "",
+    ]),
+  ) as Partial<Record<UgcPlatform, string>>,
   mainPlatform: (d.creator.mainPlatform ?? "") as UgcPlatform | "",
   teeSize: (d.creator.teeSize ?? "") as UgcTeeSize | "",
 });
+
+/** Only the counts that changed: a number, or null when the field was cleared. */
+function followersPatch(
+  stats: UgcChannelStats | undefined,
+  typed: Partial<Record<UgcPlatform, string>>,
+): Partial<Record<UgcPlatform, number | null>> | undefined {
+  const out: Partial<Record<UgcPlatform, number | null>> = {};
+  for (const p of UGC_PLATFORMS) {
+    const raw = typed[p]?.trim() ?? "";
+    const before = stats?.[p]?.followers ?? null;
+    const n = raw ? parseCount(raw) : null;
+    if (raw && n == null) continue; // not a number: leave it as it was
+    if (n !== before) out[p] = n;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 
 const EMPTY_ADDRESS: ShippingAddress = {
   name: "",

@@ -7,6 +7,7 @@
  */
 import {
   UGC_PLATFORMS,
+  UGC_PLATFORM_LABELS,
   normaliseTeeSize,
   type ShippingAddress,
   type UgcPlatform,
@@ -299,4 +300,98 @@ export function parseCodesCsv(text: string): { email: string; code: string }[] {
     email: (r[ie] ?? "").trim().toLowerCase(),
     code: (ic >= 0 ? (r[ic] ?? "") : "").trim(),
   }));
+}
+
+/** Columns of the channel stats CSV (one row per creator and platform). */
+export const UGC_CHANNEL_STATS_FIELDS = [
+  "email",
+  "platform",
+  "followers",
+  "posts",
+  "likes",
+  "url",
+  "note",
+  "checked_at",
+] as const;
+
+export type ChannelStatsRow = {
+  email: string;
+  platform: UgcPlatform | null;
+  followers: number | null;
+  posts: number | null;
+  likes: number | null;
+  url: string;
+  note: string;
+  checkedAt: number | null;
+  /** Why the row can't be used, or null. */
+  problem: string | null;
+};
+
+/** "38,243", "38.2K", "1.3M" → a whole number; "" or junk → null. */
+export function parseCount(v: string | undefined): number | null {
+  const s = (v ?? "")
+    .trim()
+    .replace(/[,\s_]/g, "")
+    .toUpperCase();
+  if (!s) return null;
+  const m = /^(\d+(?:\.\d+)?)([KMB])?$/.exec(s);
+  if (!m) return null;
+  const mult = m[2] === "K" ? 1e3 : m[2] === "M" ? 1e6 : m[2] === "B" ? 1e9 : 1;
+  return Math.round(parseFloat(m[1]) * mult);
+}
+
+/**
+ * Channel stats CSV: email,platform,followers[,posts,likes,url,note,checked_at].
+ * Header row required. Platform is a UGC_PLATFORMS id or its label ("YouTube").
+ */
+export function parseChannelStatsCsv(text: string): ChannelStatsRow[] {
+  const rows = parseCsv(text);
+  if (!rows.length) return [];
+  const head = rows[0].map((h) => norm(h));
+  const col = (...names: string[]) => head.findIndex((h) => names.includes(h));
+  const ie = col("email");
+  const ip = col("platform", "channel");
+  const ifo = col("followers", "subscribers", "followers_subscribers", "count");
+  const ipo = col("posts", "videos");
+  const il = col("likes");
+  const iu = col("url", "profile", "profile_url");
+  const inote = col("note", "notes");
+  const id = col("checked_at", "checked", "date");
+  const at = (r: string[], i: number) => (i >= 0 ? (r[i] ?? "").trim() : "");
+  const labels = new Map<string, UgcPlatform>(
+    UGC_PLATFORMS.flatMap((p) => [
+      [p, p],
+      [norm(UGC_PLATFORM_LABELS[p]), p],
+    ]),
+  );
+  return rows
+    .slice(1)
+    .filter((r) => r.some((v) => v.trim()))
+    .map((r) => {
+      const email = at(r, ie).toLowerCase();
+      const platform = labels.get(norm(at(r, ip))) ?? null;
+      const followers = parseCount(at(r, ifo));
+      const date = at(r, id) ? Date.parse(at(r, id)) : NaN;
+      const problem =
+        ie < 0 || ip < 0 || ifo < 0
+          ? "Needs email, platform and followers columns"
+          : !email.includes("@")
+            ? "No email"
+            : !platform
+              ? "Unknown platform"
+              : followers == null && !at(r, inote)
+                ? "No follower count"
+                : null;
+      return {
+        email,
+        platform,
+        followers,
+        posts: parseCount(at(r, ipo)),
+        likes: parseCount(at(r, il)),
+        url: /^https:\/\//i.test(at(r, iu)) ? at(r, iu).slice(0, 500) : "",
+        note: at(r, inote).slice(0, 300),
+        checkedAt: Number.isFinite(date) ? date : null,
+        problem,
+      };
+    });
 }
