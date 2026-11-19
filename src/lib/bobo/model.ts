@@ -96,6 +96,8 @@ export type FeedMedia = {
   seenAt: string;
   /** Venue / landmark ("Golden Gate Bridge"), may be empty. */
   place: string;
+  /** Who spotted him ("@handle"), set by the team; may be empty. */
+  credit?: string;
   tags: string[];
   sample: boolean;
   /**
