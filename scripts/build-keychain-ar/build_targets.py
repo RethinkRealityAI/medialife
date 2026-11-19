@@ -1,0 +1,202 @@
+# Image targets for the 8th Wall (open-source engine) keychain experience. kc-both: the Bobo cat charm and
+# the Eclipse can charm together as they sit on the keychain (no ring or chain). kc-bobo / kc-can: each charm on its own. kc-can is cut from a phone photo of the real charm. kc-old: the earlier design's Bobo charm. Same output format as
+# @8thwall/image-target-cli (a json + a 480x640 greyscale "luminance" picture the engine extracts
+# features from). layout.json says where that picture sits in keychain space (metres), so the AR page
+# can place each charm frame (and its silhouette) exactly on its print.
+import os, json, math, time
+from PIL import Image
+REPO = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
+SRC = REPO + '/public/evade/keychain/src/'
+OUT = REPO + '/public/evade/keychain-ar/image-targets/'
+URL = '/evade/keychain-ar/image-targets/'
+os.makedirs(OUT, exist_ok=True)
+PPM = 14000                                   # charm pictures are 14 px per mm
+# charm picture, hole position (m), tilt, charm centre below the hole (m): the rest layout of the 3D keychain model
+CHARMS = [('charm-bobo.png', (-0.0070, -0.0643), 2 * math.asin(-0.096), -0.0288),
+          ('charm-eclipse.png', (0.0070, -0.0850), 2 * math.asin(0.078), -0.0252)]
+SIZE = (2400, 2400); ORG = (1200, 300)        # working canvas, keychain origin in it
+art = Image.new('RGBA', SIZE, (0, 0, 0, 0))
+for name, (tx, ty), rz, cy_ in CHARMS:
+    im = Image.open(SRC + name).convert('RGBA').rotate(math.degrees(rz), resample=Image.BICUBIC, expand=True)
+    cx = tx - math.sin(rz) * cy_; cy = ty + math.cos(rz) * cy_
+    art.alpha_composite(im, (round(ORG[0] + cx * PPM - im.width / 2), round(ORG[1] - cy * PPM - im.height / 2)))
+l, t, r, b = art.getbbox()
+w, h = r - l, b - t
+pad = 0.03 * max(w, h); w += 2 * pad; h += 2 * pad
+if w / h < 0.75: w = h * 0.75
+else: h = w / 0.75
+mx, my = (l + r) / 2, (t + b) / 2
+box = tuple(round(v) for v in (mx - w / 2, my - h / 2, mx + w / 2, my + h / 2))
+bg = Image.new('RGBA', SIZE, (236, 238, 240, 255)); bg.alpha_composite(art)     # clear acrylic over a light surface
+crop = bg.convert('RGB').crop(box)
+W, H = crop.size
+name = 'kc-both'
+crop.resize((480, 640), Image.LANCZOS).convert('L').save(OUT + f'{name}_luminance.jpg', quality=92)
+crop.resize((263, 350), Image.LANCZOS).save(OUT + f'{name}_thumbnail.jpg', quality=85)
+crop.save(OUT + f'{name}.jpg', quality=92)                                       # full colour, for people
+now = int(time.time() * 1000)
+json.dump(dict(imagePath=URL + f'{name}_luminance.jpg', metadata=None, name=name, type='PLANAR',
+               properties=dict(left=0, top=0, width=W, height=H, isRotated=False, originalWidth=W, originalHeight=H),
+               resources=dict(luminanceImage=f'{name}_luminance.jpg', thumbnailImage=f'{name}_thumbnail.jpg'),
+               created=now, updated=now), open(OUT + f'{name}.json', 'w'), indent=2)
+LAYOUT = {name: dict(widthM=W / PPM, heightM=H / PPM, silhouettes=True, charms={})}
+ctr = (((box[0] + box[2]) / 2 - ORG[0]) / PPM, -((box[1] + box[3]) / 2 - ORG[1]) / PPM)
+for key, (_, (tx, ty), rz, cy_) in zip(('bobo', 'can'), CHARMS):      # charm frame centres relative to the picture centre
+    LAYOUT[name]['charms'][key] = dict(x=tx - math.sin(rz) * cy_ - ctr[0], y=ty + math.cos(rz) * cy_ - ctr[1], rz=rz)
+
+# ---- each charm on its own (people may carry only one of the two): the whole charm picture, padded to 3:4
+def write_target(tname, img, lay):
+    w_, h_ = img.size
+    img.resize((480, 640), Image.LANCZOS).convert('L').save(OUT + f'{tname}_luminance.jpg', quality=92)
+    img.resize((263, 350), Image.LANCZOS).save(OUT + f'{tname}_thumbnail.jpg', quality=85)
+    img.save(OUT + f'{tname}.jpg', quality=92)
+    json.dump(dict(imagePath=URL + f'{tname}_luminance.jpg', metadata=None, name=tname, type='PLANAR',
+                   properties=dict(left=0, top=0, width=w_, height=h_, isRotated=False, originalWidth=w_, originalHeight=h_),
+                   resources=dict(luminanceImage=f'{tname}_luminance.jpg', thumbnailImage=f'{tname}_thumbnail.jpg'),
+                   created=now, updated=now), open(OUT + f'{tname}.json', 'w'), indent=2)
+    LAYOUT[tname] = lay
+for key, tname, (fname, _, _, _) in (('bobo', 'kc-bobo', CHARMS[0]), ('can', 'kc-can', CHARMS[1])):
+    im = Image.open(SRC + fname).convert('RGBA')
+    cw, chh = im.size
+    tw, th = (cw, round(cw / 0.75)) if cw / chh > 0.75 else (round(chh * 0.75), chh)
+    tw, th = round(tw * 1.04), round(th * 1.04)
+    canvas = Image.new('RGBA', (tw, th), (236, 238, 240, 255)); canvas.alpha_composite(im, ((tw - cw) // 2, (th - chh) // 2))
+    if key == 'can':
+        # The can is tracked from a phone photo of the real acrylic charm instead (below): it holds better on
+        # the real thing than the flat art. The art picture stays as the thumbnail on the instructions screen.
+        canvas.convert('RGB').resize((263, 350), Image.LANCZOS).save(OUT + 'how-can.jpg', quality=85)
+        ART_CAN = (tw / PPM, th / PPM, cw / PPM, chh / PPM)   # picture and acrylic piece, metres
+        tname = 'kc-can-art'                                  # the art stays as a second picture of the same charm
+    write_target(tname, canvas.convert('RGB'), dict(widthM=tw / PPM, heightM=th / PPM, silhouettes=True, charms={key: dict(x=0, y=0, rz=0)}))
+
+# ---- camera guide: the two silhouettes together, in the same frame as kc-both
+SIL = REPO + '/public/evade/keychain/ar/'
+gb = Image.new('RGBA', SIZE, (0, 0, 0, 0))
+for (fname, (tx, ty), rz, cy_), sn in zip(CHARMS, ('silhouette-bobo.png', 'silhouette-eclipse.png')):
+    im = Image.open(SIL + sn).convert('RGBA').rotate(math.degrees(rz), resample=Image.BICUBIC, expand=True)
+    cx = tx - math.sin(rz) * cy_; cy = ty + math.cos(rz) * cy_
+    gb.alpha_composite(im, (round(ORG[0] + cx * PPM - im.width / 2), round(ORG[1] - cy * PPM - im.height / 2)))
+gb.crop(box).resize((503, 670), Image.LANCZOS).save(OUT + 'guide-both.png')
+
+# ---- the earlier keychain design (blocky Bobo with his arm up + Eclipse can). Cut from a phone photo of the
+# real charm (src/old-bobo.png: Dapo's sharp photo of the Roblox Bobo charm, 2026-11-11, clear acrylic included,
+# masked out and centred 3:4 with a 4% margin). One
+# target per charm, like the cat keychain's single-charm targets. No silhouettes: they are cut for the cat art.
+# Its silhouette and 3D model come from build_old_bobo.py, in this same picture frame.
+from PIL import ImageFilter
+HERE_SRC = os.path.dirname(os.path.abspath(__file__)) + '/src/'
+OPPM = 1440 / 0.078        # the acrylic piece is about 75 mm tall (measured against the 55 mm can charm), framed 3:4 with a 4% margin
+for key, tname, fname in (('bobo', 'kc-old', 'old-bobo.png'),):
+    im = Image.open(HERE_SRC + fname).convert('RGB')
+    write_target(tname, im, dict(widthM=im.width / OPPM, heightM=im.height / OPPM, silhouettes=True, charms={key: dict(x=0, y=0, rz=0)}))
+    # a light sharpen gives the engine crisper corners to hold on to
+    Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
+
+# ---- the Eclipse can charm, for both keychain designs (the can is the same on both): cut from Dapo's phone
+# photo of the real charm, clear acrylic edge and tab included (src/can-photo.png: the acrylic piece centred
+# in a 3:4 picture with a 4% margin, the same framing as the art picture). So it maps onto the art's charm
+# frame directly: the acrylic piece is as tall in metres as the art's.
+im = Image.open(HERE_SRC + 'can-photo.png').convert('RGB')
+im = im.resize((1200, 1600), Image.LANCZOS)
+hM = ART_CAN[3] * 1.04
+write_target('kc-can', im, dict(widthM=hM * 0.75, heightM=hM, silhouettes=True, charms={'can': dict(x=0, y=0, rz=0)}))
+Image.open(OUT + 'kc-can_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=140, threshold=2)).save(OUT + 'kc-can_luminance.jpg', quality=95)
+# ---- the two charms from the product shot (cut_product_charms.py): cat Bobo and the back of the can (the QR
+# side). Both are seen from the side whose outline is the artwork's mirrored, so their pictures sit in the
+# artwork's own picture frame mirrored ("mirror" in layout.json flips the charm frame, and the 3D character
+# with it, so it lines up with its print). They replace the flat cat artwork as kc-bobo.
+# The QR code on the product shot is a stand-in: the one printed on the real charm encodes something else,
+# so its hundreds of little corners would only ever disagree with the real print. It is painted over with the
+# disc's own paper colour, and the engine holds on to the can, the lettering and the bubbles instead.
+QR_BOX = (0.387, 0.531, 0.599, 0.695)          # in src/can-back.png, fractions (found by edge density)
+def hide_qr(im):
+    import numpy as np
+    a = np.asarray(im).copy(); H_, W_ = a.shape[:2]
+    x0, y0, x1, y1 = round(QR_BOX[0] * W_), round(QR_BOX[1] * H_), round(QR_BOX[2] * W_), round(QR_BOX[3] * H_)
+    box = a[y0:y1, x0:x1].reshape(-1, 3); light = box[box.sum(1) > np.percentile(box.sum(1), 70)]
+    a[y0:y1, x0:x1] = np.median(light, 0).astype(np.uint8)
+    return Image.fromarray(a)
+for tname, fname, key in (('kc-bobo', 'bobo-product.png', 'bobo'), ('kc-can-back', 'can-back.png', 'can')):
+    im = Image.open(HERE_SRC + fname).convert('RGB')
+    if tname == 'kc-can-back': im = hide_qr(im)
+    base = LAYOUT['kc-bobo' if key == 'bobo' else 'kc-can-art']
+    write_target(tname, im, dict(widthM=base['widthM'], heightM=base['heightM'], silhouettes=True, charms={key: dict(x=0, y=0, rz=0, mirror=True)}))
+    Image.open(OUT + f'{tname}_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + f'{tname}_luminance.jpg', quality=95)
+
+# ---- portal masks: the whole acrylic piece of each charm picture (outlines traced by cut_can_photo.py and
+# cut_product_charms.py), in that picture's frame grown by MASK_PAD so the glow round it has room
+from PIL import ImageDraw, ImageOps
+MASK_PAD = 1.3
+def portal_mask(tname, outline_file):
+    lay = LAYOUT[tname]; MH = 800; MW = round(MH * lay['widthM'] / lay['heightM'])
+    pts = json.load(open(HERE_SRC + outline_file))['points']
+    SS = 4; big = Image.new('L', (MW * SS, MH * SS), 0)
+    ImageDraw.Draw(big).polygon([(((x - 0.5) / MASK_PAD + 0.5) * MW * SS, ((y - 0.5) / MASK_PAD + 0.5) * MH * SS) for x, y in pts], fill=255)
+    m = Image.new('RGBA', (MW, MH), (255, 255, 255, 0)); m.putalpha(big.resize((MW, MH), Image.LANCZOS)); m.save(OUT + f'{tname}-mask.png', optimize=True)
+    lay['mask'] = dict(src=f'{tname}-mask.png', widthM=lay['widthM'] * MASK_PAD, heightM=lay['heightM'] * MASK_PAD)
+# Roblox Bobo's acrylic: its picture is already cut out on a flat background, so the outline is simply the
+# edge of everything that is not background (smoothed)
+def flat_outline(fname, out_name):
+    import numpy as np
+    from scipy import ndimage as ndi
+    from scipy.ndimage import gaussian_filter1d
+    from skimage import measure
+    a = np.asarray(Image.open(HERE_SRC + fname).convert('RGB')).astype(int)
+    m = ndi.binary_opening(np.abs(a - np.array([236, 238, 240])).sum(2) > 10, iterations=2)
+    m = ndi.binary_fill_holes(ndi.binary_closing(m, iterations=3)); lab, n = ndi.label(m); m = lab == 1 + np.argmax(ndi.sum(m, lab, range(1, n + 1)))
+    c = max(measure.find_contours(m.astype(float), 0.5), key=len)
+    c = np.c_[gaussian_filter1d(c[:, 1], 3, mode='wrap'), gaussian_filter1d(c[:, 0], 3, mode='wrap')][::4]
+    json.dump(dict(note=f'acrylic outline in src/{fname}, x/y as fractions', points=[[round(x / m.shape[1], 5), round(y / m.shape[0], 5)] for x, y in c]), open(HERE_SRC + out_name, 'w'))
+flat_outline('old-bobo.png', 'old-bobo-outline.json')
+portal_mask('kc-old', 'old-bobo-outline.json')
+# the 3D characters lined up with the print in each photo-based picture (fit_print.py, run by the cut scripts)
+for tname, key, fit_file in (('kc-can', 'can', 'can-photo-fit.json'), ('kc-can-back', 'can', 'can-back-fit.json'), ('kc-bobo', 'bobo', 'bobo-product-fit.json')):
+    f = json.load(open(HERE_SRC + fit_file))
+    LAYOUT[tname]['charms'][key] = dict(x=f['x'], y=f['y'], rz=f['rz'], s=f['s'], mirror=f['mirror'])
+portal_mask('kc-can', 'can-outline.json')
+portal_mask('kc-can-back', 'can-back-outline.json')
+portal_mask('kc-bobo', 'bobo-product-outline.json')
+# ---- the cat charm's other side: the same print seen through the clear acrylic is its mirror image (tail on the
+# left, like the artwork). Its own target, so the cat is found whichever way round the charm hangs, and the 3D
+# Bobo is drawn unmirrored on it (tail on the left with the print). Mirroring the picture mirrors the charm frame:
+# x and rz change sign and the frame's own flip cancels (Dapo, 2026-11-11).
+im = ImageOps.mirror(Image.open(HERE_SRC + 'bobo-product.png').convert('RGB'))
+cb = LAYOUT['kc-bobo']['charms']['bobo']
+write_target('kc-bobo-l', im, dict(widthM=LAYOUT['kc-bobo']['widthM'], heightM=LAYOUT['kc-bobo']['heightM'], silhouettes=True,
+                                   charms={'bobo': dict(x=-cb['x'], y=cb['y'], rz=-cb['rz'], s=cb['s'], mirror=not cb['mirror'])}))
+Image.open(OUT + 'kc-bobo-l_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + 'kc-bobo-l_luminance.jpg', quality=95)
+pts = json.load(open(HERE_SRC + 'bobo-product-outline.json'))['points']
+json.dump(dict(note='kc-bobo-l: the bobo-product outline mirrored', points=[[round(1 - x, 5), y] for x, y in pts]), open(HERE_SRC + 'bobo-product-l-outline.json', 'w'))
+portal_mask('kc-bobo-l', 'bobo-product-l-outline.json')
+# ---- the Roblox Bobo charm's other side, the same way: its print mirrored, the 3D Bobo unmirrored on it
+im = ImageOps.mirror(Image.open(HERE_SRC + 'old-bobo.png').convert('RGB'))
+co = LAYOUT['kc-old']['charms']['bobo']
+write_target('kc-old-l', im, dict(widthM=LAYOUT['kc-old']['widthM'], heightM=LAYOUT['kc-old']['heightM'], silhouettes=True,
+                                  charms={'bobo': dict(x=-co['x'], y=co['y'], rz=-co['rz'], s=co.get('s', 1), mirror=not co.get('mirror', False))}))
+Image.open(OUT + 'kc-old-l_luminance.jpg').filter(ImageFilter.UnsharpMask(radius=2, percent=90, threshold=2)).save(OUT + 'kc-old-l_luminance.jpg', quality=95)
+pts = json.load(open(HERE_SRC + 'old-bobo-outline.json'))['points']
+json.dump(dict(note='kc-old-l: the old-bobo outline mirrored', points=[[round(1 - x, 5), y] for x, y in pts]), open(HERE_SRC + 'old-bobo-l-outline.json', 'w'))
+portal_mask('kc-old-l', 'old-bobo-l-outline.json')
+
+# ---- side probes: for a charm with a picture of each side (the print seen from the front or through the
+# acrylic, so one is the other's mirror image), both pictures often lock onto the same charm. The page then
+# looks at the camera image under a picture's pose and asks whether it matches that picture better than the
+# picture mirrored about the character's own middle (`axis`, where the face is symmetric). probe.json: each
+# picture's brightness, heavily blurred, on a coarse grid (big shapes like the tail survive a pose that is a
+# little off; fine detail would not).
+def probe(tname, cols=12, rows=16):
+    import numpy as np
+    L = Image.open(OUT + f'{tname}_luminance.jpg').convert('L')
+    lum = np.asarray(L.filter(ImageFilter.GaussianBlur(8)).resize((cols, rows), Image.BOX)).astype(int)
+    band = np.asarray(L.resize((240, 320), Image.BOX)).astype(float)[38:144]     # the head rows: the most symmetric part
+    best = (-2, 0.5); xs = np.arange(240)
+    for a in np.arange(0.3, 0.7, 0.0025):
+        xm = np.round(2 * a * 240 - xs - 1).astype(int); ok = (xm >= 0) & (xm < 240)
+        if ok.sum() < 120: continue
+        c = np.corrcoef(band[:, ok].ravel(), band[:, xm[ok]].ravel())[0, 1]
+        if c > best[0]: best = (c, a)
+    return dict(cols=cols, rows=rows, axis=round(float(best[1]), 4), lum=lum.flatten().tolist())
+PROBES = {t: probe(t) for t in ('kc-bobo', 'kc-bobo-l', 'kc-old', 'kc-old-l')}
+json.dump(PROBES, open(OUT + 'probe.json', 'w'), separators=(',', ':'))
+json.dump(dict(targets=LAYOUT), open(OUT + 'layout.json', 'w'), indent=2)
+print(open(OUT + 'layout.json').read())

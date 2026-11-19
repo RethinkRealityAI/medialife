@@ -151,10 +151,7 @@ function Hero({ ws, name }: { ws: Workspace; name: string }) {
         aria-hidden
         className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(8_10_24/0.55)_0%,rgb(8_10_24/0.92)_70%)] @4xl/inset:bg-[linear-gradient(90deg,rgb(8_10_24/0.96)_0%,rgb(8_10_24/0.8)_45%,rgb(8_10_24/0.15)_100%)]"
       />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-[var(--partner)] to-transparent"
-      />
+      <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-px bg-[var(--partner)]/50" />
       <div className="grid gap-5 p-5 sm:p-7 @4xl/inset:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] @4xl/inset:items-end">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -353,7 +350,7 @@ function Kpis({ ws }: { ws: Workspace }) {
                     <span className="w-16 truncate">{p.name}</span>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                       <span
-                        className="block h-full rounded-full bg-gradient-to-r from-[#f472b6] to-[var(--partner)]"
+                        className="block h-full rounded-full bg-[var(--partner)]"
                         style={{ width: `${(p.scans / scanMax) * 100}%` }}
                       />
                     </span>
@@ -502,9 +499,9 @@ function QuickActions({ ws }: { ws: Workspace }) {
    --------------------------------------------------------------------------- */
 
 const PHASE_LOOK: Record<PhaseId, { icon: LucideIcon; tone: Tone; bar: string }> = {
-  design: { icon: Palette, tone: "violet", bar: "from-[#a78bfa] to-[var(--partner)]" },
-  making: { icon: Factory, tone: "blue", bar: "from-[#6f86d6] to-[var(--partner)]" },
-  live: { icon: Store, tone: "mint", bar: "from-emerald-500 to-emerald-300" },
+  design: { icon: Palette, tone: "violet", bar: "bg-[#a78bfa]" },
+  making: { icon: Factory, tone: "blue", bar: "bg-[#6f86d6]" },
+  live: { icon: Store, tone: "mint", bar: "bg-emerald-400" },
 };
 
 function PipelineCard({ ws, className }: { ws: Workspace; className?: string }) {
@@ -552,7 +549,7 @@ function PipelineCard({ ws, className }: { ws: Workspace; className?: string }) 
                       className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.06]"
                     >
                       <span
-                        className={cn("block h-full rounded-full bg-gradient-to-r", look.bar)}
+                        className={cn("block h-full rounded-full", look.bar)}
                         style={{ width: `${(n / max) * 100}%` }}
                       />
                     </span>

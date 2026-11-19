@@ -1,0 +1,3239 @@
+/**
+ * The studio screen.
+ *
+ * Full-bleed 3D stage under a chosen atmosphere (a flat pattern backdrop or a flat
+ * colour), with the controls on floating glass furniture that never boxes the
+ * object in. Two furniture sets share one component:
+ *
+ *   - Wide displays (`RAILS_QUERY`): collapsible instrument cards either side
+ *     of the stage. Left: the tool in your hand (a live 3D render of the can,
+ *     brush or stencil, size, colours, tool tiles) and the stage (view tiles,
+ *     zoom, orbit). Right: the canvas library and the crew, with the surface
+ *     finish pinned under the list. Save and showcase sit in the header; what
+ *     the pointer does and undo / redo / replay / clear sit in one toolbar
+ *     pill under the model.
+ *   - Everything else: the compact top bar, a left view island and the bottom
+ *     dock, which is what phones and tablets have always had.
+ *
+ * Only the active set is mounted (see `useMediaQuery`), so the stamp tray, the
+ * colour well and every keyboard target exist exactly once.
+ */
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useParams } from 'react-router-dom';
+import { Canvas, useThree } from '@react-three/fiber';
+import { QRCodeSVG } from 'qrcode.react';
+import { motion, AnimatePresence } from 'motion/react';
+import * as THREE from 'three';
+import {
+  Volume2, VolumeX, Download, Trash2, Sparkles, Maximize, Minimize, AlertTriangle,
+  RefreshCw, Wand2, Palette, Eye, Check, Upload, Users, Layers,
+  Copy, ExternalLink, MousePointer, Hand, SprayCan, Brush, Loader2,
+  WifiOff, Undo2, Redo2, History, Video, HelpCircle,
+  Stamp as StampIcon, Clapperboard, Megaphone, X, Orbit, RotateCcw, Box,
+  Square, RectangleHorizontal, ArrowDownToLine,
+} from 'lucide-react';
+
+import { PaintSurface, CANVAS_RES } from '../paint/PaintSurface';
+import { StampBatcher, StampPacket, PaintStamp, packStamps, unpackStamps } from '../paint/stamps';
+import {
+  BUILTIN_STAMPS,
+  StampAsset,
+  StampLibrary,
+  addUpload,
+  createStampApplier,
+  decodeStampImage,
+  loadStampLibrary,
+  markRecent,
+  removeUpload,
+  stampForSymbol,
+  stampFromFile,
+  stampPayload,
+  stampRadiusPx,
+} from '../paint/stampAssets';
+import { StampTray } from '../ui/StampSheet';
+import { pickSurfaceUV, pointerToNdc } from '../scene/stampPlacement';
+import { StudioScene } from '../scene/StudioScene';
+import { ShowcasePanel } from '../showcase/ShowcasePanel';
+import type { ShowcaseHandles } from '../showcase/recorder';
+import { Finish } from '../scene/PaintTarget';
+import { ObjectTrigger, ObjectPickerSheet } from '../ui/ObjectPicker';
+import { GlassPanel, GlassPill, GlassIconButton, Segmented, Sheet } from '../ui/Glass';
+import { WelcomeGuide } from './WelcomeGuide';
+import { ColorWell, PALETTE } from '../ui/ColorWell';
+import { StudioBackdrop } from '../ui/studio/StudioBackdrop';
+import { RailCard } from '../ui/studio/RailCard';
+import { ToolPreview } from '../ui/studio/ToolPreview';
+import { OrbitReadout, ZoomSlider } from '../ui/studio/StageControls';
+import { ObjectRows, CrewRows } from '../ui/studio/RailLists';
+import { useMediaQuery, RAILS_QUERY } from '../ui/studio/useMediaQuery';
+import { AtmospherePicker } from '../ui/studio/AtmospherePicker';
+import { Atmosphere, atmosphereVars, loadAtmosphere, saveAtmosphere } from '../ui/studio/atmospheres';
+import { OBJECT_BY_ID, PAINTABLE_OBJECTS } from '../paint/objectCatalog';
+import { ensureCustomModels } from '../paint/customModels';
+import { prefetchModels } from '../paint/modelRegistry';
+import { AiroConnection, SLOT_COLORS, isRealtimeConfigured } from '../net/realtime';
+import { sounds } from '../utils/audio';
+import { parseUploaded3DModel } from '../utils/model3dLoader';
+import { TargetObjectType, PlayerState, Uploaded3DModelInfo, ImageStampData } from '../types';
+import { getFlags, useFlags } from '../config/flags';
+import { Camera as CameraIcon } from 'lucide-react';
+import { sprayUniforms } from '../paint/sprayModel';
+import { ShareSheet } from '../spray/ShareSheet';
+import { KioskLayer } from '../spray/KioskLayer';
+import { saveCreation, startSet, isKiosk, type SavedCreation } from '../spray/creation';
+import { track } from '../analytics/track';
+import { FeedbackButton } from '../feedback/FeedbackButton';
+import { Sticker, Move3d, Library } from 'lucide-react';
+import { useArrange, type SaveStatus } from '../arrange/useArrange';
+import { useDecals } from '../arrange/useDecals';
+import { StageInteraction, type StageCtl } from '../arrange/StageInteraction';
+import { DecalHandle } from '../arrange/DecalHandle';
+import { DecalTray } from '../arrange/DecalTray';
+import { startCardDrag } from '../arrange/drag';
+import { overStage, rayAt, stage } from '../arrange/stage';
+import { getSceneLayer } from '../paint/sceneItems';
+import { DECAL_BASE, MAX_DECALS, getDecalLayer, type DecalDef } from '../arrange/decals';
+import { addFiles } from '../arrange/assetStore';
+import { POS_LIMIT, SCENE_MAX_ITEMS, clamp as clampNum, defaultItem, itemDims, round as roundTo } from '../arrange/sceneMath';
+import type { Asset } from '../arrange/api';
+
+// Arrange and the asset library load the first time they are opened (staff only; never on the kiosk).
+const AssetsPanel = React.lazy(() => import('../arrange/AssetsPanel'));
+const ArrangePanel = React.lazy(() => import('../arrange/ArrangePanel'));
+
+type StageMode = 'paint' | 'stamp' | 'decal' | 'arrange' | 'orbit';
+/** The right rail on wide displays: wider than the left, for the asset grid. */
+const RIGHT_RAIL = 'clamp(320px, 28vw, 392px)';
+
+/** Arrange mode's save state, next to the mode switch. */
+const SaveBadge: React.FC<{ status: SaveStatus; error: string | null; onRetry: () => void }> = ({ status, error, onRetry }) => {
+  if (status === 'idle') return <span className="mono-caps px-2 text-[8.5px] text-white/45">All saved</span>;
+  if (status === 'error')
+    return (
+      <button
+        type="button"
+        onClick={onRetry}
+        title={error ?? undefined}
+        className="tap flex items-center gap-1.5 rounded-full bg-[#ff3b4e] px-3 min-h-[34px] text-[11px] font-semibold text-white"
+      >
+        <AlertTriangle size={12} /> Couldn’t save, retry
+      </button>
+    );
+  return (
+    <span role="status" className="flex items-center gap-1.5 px-2 text-[11px] font-medium text-white/75 whitespace-nowrap">
+      {status === 'saved' ? <Check size={12} className="text-[#f6c344]" /> : <Loader2 size={12} className="animate-spin" />}
+      {status === 'saved' ? 'Saved' : 'Saving…'}
+    </span>
+  );
+};
+
+/**
+ * Turns a tap on the stage into a surface UV.
+ *
+ * It lives inside the R3F canvas purely to reach the default camera and the
+ * scene graph; the ray maths and the "which meshes are paintable" question are
+ * both answered by `scene/stampPlacement`. A drag is never a placement — the
+ * same left button still orbits the camera in stamp mode, so only a press that
+ * neither travels nor lingers counts as a tap.
+ */
+function StampPlacer({
+  armedRef,
+  onPlace,
+  pickCentreRef,
+}: {
+  armedRef: React.MutableRefObject<boolean>;
+  onPlace: (u: number, v: number) => void;
+  /**
+   * Filled in with a "where is the model right now" probe, so code outside the
+   * canvas — the AI copilot — can place a stamp somewhere the viewer can
+   * actually see rather than at a fixed UV.
+   */
+  pickCentreRef: React.MutableRefObject<(() => { u: number; v: number } | null) | null>;
+}) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const camera = useThree((state) => state.camera);
+
+  const onPlaceRef = useRef(onPlace);
+  onPlaceRef.current = onPlace;
+  const cameraRef = useRef(camera);
+  cameraRef.current = camera;
+
+  // The UV under the middle of the frame. A generated model's atlas scatters
+  // its charts, so a hard-coded UV lands wherever that chart happens to be —
+  // often on a face nobody is looking at. Rays from the centre outwards find a
+  // spot that is genuinely on screen.
+  useEffect(() => {
+    pickCentreRef.current = () => {
+      const offsets: [number, number][] = [
+        [0, 0],
+        [0, 0.18],
+        [0, -0.18],
+        [0.22, 0],
+        [-0.22, 0],
+        [0.26, 0.2],
+        [-0.26, -0.2],
+      ];
+      for (const [x, y] of offsets) {
+        const hit = pickSurfaceUV(scene, cameraRef.current, x, y);
+        if (hit) return { u: hit.u, v: hit.v };
+      }
+      return null;
+    };
+    return () => {
+      pickCentreRef.current = null;
+    };
+  }, [scene, pickCentreRef]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const press = { x: 0, y: 0, at: 0, id: -1, live: false };
+
+    const onDown = (event: PointerEvent) => {
+      press.live = armedRef.current && event.button === 0;
+      if (!press.live) return;
+      press.x = event.clientX;
+      press.y = event.clientY;
+      press.at = performance.now();
+      press.id = event.pointerId;
+    };
+
+    const onUp = (event: PointerEvent) => {
+      if (!press.live || event.pointerId !== press.id) return;
+      press.live = false;
+      if (!armedRef.current) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 8) return;
+      if (performance.now() - press.at > 700) return;
+      const ndc = pointerToNdc(canvas, event.clientX, event.clientY);
+      const hit = pickSurfaceUV(scene, cameraRef.current, ndc.x, ndc.y);
+      if (hit) onPlaceRef.current(hit.u, hit.v);
+    };
+
+    const onCancel = () => {
+      press.live = false;
+    };
+
+    canvas.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    return () => {
+      canvas.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+    };
+  }, [gl, scene, armedRef]);
+
+  return null;
+}
+
+/**
+ * The style presets, as art.
+ *
+ * Each one ships a reference plate (`/ui/presets/*.webp`) showing what the
+ * transform actually lays down, so the picker is a row of small paintings
+ * rather than a row of labels. `id` is the wire value the AI endpoint expects
+ * and never changes; the plate filename is deliberately decoupled from it.
+ */
+const STYLE_PRESETS = [
+  {
+    id: 'cyberpunk',
+    name: 'Cyberpunk',
+    art: '/ui/presets/preset-cyberpunk.webp',
+    desc: 'Neon grids and chromatic flare.',
+    accent: '#8cc8f8',
+  },
+  {
+    id: 'wildstyle80s',
+    name: 'Wildstyle 84',
+    art: '/ui/presets/preset-wildstyle.webp',
+    desc: 'Fat caps and gravity drips.',
+    accent: '#F6C344',
+  },
+  {
+    id: 'banksy',
+    name: 'Stencil',
+    art: '/ui/presets/preset-stencil.webp',
+    desc: 'Monochrome wash, one red accent.',
+    accent: '#E4E4E7',
+  },
+  {
+    id: 'popart',
+    name: 'Pop Art',
+    art: '/ui/presets/preset-popart.webp',
+    desc: 'Ben-Day dots, primary bursts.',
+    accent: '#f08a3c',
+  },
+  {
+    id: 'cosmic',
+    name: 'Cosmic',
+    art: '/ui/presets/preset-cosmic.webp',
+    desc: 'Nebula haze and stardust.',
+    accent: '#9b7bea',
+  },
+];
+
+/** Where an AI-suggested stencil lands: centred, a little above the equator. */
+const AI_STAMP_UV = { u: 0.5, v: 0.35 };
+
+/** House ink for the copilot's paint-stroke buttons. */
+const AI_PAINT = '#e85bd8';
+
+/** Hex colours an AI answer offered, cleaned up for use as swatches. */
+function paletteOf(...values: unknown[]): string[] {
+  const flat = values.flatMap((value) => (Array.isArray(value) ? value : [value]));
+  const seen = new Set<string>();
+  return flat.filter(
+    (value): value is string =>
+      typeof value === 'string' &&
+      /^#[0-9a-f]{6}$/i.test(value.trim()) &&
+      !seen.has(value.toUpperCase()) &&
+      Boolean(seen.add(value.toUpperCase()))
+  );
+}
+
+/* ------------------------------------------------------------------
+   AI copilot presentation
+   ------------------------------------------------------------------ */
+
+/** One style preset, presented as a small painting with its own accent edge. */
+const PresetCard: React.FC<{
+  preset: (typeof STYLE_PRESETS)[number];
+  selected: boolean;
+  onSelect: () => void;
+}> = ({ preset, selected, onSelect }) => (
+  <button
+    type="button"
+    onClick={onSelect}
+    aria-pressed={selected}
+    className={`tap group relative flex flex-col overflow-hidden rounded-2xl border text-left transition-colors ${
+      selected ? 'border-white/40 bg-white/[0.12]' : 'border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'
+    }`}
+  >
+    <div className="relative h-[86px] shrink-0 overflow-hidden">
+      <img
+        src={preset.art}
+        alt=""
+        draggable={false}
+        className={`h-full w-full scale-[1.08] object-cover transition-transform duration-300 group-hover:scale-[1.14] ${
+          selected ? '' : 'opacity-80 saturate-[0.85]'
+        }`}
+      />
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{ background: 'rgba(15,21,25,0.35)' }}
+      />
+      {selected && (
+        <span
+          className="absolute right-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full"
+          style={{ background: preset.accent, boxShadow: `0 4px 14px -2px ${preset.accent}` }}
+        >
+          <Check size={11} className="text-black/80" />
+        </span>
+      )}
+    </div>
+    {/* The accent edge: a painted rule the width of the card. */}
+    <span
+      aria-hidden
+      className="block h-[2.5px] w-full transition-opacity"
+      style={{ background: preset.accent, opacity: selected ? 1 : 0.42 }}
+    />
+    <div className="px-2.5 pb-2.5 pt-2">
+      <div className="truncate text-[11.5px] font-bold tracking-tight text-white">{preset.name}</div>
+      <p className="mt-0.5 text-[9.5px] leading-snug text-white/45">{preset.desc}</p>
+    </div>
+  </button>
+);
+
+/** Colours an answer proposed, as a row of paint swatches. */
+const PaletteRow: React.FC<{
+  colors: string[];
+  active?: string;
+  onPick?: (hex: string) => void;
+}> = ({ colors, active, onPick }) =>
+  colors.length === 0 ? null : (
+    <div className="flex items-center gap-1.5">
+      {colors.map((hex) => {
+        const selected = active?.toUpperCase() === hex.toUpperCase();
+        return onPick ? (
+          <button
+            key={hex}
+            type="button"
+            onClick={() => onPick(hex)}
+            title={hex}
+            aria-label={`Use ${hex}`}
+            aria-pressed={selected}
+            className={`tap h-6 w-6 rounded-full border transition-transform ${
+              selected ? 'border-white/80 scale-110' : 'border-white/20 hover:border-white/50'
+            }`}
+            style={{ background: hex, boxShadow: selected ? `0 4px 14px -3px ${hex}` : undefined }}
+          />
+        ) : (
+          <span
+            key={hex}
+            title={hex}
+            className="h-5 w-5 rounded-full border border-white/20"
+            style={{ background: hex }}
+          />
+        );
+      })}
+    </div>
+  );
+
+/** The copilot's failure state — one quiet line, never a red wall. */
+const ResultNote: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="mt-3.5 flex items-start gap-2 rounded-2xl border border-amber-400/25 bg-amber-400/[0.07] px-3.5 py-3 text-[11px] text-amber-200/90">
+    <AlertTriangle size={13} className="mt-px shrink-0" />
+    <span>{children}</span>
+  </div>
+);
+
+/** The stencil an answer suggested, drawn as the stamp it will actually place. */
+const StencilPreview: React.FC<{ asset: StampAsset; tint: string; size?: number }> = ({
+  asset,
+  tint,
+  size = 60,
+}) => (
+  <span
+    className="glass relative grid shrink-0 place-items-center rounded-2xl"
+    style={{ width: size, height: size }}
+  >
+    <span
+      aria-hidden
+      className="block h-[64%] w-[64%]"
+      style={{
+        background: tint,
+        WebkitMaskImage: `url(${asset.src})`,
+        maskImage: `url(${asset.src})`,
+        WebkitMaskSize: 'contain',
+        maskSize: 'contain',
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        filter: `drop-shadow(0 3px 10px ${tint}80)`,
+      }}
+    />
+  </span>
+);
+
+/** The swatches on the spray-can card. The full palette lives in the well. */
+const QUICK_COLORS = ['EVADE yellow', 'Bobo blue', 'Sky', 'Magenta', 'Red', 'Green']
+  .map((name) => PALETTE.find((swatch) => swatch.name === name)?.hex)
+  .filter((hex): hex is string => Boolean(hex));
+
+/** Camera presets shared by the rail card and the compact view island. */
+const VIEW_PRESETS = [
+  { label: 'Front', az: 0, pol: Math.PI / 2, icon: Square },
+  { label: '3/4', az: 0.7, pol: Math.PI / 2.25, icon: Box },
+  { label: 'Side', az: Math.PI / 2, pol: Math.PI / 2, icon: RectangleHorizontal },
+  { label: 'Top', az: 0, pol: 0.32, icon: ArrowDownToLine },
+];
+
+type ConnectionState = 'connecting' | 'connected' | 'reconnecting' | 'offline';
+
+/** Built-in canvases, for the library card's badge. */
+const OBJECT_COUNT = PAINTABLE_OBJECTS.filter((object) => object.id !== 'custom3d').length;
+
+/** Coloured dot for the status pill: green and pulsing while the room is live. */
+const StatusDot: React.FC<{ connection: ConnectionState }> = ({ connection }) =>
+  connection === 'connected' ? (
+    <span className="studio-pulse h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+  ) : connection === 'reconnecting' ? (
+    <RefreshCw size={11} className="shrink-0 animate-spin text-amber-400" />
+  ) : connection === 'connecting' ? (
+    <Loader2 size={11} className="shrink-0 animate-spin text-white/70" />
+  ) : (
+    <WifiOff size={11} className="shrink-0 text-[#f6c344]" />
+  );
+
+const HOST_ID = 'host-local';
+
+/**
+ * Ceiling on players minted from traffic alone. Presence caps the real room at
+ * MAX_PLAYERS; this only stops a peer that spams fresh ids from growing the
+ * roster without bound, so it sits above the roster size rather than at it.
+ */
+const MAX_REMOTE_PLAYERS = 8;
+/**
+ * How long a player minted from traffic outlives a roster that has not caught
+ * up with them. Long enough to cover a presence re-track after a drop, short
+ * enough that someone who genuinely left gives their slot colour back.
+ */
+const PROVISIONAL_GRACE_MS = 15000;
+
+function makeHost(color: string): PlayerState {
+  return {
+    id: HOST_ID,
+    slot: 0,
+    name: 'Studio',
+    color,
+    tool: 'spray',
+    isPainting: false,
+    cursorPx: { x: CANVAS_RES / 2, y: CANVAS_RES / 2 },
+    worldPos: [0, 0, 6],
+    pressure: 1,
+    sizeMultiplier: 1,
+    lastActive: Date.now(),
+    mode: 'motion',
+    isHost: true,
+  };
+}
+
+export default function CanvasView() {
+  const { roomId } = useParams<{ roomId: string }>();
+
+  /**
+   * What the owner has switched on. The defaults resolve synchronously (see
+   * src/config/flags.ts), so the AI button and the stamp tool are absent on the
+   * first frame rather than appearing and then being taken away.
+   */
+  const flags = useFlags();
+
+  // Guarded on the room it last reported rather than a "first run" flag:
+  // StrictMode mounts effects twice in development, and one arrival is one
+  // arrival.
+  const enteredRoom = useRef<string | null>(null);
+  useEffect(() => {
+    if (enteredRoom.current === (roomId ?? null)) return;
+    enteredRoom.current = roomId ?? null;
+    track('room.enter', { role: 'studio' }, roomId);
+  }, [roomId]);
+
+  const paintSurface = useMemo(() => new PaintSurface(CANVAS_RES), []);
+  const orbitRef = useRef<any>(null);
+
+  const [objectId, setObjectId] = useState<TargetObjectType>(startSet);
+  const objectIdRef = useRef(objectId);
+  useEffect(() => {
+    objectIdRef.current = objectId;
+  }, [objectId]);
+  /**
+   * Guards state responses: a peer that just (re)connected and still sits on
+   * defaults must not answer a state request and downgrade the room. It earns
+   * the right to answer by learning the room (applied state, changed object,
+   * painted) — or by incumbency, 8s connected with nobody contradicting it.
+   */
+  const roomStateKnown = useRef(false);
+  const connectedAt = useRef(Date.now());
+  const canAnswerState = () =>
+    roomStateKnown.current || Date.now() - connectedAt.current > 8000;
+  const [finish, setFinish] = useState<Finish>('primer');
+  // The canvas overlay's outline lines (Spray Bobo's "Outline" switch).
+  const [linesOn, setLinesOn] = useState(true);
+  useEffect(() => {
+    sprayUniforms.linesOn.value = linesOn ? 1 : 0;
+  }, [linesOn]);
+  // Saving: the painting goes to the CMS and comes back with a share link + QR.
+  const [saving, setSaving] = useState(false);
+  const [shared, setShared] = useState<SavedCreation | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [objectLoading, setObjectLoading] = useState(true);
+
+  const [hostTool, setHostTool] = useState<'spray' | 'brush'>('spray');
+  const [hostColor, setHostColor] = useState('#f6c344');
+  const [hostSize, setHostSize] = useState(1);
+  const [stageMode, setStageMode] = useState<StageMode>('paint');
+  // The island entry and the `s` key are gated on the flag, but a flag can flip
+  // off while the tray is already open (the fetch lands ~2s after first paint).
+  // Without this the tray would stay up with no control left to close it.
+  useEffect(() => {
+    if (!flags.ui.stamps && stageMode === 'stamp') setStageMode('paint');
+  }, [flags.ui.stamps, stageMode]);
+
+  /* ------------------------------ stamps ------------------------------ */
+
+  const [stampLibrary, setStampLibrary] = useState<StampLibrary>(() => loadStampLibrary());
+  // Mirrored so the mutating helpers (which also write localStorage) run once
+  // per action rather than once per React updater invocation.
+  const libraryRef = useRef(stampLibrary);
+  const updateLibrary = useCallback((next: (library: StampLibrary) => StampLibrary) => {
+    libraryRef.current = next(libraryRef.current);
+    setStampLibrary(libraryRef.current);
+  }, []);
+
+  const [selectedStamp, setSelectedStamp] = useState<StampAsset | null>(BUILTIN_STAMPS[0]);
+  const [stampRotationDeg, setStampRotationDeg] = useState(0);
+  const [stampRandomise, setStampRandomise] = useState(true);
+  const [stampBusy, setStampBusy] = useState(false);
+  const [stampError, setStampError] = useState<string | null>(null);
+  const stampSeq = useRef(0);
+  /** Set by `StampPlacer`: the UV under the middle of the live frame. */
+  const pickCentreRef = useRef<(() => { u: number; v: number } | null) | null>(null);
+  /** Read by the in-canvas tap listener, which is bound once. */
+  const stampArmed = useRef(false);
+  stampArmed.current = stageMode === 'stamp' && Boolean(selectedStamp);
+
+  /* --------------------------- arrange & decals --------------------------- */
+
+  /** The piece on the stage as the CMS has it (its scene, mask, print size). */
+  const meta = OBJECT_BY_ID.get(objectId)?.paintable;
+  const arrange = useArrange(meta, !objectLoading, stageMode === 'arrange');
+  const decals = useDecals(meta, !objectLoading, stageMode === 'decal');
+  const decalsClearRef = useRef(decals.clear);
+  decalsClearRef.current = decals.clear;
+  /** One short line over the stage ("that piece is full"), gone after a few seconds. */
+  const [stageNotice, setStageNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!stageNotice) return;
+    const t = window.setTimeout(() => setStageNotice(null), 4500);
+    return () => window.clearTimeout(t);
+  }, [stageNotice]);
+  // Arrange is staff only: never on the kiosk.
+  useEffect(() => {
+    if (isKiosk && stageMode === 'arrange') setStageMode('paint');
+  }, [stageMode]);
+  // Leaving Arrange saves at once; Decals face the print; neither spins.
+  const lastMode = useRef<StageMode>(stageMode);
+  useEffect(() => {
+    const prev = lastMode.current;
+    lastMode.current = stageMode;
+    if (prev === stageMode) return;
+    if (prev === 'arrange') void arrange.flush();
+    if (stageMode === 'arrange' || stageMode === 'decal') setAutoRotate(false);
+    if (stageMode === 'decal') {
+      const controls = orbitRef.current;
+      if (controls) {
+        controls.setAzimuthalAngle(0);
+        controls.setPolarAngle(Math.PI / 2);
+        controls.update();
+      }
+    }
+    if (stageMode === 'arrange' && !rails) setAssetsOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stageMode]);
+
+  const [muted, setMuted] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [autoRotate, setAutoRotate] = useState(false);
+  const [connection, setConnection] = useState<ConnectionState>('connecting');
+  /** Wide displays get the floating rails; everything else the dock. */
+  const rails = useMediaQuery(RAILS_QUERY);
+  const [railTab, setRailTab] = useState<'objects' | 'assets' | 'crew'>('objects');
+  /** Compact displays: the Assets / Arrange drawer on the right. */
+  const [assetsOpen, setAssetsOpen] = useState(false);
+  /** The sky behind the stage, and the accent the furniture takes from it. */
+  const [atmosphere, setAtmosphere] = useState<Atmosphere>(() => loadAtmosphere());
+  const changeAtmosphere = (next: Atmosphere) => {
+    setAtmosphere(next);
+    saveAtmosphere(next);
+    track('atmosphere.change', { atmosphere: next.id }, roomId);
+  };
+
+  const [objectSheet, setObjectSheet] = useState(false);
+  /** Players whose gestures are allowed to rotate the studio camera. */
+  const [cameraSyncIds, setCameraSyncIds] = useState<Set<string>>(new Set());
+  const cameraSyncRef = useRef(cameraSyncIds);
+  useEffect(() => {
+    cameraSyncRef.current = cameraSyncIds;
+  }, [cameraSyncIds]);
+  const [inviteSheet, setInviteSheet] = useState(false);
+  // Fresh studio from the landing page: put the invite QR front and centre so
+  // the creator can hand phones in immediately. If the first-run guide is up,
+  // the invite follows it once the guide closes.
+  const location = useLocation();
+  const pendingInvite = useRef<boolean>((location.state as any)?.justCreated === true);
+  // First-run guide: shown once per browser, reopenable from the help button.
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try {
+      return localStorage.getItem('airo:guide:studio') !== '1';
+    } catch {
+      return true;
+    }
+  });
+  const closeGuide = () => {
+    setGuideOpen(false);
+    try {
+      localStorage.setItem('airo:guide:studio', '1');
+    } catch {
+      /* private mode */
+    }
+  };
+  useEffect(() => {
+    if (pendingInvite.current && !guideOpen) {
+      pendingInvite.current = false;
+      setInviteSheet(true);
+      // Consume the navigation state so a refresh doesn't re-open the modal.
+      window.history.replaceState({}, '');
+    }
+  }, [guideOpen]);
+  /**
+   * The owner's banner, dismissed per tab and keyed by its own text: changing
+   * the notice makes it a new notice, so an announcement that matters is not
+   * silenced by someone having waved away the last one.
+   */
+  const [noticeSeen, setNoticeSeen] = useState(() => {
+    try {
+      return sessionStorage.getItem('airo:notice:seen') ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const dismissNotice = () => {
+    setNoticeSeen(flags.notice);
+    try {
+      sessionStorage.setItem('airo:notice:seen', flags.notice);
+    } catch {
+      /* private mode — it will be back on the next load */
+    }
+  };
+
+  const [aiSheet, setAiSheet] = useState(false);
+  const [uploadSheet, setUploadSheet] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // Showcase: cinematic turntable video export of the painted piece.
+  const [showcaseOpen, setShowcaseOpen] = useState(false);
+  const glCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Player roster. A ref mirrors it because the render loop mutates player
+  // transforms every frame and must not trigger React re-renders.
+  const [players, setPlayers] = useState<PlayerState[]>([makeHost('#F6C344')]);
+  const playersRef = useRef<PlayerState[]>(players);
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  /**
+   * Resolves the sender of a packet, minting them if presence has not placed
+   * them on the roster yet.
+   *
+   * Presence and broadcast are separate guarantees: a controller whose
+   * `track` is still retrying — or whose sync simply has not landed here yet —
+   * broadcasts motion, stamps and actions perfectly well. Dropping that
+   * traffic is what produced "I can see them spraying but their remote never
+   * shows up on my screen". The entry is provisional: the presence roster
+   * overwrites the guessed name, colour and slot the moment it arrives.
+   */
+  const ensurePlayer = useCallback(
+    (
+      playerId: unknown,
+      hints?: {
+        name?: unknown;
+        tool?: 'spray' | 'brush';
+        color?: unknown;
+        mode?: 'motion' | 'projection';
+      }
+    ): PlayerState | null => {
+      if (typeof playerId !== 'string' || !playerId || playerId === HOST_ID) return null;
+      const known = playersRef.current.find((p) => p.id === playerId);
+      if (known) return known;
+      const remotes = playersRef.current.filter((p) => !p.isHost);
+      if (remotes.length >= MAX_REMOTE_PLAYERS) return null;
+      const taken = new Set(remotes.map((p) => p.color));
+      const player: PlayerState = {
+        id: playerId,
+        slot: remotes.length + 1,
+        name: typeof hints?.name === 'string' && hints.name ? hints.name : `Player ${remotes.length + 1}`,
+        color:
+          (typeof hints?.color === 'string' && hints.color) ||
+          SLOT_COLORS.find((c) => !taken.has(c)) ||
+          SLOT_COLORS[remotes.length % SLOT_COLORS.length],
+        tool: hints?.tool ?? 'spray',
+        isPainting: false,
+        cursorPx: { x: CANVAS_RES / 2, y: CANVAS_RES / 2 },
+        worldPos: [0, 0, 6],
+        pressure: 1,
+        sizeMultiplier: 1,
+        lastActive: Date.now(),
+        mode: hints?.mode ?? 'motion',
+      };
+      // Written into the ref synchronously, not just queued through setState:
+      // the packet that revealed this player is applied to the returned object
+      // in this same tick, and a motion sample dropped here is a lost frame.
+      playersRef.current = [...playersRef.current, player];
+      setPlayers(playersRef.current);
+      return player;
+    },
+    []
+  );
+
+  const [customGroup, setCustomGroup] = useState<THREE.Group | null>(null);
+  const [customInfo, setCustomInfo] = useState<Uploaded3DModelInfo | null>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const [aiTab, setAiTab] = useState<'style' | 'concept' | 'critique'>('style');
+  const [stylePreset, setStylePreset] = useState('cyberpunk');
+  const [aiPrompt, setAiPrompt] = useState('NEON OVERDRIVE');
+  const [aiBusy, setAiBusy] = useState(false);
+  /**
+   * Colour an AI stencil is stamped in. Seeded from whatever palette the last
+   * answer proposed and overridable by tapping a swatch; null means "whatever
+   * the painter is holding".
+   */
+  const [aiTint, setAiTint] = useState<string | null>(null);
+  const [styleResult, setStyleResult] = useState<any>(null);
+  const [conceptResult, setConceptResult] = useState<any>(null);
+  const [critiqueResult, setCritiqueResult] = useState<any>(null);
+
+  const connectionRef = useRef<AiroConnection | null>(null);
+  const controllerUrl = `${window.location.origin}/spray/join/${roomId}`;
+
+  // Fold admin-uploaded models into the picker once the registry answers.
+  const [, setCatalogTick] = useState(0);
+  useEffect(() => {
+    ensureCustomModels().then((count) => count > 0 && setCatalogTick((t) => t + 1));
+  }, []);
+
+  /**
+   * Rebroadcasts stamps the studio painted (host pointer strokes and the paint
+   * it derives for motion-aiming phones) so controllers' local textures track
+   * the studio's. One batcher per painter identity, keyed with the tool+colour
+   * the batch was painted with.
+   */
+  const stampBatchers = useRef(
+    new Map<string, { batcher: StampBatcher; tool: 'spray' | 'brush'; color: string; strokeId: string }>()
+  );
+  /** One per mount: the first paint this studio put on the model. */
+  const paintedOnce = useRef(false);
+  const broadcastStamps = useCallback(
+    (playerId: string, tool: 'spray' | 'brush', color: string, stamps: PaintStamp[], strokeId: string) => {
+      roomStateKnown.current = true;
+      if (!paintedOnce.current && stamps.length) {
+        paintedOnce.current = true;
+        track('paint.first', { role: 'studio' }, roomId);
+      }
+      let entry = stampBatchers.current.get(playerId);
+      if (!entry || entry.tool !== tool || entry.color !== color || entry.strokeId !== strokeId) {
+        entry?.batcher.dispose();
+        const batcher = new StampBatcher((batch, state) => {
+          connectionRef.current?.emit('paint-stamps', {
+            playerId,
+            tool,
+            color,
+            state,
+            strokeId,
+            stamps: packStamps(batch),
+          } satisfies StampPacket as unknown as Record<string, unknown>);
+        });
+        entry = { batcher, tool, color, strokeId };
+        stampBatchers.current.set(playerId, entry);
+        entry.batcher.begin();
+      }
+      entry.batcher.push(stamps);
+    },
+    [roomId]
+  );
+  useEffect(
+    () => () => {
+      for (const { batcher } of stampBatchers.current.values()) batcher.dispose();
+    },
+    []
+  );
+
+  /** Applies `image-stamp` broadcasts, decode-serialised so order holds. */
+  const applyImageStamp = useMemo(() => createStampApplier(paintSurface), [paintSurface]);
+
+  /* --------------------------- networking --------------------------- */
+
+  useEffect(() => {
+    if (!roomId) return;
+    if (!isRealtimeConfigured()) {
+      setConnection('offline');
+      return;
+    }
+
+    const conn = new AiroConnection(roomId, {
+      id: HOST_ID,
+      role: 'canvas',
+      name: 'Studio',
+      tool: 'spray',
+      mode: 'motion',
+    }).connect();
+    connectionRef.current = conn;
+
+    conn.on('connection', ({ status }) => {
+      setConnection(
+        status === 'connected'
+          ? 'connected'
+          : status === 'reconnecting'
+            ? 'reconnecting'
+            : status === 'error'
+              ? 'offline'
+              : 'connecting'
+      );
+      if (status === 'connected') {
+        connectedAt.current = Date.now();
+        conn.emit('request-state', { playerId: HOST_ID });
+      }
+    });
+
+    // A peer answered our state request: adopt the room's object and bake
+    // their artwork in as our baseline.
+    conn.on('canvas-state', ({ target, dataUrl, objectType }) => {
+      if (target !== HOST_ID) return;
+      roomStateKnown.current = true;
+      if (objectType && objectType !== objectIdRef.current) {
+        ensureCustomModels().finally(() => setObjectId(objectType));
+      }
+      if (typeof dataUrl === 'string' && dataUrl.length > 100) {
+        const image = new Image();
+        image.onload = () => {
+          paintSurface.setBaseline(image);
+          paintSurface.commit();
+        };
+        image.src = dataUrl;
+      }
+    });
+
+    conn.on('player-list-update', (roster: any[]) => {
+      setPlayers((prev) => {
+        const host = prev.find((p) => p.isHost) ?? makeHost(hostColor);
+        const next: PlayerState[] = [host];
+        for (const entry of roster) {
+          const existing = prev.find((p) => p.id === entry.id);
+          next.push(
+            existing
+              ? {
+                  ...existing,
+                  slot: entry.slot,
+                  name: entry.name,
+                  color: entry.color,
+                  mode: entry.mode,
+                  tool: entry.tool ?? existing.tool,
+                }
+              : {
+                  id: entry.id,
+                  slot: entry.slot,
+                  name: entry.name,
+                  color: entry.color,
+                  tool: entry.tool ?? 'spray',
+                  isPainting: false,
+                  cursorPx: { x: CANVAS_RES / 2, y: CANVAS_RES / 2 },
+                  worldPos: [0, 0, 6],
+                  pressure: 1,
+                  sizeMultiplier: 1,
+                  lastActive: Date.now(),
+                  mode: entry.mode ?? 'motion',
+                }
+          );
+        }
+        // Players minted from traffic survive a roster that has not listed
+        // them yet — evicting someone mid-stroke because their presence record
+        // is a beat behind is the ghost bug all over again. They keep their own
+        // slot number so a badge cannot be claimed twice, and age out through
+        // the roster once they go quiet.
+        const now = Date.now();
+        for (const p of prev) {
+          if (p.isHost || next.some((n) => n.id === p.id)) continue;
+          if (now - p.lastActive < PROVISIONAL_GRACE_MS) next.push({ ...p, slot: next.length });
+        }
+        return next;
+      });
+    });
+
+    // Motion arrives at ~30 Hz. Mutating the ref (rather than setState) keeps
+    // it off the React render path; the scene reads it every frame anyway.
+    conn.on('motion', ({ playerId, x, y }) => {
+      if (typeof x !== 'number') return;
+      const player = playersRef.current.find((p) => p.id === playerId) ?? ensurePlayer(playerId);
+      if (!player) return;
+      player.cursorPx.x = x * CANVAS_RES;
+      player.cursorPx.y = y * CANVAS_RES;
+      // Arrival-stamped for the scene's jitter-buffer interpolation — the
+      // stamp must be taken here, at delivery, not when the frame loop reads.
+      (player.cursorSamples ??= []).push({ x, y, at: performance.now() });
+      if (player.cursorSamples.length > 60) {
+        player.cursorSamples.splice(0, player.cursorSamples.length - 60);
+      }
+      player.lastActive = Date.now();
+    });
+
+    conn.on('action', ({ playerId, action, state, color, size }) => {
+      const player =
+        playersRef.current.find((p) => p.id === playerId) ??
+        ensurePlayer(playerId, { tool: action, color });
+      if (!player) return;
+      const painting = state === 'start';
+      player.tool = action || player.tool;
+      if (color) player.color = color;
+      if (typeof size === 'number') player.sizeMultiplier = size;
+      player.isPainting = painting;
+      player.mode = 'motion';
+      if (painting) {
+        if (player.tool === 'spray') sounds.startSpray(1);
+        else sounds.startBrush();
+      } else {
+        sounds.stopSpray();
+        sounds.stopBrush();
+      }
+      // Mirror into state so the roster badges reflect who is painting.
+      setPlayers((prev) => prev.map((p) => (p.id === playerId ? { ...p, isPainting: painting } : p)));
+    });
+
+    // Phones painting by touch resolve their own surface raycasts and send the
+    // resulting stamps; the studio applies them verbatim so every peer's
+    // texture is identical.
+    conn.on('paint-stamps', (packet: StampPacket) => {
+      const { playerId, tool, color, state, stamps, cursor, point, normal } = packet;
+      const player =
+        playersRef.current.find((p) => p.id === playerId) ??
+        ensurePlayer(playerId, { name: packet.playerName, tool, color, mode: 'projection' });
+      if (player) {
+        player.tool = tool || player.tool;
+        if (color) player.color = color;
+        player.mode = 'projection';
+        player.isPainting = state !== 'end';
+        if (cursor) {
+          player.cursorPx.x = cursor[0] * CANVAS_RES;
+          player.cursorPx.y = cursor[1] * CANVAS_RES;
+        }
+        // Touch-painting phones know their true surface contact; use it to
+        // place their floating tool instead of guessing from a screen ray.
+        if (point) {
+          player.worldPos = point;
+          player.surfacePoint = point;
+          player.surfaceNormal = normal ?? [0, 0, 1];
+        }
+        player.lastActive = Date.now();
+      }
+      if (state === 'start') {
+        if (tool === 'spray') sounds.startSpray(1);
+        else sounds.startBrush();
+      } else if (state === 'end') {
+        sounds.stopSpray();
+        sounds.stopBrush();
+      }
+      if (stamps?.length) {
+        paintSurface.applyStamps(unpackStamps(stamps), tool, color, packet.strokeId);
+        paintSurface.commit();
+      }
+    });
+
+    // A stamp placed anywhere in the room. UV-anchored, so it lands on the
+    // same spot of the model here as it did on the peer that placed it.
+    conn.on('image-stamp', (payload: ImageStampData) => {
+      applyImageStamp(payload);
+      sounds.playClick(1.35);
+    });
+
+    conn.on('redo-stroke', ({ strokeId }) => {
+      if (strokeId && paintSurface.redoStroke(strokeId)) paintSurface.commit();
+    });
+    conn.on('undo-stroke', ({ strokeId }) => {
+      if (strokeId && paintSurface.undoStroke(strokeId)) {
+        paintSurface.commit();
+        sounds.playWhoosh();
+      }
+    });
+
+    // A phone's orbit gesture steers the studio camera — but only for players
+    // the host has toggled on, so ten people can't fight over the view.
+    conn.on('camera-sync', ({ playerId, azimuth, polar, distanceRatio }) => {
+      if (!playerId || !cameraSyncRef.current.has(playerId)) return;
+      const controls = orbitRef.current;
+      if (!controls) return;
+      controls.setAzimuthalAngle(azimuth);
+      controls.setPolarAngle(polar);
+      if (typeof distanceRatio === 'number') {
+        const min = controls.minDistance || 1;
+        const max = controls.maxDistance || min + 1;
+        const dist = min + (max - min) * Math.min(Math.max(distanceRatio, 0), 1);
+        const cam = controls.object as THREE.PerspectiveCamera;
+        const dir = cam.position.clone().sub(controls.target).normalize().multiplyScalar(dist);
+        cam.position.copy(controls.target).add(dir);
+      }
+      controls.update();
+    });
+
+    // Late joiners ask for the artwork as it stands; answer with a downscaled
+    // snapshot they bake in as a baseline. Throttled per requester.
+    const lastStateSend = new Map<string, number>();
+    conn.on('request-state', ({ playerId }) => {
+      if (!playerId) return;
+      const now = Date.now();
+      if (now - (lastStateSend.get(playerId) ?? 0) < 4000) return;
+      lastStateSend.set(playerId, now);
+      if (!canAnswerState()) return;
+      const dataUrl = paintSurface.toSyncDataURL(1024);
+      // The object choice always syncs; the artwork rides along when it is
+      // non-trivial and within the broadcast size budget.
+      const withArt = dataUrl.length >= 2000 && dataUrl.length <= 900000;
+      conn.emit('canvas-state', {
+        target: playerId,
+        objectType: objectIdRef.current,
+        ...(withArt ? { dataUrl } : {}),
+      });
+    });
+
+    conn.on('change-object', ({ objectType }) => {
+      roomStateKnown.current = true;
+      if (objectType) ensureCustomModels().finally(() => setObjectId(objectType));
+    });
+
+    conn.on('settings', ({ playerId, color, tool, size, playerName }) => {
+      ensurePlayer(playerId, { name: playerName, tool, color });
+      setPlayers((prev) =>
+        prev.map((p) =>
+          p.id === playerId
+            ? {
+                ...p,
+                color: color ?? p.color,
+                tool: tool ?? p.tool,
+                sizeMultiplier: size ?? p.sizeMultiplier,
+                name: playerName ?? p.name,
+              }
+            : p
+        )
+      );
+    });
+
+    conn.on('clear-canvas', () => {
+      paintSurface.clear();
+      decalsClearRef.current();
+      sounds.playWhoosh();
+    });
+    conn.on('shake', () => sounds.playCanRattle());
+    // Legacy AI stencil broadcast. Peers on an older build still send a symbol
+    // character; it is resolved to a real stencil and applied through the
+    // image-stamp pipeline, so it lands as a proper undoable stamp rather than
+    // as typeset text in the middle of the texture.
+    conn.on('ai-stamp', ({ stencilSymbol, color, stampId }) => {
+      const asset = stampForSymbol(stencilSymbol);
+      stampPayload(asset)
+        .then((img) =>
+          applyImageStamp({
+            img,
+            u: AI_STAMP_UV.u,
+            v: AI_STAMP_UV.v,
+            radiusPx: stampRadiusPx(1.5),
+            rotation: 0,
+            tint: typeof color === 'string' ? color : '#F6C344',
+            stampId: stampId || `ai#${Math.random().toString(36).slice(2, 9)}`,
+          })
+        )
+        .catch((err) => console.error('[ai-stamp] could not prepare stencil', err));
+      sounds.playWhoosh();
+    });
+
+    // Test hook (only with ?debug in the URL): lets automated verification
+    // drive the remote-player path without a live network.
+    if (new URLSearchParams(window.location.search).has('debug')) {
+      (window as any).__airoSim = (event: string, payload: unknown) =>
+        conn.simulateIncoming(event as any, payload);
+      (window as any).__airoProbe = () =>
+        playersRef.current.map((p) => ({
+          id: p.id,
+          cursor: { ...p.cursorPx },
+          painting: p.isPainting,
+          mode: p.mode,
+          world: [...p.worldPos],
+        }));
+      // The roster as the render loop sees it, so verification can assert that
+      // a peer who is sending traffic actually has a cursor here.
+      (window as any).__airoPlayers = () =>
+        playersRef.current.map((p) => ({
+          id: p.id,
+          isHost: !!p.isHost,
+          isPainting: p.isPainting,
+          x: p.cursorPx.x,
+          y: p.cursorPx.y,
+        }));
+      // Samples the paint layer itself — no camera, no model, no shader — so
+      // stamp/undo assertions can be made on what actually landed.
+      (window as any).__airoPaintProbe = (u: number, v: number) =>
+        paintSurface.samplePaint(u, v);
+    }
+
+    return () => {
+      conn.disconnect();
+      connectionRef.current = null;
+      delete (window as any).__airoSim;
+      delete (window as any).__airoPlayers;
+      delete (window as any).__airoPaintProbe;
+      sounds.stopSpray();
+      sounds.stopBrush();
+    };
+    // hostColor is only read for the initial host record; re-subscribing on
+    // every colour change would tear down the channel mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, paintSurface]);
+
+  /* ------------------------------ effects ------------------------------ */
+
+  useEffect(() => {
+    // Warm the two most likely next objects so switching feels instant.
+    prefetchModels(['tool-spraycan', 'tool-brush'], null);
+  }, []);
+
+  const undoRef = useRef<() => void>(() => {});
+  const redoRef = useRef<() => void>(() => {});
+  /** Arrange / Decals keys (Delete, arrows, Esc); true when the key was theirs. */
+  const stageKeysRef = useRef<(e: KeyboardEvent) => boolean>(() => false);
+
+  useEffect(() => {
+    const onFsChange = () => setFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFsChange);
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      )
+        return;
+      if (stageKeysRef.current(e)) return;
+      const key = e.key.toLowerCase();
+      if (key === 'f') toggleFullscreen();
+      if (key === 'b') setHostTool((t) => (t === 'spray' ? 'brush' : 'spray'));
+      if (key === 'o') setStageMode((m) => (m === 'orbit' ? 'paint' : 'orbit'));
+      // `getFlags()`, not the hook's value: this listener is bound once with
+      // empty deps, so a captured flags object would be the one from mount.
+      if (key === 's' && getFlags().ui.stamps) setStageMode((m) => (m === 'stamp' ? 'paint' : 'stamp'));
+      if (key === 'z' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        if (e.shiftKey) redoRef.current();
+        else undoRef.current();
+      }
+      if (key === 'y' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        redoRef.current();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    else document.exitFullscreen().catch(() => {});
+  };
+
+  const setCameraAngle = (azimuth: number, polar: number) => {
+    const controls = orbitRef.current;
+    if (!controls) return;
+    sounds.playClick(1.2);
+    controls.setAzimuthalAngle(azimuth);
+    controls.setPolarAngle(polar);
+    controls.update();
+  };
+
+  const changeObject = useCallback(
+    (next: TargetObjectType) => {
+      // each piece of merch has its own canvas: a new piece starts clean
+      if (next !== objectIdRef.current) {
+        paintSurface.clear();
+        paintSurface.commit();
+        connectionRef.current?.emit('clear-canvas', {});
+      }
+      setObjectId(next);
+      sounds.playClick(1.3);
+      roomStateKnown.current = true;
+      track('object.change', { objectId: next }, roomId);
+      connectionRef.current?.emit('change-object', { objectType: next });
+    },
+    [roomId]
+  );
+
+  const handleHostColor = (hex: string) => {
+    setHostColor(hex);
+    setPlayers((prev) => prev.map((p) => (p.isHost ? { ...p, color: hex } : p)));
+  };
+
+  const clearCanvas = () => {
+    paintSurface.clear();
+    paintSurface.commit();
+    decals.clear();
+    sounds.playWhoosh();
+    connectionRef.current?.emit('clear-canvas', {});
+  };
+
+  const undoLast = useCallback(() => {
+    const strokeId = paintSurface.lastStrokeId();
+    if (!strokeId) return;
+    paintSurface.undoStroke(strokeId);
+    paintSurface.commit();
+    sounds.playClick(1.1);
+    connectionRef.current?.emit('undo-stroke', { strokeId });
+  }, [paintSurface]);
+
+  const redoLast = useCallback(() => {
+    const strokeId = paintSurface.redoStroke();
+    if (!strokeId) return;
+    paintSurface.commit();
+    sounds.playClick(1.25);
+    connectionRef.current?.emit('redo-stroke', { strokeId });
+  }, [paintSurface]);
+  // Undo / redo follow the mode: the scene in Arrange, the decals in Decals, the paint otherwise.
+  undoRef.current = stageMode === 'arrange' ? arrange.undo : stageMode === 'decal' ? decals.undo : undoLast;
+  redoRef.current = stageMode === 'arrange' ? arrange.redo : stageMode === 'decal' ? decals.redo : redoLast;
+  const undoTitle =
+    stageMode === 'arrange' ? 'Undo (Ctrl+Z)' : stageMode === 'decal' ? 'Undo decal change (Ctrl+Z)' : 'Undo last stroke (Ctrl+Z)';
+  const redoTitle =
+    stageMode === 'arrange' ? 'Redo (Ctrl+Shift+Z)' : stageMode === 'decal' ? 'Redo decal change (Ctrl+Shift+Z)' : 'Redo undone stroke (Ctrl+Shift+Z)';
+
+  stageKeysRef.current = (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return false;
+    const k = e.key;
+    const arrows: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+    if (stageMode === 'arrange' && arrange.selectedItem) {
+      const it = arrange.selectedItem;
+      if (k === 'Delete' || k === 'Backspace') {
+        e.preventDefault();
+        arrange.remove(it.id);
+        return true;
+      }
+      if (k === 'Escape') {
+        arrange.select(null);
+        return true;
+      }
+      const d = arrows[k];
+      if (d) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const pos: [number, number, number] = [
+          clampNum(roundTo(it.pos[0] + d[0] * step, 0.1), -POS_LIMIT, POS_LIMIT),
+          clampNum(roundTo(it.pos[1] + d[1] * step, 0.1), -POS_LIMIT, POS_LIMIT),
+          it.pos[2],
+        ];
+        arrange.update(it.id, { ...it, pos }, `nudge:${it.id}`);
+        return true;
+      }
+    }
+    if (stageMode === 'decal' && decals.selected != null && decals.list[decals.selected]) {
+      const i = decals.selected;
+      const dc = decals.list[i];
+      if (k === 'Delete' || k === 'Backspace') {
+        e.preventDefault();
+        decals.remove(i);
+        return true;
+      }
+      if (k === 'Escape') {
+        decals.select(null);
+        return true;
+      }
+      const d = arrows[k];
+      if (d) {
+        e.preventDefault();
+        const step = e.shiftKey ? 0.02 : 0.005;
+        decals.change(
+          i,
+          {
+            u: Math.round(clampNum(dc.u + d[0] * step, -0.1, 1.1) * 10000) / 10000,
+            v: Math.round(clampNum(dc.v - d[1] * step, -0.1, 1.1) * 10000) / 10000,
+          },
+          `nudge:${i}`,
+        );
+        return true;
+      }
+    }
+    return false;
+  };
+
+  /* ---------------------------- stamp actions ---------------------------- */
+
+  /**
+   * Places any stamp at a surface UV: applied here first so the studio never
+   * waits on the network, then broadcast for every peer. The stamp id doubles
+   * as its stroke id, which is what makes one placement one undoable unit
+   * everywhere in the room.
+   *
+   * Everything that puts a stamp on the model goes through here — the tray, a
+   * tap on the stage, and the AI copilot's suggestions — so all three converge
+   * identically and undo the same way.
+   */
+  const placeStampAsset = async (
+    asset: StampAsset,
+    u: number,
+    v: number,
+    options: { tint?: string; sizeMultiplier?: number; rotation?: number } = {}
+  ): Promise<boolean> => {
+    const rotation =
+      options.rotation ??
+      (stampRandomise ? (Math.random() - 0.5) * 0.36 : (stampRotationDeg * Math.PI) / 180);
+    const tint = asset.tintable ? options.tint || hostColor : null;
+    const radiusPx = stampRadiusPx(options.sizeMultiplier ?? hostSize);
+    const stampId = `${HOST_ID}#stamp${++stampSeq.current}`;
+
+    try {
+      const img = await stampPayload(asset);
+      const image = await decodeStampImage(img);
+      paintSurface.stampImage(image, u, v, radiusPx, rotation, tint, stampId);
+      paintSurface.commit();
+      sounds.playWhoosh();
+      roomStateKnown.current = true;
+      track('stamp.place', { builtin: asset.origin === 'builtin' }, roomId);
+      updateLibrary((library) => markRecent(library, asset.id));
+      connectionRef.current?.emit('image-stamp', {
+        playerId: HOST_ID,
+        stampId,
+        img,
+        u,
+        v,
+        radiusPx,
+        rotation,
+        ...(tint ? { tint } : {}),
+      });
+      return true;
+    } catch (err) {
+      console.error('[stamp] placement failed', err);
+      setStampError('That stamp could not be prepared. Try another one.');
+      return false;
+    }
+  };
+
+  /** A tap on the stage places whatever the tray has selected. */
+  const placeStamp = (u: number, v: number) => {
+    if (selectedStamp) void placeStampAsset(selectedStamp, u, v);
+  };
+
+  const handleStampUpload = async (file: File) => {
+    setStampBusy(true);
+    setStampError(null);
+    try {
+      const asset = await stampFromFile(file);
+      updateLibrary((library) => addUpload(library, asset));
+      setSelectedStamp(asset);
+      sounds.playClick(1.4);
+    } catch (err: any) {
+      setStampError(err?.message || 'Could not use that image as a stamp.');
+    } finally {
+      setStampBusy(false);
+    }
+  };
+
+  const [replaying, setReplaying] = useState(false);
+  const replayArtwork = async () => {
+    if (paintSurface.isReplaying) return;
+    setReplaying(true);
+    sounds.playWhoosh();
+    await paintSurface.replayTimelapse(4200);
+    setReplaying(false);
+  };
+
+  /** The same piece in the real AR page (camera), drafts included: a full test on this device. */
+  const openCameraPreview = () => {
+    const id = OBJECT_BY_ID.get(objectId)?.paintable?.id;
+    if (!id) return;
+    sounds.playClick(1.3);
+    track('camera.preview', { objectId }, roomId);
+    window.open(`/evade/spray-bobo/?set=${encodeURIComponent(id)}&from=studio`, '_blank', 'noopener');
+  };
+
+  const saveSnapshot = async () => {
+    if (saving) return;
+    const meta = OBJECT_BY_ID.get(objectId)?.paintable;
+    if (!meta) return;
+    sounds.playClick(1.6);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const made = await saveCreation(paintSurface.canvas, meta, { primer: finish === 'primer', linesOn, decals: decals.list });
+      track('snapshot.save', { objectId, creation: made.id }, roomId);
+      sounds.playWhoosh();
+      setShared(made);
+    } catch (err: any) {
+      setSaveError(err?.message || 'Could not save. Check the connection and try again.');
+      setTimeout(() => setSaveError(null), 5000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpload = async (file: File) => {
+    setUploadBusy(true);
+    setUploadError(null);
+    try {
+      const result = await parseUploaded3DModel(file, paintSurface.texture);
+      setCustomGroup(result.group);
+      setCustomInfo(result.info);
+      setObjectId('custom3d');
+      sounds.playWhoosh();
+      setUploadSheet(false);
+    } catch (err: any) {
+      setUploadError(err?.message || 'Could not read that model. Try a GLB, GLTF, OBJ or STL file.');
+    } finally {
+      setUploadBusy(false);
+    }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(controllerUrl);
+    setCopied(true);
+    track('invite.copy', undefined, roomId);
+    sounds.playClick(1.5);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  /* -------------------------------- AI -------------------------------- */
+
+  const callAi = async (path: string, body: unknown) => {
+    track('ai.run', { route: path }, roomId);
+    const res = await fetch(`/api/ai/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`AI request failed (${res.status})`);
+    return res.json();
+  };
+
+  const applyStyle = async () => {
+    setAiBusy(true);
+    sounds.playClick(1.4);
+    try {
+      const data = await callAi('transform-style', {
+        preset: stylePreset,
+        objectType: objectId,
+        customPrompt: aiPrompt,
+      });
+      setStyleResult(data);
+      setAiTint(paletteOf(data.accentColor, data.secondaryColor)[0] ?? null);
+      const apply: Record<string, () => void> = {
+        cyberpunk: () => paintSurface.applyCyberpunkStyle(data.accentColor, data.secondaryColor, data.tagText),
+        wildstyle80s: () => paintSurface.applyWildstyleDrips(data.accentColor, data.tagText),
+        banksy: () => paintSurface.applyBanksyFilter(data.accentColor, data.tagText),
+        popart: () => paintSurface.applyPopArtDots(data.accentColor, data.tagText),
+        cosmic: () => paintSurface.applyCosmicNebula(data.accentColor, data.secondaryColor, data.tagText),
+      };
+      apply[stylePreset]?.();
+      paintSurface.commit();
+      sounds.playWhoosh();
+    } catch (err) {
+      console.error(err);
+      setStyleResult({ error: 'The style engine is unavailable right now.' });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const generateConcept = async () => {
+    setAiBusy(true);
+    sounds.playClick(1.3);
+    try {
+      const data = await callAi('graffiti-tag', { prompt: aiPrompt, style: 'wildstyle' });
+      setConceptResult(data);
+      setAiTint(paletteOf(data.recommendedPalette)[0] ?? null);
+    } catch {
+      setConceptResult({ error: 'The concept generator is unavailable right now.' });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const generateCritique = async () => {
+    setAiBusy(true);
+    try {
+      setCritiqueResult(await callAi('critique', { objectType: objectId, dominantColor: hostColor }));
+    } catch {
+      setCritiqueResult({ error: 'The appraisal service is unavailable right now.' });
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  /**
+   * Puts an AI suggestion on the model.
+   *
+   * The old version typed the suggested character into the middle of the
+   * texture at 260px and called it a stencil. It now resolves to one of the
+   * shipped stencils and goes out as a normal `image-stamp`, so the studio,
+   * every phone and the undo stack all agree about what just happened — and it
+   * lands on the face of the model you are currently looking at.
+   */
+  const stampSuggestion = async (symbol: string | undefined, tint: string) => {
+    const spot = pickCentreRef.current?.() ?? AI_STAMP_UV;
+    const placed = await placeStampAsset(stampForSymbol(symbol), spot.u, spot.v, {
+      tint,
+      // Same size a hand-placed stamp gets: the tray's radius is already tuned
+      // to sit inside a single UV chart on these atlased models.
+      sizeMultiplier: hostSize,
+      // A hand-placed stencil is never perfectly square to the object.
+      rotation: (Math.random() - 0.5) * 0.28,
+    });
+    if (placed) setAiSheet(false);
+  };
+
+  /* ----------------------- placing from the panels ----------------------- */
+
+  /** Where an asset dropped at (x, y) on the screen lands: on its own default height above the print. */
+  const assetDrop = (a: Asset, at?: { x: number; y: number }) => {
+    const info = { box: a.dims ? { w: a.dims[0], h: a.dims[1], d: a.dims[2] } : undefined, clips: a.clips };
+    const probe = defaultItem(a.kind, a.file, a.name, arrange.heightMm, { ...info, aspect: a.aspect });
+    const dims = itemDims(probe, info);
+    const layer = getSceneLayer(arrange.pid ?? '');
+    const r = at ? rayAt(at.x, at.y) : null;
+    if (!at || !layer || !r) return { mm: undefined, pos: probe.pos, dims };
+    const hit = r.intersectPlane(layer.planeAt(probe.pos[2]), new THREE.Vector3());
+    if (!hit) return { mm: undefined, pos: probe.pos, dims };
+    const m = layer.toMm(hit);
+    return { mm: [m.x, m.y] as [number, number], pos: [m.x, m.y, probe.pos[2]] as [number, number, number], dims };
+  };
+
+  const fullNotice = () =>
+    setStageNotice(`${meta?.name ?? 'This piece'} already has ${SCENE_MAX_ITEMS} things on it, the most one piece can have. Delete one to add another.`);
+
+  /** A library asset onto this piece (at a drop point, or the middle), then Arrange to adjust it. */
+  const placeAsset = (a: Asset, at?: { x: number; y: number }) => {
+    if (isKiosk || !arrange.pid) return;
+    const item = arrange.add(a, assetDrop(a, at).mm);
+    if (!item) {
+      fullNotice();
+      return;
+    }
+    sounds.playClick(1.3);
+    track('scene.add', { kind: a.kind, how: at ? 'drag' : 'tap' }, roomId);
+    if (stageMode !== 'arrange') setStageMode('arrange');
+  };
+
+  const beginAssetDrag = (e: React.PointerEvent, a: Asset) =>
+    startCardDrag(e, {
+      thumb: a.thumb,
+      label: a.name,
+      overStage,
+      onOver: (at) => {
+        const layer = getSceneLayer(arrange.pid ?? '');
+        if (!layer) return;
+        if (!at) return layer.preview(null);
+        const d = assetDrop(a, at);
+        layer.preview(d.pos, d.dims);
+      },
+      onDrop: (at) => placeAsset(a, at),
+      onTap: () => placeAsset(a),
+    });
+
+  /** A decal onto the painting (at a drop point, or where the AR page would put it), then Decals mode. */
+  const placeDecal = async (d: DecalDef, at?: { x: number; y: number }) => {
+    let uv: [number, number] | undefined;
+    if (at) {
+      const r = rayAt(at.x, at.y);
+      uv = (r && getDecalLayer(decals.pid ?? '')?.uvAt(r)) || undefined;
+    }
+    const ok = await decals.add(d, uv);
+    if (ok !== 'ok') {
+      setStageNotice(
+        ok === 'full'
+          ? `That’s the most decals one painting can have (${MAX_DECALS}). Remove one to add another.`
+          : 'The decals are still loading. Try again in a moment.',
+      );
+      return;
+    }
+    sounds.playClick(1.35);
+    track('decal.add', { decal: d.id, how: at ? 'drag' : 'tap' }, roomId);
+    if (stageMode !== 'decal') setStageMode('decal');
+  };
+
+  const beginDecalDrag = (e: React.PointerEvent, d: DecalDef) =>
+    startCardDrag(e, {
+      thumb: DECAL_BASE + d.file,
+      label: d.name,
+      overStage,
+      onDrop: (at) => void placeDecal(d, at),
+      onTap: () => void placeDecal(d),
+    });
+
+  /** Files from the desktop dropped on the stage: into the library, then onto this piece where they fell. */
+  const dropFilesOnStage = (files: File[], at: { x: number; y: number }) => {
+    if (isKiosk || !files.length) return;
+    if (rails) setRailTab('assets');
+    else setAssetsOpen(true);
+    void addFiles(files).then((added) => added.forEach((a, i) => placeAsset(a, i === 0 ? at : undefined)));
+  };
+
+  const stageCtl = useRef<StageCtl | null>(null);
+  stageCtl.current = { mode: stageMode, arrange, decals, orbit: () => orbitRef.current };
+
+  if (!roomId) {
+    return (
+      <div className="min-h-screen grid place-items-center stage-vignette text-white">
+        <GlassPanel className="p-8 text-center">
+          <p className="text-sm">That studio link is missing a room code.</p>
+        </GlassPanel>
+      </div>
+    );
+  }
+
+  const remotePlayers = players.filter((p) => !p.isHost);
+  const activeObject = OBJECT_BY_ID.get(objectId);
+  const activeLabel =
+    objectId === 'custom3d' ? customInfo?.name || 'Custom model' : activeObject?.label || 'Model';
+  const statusLabel =
+    connection === 'connected'
+      ? remotePlayers.length
+        ? `${remotePlayers.length} phone${remotePlayers.length === 1 ? '' : 's'} live`
+        : 'Live · waiting for phones'
+      : connection === 'reconnecting'
+        ? 'Reconnecting…'
+        : connection === 'connecting'
+          ? 'Connecting…'
+          : 'Solo mode';
+
+  const toggleCameraSync = (playerId: string) => {
+    setCameraSyncIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(playerId)) next.delete(playerId);
+      else next.add(playerId);
+      return next;
+    });
+    sounds.playClick(1.1);
+  };
+
+  /**
+   * The stamp shelf, built once and docked above whichever bottom furniture is
+   * on screen: the mode pill on wide displays, the dock everywhere else.
+   */
+  const stampTray = (
+    <StampTray
+      key="stamp-tray"
+      library={stampLibrary}
+      selectedId={selectedStamp?.id ?? null}
+      color={hostColor}
+      rotationDeg={stampRotationDeg}
+      randomise={stampRandomise}
+      busy={stampBusy}
+      error={stampError}
+      onSelect={(asset) => {
+        setSelectedStamp(asset);
+        setStampError(null);
+        sounds.playClick(1.3);
+      }}
+      onUpload={handleStampUpload}
+      onRemoveUpload={(asset) => {
+        updateLibrary((library) => removeUpload(library, asset.id));
+        if (selectedStamp?.id === asset.id) setSelectedStamp(BUILTIN_STAMPS[0]);
+        sounds.playClick(0.9);
+      }}
+      onRotate={(deg) => setStampRotationDeg(((deg % 360) + 360) % 360)}
+      onToggleRandom={() => setStampRandomise((v) => !v)}
+      onClose={() => setStageMode('paint')}
+    />
+  );
+  /** Wide displays: Arrange's numbers need a little more room than the tool card. */
+  const leftRail = stageMode === 'arrange' ? 304 : 272;
+  /** The decal shelf, docked like the stamp shelf. */
+  const decalTray = (
+    <DecalTray
+      key="decal-tray"
+      decals={decals}
+      bobo={meta?.id === 'bobo'}
+      onPick={(d) => void placeDecal(d)}
+      onDragStart={beginDecalDrag}
+      onDone={() => {
+        decals.select(null);
+        setStageMode('paint');
+        sounds.playClick(1.1);
+      }}
+      notice={null}
+    />
+  );
+  /** What an AI stencil would be stamped in right now. */
+  const activeAiTint = aiTint || hostColor;
+
+  const showcaseHandles: ShowcaseHandles = useMemo(
+    () => ({
+      getCanvas: () => glCanvasRef.current,
+      getOrbit: () => orbitRef.current,
+      roomId: roomId ?? 'studio',
+    }),
+    [roomId]
+  );
+
+  return (
+    <div
+      className="studio-theme h-screen w-screen overflow-hidden text-white relative select-none"
+      style={atmosphereVars(atmosphere) as React.CSSProperties}
+      // files from the desktop dropped on the stage go into the asset library and onto the piece
+      onDragOver={(e) => {
+        if (isKiosk || !e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = e.target === stage.canvas ? 'copy' : 'none';
+      }}
+      onDrop={(e) => {
+        if (isKiosk || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        if (e.target === stage.canvas) dropFilesOnStage(Array.from(e.dataTransfer.files), { x: e.clientX, y: e.clientY });
+      }}
+    >
+      <StudioBackdrop atmosphere={atmosphere} />
+      {/* ---------------------------- 3D stage ---------------------------- */}
+      <Canvas
+        dpr={[1, 2]}
+        // No consumer reads this framebuffer back: Save exports the 2D paint
+        // canvas and the showcase records via captureStream(), so neither
+        // preserveDrawingBuffer nor shadow-map machinery earns its cost here.
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          glCanvasRef.current = gl.domElement;
+        }}
+        className={`absolute inset-0 ${
+          stageMode === 'paint'
+            ? 'cursor-crosshair'
+            : stageMode === 'stamp'
+              ? 'cursor-copy'
+              : stageMode === 'arrange' || stageMode === 'decal'
+                ? 'cursor-pointer'
+                : 'cursor-grab active:cursor-grabbing'
+        }`}
+      >
+        <StampPlacer armedRef={stampArmed} onPlace={placeStamp} pickCentreRef={pickCentreRef} />
+        <StageInteraction ctl={stageCtl} />
+        <Suspense fallback={null}>
+        <StudioScene
+          objectId={objectId}
+          finish={finish}
+          paintSurface={paintSurface}
+          players={players}
+          playersRef={playersRef}
+          orbitRef={orbitRef}
+          autoRotate={autoRotate}
+          customGroup={customGroup}
+          hostPainting={stageMode === 'paint'}
+          hostTool={hostTool}
+          hostColor={hostColor}
+          hostSize={hostSize}
+          onObjectLoadingChange={setObjectLoading}
+          onStampsPainted={broadcastStamps}
+        />
+        </Suspense>
+      </Canvas>
+
+      {/* --------------------------- top command bar --------------------------- */}
+      <AnimatePresence>
+        {!fullscreen && (
+          <motion.header
+            initial={{ y: -70, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -70, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="absolute top-0 inset-x-0 z-30 p-3 md:p-4 flex items-center gap-2 md:gap-3 safe-top"
+          >
+            {/* Brand + live status */}
+            <div className="flex items-center gap-2.5 shrink-0 min-w-0">
+              <div className="w-9 h-9 rounded-[13px] bg-[#f6c344] shadow-[3px_3px_0_#15131a] grid place-items-center shrink-0">
+                <SprayCan size={17} className="text-[#15131a]" />
+              </div>
+              {rails ? (
+                <div className="flex items-center gap-2">
+                  <GlassPill className="!py-1.5 !pl-2.5 !pr-3 !gap-2">
+                    <StatusDot connection={connection} />
+                    <span className="mono-caps text-[9px] text-white/80 whitespace-nowrap">{statusLabel}</span>
+                  </GlassPill>
+                  <AnimatePresence>
+                    {objectLoading && (
+                      <motion.div
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -8 }}
+                        className="glass glass-sheen rounded-full pl-2.5 pr-3 py-1.5 flex items-center gap-2"
+                      >
+                        <Loader2 size={11} className="animate-spin text-[#f6c344]" />
+                        <span className="mono-caps text-[9px] text-white/70 whitespace-nowrap">
+                          Loading {activeLabel}
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="hidden sm:block leading-none">
+                  <div className="text-[15px] font-bold tracking-tight">Spray Studio</div>
+                  <div className="text-[9px] font-mono text-white/40 mt-0.5">ROOM {roomId}</div>
+                </div>
+              )}
+            </div>
+
+            {/* Centre: wordmark on wide displays, the object switcher elsewhere. */}
+            <div className="flex-1 flex justify-center min-w-0 overflow-hidden px-1">
+              {rails ? (
+                <div className="text-center leading-none pointer-events-none">
+                  <img src="/brand/evade-logo.webp" alt="EVADE" className="mx-auto h-5 w-auto" />
+                  <div className="mt-1.5 text-[11px] font-bold tracking-[0.42em] pl-[0.42em] text-white/92">SPRAY STUDIO</div>
+                  <div className="mono-caps mt-1.5 text-[8.5px] text-white/40 tracking-[0.3em] pl-[0.3em]">
+                    Room {roomId}
+                  </div>
+                </div>
+              ) : (
+                <ObjectTrigger
+                  objectId={objectId}
+                  customName={customInfo?.name}
+                  onClick={() => {
+                    setObjectSheet(true);
+                    sounds.playClick(1.2);
+                  }}
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {rails && <AtmospherePicker value={atmosphere} onChange={changeAtmosphere} placement="down" />}
+
+              <button
+                onClick={() => {
+                  setInviteSheet(true);
+                  track('invite.open', undefined, roomId);
+                }}
+                className="tap glass glass-sheen splat-btn-2 rounded-full pl-2 pr-3 py-1.5 flex items-center gap-2"
+                style={{ '--paint': 'rgba(246,195,68,0.22)' } as React.CSSProperties}
+                title="Invite players"
+              >
+                <Users size={14} className="text-[#f6c344]" />
+                <div className="flex -space-x-1.5">
+                  {[1, 2, 3, 4].map((slot) => {
+                    const player = remotePlayers.find((p) => p.slot === slot);
+                    const syncOn = player ? cameraSyncIds.has(player.id) : false;
+                    return (
+                      <span
+                        key={slot}
+                        className={`w-4 h-4 rounded-full border-2 ${
+                          syncOn ? 'border-[#f6c344]' : 'border-black/50'
+                        } ${player?.isPainting ? 'airo-breathe' : ''}`}
+                        style={{ background: player ? player.color : 'rgba(255,255,255,0.14)' }}
+                      />
+                    );
+                  })}
+                </div>
+              </button>
+
+              <GlassIconButton
+                onClick={() => {
+                  setGuideOpen(true);
+                  track('guide.open', { role: 'studio' }, roomId);
+                }}
+                title="How it works"
+                size={38}
+              >
+                <HelpCircle size={15} className="text-[#f6c344]" />
+              </GlassIconButton>
+              <span className="hidden md:contents">
+              {flags.ui.aiPanel && (
+                <GlassIconButton
+                  onClick={() => {
+                    setAiSheet(true);
+                    track('ai.open', undefined, roomId);
+                  }}
+                  title="AI copilot"
+                  size={38}
+                >
+                  <Wand2 size={15} className="text-[var(--color-airo-violet)]" />
+                </GlassIconButton>
+              )}
+              <GlassIconButton
+                onClick={() => {
+                  const next = sounds.toggleMute();
+                  setMuted(next);
+                }}
+                title={muted ? 'Unmute' : 'Mute'}
+                size={38}
+              >
+                {muted ? <VolumeX size={15} /> : <Volume2 size={15} className="text-[var(--color-airo-ember)]" />}
+              </GlassIconButton>
+              </span>
+              <span className="hidden sm:contents">
+              <GlassIconButton onClick={toggleFullscreen} title="Fullscreen (F)" size={38}>
+                <Maximize size={15} />
+              </GlassIconButton>
+              </span>
+              {rails && <FeedbackButton variant="inline" roomId={roomId} size={38} />}
+              {rails && (
+                <>
+                  <span className="mx-0.5 h-6 w-px bg-white/15" />
+                  {flags.ui.showcase && (
+                    <GlassIconButton
+                      onClick={() => setShowcaseOpen(true)}
+                      title="Showcase — record a turntable video of your piece"
+                      size={38}
+                    >
+                      <Clapperboard size={15} className="text-white/85" />
+                    </GlassIconButton>
+                  )}
+                  <GlassIconButton
+                    onClick={openCameraPreview}
+                    title="Camera preview: try this piece in AR on this device"
+                    size={38}
+                  >
+                    <CameraIcon size={15} className="text-white/85" />
+                  </GlassIconButton>
+                  <button
+                    onClick={saveSnapshot}
+                    className="tap studio-cta rounded-full pl-3.5 pr-4 py-2.5 text-[11px] font-bold tracking-wide flex items-center gap-1.5"
+                  >
+                    <Download size={14} />
+                    <span>{saving ? 'Saving…' : 'Save & share'}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.header>
+        )}
+      </AnimatePresence>
+
+      {/* --------------------------- owner's notice --------------------------- */}
+      {/* One line, under the top bar, over nothing that matters: the frame is
+          click-through so an announcement can never cost somebody a brush
+          stroke, and only the pill itself takes the pointer. */}
+      <AnimatePresence>
+        {!fullscreen && Boolean(flags.notice) && noticeSeen !== flags.notice && (
+          <motion.div
+            initial={{ y: -16, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -16, opacity: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            className="absolute top-16 inset-x-0 z-30 flex justify-center pointer-events-none"
+          >
+            <GlassPill className="pointer-events-auto max-w-[min(92vw,640px)] pl-3 pr-1.5 py-1.5">
+              <Megaphone size={12} className="shrink-0 text-[var(--color-airo-ember)]" />
+              <span className="min-w-0 truncate text-[11px] font-medium text-white/80">
+                {flags.notice}
+              </span>
+              <button
+                type="button"
+                onClick={dismissNotice}
+                aria-label="Dismiss notice"
+                className="tap grid h-6 w-6 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+              >
+                <X size={12} />
+              </button>
+            </GlassPill>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {fullscreen && (
+        <GlassIconButton
+          onClick={toggleFullscreen}
+          className="absolute top-4 right-4 z-30"
+          title="Exit fullscreen"
+        >
+          <Minimize size={15} />
+        </GlassIconButton>
+      )}
+
+      {/* ============================ wide displays ============================ */}
+      {/* Two floating rails either side of the stage and one toolbar pill under
+          the model. Every card names what it controls — the tool in your hand,
+          the stage the object stands on, the canvas itself — so nothing has to
+          be decoded from an icon. */}
+      {rails && (
+        <AnimatePresence>
+          {!fullscreen && (
+            <React.Fragment key="rails">
+              {/* ------------------------------ left rail ------------------------------ */}
+              <motion.aside
+                initial={{ x: -60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -60, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.05 }}
+                className="absolute left-5 top-[78px] bottom-5 z-30 flex flex-col gap-3 overflow-y-auto no-scrollbar"
+                style={{ width: leftRail }}
+              >
+                {stageMode === 'arrange' ? (
+                  <RailCard title="Arrange" badge={meta?.name} storageKey="arrange">
+                    <Suspense
+                      fallback={
+                        <div className="flex items-center gap-2 text-[12px] text-white/60">
+                          <Loader2 size={13} className="animate-spin" /> Loading
+                        </div>
+                      }
+                    >
+                      <ArrangePanel arrange={arrange} />
+                    </Suspense>
+                  </RailCard>
+                ) : (
+                <RailCard
+                  title={stageMode === 'stamp' ? 'Stencil' : stageMode === 'decal' ? 'Decals' : hostTool === 'brush' ? 'Brush' : 'Spray Can'}
+                  badge={
+                    stageMode === 'stamp'
+                      ? selectedStamp?.label ?? 'Stamp'
+                      : stageMode === 'decal'
+                        ? `${decals.list.length} of ${MAX_DECALS}`
+                        : hostTool === 'brush'
+                          ? 'Soft bristle'
+                          : 'Fat cap'
+                  }
+                  storageKey="tool"
+                >
+                  <ToolPreview
+                    tool={stageMode === 'stamp' ? 'stamp' : hostTool}
+                    color={hostColor}
+                    stamp={selectedStamp}
+                  />
+
+                  {/* Size: one slider, labelled for what it changes. */}
+                  <div className="mt-3.5 flex items-center gap-2">
+                    <span className="mono-caps w-9 shrink-0 text-[8.5px] text-white/45">
+                      {stageMode === 'stamp' ? 'Size' : hostTool === 'brush' ? 'Width' : 'Nozzle'}
+                    </span>
+                    <input
+                      type="range"
+                      min={0.4}
+                      max={2}
+                      step={0.05}
+                      value={hostSize}
+                      onChange={(e) => setHostSize(Number(e.target.value))}
+                      className="airo-slider flex-1 min-w-0"
+                      aria-label="Tool size"
+                    />
+                    <span className="mono-caps w-8 shrink-0 text-right text-[8.5px] tabular-nums text-white/60">
+                      {Math.round(hostSize * 100)}%
+                    </span>
+                  </div>
+
+                  {/* Quick colours plus the full well. */}
+                  <div className="mt-3.5 flex items-center justify-center gap-2">
+                    {QUICK_COLORS.map((hex) => {
+                      const selected = hex.toLowerCase() === hostColor.toLowerCase();
+                      return (
+                        <button
+                          key={hex}
+                          type="button"
+                          onClick={() => {
+                            handleHostColor(hex);
+                            sounds.playClick(1.4);
+                          }}
+                          aria-label={`Paint colour ${hex}`}
+                          aria-pressed={selected}
+                          className={`tap relative grid h-7 w-7 place-items-center rounded-full transition-transform ${
+                            selected ? 'scale-110' : 'hover:scale-105'
+                          }`}
+                          style={{
+                            background: hex,
+                            boxShadow: selected
+                              ? `0 0 0 2px var(--studio-ink), 0 0 0 3.5px rgba(255,255,255,0.9), 0 8px 20px -6px ${hex}`
+                              : `inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 14px -8px ${hex}`,
+                          }}
+                        >
+                          {selected && <span className="h-2 w-2 rounded-full bg-white/90" />}
+                        </button>
+                      );
+                    })}
+                    <ColorWell color={hostColor} onChange={handleHostColor} size={30} />
+                  </div>
+                  <div className="mono-caps mt-2 text-center text-[8.5px] text-white/45">
+                    Paint colour <span className="mx-1 text-white/25">•</span> {hostColor.toUpperCase()}
+                  </div>
+
+                  {/* Tool tiles. */}
+                  <div
+                    className="mt-3.5 grid gap-2.5"
+                    style={{ gridTemplateColumns: `repeat(${flags.ui.stamps ? 4 : 3}, minmax(0, 1fr))` }}
+                  >
+                    {(
+                      [
+                        {
+                          id: 'spray' as const,
+                          label: 'Spray',
+                          icon: <SprayCan size={19} />,
+                          tile: atmosphere.accent,
+                          glow: `${atmosphere.accent}d9`,
+                          title: 'Spray can (B toggles)',
+                        },
+                        {
+                          id: 'brush' as const,
+                          label: 'Brush',
+                          icon: <Brush size={19} />,
+                          tile: atmosphere.accent,
+                          glow: `${atmosphere.hot}d9`,
+                          title: 'Brush (B toggles)',
+                        },
+                        {
+                          id: 'stamp' as const,
+                          label: 'Stamp',
+                          icon: <StampIcon size={19} />,
+                          tile: atmosphere.accent,
+                          glow: `${atmosphere.hot}d9`,
+                          title: 'Place stamps (S)',
+                        },
+                        {
+                          id: 'decal' as const,
+                          label: 'Decals',
+                          icon: <Sticker size={19} />,
+                          tile: atmosphere.accent,
+                          glow: `${atmosphere.hot}d9`,
+                          title: 'Stick on decals',
+                        },
+                      ] as const
+                    )
+                      .filter((tile) => tile.id !== 'stamp' || flags.ui.stamps)
+                      .map((tile) => {
+                        const active =
+                          tile.id === 'stamp' || tile.id === 'decal'
+                            ? stageMode === tile.id
+                            : stageMode !== 'stamp' && stageMode !== 'decal' && hostTool === tile.id;
+                        return (
+                          <button
+                            key={tile.id}
+                            type="button"
+                            title={tile.title}
+                            aria-pressed={active}
+                            onClick={() => {
+                              sounds.playClick(1.2);
+                              if (tile.id === 'stamp' || tile.id === 'decal') {
+                                setStageMode(tile.id);
+                                return;
+                              }
+                              setHostTool(tile.id);
+                              if (stageMode !== 'paint') setStageMode('paint');
+                            }}
+                            className="tap tool-tile"
+                            style={{ '--tile': tile.tile, '--tile-glow': tile.glow } as React.CSSProperties}
+                          >
+                            {tile.icon}
+                            <span>{tile.label}</span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </RailCard>
+                )}
+
+                <RailCard title="Stage" aside={<OrbitReadout orbitRef={orbitRef} />} storageKey="stage">
+                  {/* Where the camera stands. */}
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {VIEW_PRESETS.map((view) => {
+                      const Icon = view.icon;
+                      return (
+                        <button
+                          key={view.label}
+                          type="button"
+                          onClick={() => {
+                            setAutoRotate(false);
+                            setCameraAngle(view.az, view.pol);
+                          }}
+                          title={`${view.label} view`}
+                          className="tap flex flex-col items-center gap-1.5 rounded-2xl border border-white/12 bg-white/[0.05] py-2.5 text-white/70 hover:bg-white/[0.12] hover:text-white"
+                        >
+                          <Icon size={15} />
+                          <span className="mono-caps text-[8px]">{view.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-3">
+                    <ZoomSlider orbitRef={orbitRef} onUserZoom={() => setAutoRotate(false)} />
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoRotate((v) => !v);
+                        sounds.playClick(1.1);
+                      }}
+                      aria-pressed={autoRotate}
+                      title="Slowly spin the stage"
+                      className={`tap flex flex-1 items-center justify-center gap-2 rounded-full border py-2 ${
+                        autoRotate
+                          ? 'border-white/30 bg-[color-mix(in_srgb,var(--studio-accent)_28%,transparent)] text-white'
+                          : 'border-white/12 bg-white/[0.05] text-white/70 hover:bg-white/[0.12] hover:text-white'
+                      }`}
+                    >
+                      <Orbit size={13} className={autoRotate ? 'studio-spin' : ''} />
+                      <span className="mono-caps text-[8.5px]">{autoRotate ? 'Orbiting' : '360° Orbit'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAutoRotate(false);
+                        setCameraAngle(0, Math.PI / 2);
+                      }}
+                      title="Reset the view"
+                      className="tap flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.05] px-3 py-2 text-white/70 hover:bg-white/[0.12] hover:text-white"
+                    >
+                      <RotateCcw size={13} />
+                      <span className="mono-caps text-[8.5px]">Reset</span>
+                    </button>
+                  </div>
+                </RailCard>
+              </motion.aside>
+
+              {/* ------------------------------ right rail ------------------------------ */}
+              <motion.aside
+                initial={{ x: 60, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 60, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.08 }}
+                className="absolute right-5 top-[78px] bottom-5 z-30 flex flex-col gap-3"
+                style={{ width: RIGHT_RAIL }}
+              >
+                <RailCard
+                  title={railTab === 'objects' ? 'Merch' : railTab === 'assets' ? 'Assets' : 'Crew'}
+                  badge={
+                    railTab === 'objects'
+                      ? `${PAINTABLE_OBJECTS.length} pieces`
+                      : railTab === 'assets'
+                        ? `${arrange.items.length}/${SCENE_MAX_ITEMS} on this piece`
+                        : `${remotePlayers.length}/4 phones`
+                  }
+                  grow
+                  storageKey="canvas"
+                  footer={
+                    railTab === 'objects' ? (
+                      <div className="flex flex-wrap items-center gap-2 border-t border-white/10 pt-3">
+                        <span className="mono-caps shrink-0 text-[8.5px] text-white/45">Base</span>
+                        <Segmented
+                          layoutId="rail-finish"
+                          size="sm"
+                          className="flex-1"
+                          value={finish}
+                          onChange={(value) => {
+                            setFinish(value);
+                            sounds.playClick(1.1);
+                          }}
+                          options={[
+                            { value: 'original', label: 'On print', accent: atmosphere.accent },
+                            { value: 'primer', label: 'White base', accent: atmosphere.hot },
+                          ]}
+                        />
+                        <button
+                          type="button"
+                          aria-pressed={linesOn}
+                          onClick={() => {
+                            setLinesOn((v) => !v);
+                            sounds.playClick(1.1);
+                          }}
+                          className={`tap mono-caps shrink-0 rounded-full border px-2.5 py-1.5 text-[8.5px] ${linesOn ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 text-white/45'}`}
+                          title="Show or hide the outline over the paint"
+                        >
+                          Outline
+                        </button>
+                      </div>
+                    ) : undefined
+                  }
+                >
+                  <Segmented<'objects' | 'assets' | 'crew'>
+                    layoutId="rail-tabs"
+                    size="sm"
+                    className="mb-3 shrink-0"
+                    value={railTab}
+                    onChange={(tab) => {
+                      setRailTab(tab);
+                      sounds.playClick(1.1);
+                    }}
+                    options={[
+                      { value: 'objects', label: 'Merch', icon: <Box size={11} />, accent: atmosphere.accent },
+                      ...(isKiosk
+                        ? []
+                        : [{ value: 'assets' as const, label: 'Assets', icon: <Library size={11} />, accent: atmosphere.accent }]),
+                      {
+                        value: 'crew',
+                        label: remotePlayers.length ? `Crew · ${remotePlayers.length}` : 'Crew',
+                        icon: <Users size={11} />,
+                        accent: atmosphere.hot,
+                      },
+                    ]}
+                  />
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar -mx-2 px-2 pb-1">
+                    {railTab === 'objects' ? (
+                      <ObjectRows
+                        objectId={objectId}
+                        loading={objectLoading}
+                        onSelect={changeObject}
+                        onUpload={flags.ui.uploads ? () => setUploadSheet(true) : undefined}
+                        customName={customInfo?.name}
+                      />
+                    ) : railTab === 'assets' && !isKiosk ? (
+                      <Suspense
+                        fallback={
+                          <div className="flex items-center gap-2 text-[12px] text-white/60">
+                            <Loader2 size={13} className="animate-spin" /> Loading your assets
+                          </div>
+                        }
+                      >
+                        <AssetsPanel
+                          sceneCount={arrange.items.length}
+                          pieceName={meta?.name ?? 'This piece'}
+                          decals={decals}
+                          onAdd={(a) => placeAsset(a)}
+                          onDragStart={beginAssetDrag}
+                          onPickDecal={(d) => void placeDecal(d)}
+                          onDecalDragStart={beginDecalDrag}
+                          beforeDelete={arrange.flush}
+                          onDeleted={(a) => arrange.dropFile(a.file)}
+                        />
+                      </Suspense>
+                    ) : (
+                      <CrewRows
+                        players={remotePlayers}
+                        cameraSyncIds={cameraSyncIds}
+                        onToggleCameraSync={toggleCameraSync}
+                        onInvite={() => {
+                          setInviteSheet(true);
+                          track('invite.open', undefined, roomId);
+                        }}
+                        controllerUrl={controllerUrl}
+                        roomId={roomId}
+                        copied={copied}
+                        onCopyLink={copyLink}
+                      />
+                    )}
+                  </div>
+                </RailCard>
+              </motion.aside>
+
+              {/* ------------------------------ toolbar pill ------------------------------ */}
+              {/* What the pointer does on the stage, and what to do about the
+                  last thing it did. */}
+              <motion.div
+                initial={{ y: 60, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 60, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 32, delay: 0.1 }}
+                className="absolute bottom-0 z-30 pb-5 flex flex-col items-center gap-2 pointer-events-none"
+                style={{ left: leftRail + 40, right: `calc(${RIGHT_RAIL} + 40px)` }}
+              >
+                <AnimatePresence>{stageMode === 'stamp' && stampTray}</AnimatePresence>
+                <AnimatePresence>{stageMode === 'decal' && decalTray}</AnimatePresence>
+                <GlassPanel
+                  radius="rounded-full"
+                  className="pointer-events-auto flex items-center gap-1.5 px-1.5 py-1.5"
+                  liquid
+                >
+                  <Segmented<StageMode>
+                    layoutId="stage-mode"
+                    className="!bg-transparent !border-0 !shadow-none !backdrop-blur-none !p-0"
+                    value={stageMode}
+                    onChange={(mode) => {
+                      setStageMode(mode);
+                      sounds.playClick(1.2);
+                    }}
+                    options={[
+                      { value: 'paint', label: 'Paint', icon: <MousePointer size={13} />, accent: atmosphere.deep },
+                      ...(flags.ui.stamps
+                        ? [{ value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: atmosphere.hot }]
+                        : []),
+                      { value: 'decal' as const, label: 'Decals', icon: <Sticker size={13} />, accent: atmosphere.hot },
+                      ...(isKiosk
+                        ? []
+                        : [{ value: 'arrange' as const, label: 'Arrange', icon: <Move3d size={13} />, accent: atmosphere.accent }]),
+                      { value: 'orbit', label: 'Orbit', icon: <Hand size={13} />, accent: '#8cc8f8' },
+                    ]}
+                  />
+                  <span className="mx-0.5 h-5 w-px bg-white/15" />
+                  <GlassIconButton size={34} onClick={() => undoRef.current()} title={undoTitle} className="!shadow-none">
+                    <Undo2 size={14} />
+                  </GlassIconButton>
+                  <GlassIconButton size={34} onClick={() => redoRef.current()} title={redoTitle} className="!shadow-none">
+                    <Redo2 size={14} />
+                  </GlassIconButton>
+                  <span className="mx-0.5 h-5 w-px bg-white/15" />
+                  {stageMode === 'arrange' ? (
+                    <SaveBadge status={arrange.status} error={arrange.error} onRetry={arrange.retry} />
+                  ) : (
+                  <>
+                  <GlassIconButton
+                    size={34}
+                    onClick={replayArtwork}
+                    disabled={replaying}
+                    title="Replay the artwork painting itself"
+                    className="!shadow-none"
+                  >
+                    <History size={14} className={replaying ? 'animate-spin' : ''} />
+                  </GlassIconButton>
+                  <GlassIconButton size={34} onClick={clearCanvas} title="Clear all paint and decals" className="!shadow-none">
+                    <Trash2 size={14} />
+                  </GlassIconButton>
+                  </>
+                  )}
+                </GlassPanel>
+              </motion.div>
+            </React.Fragment>
+          )}
+        </AnimatePresence>
+      )}
+      {/* ============================ compact displays ============================ */}
+      {!rails && (
+        <>
+          {/* --------------------------- left view island --------------------------- */}
+          <AnimatePresence>
+            {!fullscreen && (
+              <motion.div
+                initial={{ x: -80, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -80, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 32, delay: 0.05 }}
+                className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-2"
+              >
+                <GlassPanel radius="rounded-[22px]" className="p-1.5 flex flex-col gap-1">
+                  {VIEW_PRESETS.map((view) => (
+                    <button
+                      key={view.label}
+                      onClick={() => setCameraAngle(view.az, view.pol)}
+                      className="tap w-[52px] py-1.5 rounded-[15px] text-[10px] font-semibold text-white/75 hover:text-white hover:bg-white/12"
+                    >
+                      {view.label}
+                    </button>
+                  ))}
+                  <div className="h-px bg-white/12 mx-2 my-0.5" />
+                  <button
+                    onClick={() => setAutoRotate((v) => !v)}
+                    className={`tap w-[52px] py-1.5 rounded-[15px] grid place-items-center ${
+                      autoRotate ? 'splat-chip text-white' : 'text-white/70 hover:bg-white/12'
+                    }`}
+                    style={autoRotate ? ({ '--paint': '#a855f7' } as React.CSSProperties) : undefined}
+                    title="Auto-rotate"
+                    aria-pressed={autoRotate}
+                  >
+                    <RefreshCw size={14} className={autoRotate ? 'animate-spin' : ''} />
+                  </button>
+                  <div className="grid place-items-center pb-0.5">
+                    <AtmospherePicker value={atmosphere} onChange={changeAtmosphere} placement="right" size={34} />
+                  </div>
+                </GlassPanel>
+
+                {/* The stage-mode island. The active mode wears a spray splat
+                    rather than a solid chip, so the one piece of state on the left
+                    rail matches the dock's paint-stroke toggles. */}
+                <GlassPanel radius="rounded-[22px]" className="p-1.5 flex flex-col gap-1">
+                  {(
+                    [
+                      {
+                        mode: 'paint',
+                        icon: <MousePointer size={14} />,
+                        title: 'Paint with pointer',
+                        paint: '#f6c344',
+                        ink: 'text-white',
+                      },
+                      {
+                        mode: 'stamp',
+                        icon: <StampIcon size={14} />,
+                        title: 'Place stamps (S)',
+                        paint: '#e0409a',
+                        ink: 'text-white',
+                      },
+                      {
+                        mode: 'decal',
+                        icon: <Sticker size={14} />,
+                        title: 'Decals',
+                        paint: '#e0409a',
+                        ink: 'text-white',
+                      },
+                      {
+                        mode: 'arrange',
+                        icon: <Move3d size={14} />,
+                        title: 'Arrange: move things around the print',
+                        paint: '#f6c344',
+                        ink: 'text-black',
+                      },
+                      {
+                        mode: 'orbit',
+                        icon: <Hand size={14} />,
+                        title: 'Orbit camera (O)',
+                        paint: '#8cc8f8',
+                        ink: 'text-black',
+                      },
+                    ] as const
+                  )
+                    .filter((entry) => (entry.mode !== 'stamp' || flags.ui.stamps) && (entry.mode !== 'arrange' || !isKiosk))
+                    .map((entry) => {
+                      const active = stageMode === entry.mode;
+                      return (
+                        <button
+                          key={entry.mode}
+                          aria-label={entry.title}
+                          onClick={() => {
+                            setStageMode(entry.mode);
+                            sounds.playClick(1.2);
+                          }}
+                          className={`tap w-[52px] py-2 rounded-[15px] grid place-items-center ${
+                            active ? `splat-chip ${entry.ink}` : 'text-white/70 hover:bg-white/12'
+                          }`}
+                          style={active ? ({ '--paint': entry.paint } as React.CSSProperties) : undefined}
+                          title={entry.title}
+                          aria-pressed={active}
+                        >
+                          {entry.icon}
+                        </button>
+                      );
+                    })}
+                  {!isKiosk && (
+                    <>
+                      <div className="h-px bg-white/12 mx-2 my-0.5" />
+                      <button
+                        onClick={() => {
+                          setAssetsOpen((v) => !v);
+                          sounds.playClick(1.2);
+                        }}
+                        className={`tap w-[52px] py-2 rounded-[15px] grid place-items-center ${
+                          assetsOpen ? 'bg-white text-[#15131a]' : 'text-white/70 hover:bg-white/12'
+                        }`}
+                        title="Assets"
+                        aria-label="Assets"
+                        aria-pressed={assetsOpen}
+                      >
+                        <Library size={14} />
+                      </button>
+                    </>
+                  )}
+                </GlassPanel>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ------------------------- assets / arrange drawer ------------------------- */}
+          <AnimatePresence>
+            {!fullscreen && !isKiosk && assetsOpen && (
+              <motion.aside
+                key="assets-drawer"
+                initial={{ x: 80, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 80, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+                aria-label={stageMode === 'arrange' ? 'Arrange and assets' : 'Assets'}
+                className="glass-strong absolute right-3 top-[64px] z-30 flex flex-col rounded-[24px] p-3"
+                style={{ width: 'min(360px, calc(100vw - 96px))', bottom: stageMode === 'decal' ? 260 : 150 }}
+              >
+                <div className="mb-2 flex items-center gap-2 shrink-0">
+                  <h2 className="flex-1 text-[15px] font-semibold text-white">{stageMode === 'arrange' ? 'Arrange' : 'Assets'}</h2>
+                  {stageMode === 'arrange' && <SaveBadge status={arrange.status} error={arrange.error} onRetry={arrange.retry} />}
+                  <button
+                    type="button"
+                    onClick={() => setAssetsOpen(false)}
+                    aria-label="Close"
+                    className="tap grid h-9 w-9 place-items-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"
+                  >
+                    <X size={15} />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar -mx-1 px-1">
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center gap-2 text-[12px] text-white/60">
+                        <Loader2 size={13} className="animate-spin" /> Loading
+                      </div>
+                    }
+                  >
+                    {stageMode === 'arrange' && (
+                      <div className="mb-4 border-b border-white/10 pb-4">
+                        <ArrangePanel arrange={arrange} compact />
+                      </div>
+                    )}
+                    {stageMode === 'arrange' && <h3 className="mb-2 text-[12.5px] font-semibold text-white/90">Assets</h3>}
+                    <AssetsPanel
+                      sceneCount={arrange.items.length}
+                      pieceName={meta?.name ?? 'This piece'}
+                      decals={decals}
+                      onAdd={(a) => placeAsset(a)}
+                      onDragStart={beginAssetDrag}
+                      onPickDecal={(d) => void placeDecal(d)}
+                      onDecalDragStart={beginDecalDrag}
+                      beforeDelete={arrange.flush}
+                      onDeleted={(a) => arrange.dropFile(a.file)}
+                    />
+                  </Suspense>
+                </div>
+              </motion.aside>
+            )}
+          </AnimatePresence>
+
+          {/* --------------------------- right feedback rail --------------------------- */}
+          <AnimatePresence>
+            {!fullscreen && !(assetsOpen && !isKiosk) && (
+              <motion.div
+                initial={{ x: 80, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: 80, opacity: 0 }}
+                className="absolute right-3 md:right-4 top-1/2 -translate-y-1/2 z-30"
+              >
+                <FeedbackButton variant="inline" roomId={roomId} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ------------------------------ bottom dock ------------------------------ */}
+          <AnimatePresence>
+            {!fullscreen && (
+              <motion.div
+                initial={{ y: 90, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 90, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 320, damping: 32, delay: 0.08 }}
+                className="absolute bottom-0 inset-x-0 z-30 p-3 md:p-4 flex flex-col items-center gap-2 safe-bottom pointer-events-none"
+              >
+                {/* The stamp shelf docks directly above the bar so it can never
+                    cover it, and stays non-modal so the next tap reaches the
+                    model rather than a backdrop. */}
+                <AnimatePresence>{stageMode === 'stamp' && stampTray}</AnimatePresence>
+                <AnimatePresence>{stageMode === 'decal' && decalTray}</AnimatePresence>
+
+                <GlassPanel className="px-3 py-2.5 flex items-center gap-2 md:gap-3 flex-wrap justify-center w-full md:w-auto max-w-[min(100%,1120px)] pointer-events-auto">
+                  {/* Row 1 on phones: tool + colour. */}
+                  <div className="flex items-center gap-2 w-full md:w-auto md:contents">
+                    <Segmented<'spray' | 'brush' | 'stamp' | 'decal'>
+                      layoutId="host-tool"
+                      paint
+                      className="flex-1 md:flex-none"
+                      value={stageMode === 'stamp' || stageMode === 'decal' ? stageMode : hostTool}
+                      onChange={(value) => {
+                        sounds.playClick(1.2);
+                        if (value === 'stamp' || value === 'decal') {
+                          setStageMode(value);
+                          return;
+                        }
+                        setHostTool(value);
+                        if (stageMode !== 'paint') setStageMode('paint');
+                      }}
+                      options={[
+                        { value: 'spray' as const, label: 'Spray', icon: <SprayCan size={13} />, accent: '#f6c344' },
+                        { value: 'brush' as const, label: 'Brush', icon: <Brush size={13} />, accent: '#8cc8f8' },
+                        { value: 'stamp' as const, label: 'Stamp', icon: <StampIcon size={13} />, accent: '#e85bd8' },
+                        { value: 'decal' as const, label: 'Decals', icon: <Sticker size={13} />, accent: '#e85bd8' },
+                      ].filter((option) => option.value !== 'stamp' || flags.ui.stamps)}
+                    />
+                    <ColorWell color={hostColor} onChange={handleHostColor} />
+                  </div>
+
+                  {/* Row 2 on phones: size + finish. */}
+                  <div className="flex items-center gap-2 w-full md:w-auto md:contents">
+                    <div className="flex items-center gap-2 px-1 md:px-2 flex-1 md:flex-none md:min-w-[130px]">
+                      <span className="mono-caps text-[8.5px] text-white/40 shrink-0">Size</span>
+                      <input
+                        type="range"
+                        min={0.4}
+                        max={2}
+                        step={0.05}
+                        value={hostSize}
+                        onChange={(e) => setHostSize(Number(e.target.value))}
+                        className="airo-slider flex-1"
+                        aria-label="Tool size"
+                      />
+                    </div>
+
+                    <div className="w-px h-7 bg-white/12 hidden md:block" />
+
+                    <Segmented
+                      layoutId="host-finish"
+                      size="sm"
+                      paint
+                      value={finish}
+                      onChange={(value) => {
+                        setFinish(value);
+                        sounds.playClick(1.1);
+                      }}
+                      options={[
+                        { value: 'original', label: 'On print', accent: '#3f9be6' },
+                        { value: 'primer', label: 'White base', accent: '#f6c344' },
+                      ]}
+                    />
+                    <button
+                      type="button"
+                      aria-pressed={linesOn}
+                      onClick={() => {
+                        setLinesOn((v) => !v);
+                        sounds.playClick(1.1);
+                      }}
+                      className={`tap rounded-full border px-3 py-2 text-[11px] font-semibold ${linesOn ? 'border-white/40 bg-white/15 text-white' : 'border-white/15 text-white/45'}`}
+                      title="Show or hide the outline over the paint"
+                    >
+                      Outline
+                    </button>
+                  </div>
+
+                  <div className="w-px h-7 bg-white/12 hidden md:block" />
+
+                  <div className="flex items-center justify-center gap-2 w-full md:w-auto md:contents">
+                    <GlassIconButton onClick={() => undoRef.current()} title={undoTitle} size={38}>
+                      <Undo2 size={15} />
+                    </GlassIconButton>
+                    <GlassIconButton onClick={() => redoRef.current()} title={redoTitle} size={38}>
+                      <Redo2 size={15} />
+                    </GlassIconButton>
+                    <GlassIconButton
+                      onClick={replayArtwork}
+                      title="Replay the artwork painting itself"
+                      size={38}
+                      disabled={replaying}
+                    >
+                      <History size={15} className={replaying ? 'animate-spin text-[#f6c344]' : ''} />
+                    </GlassIconButton>
+                    <GlassIconButton onClick={() => sounds.playCanRattle()} title="Shake can" size={38}>
+                      <Sparkles size={15} className="text-[var(--color-airo-ember)]" />
+                    </GlassIconButton>
+                    <GlassIconButton onClick={clearCanvas} title="Clear paint and decals" size={38}>
+                      <Trash2 size={15} />
+                    </GlassIconButton>
+                    {flags.ui.showcase && (
+                      <GlassIconButton
+                        onClick={() => setShowcaseOpen(true)}
+                        title="Showcase — record a turntable video of your piece"
+                        size={38}
+                      >
+                        <Clapperboard size={15} className="text-[#f6c344]" />
+                      </GlassIconButton>
+                    )}
+                    <GlassIconButton
+                      onClick={openCameraPreview}
+                      title="Camera preview: try this piece in AR on this device"
+                      size={38}
+                    >
+                      <CameraIcon size={15} className="text-white/85" />
+                    </GlassIconButton>
+                    <button
+                      onClick={saveSnapshot}
+                      className="tap studio-cta rounded-full px-4 py-2 text-[11px] font-bold tracking-wide flex items-center gap-1.5"
+                    >
+                      <Download size={14} />
+                      <span>{saving ? 'Saving…' : 'Save & share'}</span>
+                    </button>
+                  </div>
+                </GlassPanel>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* --------------------------- status readouts --------------------------- */}
+          {/* On phones the stamp shelf occupies the space these pills sit in, so
+              they stand down until it closes. */}
+          <div
+            className={`absolute right-3 md:right-4 bottom-48 md:bottom-28 z-20 flex-col items-end gap-2 pointer-events-none ${
+              stageMode === 'stamp' || stageMode === 'decal' ? 'hidden md:flex' : 'flex'
+            }`}
+          >
+            <AnimatePresence>
+              {objectLoading && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  className="glass glass-sheen rounded-full px-3 py-1.5 flex items-center gap-2 text-[10px] font-semibold"
+                >
+                  <Loader2 size={12} className="animate-spin" />
+                  <span>Loading {activeLabel}…</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="glass glass-sheen rounded-full px-3 py-1.5 flex items-center gap-2 text-[10px] font-medium text-white/70">
+              <StatusDot connection={connection} />
+              <span className={connection === 'reconnecting' ? 'text-amber-300' : ''}>{statusLabel}</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* -------------------------------- sheets -------------------------------- */}
+
+      <WelcomeGuide open={guideOpen} onClose={closeGuide} role="studio" assets={!isKiosk} />
+
+      <DecalHandle decals={decals} active={stageMode === 'decal'} />
+      <AnimatePresence>
+        {stageNotice && (
+          <motion.div
+            key="stage-notice"
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="pointer-events-none fixed left-1/2 top-24 z-[60] max-w-[min(92vw,520px)] -translate-x-1/2 rounded-full bg-[#15131a] border border-white/15 px-4 py-2.5 text-center text-[12.5px] font-medium text-white shadow-xl"
+          >
+            {stageNotice}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <ObjectPickerSheet
+        open={objectSheet}
+        onClose={() => setObjectSheet(false)}
+        objectId={objectId}
+        onSelect={changeObject}
+        onUpload={flags.ui.uploads ? () => setUploadSheet(true) : undefined}
+        customName={customInfo?.name}
+      />
+
+      <ShareSheet
+        creation={shared}
+        onClose={() => setShared(null)}
+        onNew={() => {
+          setShared(null);
+          clearCanvas();
+        }}
+      />
+      {saveError && (
+        <div role="alert" className="fixed left-1/2 top-20 z-[80] -translate-x-1/2 rounded-full bg-[#ff3b4e] px-5 py-3 text-sm font-semibold text-white shadow-xl">
+          {saveError}
+        </div>
+      )}
+      {isKiosk && (
+        <KioskLayer
+          busy={!!shared}
+          onReset={() => {
+            setShared(null);
+            clearCanvas();
+          }}
+        />
+      )}
+      <ShowcasePanel
+        open={showcaseOpen && flags.ui.showcase}
+        onClose={() => setShowcaseOpen(false)}
+        handles={showcaseHandles}
+      />
+
+      <Sheet
+        open={inviteSheet}
+        onClose={() => setInviteSheet(false)}
+        centered
+        title="Invite players"
+        subtitle="Up to four phones can join this studio"
+      >
+        <div className="relative mx-auto mb-3 w-fit">
+          <div
+            className="absolute -inset-4 splatter-accent opacity-70 pointer-events-none"
+            style={{ '--paint': '#8cc8f8' } as React.CSSProperties}
+          />
+          <div className="relative bg-white rounded-[26px] p-5 grid place-items-center shadow-[0_28px_90px_-28px_rgba(34,211,238,0.5)]">
+            <QRCodeSVG
+              value={controllerUrl}
+              size={Math.min(258, Math.floor(window.innerWidth * 0.56))}
+            />
+          </div>
+        </div>
+
+        <p className="text-[11.5px] text-white/60 text-center mb-1.5">
+          Scan with a phone camera to turn it into a spray can.
+        </p>
+        <div className="text-center mb-4">
+          <span className="label-caps text-white/40">Room code</span>
+          <div
+            className="paint-title text-3xl font-black tracking-[0.34em] mt-0.5 pl-[0.34em]"
+            aria-label={`Room code ${roomId}`}
+          >
+            {roomId}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          {[1, 2, 3, 4].map((slot) => {
+            const player = remotePlayers.find((p) => p.slot === slot);
+            const syncOn = player ? cameraSyncIds.has(player.id) : false;
+            return (
+              <div
+                key={slot}
+                className={`rounded-2xl px-3 py-2.5 border flex items-center gap-2 text-[11px] ${
+                  player ? 'bg-white/[0.1] border-white/25' : 'bg-white/[0.03] border-dashed border-white/15 text-white/40'
+                }`}
+              >
+                <span
+                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${player ? 'airo-breathe' : ''}`}
+                  style={{ background: player ? player.color : 'rgba(255,255,255,0.2)' }}
+                />
+                <span className="font-semibold truncate flex-1">
+                  {player ? player.name : `Slot ${slot} open`}
+                </span>
+                {player && (
+                  <button
+                    onClick={() => toggleCameraSync(player.id)}
+                    title={
+                      syncOn
+                        ? 'This player is steering the studio camera — click to stop'
+                        : "Let this player's gestures rotate the studio camera"
+                    }
+                    className={`tap shrink-0 rounded-lg px-1.5 py-1 border text-[9px] font-bold flex items-center gap-1 ${
+                      syncOn
+                        ? 'bg-[var(--color-airo-aqua)]/25 border-[var(--color-airo-aqua)]/50 text-[var(--color-airo-aqua)]'
+                        : 'bg-white/[0.06] border-white/15 text-white/50'
+                    }`}
+                  >
+                    <Video size={10} />
+                    CAM
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            readOnly
+            value={controllerUrl}
+            className="flex-1 min-w-0 px-3 py-2.5 rounded-xl bg-black/40 border border-white/12 text-[11px] font-mono text-white/60 truncate"
+          />
+          <button onClick={copyLink} className="tap px-4 rounded-xl bg-white/15 hover:bg-white/25 text-[11px] font-bold flex items-center gap-1.5">
+            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+
+        <button
+          onClick={() => window.open(controllerUrl, '_blank')}
+          className="tap w-full mt-2 py-2.5 rounded-xl bg-white/[0.07] hover:bg-white/[0.13] border border-white/12 text-[11px] font-semibold flex items-center justify-center gap-2"
+        >
+          <ExternalLink size={13} />
+          Open controller in a new tab
+        </button>
+      </Sheet>
+
+      <Sheet
+        open={uploadSheet && flags.ui.uploads}
+        onClose={() => setUploadSheet(false)}
+        centered
+        title="Upload a 3D model"
+        subtitle="GLB, GLTF, OBJ or STL"
+      >
+        <label className="block rounded-2xl border-2 border-dashed border-white/20 hover:border-[var(--color-airo-aqua)]/60 bg-white/[0.03] p-8 text-center cursor-pointer transition-colors">
+          <input
+            type="file"
+            accept=".glb,.gltf,.obj,.stl"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+          />
+          <Upload size={26} className="mx-auto mb-2 text-[var(--color-airo-aqua)]" />
+          <p className="text-[13px] font-semibold">Drop a model here or click to browse</p>
+          <p className="text-[10px] text-white/45 mt-1">
+            We normalise the scale, generate UVs when missing, and wire it to the shared paint layer.
+          </p>
+        </label>
+
+        {uploadBusy && (
+          <div className="mt-3 rounded-xl bg-white/[0.07] border border-white/12 px-3 py-2.5 text-[11px] flex items-center gap-2">
+            <Loader2 size={13} className="animate-spin" />
+            Reading geometry and attaching paint shaders…
+          </div>
+        )}
+        {uploadError && (
+          <div className="mt-3 rounded-xl bg-red-950/50 border border-red-500/30 px-3 py-2.5 text-[11px] text-red-200">
+            {uploadError}
+          </div>
+        )}
+        {customInfo && (
+          <div className="mt-3 rounded-xl bg-white/[0.06] border border-white/12 p-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[12px] font-semibold truncate">{customInfo.name}</span>
+              <span className="text-[9px] font-mono text-white/50">
+                {customInfo.meshCount} meshes · {customInfo.vertexCount.toLocaleString()} verts
+              </span>
+            </div>
+            <p className="text-[10px] text-white/45 flex items-center gap-1.5">
+              <Layers size={10} /> {customInfo.materials.length} materials mapped for painting
+            </p>
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet
+        open={aiSheet && flags.ui.aiPanel}
+        onClose={() => setAiSheet(false)}
+        centered
+        wide
+        title="AI copilot"
+        subtitle="Restyle the piece, sketch a concept, or have it appraised"
+      >
+        <div className="mb-4">
+          <Segmented<'style' | 'concept' | 'critique'>
+            layoutId="ai-tabs"
+            paint
+            value={aiTab}
+            onChange={(next) => {
+              setAiTab(next);
+              sounds.playClick(1.15);
+            }}
+            options={[
+              { value: 'style', label: 'Style', icon: <Palette size={12} />, accent: '#9b7bea' },
+              { value: 'concept', label: 'Concept', icon: <Sparkles size={12} />, accent: '#E879F9' },
+              { value: 'critique', label: 'Appraise', icon: <Eye size={12} />, accent: '#8cc8f8' },
+            ]}
+          />
+        </div>
+
+        {aiTab === 'style' && (
+          <div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3.5">
+              {STYLE_PRESETS.map((preset) => (
+                <PresetCard
+                  key={preset.id}
+                  preset={preset}
+                  selected={stylePreset === preset.id}
+                  onSelect={() => {
+                    setStylePreset(preset.id);
+                    sounds.playClick(1.15);
+                  }}
+                />
+              ))}
+            </div>
+
+            <label className="label-caps mb-1.5 block text-white/35" htmlFor="ai-style-theme">
+              Theme words
+            </label>
+            <input
+              id="ai-style-theme"
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="e.g. TOKYO OVERDRIVE"
+              className="mb-3.5 w-full rounded-xl border border-white/12 bg-black/40 px-3 py-2.5 text-[12px] placeholder-white/25 focus:border-[var(--color-airo-violet)] focus:outline-none"
+            />
+
+            <button
+              onClick={applyStyle}
+              disabled={aiBusy}
+              className="paint-btn paint-cta tap flex w-full items-center justify-center gap-2 px-6 py-3.5 text-[12.5px] font-bold tracking-wide text-white disabled:opacity-50"
+              style={{ '--paint': AI_PAINT } as React.CSSProperties}
+            >
+              {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+              {aiBusy ? 'Styling…' : 'Apply style'}
+            </button>
+
+            {styleResult &&
+              (styleResult.error ? (
+                <ResultNote>{styleResult.error}</ResultNote>
+              ) : (
+                <div className="mt-3.5 rounded-2xl border border-white/12 bg-white/[0.05] p-4">
+                  <div className="label-caps text-white/35">{styleResult.vibe || 'Applied'}</div>
+                  <h3 className="mt-0.5 truncate text-[15px] font-black tracking-tight">
+                    {styleResult.transformedTitle}
+                  </h3>
+                  <p className="mt-1.5 text-[11px] italic leading-relaxed text-white/55">
+                    “{styleResult.curatorNotes}”
+                  </p>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3">
+                    <div className="flex items-center gap-2.5">
+                      <StencilPreview
+                        asset={stampForSymbol(styleResult.stencilSymbol)}
+                        tint={activeAiTint}
+                        size={40}
+                      />
+                      <div>
+                        <div className="label-caps mb-1.5 text-white/30">Palette</div>
+                        <PaletteRow
+                          colors={paletteOf(styleResult.accentColor, styleResult.secondaryColor)}
+                          active={activeAiTint}
+                          onPick={setAiTint}
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => stampSuggestion(styleResult.stencilSymbol, activeAiTint)}
+                      className="tap glass glass-sheen flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10.5px] font-bold text-white/85 hover:text-white"
+                    >
+                      <StampIcon size={12} style={{ color: activeAiTint }} />
+                      Stamp its mark
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {aiTab === 'concept' && (
+          <div>
+            <div className="mb-3.5 flex gap-2">
+              <input
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder="A word to build a piece around, e.g. PHANTOM"
+                className="min-w-0 flex-1 rounded-xl border border-white/12 bg-black/40 px-3 py-2.5 text-[12px] placeholder-white/25 focus:border-[var(--color-airo-violet)] focus:outline-none"
+              />
+              <button
+                onClick={generateConcept}
+                disabled={aiBusy}
+                className="paint-btn paint-btn-2 paint-cta tap flex shrink-0 items-center gap-1.5 px-5 text-[11px] font-bold text-white disabled:opacity-50"
+                style={{ '--paint': AI_PAINT } as React.CSSProperties}
+              >
+                {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                Generate
+              </button>
+            </div>
+
+            {conceptResult &&
+              (conceptResult.error ? (
+                <ResultNote>{conceptResult.error}</ResultNote>
+              ) : (
+                <div
+                  className="splatter-accent relative overflow-hidden rounded-2xl border border-white/12 bg-white/[0.05] p-4"
+                  style={{ '--paint': activeAiTint } as React.CSSProperties}
+                >
+                  <div className="relative z-10 flex items-start gap-3">
+                    <StencilPreview
+                      asset={stampForSymbol(conceptResult.stencilSymbol)}
+                      tint={activeAiTint}
+                      size={64}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="label-caps truncate text-white/35">
+                        {conceptResult.tagLine || conceptResult.title}
+                      </div>
+                      <h3 className="truncate text-[19px] font-black uppercase leading-tight tracking-tight">
+                        {conceptResult.graffitiText}
+                      </h3>
+                      <p className="mt-1 text-[10.5px] italic leading-snug text-white/50">
+                        {conceptResult.styleNotes}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="relative z-10 mt-3.5 border-t border-white/10 pt-3">
+                    <div className="label-caps mb-2 text-white/30">Suggested palette</div>
+                    <PaletteRow
+                      colors={paletteOf(conceptResult.recommendedPalette)}
+                      active={activeAiTint}
+                      onPick={setAiTint}
+                    />
+                  </div>
+
+                  <button
+                    onClick={() => stampSuggestion(conceptResult.stencilSymbol, activeAiTint)}
+                    className="paint-btn paint-cta tap relative z-10 mt-4 flex w-full items-center justify-center gap-2 px-5 py-3 text-[12px] font-bold text-white"
+                    style={
+                      {
+                        '--paint': activeAiTint,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <StampIcon size={14} />
+                    Stamp it on the {activeObject?.label ?? 'object'}
+                  </button>
+                  <p className="relative z-10 mt-2 text-center text-[9.5px] text-white/35">
+                    Placed as a real stencil, shared with every phone, undoable with Ctrl+Z.
+                  </p>
+                </div>
+              ))}
+          </div>
+        )}
+
+        {aiTab === 'critique' && (
+          <div>
+            <p className="mb-3.5 text-[11.5px] leading-relaxed text-white/55">
+              A gallery-style appraisal of the piece currently on the{' '}
+              {activeObject?.label ?? 'object'}.
+            </p>
+            <button
+              onClick={generateCritique}
+              disabled={aiBusy}
+              className="paint-btn paint-cta tap flex w-full items-center justify-center gap-2 px-6 py-3.5 text-[12.5px] font-bold tracking-wide text-white disabled:opacity-50"
+              style={{ '--paint': AI_PAINT } as React.CSSProperties}
+            >
+              {aiBusy ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+              {aiBusy ? 'Appraising…' : 'Appraise artwork'}
+            </button>
+
+            {critiqueResult &&
+              (critiqueResult.error ? (
+                <ResultNote>{critiqueResult.error}</ResultNote>
+              ) : (
+                <div className="mt-3.5 rounded-2xl border border-white/12 bg-white/[0.05] p-4">
+                  <div className="label-caps text-white/35">
+                    {critiqueResult.auctionHouse || 'Curator'}
+                  </div>
+                  <h3 className="mt-0.5 text-[16px] font-black leading-tight tracking-tight">
+                    {critiqueResult.exhibitionTitle}
+                  </h3>
+                  <p className="mt-2.5 text-[11.5px] leading-relaxed text-white/65">
+                    “{critiqueResult.curatorCritique}”
+                  </p>
+                  <div className="mt-3.5 flex items-center justify-between border-t border-white/10 pt-3">
+                    <span className="label-caps text-white/35">Estimate</span>
+                    <span className="font-mono text-[14px] font-bold text-emerald-300">
+                      {critiqueResult.estimatedValue}
+                    </span>
+                  </div>
+                  {Array.isArray(critiqueResult.vibeTags) && critiqueResult.vibeTags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {critiqueResult.vibeTags.map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="glass rounded-full px-2.5 py-1 text-[9.5px] font-semibold text-white/60"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+      </Sheet>
+    </div>
+  );
+}

@@ -123,11 +123,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "preload",
         as: "style",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block",
+        href: "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5,800;62.5,900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block",
       },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block",
+        href: "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5,800;62.5,900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=block",
       },
     ],
   }),
@@ -166,6 +166,8 @@ function RootComponent() {
         p.startsWith("/overlay/") ||
         p.startsWith("/partner-hub") ||
         p.startsWith("/ugc-hub") ||
+        // Giveaway campaign pages are co-branded campaign microsites.
+        p.startsWith("/giveaway") ||
         // Co-branded partner program pages carry both brands, not the site nav.
         p.startsWith("/with/") ||
         (p.startsWith("/creator-hub/") && p !== "/creator-hub/")

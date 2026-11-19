@@ -1,0 +1,91 @@
+{
+ "slug": "sakamoto-days",
+ "title": "Sakamoto Days",
+ "client": "Netflix",
+ "wordmark": "Netflix · Sakamoto Days",
+ "accent": "#efb419",
+ "onAccent": "#111111",
+ "lead": "Point your phone at the Sakamoto standee or the magazine. Tap for a photo, hold for a video.",
+ "hint": "Point at the Sakamoto standee or magazine",
+ "targets": [
+  {
+   "name": "Sakamoto Standee Final",
+   "label": "Sakamoto standee",
+   "what": "Life-size standee",
+   "json": "image-targets/sakamoto-standee-final.json",
+   "picture": "image-targets/sakamoto-standee-final.jpg",
+   "content": [
+    {
+     "type": "image",
+     "src": "/labs/x/media/Sakamoto-Comic-Mask-0a958444.png",
+     "width": 2.16,
+     "height": 1.37,
+     "offset": [
+      0.1,
+      0,
+      -0.01
+     ]
+    },
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Sakamoto-bdb69d78.mp4",
+     "width": 2.16,
+     "height": 1.37,
+     "loop": true,
+     "offset": [
+      0.1,
+      0,
+      0
+     ],
+     "chroma": {
+      "color": "#04972a"
+     },
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "sakamotodays-magazine",
+   "label": "Magazine",
+   "what": "Den of Geek x Sakamoto Days",
+   "json": "image-targets/sakamotodays-magazine.json",
+   "picture": "image-targets/sakamotodays-magazine.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/magazine-anim-f6175008.mp4",
+     "width": 0.75,
+     "height": 1.02,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Watch trailer",
+   "url": "https://www.instagram.com/p/DNnxl9Fu2ms/?igsh=bHl1a2tweWYwMnY3"
+  },
+  {
+   "label": "Win mystery box",
+   "url": "https://www.instagram.com/p/DNnxl9Fu2ms/?igsh=bHl1a2tweWYwMnY3"
+  }
+ ],
+ "capture": {
+  "photo": true,
+  "video": true,
+  "filePrefix": "sakamoto-standee",
+  "watermark": [
+   {
+    "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+    "pos": "bottom",
+    "w": 0.62
+   }
+  ]
+ },
+ "banner": {
+  "src": "/labs/x/media/netflix-now-playing-banner-b3bb39a2.png",
+  "alt": "Now playing on Netflix"
+ }
+}

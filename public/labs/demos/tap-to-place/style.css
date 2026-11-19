@@ -1,0 +1,5 @@
+/* Street Kit: the tray (flat) */
+.tray{display:flex;gap:8px;justify-content:center;padding:8px}
+.kit{flex-direction:column;gap:2px;width:72px;height:80px;min-height:80px;padding:6px 0 4px;border-radius:14px;background:rgba(255,255,255,.06);border:2px solid transparent;font-size:12px;backdrop-filter:none;-webkit-backdrop-filter:none}
+.kit img{width:44px;height:44px;border-radius:10px;object-fit:cover}
+.kit[aria-checked=true]{border-color:var(--x);background:rgba(79,214,232,.16)}

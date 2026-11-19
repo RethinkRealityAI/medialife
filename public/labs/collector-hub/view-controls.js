@@ -7,7 +7,7 @@
 //   → { show(on), el }
 
 const CSS = `
-.mlv{position:fixed;right:max(14px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:2000050;
+.mlv{position:fixed;right:max(14px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:1999800;
   display:flex;flex-direction:column;gap:2px;padding:5px;border-radius:16px;
   background:rgba(12,18,40,.55);border:1px solid rgba(160,200,255,.16);
   backdrop-filter:blur(14px) saturate(1.3);-webkit-backdrop-filter:blur(14px) saturate(1.3);
@@ -20,7 +20,7 @@ const CSS = `
 .mlv button:focus-visible{outline:2px solid #36e3ff;outline-offset:1px}
 .mlv svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .mlv hr{all:unset;display:block;height:1px;margin:3px 8px;background:rgba(160,200,255,.14)}
-.mlv-tip{position:fixed;right:max(70px,calc(env(safe-area-inset-right) + 70px));top:50%;transform:translateY(-50%);z-index:2000050;
+.mlv-tip{position:fixed;right:max(70px,calc(env(safe-area-inset-right) + 70px));top:50%;transform:translateY(-50%);z-index:1999800;
   max-width:220px;padding:10px 12px;border-radius:12px;background:rgba(12,18,40,.82);border:1px solid rgba(160,200,255,.16);
   color:#cfdcf7;font:500 12.5px/1.45 ui-sans-serif,system-ui,sans-serif;pointer-events:none;opacity:0;transition:opacity .3s}
 .mlv-tip.on{opacity:1}

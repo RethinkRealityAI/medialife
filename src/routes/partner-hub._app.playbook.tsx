@@ -214,9 +214,7 @@ function Pitch({ image }: { image: string }) {
           Say it in one line
         </div>
         <p className="mt-3 max-w-md text-2xl leading-snug font-semibold text-balance sm:text-3xl">
-          <span className="bg-gradient-to-r from-white to-[var(--partner)] bg-clip-text text-transparent">
-            {PITCH.oneLine}
-          </span>
+          <span className="text-[var(--partner)]">{PITCH.oneLine}</span>
         </p>
         <div className="mt-6 flex flex-wrap gap-2">
           <CopyButton value={PITCH.oneLine} label="Copy line" variant="default" />
@@ -317,10 +315,7 @@ function Steps({ journeyImage }: { journeyImage?: string }) {
                   className="size-3 shrink-0 rounded-full bg-[var(--partner)] shadow-[0_0_0_4px_color-mix(in_oklab,var(--partner)_20%,transparent)]"
                 />
                 {i < TIMELINE.length - 1 ? (
-                  <span
-                    aria-hidden
-                    className="h-0.5 flex-1 bg-gradient-to-r from-[var(--partner)]/70 to-[var(--partner-2)]/50"
-                  />
+                  <span aria-hidden className="h-0.5 flex-1 bg-[var(--partner)]/60" />
                 ) : null}
               </div>
               <div className="mt-2.5 text-sm font-medium">{t.title}</div>

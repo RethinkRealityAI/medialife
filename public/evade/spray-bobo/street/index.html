@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Spray Bobo</title>
+  <script>
+    // Spray Bobo Street now lives inside Spray Bobo. Old links (?mode=hang|stamp|graffiti) open the same room there.
+    (function () {
+      var q = new URLSearchParams(location.search), m = q.get('mode');
+      var room = ['hang', 'stamp', 'graffiti'].indexOf(m) >= 0 ? m : 'hang';
+      var out = new URLSearchParams({ room: room });
+      ['test', 'diag', 'desktop', 'nolog'].forEach(function (k) { if (q.has(k)) out.set(k, q.get(k)); });
+      location.replace('/evade/spray-bobo/?' + out.toString());
+    })();
+  </script>
+  <meta http-equiv="refresh" content="0;url=/evade/spray-bobo/?room=hang">
+</head>
+<body style="background:#0f1519;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:40px 20px">
+  <p>Spray Bobo Street is now part of <a href="/evade/spray-bobo/?room=hang" style="color:#f6c344">Spray Bobo</a>.</p>
+</body>
+</html>

@@ -23,7 +23,13 @@ import {
 
 const iso = (ms: number) => new Date(ms).toISOString();
 
-const REVIEW_TITLE: Record<string, string> = { "cola-run": "New Cola Run clip" };
+const REVIEW_TITLE: Record<string, string> = {
+  "cola-run": "New Cola Run clip",
+  "keychain-ar": "New keychain AR clip",
+  "spray-bobo": "New Spray Bobo clip",
+  "xray-bobo": "New Bobo X-Ray clip",
+  "eclipse-night": "New Eclipse Night clip",
+};
 
 /** A game clip waiting for review: enough for a pin, nothing that shows the clip. */
 function reviewMedia(a: MediaAsset): FeedMedia {

@@ -1,0 +1,19 @@
+{
+ "name": "Money Trigger",
+ "type": "PLANAR",
+ "properties": {
+  "top": 1,
+  "left": 0,
+  "width": 545,
+  "height": 726,
+  "isRotated": false,
+  "originalWidth": 546,
+  "originalHeight": 728
+ },
+ "imagePath": "/labs/x/dentsu-products/image-targets/money-trigger_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "money-trigger_luminance.jpeg",
+  "originalImage": "money-trigger.jpg"
+ }
+}

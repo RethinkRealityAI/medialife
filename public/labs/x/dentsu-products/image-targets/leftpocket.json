@@ -1,0 +1,19 @@
+{
+ "name": "leftpocket",
+ "type": "PLANAR",
+ "properties": {
+  "top": 43,
+  "left": 499,
+  "width": 969,
+  "height": 1292,
+  "isRotated": false,
+  "originalWidth": 2000,
+  "originalHeight": 1377
+ },
+ "imagePath": "/labs/x/dentsu-products/image-targets/leftpocket_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "leftpocket_luminance.png",
+  "originalImage": "leftpocket.jpg"
+ }
+}

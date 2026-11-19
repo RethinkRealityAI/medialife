@@ -24,6 +24,7 @@
       href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62.5,800;62.5,900&family=Pixelify+Sans:wght@500;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="/site-nav/site-nav.css" />
     <link rel="stylesheet" href="/activated-merch/style.css" />
     <!-- The import map must come before any module preload, or Chrome can't resolve "three". -->
     <script type="importmap">
@@ -48,20 +49,11 @@
     <canvas id="stage" aria-hidden="true"></canvas>
     <div class="grain" aria-hidden="true"></div>
 
-    <header class="nav" id="nav">
-      <a class="nav__logo" href="/" aria-label="MEDIALIFE home">
-        <img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" width="132" height="22" />
-        <span class="nav__tag">Activated</span>
-      </a>
-      <nav class="nav__links" aria-label="Sections">
-        <a href="#how">How it works</a>
-        <a href="#tech">Technology</a>
-        <a href="#fans">Fans</a>
-        <a href="#lineup">Collections</a>
-        <a href="#partner">For IP holders</a>
-      </nav>
-      <a class="nav__shop" href="https://shop.medialife.ai" target="_blank" rel="noopener">Shop <span aria-hidden="true">[↗]</span></a>
-    </header>
+    <!-- The main medialife.ai navigation: the same bar as every page on the
+         site (public/site-nav/, items from src/lib/site-nav.json). Fixed here
+         because the 3D hero runs under it. -->
+    <header class="mlnav" id="site-nav" data-fixed></header>
+    <script src="/site-nav/site-nav.js"></script>
 
     <main>
       <!-- 01 HERO ------------------------------------------------------- -->

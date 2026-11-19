@@ -1,55 +1,45 @@
 import { Link } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { TECH_STACKS } from "@/lib/tech-stacks";
+import SITE_NAV from "@/lib/site-nav.json";
 import { Lockup } from "./Logo";
 
 export const SHOP_URL = "https://shop.medialife.ai/";
 
 /**
- * Primary navigation — the seven commercial destinations.
+ * Primary navigation: one list for the whole site.
  *
- * Numbers follow the homepage reading order, so /02 in the nav is the second
- * section down the page. Fan Reactions and Production Capabilities are homepage
- * anchors; Live Now and Case Studies are real routes because both need linkable
- * URLs. Merch is external.
+ * The items live in src/lib/site-nav.json. This component renders them on the
+ * React pages, and public/site-nav/site-nav.js renders the same list on the
+ * static pages (/evade/, /activated-merch/). `npm run build` copies the JSON
+ * into that script, so the two can never drift apart. Edit the JSON only.
  *
  * Contact is deliberately NOT a nav row: the "Activate your IP" pill is the
- * single, higher-intent path to the same /contact route, and one primary CTA
- * beats two competing entry points. /contact is still linked from the footer
- * and from every section CTA, so the Netlify form is not orphaned.
+ * single, higher-intent path to /contact.
  *
- * The Technology stack pages are still reachable through the Production
- * Capabilities mega-menu, so nothing was orphaned by the nav change.
- *
- * Width: seven items plus the CTA need ~1480px with numbers and full labels.
- * The inline nav starts at xl (1280px; below that it is the menu), and between
- * xl and 2xl the /0X numbers hide and long labels use `short`, so it never
- * overflows.
+ * Width (2026-11-13, Dapo: the menu must not collapse on normal laptops): the
+ * inline nav starts at lg (1024px). Between lg and xl it is compact (13px,
+ * tighter padding); from xl it is the full size; from 2xl the /0X numbers and
+ * long labels show. Below lg it is the Menu button. The bar is 64px tall
+ * everywhere, on every page.
  */
-type NavItem = { label: string; num: string; short?: string } & (
-  | { kind: "anchor"; hash: string }
-  | { kind: "route"; to: string }
-  | { kind: "external"; href: string }
-);
+type NavChild = { href: string; label: string; note?: string };
+type NavItem = {
+  label: string;
+  /** Optional sub-pages (static links), shown in a small dropdown on desktop
+   *  and as indented rows in the mobile menu. The parent stays a real link. */
+  children?: NavChild[];
+  num: string;
+  short?: string;
+  isNew?: boolean;
+  kind: "anchor" | "static" | "route" | "external";
+  href: string;
+};
 
-const NAV: NavItem[] = [
-  { kind: "route", to: "/live", label: "Live Now", num: "01" },
-  { kind: "anchor", hash: "fan-reactions", label: "Fan Reactions", num: "02" },
-  {
-    kind: "anchor",
-    hash: "capabilities",
-    label: "Production Capabilities",
-    short: "Capabilities",
-    num: "03",
-  },
-  { kind: "route", to: "/activated-retail", label: "Retail Program", num: "04" },
-  { kind: "route", to: "/creator-hub", label: "Creator Hub", num: "05" },
-  { kind: "route", to: "/case-studies", label: "Case Studies", num: "06" },
-  { kind: "external", href: SHOP_URL, label: "Merch", num: "07" },
-];
+const NAV = SITE_NAV.items as NavItem[];
 
 const itemCls =
-  "group relative px-3 py-2 text-sm transition-colors hover:text-primary inline-flex items-center whitespace-nowrap";
+  "group relative px-2 xl:px-3 py-2 text-[13px] xl:text-sm transition-colors hover:text-primary inline-flex items-center whitespace-nowrap";
 const numCls =
   "hidden 2xl:inline mono text-[10px] text-muted-foreground mr-2 group-hover:text-primary transition shrink-0";
 
@@ -67,6 +57,8 @@ function DeskLabel({ item }: { item: NavItem }) {
 export function Nav() {
   const [open, setOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
+  // Which item's sub-page dropdown is open (by href), if any.
+  const [subOpen, setSubOpen] = useState<string | null>(null);
   const [hoveredStack, setHoveredStack] = useState(0);
   const featured = TECH_STACKS[hoveredStack];
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -88,18 +80,18 @@ export function Nav() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 w-full items-center justify-between px-6 lg:px-10 gap-4">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#05060c]/70 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_-1px_0_rgba(255,255,255,0.04)]">
+      <div className="mx-auto flex h-16 w-full items-center justify-between px-6 xl:px-10 gap-4">
         <Link to="/" className="flex items-center gap-2 group shrink-0">
           <div className="relative h-6 w-6 shrink-0">
             <div
               className="absolute inset-0 rounded-full opacity-70 blur-sm group-hover:opacity-100 transition"
-              style={{ background: "var(--gradient-ember)" }}
+              style={{ background: "var(--gradient-logo)" }}
             />
             <div className="absolute inset-1 rounded-full border border-primary" />
             <div
               className="absolute inset-2 rounded-full"
-              style={{ background: "var(--gradient-ember)" }}
+              style={{ background: "var(--gradient-logo)" }}
             />
           </div>
           {/* 28px, not smaller: the lockup is two lines, and the "ACTIVATED BY"
@@ -108,22 +100,114 @@ export function Nav() {
           <Lockup className="h-[28px] w-auto" />
         </Link>
 
-        <nav className="hidden xl:flex items-center gap-0.5" onMouseLeave={closeMega}>
+        <nav className="hidden lg:flex items-center gap-0.5" onMouseLeave={closeMega}>
           {NAV.map((item) => {
             if (item.kind === "anchor") {
-              const isCapabilities = item.hash === "capabilities";
+              const isCapabilities = item.href === "/#capabilities";
               return (
                 <div
-                  key={item.hash}
+                  key={item.href}
                   className="relative"
                   onMouseEnter={isCapabilities ? openMega : () => setMegaOpen(false)}
                 >
-                  <a href={`/#${item.hash}`} className={itemCls} onClick={() => setMegaOpen(false)}>
+                  <a href={item.href} className={itemCls} onClick={() => setMegaOpen(false)}>
                     <span className={numCls}>/{item.num}</span>
                     <DeskLabel item={item} />
                     {isCapabilities && <span className="ml-2 text-[10px] opacity-60">▾</span>}
                   </a>
                 </div>
+              );
+            }
+            if (item.kind === "static" && item.children?.length) {
+              const isOpen = subOpen === item.href;
+              const menuId = `nav-sub-${item.num}`;
+              return (
+                <div
+                  key={item.href}
+                  className="relative inline-flex items-center"
+                  onMouseEnter={() => {
+                    setMegaOpen(false);
+                    setSubOpen(item.href);
+                  }}
+                  onMouseLeave={() => setSubOpen(null)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setSubOpen(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") setSubOpen(null);
+                  }}
+                >
+                  <a href={item.href} className={`${itemCls} pr-1 xl:pr-1`}>
+                    <span className={numCls}>/{item.num}</span>
+                    <DeskLabel item={item} />
+                    {item.isNew && (
+                      <span
+                        className="ml-1.5 h-1.5 w-1.5 rounded-full bg-[#f5c84b]"
+                        aria-label="(new)"
+                        role="img"
+                      />
+                    )}
+                  </a>
+                  <button
+                    type="button"
+                    aria-expanded={isOpen}
+                    aria-controls={menuId}
+                    aria-label={`${item.label} pages`}
+                    className="grid place-items-center h-8 w-6 text-[10px] opacity-60 hover:opacity-100 hover:text-primary transition"
+                    onClick={() => setSubOpen(isOpen ? null : item.href)}
+                  >
+                    <span
+                      aria-hidden
+                      className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+                  <div
+                    id={menuId}
+                    hidden={!isOpen}
+                    className="absolute left-0 top-full pt-2 min-w-[280px]"
+                  >
+                    <ul className="border border-white/10 bg-[#05060c] rounded-xl p-1.5 shadow-2xl">
+                      {item.children.map((c) => (
+                        <li key={c.href}>
+                          <a
+                            href={c.href}
+                            className="block rounded-lg px-3 py-2.5 hover:bg-white/[0.06] focus-visible:bg-white/[0.06] transition-colors"
+                            onClick={() => setSubOpen(null)}
+                          >
+                            <span className="block text-sm text-foreground">{c.label}</span>
+                            {c.note && (
+                              <span className="block text-xs text-muted-foreground mt-0.5">
+                                {c.note}
+                              </span>
+                            )}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+            if (item.kind === "static") {
+              return (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className={itemCls}
+                  onMouseEnter={() => setMegaOpen(false)}
+                >
+                  <span className={numCls}>/{item.num}</span>
+                  <DeskLabel item={item} />
+                  {item.isNew && (
+                    <span
+                      className="ml-1.5 h-1.5 w-1.5 rounded-full bg-[#f5c84b]"
+                      aria-label="(new)"
+                      role="img"
+                    />
+                  )}
+                </a>
               );
             }
             if (item.kind === "external") {
@@ -147,8 +231,8 @@ export function Nav() {
             }
             return (
               <Link
-                key={item.to}
-                to={item.to}
+                key={item.href}
+                to={item.href}
                 className={itemCls}
                 activeProps={{ className: "text-primary" }}
                 onMouseEnter={() => setMegaOpen(false)}
@@ -160,10 +244,10 @@ export function Nav() {
           })}
         </nav>
 
-        <div className="hidden xl:flex items-center gap-2 shrink-0">
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
           <Link
             to="/contact"
-            className="btn-pill btn-ember mono text-xs uppercase tracking-[0.18em] font-medium px-6 py-3"
+            className="btn-pill btn-solid text-[13px] xl:text-sm font-medium px-4 xl:px-5 py-2.5"
           >
             Activate your IP
             <span aria-hidden>→</span>
@@ -173,7 +257,7 @@ export function Nav() {
         <button
           aria-label="Menu"
           aria-expanded={open}
-          className="xl:hidden mono text-xs uppercase tracking-widest"
+          className="lg:hidden mono text-xs uppercase tracking-widest min-h-[44px] px-1"
           onClick={() => setOpen((v) => !v)}
         >
           {open ? "Close" : "Menu"}
@@ -183,7 +267,7 @@ export function Nav() {
       {/* MEGA MENU — production capabilities / technology stack */}
       {megaOpen && (
         <div
-          className="hidden xl:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
+          className="hidden lg:block absolute left-0 right-0 top-16 border-t border-border bg-background/95 backdrop-blur-xl shadow-2xl"
           onMouseEnter={openMega}
           onMouseLeave={closeMega}
         >
@@ -226,7 +310,7 @@ export function Nav() {
                         <div className="mono text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
                           /{s.num} · {s.category}
                         </div>
-                        <h4 className="mt-1 text-sm font-medium truncate group-hover:ember-text transition-colors">
+                        <h4 className="mt-1 text-sm font-medium truncate group-hover:text-primary transition-colors">
                           {s.name}
                         </h4>
                         <p className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
@@ -249,7 +333,7 @@ export function Nav() {
                   style={{ background: featured.accent }}
                 />
                 <div className="absolute inset-0 grid-bg opacity-30" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                <div className="absolute inset-0 bg-background/55" />
                 <div className="relative h-full min-h-[260px] p-6 flex flex-col justify-between">
                   <div className="flex items-start justify-between">
                     <div className="text-5xl text-white drop-shadow-lg">{featured.glyph}</div>
@@ -279,7 +363,7 @@ export function Nav() {
 
       {/* MOBILE */}
       {open && (
-        <div className="xl:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
+        <div className="lg:hidden border-t border-border bg-background max-h-[calc(100vh-4rem)] overflow-y-auto">
           <div className="flex flex-col">
             {NAV.map((item) => {
               const row =
@@ -287,14 +371,46 @@ export function Nav() {
               if (item.kind === "anchor") {
                 return (
                   <a
-                    key={item.hash}
-                    href={`/#${item.hash}`}
+                    key={item.href}
+                    href={item.href}
                     className={row}
                     onClick={() => setOpen(false)}
                   >
                     <span>{item.label}</span>
                     <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
                   </a>
+                );
+              }
+              if (item.kind === "static") {
+                return (
+                  <Fragment key={item.href}>
+                    <a href={item.href} className={row} onClick={() => setOpen(false)}>
+                      <span className="inline-flex items-center gap-2">
+                        {item.label}
+                        {item.isNew && (
+                          <span className="rounded-full bg-[#f5c84b] px-1.5 py-0.5 mono text-[9px] uppercase tracking-wider text-[#1a1300]">
+                            New
+                          </span>
+                        )}
+                      </span>
+                      <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
+                    </a>
+                    {item.children
+                      ?.filter((c) => c.href !== item.href)
+                      .map((c) => (
+                        <a
+                          key={c.href}
+                          href={c.href}
+                          className="flex items-center justify-between pl-10 pr-6 py-3 border-b border-border text-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          onClick={() => setOpen(false)}
+                        >
+                          <span>{c.label}</span>
+                          <span aria-hidden className="text-xs opacity-60">
+                            →
+                          </span>
+                        </a>
+                      ))}
+                  </Fragment>
                 );
               }
               if (item.kind === "external") {
@@ -319,7 +435,7 @@ export function Nav() {
                 );
               }
               return (
-                <Link key={item.to} to={item.to} className={row} onClick={() => setOpen(false)}>
+                <Link key={item.href} to={item.href} className={row} onClick={() => setOpen(false)}>
                   <span>{item.label}</span>
                   <span className="mono text-[10px] text-muted-foreground">/{item.num}</span>
                 </Link>
@@ -346,7 +462,7 @@ export function Nav() {
             <div className="p-6">
               <Link
                 to="/contact"
-                className="btn-pill btn-ember w-full justify-center mono text-xs uppercase tracking-[0.18em] font-medium px-7 py-3.5"
+                className="btn-pill btn-solid w-full justify-center text-sm font-medium px-7 py-3.5"
                 onClick={() => setOpen(false)}
               >
                 Activate your IP

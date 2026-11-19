@@ -1,0 +1,19 @@
+{
+ "name": "cat-girl",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 219,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1966,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/demo-reel/image-targets/cat-girl_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "cat-girl_luminance.jpeg",
+  "originalImage": "cat-girl.jpg"
+ }
+}

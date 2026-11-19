@@ -1,0 +1,9 @@
+{
+  "note": "Spray Bobo image targets (build_sukeban.py). widthM/heightM: the print in metres.",
+  "targets": {
+    "tee-sukeban": {
+      "widthM": 0.3048,
+      "heightM": 0.4064
+    }
+  }
+}

@@ -242,13 +242,16 @@ function BrandPage() {
             ))}
           </div>
 
-          {/* Gradient */}
+          {/* Highlight rule (2026-11-10): no brand gradients. */}
           <div className="mt-8 border border-border">
-            <div className="h-24" style={{ background: "var(--gradient-ember)" }} />
-            <div className="p-5 flex items-baseline justify-between bg-background">
-              <h4 className="text-base font-medium">Ember Gradient</h4>
+            <div className="grid h-24 grid-cols-[3fr_1fr]">
+              <div className="bg-primary" />
+              <div className="bg-accent" />
+            </div>
+            <div className="p-5 flex flex-wrap items-baseline justify-between gap-2 bg-background">
+              <h4 className="text-base font-medium">Solid highlights, no gradients</h4>
               <span className="mono text-[10px] text-muted-foreground">
-                --gradient-ember · 135° · Field Blue → Pulse Magenta
+                Field Blue for highlights and actions · Pulse Magenta sparingly, for status
               </span>
             </div>
           </div>

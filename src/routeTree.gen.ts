@@ -18,18 +18,20 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as FanReactionsRouteImport } from './routes/fan-reactions'
 import { Route as InsightsRouteImport } from './routes/insights'
 import { Route as LiveRouteImport } from './routes/live'
-import { Route as TechnologyRouteImport } from './routes/technology'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminBuilderRouteImport } from './routes/admin.builder'
 import { Route as AdminCollectorRouteImport } from './routes/admin.collector'
 import { Route as AdminDemosRouteImport } from './routes/admin.demos'
 import { Route as AdminLinksRouteImport } from './routes/admin.links'
+import { Route as AdminLootbreakRouteImport } from './routes/admin.lootbreak'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMedialifeRouteImport } from './routes/admin.medialife'
 import { Route as AdminShelvesRouteImport } from './routes/admin.shelves'
+import { Route as AdminSprayRouteImport } from './routes/admin.spray'
 import { Route as AdminUgcRouteImport } from './routes/admin.ugc'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
+import { Route as ApiShowcaseDotjsonRouteImport } from './routes/api.showcase[.]json'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
 import { Route as CreatorHubAppRouteImport } from './routes/creator-hub._app'
 import { Route as CreatorHubForgotPasswordRouteImport } from './routes/creator-hub.forgot-password'
@@ -39,6 +41,7 @@ import { Route as CreatorHubResetPasswordRouteImport } from './routes/creator-hu
 import { Route as CreatorHubSignInRouteImport } from './routes/creator-hub.sign-in'
 import { Route as CreatorHubTermsRouteImport } from './routes/creator-hub.terms'
 import { Route as CreatorHubVerifyEmailRouteImport } from './routes/creator-hub.verify-email'
+import { Route as GiveawayAuthRouteImport } from './routes/giveaway.auth'
 import { Route as GoCodeRouteImport } from './routes/go.$code'
 import { Route as OverlayTokenRouteImport } from './routes/overlay.$token'
 import { Route as PartnerHubAppRouteImport } from './routes/partner-hub._app'
@@ -46,6 +49,7 @@ import { Route as PartnerHubJoinRouteImport } from './routes/partner-hub.join'
 import { Route as RobloxPortalRouteImport } from './routes/roblox.portal'
 import { Route as ShelfIndexRouteImport } from './routes/shelf.index'
 import { Route as ShelfSlugRouteImport } from './routes/shelf.$slug'
+import { Route as TechnologyIndexRouteImport } from './routes/technology.index'
 import { Route as TechnologySlugRouteImport } from './routes/technology.$slug'
 import { Route as UgcHubAppRouteImport } from './routes/ugc-hub._app'
 import { Route as UgcHubAuthRouteImport } from './routes/ugc-hub.auth'
@@ -57,6 +61,8 @@ import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.in
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
 import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
+import { Route as AdminGiveawaysIndexRouteImport } from './routes/admin.giveaways.index'
+import { Route as AdminGiveawaysCampaignIdRouteImport } from './routes/admin.giveaways.$campaignId'
 import { Route as AdminPartnersIndexRouteImport } from './routes/admin.partners.index'
 import { Route as AdminPartnersPartnerIdRouteImport } from './routes/admin.partners.$partnerId'
 import { Route as AdminPartnersCollateralRouteImport } from './routes/admin.partners.collateral'
@@ -67,6 +73,7 @@ import { Route as AdminUgcIndexRouteImport } from './routes/admin.ugc.index'
 import { Route as AdminUgcImportRouteImport } from './routes/admin.ugc.import'
 import { Route as AdminUgcReviewRouteImport } from './routes/admin.ugc.review'
 import { Route as AdminUgcShippingRouteImport } from './routes/admin.ugc.shipping'
+import { Route as ApiArKcDiagRouteImport } from './routes/api.ar.kc-diag'
 import { Route as ApiArLinkRouteImport } from './routes/api.ar.link'
 import { Route as ApiArTrackRouteImport } from './routes/api.ar.track'
 import { Route as ApiBoboEventsRouteImport } from './routes/api.bobo.events'
@@ -76,12 +83,23 @@ import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
 import { Route as ApiCollectorAlertsDotjsonRouteImport } from './routes/api.collector.alerts[.]json'
 import { Route as ApiCollectorMeRouteImport } from './routes/api.collector.me'
 import { Route as ApiCollectorUnlockRouteImport } from './routes/api.collector.unlock'
+import { Route as ApiGiveawayDiscordRouteImport } from './routes/api.giveaway.discord'
+import { Route as ApiHolocastCodeRouteImport } from './routes/api.holocast.$code'
+import { Route as ApiHolocastRoomsRouteImport } from './routes/api.holocast.rooms'
 import { Route as ApiHubFilesRouteImport } from './routes/api.hub.files'
 import { Route as ApiHubOrdersRouteImport } from './routes/api.hub.orders'
 import { Route as ApiHubShelfAssetsRouteImport } from './routes/api.hub.shelf-assets'
+import { Route as ApiLootbreakClaimRouteImport } from './routes/api.lootbreak.claim'
+import { Route as ApiLootbreakConfigRouteImport } from './routes/api.lootbreak.config'
+import { Route as ApiLootbreakRoundRouteImport } from './routes/api.lootbreak.round'
 import { Route as ApiMediaIndexDotjsonRouteImport } from './routes/api.media.index[.]json'
 import { Route as ApiMediaLlmsDottxtRouteImport } from './routes/api.media.llms[.]txt'
 import { Route as ApiMediaUploadsRouteImport } from './routes/api.media.uploads'
+import { Route as ApiSprayCreationsRouteImport } from './routes/api.spray.creations'
+import { Route as ApiSprayMeRouteImport } from './routes/api.spray.me'
+import { Route as ApiSprayQrRouteImport } from './routes/api.spray.qr'
+import { Route as ApiSprayRealtimeRouteImport } from './routes/api.spray.realtime'
+import { Route as ApiSpraySetsRouteImport } from './routes/api.spray.sets'
 import { Route as ApiUgcUploadsRouteImport } from './routes/api.ugc.uploads'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
 import { Route as CreatorHubAppAgreementRouteImport } from './routes/creator-hub._app.agreement'
@@ -92,6 +110,8 @@ import { Route as CreatorHubAppEarningsRouteImport } from './routes/creator-hub.
 import { Route as CreatorHubAppExperiencesRouteImport } from './routes/creator-hub._app.experiences'
 import { Route as CreatorHubAppLaunchKitRouteImport } from './routes/creator-hub._app.launch-kit'
 import { Route as CreatorHubAppLiveRouteImport } from './routes/creator-hub._app.live'
+import { Route as GiveawaySlugIndexRouteImport } from './routes/giveaway.$slug.index'
+import { Route as GiveawaySlugRulesRouteImport } from './routes/giveaway.$slug.rules'
 import { Route as MIdFilenameRouteImport } from './routes/m.$id.$filename'
 import { Route as PartnerHubAppIndexRouteImport } from './routes/partner-hub._app.index'
 import { Route as PartnerHubAppCollateralRouteImport } from './routes/partner-hub._app.collateral'
@@ -123,6 +143,10 @@ import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-c
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as ApiBoboClipsIdRouteImport } from './routes/api.bobo.clips.$id'
 import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
+import { Route as ApiGiveawayDiscordCallbackRouteImport } from './routes/api.giveaway.discord.callback'
+import { Route as ApiHolocastCodeFrameRouteImport } from './routes/api.holocast.$code.frame'
+import { Route as ApiHolocastCodePhotoRouteImport } from './routes/api.holocast.$code.photo'
+import { Route as ApiHolocastCodeRtcRouteImport } from './routes/api.holocast.$code.rtc'
 import { Route as ApiHubAuthDiscordRouteImport } from './routes/api.hub.auth.discord'
 import { Route as ApiHubDevSeedRouteImport } from './routes/api.hub.dev.seed'
 import { Route as ApiHubOverlayTokenRouteImport } from './routes/api.hub.overlay.$token'
@@ -131,6 +155,12 @@ import { Route as ApiMediaDevSeedRouteImport } from './routes/api.media.dev.seed
 import { Route as ApiMediaFilesIdRouteImport } from './routes/api.media.files.$id'
 import { Route as ApiMediaThumbsIdRouteImport } from './routes/api.media.thumbs.$id'
 import { Route as ApiMediaUploadsIdRouteImport } from './routes/api.media.uploads.$id'
+import { Route as ApiSprayAdminAssetsRouteImport } from './routes/api.spray.admin.assets'
+import { Route as ApiSprayAdminCreationsRouteImport } from './routes/api.spray.admin.creations'
+import { Route as ApiSprayAdminSetsRouteImport } from './routes/api.spray.admin.sets'
+import { Route as ApiSprayCreationsIdRouteImport } from './routes/api.spray.creations.$id'
+import { Route as ApiSprayFileSplatRouteImport } from './routes/api.spray.file.$'
+import { Route as ApiSpraySetsIdRouteImport } from './routes/api.spray.sets.$id'
 import { Route as ApiUgcDevSeedRouteImport } from './routes/api.ugc.dev.seed'
 import { Route as ApiUgcUploadsIdRouteImport } from './routes/api.ugc.uploads.$id'
 import { Route as CreatorHubAppProductsIndexRouteImport } from './routes/creator-hub._app.products.index'
@@ -142,12 +172,19 @@ import { Route as RobloxPortalSubmissionsIdRouteImport } from './routes/roblox.p
 import { Route as ApiArAdminAssetsIdRouteImport } from './routes/api.ar.admin.assets.$id'
 import { Route as ApiArAdminProjectSlugRouteImport } from './routes/api.ar.admin.project.$slug'
 import { Route as ApiCollectorAdminBatchesKeyRouteImport } from './routes/api.collector.admin.batches.$key'
+import { Route as ApiHolocastCodePhotoIdRouteImport } from './routes/api.holocast.$code.photo.$id'
 import { Route as ApiHubAuthDiscordCallbackRouteImport } from './routes/api.hub.auth.discord.callback'
 import { Route as ApiHubFilesCreatorIdFileIdRouteImport } from './routes/api.hub.files.$creatorId.$fileId'
 import { Route as ApiHubOverlayTokenImageRouteImport } from './routes/api.hub.overlay.$token.image'
 import { Route as ApiHubShelfAssetsIdCompleteRouteImport } from './routes/api.hub.shelf-assets.$id.complete'
 import { Route as ApiMediaUploadsIdCompleteRouteImport } from './routes/api.media.uploads.$id.complete'
 import { Route as ApiMediaUploadsIdThumbRouteImport } from './routes/api.media.uploads.$id.thumb'
+import { Route as ApiSprayAdminAssetsIdRouteImport } from './routes/api.spray.admin.assets.$id'
+import { Route as ApiSprayAdminAssetsUploadRouteImport } from './routes/api.spray.admin.assets.upload'
+import { Route as ApiSprayAdminCreationsIdRouteImport } from './routes/api.spray.admin.creations.$id'
+import { Route as ApiSprayAdminSetsIdRouteImport } from './routes/api.spray.admin.sets.$id'
+import { Route as ApiSprayCreationsIdImageRouteImport } from './routes/api.spray.creations.$id.image'
+import { Route as ApiSprayCreationsIdReportRouteImport } from './routes/api.spray.creations.$id.report'
 import { Route as ApiUgcFilesPostersIdRouteImport } from './routes/api.ugc.files.posters.$id'
 import { Route as ApiUgcFilesSubmissionsIdRouteImport } from './routes/api.ugc.files.submissions.$id'
 import { Route as ApiUgcUploadsIdCompleteRouteImport } from './routes/api.ugc.uploads.$id.complete'
@@ -156,6 +193,8 @@ import { Route as ApiArAdminAssetsIdCompleteRouteImport } from './routes/api.ar.
 import { Route as ApiHubFilesCreatorIdFileIdCompleteRouteImport } from './routes/api.hub.files.$creatorId.$fileId.complete'
 import { Route as ApiHubShelfAssetsIdChunksNRouteImport } from './routes/api.hub.shelf-assets.$id.chunks.$n'
 import { Route as ApiMediaUploadsIdChunksNRouteImport } from './routes/api.media.uploads.$id.chunks.$n'
+import { Route as ApiSprayAdminSetsIdAssetRouteImport } from './routes/api.spray.admin.sets.$id.asset'
+import { Route as ApiSprayAdminSetsIdSceneRouteImport } from './routes/api.spray.admin.sets.$id.scene'
 import { Route as ApiUgcFilesAssetsCampaignIdIdRouteImport } from './routes/api.ugc.files.assets.$campaignId.$id'
 import { Route as ApiUgcUploadsIdChunksNRouteImport } from './routes/api.ugc.uploads.$id.chunks.$n'
 import { Route as ApiArAdminAssetsIdChunksNRouteImport } from './routes/api.ar.admin.assets.$id.chunks.$n'
@@ -206,11 +245,6 @@ const LiveRoute = LiveRouteImport.update({
   path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TechnologyRoute = TechnologyRouteImport.update({
-  id: '/technology',
-  path: '/technology',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -241,6 +275,11 @@ const AdminLinksRoute = AdminLinksRouteImport.update({
   path: '/links',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLootbreakRoute = AdminLootbreakRouteImport.update({
+  id: '/lootbreak',
+  path: '/lootbreak',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMediaRoute = AdminMediaRouteImport.update({
   id: '/media',
   path: '/media',
@@ -256,6 +295,11 @@ const AdminShelvesRoute = AdminShelvesRouteImport.update({
   path: '/shelves',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSprayRoute = AdminSprayRouteImport.update({
+  id: '/spray',
+  path: '/spray',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUgcRoute = AdminUgcRouteImport.update({
   id: '/ugc',
   path: '/ugc',
@@ -264,6 +308,11 @@ const AdminUgcRoute = AdminUgcRouteImport.update({
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/admin_/login',
   path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiShowcaseDotjsonRoute = ApiShowcaseDotjsonRouteImport.update({
+  id: '/api/showcase.json',
+  path: '/api/showcase.json',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
@@ -312,6 +361,11 @@ const CreatorHubVerifyEmailRoute = CreatorHubVerifyEmailRouteImport.update({
   path: '/creator-hub/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GiveawayAuthRoute = GiveawayAuthRouteImport.update({
+  id: '/giveaway/auth',
+  path: '/giveaway/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GoCodeRoute = GoCodeRouteImport.update({
   id: '/go/$code',
   path: '/go/$code',
@@ -347,10 +401,15 @@ const ShelfSlugRoute = ShelfSlugRouteImport.update({
   path: '/shelf/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnologyIndexRoute = TechnologyIndexRouteImport.update({
+  id: '/technology/',
+  path: '/technology/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TechnologySlugRoute = TechnologySlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => TechnologyRoute,
+  id: '/technology/$slug',
+  path: '/technology/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UgcHubAppRoute = UgcHubAppRouteImport.update({
   id: '/ugc-hub/_app',
@@ -402,6 +461,17 @@ const AdminCreatorsCreatorIdRoute = AdminCreatorsCreatorIdRouteImport.update({
   path: '/creators/$creatorId',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGiveawaysIndexRoute = AdminGiveawaysIndexRouteImport.update({
+  id: '/giveaways/',
+  path: '/giveaways/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminGiveawaysCampaignIdRoute =
+  AdminGiveawaysCampaignIdRouteImport.update({
+    id: '/giveaways/$campaignId',
+    path: '/giveaways/$campaignId',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminPartnersIndexRoute = AdminPartnersIndexRouteImport.update({
   id: '/partners/',
   path: '/partners/',
@@ -452,6 +522,11 @@ const AdminUgcShippingRoute = AdminUgcShippingRouteImport.update({
   path: '/shipping',
   getParentRoute: () => AdminUgcRoute,
 } as any)
+const ApiArKcDiagRoute = ApiArKcDiagRouteImport.update({
+  id: '/api/ar/kc-diag',
+  path: '/api/ar/kc-diag',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiArLinkRoute = ApiArLinkRouteImport.update({
   id: '/api/ar/link',
   path: '/api/ar/link',
@@ -498,6 +573,21 @@ const ApiCollectorUnlockRoute = ApiCollectorUnlockRouteImport.update({
   path: '/api/collector/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGiveawayDiscordRoute = ApiGiveawayDiscordRouteImport.update({
+  id: '/api/giveaway/discord',
+  path: '/api/giveaway/discord',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHolocastCodeRoute = ApiHolocastCodeRouteImport.update({
+  id: '/api/holocast/$code',
+  path: '/api/holocast/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiHolocastRoomsRoute = ApiHolocastRoomsRouteImport.update({
+  id: '/api/holocast/rooms',
+  path: '/api/holocast/rooms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHubFilesRoute = ApiHubFilesRouteImport.update({
   id: '/api/hub/files',
   path: '/api/hub/files',
@@ -513,6 +603,21 @@ const ApiHubShelfAssetsRoute = ApiHubShelfAssetsRouteImport.update({
   path: '/api/hub/shelf-assets',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLootbreakClaimRoute = ApiLootbreakClaimRouteImport.update({
+  id: '/api/lootbreak/claim',
+  path: '/api/lootbreak/claim',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLootbreakConfigRoute = ApiLootbreakConfigRouteImport.update({
+  id: '/api/lootbreak/config',
+  path: '/api/lootbreak/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiLootbreakRoundRoute = ApiLootbreakRoundRouteImport.update({
+  id: '/api/lootbreak/round',
+  path: '/api/lootbreak/round',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMediaIndexDotjsonRoute = ApiMediaIndexDotjsonRouteImport.update({
   id: '/api/media/index.json',
   path: '/api/media/index.json',
@@ -526,6 +631,31 @@ const ApiMediaLlmsDottxtRoute = ApiMediaLlmsDottxtRouteImport.update({
 const ApiMediaUploadsRoute = ApiMediaUploadsRouteImport.update({
   id: '/api/media/uploads',
   path: '/api/media/uploads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayCreationsRoute = ApiSprayCreationsRouteImport.update({
+  id: '/api/spray/creations',
+  path: '/api/spray/creations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayMeRoute = ApiSprayMeRouteImport.update({
+  id: '/api/spray/me',
+  path: '/api/spray/me',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayQrRoute = ApiSprayQrRouteImport.update({
+  id: '/api/spray/qr',
+  path: '/api/spray/qr',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayRealtimeRoute = ApiSprayRealtimeRouteImport.update({
+  id: '/api/spray/realtime',
+  path: '/api/spray/realtime',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSpraySetsRoute = ApiSpraySetsRouteImport.update({
+  id: '/api/spray/sets',
+  path: '/api/spray/sets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiUgcUploadsRoute = ApiUgcUploadsRouteImport.update({
@@ -578,6 +708,16 @@ const CreatorHubAppLiveRoute = CreatorHubAppLiveRouteImport.update({
   id: '/live',
   path: '/live',
   getParentRoute: () => CreatorHubAppRoute,
+} as any)
+const GiveawaySlugIndexRoute = GiveawaySlugIndexRouteImport.update({
+  id: '/giveaway/$slug/',
+  path: '/giveaway/$slug/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GiveawaySlugRulesRoute = GiveawaySlugRulesRouteImport.update({
+  id: '/giveaway/$slug/rules',
+  path: '/giveaway/$slug/rules',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MIdFilenameRoute = MIdFilenameRouteImport.update({
   id: '/m/$id/$filename',
@@ -736,6 +876,27 @@ const ApiBoboDevSeedRoute = ApiBoboDevSeedRouteImport.update({
   path: '/api/bobo/dev/seed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGiveawayDiscordCallbackRoute =
+  ApiGiveawayDiscordCallbackRouteImport.update({
+    id: '/callback',
+    path: '/callback',
+    getParentRoute: () => ApiGiveawayDiscordRoute,
+  } as any)
+const ApiHolocastCodeFrameRoute = ApiHolocastCodeFrameRouteImport.update({
+  id: '/frame',
+  path: '/frame',
+  getParentRoute: () => ApiHolocastCodeRoute,
+} as any)
+const ApiHolocastCodePhotoRoute = ApiHolocastCodePhotoRouteImport.update({
+  id: '/photo',
+  path: '/photo',
+  getParentRoute: () => ApiHolocastCodeRoute,
+} as any)
+const ApiHolocastCodeRtcRoute = ApiHolocastCodeRtcRouteImport.update({
+  id: '/rtc',
+  path: '/rtc',
+  getParentRoute: () => ApiHolocastCodeRoute,
+} as any)
 const ApiHubAuthDiscordRoute = ApiHubAuthDiscordRouteImport.update({
   id: '/api/hub/auth/discord',
   path: '/api/hub/auth/discord',
@@ -775,6 +936,36 @@ const ApiMediaUploadsIdRoute = ApiMediaUploadsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => ApiMediaUploadsRoute,
+} as any)
+const ApiSprayAdminAssetsRoute = ApiSprayAdminAssetsRouteImport.update({
+  id: '/api/spray/admin/assets',
+  path: '/api/spray/admin/assets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayAdminCreationsRoute = ApiSprayAdminCreationsRouteImport.update({
+  id: '/api/spray/admin/creations',
+  path: '/api/spray/admin/creations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayAdminSetsRoute = ApiSprayAdminSetsRouteImport.update({
+  id: '/api/spray/admin/sets',
+  path: '/api/spray/admin/sets',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSprayCreationsIdRoute = ApiSprayCreationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSprayCreationsRoute,
+} as any)
+const ApiSprayFileSplatRoute = ApiSprayFileSplatRouteImport.update({
+  id: '/api/spray/file/$',
+  path: '/api/spray/file/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSpraySetsIdRoute = ApiSpraySetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSpraySetsRoute,
 } as any)
 const ApiUgcDevSeedRoute = ApiUgcDevSeedRouteImport.update({
   id: '/api/ugc/dev/seed',
@@ -838,6 +1029,11 @@ const ApiCollectorAdminBatchesKeyRoute =
     path: '/api/collector/admin/batches/$key',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiHolocastCodePhotoIdRoute = ApiHolocastCodePhotoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiHolocastCodePhotoRoute,
+} as any)
 const ApiHubAuthDiscordCallbackRoute =
   ApiHubAuthDiscordCallbackRouteImport.update({
     id: '/callback',
@@ -872,6 +1068,40 @@ const ApiMediaUploadsIdThumbRoute = ApiMediaUploadsIdThumbRouteImport.update({
   path: '/thumb',
   getParentRoute: () => ApiMediaUploadsIdRoute,
 } as any)
+const ApiSprayAdminAssetsIdRoute = ApiSprayAdminAssetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSprayAdminAssetsRoute,
+} as any)
+const ApiSprayAdminAssetsUploadRoute =
+  ApiSprayAdminAssetsUploadRouteImport.update({
+    id: '/upload',
+    path: '/upload',
+    getParentRoute: () => ApiSprayAdminAssetsRoute,
+  } as any)
+const ApiSprayAdminCreationsIdRoute =
+  ApiSprayAdminCreationsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => ApiSprayAdminCreationsRoute,
+  } as any)
+const ApiSprayAdminSetsIdRoute = ApiSprayAdminSetsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiSprayAdminSetsRoute,
+} as any)
+const ApiSprayCreationsIdImageRoute =
+  ApiSprayCreationsIdImageRouteImport.update({
+    id: '/image',
+    path: '/image',
+    getParentRoute: () => ApiSprayCreationsIdRoute,
+  } as any)
+const ApiSprayCreationsIdReportRoute =
+  ApiSprayCreationsIdReportRouteImport.update({
+    id: '/report',
+    path: '/report',
+    getParentRoute: () => ApiSprayCreationsIdRoute,
+  } as any)
 const ApiUgcFilesPostersIdRoute = ApiUgcFilesPostersIdRouteImport.update({
   id: '/api/ugc/files/posters/$id',
   path: '/api/ugc/files/posters/$id',
@@ -917,6 +1147,18 @@ const ApiMediaUploadsIdChunksNRoute =
     path: '/chunks/$n',
     getParentRoute: () => ApiMediaUploadsIdRoute,
   } as any)
+const ApiSprayAdminSetsIdAssetRoute =
+  ApiSprayAdminSetsIdAssetRouteImport.update({
+    id: '/asset',
+    path: '/asset',
+    getParentRoute: () => ApiSprayAdminSetsIdRoute,
+  } as any)
+const ApiSprayAdminSetsIdSceneRoute =
+  ApiSprayAdminSetsIdSceneRouteImport.update({
+    id: '/scene',
+    path: '/scene',
+    getParentRoute: () => ApiSprayAdminSetsIdRoute,
+  } as any)
 const ApiUgcFilesAssetsCampaignIdIdRoute =
   ApiUgcFilesAssetsCampaignIdIdRouteImport.update({
     id: '/api/ugc/files/assets/$campaignId/$id',
@@ -951,17 +1193,19 @@ export interface FileRoutesByFullPath {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -970,6 +1214,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub': typeof PartnerHubAppRouteWithChildren
@@ -986,8 +1231,10 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
+  '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -995,6 +1242,7 @@ export interface FileRoutesByFullPath {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1004,12 +1252,23 @@ export interface FileRoutesByFullPath {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
+  '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
+  '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
+  '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
+  '/api/spray/me': typeof ApiSprayMeRoute
+  '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
@@ -1020,6 +1279,7 @@ export interface FileRoutesByFullPath {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
@@ -1041,9 +1301,11 @@ export interface FileRoutesByFullPath {
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/ugc-hub/': typeof UgcHubAppIndexRoute
@@ -1055,6 +1317,10 @@ export interface FileRoutesByFullPath {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
+  '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1063,6 +1329,12 @@ export interface FileRoutesByFullPath {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
+  '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
+  '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
+  '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
+  '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1075,12 +1347,19 @@ export interface FileRoutesByFullPath {
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
+  '/api/holocast/$code/photo/$id': typeof ApiHolocastCodePhotoIdRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
+  '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
+  '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
+  '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
   '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
   '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
@@ -1089,6 +1368,8 @@ export interface FileRoutesByFullPath {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1103,14 +1384,16 @@ export interface FileRoutesByTo {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1119,6 +1402,7 @@ export interface FileRoutesByTo {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub/join': typeof PartnerHubJoinRoute
@@ -1131,8 +1415,10 @@ export interface FileRoutesByTo {
   '/x/$slug': typeof XSlugRoute
   '/admin': typeof AdminIndexRoute
   '/shelf': typeof ShelfIndexRoute
+  '/technology': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -1140,6 +1426,7 @@ export interface FileRoutesByTo {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1149,12 +1436,23 @@ export interface FileRoutesByTo {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
+  '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
+  '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
+  '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
+  '/api/spray/me': typeof ApiSprayMeRoute
+  '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
@@ -1165,6 +1463,7 @@ export interface FileRoutesByTo {
   '/creator-hub/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/links': typeof PartnerHubAppLinksRoute
@@ -1186,9 +1485,11 @@ export interface FileRoutesByTo {
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
   '/admin/creators': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways': typeof AdminGiveawaysIndexRoute
   '/admin/partners': typeof AdminPartnersIndexRoute
   '/admin/shelves': typeof AdminShelvesIndexRoute
   '/admin/ugc': typeof AdminUgcIndexRoute
+  '/giveaway/$slug': typeof GiveawaySlugIndexRoute
   '/partner-hub': typeof PartnerHubAppIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
   '/ugc-hub': typeof UgcHubAppIndexRoute
@@ -1200,6 +1501,10 @@ export interface FileRoutesByTo {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
+  '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1208,6 +1513,12 @@ export interface FileRoutesByTo {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
+  '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
+  '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
+  '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
+  '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1220,12 +1531,19 @@ export interface FileRoutesByTo {
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
+  '/api/holocast/$code/photo/$id': typeof ApiHolocastCodePhotoIdRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
+  '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
+  '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
+  '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
   '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
   '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
@@ -1234,6 +1552,8 @@ export interface FileRoutesByTo {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1250,17 +1570,19 @@ export interface FileRoutesById {
   '/fan-reactions': typeof FanReactionsRoute
   '/insights': typeof InsightsRoute
   '/live': typeof LiveRoute
-  '/technology': typeof TechnologyRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/builder': typeof AdminBuilderRouteWithChildren
   '/admin/collector': typeof AdminCollectorRoute
   '/admin/demos': typeof AdminDemosRoute
   '/admin/links': typeof AdminLinksRoute
+  '/admin/lootbreak': typeof AdminLootbreakRoute
   '/admin/media': typeof AdminMediaRoute
   '/admin/medialife': typeof AdminMedialifeRoute
   '/admin/shelves': typeof AdminShelvesRouteWithChildren
+  '/admin/spray': typeof AdminSprayRoute
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
+  '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1269,6 +1591,7 @@ export interface FileRoutesById {
   '/creator-hub/sign-in': typeof CreatorHubSignInRoute
   '/creator-hub/terms': typeof CreatorHubTermsRoute
   '/creator-hub/verify-email': typeof CreatorHubVerifyEmailRoute
+  '/giveaway/auth': typeof GiveawayAuthRoute
   '/go/$code': typeof GoCodeRoute
   '/overlay/$token': typeof OverlayTokenRoute
   '/partner-hub/_app': typeof PartnerHubAppRouteWithChildren
@@ -1285,8 +1608,10 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/creator-hub/': typeof CreatorHubIndexRoute
   '/shelf/': typeof ShelfIndexRoute
+  '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
+  '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
   '/admin/partners/collateral': typeof AdminPartnersCollateralRoute
   '/admin/partners/kit': typeof AdminPartnersKitRoute
@@ -1294,6 +1619,7 @@ export interface FileRoutesById {
   '/admin/ugc/import': typeof AdminUgcImportRoute
   '/admin/ugc/review': typeof AdminUgcReviewRoute
   '/admin/ugc/shipping': typeof AdminUgcShippingRoute
+  '/api/ar/kc-diag': typeof ApiArKcDiagRoute
   '/api/ar/link': typeof ApiArLinkRoute
   '/api/ar/track': typeof ApiArTrackRoute
   '/api/bobo/events': typeof ApiBoboEventsRoute
@@ -1303,12 +1629,23 @@ export interface FileRoutesById {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
+  '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
+  '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
   '/api/hub/files': typeof ApiHubFilesRouteWithChildren
   '/api/hub/orders': typeof ApiHubOrdersRoute
   '/api/hub/shelf-assets': typeof ApiHubShelfAssetsRouteWithChildren
+  '/api/lootbreak/claim': typeof ApiLootbreakClaimRoute
+  '/api/lootbreak/config': typeof ApiLootbreakConfigRoute
+  '/api/lootbreak/round': typeof ApiLootbreakRoundRoute
   '/api/media/index.json': typeof ApiMediaIndexDotjsonRoute
   '/api/media/llms.txt': typeof ApiMediaLlmsDottxtRoute
   '/api/media/uploads': typeof ApiMediaUploadsRouteWithChildren
+  '/api/spray/creations': typeof ApiSprayCreationsRouteWithChildren
+  '/api/spray/me': typeof ApiSprayMeRoute
+  '/api/spray/qr': typeof ApiSprayQrRoute
+  '/api/spray/realtime': typeof ApiSprayRealtimeRoute
+  '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
@@ -1319,6 +1656,7 @@ export interface FileRoutesById {
   '/creator-hub/_app/experiences': typeof CreatorHubAppExperiencesRoute
   '/creator-hub/_app/launch-kit': typeof CreatorHubAppLaunchKitRoute
   '/creator-hub/_app/live': typeof CreatorHubAppLiveRoute
+  '/giveaway/$slug/rules': typeof GiveawaySlugRulesRoute
   '/m/$id/$filename': typeof MIdFilenameRoute
   '/partner-hub/_app/collateral': typeof PartnerHubAppCollateralRoute
   '/partner-hub/_app/links': typeof PartnerHubAppLinksRoute
@@ -1340,9 +1678,11 @@ export interface FileRoutesById {
   '/ugc-hub/_app/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
+  '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/_app/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
   '/ugc-hub/_app/': typeof UgcHubAppIndexRoute
@@ -1354,6 +1694,10 @@ export interface FileRoutesById {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
+  '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
+  '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
+  '/api/holocast/$code/rtc': typeof ApiHolocastCodeRtcRoute
   '/api/hub/auth/discord': typeof ApiHubAuthDiscordRouteWithChildren
   '/api/hub/dev/seed': typeof ApiHubDevSeedRoute
   '/api/hub/overlay/$token': typeof ApiHubOverlayTokenRouteWithChildren
@@ -1362,6 +1706,12 @@ export interface FileRoutesById {
   '/api/media/files/$id': typeof ApiMediaFilesIdRoute
   '/api/media/thumbs/$id': typeof ApiMediaThumbsIdRoute
   '/api/media/uploads/$id': typeof ApiMediaUploadsIdRouteWithChildren
+  '/api/spray/admin/assets': typeof ApiSprayAdminAssetsRouteWithChildren
+  '/api/spray/admin/creations': typeof ApiSprayAdminCreationsRouteWithChildren
+  '/api/spray/admin/sets': typeof ApiSprayAdminSetsRouteWithChildren
+  '/api/spray/creations/$id': typeof ApiSprayCreationsIdRouteWithChildren
+  '/api/spray/file/$': typeof ApiSprayFileSplatRoute
+  '/api/spray/sets/$id': typeof ApiSpraySetsIdRoute
   '/api/ugc/dev/seed': typeof ApiUgcDevSeedRoute
   '/api/ugc/uploads/$id': typeof ApiUgcUploadsIdRouteWithChildren
   '/creator-hub/_app/products/$productId': typeof CreatorHubAppProductsProductIdRoute
@@ -1374,12 +1724,19 @@ export interface FileRoutesById {
   '/api/ar/admin/assets/$id': typeof ApiArAdminAssetsIdRouteWithChildren
   '/api/ar/admin/project/$slug': typeof ApiArAdminProjectSlugRoute
   '/api/collector/admin/batches/$key': typeof ApiCollectorAdminBatchesKeyRoute
+  '/api/holocast/$code/photo/$id': typeof ApiHolocastCodePhotoIdRoute
   '/api/hub/auth/discord/callback': typeof ApiHubAuthDiscordCallbackRoute
   '/api/hub/files/$creatorId/$fileId': typeof ApiHubFilesCreatorIdFileIdRouteWithChildren
   '/api/hub/overlay/$token/image': typeof ApiHubOverlayTokenImageRoute
   '/api/hub/shelf-assets/$id/complete': typeof ApiHubShelfAssetsIdCompleteRoute
   '/api/media/uploads/$id/complete': typeof ApiMediaUploadsIdCompleteRoute
   '/api/media/uploads/$id/thumb': typeof ApiMediaUploadsIdThumbRoute
+  '/api/spray/admin/assets/$id': typeof ApiSprayAdminAssetsIdRoute
+  '/api/spray/admin/assets/upload': typeof ApiSprayAdminAssetsUploadRoute
+  '/api/spray/admin/creations/$id': typeof ApiSprayAdminCreationsIdRoute
+  '/api/spray/admin/sets/$id': typeof ApiSprayAdminSetsIdRouteWithChildren
+  '/api/spray/creations/$id/image': typeof ApiSprayCreationsIdImageRoute
+  '/api/spray/creations/$id/report': typeof ApiSprayCreationsIdReportRoute
   '/api/ugc/files/posters/$id': typeof ApiUgcFilesPostersIdRoute
   '/api/ugc/files/submissions/$id': typeof ApiUgcFilesSubmissionsIdRoute
   '/api/ugc/uploads/$id/complete': typeof ApiUgcUploadsIdCompleteRoute
@@ -1388,6 +1745,8 @@ export interface FileRoutesById {
   '/api/hub/files/$creatorId/$fileId/complete': typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   '/api/hub/shelf-assets/$id/chunks/$n': typeof ApiHubShelfAssetsIdChunksNRoute
   '/api/media/uploads/$id/chunks/$n': typeof ApiMediaUploadsIdChunksNRoute
+  '/api/spray/admin/sets/$id/asset': typeof ApiSprayAdminSetsIdAssetRoute
+  '/api/spray/admin/sets/$id/scene': typeof ApiSprayAdminSetsIdSceneRoute
   '/api/ugc/files/assets/$campaignId/$id': typeof ApiUgcFilesAssetsCampaignIdIdRoute
   '/api/ugc/uploads/$id/chunks/$n': typeof ApiUgcUploadsIdChunksNRoute
   '/api/ar/admin/assets/$id/chunks/$n': typeof ApiArAdminAssetsIdChunksNRoute
@@ -1405,17 +1764,19 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
+    | '/admin/spray'
     | '/admin/ugc'
     | '/admin/login'
+    | '/api/showcase.json'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1424,6 +1785,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub'
@@ -1440,8 +1802,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
+    | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1449,6 +1813,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1458,12 +1823,23 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
+    | '/api/holocast/$code'
+    | '/api/holocast/rooms'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
+    | '/api/spray/creations'
+    | '/api/spray/me'
+    | '/api/spray/qr'
+    | '/api/spray/realtime'
+    | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
@@ -1474,6 +1850,7 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/collateral'
     | '/partner-hub/links'
@@ -1495,9 +1872,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/upload'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/giveaway/$slug/'
     | '/partner-hub/'
     | '/roblox/portal/'
     | '/ugc-hub/'
@@ -1509,6 +1888,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
+    | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1517,6 +1900,12 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
+    | '/api/spray/admin/creations'
+    | '/api/spray/admin/sets'
+    | '/api/spray/creations/$id'
+    | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
@@ -1529,12 +1918,19 @@ export interface FileRouteTypes {
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
     | '/api/collector/admin/batches/$key'
+    | '/api/holocast/$code/photo/$id'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
+    | '/api/spray/admin/creations/$id'
+    | '/api/spray/admin/sets/$id'
+    | '/api/spray/creations/$id/image'
+    | '/api/spray/creations/$id/report'
     | '/api/ugc/files/posters/$id'
     | '/api/ugc/files/submissions/$id'
     | '/api/ugc/uploads/$id/complete'
@@ -1543,6 +1939,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -1557,14 +1955,16 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
+    | '/admin/spray'
     | '/admin/login'
+    | '/api/showcase.json'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1573,6 +1973,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub/join'
@@ -1585,8 +1986,10 @@ export interface FileRouteTypes {
     | '/x/$slug'
     | '/admin'
     | '/shelf'
+    | '/technology'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1594,6 +1997,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1603,12 +2007,23 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
+    | '/api/holocast/$code'
+    | '/api/holocast/rooms'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
+    | '/api/spray/creations'
+    | '/api/spray/me'
+    | '/api/spray/qr'
+    | '/api/spray/realtime'
+    | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
@@ -1619,6 +2034,7 @@ export interface FileRouteTypes {
     | '/creator-hub/experiences'
     | '/creator-hub/launch-kit'
     | '/creator-hub/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/collateral'
     | '/partner-hub/links'
@@ -1640,9 +2056,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/upload'
     | '/admin/builder'
     | '/admin/creators'
+    | '/admin/giveaways'
     | '/admin/partners'
     | '/admin/shelves'
     | '/admin/ugc'
+    | '/giveaway/$slug'
     | '/partner-hub'
     | '/roblox/portal'
     | '/ugc-hub'
@@ -1654,6 +2072,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
+    | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1662,6 +2084,12 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
+    | '/api/spray/admin/creations'
+    | '/api/spray/admin/sets'
+    | '/api/spray/creations/$id'
+    | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/products/$productId'
@@ -1674,12 +2102,19 @@ export interface FileRouteTypes {
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
     | '/api/collector/admin/batches/$key'
+    | '/api/holocast/$code/photo/$id'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
+    | '/api/spray/admin/creations/$id'
+    | '/api/spray/admin/sets/$id'
+    | '/api/spray/creations/$id/image'
+    | '/api/spray/creations/$id/report'
     | '/api/ugc/files/posters/$id'
     | '/api/ugc/files/submissions/$id'
     | '/api/ugc/uploads/$id/complete'
@@ -1688,6 +2123,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -1703,17 +2140,19 @@ export interface FileRouteTypes {
     | '/fan-reactions'
     | '/insights'
     | '/live'
-    | '/technology'
     | '/admin/analytics'
     | '/admin/builder'
     | '/admin/collector'
     | '/admin/demos'
     | '/admin/links'
+    | '/admin/lootbreak'
     | '/admin/media'
     | '/admin/medialife'
     | '/admin/shelves'
+    | '/admin/spray'
     | '/admin/ugc'
     | '/admin_/login'
+    | '/api/showcase.json'
     | '/creator-hub/_app'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1722,6 +2161,7 @@ export interface FileRouteTypes {
     | '/creator-hub/sign-in'
     | '/creator-hub/terms'
     | '/creator-hub/verify-email'
+    | '/giveaway/auth'
     | '/go/$code'
     | '/overlay/$token'
     | '/partner-hub/_app'
@@ -1738,8 +2178,10 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/creator-hub/'
     | '/shelf/'
+    | '/technology/'
     | '/admin/builder/$slug'
     | '/admin/creators/$creatorId'
+    | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
     | '/admin/partners/collateral'
     | '/admin/partners/kit'
@@ -1747,6 +2189,7 @@ export interface FileRouteTypes {
     | '/admin/ugc/import'
     | '/admin/ugc/review'
     | '/admin/ugc/shipping'
+    | '/api/ar/kc-diag'
     | '/api/ar/link'
     | '/api/ar/track'
     | '/api/bobo/events'
@@ -1756,12 +2199,23 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/giveaway/discord'
+    | '/api/holocast/$code'
+    | '/api/holocast/rooms'
     | '/api/hub/files'
     | '/api/hub/orders'
     | '/api/hub/shelf-assets'
+    | '/api/lootbreak/claim'
+    | '/api/lootbreak/config'
+    | '/api/lootbreak/round'
     | '/api/media/index.json'
     | '/api/media/llms.txt'
     | '/api/media/uploads'
+    | '/api/spray/creations'
+    | '/api/spray/me'
+    | '/api/spray/qr'
+    | '/api/spray/realtime'
+    | '/api/spray/sets'
     | '/api/ugc/uploads'
     | '/creator-hub/_app/account'
     | '/creator-hub/_app/agreement'
@@ -1772,6 +2226,7 @@ export interface FileRouteTypes {
     | '/creator-hub/_app/experiences'
     | '/creator-hub/_app/launch-kit'
     | '/creator-hub/_app/live'
+    | '/giveaway/$slug/rules'
     | '/m/$id/$filename'
     | '/partner-hub/_app/collateral'
     | '/partner-hub/_app/links'
@@ -1793,9 +2248,11 @@ export interface FileRouteTypes {
     | '/ugc-hub/_app/upload'
     | '/admin/builder/'
     | '/admin/creators/'
+    | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/giveaway/$slug/'
     | '/partner-hub/_app/'
     | '/roblox/portal/'
     | '/ugc-hub/_app/'
@@ -1807,6 +2264,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/giveaway/discord/callback'
+    | '/api/holocast/$code/frame'
+    | '/api/holocast/$code/photo'
+    | '/api/holocast/$code/rtc'
     | '/api/hub/auth/discord'
     | '/api/hub/dev/seed'
     | '/api/hub/overlay/$token'
@@ -1815,6 +2276,12 @@ export interface FileRouteTypes {
     | '/api/media/files/$id'
     | '/api/media/thumbs/$id'
     | '/api/media/uploads/$id'
+    | '/api/spray/admin/assets'
+    | '/api/spray/admin/creations'
+    | '/api/spray/admin/sets'
+    | '/api/spray/creations/$id'
+    | '/api/spray/file/$'
+    | '/api/spray/sets/$id'
     | '/api/ugc/dev/seed'
     | '/api/ugc/uploads/$id'
     | '/creator-hub/_app/products/$productId'
@@ -1827,12 +2294,19 @@ export interface FileRouteTypes {
     | '/api/ar/admin/assets/$id'
     | '/api/ar/admin/project/$slug'
     | '/api/collector/admin/batches/$key'
+    | '/api/holocast/$code/photo/$id'
     | '/api/hub/auth/discord/callback'
     | '/api/hub/files/$creatorId/$fileId'
     | '/api/hub/overlay/$token/image'
     | '/api/hub/shelf-assets/$id/complete'
     | '/api/media/uploads/$id/complete'
     | '/api/media/uploads/$id/thumb'
+    | '/api/spray/admin/assets/$id'
+    | '/api/spray/admin/assets/upload'
+    | '/api/spray/admin/creations/$id'
+    | '/api/spray/admin/sets/$id'
+    | '/api/spray/creations/$id/image'
+    | '/api/spray/creations/$id/report'
     | '/api/ugc/files/posters/$id'
     | '/api/ugc/files/submissions/$id'
     | '/api/ugc/uploads/$id/complete'
@@ -1841,6 +2315,8 @@ export interface FileRouteTypes {
     | '/api/hub/files/$creatorId/$fileId/complete'
     | '/api/hub/shelf-assets/$id/chunks/$n'
     | '/api/media/uploads/$id/chunks/$n'
+    | '/api/spray/admin/sets/$id/asset'
+    | '/api/spray/admin/sets/$id/scene'
     | '/api/ugc/files/assets/$campaignId/$id'
     | '/api/ugc/uploads/$id/chunks/$n'
     | '/api/ar/admin/assets/$id/chunks/$n'
@@ -1857,8 +2333,8 @@ export interface RootRouteChildren {
   FanReactionsRoute: typeof FanReactionsRoute
   InsightsRoute: typeof InsightsRoute
   LiveRoute: typeof LiveRoute
-  TechnologyRoute: typeof TechnologyRouteWithChildren
   AdminLoginRoute: typeof AdminLoginRoute
+  ApiShowcaseDotjsonRoute: typeof ApiShowcaseDotjsonRoute
   CreatorHubAppRoute: typeof CreatorHubAppRouteWithChildren
   CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
   CreatorHubJoinRoute: typeof CreatorHubJoinRoute
@@ -1867,12 +2343,14 @@ export interface RootRouteChildren {
   CreatorHubSignInRoute: typeof CreatorHubSignInRoute
   CreatorHubTermsRoute: typeof CreatorHubTermsRoute
   CreatorHubVerifyEmailRoute: typeof CreatorHubVerifyEmailRoute
+  GiveawayAuthRoute: typeof GiveawayAuthRoute
   GoCodeRoute: typeof GoCodeRoute
   OverlayTokenRoute: typeof OverlayTokenRoute
   PartnerHubAppRoute: typeof PartnerHubAppRouteWithChildren
   PartnerHubJoinRoute: typeof PartnerHubJoinRoute
   RobloxPortalRoute: typeof RobloxPortalRouteWithChildren
   ShelfSlugRoute: typeof ShelfSlugRoute
+  TechnologySlugRoute: typeof TechnologySlugRoute
   UgcHubAppRoute: typeof UgcHubAppRouteWithChildren
   UgcHubAuthRoute: typeof UgcHubAuthRoute
   UgcHubCheckEmailRoute: typeof UgcHubCheckEmailRoute
@@ -1881,6 +2359,8 @@ export interface RootRouteChildren {
   XSlugRoute: typeof XSlugRoute
   CreatorHubIndexRoute: typeof CreatorHubIndexRoute
   ShelfIndexRoute: typeof ShelfIndexRoute
+  TechnologyIndexRoute: typeof TechnologyIndexRoute
+  ApiArKcDiagRoute: typeof ApiArKcDiagRoute
   ApiArLinkRoute: typeof ApiArLinkRoute
   ApiArTrackRoute: typeof ApiArTrackRoute
   ApiBoboEventsRoute: typeof ApiBoboEventsRoute
@@ -1890,14 +2370,27 @@ export interface RootRouteChildren {
   ApiCollectorAlertsDotjsonRoute: typeof ApiCollectorAlertsDotjsonRoute
   ApiCollectorMeRoute: typeof ApiCollectorMeRoute
   ApiCollectorUnlockRoute: typeof ApiCollectorUnlockRoute
+  ApiGiveawayDiscordRoute: typeof ApiGiveawayDiscordRouteWithChildren
+  ApiHolocastCodeRoute: typeof ApiHolocastCodeRouteWithChildren
+  ApiHolocastRoomsRoute: typeof ApiHolocastRoomsRoute
   ApiHubFilesRoute: typeof ApiHubFilesRouteWithChildren
   ApiHubOrdersRoute: typeof ApiHubOrdersRoute
   ApiHubShelfAssetsRoute: typeof ApiHubShelfAssetsRouteWithChildren
+  ApiLootbreakClaimRoute: typeof ApiLootbreakClaimRoute
+  ApiLootbreakConfigRoute: typeof ApiLootbreakConfigRoute
+  ApiLootbreakRoundRoute: typeof ApiLootbreakRoundRoute
   ApiMediaIndexDotjsonRoute: typeof ApiMediaIndexDotjsonRoute
   ApiMediaLlmsDottxtRoute: typeof ApiMediaLlmsDottxtRoute
   ApiMediaUploadsRoute: typeof ApiMediaUploadsRouteWithChildren
+  ApiSprayCreationsRoute: typeof ApiSprayCreationsRouteWithChildren
+  ApiSprayMeRoute: typeof ApiSprayMeRoute
+  ApiSprayQrRoute: typeof ApiSprayQrRoute
+  ApiSprayRealtimeRoute: typeof ApiSprayRealtimeRoute
+  ApiSpraySetsRoute: typeof ApiSpraySetsRouteWithChildren
   ApiUgcUploadsRoute: typeof ApiUgcUploadsRouteWithChildren
+  GiveawaySlugRulesRoute: typeof GiveawaySlugRulesRoute
   MIdFilenameRoute: typeof MIdFilenameRoute
+  GiveawaySlugIndexRoute: typeof GiveawaySlugIndexRoute
   ApiArAdminAssetsRoute: typeof ApiArAdminAssetsRouteWithChildren
   ApiArAssetIdRoute: typeof ApiArAssetIdRoute
   ApiArDemoContentDemoRoute: typeof ApiArDemoContentDemoRoute
@@ -1911,6 +2404,10 @@ export interface RootRouteChildren {
   ApiMediaDevSeedRoute: typeof ApiMediaDevSeedRoute
   ApiMediaFilesIdRoute: typeof ApiMediaFilesIdRoute
   ApiMediaThumbsIdRoute: typeof ApiMediaThumbsIdRoute
+  ApiSprayAdminAssetsRoute: typeof ApiSprayAdminAssetsRouteWithChildren
+  ApiSprayAdminCreationsRoute: typeof ApiSprayAdminCreationsRouteWithChildren
+  ApiSprayAdminSetsRoute: typeof ApiSprayAdminSetsRouteWithChildren
+  ApiSprayFileSplatRoute: typeof ApiSprayFileSplatRoute
   ApiUgcDevSeedRoute: typeof ApiUgcDevSeedRoute
   ApiArAdminProjectSlugRoute: typeof ApiArAdminProjectSlugRoute
   ApiCollectorAdminBatchesKeyRoute: typeof ApiCollectorAdminBatchesKeyRoute
@@ -1984,13 +2481,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/technology': {
-      id: '/technology'
-      path: '/technology'
-      fullPath: '/technology'
-      preLoaderRoute: typeof TechnologyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin/': {
       id: '/admin/'
       path: '/'
@@ -2033,6 +2523,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLinksRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/lootbreak': {
+      id: '/admin/lootbreak'
+      path: '/lootbreak'
+      fullPath: '/admin/lootbreak'
+      preLoaderRoute: typeof AdminLootbreakRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/media': {
       id: '/admin/media'
       path: '/media'
@@ -2054,6 +2551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminShelvesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/spray': {
+      id: '/admin/spray'
+      path: '/spray'
+      fullPath: '/admin/spray'
+      preLoaderRoute: typeof AdminSprayRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/ugc': {
       id: '/admin/ugc'
       path: '/ugc'
@@ -2066,6 +2570,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/login'
       fullPath: '/admin/login'
       preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/showcase.json': {
+      id: '/api/showcase.json'
+      path: '/api/showcase.json'
+      fullPath: '/api/showcase.json'
+      preLoaderRoute: typeof ApiShowcaseDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/creator-hub/': {
@@ -2131,6 +2642,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CreatorHubVerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/giveaway/auth': {
+      id: '/giveaway/auth'
+      path: '/giveaway/auth'
+      fullPath: '/giveaway/auth'
+      preLoaderRoute: typeof GiveawayAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/go/$code': {
       id: '/go/$code'
       path: '/go/$code'
@@ -2180,12 +2698,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShelfSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technology/': {
+      id: '/technology/'
+      path: '/technology'
+      fullPath: '/technology/'
+      preLoaderRoute: typeof TechnologyIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/technology/$slug': {
       id: '/technology/$slug'
-      path: '/$slug'
+      path: '/technology/$slug'
       fullPath: '/technology/$slug'
       preLoaderRoute: typeof TechnologySlugRouteImport
-      parentRoute: typeof TechnologyRoute
+      parentRoute: typeof rootRouteImport
     }
     '/ugc-hub/_app': {
       id: '/ugc-hub/_app'
@@ -2255,6 +2780,20 @@ declare module '@tanstack/react-router' {
       path: '/creators/$creatorId'
       fullPath: '/admin/creators/$creatorId'
       preLoaderRoute: typeof AdminCreatorsCreatorIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/giveaways/': {
+      id: '/admin/giveaways/'
+      path: '/giveaways'
+      fullPath: '/admin/giveaways/'
+      preLoaderRoute: typeof AdminGiveawaysIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/giveaways/$campaignId': {
+      id: '/admin/giveaways/$campaignId'
+      path: '/giveaways/$campaignId'
+      fullPath: '/admin/giveaways/$campaignId'
+      preLoaderRoute: typeof AdminGiveawaysCampaignIdRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/partners/': {
@@ -2327,6 +2866,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUgcShippingRouteImport
       parentRoute: typeof AdminUgcRoute
     }
+    '/api/ar/kc-diag': {
+      id: '/api/ar/kc-diag'
+      path: '/api/ar/kc-diag'
+      fullPath: '/api/ar/kc-diag'
+      preLoaderRoute: typeof ApiArKcDiagRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ar/link': {
       id: '/api/ar/link'
       path: '/api/ar/link'
@@ -2390,6 +2936,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCollectorUnlockRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/giveaway/discord': {
+      id: '/api/giveaway/discord'
+      path: '/api/giveaway/discord'
+      fullPath: '/api/giveaway/discord'
+      preLoaderRoute: typeof ApiGiveawayDiscordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/holocast/$code': {
+      id: '/api/holocast/$code'
+      path: '/api/holocast/$code'
+      fullPath: '/api/holocast/$code'
+      preLoaderRoute: typeof ApiHolocastCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/holocast/rooms': {
+      id: '/api/holocast/rooms'
+      path: '/api/holocast/rooms'
+      fullPath: '/api/holocast/rooms'
+      preLoaderRoute: typeof ApiHolocastRoomsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/hub/files': {
       id: '/api/hub/files'
       path: '/api/hub/files'
@@ -2411,6 +2978,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHubShelfAssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/lootbreak/claim': {
+      id: '/api/lootbreak/claim'
+      path: '/api/lootbreak/claim'
+      fullPath: '/api/lootbreak/claim'
+      preLoaderRoute: typeof ApiLootbreakClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lootbreak/config': {
+      id: '/api/lootbreak/config'
+      path: '/api/lootbreak/config'
+      fullPath: '/api/lootbreak/config'
+      preLoaderRoute: typeof ApiLootbreakConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/lootbreak/round': {
+      id: '/api/lootbreak/round'
+      path: '/api/lootbreak/round'
+      fullPath: '/api/lootbreak/round'
+      preLoaderRoute: typeof ApiLootbreakRoundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/media/index.json': {
       id: '/api/media/index.json'
       path: '/api/media/index.json'
@@ -2430,6 +3018,41 @@ declare module '@tanstack/react-router' {
       path: '/api/media/uploads'
       fullPath: '/api/media/uploads'
       preLoaderRoute: typeof ApiMediaUploadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/creations': {
+      id: '/api/spray/creations'
+      path: '/api/spray/creations'
+      fullPath: '/api/spray/creations'
+      preLoaderRoute: typeof ApiSprayCreationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/me': {
+      id: '/api/spray/me'
+      path: '/api/spray/me'
+      fullPath: '/api/spray/me'
+      preLoaderRoute: typeof ApiSprayMeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/qr': {
+      id: '/api/spray/qr'
+      path: '/api/spray/qr'
+      fullPath: '/api/spray/qr'
+      preLoaderRoute: typeof ApiSprayQrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/realtime': {
+      id: '/api/spray/realtime'
+      path: '/api/spray/realtime'
+      fullPath: '/api/spray/realtime'
+      preLoaderRoute: typeof ApiSprayRealtimeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/sets': {
+      id: '/api/spray/sets'
+      path: '/api/spray/sets'
+      fullPath: '/api/spray/sets'
+      preLoaderRoute: typeof ApiSpraySetsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/ugc/uploads': {
@@ -2501,6 +3124,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/creator-hub/live'
       preLoaderRoute: typeof CreatorHubAppLiveRouteImport
       parentRoute: typeof CreatorHubAppRoute
+    }
+    '/giveaway/$slug/': {
+      id: '/giveaway/$slug/'
+      path: '/giveaway/$slug'
+      fullPath: '/giveaway/$slug/'
+      preLoaderRoute: typeof GiveawaySlugIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/giveaway/$slug/rules': {
+      id: '/giveaway/$slug/rules'
+      path: '/giveaway/$slug/rules'
+      fullPath: '/giveaway/$slug/rules'
+      preLoaderRoute: typeof GiveawaySlugRulesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/m/$id/$filename': {
       id: '/m/$id/$filename'
@@ -2719,6 +3356,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBoboDevSeedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/giveaway/discord/callback': {
+      id: '/api/giveaway/discord/callback'
+      path: '/callback'
+      fullPath: '/api/giveaway/discord/callback'
+      preLoaderRoute: typeof ApiGiveawayDiscordCallbackRouteImport
+      parentRoute: typeof ApiGiveawayDiscordRoute
+    }
+    '/api/holocast/$code/frame': {
+      id: '/api/holocast/$code/frame'
+      path: '/frame'
+      fullPath: '/api/holocast/$code/frame'
+      preLoaderRoute: typeof ApiHolocastCodeFrameRouteImport
+      parentRoute: typeof ApiHolocastCodeRoute
+    }
+    '/api/holocast/$code/photo': {
+      id: '/api/holocast/$code/photo'
+      path: '/photo'
+      fullPath: '/api/holocast/$code/photo'
+      preLoaderRoute: typeof ApiHolocastCodePhotoRouteImport
+      parentRoute: typeof ApiHolocastCodeRoute
+    }
+    '/api/holocast/$code/rtc': {
+      id: '/api/holocast/$code/rtc'
+      path: '/rtc'
+      fullPath: '/api/holocast/$code/rtc'
+      preLoaderRoute: typeof ApiHolocastCodeRtcRouteImport
+      parentRoute: typeof ApiHolocastCodeRoute
+    }
     '/api/hub/auth/discord': {
       id: '/api/hub/auth/discord'
       path: '/api/hub/auth/discord'
@@ -2774,6 +3439,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/media/uploads/$id'
       preLoaderRoute: typeof ApiMediaUploadsIdRouteImport
       parentRoute: typeof ApiMediaUploadsRoute
+    }
+    '/api/spray/admin/assets': {
+      id: '/api/spray/admin/assets'
+      path: '/api/spray/admin/assets'
+      fullPath: '/api/spray/admin/assets'
+      preLoaderRoute: typeof ApiSprayAdminAssetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/admin/creations': {
+      id: '/api/spray/admin/creations'
+      path: '/api/spray/admin/creations'
+      fullPath: '/api/spray/admin/creations'
+      preLoaderRoute: typeof ApiSprayAdminCreationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/admin/sets': {
+      id: '/api/spray/admin/sets'
+      path: '/api/spray/admin/sets'
+      fullPath: '/api/spray/admin/sets'
+      preLoaderRoute: typeof ApiSprayAdminSetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/creations/$id': {
+      id: '/api/spray/creations/$id'
+      path: '/$id'
+      fullPath: '/api/spray/creations/$id'
+      preLoaderRoute: typeof ApiSprayCreationsIdRouteImport
+      parentRoute: typeof ApiSprayCreationsRoute
+    }
+    '/api/spray/file/$': {
+      id: '/api/spray/file/$'
+      path: '/api/spray/file/$'
+      fullPath: '/api/spray/file/$'
+      preLoaderRoute: typeof ApiSprayFileSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/spray/sets/$id': {
+      id: '/api/spray/sets/$id'
+      path: '/$id'
+      fullPath: '/api/spray/sets/$id'
+      preLoaderRoute: typeof ApiSpraySetsIdRouteImport
+      parentRoute: typeof ApiSpraySetsRoute
     }
     '/api/ugc/dev/seed': {
       id: '/api/ugc/dev/seed'
@@ -2852,6 +3559,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCollectorAdminBatchesKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/holocast/$code/photo/$id': {
+      id: '/api/holocast/$code/photo/$id'
+      path: '/$id'
+      fullPath: '/api/holocast/$code/photo/$id'
+      preLoaderRoute: typeof ApiHolocastCodePhotoIdRouteImport
+      parentRoute: typeof ApiHolocastCodePhotoRoute
+    }
     '/api/hub/auth/discord/callback': {
       id: '/api/hub/auth/discord/callback'
       path: '/callback'
@@ -2893,6 +3607,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/media/uploads/$id/thumb'
       preLoaderRoute: typeof ApiMediaUploadsIdThumbRouteImport
       parentRoute: typeof ApiMediaUploadsIdRoute
+    }
+    '/api/spray/admin/assets/$id': {
+      id: '/api/spray/admin/assets/$id'
+      path: '/$id'
+      fullPath: '/api/spray/admin/assets/$id'
+      preLoaderRoute: typeof ApiSprayAdminAssetsIdRouteImport
+      parentRoute: typeof ApiSprayAdminAssetsRoute
+    }
+    '/api/spray/admin/assets/upload': {
+      id: '/api/spray/admin/assets/upload'
+      path: '/upload'
+      fullPath: '/api/spray/admin/assets/upload'
+      preLoaderRoute: typeof ApiSprayAdminAssetsUploadRouteImport
+      parentRoute: typeof ApiSprayAdminAssetsRoute
+    }
+    '/api/spray/admin/creations/$id': {
+      id: '/api/spray/admin/creations/$id'
+      path: '/$id'
+      fullPath: '/api/spray/admin/creations/$id'
+      preLoaderRoute: typeof ApiSprayAdminCreationsIdRouteImport
+      parentRoute: typeof ApiSprayAdminCreationsRoute
+    }
+    '/api/spray/admin/sets/$id': {
+      id: '/api/spray/admin/sets/$id'
+      path: '/$id'
+      fullPath: '/api/spray/admin/sets/$id'
+      preLoaderRoute: typeof ApiSprayAdminSetsIdRouteImport
+      parentRoute: typeof ApiSprayAdminSetsRoute
+    }
+    '/api/spray/creations/$id/image': {
+      id: '/api/spray/creations/$id/image'
+      path: '/image'
+      fullPath: '/api/spray/creations/$id/image'
+      preLoaderRoute: typeof ApiSprayCreationsIdImageRouteImport
+      parentRoute: typeof ApiSprayCreationsIdRoute
+    }
+    '/api/spray/creations/$id/report': {
+      id: '/api/spray/creations/$id/report'
+      path: '/report'
+      fullPath: '/api/spray/creations/$id/report'
+      preLoaderRoute: typeof ApiSprayCreationsIdReportRouteImport
+      parentRoute: typeof ApiSprayCreationsIdRoute
     }
     '/api/ugc/files/posters/$id': {
       id: '/api/ugc/files/posters/$id'
@@ -2949,6 +3705,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/media/uploads/$id/chunks/$n'
       preLoaderRoute: typeof ApiMediaUploadsIdChunksNRouteImport
       parentRoute: typeof ApiMediaUploadsIdRoute
+    }
+    '/api/spray/admin/sets/$id/asset': {
+      id: '/api/spray/admin/sets/$id/asset'
+      path: '/asset'
+      fullPath: '/api/spray/admin/sets/$id/asset'
+      preLoaderRoute: typeof ApiSprayAdminSetsIdAssetRouteImport
+      parentRoute: typeof ApiSprayAdminSetsIdRoute
+    }
+    '/api/spray/admin/sets/$id/scene': {
+      id: '/api/spray/admin/sets/$id/scene'
+      path: '/scene'
+      fullPath: '/api/spray/admin/sets/$id/scene'
+      preLoaderRoute: typeof ApiSprayAdminSetsIdSceneRouteImport
+      parentRoute: typeof ApiSprayAdminSetsIdRoute
     }
     '/api/ugc/files/assets/$campaignId/$id': {
       id: '/api/ugc/files/assets/$campaignId/$id'
@@ -3039,16 +3809,20 @@ interface AdminRouteChildren {
   AdminCollectorRoute: typeof AdminCollectorRoute
   AdminDemosRoute: typeof AdminDemosRoute
   AdminLinksRoute: typeof AdminLinksRoute
+  AdminLootbreakRoute: typeof AdminLootbreakRoute
   AdminMediaRoute: typeof AdminMediaRoute
   AdminMedialifeRoute: typeof AdminMedialifeRoute
   AdminShelvesRoute: typeof AdminShelvesRouteWithChildren
+  AdminSprayRoute: typeof AdminSprayRoute
   AdminUgcRoute: typeof AdminUgcRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
+  AdminGiveawaysCampaignIdRoute: typeof AdminGiveawaysCampaignIdRoute
   AdminPartnersPartnerIdRoute: typeof AdminPartnersPartnerIdRoute
   AdminPartnersCollateralRoute: typeof AdminPartnersCollateralRoute
   AdminPartnersKitRoute: typeof AdminPartnersKitRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
+  AdminGiveawaysIndexRoute: typeof AdminGiveawaysIndexRoute
   AdminPartnersIndexRoute: typeof AdminPartnersIndexRoute
 }
 
@@ -3058,32 +3832,24 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCollectorRoute: AdminCollectorRoute,
   AdminDemosRoute: AdminDemosRoute,
   AdminLinksRoute: AdminLinksRoute,
+  AdminLootbreakRoute: AdminLootbreakRoute,
   AdminMediaRoute: AdminMediaRoute,
   AdminMedialifeRoute: AdminMedialifeRoute,
   AdminShelvesRoute: AdminShelvesRouteWithChildren,
+  AdminSprayRoute: AdminSprayRoute,
   AdminUgcRoute: AdminUgcRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
+  AdminGiveawaysCampaignIdRoute: AdminGiveawaysCampaignIdRoute,
   AdminPartnersPartnerIdRoute: AdminPartnersPartnerIdRoute,
   AdminPartnersCollateralRoute: AdminPartnersCollateralRoute,
   AdminPartnersKitRoute: AdminPartnersKitRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
+  AdminGiveawaysIndexRoute: AdminGiveawaysIndexRoute,
   AdminPartnersIndexRoute: AdminPartnersIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
-interface TechnologyRouteChildren {
-  TechnologySlugRoute: typeof TechnologySlugRoute
-}
-
-const TechnologyRouteChildren: TechnologyRouteChildren = {
-  TechnologySlugRoute: TechnologySlugRoute,
-}
-
-const TechnologyRouteWithChildren = TechnologyRoute._addFileChildren(
-  TechnologyRouteChildren,
-)
 
 interface CreatorHubAppRouteChildren {
   CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
@@ -3197,6 +3963,44 @@ const UgcHubAppRouteWithChildren = UgcHubAppRoute._addFileChildren(
   UgcHubAppRouteChildren,
 )
 
+interface ApiGiveawayDiscordRouteChildren {
+  ApiGiveawayDiscordCallbackRoute: typeof ApiGiveawayDiscordCallbackRoute
+}
+
+const ApiGiveawayDiscordRouteChildren: ApiGiveawayDiscordRouteChildren = {
+  ApiGiveawayDiscordCallbackRoute: ApiGiveawayDiscordCallbackRoute,
+}
+
+const ApiGiveawayDiscordRouteWithChildren =
+  ApiGiveawayDiscordRoute._addFileChildren(ApiGiveawayDiscordRouteChildren)
+
+interface ApiHolocastCodePhotoRouteChildren {
+  ApiHolocastCodePhotoIdRoute: typeof ApiHolocastCodePhotoIdRoute
+}
+
+const ApiHolocastCodePhotoRouteChildren: ApiHolocastCodePhotoRouteChildren = {
+  ApiHolocastCodePhotoIdRoute: ApiHolocastCodePhotoIdRoute,
+}
+
+const ApiHolocastCodePhotoRouteWithChildren =
+  ApiHolocastCodePhotoRoute._addFileChildren(ApiHolocastCodePhotoRouteChildren)
+
+interface ApiHolocastCodeRouteChildren {
+  ApiHolocastCodeFrameRoute: typeof ApiHolocastCodeFrameRoute
+  ApiHolocastCodePhotoRoute: typeof ApiHolocastCodePhotoRouteWithChildren
+  ApiHolocastCodeRtcRoute: typeof ApiHolocastCodeRtcRoute
+}
+
+const ApiHolocastCodeRouteChildren: ApiHolocastCodeRouteChildren = {
+  ApiHolocastCodeFrameRoute: ApiHolocastCodeFrameRoute,
+  ApiHolocastCodePhotoRoute: ApiHolocastCodePhotoRouteWithChildren,
+  ApiHolocastCodeRtcRoute: ApiHolocastCodeRtcRoute,
+}
+
+const ApiHolocastCodeRouteWithChildren = ApiHolocastCodeRoute._addFileChildren(
+  ApiHolocastCodeRouteChildren,
+)
+
 interface ApiHubFilesCreatorIdFileIdRouteChildren {
   ApiHubFilesCreatorIdFileIdCompleteRoute: typeof ApiHubFilesCreatorIdFileIdCompleteRoute
   ApiHubFilesCreatorIdFileIdChunksNRoute: typeof ApiHubFilesCreatorIdFileIdChunksNRoute
@@ -3265,6 +4069,42 @@ const ApiMediaUploadsRouteChildren: ApiMediaUploadsRouteChildren = {
 
 const ApiMediaUploadsRouteWithChildren = ApiMediaUploadsRoute._addFileChildren(
   ApiMediaUploadsRouteChildren,
+)
+
+interface ApiSprayCreationsIdRouteChildren {
+  ApiSprayCreationsIdImageRoute: typeof ApiSprayCreationsIdImageRoute
+  ApiSprayCreationsIdReportRoute: typeof ApiSprayCreationsIdReportRoute
+}
+
+const ApiSprayCreationsIdRouteChildren: ApiSprayCreationsIdRouteChildren = {
+  ApiSprayCreationsIdImageRoute: ApiSprayCreationsIdImageRoute,
+  ApiSprayCreationsIdReportRoute: ApiSprayCreationsIdReportRoute,
+}
+
+const ApiSprayCreationsIdRouteWithChildren =
+  ApiSprayCreationsIdRoute._addFileChildren(ApiSprayCreationsIdRouteChildren)
+
+interface ApiSprayCreationsRouteChildren {
+  ApiSprayCreationsIdRoute: typeof ApiSprayCreationsIdRouteWithChildren
+}
+
+const ApiSprayCreationsRouteChildren: ApiSprayCreationsRouteChildren = {
+  ApiSprayCreationsIdRoute: ApiSprayCreationsIdRouteWithChildren,
+}
+
+const ApiSprayCreationsRouteWithChildren =
+  ApiSprayCreationsRoute._addFileChildren(ApiSprayCreationsRouteChildren)
+
+interface ApiSpraySetsRouteChildren {
+  ApiSpraySetsIdRoute: typeof ApiSpraySetsIdRoute
+}
+
+const ApiSpraySetsRouteChildren: ApiSpraySetsRouteChildren = {
+  ApiSpraySetsIdRoute: ApiSpraySetsIdRoute,
+}
+
+const ApiSpraySetsRouteWithChildren = ApiSpraySetsRoute._addFileChildren(
+  ApiSpraySetsRouteChildren,
 )
 
 interface ApiUgcUploadsIdRouteChildren {
@@ -3341,6 +4181,57 @@ const ApiHubOverlayTokenRouteChildren: ApiHubOverlayTokenRouteChildren = {
 const ApiHubOverlayTokenRouteWithChildren =
   ApiHubOverlayTokenRoute._addFileChildren(ApiHubOverlayTokenRouteChildren)
 
+interface ApiSprayAdminAssetsRouteChildren {
+  ApiSprayAdminAssetsIdRoute: typeof ApiSprayAdminAssetsIdRoute
+  ApiSprayAdminAssetsUploadRoute: typeof ApiSprayAdminAssetsUploadRoute
+}
+
+const ApiSprayAdminAssetsRouteChildren: ApiSprayAdminAssetsRouteChildren = {
+  ApiSprayAdminAssetsIdRoute: ApiSprayAdminAssetsIdRoute,
+  ApiSprayAdminAssetsUploadRoute: ApiSprayAdminAssetsUploadRoute,
+}
+
+const ApiSprayAdminAssetsRouteWithChildren =
+  ApiSprayAdminAssetsRoute._addFileChildren(ApiSprayAdminAssetsRouteChildren)
+
+interface ApiSprayAdminCreationsRouteChildren {
+  ApiSprayAdminCreationsIdRoute: typeof ApiSprayAdminCreationsIdRoute
+}
+
+const ApiSprayAdminCreationsRouteChildren: ApiSprayAdminCreationsRouteChildren =
+  {
+    ApiSprayAdminCreationsIdRoute: ApiSprayAdminCreationsIdRoute,
+  }
+
+const ApiSprayAdminCreationsRouteWithChildren =
+  ApiSprayAdminCreationsRoute._addFileChildren(
+    ApiSprayAdminCreationsRouteChildren,
+  )
+
+interface ApiSprayAdminSetsIdRouteChildren {
+  ApiSprayAdminSetsIdAssetRoute: typeof ApiSprayAdminSetsIdAssetRoute
+  ApiSprayAdminSetsIdSceneRoute: typeof ApiSprayAdminSetsIdSceneRoute
+}
+
+const ApiSprayAdminSetsIdRouteChildren: ApiSprayAdminSetsIdRouteChildren = {
+  ApiSprayAdminSetsIdAssetRoute: ApiSprayAdminSetsIdAssetRoute,
+  ApiSprayAdminSetsIdSceneRoute: ApiSprayAdminSetsIdSceneRoute,
+}
+
+const ApiSprayAdminSetsIdRouteWithChildren =
+  ApiSprayAdminSetsIdRoute._addFileChildren(ApiSprayAdminSetsIdRouteChildren)
+
+interface ApiSprayAdminSetsRouteChildren {
+  ApiSprayAdminSetsIdRoute: typeof ApiSprayAdminSetsIdRouteWithChildren
+}
+
+const ApiSprayAdminSetsRouteChildren: ApiSprayAdminSetsRouteChildren = {
+  ApiSprayAdminSetsIdRoute: ApiSprayAdminSetsIdRouteWithChildren,
+}
+
+const ApiSprayAdminSetsRouteWithChildren =
+  ApiSprayAdminSetsRoute._addFileChildren(ApiSprayAdminSetsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ActivatedRetailRoute: ActivatedRetailRoute,
@@ -3351,8 +4242,8 @@ const rootRouteChildren: RootRouteChildren = {
   FanReactionsRoute: FanReactionsRoute,
   InsightsRoute: InsightsRoute,
   LiveRoute: LiveRoute,
-  TechnologyRoute: TechnologyRouteWithChildren,
   AdminLoginRoute: AdminLoginRoute,
+  ApiShowcaseDotjsonRoute: ApiShowcaseDotjsonRoute,
   CreatorHubAppRoute: CreatorHubAppRouteWithChildren,
   CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
   CreatorHubJoinRoute: CreatorHubJoinRoute,
@@ -3361,12 +4252,14 @@ const rootRouteChildren: RootRouteChildren = {
   CreatorHubSignInRoute: CreatorHubSignInRoute,
   CreatorHubTermsRoute: CreatorHubTermsRoute,
   CreatorHubVerifyEmailRoute: CreatorHubVerifyEmailRoute,
+  GiveawayAuthRoute: GiveawayAuthRoute,
   GoCodeRoute: GoCodeRoute,
   OverlayTokenRoute: OverlayTokenRoute,
   PartnerHubAppRoute: PartnerHubAppRouteWithChildren,
   PartnerHubJoinRoute: PartnerHubJoinRoute,
   RobloxPortalRoute: RobloxPortalRouteWithChildren,
   ShelfSlugRoute: ShelfSlugRoute,
+  TechnologySlugRoute: TechnologySlugRoute,
   UgcHubAppRoute: UgcHubAppRouteWithChildren,
   UgcHubAuthRoute: UgcHubAuthRoute,
   UgcHubCheckEmailRoute: UgcHubCheckEmailRoute,
@@ -3375,6 +4268,8 @@ const rootRouteChildren: RootRouteChildren = {
   XSlugRoute: XSlugRoute,
   CreatorHubIndexRoute: CreatorHubIndexRoute,
   ShelfIndexRoute: ShelfIndexRoute,
+  TechnologyIndexRoute: TechnologyIndexRoute,
+  ApiArKcDiagRoute: ApiArKcDiagRoute,
   ApiArLinkRoute: ApiArLinkRoute,
   ApiArTrackRoute: ApiArTrackRoute,
   ApiBoboEventsRoute: ApiBoboEventsRoute,
@@ -3384,14 +4279,27 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCollectorAlertsDotjsonRoute: ApiCollectorAlertsDotjsonRoute,
   ApiCollectorMeRoute: ApiCollectorMeRoute,
   ApiCollectorUnlockRoute: ApiCollectorUnlockRoute,
+  ApiGiveawayDiscordRoute: ApiGiveawayDiscordRouteWithChildren,
+  ApiHolocastCodeRoute: ApiHolocastCodeRouteWithChildren,
+  ApiHolocastRoomsRoute: ApiHolocastRoomsRoute,
   ApiHubFilesRoute: ApiHubFilesRouteWithChildren,
   ApiHubOrdersRoute: ApiHubOrdersRoute,
   ApiHubShelfAssetsRoute: ApiHubShelfAssetsRouteWithChildren,
+  ApiLootbreakClaimRoute: ApiLootbreakClaimRoute,
+  ApiLootbreakConfigRoute: ApiLootbreakConfigRoute,
+  ApiLootbreakRoundRoute: ApiLootbreakRoundRoute,
   ApiMediaIndexDotjsonRoute: ApiMediaIndexDotjsonRoute,
   ApiMediaLlmsDottxtRoute: ApiMediaLlmsDottxtRoute,
   ApiMediaUploadsRoute: ApiMediaUploadsRouteWithChildren,
+  ApiSprayCreationsRoute: ApiSprayCreationsRouteWithChildren,
+  ApiSprayMeRoute: ApiSprayMeRoute,
+  ApiSprayQrRoute: ApiSprayQrRoute,
+  ApiSprayRealtimeRoute: ApiSprayRealtimeRoute,
+  ApiSpraySetsRoute: ApiSpraySetsRouteWithChildren,
   ApiUgcUploadsRoute: ApiUgcUploadsRouteWithChildren,
+  GiveawaySlugRulesRoute: GiveawaySlugRulesRoute,
   MIdFilenameRoute: MIdFilenameRoute,
+  GiveawaySlugIndexRoute: GiveawaySlugIndexRoute,
   ApiArAdminAssetsRoute: ApiArAdminAssetsRouteWithChildren,
   ApiArAssetIdRoute: ApiArAssetIdRoute,
   ApiArDemoContentDemoRoute: ApiArDemoContentDemoRoute,
@@ -3405,6 +4313,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMediaDevSeedRoute: ApiMediaDevSeedRoute,
   ApiMediaFilesIdRoute: ApiMediaFilesIdRoute,
   ApiMediaThumbsIdRoute: ApiMediaThumbsIdRoute,
+  ApiSprayAdminAssetsRoute: ApiSprayAdminAssetsRouteWithChildren,
+  ApiSprayAdminCreationsRoute: ApiSprayAdminCreationsRouteWithChildren,
+  ApiSprayAdminSetsRoute: ApiSprayAdminSetsRouteWithChildren,
+  ApiSprayFileSplatRoute: ApiSprayFileSplatRoute,
   ApiUgcDevSeedRoute: ApiUgcDevSeedRoute,
   ApiArAdminProjectSlugRoute: ApiArAdminProjectSlugRoute,
   ApiCollectorAdminBatchesKeyRoute: ApiCollectorAdminBatchesKeyRoute,

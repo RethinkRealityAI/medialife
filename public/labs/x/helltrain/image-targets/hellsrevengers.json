@@ -1,0 +1,19 @@
+{
+ "name": "hellsrevengers",
+ "type": "PLANAR",
+ "properties": {
+  "top": 60,
+  "left": 0,
+  "width": 1412,
+  "height": 1883,
+  "isRotated": false,
+  "originalWidth": 1412,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/helltrain/image-targets/hellsrevengers_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "hellsrevengers_luminance.jpeg",
+  "originalImage": "hellsrevengers.jpg"
+ }
+}

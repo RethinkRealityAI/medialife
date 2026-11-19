@@ -1,0 +1,145 @@
+{
+  "targets": {
+    "kc-both": {
+      "widthM": 0.07185714285714286,
+      "heightM": 0.09578571428571428,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": -0.006075489195704929,
+          "y": 0.006823698742857154,
+          "rz": -0.19229614181076757
+        },
+        "can": {
+          "x": 0.01734779447343007,
+          "y": -0.010500509257142868,
+          "rz": 0.15615861865103256
+        }
+      }
+    },
+    "kc-bobo": {
+      "widthM": 0.060071428571428574,
+      "heightM": 0.08014285714285714,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": 0.000154,
+          "y": -2e-06,
+          "rz": 0.00227,
+          "s": 0.99715,
+          "mirror": true
+        }
+      },
+      "mask": {
+        "src": "kc-bobo-mask.png",
+        "widthM": 0.07809285714285714,
+        "heightM": 0.10418571428571428
+      }
+    },
+    "kc-can-art": {
+      "widthM": 0.04485714285714286,
+      "heightM": 0.05978571428571428,
+      "silhouettes": true,
+      "charms": {
+        "can": {
+          "x": 0,
+          "y": 0,
+          "rz": 0
+        }
+      }
+    },
+    "kc-old": {
+      "widthM": 0.0585,
+      "heightM": 0.078,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": 0,
+          "y": 0,
+          "rz": 0
+        }
+      },
+      "mask": {
+        "src": "kc-old-mask.png",
+        "widthM": 0.07605,
+        "heightM": 0.1014
+      }
+    },
+    "kc-can": {
+      "widthM": 0.04485,
+      "heightM": 0.059800000000000006,
+      "silhouettes": true,
+      "charms": {
+        "can": {
+          "x": 0.000213,
+          "y": 0.000772,
+          "rz": 0.05263,
+          "s": 0.98626,
+          "mirror": false
+        }
+      },
+      "mask": {
+        "src": "kc-can-mask.png",
+        "widthM": 0.058305,
+        "heightM": 0.07774
+      }
+    },
+    "kc-can-back": {
+      "widthM": 0.04485714285714286,
+      "heightM": 0.05978571428571428,
+      "silhouettes": true,
+      "charms": {
+        "can": {
+          "x": 0.000305,
+          "y": -9.8e-05,
+          "rz": -0.00081,
+          "s": 0.99684,
+          "mirror": true
+        }
+      },
+      "mask": {
+        "src": "kc-can-back-mask.png",
+        "widthM": 0.05831428571428572,
+        "heightM": 0.07772142857142857
+      }
+    },
+    "kc-bobo-l": {
+      "widthM": 0.060071428571428574,
+      "heightM": 0.08014285714285714,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": -0.000154,
+          "y": -2e-06,
+          "rz": -0.00227,
+          "s": 0.99715,
+          "mirror": false
+        }
+      },
+      "mask": {
+        "src": "kc-bobo-l-mask.png",
+        "widthM": 0.07809285714285714,
+        "heightM": 0.10418571428571428
+      }
+    },
+    "kc-old-l": {
+      "widthM": 0.0585,
+      "heightM": 0.078,
+      "silhouettes": true,
+      "charms": {
+        "bobo": {
+          "x": 0,
+          "y": 0,
+          "rz": 0,
+          "s": 1,
+          "mirror": true
+        }
+      },
+      "mask": {
+        "src": "kc-old-l-mask.png",
+        "widthM": 0.07605,
+        "heightM": 0.1014
+      }
+    }
+  }
+}

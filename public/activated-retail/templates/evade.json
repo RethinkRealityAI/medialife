@@ -100,13 +100,13 @@
         "category": "Activated Merchandise® · pilot SKU",
         "sku": "EVD-KEY-01",
         "price": 18,
-        "description": "The launch-ready pilot product: acrylic Bobo and Eclipse Cola charms with an NFC tag and a QR on the back. One tap opens Cola Run, the exclusive mini-game, and unlocks an in-game UGC item (subject to final approval).",
+        "description": "The launch-ready pilot product: clear acrylic Bobo the cat and Eclipse Cola charms, with a QR printed on the back of the can. One scan opens Cola Run, the exclusive mini-game, and unlocks an in-game UGC item (subject to final approval).",
         "unlock": {
           "title": "Cola Run + UGC item",
           "sub": "Live now at evade.medialife.ai",
           "image": "/roblox/activated-retail/assets/ev_keyglow.webp"
         },
-        "trigger": "NFC tag + QR on the charm back",
+        "trigger": "QR on the back of the can charm",
         "channel": "Roblox Commerce in EVADE",
         "canActivate": true
       }

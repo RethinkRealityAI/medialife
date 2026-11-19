@@ -132,7 +132,7 @@ export function PartnerBanner({
       />
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-[var(--partner)] to-transparent opacity-70"
+        className="absolute inset-x-0 top-0 -z-10 h-px bg-[var(--partner)]/50 opacity-70"
       />
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4 p-5 sm:p-7">
         <div className="max-w-xl min-w-0">

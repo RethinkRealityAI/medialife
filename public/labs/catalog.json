@@ -1,0 +1,1321 @@
+[
+  {
+    "slug": "holocast",
+    "title": "Holocast",
+    "lead": "Put a holo projector on your floor or table and its floating screens fill with live data from the control room: notices, a live sketch, photo drops, a 3D live poll, spoken captions, the Where is Bobo? globe, reactions and a live video stream.",
+    "url": "/labs/holocast/",
+    "extraLinks": [
+      {
+        "label": "Control room",
+        "url": "/labs/holocast/control/"
+      }
+    ],
+    "thumb": "/labs/img/holocast.webp",
+    "alt": "Holocast: a holo projector beaming a notice board, a Where is Bobo? globe and a live sketch screen above it",
+    "client": "MEDIALIFE",
+    "categories": [
+      "live-data",
+      "showcase"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "phone"
+  },
+  {
+    "slug": "bobo-portal",
+    "title": "Bobo's Portal",
+    "lead": "Put a door on your floor and walk through it into Bobo's world under the eclipse: a night city, the giant Eclipse can, Bobo running laps and 8 floating cans to crack open. Turn round and your room is still there through the door.",
+    "url": "/evade/bobo-portal/",
+    "thumb": "/labs/img/bobo-portal.webp",
+    "alt": "Bobo's Portal: a yellow, magenta and white door on the floor opening onto Eclipse Plaza at night, with the giant Eclipse can inside",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "showcase"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "phone",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "medialife-portal",
+    "title": "MEDIALIFE Portal",
+    "lead": "Walk through a glowing door into the MEDIALIFE world. Spark waves you in, five pieces of activated merch wait on plinths: tap one to wake it up and a real fan clip plays above it.",
+    "url": "/labs/medialife-portal/",
+    "thumb": "/labs/img/medialife-portal.webp",
+    "alt": "MEDIALIFE Portal: a blue, magenta and white door on the floor with Spark the mascot waving inside a starry stage",
+    "client": "MEDIALIFE",
+    "categories": [
+      "showcase",
+      "apparel"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "moon-portal",
+    "title": "Moon Portal (sample)",
+    "lead": "The world-tracking portal sample running on medialife.ai: drop a portal on your floor, walk through it onto the moon, and turn round to see your room through the door. The starting point for our portals.",
+    "url": "/labs/moon-portal/",
+    "thumb": "/labs/img/moon-portal.webp",
+    "alt": "Moon Portal in the camera: a round sci-fi portal on the floor showing the moon's surface and a landing platform through it",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "eclipse-night",
+    "title": "Eclipse Night",
+    "lead": "Charge the Eclipse can charm, then point at the sky: the real sky turns into EVADE's night, the giant can eclipses the moon and Bobo walks out of his constellation.",
+    "url": "/evade/eclipse-night/",
+    "extraLinks": [
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/eclipse-night.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "showcase"
+    ],
+    "tech": [
+      "sky",
+      "image-target"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation"
+  },
+  {
+    "slug": "cola-run",
+    "title": "Cola Run on our own world tracking",
+    "lead": "The full Cola Run game on world tracking, hosted on medialife.ai with no Mattercraft: splash, game, record button, Bobo's Arcade, and a life-size Bobo's Hideout you walk into through a door.",
+    "url": "/evade/cola-run/",
+    "extraLinks": [
+      {
+        "label": "Open Bobo's Arcade",
+        "url": "/evade/cola-run/?mode=arcade"
+      },
+      {
+        "label": "First test build",
+        "url": "/labs/cola-run-world/"
+      }
+    ],
+    "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "capture"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "Cola Run splash art with Bobo the cat",
+    "notes": [
+      "Phone only"
+    ]
+  },
+  {
+    "slug": "bobo-hoops",
+    "title": "Bobo Hoops",
+    "lead": "Point at the Eclipse can on the keychain, grow it into a giant open-top can on your floor and swipe to shoot 10 balls in. Image target to world tracking on one engine.",
+    "url": "/evade/bobo-hoops/",
+    "extraLinks": [
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/bobo-hoops.webp",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "sports",
+      "collectibles"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": true,
+    "tested": "phone",
+    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top"
+  },
+  {
+    "slug": "wake-the-print",
+    "title": "Wake the Print",
+    "lead": "Point at the print and Spark the robot climbs out. Talk to it: it sees your room, does what you ask, hops onto your hand and remembers you. MEDIALIFE's AI showcase.",
+    "url": "/labs/wake-the-print/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/wake-the-print/target/"
+      }
+    ],
+    "thumb": "/labs/img/wake-the-print.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "showcase",
+      "3d-character",
+      "apparel"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "Wake the Print in the camera: Spark, a small blue robot, standing on the Sukeban tee print",
+    "notes": [
+      "Voice AI"
+    ]
+  },
+  {
+    "slug": "off-the-chain",
+    "title": "Bobo Off the Chain",
+    "lead": "Point at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D. Feed Bobo, go Super Bobo, take photos or video and jump into Cola Run.",
+    "url": "/evade/keychain-ar/",
+    "extraLinks": [
+      {
+        "label": "Watch a phone recording",
+        "url": "/evade/video/otc-bobo.mp4"
+      },
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/off-the-chain.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "3d-character",
+      "capture",
+      "game"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": true,
+    "tested": "phone",
+    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button"
+  },
+  {
+    "slug": "spray-bobo",
+    "title": "Spray Bobo",
+    "lead": "Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
+    "url": "/evade/spray-bobo/",
+    "extraLinks": [
+      {
+        "label": "Graffiti mode",
+        "url": "/evade/spray-bobo/?room=graffiti"
+      },
+      {
+        "label": "Watch a phone recording",
+        "url": "/evade/video/spray-bobo.mp4"
+      },
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/spray-bobo.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "apparel",
+      "capture"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "phone",
+    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button"
+  },
+  {
+    "slug": "xray-bobo",
+    "title": "Bobo X-Ray",
+    "lead": "Point at Bobo on the keychain or a tee: the print opens into a box behind the surface, Bobo floats inside and a scanner shows his bones.",
+    "url": "/evade/xray-bobo/",
+    "extraLinks": [
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/xray-bobo.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "apparel",
+      "3d-character"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton"
+  },
+  {
+    "slug": "bobo-booth",
+    "title": "Bobo Booth",
+    "lead": "A selfie photo booth on face tracking: try on the Bobo cat hat, shades, swinging Eclipse can earrings and face paint, then take a photo, video or 4-shot strip.",
+    "url": "/evade/bobo-booth/",
+    "extraLinks": [],
+    "thumb": "/labs/img/bobo-booth.webp",
+    "client": "EVADE",
+    "categories": [
+      "capture",
+      "apparel"
+    ],
+    "tech": [
+      "face"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring"
+  },
+  {
+    "slug": "photo-beam",
+    "title": "Photo Beam",
+    "lead": "Snap a selfie, aim at the EVADE keychain and beam it: it flies down a beam of light as pixels and prints onto Bobo's visor or the can's label. The photo never leaves the phone.",
+    "url": "/evade/photo-beam/",
+    "extraLinks": [
+      {
+        "label": "Test pictures",
+        "url": "/evade/keychain-ar/target/"
+      }
+    ],
+    "thumb": "/labs/img/photo-beam.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "capture"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "phone",
+    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain"
+  },
+  {
+    "slug": "spray-studio",
+    "title": "Spray Studio",
+    "lead": "Spray Bobo without a camera, for touchscreens at pop-ups and home computers. Up to four phones join as spray cans; Save & share gives a link and QR code.",
+    "url": "/spray/",
+    "extraLinks": [
+      {
+        "label": "Kiosk mode",
+        "url": "/spray/?kiosk=1"
+      }
+    ],
+    "thumb": "/labs/img/spray-studio.webp",
+    "client": "EVADE",
+    "categories": [
+      "events",
+      "capture"
+    ],
+    "tech": [
+      "web-3d",
+      "cms"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "phone",
+    "alt": "Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right",
+    "notes": [
+      "Team sign-in for now"
+    ]
+  },
+  {
+    "slug": "where-is-bobo",
+    "title": "Where is Bobo?",
+    "lead": "A live 3D globe of Bobo sightings around the world. Every pin is a real scan, clip or play from fans, creators and activated merch.",
+    "url": "/evade/where-is-bobo/",
+    "extraLinks": [],
+    "thumb": "/labs/img/where-is-bobo.webp",
+    "client": "EVADE",
+    "categories": [
+      "live-data",
+      "collectibles"
+    ],
+    "tech": [
+      "web-3d"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "phone",
+    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip"
+  },
+  {
+    "slug": "vault",
+    "title": "EVADE Digital Collection",
+    "lead": "Every piece of activated merch a fan owns shows up as a digital collectible; the rest stay holograms until activated. The same vault opens inside Bobo's Hideout.",
+    "url": "/evade/vault/",
+    "extraLinks": [
+      {
+        "label": "As an owner",
+        "url": "/evade/vault/?owned=keychain"
+      }
+    ],
+    "thumb": "/labs/img/vault.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles"
+    ],
+    "tech": [
+      "web-3d"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "phone",
+    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front"
+  },
+  {
+    "slug": "cola-run-lab",
+    "title": "Cola Run: record button",
+    "lead": "Record a run or a lounge session with Bobo, watch it back, and send it to the Where is Bobo? globe or save it. Plain three.js copy of the Mattercraft component.",
+    "url": "/evade/cola-run-lab/index.html",
+    "extraLinks": [],
+    "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "capture"
+    ],
+    "tech": [
+      "mattercraft"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "not yet",
+    "alt": "Cola Run splash art with Bobo the cat",
+    "notes": [
+      "Sent clips go to this site's Media Library"
+    ],
+    "source": "mattercraft/cola-run/"
+  },
+  {
+    "slug": "collector-hub",
+    "title": "Collector Hub: Bobo's Hideout",
+    "lead": "The EVADE room for owners of activated merch. Walk Bobo through the Go home portal, watch the room build in, then tap Bobo, the keychain or the BOBO OS computer.",
+    "url": "/labs/collector-hub/index.html",
+    "extraLinks": [],
+    "thumb": "/labs/img/collector-hub.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "game"
+    ],
+    "tech": [
+      "mattercraft",
+      "web-3d"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "not yet",
+    "alt": "Bobo's room built inside a giant Eclipse can, with a Go home portal out front",
+    "notes": [
+      "Demo data, no sign-in yet"
+    ],
+    "source": "art/collector-hub/"
+  },
+  {
+    "slug": "keychain-pop",
+    "title": "EVADE keychain: Off the Chain (lab)",
+    "lead": "Scan the keychain and Bobo and the Eclipse can jump out of their charms in 3D. Tap Bobo to wave, tap the can to spin it, or try the tail wag and walk cycle.",
+    "url": "/labs/keychain-pop/index.html",
+    "extraLinks": [
+      {
+        "label": "Open Off the Chain",
+        "url": "/evade/keychain-ar/"
+      }
+    ],
+    "thumb": "/labs/img/keychain-pop.webp",
+    "client": "EVADE",
+    "categories": [
+      "collectibles",
+      "3d-character"
+    ],
+    "tech": [
+      "mattercraft",
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "not yet",
+    "alt": "Bobo and the Eclipse can standing on glowing pads after popping out of the EVADE keychain",
+    "notes": [
+      "Blender, no gen AI"
+    ],
+    "source": "mattercraft/keychain-pop/"
+  },
+  {
+    "slug": "loot-break",
+    "title": "LOOT BREAK on our own world tracking",
+    "lead": "A 60-second lunch-break raid for TBH: Task Bar Hero, now on our own world tracking. Your party marches along a taskbar on your real desk, you are the cursor, and at 12:59 the chest opens.",
+    "url": "/labs/loot-break/",
+    "extraLinks": [
+      {
+        "label": "Desk test (no camera)",
+        "url": "/labs/loot-break/desk.html"
+      },
+      {
+        "label": "Mattercraft recording",
+        "url": "/labs/video/loot-break.mp4"
+      }
+    ],
+    "thumb": "/labs/img/loot-break.webp",
+    "client": "TBH",
+    "categories": [
+      "gaming",
+      "game"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "Pixel heroes on a taskbar lane fighting a skeleton king that steps out of a purple portal",
+    "notes": [
+      "Concept build, not client-approved"
+    ]
+  },
+  {
+    "slug": "sukeban-syndicate",
+    "title": "Sukeban Syndicate",
+    "lead": "Point at the Sukeban or Syndicate tee print and the anime characters play out of the shirt as cut-out video.",
+    "url": "/labs/x/sukeban-syndicate/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/sukeban-syndicate/target/"
+      }
+    ],
+    "thumb": "/labs/img/sukeban-syndicate.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "apparel"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Sukeban Syndicate artwork"
+  },
+  {
+    "slug": "train-frame",
+    "title": "Train Frame",
+    "lead": "Point at the train frame print and the scene comes alive as an anime clip inside the frame.",
+    "url": "/labs/x/train-frame/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/train-frame/target/"
+      }
+    ],
+    "thumb": "/labs/img/train-frame.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Train Frame artwork"
+  },
+  {
+    "slug": "helltrain",
+    "title": "Helltrain",
+    "lead": "Point at the Hell's Revengers print and the Helltrain crew bursts out of the art.",
+    "url": "/labs/x/helltrain/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/helltrain/target/"
+      }
+    ],
+    "thumb": "/labs/img/helltrain.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Helltrain artwork"
+  },
+  {
+    "slug": "bunny-girls",
+    "title": "Bunny Girls",
+    "lead": "Point at the bunny girl and cat girl prints and each one comes alive as animated anime video.",
+    "url": "/labs/x/bunny-girls/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/bunny-girls/target/"
+      }
+    ],
+    "thumb": "/labs/img/bunny-girls.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Bunny Girls artwork"
+  },
+  {
+    "slug": "dashie",
+    "title": "Dashie",
+    "lead": "Point at the Dashie print and the character steps out of the art as animated video.",
+    "url": "/labs/x/dashie/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/dashie/target/"
+      }
+    ],
+    "thumb": "/labs/img/dashie.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Dashie artwork"
+  },
+  {
+    "slug": "moneymaker-bunny",
+    "title": "Moneymaker Bunny",
+    "lead": "Point at the Moneymaker Bunny bookmark and the bunny plays out of the print in 2D animation.",
+    "url": "/labs/x/moneymaker-bunny/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/moneymaker-bunny/target/"
+      }
+    ],
+    "thumb": "/labs/img/moneymaker-bunny.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Moneymaker Bunny artwork"
+  },
+  {
+    "slug": "bunny-girl-3d",
+    "title": "Bunny Girl 3D",
+    "lead": "Point at the bunny rug or print and a full 3D bunny girl appears on top of it. First shown in Hawaii, March 2025.",
+    "url": "/labs/x/bunny-girl-3d/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/bunny-girl-3d/target/"
+      }
+    ],
+    "thumb": "/labs/img/bunny-girl-3d.webp",
+    "client": "Animebae",
+    "categories": [
+      "anime",
+      "3d-character"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Bunny Girl 3D artwork"
+  },
+  {
+    "slug": "sakamoto-days",
+    "title": "Sakamoto Days",
+    "lead": "Netflix's Sakamoto Days AR campaign: point at the standee or magazine, watch Sakamoto in action, record yourself with him and share. July 2025.",
+    "url": "/labs/x/sakamoto-days/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/sakamoto-days/target/"
+      }
+    ],
+    "thumb": "/labs/img/sakamoto-days.webp",
+    "client": "Netflix",
+    "categories": [
+      "anime",
+      "streaming",
+      "print",
+      "capture"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "Sakamoto Days artwork"
+  },
+  {
+    "slug": "sakamoto-anime-expo",
+    "title": "Sakamoto Days at Anime Expo",
+    "lead": "The Anime Expo activation for Netflix's Sakamoto Days: point at the event art for the supermarket fight scene, with a Watch the trailer button.",
+    "url": "/labs/x/sakamoto-anime-expo/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/sakamoto-anime-expo/target/"
+      }
+    ],
+    "thumb": "/labs/img/sakamoto-anime-expo.webp",
+    "client": "Netflix",
+    "categories": [
+      "anime",
+      "streaming",
+      "events"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Sakamoto Days at Anime Expo artwork"
+  },
+  {
+    "slug": "sakamoto-graffiti",
+    "title": "Sakamoto Graffiti",
+    "lead": "Point at the Sakamoto Days graffiti wall art and it comes alive, then record and share the clip.",
+    "url": "/labs/x/sakamoto-graffiti/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/sakamoto-graffiti/target/"
+      }
+    ],
+    "thumb": "/labs/img/sakamoto-graffiti.webp",
+    "client": "Netflix",
+    "categories": [
+      "anime",
+      "streaming",
+      "capture"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Sakamoto Graffiti artwork"
+  },
+  {
+    "slug": "brooklyn-nets",
+    "title": "Brooklyn Nets",
+    "lead": "Point at the Brooklyn Nets poster art and the player drives through the defenders as a game-day clip.",
+    "url": "/labs/x/brooklyn-nets/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/brooklyn-nets/target/"
+      }
+    ],
+    "thumb": "/labs/img/brooklyn-nets.webp",
+    "client": "Brooklyn Nets",
+    "categories": [
+      "sports"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Brooklyn Nets artwork"
+  },
+  {
+    "slug": "sport-magazine",
+    "title": "Sport Magazine",
+    "lead": "Point at the Sport magazine page and it plays as animated video, with a Subscribe button.",
+    "url": "/labs/x/sport-magazine/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/sport-magazine/target/"
+      }
+    ],
+    "thumb": "/labs/img/sport-magazine.webp",
+    "client": "Sport Magazine",
+    "categories": [
+      "sports",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Sport Magazine artwork"
+  },
+  {
+    "slug": "dentsu-products",
+    "title": "dentsu Products Demo",
+    "lead": "The dentsu product demo: point at tee prints, pockets, magazine and dog art and each one plays its own clip.",
+    "url": "/labs/x/dentsu-products/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/dentsu-products/target/"
+      }
+    ],
+    "thumb": "/labs/img/dentsu-products.webp",
+    "client": "dentsu",
+    "categories": [
+      "agency",
+      "apparel"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "dentsu Products Demo artwork"
+  },
+  {
+    "slug": "ces-2026",
+    "title": "CES 2026",
+    "lead": "Our CES 2026 booth demo: point at the tees, pockets and prints on the stand and each one comes alive.",
+    "url": "/labs/x/ces-2026/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/ces-2026/target/"
+      }
+    ],
+    "thumb": "/labs/img/ces-2026.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "events",
+      "apparel"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "alt": "CES 2026 artwork"
+  },
+  {
+    "slug": "demo-reel",
+    "title": "Demo Reel",
+    "lead": "Every MEDIALIFE print in one experience: point at any of our activated prints and its animation plays. The master demo for pitches.",
+    "url": "/labs/x/demo-reel/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/demo-reel/target/"
+      }
+    ],
+    "thumb": "/labs/img/demo-reel.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "showcase",
+      "anime",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Demo Reel artwork"
+  },
+  {
+    "slug": "bushido-can",
+    "title": "Bushido Can",
+    "lead": "Point at the Bushido can and the label animates around the curved can as video.",
+    "url": "/labs/x/bushido-can/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/bushido-can/target/"
+      }
+    ],
+    "thumb": "/labs/img/bushido-can.webp",
+    "client": "Bushido",
+    "categories": [
+      "beverage",
+      "packaging"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Bushido Can artwork"
+  },
+  {
+    "slug": "vvbg-comic",
+    "title": "VVBG Comic",
+    "lead": "Point at the VVBG comic cover and the panel plays as an animated comic.",
+    "url": "/labs/x/vvbg-comic/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/vvbg-comic/target/"
+      }
+    ],
+    "thumb": "/labs/img/vvbg-comic.webp",
+    "client": "VVBG Comics",
+    "categories": [
+      "comics",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "VVBG Comic artwork"
+  },
+  {
+    "slug": "violence-family",
+    "title": "Violence Family",
+    "lead": "Point at the Violence Family comic art and the characters play out of the page.",
+    "url": "/labs/x/violence-family/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/violence-family/target/"
+      }
+    ],
+    "thumb": "/labs/img/violence-family.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "comics",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Violence Family artwork"
+  },
+  {
+    "slug": "heart-of-darkness",
+    "title": "Heart of Darkness",
+    "lead": "Point at the Heart of Darkness badge and the comic art opens up in AR.",
+    "url": "/labs/x/heart-of-darkness/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/labs/x/heart-of-darkness/target/"
+      }
+    ],
+    "thumb": "/labs/img/heart-of-darkness.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "comics",
+      "print"
+    ],
+    "tech": [
+      "image-target"
+    ],
+    "status": "lab",
+    "year": 2025,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Heart of Darkness artwork"
+  },
+  {
+    "slug": "robot-chat",
+    "title": "Talk to Misa",
+    "lead": "A chat character stands on your floor, answers and breaks into keyword dances.",
+    "url": "/labs/demos/robot-chat/",
+    "extraLinks": [],
+    "thumb": "/labs/img/robot-chat.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "3d-character"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Robot Chat tech demo"
+  },
+  {
+    "slug": "joystick-robot",
+    "title": "Robot Run",
+    "lead": "Drive a robot around your room with a joystick; it walks, runs, jumps and waves.",
+    "url": "/labs/demos/joystick-robot/",
+    "extraLinks": [],
+    "thumb": "/labs/img/joystick-robot.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "game",
+      "3d-character"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Joystick Robot tech demo"
+  },
+  {
+    "slug": "float-notes",
+    "title": "Float Notes",
+    "lead": "Leave notes floating in the air that you can edit, move and drop.",
+    "url": "/labs/demos/float-notes/",
+    "extraLinks": [],
+    "thumb": "/labs/img/float-notes.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Float Notes tech demo"
+  },
+  {
+    "slug": "tap-to-place",
+    "title": "Street Kit",
+    "lead": "Pick a bench, bin or lamp from a tray and tap the floor to build a street scene.",
+    "url": "/labs/demos/tap-to-place/",
+    "extraLinks": [],
+    "thumb": "/labs/img/tap-to-place.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Tap to Place tech demo"
+  },
+  {
+    "slug": "physics",
+    "title": "Pin Bowl",
+    "lead": "Tap to throw a ball at bowling pins with real collisions.",
+    "url": "/labs/demos/physics/",
+    "extraLinks": [],
+    "thumb": "/labs/img/physics.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "game"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Physics Playground tech demo"
+  },
+  {
+    "slug": "nav-mesh",
+    "title": "Robot Path",
+    "lead": "Tap a spot and the robot finds its own way over ramps and bridges.",
+    "url": "/labs/demos/nav-mesh/",
+    "extraLinks": [],
+    "thumb": "/labs/img/nav-mesh.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "3d-character"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Nav Mesh tech demo"
+  },
+  {
+    "slug": "moon-shop",
+    "title": "Moon Shop",
+    "lead": "A portal opens in your room and you walk through it onto the moon.",
+    "url": "/labs/demos/moon-shop/",
+    "extraLinks": [],
+    "thumb": "/labs/img/moon-shop.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "showcase"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Moon Shop tech demo"
+  },
+  {
+    "slug": "product-viewer",
+    "title": "Product Viewer",
+    "lead": "A car in your room with colour swatches and a switch between AR and a 3D viewer.",
+    "url": "/labs/demos/product-viewer/",
+    "extraLinks": [],
+    "thumb": "/labs/img/product-viewer.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "packaging",
+      "showcase"
+    ],
+    "tech": [
+      "world",
+      "web-3d"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Product Viewer tech demo"
+  },
+  {
+    "slug": "occlusion-floor",
+    "title": "Floor Lift",
+    "lead": "A pillar rises out of your real floor and sinks back into it.",
+    "url": "/labs/demos/occlusion-floor/",
+    "extraLinks": [],
+    "thumb": "/labs/img/occlusion-floor.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Occlusion Floor tech demo"
+  },
+  {
+    "slug": "face-effects",
+    "title": "Face FX",
+    "lead": "Shades, face paint and a mask on up to three faces, with a branded photo.",
+    "url": "/labs/demos/face-effects/",
+    "extraLinks": [],
+    "thumb": "/labs/img/face-effects.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "capture"
+    ],
+    "tech": [
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Face Effects tech demo"
+  },
+  {
+    "slug": "camera-swap",
+    "title": "Camera Swap",
+    "lead": "A cube on your floor, shades on your face: one tap flips between your phone's two cameras.",
+    "url": "/labs/demos/camera-swap/",
+    "extraLinks": [],
+    "thumb": "/labs/img/camera-swap.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "capture"
+    ],
+    "tech": [
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Camera Swap tech demo: shades on a face and a cube on the floor"
+  },
+  {
+    "slug": "wear-it-meet-it",
+    "title": "Wear It, Meet It",
+    "lead": "Wear the robot's visor for a selfie, then flip your camera: the robot is in your room, holding your photo.",
+    "url": "/labs/demos/wear-it-meet-it/",
+    "extraLinks": [],
+    "thumb": "/labs/img/wear-it-meet-it.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo",
+      "capture",
+      "3d-character"
+    ],
+    "tech": [
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Wear It, Meet It: a robot antenna on a selfie, and the life-size robot holding the selfie in a room"
+  },
+  {
+    "slug": "image-to-world",
+    "title": "Picture to Room",
+    "lead": "Point at a picture and a sand castle appears on the floor and stays in the room.",
+    "url": "/labs/demos/image-to-world/",
+    "extraLinks": [],
+    "thumb": "/labs/img/image-to-world.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "tech-demo"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "Image to World tech demo"
+  }
+]

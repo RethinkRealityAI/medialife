@@ -1,19 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useId, useState } from "react";
+import { Reveal } from "@/components/home/Reveal";
+import { CARD, Eyebrow, H1, SECTION, TEXT } from "@/components/site/kit";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — Activate Your IP | MEDIALIFE" },
+      { title: "Contact | MEDIALIFE" },
       {
         name: "description",
         content:
-          "Activate your IP with MEDIALIFE. Live events, merchandise, print and location-based entertainment. We'll scope an immersive deployment in 48 hours.",
+          "Activate your IP with MEDIALIFE: activated merch, AR experiences and retail fixtures. We reply within 48 hours.",
       },
       { property: "og:title", content: "Activate Your IP | MEDIALIFE" },
       {
         property: "og:description",
-        content: "We'll scope an immersive deployment in 48 hours.",
+        content: "Tell us about your IP. We reply within 48 hours.",
       },
     ],
     links: [{ rel: "canonical", href: "https://medialife.ai/contact" }],
@@ -54,50 +56,54 @@ function Contact() {
   }
 
   return (
-    <section className="relative min-h-[80vh] overflow-hidden">
-      <div className="absolute inset-0 grid-bg opacity-40" />
-      <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-      <div className="relative mx-auto max-w-[1400px] px-6 py-24 grid md:grid-cols-12 gap-12">
-        <div className="md:col-span-5">
-          <div className="mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            / Contact
-          </div>
-          <h1 className="mt-6 text-5xl md:text-6xl font-medium tracking-tight text-balance leading-[0.95]">
-            Are you ready for <span className="ember-text">immersive media?</span>
+    <section className="relative overflow-hidden">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[1100px] max-w-[160vw] -translate-x-1/2 rounded-full bg-primary opacity-30 blur-[120px]"
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-0 grid-bg opacity-25" />
+      <div className={`${SECTION} grid gap-12 pb-24 pt-16 sm:pt-20 lg:grid-cols-12 lg:gap-16`}>
+        <Reveal className="lg:col-span-5">
+          <Eyebrow hue="blue">Contact</Eyebrow>
+          <h1 className={`mt-6 ${H1}`}>
+            Let's activate <span className={TEXT.blue}>your IP.</span>
           </h1>
-          <p className="mt-8 text-muted-foreground max-w-md">
-            Live Events · Merchandise · Print Media · Direct Mail. We'll scope a deployment in 48
-            hours.
+          <p className="mt-6 max-w-md text-muted-foreground lg:text-lg">
+            Tell us about the IP and where fans will meet it. We reply within 48 hours.
           </p>
 
-          <div className="mt-12 space-y-4 mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            <div className="flex justify-between border-b border-border pb-3">
-              <span>Region · NA</span>
-              <span className="text-accent">● Available</span>
-            </div>
-            <div className="flex justify-between border-b border-border pb-3">
-              <span>Region · EU</span>
-              <span className="text-accent">● Available</span>
-            </div>
-            <div className="flex justify-between border-b border-border pb-3">
-              <span>Region · APAC</span>
-              <span className="text-accent">● Available</span>
-            </div>
-            <div className="flex justify-between border-b border-border pb-3">
-              <span>Region · LATAM</span>
-              <span className="text-primary">○ Q2 2027</span>
-            </div>
-          </div>
-        </div>
+          <ol className="mt-10 grid gap-3" aria-label="What happens next">
+            {NEXT.map((n, i) => (
+              <li key={n} className={`${CARD} flex items-center gap-4 px-5 py-4`}>
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 mono text-[11px] ${i % 2 === 0 ? TEXT.blue : TEXT.magenta}`}
+                >
+                  {i + 1}
+                </span>
+                <span className="text-sm text-white/85">{n}</span>
+              </li>
+            ))}
+          </ol>
 
-        <div className="md:col-span-7">
+          <p className="mt-8 text-sm text-muted-foreground">
+            Prefer email?{" "}
+            <a
+              href="mailto:hello@medialife.ai"
+              className="text-white underline underline-offset-4 hover:text-primary"
+            >
+              hello@medialife.ai
+            </a>
+          </p>
+        </Reveal>
+
+        <Reveal delay={120} className="lg:col-span-7">
           <form
             name={FORM_NAME}
             method="POST"
             data-netlify="true"
             netlify-honeypot="bot-field"
             onSubmit={handleSubmit}
-            className="border border-border bg-background/60 backdrop-blur p-8 md:p-10 space-y-6"
+            className={`${CARD} space-y-6 p-6 sm:p-8 md:p-10`}
           >
             <input type="hidden" name="form-name" value={FORM_NAME} />
             {/* Honeypot: hidden from humans, irresistible to bots. */}
@@ -110,41 +116,62 @@ function Contact() {
 
             {status === "sent" ? (
               <div className="py-16 text-center" role="status" aria-live="polite">
-                <div className="mono text-[10px] uppercase tracking-[0.25em] text-accent">
-                  / Transmission received
-                </div>
-                <h2 className="mt-4 text-3xl font-medium">We'll be in touch within 48 hours.</h2>
+                <Eyebrow hue="magenta">Got it</Eyebrow>
+                <h2 className="mt-5 display text-[clamp(26px,2.6vw,38px)]">
+                  We'll be in touch within 48 hours.
+                </h2>
                 <button
                   type="button"
                   onClick={() => setStatus("idle")}
-                  className="mt-8 mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground underline underline-offset-4 hover:text-primary transition"
+                  className="btn-pill btn-glass mt-8 px-6 py-3 text-sm font-medium"
                 >
                   Send another
                 </button>
               </div>
             ) : (
               <>
-                <Field label="Company" name="company" autoComplete="organization" />
-                <Field label="Contact Email" name="email" type="email" autoComplete="email" />
-                <div className="grid md:grid-cols-2 gap-6">
+                <fieldset>
+                  <legend className={labelCls}>What are you thinking about?</legend>
+                  <div className="flex flex-wrap gap-2">
+                    {INTERESTS.map((o, i) => (
+                      <label key={o} className="cursor-pointer">
+                        <input
+                          type="radio"
+                          name="interest"
+                          value={o}
+                          defaultChecked={i === 0}
+                          className="peer sr-only"
+                        />
+                        <span className="inline-block rounded-full border border-white/15 px-4 py-2 text-sm text-white/80 transition peer-checked:border-primary peer-checked:bg-primary/15 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60 hover:border-white/30">
+                          {o}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <Field label="Company" name="company" autoComplete="organization" />
+                  <Field label="Email" name="email" type="email" autoComplete="email" />
+                </div>
+                <Field label="IP or brand" name="brand" />
+                <div className="grid gap-6 md:grid-cols-2">
                   <Select
-                    label="Deployment Region"
+                    label="Where"
                     name="region"
-                    opts={["Asia", "Europe", "North America", "South America"]}
+                    opts={["North America", "Europe", "Asia", "South America"]}
                   />
                   <Select
-                    label="Deployment Duration"
+                    label="How long"
                     name="duration"
-                    opts={["Less than a month", "1–3 months", "More than 3 months"]}
+                    opts={["Less than a month", "1 to 3 months", "More than 3 months"]}
                   />
                 </div>
-                <Field label="IP / Brand" name="brand" />
-                <TextArea label="Tell us about the activation" name="msg" />
+                <TextArea label="Tell us about it" name="msg" />
 
                 {status === "error" && (
                   <div
                     role="alert"
-                    className="border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                    className="rounded-2xl border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
                   >
                     That didn't send. Please try again, or email{" "}
                     <a href="mailto:hello@medialife.ai" className="underline underline-offset-4">
@@ -157,22 +184,32 @@ function Contact() {
                 <button
                   type="submit"
                   disabled={status === "submitting"}
-                  className="btn-pill btn-ember w-full justify-center py-4 mono text-xs uppercase tracking-[0.25em] font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:transform-none"
+                  className="group btn-pill btn-solid w-full justify-center py-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {status === "submitting" ? "Transmitting…" : "Initiate Deployment →"}
+                  {status === "submitting" ? "Sending…" : "Send"}
+                  <span aria-hidden className="transition-transform group-hover:translate-x-0.5">
+                    →
+                  </span>
                 </button>
               </>
             )}
           </form>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
-const labelCls = "mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-2 block";
+const NEXT = [
+  "We read it and reply within 48 hours.",
+  "A short call to shape the idea with you.",
+  "A plan: the products, the experience and the launch.",
+];
+const INTERESTS = ["Activated merch", "An AR experience", "A retail fixture", "Something else"];
+
+const labelCls = "mb-2 block mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground";
 const controlCls =
-  "w-full bg-input border border-border px-4 py-3 text-sm focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition";
+  "w-full rounded-2xl border border-white/12 bg-black/40 px-4 py-3 text-sm text-white transition focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 function Field({
   label,

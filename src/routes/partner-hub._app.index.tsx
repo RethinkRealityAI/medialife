@@ -175,10 +175,7 @@ function Home() {
           aria-hidden
           className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgb(8_10_24/0.97)_0%,rgb(8_10_24/0.85)_50%,rgb(8_10_24/0.1)_100%)]"
         />
-        <div
-          aria-hidden
-          className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-[var(--partner)] to-transparent"
-        />
+        <div aria-hidden className="absolute inset-x-0 top-0 -z-10 h-px bg-[var(--partner)]/50" />
         <div className="max-w-xl p-6 sm:p-8">
           <div className="flex items-center gap-3">
             {logo ? (

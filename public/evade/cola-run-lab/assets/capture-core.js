@@ -18,7 +18,12 @@ const DEFAULT_SETTINGS = {
   consentText: "The EVADE team checks every clip first. If it's picked, it can show on the Where is Bobo? globe with your city, never your exact location.",
   hintText: "Record your run and send it to the Bobo globe",
   hideInXR: true,
-  sendEnabled: true
+  sendEnabled: true,
+  sheetTitle: "Send Bobo's run to the globe?",
+  keepTitle: "Nice run! Keep the clip?",
+  clipTitle: "Cola Run clip",
+  filePrefix: "cola-run",
+  backLabel: "Back to the game"
 };
 const MIME_PREFERENCE = [
   // MP4 first: Safari only makes MP4, recent Chrome does too, and it plays everywhere.
@@ -60,6 +65,7 @@ class ClipRecorder {
     __publicField(this, "onTick", null);
     __publicField(this, "onStop", null);
     __publicField(this, "onError", null);
+    __publicField(this, "overlay", null);
     __publicField(this, "_out", document.createElement("canvas"));
     __publicField(this, "_ctx", this._out.getContext("2d", { alpha: false }));
     __publicField(this, "_rec", null);
@@ -135,7 +141,14 @@ class ClipRecorder {
       } catch {
       }
     }
-    if (s.watermark) this._drawOverlay(c, W, H, s);
+    if (s.watermark) {
+      if (this.overlay) {
+        try {
+          this.overlay(c, W, H);
+        } catch {
+        }
+      } else this._drawOverlay(c, W, H, s);
+    }
     this._seconds = (performance.now() - this._t0) / 1e3;
     this.onTick?.(this._seconds, Math.min(1, this._seconds / s.maxSeconds));
     if (this._seconds >= s.maxSeconds) this.stop();
@@ -305,11 +318,11 @@ async function sendClip(clip, o) {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        name: `cola-run-${stamp}.${clip.ext}`,
+        name: `${o.filePrefix || "cola-run"}-${stamp}.${clip.ext}`,
         size: clip.blob.size,
         mime: clip.mime,
         source: o.source,
-        title: "Cola Run clip",
+        title: o.title || "Cola Run clip",
         description: [scoreText, `${Math.round(clip.seconds)} s`, h?.badge].filter(Boolean).join(" \xB7 "),
         width: clip.width,
         height: clip.height,
@@ -377,13 +390,13 @@ async function sendClip(clip, o) {
     review: init.review !== false
   };
 }
-async function saveClip(clip) {
-  const name = `cola-run-${Date.now()}.${clip.ext}`;
+async function saveClip(clip, filePrefix = "cola-run", shareTitle = "My Cola Run") {
+  const name = `${filePrefix}-${Date.now()}.${clip.ext}`;
   const file = new File([clip.blob], name, { type: clip.mime });
   const nav = navigator;
   if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
     try {
-      await nav.share({ files: [file], title: "My Cola Run" });
+      await nav.share({ files: [file], title: shareTitle });
       return "shared";
     } catch (e) {
       if (e?.name === "AbortError") return "cancelled";
@@ -414,6 +427,18 @@ const CSS = `
 .crc-anchor.crc-tl{top:calc(var(--safe-area-inset-top,0px) + 78px + var(--crc-dy,0px));left:calc(var(--safe-area-inset-left,0px) + 19px + var(--crc-dx,0px))}
 .crc-anchor.crc-br{bottom:calc(var(--safe-area-inset-bottom,0px) + 78px + var(--crc-dy,0px));right:calc(var(--safe-area-inset-right,0px) + 19px + var(--crc-dx,0px));flex-direction:column-reverse}
 .crc-anchor.crc-bl{bottom:calc(var(--safe-area-inset-bottom,0px) + 78px + var(--crc-dy,0px));left:calc(var(--safe-area-inset-left,0px) + 19px + var(--crc-dx,0px));flex-direction:column-reverse}
+/* Bottom centre: a camera-style shutter in the thumb's reach (BOBO OS as home). */
+.crc-anchor.crc-bc{left:50%;bottom:calc(var(--safe-area-inset-bottom,0px) + 18px + var(--crc-dy,0px));width:68px;
+  transform:translateX(calc(-50% + var(--crc-dx,0px)));flex-direction:column-reverse;gap:8px}
+.crc-bc .crc-rec{width:68px;height:68px;border:3px solid rgba(255,255,255,.92);background:rgba(12,14,18,.38);
+  box-shadow:0 6px 22px rgba(0,0,0,.35)}
+.crc-bc .crc-dot{width:50px;height:50px;box-shadow:inset 0 -3px 8px rgba(0,0,0,.18),0 0 14px rgba(255,77,94,.45)}
+.crc-bc.crc-on .crc-dot{width:26px;height:26px;border-radius:7px}
+.crc-bc .crc-ring{inset:-6px;width:74px;height:74px}
+.crc-bc .crc-ring circle{stroke-width:2.4}
+.crc-bc .crc-hint{top:auto;bottom:80px;left:50%;right:auto;transform:translate(-50%,4px);text-align:center;max-width:min(172px,46vw)}
+.crc-bc .crc-hint.crc-show{transform:translate(-50%,0)}
+.crc-bc .crc-hint::before{top:auto;bottom:-6px;left:calc(50% - 5px);transform:rotate(225deg)}
 .crc-anchor.crc-hidden{display:none}
 .crc-rec{pointer-events:auto!important;position:relative;width:44px;height:44px;border-radius:50%;padding:0;cursor:pointer;
   display:grid;place-items:center;border:1px solid rgba(255,255,255,.18);background:rgba(20,22,26,.78);
@@ -461,7 +486,7 @@ const CSS = `
 .crc-scrim{position:absolute;inset:0;background:rgba(4,6,10,.62)}
 .crc-sheet{position:relative;width:100%;max-width:400px;max-height:calc(100% - var(--safe-area-inset-top,0px) - 12px);
   overflow:auto;border-radius:22px;padding:16px;color:#f2f6f8;
-  background:linear-gradient(180deg,rgba(30,33,38,.98),rgba(18,20,24,.98));
+  background:rgba(22,25,29,.98);
   border:1px solid rgba(255,255,255,.08);box-shadow:0 20px 60px rgba(0,0,0,.5);
   transform:translateY(16px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .crc-open .crc-sheet{transform:none}
@@ -541,6 +566,7 @@ class ColaCapture {
     this._rec.onTick = (sec, f) => this._onTick(sec, f);
     this._rec.onStop = (clip) => this._onClip(clip);
     this._rec.onError = (m) => this._onRecordError(m);
+    this._rec.overlay = _o.overlay ?? null;
     this._ensureStyle();
     this._build();
     this.mount(_o.host);
@@ -561,7 +587,8 @@ class ColaCapture {
       topRight: "crc-tr",
       topLeft: "crc-tl",
       bottomRight: "crc-br",
-      bottomLeft: "crc-bl"
+      bottomLeft: "crc-bl",
+      bottomCenter: "crc-bc"
     }[s.corner];
     this._anchor.className = `crc-anchor ${cls}`;
     for (const el of [this._anchor, this._layer]) {
@@ -572,7 +599,8 @@ class ColaCapture {
     this._hint.textContent = s.hintText;
     this._layer.querySelector(".crc-sendLbl").textContent = s.sendLabel;
     this._layer.querySelector(".crc-fine").textContent = s.consentText;
-    this._layer.querySelector(".crc-main .crc-title").textContent = s.sendEnabled ? "Send Bobo's run to the globe?" : "Nice run! Keep the clip?";
+    this._layer.querySelector(".crc-main .crc-title").textContent = s.sendEnabled ? s.sheetTitle : s.keepTitle;
+    this._layer.querySelector('.crc-done [data-a="close"] span').textContent = s.backLabel;
     this._layer.querySelector(".crc-send").style.display = s.sendEnabled ? "" : "none";
     this._layer.querySelector(".crc-fine").style.display = s.sendEnabled ? "" : "none";
     this._syncVisibility();
@@ -860,6 +888,8 @@ class ColaCapture {
       const r = await sendClip(clip, {
         endpoint: this._o.endpoint,
         source: this._o.source,
+        title: this.settings.clipTitle,
+        filePrefix: this.settings.filePrefix,
         signal: ac.signal,
         onProgress: (f) => this._setSending(true, f)
       });
@@ -888,7 +918,7 @@ class ColaCapture {
   }
   async _save() {
     if (!this._clip) return;
-    const r = await saveClip(this._clip);
+    const r = await saveClip(this._clip, this.settings.filePrefix, this.settings.clipTitle);
     if (r !== "cancelled") {
       this._emit("saved", void 0);
       if (r === "downloaded") this._showToast("Saved to your downloads.");

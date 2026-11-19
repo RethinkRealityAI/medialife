@@ -31,7 +31,15 @@
 <link rel="preload" href="/api/bobo/feed.json" as="fetch" crossorigin />
 <link rel="stylesheet" href="/evade/where-is-bobo/assets/css/bobo.css?v=5" />
 
-<script>document.documentElement.classList.add("js");</script>
+<script>document.documentElement.classList.add("js");
+/* ?embed: framed inside another page (the EVADE launch page). The host page
+   carries the title, so drop the header and the big headline here. */
+if (/[?&]embed\b/.test(location.search)) document.documentElement.classList.add("embed");</script>
+<style>
+  html.embed .top, html.embed .hero h1, html.embed .hero .sub { display: none; }
+  html.embed .hero { top: 18px; }
+  html.embed .hero .eyebrow { margin-bottom: 10px; }
+</style>
 <script type="importmap">
 {"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
 </script>

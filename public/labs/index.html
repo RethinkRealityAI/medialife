@@ -5,71 +5,70 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>MEDIALIFE Labs</title>
-<meta name="description" content="Browser test versions of MEDIALIFE's Mattercraft AR experiences.">
-<meta name="theme-color" content="#0f1114">
+<meta name="description" content="Every MEDIALIFE AR and immersive experience in one place, filterable by client, category, tech and status.">
+<meta name="theme-color" content="#05060c">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<style>
-  :root{--bg:#0f1114;--card:#171a1f;--line:rgba(255,255,255,.09);--text:#eef3f6;--muted:#97a2ad;--accent:#4fd6e8;color-scheme:dark}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:500 15px/1.55 ui-sans-serif,-apple-system,"SF Pro Text",Inter,"Segoe UI",Roboto,sans-serif}
-  main{max-width:960px;margin:0 auto;padding:clamp(28px,6vw,64px) 16px 64px}
-  .kicker{font-size:11px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
-  h1{font-size:clamp(28px,5vw,40px);line-height:1.1;margin:8px 0 10px}
-  .lead{color:var(--muted);max-width:640px;margin:0 0 32px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-  .card{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden}
-  .card img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center 30%;background:#000}
-  .body{padding:16px 18px 18px;display:flex;flex-direction:column;gap:10px;flex:1}
-  .card h2{font-size:18px;margin:0}
-  .card p{margin:0;color:var(--muted);font-size:14px}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:rgba(79,214,232,.1);color:#bdeff6}
-  .tag.warn{background:rgba(255,200,80,.1);color:#ffe2a3}
-  .actions{margin-top:auto;display:flex;gap:8px;padding-top:6px}
-  .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border-radius:12px;
-    background:var(--accent);color:#06141a;font-weight:800;text-decoration:none}
-  .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
-  .src{font-size:12.5px;color:var(--muted)}
-  code{font-size:12.5px;color:#cfe9ee}
-  footer{margin-top:40px;color:var(--muted);font-size:13px}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site-nav/site-nav.css">
+<link rel="stylesheet" href="/labs/labs.css?v=1">
 </head>
 <body>
-<main>
-  <div class="kicker">MEDIALIFE Labs</div>
-  <h1>Test versions of our AR experiences</h1>
-  <p class="lead">Each lab is a plain three.js copy of a Mattercraft feature, running the same code the Mattercraft component uses, so it can be tried on any phone or laptop before it goes into the project. Not linked from the site and hidden from search.</p>
+<a class="skip" href="#results">Skip to experiences</a>
 
-  <div class="grid">
-    <article class="card">
-      <img src="/evade/creators/assets/img/cola-run-splash-sm.webp" alt="Cola Run splash art with Bobo the cat" loading="lazy" width="540" height="967">
-      <div class="body">
-        <h2>Cola Run: record button</h2>
-        <p>Record a run or a lounge session with Bobo, watch it back, and send it to the Where is Bobo? globe or save it.</p>
-        <div class="tags">
-          <span class="tag">EVADE</span><span class="tag">Recording</span><span class="tag">Lounge mode</span>
-          <span class="tag warn">Sent clips go to this site's Media Library</span>
-        </div>
-        <p class="src">Mattercraft source: <code>mattercraft/cola-run/</code></p>
-        <div class="actions"><a class="btn" href="/evade/cola-run-lab/index.html">Open the lab</a></div>
-      </div>
-    </article>
-    <article class="card">
-      <img src="/labs/img/collector-hub.webp" alt="Bobo's room built inside a giant Eclipse can, with a Go home portal out front" loading="lazy" width="960" height="540">
-      <div class="body">
-        <h2>Collector Hub: Bobo's Hideout</h2>
-        <p>The EVADE room for owners of activated merch. Tap Go home to walk Bobo through the portal and watch the room build in, then tap anything inside: Bobo, the keychain, the BOBO OS computer.</p>
-        <div class="tags">
-          <span class="tag">EVADE</span><span class="tag">Collector Hub</span><span class="tag">3D room</span>
-          <span class="tag warn">Demo data, no sign-in yet</span>
-        </div>
-        <p class="src">Room source: <code>art/collector-hub/</code></p>
-        <div class="actions"><a class="btn" href="/labs/collector-hub/index.html">Open the lab</a></div>
-      </div>
-    </article>
-  </div>
+<!-- The main medialife.ai navigation (public/site-nav/, items from src/lib/site-nav.json). -->
+<header class="mlnav" id="site-nav"></header>
+<script src="/site-nav/site-nav.js"></script>
 
-  <footer>Clips sent from a deploy preview stay in that preview's Media Library (private, "Needs review").</footer>
-</main>
+<!-- Every card on this page comes from /labs/catalog.json (see public/labs/README.md):
+     add an experience by adding one object there. -->
+<div class="hero">
+  <div class="kicker"><i aria-hidden="true"></i>MEDIALIFE Labs</div>
+  <h1>Every experience we've built, <em>in one place</em></h1>
+  <p>AR on merch and print, place-in-room games, face effects, sky AR and web 3D, for every client. Search or filter, open one on your phone, or use the test pictures on a second screen. This page isn't linked from the site and is hidden from search.</p>
+  <ul class="stats" id="stats" aria-label="Catalogue size"></ul>
+</div>
+
+<div class="layout">
+  <aside class="dock" id="dock" aria-label="Find an experience">
+    <div class="dock-grab" aria-hidden="true"></div>
+    <div class="dock-head">
+      <h2 id="dockTitle">Find an experience</h2>
+      <button type="button" class="dock-close" id="dockClose" aria-label="Close filters">&times;</button>
+    </div>
+    <form class="search" id="search" role="search">
+      <label class="sr-only" for="q">Search experiences</label>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></g></svg>
+      <input type="search" id="q" name="q" placeholder="Search title, client, tag…" autocomplete="off" spellcheck="false">
+      <button type="button" class="search-x" id="qx" aria-label="Clear search" hidden>&times;</button>
+    </form>
+    <div class="summary">
+      <span id="count" role="status" aria-live="polite">Loading…</span>
+      <button type="button" class="clear" id="clear" hidden>Clear <span class="n" id="clearN">0</span></button>
+    </div>
+    <nav class="jump" id="jump" aria-label="Jump to a section">
+      <h3 class="grp-t">Jump to</h3>
+      <ul id="jumps"></ul>
+    </nav>
+    <div id="groups"></div>
+  </aside>
+
+  <main class="results" id="results" tabindex="-1">
+    <noscript><p>This catalogue needs JavaScript. The raw list is at <a href="/labs/catalog.json">/labs/catalog.json</a>.</p></noscript>
+  </main>
+</div>
+
+<p class="foot">Clips sent from a deploy preview stay in that preview's Media Library (private, "Needs review"). Tested = someone has run it on a real phone (or the simulator) since it was built or converted.</p>
+
+<button type="button" class="pill" id="pill" aria-controls="dock" aria-expanded="false">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M4 6h16M7 12h10M10 18h4"/></svg>
+  <span id="pillLabel">Filter &amp; jump</span>
+  <span class="pill-n" id="pillN">0</span>
+</button>
+<div class="scrim" id="scrim" aria-hidden="true"></div>
+
+<script src="/vendor/ar-kit/qrcode.min.js" defer></script>
+<script src="/labs/labs.js?v=1" defer></script>
 </body>
 </html>

@@ -1,4 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { Reveal } from "@/components/home/Reveal";
+import { CARD, CtaBand, EYEBROW, PageHero, SECTION, TEXT, type Hue } from "@/components/site/kit";
 import { TECH_STACKS, getStack, type TechStack } from "@/lib/tech-stacks";
 
 export const Route = createFileRoute("/technology/$slug")({
@@ -10,22 +12,19 @@ export const Route = createFileRoute("/technology/$slug")({
   head: ({ loaderData }) => ({
     meta: loaderData
       ? [
-          { title: `${loaderData.stack.name} — MediaLife.AI Technology` },
+          { title: `${loaderData.stack.name} | MEDIALIFE Technology` },
           { name: "description", content: loaderData.stack.summary },
-          { property: "og:title", content: `${loaderData.stack.name} — MediaLife.AI` },
+          { property: "og:title", content: `${loaderData.stack.name} | MEDIALIFE` },
           { property: "og:description", content: loaderData.stack.tagline },
         ]
       : [],
   }),
   notFoundComponent: () => (
-    <div className="mx-auto max-w-[1400px] px-6 py-32 text-center">
-      <div className="mono text-xs uppercase tracking-[0.25em] text-muted-foreground">/ 404</div>
-      <h1 className="mt-4 text-4xl font-medium">Stack not found</h1>
-      <Link
-        to="/technology"
-        className="mt-8 inline-block mono text-xs uppercase tracking-widest text-primary border-b border-primary"
-      >
-        Back to Technology →
+    <div className={`${SECTION} py-32 text-center`}>
+      <p className={EYEBROW}>404</p>
+      <h1 className="mt-4 display text-4xl">Stack not found</h1>
+      <Link to="/technology" className="btn-pill btn-glass mt-8 px-6 py-3 text-sm font-medium">
+        Back to Technology
       </Link>
     </div>
   ),
@@ -41,177 +40,149 @@ export const Route = createFileRoute("/technology/$slug")({
 function StackPage() {
   const { stack } = Route.useLoaderData() as { stack: TechStack };
   const others = TECH_STACKS.filter((s) => s.slug !== stack.slug);
+  const hue: Hue = Number(stack.num) % 2 === 1 ? "blue" : "magenta";
+  const other: Hue = hue === "blue" ? "magenta" : "blue";
 
   return (
     <>
-      {/* HERO */}
-      <section className="relative border-b border-border overflow-hidden">
-        <div className="absolute inset-0 grid-bg opacity-40" />
-        <div className="absolute inset-0" style={{ background: "var(--gradient-radial)" }} />
-        <div className="relative mx-auto max-w-[1400px] px-6 pt-16 pb-24">
-          <div className="flex items-center gap-4 mono text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
-            <Link to="/technology" className="hover:text-primary">
-              / Technology
+      <PageHero
+        hue={hue}
+        eyebrow={
+          <>
+            <Link to="/technology" className="hover:text-white">
+              Technology
             </Link>
-            <span>/</span>
-            <span className="text-foreground">
+            <span aria-hidden>/</span>
+            <span>
               {stack.num} · {stack.category}
             </span>
-          </div>
-
-          <h1 className="mt-8 text-5xl md:text-7xl font-medium tracking-tight text-balance leading-[0.95]">
-            <span className="ember-text">{stack.name}</span>
-          </h1>
-          <p className="mt-6 max-w-2xl text-2xl text-muted-foreground text-balance">
-            {stack.tagline}
-          </p>
-
-          <div className="mt-12 grid md:grid-cols-12 gap-8">
-            <p className="md:col-span-7 text-lg text-muted-foreground leading-relaxed">
-              {stack.summary}
+          </>
+        }
+        title={
+          <>
+            <span className={TEXT[hue]}>{stack.name}</span>
+          </>
+        }
+        lead={
+          <>
+            <span className="block text-white">{stack.tagline}</span>
+            <span className="mt-4 block">{stack.summary}</span>
+          </>
+        }
+        aside={
+          <div className={`${CARD} p-7 sm:p-9`}>
+            <p className={EYEBROW}>What it does best</p>
+            <p className={`mt-4 display text-[clamp(22px,2.2vw,32px)] ${TEXT[hue]}`}>
+              {stack.hero}
             </p>
-            <div className="md:col-span-5 border border-border bg-surface p-6">
-              <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                / Hero Capability
-              </div>
-              <p className="mt-4 text-xl font-medium ember-text">{stack.hero}</p>
-            </div>
           </div>
+        }
+      />
+
+      {/* capabilities */}
+      <section aria-labelledby="cap-title" className={`${SECTION} pb-20`}>
+        <h2 id="cap-title" className={EYEBROW}>
+          Capabilities
+        </h2>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {stack.capabilities.map((c, i) => (
+            <Reveal key={c.t} delay={(i % 2) * 80} className={`${CARD} h-full p-7`}>
+              <span className={`mono text-[11px] ${TEXT[i % 2 === 0 ? hue : other]}`}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-4 display text-[clamp(20px,1.8vw,26px)]">{c.t}</h3>
+              <p className="mt-3 text-muted-foreground">{c.d}</p>
+            </Reveal>
+          ))}
         </div>
       </section>
 
-      {/* CAPABILITIES */}
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-24">
-          <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground mb-10">
-            / Capabilities
-          </div>
-          <div className="grid md:grid-cols-2 gap-px bg-border border border-border">
-            {stack.capabilities.map((c, i) => (
-              <div key={c.t} className="bg-background p-8 hover:bg-secondary transition group">
-                <div className="flex items-start justify-between">
-                  <div className="mono text-[10px] uppercase tracking-widest text-primary">
-                    /{String(i + 1).padStart(2, "0")}
-                  </div>
-                </div>
-                <h3 className="mt-6 text-2xl font-medium">{c.t}</h3>
-                <p className="mt-3 text-muted-foreground">{c.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SPECS + USE CASES */}
-      <section className="border-b border-border bg-surface">
-        <div className="mx-auto max-w-[1400px] px-6 py-24 grid md:grid-cols-12 gap-12">
-          <div className="md:col-span-5">
-            <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              / Tech Specs
-            </div>
-            <div className="mt-8 border border-border bg-background">
-              {stack.specs.map((s) => (
-                <div
-                  key={s.k}
-                  className="grid grid-cols-2 border-b border-border last:border-b-0 px-5 py-4"
-                >
-                  <div className="mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {s.k}
-                  </div>
-                  <div className="text-sm">{s.v}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-10 mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              / Partners & Frameworks
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {stack.partners.map((p) => (
+      {/* use cases + specs */}
+      <section className={`${SECTION} grid gap-4 pb-20 lg:grid-cols-12`}>
+        <div className="lg:col-span-7">
+          <h2 className={EYEBROW}>Where it shows up</h2>
+          <ol className="mt-6 grid gap-3">
+            {stack.useCases.map((u, i) => (
+              <li key={u.t} className={`${CARD} flex gap-5 p-6`}>
                 <span
-                  key={p}
-                  className="mono text-[10px] uppercase tracking-widest border border-border bg-background px-3 py-1.5"
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 mono text-[11px] ${TEXT[i % 2 === 0 ? hue : other]}`}
                 >
-                  {p}
+                  {i + 1}
                 </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="md:col-span-7">
-            <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-              / Use Cases
-            </div>
-            <div className="mt-8 space-y-px bg-border border border-border">
-              {stack.useCases.map((u, i) => (
-                <div
-                  key={u.t}
-                  className="bg-background p-6 grid grid-cols-12 gap-4 hover:bg-secondary transition"
-                >
-                  <div className="col-span-1 mono text-xs text-primary">
-                    [{String(i + 1).padStart(2, "0")}]
-                  </div>
-                  <div className="col-span-4 font-medium">{u.t}</div>
-                  <div className="col-span-7 text-sm text-muted-foreground">{u.d}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* OTHER STACKS */}
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-20">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <div className="mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-                / Continue Exploring
-              </div>
-              <h2 className="mt-3 text-3xl font-medium">Other layers of the stack</h2>
-            </div>
-            <Link
-              to="/technology"
-              className="mono text-[10px] uppercase tracking-widest text-primary border-b border-primary pb-1"
-            >
-              All technology →
-            </Link>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-px bg-border border border-border">
-            {others.map((o) => (
-              <Link
-                key={o.slug}
-                to="/technology/$slug"
-                params={{ slug: o.slug }}
-                className="group bg-background p-5 hover:bg-secondary transition"
-              >
-                <div className="mono text-[9px] uppercase tracking-widest text-muted-foreground">
-                  /{o.num}
-                </div>
-                <div className="mt-3 font-medium group-hover:ember-text transition">{o.name}</div>
-                <div className="mt-2 text-xs text-muted-foreground line-clamp-2">{o.tagline}</div>
-              </Link>
+                <span>
+                  <span className="block font-semibold text-white">{u.t}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{u.d}</span>
+                </span>
+              </li>
             ))}
-          </div>
+          </ol>
+        </div>
+        <div className="lg:col-span-5">
+          <h2 className={EYEBROW}>Specs</h2>
+          <dl className={`${CARD} mt-6 grid gap-0 p-2`}>
+            {stack.specs.map((s) => (
+              <div
+                key={s.k}
+                className="flex items-baseline justify-between gap-4 border-b border-white/10 px-4 py-3.5 last:border-b-0"
+              >
+                <dt className={`${EYEBROW} text-[9px]`}>{s.k}</dt>
+                <dd className="text-right text-sm text-white">{s.v}</dd>
+              </div>
+            ))}
+          </dl>
+          <h2 className={`mt-8 ${EYEBROW}`}>Built with</h2>
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {stack.partners.map((p) => (
+              <li
+                key={p}
+                className="lg-chip rounded-full px-3 py-1.5 mono text-[10px] uppercase tracking-[0.16em] text-white/85"
+              >
+                {p}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-[1400px] px-6 py-20 grid md:grid-cols-2 gap-10 items-center">
-          <h2 className="text-3xl md:text-5xl font-medium tracking-tight text-balance">
-            Deploy <span className="ember-text">{stack.name}</span> for your brand.
+      {/* the other stacks */}
+      <section aria-labelledby="more-title" className={`${SECTION} pb-24`}>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 id="more-title" className={EYEBROW}>
+            More of the toolkit
           </h2>
-          <div className="flex gap-3 md:justify-end">
+          <Link to="/technology" className="text-sm text-muted-foreground hover:text-white">
+            All technology →
+          </Link>
+        </div>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {others.map((o) => (
             <Link
-              to="/contact"
-              className="bg-primary text-primary-foreground px-6 py-3 mono text-xs uppercase tracking-[0.2em] hover:bg-accent hover:text-accent-foreground transition"
+              key={o.slug}
+              to="/technology/$slug"
+              params={{ slug: o.slug }}
+              className={`${CARD} group p-5 transition-colors hover:border-white/25`}
             >
-              Talk to engineering →
+              <span className={`${EYEBROW} text-[9px]`}>{o.num}</span>
+              <span className="mt-3 block font-semibold text-white transition-colors group-hover:text-primary">
+                {o.name}
+              </span>
+              <span className="mt-1 line-clamp-2 block text-xs text-muted-foreground">
+                {o.tagline}
+              </span>
             </Link>
-          </div>
+          ))}
         </div>
       </section>
+
+      <CtaBand
+        hue={hue}
+        eyebrow="Build with us"
+        title={
+          <>
+            Put {stack.name} <span className={TEXT[hue]}>in your next drop.</span>
+          </>
+        }
+      />
     </>
   );
 }

@@ -1,0 +1,19 @@
+{
+ "name": "Syndicate",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 49,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1597,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/demo-reel/image-targets/syndicate_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "syndicate_luminance.png",
+  "originalImage": "syndicate.jpg"
+ }
+}

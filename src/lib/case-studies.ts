@@ -84,16 +84,15 @@ export const CASE_STUDIES: CaseStudy[] = [
     },
     intro: [
       "MEDIALIFE turned Mr. Sakamoto's climactic transformation into a live, app-free augmented reality experience.",
-      "We distributed AR-activated magazines, stickers, and posters across 150+ comic and manga retailers, then brought the program out of the living room and directly into fans' lives at Anime Expo, San Diego Comic-Con and Anime NYC — turning the transformation into a live, participatory experience.",
     ],
     approach: [
       {
         label: "Challenge",
-        body: "A globally launching series needed a physical presence that fans would actually stop for — one that could be measured, not just admired.",
+        body: "A globally launching series needed a physical presence fans would actually stop for, and one that could be measured, not just admired.",
       },
       {
         label: "Solution",
-        body: "We activated the print and retail media that was already going out — magazines, stickers, posters and standees — so a phone camera turns each one into a live AR performance with no app to install.",
+        body: "We activated the print and retail media already going out (magazines, stickers, posters and standees), so a phone camera turns each one into a live AR performance with no app to install.",
       },
       {
         label: "Execution",
@@ -151,7 +150,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     hero: {
       src: "/work/sakamoto-header.webp",
       large: "/work/sakamoto-header-large.webp",
-      alt: "Sakamoto Days on Netflix — MEDIALIFE activated character standee artwork and the Platinum Pinnacle Award badge",
+      alt: "Sakamoto Days on Netflix: MEDIALIFE activated character standee artwork and the Platinum Pinnacle Award badge",
     },
     motion: [
       clip(
@@ -201,7 +200,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     title: "Amplifying fandom immersion at anime conventions.",
     kicker: "Activated Apparel™ · NFC · Live events",
     intro: [
-      "Convention exhibitors struggle to create memorable fan experiences that extend beyond the physical event, deliver measurable ROI, and sustain social media visibility.",
+      "Activated Apparel™ and NFC merch that fans tap at the booth, take home and keep sharing long after the show.",
     ],
     approach: [
       {
@@ -210,11 +209,11 @@ export const CASE_STUDIES: CaseStudy[] = [
       },
       {
         label: "Solution",
-        body: "We enhanced print media and pop-culture merch with AR overlays using NFC for frictionless interaction, creating immersive touchpoints that drive repeat engagement & conversion.",
+        body: "We enhanced print media and pop-culture merch with AR overlays using NFC for frictionless interaction, creating immersive touchpoints that drive repeat engagement and conversion.",
       },
       {
         label: "Execution",
-        body: "We distributed AR media at 10+ major conventions: Anime Expo, San Diego Comic Con, Anime NYC, New York Comic Con, AWA, Kawaii Kon, Sakura-Con, Anime North, etc. delivering complete end-to-end implementation.",
+        body: "AR media distributed at 10+ major conventions, including Anime Expo, San Diego Comic Con, Anime NYC, New York Comic Con, AWA, Kawaii Kon, Sakura-Con and Anime North, delivered end to end.",
       },
     ],
     metricGroups: [
@@ -222,7 +221,7 @@ export const CASE_STUDIES: CaseStudy[] = [
         label: "Conversion & interaction",
         items: [
           { v: "86%", l: "of AR interactions converted to action" },
-          { v: "6.2", l: "number of interactions per AR-activated unit" },
+          { v: "6.2", l: "interactions per AR-activated unit" },
           { v: "90%", l: "interaction rate" },
         ],
       },
@@ -264,7 +263,7 @@ export const CASE_STUDIES: CaseStudy[] = [
           platform: "Instagram",
           stat: "100k+",
           statLabel: "Anime fans engaged",
-          note: "Engaged over 100k anime fans with relatable activated content & merch.",
+          note: "Over 100k anime fans engaged with activated content and merch.",
           clip: clip(
             "creator-anime-community",
             "A fan holding the Sukeban activated card at Anime NYC, shared to Instagram",
@@ -276,7 +275,7 @@ export const CASE_STUDIES: CaseStudy[] = [
     hero: {
       src: "/work/sukeban-sticker.webp",
       large: "/work/sukeban-sticker-large.webp",
-      alt: "Sukeban activated sticker artwork — activated apparel and fandom merchandise for convention audiences",
+      alt: "Sukeban activated sticker artwork: activated apparel and fandom merchandise for convention audiences",
     },
     gallery: [],
     formats: [

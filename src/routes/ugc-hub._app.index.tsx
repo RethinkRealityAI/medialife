@@ -62,7 +62,7 @@ function Home() {
         />
         <div
           aria-hidden
-          className="absolute inset-x-0 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-[#3fe6e0] to-transparent opacity-70"
+          className="absolute inset-x-0 top-0 -z-10 h-px bg-[#3fe6e0]/50 opacity-70"
         />
         <div className="flex min-h-[160px] flex-col justify-end sm:min-h-0 sm:justify-start">
           <div className="flex flex-wrap items-center gap-2">

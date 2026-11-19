@@ -1,0 +1,19 @@
+{
+ "name": "sukeban",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 21,
+  "width": 900,
+  "height": 1200,
+  "isRotated": false,
+  "originalWidth": 942,
+  "originalHeight": 1200
+ },
+ "imagePath": "/labs/x/ces-2026/image-targets/sukeban_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sukeban_luminance.png",
+  "originalImage": "sukeban.jpg"
+ }
+}

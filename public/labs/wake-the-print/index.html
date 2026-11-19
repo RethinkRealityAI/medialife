@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Wake the Print (POC): MEDIALIFE's AI + activated merch showcase. Image-tracked AR on the open-source
+       8th Wall engine, with on-device hand tracking and object detection, and a real-time voice character.
+       Built from the immersive skill's 8th Wall template. See README.md. -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0b0b0f">
+  <title>Wake the Print | MEDIALIFE Labs</title>
+  <meta name="description" content="Point your camera at the print. The character inside climbs out, sees your room, talks with you and remembers you.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/roblox/creators/vendor/three/build/three.module.js",
+        "three/addons/": "/roblox/creators/vendor/three/jsm/"
+      }
+    }
+  </script>
+  <style>
+    /* Flat colours only: no gradients anywhere on the platform. */
+    :root{--bg:#0b0b0f;--ink:#fff;--muted:rgba(255,255,255,.72);--blue:#19afff;--mag:#ff2fae;--glass:rgba(11,11,15,.72);--line:rgba(255,255,255,.18)}
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}
+    [hidden]{display:none!important}
+    /* The engine writes its drawing size into the canvas's inline style: pin it to the screen. */
+    #cam{position:fixed;inset:0;width:100%!important;height:100%!important;display:block;touch-action:none}
+    button{font:inherit;color:inherit;border:0;cursor:pointer}
+    .primary{background:var(--blue);color:#06141d;font-weight:800;border-radius:999px;min-height:56px;padding:0 28px;width:min(100%,340px)}
+    .primary:disabled{opacity:.55}
+    .ghost{background:var(--glass);border:1px solid var(--line);border-radius:999px;min-height:48px;padding:0 22px}
+    :focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+    #splash{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+      padding:max(28px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));background:var(--bg);text-align:center;transition:opacity .5s}
+    #splash.gone{opacity:0;pointer-events:none}
+    #splash img{height:22px;width:auto}
+    #splash h1{margin:0 0 10px;font-size:clamp(34px,9vw,52px);line-height:1;font-weight:900;letter-spacing:-.01em;text-transform:uppercase}
+    #splash h1 span{color:var(--mag)}
+    #splash p{margin:0 auto 24px;color:var(--muted);max-width:320px}
+    #splash small{display:block;margin-top:14px;color:var(--muted);font-size:13px}
+    .tagrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 22px}
+    .tagrow span{font-size:12px;font-weight:700;padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+    .by{font-size:12px;color:var(--muted)}
+
+    #hud{position:fixed;inset:0;z-index:5;pointer-events:none}
+    #hud > *{pointer-events:auto}
+    /* what Spark says (and what it heard): top of the screen, never over the controls */
+    /* top stack: the caption, then the chip row under it (the row moves down with a longer caption, never under it) */
+    #top{position:absolute;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
+    #cap{width:100%;max-width:520px;background:var(--glass);border:1px solid var(--line);
+      border-radius:18px;padding:12px 16px;font-size:16px;font-weight:600;pointer-events:none}
+    #cap b{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:2px}
+    #cap.you b{color:var(--mag)} #cap.system b{color:var(--muted)}
+    #energy{position:absolute;left:16px;right:16px;bottom:0;height:3px;border-radius:3px;background:var(--line);overflow:hidden}
+    #energy i{display:block;height:100%;width:100%;background:var(--blue);transform-origin:left;transition:transform .5s linear}
+    #cap .wrap{position:relative;padding-bottom:8px}
+    #sees{width:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;pointer-events:none}
+    #sees span{background:var(--mag);color:#fff;font-size:13px;font-weight:800;border-radius:999px;padding:5px 12px}
+    #sees span.q{background:var(--glass);border:1px solid var(--line);color:var(--muted)}
+    /* the hand chip: "Hand seen" (.q) or the gesture's name (.g) */
+    #sees span.g{background:var(--blue);color:#06141d}
+    #hint{position:absolute;left:50%;bottom:calc(118px + env(safe-area-inset-bottom));transform:translateX(-50%);width:max-content;max-width:calc(100% - 32px);
+      background:var(--blue);color:#06141d;font-weight:800;border-radius:999px;padding:10px 18px;font-size:15px;text-align:center;pointer-events:none}
+    /* The shutter is ALWAYS bottom centre, never overlapped. Mic left of it, menu right of it: one thumb. */
+    #shutter{position:absolute;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);width:76px;height:76px;border-radius:50%;
+      background:transparent;border:5px solid #fff}
+    #shutter::after{content:"";position:absolute;inset:6px;border-radius:50%;background:#fff}
+    #shutter:active::after{inset:10px}
+    .round{position:absolute;bottom:calc(30px + env(safe-area-inset-bottom));width:56px;height:56px;border-radius:50%;background:var(--glass);border:1px solid var(--line);
+      display:grid;place-items:center}
+    .round svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    #mic{left:calc(50% - 122px)} #menu{left:calc(50% + 66px)}
+    #mic[data-s="connecting"]{border-color:var(--blue)}
+    #mic[data-s="listening"],#mic[data-s="speaking"]{background:var(--mag);border-color:var(--mag)}
+    #mic[data-s="off"].nudge{border-color:var(--mag);animation:nudge 1.4s ease-in-out infinite}
+    @keyframes nudge{50%{transform:scale(1.1)}}
+    #mic:disabled{opacity:.45}
+    @media (orientation:landscape) and (max-height:500px){
+      #shutter{left:auto;right:calc(20px + env(safe-area-inset-right));bottom:50%;transform:translateY(50%)}
+      #mic,#menu{left:auto;right:calc(30px + env(safe-area-inset-right))}
+      #mic{bottom:calc(50% + 56px)} #menu{bottom:calc(50% - 112px)}
+      #hint{bottom:20px}
+    }
+    #typebar{position:absolute;left:12px;right:12px;bottom:calc(116px + env(safe-area-inset-bottom));display:flex;gap:8px;max-width:520px;margin:0 auto}
+    #typebar input{flex:1;min-width:0;min-height:48px;border-radius:999px;border:1px solid var(--line);background:var(--glass);color:#fff;padding:0 18px;font:inherit}
+    #typebar button{min-height:48px;border-radius:999px;background:var(--blue);color:#06141d;font-weight:800;padding:0 18px}
+    #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:6;transition:opacity .25s}
+    .sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.8);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;text-align:center}
+    #shot img{max-width:100%;max-height:68vh;border-radius:14px}
+    .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    #sheet .card{background:#15161c;border:1px solid var(--line);border-radius:22px;padding:22px;width:min(100%,360px);display:flex;flex-direction:column;gap:10px}
+    #sheet h2{margin:0 0 4px;font-size:20px} #sheet p{margin:0 0 6px;color:var(--muted);font-size:14px}
+    #sheet .ghost{width:100%;text-decoration:none;display:grid;place-items:center}
+    #error{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center}
+    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  </style>
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
+</head>
+<body>
+  <canvas id="cam"></canvas>
+
+  <section id="splash">
+    <img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE">
+    <div>
+      <h1>Wake<br>the <span>Print</span></h1>
+      <p>Someone lives in this print. Point your camera at it, then say hello.</p>
+      <div class="tagrow"><span>Sees your room</span><span>Talks with you</span><span>Reacts to your hand</span><span>Remembers you</span></div>
+      <button id="start" class="primary" disabled>Loading…</button>
+      <small>Uses your camera. The microphone is only used if you tap the mic to talk.</small>
+    </div>
+    <div class="by">Activated by MEDIALIFE · Labs proof of concept</div>
+  </section>
+
+  <div id="hud" hidden>
+    <div id="top">
+      <div id="cap" hidden role="status" aria-live="polite"><div class="wrap"><b id="cap-who">Spark</b><span id="cap-text"></span><div id="energy" hidden><i></i></div></div></div>
+      <div id="sees" aria-live="polite"></div>
+    </div>
+    <div id="hint" class="ml-hint" role="status" aria-live="polite">Point at the print</div>
+    <form id="typebar" hidden><input id="type-in" type="text" autocomplete="off" enterkeyhint="send" placeholder="Type to Spark" aria-label="Type to Spark"><button>Send</button></form>
+    <button id="mic" class="round" data-s="off" aria-label="Talk to Spark" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </button>
+    <button id="shutter" aria-label="Take a photo"></button>
+    <button id="menu" class="round" aria-label="More options">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+    </button>
+  </div>
+  <div id="flash" aria-hidden="true"></div>
+
+  <div id="shot" class="sheet" hidden>
+    <img id="shot-img" alt="Your photo">
+    <div class="row"><button id="shot-save" class="primary" style="width:auto">Save</button><button id="shot-close" class="ghost">Close</button></div>
+  </div>
+
+  <div id="sheet" class="sheet" hidden role="dialog" aria-labelledby="sheet-title">
+    <div class="card">
+      <h2 id="sheet-title">Spark</h2>
+      <p id="sheet-mem"></p>
+      <button id="opt-type" class="ghost">Type instead of talking</button>
+      <button id="opt-forget" class="ghost">Forget me</button>
+      <a class="ghost" href="./target/" target="_blank" rel="noopener">Open the test picture</a>
+      <button id="opt-close" class="primary" style="width:100%">Back to the camera</button>
+    </div>
+  </div>
+
+  <div id="error" hidden role="alertdialog" aria-labelledby="err-title">
+    <h2 id="err-title">Something went wrong</h2>
+    <p id="err-body"></p>
+    <button id="err-retry" class="primary">Try again</button>
+  </div>
+
+  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

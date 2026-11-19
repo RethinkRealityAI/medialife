@@ -46,3 +46,7 @@ assets-src/
 # local dev storage for /admin tools (Netlify Blobs in production)
 .data/
 .cache/
+__pycache__/
+
+# Spray Studio build output (npm run build:studio)
+/public/spray/

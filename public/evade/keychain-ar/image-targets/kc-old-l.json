@@ -1,0 +1,21 @@
+{
+  "imagePath": "/evade/keychain-ar/image-targets/kc-old-l_luminance.jpg",
+  "metadata": null,
+  "name": "kc-old-l",
+  "type": "PLANAR",
+  "properties": {
+    "left": 0,
+    "top": 0,
+    "width": 1080,
+    "height": 1440,
+    "isRotated": false,
+    "originalWidth": 1080,
+    "originalHeight": 1440
+  },
+  "resources": {
+    "luminanceImage": "kc-old-l_luminance.jpg",
+    "thumbnailImage": "kc-old-l_thumbnail.jpg"
+  },
+  "created": 1794439517438,
+  "updated": 1794439517438
+}

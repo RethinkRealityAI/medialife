@@ -213,7 +213,7 @@ export function PartnerWelcome() {
           <div className="relative flex min-w-0 flex-col p-5 sm:p-6">
             <div
               aria-hidden
-              className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--partner)] to-transparent opacity-60"
+              className="absolute inset-x-6 top-0 h-px bg-[var(--partner)]/50 opacity-60"
             />
             <div className="flex items-center gap-2.5 pr-10">
               {logo ? (

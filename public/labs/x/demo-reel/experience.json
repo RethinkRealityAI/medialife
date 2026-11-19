@@ -1,0 +1,200 @@
+{
+ "slug": "demo-reel",
+ "title": "MEDIALIFE Demo Reel",
+ "client": "MEDIALIFE",
+ "wordmark": "MEDIALIFE",
+ "accent": "#f6c344",
+ "onAccent": "#111111",
+ "lead": "Ten prints from our Animebae, SPORT, PSA and Den of Geek drops, all in one experience.",
+ "hint": "Point at any of the prints",
+ "targets": [
+  {
+   "name": "Syndicate",
+   "label": "Syndicate",
+   "what": "Print",
+   "json": "image-targets/syndicate.json",
+   "picture": "image-targets/syndicate.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Syndicate-9f783191.mp4",
+     "width": 0.85,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "sukeban",
+   "label": "Sukeban",
+   "what": "Print",
+   "json": "image-targets/sukeban.json",
+   "picture": "image-targets/sukeban.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/Sukeban-Cherry_Blossom-20eb71db.mp4",
+     "width": 0.75,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "redbunny1",
+   "label": "Red bunny",
+   "what": "Sticker",
+   "json": "image-targets/redbunny1.json",
+   "picture": "image-targets/redbunny1.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/redbunny1-633d877b.mp4",
+     "width": 0.6,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "hellsrevengers",
+   "label": "Hell's Revengers",
+   "what": "Print",
+   "json": "image-targets/hellsrevengers.json",
+   "picture": "image-targets/hellsrevengers.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/hellsrevengers-3c0d9412.mp4",
+     "width": 0.85,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "cat-girl",
+   "label": "Cat girl",
+   "what": "Sticker",
+   "json": "image-targets/cat-girl.json",
+   "picture": "image-targets/cat-girl.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/cat-girl1-6d00b2ba.mp4",
+     "width": 0.9,
+     "height": 1.4,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "AB_trainframe",
+   "label": "Train frame",
+   "what": "Framed print",
+   "json": "image-targets/ab-trainframe.json",
+   "picture": "image-targets/ab-trainframe.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/AB_Train-427be419.mp4",
+     "scale": [
+      1,
+      1.02
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "Sticker Graphic",
+   "label": "SPORT cover",
+   "what": "Magazine cover",
+   "json": "image-targets/sticker-graphic.json",
+   "picture": "image-targets/sticker-graphic.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/pr-animation1-b40ec9df.mp4",
+     "scale": [
+      1.05,
+      1.05
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true,
+     "sound": true
+    }
+   ]
+  },
+  {
+   "name": "DOG image target",
+   "label": "Den of Geek",
+   "what": "Magazine cover",
+   "json": "image-targets/dog-image-target.json",
+   "picture": "image-targets/dog-image-target.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/den-of-geek-0433ef21.mp4",
+     "scale": [
+      1,
+      1.05
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "Magazine PSA",
+   "label": "PSA card",
+   "what": "Trading card",
+   "json": "image-targets/magazine-psa.json",
+   "picture": "image-targets/magazine-psa.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/cj-squabble-v2-405530d9.mp4",
+     "scale": [
+      1.05,
+      1.05
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "bunny-final",
+   "label": "Tri-bunny",
+   "what": "Afterhours print",
+   "json": "image-targets/bunny-final.json",
+   "picture": "image-targets/bunny-final.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/tribunny1-bad6687c.mp4",
+     "width": 1.03,
+     "height": 1.04,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Win $300",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "Follow IG",
+   "url": "https://www.instagram.com/animebae.co/"
+  }
+ ]
+}

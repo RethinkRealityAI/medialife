@@ -1,0 +1,19 @@
+{
+ "name": "violence-family",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/violence-family/image-targets/violence-family_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "violence-family_luminance.png",
+  "originalImage": "violence-family.jpg"
+ }
+}
