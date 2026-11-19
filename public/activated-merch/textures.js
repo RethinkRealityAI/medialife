@@ -115,10 +115,7 @@ export function nfcTexture() {
   g.beginPath();
   g.arc(256, 256, 252, 0, Math.PI * 2);
   g.clip();
-  const bg = g.createRadialGradient(256, 256, 20, 256, 256, 256);
-  bg.addColorStop(0, "#1b2340");
-  bg.addColorStop(1, "#0c1020");
-  g.fillStyle = bg;
+  g.fillStyle = "#141a32"; // flat, no gradient
   g.fillRect(0, 0, 512, 512);
   // Coil: a round spiral.
   g.strokeStyle = "#e39a52";
