@@ -10,6 +10,8 @@
  *     → mattercraft/loot-break/index.html      (the file that goes in Mattercraft)
  *     → public/labs/loot-break/splash.html     (the same page, with a fake loader
  *                                               standing in for index.ts, no analytics)
+ *     → public/labs/loot-break/index.html      (the 8th Wall world-tracking game: the same
+ *                                               splash, booting assets/ar.js instead of index.ts)
  *
  * Usage:  node scripts/build-loot-break.mjs          rebuild
  *         node scripts/build-loot-break.mjs --check  fail if the lab copy is stale
@@ -96,7 +98,7 @@ const LAB_BOOT = `<!-- Lab stand-in for index.ts: in Mattercraft, initialize() e
 				if (!q.has('loading')) setTimeout(function () { b.disabled = false; }, 1800);
 				b.addEventListener('click', function () {
 					document.body.classList.add('zcomponent-launched');
-					setTimeout(function () { location.href = './index.html'; }, 450);
+					setTimeout(function () { location.href = './desk.html'; }, 450);
 				});
 			});
 		</script>`;
@@ -105,12 +107,48 @@ const labHtml = withArt
   .replace(/<!-- @lab:boot -->[\s\S]*?<!-- @lab:end -->/, LAB_BOOT)
   .replace(/[ \t]*<!-- @lab:analytics -->[\s\S]*?<!-- @lab:end -->\n?/g, "")
   .replace("<head>", '<head>\n\t\t<meta name="robots" content="noindex" />');
+// The 8th Wall page: same splash and analytics, booting the world-tracking
+// game (assets/ar.js) instead of Mattercraft's index.ts.
+const AR_BOOT = `<!-- LOOT BREAK on 8th Wall world tracking (assets/ar.js runs LootBreakGame.ts through the lab shim).
+		     World tracking: 8th Wall distributed engine binary (@8thwall/engine-binary 1.0.0), Copyright (c) 2026
+		     Niantic Spatial, Inc., XR Engine License Agreement https://github.com/8thwall/engine/blob/main/LICENSE ,
+		     loaded unmodified from jsDelivr as the licence asks. Credits: ./licences.html (menu > Licences). -->
+		<meta name="robots" content="noindex,nofollow" />
+		<script type="importmap">
+			{"imports":{"three":"/roblox/creators/vendor/three/build/three.module.js","three/addons/":"/roblox/creators/vendor/three/jsm/"}}
+		</script>
+		<link rel="stylesheet" href="./assets/ar.css?v=1" />
+		<link rel="stylesheet" href="/vendor/ar-kit/hint.css" />
+		<script src="/vendor/ar-kit/qrcode.min.js" defer></script>
+		<script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+		<script type="module" src="./assets/ar.js?v=1"></script>`;
+const AR_BODY = `<body>
+		<!-- 8th Wall draws the camera and the game here; the game's UI goes in the overlay (as in Mattercraft). -->
+		<canvas id="cam" aria-label="Your camera with LOOT BREAK on your desk"></canvas>
+		<div id="zcomponent-overlay"></div>
+		<p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
+		<div id="sheet" class="ar-sheet" role="alertdialog" aria-labelledby="sheet-title" hidden>
+			<div class="ar-sheet-box">
+				<h2 id="sheet-title">Something went wrong</h2>
+				<p id="sheet-body"></p>
+				<div id="qr" class="ar-qr" hidden aria-label="QR code that opens this page on your phone"></div>
+				<button id="sheet-btn" type="button">Try again</button>
+			</div>
+		</div>
+`;
+const arHtml = withArt
+  .replace("<!DOCTYPE html>\n", "<!DOCTYPE html>\n" + banner)
+  .replace(/<!-- @lab:boot -->[\s\S]*?<!-- @lab:end -->/, AR_BOOT)
+  .replace(/[ \t]*<!-- @lab:(analytics|end) -->\n/g, "")
+  .replace("<body>\n", AR_BODY);
+
 const mcClean = mcHtml.replace(/[ \t]*<!-- @lab:(boot|analytics|end) -->\n/g, "");
 
 const outputs = [
   [out, code],
   [path.join(root, "mattercraft/loot-break/index.html"), mcClean],
   [path.join(root, "public/labs/loot-break/splash.html"), labHtml],
+  [path.join(root, "public/labs/loot-break/index.html"), arHtml],
   // the lab serves the same images beside splash.html
   ...(await Promise.all(
     Object.entries(IMAGES).map(async ([name, src]) => [

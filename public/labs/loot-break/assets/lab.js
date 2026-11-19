@@ -4,7 +4,7 @@
    would give you: a camera, a renderer, a desk to stand the lane on. */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { LootBreakGame, LabContext, Observable } from "./loot-break-game.js?v=2";
+import { LootBreakGame, LabContext, Observable } from "./loot-break-game.js?v=3";
 
 const $ = (s) => document.querySelector(s);
 const canvas = $("#c");

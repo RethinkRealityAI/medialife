@@ -710,6 +710,11 @@ class Sfx {
   constructor(private ctx: AudioContext | null) {
     this.out = ctx?.destination ?? null;
   }
+  /** Route the sound through another node of the same context (a page mixer or a recorder tap). */
+  setOutput(node: AudioNode | null) {
+    if (node && this.ctx && node.context === this.ctx) this.out = node;
+    else if (!node && this.ctx) this.out = this.ctx.destination;
+  }
   /**
    * iOS only starts Web Audio from inside a real tap (touchend / click, not
    * touchstart), and keeps it silent on the silent switch unless the page
@@ -899,7 +904,7 @@ interface Floater {
   max: number;
 }
 
-type Phase = "idle" | "placing" | "countdown" | "playing" | "ending" | "results";
+type Phase = "idle" | "placing" | "countdown" | "playing" | "ending" | "results" | "moving" | "resuming";
 
 /* ══════════════════════════════════════════════════════════════════════════
    The component
@@ -1154,15 +1159,39 @@ export class LootBreakGame extends Group {
   public placeButtonLabel = new Observable("Place on desk", () => this._syncPlacementUi());
 
   /**
-   * Caption under the Re-place button (shown during a round, top right).
-   * Blank hides the caption, not the button.
+   * Caption under the Move button (bottom right, always on screen once the
+   * lane is placed). Blank hides the caption, not the button.
    *
    * @zui
    * @zgroup Placement
    * @zpriority 6
-   * @zdefault Re-place
+   * @zdefault Move
    */
-  public replaceButtonLabel = new Observable("Re-place", () => this._syncPlacementUi());
+  public replaceButtonLabel = new Observable("Move", () => this._syncPlacementUi());
+
+  /**
+   * Move keeps the round: the game pauses while the lane follows the phone,
+   * and picks up where it left off (after a short 3-2-1) once it's put down
+   * again. Off = Move drops the round, as in the first Mattercraft build.
+   *
+   * @zui
+   * @zgroup Placement
+   * @zpriority 6
+   * @zdefault true
+   */
+  public moveKeepsRound = new Observable(true);
+
+  /**
+   * Shown instead of the place hint while the tracker can't place yet (the
+   * placement group's placementValid is false: no surface, or tracking still
+   * settling). Place stays disabled until then.
+   *
+   * @zui
+   * @zgroup Placement
+   * @zpriority 6
+   * @zdefault Scanning your desk. Move the phone slowly.
+   */
+  public placeWaitHint = new Observable("Scanning your desk. Move the phone slowly.", () => this._syncPlacementUi());
 
   /**
    * Timeline or state played when the player taps Place.
@@ -1183,6 +1212,26 @@ export class LootBreakGame extends Group {
    * @zvalues layerclipids
    */
   public resetTimeline = new Observable<string | undefined>(undefined);
+
+  /**
+   * Link shown as "Licences" in the menu (third-party software notices). Blank hides it.
+   *
+   * @zui
+   * @zgroup Screens
+   * @zpriority 2
+   */
+  public licencesUrl = new Observable("", () => this._syncMenu());
+
+  /**
+   * Leave the bottom centre free for a record button (the shutter goes there,
+   * house rule). The hero buttons sit above it.
+   *
+   * @zui
+   * @zgroup Screens
+   * @zpriority 1
+   * @zdefault false
+   */
+  public reserveShutter = new Observable(false, (v) => this._ui?.classList.toggle("lb-shutter", !!v));
 
   /* ── Rewards ─────────────────────────────────────────────────────────── */
 
@@ -1224,8 +1273,10 @@ export class LootBreakGame extends Group {
   public onRoundEnd = new Event<[number, string]>();
   /** Fires when the player confirms placement with the Place button. */
   public onPlace = new Event<[]>();
-  /** Fires when the player taps Re-place. */
+  /** Fires when the player taps Move (or Re-place) and the lane lifts off the desk. */
   public onResetPlacement = new Event<[]>();
+  /** Fires when the game pauses (Move) or resumes. true = paused. */
+  public onPause = new Event<[boolean]>();
   /**
    * Fires on reward moments: action ("offer", "claim", "upgrade", "quest_claim",
    * "quest_step_N", "save", "shop") and the percent off (0 when there isn't one).
@@ -1261,6 +1312,10 @@ export class LootBreakGame extends Group {
   private readonly _floaters: Floater[] = [];
 
   private _phase: Phase = "idle";
+  /** Where Move came from, so Place can pick the round up again. */
+  private _resumeTo: Phase | null = null;
+  /** placementValid from the placement group (true when it has none). */
+  private _canPlace = true;
   private _t = 0; // seconds into the round
   private _phaseT = 0;
   private _spawnT = 0;
@@ -1393,6 +1448,15 @@ export class LootBreakGame extends Group {
   }
 
   /* ══ public API ═══════════════════════════════════════════════════════ */
+
+  /**
+   * Send the game's sound through this node instead of straight to the
+   * speakers (it must belong to the same AudioContext). Pages use it to put the
+   * sound into screen recordings.
+   */
+  public setAudioOutput(node: AudioNode | null) {
+    this._sfx.setOutput(node);
+  }
 
   /** Show the intro card (title, how to play, Start). */
   public showIntro() {
@@ -1604,22 +1668,25 @@ export class LootBreakGame extends Group {
     const c = document.createElement("canvas");
     c.width = c.height = 64;
     const g = c.getContext("2d")!;
-    const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30);
-    gr.addColorStop(0, "rgba(0,0,0,0.55)");
-    gr.addColorStop(1, "rgba(0,0,0,0)");
-    g.fillStyle = gr;
-    g.fillRect(0, 0, 64, 64);
+    // Flat stepped rings, not a smooth gradient (house rule: flat colours only).
+    for (const [r, a] of [[30, 0.16], [22, 0.18], [14, 0.2]] as const) {
+      g.fillStyle = `rgba(0,0,0,${a})`;
+      g.beginPath();
+      g.arc(32, 32, r, 0, Math.PI * 2);
+      g.fill();
+    }
     this._shadowTex = new THREE.CanvasTexture(c);
     // generic glow
     const c2 = document.createElement("canvas");
     c2.width = c2.height = 64;
     const g2 = c2.getContext("2d")!;
-    const gr2 = g2.createRadialGradient(32, 32, 0, 32, 32, 32);
-    gr2.addColorStop(0, "rgba(255,255,255,1)");
-    gr2.addColorStop(0.35, "rgba(255,255,255,0.45)");
-    gr2.addColorStop(1, "rgba(255,255,255,0)");
-    g2.fillStyle = gr2;
-    g2.fillRect(0, 0, 64, 64);
+    // Pixel glow: three flat rings (house rule: no gradients).
+    for (const [r, a] of [[30, 0.18], [20, 0.35], [10, 1]] as const) {
+      g2.fillStyle = `rgba(255,255,255,${a})`;
+      g2.beginPath();
+      g2.arc(32, 32, r, 0, Math.PI * 2);
+      g2.fill();
+    }
     this._glowTex = new THREE.CanvasTexture(c2);
     this._disposables.push(this._shadowTex, this._glowTex);
     this._chestOpenTex = this._sprite("chestOpen").tex;
@@ -1857,10 +1924,7 @@ export class LootBreakGame extends Group {
     const g = c.getContext("2d")!;
     const W = c.width;
     const H = c.height;
-    const gr = g.createLinearGradient(0, 0, 0, H);
-    gr.addColorStop(0, "#2a3346");
-    gr.addColorStop(1, "#141a26");
-    g.fillStyle = gr;
+    g.fillStyle = "#1e2636";
     g.fillRect(0, 0, W, H);
     g.fillStyle = "rgba(111,216,255,0.55)";
     g.fillRect(0, 0, W, 2);
@@ -1977,11 +2041,6 @@ export class LootBreakGame extends Group {
           <div class="lb-chip lb-clock"><span>PM</span><b data-k="clock">12:00</b></div>
         </div>
         <div class="lb-party" aria-label="Party health"><span>PARTY</span><div class="lb-bar"><i data-k="hp"></i></div></div>
-        <button class="lb-iconbtn lb-mute" type="button" data-k="mute" aria-label="Mute sound">♪</button>
-        <button class="lb-iconbtn lb-replace" type="button" data-k="replace" aria-label="Re-place the game" hidden>
-          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1v3M8 12v3M1 8h3M12 8h3" stroke="currentColor" stroke-width="2"/><rect x="5" y="5" width="6" height="6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-          <span data-k="replaceLbl">Re-place</span>
-        </button>
         <div class="lb-combo" data-k="combo" aria-live="polite"></div>
         <div class="lb-banner" data-k="banner"></div>
         <div class="lb-count" data-k="count"></div>
@@ -1996,6 +2055,19 @@ export class LootBreakGame extends Group {
           <div class="lb-meter-bar"><i data-k="meter"></i></div>
         </div>
       </div>
+
+      <button class="lb-iconbtn lb-menubtn" type="button" data-k="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="lb-menu">
+        <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M2 3h12v2H2zM2 7h12v2H2zM2 11h12v2H2z" fill="currentColor"/></svg>
+      </button>
+      <div class="lb-menu" id="lb-menu" data-k="menu" role="menu" hidden>
+        <button type="button" role="menuitemcheckbox" data-k="mute" aria-checked="true"><span>Sound</span><b data-k="muteLbl">On</b></button>
+        <button type="button" role="menuitem" data-k="menuHow">How to play</button>
+        <a role="menuitem" data-k="licences" target="_blank" rel="noopener" hidden>Licences</a>
+      </div>
+      <button class="lb-iconbtn lb-replace" type="button" data-k="replace" aria-label="Move the game" hidden>
+        <svg viewBox="0 0 16 16" aria-hidden="true" shape-rendering="crispEdges"><path d="M7 0h2v2h2v2H9v3h3V5h2v2h2v2h-2v2h-2V9H9v3h2v2H9v2H7v-2H5v-2h2V9H4v2H2V9H0V7h2V5h2v2h3V4H5V2h2z" fill="currentColor"/></svg>
+        <span data-k="replaceLbl">Move</span>
+      </button>
 
       <div class="lb-place" data-screen="place" hidden>
         <div class="lb-placebox">
@@ -2091,8 +2163,24 @@ export class LootBreakGame extends Group {
     this._el.again.addEventListener("click", () => this.startRound());
     this._el.share.addEventListener("click", () => void this._share());
     this._el.mute.addEventListener("click", () => this._setMuted(!this._sfx.muted));
+    this._el.menuBtn.addEventListener("click", () => this._toggleMenu());
+    this._el.menuHow.addEventListener("click", () => {
+      this._toggleMenu(false);
+      this.showIntro();
+    });
+    this._el.licences.addEventListener("click", () => this._toggleMenu(false));
+    // A tap anywhere else closes the menu.
+    window.addEventListener(
+      "pointerdown",
+      (e) => {
+        const t = e.target as HTMLElement | null;
+        if (!this._el.menu.hidden && !t?.closest?.(".lb-menu, .lb-menubtn")) this._toggleMenu(false);
+      },
+      { capture: true },
+    );
     this._el.placeBtn.addEventListener("click", () => this._place());
     this._el.replace.addEventListener("click", () => this._resetPlacement(true));
+    ui.classList.toggle("lb-shutter", !!this.reserveShutter?.value);
     return ui;
   }
 
@@ -2118,9 +2206,27 @@ export class LootBreakGame extends Group {
     this._sfx.muted = m;
     if (!m) this._sfx?.unlock();
     if (this._el.mute) {
-      this._el.mute.classList.toggle("is-off", m);
-      this._el.mute.setAttribute("aria-label", m ? "Turn sound on" : "Mute sound");
+      this._el.mute.setAttribute("aria-checked", String(!m));
+      this._el.muteLbl.textContent = m ? "Off" : "On";
     }
+  }
+
+  private _toggleMenu(open = this._el.menu?.hidden) {
+    if (!this._el.menu) return;
+    this._syncMenu();
+    this._el.menu.hidden = !open;
+    this._el.menuBtn.setAttribute("aria-expanded", String(!!open));
+  }
+
+  /** Menu items: How to play only between rounds, Licences only with a link. */
+  private _syncMenu() {
+    if (!this._el.menu) return;
+    const url = (this.licencesUrl?.value || "").trim();
+    const a = this._el.licences as HTMLAnchorElement;
+    a.hidden = !url;
+    if (url) a.href = url;
+    const busy = ["countdown", "playing", "ending", "moving", "resuming", "placing"].includes(this._phase);
+    this._el.menuHow.hidden = busy;
   }
 
   private _show(screen: "intro" | "place" | "hud" | "results" | "reward" | "none") {
@@ -2171,7 +2277,7 @@ export class LootBreakGame extends Group {
     this._el.tierNext.style.color = next.color;
     const m = this._el.meter;
     m.style.width = `${p * 100}%`;
-    m.style.background = `linear-gradient(90deg, ${now.color}, ${next.color})`;
+    m.style.background = next.color;
     m.style.boxShadow = `0 0 12px ${next.glow}`;
   }
 
@@ -2364,6 +2470,8 @@ export class LootBreakGame extends Group {
   private _pgWriting = false;
 
   private _reset() {
+    this._ui.classList.remove("lb-moving");
+    this._resumeTo = null;
     for (const m of this._monsters) this._removeActor(m);
     this._monsters.length = 0;
     for (const s of this._shots) s.mesh.removeFromParent();
@@ -2496,19 +2604,13 @@ export class LootBreakGame extends Group {
     bc.width = 32;
     bc.height = 128;
     const g = bc.getContext("2d")!;
-    const gr = g.createLinearGradient(0, 128, 0, 0);
-    gr.addColorStop(0, "rgba(255,255,255,1)");
-    gr.addColorStop(0.4, "rgba(255,255,255,0.55)");
-    gr.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = gr;
-    g.fillRect(0, 0, 32, 128);
-    const gx = g.getImageData(0, 0, 32, 128);
-    for (let y = 0; y < 128; y++)
-      for (let x = 0; x < 32; x++) {
-        const k = Math.abs(x - 15.5) / 16;
-        gx.data[(y * 32 + x) * 4 + 3] *= Math.pow(1 - k, 1.6);
-      }
-    g.putImageData(gx, 0, 0);
+    // Stepped pixel beam: flat bands, brighter core (house rule: no gradients).
+    for (const [y0, a] of [[0, 0.25], [48, 0.55], [88, 1]] as const) {
+      g.fillStyle = `rgba(255,255,255,${a * 0.45})`;
+      g.fillRect(0, y0, 32, 128 - y0);
+      g.fillStyle = `rgba(255,255,255,${a})`;
+      g.fillRect(10, y0, 12, 128 - y0);
+    }
     const bt = this._track(new THREE.CanvasTexture(bc));
     const beamH = 0.35 + this._resultTier * 0.045;
     const beam = new THREE.Mesh(
@@ -3140,7 +3242,7 @@ export class LootBreakGame extends Group {
     if (this._phase === "playing" || this._phase === "countdown" || this._phase === "idle") {
       this._groundTex.offset.x += dt * 0.08;
     }
-    this._placePad.visible = this._phase === "placing";
+    this._placePad.visible = this._phase === "placing" || this._phase === "moving";
     if (this._placePad.visible) {
       // Pixel games animate in steps, not smooth tweens: 8 frames a second.
       const step = Math.floor(now * RETICLE.fps);
@@ -3149,6 +3251,14 @@ export class LootBreakGame extends Group {
         drawReticle(this._padCanvas, step);
         this._padTex.needsUpdate = true;
       }
+    }
+
+    if (this._phase === "moving" || this._phase === "resuming") {
+      // Paused: nothing moves on the lane until it's down and the 3-2-1 is over.
+      if (this._phase === "resuming") this._tickResume(dt);
+      this._billboard();
+      this._tickUiTimers(dt);
+      return;
     }
 
     switch (this._phase) {
@@ -3578,6 +3688,7 @@ export class LootBreakGame extends Group {
     this._pgUnsub = [];
     const prev = this._pg;
     this._pg = null;
+    this._canPlace = true;
     if (prev) {
       // Hand the buttons back if we let go of a group.
       if (prev.showPlaceButton) prev.showPlaceButton.value = true;
@@ -3632,6 +3743,18 @@ export class LootBreakGame extends Group {
     };
     found.placementMode.addListener(onMode);
     this._pgUnsub.push(() => found!.placementMode.removeListener(onMode));
+    // Trackers that know whether they can place right now (8th Wall page: a
+    // surface under the reticle and settled tracking) gate the Place button.
+    const pv = found.placementValid;
+    if (pv && typeof pv.addListener === "function") {
+      const onValid = (v: boolean) => {
+        this._canPlace = !!v;
+        this._syncPlacementUi();
+      };
+      pv.addListener(onValid);
+      this._pgUnsub.push(() => pv.removeListener?.(onValid));
+      this._canPlace = !!pv.value;
+    } else this._canPlace = true;
     // Instant World Trackers start in placement mode; keep the lane following
     // the phone until the player places it.
     if (this._phase === "placing" || this._phase === "idle") this._setPlacementMode(true);
@@ -3656,7 +3779,9 @@ export class LootBreakGame extends Group {
   }
 
   private _place() {
+    if (this._phase === "moving") return this._finishMove();
     if (this._phase !== "placing") return;
+    if (!this._canPlace) return;
     this._setPlacementMode(false);
     this._placed = true;
     this._sfx.coin();
@@ -3671,7 +3796,8 @@ export class LootBreakGame extends Group {
    */
   private _resetPlacement(fromButton: boolean) {
     if (!this.placementEnabled.value) return;
-    if (this._phase === "placing") return;
+    if (this._phase === "placing" || this._phase === "moving") return;
+    if (this.moveKeepsRound.value && this._placed) return this._startMove(fromButton);
     if (fromButton && this._pg) {
       // Same as Zappar's own restart button: honours the group's Restart
       // Placement Mode ("reset" re-scans the world, "place" just lifts the lane).
@@ -3697,6 +3823,90 @@ export class LootBreakGame extends Group {
     this._enterPlacing();
   }
 
+  /**
+   * Move without losing anything: the round (or the results card) freezes,
+   * the lane follows the phone again, and Place puts it down and picks up
+   * where it stopped. House rule: moving keeps the object's state.
+   */
+  private _startMove(fromButton: boolean) {
+    const from = this._phase === "resuming" ? (this._resumeTo ?? "playing") : this._phase;
+    this._resumeTo = from;
+    this._phase = "moving";
+    this._phaseT = 0;
+    this._toggleMenu(false);
+    if (fromButton && this._pg) {
+      this._pgWriting = true;
+      try {
+        this._pg.placementMode.value = true;
+      } finally {
+        this._pgWriting = false;
+      }
+    }
+    this._placed = false;
+    this._el.count.className = "lb-count";
+    this._playClip(this.resetTimeline.value);
+    this.onResetPlacement.emit();
+    if (from === "countdown" || from === "playing" || from === "ending") this.onPause.emit(true);
+    this._show("place");
+    this._ui.classList.add("lb-moving");
+    // Keep the frozen round's HUD under the place box.
+    if (from !== "idle" && from !== "results")
+      this._ui.querySelector<HTMLElement>('[data-screen="hud"]')!.hidden = false;
+  }
+
+  private _finishMove() {
+    if (!this._canPlace) return;
+    this._ui.classList.remove("lb-moving");
+    this._setPlacementMode(false);
+    this._placed = true;
+    this._sfx.coin();
+    this._playClip(this.placeTimeline.value);
+    this.onPlace.emit();
+    const to = this._resumeTo ?? "idle";
+    this._resumeTo = to;
+    if (to === "playing" || to === "countdown") {
+      // A short 3-2-1 before the monsters move again.
+      this._phase = "resuming";
+      this._phaseT = 0;
+      this._countdownShown = -1;
+      this._show("hud");
+      return;
+    }
+    this._resumeTo = null;
+    this._phase = to;
+    if (to === "ending") {
+      this._show("hud");
+      this.onPause.emit(false);
+    } else if (to === "results") this._show("results");
+    else this._show("intro");
+  }
+
+  private _tickResume(dt: number) {
+    this._phaseT += dt;
+    const step = 0.5;
+    const n = 3 - Math.floor(this._phaseT / step);
+    if (n !== this._countdownShown && n > 0) {
+      this._countdownShown = n;
+      const el = this._el.count;
+      el.textContent = String(n);
+      el.className = "lb-count";
+      void el.offsetWidth;
+      el.className = "lb-count is-on is-resume";
+      this._sfx.beep(false);
+    }
+    if (this._phaseT >= 3 * step) {
+      const to = this._resumeTo === "countdown" ? "countdown" : "playing";
+      this._resumeTo = null;
+      this._el.count.className = "lb-count";
+      this._phase = to;
+      if (to === "countdown") {
+        this._phaseT = 0;
+        this._countdownShown = -1;
+      }
+      this.onPause.emit(false);
+    }
+  }
+
   private _playClip(id: string | undefined) {
     if (!id) return;
     try {
@@ -3714,16 +3924,30 @@ export class LootBreakGame extends Group {
   private _syncPlacementUi() {
     const el = this._el;
     if (!el.placeBtn) return;
-    el.placeHint.textContent = this.placeHint.value;
-    el.placeLbl.textContent = this.placeButtonLabel.value;
+    const moving = this._phase === "moving";
+    el.placeHint.textContent = !this._canPlace
+      ? this.placeWaitHint.value
+      : moving
+        ? "Point at the new spot, then put it down. Your round is paused."
+        : this.placeHint.value;
+    el.placeLbl.textContent = moving ? "Put it here" : this.placeButtonLabel.value;
+    (el.placeBtn as HTMLButtonElement).disabled = !this._canPlace;
+    el.placeBtn.classList.toggle("is-wait", !this._canPlace);
     const lbl = this.replaceButtonLabel.value.trim();
     el.replaceLbl.textContent = lbl;
     el.replaceLbl.hidden = !lbl;
-    el.replace.setAttribute("aria-label", lbl || "Re-place the game");
+    el.replace.setAttribute("aria-label", lbl || "Move the game");
 
-    // Re-place sits under mute while the HUD is up.
-    const hud = this._ui.querySelector<HTMLElement>('[data-screen="hud"]');
-    el.replace.hidden = !(this.placementEnabled.value && hud && !hud.hidden && this._phase !== "results");
+    // Move: always on screen once the lane is down (house rule), bottom right.
+    el.replace.hidden = !(
+      this.placementEnabled.value &&
+      this._placed &&
+      this._phase !== "placing" &&
+      this._phase !== "moving"
+    );
+    // Cards keep clear of the Move button.
+    this._ui.classList.toggle("lb-placed", !el.replace.hidden);
+    this._syncMenu();
   }
 
   /* ══ cleanup ══════════════════════════════════════════════════════════ */
@@ -3754,6 +3978,8 @@ export class LootBreakGame extends Group {
  */
 interface PlacementGroup {
   placementMode: Observable<boolean>;
+  /** Optional: false while the tracker can't place yet (Place waits). */
+  placementValid?: Observable<boolean>;
   showPlaceButton?: Observable<boolean>;
   showRestartPlacementButton?: Observable<boolean>;
 }
@@ -4461,10 +4687,7 @@ async function drawCoupon(c: RwCode, cfg: RwConfig | null, title: string) {
   cv.height = H;
   const x = cv.getContext("2d")!;
   const accent = c.kind === "quest" ? "#c79bff" : "#ffc53d";
-  const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#2b2531");
-  g.addColorStop(1, "#120f16");
-  x.fillStyle = g;
+  x.fillStyle = "#1f1a25";
   x.fillRect(0, 0, W, H);
   // pixel border
   x.fillStyle = "#0b090e";
@@ -4546,10 +4769,7 @@ async function drawStory(score: number, tierIdx: number, tags: string, title: st
   cv.height = H;
   const x = cv.getContext("2d")!;
   const tier = TIERS[tierIdx];
-  const g = x.createRadialGradient(W / 2, 820, 60, W / 2, 820, 1100);
-  g.addColorStop(0, "#3a2d48");
-  g.addColorStop(1, "#0d0b11");
-  x.fillStyle = g;
+  x.fillStyle = "#1c1623";
   x.fillRect(0, 0, W, H);
   // light rays behind the chest
   x.save();
@@ -4663,16 +4883,16 @@ const CSS = `
 .lb-hud{position:absolute;inset:0}
 
 .lb-top{position:absolute;left:0;right:0;top:calc(var(--top) + 10px);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px}
-.lb-chip{display:flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border-radius:8px;background:linear-gradient(#2c2633,#16131b);
+.lb-chip{display:flex;align-items:center;gap:6px;min-height:36px;padding:4px 12px;border-radius:8px;background:#221d28;
   border:2px solid #0c0a10;box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45);font-family:'Silkscreen',monospace;font-size:15px;white-space:nowrap}
 .lb-chip b{font-weight:700;color:#fff;letter-spacing:.02em}
 @media (max-width:400px){.lb-chip{padding:4px 8px;font-size:13px}.lb-ribbon-sm{padding:5px 12px 6px;font-size:10px}}
 .lb-coins b{color:#ffe08a;min-width:4.5ch;text-align:right}
-.lb-coin{width:16px;height:16px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6c9 0 18%,#f5c447 20% 60%,#a8731b 62%);box-shadow:0 0 0 2px #16121d}
+.lb-coin{width:16px;height:16px;border-radius:50%;background:#f5c447;box-shadow:inset -3px -3px 0 #a8731b,inset 3px 3px 0 #fff6c9,0 0 0 2px #16121d}
 .lb-clock span{font-size:11px;color:#a9b4c4}
 .lb-clock b.is-late{color:#ff6b6b;animation:lbBlink .5s steps(2) infinite}
 .lb-ribbon{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:6px 26px 7px;color:#ffd979;
-  font-family:'Silkscreen',monospace;font-weight:700;letter-spacing:.06em;background:linear-gradient(#cf3440,#8c1823);
+  font-family:'Silkscreen',monospace;font-weight:700;letter-spacing:.06em;background:#b52a36;
   clip-path:polygon(0 50%,12px 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,12px 100%);
   text-shadow:0 2px 0 #3d0710;filter:drop-shadow(0 3px 0 rgba(0,0,0,.5))}
 .lb-ribbon::before{content:"";position:absolute;inset:3px 10px;border-top:1px solid rgba(255,220,150,.35);border-bottom:1px solid rgba(0,0,0,.35);pointer-events:none}
@@ -4681,24 +4901,33 @@ const CSS = `
 .lb-ribbon-sm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-party{position:absolute;left:12px;right:12px;top:calc(var(--top) + 56px);display:flex;align-items:center;gap:8px;font-family:'Silkscreen',monospace;font-size:10px;color:#cdd3dc}
 .lb-bar{flex:1;max-width:260px;height:10px;border-radius:3px;background:#16121d;box-shadow:inset 0 0 0 2px #0c0a10,0 0 0 1px #51465a}
-.lb-bar i{display:block;height:100%;width:100%;border-radius:2px;background:linear-gradient(#7cf08a,#2f9e47);transition:width .15s}
-.lb-bar i.is-low{background:linear-gradient(#ff8080,#c42b2b);animation:lbBlink .6s steps(2) infinite}
+.lb-bar i{display:block;height:100%;width:100%;border-radius:2px;background:#4cc760;transition:width .15s}
+.lb-bar i.is-low{background:#e04848;animation:lbBlink .6s steps(2) infinite}
 .lb-iconbtn{position:absolute;right:10px;top:calc(var(--top) + 52px);width:44px;height:44px;border-radius:10px;border:2px solid #0c0a10;
-  background:linear-gradient(#a3622f,#6b3a16);box-shadow:inset 0 0 0 2px #d79a52,0 3px 0 rgba(0,0,0,.45);color:#ffe7b5;font-size:18px;cursor:pointer}
-.lb-iconbtn.is-off{filter:grayscale(1) brightness(.7)}
-.lb-replace{top:calc(var(--top) + 104px);display:flex;align-items:center;justify-content:center;padding:0}
-.lb-replace[hidden]{display:none}
-.lb-replace svg{width:20px;height:20px}
-.lb-replace span{position:absolute;top:calc(100% + 4px);right:-6px;white-space:nowrap;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;color:#f4efe2;text-shadow:0 1px 0 #16121d,0 0 6px #16121d}
+  background:#8a4e22;box-shadow:inset 0 0 0 2px #d79a52,0 3px 0 rgba(0,0,0,.45);color:#ffe7b5;font-size:18px;cursor:pointer}
+.lb-iconbtn{pointer-events:auto;z-index:4;display:flex;align-items:center;justify-content:center;padding:0}
+.lb-iconbtn svg{width:20px;height:20px}
+.lb-iconbtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
+/* Move: always on screen once the lane is down, bottom right (house rule). */
+.lb-replace{top:auto;right:12px;bottom:calc(var(--bot) + 14px);width:58px;height:58px;flex-direction:column;gap:3px}
+.lb-replace span{font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.04em;color:#ffe7b5}
+.lb-menu{position:absolute;right:10px;top:calc(var(--top) + 100px);z-index:5;min-width:180px;padding:6px;border-radius:12px;display:grid;gap:4px;pointer-events:auto;
+  background:rgba(22,18,27,.96);border:2px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
+.lb-menu button,.lb-menu a{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;padding:0 12px;border:0;border-radius:8px;
+  background:transparent;color:#f4efe2;font-family:'Silkscreen',monospace;font-size:13px;letter-spacing:.03em;text-decoration:none;text-align:left;cursor:pointer}
+.lb-menu button:hover,.lb-menu a:hover,.lb-menu button:focus-visible,.lb-menu a:focus-visible{background:#2c2633;outline:none}
+.lb-menu b{color:#7cf08a}
+.lb-menu [aria-checked="false"] b{color:#ff8a8a}
 .lb-place{position:absolute;inset:0;pointer-events:none}
 .lb-placebox{position:absolute;left:50%;bottom:calc(var(--bot) + max(32px, 9vh));transform:translateX(-50%);width:min(calc(100% - 24px),400px);
   padding:14px 14px 16px;border-radius:14px;text-align:center;pointer-events:auto;
-  background:linear-gradient(rgba(43,37,49,.94),rgba(24,20,29,.94));border:3px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
+  background:rgba(32,27,38,.95);border:3px solid #0b090e;box-shadow:inset 0 0 0 2px #55495f,0 10px 30px rgba(0,0,0,.5)}
 .lb-placehint{margin:0 0 12px;font-size:15px;line-height:1.35;color:#f4efe2}
 .lb-btn-place{width:100%;font-size:17px}
-.lb-iconbtn.is-off::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:3px;background:#ffe7b5;transform:rotate(-40deg)}
+.lb-btn-place.is-wait{filter:grayscale(.7) brightness(.75);animation:lbBlink 1.2s ease-in-out infinite}
+.lb-count.is-resume{color:#9fd3ff;font-size:84px}
 
-.lb-combo{position:absolute;right:14px;top:calc(var(--top) + 168px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;
+.lb-combo{position:absolute;right:14px;top:calc(var(--top) + 176px);text-align:right;font-family:'Silkscreen',monospace;font-size:34px;font-weight:700;color:#fff;
   text-shadow:0 3px 0 #16121d,0 0 14px rgba(255,200,80,.6);opacity:0;transform:scale(.6);transform-origin:right center}
 .lb-combo small{display:block;font-size:12px;letter-spacing:.2em;color:#ffd979}
 .lb-combo em{display:block;font-style:normal;font-size:12px;color:#ffe08a}
@@ -4717,15 +4946,15 @@ const CSS = `
 .lb-count.is-on{animation:lbCount .75s ease-out forwards}
 .lb-count.is-go{color:#ffd979;font-size:72px}
 
-.lb-toast{position:absolute;left:50%;top:calc(var(--top) + 96px);transform:translate(-50%,-10px);opacity:0;padding:8px 16px;border-radius:999px;
+.lb-toast{position:absolute;left:50%;top:calc(var(--top) + 132px);transform:translate(-50%,-10px);opacity:0;padding:8px 16px;border-radius:999px;
   background:rgba(14,12,18,.88);border:1px solid rgba(255,255,255,.12);font-family:'Pixelify Sans',sans-serif;font-size:15px;white-space:nowrap}
 .lb-toast.is-on{animation:lbToast 2s ease forwards}
 
-.lb-meter{position:absolute;left:50%;bottom:calc(var(--bot) + 14px);transform:translateX(-50%);width:min(92%,420px);padding:8px 12px 10px;border-radius:10px;
-  background:linear-gradient(#2c2633,#16131b);border:2px solid #0c0a10;box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45)}
-.lb-meter-label{display:flex;align-items:center;justify-content:center;gap:8px;font-family:'Silkscreen',monospace;font-size:12px;letter-spacing:.06em;margin-bottom:6px}
+.lb-meter{position:absolute;left:12px;right:66px;top:calc(var(--top) + 76px);max-width:340px;padding:5px 10px 7px;border-radius:10px;
+  background:#221d28;border:2px solid #0c0a10;box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45)}
+.lb-meter-label{display:flex;align-items:center;justify-content:flex-start;gap:8px;font-family:'Silkscreen',monospace;font-size:10px;letter-spacing:.06em;margin-bottom:4px}
 .lb-arrow{color:#8d8496}
-.lb-meter-bar{height:10px;border-radius:3px;background:#0e0c12;box-shadow:inset 0 0 0 1px #3c3444;overflow:hidden}
+.lb-meter-bar{height:7px;border-radius:3px;background:#0e0c12;box-shadow:inset 0 0 0 1px #3c3444;overflow:hidden}
 .lb-meter-bar i{display:block;height:100%;width:0;transition:width .2s}
 
 .lb-cursor{position:absolute;left:0;top:0;width:34px;height:44px;margin:-4px 0 0 -6px;opacity:0;transform-origin:6px 4px;
@@ -4741,34 +4970,34 @@ const CSS = `
 .lb-float.is-loot{color:#9fd3ff;font-size:20px}
 
 .lb-card{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(var(--top) + 12px) 12px calc(var(--bot) + 12px);
-  background:radial-gradient(ellipse at center,rgba(10,8,14,.35),rgba(10,8,14,.72))}
-.lb-results{background:linear-gradient(rgba(10,8,14,0) 0,rgba(10,8,14,.55) 45%,rgba(10,8,14,.8));align-items:flex-end}
+  background:rgba(10,8,14,.6)}
+.lb-results{background:rgba(10,8,14,.55);align-items:flex-end}
 .lb-frame{position:relative;width:min(100%,400px);max-height:100%;overflow:auto;padding:16px 18px 18px;border-radius:14px;text-align:center;
-  background:linear-gradient(#2b2531,#18141d);border:3px solid #0b090e;box-shadow:inset 0 0 0 3px #55495f,inset 0 0 0 6px #1a161f,0 10px 30px rgba(0,0,0,.6);
+  background:#211c27;border:3px solid #0b090e;box-shadow:inset 0 0 0 3px #55495f,inset 0 0 0 6px #1a161f,0 10px 30px rgba(0,0,0,.6);
   animation:lbRise .35s cubic-bezier(.2,1.3,.4,1)}
 .lb-frame>.lb-ribbon{display:flex;width:max-content;max-width:100%;min-width:62%;margin:0 auto 6px;font-size:20px;white-space:nowrap}
 .lb-sub{margin:4px 0 12px;color:#c9c1d4;font-size:15px}
 .lb-how{list-style:none;margin:0 0 16px;padding:0;text-align:left;display:grid;gap:8px}
 .lb-how li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.35;color:#ece6f3}
 .lb-how b{color:#fff}
-.lb-cosmic{background:linear-gradient(90deg,#c79bff,#33e6e6,#ff5ad1);-webkit-background-clip:text;background-clip:text;color:transparent !important}
+.lb-cosmic{color:#c79bff;animation:lbCosmic 1.6s steps(1) infinite}
 .lb-ico{flex:0 0 28px;height:28px;border-radius:6px;background:#3a3242;box-shadow:inset 0 0 0 2px #55495f;position:relative}
 .lb-ico::after{content:"";position:absolute;inset:6px;image-rendering:pixelated}
-.lb-ico-party::after{background:linear-gradient(90deg,#cfd4dc 0 25%,#58a63e 25% 50%,#8a57d6 50% 75%,#f28fae 75%)}
+.lb-ico-party::after{background:#58a63e;box-shadow:inset 6px 0 0 #cfd4dc,inset -6px 0 0 #f28fae}
 .lb-ico-cursor::after{inset:5px 8px;background:#fff;clip-path:polygon(0 0,100% 70%,55% 70%,75% 100%,55% 100%,35% 75%,0 100%)}
-.lb-ico-loot::after{border-radius:50%;background:radial-gradient(circle,#9fd3ff,#2b6fc4)}
-.lb-ico-chest::after{background:linear-gradient(#f5c447 0 30%,#91603a 30%);box-shadow:0 0 0 2px #16121d}
+.lb-ico-loot::after{border-radius:50%;background:#2b6fc4;box-shadow:inset 0 0 0 4px #9fd3ff}
+.lb-ico-chest::after{background:#91603a;box-shadow:inset 0 6px 0 #f5c447,0 0 0 2px #16121d}
 .lb-btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 18px;border-radius:10px;border:2px solid #0c0a10;
-  background:linear-gradient(#a3622f,#6b3a16);box-shadow:inset 0 0 0 2px #d79a52,0 4px 0 #2a1608;color:#ffe7b5;font-family:'Silkscreen',monospace;
+  background:#8a4e22;box-shadow:inset 0 0 0 2px #d79a52,0 4px 0 #2a1608;color:#ffe7b5;font-family:'Silkscreen',monospace;
   font-weight:700;font-size:15px;letter-spacing:.03em;text-decoration:none;cursor:pointer;touch-action:manipulation}
 .lb-btn:active{transform:translateY(2px);box-shadow:inset 0 0 0 2px #d79a52,0 2px 0 #2a1608}
 .lb-btn:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.lb-btn-go{background:linear-gradient(#d13b46,#8c1823);box-shadow:inset 0 0 0 2px #ff8a7a,0 4px 0 #3d0710;color:#fff1c9}
+.lb-btn-go{background:#b52a36;box-shadow:inset 0 0 0 2px #ff8a7a,0 4px 0 #3d0710;color:#fff1c9}
 .lb-intro .lb-btn-go{width:100%;font-size:17px}
 .lb-best{margin:10px 0 0;font-size:13px;color:#a99fb4;min-height:1em}
 .lb-kicker{margin:0;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.24em;color:#a99fb4}
 .lb-tier{margin:2px 0 0;font-family:'Silkscreen',monospace;font-weight:700;font-size:clamp(34px,10vw,46px);letter-spacing:.03em;line-height:1.1}
-.lb-tier.is-cosmic{background:linear-gradient(90deg,#c79bff,#33e6e6,#ff5ad1,#ffc53d,#c79bff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent !important;animation:lbHue 3s linear infinite}
+.lb-tier.is-cosmic{color:#c79bff;animation:lbCosmic 1.6s steps(1) infinite}
 .lb-scoreline{display:flex;align-items:baseline;justify-content:center;gap:10px;margin-bottom:8px}
 .lb-scoreline b{font-family:'Silkscreen',monospace;font-size:24px;color:#ffe08a}
 .lb-scoreline span{font-size:13px;color:#a99fb4}
@@ -4785,30 +5014,35 @@ const CSS = `
 .lb-stats b{display:block;font-family:'Silkscreen',monospace;font-size:17px;color:#fff}
 .lb-stats span{font-size:11.5px;color:#a99fb4}
 .lb-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:8px}
-.lb-btn-redeem{width:100%;margin-top:8px;background:linear-gradient(#3a7bd5,#1d4f9a);box-shadow:inset 0 0 0 2px #8fc2ff,0 4px 0 #0d2850;color:#eaf4ff}
+.lb-btn-redeem{width:100%;margin-top:8px;background:#2a64b8;box-shadow:inset 0 0 0 2px #8fc2ff,0 4px 0 #0d2850;color:#eaf4ff}
 .lb-foot{margin:12px 0 0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#7f768a}
 
-.lb-coach{position:absolute;left:50%;bottom:calc(var(--bot) + 140px);transform:translate(-50%,8px);opacity:0;width:max-content;max-width:calc(100% - 24px);
+.lb-coach{position:absolute;left:50%;bottom:calc(var(--bot) + 92px);transform:translate(-50%,8px);opacity:0;width:max-content;max-width:calc(100% - 24px);
   padding:8px 14px;border-radius:10px;background:rgba(14,12,18,.92);border:2px solid #ffd979;color:#fff3c9;font-family:'Silkscreen',monospace;font-size:12px;
   letter-spacing:.03em;line-height:1.3;text-align:center;transition:opacity .2s,transform .2s}
 .lb-coach.is-on{opacity:1;transform:translate(-50%,0);animation:lbNudge 1.2s ease-in-out infinite}
-.lb-ults{position:absolute;left:50%;bottom:calc(var(--bot) + 76px);transform:translateX(-50%);width:min(92%,420px);display:flex;align-items:center;gap:8px;--ult:0}
+.lb-ults{position:absolute;left:12px;right:82px;bottom:calc(var(--bot) + 14px);max-width:430px;display:flex;align-items:center;gap:8px;--ult:0}
+/* Record button bottom centre (house rule): hero buttons move up a row, full width. */
+.lb-shutter .lb-ults{left:50%;right:auto;width:min(calc(100% - 24px),430px);transform:translateX(-50%);bottom:calc(var(--bot) + 96px)}
+.lb-shutter .lb-coach{bottom:calc(var(--bot) + 172px)}
+.lb-shutter .lb-placebox{bottom:calc(var(--bot) + 112px)}
+.lb-root.lb-placed .lb-card{padding-bottom:calc(var(--bot) + 84px)}
 .lb-ults-lbl{margin:0;flex:0 0 48px;font-family:'Silkscreen',monospace;font-size:10px;line-height:1.3;color:#cdd3dc;text-align:center;text-shadow:0 1px 0 #16121d}
 .lb-ults-lbl b{display:block;font-size:12px;color:#ffe08a}
 .lb-ultbtns{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .lb-ultbtn{position:relative;height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;border-radius:9px;
   border:2px solid #0c0a10;overflow:hidden;cursor:pointer;color:#cfc6da;font-family:'Silkscreen',monospace;font-size:9px;letter-spacing:.03em;
   background:#1d1922;box-shadow:inset 0 0 0 2px #3c3444,0 3px 0 rgba(0,0,0,.45);touch-action:manipulation}
-.lb-ultbtn::before{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--ult) * 100%);background:linear-gradient(#6b4bc0,#33205f);transition:height .2s}
+.lb-ultbtn::before{content:"";position:absolute;left:0;right:0;bottom:0;height:calc(var(--ult) * 100%);background:#523a96;transition:height .2s}
 .lb-ultbtn img{position:relative;width:26px;height:26px;image-rendering:pixelated}
 .lb-ultbtn span{position:relative}
 .lb-ultbtn:disabled{cursor:default}
 .lb-ultbtn:disabled img{filter:grayscale(.5) brightness(.85)}
 .lb-ultbtn:focus-visible{outline:3px solid #fff;outline-offset:2px}
-.lb-ults.is-ready .lb-ultbtn{background:linear-gradient(#ffd25a,#c7861b);color:#2a1608;box-shadow:inset 0 0 0 2px #fff0b0,0 3px 0 #5a3a0a,0 0 14px rgba(255,200,80,.7);animation:lbReady .8s ease-in-out infinite}
+.lb-ults.is-ready .lb-ultbtn{background:#eeb03a;color:#2a1608;box-shadow:inset 0 0 0 2px #fff0b0,0 3px 0 #5a3a0a,0 0 14px rgba(255,200,80,.7);animation:lbReady .8s ease-in-out infinite}
 .lb-ults.is-ready .lb-ultbtn::before{display:none}
 .lb-ults.is-ready .lb-ults-lbl b{color:#fff;animation:lbBlink .6s steps(2) infinite}
-.lb-resulting .lb-ults,.lb-resulting .lb-coach{display:none}
+.lb-resulting .lb-ults,.lb-resulting .lb-coach,.lb-moving .lb-ults,.lb-moving .lb-coach{display:none}
 .lb-root.lb-danger::after,.lb-root.lb-hurt::after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 70px 12px rgba(255,40,40,.5)}
 .lb-root.lb-danger::after{animation:lbBlink .9s ease-in-out infinite}
 .lb-root.lb-hurt::after{box-shadow:inset 0 0 90px 20px rgba(166,77,255,.6)}
@@ -4821,17 +5055,20 @@ const CSS = `
 .lb-badges li b{display:block;font-size:10px;font-weight:400}
 .lb-badges li.is-got{background:#2c2410;box-shadow:inset 0 0 0 1px #f5c447;color:#ffe08a}
 .lb-badges li.is-bad{background:#2a0f14;box-shadow:inset 0 0 0 1px #ff5a5a;color:#ff9a9a}
-.lb-ico-ult::after{background:linear-gradient(#ffd25a,#c7861b);clip-path:polygon(60% 0,15% 58%,45% 58%,35% 100%,85% 40%,55% 40%)}
-.lb-ico-boss::after{border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#f5c447 22% 40%,#ff3b3b 44% 62%,transparent 66%)}
+.lb-ico-ult::after{background:#eeb03a;clip-path:polygon(60% 0,15% 58%,45% 58%,35% 100%,85% 40%,55% 40%)}
+.lb-ico-boss::after{border-radius:50%;background:#ff3b3b;box-shadow:inset 0 0 0 3px #f5c447,inset 0 0 0 5px #fff;transform:scale(.62)}
 .lb-purple{color:#c79bff !important}
 @keyframes lbReady{50%{transform:translateY(-2px)}}
 @keyframes lbNudge{50%{transform:translate(-50%,-3px)}}
-@media (max-height:500px){.lb-ultbtn{height:38px}.lb-ultbtn span{display:none}.lb-ults{bottom:calc(var(--bot) + 64px)}.lb-coach{bottom:calc(var(--bot) + 110px)}}
+@media (max-height:500px){.lb-ultbtn{height:40px}.lb-ultbtn span{display:none}.lb-ults{max-width:340px}.lb-coach{bottom:calc(var(--bot) + 66px)}
+  .lb-shutter .lb-ults{left:12px;transform:none;width:auto;right:auto;bottom:calc(var(--bot) + 14px)}.lb-shutter .lb-coach{bottom:calc(var(--bot) + 66px)}
+  .lb-meter{left:auto;right:66px;width:260px;top:calc(var(--top) + 52px)}.lb-party{right:auto;width:40%}
+  .lb-shutter .lb-placebox{bottom:calc(var(--bot) + 14px);left:12px;transform:none;width:min(46%,360px)}}
 
 /* rewards */
 .lb-reward{margin:0 0 10px;display:grid;gap:6px;text-align:left}
 .lb-rw-row{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 10px;border-radius:10px;background:#1d1922;box-shadow:inset 0 0 0 1px #3c3444}
-.lb-rw-row.is-win{background:linear-gradient(#3a2c10,#251c0b);box-shadow:inset 0 0 0 2px #f5c447,0 0 18px rgba(245,196,71,.35);animation:lbGlow 1.4s ease-in-out infinite}
+.lb-rw-row.is-win{background:#2f2410;box-shadow:inset 0 0 0 2px #f5c447,0 0 18px rgba(245,196,71,.35);animation:lbGlow 1.4s ease-in-out infinite}
 .lb-rw-ico{flex:0 0 30px;height:30px;border-radius:6px;position:relative;background:#3a3242;box-shadow:inset 0 0 0 2px #55495f}
 .lb-rw-ico::after{content:"%";position:absolute;inset:0;display:grid;place-items:center;font-family:'Silkscreen',monospace;font-weight:700;font-size:16px;color:#ffe08a}
 .is-win .lb-rw-ico{background:#f5c447;box-shadow:inset 0 0 0 2px #fff0b0}
@@ -4844,9 +5081,9 @@ const CSS = `
 .lb-rw-prog{display:block;height:6px;margin-top:3px;border-radius:3px;background:#0e0c12;box-shadow:inset 0 0 0 1px #3c3444;overflow:hidden}
 .lb-rw-prog i{display:block;height:100%;background:var(--c)}
 .lb-btn-sm{min-height:40px;padding:0 12px;font-size:12px;flex:none}
-.lb-btn-gold{flex:none;min-height:42px;padding:0 16px;font-size:14px;background:linear-gradient(#ffd25a,#c7861b);box-shadow:inset 0 0 0 2px #fff0b0,0 4px 0 #5a3a0a;color:#2a1608}
+.lb-btn-gold{flex:none;min-height:42px;padding:0 16px;font-size:14px;background:#eeb03a;box-shadow:inset 0 0 0 2px #fff0b0,0 4px 0 #5a3a0a;color:#2a1608}
 .lb-rw-quest{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:46px;padding:6px 14px;border-radius:10px;
-  border:2px solid #8a57d6;background:linear-gradient(rgba(138,87,214,.28),rgba(138,87,214,.12));color:#efe4ff;font-family:'Silkscreen',monospace;font-size:13px;
+  border:2px solid #8a57d6;background:rgba(138,87,214,.2);color:#efe4ff;font-family:'Silkscreen',monospace;font-size:13px;
   letter-spacing:.02em;text-align:left;cursor:pointer;touch-action:manipulation}
 .lb-rw-quest span{color:#c79bff;font-size:16px}
 .lb-rw-quest:focus-visible,.lb-rw-step:focus-visible,.lb-rw-link:focus-visible{outline:3px solid #fff;outline-offset:2px}
@@ -4888,7 +5125,7 @@ const CSS = `
 .lb-coupon-meta{margin:0;font-size:12px;line-height:1.35}
 .lb-coupon-status{margin:4px 0 0;font-family:'Silkscreen',monospace;font-size:11px;letter-spacing:.04em}
 .lb-coupon-acts{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
-.lb-coupon-acts .lb-btn{background:linear-gradient(#2c2633,#16131b);box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45);color:#fff}
+.lb-coupon-acts .lb-btn{background:#221d28;box-shadow:inset 0 0 0 2px #51465a,0 3px 0 rgba(0,0,0,.45);color:#fff}
 .lb-rw-steps{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:6px}
 .lb-rw-step{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 12px 6px 8px;border-radius:10px;border:2px solid #0c0a10;background:#1d1922;
   box-shadow:inset 0 0 0 1px #3c3444;color:#f4efe2;font-family:'Pixelify Sans',sans-serif;font-size:14.5px;text-align:left;cursor:pointer;touch-action:manipulation}
@@ -4909,6 +5146,7 @@ const CSS = `
 @keyframes lbBlink{50%{opacity:.35}}
 @keyframes lbPulse{50%{box-shadow:0 0 22px var(--c)}}
 @keyframes lbHue{to{background-position:200% 0}}
+@keyframes lbCosmic{0%{color:#c79bff}25%{color:#33e6e6}50%{color:#ff5ad1}75%{color:#ffc53d}}
 @media (prefers-reduced-motion:reduce){.lb-root *{animation-duration:.01ms !important;animation-iteration-count:1 !important}}
 @media (max-height:600px){.lb-how li{font-size:13px}.lb-frame{padding-top:26px}}
 `;
