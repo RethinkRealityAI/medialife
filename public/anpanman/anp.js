@@ -47,7 +47,7 @@
     const sy = scrollY;
     if (sy < innerHeight * 1.2) {
       cloudEls.forEach((c) => {
-        const drift = reduce ? 0 : ((t * c.s * 8 + c.off) % 140) - 20;
+        const drift = ((t * c.s * 8 + c.off) % 140) - 20;
         c.el.style.transform = `translate3d(${drift}vw, ${-sy * c.s * 0.4 + my * c.z * -6}px, 0)`;
       });
       // Anpanman flies up and away as you scroll down
@@ -57,7 +57,6 @@
     requestAnimationFrame(heroLoop);
   }
   requestAnimationFrame(heroLoop);
-  if (reduce) cloudEls.forEach((c) => (c.el.style.left = c.x + "%"));
 
   /* ── scroll progress + section nav ──────────────────────────────────── */
   const prog = $("#progress");
@@ -104,7 +103,7 @@
         const v = e.target;
         if (e.isIntersecting) {
           if (!v.src && v.dataset.src) v.src = v.dataset.src;
-          if (!reduce) v.play().catch(() => {});
+          v.play().catch(() => {});
         } else if (!v.paused) v.pause();
       });
     },
@@ -153,7 +152,7 @@
     setTimeout(() => {
       hubImg.src = src;
       hubImg.onload = () => (hubImg.style.opacity = 1);
-      if (vid && !reduce) {
+      if (vid) {
         hubVid.src = vid;
         hubVid.hidden = false;
         hubImg.hidden = true;

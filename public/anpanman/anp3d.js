@@ -3,6 +3,9 @@
    OFFICIAL supplied art printed on them, composited as-is. No generative tools, no redrawn character.
    Flat colours only: no gradient textures, no gradient glows. */
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
+import { DecalGeometry } from "./vendor/DecalGeometry.js";
 
 // Rounded box made from an extruded rounded rectangle (centred, depth along z).
 class RoundedBoxGeometry extends THREE.ExtrudeGeometry {
@@ -28,7 +31,7 @@ class RoundedBoxGeometry extends THREE.ExtrudeGeometry {
 const stageEl = document.getElementById("stage3d");
 const bubble = document.getElementById("bubble");
 const hint = document.getElementById("stageHint");
-const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reduce = false; // the stage is interactive content: keep the idle spin even with reduced motion on
 
 function webglOK() {
   try {
@@ -311,49 +314,14 @@ function start() {
       products.sheet = g;
     }
 
-    // ── shirt: flat tee silhouette (extruded), art print + NFC disc embedded in the design
+    // ── shirt: the real Activated Merch tee mesh (/merch-shelf lineup blank) with a projected front
+    //    print (official art composited as supplied + original flat graphics) and a back print.
     {
       const g = new THREE.Group();
-      const s = new THREE.Shape();
-      // tee outline, 440×420 units scaled down (same outline as the deck's concept shirt)
-      const pts = [
-        [150, 20],
-        [290, 20],
-        [420, 80],
-        [380, 190],
-        [335, 170],
-        [335, 400],
-        [105, 400],
-        [105, 170],
-        [60, 190],
-        [20, 80],
-      ];
-      const k = 3.4 / 440;
-      const P = pts.map(([x, y]) => [(x - 220) * k, (210 - y) * k]);
-      s.moveTo(...P[0]);
-      s.quadraticCurveTo(0, (210 - 62) * k, ...P[1]);
-      for (let i = 2; i < P.length; i++) s.lineTo(...P[i]);
-      s.lineTo(...P[0]);
-      const geo = new THREE.ExtrudeGeometry(s, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.05, bevelSegments: 4, curveSegments: 16 });
-      geo.translate(0, 0, -0.07);
-      const tee = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.95 }));
-      g.add(tee);
-      const collar = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.04, 8, 32, Math.PI), new THREE.MeshStandardMaterial({ color: "#E3241B", roughness: 0.9 }));
-      collar.rotation.z = Math.PI;
-      collar.position.set(0, 1.5, 0.13);
-      collar.scale.set(1.25, 0.55, 1);
-      g.add(collar);
-      const printH = 1.55;
-      const print = new THREE.Mesh(new THREE.PlaneGeometry(printH * 0.86, printH), new THREE.MeshBasicMaterial({ map: artCard(art, 430, 500, "#FFD23F", 0.06) }));
-      print.position.set(0, 0.25, 0.135);
-      g.add(print);
-      const disc = new THREE.Mesh(new THREE.CircleGeometry(0.13, 32), new THREE.MeshBasicMaterial({ color: "#E3241B" }));
-      disc.position.set(0.44, 0.86, 0.137);
-      g.add(disc);
-      g.userData = { target: new THREE.Vector3(0.44, 0.86, 0.14), qr: new THREE.Vector3(0.44, 0.86, 0.14), artH: printH, y: 0.1, label: "Shirt" };
+      g.userData = { target: new THREE.Vector3(0, 0.35, 0.3), qr: new THREE.Vector3(0.28, 0.95, 0.3), artH: 1.6, y: 0, label: "Shirt" };
       products.shirt = g;
+      buildShirt(g, art, qrImg);
     }
-
     Object.values(products).forEach((p) => {
       p.visible = false;
       root.add(p);
@@ -407,6 +375,193 @@ function start() {
     stageEl.classList.add("ready");
     resize();
     renderer.setAnimationLoop(loop);
+  }
+
+
+  // ── shirt helpers ─────────────────────────────────────────────────────
+  const CLOUD_PATH = new Path2D("M30 84c-16 0-28-10-28-24s12-24 27-24c3-17 18-30 37-30 16 0 30 9 35 23 5-4 12-6 19-6 19 0 34 14 34 31v1c14 2 24 13 24 25 0 2 0 3-1 4z");
+  function cloudAt(c, x, y, s, col) {
+    c.save();
+    c.translate(x, y);
+    c.scale(s, s);
+    c.fillStyle = col;
+    c.fill(CLOUD_PATH);
+    c.restore();
+  }
+  function star(c, x, y, r, col) {
+    c.save();
+    c.translate(x, y);
+    c.fillStyle = col;
+    c.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4,
+        rr = i % 2 ? r * 0.38 : r;
+      c.lineTo(Math.sin(a) * rr, -Math.cos(a) * rr);
+    }
+    c.closePath();
+    c.fill();
+    c.restore();
+  }
+  // Front print: flat sun disc, clouds, sparkles, type, the official art as supplied, NFC disc behind the head.
+  function frontPrint(art) {
+    const W = 1024,
+      H = 1200;
+    const cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const c = cv.getContext("2d");
+    // sun disc + ring (flat)
+    c.fillStyle = "#FFD23F";
+    c.beginPath();
+    c.arc(W / 2, 470, 360, 0, Math.PI * 2);
+    c.fill();
+    c.lineWidth = 18;
+    c.strokeStyle = "#E3241B";
+    c.beginPath();
+    c.arc(W / 2, 470, 404, Math.PI * 1.08, Math.PI * 1.92);
+    c.stroke();
+    // rays
+    c.fillStyle = "#E3241B";
+    for (let i = 0; i < 9; i++) {
+      const a = Math.PI * (1.1 + i * 0.1);
+      c.save();
+      c.translate(W / 2 + Math.cos(a) * 450, 470 + Math.sin(a) * 450);
+      c.rotate(a + Math.PI / 2);
+      c.fillRect(-9, -26, 18, 52);
+      c.restore();
+    }
+    cloudAt(c, 80, 560, 1.5, "#FFFFFF");
+    cloudAt(c, 700, 620, 1.3, "#FFFFFF");
+    cloudAt(c, 640, 250, 0.9, "#8FD3F4");
+    star(c, 180, 300, 34, "#E3241B");
+    star(c, 860, 420, 26, "#3FA9E0");
+    star(c, 250, 760, 22, "#FFD23F");
+    // NFC disc, embedded in the design behind the head
+    c.fillStyle = "#2B1A12";
+    c.beginPath();
+    c.arc(W / 2, 300, 82, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = "#FFD23F";
+    c.lineWidth = 6;
+    for (const r of [26, 44, 62]) {
+      c.beginPath();
+      c.arc(W / 2 + 4, 300, r, -0.7, 0.7);
+      c.stroke();
+    }
+    // official art, as supplied
+    const ah = 690,
+      aw = (ah * art.width) / art.height;
+    c.drawImage(art, (W - aw) / 2, 200, aw, ah);
+    // type
+    c.textAlign = "center";
+    c.fillStyle = "#E3241B";
+    c.font = "700 128px Fredoka, sans-serif";
+    c.lineWidth = 22;
+    c.strokeStyle = "#FFFFFF";
+    c.lineJoin = "round";
+    c.strokeText("HELLO,", W / 2, 1000);
+    c.fillText("HELLO,", W / 2, 1000);
+    c.fillStyle = "#2B1A12";
+    c.font = "700 104px Fredoka, sans-serif";
+    c.strokeText("AMERICA!", W / 2, 1110);
+    c.fillText("AMERICA!", W / 2, 1110);
+    c.fillStyle = "#2B1A12";
+    c.font = "600 40px Nunito, sans-serif";
+    c.fillText("アンパンマン · TAP TO SAY HELLO", W / 2, 1175);
+    return cv;
+  }
+  // Back print: big stacked type + QR panel (no character).
+  function backPrint(qrImg) {
+    const W = 1024,
+      H = 1200;
+    const cv = document.createElement("canvas");
+    cv.width = W;
+    cv.height = H;
+    const c = cv.getContext("2d");
+    c.textAlign = "center";
+    c.fillStyle = "#FFFFFF";
+    c.font = "700 170px Fredoka, sans-serif";
+    c.fillText("ANPANMAN", W / 2, 230);
+    c.fillStyle = "#FFD23F";
+    c.strokeStyle = "#2B1A12";
+    c.lineWidth = 14;
+    c.lineJoin = "round";
+    c.font = "700 150px Fredoka, sans-serif";
+    c.strokeText("ACTIVATED", W / 2, 400);
+    c.fillText("ACTIVATED", W / 2, 400);
+    cloudAt(c, 110, 470, 1.6, "#FFFFFF");
+    cloudAt(c, 640, 520, 1.4, "#8FD3F4");
+    if (qrImg) {
+      c.fillStyle = "#FFFFFF";
+      c.fillRect(W / 2 - 170, 640, 340, 340);
+      c.drawImage(qrImg, W / 2 - 150, 660, 300, 300);
+    }
+    c.fillStyle = "#2B1A12";
+    c.font = "700 44px JetBrains Mono, monospace";
+    c.fillText("SCAN · TAP · PLAY", W / 2, 1060);
+    star(c, 190, 860, 40, "#E3241B");
+    star(c, 840, 820, 30, "#FFD23F");
+    return cv;
+  }
+  function shirtDecal(meshes, canvas, pos, size, back) {
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.05, roughness: 0.86, metalness: 0, polygonOffset: true, polygonOffsetFactor: -8 });
+    const grp = new THREE.Group();
+    const euler = new THREE.Euler(0, back ? Math.PI : 0, 0);
+    for (const m of meshes) {
+      try {
+        grp.add(new THREE.Mesh(new DecalGeometry(m, pos, euler, size), mat));
+      } catch {}
+    }
+    return grp;
+  }
+  function buildShirt(g, art, qrImg) {
+    const gl = new GLTFLoader();
+    gl.setMeshoptDecoder(MeshoptDecoder);
+    gl.load(
+      "assets/tee.glb",
+      (gltf) => {
+        const model = gltf.scene;
+        // normalise: ~3.3 units wide, centred
+        const box0 = new THREE.Box3().setFromObject(model);
+        const s0 = box0.getSize(new THREE.Vector3());
+        const k = 3.3 / s0.x;
+        model.scale.multiplyScalar(k);
+        const c0 = new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3());
+        model.position.sub(c0);
+        const meshes = [];
+        model.traverse((o) => {
+          if (o.isMesh) {
+            o.material = new THREE.MeshStandardMaterial({ color: "#E3241B", roughness: 0.92, metalness: 0, side: THREE.DoubleSide });
+            meshes.push(o);
+          }
+        });
+        const savedRot = g.rotation.y,
+          savedY = g.position.y;
+        g.rotation.y = 0;
+        g.position.y = 0;
+        g.add(model);
+        model.updateMatrixWorld(true);
+        g.updateMatrixWorld(true);
+        const box = new THREE.Box3().setFromObject(model);
+        const sz = box.getSize(new THREE.Vector3());
+        // DecalGeometry projects in world space; the group sits at the origin unrotated while building
+        const fw = sz.x * 0.48,
+          fh = fw * 1.17;
+        const front = shirtDecal(meshes, frontPrint(art), new THREE.Vector3(0, box.min.y + sz.y * 0.56, box.max.z), new THREE.Vector3(fw, fh, sz.z * 0.62), false);
+        const back = shirtDecal(meshes, backPrint(qrImg), new THREE.Vector3(0, box.min.y + sz.y * 0.58, box.min.z), new THREE.Vector3(fw * 1.05, fh * 1.05, sz.z * 0.62), true);
+        g.add(front, back);
+        g.userData.target.set(0, box.min.y + sz.y * 0.6, box.max.z);
+        g.userData.qr.set(0, box.min.y + sz.y * 0.5, box.min.z);
+        g.userData.artH = fh;
+        g.rotation.y = savedRot;
+        g.position.y = savedY;
+      },
+      undefined,
+      () => {},
+    );
   }
 
   // ── interaction ───────────────────────────────────────────────────────
@@ -474,7 +629,7 @@ function start() {
     if (!current) return;
     cancelSeq();
     // face the product forward (or show its back for a keychain QR scan)
-    const wantBack = mode === "scan" && current === products.keychain;
+    const wantBack = mode === "scan" && (current === products.keychain || current === products.shirt);
     seq = { mode, t: 0, from: rotY, to: wantBack ? Math.PI : 0 };
     velY = 0;
     hint.textContent = { tap: "Tap: the phone touches the NFC", scan: "Scan: the QR opens it", point: "Point: the art is the trigger" }[mode];
@@ -507,8 +662,8 @@ function start() {
       current.position.y = current.userData.y;
       current.updateMatrixWorld(true);
       const target = worldOf(s.mode === "scan" ? current.userData.qr : current.userData.target).clone();
-      const faceZ = s.mode === "scan" && current === products.keychain ? -1 : 1;
-      if (s.mode === "scan" && current === products.keychain) target.z = -target.z;
+      const faceZ = s.mode === "scan" && (current === products.keychain || current === products.shirt) ? -1 : 1;
+      if (s.mode === "scan" && (current === products.keychain || current === products.shirt)) target.z = -target.z;
       phone.visible = s.t > 0.35;
       // phone path
       let ph;
