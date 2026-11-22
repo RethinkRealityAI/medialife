@@ -81,8 +81,11 @@ export interface ExperienceEvents {
   photo: { blob: Blob; mode: ExperienceMode };
   /** The experience cannot run a camera mode here (desktop, permission denied...). `mode` falls back to showcase. */
   unavailable: { mode: ExperienceMode; reason: 'desktop' | 'permission' | 'unsupported' | 'error'; message: string };
-  /** Mini game (Heart Run, Heart Hoops) state, emitted on every change of state and score. */
+  /** Mini game state, emitted on every change of state and score. */
   play: PlayStatus;
+  /** EVADE Hub: the fan picked an experience in the world (tapped an arcade cabinet, or walked Bobo up to one and
+   *  tapped Play). `id` is an ArcadeItem id from src/evade/catalog.ts. The app opens that experience's card. */
+  arcade: { id: string; source: 'cabinet' | 'walk' };
 }
 
 // ------------------------------------------------------------------ mini games (round 3)
