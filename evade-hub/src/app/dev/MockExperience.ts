@@ -142,7 +142,7 @@ export function createMockExperience(): ExperienceApi {
         btn.addEventListener('click', () => { void api.setMode(btn.dataset.mode as ExperienceMode); });
       });
       root.querySelector('.mx-bear')?.addEventListener('click', () => {
-        if (api.trigger('Wave')) em.emit('action', { name: 'Wave', source: 'tap' });
+        if (api.trigger('Cheer')) em.emit('action', { name: 'Cheer', source: 'tap' });
       });
 
       // fake loading

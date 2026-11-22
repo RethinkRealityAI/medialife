@@ -78,6 +78,8 @@ export class Stage {
     this.root.name = `stage-${variant}`;
     this.root.add(this.content);
     this.actor = new Actor(`bear-${variant}`);
+    // 3D: Bobo a little smaller in the hideout (Dapo, 2026-11-22), so the room and the machines read bigger round him
+    if (variant === 'showcase') this.actor.holder.scale.setScalar(0.85);
 
     // lights (each stage carries its own: the light count never changes, so no recompiles)
     this.hemi.position.set(0, 4, 0);

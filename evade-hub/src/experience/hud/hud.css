@@ -577,3 +577,8 @@
 .cbx .hm-grid .t-red span { background: var(--cb-red); }
 .cbx .hm-grid .t-sky span { background: var(--cb-sky); color: var(--cb-blue); }
 .cbx .hm-grid .t-gold span { background: #e6b54a; }
+
+/* EVADE hub round 2: the Play pill bounces in when Bobo walks into a machine's zone (with a haptic buzz) */
+.cbx-pill.pop{animation:cbx-pop .42s cubic-bezier(.2,1.6,.4,1)}
+@keyframes cbx-pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion: reduce){.cbx-pill.pop{animation:none}}

@@ -7,7 +7,7 @@
 //   await exp.mount(el);          // splash + loading; Start (a tap) -> showcase
 //   exp.setMode('ar');            // from a tap; switches in place
 //   exp.trigger('dance');         // case-insensitive
-import { movesHtml } from '../evade/world/moves';
+import { ActionFan } from '../evade/world/fan';
 import { preloadHideout } from '../evade/world/hideout';
 import { preloadCan } from '../evade/world/can';
 import * as THREE from 'three';
@@ -185,6 +185,7 @@ class Experience implements ExperienceApi {
   }
 
   setMode(mode: ExperienceMode): Promise<void> {
+    this.fan.close();
     if (!this.modes.has(mode) && !['face', 'photo'].includes(mode)) return Promise.resolve();
     if (!this.started) {
       this.opts.initialMode = mode;
@@ -291,17 +292,30 @@ class Experience implements ExperienceApi {
     return on ? this.play.pause('sheet') : this.play.resume('sheet');
   }
 
-  /** The Actions button (bottom right in 3D and AR): a grid of Bobo's moves; a tap closes it and Bobo does it. */
+  /** The Actions button (bottom right in 3D and AR): a fan of Bobo's moves round the button, so he stays in view
+   *  (src/evade/world/fan.ts). A tap plays the move; the fan stays open until you tap away. */
+  private fan = new ActionFan({
+    trigger: (name) => {
+      // a fan tap switches straight to the new move (no queue, no wake-up show first)
+      const r = this.mode === 'ar' ? this.runners?.ar : this.runners?.showcase;
+      if (r && !(name === 'Sleep' && r.asleep) && (r.current !== name || r.asleep)) r.interrupt();
+      this.trigger(name);
+    },
+    current: () => {
+      const r = this.mode === 'ar' ? this.runners?.ar : this.runners?.showcase;
+      if (!r) return null;
+      if (r.asleep && r.current !== 'WakeUp') return 'Sleep';
+      return r.current;
+    },
+  });
+
   private pickMove(): void {
+    this.fan.onOpen ??= (open) => { if (this.showcase) this.showcase.sideShift = open ? 1 : 0; };
     const hud = this.hud;
     if (!hud || hud.sheetOpen) return;
-    void hud.sheet({ title: 'What should Bobo do?', body: '', html: movesHtml(), buttons: ['Close'] });
-    const wraps = this.box?.querySelectorAll<HTMLElement>('.cbx-sheet-wrap');
-    const wrap = wraps?.[wraps.length - 1];
-    wrap?.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((b) => b.addEventListener('click', () => {
-      (wrap.querySelector('.row .btn') as HTMLButtonElement | null)?.click();
-      window.setTimeout(() => this.trigger(b.dataset.move!), 120);
-    }));
+    const btns = this.box?.querySelectorAll<HTMLElement>('[aria-label="Pick something for Bobo to do"]');
+    const btn = Array.from(btns ?? []).find((b) => b.offsetParent !== null) ?? null;
+    this.fan.toggle(btn);
   }
 
   /** The Arcade button (bottom left in 3D, above Move in AR): the app opens Bobo's Arcade sheet. */
@@ -312,6 +326,7 @@ class Experience implements ExperienceApi {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.fan.close();
     this.play.stop();
     this.offVis?.();
     try { this.cur?.exit('showcase'); } catch { /* ignore */ }
@@ -421,7 +436,7 @@ class Experience implements ExperienceApi {
       .then(() => this.switchTo(first))
       .then(() => {
         this.ev.emit('started', { mode: this.mode });
-        if (this.mode === 'showcase') window.setTimeout(() => { if (this.mode === 'showcase' && this.entered) this.runners?.showcase.trigger('Wave'); }, reducedMotion() ? 100 : 900);
+        if (this.mode === 'showcase') window.setTimeout(() => { if (this.mode === 'showcase' && this.entered) this.runners?.showcase.trigger('Cheer'); }, reducedMotion() ? 100 : 900);
       })
       .catch((e) => console.error('[experience] start failed', e));
   }
@@ -486,7 +501,7 @@ class Experience implements ExperienceApi {
     for (const m of this.modes.values()) { try { m.reset?.(); } catch (e) { console.warn(e); } }
     this.media?.reset();
     this.hud?.speech(null);
-    const goHome = () => window.setTimeout(() => { if (this.mode === 'showcase') this.runners?.showcase.trigger('Wave'); }, 500);
+    const goHome = () => window.setTimeout(() => { if (this.mode === 'showcase') this.runners?.showcase.trigger('Cheer'); }, 500);
     if (this.mode === 'showcase') goHome();
     else void this.setMode('showcase').then(goHome);
   }

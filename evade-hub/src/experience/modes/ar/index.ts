@@ -36,7 +36,7 @@ const houseMul = (s: number) => THREE.MathUtils.clamp(s / SCALE.def, 0.6, 1.6);
 const STEADY = 0.5; // seconds the reticle must sit steadily on the floor before Place lights up
 const REACH = { min: 0.8, max: 3.6 }; // metres from the phone the reticle may sit
 const AREA = 3.0; // stage units Bobo may walk from the stage centre
-const TAP_REACTIONS = ['Wave', 'Purr', 'Cheer', 'Sparkle'];
+const TAP_REACTIONS = ['Cheer', 'Purr', 'Alert'];
 const TOSS_HINT = 'Swipe up to throw hearts';
 
 type State = 'placing' | 'placed';
@@ -385,7 +385,7 @@ export class ArMode implements Mode {
       this.game.placed();
       return;
     }
-    if (first) this.runner.trigger('Wave');
+    if (first) this.runner.trigger('Cheer');
     this.syncHud();
     this.walk.placed();
     this.flashHint('Walk Bobo to the door', 5);
@@ -549,7 +549,7 @@ export class ArMode implements Mode {
       const right = this.w.set(-this.camFwd.z, 0, this.camFwd.x);
       this.v.copy(right).multiplyScalar(sv.x).addScaledVector(this.camFwd, -sv.y);
       this.v.applyAxisAngle(THREE.Object3D.DEFAULT_UP, -this.anchor.rotation.y); // world -> stage-local
-      if (this.v.lengthSq() > 0.01 && a.asleep) this.runner.nudge();
+      if (this.v.lengthSq() > 0.01 && (a.asleep || this.runner.busy) && !this.game) this.runner.interrupt(); // the joystick always wins over a move
       if (this.walkTo && this.v.lengthSq() > 0.04) this.walkTo = null; // the joystick takes over
       if (this.game && !this.game.stickWalk) this.game.walk(dt);
       else if (this.walkTo && !this.game) this.walkToCabinet(dt);

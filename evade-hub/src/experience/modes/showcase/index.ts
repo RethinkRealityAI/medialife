@@ -11,6 +11,7 @@
 // Controls: joystick (or arrow keys / WASD) walks him, the camera follows; drag to look around; pinch or scroll to
 // zoom within limits; tap him for a reaction; tap a machine (Bobo walks over, the camera glides to it, its card
 // opens) or walk Bobo up to one and tap Play.
+import { haptic } from '../../../evade/world/haptics';
 import { recorder } from '../../capture/recorder';
 import * as THREE from 'three';
 import { ARCADE_ICON, MOVES_ICON } from '../../../evade/world/moves';
@@ -34,7 +35,9 @@ let tossHinted = false;
 const FOV_WIDE = 58; // portrait screens: a taller (and so wider) view shows more of the hideout
 const FOV_LAND = 38;
 const PLAY = { dist: 3.1, pitch: 0.2, targetY: 0.6, yaw: 0.55 }; // looking a little above Bobo: he stands in the lower half, clear of the top bar
-const LIM = { yaw: 1.25, pitchMin: 0.04, pitchMax: 0.7, distMin: 1.4, distMax: 4.4 };
+// Wider, freer look-around (Dapo, 2026-11-22): most of the way round, higher and further; the camera slides in when
+// the can's wall would block it, and drags glide on with a little inertia.
+const LIM = { yaw: 1.7, pitchMin: 0.02, pitchMax: 0.95, distMin: 1.2, distMax: 5.4 };
 /** The camera stays inside the hall (stage units from Bobo's home): hall radius x SHOW_K, minus a margin. */
 const CAM_R = 5.4;
 /** The hall's centre in stage units relative to Bobo's home (scene/house restPos). */
@@ -163,8 +166,14 @@ export class ShowcaseMode implements Mode {
         // Paw Hoops holds the camera on the court: a slow drag up is a throw there, not a look (polish-4)
         if (!this.active || this.game?.flicks) return;
         this.unfocus();
-        this.yaw = THREE.MathUtils.clamp(this.yaw - dx * 0.006, -LIM.yaw, LIM.yaw);
-        this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.004, LIM.pitchMin, LIM.pitchMax);
+        const dyaw = -dx * 0.0062, dpitch = dy * 0.0042;
+        this.yaw = THREE.MathUtils.clamp(this.yaw + dyaw, -LIM.yaw, LIM.yaw);
+        this.pitch = THREE.MathUtils.clamp(this.pitch + dpitch, LIM.pitchMin, LIM.pitchMax);
+        // remember the swipe's speed for the glide after the finger lifts
+        const now = performance.now(), gap = Math.max(8, now - this.dragAt);
+        this.dragAt = now;
+        this.yawV = this.yawV * 0.4 + (dyaw / gap) * 1000 * 0.6;
+        this.pitchV = this.pitchV * 0.4 + (dpitch / gap) * 1000 * 0.6;
       },
       onPinch: (k) => { if (this.active) this.dist = THREE.MathUtils.clamp(this.dist / k, LIM.distMin, LIM.distMax); },
       onWheel: (d) => { if (this.active) this.dist = THREE.MathUtils.clamp(this.dist * Math.exp(d * 0.0012), LIM.distMin, LIM.distMax); },
@@ -401,7 +410,7 @@ export class ShowcaseMode implements Mode {
       this.dir.normalize();
       const right = this.tmp.set(-this.dir.z, 0, this.dir.x);
       this.v.copy(right).multiplyScalar(sv.x).addScaledVector(this.dir, -sv.y);
-      if (this.v.lengthSq() > 0.01 && a.asleep) this.runner.nudge();
+      if (this.v.lengthSq() > 0.01 && (a.asleep || this.runner.busy) && !this.game) this.runner.interrupt(); // the joystick always wins over a move
       if (this.game && !this.game.stickWalk) this.game.walk(dt);
       else if (this.walkTo && this.v.lengthSq() < 0.01) this.walkToCabinet(dt);
       else {
@@ -430,6 +439,8 @@ export class ShowcaseMode implements Mode {
     // pull back a little while a big moment plays (the house, the party set, the rainbow, a lap)
     const wantWide = (WIDE[this.runner.current ?? ''] ?? 0) + (this.game?.view?.wide ?? 0);
     this.wide += (wantWide - this.wide) * damp(wantWide > this.wide ? 2.2 : 1.2, dt);
+    if (!this.focus) this.glide(dt);
+    this.side += ((this.active ? this.sideShift : 0) - this.side) * damp(this.sh.reduced ? 12 : 5, dt);
     this.placeCamera(dt);
     st.root.updateMatrixWorld();
     st.update(dt, this.cam);
@@ -463,6 +474,9 @@ export class ShowcaseMode implements Mode {
       ty = ty * (1 - k) + 0.5 * k;
       const ox = (W / 2 - (this.hero.x + this.hero.w / 2)) * k, oy = (H / 2 - (this.hero.y + this.hero.h / 2)) * k;
       this.cam.setViewOffset(W, H, ox, oy, W, H);
+    } else if (this.side > 0.002) {
+      // Actions fan open: shift the picture so Bobo sits left of centre (a view offset, not a camera move)
+      this.cam.setViewOffset(W, H, W * 0.27 * ease.inOut(this.side), 0, W, H);
     } else if (this.cam.view) this.cam.clearViewOffset();
     const tgt = this.tmp.set(this.target.x, ty, this.target.z);
     if (fo && fk > 0) { tgt.x += (fo.x - tgt.x) * fk; tgt.z += (fo.z - tgt.z) * fk; } // glide to the machine
@@ -485,6 +499,25 @@ export class ShowcaseMode implements Mode {
   }
 
   private playPitch = -1;
+  /** 1 while the Actions fan is open: the view slides so Bobo stands in the left part of the screen, clear of it. */
+  sideShift = 0;
+  private side = 0;
+  /** look-around inertia (rad/s) and when the last drag event came */
+  private yawV = 0;
+  private pitchV = 0;
+  private dragAt = 0;
+
+  /** After a drag ends, the view keeps turning a moment and eases to a stop. */
+  private glide(dt: number): void {
+    if (performance.now() - this.dragAt < 70) return; // still dragging
+    if (Math.abs(this.yawV) < 0.01 && Math.abs(this.pitchV) < 0.01) { this.yawV = this.pitchV = 0; return; }
+    const k = Math.exp(-(this.sh.reduced ? 14 : 5.5) * dt);
+    this.yaw = THREE.MathUtils.clamp(this.yaw + this.yawV * dt, -LIM.yaw, LIM.yaw);
+    this.pitch = THREE.MathUtils.clamp(this.pitch + this.pitchV * dt, LIM.pitchMin, LIM.pitchMax);
+    if (Math.abs(this.yaw) >= LIM.yaw) this.yawV = 0;
+    this.yawV *= k;
+    this.pitchV *= k;
+  }
 
   /** Lower the pixel ratio once if frames are very slow (phones with big screens). */
   private adapt(dt: number): void {
@@ -569,12 +602,16 @@ export class ShowcaseMode implements Mode {
   /** Bobo standing at a machine: the Play pill (bottom, above the joystick) opens its card. */
   private checkNear(): void {
     const a = this.stage.actor;
-    const cab = this.walkTo || this.game || a.walking ? null : this.stage.houseSet.nearCabinet(a.position);
+    // the zone counts as soon as he walks into it (no need to stop first): a buzz and a flash say "this one's live"
+    const cab = this.walkTo || this.game ? null : this.stage.houseSet.nearCabinet(a.position);
     for (const c of this.stage.houseSet.cabinets) if (c !== cab && c.glow > 0 && (!this.walkTo || this.walkTo.cab !== c)) c.glow = Math.max(0, c.glow - 0.05);
+    if (cab && cab.glow > 0.6) cab.glow = Math.max(0.6, cab.glow - 0.02); // the entry flash settles
     if (cab === this.near) return;
     this.near = cab;
     if (cab) {
-      cab.glow = Math.max(cab.glow, 0.6);
+      cab.glow = 1; // flash, then settles to the near glow
+      haptic('zone');
+      this.playBtn.classList.remove('pop'); void this.playBtn.offsetWidth; this.playBtn.classList.add('pop');
       this.playBtn.textContent = `Play ${cab.item.name}`;
       this.playBtn.setAttribute('aria-label', `Open ${cab.item.name}`);
       this.sh.hud.above.appendChild(this.playBtn);
@@ -639,7 +676,7 @@ export class ShowcaseMode implements Mode {
   }
 }
 
-const TAP_REACTIONS = ['Cheer', 'Purr', 'Alert', 'Sparkle'];
+const TAP_REACTIONS = ['Cheer', 'Purr', 'Alert'];
 const WIDE: Record<string, number> = { Party: 1.6, Running: 1.4, Magic: 0.8 };
 
 

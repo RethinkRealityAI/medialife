@@ -1,8 +1,9 @@
 // Bobo's moments as short choreographies on a Timeline: his clip, the props that appear, particles, lighting mood.
 // Every moment starts from and returns to a tidy idle, so they can follow each other in any order.
 //
-//   Bobo's own moves (his real clips): Sit, Chill, Purr, Alert, Excited (Cheer), Sleep / WakeUp, Running (a lap)
-//   Little shows: Wave (hello), Sparkle, Dance, Magic (the fizz orb), Party (dance floor, disco ball, balloons)
+//   Only Bobo's own clips (Dapo, 2026-11-22: no leftover Happi / Cheer Bear moves): Sit, Chill, Purr, Alert,
+//   Excited (Cheer), Nap (Sleep / WakeUp), Running (a lap), and Fizz (Magic: a fizz bubble circles him, he watches it
+//   and pops it). Wave, Dance, Sparkle and Party are gone: Bobo has no wave or dance clip.
 //
 // Runner rules: one moment at a time; up to two wait in a queue (repeats of the same name are ignored); 1.5 s
 // cooldown per name; Sleep is a state (Bobo stays asleep until WakeUp, another action, the joystick, or ~30 s); a
@@ -11,18 +12,18 @@ import * as THREE from 'three';
 import type { BearClip } from '../../shared/contracts';
 import { Timeline, ease, sampleKeys } from '../core/timeline';
 import type { EmitOptions } from './fx';
-import { PAL, RAINBOW } from './fx';
+import { PAL } from './fx';
 import type { Stage } from './stage';
 
 /** Everything Bobo can do (the Actions sheet, voice/app triggers). 'House', 'Rainbow', 'Stare', 'Cold' are gone. */
 export const MOMENT_NAMES = [
-  'Wave', 'Sit', 'Chill', 'Purr', 'Alert', 'Cheer', 'Dance', 'Running', 'Sparkle', 'Magic', 'Party', 'Sleep', 'WakeUp',
+  'Sit', 'Chill', 'Purr', 'Alert', 'Cheer', 'Running', 'Magic', 'Sleep', 'WakeUp',
 ] as const;
 export type MomentName = (typeof MOMENT_NAMES)[number];
 
 const ALIASES: Record<string, MomentName> = {
   wake: 'WakeUp', 'wake up': 'WakeUp', run: 'Running', magicorb: 'Magic', 'magic orb': 'Magic', fizz: 'Magic',
-  hello: 'Wave', hi: 'Wave', excited: 'Cheer', nap: 'Sleep', relax: 'Chill', sit: 'Sit', purr: 'Purr', alert: 'Alert',
+  hello: 'Cheer', hi: 'Cheer', wave: 'Cheer', excited: 'Cheer', nap: 'Sleep', relax: 'Chill', sit: 'Sit', purr: 'Purr', alert: 'Alert',
 };
 /** Case-insensitive name lookup ('wakeup', 'Wake Up', 'PARTY' ...). Null when unknown. */
 export function canonicalMoment(name: string): MomentName | null {
@@ -114,6 +115,20 @@ export class MomentRunner {
     if (this.asleep && this.cur?.name !== 'WakeUp' && !this.queue.includes('WakeUp')) {
       this.queue.unshift('WakeUp');
       if (!this.cur) this.next();
+    }
+  }
+
+  /** The fan grabbed the joystick: stop whatever is playing at once (and wake him without the wake-up show), so
+   *  walking is never blocked or delayed by a moment (Dapo, 2026-11-22). */
+  interrupt(): void {
+    if (!this.cur && !this.queue.length && !this.asleep) return;
+    this.cancel();
+    const a = this.st.actor;
+    if (a.asleep) {
+      a.asleep = false;
+      this.st.setMood('normal');
+      a.face('neutral');
+      this.sleepT = 0;
     }
   }
 
@@ -210,29 +225,6 @@ export class MomentRunner {
 
 // ==================================================================== the moments
 const BUILD: Record<MomentName, (c: Ctx) => MomentDef> = {
-  Wave: (c) => {
-    const tl = new Timeline();
-    const head = c.A.clone().setY(0.95).addScaledVector(c.f, 0.1);
-    tl.at(0, () => { c.play('wave'); c.st.actor.face('happy', 3); })
-      .at(0.5, () => c.emit({ count: 6, glyph: 'heart', colors: [PAL.pink, PAL.pinkSoft, PAL.red], at: head, spread: [0.25, 0.1, 0.1], vel: [0, 0.35, 0.05], velSpread: [0.15, 0.1, 0.05], life: [1.4, 2], size: [0.08, 0.14], sway: 0.04 }))
-      .at(1.4, () => c.emit({ count: 5, glyph: 'heart', colors: [PAL.pink, PAL.pinkSoft], at: head, spread: [0.3, 0.1, 0.1], vel: [0, 0.4, 0.05], velSpread: [0.15, 0.1, 0.05], life: [1.4, 2], size: [0.07, 0.12], sway: 0.04 }))
-      .hold(3.2);
-    return { tl, tidy: () => undefined };
-  },
-
-  Sparkle: (c) => {
-    // two sparkle emitters: one low and wide rising slowly, one burst at chest height (EVADE colours, flat)
-    const tl = new Timeline();
-    const cols = [PAL.sky, PAL.pink, PAL.yellow, PAL.blue, PAL.white];
-    tl.at(0, () => { c.play('cheer'); c.st.actor.face('happy', 3); });
-    for (let k = 0; k < (c.reduced ? 3 : 6); k++) {
-      tl.at(0.15 + k * 0.4, () => c.emit({ count: 22, glyph: ['sparkle', 'star'], colors: cols, at: c.A.clone().setY(0.05), ring: 0.75, spread: [0, 0.05, 0], vel: [0, 0.45, 0], velSpread: [0.12, 0.15, 0.12], life: [1.4, 2.2], size: [0.06, 0.13], drag: 0.3 }));
-    }
-    tl.at(0.7, () => c.emit({ count: 50, glyph: ['sparkle', 'star', 'dot'], colors: cols, at: c.A.clone().setY(0.6), burst: 1.4, drag: 1.2, gravity: 1.6, life: [1.6, 2.3], size: [0.05, 0.12], floor: 0, bounce: 0.5, rest: 0.6 }))
-      .hold(3.5);
-    return { tl, tidy: () => undefined };
-  },
-
   Running: (c) => {
     // a lap: a circle beside him, through his spot, then back to face you
     const a = c.st.actor, R = c.st.variant === 'ar' ? 0.7 : 0.9, T = (2 * Math.PI * R) / 1.75;
@@ -291,16 +283,6 @@ const BUILD: Record<MomentName, (c: Ctx) => MomentDef> = {
     return { tl, tidy: () => { a.asleep = false; c.st.setMood('normal'); } };
   },
 
-  Dance: (c) => {
-    const a = c.st.actor, tl = new Timeline(), D = 6;
-    tl.at(0, () => { c.play('dance', false); a.face('happy', D); });
-    for (let t = 0.2; t < D - 0.6; t += c.reduced ? 0.8 : 0.45) {
-      tl.at(t, () => c.emit({ count: 1, glyph: 'note', colors: [PAL.pink, PAL.blue, PAL.purple, PAL.yellow], at: c.A.clone().setY(0.9), spread: [0.35, 0.15, 0.2], vel: [0, 0.32, 0], velSpread: [0.15, 0.05, 0.1], sway: 0.06, life: [1.6, 2.2], size: [0.1, 0.15], drag: 0.3 }));
-    }
-    tl.at(D - 0.4, () => c.play('idle', false)).hold(D);
-    return { tl, tidy: () => undefined };
-  },
-
   Magic: (c) => {
     // the fizz orb: a big Eclipse fizz bubble rises from his paws, circles him, comes back and bursts into sparkles;
     // its flat glow steps through cyan -> yellow -> pink -> violet -> cyan
@@ -319,7 +301,7 @@ const BUILD: Record<MomentName, (c: Ctx) => MomentDef> = {
     };
     let trail = 0, prev = 0;
     const tl = new Timeline();
-    tl.at(0, () => { place(0); orb.visible = true; mat.opacity = 0.92; c.play('present'); a.face('surprised', 1); })
+    tl.at(0, () => { place(0); orb.visible = true; mat.opacity = 0.92; c.play('present'); a.face('surprised', 1); a.lookOverride = orb.position; })
       .tween(0, 6.8, (_k, t) => {
         place(t);
         trail -= t - prev;
@@ -329,58 +311,17 @@ const BUILD: Record<MomentName, (c: Ctx) => MomentDef> = {
           c.emit({ count: 1, glyph: 'sparkle', colors: [PAL.sky, PAL.white, PAL.yellow], at: orb.position, spread: [0.03, 0.03, 0.03], vel: [0, 0.05, 0], life: [0.6, 0.9], size: [0.04, 0.08] });
         }
       }, ease.linear)
-      .at(1.6, () => { a.face('happy', 5); c.play('sway', false); })
+      .at(3.0, () => { a.face('happy', 5); c.move('Purr'); })
+      .at(6.3, () => c.play('cheer')) // he jumps at it: the bubble pops at the top of his jump
       .at(6.8, () => {
         c.emit({ count: 60, glyph: ['sparkle', 'star', 'dot'], colors: [PAL.sky, PAL.yellow, PAL.pink, PAL.white, PAL.purple], at: orb.position.clone(), burst: 1.3, drag: 1.3, gravity: 1.4, life: [1.4, 2], size: [0.05, 0.12], floor: 0, bounce: 0.45, rest: 0.5 });
         c.st.play.starBurst(orb.position, 6, 1.1, [PAL.sky, PAL.yellow, PAL.pink, PAL.white, PAL.purple], 1.2);
-        c.play('cheer');
+        a.lookOverride = null;
       })
       .tween(6.8, 0.25, (k) => { orb.scale.setScalar(0.16 * (1 + k * 0.8)); mat.opacity = 0.92 * (1 - k); }, ease.out)
       .at(7.1, () => { orb.visible = false; })
       .hold(8.6);
-    return { tl, tidy: () => { orb.visible = false; mat.opacity = 0.92; mat.emissive.setRGB(0.31, 0.84, 0.91); } };
-  },
-
-  Party: (c) => {
-    // Party: the tile floor grows in (0.5 s), the disco ball drops in and spins, party lights, Bobo dances,
-    // notes, confetti and balloons
-    const st = c.st, a = st.actor, D = 15, OUT = D - 1.2;
-    const floor = st.discoFloor, fm = floor.material, ball = st.discoBall;
-    const tl = new Timeline();
-    tl.at(0, () => {
-      st.disco.position.copy(c.A);
-      floor.mesh.visible = true;
-      fm.opacity = 0;
-      ball.visible = true;
-      ball.position.set(0, 1.55, 0);
-      ball.scale.setScalar(0.001);
-      st.setMood('party');
-      a.face('happy', D);
-    })
-      .tween(0, 0.5, (k) => { fm.opacity = 0.92 * k; floor.mesh.scale.setScalar(0.3 + 0.7 * k); }, ease.out)
-      .tween(0.35, 0.7, (k) => { ball.scale.setScalar(Math.max(0.001, k)); ball.position.y = 2.1 - 0.55 * k; }, ease.backOut)
-      .at(0.4, () => c.play('dance', false))
-      // balloons rise around him and float, bumping each other (tap one to pop it); they float away at the end
-      .at(0.6, () => { if (!c.cut()) st.play.balloonsAround(c.A, c.reduced ? 4 : 7, 1.45, 0.95); });
-    for (let t = 0.6; t < OUT - 0.3; t += c.reduced ? 0.9 : 0.4) {
-      tl.at(t, () => {
-        c.emit({ count: 1, glyph: 'note', colors: [PAL.pink, PAL.blue, PAL.purple, PAL.yellow], at: c.A.clone().setY(0.95), spread: [0.4, 0.15, 0.25], vel: [0, 0.3, 0], velSpread: [0.15, 0.05, 0.1], sway: 0.06, life: [1.6, 2.2], size: [0.1, 0.15] });
-        c.emit({ count: 3, glyph: ['dot', 'star'], colors: RAINBOW, at: c.A.clone().setY(1.75), spread: [1, 0.1, 0.9], vel: [0, -0.4, 0], velSpread: [0.1, 0.1, 0.1], sway: 0.05, spin: 3, life: [4.6, 5], size: [0.04, 0.07], drag: 0, floor: 0, bounce: 0, rest: 1.2 });
-      });
-    }
-    tl.at(OUT, () => { st.setMood('normal'); c.play('idle', false); c.play('cheer'); st.play.releaseBalloons(); })
-      .tween(OUT, 0.6, (k) => { fm.opacity = 0.92 * (1 - k); floor.mesh.scale.setScalar(1 - 0.3 * k); }, ease.in)
-      .tween(OUT + 0.1, 0.6, (k) => { ball.scale.setScalar(Math.max(0.001, 1 - k)); ball.position.y = 1.55 + 0.55 * k; }, ease.in)
-      .hold(D);
-    return {
-      tl, outro: OUT, minT: 4,
-      tidy: () => {
-        floor.mesh.visible = false; fm.opacity = 0; floor.mesh.scale.setScalar(1);
-        ball.visible = false; ball.scale.setScalar(1);
-        st.setMood('normal');
-        st.play.releaseBalloons();
-      },
-    };
+    return { tl, tidy: () => { orb.visible = false; a.lookOverride = null; mat.opacity = 0.92; mat.emissive.setRGB(0.31, 0.84, 0.91); } };
   },
 
   Sit: (c) => {

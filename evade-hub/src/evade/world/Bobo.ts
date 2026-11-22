@@ -1,7 +1,8 @@
 // Bobo, EVADE's cat, as the hub's character (the same BearCharacter contract the experience was built on, so every
-// mode, game and moment drives him unchanged). Body: the Roblox-rigged catbobo.glb (Sit / Walk / Excited / Sleep /
-// Chill) plus the animation-only bobo-clips.glb (Idle / Run / Alert / Purr), which binds to the same skeleton by bone
-// name (the activated-retail display, the creators page and Where is Bobo? use the same pair).
+// mode, game and moment drives him unchanged). Body: catrun.glb, the exact Bobo Cola Run plays with (the Mattercraft
+// CatRun_Bobo export: Idle / Run / Alert / Sleep / Purr), plus the clips of catbobo.glb (the Mattercraft CatBobo_Anims
+// export of the same rig: Sit / Walk / Excited / Sleep / Chill), bound by bone name. Its Sleep (the long, calm one)
+// replaces catrun's (Dapo, 2026-11-22: use the Cola Run Bobo; keep the good sleep).
 //
 // Bobo is a 3D cat: no face canvas, no lip sync, no voice. say() resolves at once, setVisemes / setSpeechStream do
 // nothing. Expressions become little body beats (an ear flick, a head tilt); lookAt turns his head a little.
@@ -10,8 +11,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import type { BearCharacter, BearClip, BearExpression, VisemeFrame } from '../../shared/contracts';
 
-export const BOBO_MODEL_URL = '/roblox/activated-retail/models/catbobo.glb';
-export const BOBO_CLIPS_URL = '/evade/creators/assets/models/bobo-clips.glb';
+export const BOBO_MODEL_URL = '/roblox/activated-retail/models/catrun.glb?v=2';
+export const BOBO_CLIPS_URL = '/roblox/activated-retail/models/catbobo.glb';
 
 /** Bobo's own moves, by their clip names (the Actions sheet and the moments play these). */
 export type BoboMove = 'Idle' | 'Walk' | 'Run' | 'Sit' | 'Chill' | 'Sleep' | 'Excited' | 'Alert' | 'Purr';
@@ -45,7 +46,7 @@ const _m = new THREE.Matrix4();
 const UP = new THREE.Vector3(0, 1, 0);
 const RIGHT = new THREE.Vector3(1, 0, 0);
 /** The contract wants +z. */
-const MODEL_YAW = 0; // catbobo.glb faces +z once its clips play (checked in a render)
+const MODEL_YAW = 0; // the rig faces +z once its clips play (checked in a render)
 
 export class Bobo implements BearCharacter {
   readonly object: THREE.Group;
@@ -78,7 +79,7 @@ export class Bobo implements BearCharacter {
     const [body, extra] = await Promise.all([
       sharedLoader.loadAsync(BOBO_MODEL_URL, (e) => { if (e.total) { a = e.loaded / e.total; tick(); } }),
       sharedLoader.loadAsync(BOBO_CLIPS_URL, (e) => { if (e.total) { b = e.loaded / e.total; tick(); } }).catch((e) => {
-        console.warn('[bobo] extra clips did not load; Idle/Run/Alert/Purr fall back', e);
+        console.warn('[bobo] extra clips did not load; Sit/Walk/Excited/Chill fall back', e);
         return null;
       }),
     ]);
@@ -136,7 +137,7 @@ export class Bobo implements BearCharacter {
     this.object.add(inner);
 
     this.mixer = new THREE.AnimationMixer(model);
-    const all = [...own.map(fix), ...extra.map(fix)];
+    const all = [...extra.map(fix), ...own.map(fix)]; // first name wins: catbobo's Sleep over catrun's
     const names: string[] = [];
     for (const clip of all) {
       if (this.actions.has(clip.name)) continue;

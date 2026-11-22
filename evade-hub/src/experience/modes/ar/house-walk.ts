@@ -9,6 +9,7 @@
 // Leave glides it back out over you and home.
 //
 // Bobo can walk in first (joystick through the doorway): he waits just inside, until you come.
+import { haptic } from '../../../evade/world/haptics';
 import * as THREE from 'three';
 import type { Stage } from '../../scene/stage';
 import type { MomentRunner } from '../../scene/moments';
@@ -186,7 +187,7 @@ export class HouseWalk {
       fwd.normalize();
       const spot = hs.clampToRoom(new THREE.Vector3(lp.x, 0, lp.z).addScaledVector(fwd, 1.3));
       const yaw = Math.atan2(lp.x - spot.x, lp.z - spot.z) + st.house.rotation.y;
-      this.hopTo(hs.toStage(spot, new THREE.Vector3()), yaw, 0.35, () => { if (this.runner.trigger('Wave')) this.host.tapAction('Wave'); });
+      this.hopTo(hs.toStage(spot, new THREE.Vector3()), yaw, 0.35, () => { if (this.runner.trigger('Cheer')) this.host.tapAction('Cheer'); });
       this.bearIn = false;
       this.host.hint("You're in Bobo's Hideout!", 4);
       this.tipT = 4.5;
@@ -359,13 +360,16 @@ export class HouseWalk {
   /** Bobo standing at a machine inside: the Play pill opens its card. `busy`: he's being walked there. */
   checkNear(busy: boolean): void {
     const a = this.st.actor, hs = this.st.houseSet;
-    const cab = this.walking && this.inside && !busy && !a.walking && !this.hop ? hs.nearCabinet(a.position) : null;
+    const cab = this.walking && this.inside && !busy && !this.hop ? hs.nearCabinet(a.position) : null;
     for (const c of hs.cabinets) if (c !== cab && c.glow > 0) c.glow = Math.max(0, c.glow - 0.05);
+    if (cab && cab.glow > 0.6) cab.glow = Math.max(0.6, cab.glow - 0.02); // the entry flash settles
     const id = cab?.item.id ?? null;
     if (id === this.near && (!!id === !!this.playBtn.parentElement)) return;
     this.near = id;
     if (cab) {
-      cab.glow = Math.max(cab.glow, 0.6);
+      cab.glow = 1;
+      haptic('zone');
+      this.playBtn.classList.remove('pop'); void this.playBtn.offsetWidth; this.playBtn.classList.add('pop');
       this.playBtn.textContent = `Play ${cab.item.name}`;
       this.playBtn.setAttribute('aria-label', `Open ${cab.item.name}`);
       this.sh.hud.above.appendChild(this.playBtn);
