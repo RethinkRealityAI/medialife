@@ -9,7 +9,7 @@
 
   var CLIENT = "EVADE";
   var SECTIONS = [
-    { id: "start", title: "Start here", short: "Start here", note: "The three to show first." },
+    { id: "start", title: "Start here", short: "Start here", note: "The ones to show first." },
     { id: "merch", title: "Point your phone at the merch", short: "On the merch", note: "Image-tracked AR on the Bobo & Eclipse keychain and the tees." },
     { id: "room", title: "In your room, and selfies", short: "Room & selfies", note: "Place it on the floor and walk around it, or flip to the front camera and wear Bobo." },
     { id: "screen", title: "Bobo's world on any screen", short: "Any screen", note: "No camera needed: phone, tablet or computer." }

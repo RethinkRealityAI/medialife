@@ -159,7 +159,7 @@
       "Phone only"
     ],
     "share": {
-      "start": 2,
+      "start": 3,
       "needs": "A bit of floor",
       "lead": "The full Cola Run game in your room: grab every can before time runs out and record your run. Then open Bobo's Arcade to jump between every EVADE experience, or walk through a door into a life-size Bobo's Hideout.",
       "links": [
@@ -199,7 +199,7 @@
     "tested": "phone",
     "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top",
     "share": {
-      "start": 3,
+      "start": 4,
       "needs": "The EVADE keychain and some floor",
       "lead": "Point at the Eclipse can on the keychain, grow it into a giant open-top can on your floor and swipe to shoot 10 balls in."
     }
@@ -266,7 +266,7 @@
     "tested": "phone",
     "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button",
     "share": {
-      "start": 1,
+      "start": 2,
       "needs": "The EVADE keychain"
     }
   },
