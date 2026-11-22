@@ -78,6 +78,11 @@
   status = 200
 
 [[headers]]
+  for = "/evade/labs/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
+[[headers]]
   for = "/spray/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
