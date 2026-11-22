@@ -298,7 +298,8 @@ function bakeMask(map, aspect) {
   renderer.render(sc, new THREE.Camera());
   renderer.setRenderTarget(prev);
   quad.geometry.dispose();
-  mat.dispose();
+  // mat is NOT disposed: 8th Wall restores the GL program it last saw after its own draws, and a deleted program there
+  // logged "useProgram: attempt to use a deleted object" every frame (found in the Bobo Hoops sim, 2026-11-22)
   return rt.texture;
 }
 function portalMaterial(baked, aspect, a, b, c) {
