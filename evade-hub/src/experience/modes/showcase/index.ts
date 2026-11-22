@@ -1,15 +1,22 @@
-// Showcase: Happi in New York, no camera. Its own WebGL canvas and renderer (works on computers); the engine
-// is stopped while it runs, and this renderer is disposed (context released) whenever a camera mode runs.
+// Showcase: Bobo in his hideout, no camera. Its own WebGL canvas and renderer (works on computers); the engine is
+// stopped while it runs, and this renderer is disposed (context released) whenever a camera mode runs.
 //
-// Also renders the splash: the bear stands inside the splash's transparent "hero window" (setViewOffset framing),
-// then the camera eases out to the play framing when Start slides the splash away.
+// The world is Bobo's Hideout (scene/house + src/evade/world/hideout.ts): the Collector Hub's two-storey can room at
+// the back of a round hall, Bobo's Arcade lining the hall (one machine per EVADE experience). Bobo lives on the can's
+// ground floor.
 //
-// Controls: joystick (or arrow keys / WASD) walks her, the camera follows; drag to look around a little; pinch or
-// scroll to zoom within limits; tap her for a reaction.
+// Also renders the splash: Bobo stands inside the splash's transparent "hero window" (setViewOffset framing), then
+// the camera eases out to the play framing when Start slides the splash away.
+//
+// Controls: joystick (or arrow keys / WASD) walks him, the camera follows; drag to look around; pinch or scroll to
+// zoom within limits; tap him for a reaction; tap a machine (Bobo walks over, the camera glides to it, its card
+// opens) or walk Bobo up to one and tap Play.
 import { recorder } from '../../capture/recorder';
 import * as THREE from 'three';
-import { happiPlaza } from '../../../happi/plaza';
-import { MOVES_ICON } from '../../../happi/moves';
+import { ARCADE_ICON, MOVES_ICON } from '../../../evade/world/moves';
+import type { Cabinet } from '../../../evade/world/arcade';
+import { HALL } from '../../../evade/world/hideout';
+import { SHOW_K } from '../../scene/house';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import type { ExperienceMode } from '../../../shared/contracts';
 import type { Mode } from '../../types';
@@ -24,10 +31,18 @@ import { PlayKit, type PlayGame, type PlayHost } from '../../play';
 /** The "throw hearts" hint shows once per visit (after the look-around hint). */
 let tossHinted = false;
 
-const FOV_WIDE = 50; // portrait screens: a taller view shows more of New York
+const FOV_WIDE = 58; // portrait screens: a taller (and so wider) view shows more of the hideout
 const FOV_LAND = 38;
-const PLAY = { dist: 2.2, pitch: 0.12, targetY: 0.62 }; // looking a little above her: she stands in the lower half, clear of the top bar
-const LIM = { yaw: 1.0, pitchMin: 0.02, pitchMax: 0.6, distMin: 1.3, distMax: 5, area: 3.4 };
+const PLAY = { dist: 3.1, pitch: 0.2, targetY: 0.6, yaw: 0.55 }; // looking a little above Bobo: he stands in the lower half, clear of the top bar
+const LIM = { yaw: 1.25, pitchMin: 0.04, pitchMax: 0.7, distMin: 1.4, distMax: 4.4 };
+/** The camera stays inside the hall (stage units from Bobo's home): hall radius x SHOW_K, minus a margin. */
+const CAM_R = 5.4;
+/** The hall's centre in stage units relative to Bobo's home (scene/house restPos). */
+const HALL_CZ = (HALL.cz - HALL.home.z) * SHOW_K;
+/** The can room's centre and the radius the camera keeps outside its wall (stage units, relative to Bobo's home). */
+const CAN_CZ = (HALL.canZ - HALL.home.z) * SHOW_K;
+const CAN_KEEP = (HALL.canR + 0.3) * SHOW_K;
+const angleDiff = (a: number, b: number) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 export class ShowcaseMode implements Mode {
   readonly id = 'showcase' as const;
@@ -44,7 +59,7 @@ export class ShowcaseMode implements Mode {
   private ready: Promise<void> | null = null;
   private last = 0;
   // camera rig
-  private yaw = 0;
+  private yaw = PLAY.yaw; // a little to Bobo's side: the can behind him, a row of machines beside it
   private pitch = PLAY.pitch;
   private dist = PLAY.dist;
   private target = new THREE.Vector3(0, PLAY.targetY, 0);
@@ -65,7 +80,7 @@ export class ShowcaseMode implements Mode {
   private stick: { readonly vector: THREE.Vector2; readonly active: boolean } | null = null;
   /** Programs compiled after warm-up (pitfall 13 check: must not grow when moments appear). */
   programsAfterWarm = 0;
-  /** Swipe up to throw hearts at her (src/experience/physics/toss.ts). */
+  /** Swipe up to throw hearts at his (src/experience/physics/toss.ts). */
   readonly toss: HeartToss;
   private hintNext = '';
   /** Mini games (src/experience/play): this stage's game pieces, the running game, the HUD's Games button. */
@@ -73,7 +88,9 @@ export class ShowcaseMode implements Mode {
   game: PlayGame | null = null;
   /** Set by the experience: open the game chooser (the Games button, bottom left). */
   onPickGame: (() => void) | null = null;
-  /** Set by the experience: open Happi's actions (the Actions button, bottom right). */
+  /** Set by the experience: a machine was picked in the world (emits the `arcade` event). */
+  onArcade: ((id: string, source: 'cabinet' | 'walk') => void) | null = null;
+  /** Set by the experience: open Bobo's actions (the Actions button, bottom right). */
   onPickMove: (() => void) | null = null;
   private movesBtn: HTMLButtonElement | null = null;
   private gamesBtn: HTMLButtonElement | null = null;
@@ -93,22 +110,24 @@ export class ShowcaseMode implements Mode {
     if (this.game?.flicks) this.game.flick(Math.min(1.1, held / 1.1), 0);
   };
 
-  constructor(private sh: Shared, readonly stage: Stage, private runner: MomentRunner, backdrop: THREE.Texture) {
+  constructor(private sh: Shared, readonly stage: Stage, private runner: MomentRunner) {
     stage.actor.soft = sh.reduced;
-    this.toss = new HeartToss({
-      stage, runner, layer: sh.hud.layer, reduced: sh.reduced,
-      constrain: (p) => {
-        const l = Math.hypot(p.x, p.z);
-        if (l > LIM.area) { p.x *= LIM.area / l; p.z *= LIM.area / l; }
-      },
-    });
-    backdrop.mapping = THREE.EquirectangularReflectionMapping;
-    this.scene.background = backdrop;
-    // the panorama's floating island (its centre column) straight ahead of the default view
-    this.scene.backgroundRotation.set(0, Math.PI / 2, 0);
+    this.toss = new HeartToss({ stage, runner, layer: sh.hud.layer, reduced: sh.reduced, constrain: (p) => this.constrain(p) });
+    // the hall is the whole world: a flat deep-navy backdrop shows only past its far wall
+    this.scene.background = new THREE.Color(0x0a1c2a);
     this.scene.add(stage.root);
-    this.scene.add(happiPlaza());
     this.kit = new PlayKit(stage);
+    this.playBtn = sh.hud.pill('Play', () => this.playNear());
+    this.playBtn.dataset.cmd = 'arcade-play';
+  }
+
+  /** Keep a stage point on the hideout's floor (in front of the machines, off the can's walls). */
+  private cv = new THREE.Vector3();
+  private constrain(p: THREE.Vector3): void {
+    const hs = this.stage.houseSet;
+    const l = hs.clampToRoom(hs.fromStage(p, this.cv));
+    hs.toStage(l, p);
+    p.y = 0;
   }
 
   // ------------------------------------------------------------------ renderer life cycle
@@ -117,7 +136,7 @@ export class ShowcaseMode implements Mode {
     if (this.ready) return this.ready;
     const c = document.createElement('canvas');
     c.className = 'cbx-3d';
-    c.setAttribute('aria-label', 'Happi in New York');
+    c.setAttribute('aria-label', "Bobo in his hideout");
     c.style.visibility = 'hidden';
     this.sh.container.insertBefore(c, this.sh.container.firstChild);
     this.canvas = c;
@@ -141,8 +160,9 @@ export class ShowcaseMode implements Mode {
       onFlick: (power, side) => this.throwHeart(power, side),
       onLongPress: (x, y) => this.hug(x, y),
       onDrag: (dx, dy) => {
-        // Heart Hoops holds the camera on the court: a slow drag up is a throw there, not a look (polish-4)
+        // Paw Hoops holds the camera on the court: a slow drag up is a throw there, not a look (polish-4)
         if (!this.active || this.game?.flicks) return;
+        this.unfocus();
         this.yaw = THREE.MathUtils.clamp(this.yaw - dx * 0.006, -LIM.yaw, LIM.yaw);
         this.pitch = THREE.MathUtils.clamp(this.pitch + dy * 0.004, LIM.pitchMin, LIM.pitchMax);
       },
@@ -217,8 +237,8 @@ export class ShowcaseMode implements Mode {
     this.setHero(null);
     this.stick = this.sh.hud.joystick(true);
     this.hintT = 5;
-    this.sh.hud.hint(IS_PHONE ? 'Drag to look around' : 'Drag to look, arrows walk');
-    this.hintNext = tossHinted ? '' : IS_PHONE ? 'Swipe up to throw blossoms' : 'Press Space to throw blossoms';
+    this.sh.hud.hint(IS_PHONE ? 'Drag to see the arcade' : 'Drag to look, arrows walk');
+    this.hintNext = tossHinted ? '' : IS_PHONE ? 'Tap a machine to play' : 'Click a machine to play';
     this.toss.show(true);
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', this.onKeyUp);
@@ -235,6 +255,10 @@ export class ShowcaseMode implements Mode {
     window.removeEventListener('keyup', this.onKeyUp);
     this.gamesBtn?.remove();
     this.movesBtn?.remove();
+    this.playBtn.remove();
+    this.near = null;
+    this.walkTo = null;
+    this.focus = null;
     this.sh.hud.joystick(false);
     this.sh.hud.hint('');
     this.stick = null;
@@ -247,7 +271,7 @@ export class ShowcaseMode implements Mode {
   }
 
   trigger(name: string): boolean {
-    // while a mini game runs, her moments wait (they would walk her off the field)
+    // while a mini game runs, his moments wait (they would walk his off the field)
     if (this.game && this.game.state !== 'won' && this.game.state !== 'over') return false;
     return this.runner.trigger(name);
   }
@@ -262,15 +286,13 @@ export class ShowcaseMode implements Mode {
       layer: this.sh.hud.layer, root: this.sh.container,
       hint: (t) => this.sh.hud.hint(t),
       project: (p, out) => this.project(p, out),
-      constrain: (p) => {
-        const l = Math.hypot(p.x, p.z);
-        if (l > LIM.area) { p.x *= LIM.area / l; p.z *= LIM.area / l; }
-      },
-      field: (o) => { o.x = 0; o.z = 0; o.r = LIM.area - 0.75; },
+      constrain: (p) => this.constrain(p),
+      // the open floor in front of the can (the machines and the can walls stay out of it)
+      field: (o) => { o.x = 0; o.z = 1.2; o.r = 2.1; },
       unitsPerM: 1 / 0.9,
       get ready() { return self.active; },
       sync: () => this.syncPlay(),
-      // where the camera settles for a game that holds it on the court (Heart Hoops)
+      // where the camera settles for a game that holds it on the court (Paw Hoops)
       court: (pos, dir) => {
         const wide = this.game?.view?.wide ?? 0;
         const pitch = Math.max(this.pitch, this.game?.view?.pitch ?? 0), dist = this.dist + wide;
@@ -313,14 +335,14 @@ export class ShowcaseMode implements Mode {
     this.stick = this.sh.hud.joystick(stick);
     if (!stick) this.stick = null;
     if (!g && this.onPickGame) {
-      this.gamesBtn ??= this.sh.hud.toolButton({ label: 'Games', icon: GAMES_ICON, aria: 'Play a game with Happi', tone: 'orange', onClick: () => this.onPickGame?.() });
-      this.gamesBtn.dataset.cmd = 'games';
+      this.gamesBtn ??= this.sh.hud.toolButton({ label: 'Arcade', icon: ARCADE_ICON, aria: "Open Bobo's Arcade", tone: 'orange', onClick: () => this.onPickGame?.() });
+      this.gamesBtn.dataset.cmd = 'arcade';
       if (this.gamesBtn.parentElement !== this.sh.hud.right) this.sh.hud.right.prepend(this.gamesBtn);
     } else this.gamesBtn?.remove();
     if (!g && this.onPickMove) {
-      this.movesBtn ??= this.sh.hud.toolButton({ label: 'Actions', icon: MOVES_ICON, aria: 'Pick something for Happi to do', tone: 'navy', onClick: () => this.onPickMove?.() });
+      this.movesBtn ??= this.sh.hud.toolButton({ label: 'Actions', icon: MOVES_ICON, aria: 'Pick something for Bobo to do', tone: 'navy', onClick: () => this.onPickMove?.() });
       if (this.movesBtn.parentElement !== this.sh.hud.right) this.sh.hud.right.appendChild(this.movesBtn);
-      // Games and Actions stack together at the bottom right (Dapo, 2026-11-20): Games at the bottom, Actions above
+      // Arcade and Actions stack together at the bottom right (Dapo, 2026-11-20): Arcade at the bottom, Actions above
     } else this.movesBtn?.remove();
   }
 
@@ -335,7 +357,7 @@ export class ShowcaseMode implements Mode {
     return true;
   }
 
-  /** Throw a heart at her (swipe up, Space, tests). */
+  /** Throw a heart at his (swipe up, Space, tests). */
   throwHeart(power: number, side = 0): boolean {
     if (!this.active || !this.stage.actor.bear) return false;
     if (this.game) return this.game.flicks ? this.game.flick(power, side) : false;
@@ -350,10 +372,12 @@ export class ShowcaseMode implements Mode {
     const a = this.stage.actor;
     a.position.set(0, 0, 0);
     a.setHeading(0);
-    this.yaw = 0;
+    this.yaw = PLAY.yaw;
     this.pitch = PLAY.pitch;
     this.dist = PLAY.dist;
     this.target.set(0, PLAY.targetY, 0);
+    this.focus = null;
+    this.walkTo = null;
   }
 
   update(): void {
@@ -379,10 +403,12 @@ export class ShowcaseMode implements Mode {
       this.v.copy(right).multiplyScalar(sv.x).addScaledVector(this.dir, -sv.y);
       if (this.v.lengthSq() > 0.01 && a.asleep) this.runner.nudge();
       if (this.game && !this.game.stickWalk) this.game.walk(dt);
-      else a.drive(this.v, dt, (p) => {
-        const l = Math.hypot(p.x, p.z);
-        if (l > LIM.area) { p.x *= LIM.area / l; p.z *= LIM.area / l; }
-      });
+      else if (this.walkTo && this.v.lengthSq() < 0.01) this.walkToCabinet(dt);
+      else {
+        if (this.v.lengthSq() > 0.01) { this.walkTo = null; this.unfocus(); }
+        a.drive(this.v, dt, (p) => this.constrain(p));
+      }
+      this.checkNear();
       if (this.hintT > 0 && !this.game && (this.hintT -= dt) <= 0) {
         // then, once: how to throw hearts
         if (this.hintNext) { this.sh.hud.hint(this.hintNext); this.hintNext = ''; tossHinted = true; this.hintT = 5; }
@@ -392,18 +418,19 @@ export class ShowcaseMode implements Mode {
     this.runner.update(dt);
     if (this.active) { if (this.game) this.game.update(dt); else this.toss.update(dt); }
     this.kit.tick(dt);
-    // camera follows her (a game may hold it on the court instead, pull back and look down a little)
+    // camera follows his (a game may hold it on the court instead, pull back and look down a little)
     const view = this.game?.view;
-    const fx = view?.focus ? 0 : a.position.x, fz = view?.focus ? 0 : a.position.z;
+    const fo = this.focus && !this.game ? this.focus : null;
+    const fx = view?.focus ? 0 : fo ? fo.x : a.position.x, fz = view?.focus ? 0 : fo ? fo.z : a.position.z;
     this.target.x += (fx - this.target.x) * damp(3.5, dt);
     this.target.z += (fz - this.target.z) * damp(3.5, dt);
     this.playPitch += ((view?.pitch ?? -1) - this.playPitch) * damp(2.5, dt);
     this.framing += (this.framingTo - this.framing) * (this.framingTo < this.framing ? damp(3.2, dt) : 1);
+    this.focusK += ((this.focus && !this.game ? 1 : 0) - this.focusK) * damp(this.sh.reduced ? 6 : 2.2, dt);
     // pull back a little while a big moment plays (the house, the party set, the rainbow, a lap)
     const wantWide = (WIDE[this.runner.current ?? ''] ?? 0) + (this.game?.view?.wide ?? 0);
     this.wide += (wantWide - this.wide) * damp(wantWide > this.wide ? 2.2 : 1.2, dt);
     this.placeCamera(dt);
-    st.houseSet.applyTour(this.cam); // House moment: the camera glides into her house (scene/house)
     st.root.updateMatrixWorld();
     st.update(dt, this.cam);
     this.scene.backgroundIntensity = st.bg;
@@ -417,25 +444,42 @@ export class ShowcaseMode implements Mode {
     // play framing
     // a game's camera pitch blends in (playPitch < 0 = none)
     const pp = this.playPitch > 0 ? Math.max(this.pitch, this.playPitch) : this.pitch;
-    const yaw = this.yaw * (1 - k), pitch = pp * (1 - k) + 0.08 * k;
+    const fo = this.focus, fk = ease.inOut(this.focusK);
+    let yaw = this.yaw * (1 - k), pitch = pp * (1 - k) + 0.1 * k;
     let dist = this.dist + this.wide;
     let ty = PLAY.targetY + this.wide * 0.18;
+    if (fo && fk > 0) {
+      yaw += angleDiff(yaw, fo.yaw) * fk;
+      pitch += (0.16 - pitch) * fk;
+      dist += (fo.dist - dist) * fk;
+      ty += (fo.y - ty) * fk;
+    }
     const W = Math.max(1, this.sh.container.clientWidth), H = Math.max(1, this.sh.container.clientHeight);
     if (this.hero && k > 0.001) {
       // splash framing: bear (1 unit + a margin) fills the hero window's height, centred in it
       const want = 1.38 / (2 * Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2))) * (H / Math.max(60, this.hero.h));
-      const wantW = 1.0 / (2 * Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)) * (W / H)) * (W / Math.max(60, this.hero.w));
+      const wantW = 1.5 / (2 * Math.tan(THREE.MathUtils.degToRad(this.cam.fov / 2)) * (W / H)) * (W / Math.max(60, this.hero.w));
       dist = dist * (1 - k) + Math.max(want, wantW) * k;
-      ty = PLAY.targetY * (1 - k) + 0.52 * k;
+      ty = ty * (1 - k) + 0.5 * k;
       const ox = (W / 2 - (this.hero.x + this.hero.w / 2)) * k, oy = (H / 2 - (this.hero.y + this.hero.h / 2)) * k;
       this.cam.setViewOffset(W, H, ox, oy, W, H);
     } else if (this.cam.view) this.cam.clearViewOffset();
     const tgt = this.tmp.set(this.target.x, ty, this.target.z);
+    if (fo && fk > 0) { tgt.x += (fo.x - tgt.x) * fk; tgt.z += (fo.z - tgt.z) * fk; } // glide to the machine
     this.cam.position.set(
       tgt.x + Math.sin(yaw) * Math.cos(pitch) * dist,
       tgt.y + Math.sin(pitch) * dist,
       tgt.z + Math.cos(yaw) * Math.cos(pitch) * dist,
     );
+    // stay inside the hall (its centre is HALL.cz - home.z metres ahead of Bobo's home)
+    const hx = this.cam.position.x, hz = this.cam.position.z - HALL_CZ;
+    const hl = Math.hypot(hx, hz);
+    if (hl > CAM_R) { this.cam.position.x = (hx / hl) * CAM_R; this.cam.position.z = HALL_CZ + (hz / hl) * CAM_R; }
+    // never inside the can's wall (machines behind it are framed from the walkway between them and the can)
+    if (fo && fk > 0) {
+      const p = this.cam.position;
+      for (let i = 0; i < 14 && Math.hypot(p.x, p.z - CAN_CZ) < CAN_KEEP && Math.abs(Math.atan2(p.x, p.z - CAN_CZ)) > HALL.canOpen; i++) p.lerp(tgt, 0.12);
+    }
     this.cam.lookAt(tgt);
     this.cam.updateMatrixWorld();
   }
@@ -444,7 +488,7 @@ export class ShowcaseMode implements Mode {
 
   /** Lower the pixel ratio once if frames are very slow (phones with big screens). */
   private adapt(dt: number): void {
-    // only for really slow phones, and never below 1.5: dropping to 1.25 made Happi look soft on Android (2026-11-20)
+    // only for really slow phones, and never below 1.5: dropping to 1.25 made the character look soft on Android (2026-11-20)
     if (this.dpr <= 1.5 || !this.renderer) return;
     this.frames++;
     if (this.frames < 90) return;
@@ -456,6 +500,93 @@ export class ShowcaseMode implements Mode {
     }
   }
 
+  // ------------------------------------------------------------------ Bobo's Arcade
+  /** Where the camera frames a picked machine (stage space), blended in by focusK. */
+  private focus: { x: number; z: number; y: number; yaw: number; dist: number } | null = null;
+  private focusK = 0;
+  private walkTo: { cab: Cabinet; to: THREE.Vector3; t: number; arrived: number } | null = null;
+  private near: Cabinet | null = null;
+  private playBtn: HTMLButtonElement;
+  private wv = new THREE.Vector3();
+
+  /** Tap on a machine: Bobo walks to it, the camera glides to frame it, then its card opens. */
+  goToCabinet(cab: Cabinet): void {
+    const hs = this.stage.houseSet, a = this.stage.actor;
+    if (a.asleep) this.runner.nudge();
+    this.runner.cancel();
+    const to = hs.cabinetFront(cab, new THREE.Vector3());
+    this.constrain(to);
+    this.walkTo = { cab, to, t: 0, arrived: -1 };
+    cab.glow = 1;
+    // the camera: in front of the machine, a little to Bobo's side, looking at its screen
+    const scr = hs.cabinetScreen(cab, new THREE.Vector3());
+    // looking past Bobo's shoulder: turned 0.5 rad off the machine's axis, to whichever side is further from the can
+    const base = Math.atan2(to.x - scr.x, to.z - scr.z);
+    const mid = this.wv.copy(scr).lerp(to, 0.35);
+    const dist = 2.8;
+    const far = (y: number) => Math.hypot(mid.x + Math.sin(y) * dist, mid.z + Math.cos(y) * dist - CAN_CZ);
+    const yaw = far(base + 0.5) >= far(base - 0.5) ? base + 0.5 : base - 0.5;
+    this.focus = { x: mid.x, z: mid.z, y: 0.5, yaw, dist };
+    if (this.sh.reduced) { a.position.copy(to); this.walkTo.arrived = 0; }
+  }
+
+  private walkToCabinet(dt: number): void {
+    const w = this.walkTo!, a = this.stage.actor;
+    w.t += dt;
+    const d = this.wv.copy(w.to).sub(a.position).setY(0);
+    if (w.arrived < 0 && (d.length() < 0.12 || w.t > 6)) {
+      if (w.t > 6) a.position.copy(w.to); // never stuck: he pops the rest of the way
+      w.arrived = 0;
+      a.drive(this.wv.set(0, 0, 0), dt);
+    }
+    if (w.arrived < 0) {
+      d.normalize().multiplyScalar(0.7); // a brisk walk (under the run threshold)
+      a.drive(d, dt, (p) => this.constrain(p));
+      return;
+    }
+    a.drive(this.wv.set(0, 0, 0), dt);
+    // face the machine, then open its card
+    const scr = this.stage.houseSet.cabinetScreen(w.cab, this.wv);
+    a.turnToPoint(scr, dt, 8);
+    w.arrived += dt;
+    if (w.arrived > 0.45) {
+      this.walkTo = null;
+      w.cab.glow = 0.6;
+      this.onArcade?.(w.cab.item.id, 'cabinet');
+    }
+  }
+
+  /** Drop the machine framing (the fan looks around or walks off). */
+  private unfocus(): void {
+    if (this.focus) { this.focus = null; this.yaw = this.lastYawFromFocus(); }
+  }
+  private lastYawFromFocus(): number {
+    // keep looking from where the glide left the camera (no snap back)
+    const c = this.cam.position, t = this.target;
+    return THREE.MathUtils.clamp(Math.atan2(c.x - t.x, c.z - t.z), -LIM.yaw, LIM.yaw);
+  }
+
+  /** Bobo standing at a machine: the Play pill (bottom, above the joystick) opens its card. */
+  private checkNear(): void {
+    const a = this.stage.actor;
+    const cab = this.walkTo || this.game || a.walking ? null : this.stage.houseSet.nearCabinet(a.position);
+    for (const c of this.stage.houseSet.cabinets) if (c !== cab && c.glow > 0 && (!this.walkTo || this.walkTo.cab !== c)) c.glow = Math.max(0, c.glow - 0.05);
+    if (cab === this.near) return;
+    this.near = cab;
+    if (cab) {
+      cab.glow = Math.max(cab.glow, 0.6);
+      this.playBtn.textContent = `Play ${cab.item.name}`;
+      this.playBtn.setAttribute('aria-label', `Open ${cab.item.name}`);
+      this.sh.hud.above.appendChild(this.playBtn);
+    } else this.playBtn.remove();
+  }
+
+  private playNear(): void {
+    const cab = this.near;
+    if (!cab || !this.active) return;
+    this.onArcade?.(cab.item.id, 'walk');
+  }
+
   private ray = new THREE.Raycaster();
   private tap(x: number, y: number): void {
     if (!this.active || !this.canvas) return;
@@ -464,8 +595,13 @@ export class ShowcaseMode implements Mode {
     // party balloons pop first (the stage sits at the origin here: world = stage space)
     if (this.stage.play.popRay(this.ray.ray)) return;
     const a = this.stage.actor;
-    if (!a.bear || !this.hitsBear(this.ray.ray)) return;
-    // a poke: she always jiggles; a reaction plays when she's free
+    if (!a.bear || !this.hitsBear(this.ray.ray)) {
+      // a machine: Bobo walks over, the camera glides to it, then its card opens
+      const cab = this.game ? null : this.stage.houseSet.pickCabinet(this.ray.ray);
+      if (cab) this.goToCabinet(cab);
+      return;
+    }
+    // a poke: he always jiggles; a reaction plays when he's free
     a.jiggle(0.14);
     if (this.game) return; // a game is on: just the jiggle
     const name = a.asleep ? 'WakeUp' : TAP_REACTIONS[Math.floor(Math.random() * TAP_REACTIONS.length)];
@@ -475,14 +611,14 @@ export class ShowcaseMode implements Mode {
 
   private box = new THREE.Box3();
   private hitsBear(ray: THREE.Ray): boolean {
-    // her body: a capsule-ish box around her spot (the skinned mesh bounds are unreliable for raycasts)
+    // his body: a box around his spot (the skinned mesh bounds are unreliable for raycasts)
     const p = this.stage.actor.position;
-    this.box.min.set(p.x - 0.32, 0, p.z - 0.32);
-    this.box.max.set(p.x + 0.32, 1.02, p.z + 0.32);
+    this.box.min.set(p.x - 0.45, 0, p.z - 0.45);
+    this.box.max.set(p.x + 0.45, 1.0, p.z + 0.45);
     return ray.intersectsBox(this.box);
   }
 
-  /** Long press on her: a hug (a squeeze, a ring of hearts). */
+  /** Long press on his: a hug (a squeeze, a ring of hearts). */
   private hug(x: number, y: number): void {
     if (!this.active || !this.canvas) return;
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
@@ -497,15 +633,14 @@ export class ShowcaseMode implements Mode {
     this.toss.show(false);
     this.gamesBtn?.remove();
     this.movesBtn?.remove();
+    this.playBtn.remove();
     window.removeEventListener('keydown', this.onKey);
     window.removeEventListener('keyup', this.onKeyUp);
   }
 }
 
-const TAP_REACTIONS = ['Wave', 'Cheer', 'Sparkle'];
-/** The Games button's icon: a heart with speed lines (flat, currentColor). */
-const GAMES_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(14.5 12) scale(1.15) translate(-12 -12.6)"><g fill="currentColor"><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(0 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(72 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(144 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(216 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(288 12 12)"/></g></g><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 8.5h3M1 12h2.5M1.5 15.5h3"/></g></svg>';
-const WIDE: Record<string, number> = { House: 4.2, Party: 2.2, Rainbow: 1.5, Running: 1.8, Magic: 1.0, Cold: 0.6, Stare: 0.9 };
+const TAP_REACTIONS = ['Cheer', 'Purr', 'Alert', 'Sparkle'];
+const WIDE: Record<string, number> = { Party: 1.6, Running: 1.4, Magic: 0.8 };
 
 
 function collectTextures(root: THREE.Object3D): THREE.Texture[] {

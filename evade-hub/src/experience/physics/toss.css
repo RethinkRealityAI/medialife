@@ -3,7 +3,7 @@
   position: absolute; left: 50%; top: calc(var(--cbx-top, 10px) + 120px + var(--cb-top-reserve, 0px));
   transform: translate(-50%, -6px) scale(0.9); opacity: 0; pointer-events: none;
   display: flex; align-items: center; gap: 7px; padding: 7px 14px 7px 10px; border-radius: 999px;
-  background: var(--cb-pink); color: var(--cb-white); font-family: var(--cb-font); font-size: 14px; font-weight: 600;
+  background: var(--cb-pink); color: var(--cb-ink); font-family: var(--cb-font); font-size: 14px; font-weight: 600;
   line-height: 1; white-space: nowrap; transition: opacity 0.25s ease, transform 0.35s var(--cb-ease);
 }
 .cbx-combo svg { width: 18px; height: 18px; display: block; }

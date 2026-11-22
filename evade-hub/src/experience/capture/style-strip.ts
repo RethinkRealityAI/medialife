@@ -2,15 +2,15 @@
 // a tiny preview of what it does and its name under it. Frames first, a thin divider, then filters. A tap applies it
 // to the live view at once (the frame on the overlay canvas, the filter as a cheap CSS look on the camera canvas) and
 // to the next photo exactly (frame-art.ts draws the same frame and runs the per-pixel filter). Two radio groups, so
-// screen readers hear "Frame, Blossom, selected" etc; the row scrolls sideways on narrow phones.
+// screen readers hear "Frame, Hideout, selected" etc; the row scrolls sideways on narrow phones.
 import { el, esc, loadImage } from './ui';
 import { FRAME_STYLES, PHOTO_FILTERS, applyFilter, drawFrameArt, loadFrameArt, type FrameStyle, type PhotoFilter } from './frame-art';
 
 /** The live look of each filter on the camera canvas (close to applyFilter, GPU-cheap on every phone). */
 export const FILTER_CSS: Record<PhotoFilter, { filter: string; tint: string }> = {
   natural: { filter: '', tint: '' },
-  warm: { filter: 'sepia(0.16) saturate(1.12) brightness(1.03)', tint: '' },
-  sakura: { filter: 'brightness(1.02)', tint: 'rgba(255, 183, 201, 0.14)' },
+  gold: { filter: 'sepia(0.22) saturate(1.18) brightness(1.04)', tint: 'rgba(246, 195, 68, 0.10)' },
+  eclipse: { filter: 'saturate(0.7) brightness(0.95) contrast(1.06)', tint: 'rgba(42, 91, 215, 0.18)' },
   mono: { filter: 'grayscale(1) contrast(1.12)', tint: '' },
 };
 
@@ -62,7 +62,7 @@ export function styleStrip(frame: FrameStyle, filter: PhotoFilter, onPick: (fram
   };
   sync();
 
-  // previews: a frame drawn over a plain sky; a filter run over Happi's happy head
+  // previews: a frame drawn over a plain slate page; a filter run over the Bobo render
   void loadFrameArt().then(() => {
     // draw each frame on a phone-shaped page, then show the telling corner of it in the circle
     const page = document.createElement('canvas');
@@ -70,19 +70,19 @@ export function styleStrip(frame: FrameStyle, filter: PhotoFilter, onPick: (fram
     const pg = page.getContext('2d')!;
     for (const [id, b] of frameBtns) {
       pg.clearRect(0, 0, 300, 400);
-      pg.fillStyle = '#8fd0f2'; pg.fillRect(0, 0, 300, 400);
+      pg.fillStyle = '#3a5566'; pg.fillRect(0, 0, 300, 400);
       pg.fillStyle = '#f4d9c6'; pg.beginPath(); pg.ellipse(150, 230, 70, 90, 0, 0, Math.PI * 2); pg.fill();
       drawFrameArt(pg, 300, 400, { title: true, frame: id });
       const g = b.querySelector('canvas')!.getContext('2d')!;
-      // zoom on the part that tells them apart: the blossom branch / the checker corner / the lockup
-      const [sx, sy, sw] = id === 'clean' ? [150, 285, 150] : id === 'parade' ? [130, 260, 170] : [0, 0, 190];
+      // zoom on the part that tells them apart: the bracket corner / the marquee / Bobo / the lockup
+      const [sx, sy, sw] = id === 'clean' ? [150, 250, 150] : id === 'arcade' ? [55, 0, 190] : id === 'bobo' ? [0, 230, 170] : [0, 0, 150];
       g.drawImage(page, sx, sy, sw, sw, 0, 0, PX, PX);
     }
   });
-  void loadImage('/evade/hub/img/happi/head-happy.webp').then((img) => {
+  void loadImage('/evade/hub/img/bobo/bobo-sit.webp').then((img) => {
     for (const [id, b] of filterBtns) {
       const g = b.querySelector('canvas')!.getContext('2d', { willReadFrequently: true })!;
-      g.fillStyle = '#8fd0f2'; g.fillRect(0, 0, PX, PX);
+      g.fillStyle = '#4fd6e8'; g.fillRect(0, 0, PX, PX);
       if (img) {
         const s = PX * 0.92 / Math.max(img.naturalWidth, img.naturalHeight);
         const w = img.naturalWidth * s, h = img.naturalHeight * s;

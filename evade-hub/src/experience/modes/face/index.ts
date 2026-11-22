@@ -1,21 +1,15 @@
-// Selfie with Happi (front camera, face effects). Port of the Mattercraft "Face-filter" scene, improved.
+// Selfie with Bobo (front camera, face effects).
 //
-//   live      bear ears, heart nose and cheek hearts on your face; the title cloud on top; one of two looks:
-//     3D bear   the shared rigged bear, big, bottom left. She is an OVERLAY: drawn last, after a depth clear, so she is
-//               always in front of you and the face effects (the head occluder only hides things behind YOUR head).
-//               She says hello, mirrors you (smile -> she beams, mouth wide -> she gasps, wink -> she winks back,
-//               eyebrows up -> surprised, head tilt -> she tilts hers; all gated, see signals.ts), cheers for the
-//               photo, keeps lip-syncing on a call. Shutter: a visible 5 s countdown, a second tap shoots at once.
-//     Classic   the old filter's video: Happi slides in, waves and ends on a wink with a peace sign. Choosing
-//               Classic (a tap) plays it WITH sound over the camera, keyed in the scene. On its last frame she holds
-//               the pose (the video stays paused on it) while "Smile!" then a big 3, 2, 1 count you in (soft ticks),
-//               then a flash + shutter sound and the photo, with her in it exactly as on screen. (polish-4: the clip
-//               itself has no countdown; round 2 assumed it did, so nothing was shown between her pose and the photo.)
-//               The shutter shoots at once during the 3-2-1 and plays the clip again for another take afterwards.
-//               Autoplay refused -> a "Tap to play" button.
+//   live      Bobo Booth's wearables on your face (face-fx.ts / wearables.ts: the cat hat, Bobo shades, Eclipse can
+//             earrings, nose rings, face paint) in one of four looks picked above the frame + filter chips. Bobo
+//             himself (the shared rigged model, borrowed from the stages) stands small in the bottom-left corner: an
+//             OVERLAY, drawn last after a depth clear, so he is always in front of you. He says hello, reacts to your
+//             face (smile, mouth wide, wink, eyebrows up, head tilt; gated, see signals.ts) and cheers for the photo.
+//             The Bobo button (bottom right) hides / shows him. Shutter: a visible 5 s countdown, a second tap shoots
+//             at once; hold it for a video with the frame and filter baked in.
 //   smile     optional "Smile" switch (bottom left, off by default): a held smile starts the shot.
-//   review    camera + 3D (+ the keyed clip) + the title art in one JPEG (the selfie is the mirror image you saw; the
-//             art is never mirrored): Save / Share / Retake / Watch photo animation / Behind the scenes.
+//   review    camera + 3D + the frame art in one JPEG (the selfie is the mirror image you saw; the art is never
+//             mirrored): Save / Share / Retake.
 import * as THREE from 'three';
 import type { BearClip, BearExpression, ExperienceMode } from '../../../shared/contracts';
 import type { FaceEvent, Mode, ModeContext, XrScene } from '../../types';
@@ -26,7 +20,7 @@ import { styleStrip, FILTER_CSS, type StyleStrip } from '../../capture/style-str
 import { clipHold } from '../../capture/recorder';
 import { drawFrameArt, loadFrameArt, type FrameStyle, type PhotoFilter } from '../../capture/frame-art';
 import { shutterSound } from '../../capture/sounds';
-import { FaceFx } from './face-fx';
+import { FaceFx, FX_LOOKS, type FxLook } from './face-fx';
 import { FaceSignals, type FaceCue } from './signals';
 
 const COUNTDOWN_S = 5;
@@ -40,7 +34,7 @@ const CLASSIC_COUNT_S = 3;
 const OVERLAY_ORDER = 1000;
 
 type State = 'off' | 'live' | 'countdown' | 'clip' | 'busy' | 'review' | 'recording';
-type Look = 'hood' | 'faces';
+type Look = FxLook;
 
 // trigger words -> what the selfie bear does
 const REACT: Record<string, BearClip> = {
@@ -48,7 +42,7 @@ const REACT: Record<string, BearClip> = {
   cheer: 'cheer', sparkle: 'cheer', magic: 'cheer', rainbow: 'cheer', house: 'cheer', running: 'cheer', wakeup: 'cheer',
 };
 
-const HAPPI_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 10 4 3l5 4M19 10l1-7-5 4"/><path d="M5 11a7 7 0 0 0 14 0 7 7 0 0 0-14 0Z"/><path d="M9.5 11v1M14.5 11v1M10 15.5c1.2.8 2.8.8 4 0"/></svg>';
+const BOBO_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11 4.5 3.5 9.5 7M19 11l.5-7.5L14.5 7"/><path d="M4.5 13a7.5 6.5 0 0 0 15 0 7.5 6.5 0 0 0-15 0Z"/><path d="M9.5 12v1M14.5 12v1M11 15.5h2M2 14h3M19 14h3"/></svg>';
 const SMILE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8 14c1 1.6 2.4 2.4 4 2.4s3-.8 4-2.4"/><path d="M9 9.5v.5M15 9.5v.5"/></svg>';
 
 export class FaceMode implements Mode {
@@ -56,7 +50,7 @@ export class FaceMode implements Mode {
   readonly camera = 'face' as const;
   readonly root = new THREE.Group();
   state: State = 'off';
-  look: Look = 'hood';
+  look: Look = 'full';
   faceFound = false;
   smileSnap = false;
   /** Test hooks. */
@@ -70,7 +64,7 @@ export class FaceMode implements Mode {
 
   private cam = new THREE.Group(); // follows the engine camera: screen-anchored things
   private anchor = new THREE.Group(); // follows the face
-  private fx = new FaceFx();
+  private fx = new FaceFx({ look: 'full' });
   private bearHolder = new THREE.Group();
   private clipQuad: THREE.Mesh;
   private clipMat: THREE.ShaderMaterial;
@@ -85,9 +79,9 @@ export class FaceMode implements Mode {
   private strip: StyleStrip;
   private tint: HTMLElement;
   private smileBtn: HTMLButtonElement;
-  /** Show the 3D Happi beside you (the Happi on/off button, bottom right). */
-  private showHappi = true;
-  private happiBtn: HTMLButtonElement;
+  /** Show the 3D Bobo beside you (the Bobo on/off button, bottom right). */
+  private showBobo = true;
+  private boboBtn: HTMLButtonElement;
   private tapPlay: HTMLButtonElement;
   private countdown: Countdown | null = null;
   private review: ReviewSheet;
@@ -98,7 +92,7 @@ export class FaceMode implements Mode {
   private cheered = false;
   private lastReact = 0;
   private resizeObs: ResizeObserver | null = null;
-  private frame: FrameStyle = 'blossom';
+  private frame: FrameStyle = 'hideout';
   private filter: PhotoFilter = 'natural';
   /** The last raw shot (camera + 3D), kept while the review sheet is open so a new frame / filter can recompose it. */
   private shot: HTMLImageElement | null = null;
@@ -171,7 +165,8 @@ export class FaceMode implements Mode {
     this.overlay = el('canvas', 'cbc-overlay');
     this.overlay.setAttribute('aria-hidden', 'true');
     // choosing Classic is a tap: the clip starts (with sound) inside it
-    this.picker = segmented('Selfie look', [{ id: 'hood', label: 'Happi hood' }, { id: 'faces', label: 'Happi faces' }], this.look, (id) => this.setLook(id as Look, true));
+    this.picker = segmented('Selfie look', FX_LOOKS.map((l) => ({ id: l.id, label: l.short })), this.look, (id) => this.setLook(id as Look, true));
+    this.picker.el.classList.add('cbc-seg-looks');
     this.strip = styleStrip(this.frame, this.filter, (frame, filter) => {
       this.frame = frame;
       this.filter = filter;
@@ -183,20 +178,20 @@ export class FaceMode implements Mode {
     this.smileBtn = ctx.hud.toolButton({ label: 'Smile', icon: SMILE_ICON, aria: 'Smile to take the photo', onClick: () => this.toggleSmileSnap() });
     this.smileBtn.setAttribute('aria-pressed', 'false');
     this.smileBtn.classList.add('cbc-toggle');
-    this.happiBtn = ctx.hud.toolButton({ label: 'Happi', icon: HAPPI_ICON, aria: 'Show Happi beside you', tone: 'orange', onClick: () => this.toggleHappi() });
-    this.happiBtn.setAttribute('aria-pressed', 'true');
-    this.happiBtn.classList.add('cbc-toggle', 'on');
+    this.boboBtn = ctx.hud.toolButton({ label: 'Bobo', icon: BOBO_ICON, aria: 'Show Bobo beside you', tone: 'orange', onClick: () => this.toggleBobo() });
+    this.boboBtn.setAttribute('aria-pressed', 'true');
+    this.boboBtn.classList.add('cbc-toggle', 'on');
     this.tapPlay = el('button', 'cbc-tapplay', `${CICON.play}<span>Tap to play</span>`);
     this.tapPlay.type = 'button';
-    this.tapPlay.setAttribute('aria-label', 'Play Happi’s video');
+    this.tapPlay.setAttribute('aria-label', 'Play the video');
     this.tapPlay.addEventListener('click', (e) => { e.stopPropagation(); this.playClip(); });
 
-    const name = 'happi-selfie';
+    const name = 'bobo-selfie';
     this.review = new ReviewSheet({
       container: ctx.container,
       name,
       title: 'Your selfie',
-      share: { title: 'Me and Happi', text: 'My selfie with Happi!' },
+      share: { title: 'Me and Bobo', text: 'My selfie with Bobo in his hideout. EVADE' },
       onRetake: () => { this.dropShot(); this.toLive(false); },
     });
     this.reveal = new RevealPlayer(ctx.container, name);
@@ -213,8 +208,8 @@ export class FaceMode implements Mode {
     };
     this.ctx.container.addEventListener('click', onClick, true);
     this.unprime = () => this.ctx.container.removeEventListener('click', onClick, true);
-    // the hood streams in behind (the mode is usable at once; the hood pops on when it lands)
-    void this.fx.loadHood().then(() => { if (this.faceFound) this.fx.pop(); }).catch((e) => console.warn('[selfie] hood failed', e));
+    // the Eclipse can (for the can earrings) streams in behind; the rest is built in code and is on at once
+    void this.fx.load().catch((e) => console.warn('[selfie] wearables failed', e));
     await loadFrameArt();
   }
 
@@ -255,7 +250,7 @@ export class FaceMode implements Mode {
     this.tint.remove();
     this.liveFilter(true);
     this.smileBtn.remove();
-    this.happiBtn.remove();
+    this.boboBtn.remove();
     this.tapPlay.remove();
     this.overlay.remove();
     this.resizeObs?.disconnect();
@@ -293,7 +288,7 @@ export class FaceMode implements Mode {
       // small, in the bottom-left corner beside the shutter, so he never covers you (Dapo, round 3)
       const H = hh * Math.min(0.66, (hw / hh) * 1.25);
       const top = -hh + 0.22 * hh + H; // feet just above the dock
-      // live reactions: a little bounce when she beams, a small step back when she gasps, a lean with your tilt
+      // live reactions: a little bounce when he beams, a small step back when he gasps, a lean with your tilt
       const kb = 1 - Math.exp(-dt * 3.2);
       this.bounce -= this.bounce * kb;
       this.recoil -= this.recoil * (1 - Math.exp(-dt * 2.4));
@@ -346,7 +341,7 @@ export class FaceMode implements Mode {
       this.target.pos.set(t.position.x, t.position.y, t.position.z);
       this.target.quat.set(t.rotation.x, t.rotation.y, t.rotation.z, t.rotation.w);
       this.target.scale = t.scale ?? 1;
-      this.fx.place(ev.detail?.attachmentPoints ?? null);
+      this.fx.place(ev.detail?.attachmentPoints ?? null, ev.detail?.vertices);
       if (!this.diag.attachmentKeys.length && ev.detail?.attachmentPoints) this.diag.attachmentKeys = Object.keys(ev.detail.attachmentPoints);
       if (!this.faceFound) {
         this.faceFound = true;
@@ -365,6 +360,8 @@ export class FaceMode implements Mode {
       this.anchor.visible = false;
       this.signals.lost();
       if (this.state === 'live') this.ctx.hud.hint('Look at the camera');
+    } else if (ev.type === 'loading') {
+      this.fx.meshLoading(ev.detail);
     } else if (ev.type === 'other') {
       this.signals.event(ev.name, now);
     }
@@ -392,8 +389,8 @@ export class FaceMode implements Mode {
   }
 
   reset(): void {
-    this.look = 'hood';
-    this.picker.set('hood');
+    this.look = 'full';
+    this.picker.set('full');
     this.setSmileSnap(false);
     if (this.state !== 'off') {
       this.review.close();
@@ -402,7 +399,7 @@ export class FaceMode implements Mode {
       this.bts.close();
       this.countdown?.cancel();
       this.state = 'live';
-      this.setLook('hood', false);
+      this.setLook('full', false);
       this.toLive(false);
     }
   }
@@ -426,7 +423,7 @@ export class FaceMode implements Mode {
     this.signals.fire(cue);
   }
 
-  // ------------------------------------------------------------------ the Classic clip
+  // ------------------------------------------------------------------ the Classic clip (dormant: no clip ships in the hub; kept so the engine wiring and tests stay the same)
   private primeSound(): void {
     const v = this.video;
     try {
@@ -459,7 +456,7 @@ export class FaceMode implements Mode {
     try { v.currentTime = 0; } catch { /* not seekable yet: starts at 0 anyway */ }
     v.muted = false;
     this.clipQuad.visible = true;
-    this.armShutter(true, 'Happi takes the photo at the end');
+    this.armShutter(true, 'Take the photo at the end');
     this.ctx.hud.hint('');
     this.diag.clipPlays++;
     this.diag.clipMuted = false;
@@ -515,7 +512,7 @@ export class FaceMode implements Mode {
     if (this.state === 'off') return;
     this.state = 'live';
     const hud = this.ctx.hud;
-    if (!this.shutterBtn) this.shutterBtn = hud.shutter(() => this.onShutter(), 'Take a selfie with Happi', clipHold({
+    if (!this.shutterBtn) this.shutterBtn = hud.shutter(() => this.onShutter(), 'Take a selfie with Bobo', clipHold({
       // hold the shutter for a video: the chosen frame and filter are baked into the clip
       can: () => this.state === 'live',
       options: () => ({ overlay: (g, w, h) => drawFrameArt(g, w, h, { title: true, frame: this.frame }), filter: FILTER_CSS[this.filter].filter, tint: FILTER_CSS[this.filter].tint }),
@@ -534,7 +531,7 @@ export class FaceMode implements Mode {
     this.tuckPicker(false);
     hud.above.append(this.picker.el, this.strip.el);
     hud.left.appendChild(this.smileBtn);
-    hud.right.appendChild(this.happiBtn);
+    hud.right.appendChild(this.boboBtn);
     // Classic between takes: she stays on her last frame (the clip is paused there); the shutter plays it again
     this.clipQuad.visible = false;
     this.fxLook(this.look);
@@ -545,7 +542,7 @@ export class FaceMode implements Mode {
     if (hello && bear) this.hello();
   }
 
-  /** The 3D look's short hello: she waves and beams. */
+  /** Bobo's short hello: he waves and beams. */
   private hello(): void {
     const bear = this.ctx.bear;
     if (!bear || bear.object.parent !== this.bearHolder) return;
@@ -555,7 +552,7 @@ export class FaceMode implements Mode {
   }
 
   private fxLook(l: Look): void {
-    this.fx.setLook(l === 'faces' ? 'faces' : 'hood');
+    this.fx.setLook(l, this.state !== 'off');
   }
 
   private setLook(l: Look, _fromTap: boolean): void {
@@ -564,25 +561,20 @@ export class FaceMode implements Mode {
     this.picker.set(l);
     this.fxLook(l);
     if (this.state === 'off' || this.state === 'busy' || this.state === 'review') { this.drawOverlay(); return; }
-    if (was !== l) {
-      this.fx.pop();
-      this.fx.react(l === 'faces' ? 'happy' : null, 1.6);
-      this.hello();
-    }
+    if (was !== l) this.hello();
     this.drawOverlay();
   }
 
-  /** Your face -> an official expression head pops up beside you (smile, gasp, frown at brows down, sleepy wink). */
+  /** Your face -> the earrings swing and the hat hops (smile, gasp, eyebrows up, wink). */
   private fxReact(c: FaceCue): void {
     if (this.state !== 'live' && this.state !== 'countdown') return;
     if (c === 'smile') this.fx.react('happy', 2.2);
     else if (c === 'mouth') this.fx.react('surprised', 1.8);
     else if (c === 'brows') this.fx.react('surprised', 1.4);
     else if (c === 'wink') this.fx.react('sleepy', 1.6);
-    else if (c === 'smileOff' && this.fx.mood === 'happy') this.fx.react('happy', 0.4);
   }
 
-  /** Classic's countdown: the look picker (over her face at phone size) fades out and is inert until live again. */
+  /** During the countdown / a recording the look picker and chips fade out and are inert until live again. */
   private tuckPicker(on: boolean): void {
     for (const el of [this.picker.el, this.strip.el]) {
       el.classList.toggle('cbc-tuck', on);
@@ -590,7 +582,7 @@ export class FaceMode implements Mode {
     }
   }
 
-  /** The chosen filter's live look on the camera canvas (and the sakura tint); `off` clears it on leaving. */
+  /** The chosen filter's live look on the camera canvas (and its flat tint); `off` clears it on leaving. */
   private liveFilter(off = false): void {
     const css = FILTER_CSS[off ? 'natural' : this.filter];
     const cam = this.ctx.container.querySelector<HTMLCanvasElement>('canvas.cbx-xr');
@@ -599,16 +591,16 @@ export class FaceMode implements Mode {
     this.tint.hidden = !css.tint;
   }
 
-  private toggleHappi(): void {
-    this.showHappi = !this.showHappi;
-    this.happiBtn.setAttribute('aria-pressed', String(this.showHappi));
-    this.happiBtn.classList.toggle('on', this.showHappi);
-    this.ctx.hud.toast(this.showHappi ? 'Happi is in the picture' : 'Just you this time');
+  private toggleBobo(): void {
+    this.showBobo = !this.showBobo;
+    this.boboBtn.setAttribute('aria-pressed', String(this.showBobo));
+    this.boboBtn.classList.toggle('on', this.showBobo);
+    this.ctx.hud.toast(this.showBobo ? 'Bobo is in the picture' : 'Just you this time');
     if (this.state === 'live' || this.state === 'countdown') this.setBearVisible(true);
   }
 
   private setBearVisible(on: boolean): void {
-    on = on && this.showHappi;
+    on = on && this.showBobo;
     this.bearHolder.visible = on;
     if (!on) this.setExpression('neutral');
   }
@@ -617,7 +609,7 @@ export class FaceMode implements Mode {
     const b = this.shutterBtn;
     if (!b) return;
     b.classList.toggle('cbc-armed', on);
-    b.setAttribute('aria-label', on ? aria : 'Take a selfie with Happi');
+    b.setAttribute('aria-label', on ? aria : 'Take a selfie with Bobo');
   }
 
   private onShutter(): void {
@@ -667,7 +659,7 @@ export class FaceMode implements Mode {
     try {
       if (!classic && !this.cheered) {
         this.cheer();
-        await new Promise((r) => setTimeout(r, 380)); // let her arms come up
+        await new Promise((r) => setTimeout(r, 380)); // let his arms come up
       }
       if (this.state !== 'busy') return; // left the mode meanwhile
       flash(this.ctx.container, this.ctx.reducedMotion);
@@ -712,7 +704,7 @@ export class FaceMode implements Mode {
     this.smileBtn.classList.toggle('on', on);
   }
 
-  // ------------------------------------------------------------------ she mirrors you (3D look)
+  // ------------------------------------------------------------------ Bobo mirrors you
   private onCue(c: FaceCue): void {
     this.diag.reactions[c] = (this.diag.reactions[c] ?? 0) + 1;
     const bear = this.ctx.bear;
@@ -757,7 +749,7 @@ export class FaceMode implements Mode {
     }
   }
 
-  /** Her head follows your head tilt (an additive turn on the head bone, after the clip and her look-at). */
+  /** His head follows your head tilt (an additive turn on the head bone, after the clip and his look-at). */
   private tiltHead(): void {
     const h = this.headBone;
     if (!h || !h.parent || Math.abs(this.tilt) < 0.005) return;
@@ -777,7 +769,7 @@ export class FaceMode implements Mode {
     o.rotation.set(0, 0, 0);
     o.scale.setScalar(1 / (bear.height || 1));
     o.userData.cbxOwnGpu = !!bear.releaseRenderer;
-    // drawn after the depth clear (restored when she goes back to the stages)
+    // drawn after the depth clear (restored when he goes back to the stages)
     o.traverse((m) => {
       if (!(m as THREE.Mesh).isMesh) return;
       m.userData.cbcOrder = m.renderOrder;

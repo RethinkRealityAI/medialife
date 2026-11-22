@@ -1,10 +1,11 @@
-// Mini games inside 3D and AR (round 3): Heart Run and Heart Hoops. The experience owns ONE PlayDirector; a game runs
+// Mini games inside 3D and AR: Can Dash and Paw Hoops. The experience owns ONE PlayDirector; a game runs
 // in the mode that was live when it started (the mode hands it a PlayHost) and is torn down on stopPlay, a mode
 // switch, Start again or dispose. See docs/handoff/games-3.md.
 import type { PlayGameId, PlayGameInfo, PlayStatus } from '../../shared/contracts';
 import { PlayGame, readBest, type PauseReason, type PlayHost } from './game';
-import { HeartRun } from './run';
-import { HeartHoops } from './hoops';
+import { SVG } from './ui';
+import { CanDash } from './run';
+import { PawHoops } from './hoops';
 
 export { PlayKit } from './kit';
 export type { PlayHost, PauseReason } from './game';
@@ -12,8 +13,8 @@ export { PlayGame } from './game';
 export { SVG as PLAY_SVG } from './ui';
 
 export const PLAY_GAMES: readonly PlayGameInfo[] = [
-  { id: 'heart-run', label: 'Parade Dash', lead: 'Dash Happi round the square and catch cherry blossoms and fans in 60 seconds.' },
-  { id: 'heart-hoops', label: 'Blossom Toss', lead: 'Swipe up to toss 10 blossoms through the festival ring.' },
+  { id: 'heart-run', label: 'Can Dash', lead: 'Run Bobo round and grab Eclipse cans in 60 seconds.', color: '#4fd6e8', icon: SVG.run },
+  { id: 'heart-hoops', label: 'Paw Hoops', lead: 'Swipe up to toss 10 hearts through the hoop on the Eclipse can.', color: '#f6c344', icon: SVG.hoops },
 ];
 
 /** What a mode offers the director. */
@@ -36,7 +37,7 @@ export class PlayDirector {
     if (!host || !PLAY_GAMES.some((g) => g.id === id)) return false;
     this.stop();
     const exit = () => this.stop();
-    const g = id === 'heart-run' ? new HeartRun(host, this.emit, exit) : new HeartHoops(host, this.emit, exit, this.desktop);
+    const g = id === 'heart-run' ? new CanDash(host, this.emit, exit) : new PawHoops(host, this.emit, exit, this.desktop);
     this.game = g;
     this.mode = mode;
     mode.setGame(g);

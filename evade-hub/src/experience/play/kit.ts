@@ -2,26 +2,29 @@
 // warm-up (AR) and the showcase's compileAsync compile them with everything else: nothing compiles when a game starts
 // (pitfall 13). Flat colours only.
 //
-//   pickups   hearts / gold stars / rainbows as instanced meshes. Hearts and stars reuse the toy geometries; every
-//             instanced mesh has instanceColor from the start, so they all share the toys' one program.
+//   pickups   Eclipse cans (Can Dash), hearts, gold stars and fizz arcs as instanced meshes. Hearts and stars reuse
+//             the toy geometries; the can is EVADE's real can model (src/evade/world/can.ts). Every instanced mesh has
+//             instanceColor from the start, so nothing recompiles.
 //   beacons   a pulsing flat ring on the floor under each pickup: one instanced mesh, one small shader (a solid core
 //             disc + a crisp ring that grows and fades over time; no gradient across the shape).
-//   hoop      Heart Hoops' ring: six flat rainbow bands on a little cloud (plain standard materials).
-//   cloud     the grumpy raincloud (Heart Run): grey puffs, two eyes, a frown. Our own simple geometry.
+//   hoop      Paw Hoops' ring: six flat EVADE bands standing on a big Eclipse can (plain standard materials).
+//   cloud     the grumpy raincloud (Can Dash): grey puffs, two eyes, a frown. Our own simple geometry.
 import * as THREE from 'three';
 import type { Stage } from '../scene/stage';
 import { PAL } from '../scene/fx';
 import type { StaticSphere } from '../physics/world';
+import { canParts } from '../../evade/world/can';
 
-export const PICK = { heart: 0, star: 1, rainbow: 2 } as const;
+export const PICK = { heart: 0, star: 1, rainbow: 2, can: 3 } as const;
 export type PickKind = keyof typeof PICK;
-const CAP = { heart: 14, star: 3, rainbow: 3 };
+const CAP = { heart: 14, star: 3, rainbow: 3, can: 14 };
+/** A can pickup's height (stage units; Bobo is 1 tall). */
+const CAN_H = 0.3;
 const BEACONS = 20;
-/** The rainbow pickup's four bands, outside in. */
-/** The fan pickup (the hub's rainbow shape): red and white bands like a festival sensu. */
-const ARC_COLORS = [0xd8312a, 0xffffff, 0xd8312a, 0xffffff];
-/** Festival ring bands: vermilion, white and navy. */
-const RING = [0xe0452b, 0xffffff, 0xe0452b, 0x283a8f, 0xe0452b, 0xffffff];
+/** The fizz arc pickup's four bands, outside in (flat EVADE colours). */
+const ARC_COLORS = [PAL.pink, PAL.yellow, PAL.sky, PAL.blue];
+/** The hoop's bands, outside in. */
+const RING = [PAL.red, PAL.white, PAL.yellow, PAL.sky, PAL.blue, PAL.white];
 /** Hoop: radius of the opening's centre line and the band half-width (stage units). */
 export const HOOP_R = 0.36;
 export const HOOP_BAND = 0.06;
@@ -98,6 +101,8 @@ export interface PickDraw {
 export class PlayKit {
   readonly group = new THREE.Group();
   readonly hearts: THREE.InstancedMesh;
+  /** Eclipse can pickups: one instanced mesh per can material (all drawn with the same matrices). */
+  readonly cans: THREE.InstancedMesh[] = [];
   readonly stars: THREE.InstancedMesh;
   readonly arcs: THREE.InstancedMesh[] = [];
   readonly puffs: THREE.InstancedMesh;
@@ -109,7 +114,7 @@ export class PlayKit {
   readonly cloudFrown: THREE.Mesh;
   private beaconMat: THREE.ShaderMaterial;
   private phase: THREE.InstancedBufferAttribute;
-  /** The hoop's rim as static spheres in the stage's toy physics (off unless Heart Hoops shows the ring). */
+  /** The hoop's rim as static spheres in the stage's toy physics (off unless Paw Hoops shows the ring). */
   readonly rim: StaticSphere[] = [];
   private warmed = false;
   private m = new THREE.Matrix4();
@@ -118,6 +123,7 @@ export class PlayKit {
   private s = new THREE.Vector3();
   private p = new THREE.Vector3();
   private c = new THREE.Color();
+  private canIsHeart = false;
 
   constructor(stage: Stage) {
     this.group.name = 'play-kit';
@@ -144,9 +150,14 @@ export class PlayKit {
     });
     this.beacons = instanced(bg, this.beaconMat, BEACONS, 'play-beacons');
     this.beacons.renderOrder = 1;
-    this.group.add(this.hearts, this.stars, ...this.arcs, this.puffs, this.beacons);
+    const can = canParts();
+    can.forEach((p, i) => this.cans.push(instanced(p.geometry, p.material, CAP.can, `play-can-${i}`)));
+    // no can model: the pickups fall back to hearts
+    if (!this.cans.length) this.cans.push(instanced(stage.play.hearts.geometry, tm, CAP.can, 'play-can-heart'));
+    this.canIsHeart = !can.length;
+    this.group.add(this.hearts, this.stars, ...this.arcs, this.puffs, this.beacons, ...this.cans);
 
-    // ---- the hoop: six flat rainbow bands (outside red .. inside purple) standing up, on a cloud
+    // ---- the hoop: six flat bands standing up, on a big Eclipse can
     const bands = RING.length;
     const w = (HOOP_BAND * 2) / bands;
     for (let i = 0; i < bands; i++) {
@@ -158,12 +169,20 @@ export class PlayKit {
       this.hoop.add(mesh);
     }
     const puffG = new THREE.SphereGeometry(1, 16, 12);
-    const white = flat(0xffb7c9, 0.8); // a cluster of blossom at its foot
-    for (const [x, y, s] of [[0, -HOOP_R - 0.06, 0.11], [-0.11, -HOOP_R - 0.04, 0.085], [0.11, -HOOP_R - 0.04, 0.085], [-0.2, -HOOP_R + 0.0, 0.065], [0.2, -HOOP_R + 0.0, 0.065]] as const) {
-      const pm = new THREE.Mesh(puffG, white);
-      pm.position.set(x, y, 0);
-      pm.scale.set(s * 1.25, s, s);
-      this.hoop.add(pm);
+    // the stand: an Eclipse can under the ring (or a flat yellow post when the model did not load)
+    const standH = 0.34;
+    if (can.length) {
+      for (const p of can) {
+        const cm = new THREE.Mesh(p.geometry, p.material);
+        cm.name = 'hoop-can';
+        cm.position.set(0, -HOOP_R - HOOP_BAND - standH / 2 + 0.02, 0);
+        cm.scale.setScalar(standH);
+        this.hoop.add(cm);
+      }
+    } else {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, standH, 20), flat(PAL.yellow, 0.6));
+      post.position.set(0, -HOOP_R - HOOP_BAND - standH / 2 + 0.02, 0);
+      this.hoop.add(post);
     }
     this.hoop.name = 'play-hoop';
 
@@ -216,12 +235,20 @@ export class PlayKit {
 
   /** Draw the pickups (call once per frame while a game shows them; an empty list hides everything). */
   draw(list: readonly PickDraw[]): void {
-    let nh = 0, ns = 0, nr = 0, nb = 0;
+    let nh = 0, ns = 0, nr = 0, nb = 0, nc = 0;
     const m = this.m;
     for (const d of list) {
       if (d.s <= 0.001 && d.beacon < 0) continue;
       this.p.set(d.x, d.y, d.z);
-      if (d.s <= 0.001) { /* beacon only (the raincloud's shadow) */ } else if (d.kind === 'heart') {
+      if (d.s <= 0.001) { /* beacon only (the raincloud's shadow) */ } else if (d.kind === 'can') {
+        // an Eclipse can, standing up, leaning a little as it spins
+        this.e.set(0.18, d.yaw, 0);
+        this.q.setFromEuler(this.e);
+        m.compose(this.p, this.q, this.s.setScalar((this.canIsHeart ? 0.13 : CAN_H) * d.s));
+        this.c.setHex(this.canIsHeart ? d.hex : 0xffffff);
+        for (const cm of this.cans) { cm.setMatrixAt(nc, m); cm.setColorAt(nc, this.c); }
+        nc++;
+      } else if (d.kind === 'heart') {
         this.e.set(0, d.yaw, 0);
         this.q.setFromEuler(this.e);
         m.compose(this.p, this.q, this.s.setScalar(0.13 * d.s));
@@ -234,7 +261,7 @@ export class PlayKit {
         this.stars.setMatrixAt(ns, m);
         this.stars.setColorAt(ns++, this.c.setHex(d.hex));
       } else {
-        // a rainbow standing up, turning slowly
+        // a fizz arc standing up, turning slowly
         this.e.set(0, d.yaw, 0);
         this.q.setFromEuler(this.e);
         m.compose(this.p, this.q, this.s.setScalar(1.3 * d.s));
@@ -264,6 +291,7 @@ export class PlayKit {
       }
     }
     this.finish(this.hearts, nh);
+    for (const cm of this.cans) this.finish(cm, nc);
     this.finish(this.stars, ns);
     for (const a of this.arcs) this.finish(a, nr);
     this.finish(this.puffs, nr * 2);
@@ -294,7 +322,7 @@ export class PlayKit {
 }
 
 /**
- * The house's footprint in stage-local space, read from the stage's house set (its geometry may change: never
+ * The hideout door's footprint in stage-local space, read from the stage's house set (its geometry may change: never
  * hard-code its size). Null when the house is hidden. `pad` grows the box on every side.
  */
 export function houseBounds(stage: Stage, pad = 0, out = new THREE.Box3()): THREE.Box3 | null {

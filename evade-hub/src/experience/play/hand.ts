@@ -1,4 +1,4 @@
-// Heart Hoops "in hand" (polish-4, after Dapo's phone test: "show the hearts so users know what they're flicking and
+// Paw Hoops "in hand" (polish-4, after Dapo's phone test: "show the hearts so users know what they're flicking and
 // how many they have"). Modelled on Bobo Hoops:
 //
 //   held heart  the next heart, a real 3D heart held low in the middle of the view. It is drawn with the kit's
@@ -149,7 +149,7 @@ export class HoopsHand {
     this.tag = document.createElement('div');
     this.tag.className = 'cbp-x2tag';
     this.tag.setAttribute('role', 'status');
-    this.tag.innerHTML = 'Last blossom <b>x2</b>';
+    this.tag.innerHTML = 'Last heart <b>x2</b>';
     host.layer.append(this.dotsEl, this.coach, this.tag);
     host.root.addEventListener('pointerdown', this.onDown);
     host.root.addEventListener('pointermove', this.onMove);

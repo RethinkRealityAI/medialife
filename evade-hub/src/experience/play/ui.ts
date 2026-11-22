@@ -2,14 +2,17 @@
 // Built per game and removed on teardown (no listeners left behind). Plain DOM, theme tokens (play.css).
 import './play.css';
 
-import { BLOSSOM_SVG, blossomD } from '../../happi/blossom';
+const HEART_D = 'M12 20.6C6.2 16.4 2.6 13 2.6 8.9 2.6 6 4.9 3.8 7.7 3.8c1.8 0 3.3.9 4.3 2.4 1-1.5 2.5-2.4 4.3-2.4 2.8 0 5.1 2.2 5.1 5.1 0 4.1-3.6 7.5-9.4 11.7z';
+/** A flat Eclipse can (body, rim, pull tab), currentColor. */
+const CAN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="currentColor"><path d="M7 5.2h10l.8 1.6v12.6l-.8 1.6H7l-.8-1.6V6.8z"/><rect x="7.6" y="2.4" width="8.8" height="2" rx="1"/></g><path fill="none" stroke="#0a1c2a" stroke-width="1.6" stroke-linecap="round" d="M6.6 9.5h10.8M6.6 15.5h10.8"/></svg>';
 export const SVG = {
-  heart: BLOSSOM_SVG,
+  heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="${HEART_D}"/></svg>`,
+  can: CAN_SVG,
   star: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2.6 2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.3l-5.8 3.1 1.2-6.5-4.8-4.5 6.5-.8Z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></svg>',
   clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/></g></svg>',
-  run: `<svg viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="${blossomD(19, 16.5, 11)}"/><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2.5 10h4M1.5 15h3.5M2.5 20h3"/></g></svg>`,
-  hoops: `<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3"><circle cx="19" cy="14" r="9"/></g><path fill="currentColor" d="${blossomD(8.5, 23.5, 6.5)}"/></svg>`,
+  run: '<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="currentColor"><path d="M13 8.2h11l.9 1.7v15.4l-.9 1.7H13l-.9-1.7V9.9z"/><rect x="13.8" y="5.2" width="9.4" height="2.2" rx="1.1"/></g><g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2.5 11h5M1.5 16.5h5M2.5 22h4.5"/></g></svg>',
+  hoops: `<svg viewBox="0 0 32 32" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="3"><circle cx="19" cy="13" r="8.5"/></g><path fill="currentColor" transform="translate(1 15) scale(.62)" d="${HEART_D}"/></svg>`,
 };
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string): HTMLElementTagNameMap[K] => {
@@ -58,7 +61,8 @@ export class PlayUi {
     pause.setAttribute('aria-label', `Pause ${opts.label}`);
     pause.addEventListener('click', (e) => { e.stopPropagation(); opts.onPause(); });
     this.board.appendChild(pause);
-    const score = el('div', 'cbp-score', `${SVG.heart}<b>0</b>`);
+    const icon = opts.clock ? SVG.can : SVG.heart; // Can Dash counts cans, Paw Hoops hearts
+    const score = el('div', 'cbp-score', `${icon}<b>0</b>`);
     score.setAttribute('aria-label', 'Score');
     this.scoreEl = score.querySelector('b')!;
     this.board.appendChild(score);
@@ -69,7 +73,7 @@ export class PlayUi {
       this.board.appendChild(this.timeEl);
     }
     if (opts.balls) {
-      // the hearts you have left (Heart Hoops): a big rack at the bottom, under the heart in your hand (polish-4: the
+      // the hearts you have left (Paw Hoops): a big rack at the bottom, under the heart in your hand (polish-4: the
       // tiny row in the scoreboard did not say "these are what you throw"). The last one is gold and counts double.
       const row = el('div', 'cbp-rack');
       row.setAttribute('role', 'img');
@@ -86,7 +90,7 @@ export class PlayUi {
     this.countEl.setAttribute('aria-live', 'assertive');
     this.countSub = el('div', 'cbp-count-sub');
     this.countSub.hidden = true;
-    this.streakEl = el('div', 'cbp-streak', `${SVG.heart}<b>0</b><span>in a row</span>`);
+    this.streakEl = el('div', 'cbp-streak', `${icon}<b>0</b><span>in a row</span>`);
     this.streakN = this.streakEl.querySelector('b')!;
     this.powerEl = el('div', 'cbp-power', '<span></span><i class="bar"></i>');
     this.powerBar = this.powerEl.querySelector('.bar')!;
@@ -130,7 +134,7 @@ export class PlayUi {
       }
       this.rackUsed = used;
       const left = Math.max(0, this.rackN - used);
-      this.rack.setAttribute('aria-label', `${left} blossom${left === 1 ? '' : 's'} left to throw`);
+      this.rack.setAttribute('aria-label', `${left} heart${left === 1 ? '' : 's'} left to throw`);
     }
   }
 

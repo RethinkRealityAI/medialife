@@ -1,5 +1,38 @@
 [
   {
+    "slug": "evade-hub",
+    "title": "Bobo's Hideout",
+    "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade.",
+    "url": "/evade/hub/",
+    "extraLinks": [
+      {
+        "label": "Open the arcade",
+        "url": "/evade/hub/?arcade"
+      }
+    ],
+    "thumb": "/labs/img/evade-hub.webp",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "collectibles",
+      "capture"
+    ],
+    "tech": [
+      "web-3d",
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "not yet",
+    "alt": "Bobo in his hideout with the arcade machines on the left, the 3D / AR / Selfie / Photo tabs and the Arcade button",
+    "share": {
+      "start": 1,
+      "needs": "Any screen, camera optional"
+    }
+  },
+  {
     "slug": "holocast",
     "title": "Holocast",
     "lead": "Put a holo projector on your floor or table and its floating screens fill with live data from the control room: notices, a live sketch, photo drops, a 3D live poll, spoken captions, the Where is Bobo? globe, reactions and a live video stream.",
@@ -478,7 +511,8 @@
     "notes": [
       "Demo data, no sign-in yet"
     ],
-    "source": "art/collector-hub/"
+    "source": "art/collector-hub/",
+    "share": false
   },
   {
     "slug": "keychain-pop",

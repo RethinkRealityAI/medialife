@@ -1,6 +1,6 @@
 // The experience's internal contracts: how a mode plugs into the engine and the HUD.
 //
-// A mode is one way of seeing Happi (3D showcase, AR in the room, selfie filter, 3D photo). The experience
+// A mode is one way of seeing Bobo (3D showcase, AR in the room, selfie filter, 3D photo). The experience
 // (src/experience/index.ts) owns ONE engine session, ONE HUD and ONE bear; modes borrow them through `ModeContext`.
 //
 //   showcase  camera 'none'  : its own three.js renderer, works on computers (src/experience/modes/showcase)
@@ -142,7 +142,7 @@ export interface ModeContext {
   readonly assets: AssetLoader;
   readonly hud: HudApi;
   readonly engine: EngineView;
-  /** The one Happi (null until loaded). Add `bear.object` to your root while active, give it back on exit. */
+  /** The one Bobo (null until loaded). Add `bear.object` to your root while active, give it back on exit. */
   readonly bear: BearCharacter | null;
   /** Emit an experience event (photo, action...). */
   emit<K extends keyof ExperienceEvents>(event: K, payload: ExperienceEvents[K]): void;

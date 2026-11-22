@@ -1,9 +1,9 @@
-// Heart toss: swipe up to throw soft hearts at Happi (3D and AR). She watches each one come, shuffles to get
-// under it and catches it in her arms (a small cheer, a heart burst, a squash-and-stretch); misses bounce on the floor
+// Heart toss: swipe up to throw soft hearts to Bobo (3D and AR). He watches each one come, shuffles to get
+// under it and catches it (a small cheer, a heart burst, a squash-and-stretch); misses bounce on the floor
 // (the cloud in 3D, your real floor in AR), roll, settle and shrink away. Catches in a row show a gentle counter.
 //
 // The throw is aim-assisted for little hands: the swipe's lean picks a direction and its length a distance; close
-// enough to her counts as "at her". Everything runs in the stage's local space, so the same code serves both modes.
+// enough to Bobo counts as "at him". Everything runs in the stage's local space, so the same code serves both modes.
 import * as THREE from 'three';
 import './toss.css';
 import type { Body } from './world';
@@ -17,7 +17,7 @@ export interface TossHost {
   /** The HUD's overlay layer (the counter goes here). */
   layer: HTMLElement;
   reduced: boolean;
-  /** Keeps her side-steps inside the play area (AR: out of the house walls, never through the door). */
+  /** Keeps his side-steps inside the play area (AR: out of the house walls, never through the door). */
   constrain?(p: THREE.Vector3): void;
   /** A catch happened (the mode may clear its hint, etc.). */
   onCatch?(combo: number): void;
@@ -25,7 +25,7 @@ export interface TossHost {
 
 const HEART_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 21.2 3.9 13.4A5.1 5.1 0 0 1 12 6.6a5.1 5.1 0 0 1 8.1 6.8Z"/></svg>';
 const UP = new THREE.Vector3(0, 1, 0);
-/** Side-step speed (stage units / s) and how far she may shuffle for one heart. */
+/** Side-step speed (stage units / s) and how far he may shuffle for one heart. */
 const STEP_SPEED = 2.1;
 const STEP_BUDGET = 0.7;
 
@@ -69,8 +69,8 @@ export class HeartToss {
   }
 
   /**
-   * Throw a heart. `power` 0..1 (swipe length/speed: ~0.5 reaches her), `side` -0.6..0.6 rad (swipe lean, + = right).
-   * Returns false while the previous throw is too recent or she isn't there.
+   * Throw a heart. `power` 0..1 (swipe length/speed: ~0.5 reaches his), `side` -0.6..0.6 rad (swipe lean, + = right).
+   * Returns false while the previous throw is too recent or he isn't there.
    */
   throw(power: number, side = 0): boolean {
     const st = this.host.stage, a = st.actor;
@@ -81,24 +81,24 @@ export class HeartToss {
     // from low in your view, as if from your hand (it grows to full size as it leaves)
     this.o.copy(st.cam).addScaledVector(st.camDir, 0.5 * unitsPerM);
     this.o.y = Math.max(0.15, this.o.y - 0.22 * unitsPerM);
-    // at her chest, where her arms are (a little in front of her, towards you)
+    // at his chest, where his arms are (a little in front of his, towards you)
     this.d.subVectors(this.o, a.position).setY(0);
     if (this.d.lengthSq() > 1e-6) this.d.normalize();
     this.t.copy(a.position).addScaledVector(this.d, 0.15).setY(0.55);
     this.d.subVectors(this.t, this.o).setY(0);
     const dist = Math.max(0.25, this.d.length());
     this.d.divideScalar(dist);
-    // direction: where you look, leaned by the swipe; snapped onto her when it's close (aim assist)
+    // direction: where you look, leaned by the swipe; snapped onto his when it's close (aim assist)
     this.v.copy(st.camDir).setY(0);
     if (this.v.lengthSq() < 1e-6) this.v.copy(this.d);
     this.v.normalize().applyAxisAngle(UP, -THREE.MathUtils.clamp(side, -0.6, 0.6) * 0.8);
     const ang = Math.acos(THREE.MathUtils.clamp(this.v.dot(this.d), -1, 1));
     const snap = THREE.MathUtils.clamp((0.6 - ang) / 0.3, 0, 1);
     this.v.lerp(this.d, snap).normalize();
-    // distance: the swipe's power; within 20 % of her counts as "at her"
+    // distance: the swipe's power; within 20 % of his counts as "at his"
     let D = dist * (0.45 + THREE.MathUtils.clamp(power, 0, 1.2) * 1.1);
     if (Math.abs(D / dist - 1) < 0.2 && snap > 0.5) D = dist;
-    // a soft lob that comes down at her chest height after D
+    // a soft lob that comes down at his chest height after D
     const g = st.play.world.gravityY;
     const dy = this.t.y - this.o.y;
     let elev = 0.52;
@@ -114,11 +114,11 @@ export class HeartToss {
     return true;
   }
 
-  /** Per frame, BEFORE stage.update (it sets her catch sensor for this frame's physics). */
+  /** Per frame, BEFORE stage.update (it sets his catch sensor for this frame's physics). */
   update(dt: number): void {
     const st = this.host.stage, a = st.actor, play = st.play;
     const free = !!a.bear && !a.asleep && !a.walking && a.scripted === 0 && !this.host.runner.busy;
-    // find the heart that will reach her first
+    // find the heart that will reach his first
     let best: Body | null = null, bt = 9, bd = 0;
     for (const b of play.pool('heart')) {
       if (!b.alive || !b.sense) continue;
@@ -134,11 +134,11 @@ export class HeartToss {
     let wantY = 0.6;
     if (best && !a.asleep) {
       a.lookOverride = st.root.localToWorld(this.lookW.copy(best.p));
-      // where it will be when it reaches her
+      // where it will be when it reaches his
       const T = Math.min(bt, 1.2);
       this.pred.copy(best.p).addScaledVector(best.v, T);
       this.pred.y -= 0.5 * play.world.gravityY * T * T;
-      // she reaches up or bends down for it once it's close
+      // he reaches up or bends down for it once it's close
       if (bd < 1.0) wantY = THREE.MathUtils.clamp(best.p.y, 0.32, 0.8);
       if (free) {
         a.turnToPoint(best.p, dt, 10);
@@ -160,7 +160,7 @@ export class HeartToss {
     this.sensorY += (wantY - this.sensorY) * Math.min(1, dt * 16);
     st.catching = !!a.bear && !a.asleep;
     st.catchY = this.sensorY;
-    // reach a little towards the incoming heart: the sensor sits slightly in front of her
+    // reach a little towards the incoming heart: the sensor sits slightly in front of his
     if (this.badgeT > 0 && (this.badgeT -= dt) <= 0) this.badge.classList.remove('on', 'big');
   }
 
@@ -195,7 +195,7 @@ export class HeartToss {
     }
     a.face('happy', 1.6);
     if (this.combo % 5 === 0) {
-      // every five in a row: a ring of bouncing stars around her
+      // every five in a row: a ring of bouncing stars around his
       st.play.starBurst(this.t.copy(a.position).setY(0.5), rm ? 4 : 8, 1.3, RAINBOW, 1.8);
     }
     this.showCombo();
@@ -230,7 +230,7 @@ export class HeartToss {
   }
 }
 
-/** A hug (long press on her), shared with AR: she squeezes, a ring of hearts rises around her. */
+/** A hug (long press on his), shared with AR: he squeezes, a ring of hearts rises around his. */
 export function hugBear(stage: Stage, runner: MomentRunner, reduced: boolean): void {
   const a = stage.actor, p = a.position;
   if (a.asleep) { a.jiggle(-0.12); runner.nudge(); return; }

@@ -1,17 +1,12 @@
-// Happi's props: the TV, cab, post box, tub, mirror and tansu chest are built in code (src/happi/kit3d.ts); only the
-// rainbow and the disco ball are still GLBs (public/models/props/*.glb: a few thousand triangles each, 1024 webp).
-// Each `make()` returns a fresh clone (geometry and textures shared) fitted to a height, standing on y = 0, centred,
-// facing +z.
+// The party props: only the disco ball is a GLB (public/models/props/discoball.glb, a few thousand triangles, 1024
+// webp). Each `make()` returns a fresh clone (geometry and textures shared) fitted to a height, standing on y = 0,
+// centred, facing +z.
 import * as THREE from 'three';
 import type { Assets } from '../core/assets';
-import { happiProp } from '../../happi/kit3d';
 
-export type PropName = 'tv' | 'car' | 'mailbox' | 'tub' | 'mirror' | 'shelf' | 'rainbow' | 'discoball';
-const FILES: Record<PropName, string> = {
-  tv: '', car: '', mailbox: '', tub: '', mirror: '', shelf: '',
-  rainbow: 'rainbow', discoball: 'discoball',
-};
-/** Turn so the prop's front faces +z (the car model drives along -x). */
+export type PropName = 'discoball';
+const FILES: Record<PropName, string> = { discoball: 'discoball' };
+/** Turn so the prop's front faces +z. */
 const YAW: Partial<Record<PropName, number>> = {};
 
 export class PropKit {
@@ -21,8 +16,6 @@ export class PropKit {
     const names = Object.keys(FILES) as PropName[];
     let done = 0;
     await Promise.all(names.map(async (n) => {
-      const code = happiProp(n);
-      if (code) { this.src.set(n, code); progress(++done / names.length); return; }
       const g = await assets.gltf(`/evade/hub/models/props/${FILES[n]}.glb`);
       g.scene.traverse((o) => {
         const m = o as THREE.Mesh;

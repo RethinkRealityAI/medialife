@@ -9,10 +9,12 @@ export type Glyph = keyof typeof GLYPH;
 
 /** Flat palette (sRGB, the theme tokens). */
 export const PAL = {
-  pink: 0xff389b, pinkSoft: 0xffd6ea, blue: 0x439bdd, sky: 0xd4edff, yellow: 0xffd84a, orange: 0xff9a3d,
-  green: 0x5fcf86, purple: 0x9a6bff, red: 0xff5a5f, white: 0xffffff, ice: 0xbfe6ff,
+  // EVADE flat palette (names kept so every moment reads the same): pink = hot pink, blue = Eclipse blue, sky = cyan
+  pink: 0xff4f9a, pinkSoft: 0xffc2dc, blue: 0x2a5bd7, sky: 0x4fd6e8, yellow: 0xf6c344, orange: 0xff7a1a,
+  green: 0x7bf1a8, purple: 0x6a32e8, red: 0xe3243a, white: 0xffffff, ice: 0xbfefff,
 };
-export const RAINBOW = [0xff5a5f, 0xff9a3d, 0xffd84a, 0x5fcf86, 0x439bdd, 0x9a6bff];
+/** The EVADE accent set (the BOBO OS app colours), used for every celebration. */
+export const RAINBOW = [0xe3243a, 0xff7a1a, 0xf6c344, 0x4fd6e8, 0x2a5bd7, 0x6a32e8];
 
 // ------------------------------------------------------------------ glyph atlas (4 x 2 cells, white on clear)
 let atlasTex: THREE.CanvasTexture | null = null;
@@ -54,18 +56,15 @@ function atlas(): THREE.CanvasTexture {
     g.fillRect(2, -50, 11, 80);
     g.beginPath(); g.moveTo(13, -50); g.quadraticCurveTo(46, -36, 36, -6); g.quadraticCurveTo(34, -24, 13, -28); g.closePath(); g.fill();
   });
-  // 'heart' slot: a cherry blossom (Happi's build; five notched petals, centre punched out)
+  // 'heart' slot: a heart (Bobo's love; flat)
   cell(4, () => {
-    for (let k = 0; k < 5; k++) {
-      g.save(); g.rotate((k * Math.PI * 2) / 5);
-      g.beginPath(); g.moveTo(0, 0);
-      g.bezierCurveTo(-30, -18, -26, -56, -7, -56); g.lineTo(0, -46); g.lineTo(7, -56);
-      g.bezierCurveTo(26, -56, 30, -18, 0, 0); g.fill();
-      g.restore();
-    }
-    g.globalCompositeOperation = 'destination-out';
-    g.beginPath(); g.arc(0, 0, 8, 0, Math.PI * 2); g.fill();
-    g.globalCompositeOperation = 'source-over';
+    g.beginPath();
+    g.moveTo(0, 50);
+    g.bezierCurveTo(-60, 8, -52, -50, -16, -50);
+    g.bezierCurveTo(-4, -50, 0, -40, 0, -32);
+    g.bezierCurveTo(0, -40, 4, -50, 16, -50);
+    g.bezierCurveTo(52, -50, 60, 8, 0, 50);
+    g.fill();
   });
   // dot
   cell(5, () => { g.beginPath(); g.arc(0, 0, 40, 0, Math.PI * 2); g.fill(); });
@@ -148,7 +147,7 @@ export interface EmitOptions {
   bounce?: number;
   /** Seconds a landed particle stays before it fades (default: the rest of its life). */
   rest?: number;
-  /** Also land on top of this sphere (snow on her head). The object is read live, keep it. */
+  /** Also land on top of this sphere (snow on his head). The object is read live, keep it. */
   perch?: THREE.Sphere;
 }
 
@@ -174,7 +173,6 @@ export class Particles {
   private dir = new THREE.Vector3();
   private cursor = 0;
   scale = 1; // reduced motion: fewer particles
-
   constructor(readonly capacity = 600) {
     this.geo = new THREE.BufferGeometry();
     this.pos = new Float32Array(capacity * 3);

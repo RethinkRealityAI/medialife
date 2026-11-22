@@ -69,7 +69,7 @@ export class RevealPlayer {
     c.width = 720;
     c.height = 1280;
     c.setAttribute('role', 'img');
-    c.setAttribute('aria-label', 'Happi puts your photo in the picture frame');
+    c.setAttribute('aria-label', 'Your photo goes into the picture frame');
     stage.appendChild(c);
     const close = iconButton(CICON.close, 'Close the animation', () => this.close(), 'cbc-pl-close');
     this.skipBtn = actionButton('Skip', CICON.skip, () => this.skip(), 'ghost');
@@ -268,7 +268,7 @@ export class BtsPlayer {
       c.width = BTS_TRACK.size[0];
       c.height = BTS_TRACK.size[1];
       c.setAttribute('role', 'img');
-      c.setAttribute('aria-label', 'Behind the scenes: filming Happi, holding your photo');
+      c.setAttribute('aria-label', 'Behind the scenes, holding your photo');
       stage.appendChild(c);
       v.style.cssText = 'position:absolute;width:2px;height:2px;opacity:0;pointer-events:none;left:0;top:0';
       n.appendChild(v); // iOS: in the document, or drawImage gets no frames
@@ -278,7 +278,7 @@ export class BtsPlayer {
       img.src = this.photoUrl;
       this.photo = img;
     } else {
-      v.setAttribute('aria-label', 'Behind the scenes: filming Happi');
+      v.setAttribute('aria-label', 'Behind the scenes');
       stage.appendChild(v);
     }
     const close = iconButton(CICON.close, 'Close', () => this.close(), 'cbc-pl-close');

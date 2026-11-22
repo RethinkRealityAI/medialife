@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <span /><span /><span /><span /><span /><span />
           </div>
           <h1>Oops! Something went wrong.</h1>
-          <p>Happi tripped over a rainbow. Let’s try that again.</p>
+          <p>Bobo knocked something over in the hideout. Let’s try that again.</p>
           <div className="cb-row is-stack">
             <button type="button" className="cb-btn is-primary is-wide is-big" onClick={this.reset}>Try again</button>
             <button type="button" className="cb-btn is-ghost is-wide" onClick={() => location.reload()}>Reload the page</button>

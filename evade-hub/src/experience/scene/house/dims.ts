@@ -1,17 +1,11 @@
-// Happi's house, in metres, door-local: the door opening stands on the floor at z = 0, centred on x = 0, the
-// garden is on +z and the room behind the door on -z. The outside is a cosy cottage; the room through the door is
-// much bigger than the cottage (it is a portal: you only ever see the room through the door, or from inside).
+// Bobo's Hideout door, in metres, door-local: the doorway stands on the floor at z = 0, centred on x = 0; your room is
+// on +z and the hideout's hall behind the door on -z (src/evade/world/hideout.ts lays the hall out in the same frame).
 
-/** The doorway: what you walk through. Arched top (half circle). */
-export const DOOR = { w: 1.12, h: 2.12 };
-export const DOOR_R = DOOR.w / 2;
-export const DOOR_H0 = DOOR.h - DOOR_R; // where the arch starts
+/** The doorway: what you walk through (square top). */
+export const DOOR = { w: 1.1, h: 2.15 };
 
-/** The cottage outside. */
-export const COT = { w: 3.7, wall: 2.3, peak: 3.0, d: 2.4, t: 0.2 };
+/** The freestanding door frame outside (an Eclipse can opened up into a doorway). */
+export const COT = { w: 1.9, peak: 2.85, d: 0.34 };
 
-/** The room inside (rounded at the back), its front wall just behind the cottage's front wall. */
-export const ROOM = { halfW: 2.75, zFront: -0.21, zBack: -4.7, rc: 1.15, h: 2.62 };
-
-/** Inside the room while the camera stays within this box (a little slack round the walls). */
+/** Inside the hall while the camera stays within the hall circle plus this slack. */
 export const ROOM_SLACK = 0.45;

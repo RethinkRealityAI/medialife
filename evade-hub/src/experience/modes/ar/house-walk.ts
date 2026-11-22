@@ -1,20 +1,22 @@
-// AR: walking into Happi's house (scene/house/). The cottage stands on the stage, life size, a metre or so
-// behind her; a beat after Place its door swings open and through it you see her room. You walk in through the door
-// with your phone (the house's portal notices the crossing), she pops in to greet you, the TV starts the theme; walk
-// back out (or tap Leave) and your own room is back.
+// AR: walking into Bobo's Hideout (scene/house/, src/evade/world/hideout.ts). A freestanding door frame (an Eclipse
+// can opened up into a doorway) stands on the stage a metre or so behind Bobo; a beat after Place its door swings
+// open and through it you see the hideout's hall, life size, with Bobo's Arcade along its walls and the Collector Hub
+// can at the back. You walk in through the door with your phone (the portal notices the crossing) and Bobo pops in
+// to greet you; walk back out (or tap Leave) and your own room is back.
 //
 // For anyone who can't walk a few metres (small room, wheelchair, sitting down), "Step inside" (or a tap on the
-// house) brings the room to you: the house glides towards you and its doorway passes over the phone, so you end up
-// inside exactly as if you had walked (same crossing, same room). Leave glides it back out over you and home.
+// door) brings the hall to you: the doorway glides over the phone, so you end up inside exactly as if you had walked.
+// Leave glides it back out over you and home.
 //
-// She can walk in first (joystick through the doorway): she waits just inside the cottage, waving, until you come.
+// Bobo can walk in first (joystick through the doorway): he waits just inside, until you come.
 import * as THREE from 'three';
 import type { Stage } from '../../scene/stage';
 import type { MomentRunner } from '../../scene/moments';
 import type { Shared } from '../shared';
 import { PAL } from '../../scene/fx';
 import { angleTo, ease } from '../../core/timeline';
-import { COT, DOOR, ROOM } from '../../scene/house/dims';
+import { COT, DOOR } from '../../scene/house/dims';
+import { HALL } from '../../../evade/world/hideout';
 
 interface Pose { pos: THREE.Vector3; yaw: number }
 interface Glide { to: Pose | (() => Pose); dur: number; from?: Pose; fromL?: THREE.Vector3; t: number; then?: () => void }
@@ -27,16 +29,20 @@ export interface WalkHost {
   calm(): boolean;
   /** A breadcrumb for ?diag. */
   note(what: string): void;
+  /** A machine was tapped (inside, or through the open door): Bobo walks over, then its card opens. */
+  goToCabinet(id: string): void;
+  /** Bobo is at a machine and the Play pill was tapped. */
+  openArcade(id: string, source: 'walk'): void;
 }
 
 const V = new THREE.Vector3(), V2 = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
 const FC = new THREE.Vector3(), FF = new THREE.Vector3();
-const TIP_INSIDE = 'Tap the jukebox!';
-const BACK_IN = 'Tap Step inside, or walk Happi to the door, to go back in';
+const TIP_INSIDE = 'Tap a machine to play';
+const BACK_IN = 'Walk Bobo to the door to go back in';
 
 export class HouseWalk {
   readonly stepBtn: HTMLButtonElement;
-  /** She walked in ahead of you and waits inside the cottage. */
+  /** Bobo walked in ahead of you and waits just inside the door. */
   bearIn = false;
   /** Test only (?test): the camera's pose in door-local metres, applied over the tracked pose every frame. */
   testPose: { x: number; y: number; z: number; yaw: number; pitch: number } | null = null;
@@ -45,10 +51,14 @@ export class HouseWalk {
   private doorWait = 0;
   private hop: { at: number; to: THREE.Vector3; yaw: number; then?: () => void } | null = null;
   private tipT = 0;
+  private playBtn: HTMLButtonElement;
+  private near: string | null = null;
 
   constructor(private sh: Shared, private st: Stage, private runner: MomentRunner, private host: WalkHost) {
     this.stepBtn = sh.hud.pill('Step inside', () => this.stepInside());
     this.stepBtn.dataset.cmd = 'step-inside';
+    this.playBtn = sh.hud.pill('Play', () => { if (this.near) host.openArcade(this.near, 'walk'); });
+    this.playBtn.dataset.cmd = 'play-near';
     st.houseSet.onCross = (inside) => this.crossed(inside);
   }
 
@@ -76,7 +86,7 @@ export class HouseWalk {
   /** The house pose that puts the camera at door-local z = `zc` on the door's axis, facing along `yaw`. */
   private poseFor(c: THREE.Vector3, yaw: number, zc: number): Pose {
     const k = this.st.houseSet.k;
-    const off = V.set(0, 0, (zc + COT.d / 2) * k).applyAxisAngle(THREE.Object3D.DEFAULT_UP, yaw);
+    const off = V.set(0, 0, zc * k).applyAxisAngle(THREE.Object3D.DEFAULT_UP, yaw);
     return { pos: c.clone().sub(off).setY(0), yaw };
   }
 
@@ -93,7 +103,7 @@ export class HouseWalk {
     const yaw = Math.atan2(-f.x, -f.z); // the room (door-local -z) straight ahead
     this.glides.push(
       { to: this.poseFor(c, yaw, 1.7), dur: this.sh.reduced ? 0.5 : 1.0, t: 0 },
-      { to: this.poseFor(c, yaw, -0.95), dur: this.sh.reduced ? 0.5 : 1.1, t: 0, then: () => { if (!this.inside) hs.setInside(true); } },
+      { to: this.poseFor(c, yaw, -1.2), dur: this.sh.reduced ? 0.5 : 1.1, t: 0, then: () => { if (!this.inside) hs.setInside(true); } },
     );
     this.host.syncHud();
   }
@@ -114,7 +124,7 @@ export class HouseWalk {
     this.host.syncHud();
   }
 
-  /** At once: house home, you outside, her by the door (Move, leaving AR, Start again, a game starting). */
+  /** At once: door home, you outside, Bobo by the door (Move, leaving AR, Start again, a game starting). */
   collapse(): void {
     const st = this.st, hs = st.houseSet;
     this.glides.length = 0;
@@ -125,12 +135,11 @@ export class HouseWalk {
     if (this.hop) { st.actor.scripted = Math.max(0, st.actor.scripted - 1); this.hop = null; }
     const wasIn = this.inside || this.bearIn;
     hs.setInside(false);
-    // she goes to the doorstep if you were in, she was waiting in there, a hop was cut short (ar-4: you had just
-    // walked out, her hop out was still pending and Move left her standing in the hidden room), or she is anywhere
-    // behind the front wall
+    // Bobo goes to the doorstep if you were in, he was waiting in there, a hop was cut short (you had just walked
+    // out, his hop out was still pending and Move left him standing in the hidden hall), or he is in the hall
     hs.root.updateMatrix();
     const l = hs.fromStage(st.actor.position, V);
-    const behind = l.z < 0.1 && l.z > ROOM.zBack - 0.3 && Math.abs(l.x) < COT.w / 2 + 0.1; // the room keeps her within that
+    const behind = l.z < -0.1 && Math.hypot(l.x, l.z - HALL.cz) < HALL.r + 0.3; // somewhere in the (hidden) hall
     if (wasIn || hadHop || behind) this.toDoor(st.actor.position);
     this.bearIn = false;
   }
@@ -142,7 +151,7 @@ export class HouseWalk {
     this.openIn = 0;
   }
 
-  /** The house popped back after a game: if she is standing where its walls are, she hops out to the doorstep. */
+  /** The door popped back after a game: if Bobo stands where its frame is, he hops out to the doorstep. */
   evict(): void {
     const hs = this.st.houseSet, a = this.st.actor;
     const l = hs.fromStage(a.position, V);
@@ -150,8 +159,7 @@ export class HouseWalk {
     if (Math.abs(l.x) < hw && l.z < 0.35 && l.z > -COT.d - 0.3) this.hopTo(this.toDoor(new THREE.Vector3()), a.heading, 0.2);
   }
 
-  /** The house is home again after Leave: Happi pops out in front of its door, facing you (never left behind where
-   *  the room was while it glided). */
+  /** The door is home again after Leave: Bobo pops out in front of it, facing you (never left in the hall). */
   private backToDoor(): void {
     const st = this.st, hs = st.houseSet;
     const to = this.toDoor(new THREE.Vector3());
@@ -171,7 +179,7 @@ export class HouseWalk {
     this.runner.cancel();
     this.host.note(inside ? 'crossed in' : 'crossed out');
     if (inside) {
-      // she pops in front of you and waves
+      // Bobo pops in front of you and waves
       const lp = hs.cam;
       const fwd = hs.fromStage(V.copy(st.cam).add(st.camDir), new THREE.Vector3()).sub(hs.fromStage(V2.copy(st.cam), new THREE.Vector3())).setY(0);
       if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
@@ -180,7 +188,7 @@ export class HouseWalk {
       const yaw = Math.atan2(lp.x - spot.x, lp.z - spot.z) + st.house.rotation.y;
       this.hopTo(hs.toStage(spot, new THREE.Vector3()), yaw, 0.35, () => { if (this.runner.trigger('Wave')) this.host.tapAction('Wave'); });
       this.bearIn = false;
-      this.host.hint("You're in Happi's house!", 4);
+      this.host.hint("You're in Bobo's Hideout!", 4);
       this.tipT = 4.5;
     } else {
       const out = this.toDoor(new THREE.Vector3());
@@ -201,8 +209,8 @@ export class HouseWalk {
     this.hop = { at: delay, to: to.clone(), yaw, then };
   }
 
-  // ------------------------------------------------------------------ her walking (joystick) near / in the house
-  /** Keep her in the room (you're in), in the cottage (she went in first) or out of its walls; the doorway lets her in. */
+  // ------------------------------------------------------------------ Bobo walking (joystick) near / in the hideout
+  /** Keep Bobo in the hall (you're in), just inside the door (he went in first) or off the frame; the doorway lets him in. */
   constrain(p: THREE.Vector3, door: boolean): void {
     const hs = this.st.houseSet;
     if (!hs.present) return; // hidden, or popped away for a game: its ground is free
@@ -214,7 +222,7 @@ export class HouseWalk {
     const gap = DOOR.w / 2 - 0.16;
     if (this.bearIn) {
       if (l.z > -0.45 && Math.abs(l.x) < gap) {
-        // in the doorway: she may walk back out
+        // in the doorway: he may walk back out
         l.x = THREE.MathUtils.clamp(l.x, -gap, gap);
         if (l.z > 0.3) this.bearIn = false;
       } else hs.clampToCottage(l);
@@ -222,18 +230,18 @@ export class HouseWalk {
       return;
     }
     const hw = COT.w / 2 + 0.2, z0 = -COT.d - 0.2, z1 = 0.16;
-    // Happi walks up to a shut door: it swings open by itself (Dapo, 2026-11-20)
+    // Bobo walks up to a shut door: it swings open by itself
     if (door && hs.openTarget < 1 && Math.abs(l.x) < DOOR.w / 2 + 0.35 && l.z > -0.1 && l.z < 0.9) {
       this.openIn = 0;
-      this.host.note('door opens (Happi)');
+      this.host.note('door opens (Bobo)');
       hs.setOpen(true);
     }
     if (Math.abs(l.x) < hw && l.z > z0 && l.z < z1) {
       if (door && Math.abs(l.x) < gap && hs.open > 0.6) {
-        // through the open door: in she goes
+        // through the open door: in he goes
         if (l.z < -0.35) {
           this.bearIn = true;
-          this.host.hint('Follow Happi inside!', 4);
+          this.host.hint('Follow Bobo inside!', 4);
           this.host.syncHud();
         }
         return;
@@ -247,7 +255,7 @@ export class HouseWalk {
   }
 
   // ------------------------------------------------------------------ taps
-  /** A tap (world ray): room things, the door / the house (step inside). True if it was ours. */
+  /** A tap (world ray): a machine, the door / its frame (step inside). True if it was ours. */
   tap(ray: THREE.Ray): boolean {
     const hs = this.st.houseSet;
     const item = hs.pick(ray);
@@ -256,13 +264,10 @@ export class HouseWalk {
       if (!this.inside) this.stepInside();
       return true;
     }
-    const react = hs.interact(item);
-    const a = this.st.actor;
-    if (react && !a.asleep && !this.runner.busy) {
-      const name = react === 'dance' ? 'Dance' : react === 'sparkle' ? 'Sparkle' : 'Cheer';
-      if (this.runner.trigger(name)) this.host.tapAction(name);
+    if (item.startsWith('arcade:')) {
+      if (this.tipT > 0) this.tipT = 0;
+      this.host.goToCabinet(item.slice(7));
     }
-    if (item === 'jukebox' && this.tipT > 0) this.tipT = 0;
     return true;
   }
 
@@ -300,7 +305,7 @@ export class HouseWalk {
     if (g) {
       hs.posed = true;
       // glide in the house's own frame: the phone moves in a straight line through the garden and the doorway
-      // (lerping the house's position and turn separately would swing the phone through her walls)
+      // (lerping the house's position and turn separately would swing the phone through the frame)
       const c = this.camFlat().c;
       if (!g.from) {
         g.from = { pos: st.house.position.clone(), yaw: st.house.rotation.y };
@@ -323,7 +328,7 @@ export class HouseWalk {
         }
       }
     }
-    // her pop (in to greet you, or out by the door)
+    // Bobo's pop (in to greet you, or out by the door)
     const hop = this.hop;
     if (hop && (hop.at -= dt) <= 0) {
       this.hop = null;
@@ -339,15 +344,37 @@ export class HouseWalk {
     if (this.tipT > 0 && (this.tipT -= dt) <= 0 && this.inside) this.host.hint(TIP_INSIDE, 4);
   }
 
-  /** The Step inside pill (above the bottom row) while she's placed and you're outside. */
+  /** The Step inside pill (above the bottom row) while Bobo is placed and you're outside; inside, the Play pill
+   *  while he stands at a machine. */
   syncHud(walking: boolean): void {
+    this.walking = walking;
     const show = walking && !this.inside && !this.busy && this.st.houseSet.present;
     if (show) this.sh.hud.above.appendChild(this.stepBtn);
     else this.stepBtn.remove();
+    this.near = null;
+    this.checkNear(false);
+  }
+  private walking = false;
+
+  /** Bobo standing at a machine inside: the Play pill opens its card. `busy`: he's being walked there. */
+  checkNear(busy: boolean): void {
+    const a = this.st.actor, hs = this.st.houseSet;
+    const cab = this.walking && this.inside && !busy && !a.walking && !this.hop ? hs.nearCabinet(a.position) : null;
+    for (const c of hs.cabinets) if (c !== cab && c.glow > 0) c.glow = Math.max(0, c.glow - 0.05);
+    const id = cab?.item.id ?? null;
+    if (id === this.near && (!!id === !!this.playBtn.parentElement)) return;
+    this.near = id;
+    if (cab) {
+      cab.glow = Math.max(cab.glow, 0.6);
+      this.playBtn.textContent = `Play ${cab.item.name}`;
+      this.playBtn.setAttribute('aria-label', `Open ${cab.item.name}`);
+      this.sh.hud.above.appendChild(this.playBtn);
+    } else this.playBtn.remove();
   }
 
   dispose(): void {
     this.stepBtn.remove();
+    this.playBtn.remove();
     if (this.st.houseSet.onCross) this.st.houseSet.onCross = null;
   }
 }

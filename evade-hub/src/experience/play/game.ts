@@ -3,7 +3,7 @@
 // tab hidden, Move in AR, the pause button), the scoreboard / countdown / results UI and a clean teardown.
 //
 // A game runs inside ONE mode (3D showcase or AR), which hands it a PlayHost (its stage, runner, kit, HUD bits) and
-// calls `update(dt)` every frame (instead of the free heart toss) and `walk(dt)` when the game moves Happi.
+// calls `update(dt)` every frame (instead of the free heart toss) and `walk(dt)` when the game moves Bobo.
 import * as THREE from 'three';
 import type { PlayGameId, PlayStatus } from '../../shared/contracts';
 import type { Stage } from '../scene/stage';
@@ -60,11 +60,11 @@ export abstract class PlayGame {
   score = 0;
   best = 0;
   timeLeft: number | null = null;
-  /** The mode walks her with the joystick (Heart Run while playing); otherwise the game moves her (`walk`). */
+  /** The mode walks Bobo with the joystick (Can Dash while playing); otherwise the game moves him (`walk`). */
   stickWalk = false;
   /** Show the joystick while this game runs. */
   abstract readonly showStick: boolean;
-  /** Swipes (and Space on a computer) go to `flick` (Heart Hoops). */
+  /** Swipes (and Space on a computer) go to `flick` (Paw Hoops). */
   readonly flicks: boolean = false;
   /** The 3D camera while this runs: pull back (`wide`), look down (`pitch`), hold on the court (`focus`). */
   readonly view: { wide: number; pitch: number | null; focus?: boolean } = { wide: 0, pitch: null };
@@ -151,7 +151,7 @@ export abstract class PlayGame {
     // the app's sheet covers the scene and lets go when it closes, so it needs no card of its own
     const hard = this.holds.has('user') || this.holds.has('hidden');
     if (hard && !this.ui.cardOpen) this.ui.pauseCard(() => this.resume('all'), () => this.quit(), this.pauseExtra());
-    if (!hard && (this.holds.has('move') || this.holds.has('place'))) this.host.hint('Place Happi to keep playing');
+    if (!hard && (this.holds.has('move') || this.holds.has('place'))) this.host.hint('Place Bobo to keep playing');
     this.emit(true);
     this.host.sync();
   }
@@ -213,12 +213,12 @@ export abstract class PlayGame {
     this.ui.hidePlay();
     this.sounds.finish(stars);
     const a = this.host.stage.actor;
-    // she cheers at the end, whatever the score
+    // he cheers at the end, whatever the score
     if (a.bear && a.scripted === 0) void a.once('cheer', 2.6);
     a.face('happy', 3);
     const s = this.summary(stars);
     const r: Results = { title: s.title, line: s.line, score: this.score, best: this.best, newBest: newBest && this.score > 0, stars };
-    // a beat to see her cheer before the card comes up
+    // a beat to see his cheer before the card comes up
     window.setTimeout(() => {
       if (this.disposed || (this.state !== 'won' && this.state !== 'over')) return;
       this.ui.resultsCard(r, () => this.again(), () => this.quit());
@@ -228,7 +228,7 @@ export abstract class PlayGame {
   }
 
   // ------------------------------------------------------------------ per frame
-  /** The mode calls this every frame while the game runs (after it walked her). */
+  /** The mode calls this every frame while the game runs (after it walked his). */
   update(dt: number): void {
     const st = this.host.stage;
     st.catching = false; // the free toss's catch sensor stays off
@@ -265,17 +265,17 @@ export abstract class PlayGame {
     this.emit(false);
   }
 
-  /** Optional controls on the pause card (Heart Hoops: the aim guide). */
+  /** Optional controls on the pause card (Paw Hoops: the aim guide). */
   protected pauseExtra(): HTMLElement | null {
     return null;
   }
 
-  /** Move her when the joystick doesn't (countdown, paused, hoops): default = stand still. */
+  /** Move his when the joystick doesn't (countdown, paused, hoops): default = stand still. */
   walk(dt: number): void {
     this.host.stage.actor.drive(this.zero, dt);
   }
 
-  /** A swipe up (hoops throws; Heart Run ignores it). */
+  /** A swipe up (hoops throws; Can Dash ignores it). */
   flick(_power: number, _side: number): boolean {
     return false;
   }

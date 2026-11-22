@@ -1,8 +1,11 @@
-// The theme song video that plays on the TVs (party, inside the house). The old keyed-green portal swirl
-// (public/media/portal.mp4) is no longer loaded: her doorway is a real walk-through room now (scene/house).
-// Video elements live in the document with playsinline set before src (iOS shows off-document videos black). The theme is "primed" inside the Start tap so it may play with sound later.
+// A looping video for TV screens in the scene. EVADE's hub has no theme video yet:
+// THEME_URL is empty, so nothing is downloaded and play/stop calls are cheap no-ops on an empty element. Put a URL here
+// to bring a screen video back. Video elements live in the document with playsinline set before src (iOS shows
+// off-document videos black); the video is "primed" inside the Start tap so it may play with sound later.
 import * as THREE from 'three';
 import { makeVideo } from './fx';
+
+const THEME_URL = '';
 
 export class Media {
   readonly theme: HTMLVideoElement;
@@ -15,7 +18,8 @@ export class Media {
   soundOk = false;
 
   constructor() {
-    this.theme = makeVideo('/evade/hub/media/theme.mp4', { loop: true, muted: true });
+    this.theme = makeVideo(THEME_URL || 'about:blank', { loop: true, muted: true });
+    if (!THEME_URL) { this.theme.removeAttribute('src'); this.theme.preload = 'none'; }
     this.theme.volume = 0.6;
     this.themeTexture = new THREE.VideoTexture(this.theme);
     this.themeTexture.colorSpace = THREE.SRGBColorSpace;
@@ -28,6 +32,7 @@ export class Media {
 
   /** Resolves when the theme can show a first frame (or after `ms`). For the loading bar. */
   ready(ms = 8000): Promise<void> {
+    if (!THEME_URL) return Promise.resolve();
     const one = (v: HTMLVideoElement) =>
       v.readyState >= 2
         ? Promise.resolve()
@@ -45,6 +50,7 @@ export class Media {
   prime(): void {
     if (this.primed) return;
     this.primed = true;
+    if (!THEME_URL) { this.soundOk = true; return; }
     // play() unmuted inside the gesture marks the element as allowed to make sound later; pausing at once keeps it
     // silent (iOS ignores volume, so a volume-0 trick would blip). An AbortError just means "paused before it began".
     const t = this.theme;
@@ -63,6 +69,7 @@ export class Media {
 
   /** Start the theme for a user ('party', 'inside'). Fades in. Plays muted if sound is not allowed. */
   playTheme(user: string, fromStart = false): void {
+    if (!THEME_URL) { this.themeUsers.add(user); return; }
     const first = this.themeUsers.size === 0;
     this.themeUsers.add(user);
     const t = this.theme;

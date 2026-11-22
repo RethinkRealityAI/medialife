@@ -15,7 +15,7 @@ export interface ClipOptions {
   overlay?: OverlayFn;
   /** 2D canvas filter string (the live look), e.g. 'grayscale(1)'. */
   filter?: string;
-  /** A flat tint over the picture (sakura), e.g. 'rgba(255,183,201,0.14)'. */
+  /** A flat tint over the picture (the Gold / Eclipse filters), e.g. 'rgba(42,91,215,0.18)'. */
   tint?: string;
   /** Called every ~100 ms with seconds recorded (for the ring). */
   onTick?: (s: number) => void;

@@ -1,17 +1,17 @@
-// AR: Happi and her house on your floor (world tracking, back camera).
+// AR: Bobo and the door to his hideout on your floor (world tracking, back camera).
 //
-//   placing  the stage follows a reticle on the floor; pinch to size it; Place is enabled once tracking has settled
-//   placed   joystick walks her (camera-relative); Move (bottom left) is a full re-placement: out of the house,
-//            the default size again, tracking restarted where you stand (a scale that drifted while you walked is
-//            thrown away) and Place waits for freshly settled tracking; her state, a paused game and the photo wall
-//            are kept;
-//            tap her for a reaction; her house stands behind her, life size, and its door is a portal: walk in through
-//            it with your phone (or tap "Step inside" / the house and the room comes to you), the TV plays the theme;
-//            walk back out or tap Leave (./house-walk.ts, scene/house/)
+//   placing  the stage follows a reticle on the floor; pinch to size Bobo; Place is enabled once tracking has settled
+//   placed   joystick walks Bobo (camera-relative); Move (bottom left) is a full re-placement: out of the hideout,
+//            the default size again, tracking restarted where you stand and Place waits for freshly settled
+//            tracking; his state and a paused game are kept;
+//            tap Bobo for a reaction; the hideout door stands behind him, life size, and it is a portal: walk in
+//            through it with your phone (or tap "Step inside" / the door and the hall comes to you), Bobo's Arcade
+//            lines its walls; tap a machine (or walk Bobo up to one and tap Play) to open it; walk back out or tap
+//            Leave (./house-walk.ts, scene/house/)
 //
 // Leaving AR remembers where the stage stood relative to the phone; coming back (from 3D or Selfie) puts it back in
 // the same place in front of you once tracking has settled again (a new run has a new world origin).
-import { MOVES_ICON } from '../../../happi/moves';
+import { ARCADE_ICON, MOVES_ICON } from '../../../evade/world/moves';
 import * as THREE from 'three';
 import type { ExperienceMode } from '../../../shared/contracts';
 import type { Mode, XrScene } from '../../types';
@@ -28,17 +28,16 @@ import { PlayKit, type PlayGame, type PlayHost } from '../../play';
 /** The "throw hearts" hint shows once per visit. */
 let tossHinted = false;
 
-const SCALE = { def: 0.85, min: 0.4, max: 1.6 }; // 0.85: Happi about a metre tall (Dapo 2026-11-20: near the 3D size), the house life size
+const SCALE = { def: 0.45, min: 0.22, max: 0.9 }; // Bobo is 1 stage unit tall: 0.45 = cat-sized; the hideout life size
 /**
- * The pinch sizes her house too (ar-4, Dapo: "I can't really resize it"): life size at the default, from 0.6x to 1.6x.
- * Move puts both back to the default.
+ * The pinch sizes the hideout door too: life size at the default, from 0.6x to 1.6x. Move puts both back.
  */
 const houseMul = (s: number) => THREE.MathUtils.clamp(s / SCALE.def, 0.6, 1.6);
 const STEADY = 0.5; // seconds the reticle must sit steadily on the floor before Place lights up
 const REACH = { min: 0.8, max: 3.6 }; // metres from the phone the reticle may sit
-const AREA = 3.0; // stage units she may walk from the stage centre
-const TAP_REACTIONS = ['Wave', 'Cheer', 'Sparkle'];
-const TOSS_HINT = 'Swipe up to throw blossoms';
+const AREA = 3.0; // stage units Bobo may walk from the stage centre
+const TAP_REACTIONS = ['Wave', 'Purr', 'Cheer', 'Sparkle'];
+const TOSS_HINT = 'Swipe up to throw hearts';
 
 type State = 'placing' | 'placed';
 
@@ -56,13 +55,13 @@ export class ArMode implements Mode {
   private restoring = false;
   private active = false;
   private live = false; // enter() has run for this activation
-  // her house: walk in through the door (./house-walk.ts)
+  // the hideout: walk in through the door (./house-walk.ts)
   readonly walk: HouseWalk;
-  /** You're inside her house. */
+  /** You're inside the hideout. */
   get inside(): boolean {
     return this.walk.inside;
   }
-  /** 1 when the house is still (0 while it glides to you or back home). */
+  /** 1 when the door is still (0 while it glides to you or back home). */
   private get houseT(): number {
     return this.walk.busy ? 0 : 1;
   }
@@ -79,7 +78,7 @@ export class ArMode implements Mode {
   private steadyT = 0;
   /** The floor point is past arm's reach (phone held level): the reticle would sit low on screen, so ask to tilt. */
   private aimLow = false;
-  /** How long Happi has been off screen while placed (a hint offers Move to bring Happi back). */
+  /** How long Bobo has been off screen while placed (a hint offers Move to bring him back). */
   private lostT = 0;
   // scratch
   private plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -93,13 +92,17 @@ export class ArMode implements Mode {
   private tapRay = new THREE.Ray();
   private box = new THREE.Box3();
   private lp = new THREE.Vector2();
-  /** Swipe up to throw hearts at her (src/experience/physics/toss.ts). */
+  /** Swipe up to throw hearts at Bobo (src/experience/physics/toss.ts). */
   readonly toss: HeartToss;
-  /** Mini games (src/experience/play): this stage's game pieces, the running game, the Games button. */
+  /** Mini games (src/experience/play): this stage's game pieces, the running game. */
   readonly kit: PlayKit;
   game: PlayGame | null = null;
-  /** Set by the experience: open the game chooser (the Games button, above Move). */
+  /** Set by the experience: open Bobo's Arcade (the Arcade button). */
   onPickGame: (() => void) | null = null;
+  /** Set by the experience: a machine was picked in the hall. */
+  onArcade: ((id: string, source: 'cabinet' | 'walk') => void) | null = null;
+  /** Bobo walking to a tapped machine. */
+  private walkTo: { id: string; to: THREE.Vector3; t: number; arrived: number } | null = null;
   onPickMove: (() => void) | null = null;
   private movesBtn: HTMLButtonElement | null = null;
   private gamesBtn: HTMLButtonElement | null = null;
@@ -119,20 +122,22 @@ export class ArMode implements Mode {
     this.kit = new PlayKit(stage);
 
     const hud = sh.hud;
-    this.placeBtn = hud.pill('Place Happi', () => this.place());
-    this.moveBtn = hud.toolButton({ label: 'Move', icon: ICON.move, aria: 'Move Happi somewhere else', onClick: () => this.move() });
+    this.placeBtn = hud.pill('Place Bobo', () => this.place());
+    this.moveBtn = hud.toolButton({ label: 'Move', icon: ICON.move, aria: 'Move Bobo somewhere else', onClick: () => this.move() });
     this.placeBtn.dataset.cmd = 'place'; this.moveBtn.dataset.cmd = 'move'; // voice commands press these (../../commands.ts)
-    this.leaveBtn = hud.toolButton({ label: 'Leave', icon: ICON.leave, aria: 'Leave the house', onClick: () => this.leaveHouse() });
+    this.leaveBtn = hud.toolButton({ label: 'Leave', icon: ICON.leave, aria: "Leave Bobo's Hideout", onClick: () => this.leaveHouse() });
     this.walk = new HouseWalk(sh, stage, runner, {
       hint: (t, sec) => this.flashHint(t, sec),
       syncHud: () => this.syncHud(),
       tapAction: (n) => sh.tapAction(n),
       calm: () => sh.ctx.engine.calm?.() ?? sh.ctx.engine.settled(),
       note: (w) => sh.ctx.engine.note?.(w),
+      goToCabinet: (id) => this.goToCabinet(id),
+      openArcade: (id, source) => this.onArcade?.(id, source),
     });
   }
 
-  /** Her size (the pinch) and her house's (life size times houseMul). */
+  /** Bobo's size (the pinch) and the hideout's (life size times houseMul). */
   private applyScale(): void {
     this.stage.root.scale.setScalar(this.scale);
     this.stage.houseSet.sizeMul = houseMul(this.scale);
@@ -233,13 +238,13 @@ export class ArMode implements Mode {
   }
 
   trigger(name: string): boolean {
-    // while a mini game runs, her moments wait (they would walk her off the field)
+    // while a mini game runs, Bobo's moments wait (they would walk him off the field)
     if (this.game && this.game.state !== 'won' && this.game.state !== 'over') return false;
     return this.runner.trigger(name);
   }
 
   // ------------------------------------------------------------------ mini games (src/experience/play)
-  /** What a game needs from this mode (a game may start before she is placed: it waits for Place). */
+  /** What a game needs from this mode (a game may start before Bobo is placed: it waits for Place). */
   playHost(): PlayHost | null {
     if (!this.active || !this.stage.actor.bear) return null;
     const self = this;
@@ -249,7 +254,7 @@ export class ArMode implements Mode {
       hint: (t) => this.sh.hud.hint(t),
       project: (p, out) => this.project(p, out),
       constrain: (p) => this.constrain(p, false),
-      // the placed stage's floor around her spot (about 1.5 m across each way at the default size), away from the house
+      // the placed stage's floor around Bobo's spot, away from the door
       field: (o) => { o.x = 0; o.z = 0.35; o.r = Math.min(AREA - 0.45, 2.6); },
       get unitsPerM() { return 1 / Math.max(0.05, self.scale); },
       get ready() { return self.state === 'placed' && !self.restoring && self.houseT >= 1 && !self.inside; },
@@ -261,12 +266,13 @@ export class ArMode implements Mode {
     this.game = g;
     if (g) {
       this.runner.cancel();
-      if (this.inside || this.walk.busy || this.walk.bearIn) this.collapseNow(); // out of the house first
+      this.walkTo = null;
+      if (this.inside || this.walk.busy || this.walk.bearIn) this.collapseNow(); // out of the hideout first
       this.toss.reset();
       this.toss.show(false);
       this.hintT = 0;
     } else if (this.active) this.toss.show(true);
-    // the house (and its mailbox) pops out of the way while a game runs and comes back when it ends (ar-4)
+    // the door pops out of the way while a game runs and comes back when it ends
     this.stage.houseSet.setAway(!!g);
     if (!g) this.walk.evict();
     this.sh.ctx.engine.note?.(g ? `game ${g.id}` : 'game off');
@@ -306,7 +312,7 @@ export class ArMode implements Mode {
     if (this.stage.play.popRay(this.stageRay(ndc))) return true;
     const a = this.stage.actor;
     if (this.hitsBear(ndc)) {
-      // a poke: she always jiggles; a reaction plays when she's free
+      // a poke: Bobo always jiggles; a reaction plays when he's free
       a.jiggle(0.14);
       if (this.game) return true; // a game is on: just the jiggle
       const name = a.asleep ? 'WakeUp' : TAP_REACTIONS[Math.floor(Math.random() * TAP_REACTIONS.length)];
@@ -326,12 +332,13 @@ export class ArMode implements Mode {
 
   private hitsBear(ndc: THREE.Vector2): boolean {
     const p = this.stage.actor.position;
-    this.box.min.set(p.x - 0.32, 0, p.z - 0.32);
-    this.box.max.set(p.x + 0.32, 1.02, p.z + 0.32);
+    // a cat: low and long (generous, so a small Bobo is easy to tap)
+    this.box.min.set(p.x - 0.42, 0, p.z - 0.42);
+    this.box.max.set(p.x + 0.42, 1.05, p.z + 0.42);
     return this.stageRay(ndc).intersectsBox(this.box);
   }
 
-  /** Throw a heart at her (swipe up, tests). Only once she's placed. */
+  /** Throw a heart to Bobo (swipe up, tests). Only once he's placed. */
   throwHeart(power: number, side = 0): boolean {
     if (!this.active || this.state !== 'placed' || this.restoring || this.houseT < 1) return false;
     if (this.game) return this.game.flicks ? this.game.flick(power, side) : false;
@@ -344,6 +351,7 @@ export class ArMode implements Mode {
     this.toss.reset();
     this.runner.reset();
     this.walk.reset();
+    this.walkTo = null;
     const a = this.stage.actor;
     a.position.set(0, 0, 0);
     a.setHeading(0);
@@ -380,14 +388,14 @@ export class ArMode implements Mode {
     if (first) this.runner.trigger('Wave');
     this.syncHud();
     this.walk.placed();
-    this.flashHint('Walk Happi to the door', 5);
+    this.flashHint('Walk Bobo to the door', 5);
   }
 
   /**
-   * Move = a full re-placement (ar-4). Out of the house first (inside, mid-glide or her waiting in there), the door
+   * Move = a full re-placement. Out of the hideout first (inside, mid-glide or Bobo waiting in there), the door
    * shut, the size back to the default (not the last pinch), the preview snapping to the new reticle, and SLAM
    * restarted where you stand (recenter) so a scale that drifted while you walked is gone; Place then waits for
-   * freshly settled tracking. Her moments' state, a paused game and the photo wall are kept.
+   * freshly settled tracking. Bobo's state and a paused game are kept.
    */
   private move(): void {
     if (this.state !== 'placed' || this.restoring) return;
@@ -395,8 +403,8 @@ export class ArMode implements Mode {
     this.runner.cancel();
     this.collapseNow();
     this.walk.reset();
-    // Happi comes home to the stage's centre, facing you: the preview sits right on the reticle (Dapo, 2026-11-20:
-    // after a reset Happi must always be in view, never left wherever the joystick took them)
+    this.walkTo = null;
+    // Bobo comes home to the stage's centre, facing you: the preview sits right on the reticle (always in view)
     if (!this.game) {
       this.stage.actor.position.set(0, 0, 0);
       this.stage.actor.setHeading(0);
@@ -444,8 +452,8 @@ export class ArMode implements Mode {
     this.camFwd.normalize();
   }
 
-  // ------------------------------------------------------------------ house
-  /** Bring the room to you (tap on the house, "Step inside", tests): you end up inside, facing the TV. */
+  // ------------------------------------------------------------------ hideout
+  /** Bring the hall to you (tap on the door, "Step inside", tests): you end up inside, facing the arcade. */
   enterHouse(): void {
     if (this.inside || this.state !== 'placed' || this.restoring || !this.sh.ctx.engine.xr) return;
     this.walk.stepInside();
@@ -455,10 +463,48 @@ export class ArMode implements Mode {
     this.walk.leave();
   }
 
-  /** Instantly back outside, the house home (Move, leaving AR, Start again, a game starting). */
+  /** Instantly back outside, the door home (Move, leaving AR, Start again, a game starting). */
   private collapseNow(): void {
     this.walk.collapse();
     if (this.live) this.syncHud();
+  }
+
+  // ------------------------------------------------------------------ Bobo's Arcade (in the hall)
+  /** A machine was tapped: Bobo walks over (a pop if it takes too long), faces it, then its card opens. */
+  private goToCabinet(id: string): void {
+    const hs = this.stage.houseSet, a = this.stage.actor;
+    const cab = hs.cabinets.find((c) => c.item.id === id);
+    if (!cab || this.game) return;
+    if (a.asleep) this.runner.nudge();
+    this.runner.cancel();
+    cab.glow = 1;
+    const to = hs.cabinetFront(cab, new THREE.Vector3());
+    // through the door from outside: he has to go in first, so just open the card (walking 4 m takes a cat a while)
+    if (!this.inside || this.sh.reduced) { this.onArcade?.(id, 'cabinet'); return; }
+    this.walkTo = { id, to, t: 0, arrived: -1 };
+  }
+
+  private walkToCabinet(dt: number): void {
+    const w = this.walkTo!, a = this.stage.actor, hs = this.stage.houseSet;
+    w.t += dt;
+    const d = this.pv.copy(w.to).sub(a.position).setY(0);
+    if (w.arrived < 0 && (d.length() < 0.1 * hs.k || w.t > 5)) {
+      if (w.t > 5) a.position.copy(w.to); // never stuck behind something: he pops the rest of the way
+      w.arrived = 0;
+    }
+    if (w.arrived < 0) {
+      d.normalize().multiplyScalar(0.75);
+      a.drive(d, dt, (p) => this.constrain(p, false));
+      return;
+    }
+    a.drive(this.pv.set(0, 0, 0), dt);
+    const cab = hs.cabinets.find((c) => c.item.id === w.id);
+    if (cab) a.turnToPoint(hs.cabinetScreen(cab, this.pv), dt, 8);
+    w.arrived += dt;
+    if (w.arrived > 0.45) {
+      this.walkTo = null;
+      this.onArcade?.(w.id, 'cabinet');
+    }
   }
 
   // ------------------------------------------------------------------ per frame
@@ -493,7 +539,7 @@ export class ArMode implements Mode {
       }
       const ready = hasHit && this.steadyT >= STEADY;
       this.placeBtn.disabled = !ready;
-      this.placeBtn.textContent = ready ? 'Place Happi' : 'Getting ready…';
+      this.placeBtn.textContent = ready ? 'Place Bobo' : 'Getting ready…';
     }
 
     // walking
@@ -504,13 +550,16 @@ export class ArMode implements Mode {
       this.v.copy(right).multiplyScalar(sv.x).addScaledVector(this.camFwd, -sv.y);
       this.v.applyAxisAngle(THREE.Object3D.DEFAULT_UP, -this.anchor.rotation.y); // world -> stage-local
       if (this.v.lengthSq() > 0.01 && a.asleep) this.runner.nudge();
+      if (this.walkTo && this.v.lengthSq() > 0.04) this.walkTo = null; // the joystick takes over
       if (this.game && !this.game.stickWalk) this.game.walk(dt);
+      else if (this.walkTo && !this.game) this.walkToCabinet(dt);
       else if (this.houseT >= 1) a.drive(this.v, dt, (p) => this.constrain(p, !this.game));
     } else if (this.game && this.state === 'placed' && !this.restoring) this.game.walk(dt);
     else a.drive(this.v.set(0, 0, 0), dt);
 
     this.runner.update(dt);
     this.walk.update(dt);
+    if (this.state === 'placed') this.walk.checkNear(!!this.walkTo);
     if (this.game) this.game.update(dt);
     else if (this.state === 'placed' && !this.restoring) this.toss.update(dt);
     this.kit.tick(dt);
@@ -518,12 +567,12 @@ export class ArMode implements Mode {
     st.update(dt, xr.camera);
     a.update(dt, xr.camera.getWorldPosition(this.w));
     this.trackLost(dt, xr.camera);
-    // facing you outside; looking around the room in the house
+    // facing you outside; looking around the hall inside
     (this.sh.ctx.bear as { setIdleStyle?: (s: 'front' | 'roam') => void } | null)?.setIdleStyle?.(this.inside ? 'roam' : 'front');
     this.hints(dt, eng.tracking, settled);
   }
 
-  /** Count how long Happi has been off screen while placed (outside the house, no game). */
+  /** Count how long Bobo has been off screen while placed (outside the hideout, no game). */
   private trackLost(dt: number, cam: THREE.Camera): void {
     if (this.state !== 'placed' || this.restoring || this.inside || this.game) { this.lostT = 0; return; }
     const p = this.stage.actor.holder.getWorldPosition(this.pv); p.y += 0.25 * this.scale;
@@ -534,7 +583,7 @@ export class ArMode implements Mode {
   }
   private pv2 = new THREE.Vector3();
 
-  /** Keep her in the play area and out of the house walls; the open doorway lets her in (./house-walk.ts). */
+  /** Keep Bobo in the play area and off the door frame; the open doorway lets him in (./house-walk.ts). */
   private constrain(p: THREE.Vector3, door = true): void {
     if (!this.inside && !this.walk.bearIn) {
       const l = Math.hypot(p.x, p.z);
@@ -586,14 +635,14 @@ export class ArMode implements Mode {
     if (walking && this.inside) hud.left.appendChild(this.leaveBtn);
     else this.leaveBtn.remove();
     this.walk.syncHud(walking && !this.game);
-    // Games and Actions stack together bottom right once Happi is placed (Games at the bottom), while no game runs
-    if (walking && !this.inside && !this.game && this.onPickGame) {
-      this.gamesBtn ??= hud.toolButton({ label: 'Games', icon: GAMES_ICON, aria: 'Play a game with Happi', tone: 'orange', onClick: () => this.onPickGame?.() });
-      this.gamesBtn.dataset.cmd = 'games';
+    // Arcade and Actions stack together bottom right once Bobo is placed (Arcade at the bottom), while no game runs
+    if (walking && !this.game && this.onPickGame) {
+      this.gamesBtn ??= hud.toolButton({ label: 'Arcade', icon: ARCADE_ICON, aria: "Open Bobo's Arcade", tone: 'orange', onClick: () => this.onPickGame?.() });
+      this.gamesBtn.dataset.cmd = 'arcade';
       hud.right.prepend(this.gamesBtn);
     } else this.gamesBtn?.remove();
     if (walking && !this.game && this.onPickMove) {
-      this.movesBtn ??= hud.toolButton({ label: 'Actions', icon: MOVES_ICON, aria: 'Pick something for Happi to do', tone: 'navy', onClick: () => this.onPickMove?.() });
+      this.movesBtn ??= hud.toolButton({ label: 'Actions', icon: MOVES_ICON, aria: 'Pick something for Bobo to do', tone: 'navy', onClick: () => this.onPickMove?.() });
       hud.right.appendChild(this.movesBtn);
     } else this.movesBtn?.remove();
   }
@@ -606,14 +655,14 @@ export class ArMode implements Mode {
 
   private hints(dt: number, tracking: string, settled: boolean): void {
     let text = '';
-    // a game owns the hint pill while she is placed (it shows its own short hints)
+    // a game owns the hint pill while Bobo is placed (it shows its own short hints)
     if (this.game && this.state === 'placed' && !this.restoring && tracking !== 'LIMITED') { this.limitedT = 0; return; }
     this.limitedT = tracking === 'LIMITED' ? this.limitedT + dt : 0;
     if (this.limitedT > 1.5) text = 'Move your phone slowly';
     else if (this.restoring || (this.state === 'placing' && !settled)) text = 'Point at the floor';
     else if (this.state === 'placing' && this.aimLow) text = 'Tilt your phone down to the floor';
     else if (this.state === 'placing') text = 'Pinch to size, then Place';
-    else if (this.lostT > 4 && !this.inside && !this.game) text = "Can't see Happi? Tap Move to bring Happi back";
+    else if (this.lostT > 4 && !this.inside && !this.game) text = "Can't see Bobo? Tap Move";
     else if (this.hintT > 0) {
       this.hintT -= dt;
       text = this.hintT > 0 ? this.lastHint : '';
@@ -639,6 +688,3 @@ export class ArMode implements Mode {
     this.walk.dispose();
   }
 }
-
-/** The Games button's icon: a heart with speed lines (flat, currentColor). */
-const GAMES_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><g transform="translate(14.5 12) scale(1.15) translate(-12 -12.6)"><g fill="currentColor"><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(0 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(72 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(144 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(216 12 12)"/><path d="M12 12C9.6 10.6 9.9 6.6 11.4 5.6L12 6.6l.6-1C14.1 6.6 14.4 10.6 12 12z" transform="rotate(288 12 12)"/></g></g><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1.5 8.5h3M1 12h2.5M1.5 15.5h3"/></g></svg>';

@@ -73,13 +73,13 @@ export class ReviewSheet {
       v.src = this.url;
       v.muted = true; v.loop = true; v.autoplay = true; v.playsInline = true;
       v.setAttribute('playsinline', '');
-      v.setAttribute('aria-label', 'Your video with Happi');
+      v.setAttribute('aria-label', 'Your video with Bobo');
       ph.appendChild(v);
       void v.play().catch(() => { /* autoplay refused: the poster frame stays */ });
     } else {
       const img = el('img');
       img.src = this.url;
-      img.alt = 'Your photo with Happi';
+      img.alt = 'Your photo with Bobo';
       ph.appendChild(img);
       this.img = img;
     }
@@ -115,7 +115,7 @@ export class ReviewSheet {
     (r1.children[1] as HTMLElement).focus({ preventScroll: true });
   }
 
-  /** Two rows of chips: Frame (Blossom, Parade, Clean) and Filter (Natural, Warm, Sakura, Mono). */
+  /** Two rows of chips: Frame (Hideout, Arcade, Bobo, Clean) and Filter (Natural, Gold, Eclipse, Mono). */
   private styleRows(st: ReviewStyles): HTMLElement {
     const box = el('div', 'cbc-rv-styles');
     let frame = st.frame, filter = st.filter;

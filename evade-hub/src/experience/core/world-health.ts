@@ -9,7 +9,7 @@
 // Long frames and stalls (shader compiles, texture uploads, GLB parsing) during the first seconds or while walking
 // make the map slip, so content "travels with you" or "flies away".
 //
-//   const wh = worldHealth({ page: 'cheer-bear', canvas, size: () => [w, h], baseDpr: 1.5 }); // before XR8.run
+//   const wh = worldHealth({ page: 'evade-hub', canvas, size: () => [w, h], baseDpr: 1.5 }); // before XR8.run
 //   XR8.addCameraPipelineModules([..., XR8.XrController.pipelineModule(), wh.module, app]);
 //   wh.sizeCanvas();          // adaptive pixel ratio
 //   wh.settled()              // gate Place on it

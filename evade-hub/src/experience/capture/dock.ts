@@ -1,7 +1,7 @@
 // The capture button for the 3D and AR views (Dapo, round 5: "we should be able to record in each of these
 // scenarios"). Those views keep the joystick bottom centre, so the shutter sits bottom right, under Games and
 // Actions (house rule for joystick games: record bottom right, the action buttons stacked above it).
-// Tap = a photo of the view as drawn with the parade lockup; press and hold = a video clip with the same lockup.
+// Tap = a photo of the view as drawn with the EVADE lockup; press and hold = a video clip with the same lockup.
 import type { HudApi } from '../types';
 import { compose } from './compose';
 import { flash } from './countdown';
@@ -19,8 +19,8 @@ export class CaptureDock {
   constructor(private hud: HudApi, private container: HTMLElement, private onPhoto: (blob: Blob) => void, private reduced: () => boolean) {
     this.review = new ReviewSheet({
       container,
-      name: 'happi',
-      share: { title: 'Me and Happi', text: 'Me and Happi, the Japan Parade & Street Fair mascot' },
+      name: 'bobo-hideout',
+      share: { title: 'Bobo’s Hideout', text: 'Hanging out with Bobo in his hideout. EVADE' },
       onRetake: () => { /* back to the view: nothing to undo */ },
     });
     this.btn = hud.shutter(() => void this.photo(), 'Take a photo', clipHold({

@@ -1,13 +1,13 @@
-// Heart Run (the Cola Run idea): 60 seconds to run Happi around with the joystick and collect what floats over
-// the pulsing floor beacons.
+// Can Dash (the Cola Run idea): 60 seconds to run Bobo around with the joystick and grab the Eclipse cans that
+// float over the pulsing floor beacons.
 //
-//   heart    common, +1 (a run of quick pickups climbs in pitch; every 5 in a row +2)
-//   rainbow  rare, +5 and a short speed boost with a rainbow trail
-//   star     every ~15 s, +2 and a magnet: nearby hearts glide to her for 4 s
-//   cloud    after the first 18 s a grumpy grey raincloud drifts after her; if it reaches her she drops 3 hearts
+//   can      common, +1 (a run of quick pickups climbs in pitch; every 5 in a row +2)
+//   rainbow  (a fizz arc) rare, +5 and a short speed boost with a trail
+//   star     every ~15 s, +2 and a magnet: nearby cans glide to Bobo for 4 s
+//   cloud    after the first 18 s a grumpy grey raincloud drifts after Bobo; if it reaches him he drops 3 hearts
 //
-// Pickups use a seeded minimum-separation layout inside the play area (AR: the placed stage's radius, out of the
-// house); collected ones respawn somewhere new, so 9 to 11 are always out. Everything is stage-local.
+// Pickups use a seeded minimum-separation layout inside the play area (AR: the placed stage's radius, away from the
+// door); collected ones respawn somewhere new, so 9 to 11 are always out. Everything is stage-local.
 import * as THREE from 'three';
 import type { PlayStatus } from '../../shared/contracts';
 import { PAL, RAINBOW } from '../scene/fx';
@@ -25,7 +25,8 @@ const STAR_EVERY = 15;
 const BOOST_S = 3;
 const MAGNET_S = 4;
 const CLOUD_AFTER = 18;
-const HEART_HEX = [0xffb7c9, 0xff94b0, 0xffd9e3];
+/** Tints for the fallback (no can model): the can itself is drawn white (its own label). */
+const HEART_HEX = [PAL.pink, PAL.yellow, PAL.sky];
 
 interface Slot extends PickDraw {
   alive: boolean;
@@ -37,14 +38,14 @@ interface Slot extends PickDraw {
   baseY: number;
 }
 
-export class HeartRun extends PlayGame {
+export class CanDash extends PlayGame {
   readonly id = 'heart-run' as const;
-  readonly label = 'Parade Dash';
+  readonly label = 'Can Dash';
   readonly showStick = true;
   protected readonly roundS = ROUND_S;
   protected readonly starAt = [25, 50, 80] as const;
   protected readonly balls = 0;
-  protected readonly goLine = 'Catch the blossoms!';
+  protected readonly goLine = 'Grab the cans!';
   /** The 3D camera pulls back and looks down a little while this runs. */
   readonly view = { wide: 2.7, pitch: 0.42 as number | null };
   private slots: Slot[] = [];
@@ -70,12 +71,12 @@ export class HeartRun extends PlayGame {
   private cloudCool = 0;
   private rainT = 0;
   private cloudK = 0;
-  private cloudSlot: PickDraw = { kind: 'heart', x: 0, y: 0, z: 0, s: 0, yaw: 0, hex: 0, beacon: -1, phase: 0.3, beaconSize: 0.8 };
+  private cloudSlot: PickDraw = { kind: 'can', x: 0, y: 0, z: 0, s: 0, yaw: 0, hex: 0, beacon: -1, phase: 0.3, beaconSize: 0.8 };
   private field = { x: 0, z: 0, r: 2.4 };
   private house = new THREE.Box3();
   private t = new THREE.Vector3();
   private t2 = new THREE.Vector3();
-  /** polish-4: a one-time nudge when she has not moved a few seconds into the round (is the joystick obvious?). */
+  /** polish-4: a one-time nudge when Bobo has not moved a few seconds into the round (is the joystick obvious?). */
   private stillT = 0;
   private movedOnce = false;
   private nudgeEl: HTMLElement | null = null;
@@ -85,7 +86,7 @@ export class HeartRun extends PlayGame {
   constructor(host: PlayHost, emit: (s: PlayStatus) => void, exit: () => void) {
     super(host, emit, exit);
     for (let i = 0; i < 14; i++) {
-      this.slots.push({ kind: 'heart', x: 0, y: 0, z: 0, s: 0, yaw: 0, hex: PAL.pink, beacon: PAL.pink, phase: 0, alive: false, k: 0, going: false, age: 0, life: 99, baseY: 0.34 });
+      this.slots.push({ kind: 'can', x: 0, y: 0, z: 0, s: 0, yaw: 0, hex: PAL.pink, beacon: PAL.pink, phase: 0, alive: false, k: 0, going: false, age: 0, life: 99, baseY: 0.34 });
     }
   }
 
@@ -105,11 +106,11 @@ export class HeartRun extends PlayGame {
     this.host.kit.cloud.visible = false;
     for (const s of this.slots) { s.alive = false; s.k = 0; s.going = false; }
     this.host.field(this.field);
-    // her starting spot: the field's centre, facing you
+    // his starting spot: the field's centre, facing you
     const a = this.host.stage.actor;
     if (Math.hypot(a.position.x - this.field.x, a.position.z - this.field.z) > this.field.r * 0.8) a.position.set(this.field.x, 0, this.field.z);
-    // the opening layout: hearts and one rainbow, spread out (pop in during the countdown)
-    for (let i = 0; i < ON_FIELD; i++) this.spawn(i === 4 ? 'rainbow' : 'heart', i * 0.05);
+    // the opening layout: cans and one fizz arc, spread out (pop in during the countdown)
+    for (let i = 0; i < ON_FIELD; i++) this.spawn(i === 4 ? 'rainbow' : 'can', i * 0.05);
     this.ui.power(null);
     this.ui.streak(0);
     this.stillT = 0;
@@ -138,7 +139,7 @@ export class HeartRun extends PlayGame {
     }
   }
 
-  /** A seeded spot in the field: apart from the others, not on her, not in the house, inside the play area. */
+  /** A seeded spot in the field: apart from the others, not on Bobo, not by the door, inside the play area. */
   private spot(out: THREE.Vector3): boolean {
     const f = this.field, a = this.host.stage.actor.position;
     const hb = houseBounds(this.host.stage, 0.32, this.house);
@@ -168,11 +169,11 @@ export class HeartRun extends PlayGame {
     s.going = false;
     s.age = 0;
     s.life = kind === 'star' ? 9 : kind === 'rainbow' ? 14 : 99;
-    s.baseY = kind === 'heart' ? 0.34 : kind === 'star' ? 0.42 : 0.3;
+    s.baseY = kind === 'can' ? 0.34 : kind === 'star' ? 0.42 : 0.3;
     s.phase = this.rng();
     s.yaw = this.rng() * Math.PI * 2;
-    s.hex = kind === 'heart' ? HEART_HEX[Math.floor(this.rng() * HEART_HEX.length)] : kind === 'star' ? PAL.yellow : PAL.white;
-    s.beacon = kind === 'heart' ? PAL.pink : kind === 'star' ? PAL.yellow : PAL.purple;
+    s.hex = kind === 'can' ? HEART_HEX[Math.floor(this.rng() * HEART_HEX.length)] : kind === 'star' ? PAL.yellow : PAL.white;
+    s.beacon = kind === 'can' ? PAL.sky : kind === 'star' ? PAL.yellow : PAL.purple;
     return true;
   }
 
@@ -186,7 +187,7 @@ export class HeartRun extends PlayGame {
   protected tick(dt: number): void {
     const st = this.host.stage, a = st.actor;
     this.elapsed += dt;
-    // not moved yet 2.5 s into the round: show how (once she runs, it goes for the rest of the round)
+    // not moved yet 2.5 s into the round: show how (once he runs, it goes for the rest of the round)
     if (!this.movedOnce) {
       if (a.walking && a.moving > 0.1) { this.movedOnce = true; this.nudge(false); }
       else if ((this.stillT += dt) > 2.5 && !this.nudgeEl) this.nudge(true);
@@ -205,7 +206,7 @@ export class HeartRun extends PlayGame {
       }
     }
     if (this.boost > 0) this.ui.power('Rainbow boost!', this.boost / BOOST_S, true);
-    else if (this.magnet > 0) this.ui.power('Blossom magnet!', this.magnet / MAGNET_S);
+    else if (this.magnet > 0) this.ui.power('Can magnet!', this.magnet / MAGNET_S);
     else this.ui.power(null);
 
     // pickups: magnet pull, collect
@@ -213,7 +214,7 @@ export class HeartRun extends PlayGame {
     for (const s of this.slots) {
       if (!s.alive || s.going || s.k < 0.6) continue;
       let d = Math.hypot(s.x - px, s.z - pz);
-      if (this.magnet > 0 && s.kind === 'heart' && d < 2.2 && d > 0.05) {
+      if (this.magnet > 0 && s.kind === 'can' && d < 2.2 && d > 0.05) {
         const step = Math.min(d, (1.2 + (2.2 - d)) * 1.6 * dt);
         s.x += ((px - s.x) / d) * step;
         s.z += ((pz - s.z) / d) * step;
@@ -230,7 +231,7 @@ export class HeartRun extends PlayGame {
       if ((this.respawn[i] -= dt) > 0) continue;
       this.respawn.splice(i, 1);
       const rare = this.rng() < 0.09 && !this.slots.some((s) => s.alive && s.kind === 'rainbow');
-      this.spawn(rare ? 'rainbow' : 'heart');
+      this.spawn(rare ? 'rainbow' : 'can');
     }
     if (this.elapsed >= this.nextStar) {
       this.nextStar += STAR_EVERY;
@@ -248,14 +249,14 @@ export class HeartRun extends PlayGame {
     this.streak = quick ? this.streak + 1 : 1;
     this.ui.streak(this.streak);
     const at = this.t.set(s.x, s.y, s.z);
-    if (s.kind === 'heart') {
+    if (s.kind === 'can') {
       this.hearts++;
       let pts = 1;
       const bonus = this.streak % 5 === 0;
       if (bonus) pts += 2;
       this.score += pts;
       this.sounds.blip(this.streak);
-      st.fx.emit({ count: rm ? 5 : 10, glyph: 'heart', colors: [PAL.pink, PAL.pinkSoft, PAL.red], at, burst: 0.8, drag: 2.2, gravity: -0.1, life: [0.5, 0.9], size: [0.05, 0.09] });
+      st.fx.emit({ count: rm ? 5 : 10, glyph: ['sparkle', 'star'], colors: [PAL.sky, PAL.white, PAL.yellow], at, burst: 0.8, drag: 2.2, gravity: -0.1, life: [0.5, 0.9], size: [0.05, 0.09] });
       this.popAt(at, bonus ? '+3' : '+1', '', bonus ? `${this.streak} in a row` : '');
       a.jiggle(0.08);
     } else if (s.kind === 'rainbow') {
@@ -294,7 +295,7 @@ export class HeartRun extends PlayGame {
     }
     if (!this.cloudOn) return;
     this.cloudCool = Math.max(0, this.cloudCool - dt);
-    // seek her slowly (or drift away after a hit), with a little wander
+    // seek Bobo slowly (or drift away after a hit), with a little wander
     const sp = (this.host.reduced ? 0.32 : 0.46) * (this.cloudCool > 0 ? -0.6 : 1);
     const dx = a.position.x - this.cloudP.x, dz = a.position.z - this.cloudP.z;
     const d = Math.hypot(dx, dz) || 1;
@@ -311,7 +312,7 @@ export class HeartRun extends PlayGame {
       this.rainT = this.host.reduced ? 0.16 : 0.07;
       st.fx.emit({ count: 1, glyph: 'dot', colors: [PAL.blue, PAL.sky], at: this.t.set(this.cloudP.x, this.cloudP.y - 0.1, this.cloudP.z), spread: [0.18, 0.02, 0.1], vel: [0, -1.4, 0], gravity: 1.5, life: [0.8, 0.9], size: [0.025, 0.035], floor: 0, bounce: 0, rest: 0.1 });
     }
-    // it reaches her: she drops 3 hearts (they pop out and bounce away)
+    // it reaches Bobo: he drops 3 hearts (they pop out and bounce away)
     if (this.cloudCool <= 0 && d < 0.42) {
       this.cloudCool = 4;
       const lost = Math.min(3, this.score);
@@ -350,7 +351,7 @@ export class HeartRun extends PlayGame {
       const pop = s.going ? kin : kin < 1 ? kin * (1.15 - 0.15 * kin) : 1;
       const tt = performance.now() / 1000;
       s.y = s.baseY + Math.sin(tt * 2.4 + s.phase * 6.28) * (this.host.reduced ? 0.02 : 0.05) + (s.going ? (1 - kin) * 0.35 : 0);
-      s.yaw += dt * (s.kind === 'star' ? 2.4 : s.kind === 'heart' ? 1.4 : 0.6) * (this.host.reduced ? 0.5 : 1);
+      s.yaw += dt * (s.kind === 'star' ? 2.4 : s.kind === 'can' ? 1.4 : 0.6) * (this.host.reduced ? 0.5 : 1);
       s.s = pop * (s.going ? 1 + (1 - kin) * 0.5 : 1);
       // a pickup about to vanish blinks (stars, rainbows)
       if (!s.going && s.age > s.life - 2.5 && Math.floor(tt * 6) % 2 === 0) s.s *= 0.75;
@@ -365,7 +366,7 @@ export class HeartRun extends PlayGame {
       const tt = performance.now() / 1000;
       c.position.set(this.cloudP.x, this.cloudP.y + Math.sin(tt * 1.7) * 0.04, this.cloudP.z);
       c.scale.setScalar(this.cloudK * (this.cloudCool > 2.5 ? 1.12 : 1));
-      // it faces you (yaw only), and grins when it got her
+      // it faces you (yaw only), and grins when it got him
       const cam = this.host.stage.cam;
       c.rotation.set(0, Math.atan2(cam.x - c.position.x, cam.z - c.position.z), 0);
       kit.cloudFrown.rotation.z = this.cloudCool > 2.5 ? Math.PI : 0;
@@ -379,10 +380,10 @@ export class HeartRun extends PlayGame {
   }
 
   protected summary(stars: number): { title: string; line: string } {
-    const bits = [`${this.hearts} blossom${this.hearts === 1 ? '' : 's'}`];
-    if (this.rainbows) bits.push(`${this.rainbows} rainbow${this.rainbows === 1 ? '' : 's'}`);
+    const bits = [`${this.hearts} can${this.hearts === 1 ? '' : 's'}`];
+    if (this.rainbows) bits.push(`${this.rainbows} fizz arc${this.rainbows === 1 ? '' : 's'}`);
     if (this.stars) bits.push(`${this.stars} star${this.stars === 1 ? '' : 's'}`);
-    const title = stars >= 3 ? 'Parade champion!' : stars === 2 ? 'Super running!' : stars === 1 ? 'Lovely running!' : 'Good try!';
+    const title = stars >= 3 ? 'Can champion!' : stars === 2 ? 'Super dash!' : stars === 1 ? 'Nice dash!' : 'Good try!';
     return { title, line: bits.join(' · ') };
   }
 

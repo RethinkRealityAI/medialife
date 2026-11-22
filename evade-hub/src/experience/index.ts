@@ -1,16 +1,17 @@
-// Happi's experience: splash, 3D showcase, AR, and the engine side of the Selfie and Photo modes, in one page
-// with one engine session, one HUD and one bear. Framework-free (vanilla DOM + three.js r180 + the 8th Wall engine
+// The EVADE Hub experience: splash, 3D hideout (Bobo's Arcade), AR, and the engine side of the Selfie and Photo
+// modes, in one page with one engine session, one HUD and one Bobo. Framework-free (vanilla DOM + three.js r180 + the 8th Wall engine
 // binary, loaded by index.html's <script> tag). The app talks to it only through ExperienceApi
 // (src/shared/contracts.ts); docs/handoff/xr-core.md explains the inside.
 //
 //   const exp = createExperience({ title, lead });
 //   await exp.mount(el);          // splash + loading; Start (a tap) -> showcase
 //   exp.setMode('ar');            // from a tap; switches in place
-//   exp.trigger('rainbow');       // case-insensitive
-import { movesHtml } from '../happi/moves';
+//   exp.trigger('dance');         // case-insensitive
+import { movesHtml } from '../evade/world/moves';
+import { preloadHideout } from '../evade/world/hideout';
+import { preloadCan } from '../evade/world/can';
 import * as THREE from 'three';
 import '../shared/theme.css';
-import { happiSky } from '../happi/sky';
 import type {
   VisemeFrame,
   ActionName, BearCharacter, ExperienceApi, ExperienceCommand, ExperienceEvents, ExperienceMode, ExperienceOptions,
@@ -25,7 +26,6 @@ import { Hud } from './hud/hud';
 import { PropKit } from './scene/props';
 import { Media } from './scene/media';
 import { Stage } from './scene/stage';
-import { addHousePhoto } from './scene/house';
 import { MOMENT_NAMES, MomentRunner, canonicalMoment } from './scene/moments';
 import { ShowcaseMode } from './modes/showcase';
 import { CaptureDock } from './capture/dock';
@@ -35,7 +35,7 @@ import { createFacePlaceholder } from './placeholders/face-placeholder';
 import { createPhotoPlaceholder } from './placeholders/photo-placeholder';
 import type { FaceEvent, Mode, ModeContext, ModeFactory, XrScene } from './types';
 import { modeCanCommand, runModeCommand } from './commands';
-import { PLAY_GAMES, PLAY_SVG, PlayDirector, type PlayMode } from './play';
+import { PLAY_GAMES, PlayDirector, type PlayMode } from './play';
 
 export type { Mode, ModeContext, ModeFactory } from './types';
 
@@ -47,7 +47,7 @@ const LABEL: Record<ExperienceMode, string> = { showcase: '3D', ar: 'AR', face: 
 const FRIENDLY: Record<string, { title: string; body: string }> = {
   permission: {
     title: 'The camera is switched off',
-    body: 'To see Happi in your room, allow the camera for this page in your browser settings, then try again. The 3D view works without it.',
+    body: 'To see Bobo in your room, allow the camera for this page in your browser settings, then try again. The 3D view works without it.',
   },
   unsupported: {
     title: 'This phone cannot do that one',
@@ -75,6 +75,8 @@ class Experience implements ExperienceApi {
   private stages: { showcase: Stage; ar: Stage } | null = null;
   private runners: { showcase: MomentRunner; ar: MomentRunner } | null = null;
   private modes = new Map<ExperienceMode, Mode>();
+  /** Real face / photo modes that loaded while their placeholder was on screen. */
+  private pending = new Map<ExperienceMode, Mode>();
   private showcase: ShowcaseMode | null = null;
   private cur: Mode | null = null;
   private entered = false;
@@ -86,7 +88,7 @@ class Experience implements ExperienceApi {
   private unbindTap: (() => void) | null = null;
   private offResize: (() => void) | null = null;
   private ctx: ModeContext | null = null;
-  /** Mini games (Heart Run, Heart Hoops) in 3D and AR: src/experience/play. */
+  /** Mini games (Can Dash, Paw Hoops) in 3D and AR: src/experience/play. */
   private play = new PlayDirector((s) => this.ev.emit('play', s), !IS_PHONE);
   private offVis: (() => void) | null = null;
   started = false;
@@ -94,8 +96,8 @@ class Experience implements ExperienceApi {
   constructor(opts: ExperienceOptions = {}) {
     this.opts = {
       ...opts,
-      title: opts.title || 'Happi',
-      lead: opts.lead || 'Meet Happi in 3D and in your room.',
+      title: opts.title || 'EVADE Hub',
+      lead: opts.lead || "Bobo's hideout, every EVADE game in one arcade.",
     };
   }
 
@@ -129,7 +131,7 @@ class Experience implements ExperienceApi {
       onRestart: () => this.restart(),
     });
     this.hud = hud;
-    this.dock = new CaptureDock(hud, box, (blob) => { addHousePhoto(blob); this.ev.emit('photo', { blob, mode: this.mode }); }, reducedMotion);
+    this.dock = new CaptureDock(hud, box, (blob) => { this.ev.emit('photo', { blob, mode: this.mode }); }, reducedMotion);
     this.media = new Media();
     this.engine = new Engine(box, {
       onScene: (xr, kind) => this.onScene(xr, kind),
@@ -149,24 +151,25 @@ class Experience implements ExperienceApi {
     window.addEventListener('resize', onResize);
     this.offResize = () => window.removeEventListener('resize', onResize);
 
-    // ---- load (real progress: bear, props, backdrop, videos)
+    // ---- load (real progress: Bobo, props, the hideout room + arcade thumbnails)
     this.assets.onProgress = (p) => { hud.progress(p * 0.97); this.ev.emit('progress', p); };
-    const pBear = this.assets.part('bear', 6), pProps = this.assets.part('props', 3), pSky = this.assets.part('sky', 1), pVid = this.assets.part('video', 1);
+    const pBear = this.assets.part('bear', 6), pProps = this.assets.part('props', 3), pRoom = this.assets.part('hideout', 5), pCan = this.assets.part('can', 1), pVid = this.assets.part('video', 1);
     const bearP = loadBear({ onProgress: pBear }).then((b) => { pBear(1); return b; }).catch((e) => {
-      console.error('[experience] the bear did not load', e);
+      console.error('[experience] Bobo did not load', e);
       pBear(1);
       return null;
     });
     const propsP = this.kit.load(this.assets, pProps).catch((e) => console.error('[experience] props did not load', e));
-    const skyP = Promise.resolve(happiSky()).then((t) => { pSky(1); return t; });
+    const roomP = preloadHideout(this.assets.gltf.bind(this.assets), pRoom);
+    const canP = preloadCan(this.assets.gltf.bind(this.assets), pCan);
     void this.media.ready().then(() => pVid(1));
-    const [bear, , sky] = await Promise.all([bearP, propsP, skyP]);
+    const [bear] = await Promise.all([bearP, propsP, roomP, canP]);
     if (this.disposed) return;
     this.bear = bear;
     if (bear && this.speech) bear.setSpeechStream(this.speech);
     this.applyLipTuning();
 
-    this.build(sky);
+    this.build();
     // the splash frames the bear in its hero window; compile everything before the first frame
     const sc = this.showcase!;
     sc.setHero(hud.heroRect());
@@ -269,7 +272,7 @@ class Experience implements ExperienceApi {
     return PLAY_GAMES;
   }
 
-  /** Start Heart Run / Heart Hoops in the current mode. False in Selfie / Photo (switch to 3D first). */
+  /** Start Can Dash / Paw Hoops in the current mode. False in Selfie / Photo (switch to 3D first). */
   async startPlay(id: PlayGameId): Promise<boolean> {
     if (!this.started || !this.loaded || this.disposed) return false;
     await this.chain; // a mode switch in progress finishes first
@@ -288,11 +291,11 @@ class Experience implements ExperienceApi {
     return on ? this.play.pause('sheet') : this.play.resume('sheet');
   }
 
-  /** The Actions button (bottom right in 3D and AR): a grid of everything Happi can do; a tap closes it and he does it. */
+  /** The Actions button (bottom right in 3D and AR): a grid of Bobo's moves; a tap closes it and Bobo does it. */
   private pickMove(): void {
     const hud = this.hud;
     if (!hud || hud.sheetOpen) return;
-    void hud.sheet({ title: 'What should Happi do?', body: '', html: movesHtml(), buttons: ['Close'] });
+    void hud.sheet({ title: 'What should Bobo do?', body: '', html: movesHtml(), buttons: ['Close'] });
     const wraps = this.box?.querySelectorAll<HTMLElement>('.cbx-sheet-wrap');
     const wrap = wraps?.[wraps.length - 1];
     wrap?.querySelectorAll<HTMLButtonElement>('[data-move]').forEach((b) => b.addEventListener('click', () => {
@@ -301,19 +304,9 @@ class Experience implements ExperienceApi {
     }));
   }
 
-  /** The Games button (bottom left in 3D, above Move in AR): a small chooser sheet. */
+  /** The Arcade button (bottom left in 3D, above Move in AR): the app opens Bobo's Arcade sheet. */
   private pickGame(): void {
-    const hud = this.hud;
-    if (!hud || hud.sheetOpen) return;
-    const icon = { 'heart-run': PLAY_SVG.run, 'heart-hoops': PLAY_SVG.hoops } as const;
-    const html = `<div class="cbp-pick">${PLAY_GAMES.map((g) => `<button type="button" data-game="${g.id}"><span class="ic${g.id === 'heart-hoops' ? ' hoops' : ''}">${icon[g.id]}</span><span><b>${g.label}</b><span>${g.lead}</span></span></button>`).join('')}</div>`;
-    void hud.sheet({ title: 'Play with Happi', body: '', html, buttons: ['Not now'] });
-    const wraps = this.box?.querySelectorAll<HTMLElement>('.cbx-sheet-wrap');
-    const wrap = wraps?.[wraps.length - 1];
-    wrap?.querySelectorAll<HTMLButtonElement>('[data-game]').forEach((b) => b.addEventListener('click', () => {
-      (wrap.querySelector('.row .btn') as HTMLButtonElement | null)?.click(); // closes the sheet
-      void this.startPlay(b.dataset.game as PlayGameId);
-    }));
+    this.ev.emit('arcade', { id: '', source: 'button' });
   }
 
   dispose(): void {
@@ -336,7 +329,7 @@ class Experience implements ExperienceApi {
   }
 
   // ------------------------------------------------------------------ setup
-  private build(sky: THREE.Texture): void {
+  private build(): void {
     const hud = this.hud!, media = this.media!;
     const reduced = reducedMotion();
     const showcase = new Stage('showcase', this.kit, media);
@@ -346,7 +339,7 @@ class Experience implements ExperienceApi {
     const arMode: { m: ArMode | null } = { m: null };
     this.runners = {
       showcase: new MomentRunner(showcase, { reducedMotion: reduced }),
-      ar: new MomentRunner(ar, { reducedMotion: reduced, intercept: (n) => n === 'House' && !!arMode.m?.inside }),
+      ar: new MomentRunner(ar, { reducedMotion: reduced }),
     };
     const self = this;
     const ctx: ModeContext = {
@@ -355,7 +348,7 @@ class Experience implements ExperienceApi {
       engine: this.engine!,
       get bear() { return self.bear; },
       emit: (event, payload) => this.ev.emit(event, payload),
-      capture: (blob) => { addHousePhoto(blob); this.ev.emit('photo', { blob, mode: this.mode }); },
+      capture: (blob) => { this.ev.emit('photo', { blob, mode: this.mode }); },
       get mode() { return self.mode; },
       setMode: (m) => this.setMode(m),
       reducedMotion: reduced,
@@ -367,12 +360,13 @@ class Experience implements ExperienceApi {
       bear: () => this.bear,
       tapAction: (name) => this.ev.emit('action', { name, source: 'tap' }),
     };
-    this.showcase = new ShowcaseMode(shared, showcase, this.runners.showcase, sky);
+    this.showcase = new ShowcaseMode(shared, showcase, this.runners.showcase);
     arMode.m = new ArMode(shared, ar, this.runners.ar);
     this.modes.set('showcase', this.showcase);
     this.modes.set('ar', arMode.m);
     this.showcase.onPickGame = arMode.m.onPickGame = () => this.pickGame();
     this.showcase.onPickMove = arMode.m.onPickMove = () => this.pickMove();
+    this.showcase.onArcade = arMode.m.onArcade = (id, source) => this.ev.emit('arcade', { id, source });
     // a hidden tab holds the round (the pause card waits for you)
     const onVis = () => { if (document.hidden) this.play.pause('hidden'); };
     document.addEventListener('visibilitychange', onVis);
@@ -401,8 +395,8 @@ class Experience implements ExperienceApi {
           if (!f || !this.ctx || this.disposed) return;
           const m = f(this.ctx);
           await m.load?.();
-          // swap in only while that mode is not on screen (it is picked up next time)
-          if (this.cur?.id === m.id) return;
+          // swap in only while that mode is not on screen: otherwise it waits and is swapped in when you leave it
+          if (this.cur?.id === m.id) { this.pending.set(m.id, m); return; }
           this.addMode(m);
         })
         .catch((e) => console.error(`[experience] ${path} failed to load; the placeholder stays`, e));
@@ -442,7 +436,7 @@ class Experience implements ExperienceApi {
     hud.setMode(id, true);
     const camera = to.camera !== 'none';
     // (awaited: the hud's iris finishes covering the old view before it is torn down; ~0.35 s)
-    if (from) await hud.cover(camera ? (to.camera === 'face' ? 'Turning the camera round…' : 'Opening the camera…') : 'Back to New York…');
+    if (from) await hud.cover(camera ? (to.camera === 'face' ? 'Turning the camera round…' : 'Opening the camera…') : 'Back to the hideout…');
     this.entered = false;
     this.dock?.show(false); // (stops a clip that is still recording)
     try {
@@ -451,6 +445,9 @@ class Experience implements ExperienceApi {
       console.error('[experience] exit failed', e);
     }
     if (from?.root) from.root.visible = false;
+    // a real face / photo module finished loading while its placeholder was on screen: swap it in now
+    const waiting = from ? this.pending.get(from.id) : undefined;
+    if (waiting) { this.pending.delete(waiting.id); try { from!.dispose?.(); } catch { /* ignore */ } this.addMode(waiting); }
     this.cur = to;
     try {
       if (!camera) {

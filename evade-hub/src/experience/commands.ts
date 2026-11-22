@@ -4,7 +4,7 @@
 //   1. the active mode's own `command(name)` gets the first go (games and future modes plug in here);
 //   2. otherwise we PRESS the mode's existing on-screen button, so a voice command runs exactly the code a tap runs:
 //        capture -> the shutter (`.cbx-shutter`) in the bottom centre slot
-//        place   -> the button tagged data-cmd="place" (AR / Photo "Place Happi")
+//        place   -> the button tagged data-cmd="place" (AR / Photo "Place Bobo")
 //        move    -> the button tagged data-cmd="move" (Move, bottom left)
 //      A hidden or disabled button means "not now": false, nothing happens.
 //   3. hug -> the same squeeze + ring of hearts as a long press on her (3D, and AR once placed).

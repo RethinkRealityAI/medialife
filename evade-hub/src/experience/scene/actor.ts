@@ -1,5 +1,6 @@
-// Happi on a stage: where she stands, which way she faces, walking/running from the joystick and scripted moves
-// for the moments. Uses only the BearCharacter contract (play, whenClipDone, setExpression, lookAt, update).
+// Bobo on a stage: where he stands, which way he faces, walking/running from the joystick and scripted moves
+// for the moments. Uses the BearCharacter contract (play, whenClipDone, setExpression, lookAt, update), plus Bobo's
+// own clips by name (`move`) when the character has them.
 import * as THREE from 'three';
 import type { BearCharacter, BearClip, BearExpression } from '../../shared/contracts';
 import { angleTo, damp } from '../core/timeline';
@@ -10,10 +11,10 @@ export const RUN_SPEED = 1.7;
 export class Actor {
   /** Feet on the stage floor; rotation.y = heading (0 = facing +z). The bear is normalised to 1 unit tall inside. */
   readonly holder = new THREE.Group();
-  /** Between the holder and the bear: squash-and-stretch and little hops live here (her shadow stays put). */
+  /** Between the holder and the bear: squash-and-stretch and little hops live here (his shadow stays put). */
   readonly body = new THREE.Group();
   bear: BearCharacter | null = null;
-  /** Look at this (world space) instead of the camera while set (a heart flying at her). */
+  /** Look at this (world space) instead of the camera while set (a heart flying at his). */
   lookOverride: THREE.Vector3 | null = null;
   /** A hop height (stage units) added for one frame by the toss game's side-steps. */
   hop = 0;
@@ -23,7 +24,7 @@ export class Actor {
   private sq = 0;
   private sqV = 0;
   heading = 0;
-  /** > 0 while a moment drives her (the joystick waits). */
+  /** > 0 while a moment drives his (the joystick waits). */
   scripted = 0;
   asleep = false;
   moving = 0; // 0..1 smoothed stick magnitude
@@ -90,6 +91,16 @@ export class Actor {
     });
   }
 
+  /** One of Bobo's own clips by name (Sit, Chill, Purr, Alert...): looping, or once (then back to the loop). */
+  move(name: string, once = false, speed = 1): void {
+    const b = this.bear as (BearCharacter & { playMove?: (n: string, o: { once?: boolean; fade?: number; speed?: number }) => void; hasMove?: (n: string) => boolean }) | null;
+    if (!b) return;
+    if (!b.playMove || (b.hasMove && !b.hasMove(name))) { if (once) void this.once('cheer', 4, speed); else this.setLoop('sway'); return; }
+    b.playMove(name, { once, fade: 0.3, speed });
+    if (once) this.onceUntil = performance.now() + 4000;
+    else this.loop = 'sway'; // a named loop: the next setLoop() always switches back
+  }
+
   face(e: BearExpression, hold?: number): void {
     this.bear?.setExpression(e, hold ? { hold } : undefined);
   }
@@ -111,7 +122,7 @@ export class Actor {
 
   /**
    * Joystick locomotion. `dir` is a stage-local XZ direction with length 0..1 (stick magnitude).
-   * `constrain` keeps her inside the play area / out of the house. Returns true while she moves.
+   * `constrain` keeps his inside the play area / out of the house. Returns true while he moves.
    */
   drive(dir: THREE.Vector3, dt: number, constrain?: (p: THREE.Vector3) => void): boolean {
     const mag = Math.min(1, dir.length());

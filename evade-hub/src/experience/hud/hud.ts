@@ -2,7 +2,8 @@
 // bottom row (left: Move; centre: joystick or shutter; right: kept free for the app's talk button), sheets (menu,
 // how it works, licences, open-on-phone QR, errors) and the flat cover shown while the camera switches.
 import { recorder, CLIP_MAX_S } from '../capture/recorder';
-import { PetalField, cornerBranches } from '../../happi/splash-fx';
+import { ARCADE_SVG, BOBO_HEAD_SVG, BRAND, titleHtml } from '../../evade/brand/brand';
+import { PixelField } from '../../evade/brand/splash-fx';
 import * as THREE from 'three';
 import qrcode from 'qrcode-generator';
 import type { ExperienceMode } from '../../shared/contracts';
@@ -11,10 +12,10 @@ import { ICON } from './icons';
 import './hud.css';
 
 const MODES: Array<{ id: ExperienceMode; label: string; icon: string; aria: string }> = [
-  { id: 'showcase', label: '3D', icon: ICON.cube, aria: '3D: Happi in New York' },
-  { id: 'ar', label: 'AR', icon: ICON.ar, aria: 'AR: Happi in your room' },
-  { id: 'face', label: 'Selfie', icon: ICON.selfie, aria: 'Selfie with Happi' },
-  { id: 'photo', label: 'Photo', icon: ICON.photo, aria: '3D photo with Happi' },
+  { id: 'showcase', label: '3D', icon: ICON.cube, aria: "3D: Bobo's Hideout" },
+  { id: 'ar', label: 'AR', icon: ICON.ar, aria: 'AR: Bobo in your room' },
+  { id: 'face', label: 'Selfie', icon: ICON.selfie, aria: 'Selfie with Bobo looks' },
+  { id: 'photo', label: 'Photo', icon: ICON.photo, aria: 'Photo with Bobo' },
 ];
 
 /** Press-and-hold video on a shutter: start() returns false when this view can't record right now. */
@@ -39,12 +40,13 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
 };
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
-/** Happi's head hopping on a sky disc, swapping expression on every landing (loading screen + mode-change cover). */
-const HEADS = ['happy', 'surprised', 'grumpy', 'sleepy'];
+/** Bobo's head hopping on a cyan disc (loading glyph on the splash + the mode-change cover). Flat, code-drawn. */
 function headHop(cls: string): string {
-  const imgs = HEADS.map((n, i) => `<img src="/evade/hub/img/happi/head-${n}.webp" alt="" width="240" height="222" style="--k:${i}" decoding="async">`).join('');
-  return `<div class="hh ${cls}" aria-hidden="true"><i class="hh-ring"></i><i class="hh-shadow"></i><span class="hh-head">${imgs}</span></div>`;
+  return `<div class="hh ${cls}" aria-hidden="true"><i class="hh-ring"></i><i class="hh-shadow"></i><span class="hh-head">${BOBO_HEAD_SVG}</span></div>`;
 }
+
+/** Fired on window by the menu's "Bobo's Arcade" item; the app (src/app) opens the Arcade sheet. */
+export const OPEN_ARCADE_EVENT = 'evade:open-arcade';
 
 export class Hud implements HudApi {
   readonly root: HTMLElement;
@@ -55,7 +57,7 @@ export class Hud implements HudApi {
   readonly above: HTMLElement;
   readonly layer: HTMLElement;
   private splash: HTMLElement;
-  private petals: PetalField;
+  private petals: PixelField;
   private startBtn: HTMLButtonElement;
   private loadBar: HTMLElement;
   private hintEl: HTMLElement;
@@ -90,25 +92,34 @@ export class Hud implements HudApi {
   private hintText = '';
   private openSheets: HTMLElement[] = [];
 
+  /** The page title shown on the splash, top bar and menu. */
+  readonly title: string;
+
   constructor(container: HTMLElement, private opts: HudOptions) {
     this.root = container;
 
-    // ---- splash (full branded: title art, the bear as hero, one-line lead, Start, loading bar, Activated by MEDIALIFE)
+    // ---- splash (full branded, EVADE): logo, the hero window (Bobo in his hideout, drawn by the showcase behind the
+    // transparent window), kicker, title with the last word in cyan, one-line lead, yellow Start, loading bar,
+    // Activated by MEDIALIFE. No instructions or licence text here (house rules).
+    const title = opts.title || BRAND.title;
+    const lead = opts.lead || BRAND.lead;
+    this.title = title;
     this.splash = el('section', 'cbx-splash');
-    this.splash.setAttribute('aria-label', opts.title);
+    this.splash.setAttribute('aria-label', title);
     this.splash.innerHTML = `
       <div class="sp-col">
-        <div class="sp-top"><div class="sp-clouds" aria-hidden="true"><i></i><i></i><i></i></div><p class="sp-eyebrow"><img class="wm" src="/evade/hub/img/parade-wordmark.webp" alt="Japan Parade &amp; Street Fair" width="600" height="127"><b>Official Mascot</b></p><img class="title" src="/evade/hub/img/happi-logo.webp" alt="${esc(opts.title)}" width="769" height="309"></div>
+        <div class="sp-top"><img class="sp-logo" src="${BRAND.logo}" alt="EVADE" width="600" height="150" decoding="async"></div>
         <div class="sp-bottom">
-          <p class="lead">${esc(opts.lead)}</p>
+          <p class="sp-kicker">EVADE <i aria-hidden="true"></i> Bobo's Arcade</p>
+          <h1 class="sp-title">${titleHtml(title, esc)}</h1>
+          <p class="lead">${esc(lead)}</p>
           <button type="button" class="cbx-start" disabled>Loading…</button>
           <div class="cbx-load" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100"><i></i></div>
-          <p class="sp-credit">Designed by Japan Parade 2026 Grand Marshal <b>Acky Bright</b></p>
-          <img class="act-by" src="/evade/hub/img/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+          <img class="act-by" src="${BRAND.activatedBy}" alt="Activated by MEDIALIFE" width="148" height="58" decoding="async">
         </div>
       </div>
-      <div class="sp-hero"><div class="sp-wait" aria-hidden="true">${headHop('hh-sm')}</div></div>`;
-    // portrait order: title, hero window, card (the column wrapper is display: contents there)
+      <div class="sp-hero"><i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i><div class="sp-wait" aria-hidden="true">${headHop('hh-sm')}</div></div>`;
+    // portrait order: logo, hero window, copy (the column wrapper is display: contents there)
     const col = this.splash.querySelector('.sp-col')!;
     const hero = this.splash.querySelector('.sp-hero')!;
     col.insertBefore(hero, col.querySelector('.sp-bottom'));
@@ -116,24 +127,23 @@ export class Hud implements HudApi {
     this.startBtn = this.splash.querySelector('.cbx-start')!;
     this.loadBar = this.splash.querySelector('.cbx-load')!;
     this.startBtn.addEventListener('click', () => opts.onStart());
-    // cherry branches in the sky's corners and petals drifting down over everything (src/happi/splash-fx.ts)
-    cornerBranches(this.splash.querySelector('.sp-top')!);
-    this.petals = new PetalField(this.splash);
+    // flat arcade pixels drifting up behind everything (src/evade/brand/splash-fx.ts)
+    this.petals = new PixelField(this.splash);
     this.petals.start();
 
     // ---- HUD
     this.hudEl = el('div', 'cbx-hud');
     this.hudEl.hidden = true;
-    // top (Dapo, 2026-11-20 round 5): one line with the lockup in the top right (the parade's wordmark, Happi, and
-    // "AR" set in the logo's style) and the menu in line at the far right; the mode tabs sit just below both.
+    // top (the hub's round 5/6 layout, EVADE look): row 1 = the EVADE lockup (logo + "Bobo's Hideout" in Exo 2 italic)
+    // and the menu; row 2 = the mode tabs.
     const top = el('div', 'cbx-top');
     const dock = el('nav', 'cbx-dock');
     dock.setAttribute('aria-label', 'Views and menu');
     const row1 = el('div', 'cbx-row1');
     const lockup = el('div', 'lockup');
     lockup.setAttribute('role', 'img');
-    lockup.setAttribute('aria-label', `Japan Parade and Street Fair, ${opts.title} AR`);
-    lockup.innerHTML = `<img class="wm" src="/evade/hub/img/parade-wordmark.webp" alt="" width="600" height="127"><img class="hp" src="/evade/hub/img/happi-logo-sm.webp" alt="" width="384" height="154"><b class="ar" aria-hidden="true">AR</b>`;
+    lockup.setAttribute('aria-label', `EVADE, ${title}`);
+    lockup.innerHTML = `<img class="wm" src="${BRAND.logo}" alt="" width="600" height="150"><i class="sep" aria-hidden="true"></i><b class="nm" aria-hidden="true">${titleHtml(title, esc)}</b>`;
     row1.appendChild(lockup);
     dock.appendChild(row1);
     top.append(dock);
@@ -172,8 +182,8 @@ export class Hud implements HudApi {
     this.hintEl.setAttribute('aria-live', 'polite');
     this.toastEl = el('div', 'cbx-toast');
     this.toastEl.setAttribute('aria-hidden', 'true');
-    // what Happi says: the words reveal one by one as the transcript grows; screen readers get the plain text
-    this.bubble = el('div', 'cbx-bubble', `<b class="cbx-bubble-name" aria-hidden="true">${esc(opts.title.replace(/\s+(AR|AI)$/i, '') || 'Happi')}</b><span class="cbx-bubble-text" aria-hidden="true"></span><span class="cbx-sr" role="status" aria-live="polite"></span>`);
+    // a caption bubble (unused by Bobo, who doesn't talk; kept for the HudApi)
+    this.bubble = el('div', 'cbx-bubble', `<b class="cbx-bubble-name" aria-hidden="true">Bobo</b><span class="cbx-bubble-text" aria-hidden="true"></span><span class="cbx-sr" role="status" aria-live="polite"></span>`);
     this.bubbleWords = this.bubble.querySelector('.cbx-bubble-text')!;
     this.bubbleSr = this.bubble.querySelector('.cbx-sr')!;
     this.above = el('div', 'cbx-above');
@@ -188,7 +198,7 @@ export class Hud implements HudApi {
     // and an orange thumb
     this.stick = el('div', 'cbx-stick pe', `<svg class="cbx-stick-ring" viewBox="0 0 116 116" aria-hidden="true"><circle cx="58" cy="58" r="54" fill="none" stroke="currentColor" stroke-width="3" opacity="0.5"/><circle class="arc" cx="58" cy="58" r="54" fill="none" stroke-width="4" stroke-linecap="round" pathLength="100" stroke-dasharray="16 84"/></svg><span></span>`);
     this.stick.setAttribute('role', 'application');
-    this.stick.setAttribute('aria-label', 'Joystick: walk Happi');
+    this.stick.setAttribute('aria-label', 'Joystick: walk Bobo');
     this.stick.hidden = true;
     this.stickKnob = this.stick.querySelector('span') as HTMLElement;
     this.bindStick();
@@ -196,9 +206,9 @@ export class Hud implements HudApi {
     this.hudEl.append(top, this.hintEl, this.toastEl, this.bubble, this.above, bottom);
     this.layer = el('div', 'cbx-layer');
 
-    // the mode-change cover: a flat pink iris grows from the tapped tab, the target mode's badge sits in the middle,
+    // the mode-change cover: a flat iris in the target mode's colour grows from the tapped tab, the target mode's badge sits in the middle,
     // then the whole cover fades off the new view (reduced motion: a plain crossfade)
-    this.coverEl = el('div', 'cbx-cover', `<i class="cbx-cover-disc"></i><div class="cbx-cover-sky" aria-hidden="true"><i></i><i></i><i></i><i></i></div><div class="cbx-cover-in">${headHop('')}<strong class="cbx-cover-title"></strong><p><span class="cbx-cover-badge"></span><b></b><em class="cbx-dots"><i></i><i></i><i></i></em></p></div>`);
+    this.coverEl = el('div', 'cbx-cover', `<i class="cbx-cover-disc"></i><div class="cbx-cover-sky" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cbx-cover-in">${headHop('')}<strong class="cbx-cover-title"></strong><p><span class="cbx-cover-badge"></span><b></b><em class="cbx-dots"><i></i><i></i><i></i></em></p></div>`);
     this.coverEl.setAttribute('role', 'status');
     this.coverDisc = this.coverEl.querySelector('.cbx-cover-disc')!;
     this.coverIcon = this.coverEl.querySelector('.cbx-cover-badge')!;
@@ -236,7 +246,7 @@ export class Hud implements HudApi {
   }
   hideSplash(): void {
     this.splash.classList.add('gone');
-    this.petals.gust();
+    this.petals.burst();
     this.irisFrom = null;
     this.hudEl.hidden = false;
     this.hudEl.classList.add('off');
@@ -358,7 +368,7 @@ export class Hud implements HudApi {
     this.toastT = window.setTimeout(() => this.toastEl.classList.remove('on'), ms);
   }
   /**
-   * Happi's words. Text that continues what is showing (a growing transcript) only reveals the new words; other
+   * Caption words. Text that continues what is showing (a growing transcript) only reveals the new words; other
    * text replaces it, revealed word by word. Long speech keeps its latest words.
    */
   speech(text: string | null): void {
@@ -524,7 +534,7 @@ export class Hud implements HudApi {
       this.coverText.textContent = text;
       const m = MODES.find((x) => x.id === this.curMode);
       this.coverIcon.innerHTML = m ? m.icon : ICON.heart;
-      // each mode has its own brand colour (sky, navy, orange, blossom) and says where it is going
+      // each mode has its own flat EVADE colour (slate, blue, pink, violet) and says where it is going
       this.coverTitle.textContent = `Switching to ${m ? m.label : '3D'} mode`;
       c.dataset.to = m ? m.id : 'showcase';
       if (c.classList.contains('on')) return Promise.resolve();
@@ -613,19 +623,23 @@ export class Hud implements HudApi {
     wrap.setAttribute('role', 'dialog');
     wrap.setAttribute('aria-modal', 'true');
     wrap.setAttribute('aria-label', 'Menu');
-    wrap.innerHTML = `<div class="cbx-sheet">
-      <h2>${esc(this.opts.title)}</h2>
-      <button type="button" class="mi" data-a="how">How it works<span aria-hidden="true">›</span></button>
-      <button type="button" class="mi" data-a="restart">Start again<span aria-hidden="true">↺</span></button>
+    wrap.innerHTML = `<div class="cbx-sheet is-menu">
+      <img class="sh-logo" src="${BRAND.logo}" alt="EVADE" width="600" height="150">
+      <h2>${titleHtml(this.title, esc)}</h2>
+      <button type="button" class="mi" data-a="arcade"><span class="mi-ic">${ARCADE_SVG}</span><span class="mi-t">Bobo's Arcade<small>Every EVADE game and experience</small></span><span class="mi-go" aria-hidden="true">›</span></button>
+      <button type="button" class="mi" data-a="how"><span class="mi-ic">${ICON.info}</span><span class="mi-t">How it works<small>3D, AR, Selfie and Photo</small></span><span class="mi-go" aria-hidden="true">›</span></button>
+      <a class="mi" href="${BRAND.labs}" data-a="labs"><span class="mi-ic">${ICON.grid}</span><span class="mi-t">EVADE Labs<small>All the EVADE experiences on one page</small></span><span class="mi-go" aria-hidden="true">›</span></a>
+      <button type="button" class="mi" data-a="restart"><span class="mi-ic">${ICON.restart}</span><span class="mi-t">Start again<small>Back to the start screen</small></span><span class="mi-go" aria-hidden="true">›</span></button>
       <div class="row"><button type="button" class="btn" data-a="close">Back</button></div>
-      <button type="button" class="small-link" data-a="lic">Licences</button>
+      <a class="small-link" href="${BRAND.licences}" target="_blank" rel="noopener" data-a="lic">Licences</a>
     </div>`;
     wrap.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLElement>('[data-a]')?.dataset.a;
+      if (a === 'labs' || a === 'lic') { this.closeSheet(wrap); return; } // plain links
       if (e.target === wrap || a) this.closeSheet(wrap);
       if (a === 'how') this.openHow();
       if (a === 'restart') this.opts.onRestart();
-      if (a === 'lic') this.openLicences();
+      if (a === 'arcade') window.dispatchEvent(new CustomEvent(OPEN_ARCADE_EVENT));
     });
     this.root.appendChild(wrap);
     this.openSheets.push(wrap);
@@ -637,29 +651,17 @@ export class Hud implements HudApi {
       title: 'How it works',
       body: '',
       html: `<ol>
-        <li><b>3D</b>: Happi's festival square in New York. Drag to look around, pinch to zoom, and walk Happi with the joystick. <b>Actions</b> picks something for Happi to do, <b>Games</b> starts Parade Dash or Blossom Toss.</li>
-        <li><b>AR</b>: point your phone at the floor and tap <b>Place</b>. Walk Happi to the door to go inside. <b>Move</b> puts everything somewhere else.</li>
-        <li><b>Selfie</b>: wear Happi's hood, pick a frame and a filter, then tap the white button.</li>
-        <li><b>Photo</b>: your selfie in the frame Happi holds, or a life-size Happi cutout a friend can step behind.</li>
+        <li><b>3D</b>: Bobo's Hideout. Drag to look around, pinch to zoom and walk Bobo with the joystick. Tap an arcade machine, or <b>Arcade</b>, to pick a game.</li>
+        <li><b>AR</b>: point your phone at the floor and tap <b>Place</b>. Bobo and his hideout appear in your room. <b>Move</b> puts them somewhere else.</li>
+        <li><b>Selfie</b>: try on Bobo's cat hat, shades and can earrings, pick a frame and a filter, then tap the white button. Hold it for a video.</li>
+        <li><b>Photo</b>: place a life-size Bobo cutout in the room. A friend puts their face in the hole and you snap them as Bobo.</li>
       </ol>`,
       buttons: ['Got it'],
     });
   }
 
   openLicences(): void {
-    void this.sheet({
-      title: 'Licences',
-      body: '',
-      html: `<div class="lic">
-        <div><b>three.js</b><br>MIT License. Copyright © 2010-2025 three.js authors.</div>
-        <div><b>8th Wall Engine Binary</b><br>Used under the Niantic Spatial XR Engine License, loaded unmodified. © Niantic Spatial, Inc.
-          <a href="https://8thwall.org/docs/engine/license" target="_blank" rel="noopener">Licence text</a></div>
-        <div><b>Fredoka</b> (font)<br>SIL Open Font License 1.1.</div>
-        <div><b>qrcode-generator</b><br>MIT License. Copyright © Kazuhiko Arase.</div>
-        <div><b>Happi</b><br>Happi, the Japan Parade &amp; Street Fair official mascot, designed by Acky Bright. Character, logo and artwork belong to their owners.</div>
-      </div>`,
-      buttons: ['Close'],
-    });
+    window.open(BRAND.licences, '_blank', 'noopener');
   }
 
   dispose(): void {

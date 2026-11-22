@@ -84,14 +84,15 @@ export interface ExperienceEvents {
   /** Mini game state, emitted on every change of state and score. */
   play: PlayStatus;
   /** EVADE Hub: the fan picked an experience in the world (tapped an arcade cabinet, or walked Bobo up to one and
-   *  tapped Play). `id` is an ArcadeItem id from src/evade/catalog.ts. The app opens that experience's card. */
-  arcade: { id: string; source: 'cabinet' | 'walk' };
+   *  tapped Play). `id` is an ArcadeItem id from src/evade/catalog.ts. The app opens that experience's card.
+   *  `source: 'button'` with `id: ''` = the Arcade button: open the whole Arcade sheet. */
+  arcade: { id: string; source: 'cabinet' | 'walk' | 'button' };
 }
 
 // ------------------------------------------------------------------ mini games (round 3)
 /** Mini games played inside 3D and AR. Not the word games (those live in the app and count her words). */
 export type PlayGameId = 'heart-run' | 'heart-hoops';
-export interface PlayGameInfo { id: PlayGameId; label: string; lead: string }
+export interface PlayGameInfo { id: PlayGameId; label: string; lead: string; /** flat accent (hex) */ color?: string; /** svg markup, currentColor */ icon?: string }
 export interface PlayStatus {
   id: PlayGameId | null;
   state: 'idle' | 'countdown' | 'playing' | 'paused' | 'won' | 'over';

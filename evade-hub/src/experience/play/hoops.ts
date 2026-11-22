@@ -1,4 +1,4 @@
-// Heart Hoops (from Bobo Hoops): Happi floats a rainbow ring and you get 10 hearts to throw through it with a
+// Paw Hoops (from Bobo Hoops): Bobo sets up a ring on a big Eclipse can and you get 10 hearts to throw through it with a
 // swipe up (the heart toss's flick gesture and its toy physics: the same pooled hearts, the same solver).
 //
 //   through the ring = 2, clean through without touching it (a swish) = 3, a long shot +1, from the 3rd in a row +1,
@@ -22,7 +22,7 @@ import { HoopsHand, readAimGuide, writeAimGuide, type AimGuide } from './hand';
 
 const BALLS = 10;
 const UP = new THREE.Vector3(0, 1, 0);
-/** Ring distances from you, in metres (3D: she is 0.9 m tall). */
+/** Ring distances from you, in metres. */
 const DIST_M = { min: 2.2, max: 4.6, arMin: 0.9, arMax: 2.4 };
 
 interface Shot {
@@ -40,9 +40,9 @@ interface Shot {
   near: boolean;
 }
 
-export class HeartHoops extends PlayGame {
+export class PawHoops extends PlayGame {
   readonly id = 'heart-hoops' as const;
-  readonly label = 'Blossom Toss';
+  readonly label = 'Paw Hoops';
   readonly showStick = false;
   protected readonly roundS = null;
   protected readonly starAt = [8, 18, 28] as const;
@@ -66,7 +66,7 @@ export class HeartHoops extends PlayGame {
   private moveT = 1;
   private ringK = 0;
   private dist = { min: 3, max: 5 };
-  /** Her spot beside the ring. */
+  /** His spot beside the ring. */
   private stand = new THREE.Vector3();
   private n = new THREE.Vector3(0, 0, 1);
   private right = new THREE.Vector3(1, 0, 0);
@@ -85,7 +85,7 @@ export class HeartHoops extends PlayGame {
   /** Ring flash after a score (1 -> 0) and whether it was a swish (gold). */
   private flashK = 0;
   private flashGold = false;
-  /** Her side of the ring (+1 = the ring's right as you look at it). */
+  /** His side of the ring (+1 = the ring's right as you look at it). */
   private herSide = 1;
   private aimO = new THREE.Vector3();
   private aimV = new THREE.Vector3();
@@ -143,7 +143,7 @@ export class HeartHoops extends PlayGame {
     const hb = houseBounds(st, 0.5, this.house);
     const F = this.field;
     // keep the whole ring on screen (a portrait phone is narrow: the old ±13 % sideways put it half off the edge) and
-    // put her on the side towards the middle, so the pair sits in view
+    // put his on the side towards the middle, so the pair sits in view
     const tanX = this.viewTanX();
     const ringW = HOOP_R + HOOP_BAND + 0.06;
     const side = this.rng() < 0.5 ? -1 : 1;
@@ -160,9 +160,9 @@ export class HeartHoops extends PlayGame {
       // not right where it was
       if (!first && Math.hypot(x - this.ring.x, z - this.ring.z) < 0.6) continue;
       out.set(x, 0.75 + this.rng() * 0.6, z);
-      // she stands on the inner side (towards the middle) on a narrow screen; on a wide one, outside the ring when it
+      // he stands on the inner side (towards the middle) on a narrow screen; on a wide one, outside the ring when it
       // fits, so the middle of the view (where the heart in your hand is) stays clear
-      // (her centre stands HOOP_R + 0.3 out, about 0.2 past the ring's edge; she is about 0.6 wide)
+      // (his centre stands HOOP_R + 0.3 out, about 0.2 past the ring's edge; he is about 0.6 wide)
       this.herSide = room - Math.abs(lat) > HOOP_R + 0.3 - ringW + 0.36 ? side : -side;
       best = i;
       break;
@@ -176,7 +176,7 @@ export class HeartHoops extends PlayGame {
 
   private standBeside(): void {
     // beside the ring on the side towards the middle of your view (pickSpot), a step behind it (further from you),
-    // so she never blocks the throw and the pair stays on screen
+    // so he never blocks the throw and the pair stays on screen
     this.faceBasis(this.to);
     this.stand.copy(this.to).addScaledVector(this.right, this.herSide * (HOOP_R + 0.3)).addScaledVector(this.n, -0.5).setY(0);
     this.host.constrain(this.stand);
@@ -405,11 +405,11 @@ export class HeartHoops extends PlayGame {
     this.moveT = 0;
     this.standBeside();
     const st = this.host.stage;
-    // her magic: a sparkle stream from her to the ring's new place
+    // his magic: a sparkle stream from his to the ring's new place
     st.fx.emit({ count: this.host.reduced ? 8 : 16, glyph: ['sparkle', 'star'], colors: [PAL.pink, PAL.yellow, PAL.white], at: this.ring, ring: HOOP_R, life: [0.5, 0.8], size: [0.05, 0.09], drag: 2, vel: [0, 0.3, 0] });
   }
 
-  /** She walks to her spot beside the ring, then faces you. */
+  /** He walks to his spot beside the ring, then faces you. */
   walk(dt: number): void {
     const a = this.host.stage.actor;
     const dx = this.stand.x - a.position.x, dz = this.stand.z - a.position.z, d = Math.hypot(dx, dz);

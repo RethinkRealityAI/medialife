@@ -1,12 +1,12 @@
 // A tiny rigid-sphere solver for the playful bits (thrown hearts, bouncing stars, party balloons). No library: the
-// scenes only ever need spheres against a floor plane, a few static spheres/boxes (Happi's body, her house
+// scenes only ever need spheres against a floor plane, a few static spheres/boxes (Bobo's body, the hideout door
 // walls), sphere-sphere bumps and one "catch" sensor, and cannon-es would cost ~130 KB for that.
 //
 // Rules that keep world tracking smooth (pitfall 14: tracking quality = frame rate):
 //   - fixed timestep (1/120 s) with an accumulator and a hard cap on substeps per frame;
 //   - every body is pooled at construction: nothing is allocated while stepping;
 //   - bodies fall asleep when they rest, and the owner despawns them (hard caps per kind).
-// Units are the stage's (Happi is 1 unit tall); y is up and the floor is y = 0 unless `floorY` says otherwise.
+// Units are the stage's (Bobo is 1 unit tall); y is up and the floor is y = 0 unless `floorY` says otherwise.
 import * as THREE from 'three';
 
 export const STEP = 1 / 120;
@@ -71,7 +71,7 @@ export class World {
   /** Static colliders, created once and switched on/off. */
   readonly spheres: StaticSphere[] = [];
   readonly boxes: StaticBox[] = [];
-  /** One catch sensor (her arms). */
+  /** One catch sensor (his arms). */
   readonly sensor: StaticSphere = { c: new THREE.Vector3(), r: 0, on: false };
   hooks: WorldHooks = {};
   private acc = 0;
@@ -190,7 +190,7 @@ export class World {
         // roll: angular velocity matches the ground speed (reads as a soft toy tumbling)
         b.w.set(b.v.z / b.r, b.w.y * f, -b.v.x / b.r);
       }
-      // sensor (before the statics: her arms reach out in front of her body)
+      // sensor (before the statics: his arms reach out in front of his body)
       const sn = this.sensor;
       if (sn.on && b.sense && this.hooks.onSense) {
         const rr = sn.r + b.r;

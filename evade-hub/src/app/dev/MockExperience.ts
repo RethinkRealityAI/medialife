@@ -96,7 +96,7 @@ export function createMockExperience(): ExperienceApi {
       btn.setAttribute('aria-pressed', String(btn.dataset.mode === mode));
     });
     const hint = $('.mx-hint');
-    if (hint) hint.textContent = mode === 'ar' ? 'Point at the floor' : mode === 'face' ? 'Smile with Happi' : 'Tap Happi to say hi';
+    if (hint) hint.textContent = mode === 'ar' ? 'Point at the floor' : mode === 'face' ? 'Smile with Bobo' : 'Tap Bobo to say hi';
   }
 
   function renderCorner() {
@@ -120,7 +120,7 @@ export function createMockExperience(): ExperienceApi {
         <div class="mx-banner" aria-hidden="true"></div>
         <div class="mx-bubble" role="status"></div>
         <div class="mx-top">
-          <div class="mx-word">Happi</div>
+          <div class="mx-word">Bobo</div>
           <div class="mx-modes" role="group" aria-label="View">${MODES.map((m) => `<button type="button" data-mode="${m.id}">${m.label}</button>`).join('')}</div>
           <button class="mx-menu" type="button" aria-label="Menu">&#8801;</button>
         </div>
@@ -129,8 +129,8 @@ export function createMockExperience(): ExperienceApi {
         ${params().has('showCorner') ? '<div class="mx-corner"></div>' : ''}
         <div class="mx-splash">
           <div class="hero">CB</div>
-          <h1>Happi</h1>
-          <p>Talk to Happi and bring her into your room.</p>
+          <h1>Bobo</h1>
+          <p>Bring Bobo into your room.</p>
           <button type="button" disabled>Loading…</button>
           <div class="bar"><i></i></div>
           <small>Activated by MEDIALIFE</small>

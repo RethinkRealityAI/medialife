@@ -92,7 +92,7 @@ export class Engine implements EngineView {
     this.canvas.hidden = true;
     host.appendChild(this.canvas);
     this.wh = worldHealth({
-      page: 'cheer-bear', canvas: this.canvas, baseDpr: 1.5, minDpr: 1.25, // never below 1.25: Android dropped to 1 and Happi looked soft (Dapo, 2026-11-20)
+      page: 'evade-hub', canvas: this.canvas, baseDpr: 1.5, minDpr: 1.25, // never below 1.25: Android dropped to 1 and the character looked soft
       size: () => [Math.max(1, host.clientWidth), Math.max(1, host.clientHeight)],
       diagExtra: () => {
         const r = this.xr?.renderer;
@@ -442,7 +442,7 @@ export class Engine implements EngineView {
 
   // ------------------------------------------------------------------ the pipeline module
   private appModule = {
-    name: 'cheerbear-experience',
+    name: 'evade-hub-experience',
     onStart: () => {
       try {
         const xr = window.XR8.Threejs.xrScene() as XrScene;

@@ -1,4 +1,4 @@
-// The physical toys of one stage: soft hearts (thrown at Happi), bouncing stars (Rainbow, the Care Bear Stare)
+// The physical toys of one stage: soft hearts (thrown at Bobo), bouncing stars (sparkles, the fizz orb)
 // and party balloons (they float, bump each other and pop when tapped). One World, three pooled instanced meshes
 // (one draw and one program each, built and compiled with the stage at load), plus the balloons' strings in one line
 // draw. Flat colours only. Everything despawns: resting toys shrink away, each kind has a hard cap and the oldest is
@@ -20,7 +20,7 @@ const REST_LIFE = [1.8, 1.1, 99];
 const MAX_AGE = [10, 7, 40];
 const FADE = 0.35;
 
-export const HEART_COLORS = [PAL.pink, PAL.red, 0xff7ab8, PAL.pinkSoft];
+export const HEART_COLORS = [PAL.pink, PAL.red, PAL.yellow, PAL.sky];
 export const BALLOON_COLORS = [PAL.pink, PAL.blue, PAL.yellow, PAL.green, PAL.purple, PAL.orange, PAL.red];
 
 /** Extra per-body state the World doesn't need. */
@@ -38,17 +38,13 @@ interface ToyState {
 }
 
 function heartShape(): THREE.Shape {
-  // Happi's toys are cherry blossoms: five notched petals, y up, about 2 units wide
+  // a soft heart, y up, about 2 units wide
   const s = new THREE.Shape();
-  const N = 90;
-  for (let i = 0; i < N; i++) {
-    const th = Math.PI / 2 + (i / N) * Math.PI * 2;
-    const u = ((((th - Math.PI / 2) / (Math.PI * 2 / 5) + 0.5) % 1) + 1) % 1;
-    let r = 0.3 + 0.7 * Math.pow(Math.sin(Math.PI * u), 0.55);
-    r -= 0.16 * Math.max(0, 1 - Math.abs(u - 0.5) / 0.09);
-    if (i === 0) s.moveTo(Math.cos(th) * r, Math.sin(th) * r); else s.lineTo(Math.cos(th) * r, Math.sin(th) * r);
-  }
-  s.closePath();
+  s.moveTo(0, -0.95);
+  s.bezierCurveTo(-1.15, -0.1, -1.0, 0.95, -0.42, 0.95);
+  s.bezierCurveTo(-0.15, 0.95, 0, 0.75, 0, 0.6);
+  s.bezierCurveTo(0, 0.75, 0.15, 0.95, 0.42, 0.95);
+  s.bezierCurveTo(1.0, 0.95, 1.15, -0.1, 0, -0.95);
   return s;
 }
 function starShape(): THREE.Shape {
@@ -93,15 +89,15 @@ export class Playground {
   readonly stars: THREE.InstancedMesh;
   readonly balloons: THREE.InstancedMesh;
   readonly strings: THREE.LineSegments;
-  /** Happi's body (two static spheres) and the house walls (AR). */
+  /** Bobo's body (two static spheres) and the house walls (AR). */
   readonly bearLow;
   readonly bearHigh;
   readonly houseBox;
-  /** A heart reached her arms (the sensor). Return true to consume it. */
+  /** A heart reached his paws (the sensor). Return true to consume it. */
   onCatch: ((b: Body) => boolean) | null = null;
   /** A heart touched the floor for the first time (a miss). */
   onMiss: ((b: Body) => void) | null = null;
-  /** A thrown heart bonked her body (she was asleep, so the sensor was off). */
+  /** A thrown heart bonked his body (he was asleep, so the sensor was off). */
   onBonk: ((b: Body) => void) | null = null;
   /** Reduced motion: fewer stars, softer bounces. */
   reduced = false;
@@ -177,7 +173,7 @@ export class Playground {
     return this.pools[KIND[kind]];
   }
 
-  /** Per frame: where she stands (stage-local), whether her arms are open (awake, not walking). */
+  /** Per frame: where he stands (stage-local), whether his paws are up (awake, not walking). */
   setBear(pos: THREE.Vector3, catching: boolean, sensorY = 0.6): void {
     this.bear.copy(pos);
     this.bearLow.c.set(pos.x, 0.3, pos.z);
@@ -187,7 +183,7 @@ export class Playground {
     this.world.sensor.c.set(pos.x, sensorY, pos.z);
   }
 
-  /** Point the sensor a little towards the throw (her arms reach out). */
+  /** Point the sensor a little towards the throw (his arms reach out). */
   get sensor(): THREE.Vector3 {
     return this.world.sensor.c;
   }
@@ -210,7 +206,7 @@ export class Playground {
     return pick!;
   }
 
-  /** A thrown heart (stage-local origin and velocity; `hex` picks its colour, e.g. Heart Hoops' gold heart). */
+  /** A thrown heart (stage-local origin and velocity; `hex` picks its colour, e.g. Paw Hoops' gold heart). */
   throwHeart(from: THREE.Vector3, vel: THREE.Vector3, hex?: number): Body {
     const b = this.world.spawn(this.take(KIND.heart), from, vel, HEART_R);
     b.restitution = this.reduced ? 0.3 : 0.48;
@@ -330,7 +326,7 @@ export class Playground {
     const w = this.world;
     const any = this.liveCount > 0;
     if (any) w.step(dt);
-    // the house walls (AR) and her body stay as the stage set them
+    // the house walls (AR) and his body stay as the stage set them
     for (const b of w.bodies) {
       if (!b.alive) continue;
       const st = this.state[b.index];
@@ -435,7 +431,7 @@ export class Playground {
   private impact(b: Body, speed: number): void {
     if (b.kind === KIND.heart) {
       if (b.sense) {
-        // first touch: floor = a miss; her body = a bonk (she was asleep)
+        // first touch: floor = a miss; his body = a bonk (he was asleep)
         const dx = b.p.x - this.bear.x, dz = b.p.z - this.bear.z;
         if (b.p.y > b.r * 1.5 && dx * dx + dz * dz < 0.36) this.onBonk?.(b);
         else this.onMiss?.(b);

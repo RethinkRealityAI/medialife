@@ -1,4 +1,4 @@
-/* Mini games (Heart Run, Heart Hoops): scoreboard, countdown, popups, streak counter, pause and results cards.
+/* Mini games (Can Dash, Paw Hoops): scoreboard, countdown, popups, streak counter, pause and results cards.
    Flat colours and theme tokens only (no gradients). The scoreboard sits where the hint pill normally starts (under the
    top bar and below the app's chip / toast strip, --cb-top-reserve); while a game is on, the hint pill moves below it. */
 
@@ -36,7 +36,7 @@
 .cbp-time.low { background: var(--cb-red); }
 .cbp-time.low b { animation: cbp-bump 0.4s var(--cb-ease-spring); }
 
-/* Heart Hoops' rack (polish-4): the hearts you have left, big, bottom centre, above the bottom row (clear of Move, the
+/* Paw Hoops' rack (polish-4): the hearts you have left, big, bottom centre, above the bottom row (clear of Move, the
    shutter / joystick slot and the talk button), right under the heart in your hand. The gold 10th says "x2". */
 .cbp-rack {
   position: absolute; left: 50%; bottom: calc(var(--cbx-bottom) + 84px); transform: translate3d(-50%, 0, 0);
@@ -99,14 +99,14 @@
 .cbp-aim i { position: absolute; left: 0; top: 0; width: 11px; height: 11px; border-radius: 50%; background: var(--cb-white); box-shadow: 0 0 0 2px rgba(59, 33, 64, 0.5); opacity: 0; will-change: transform; }
 .cbp-aim i.end { width: 26px; height: 26px; box-sizing: border-box; background: transparent; border: 4px solid var(--cb-white); box-shadow: 0 0 0 2px rgba(59, 33, 64, 0.5), inset 0 0 0 2px rgba(59, 33, 64, 0.5); }
 
-/* the pause card's aim guide switch (Heart Hoops) */
+/* the pause card's aim guide switch (Paw Hoops) */
 .cbp-aimset { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; font: var(--cb-w-strong) 14px/1 var(--cb-font); color: var(--cb-ink-soft); }
 .cbp-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: var(--cb-r-pill); background: var(--cb-cloud); }
 .cbp-seg button { min-height: 36px; min-width: 56px; padding: 0 12px; border: 0; border-radius: var(--cb-r-pill); background: transparent; color: var(--cb-ink-soft); font: var(--cb-w-strong) 14px/1 var(--cb-font); cursor: pointer; }
-.cbp-seg button[aria-checked="true"] { background: var(--cb-pink); color: var(--cb-white); }
+.cbp-seg button[aria-checked="true"] { background: var(--cb-pink); color: var(--cb-ink); }
 .cbp-seg button:focus-visible { outline: none; box-shadow: var(--cb-focus); }
 
-/* Heart Run: a one-time nudge when she has not moved yet (a ring pulses round the joystick, a pill above it) */
+/* Can Dash: a one-time nudge when Bobo has not moved yet (a ring pulses round the joystick, a pill above it) */
 .cbx-stick.cbp-nudge::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; border: 3px solid var(--cb-white); pointer-events: none; animation: cbp-ring 1.4s ease-out infinite; }
 .cbp-nudge-pill {
   position: absolute; left: 50%; bottom: calc(var(--cbx-bottom) + 132px); transform: translate3d(-50%, 8px, 0); opacity: 0; pointer-events: none;
@@ -133,7 +133,7 @@
   position: absolute; left: 50%; top: calc(var(--cbx-top) + var(--cbx-head) + 104px);
   transform: translate(-50%, calc(var(--cb-top-reserve, 0px) - 6px)) scale(0.9); opacity: 0; pointer-events: none;
   display: flex; align-items: center; gap: 7px; padding: 7px 14px 7px 10px; border-radius: 999px;
-  background: var(--cb-pink); color: var(--cb-white); font-family: var(--cb-font); font-size: 14px; font-weight: 600;
+  background: var(--cb-pink); color: var(--cb-ink); font-family: var(--cb-font); font-size: 14px; font-weight: 600;
   line-height: 1; white-space: nowrap; transition: opacity 0.25s ease, transform 0.35s var(--cb-ease);
 }
 .cbp-streak svg { width: 18px; height: 18px; display: block; }
@@ -159,15 +159,15 @@
 /* "+1", "Swish! +3": springs up from where it happened, then floats off */
 .cbp-pop {
   position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; will-change: transform, opacity;
-  font: var(--cb-w-heavy) 22px/1 var(--cb-font); color: var(--cb-white); padding: 6px 12px; border-radius: var(--cb-r-pill);
+  font: var(--cb-w-heavy) 22px/1 var(--cb-font); color: var(--cb-ink); padding: 6px 12px; border-radius: var(--cb-r-pill);
   background: var(--cb-pink); box-shadow: var(--cb-shadow-1);
   animation: cbp-pop 0.95s var(--cb-ease) forwards;
 }
-.cbp-pop.rainbow { background: var(--cb-purple); }
+.cbp-pop.rainbow { background: var(--cb-purple); color: var(--cb-white); }
 .cbp-pop.star { background: var(--cb-yellow); color: var(--cb-ink); }
-.cbp-pop.bad { background: var(--cb-ink); }
+.cbp-pop.bad { background: var(--cb-ink); color: var(--cb-white); }
 .cbp-pop.miss { background: var(--cb-glass-hint-solid); font-size: 18px; }
-.cbp-pop.close { background: var(--cb-white); color: var(--cb-pink-deep); font-size: 20px; }
+.cbp-pop.close { background: var(--cb-white); color: var(--cb-ink); font-size: 20px; }
 .cbp-pop.big { font-size: 30px; padding: 8px 16px; }
 .cbp-pop.big small { font-size: 14px; }
 .cbp-pop small { font-size: 13px; font-weight: var(--cb-w-strong); margin-left: 5px; opacity: 0.92; }
@@ -183,7 +183,7 @@
   padding: 22px 20px 18px; box-shadow: var(--cb-shadow-3); text-align: center; font-family: var(--cb-font);
   display: flex; flex-direction: column; align-items: center; gap: 10px; animation: cbp-rise var(--cb-dur-3) var(--cb-ease-spring);
 }
-.cbp-card h2 { margin: 0; font-size: 24px; line-height: 1.15; font-weight: var(--cb-w-heavy); color: var(--cb-pink-deep); }
+.cbp-card h2 { margin: 0; font-size: 24px; line-height: 1.15; font-weight: var(--cb-w-heavy); color: var(--cb-ink); }
 .cbp-card p { margin: 0; color: var(--cb-ink-soft); font-size: 15px; }
 .cbp-stars { display: flex; gap: 6px; align-items: flex-end; justify-content: center; height: 66px; }
 .cbp-stars i { display: block; width: 52px; height: 52px; color: var(--cb-pink-soft); }
@@ -195,15 +195,15 @@
 .cbp-big { font-size: 54px; line-height: 1; font-weight: var(--cb-w-heavy); color: var(--cb-ink); font-variant-numeric: tabular-nums; }
 .cbp-big small { display: block; font-size: 13px; font-weight: var(--cb-w-strong); color: var(--cb-ink-soft); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
 .cbp-best { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--cb-r-pill); background: var(--cb-cloud); color: var(--cb-ink-soft); font-size: 14px; font-weight: var(--cb-w-label); }
-.cbp-best.new { background: var(--cb-pink); color: var(--cb-white); font-weight: var(--cb-w-strong); }
+.cbp-best.new { background: var(--cb-pink); color: var(--cb-ink); font-weight: var(--cb-w-strong); }
 .cbp-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; width: 100%; margin-top: 4px; }
 .cbp-btn {
   flex: 1 1 0; min-height: 50px; padding: 0 18px; border-radius: var(--cb-r-pill); border: 0; cursor: pointer;
-  font: var(--cb-w-strong) 16px/1 var(--cb-font); background: var(--cb-pink); color: var(--cb-white);
+  font: var(--cb-w-strong) 16px/1 var(--cb-font); background: var(--cb-pink); color: var(--cb-ink);
   box-shadow: 0 3px 0 var(--cb-pink-deep); transition: transform var(--cb-dur-1) ease, box-shadow var(--cb-dur-1) ease;
 }
 .cbp-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--cb-pink-deep); }
-.cbp-btn.alt { background: var(--cb-pink-soft); color: var(--cb-pink-deep); box-shadow: 0 3px 0 #f2b6d4; }
+.cbp-btn.alt { background: var(--cb-pink-soft); color: var(--cb-pink); box-shadow: 0 3px 0 var(--cb-pink-deep); }
 .cbp-btn:focus-visible { outline: none; box-shadow: var(--cb-focus); }
 
 /* the game chooser sheet (the Games button in the HUD) */
@@ -215,7 +215,7 @@
 }
 .cbp-pick button:active { transform: scale(0.98); }
 .cbp-pick button:focus-visible { outline: none; box-shadow: var(--cb-focus); }
-.cbp-pick .ic { flex: none; width: 52px; height: 52px; border-radius: var(--cb-r-md); display: grid; place-items: center; background: var(--cb-pink); color: var(--cb-white); }
+.cbp-pick .ic { flex: none; width: 52px; height: 52px; border-radius: var(--cb-r-md); display: grid; place-items: center; background: var(--cb-pink); color: var(--cb-ink); }
 .cbp-pick .ic.hoops { background: var(--cb-purple); }
 .cbp-pick .ic svg { width: 30px; height: 30px; display: block; }
 .cbp-pick b { display: block; font-size: 17px; font-weight: var(--cb-w-strong); }

@@ -4,14 +4,14 @@
 // same thresholds then key far too much). The texture is NoColorSpace (raw values in), the key colour is raw sRGB, and
 // the result is written straight out (no colorspace / tone mapping chunks). Distance is measured in CbCr; one small
 // soft threshold (similarity -> similarity + smoothness), no gradient edges. Numbers were checked in numpy on the
-// Happi wink clip: the green sits at CbCr distance < 0.05, the bear at > 0.3.
+// the original character clips: the green sits at CbCr distance < 0.05, the bear at > 0.3.
 // `texel` (1 / video size) turns on a one-texel matte erosion (alpha = the lowest of the pixel and its 4 neighbours):
 // on the wink clip's last frame it cut the edge pixels that stay green-tinted from 29 % to 6 % and the dark fringe
 // from 56 % to 17 % (numpy on the decoded frame, composited over white), for 0.8 % of the bear's pixels.
 import * as THREE from 'three';
 
 export interface ChromaOptions {
-  /** Raw sRGB 0..255. Default: the Happi clips' green (0, 182, 87). */
+  /** Raw sRGB 0..255. Default: a broadcast green (0, 182, 87). */
   key?: [number, number, number];
   similarity?: number;
   smoothness?: number;
