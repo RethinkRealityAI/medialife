@@ -328,7 +328,9 @@ function buildCan(gltf, masks) {
   const own = s0.material.map; own.wrapS = own.wrapT = THREE.ClampToEdgeWrapping; own.needsUpdate = true;
   portalMasks.own = { tex: bakeMask(own, CHARM.w / CHARM.h), w: CHARM.w, h: CHARM.h };
   for (const [n, tex] of Object.entries(masks || {})) { const mk = layout.targets[n].mask; portalMasks[n] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
-  portal = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), portalMaterial(portalMasks.own.tex, CHARM.w / CHARM.h, ...PORTAL_COLOURS));
+  // the GLB's own silhouette quad (unit size, glTF uvs: v runs down) to match the masks loaded with flipY off. A
+  // PlaneGeometry (v up) drew the portal upside down: the ring loop at the bottom (Dapo, 2026-11-22).
+  portal = new THREE.Mesh(s0.geometry, portalMaterial(portalMasks.own.tex, CHARM.w / CHARM.h, ...PORTAL_COLOURS));
   portal.renderOrder = 3; portal.frustumCulled = false; portal.name = 'portal'; canRoot.name = 'canRoot';
   portal.position.z = 0.0004; portal.scale.set(CHARM.w, CHARM.h, 1); portal.userData.on = 'own';
   CF.add(portal);
