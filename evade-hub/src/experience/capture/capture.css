@@ -1,0 +1,219 @@
+/* Capture UI (xr-capture): countdown, flash, look/pose pickers, photo review sheet, reveal and behind-the-scenes
+   players, the selfie frame overlay. Scoped under .cbx (the experience root). Flat colours only, theme tokens from
+   src/shared/theme.css. The review and players sit at z-index 60+ over the HUD; their bottom padding keeps the app's
+   talk-button corner (--cbx-reserved) free so nothing sits under it. */
+
+/* ---------------------------------------------------------------- overlay art (selfie frame, title) */
+.cbx .cbc-overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none !important; }
+
+/* ---------------------------------------------------------------- countdown */
+.cbx .cbc-count {
+  position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 12;
+  display: flex; flex-direction: column; align-items: center; gap: 12px; pointer-events: none;
+}
+.cbx .cbc-count span {
+  display: grid; place-items: center; width: 132px; height: 132px; border-radius: 50%;
+  background: rgba(8, 8, 10, 0.5); border: 6px solid var(--cb-white); color: var(--cb-white);
+  font-size: 76px; font-weight: 700; line-height: 1;
+}
+.cbx .cbc-count span.pop { animation: cbc-pop 0.9s var(--cb-ease); }
+.cbx .cbc-count small {
+  padding: 7px 14px; border-radius: 999px; background: rgba(8, 8, 10, 0.56); color: #fff; font-size: 13px; font-weight: 500;
+}
+@keyframes cbc-pop { 0% { transform: scale(1.35); opacity: 0.4; } 35% { transform: scale(1); opacity: 1; } 100% { transform: scale(0.94); } }
+@media (prefers-reduced-motion: reduce) { .cbx .cbc-count span.pop { animation: none; } }
+
+.cbx .cbc-flash { position: absolute; inset: 0; z-index: 70; background: #fff; opacity: 0; pointer-events: none; transition: opacity 0.06s linear; }
+
+/* the shutter while the timer runs: a pink ring says "tap to shoot now" */
+.cbx .cbx-shutter.cbc-armed { border-color: var(--cb-pink); }
+.cbx .cbx-shutter.cbc-armed i { background: var(--cb-pink); transform: scale(0.62); border-radius: 18px; }
+.cbx .cbx-shutter:disabled { opacity: 0.5; }
+
+/* ---------------------------------------------------------------- pickers (look, pose) */
+.cbx .cbc-seg {
+  display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px; background: var(--cb-glass);
+  border: 1px solid var(--cb-glass-line); -webkit-backdrop-filter: var(--cb-blur); backdrop-filter: var(--cb-blur);
+  pointer-events: auto; transition: opacity 0.25s ease, transform 0.25s ease;
+}
+/* Classic's countdown: the look picker would sit over her face (polish-4) */
+.cbx .cbc-seg.cbc-tuck { opacity: 0; transform: translateY(10px); pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .cbx .cbc-seg.cbc-tuck { transform: none; } }
+.cbx .cbc-seg button {
+  min-height: 40px; min-width: 64px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--cb-white); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, color 0.2s;
+}
+.cbx .cbc-seg button[aria-checked="true"] { background: var(--cb-white); color: var(--cb-pink-deep); }
+
+/* the live frame + filter strip (selfie): round glass chips with a preview, the name under each (style-strip.ts) */
+.cbx .cbc-strip { width: 100%; max-width: 560px; pointer-events: auto; transition: opacity 0.25s ease, transform 0.25s ease; }
+.cbx .cbc-strip.cbc-tuck { opacity: 0; transform: translateY(10px); pointer-events: none; }
+.cbx .cbc-strip-row {
+  display: flex; align-items: flex-start; gap: 10px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  padding: 4px 12px 2px; scroll-snap-type: x proximity; touch-action: pan-x; justify-content: safe center;
+}
+.cbx .cbc-strip-row::-webkit-scrollbar { display: none; }
+.cbx .cbc-strip-group { display: flex; gap: 10px; }
+.cbx .cbc-strip-sec { flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.cbx .cbc-strip-cap {
+  font-size: 10.5px; line-height: 1; letter-spacing: 0.08em; text-transform: uppercase; font-weight: var(--cb-w-label);
+  color: rgba(255, 255, 255, 0.82); padding: 3px 8px; border-radius: var(--cb-r-pill); background: rgba(8, 8, 10, 0.38);
+}
+.cbx .cbc-strip-div { flex: none; width: 1px; height: 40px; margin: 8px 2px 0; background: rgba(255, 255, 255, 0.4); }
+.cbx .cbc-chipc {
+  flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 60px; padding: 0; border: 0;
+  background: none; color: var(--cb-white); cursor: pointer; scroll-snap-align: center;
+}
+.cbx .cbc-chipc-face {
+  display: block; width: 56px; height: 56px; padding: 3px; border-radius: 50%; background: var(--cb-glass);
+  border: 1px solid var(--cb-glass-line); -webkit-backdrop-filter: var(--cb-blur); backdrop-filter: var(--cb-blur);
+  transition: transform 0.2s var(--cb-ease-spring, ease), box-shadow 0.2s;
+}
+.cbx .cbc-chipc canvas { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.cbx .cbc-chipc-label { font-size: 11.5px; font-weight: 700; line-height: 1.1; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+.cbx .cbc-chipc[aria-checked="true"] .cbc-chipc-face { box-shadow: 0 0 0 3px var(--cb-white); transform: scale(1.06); }
+.cbx .cbc-chipc:active .cbc-chipc-face { transform: scale(0.92); }
+.cbx .cbc-chipc:focus-visible { outline: none; }
+.cbx .cbc-chipc:focus-visible .cbc-chipc-face { box-shadow: 0 0 0 3px var(--cb-white), 0 0 0 5px var(--cb-ink); }
+/* the live filter tint (sakura) over the camera, under the frame overlay */
+.cbx .cbc-tint { position: absolute; inset: 0; pointer-events: none; }
+
+.cbx .cbc-skip {
+  min-height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--cb-glass-line); background: var(--cb-glass);
+  color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; -webkit-backdrop-filter: var(--cb-blur); backdrop-filter: var(--cb-blur);
+}
+.cbx .cbc-still { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; object-fit: cover; object-position: left bottom; pointer-events: none !important; transition: opacity 0.4s; }
+
+/* ---------------------------------------------------------------- buttons */
+.cbx .cbc-btn {
+  min-height: 52px; padding: 0 20px; border-radius: 999px; border: 0; cursor: pointer; font-size: 16px; font-weight: 650;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex: 1 1 0; min-width: 0;
+  background: var(--cb-pink); color: var(--cb-white); box-shadow: 0 4px 0 var(--cb-pink-deep);
+}
+.cbx .cbc-btn span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cbx .cbc-btn svg { width: 22px; height: 22px; flex: none; }
+.cbx .cbc-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--cb-pink-deep); }
+.cbx .cbc-btn.alt { background: var(--cb-pink-soft); color: var(--cb-pink-deep); box-shadow: none; }
+.cbx .cbc-btn.alt:active { box-shadow: none; }
+.cbx .cbc-btn.ghost { background: transparent; color: var(--cb-ink-soft); box-shadow: none; flex: none; min-height: 44px; padding: 0 12px; font-size: 14px; font-weight: 600; }
+.cbx .cbc-btn.ghost svg { width: 20px; height: 20px; }
+.cbx .cbc-ib {
+  width: 48px; height: 48px; border-radius: 50%; border: 0; padding: 0; display: grid; place-items: center; cursor: pointer;
+  background: var(--cb-pink-soft); color: var(--cb-pink-deep); flex: none;
+}
+.cbx .cbc-ib svg { width: 22px; height: 22px; }
+
+/* ---------------------------------------------------------------- review sheet */
+.cbx .cbc-review {
+  position: absolute; inset: 0; z-index: 60; color: var(--cb-ink);
+  /* branded, flat (no gradients): Happi sky with a soft blossom pattern, a happi-coat checker trim along the top */
+  background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%22120%22%20height%3D%22120%22%20viewBox%3D%220%200%20120%20120%22%3E%3Cg%20fill%3D%22%23ffffff%22%20opacity%3D%220.55%22%3E%3Cg%20transform%3D%22translate%2828%2030%29%20scale%280.9%29%22%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%280%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%2872%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28144%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28216%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28288%29%22/%3E%3C/g%3E%3Cg%20transform%3D%22translate%2888%2086%29%20rotate%2830%29%20scale%280.6%29%22%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%280%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%2872%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28144%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28216%29%22/%3E%3Cpath%20d%3D%22M0%200C-6%20-4%20-5%20-12%20-1.5%20-12L0%20-10L1.5%20-12C5%20-12%206%20-4%200%200z%22%20transform%3D%22rotate%28288%29%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") 0 0 / 120px 120px repeat, var(--cb-sky);
+  display: flex; flex-direction: column; pointer-events: auto; touch-action: manipulation;
+  padding: calc(var(--cb-safe-top) + 10px) calc(var(--cb-safe-right) + 14px) 0 calc(var(--cb-safe-left) + 14px);
+  animation: cbc-in 0.28s var(--cb-ease);
+}
+.cbx .cbc-review::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--cb-safe-top) + 8px); background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2216%22%20height%3D%2216%22%3E%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%23283a8f%22/%3E%3Crect%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23ffffff%22/%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%228%22%20height%3D%228%22%20fill%3D%22%23ffffff%22/%3E%3C/svg%3E") 0 100% / 8px 8px repeat-x, var(--cb-blue); pointer-events: none; }
+@keyframes cbc-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cbx .cbc-review { animation: cbc-fade 0.2s linear; } }
+@keyframes cbc-fade { from { opacity: 0; } to { opacity: 1; } }
+.cbx .cbc-rv-top { display: flex; align-items: center; gap: 10px; min-height: 46px; flex: none; padding-top: 6px; }
+.cbx .cbc-rv-top h2 { margin: 0; font-size: 20px; font-weight: 800; color: var(--cb-blue); }
+.cbx .cbc-rv-top .cbc-ib { width: 42px; height: 42px; background: var(--cb-white); color: var(--cb-blue); }
+.cbx .cbc-rv-photo { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 4px 0 10px; }
+.cbx .cbc-rv-photo img, .cbx .cbc-rv-photo video {
+  display: block; max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 16px;
+  border: 5px solid var(--cb-white); background: var(--cb-sky); box-shadow: 0 6px 0 rgba(40, 58, 143, 0.25);
+  -webkit-touch-callout: default; -webkit-user-select: auto; user-select: auto; pointer-events: auto;
+}
+.cbx .cbc-rv-actions {
+  flex: none; display: flex; flex-direction: column; gap: 8px; width: min(100%, 460px); margin: 0 auto;
+  padding-bottom: calc(var(--cb-safe-bottom) + 14px + var(--cbx-reserved, 0px));
+}
+/* post-snap frame / filter chips */
+.cbx .cbc-rv-styles { display: flex; flex-direction: column; gap: 8px; }
+.cbx .cbc-chips { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 1px 0; }
+.cbx .cbc-chips::-webkit-scrollbar { display: none; }
+.cbx .cbc-chips .lbl { flex: 0 0 44px; font-size: 13px; font-weight: 700; color: var(--cb-ink); opacity: 0.7; }
+.cbx .cbc-chip {
+  flex: none; min-height: 38px; padding: 0 12px; border-radius: 999px; border: 2px solid #283a8f22; background: #f3efe7;
+  color: #283a8f; font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+.cbx .cbc-chip[aria-pressed="true"] { background: #283a8f; color: #fff; border-color: #283a8f; }
+.cbx .cbc-chip:focus-visible { outline: 3px solid #f37321; outline-offset: 2px; }
+.cbx .cbc-review.cbc-busy .cbc-rv-photo img { opacity: 0.7; transition: opacity 0.15s; }
+.cbx .cbc-rv-actions .row { display: flex; gap: 10px; }
+.cbx .cbc-rv-actions .row.main .cbc-btn { min-height: 44px; padding: 0 12px; font-size: 15px; gap: 6px; box-shadow: 0 3px 0 var(--cb-pink-deep); }
+.cbx .cbc-rv-actions .row.main .cbc-btn svg { width: 19px; height: 19px; }
+.cbx .cbc-btn.navy { background: var(--cb-blue); color: var(--cb-white); }
+.cbx .cbc-rv-actions .row.main .cbc-btn.navy { box-shadow: 0 3px 0 #1a2766; }
+.cbx .cbc-rv-actions .row .cbc-btn.alt:only-child { min-height: 40px; font-size: 14px; background: var(--cb-white); color: var(--cb-blue); }
+.cbx .cbc-status { text-shadow: none; }
+/* Retake keeps its natural width so "Watch photo animation" fits on a 375 px phone */
+.cbx .cbc-rv-actions .row .cbc-btn.alt:first-child:not(:only-child) { flex: 0 0 auto; padding: 0 16px; }
+.cbx .cbc-rv-actions .row .cbc-btn.alt { padding: 0 14px; gap: 6px; }
+.cbx .cbc-rv-actions .row.foot { align-items: center; justify-content: space-between; min-height: 44px; gap: 6px; }
+.cbx .cbc-status { margin: 0; font-size: 14px; font-weight: 700; color: var(--cb-blue); text-align: right; flex: 1 1 auto; }
+.cbx .cbc-status.light { color: var(--cb-white); text-align: center; flex-basis: 100%; }
+@media (max-height: 700px) {
+  .cbx .cbc-btn { min-height: 46px; font-size: 15px; }
+  .cbx .cbc-rv-actions { gap: 8px; }
+}
+@media (min-width: 900px) and (min-aspect-ratio: 1/1) {
+  /* computers / landscape tablets: photo left, buttons right */
+  .cbx .cbc-review { display: grid; grid-template-columns: 1fr minmax(300px, 420px); grid-template-rows: auto 1fr; column-gap: 28px; padding-bottom: 24px; }
+  .cbx .cbc-rv-top { grid-column: 1 / -1; }
+  .cbx .cbc-rv-photo { grid-row: 2; }
+  .cbx .cbc-rv-actions { grid-row: 2; align-self: center; padding-bottom: 24px; }
+  .cbx .cbc-rv-actions .row:not(.foot) { flex-direction: column; }
+}
+
+/* ---------------------------------------------------------------- players (reveal, behind the scenes) */
+.cbx .cbc-player {
+  position: absolute; inset: 0; z-index: 62; background: var(--cb-ink); display: flex; align-items: center; justify-content: center;
+  pointer-events: auto; touch-action: manipulation;
+  padding: calc(var(--cb-safe-top) + 8px) 8px calc(var(--cb-safe-bottom) + 8px);
+}
+.cbx .cbc-pl-stage { position: relative; height: 100%; max-width: 100%; aspect-ratio: 9 / 16; display: flex; align-items: center; justify-content: center; }
+.cbx .cbc-pl-stage canvas, .cbx .cbc-pl-stage video {
+  display: block; max-width: 100%; max-height: 100%; width: auto; height: 100%; aspect-ratio: 9 / 16; object-fit: contain; border-radius: 16px; background: #000;
+}
+.cbx .cbc-pl-close { position: absolute; top: calc(var(--cb-safe-top) + 12px); left: calc(var(--cb-safe-left) + 12px); background: var(--cb-white); }
+.cbx .cbc-pl-skip { position: absolute; top: calc(var(--cb-safe-top) + 14px); right: calc(var(--cb-safe-right) + 12px); color: var(--cb-white) !important; background: rgba(8, 8, 10, 0.56) !important; }
+.cbx .cbc-pl-bar {
+  position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  padding: 14px calc(var(--cb-safe-right) + 16px) calc(var(--cb-safe-bottom) + max(16px, var(--cbx-reserved, 88px))) calc(var(--cb-safe-left) + 16px);
+  background: rgba(59, 33, 64, 0.82);
+}
+.cbx .cbc-pl-bar .cbc-btn { flex: 1 1 0; max-width: 220px; }
+
+/* ---------------------------------------------------------------- Selfie: Classic "Tap to play", Smile switch */
+.cbx .cbc-tapplay {
+  position: absolute; left: 50%; top: 44%; transform: translate(-50%, -50%); z-index: 14;
+  display: inline-flex; align-items: center; gap: 10px; min-height: 60px; padding: 0 28px; border-radius: 999px; border: 0;
+  background: var(--cb-pink); color: var(--cb-white); font-size: 18px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 5px 0 var(--cb-pink-deep); pointer-events: auto;
+}
+.cbx .cbc-tapplay svg { width: 24px; height: 24px; }
+.cbx .cbc-tapplay:active { transform: translate(-50%, calc(-50% + 3px)); box-shadow: 0 2px 0 var(--cb-pink-deep); }
+.cbx .cbx-tool.cbc-toggle.on { background: var(--cb-white); color: var(--cb-pink-deep); border-color: var(--cb-white); }
+
+/* ---------------------------------------------------------------- 3D Photo: selfie guide oval, selfie thumbnail */
+.cbx .cbc-guide { position: absolute; inset: 0; pointer-events: none !important; }
+.cbx .cbc-guide svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cbx .cbc-thumb {
+  display: block; width: 56px; height: 68px; object-fit: cover; border-radius: 12px; border: 3px solid var(--cb-white);
+  background: var(--cb-pink-soft); box-shadow: var(--cb-shadow-1); pointer-events: none !important;
+}
+
+/* ---------------------------------------------------------------- countdown lead word (polish-4: Classic's "Smile!")
+   Big on its own first, then a small label over the 3, 2, 1. Flat pink pill, no gradient. */
+.cbx .cbc-count .cbc-lead {
+  display: block; padding: 9px 20px; border-radius: 999px; background: var(--cb-pink); color: var(--cb-white);
+  font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: 0.01em; box-shadow: 0 4px 0 var(--cb-pink-deep);
+}
+.cbx .cbc-count.leading .cbc-lead { font-size: 60px; padding: 18px 34px; border-radius: 40px; box-shadow: 0 6px 0 var(--cb-pink-deep); }
+.cbx .cbc-count.leading span, .cbx .cbc-count.leading small { display: none; }
+.cbx .cbc-count .cbc-lead.pop { animation: cbc-lead 0.6s var(--cb-ease-spring); }
+@keyframes cbc-lead { 0% { transform: scale(0.4) rotate(-6deg); opacity: 0; } 60% { transform: scale(1.08) rotate(2deg); opacity: 1; } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cbx .cbc-count .cbc-lead.pop { animation: none; } }

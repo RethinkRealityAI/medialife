@@ -1,0 +1,94 @@
+/* Shared look for the experience HUD (vanilla DOM) and the React app. Flat colours only: no gradients anywhere
+   (house rule). The rainbow is always drawn as flat stripes. */
+/* EVADE fonts (Exo 2, Space Grotesk) load from index.html */
+
+:root {
+  --cb-pink: #f37321; /* Happi orange (token names kept from the hub this was built on) */
+  --cb-pink-deep: #c9561a;
+  --cb-pink-soft: #ffe2cc;
+  --cb-blue: #283a8f; /* happi coat navy */
+  --cb-sky: #a9e0f5; /* Happi sky */
+  --cb-yellow: #ffd84a;
+  --cb-orange: #ff9a3d;
+  --cb-green: #5fcf86;
+  --cb-purple: #283a8f; /* navy: no purple in Happi's palette */
+  --cb-red: #e8222a;
+  --cb-ink: #1b2340;
+  --cb-ink-soft: #4a5578;
+  --cb-white: #ffffff;
+  --cb-cloud: #f2fafe;
+
+  /* in-camera surfaces: translucent black glass, white text (same family as the shared AR hint pill) */
+  --cb-glass: rgba(10, 14, 30, 0.56);
+  --cb-glass-strong: rgba(10, 14, 30, 0.78);
+  --cb-glass-line: rgba(255, 255, 255, 0.22);
+  --cb-blur: blur(14px) saturate(1.2);
+
+  /* hint pill glass (the shared AR hint look: white on near-black glass) and modal scrims */
+  --cb-glass-hint: rgba(8, 8, 10, 0.56);
+  --cb-glass-hint-solid: rgba(8, 8, 10, 0.82);
+  --cb-glass-hint-line: rgba(255, 255, 255, 0.14);
+  --cb-glass-hint-blur: blur(18px) saturate(150%);
+  --cb-scrim: rgba(10, 14, 30, 0.62);
+  --cb-on-glass-soft: rgba(255, 255, 255, 0.82); /* secondary text on glass (AA on --cb-glass-strong) */
+  --cb-fill-1: rgba(255, 255, 255, 0.08);         /* quiet fills on dark glass */
+  --cb-fill-2: rgba(255, 255, 255, 0.14);
+  --cb-fill-3: rgba(255, 255, 255, 0.22);
+
+  --cb-font: 'Fredoka Variable', 'Fredoka', ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, sans-serif;
+  /* Fredoka weights, tuned: 450 body, 560 labels, 640 buttons / titles, 700 numbers + big titles */
+  --cb-w-body: 450;
+  --cb-w-label: 560;
+  --cb-w-strong: 640;
+  --cb-w-heavy: 700;
+
+  /* one radius scale */
+  --cb-r-xs: 8px;
+  --cb-r-sm: 14px;
+  --cb-r-md: 18px;
+  --cb-r-lg: 22px;
+  --cb-r-xl: 28px;
+  --cb-r-pill: 999px;
+  --cb-radius: var(--cb-r-lg);    /* older names, kept */
+  --cb-radius-sm: var(--cb-r-sm);
+  --cb-tap: 48px; /* minimum touch target (never below 44px) */
+
+  /* one shadow style: soft, ink-tinted, flat colour (no gradients) */
+  --cb-shadow-1: 0 1px 2px rgba(12, 18, 40, 0.16), 0 2px 8px rgba(12, 18, 40, 0.14);
+  --cb-shadow-2: 0 2px 4px rgba(12, 18, 40, 0.14), 0 8px 24px rgba(12, 18, 40, 0.22);
+  --cb-shadow-3: 0 4px 10px rgba(12, 18, 40, 0.16), 0 20px 56px rgba(12, 18, 40, 0.34);
+  --cb-focus: 0 0 0 3px var(--cb-white), 0 0 0 6px var(--cb-ink); /* focus ring that reads on any background */
+
+  --cb-safe-top: env(safe-area-inset-top, 0px);
+  --cb-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --cb-safe-left: env(safe-area-inset-left, 0px);
+  --cb-safe-right: env(safe-area-inset-right, 0px);
+
+  /* the rainbow, as six flat stripes (use with repeating hard-stop backgrounds or separate elements) */
+  --cb-rainbow-1: #ff5a5f;
+  --cb-rainbow-2: #ff9a3d;
+  --cb-rainbow-3: #ffd84a;
+  --cb-rainbow-4: #5fcf86;
+  --cb-rainbow-5: #439bdd;
+  --cb-rainbow-6: #9a6bff;
+
+  /* one motion set */
+  --cb-ease: cubic-bezier(0.22, 1, 0.36, 1);          /* out: things arriving */
+  --cb-ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);     /* in: things leaving */
+  --cb-ease-io: cubic-bezier(0.65, 0, 0.35, 1);       /* in-out: covers, wipes */
+  --cb-ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1); /* a small overshoot: pills, chips, pops */
+  --cb-dur-1: 120ms; /* press */
+  --cb-dur-2: 220ms; /* fades, small moves */
+  --cb-dur-3: 380ms; /* slides, springs */
+  --cb-dur-4: 560ms; /* covers, big entrances */
+}
+
+/* Reduced motion softens, never freezes: no overshoot, no travel, shorter fades. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cb-ease: ease-out;
+    --cb-ease-spring: ease-out;
+    --cb-dur-3: 240ms;
+    --cb-dur-4: 300ms;
+  }
+}

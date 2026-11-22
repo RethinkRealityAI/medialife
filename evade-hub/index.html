@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#ff5fa8" />
+    <title>Happi AR</title>
+    <link rel="icon" href="/evade/hub/img/favicon.png" />
+    <!-- 8th Wall engine binary (world tracking + face effects in one session). Loaded unmodified from jsDelivr,
+         as its licence requires. The experience waits for the `xrloaded` event; nothing runs until Start. -->
+    <script async src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" crossorigin="anonymous" data-preload-chunks="slam,face"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,18 @@
+/* Heart toss: the "in a row" counter (flat colours, theme tokens). It sits under the hint pill and never takes taps. */
+.cbx-layer > .cbx-combo {
+  position: absolute; left: 50%; top: calc(var(--cbx-top, 10px) + 120px + var(--cb-top-reserve, 0px));
+  transform: translate(-50%, -6px) scale(0.9); opacity: 0; pointer-events: none;
+  display: flex; align-items: center; gap: 7px; padding: 7px 14px 7px 10px; border-radius: 999px;
+  background: var(--cb-pink); color: var(--cb-white); font-family: var(--cb-font); font-size: 14px; font-weight: 600;
+  line-height: 1; white-space: nowrap; transition: opacity 0.25s ease, transform 0.35s var(--cb-ease);
+}
+.cbx-combo svg { width: 18px; height: 18px; display: block; }
+.cbx-combo b { font-size: 19px; font-weight: 700; }
+.cbx-layer > .cbx-combo.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.cbx-layer > .cbx-combo.big { background: var(--cb-purple); }
+.cbx-combo.pop { animation: cbx-combo-pop 0.35s var(--cb-ease); }
+@keyframes cbx-combo-pop { 0% { transform: translate(-50%, 0) scale(1.22); } 100% { transform: translate(-50%, 0) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .cbx-combo.pop { animation: none; }
+  .cbx-layer > .cbx-combo { transition: opacity 0.25s ease; transform: translate(-50%, 0); }
+}
