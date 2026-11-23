@@ -139,62 +139,6 @@
     });
   });
 
-  /* ── hub: concept vs live, mode buttons, tilt ───────────────────────── */
-  const hubImg = $("#hubImg"),
-    hubVid = $("#hubVid"),
-    hubUi = $("#hubUi"),
-    hubPhone = $("#hubPhone");
-  const bConcept = $("#hubConcept"),
-    bLive = $("#hubLive");
-  const modes = $$("#hubModes .hm");
-  function showHub(src, vid) {
-    hubImg.style.opacity = 0;
-    setTimeout(() => {
-      hubImg.src = src;
-      hubImg.onload = () => (hubImg.style.opacity = 1);
-      if (vid) {
-        hubVid.src = vid;
-        hubVid.hidden = false;
-        hubImg.hidden = true;
-        hubVid.play().catch(() => {});
-      } else {
-        hubVid.pause();
-        hubVid.hidden = true;
-        hubImg.hidden = false;
-      }
-    }, 180);
-  }
-  function setConcept(on) {
-    bConcept.setAttribute("aria-pressed", on);
-    bLive.setAttribute("aria-pressed", !on);
-    hubUi.hidden = !on;
-    if (on) {
-      modes.forEach((m) => m.setAttribute("aria-pressed", "false"));
-      showHub("assets/anp-hubbg.webp");
-      hubImg.alt = "Concept: the Anpanman hub";
-    }
-  }
-  bConcept.addEventListener("click", () => setConcept(true));
-  bLive.addEventListener("click", () => modes[0].click());
-  modes.forEach((m) =>
-    m.addEventListener("click", () => {
-      setConcept(false);
-      modes.forEach((x) => x.setAttribute("aria-pressed", x === m));
-      showHub(m.dataset.img, m.dataset.vid);
-      hubImg.alt = "Live Cheer Bear hub: " + $("b", m).textContent;
-    }),
-  );
-  if (!reduce && matchMedia("(hover: hover)").matches) {
-    const hubWrap = $(".hub-device");
-    hubWrap.addEventListener("pointermove", (e) => {
-      const r = hubWrap.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width - 0.5,
-        y = (e.clientY - r.top) / r.height - 0.5;
-      hubPhone.style.transform = `rotateY(${x * 18}deg) rotateX(${-y * 12}deg)`;
-    });
-    hubWrap.addEventListener("pointerleave", () => (hubPhone.style.transform = ""));
-  }
-
   /* ── stat count-up ──────────────────────────────────────────────────── */
   const sio = new IntersectionObserver(
     (ents) => {

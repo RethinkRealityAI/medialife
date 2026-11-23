@@ -2458,3 +2458,70 @@ fieldset.field {
 .cap.fast {
   margin-top: 22px;
 }
+
+.flag-sub {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(22px, 2.6vw, 32px);
+  line-height: 1.15;
+  color: var(--white);
+  max-width: 24ch;
+}
+.touch {
+  text-align: center;
+}
+.touch-k {
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: clamp(14px, 1.4vw, 17px);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--yellow);
+  margin-bottom: 18px;
+}
+.touch-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  max-width: 900px;
+}
+.touch-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 0 6px 0 var(--ink);
+  padding: 12px 22px 12px 16px;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(19px, 2vw, 24px);
+}
+.touch-list svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: var(--red);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.flagship {
+  padding-bottom: clamp(100px, 12vw, 160px);
+}
+.award.sm {
+  margin-top: 10px;
+  font-size: 12.5px;
+  padding: 5px 12px 5px 6px;
+  border-width: 2px;
+}
+.award.sm svg {
+  width: 20px;
+  height: 20px;
+}
