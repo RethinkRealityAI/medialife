@@ -110,11 +110,11 @@ p {
   flex-wrap: wrap;
   font-family: var(--f-mono);
   font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.16em;
+  font-size: clamp(15px, 1.5vw, 18px);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--red);
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 .eyebrow .q {
   background: var(--red);
@@ -2453,4 +2453,8 @@ fieldset.field {
 }
 .foot {
   padding-bottom: 96px;
+}
+
+.cap.fast {
+  margin-top: 22px;
 }
