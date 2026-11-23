@@ -797,6 +797,7 @@ p {
 .seg button {
   border: 0;
   background: transparent;
+  color: var(--ink);
   padding: 7px 13px;
   border-radius: 999px;
   font-weight: 800;
@@ -2222,4 +2223,210 @@ fieldset.field {
     font-size: 17px;
     white-space: nowrap;
   }
+}
+
+/* ── round 3: partner model, flagship hub, formats, process, terms ── */
+.flow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+@media (min-width: 900px) {
+  .flow {
+    grid-template-columns: 1fr 40px 1.15fr 40px 1fr;
+  }
+}
+.fl {
+  background: var(--white);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 7px 0 var(--ink);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fl .k {
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--red);
+}
+.fl b {
+  font-family: var(--f-display);
+  font-size: 24px;
+  line-height: 1.05;
+}
+.fl span {
+  font-size: 15px;
+  color: var(--soft);
+}
+.fl.us {
+  background: var(--red);
+  color: var(--white);
+}
+.fl.us .k {
+  color: var(--yellow);
+}
+.fl.us span {
+  color: #ffe7e4;
+}
+.flow .arr {
+  justify-self: center;
+  align-self: center;
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 14px solid var(--ink);
+}
+@media (min-width: 900px) {
+  .flow .arr {
+    border-top: 12px solid transparent;
+    border-bottom: 12px solid transparent;
+    border-left: 14px solid var(--ink);
+    border-right: 0;
+  }
+}
+.flagship {
+  padding-top: clamp(90px, 11vw, 150px);
+}
+.flag-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 34px;
+}
+.flag-tag {
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  background: var(--yellow);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+}
+.flagship .h-deck {
+  font-size: clamp(44px, 8vw, 104px);
+}
+.flag-head .lede {
+  max-width: 44ch;
+}
+.hub-value {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+@media (min-width: 640px) {
+  .hub-value {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1040px) {
+  .hub-value {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.hv {
+  background: var(--white);
+  color: var(--ink);
+  border: 3px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 0 7px 0 var(--ink);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hv .n {
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--red);
+}
+.hv b {
+  font-family: var(--f-display);
+  font-size: 22px;
+  line-height: 1.05;
+}
+.hv span:last-child {
+  font-size: 14.5px;
+  color: var(--soft);
+}
+.flagship .src {
+  color: #ffe7e4;
+}
+@media (min-width: 1040px) {
+  .qgrid.three {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.qgrid.three .qcard {
+  min-height: 0;
+}
+.qgrid.three .qcard:hover {
+  transform: none;
+  box-shadow: 0 7px 0 var(--ink);
+  background: var(--white);
+}
+.cap {
+  margin-top: 26px;
+  background: var(--yellow);
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  padding: 14px 18px;
+  font-size: 16px;
+}
+.cap b {
+  font-family: var(--f-display);
+}
+.incl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.incl .k {
+  font-family: var(--f-mono);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--red);
+  margin-right: 4px;
+}
+.split.two-up {
+  margin-top: 24px;
+}
+@media (min-width: 760px) {
+  .split.two-up {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.track li.cy .w {
+  border-style: dashed;
+}
+.track li.cy.done .w {
+  border-style: solid;
+}
+#process .chips {
+  margin-top: -18px;
+}
+#terms .trows {
+  max-width: 900px;
+}
+@media (min-width: 600px) {
+  #terms .trow {
+    grid-template-columns: 170px 1fr;
+  }
+}
+.field .radio {
+  padding: 10px 14px 10px 12px;
 }
