@@ -1,5 +1,33 @@
 [
   {
+    "slug": "monkey-quest-hub",
+    "title": "Hypergalactic Monkey Quest Hub",
+    "lead": "Scan the Monkey Quest enamel pin and pick an experience: spray paint the pin as it pops out in 3D next to the Monkey Quest logo, or launch it into your room on world tracking. One session, paint carries over.",
+    "url": "/monkey-quest/hub/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/monkey-quest/hub/target/"
+      }
+    ],
+    "thumb": "/labs/img/monkey-quest-hub.webp",
+    "alt": "Hypergalactic Monkey Quest Hub: the 3D Monkey Quest logo and the 3D enamel monkey pin on a starfield",
+    "client": "Monkey Quest",
+    "categories": [
+      "gaming",
+      "collectibles",
+      "capture",
+      "3d-character"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "tested": "simulator"
+  },
+  {
     "slug": "holocast",
     "title": "Holocast",
     "lead": "Put a holo projector on your floor or table and its floating screens fill with live data from the control room: notices, a live sketch, photo drops, a 3D live poll, spoken captions, the Where is Bobo? globe, reactions and a live video stream.",
