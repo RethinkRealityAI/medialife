@@ -226,85 +226,35 @@
   // 12-month packages: monthly = 25% kickoff deposit + 10 monthly payments from launch (as in the deck).
   // 6-month package: 25% kickoff + 5 monthly payments. Quarterly = equal payments in advance.
   const PKG = {
-    hello: { price: 39000, months: 6, after: 5 },
-    activated: { price: 90000, months: 12, after: 10 },
-    across: { price: 195000, months: 12, after: 10 },
+    hello: { price: 28000, months: 6, after: 5 },
+    activated: { price: 50000, months: 12, after: 10 },
+    across: { price: 95000, months: 12, after: 10 },
   };
-  function payline(p, mode) {
-    if (mode === "full") return `<b>${fmt(p.price * 0.95)}</b> once, an extra 5% off`;
+  function priceFor(p, mode) {
+    if (mode === "full") return { amt: fmt(p.price * 0.95), unit: "once", det: " · paid in full, extra 5% off" };
     if (mode === "quarterly") {
       const q = p.months / 3;
-      return `<b>${q} × ${fmt(p.price / q)}</b>, each quarter in advance`;
+      return { amt: fmt(p.price / q), unit: "/ quarter", det: ` · ${q} payments, in advance` };
     }
     const dep = p.price * 0.25;
-    return `<b>${fmt(dep)}</b> at kickoff, then <b>${p.after} × ${fmt((p.price - dep) / p.after)}</b> a month from launch`;
+    return { amt: fmt((p.price - dep) / p.after), unit: "/ month", det: ` · ${fmt(dep)} at kickoff, then ${p.after} monthly payments` };
   }
   let payMode = "monthly";
   const paySeg = $("#paySeg");
   function renderPay() {
     $$("[data-pay]", paySeg).forEach((b) => b.setAttribute("aria-pressed", b.dataset.pay === payMode));
-    $$(".pkg").forEach((card) => ($(".payline", card).innerHTML = payline(PKG[card.dataset.pkg], payMode)));
-    const sel = $("#f-pay");
-    sel.selectedIndex = { full: 0, quarterly: 1, monthly: 2 }[payMode];
-    renderSummary();
+    $$(".pkg").forEach((card) => {
+      const r = priceFor(PKG[card.dataset.pkg], payMode);
+      $(".amt", card).textContent = r.amt;
+      $(".unit", card).textContent = r.unit;
+      $(".det", card).textContent = r.det;
+    });
   }
   paySeg.addEventListener("click", (e) => {
     const b = e.target.closest("[data-pay]");
     if (!b) return;
     payMode = b.dataset.pay;
     renderPay();
-  });
-  const mio = new IntersectionObserver((ents) => {
-    ents.forEach((e) => {
-      if (e.isIntersecting) {
-        const i = $(".meter i", e.target);
-        i.style.width = i.dataset.w + "%";
-        mio.unobserve(e.target);
-      }
-    });
-  });
-  $$(".pkg").forEach((c) => mio.observe(c));
-
-  /* ── offer form ─────────────────────────────────────────────────────── */
-  const form = $("#offerForm");
-  const keyOf = (v) => (v.startsWith("Hello") ? "hello" : v.startsWith("Anpanman") ? "activated" : v.startsWith("Across") ? "across" : null);
-  function renderSummary() {
-    const pkg = form.package.value;
-    const k = keyOf(pkg);
-    const mode = ["full", "quarterly", "monthly"][$("#f-pay").selectedIndex];
-    $("#summary").innerHTML = k ? `<b>${pkg.split(" (")[0]}</b><br>${payline(PKG[k], mode)}` : "We'll walk through the options on the call.";
-  }
-  form.addEventListener("change", (e) => {
-    if (e.target.id === "f-pay") {
-      payMode = ["full", "quarterly", "monthly"][e.target.selectedIndex];
-      renderPay();
-    } else renderSummary();
-  });
-  $$("[data-choose]").forEach((a) =>
-    a.addEventListener("click", () => {
-      const r = $$('input[name="package"]', form).find((i) => i.value === a.dataset.choose);
-      if (r) r.checked = true;
-      renderSummary();
-    }),
-  );
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const err = $("#formErr");
-    err.hidden = true;
-    if (!form.reportValidity()) return;
-    const data = new URLSearchParams(new FormData(form));
-    try {
-      const res = await fetch("/__forms.html", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: data.toString() });
-      if (!res.ok) throw new Error(res.status);
-      $("#okPkg").textContent = form.package.value.split(" (")[0];
-      form.hidden = true;
-      const ok = $("#formOk");
-      ok.hidden = false;
-      ok.focus();
-    } catch {
-      err.textContent = "That didn't send. Please email dapo@medialife.ai and we'll reply the same day.";
-      err.hidden = false;
-    }
   });
   renderPay();
 
