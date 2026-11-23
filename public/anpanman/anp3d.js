@@ -102,6 +102,7 @@ function start() {
   Promise.all([loadImg("assets/anp-cutout.webp"), loadTex("assets/anp-hubbg.webp"), loadImg("assets/qr-medialife.svg")]).then(([art, hubTex, qrImg]) => {
     if (!art) return;
     build(art, hubTex, qrImg);
+    if (/[?&]export\b/.test(location.search)) window.__anp = { products: window.__anpProducts, art, THREE };
   });
 
   function canvasTex(w, h, draw) {
@@ -153,6 +154,7 @@ function start() {
   const white = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.85 });
 
   const products = {};
+  if (/[?&]export\b/.test(location.search)) window.__anpProducts = products;
   const root = new THREE.Group();
   scene.add(root);
 
@@ -213,28 +215,67 @@ function start() {
       products.keychain = g;
     }
 
-    // ── standee: tall acrylic panel on a red base with a QR plate
+    // ── standee: die-cut character standee (official art with a white cut border), card edge,
+    //    fold-out easel at the back and a red foot with the QR, like a retail floor standee
     {
       const g = new THREE.Group();
-      const ph = 2.6,
-        pw = ph * aspect + 0.25;
-      const panel = new THREE.Mesh(new RoundedBoxGeometry(pw, ph + 0.2, 0.08, 4, 0.12), acrylic);
-      panel.position.y = 0.3;
-      g.add(panel);
-      const print = new THREE.Mesh(new THREE.PlaneGeometry(pw - 0.12, ph), new THREE.MeshBasicMaterial({ map: artCard(art, 512, Math.round(512 / ((pw - 0.12) / ph)), "#8FD3F4") }));
-      print.position.set(0, 0.3, 0.042);
-      g.add(print);
-      const base = new THREE.Mesh(new RoundedBoxGeometry(2.3, 0.42, 0.9, 4, 0.08), red);
-      base.position.set(0, -1.34, 0.1);
+      const fh = 3.1,
+        pad = 0.1,
+        fw = fh * aspect;
+      const W = 512,
+        H = Math.round(W / ((fw + pad * 2) / (fh + pad * 2)));
+      const px = (W * pad) / (fw + pad * 2);
+      // silhouette of the art grown by px pixels, filled with one colour
+      const grown = (fill) => {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const x = c.getContext("2d");
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) x.drawImage(art, px + Math.cos(a) * px, px + Math.sin(a) * px, W - px * 2, H - px * 2);
+        x.globalCompositeOperation = "source-in";
+        x.fillStyle = fill;
+        x.fillRect(0, 0, W, H);
+        return c;
+      };
+      const front = canvasTex(W, H, (x) => {
+        x.drawImage(grown("#ffffff"), 0, 0);
+        x.drawImage(art, px, px, W - px * 2, H - px * 2);
+      });
+      const backTex = canvasTex(W, H, (x) => x.drawImage(grown("#d9c3a0"), 0, 0));
+      const edgeTex = canvasTex(W, H, (x) => x.drawImage(grown("#f1eadf"), 0, 0));
+      const pw = fw + pad * 2,
+        ph2 = fh + pad * 2,
+        cy = 0.2;
+      const layer = (map, z, side) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph2), new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.5, side: side || THREE.FrontSide }));
+        m.position.set(0, cy, z);
+        g.add(m);
+        return m;
+      };
+      layer(front, 0.03);
+      for (const z of [0.015, 0, -0.015]) layer(edgeTex, z, THREE.DoubleSide);
+      layer(backTex, -0.03).rotation.y = Math.PI;
+      // easel strut: a folded card leg behind the figure
+      const card = new THREE.MeshStandardMaterial({ color: 0xd9c3a0, roughness: 0.9 });
+      const easel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.2, 0.03), card);
+      easel.position.set(0, -0.35, -0.42);
+      easel.rotation.x = 0.36;
+      g.add(easel);
+      const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.02), card);
+      hinge.position.set(0, 0.72, -0.05);
+      g.add(hinge);
+      // red foot with the QR label, the figure slots into it
+      const base = new THREE.Mesh(new RoundedBoxGeometry(1.9, 0.34, 0.5, 4, 0.06), red);
+      base.position.set(0, -1.38, 0.1);
       g.add(base);
       const label = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.1, 0.34),
+        new THREE.PlaneGeometry(1.76, 0.28),
         new THREE.MeshBasicMaterial({
-          map: canvasTex(1024, 166, (c, w, h) => {
+          map: canvasTex(1024, 163, (c, w, h) => {
             c.fillStyle = "#E3241B";
             c.fillRect(0, 0, w, h);
             c.fillStyle = "#ffffff";
-            c.font = "700 74px Fredoka, sans-serif";
+            c.font = "700 72px Fredoka, sans-serif";
             c.textBaseline = "middle";
             c.fillText("ANPANMAN", 30, h * 0.42);
             c.fillStyle = "#FFD23F";
@@ -242,15 +283,15 @@ function start() {
             c.fillText("SCAN TO SAY HELLO", 34, h * 0.82);
             if (qrImg) {
               c.fillStyle = "#fff";
-              c.fillRect(w - 170, 8, 150, 150);
-              c.drawImage(qrImg, w - 162, 16, 134, 134);
+              c.fillRect(w - 168, 6, 152, 152);
+              c.drawImage(qrImg, w - 160, 14, 136, 136);
             }
           }),
         }),
       );
-      label.position.set(0, -1.34, 0.556);
+      label.position.set(0, -1.38, 0.352);
       g.add(label);
-      g.userData = { target: new THREE.Vector3(0, 0.3, 0.06), qr: new THREE.Vector3(0.78, -1.34, 0.58), artH: ph, y: 0.05, label: "Standee" };
+      g.userData = { target: new THREE.Vector3(0, 0.3, 0.06), qr: new THREE.Vector3(0.66, -1.38, 0.38), artH: fh, y: 0.05, label: "Standee" };
       products.standee = g;
     }
 
@@ -558,6 +599,7 @@ function start() {
         g.userData.artH = fh;
         g.rotation.y = savedRot;
         g.position.y = savedY;
+        g.userData.ready = true;
       },
       undefined,
       () => {},
@@ -599,6 +641,8 @@ function start() {
     document.querySelectorAll("#prodSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.p === name));
     hint.textContent = "Drag to spin · then tap, scan or point";
     hint.hidden = false;
+    const ar = document.getElementById("arGo");
+    if (ar) ar.href = "ar/?p=" + name;
   }
   document.getElementById("prodSeg").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-p]");

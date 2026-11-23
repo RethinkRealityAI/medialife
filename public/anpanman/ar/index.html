@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>See it in your space · Anpanman, Activated</title>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#8FD3F4" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      Phone AR for the four concept products on /anpanman/ (unlisted pitch page).
+      /anpanman/ar/?p=keychain|standee|sheet|shirt
+      Files: ../assets/ar/<p>.glb (Android Scene Viewer + WebXR, animated "hello" clip) and <p>.usdz (iOS Quick Look,
+      static popped-out pose). Real sizes, floor at y = 0. Built from the live 3D products by the export script noted
+      in the immersive skill case study. Official art composited as supplied.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" />
+    <style>
+      :root {
+        --sky: #8fd3f4;
+        --skyink: #0f5c86;
+        --red: #e3241b;
+        --yellow: #ffd23f;
+        --ink: #2b1a12;
+        --soft: #6e5a4c;
+        --cream: #fff6e5;
+        --white: #ffffff;
+        --f-display: "Fredoka", "Nunito", system-ui, sans-serif;
+        --f-body: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --f-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: var(--sky); color: var(--ink); font: 16px/1.5 var(--f-body); -webkit-font-smoothing: antialiased; }
+      body {
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: max(14px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      }
+      .top { width: 100%; max-width: 520px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 2px 2px 10px; }
+      .lockup { display: flex; align-items: center; gap: 8px; margin: 0; font: 700 13px/1 var(--f-display); color: var(--skyink); letter-spacing: 0.02em; }
+      .lockup img { height: 13px; width: auto; filter: brightness(0) saturate(100%) invert(22%) sepia(60%) saturate(1800%) hue-rotate(178deg) brightness(88%); }
+      .kana { font: 700 13px/1 var(--f-display); color: var(--skyink); }
+      main { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+      .stage { position: relative; aspect-ratio: 1 / 1; max-height: 52dvh; width: 100%; margin: 0 auto; border-radius: 26px; background: var(--cream); border: 3px solid var(--ink); box-shadow: 0 7px 0 var(--ink); overflow: hidden; }
+      model-viewer { width: 100%; height: 100%; display: block; --poster-color: transparent; background: var(--cream); }
+      .stage .poster { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+      .stage .poster img { height: 78%; width: auto; }
+      model-viewer[loaded] + .poster { display: none; }
+      .stage .spin { position: absolute; left: 0; right: 0; bottom: 12px; text-align: center; font: 700 11px/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); pointer-events: none; }
+      .eyebrow { margin: 0; font: 700 12px/1 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--skyink); }
+      h1 { margin: 6px 0 0; font: 700 clamp(30px, 8.4vw, 40px)/1.02 var(--f-display); letter-spacing: -0.01em; }
+      h1 span { color: var(--red); }
+      .lede { margin: 6px 0 0; font-weight: 700; color: var(--skyink); }
+      .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; background: var(--white); border: 3px solid var(--ink); border-radius: 999px; padding: 4px; }
+      .seg button { appearance: none; border: 0; background: transparent; color: var(--ink); border-radius: 999px; min-height: 40px; padding: 6px 4px; font: 700 13.5px/1.1 var(--f-display); cursor: pointer; }
+      .seg button[aria-pressed="true"] { background: var(--red); color: var(--white); }
+      .seg button:focus-visible, .btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+      .btn { appearance: none; width: 100%; min-height: 58px; border: 3px solid var(--ink); border-radius: 999px; background: var(--red); color: var(--white); box-shadow: 0 6px 0 var(--ink); font: 700 19px/1 var(--f-display); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; }
+      .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--ink); }
+      .btn[disabled] { background: var(--white); color: var(--soft); cursor: progress; }
+      .btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+      .load { height: 6px; border-radius: 6px; background: rgba(43, 26, 18, 0.14); overflow: hidden; }
+      .load i { display: block; height: 100%; width: 0; background: var(--ink); transition: width 0.25s; }
+      .load.done { visibility: hidden; }
+      .note { margin: 0; font-size: 13.5px; color: var(--skyink); text-align: center; min-height: 1.5em; }
+      .foot { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+      .act-by { height: 46px; width: auto; }
+      .copy { margin: 0; font-size: 11px; color: var(--skyink); opacity: 0.85; text-align: center; }
+      .back { font: 700 13px/1 var(--f-display); color: var(--skyink); }
+      /* computers: open on your phone */
+      .qr { display: none; grid-template-columns: 132px 1fr; gap: 14px; align-items: center; background: var(--white); border: 3px solid var(--ink); border-radius: 22px; padding: 12px; }
+      .qr svg { width: 132px; height: 132px; display: block; }
+      .qr b { font: 700 18px/1.15 var(--f-display); display: block; margin-bottom: 4px; }
+      .qr p { margin: 0; font-size: 14px; color: var(--soft); }
+      body.desk .qr { display: grid; }
+      body.desk #go { display: none; }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <p class="lockup"><span>Nippon TV</span><span aria-hidden="true">×</span><img src="../assets/hp-medialife-wordmark.webp" alt="MEDIALIFE" width="120" height="17" /></p>
+      <span class="kana" lang="ja" aria-hidden="true">アンパンマン</span>
+    </header>
+    <main>
+      <div class="stage">
+        <model-viewer
+          id="mv"
+          alt="3D concept product with Anpanman art. Drag to turn it."
+          camera-controls
+          disable-pan
+          disable-zoom
+          touch-action="pan-y"
+          interaction-prompt="none"
+          autoplay
+          animation-name="hello"
+          shadow-intensity="0.8"
+          exposure="1.05"
+          environment-image="neutral"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          ar-scale="fixed"
+          ar-placement="floor"
+        >
+          <button slot="ar-button" hidden></button>
+        </model-viewer>
+        <div class="poster" aria-hidden="true"><img src="../assets/anp-cutout.webp" alt="" width="456" height="900" /></div>
+        <span class="spin" aria-hidden="true">3D · drag to turn</span>
+      </div>
+      <div>
+        <p class="eyebrow">Anpanman, activated by MEDIALIFE</p>
+        <h1>See it in <span>your space.</span></h1>
+        <p class="lede">Pick a product. It appears at true size, and Anpanman pops out to say hello.</p>
+      </div>
+      <div class="seg" id="seg" role="group" aria-label="Product">
+        <button type="button" data-p="keychain">Keychain</button>
+        <button type="button" data-p="standee">Standee</button>
+        <button type="button" data-p="sheet">Stickers</button>
+        <button type="button" data-p="shirt">Shirt</button>
+      </div>
+      <button class="btn" id="go" type="button" disabled>Loading…</button>
+      <div class="load" id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <div class="qr" id="qr">
+        <div id="qrcode" aria-label="QR code that opens this page on your phone"></div>
+        <div><b>Open on your phone</b><p>AR runs on your phone. Scan this with its camera, then tap <b style="display:inline;font:inherit;font-weight:800">View in your space</b>.</p></div>
+      </div>
+      <p class="note" id="note" aria-live="polite"></p>
+      <div class="foot">
+        <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58" />
+        <a class="back" href="../#products">Back to the proposal</a>
+        <p class="copy">Concept products · Anpanman © Takashi Yanase / Froebel-kan, TMS, NTV</p>
+      </div>
+    </main>
+    <script src="/vendor/ar-kit/qrcode.min.js"></script>
+    <script type="module">
+      const P = {
+        keychain: "Acrylic keychain · 9 cm",
+        standee: "Retail standee · 1.2 m",
+        sheet: "Sticker sheet · A5",
+        shirt: "Kids' tee · 75 cm",
+      };
+      const ua = navigator.userAgent || "";
+      const isPhone = /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const desk = !isPhone && !/[?&]desktop\b/.test(location.search);
+      if (desk) document.body.classList.add("desk");
+      const mv = document.getElementById("mv");
+      const go = document.getElementById("go");
+      const note = document.getElementById("note");
+      const bar = document.querySelector("#load i");
+      const params = new URLSearchParams(location.search);
+      let cur = P[params.get("p")] ? params.get("p") : "keychain";
+
+      function drawQR() {
+        if (!window.QRCode || !QRCode.toString) return;
+        const url = new URL(location.pathname + "?p=" + cur, location.href).href;
+        QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#2b1a12", light: "#ffffff" } }, (err, svg) => {
+          if (!err) document.getElementById("qrcode").innerHTML = svg;
+        });
+      }
+      function pick(p) {
+        cur = p;
+        document.querySelectorAll("#seg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.p === p)));
+        go.disabled = true;
+        go.textContent = "Loading…";
+        bar.parentElement.classList.remove("done");
+        bar.style.width = "0";
+        mv.removeAttribute("loaded");
+        mv.src = `../assets/ar/${p}.glb`;
+        mv.setAttribute("ios-src", `../assets/ar/${p}.usdz`);
+        mv.cameraOrbit = p === "standee" ? "20deg 80deg auto" : "20deg 75deg auto";
+        note.textContent = P[p];
+        history.replaceState(null, "", "?p=" + p + (desk ? "" : location.search.includes("desktop") ? "&desktop" : ""));
+        if (desk) drawQR();
+      }
+      document.getElementById("seg").addEventListener("click", (e) => {
+        const b = e.target.closest("[data-p]");
+        if (b && b.dataset.p !== cur) pick(b.dataset.p);
+      });
+      mv.addEventListener("progress", (e) => (bar.style.width = Math.round(e.detail.totalProgress * 100) + "%"));
+      mv.addEventListener("load", () => {
+        mv.setAttribute("loaded", "");
+        bar.parentElement.classList.add("done");
+        go.disabled = false;
+        go.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z"/><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5"/></svg>View in your space';
+      });
+      mv.addEventListener("error", () => (note.textContent = "Couldn't load the 3D file. Check your connection and try again."));
+      mv.addEventListener("ar-status", (e) => {
+        if (e.detail.status === "failed") note.textContent = "AR isn't available in this browser. Try Safari on iPhone or Chrome on Android.";
+      });
+      go.addEventListener("click", () => {
+        if (mv.canActivateAR) mv.activateAR();
+        else note.textContent = "AR isn't available in this browser. Try Safari on iPhone or Chrome on Android.";
+      });
+      pick(cur);
+      import("/activated-merch/vendor/model-viewer.min.js").catch(() => (note.textContent = "Couldn't load the 3D viewer."));
+    </script>
+  </body>
