@@ -60,6 +60,18 @@
   to = "/evade/where-is-bobo/"
   status = 301
 
+# Spray Bobo Enhanced: one page, two skins. /labs/spray-enhanced/ serves the same document in the MEDIALIFE skin
+# (the page picks its brand from the path; its assets use absolute paths so the rewrite is safe).
+[[redirects]]
+  from = "/labs/spray-enhanced"
+  to = "/evade/spray-bobo-enhanced/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/labs/spray-enhanced/"
+  to = "/evade/spray-bobo-enhanced/index.html"
+  status = 200
+
 # Spray Studio (the Spray Bobo web companion, spray-studio/, built to public/spray/): a single-page app,
 # so its rooms resolve to its one document. /sb/<id> is a creation's short share link (the QR target).
 [[redirects]]
