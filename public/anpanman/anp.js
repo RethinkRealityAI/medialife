@@ -175,7 +175,7 @@
     across: { price: 95000, months: 12, after: 10 },
   };
   function priceFor(p, mode) {
-    if (mode === "full") return { amt: fmt(p.price * 0.95), unit: "once", det: " · paid in full, extra 5% off" };
+    if (mode === "full") return { amt: fmt(p.price), unit: "total", det: "", total: true };
     if (mode === "quarterly") {
       const q = p.months / 3;
       return { amt: fmt(p.price / q), unit: "/ quarter", det: ` · ${q} payments, in advance` };
@@ -183,7 +183,7 @@
     const dep = p.price * 0.25;
     return { amt: fmt((p.price - dep) / p.after), unit: "/ month", det: ` · ${fmt(dep)} at kickoff, then ${p.after} monthly payments` };
   }
-  let payMode = "monthly";
+  let payMode = "full";
   const paySeg = $("#paySeg");
   function renderPay() {
     $$("[data-pay]", paySeg).forEach((b) => b.setAttribute("aria-pressed", b.dataset.pay === payMode));
@@ -192,6 +192,7 @@
       $(".amt", card).textContent = r.amt;
       $(".unit", card).textContent = r.unit;
       $(".det", card).textContent = r.det;
+      $(".permo", card).hidden = !!r.total;
     });
   }
   paySeg.addEventListener("click", (e) => {

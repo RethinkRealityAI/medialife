@@ -2525,3 +2525,9 @@ fieldset.field {
   width: 20px;
   height: 20px;
 }
+
+.logos.cons {
+  margin-top: 14px;
+  font-size: 15px;
+  color: var(--soft);
+}
