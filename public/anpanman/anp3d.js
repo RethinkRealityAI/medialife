@@ -308,19 +308,108 @@ function start() {
         c.strokeStyle = "#EAD6B8";
         c.lineWidth = 6;
         c.strokeRect(14, 14, w - 28, h - 28);
-        const big = stickerCanvas(art, 0.62);
-        c.drawImage(big, 40, 40);
-        const sm = stickerCanvas(art, 0.36);
-        c.save();
-        c.translate(470, 90);
-        c.rotate(0.22);
-        c.drawImage(sm, 0, 0);
-        c.restore();
-        c.save();
-        c.translate(420, 560);
-        c.rotate(-0.18);
-        c.drawImage(stickerCanvas(art, 0.3), 0, 0);
-        c.restore();
+        // the official Anpanman art (as supplied) plus original bakery + slogan stickers (no other characters
+        // until Nippon TV supplies official sticker art for them)
+        c.drawImage(stickerCanvas(art, 0.4), 34, 34);
+        const peel = (x, y, rot, draw) => {
+          c.save();
+          c.translate(x, y);
+          c.rotate(rot);
+          draw();
+          c.restore();
+        };
+        const outlined = (path, fill) => {
+          c.lineJoin = "round";
+          c.strokeStyle = "#ffffff";
+          c.lineWidth = 22;
+          c.stroke(path);
+          c.strokeStyle = "#2B1A12";
+          c.lineWidth = 6;
+          c.stroke(path);
+          c.fillStyle = fill;
+          c.fill(path);
+        };
+        // round bun with sesame seeds
+        peel(330, 110, -0.1, () => {
+          const p = new Path2D();
+          p.ellipse(0, 0, 78, 58, 0, 0, Math.PI * 2);
+          outlined(p, "#D98A3A");
+          c.fillStyle = "#FFF6E5";
+          [[-30, -18], [8, -28], [36, -8], [-8, 6], [24, 18]].forEach(([x, y]) => {
+            c.beginPath();
+            c.ellipse(x, y, 7, 4, 0.5, 0, Math.PI * 2);
+            c.fill();
+          });
+        });
+        // loaf of bread
+        peel(530, 120, 0.16, () => {
+          const p = new Path2D();
+          p.moveTo(-70, 50);
+          p.lineTo(-70, -10);
+          p.arc(-35, -10, 35, Math.PI, 0);
+          p.arc(35, -10, 35, Math.PI, 0);
+          p.lineTo(70, 50);
+          p.closePath();
+          outlined(p, "#E3A35A");
+          c.strokeStyle = "#B4672A";
+          c.lineWidth = 5;
+          c.beginPath();
+          c.moveTo(-40, -20); c.lineTo(-25, 10);
+          c.moveTo(0, -30); c.lineTo(15, 5);
+          c.moveTo(38, -20); c.lineTo(52, 10);
+          c.stroke();
+        });
+        // croissant
+        peel(400, 300, -0.2, () => {
+          const p = new Path2D();
+          p.moveTo(-95, 20);
+          p.quadraticCurveTo(-60, -60, 0, -62);
+          p.quadraticCurveTo(60, -60, 95, 20);
+          p.quadraticCurveTo(60, 0, 0, 10);
+          p.quadraticCurveTo(-60, 0, -95, 20);
+          p.closePath();
+          outlined(p, "#E8A54B");
+          c.strokeStyle = "#B4672A";
+          c.lineWidth = 5;
+          c.beginPath();
+          [-50, -18, 18, 50].forEach((x) => { c.moveTo(x, -50 + Math.abs(x) * 0.3); c.lineTo(x * 0.8, 6); });
+          c.stroke();
+        });
+        // "Hello, America!" slogan sticker
+        peel(470, 470, 0.08, () => {
+          const p = new Path2D();
+          p.roundRect(-150, -46, 300, 92, 46);
+          outlined(p, "#E3241B");
+          c.fillStyle = "#ffffff";
+          c.font = "700 40px Fredoka, sans-serif";
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillText("Hello, America!", 0, 3);
+        });
+        // star
+        peel(560, 630, 0.2, () => {
+          const p = new Path2D();
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 ? 26 : 62, a = -Math.PI / 2 + (i * Math.PI) / 5;
+            i ? p.lineTo(Math.cos(a) * r, Math.sin(a) * r) : p.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+          }
+          p.closePath();
+          outlined(p, "#FFD23F");
+        });
+        // "fresh from the bakery" badge
+        peel(390, 650, -0.12, () => {
+          const p = new Path2D();
+          p.arc(0, 0, 74, 0, Math.PI * 2);
+          outlined(p, "#8FD3F4");
+          c.fillStyle = "#0F5C86";
+          c.font = "700 24px Fredoka, sans-serif";
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillText("FRESH", 0, -16);
+          c.fillText("BAKED", 0, 14);
+          c.font = "700 13px JetBrains Mono, monospace";
+          c.fillText("DAILY", 0, 40);
+        });
         // round SCAN ME sticker with QR
         c.fillStyle = "#FFD23F";
         c.beginPath();

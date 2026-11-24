@@ -1,0 +1,6 @@
+/* Anpanman product picker in the AR dock (flat colours only) */
+.pseg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.pseg button { appearance: none; border: 1px solid rgba(255, 255, 255, 0.22); background: rgba(0, 0, 0, 0.45); color: #fff; border-radius: 999px; min-height: 40px; padding: 6px 4px; font: 700 13px/1.1 "Space Grotesk", system-ui, sans-serif; cursor: pointer; }
+.pseg button[aria-checked="true"] { background: #e3241b; border-color: #e3241b; }
+.pseg button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.psize { margin: 8px 0 0; text-align: center; font: 500 12px/1.2 "Space Grotesk", system-ui, sans-serif; color: rgba(255, 255, 255, 0.8); }
