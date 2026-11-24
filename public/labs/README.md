@@ -59,3 +59,17 @@ URL params mirror the filters: `q`, `client`, `cat`, `tech`, `status`, `year`; c
 `/labs/?tech=world,face&status=lab`.
 
 House rules apply to thumbnails too: flat colours, no gradients, never an image with 8th Wall or Orygen logos.
+
+## Client share pages (`/evade/labs/`)
+
+`/evade/labs/` is the EVADE-only view of this catalogue, made to send to the EVADE team: no site nav, no links to
+`/labs/` or other clients. It lists every entry with `"client": "EVADE"`, so a new EVADE card shows up there on its own.
+An optional `share` field controls the client view:
+
+- `"share": false` keeps an entry off the share page (team-only tools, superseded test builds).
+- `"share": { ... }` overrides what the client sees: `title`, `lead`, `needs` (the "What you need" line, e.g.
+  "The EVADE keychain"), `links` (replaces `extraLinks`), `start` (1, 2, 3… puts the card in "Start here" in that
+  order) and `section` (`start`, `merch`, `room` (place in room and face), `screen`; otherwise picked from `tech`).
+
+`notes`, `source` and `tested` never show there, and any link into `/labs/` is dropped. Write `share.lead` when the
+normal lead mentions internal things (Mattercraft, test builds, engines).

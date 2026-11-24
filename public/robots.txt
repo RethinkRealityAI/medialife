@@ -39,5 +39,6 @@ Disallow: /shelf
 Disallow: /merch-shelf/
 Disallow: /labs/
 Disallow: /evade/cola-run-lab/
+Disallow: /evade/labs/
 
 Sitemap: https://medialife.ai/sitemap.xml

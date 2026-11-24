@@ -79,7 +79,10 @@
     "tested": "phone",
     "notes": [
       "Phone only"
-    ]
+    ],
+    "share": {
+      "needs": "Room to walk a few steps"
+    }
   },
   {
     "slug": "medialife-portal",
@@ -151,7 +154,10 @@
     "year": 2026,
     "featured": true,
     "tested": "simulator",
-    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation"
+    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation",
+    "share": {
+      "needs": "The keychain, then the night sky"
+    }
   },
   {
     "slug": "cola-run",
@@ -184,7 +190,19 @@
     "alt": "Cola Run splash art with Bobo the cat",
     "notes": [
       "Phone only"
-    ]
+    ],
+    "share": {
+      "start": 3,
+      "needs": "A bit of floor",
+      "lead": "The full Cola Run game in your room: grab every can before time runs out and record your run. Then open Bobo's Arcade to jump between every EVADE experience, or walk through a door into a life-size Bobo's Hideout.",
+      "links": [
+        {
+          "label": "Open Bobo's Arcade",
+          "url": "/evade/cola-run/?mode=arcade"
+        }
+      ],
+      "title": "Cola Run"
+    }
   },
   {
     "slug": "bobo-hoops",
@@ -212,7 +230,12 @@
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top"
+    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top",
+    "share": {
+      "start": 4,
+      "needs": "The EVADE keychain and some floor",
+      "lead": "Point at the Eclipse can on the keychain, grow it into a giant open-top can on your floor and swipe to shoot 10 balls in."
+    }
   },
   {
     "slug": "wake-the-print",
@@ -274,7 +297,11 @@
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button"
+    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button",
+    "share": {
+      "start": 2,
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "spray-bobo",
@@ -310,7 +337,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button"
+    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button",
+    "share": {
+      "needs": "The keychain or the Sukeban tee"
+    }
   },
   {
     "slug": "xray-bobo",
@@ -337,7 +367,20 @@
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton"
+    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton",
+    "share": {
+      "needs": "The keychain or a Bobo tee",
+      "links": [
+        {
+          "label": "Watch a phone recording",
+          "url": "/evade/video/xray-bobo.mp4"
+        },
+        {
+          "label": "Test pictures",
+          "url": "/evade/keychain-ar/target/"
+        }
+      ]
+    }
   },
   {
     "slug": "bobo-booth",
@@ -358,7 +401,10 @@
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring"
+    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring",
+    "share": {
+      "needs": "Just your face"
+    }
   },
   {
     "slug": "photo-beam",
@@ -384,7 +430,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain"
+    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain",
+    "share": {
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "spray-studio",
@@ -414,7 +463,8 @@
     "alt": "Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right",
     "notes": [
       "Team sign-in for now"
-    ]
+    ],
+    "share": false
   },
   {
     "slug": "where-is-bobo",
@@ -435,7 +485,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip"
+    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "vault",
@@ -460,7 +513,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front"
+    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "cola-run-lab",
@@ -485,7 +541,8 @@
     "notes": [
       "Sent clips go to this site's Media Library"
     ],
-    "source": "mattercraft/cola-run/"
+    "source": "mattercraft/cola-run/",
+    "share": false
   },
   {
     "slug": "collector-hub",
@@ -543,7 +600,8 @@
     "notes": [
       "Blender, no gen AI"
     ],
-    "source": "mattercraft/keychain-pop/"
+    "source": "mattercraft/keychain-pop/",
+    "share": false
   },
   {
     "slug": "loot-break",
