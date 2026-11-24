@@ -80,6 +80,8 @@ const sound = {
     const f2 = this.ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = lp;
     s.connect(f1).connect(f2).connect(g).connect(this.master); s.start(this.ctx.currentTime + when);
   },
+  rumble(d = 1.6) { this.tone(46, 96, d, 0.3, 'sawtooth'); this.tone(69, 150, d, 0.12, 'square'); this.noise(d, 0.05, 60, 420); this.tone(300, 2400, d * 0.92, 0.05, 'triangle', d * 0.08); },
+  ballPop() { const f = 380 + Math.random() * 260; this.tone(f, f * 2.2, 0.09, 0.07, 'triangle'); this.noise(0.05, 0.04, 2000, 9000); },
   scan() { for (let i = 0; i < 6; i++) this.tone(1500 + i * 120, 1500 + i * 120, 0.05, 0.03, 'square', i * 0.11); },
   pop() { this.tone(240, 900, 0.16, 0.12, 'triangle'); this.noise(0.12, 0.08, 1500, 8000); },
   fizz() { this.noise(0.7, 0.1, 3000, 12000); this.tone(1400, 2600, 0.12, 0.03, 'sine', 0.05); },
@@ -106,7 +108,15 @@ const assets = Promise.all([
   getJson(KC + 'image-targets/layout.json'),
   Promise.all(TARGETS.map((n) => getJson(KC + `image-targets/${n}.json`))),
   gl.loadAsync('/evade/keychain/ar/eclipse-can.glb'),
-]).then(([layout, tdata, can]) => ({ layout, tdata, can }));
+]).then(async ([layout, tdata, can]) => {
+  // each charm picture's portal mask = the WHOLE acrylic piece (Off the Chain's masks). The can-shaped silhouette in
+  // the GLB left the charm's light acrylic edge bare round the cut-out: the "white border" on first scan (Dapo,
+  // 2026-11-22). flipY off: the glTF uv convention, like the model's own mask.
+  const masks = {};
+  await Promise.all(TARGETS.map((n) => { const mk = layout.targets[n] && layout.targets[n].mask; if (!mk) return null;
+    return new THREE.TextureLoader().loadAsync(KC + 'image-targets/' + mk.src).then((t) => { t.flipY = false; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; masks[n] = t; }).catch(() => { /* falls back to the model's silhouette */ }); }));
+  return { layout, tdata, can, masks };
+});
 const boboAsset = assets.then(() => gl.loadAsync('/evade/keychain/ar/bobo-keychain.glb')).catch(() => null);   // Bobo cheers by the can (after the can: it is not needed to start)
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
@@ -121,7 +131,9 @@ const CF = new THREE.Group(); A.add(CF);      // the can charm's frame inside th
 const canRoot = new THREE.Group();            // the can: model units inside (0.99 tall); its transform says where and how big
 let canModel = null, canMixer = null, canClips = {}, canMats = [], bindPose = [];
 let lie = null;                               // where the can lies exactly over its print, in the charm frame
-let sil = null, silRim = null, scanBar = null;
+let portal = null;                            // the activation on the charm: glowing rim + swirling portal (Off the Chain's shader)
+const burst = [];                             // the basketballs that burst out of the portal before the can
+let sparks = null;
 const inner = new THREE.Group();              // the open top: inner wall, inner floor, rim (shown once the lid is off)
 let lidFly = null;                            // the lid that pops off
 const clipTop = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // cuts the lid off the can (world space)
@@ -131,21 +143,118 @@ const dust = new THREE.Mesh(new THREE.RingGeometry(0.8, 1, 48), new THREE.MeshBa
 const hoop = { pos: new THREE.Vector3(), yaw: 0, s: 1 };   // the placed can (world): floor point, facing, metres per model unit
 let bobo = null, boboMixer = null, boboClips = {}, boboAct = null;
 
-// the cut-out: the silhouette picture's shape as a flat white mask (tinted by the material colour), shown only below
-// the scan line (a clipping plane in the charm frame, re-derived every frame).
-function maskTexture(src) {
-  const img = src.image, c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
-  const g = c.getContext('2d'); g.drawImage(img, 0, 0); const d = g.getImageData(0, 0, c.width, c.height);
-  for (let i = 0; i < d.data.length; i += 4) { const on = d.data[i + 3] > 127; d.data[i] = d.data[i + 1] = d.data[i + 2] = 255; d.data[i + 3] = on ? 255 : 0; }
-  g.putImageData(d, 0, 0);
-  const t = new THREE.CanvasTexture(c); t.flipY = src.flipY; t.colorSpace = THREE.SRGBColorSpace; return t;
+// ---------------------------------------------------------------- the activation (Off the Chain's portal shader)
+// One quad over the whole acrylic piece, cut by its mask. uGlow lights a border round the piece, uPortal fills it with
+// a swirling portal. Copied from /evade/keychain-ar/main.js (keep the two in step); colours: basketball orange, EVADE
+// gold, Bobo Hoops cyan. The soft halo is baked once (bakeMask: red = mask, green = halo) so the live shader reads one
+// texel per pixel.
+const HALO_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D map; uniform float uAspect;
+  void main() {
+    float halo = 0.0;
+    for (int i = 0; i < 12; i++) {
+      float an = float(i) * 0.5236; vec2 d = vec2(cos(an), sin(an) * uAspect);
+      halo += texture2D(map, vUv + d * 0.022).a + texture2D(map, vUv + d * 0.05).a * 0.7;
+    }
+    gl_FragColor = vec4(texture2D(map, vUv).a, halo / 20.4, 0.0, 1.0);
+  }`;
+const PORTAL_FRAG = /* glsl */ `
+  precision highp float;
+  varying vec2 vUv;
+  uniform sampler2D map; uniform float uTime, uGlow, uPortal, uBlack, uAspect;
+  uniform vec3 uA, uB, uC;
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  // value noise that repeats every P cells across (and every 256 down, which also keeps the hash inputs small)
+  float noise(vec2 p, float P) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+    float x0 = mod(i.x, P), x1 = mod(i.x + 1.0, P), y0 = mod(i.y, 256.0), y1 = mod(i.y + 1.0, 256.0);
+    return mix(mix(hash(vec2(x0, y0)), hash(vec2(x1, y0)), f.x), mix(hash(vec2(x0, y1)), hash(vec2(x1, y1)), f.x), f.y); }
+  float fbm(vec2 p, float P) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p, P); p = p * 2.0 + 7.1; P *= 2.0; a *= 0.5; } return v; }
+  void main() {
+    vec2 m = texture2D(map, vUv).rg; float a = m.r, halo = m.g;
+    vec2 q = (vUv - 0.5) * vec2(1.0, 1.0 / uAspect); float r = length(q), ang = atan(q.y, q.x);
+    float rim = smoothstep(0.0, 0.55, halo) * (1.0 - a);                    // outside the cut-out
+    float edge = a * (1.0 - smoothstep(0.55, 1.0, halo));                   // just inside it
+    float sweep = 0.5 + 0.5 * sin(ang * 2.0 - uTime * 3.2);
+    vec3 rimCol = mix(uA, uC, sweep) * (1.1 + 0.5 * sin(uTime * 9.0 + ang * 5.0));
+    // portal: a spiral falling into the middle (8 and 16 noise cells round the circle: seamless)
+    float sw = ang + 1.6 / (r + 0.18) - uTime * 1.5;
+    float n = fbm(vec2(sw * 1.27324, r * 5.0 - uTime * 0.9), 8.0);
+    float n2 = fbm(vec2(sw * 2.54648 + 3.0, r * 9.0 + uTime * 0.6), 16.0);
+    vec3 pc = mix(uB * 0.35, uA, smoothstep(0.25, 0.75, n));
+    pc = mix(pc, uC, smoothstep(0.55, 0.9, n2) * 0.8);
+    pc += vec3(1.0) * pow(n * n2 * 2.2, 3.0) * 0.9;                         // sparks in the swirl
+    pc *= mix(0.12, 1.25, smoothstep(0.0, 0.42, r));                        // dark at the centre: it has depth
+    pc += rimCol * edge * 1.4;
+    float inA = a * max(uBlack, uPortal);
+    vec3 inside = pc * uPortal * a + rimCol * edge * uGlow * 0.9 * a;
+    vec3 glow = rimCol * rim * uGlow * 1.5;
+    gl_FragColor = vec4(inside + glow, inA);                                // premultiplied: the glow is additive
+  }`;
+// mask picture -> a small texture holding the mask (red) and its halo (green), rendered once on the GPU
+function bakeMask(map, aspect) {
+  const img = map.image || {};
+  const k = Math.min(1, 512 / Math.max(img.width || 512, img.height || 512));
+  const rt = new THREE.WebGLRenderTarget(
+    Math.max(2, Math.round((img.width || 512) * k)),
+    Math.max(2, Math.round((img.height || 512) * k)),
+    { depthBuffer: false },
+  );
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: map }, uAspect: { value: aspect } },
+    fragmentShader: HALO_FRAG,
+    vertexShader:
+      "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+    depthTest: false,
+    depthWrite: false,
+  });
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), mat);
+  quad.frustumCulled = false;
+  const sc = new THREE.Scene();
+  sc.add(quad);
+  const prev = renderer.getRenderTarget();
+  renderer.setRenderTarget(rt);
+  renderer.render(sc, new THREE.Camera());
+  renderer.setRenderTarget(prev);
+  quad.geometry.dispose();
+  // the material is NOT disposed: 8th Wall restores the GL program it last saw after its own draws, and a deleted program
+  // there logs "useProgram: attempt to use a deleted object" every frame (Bobo Hoops sim, 2026-11-22)
+  return rt.texture;
 }
-const scanClip = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);   // world space: keeps what is below the scan line
-const silMat = (map, col) => new THREE.MeshBasicMaterial({ map, color: col, transparent: true, alphaTest: 0.5, depthWrite: false, clippingPlanes: [scanClip] });
-const _m3 = new THREE.Matrix3();
-function setScanCut(k) {                       // k: 0 = nothing shown, 1 = the whole cut-out (fraction of the charm's height)
-  const local = new THREE.Plane(new THREE.Vector3(0, -1, 0), (k - 0.5) * CHARM.h + (k >= 1 ? 1 : 0));
-  CF.updateMatrixWorld(true); scanClip.copy(local).applyMatrix4(CF.matrixWorld, _m3.getNormalMatrix(CF.matrixWorld));
+function portalMaterial(baked, aspect, a, b, c) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      map: { value: baked },
+      uTime: { value: 0 },
+      uGlow: { value: 0 },
+      uPortal: { value: 0 },
+      uBlack: { value: 0 },
+      uAspect: { value: aspect },
+      uA: { value: new THREE.Color(a) },
+      uB: { value: new THREE.Color(b) },
+      uC: { value: new THREE.Color(c) },
+    },
+    vertexShader:
+      "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: PORTAL_FRAG,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.CustomBlending,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneMinusSrcAlphaFactor,
+  });
+  return m;
+}
+const PORTAL_COLOURS = [0xff8a2a, 0x6a2a0c, 0x4fd6e8];   // rim/portal: basketball orange, deep court brown, Bobo Hoops cyan
+const PORTAL_REST = 1, GLOW_REST = 0.55;                 // once the can is out the portal keeps swirling behind it
+const fx = { glow: 0, portal: 0, shake: 0, time: 0 };
+// a flat round dot (sparks): one colour, no falloff
+function dotTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.fill();
+  return new THREE.CanvasTexture(c);
 }
 
 function buildScene(xr, data) {
@@ -158,18 +267,51 @@ function buildScene(xr, data) {
   camera.position.set(0, CAM_H, 0); camera.quaternion.identity();
   XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
   scene.add(A); A.visible = false;
-  buildCan(data.can);
+  buildBalls(); buildCan(data.can, data.masks);
   // the floor: reticle ring, the can's shadow, the landing dust ring
   const ringM = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 56), ringM), dot = new THREE.Mesh(new THREE.CircleGeometry(0.08, 24), ringM);
   for (const m of [ring, dot]) { m.rotation.x = -Math.PI / 2; reticle.add(m); }
   reticle.visible = false; scene.add(reticle);
   for (const m of [shadow, dust]) { m.rotation.x = -Math.PI / 2; m.visible = false; m.renderOrder = 1; scene.add(m); }
-  buildBalls();
-  boboAsset.then((g) => { if (g) buildBobo(g); });
+  boboAsset.then((g) => { if (g) { buildBobo(g); warmUp(bobo.userData.wrap); } });
+  warmUp();
+}
+// Compile every shader and upload every texture now, while the camera is still just looking for the charm. Compiling
+// at the moment the portal, the balls or the can first appear stalls the engine on a phone (a frozen, smeared frame:
+// immersive skill pitfall 13). renderer.compile walks hidden meshes too. The open-top clipping plane is a different
+// shader for the can's materials: warm that variant with clones (same program key, so the real ones reuse it).
+// Rendered, not just compiled: compile() can't warm clipping variants (three.js reads the clip count only while drawing)
+// and its keys can differ from the real draw. So everything is drawn once into a 1x1 scissor of the real canvas (same
+// tone mapping and colour space as the real frames; the camera feed covers it next frame), with the scene's lights:
+// the hidden pieces shown for that one draw, plus clones of the can with its top cut off and a game ball.
+function warmUp(root) {
+  try {
+    const shown = [], g = new THREE.Group();
+    (root || scene).traverse((o) => { if (!o.visible) { o.visible = true; shown.push(o); } });
+    if (!root) {
+      const cut = new THREE.Plane(new THREE.Vector3(0, -1, 0), 99);
+      for (const m of canMats) { const c = m.clone(); c.clippingPlanes = [cut]; g.add(new THREE.Mesh(ballGeo, c)); }
+      g.add(new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ map: ballTex.base, roughness: 0.55, metalness: 0 })));
+      camera.getWorldDirection(_v); g.position.copy(camera.position).addScaledVector(_v, 1); g.scale.setScalar(0.01);
+      scene.add(g);
+    }
+    const cull = []; scene.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; cull.push(o); } });
+    const sz = renderer.getSize(new THREE.Vector2()), ac = renderer.autoClear;
+    renderer.setScissorTest(true); renderer.setScissor(0, 0, 1, 1); renderer.autoClear = false;
+    renderer.render(scene, camera);
+    renderer.setScissorTest(false); renderer.setScissor(0, 0, sz.x, sz.y); renderer.autoClear = ac;
+    for (const o of cull) o.frustumCulled = true;
+    for (const o of shown) o.visible = false;
+    scene.remove(g);
+    if (renderer.initTexture) (root || scene).traverse((o) => { const m = o.material; if (m) for (const k of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) if (m[k]) renderer.initTexture(m[k]); if (m && m.uniforms && m.uniforms.map && m.uniforms.map.value) renderer.initTexture(m.uniforms.map.value); });
+    diag.programs = renderer.info.programs ? renderer.info.programs.length : null;
+  } catch (e) { diag.errors.push('warm: ' + String(e && e.message).slice(0, 120)); }
 }
 
-function buildCan(gltf) {
+const portalMasks = {};
+const BURST_N = 14;
+function buildCan(gltf, masks) {
   canModel = gltf.scene;
   canModel.traverse((o) => {
     bindPose.push([o, o.position.clone(), o.quaternion.clone(), o.scale.clone()]);
@@ -179,17 +321,27 @@ function buildCan(gltf) {
   });
   canMixer = new THREE.AnimationMixer(canModel);
   for (const c of gltf.animations) canClips[c.name] = c;
-  // the silhouette quad that ships in the GLB covers the charm's print: it becomes the dark cut-out (and its rim),
-  // pinned to the charm frame; the model lies at (charm frame) x (silhouette matrix)^-1, i.e. over its print
-  const s0 = canModel.getObjectByName('Silhouette'); s0.updateMatrix(); const silLocal = s0.matrix.clone();
-  const map = maskTexture(s0.material.map); s0.removeFromParent();
-  // the GLB's own quad: its uvs match the picture
-  sil = new THREE.Mesh(s0.geometry, silMat(map, 0x0f1519)); sil.scale.set(CHARM.w, CHARM.h, 1); sil.position.z = 0.0004; sil.renderOrder = 3;
-  silRim = new THREE.Mesh(s0.geometry, silMat(map, 0x4fd6e8)); silRim.scale.set(CHARM.w * 1.12, CHARM.h * 1.065, 1); silRim.position.z = 0.0002; silRim.renderOrder = 2;
-  scanBar = new THREE.Mesh(new THREE.PlaneGeometry(CHARM.w * 1.25, CHARM.h * 0.025), new THREE.MeshBasicMaterial({ color: 0x4fd6e8, transparent: true, depthWrite: false }));
-  scanBar.position.z = 0.0008; scanBar.renderOrder = 4;
-  sil.name = 'sil'; silRim.name = 'silRim'; canRoot.name = 'canRoot';
-  CF.add(silRim, sil, scanBar);
+  // the silhouette quad that ships in the GLB fixes where the model lies over its print: (charm frame) x (silhouette
+  // matrix)^-1. Its picture is only the fallback portal mask (the can's shape): the charm pictures' own masks cover
+  // the whole acrylic piece, so no bare acrylic edge shows round the portal.
+  const s0 = canModel.getObjectByName('Silhouette'); s0.updateMatrix(); const silLocal = s0.matrix.clone(); s0.removeFromParent();
+  const own = s0.material.map; own.wrapS = own.wrapT = THREE.ClampToEdgeWrapping; own.needsUpdate = true;
+  portalMasks.own = { tex: bakeMask(own, CHARM.w / CHARM.h), w: CHARM.w, h: CHARM.h };
+  for (const [n, tex] of Object.entries(masks || {})) { const mk = layout.targets[n].mask; portalMasks[n] = { tex: bakeMask(tex, mk.widthM / mk.heightM), w: mk.widthM, h: mk.heightM }; }
+  // the GLB's own silhouette quad (unit size, glTF uvs: v runs down) to match the masks loaded with flipY off. A
+  // PlaneGeometry (v up) drew the portal upside down: the ring loop at the bottom (Dapo, 2026-11-22).
+  portal = new THREE.Mesh(s0.geometry, portalMaterial(portalMasks.own.tex, CHARM.w / CHARM.h, ...PORTAL_COLOURS));
+  portal.renderOrder = 3; portal.frustumCulled = false; portal.name = 'portal'; canRoot.name = 'canRoot';
+  portal.position.z = 0.0004; portal.scale.set(CHARM.w, CHARM.h, 1); portal.userData.on = 'own';
+  CF.add(portal);
+  // the burst: balls (the game's own ball, at charm scale) and flat sparks, all in the charm frame
+  for (let i = 0; i < BURST_N; i++) {
+    const m = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ map: i % 5 === 4 ? ballTex.money : ballTex.base, roughness: 0.55, metalness: 0, transparent: true }));
+    m.visible = false; m.renderOrder = 6; m.frustumCulled = false; CF.add(m); burst.push({ m, v: new THREE.Vector3(), spin: new THREE.Vector3(), t: -1, life: 1, at: 0 });
+  }
+  const N = 60, geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  sparks = new THREE.Points(geo, new THREE.PointsMaterial({ map: dotTexture(), color: 0xffd27a, size: 0.0022, transparent: true, depthWrite: false, opacity: 0, alphaTest: 0.3 }));
+  sparks.frustumCulled = false; sparks.renderOrder = 7; sparks.userData = { vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 }; CF.add(sparks);
   const L = new THREE.Matrix4().makeScale(CHARM.w, CHARM.h, 1).multiply(silLocal.clone().invert());
   lie = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), sc: new THREE.Vector3() }; L.decompose(lie.pos, lie.quat, lie.sc);
   lie.pos.z += 0.0025;
@@ -296,12 +448,28 @@ function follow(t) {
   const s = t.s, p = t.p, q = t.q;
   const aP = pose.snap ? 1 : clamp(A.position.distanceTo(p) / s / 0.0015, 0.5, 1);
   const aR = pose.snap ? 1 : clamp(A.quaternion.angleTo(q) / 0.03, 0.5, 1);
+  // scale snaps too on a fresh find. It used to read pose.snap AFTER clearing it, so the first frames lerped from the
+  // previous scale (1 at the start, i.e. many times too big): the cut-out flashed up giant over the whole screen.
+  const aS = pose.snap ? 1 : 0.6;
   pose.snap = false;
-  A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(lerp(A.scale.x, s, pose.snap ? 1 : 0.6));
+  A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(lerp(A.scale.x, s, aS));
   CF.matrix.copy(t.local); CF.matrix.decompose(CF.position, CF.quaternion, CF.scale);
+  usePortalMask(t);
   // the back of the charm: the can turns round to show its back (QR side) rather than reading as a mirror image
   canModel.scale.z = t.mirror ? -1 : 1;
   A.updateMatrixWorld(true);
+}
+
+// the charm picture in view decides the portal's mask (its whole acrylic piece), placed in the charm frame
+const _mm = new THREE.Matrix4();
+function usePortalMask(t) {
+  const want = portalMasks[t.name] ? t.name : 'own';
+  if (!portal || portal.userData.on === want) return;
+  const m = portalMasks[want], u = portal.material.uniforms; portal.userData.on = want;
+  u.map.value = m.tex; u.uAspect.value = m.w / m.h;
+  if (want === 'own') { portal.position.set(0, 0, 0.0004); portal.quaternion.identity(); portal.scale.set(m.w, m.h, 1); return; }
+  _mm.copy(t.local).invert().multiply(new THREE.Matrix4().makeTranslation(0, 0, 0.0004)).multiply(new THREE.Matrix4().makeScale(m.w, m.h, 1));
+  _mm.decompose(portal.position, portal.quaternion, portal.scale);
 }
 
 // ---------------------------------------------------------------- the flow
@@ -311,41 +479,112 @@ const reveal = { t: -1 };
 function arrived(now) {
   if (mode === 'find' || (mode === 'ready' && now - pose.goneAt > 2500)) {
     if (mode === 'find' && !diag.firstFoundS) { diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1); postEvent('found', {}); }
-    setMode('reveal'); reveal.t = 0; reveal.popped = false; hint(''); sound.scan(); buzz([10, 40, 18]);
+    setMode('reveal'); reveal.t = 0; reveal.popped = false; reveal.burst = false; hint('');
+    resetCanPose(); canRoot.visible = false; Object.assign(fx, { glow: 0, portal: 0, shake: 0 });
+    for (const b of burst) { b.t = -11; b.m.visible = false; }
+    sound.rumble(CHARGE_S); buzz([70, 50, 70, 50, 90, 40, 160].map((x) => Math.round((x * CHARGE_S) / 1.7)));
     $('b-play').hidden = true;
   }
 }
-// reveal: 0..0.9 s scan line up the charm (the cut-out fills in behind it), 0.9..1.3 s shiver, then the PopOut clip
-const SCAN_S = 0.9, SHIVER_S = 0.4, _dimRim = new THREE.Color(0x1d6f7c);
-let revealCut = 0;
+// reveal (Dapo, 2026-11-22): Off the Chain's shimmering activation (a rim lights up round the whole acrylic piece, it
+// rumbles, a portal opens), then a burst of basketballs pops out of the portal, then the can pops out (PopOut clip).
+const CHARGE_S = REDUCED ? 1.0 : 1.6, BURST_S = 0.55, CAN_AT = CHARGE_S + BURST_S + 0.55;   // the can waits for the balls to clear
 function tickReveal(dt) {
   if (mode !== 'reveal' && mode !== 'ready') return;
   const vis = A.visible;
   if (mode === 'reveal') {
     reveal.t += dt; const t = reveal.t;
-    const k = clamp(t / SCAN_S, 0, 1);
-    revealCut = k;
-    scanBar.visible = k < 1; scanBar.position.y = (k - 0.5) * CHARM.h; scanBar.material.opacity = 0.9;
-    canRoot.visible = t > SCAN_S;
-    if (t > SCAN_S && t < SCAN_S + SHIVER_S) {
-      placeOnCharm(Math.sin((t - SCAN_S) * 40) * 0.04 * ((t - SCAN_S) / SHIVER_S), 0.12);
-    } else if (t >= SCAN_S + SHIVER_S && !reveal.popped) {
-      reveal.popped = true; placeOnCharm(0, 1); sound.pop(); sound.fizz(); buzz(20);
+    // the build-up (Off the Chain's charge(): same curves)
+    if (t < CHARGE_S) {
+      const k = t / CHARGE_S;
+      fx.glow = easeOut(k * 2.2) * (0.8 + 0.35 * k); fx.portal = easeInOut((k - 0.22) / 0.55); fx.shake = REDUCED ? 0 : easeInOut(k * 1.5) * (0.4 + 0.9 * k);
+    } else {
+      const k = clamp((t - CHARGE_S) / 0.8, 0, 1);
+      fx.glow = lerp(1.15, GLOW_REST, easeInOut(k)); fx.portal = PORTAL_REST; fx.shake = 0;
+    }
+    // the basketballs: one after another out of the portal
+    if (t >= CHARGE_S && !reveal.burst) { reveal.burst = true; launchBurst(); }
+    canRoot.visible = t > CAN_AT;
+    if (t > CAN_AT && !reveal.popped) {
+      reveal.popped = true; placeOnCharm(0, 0.12); sound.pop(); sound.fizz(); buzz(20);
       const a = playCan('PopOut', false); reveal.popLen = a ? canClips.PopOut.duration : 0.8;
     }
     if (reveal.popped) {
       // lift off the print: the clip does the jump, we fill out its depth and float it a little in front
-      const k2 = clamp((t - SCAN_S - SHIVER_S) / 0.6, 0, 1);
+      const k2 = clamp((t - CAN_AT) / 0.6, 0, 1);
       placeOnCharm(0, lerp(0.12, 1, easeOut(k2)), 0.012 * easeOut(k2));
-      if (t > SCAN_S + SHIVER_S + reveal.popLen) { playCan('Idle'); setMode('ready'); }
+      if (t > CAN_AT + reveal.popLen) { playCan('Idle'); setMode('ready'); }
     }
   } else {
+    fx.glow = GLOW_REST; fx.portal = PORTAL_REST;
     placeOnCharm(0, 1, 0.012 + Math.sin(clock.t * 2.4) * 0.002);
   }
-  silRim.material.color.setHex(0x4fd6e8).lerp(_dimRim, 0.5 + 0.5 * Math.sin(clock.t * 4));   // a pulsing rim (colour, not opacity: alphaTest would cut it)
-  if (A.visible) setScanCut(mode === 'reveal' ? revealCut : 1);
   $('b-play').hidden = !(mode === 'ready' && vis);
   if (mode === 'ready') hint(vis ? '' : 'Point at the can again');
+}
+// push the activation into the shader (the build-up throbs in light rather than shaking the quad: a jittering quad
+// read as the whole picture shaking on iPhone, Off the Chain 2026-11-11)
+function tickPortal(dt) {
+  if (!portal) return;
+  fx.time += dt; const u = portal.material.uniforms;
+  const throb = 1 + Math.min(fx.shake, 1.5) * 0.35 * Math.sin(fx.time * 22.0);
+  u.uTime.value = fx.time; u.uGlow.value = fx.glow * (0.86 + 0.14 * Math.sin(fx.time * 5.0)) * throb; u.uPortal.value = fx.portal; u.uBlack.value = 0;
+}
+// The burst: ~14 balls (the game's own ball, at charm scale: about 9 mm across) leave the portal one after another,
+// out towards the phone and up, arc under real "down" (gravity from the SLAM world, turned into the charm frame), spin,
+// and shrink away. Gold balls, every fifth the cyan money ball.
+const BALL_R = 0.0045, _g = new THREE.Vector3(), _qi = new THREE.Quaternion();
+function launchBurst() {
+  const mw = CHARM.w * 0.32, mh = CHARM.h * 0.32;
+  burst.forEach((b, i) => {
+    b.t = -(i / BURST_N) * BURST_S; b.life = 1.05 + Math.random() * 0.35; b.fired = false;
+    const a = (i / BURST_N) * Math.PI * 2 + Math.random() * 0.5;
+    b.m.position.set(Math.cos(a) * mw * 0.4, Math.sin(a) * mh * 0.3, 0.003);
+    // a fountain: out of the portal, up and to the sides, a little towards the phone (not into it)
+    const sp = 0.07 + Math.random() * 0.06;
+    b.v.set(Math.cos(a) * sp, 0.13 + Math.random() * 0.1 + Math.max(0, Math.sin(a)) * 0.04, 0.07 + Math.random() * 0.06);
+    b.spin.set((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 14, (Math.random() - 0.5) * 6);
+    b.m.scale.setScalar(0.001); b.m.visible = false; b.m.material.opacity = 1;
+  });
+}
+function tickBurst(dt) {
+  if (!burst.length || !burst.some((b) => b.t > -10)) return;
+  // world down in the charm frame (the burst falls to the real floor, however the keychain is held)
+  CF.getWorldQuaternion(_qi).invert(); _g.set(0, -1, 0).applyQuaternion(_qi).multiplyScalar(0.55);
+  for (const b of burst) {
+    if (b.t <= -10) continue;
+    b.t += dt;
+    if (b.t < 0) continue;
+    if (!b.fired) { b.fired = true; b.m.visible = true; sound.ballPop(); burstSparks(b.m.position, 6); if (Math.random() < 0.4) buzz(8); }
+    const k = b.t / b.life;
+    if (k >= 1) { b.m.visible = false; b.t = -11; continue; }
+    b.v.addScaledVector(_g, dt);
+    b.m.position.addScaledVector(b.v, dt);
+    b.m.rotation.x += b.spin.x * dt; b.m.rotation.y += b.spin.y * dt; b.m.rotation.z += b.spin.z * dt;
+    const grow = easeOutBack(clamp(b.t / 0.18, 0, 1)), shrink = 1 - easeInOut((k - 0.7) / 0.3);
+    b.m.scale.setScalar(Math.max(0.0001, BALL_R * grow * shrink));
+  }
+}
+function burstSparks(at, n) {
+  const pos = sparks.geometry.attributes.position, u = sparks.userData;
+  for (let i = 0; i < n; i++) {
+    const j = u.next; u.next = (u.next + 1) % u.life.length;
+    const a = Math.random() * Math.PI * 2, sp = 0.03 + Math.random() * 0.05;
+    pos.setXYZ(j, at.x, at.y, at.z + 0.002);
+    u.vel[j * 3] = Math.cos(a) * sp; u.vel[j * 3 + 1] = Math.sin(a) * sp; u.vel[j * 3 + 2] = 0.02 + Math.random() * 0.04;
+    u.life[j] = 0.35 + Math.random() * 0.3;
+  }
+  pos.needsUpdate = true; sparks.material.opacity = 1;
+}
+function tickSparks(dt) {
+  if (!sparks || sparks.material.opacity === 0) return;
+  const pos = sparks.geometry.attributes.position, u = sparks.userData; let any = false;
+  for (let j = 0; j < u.life.length; j++) {
+    if (u.life[j] <= 0) { pos.setXYZ(j, 0, 0, 50); continue; }   // parked 50 m out towards the viewer: behind the phone, never drawn
+    u.life[j] -= dt; any = true;
+    pos.setXYZ(j, pos.getX(j) + u.vel[j * 3] * dt, pos.getY(j) + u.vel[j * 3 + 1] * dt, pos.getZ(j) + u.vel[j * 3 + 2] * dt);
+  }
+  pos.needsUpdate = true; if (!any) sparks.material.opacity = 0;
 }
 function placeOnCharm(wiggle, depthK, lift = 0) {
   canRoot.position.copy(lie.pos); canRoot.position.z += lift;
@@ -735,7 +974,7 @@ function tick(dt) {
   if (canMixer && (mode === 'reveal' || mode === 'ready' || mode === 'grow' || mode === 'placing')) canMixer.update(dt);
   if (boboMixer && bobo && bobo.visible) boboMixer.update(dt);
   if (topOff) clipTop.constant = canRoot.position.y + (TOP_Y - 0.002) * canRoot.scale.y;   // the cut follows the can wherever it goes
-  tickReveal(dt); tickFloor(dt); tickGrow(dt); tickDrop(dt); tickFx(dt);
+  tickReveal(dt); tickPortal(dt); tickBurst(dt); tickSparks(dt); tickFloor(dt); tickGrow(dt); tickDrop(dt); tickFx(dt);
   tickHeld(dt); tickBalls(dt); tickDist();
   // the world: tracking lost for a while -> say how to get it back (only once we're on the floor)
   if (mode !== 'find' && mode !== 'reveal' && mode !== 'ready') {
@@ -866,8 +1105,8 @@ function drawDiag(now) {
 
 // automated tests (?test)
 if (params.has('test')) window.__bh = {
-  get mode() { return mode; }, get pose() { return pose.state; }, get game() { return { ...game, balls: balls.length, inside: balls.filter((b) => b.inside).length }; },
-  get tracking() { return lastTrack; }, scene: () => scene, get topOff() { return topOff && inner.visible && canMats.every((m) => m.clippingPlanes && m.clippingPlanes.length); }, get endShown() { return !$('end').hidden; },
+  get mode() { return mode; }, get pose() { return pose.state; }, get reveal() { return { t: +reveal.t.toFixed(2), glow: +fx.glow.toFixed(2), portal: +fx.portal.toFixed(2), balls: burst.filter((b) => b.m.visible).length, can: canRoot.visible, mask: portal && portal.userData.on, programs: renderer.info.programs.length }; }, get game() { return { ...game, balls: balls.length, inside: balls.filter((b) => b.inside).length }; },
+  get tracking() { return lastTrack; }, scene: () => scene, programs: () => renderer.info.programs.map((p) => p.name), get topOff() { return topOff && inner.visible && canMats.every((m) => m.clippingPlanes && m.clippingPlanes.length); }, get endShown() { return !$('end').hidden; },
   balls: () => balls.map((b) => ({ p: b.p.toArray().map((x) => +x.toFixed(3)), inside: b.inside, scored: !!b.scored, done: b.done, rim: b.rim, wall: b.wall, rest: +b.rest.toFixed(2), age: +b.age.toFixed(1) })), diag, TS, hoop, camera: () => camera,
   play: takeOffCharm, place: placeCan,
   // the power that lands exactly at the can's rim (for the shot test)

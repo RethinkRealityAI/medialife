@@ -1,0 +1,36 @@
+<!doctype html><html><body style="margin:0;background:transparent">
+<script type="importmap">{"imports":{"three":"/__three/build/three.module.js","three/addons/":"/__three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+const P = new URLSearchParams(location.search);
+const W = +(P.get('w')||1024), H = +(P.get('h')||1440);
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setSize(W, H); r.setPixelRatio(1); r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.NoToneMapping;
+document.body.appendChild(r.domElement);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1, 2, 3); scene.add(sun);
+const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder);
+const g = await l.loadAsync('/roblox/activated-retail/models/catbobo.glb');
+window.clips = g.animations.map(a => a.name + ':' + a.duration.toFixed(2));
+const o = g.scene; scene.add(o);
+const clip = g.animations.find(a => a.name.toLowerCase().includes((P.get('clip')||'excited').toLowerCase())) || g.animations[0];
+const mix = new THREE.AnimationMixer(o); const act = mix.clipAction(clip); act.play();
+mix.setTime(clip.duration * +(P.get('t')||0.3));
+o.rotation.y = +(P.get('yaw')||0);
+o.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(o, true); const size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+window.box = [size.x,size.y,size.z].map(v=>v.toFixed(3));
+const cam = new THREE.OrthographicCamera(-1,1,1,-1,0.01,100);
+const pad = 1.04, aspect = W/H;
+let hh = size.y/2*pad, hw = hh*aspect; if (size.x/2*pad > hw) { hw = size.x/2*pad; hh = hw/aspect; }
+cam.left=-hw; cam.right=hw; cam.top=hh; cam.bottom=-hh; cam.updateProjectionMatrix();
+cam.position.set(c.x, c.y, c.z + 10); cam.lookAt(c.x, c.y, c.z);
+// align feet to bottom
+const footPad = +(P.get('foot')||0.012);
+cam.position.y = box.min.y - footPad*2*hh + hh; cam.lookAt(c.x, cam.position.y, c.z);
+r.render(scene, cam);
+window.done = true;
+</script></body></html>

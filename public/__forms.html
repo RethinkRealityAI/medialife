@@ -148,5 +148,21 @@
       <input name="utm_content" type="text" />
       <input name="utm_term" type="text" />
     </form>
+    <!--
+      Anpanman, Activated proposal (public/anpanman/): "Lock in the intro offer" form.
+      Field names MUST stay in sync with public/anpanman/index.html.
+    -->
+    <form name="anpanman-offer" data-netlify="true" netlify-honeypot="bot-field" hidden>
+      <input type="hidden" name="form-name" value="anpanman-offer" />
+      <input name="bot-field" type="text" />
+      <input name="priority" type="text" />
+      <input name="package" type="text" />
+      <input name="payment" type="text" />
+      <input name="contact-name" type="text" />
+      <input name="email" type="email" />
+      <input name="company" type="text" />
+      <input name="launch" type="text" />
+      <textarea name="notes"></textarea>
+    </form>
   </body>
 </html>

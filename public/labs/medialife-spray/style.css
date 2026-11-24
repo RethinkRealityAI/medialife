@@ -1,0 +1,7 @@
+/* MEDIALIFE Spray: Spray Bobo's look (/evade/spray-bobo/style.css) in MEDIALIFE's flat blue and magenta, on black */
+:root{--y:#19afff;--blue:#19afff;--mag:#ff2fae;--cap:#19afff;--slate:#0b0d12}
+#splash .brand{height:26px}
+.tl .evade{height:20px}
+button.primary,a.btn.primary{box-shadow:0 8px 0 #0b7bbf,0 14px 30px rgba(0,0,0,.35)}
+button.primary:active{box-shadow:0 4px 0 #0b7bbf,0 8px 18px rgba(0,0,0,.35)}
+.ask-row .primary{box-shadow:0 5px 0 #0b7bbf}

@@ -22,6 +22,10 @@ const $ = (id) => document.getElementById('r-' + id);
 const root = document.getElementById('room');
 const params = new URLSearchParams(location.search);
 const HERE = '/evade/spray-bobo/';
+// the brand (see main.js): MEDIALIFE Spray sets window.SPRAY_BRAND; its room keeps its own art and colours.
+// hidePieces: paintings this brand's room leaves out (a Sukeban tee painted here before it moved to MEDIALIFE Spray)
+const BRAND = Object.assign({ id: 'evade', db: 'spray-bobo', hideDecalCats: [], hidePieces: ['sukeban'] }, window.SPRAY_BRAND || {});
+const ML = BRAND.id === 'medialife';
 const clamp = THREE.MathUtils.clamp;
 const easeOut = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
 const backOut = (x) => { const c = 1.9; x = clamp(x, 0, 1) - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
@@ -29,7 +33,11 @@ const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v)
 const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* no haptics */ } };
 const store = { get(k, d) { try { const v = localStorage.getItem('sbs-' + k); return v == null ? d : v; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('sbs-' + k, v); } catch (e) { /* none */ } } };
 
-const CAPS = [                                // the colours ("caps"), the same as Spray Bobo
+const CAPS = ML ? [                           // MEDIALIFE Spray's colours, the same as its merch canvas
+  { c: '#19afff', n: 'MEDIALIFE blue' }, { c: '#ff2fae', n: 'MEDIALIFE magenta' }, { c: '#f6c344', n: 'Yellow' }, { c: '#8cc8f8', n: 'Sky' },
+  { c: '#ff3b4e', n: 'Red' }, { c: '#ff8a2a', n: 'Orange' }, { c: '#3ddc84', n: 'Green' }, { c: '#7a5cff', n: 'Purple' },
+  { c: '#ffffff', n: 'White' }, { c: '#15131a', n: 'Black' },
+] : [                                         // the colours ("caps"), the same as Spray Bobo
   { c: '#f6c344', n: 'EVADE yellow' }, { c: '#3f9be6', n: 'Bobo blue' }, { c: '#8cc8f8', n: 'Sky' }, { c: '#e85bd8', n: 'Magenta' },
   { c: '#ff3b4e', n: 'Red' }, { c: '#ff8a2a', n: 'Orange' }, { c: '#3ddc84', n: 'Green' }, { c: '#7a5cff', n: 'Purple' },
   { c: '#ffffff', n: 'White' }, { c: '#15131a', n: 'Black' },
@@ -92,7 +100,7 @@ const LIB = { mine: [], decals: [], cat: 'mine', sel: null };
 const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 function idb() {
   return new Promise((res, rej) => {
-    try { const r = indexedDB.open('spray-bobo', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
+    try { const r = indexedDB.open(BRAND.db, 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
   });
 }
 async function loadMine() {
@@ -100,7 +108,7 @@ async function loadMine() {
     const db = await idb(); const st = () => db.transaction('kv').objectStore('kv');
     const keys = await new Promise((res) => { const q = st().getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); });
     const recs = [];
-    for (const k of keys) if (typeof k === 'string' && k.startsWith('street:')) {
+    for (const k of keys) if (typeof k === 'string' && k.startsWith('street:') && !(BRAND.hidePieces || []).includes(k.slice(7))) {
       const r = await new Promise((res) => { const q = st().get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
       if (r && r.png) recs.push(r);
     }
@@ -146,7 +154,8 @@ async function loadDecals() {
     const lib = await fetch(HERE + 'decals/decals.json').then((r) => r.json());
     // fun stickers and EVADE icons first: they stand on their own on a wall (the "wear" ones are made for Bobo's face)
     const order = { fun: 0, game: 1, wear: 2 };
-    const list = [...lib.decals].sort((a, b) => (order[a.cat] ?? 3) - (order[b.cat] ?? 3));
+    const hide = new Set(BRAND.hideDecalCats);
+    const list = lib.decals.filter((d) => !hide.has(d.cat)).sort((a, b) => (order[a.cat] ?? 3) - (order[b.cat] ?? 3));
     const items = await Promise.all(list.map((d) => loadDecal(d).catch(() => null)));
     LIB.decals = items.filter(Boolean);
   } catch (e) { console.warn('decals', e); }

@@ -1,5 +1,65 @@
 [
   {
+    "slug": "happi",
+    "title": "Happi AR",
+    "lead": "Meet Happi, the Japan Parade & Street Fair mascot: play with Happi in 3D, place Happi in your room, wear Happi's head in a selfie, and take a photo with a frame or a life-size cutout.",
+    "url": "/happi/",
+    "thumb": "/labs/img/happi.webp",
+    "alt": "The Happi AR splash: Japan Parade & Street Fair logo, the Happi wordmark, Start, and Happi in 3D on the parade stage",
+    "client": "Japan Parade & Street Fair",
+    "categories": [
+      "events",
+      "3d-character",
+      "capture",
+      "game"
+    ],
+    "tech": [
+      "web-3d",
+      "world",
+      "face"
+    ],
+    "status": "preview",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "notes": [
+      "Pitch demo: show only to the parade team"
+    ]
+  },
+  {
+    "slug": "evade-hub",
+    "title": "Bobo's Hideout",
+    "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade.",
+    "url": "/evade/hub/",
+    "extraLinks": [
+      {
+        "label": "Open the arcade",
+        "url": "/evade/hub/?arcade"
+      }
+    ],
+    "thumb": "/labs/img/evade-hub.webp",
+    "client": "EVADE",
+    "categories": [
+      "game",
+      "collectibles",
+      "capture"
+    ],
+    "tech": [
+      "web-3d",
+      "world",
+      "face"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "not yet",
+    "alt": "Bobo in his hideout with the arcade machines on the left, the 3D / AR / Selfie / Photo tabs and the Arcade button",
+    "share": {
+      "start": 1,
+      "needs": "Any screen, camera optional"
+    }
+  },
+  {
     "slug": "holocast",
     "title": "Holocast",
     "lead": "Put a holo projector on your floor or table and its floating screens fill with live data from the control room: notices, a live sketch, photo drops, a 3D live poll, spoken captions, the Where is Bobo? globe, reactions and a live video stream.",
@@ -46,7 +106,10 @@
     "tested": "phone",
     "notes": [
       "Phone only"
-    ]
+    ],
+    "share": {
+      "needs": "Room to walk a few steps"
+    }
   },
   {
     "slug": "medialife-portal",
@@ -118,7 +181,10 @@
     "year": 2026,
     "featured": true,
     "tested": "simulator",
-    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation"
+    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation",
+    "share": {
+      "needs": "The keychain, then the night sky"
+    }
   },
   {
     "slug": "cola-run",
@@ -151,7 +217,19 @@
     "alt": "Cola Run splash art with Bobo the cat",
     "notes": [
       "Phone only"
-    ]
+    ],
+    "share": {
+      "start": 3,
+      "needs": "A bit of floor",
+      "lead": "The full Cola Run game in your room: grab every can before time runs out and record your run. Then open Bobo's Arcade to jump between every EVADE experience, or walk through a door into a life-size Bobo's Hideout.",
+      "links": [
+        {
+          "label": "Open Bobo's Arcade",
+          "url": "/evade/cola-run/?mode=arcade"
+        }
+      ],
+      "title": "Cola Run"
+    }
   },
   {
     "slug": "bobo-hoops",
@@ -179,7 +257,12 @@
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top"
+    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top",
+    "share": {
+      "start": 4,
+      "needs": "The EVADE keychain and some floor",
+      "lead": "Point at the Eclipse can on the keychain, grow it into a giant open-top can on your floor and swipe to shoot 10 balls in."
+    }
   },
   {
     "slug": "wake-the-print",
@@ -212,6 +295,41 @@
     ]
   },
   {
+    "slug": "medialife-spray",
+    "title": "MEDIALIFE Spray",
+    "lead": "Spray Bobo's paint engine for MEDIALIFE's own apparel. Your phone is the spray can: paint Sukeban on the MEDIALIFE tee, add decals, and the painting becomes a 3D sticker on the shirt. Then hang it, stamp it or spray graffiti on real walls.",
+    "url": "/labs/medialife-spray/",
+    "extraLinks": [
+      {
+        "label": "Graffiti mode",
+        "url": "/labs/medialife-spray/?room=graffiti"
+      },
+      {
+        "label": "Test picture",
+        "url": "/labs/wake-the-print/target/"
+      }
+    ],
+    "thumb": "/labs/img/medialife-spray.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "apparel",
+      "capture",
+      "showcase"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "MEDIALIFE Spray start screen: a blue spray can beside the Sukeban stencil, with a Start painting button",
+    "notes": [
+      "MEDIALIFE products only"
+    ]
+  },
+  {
     "slug": "off-the-chain",
     "title": "Bobo Off the Chain",
     "lead": "Point at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D. Feed Bobo, go Super Bobo, take photos or video and jump into Cola Run.",
@@ -241,7 +359,11 @@
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button"
+    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button",
+    "share": {
+      "start": 2,
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "spray-bobo-enhanced",
@@ -306,7 +428,7 @@
   {
     "slug": "spray-bobo",
     "title": "Spray Bobo",
-    "lead": "Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
+    "lead": "Your phone is the spray can. Paint the Bobo charm or the Eclipse can charm, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
     "url": "/evade/spray-bobo/",
     "extraLinks": [
       {
@@ -337,7 +459,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button"
+    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button",
+    "share": {
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "xray-bobo",
@@ -364,7 +489,20 @@
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton"
+    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton",
+    "share": {
+      "needs": "The keychain or a Bobo tee",
+      "links": [
+        {
+          "label": "Watch a phone recording",
+          "url": "/evade/video/xray-bobo.mp4"
+        },
+        {
+          "label": "Test pictures",
+          "url": "/evade/keychain-ar/target/"
+        }
+      ]
+    }
   },
   {
     "slug": "bobo-booth",
@@ -385,7 +523,10 @@
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring"
+    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring",
+    "share": {
+      "needs": "Just your face"
+    }
   },
   {
     "slug": "photo-beam",
@@ -411,7 +552,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain"
+    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain",
+    "share": {
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "spray-studio",
@@ -441,7 +585,8 @@
     "alt": "Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right",
     "notes": [
       "Team sign-in for now"
-    ]
+    ],
+    "share": false
   },
   {
     "slug": "where-is-bobo",
@@ -462,7 +607,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip"
+    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "vault",
@@ -487,7 +635,10 @@
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front"
+    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "cola-run-lab",
@@ -512,7 +663,8 @@
     "notes": [
       "Sent clips go to this site's Media Library"
     ],
-    "source": "mattercraft/cola-run/"
+    "source": "mattercraft/cola-run/",
+    "share": false
   },
   {
     "slug": "collector-hub",
@@ -538,7 +690,8 @@
     "notes": [
       "Demo data, no sign-in yet"
     ],
-    "source": "art/collector-hub/"
+    "source": "art/collector-hub/",
+    "share": false
   },
   {
     "slug": "keychain-pop",
@@ -569,7 +722,8 @@
     "notes": [
       "Blender, no gen AI"
     ],
-    "source": "mattercraft/keychain-pop/"
+    "source": "mattercraft/keychain-pop/",
+    "share": false
   },
   {
     "slug": "loot-break",

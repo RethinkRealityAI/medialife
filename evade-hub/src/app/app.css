@@ -1,0 +1,70 @@
+/* The experience page's app layer (EVADE). Tokens from src/shared/theme.css; no gradients.
+   Stacking: the experience container has no z-index, so its own HUD and sheets share the page's stacking context.
+   App layer = z-index 40 (toasts). Experience HUD stays below 40, its full-screen sheets (menu, photo review, QR)
+   above 60. Bobo's Arcade is a native <dialog> in the top layer. */
+
+.cb-app {
+  position: fixed; inset: 0; overflow: hidden; background: #000;
+  font-family: var(--cb-font); color: var(--cb-white);
+  --side-w: 400px;
+  --top-bar: 112px; /* the experience's top bar: lockup + menu, the mode tabs under them */
+}
+@media (max-width: 1100px) { .cb-app { --side-w: 360px; } }
+
+.cb-stage { position: absolute; inset: 0; transition: right .3s var(--cb-ease); }
+.cb-app[data-side-open='true'] .cb-stage,
+.cb-app[data-side-open='true'] .cb-layer-stage { right: var(--side-w); }
+
+.cb-layer { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
+.cb-layer-stage { position: absolute; inset: 0; transition: right .3s var(--cb-ease); }
+
+/* ------------------------------------------------------------ top slot: toasts */
+.cb-top-slot {
+  position: absolute; left: 0; right: 0; top: calc(var(--cb-safe-top) + var(--top-bar));
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0 16px;
+}
+/* toasts: a compact chip that springs in under the top bar and shrinks away */
+.cb-toast-slot { display: flex; justify-content: center; width: 100%; pointer-events: none; }
+.cb-toast {
+  position: relative; display: inline-flex; align-items: center; gap: 8px;
+  max-width: min(400px, 100%); min-height: 40px; padding: 4px 16px 4px 4px; border-radius: var(--cb-r-pill);
+  background: var(--cb-glass-hint-solid); color: var(--cb-white); box-shadow: var(--cb-shadow-2);
+  font: var(--cb-w-strong) 15px/1.25 var(--cb-font);
+  transform-origin: 50% 0; animation: cb-chip-in var(--cb-dur-3) var(--cb-ease-spring) both;
+}
+.cb-toast.is-leaving { animation: cb-chip-out var(--cb-dur-2) var(--cb-ease-in) both; }
+.cb-toast-icon { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--cb-fill-2); color: var(--cb-white); }
+.cb-toast-text { padding: 4px 0; }
+.cb-toast.is-error .cb-toast-icon { background: var(--cb-yellow); color: var(--cb-ink); }
+.cb-toast.is-found { background: var(--ev-yellow); color: var(--ev-ink); font-size: 16px; }
+.cb-toast.is-found .cb-toast-icon { background: var(--ev-ink); color: var(--ev-yellow); animation: cb-spin-pop var(--cb-dur-4) var(--cb-ease-spring) 80ms both; }
+/* a one-shot burst of flat rainbow dots out of the icon */
+.cb-toast-burst { position: absolute; left: 20px; top: 50%; width: 0; height: 0; pointer-events: none; }
+.cb-toast-burst i {
+  position: absolute; left: -4px; top: -4px; width: 8px; height: 8px; border-radius: 50%; opacity: 0;
+  animation: cb-burst 700ms var(--cb-ease) 60ms both;
+}
+.cb-toast-burst i:nth-child(1) { background: var(--cb-rainbow-1); --bx: -26px; --by: -22px; }
+.cb-toast-burst i:nth-child(2) { background: var(--cb-rainbow-2); --bx: 4px; --by: -32px; }
+.cb-toast-burst i:nth-child(3) { background: var(--cb-rainbow-3); --bx: 30px; --by: -20px; }
+.cb-toast-burst i:nth-child(4) { background: var(--cb-rainbow-4); --bx: 30px; --by: 22px; }
+.cb-toast-burst i:nth-child(5) { background: var(--cb-rainbow-5); --bx: 2px; --by: 32px; }
+.cb-toast-burst i:nth-child(6) { background: var(--cb-rainbow-6); --bx: -26px; --by: 22px; }
+
+
+/* the layer's own error fallback */
+.cb-layer-error {
+  position: absolute; left: 50%; bottom: calc(var(--cb-safe-bottom) + 120px); transform: translateX(-50%); z-index: 41;
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; border-radius: 999px; pointer-events: auto;
+  background: var(--cb-glass-strong); color: var(--cb-white); font-size: 14px;
+}
+
+@keyframes cb-chip-in { from { opacity: 0; transform: translateY(-6px) scale(.8); } to { opacity: 1; transform: none; } }
+@keyframes cb-chip-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-6px) scale(.88); } }
+@keyframes cb-burst { 0% { opacity: 1; transform: translate(0, 0) scale(.4); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--bx), var(--by)) scale(1); } }
+@keyframes cb-spin-pop { from { opacity: 0; transform: scale(.4) rotate(-30deg); } to { opacity: 1; transform: none; } }
+@keyframes cb-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .cb-toast, .cb-toast.is-leaving { animation-name: cb-fade-in; }
+  .cb-toast-burst { display: none; }
+}

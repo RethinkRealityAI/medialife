@@ -47,7 +47,12 @@ look, at }`, ignored after 30 min, deleted once read). The splash shows it ("Bea
 Start skips capture and opens Make it yours with it; Retake there goes back to the booth; Options gains "Back to the
 Bobo Booth". Everything after (aim, lock on, Beam, saved per charm) is unchanged.
 
-## The Sukeban tee (round 3)
+## The Sukeban tee (round 3, REMOVED 2026-11-24)
+Taken out: the tee is a MEDIALIFE product, and EVADE experiences carry EVADE merch only (Dapo, 2026-11-24). The
+pieces, the tee target and its slot masks are gone; the face-fit code (face guide, Match skin, On-character
+preview) stays idle in `main.js` for a future face slot (no piece has `face: true`, so the editor's view switch is
+hidden and the selfie guide is a plain face frame). The notes below are the recipe, kept for that.
+
 The tee is Spray Bobo's target `tee-sukeban` (loaded from `/evade/spray-bobo/targets/`, not copied; print 0.3048 x
 0.4064 m), so the page tracks 9 pictures. It carries two slots, each its own piece (own photo, own IndexedDB key):
 - **Sukeban's face** (`sukeface`, kind `face`, flat). The mask is her face skin (the largest pink skin blob round the
