@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0f1519" />
+    <meta name="description" content="Bobo's Hideout: hang out with Bobo in 3D and AR, take selfies and play every EVADE game in Bobo's Arcade." />
+    <title>Bobo's Hideout · EVADE</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,800;1,900&family=Space+Grotesk:wght@400;500;700&display=swap" />
+    <link rel="preload" as="image" href="/brand/evade-logo.webp" />
+    <!-- 8th Wall engine binary (world tracking + face effects in one session). Loaded unmodified from jsDelivr,
+         as its licence requires. The experience waits for the `xrloaded` event; nothing runs until Start. -->
+    <script async src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" crossorigin="anonymous" data-preload-chunks="slam,face"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
