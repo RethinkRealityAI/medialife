@@ -38,7 +38,7 @@
       "sub": "Your phone is the spray can",
       "img": "/labs/img/spray-bobo.webp",
       "url": "/evade/spray-bobo/",
-      "needs": "Your keychain or Sukeban tee",
+      "needs": "Your EVADE keychain",
       "unlock": {
         "task": "Win a round of Cola Run",
         "key": "ohg-reward-earned"

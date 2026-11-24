@@ -27,6 +27,8 @@ are for anyone (human or agent) adding or changing an AR / immersive experience 
 6. **Licences** (8th Wall engine binary / Niantic Spatial, three.js) go on a Licences link in the menu
    (`/evade/licences/`), never on the splash.
 7. **EVADE:** no user-facing generative AI; no generative or image-to-3D tools on EVADE's own assets.
+   EVADE experiences show EVADE merch only: never MEDIALIFE's own products (Sukeban, Syndicate, Trainwreck
+   apparel). Those go in MEDIALIFE experiences (e.g. `/labs/medialife-spray/`) (Dapo, 2026-11-24).
 8. **Pitch demos** (`/pitch/*`): unlisted (noindex, robots Disallow), never linked from the site, nav or Labs;
    text wordmarks instead of client logos.
 9. **Hint pill = one shared look.** Status lines like "Point at the print" use `/vendor/ar-kit/hint.css`

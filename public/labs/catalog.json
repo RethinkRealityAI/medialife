@@ -295,6 +295,41 @@
     ]
   },
   {
+    "slug": "medialife-spray",
+    "title": "MEDIALIFE Spray",
+    "lead": "Spray Bobo's paint engine for MEDIALIFE's own apparel. Your phone is the spray can: paint Sukeban on the MEDIALIFE tee, add decals, and the painting becomes a 3D sticker on the shirt. Then hang it, stamp it or spray graffiti on real walls.",
+    "url": "/labs/medialife-spray/",
+    "extraLinks": [
+      {
+        "label": "Graffiti mode",
+        "url": "/labs/medialife-spray/?room=graffiti"
+      },
+      {
+        "label": "Test picture",
+        "url": "/labs/wake-the-print/target/"
+      }
+    ],
+    "thumb": "/labs/img/medialife-spray.webp",
+    "client": "MEDIALIFE",
+    "categories": [
+      "apparel",
+      "capture",
+      "showcase"
+    ],
+    "tech": [
+      "image-target",
+      "world"
+    ],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "MEDIALIFE Spray start screen: a blue spray can beside the Sukeban stencil, with a Start painting button",
+    "notes": [
+      "MEDIALIFE products only"
+    ]
+  },
+  {
     "slug": "off-the-chain",
     "title": "Bobo Off the Chain",
     "lead": "Point at the EVADE keychain and Bobo and the Eclipse can jump off it in 3D. Feed Bobo, go Super Bobo, take photos or video and jump into Cola Run.",
@@ -333,7 +368,7 @@
   {
     "slug": "spray-bobo",
     "title": "Spray Bobo",
-    "lead": "Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
+    "lead": "Your phone is the spray can. Paint the Bobo charm or the Eclipse can charm, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
     "url": "/evade/spray-bobo/",
     "extraLinks": [
       {
@@ -366,7 +401,7 @@
     "tested": "phone",
     "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button",
     "share": {
-      "needs": "The keychain or the Sukeban tee"
+      "needs": "The EVADE keychain"
     }
   },
   {

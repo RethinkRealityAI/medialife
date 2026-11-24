@@ -2032,7 +2032,7 @@ async function grab() {
   return img;
 }
 // The faces on screen (CSS px), hat to chin and ear to ear, with room around them: Beam crops the shot to this so the
-// visor / can / cap / Sukeban get your face and look, not the room. Null when no face is tracked.
+// visor / can / cap get your face and look, not the room. Null when no face is tracked.
 function faceBox() {
   let x0 = 1e9,
     y0 = 1e9,
@@ -2083,7 +2083,7 @@ async function showResult(c, name, title, what) {
 
 // ---------------------------------------------------------------- Beam it onto your merch (Photo Beam, /evade/photo-beam/)
 // The clean shot (no watermark), cropped round the faces, is left in Photo Beam's IndexedDB as 'handoff'; Photo Beam
-// opens straight into Make it yours with it, then you aim at a charm or the Sukeban tee and beam it on. Same origin,
+// opens straight into Make it yours with it, then you aim at a charm and beam it on. Same origin,
 // on this phone only: nothing is uploaded. From a strip you pick which of the four shots to beam.
 let beamable = [],
   beamPick = 0;
