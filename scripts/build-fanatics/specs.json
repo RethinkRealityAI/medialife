@@ -1,0 +1,80 @@
+[
+ {
+  "npz": "/tmp/claude-0/flat.npz",
+  "out": "/tmp/claude-0/t_black76.jpg",
+  "dbg": "/tmp/claude-0/d_flat.png",
+  "wall": [
+   -0.35,
+   -0.2
+  ],
+  "brimY": -0.33,
+  "crown": [
+   30,
+   29,
+   31
+  ],
+  "brim": [
+   30,
+   29,
+   31
+  ],
+  "under": [
+   44,
+   44,
+   46
+  ],
+  "button": [
+   30,
+   29,
+   31
+  ],
+  "keepLogo": [
+   245,
+   245,
+   242
+  ],
+  "inside": [
+   60,
+   60,
+   62
+  ]
+ },
+ {
+  "npz": "/tmp/claude-0/flat.npz",
+  "out": "/tmp/claude-0/t_sixers.jpg",
+  "wall": [
+   -0.35,
+   -0.2
+  ],
+  "brimY": -0.33,
+  "crown": [
+   30,
+   29,
+   32
+  ],
+  "brim": [
+   200,
+   40,
+   48
+  ],
+  "under": [
+   44,
+   44,
+   46
+  ],
+  "button": [
+   200,
+   40,
+   48
+  ],
+  "logo": "/mnt/project-files/fanatics/src/logo-sixers-star.png",
+  "logoW": 0.84,
+  "logoY": 0.02,
+  "inside": [
+   60,
+   60,
+   62
+  ],
+  "nzMin": 0.08
+ }
+]
