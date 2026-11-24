@@ -168,7 +168,7 @@ export const INTERACTIONS: Interaction[] = [
     still: "/labs/img/wake-the-print.webp",
     url: "/labs/wake-the-print/",
     target: {
-      src: "/evade/spray-bobo/targets/tee-sukeban.jpg",
+      src: "/labs/medialife-spray/targets/tee-sukeban.jpg",
       alt: "The Sukeban tee print",
       page: "/labs/wake-the-print/target/",
     },

@@ -28,7 +28,7 @@ const PAGE = 'wake-the-print';   // goes into the test log records (page: ...) a
 // ---------------------------------------------------------------- targets
 // The Sukeban tee from Spray Bobo (print 304.8 x 406.4 mm). heightMm = the whole 3:4 target frame.
 const TARGETS = [
-  { name: 'tee-sukeban', json: '/evade/spray-bobo/targets/tee-sukeban.json', heightMm: 406.4 },
+  { name: 'tee-sukeban', json: '/labs/medialife-spray/targets/tee-sukeban.json', heightMm: 406.4 },
 ];
 const BY_NAME = Object.fromEntries(TARGETS.map((t) => [t.name, t]));
 

@@ -5,9 +5,17 @@
 
 ## The flow
 1. **Find**: point at the Eclipse can charm on the EVADE keychain (targets `kc-can`, `kc-can-back`, the Off the Chain
-   pictures). A cyan scan line runs up the charm (Bobo X-Ray's scanner), the printed can turns into a dark cut-out with
-   a pulsing cyan rim, and the 3D Eclipse can (Off the Chain's Blender GLB, its `PopOut` clip) shivers and pops out,
-   then hovers and fizzes (`Idle`).
+   pictures). The activation is Off the Chain's shimmer (its portal shader, copied into `main.js`): a rim lights up round
+   the whole acrylic piece and it rumbles (1.6 s), a portal opens in basketball orange and cyan, then **a burst of 14
+   basketballs** (the game's own ball at charm scale, every fifth the cyan money ball) fountains out of the portal and
+   falls to the real floor direction, then the 3D Eclipse can (Off the Chain's Blender GLB, its `PopOut` clip) pops out,
+   then hovers and fizzes (`Idle`) with the portal swirling behind it. (Dapo, 2026-11-22: replaced the dark cut-out with
+   a cyan rim.)
+   - The portal mask is the charm picture's own mask (`kc-can-mask.png` / `kc-can-back-mask.png`: the whole acrylic
+     piece), not the can-shaped silhouette in the GLB. With the silhouette, the charm's light acrylic edge stayed bare
+     round the cut-out: the white border Dapo saw on first scan.
+   - Every shader is compiled and every texture uploaded at camera start (`warmUp()`), so nothing compiles at the moment
+     the charm is found (that stall freezes the frame on a phone).
 2. **Play Some Hoops** (bottom centre, only while the charm is tracked).
 3. **Grow**: the can leaves the charm, spins and grows out in front of the phone.
 4. **Place**: "Point at the floor or a table". A ring follows the floor in the middle of the screen, the can hovers over
@@ -57,3 +65,7 @@ finds the can charm while world tracking reports NORMAL, the reveal, Play Some H
 drop, and shots across the power range (see the PR for numbers). Phone-tested by Dapo on 2026-11-17: the image target to
 world tracking handoff works well. Round 2 fixed the lid coming back after Move the can and added the always-on Move
 button.
+
+Round 4 (2026-11-22, new reveal + white border fix): simulator only (headless camera on the can charm over a dark desk,
+near and far). Shader programs stay at 19 from camera start through the reveal (no compile at the find). Waiting on
+Dapo's phone test.

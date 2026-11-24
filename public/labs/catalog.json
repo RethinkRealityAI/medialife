@@ -1,5 +1,66 @@
 [
   {
+    "slug": "monkey-quest-hub",
+    "title": "Hypergalactic Monkey Quest Hub",
+    "lead": "Scan the Monkey Quest enamel pin and pick an experience: spray paint the pin as it pops out in 3D next to the Monkey Quest logo, or launch it into your room on world tracking. One session, paint carries over.",
+    "url": "/monkey-quest/hub/",
+    "extraLinks": [
+      {
+        "label": "Test picture",
+        "url": "/monkey-quest/hub/target/"
+      }
+    ],
+    "thumb": "/labs/img/monkey-quest-hub.webp",
+    "alt": "Hypergalactic Monkey Quest Hub: the 3D Monkey Quest logo and the 3D enamel monkey pin on a starfield",
+    "client": "Monkey Quest",
+    "categories": ["gaming", "collectibles", "capture", "3d-character"],
+    "tech": ["image-target", "world"],
+    "status": "lab",
+    "year": 2026,
+    "tested": "simulator"
+  },
+  {
+    "slug": "happi",
+    "title": "Happi AR",
+    "lead": "Meet Happi, the Japan Parade & Street Fair mascot: play with Happi in 3D, place Happi in your room, wear Happi's head in a selfie, and take a photo with a frame or a life-size cutout.",
+    "url": "/happi/",
+    "thumb": "/labs/img/happi.webp",
+    "alt": "The Happi AR splash: Japan Parade & Street Fair logo, the Happi wordmark, Start, and Happi in 3D on the parade stage",
+    "client": "Japan Parade & Street Fair",
+    "categories": ["events", "3d-character", "capture", "game"],
+    "tech": ["web-3d", "world", "face"],
+    "status": "preview",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "notes": ["Pitch demo: show only to the parade team"]
+  },
+  {
+    "slug": "evade-hub",
+    "title": "Bobo's Hideout",
+    "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade.",
+    "url": "/evade/hub/",
+    "extraLinks": [
+      {
+        "label": "Open the arcade",
+        "url": "/evade/hub/?arcade"
+      }
+    ],
+    "thumb": "/labs/img/evade-hub.webp",
+    "client": "EVADE",
+    "categories": ["game", "collectibles", "capture"],
+    "tech": ["web-3d", "world", "face"],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "not yet",
+    "alt": "Bobo in his hideout with the arcade machines on the left, the 3D / AR / Selfie / Photo tabs and the Arcade button",
+    "share": {
+      "start": 1,
+      "needs": "Any screen, camera optional"
+    }
+  },
+  {
     "slug": "holocast",
     "title": "Holocast",
     "lead": "Put a holo projector on your floor or table and its floating screens fill with live data from the control room: notices, a live sketch, photo drops, a 3D live poll, spoken captions, the Where is Bobo? globe, reactions and a live video stream.",
@@ -13,13 +74,8 @@
     "thumb": "/labs/img/holocast.webp",
     "alt": "Holocast: a holo projector beaming a notice board, a Where is Bobo? globe and a live sketch screen above it",
     "client": "MEDIALIFE",
-    "categories": [
-      "live-data",
-      "showcase"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["live-data", "showcase"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": true,
@@ -33,20 +89,16 @@
     "thumb": "/labs/img/bobo-portal.webp",
     "alt": "Bobo's Portal: a yellow, magenta and white door on the floor opening onto Eclipse Plaza at night, with the giant Eclipse can inside",
     "client": "EVADE",
-    "categories": [
-      "game",
-      "showcase"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["game", "showcase"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "notes": [
-      "Phone only"
-    ]
+    "notes": ["Phone only"],
+    "share": {
+      "needs": "Room to walk a few steps"
+    }
   },
   {
     "slug": "medialife-portal",
@@ -56,20 +108,13 @@
     "thumb": "/labs/img/medialife-portal.webp",
     "alt": "MEDIALIFE Portal: a blue, magenta and white door on the floor with Spark the mascot waving inside a starry stage",
     "client": "MEDIALIFE",
-    "categories": [
-      "showcase",
-      "apparel"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["showcase", "apparel"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "notes": [
-      "Phone only"
-    ]
+    "notes": ["Phone only"]
   },
   {
     "slug": "moon-portal",
@@ -79,19 +124,13 @@
     "thumb": "/labs/img/moon-portal.webp",
     "alt": "Moon Portal in the camera: a round sci-fi portal on the floor showing the moon's surface and a landing platform through it",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "notes": [
-      "Phone only"
-    ]
+    "notes": ["Phone only"]
   },
   {
     "slug": "eclipse-night",
@@ -106,19 +145,16 @@
     ],
     "thumb": "/labs/img/eclipse-night.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "showcase"
-    ],
-    "tech": [
-      "sky",
-      "image-target"
-    ],
+    "categories": ["collectibles", "showcase"],
+    "tech": ["sky", "image-target"],
     "status": "live",
     "year": 2026,
     "featured": true,
     "tested": "simulator",
-    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation"
+    "alt": "Eclipse Night in the camera: the real sky above a city skyline turned into a starry night, a giant Eclipse can crossing the moon, and Bobo walking out of his constellation",
+    "share": {
+      "needs": "The keychain, then the night sky"
+    }
   },
   {
     "slug": "cola-run",
@@ -137,21 +173,26 @@
     ],
     "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
     "client": "EVADE",
-    "categories": [
-      "game",
-      "capture"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["game", "capture"],
+    "tech": ["world"],
     "status": "live",
     "year": 2026,
     "featured": true,
     "tested": "simulator",
     "alt": "Cola Run splash art with Bobo the cat",
-    "notes": [
-      "Phone only"
-    ]
+    "notes": ["Phone only"],
+    "share": {
+      "start": 3,
+      "needs": "A bit of floor",
+      "lead": "The full Cola Run game in your room: grab every can before time runs out and record your run. Then open Bobo's Arcade to jump between every EVADE experience, or walk through a door into a life-size Bobo's Hideout.",
+      "links": [
+        {
+          "label": "Open Bobo's Arcade",
+          "url": "/evade/cola-run/?mode=arcade"
+        }
+      ],
+      "title": "Cola Run"
+    }
   },
   {
     "slug": "bobo-hoops",
@@ -166,20 +207,18 @@
     ],
     "thumb": "/labs/img/bobo-hoops.webp",
     "client": "EVADE",
-    "categories": [
-      "game",
-      "sports",
-      "collectibles"
-    ],
-    "tech": [
-      "image-target",
-      "world"
-    ],
+    "categories": ["game", "sports", "collectibles"],
+    "tech": ["image-target", "world"],
     "status": "live",
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top"
+    "alt": "Bobo Hoops in the camera: the giant open-top Eclipse can on the floor, a ball in flight and the score at the top",
+    "share": {
+      "start": 4,
+      "needs": "The EVADE keychain and some floor",
+      "lead": "Point at the Eclipse can on the keychain, grow it into a giant open-top can on your floor and swipe to shoot 10 balls in."
+    }
   },
   {
     "slug": "wake-the-print",
@@ -194,22 +233,40 @@
     ],
     "thumb": "/labs/img/wake-the-print.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "showcase",
-      "3d-character",
-      "apparel"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["showcase", "3d-character", "apparel"],
+    "tech": ["image-target"],
     "status": "live",
     "year": 2026,
     "featured": true,
     "tested": "simulator",
     "alt": "Wake the Print in the camera: Spark, a small blue robot, standing on the Sukeban tee print",
-    "notes": [
-      "Voice AI"
-    ]
+    "notes": ["Voice AI"]
+  },
+  {
+    "slug": "medialife-spray",
+    "title": "MEDIALIFE Spray",
+    "lead": "Spray Bobo's paint engine for MEDIALIFE's own apparel. Your phone is the spray can: paint Sukeban on the MEDIALIFE tee, add decals, and the painting becomes a 3D sticker on the shirt. Then hang it, stamp it or spray graffiti on real walls.",
+    "url": "/labs/medialife-spray/",
+    "extraLinks": [
+      {
+        "label": "Graffiti mode",
+        "url": "/labs/medialife-spray/?room=graffiti"
+      },
+      {
+        "label": "Test picture",
+        "url": "/labs/wake-the-print/target/"
+      }
+    ],
+    "thumb": "/labs/img/medialife-spray.webp",
+    "client": "MEDIALIFE",
+    "categories": ["apparel", "capture", "showcase"],
+    "tech": ["image-target", "world"],
+    "status": "live",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "alt": "MEDIALIFE Spray start screen: a blue spray can beside the Sukeban stencil, with a Start painting button",
+    "notes": ["MEDIALIFE products only"]
   },
   {
     "slug": "off-the-chain",
@@ -228,25 +285,66 @@
     ],
     "thumb": "/labs/img/off-the-chain.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "3d-character",
-      "capture",
-      "game"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["collectibles", "3d-character", "capture", "game"],
+    "tech": ["image-target"],
     "status": "live",
     "year": 2026,
     "featured": true,
     "tested": "phone",
-    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button"
+    "alt": "Bobo Off the Chain start screen: the EVADE keychain dangling beside the Off the Chain plate and a Start button",
+    "share": {
+      "start": 2,
+      "needs": "The EVADE keychain"
+    }
+  },
+  {
+    "slug": "spray-bobo-enhanced",
+    "title": "Spray Bobo Enhanced",
+    "url": "/evade/spray-bobo-enhanced/",
+    "thumb": "/labs/img/spray-bobo-enhanced.webp",
+    "alt": "Painted Bobo, Eclipse can, spray can, MEDIALIFE figure and skate deck",
+    "client": "EVADE",
+    "lead": "Place 3D pieces on your floor (Cola Run Bobo, the Eclipse can, Classic Bobo, a blank vinyl toy, a skate deck, an art block, a dancing robot) and paint them for real: spray, brush, fill, stickers, chrome and glow finishes. Your paint is saved on the phone.",
+    "extraLinks": [
+      {
+        "label": "MEDIALIFE version",
+        "url": "/labs/spray-enhanced/"
+      }
+    ],
+    "categories": ["collectibles", "capture", "3d-character"],
+    "tech": ["world"],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "notes": ["Simulator-tested, phone test pending"]
+  },
+  {
+    "slug": "spray-enhanced",
+    "title": "Spray Enhanced",
+    "url": "/labs/spray-enhanced/",
+    "thumb": "/labs/img/spray-bobo-enhanced.webp",
+    "alt": "Painted collectibles placed in a room",
+    "client": "MEDIALIFE",
+    "lead": "The MEDIALIFE skin of Spray Bobo Enhanced: place the MEDIALIFE figure, a giant spray can, a blank toy, a skate deck or an art block in your room and paint it like a custom.",
+    "extraLinks": [
+      {
+        "label": "EVADE version",
+        "url": "/evade/spray-bobo-enhanced/"
+      }
+    ],
+    "categories": ["collectibles", "capture", "showcase"],
+    "tech": ["world"],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": ["Simulator-tested, phone test pending"]
   },
   {
     "slug": "spray-bobo",
     "title": "Spray Bobo",
-    "lead": "Your phone is the spray can. Paint the Bobo charm, the Eclipse can charm or the Sukeban tee, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
+    "lead": "Your phone is the spray can. Paint the Bobo charm or the Eclipse can charm, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",
     "url": "/evade/spray-bobo/",
     "extraLinks": [
       {
@@ -264,20 +362,16 @@
     ],
     "thumb": "/labs/img/spray-bobo.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "apparel",
-      "capture"
-    ],
-    "tech": [
-      "image-target",
-      "world"
-    ],
+    "categories": ["collectibles", "apparel", "capture"],
+    "tech": ["image-target", "world"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button"
+    "alt": "Spray Bobo start screen: a spray can painting Bobo the cat, with a Start painting button",
+    "share": {
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "xray-bobo",
@@ -292,19 +386,26 @@
     ],
     "thumb": "/labs/img/xray-bobo.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "apparel",
-      "3d-character"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["collectibles", "apparel", "3d-character"],
+    "tech": ["image-target"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton"
+    "alt": "Bobo X-Ray in the camera: the Bobo print opened into a deep grid-lined box, Bobo floating inside as a skeleton",
+    "share": {
+      "needs": "The keychain or a Bobo tee",
+      "links": [
+        {
+          "label": "Watch a phone recording",
+          "url": "/evade/video/xray-bobo.mp4"
+        },
+        {
+          "label": "Test pictures",
+          "url": "/evade/keychain-ar/target/"
+        }
+      ]
+    }
   },
   {
     "slug": "bobo-booth",
@@ -314,18 +415,16 @@
     "extraLinks": [],
     "thumb": "/labs/img/bobo-booth.webp",
     "client": "EVADE",
-    "categories": [
-      "capture",
-      "apparel"
-    ],
-    "tech": [
-      "face"
-    ],
+    "categories": ["capture", "apparel"],
+    "tech": ["face"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "simulator",
-    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring"
+    "alt": "Bobo Booth splash: a display head wearing the Bobo cat hat, Bobo shades, an Eclipse can earring and a septum ring",
+    "share": {
+      "needs": "Just your face"
+    }
   },
   {
     "slug": "photo-beam",
@@ -340,18 +439,16 @@
     ],
     "thumb": "/labs/img/photo-beam.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "capture"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["collectibles", "capture"],
+    "tech": ["image-target"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain"
+    "alt": "Photo Beam in the camera: a beam of light from the phone to Bobo's visor on the keychain",
+    "share": {
+      "needs": "The EVADE keychain"
+    }
   },
   {
     "slug": "spray-studio",
@@ -366,22 +463,15 @@
     ],
     "thumb": "/labs/img/spray-studio.webp",
     "client": "EVADE",
-    "categories": [
-      "events",
-      "capture"
-    ],
-    "tech": [
-      "web-3d",
-      "cms"
-    ],
+    "categories": ["events", "capture"],
+    "tech": ["web-3d", "cms"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "phone",
     "alt": "Spray Studio on a laptop: spray can controls on the left, the Bobo charm in the middle, the merch list on the right",
-    "notes": [
-      "Team sign-in for now"
-    ]
+    "notes": ["Team sign-in for now"],
+    "share": false
   },
   {
     "slug": "where-is-bobo",
@@ -391,18 +481,16 @@
     "extraLinks": [],
     "thumb": "/labs/img/where-is-bobo.webp",
     "client": "EVADE",
-    "categories": [
-      "live-data",
-      "collectibles"
-    ],
-    "tech": [
-      "web-3d"
-    ],
+    "categories": ["live-data", "collectibles"],
+    "tech": ["web-3d"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip"
+    "alt": "Where is Bobo? globe with a pin in Toronto showing a fan's Off the Chain clip",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "vault",
@@ -417,17 +505,16 @@
     ],
     "thumb": "/labs/img/vault.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles"
-    ],
-    "tech": [
-      "web-3d"
-    ],
+    "categories": ["collectibles"],
+    "tech": ["web-3d"],
     "status": "live",
     "year": 2026,
     "featured": false,
     "tested": "phone",
-    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front"
+    "alt": "EVADE Digital Collection vault: the charm set collected in the middle case, other pieces still holograms, Bobo in front",
+    "share": {
+      "needs": "Any screen"
+    }
   },
   {
     "slug": "cola-run-lab",
@@ -437,22 +524,16 @@
     "extraLinks": [],
     "thumb": "/evade/creators/assets/img/cola-run-splash-sm.webp",
     "client": "EVADE",
-    "categories": [
-      "game",
-      "capture"
-    ],
-    "tech": [
-      "mattercraft"
-    ],
+    "categories": ["game", "capture"],
+    "tech": ["mattercraft"],
     "status": "lab",
     "year": 2026,
     "featured": false,
     "tested": "not yet",
     "alt": "Cola Run splash art with Bobo the cat",
-    "notes": [
-      "Sent clips go to this site's Media Library"
-    ],
-    "source": "mattercraft/cola-run/"
+    "notes": ["Sent clips go to this site's Media Library"],
+    "source": "mattercraft/cola-run/",
+    "share": false
   },
   {
     "slug": "collector-hub",
@@ -462,23 +543,16 @@
     "extraLinks": [],
     "thumb": "/labs/img/collector-hub.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "game"
-    ],
-    "tech": [
-      "mattercraft",
-      "web-3d"
-    ],
+    "categories": ["collectibles", "game"],
+    "tech": ["mattercraft", "web-3d"],
     "status": "lab",
     "year": 2026,
     "featured": false,
     "tested": "not yet",
     "alt": "Bobo's room built inside a giant Eclipse can, with a Go home portal out front",
-    "notes": [
-      "Demo data, no sign-in yet"
-    ],
-    "source": "art/collector-hub/"
+    "notes": ["Demo data, no sign-in yet"],
+    "source": "art/collector-hub/",
+    "share": false
   },
   {
     "slug": "keychain-pop",
@@ -493,23 +567,16 @@
     ],
     "thumb": "/labs/img/keychain-pop.webp",
     "client": "EVADE",
-    "categories": [
-      "collectibles",
-      "3d-character"
-    ],
-    "tech": [
-      "mattercraft",
-      "image-target"
-    ],
+    "categories": ["collectibles", "3d-character"],
+    "tech": ["mattercraft", "image-target"],
     "status": "lab",
     "year": 2026,
     "featured": false,
     "tested": "not yet",
     "alt": "Bobo and the Eclipse can standing on glowing pads after popping out of the EVADE keychain",
-    "notes": [
-      "Blender, no gen AI"
-    ],
-    "source": "mattercraft/keychain-pop/"
+    "notes": ["Blender, no gen AI"],
+    "source": "mattercraft/keychain-pop/",
+    "share": false
   },
   {
     "slug": "loot-break",
@@ -528,21 +595,14 @@
     ],
     "thumb": "/labs/img/loot-break.webp",
     "client": "TBH",
-    "categories": [
-      "gaming",
-      "game"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["gaming", "game"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": true,
     "tested": "simulator",
     "alt": "Pixel heroes on a taskbar lane fighting a skeleton king that steps out of a purple portal",
-    "notes": [
-      "Concept build, not client-approved"
-    ]
+    "notes": ["Concept build, not client-approved"]
   },
   {
     "slug": "sukeban-syndicate",
@@ -557,13 +617,8 @@
     ],
     "thumb": "/labs/img/sukeban-syndicate.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "apparel"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "apparel"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -583,13 +638,8 @@
     ],
     "thumb": "/labs/img/train-frame.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -609,13 +659,8 @@
     ],
     "thumb": "/labs/img/helltrain.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -635,13 +680,8 @@
     ],
     "thumb": "/labs/img/bunny-girls.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -661,13 +701,8 @@
     ],
     "thumb": "/labs/img/dashie.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -687,13 +722,8 @@
     ],
     "thumb": "/labs/img/moneymaker-bunny.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -713,13 +743,8 @@
     ],
     "thumb": "/labs/img/bunny-girl-3d.webp",
     "client": "Animebae",
-    "categories": [
-      "anime",
-      "3d-character"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "3d-character"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -739,15 +764,8 @@
     ],
     "thumb": "/labs/img/sakamoto-days.webp",
     "client": "Netflix",
-    "categories": [
-      "anime",
-      "streaming",
-      "print",
-      "capture"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "streaming", "print", "capture"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": true,
@@ -767,14 +785,8 @@
     ],
     "thumb": "/labs/img/sakamoto-anime-expo.webp",
     "client": "Netflix",
-    "categories": [
-      "anime",
-      "streaming",
-      "events"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "streaming", "events"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -794,14 +806,8 @@
     ],
     "thumb": "/labs/img/sakamoto-graffiti.webp",
     "client": "Netflix",
-    "categories": [
-      "anime",
-      "streaming",
-      "capture"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["anime", "streaming", "capture"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -821,12 +827,8 @@
     ],
     "thumb": "/labs/img/brooklyn-nets.webp",
     "client": "Brooklyn Nets",
-    "categories": [
-      "sports"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["sports"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -846,13 +848,8 @@
     ],
     "thumb": "/labs/img/sport-magazine.webp",
     "client": "Sport Magazine",
-    "categories": [
-      "sports",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["sports", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -872,13 +869,8 @@
     ],
     "thumb": "/labs/img/dentsu-products.webp",
     "client": "dentsu",
-    "categories": [
-      "agency",
-      "apparel"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["agency", "apparel"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -898,13 +890,8 @@
     ],
     "thumb": "/labs/img/ces-2026.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "events",
-      "apparel"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["events", "apparel"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2026,
     "featured": true,
@@ -924,14 +911,8 @@
     ],
     "thumb": "/labs/img/demo-reel.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "showcase",
-      "anime",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["showcase", "anime", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -951,13 +932,8 @@
     ],
     "thumb": "/labs/img/bushido-can.webp",
     "client": "Bushido",
-    "categories": [
-      "beverage",
-      "packaging"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["beverage", "packaging"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -977,13 +953,8 @@
     ],
     "thumb": "/labs/img/vvbg-comic.webp",
     "client": "VVBG Comics",
-    "categories": [
-      "comics",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["comics", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -1003,13 +974,8 @@
     ],
     "thumb": "/labs/img/violence-family.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "comics",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["comics", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -1029,13 +995,8 @@
     ],
     "thumb": "/labs/img/heart-of-darkness.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "comics",
-      "print"
-    ],
-    "tech": [
-      "image-target"
-    ],
+    "categories": ["comics", "print"],
+    "tech": ["image-target"],
     "status": "lab",
     "year": 2025,
     "featured": false,
@@ -1050,13 +1011,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/robot-chat.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "3d-character"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo", "3d-character"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1071,14 +1027,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/joystick-robot.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "game",
-      "3d-character"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo", "game", "3d-character"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1093,12 +1043,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/float-notes.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1113,12 +1059,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/tap-to-place.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1133,13 +1075,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/physics.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "game"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo", "game"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1154,13 +1091,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/nav-mesh.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "3d-character"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo", "3d-character"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1175,13 +1107,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/moon-shop.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "showcase"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo", "showcase"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1196,15 +1123,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/product-viewer.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "packaging",
-      "showcase"
-    ],
-    "tech": [
-      "world",
-      "web-3d"
-    ],
+    "categories": ["tech-demo", "packaging", "showcase"],
+    "tech": ["world", "web-3d"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1219,12 +1139,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/occlusion-floor.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo"
-    ],
-    "tech": [
-      "world"
-    ],
+    "categories": ["tech-demo"],
+    "tech": ["world"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1239,13 +1155,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/face-effects.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "capture"
-    ],
-    "tech": [
-      "face"
-    ],
+    "categories": ["tech-demo", "capture"],
+    "tech": ["face"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1260,14 +1171,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/camera-swap.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "capture"
-    ],
-    "tech": [
-      "world",
-      "face"
-    ],
+    "categories": ["tech-demo", "capture"],
+    "tech": ["world", "face"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1282,15 +1187,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/wear-it-meet-it.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo",
-      "capture",
-      "3d-character"
-    ],
-    "tech": [
-      "world",
-      "face"
-    ],
+    "categories": ["tech-demo", "capture", "3d-character"],
+    "tech": ["world", "face"],
     "status": "lab",
     "year": 2026,
     "featured": false,
@@ -1305,13 +1203,8 @@
     "extraLinks": [],
     "thumb": "/labs/img/image-to-world.webp",
     "client": "MEDIALIFE",
-    "categories": [
-      "tech-demo"
-    ],
-    "tech": [
-      "image-target",
-      "world"
-    ],
+    "categories": ["tech-demo"],
+    "tech": ["image-target", "world"],
     "status": "lab",
     "year": 2026,
     "featured": false,

@@ -115,9 +115,16 @@ key and copy. Optional: `tdir` (folder with its target files and a `layout.json`
 `near` (cm before "come closer"), `them` (him/her/it in tips), `ask`, `seek`, `evade: false` (no EVADE logo on
 its photos and artwork).
 
-**Sukeban tee** (`sukeban`): `scripts/build-spray-bobo/build_sukeban.py` places the clean character art
+**Brands (2026-11-24).** EVADE pages show only EVADE merch, and MEDIALIFE's own products are never on an EVADE
+page (Dapo). So `main.js` keeps two lists: `EVADE_PIECES` (Bobo, the can) for this page and `ML_PIECES` (the
+Sukeban tee) for **MEDIALIFE Spray** (`/labs/medialife-spray/`, its own README). That page sets
+`window.SPRAY_BRAND` before loading this same `main.js`: brand id, logo, accent, colours, its own IndexedDB
+(`medialife-spray`), no Where is Bobo? events or clip uploads, no Spray Studio CMS or `?c=` viewer, no EVADE game
+decals. `room.js` reads the same object. With no `SPRAY_BRAND` everything is EVADE, exactly as before.
+
+**Sukeban tee** (`sukeban`, MEDIALIFE Spray only; files in `public/labs/medialife-spray/`): `scripts/build-spray-bobo/build_sukeban.py` places the clean character art
 (`public/work/sukeban-sticker-large.webp`) onto Dapo's photo of the printed tee (`src/sukeban-tee.png`, match
-0.91) and writes `targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
+0.91) and writes `public/labs/medialife-spray/targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
 stencil. The print is assumed to be 12 in wide (`WIDTH_M`): only the cm readout uses it. Tested in the
 simulator from the tee photo itself: found, canvas lines up, paint, save, decals, artwork.
 

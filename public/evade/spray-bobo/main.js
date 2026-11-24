@@ -32,9 +32,29 @@ const DEBUG = params.has("debug");
 const ENDLESS = params.has("endless"); // no paint level (testing)
 const KC = "/evade/keychain-ar/"; // the Off the Chain page: engine, image targets
 const HERE = "/evade/spray-bobo/";
+// The brand. This one engine also runs MEDIALIFE Spray (/labs/medialife-spray/, MEDIALIFE's own products, e.g. the
+// Sukeban tee): that page sets window.SPRAY_BRAND before loading this module. EVADE's pages never show MEDIALIFE
+// products and MEDIALIFE's page never shows EVADE's (Dapo, 2026-11-24).
+const BRAND = Object.assign(
+  {
+    id: "evade",
+    home: HERE, // where "Paint your own" / a fresh start goes
+    logo: "/brand/evade-logo.webp", // top left of photos, clips and the artwork
+    db: "spray-bobo", // IndexedDB (paintings, room art): one per brand, so they never mix
+    source: "spray-bobo", // clips, events, test logs
+    accent: "#f6c344", // EVADE yellow
+    globe: true, // Where is Bobo?: events and clip uploads
+    cms: true, // Spray Studio merch and shared creations (?c=)
+    hideDecalCats: [], // decal kinds left out of the library
+  },
+  window.SPRAY_BRAND || {},
+);
+const ML = BRAND.id === "medialife";
+const ML_DIR = "/labs/medialife-spray/"; // MEDIALIFE Spray's own targets and stencil art
+const ACC = BRAND.accent;
 // ?c=<creation id>: VIEWER MODE. Someone's shared painting shown on the merch it was made for, nothing else (no can,
 // canvas, caps, decals, options or saving; this phone's own paintings are neither read nor written).
-const VIEWER = params.has("c");
+const VIEWER = BRAND.cms && params.has("c");
 // &go=1 (the share page's "View on merch" button): open the camera straight away. Without it the viewer splash below
 // still shows, so a link opened on its own gets an introduction first.
 const VIEWER_GO = VIEWER && params.get("go") === "1";
@@ -68,7 +88,21 @@ const buzz = (p) => {
 // ---------------------------------------------------------------- paint setup
 const TW = 768,
   TH = 1024; // paint texture (the kc-bobo picture at 768 px wide)
-const CAPS = [
+const CAPS = ML
+  ? [
+      // MEDIALIFE: its blue and magenta first, then the rest
+      { c: "#19afff", n: "MEDIALIFE blue" },
+      { c: "#ff2fae", n: "MEDIALIFE magenta" },
+      { c: "#f6c344", n: "Yellow" },
+      { c: "#8cc8f8", n: "Sky" },
+      { c: "#ff3b4e", n: "Red" },
+      { c: "#ff8a2a", n: "Orange" },
+      { c: "#3ddc84", n: "Green" },
+      { c: "#7a5cff", n: "Purple" },
+      { c: "#ffffff", n: "White" },
+      { c: "#15131a", n: "Black" },
+    ]
+  : [
   // the colours ("caps"), EVADE yellow first
   { c: "#f6c344", n: "EVADE yellow" },
   { c: "#3f9be6", n: "Bobo blue" },
@@ -80,7 +114,7 @@ const CAPS = [
   { c: "#7a5cff", n: "Purple" },
   { c: "#ffffff", n: "White" },
   { c: "#15131a", n: "Black" },
-];
+    ];
 // nozzles: the spray's half-angle. At a hand's distance (15 cm) skinny is about 3 mm wide, fat about 1.5 cm.
 const NOZZLES = [
   { n: "Skinny", a: 0.6, dot: 3 },
@@ -106,7 +140,8 @@ const FIT_EVERY_MS = 150,
 // Off the Chain's); view: the height (m) it is drawn at in AR (a big print is drawn at charm size, so the sticker,
 // hover and hops keep their look; the camera has no sense of real size anyway); sprayK: a wider spray on a big
 // print; near: past this many cm the hint says come closer; them: him / her / it in the tips; ask: the decal question.
-const PIECES = {
+// EVADE's pieces (the keychain). MEDIALIFE's products are in ML_PIECES below, only on MEDIALIFE Spray.
+const EVADE_PIECES = {
   bobo: {
     k: "bobo",
     name: "Bobo",
@@ -141,6 +176,9 @@ const PIECES = {
     ask: "Deck out your can?",
     seek: "the can",
   },
+};
+// MEDIALIFE Spray's pieces: MEDIALIFE's own apparel (never on an EVADE page)
+const ML_PIECES = {
   // the Sukeban tee: the whole print (teal panel too) is tracked, only the character is the canvas (build_sukeban.py)
   sukeban: {
     k: "sukeban",
@@ -154,17 +192,18 @@ const PIECES = {
     key: "sukeban",
     found: "Found Sukeban! Tap the spray can",
     back: "Your Sukeban is back",
-    line: "Sprayed on my Sukeban tee",
+    line: "Sprayed on my MEDIALIFE Sukeban tee",
     them: "her",
     ask: "Dress up Sukeban?",
     seek: "the Sukeban tee",
-    evade: false,
-    tdir: HERE + "targets/",
+    tdir: ML_DIR + "targets/",
+    adir: ML_DIR + "art/",
     view: 0.1,
     sprayK: 1.6,
     near: 90,
   },
 };
+const PIECES = { ...(ML ? ML_PIECES : EVADE_PIECES) };
 const tdir = (P) => P.tdir || KC + "image-targets/";
 // Merch added in the CMS joins PIECES at start (cms.js maps each paintable onto these same fields), so these are
 // worked out again once the list is final.
@@ -320,9 +359,9 @@ const layouts = {};
 const layoutOf = (d) => layouts[d] || (layouts[d] = getJson(d + "layout.json"));
 const artUrls = (P) =>
   P.urls || {
-    mask: HERE + `art/${P.art}-mask.png`,
-    lines: HERE + `art/${P.art}-lines.png`,
-    outline: HERE + `art/${P.art}-outline.json`,
+    mask: (P.adir || HERE + "art/") + `${P.art}-mask.png`,
+    lines: (P.adir || HERE + "art/") + `${P.art}-lines.png`,
+    outline: (P.adir || HERE + "art/") + `${P.art}-outline.json`,
     print: tdir(P) + P.print,
   };
 function pieceAssets(P) {
@@ -375,7 +414,7 @@ function linesFromMask(mask) {
   return c;
 }
 for (const P of Object.values(PIECES)) if (!VIEWER) pieceAssets(P).catch(() => {}); // reported below if it matters
-const lumP = loadImg(KC + "image-targets/kc-bobo_luminance.jpg").catch(() => null); // for telling the cat's two sides apart
+const lumP = PIECES.bobo ? loadImg(KC + "image-targets/kc-bobo_luminance.jpg").catch(() => null) : Promise.resolve(null); // for telling the cat's two sides apart
 // What the CMS adds (see cms.js and the README): merch, built-in scenes, ?set=, ?c= (viewer mode)
 let cmsInfo = { notice: "", viewer: null, skipped: [], gone: null, only: null };
 const BUILT = { ...PIECES };
@@ -405,7 +444,7 @@ function applyCms(r) {
       p.skipped,
     );
 }
-const assets = readCms(params)
+const assets = (BRAND.cms ? readCms(params) : Promise.resolve({ list: [], extra: [] }))
   .catch(() => ({ list: [], extra: [] }))
   .then(applyCms)
   .then(async () => {
@@ -706,7 +745,7 @@ const makePaint = () => ({
   },
   topColours(n = 5) {
     const a = [...this.used.entries()].sort((x, y) => y[1] - x[1]).map((e) => e[0]);
-    return a.length ? a.slice(0, n) : ["#f6c344", "#3f9be6", "#e85bd8"];
+    return a.length ? a.slice(0, n) : [ACC, "#3f9be6", "#e85bd8"];
   },
 });
 
@@ -715,7 +754,7 @@ let saved = null; // the current charm's: { paint: Blob, primer, linesOn, colour
 function idb() {
   return new Promise((res, rej) => {
     try {
-      const r = indexedDB.open("spray-bobo", 1);
+      const r = indexedDB.open(BRAND.db, 1);
       r.onupgradeneeded = () => r.result.createObjectStore("kv");
       r.onsuccess = () => res(r.result);
       r.onerror = () => rej(r.error);
@@ -849,7 +888,7 @@ function buildPiece(P, L, [maskImg, linesImg, outline]) {
         uFlash: { value: 0 },
         uOpacity: { value: 1 },
         uTime: { value: 0 },
-        uEdge: { value: new THREE.Color("#f6c344") },
+        uEdge: { value: new THREE.Color(ACC) },
         uInk: { value: new THREE.Color("#15131a") },
         uC: { value: new THREE.Vector2(P.centre[0], 1 - P.centre[1]) },
         uAsp: { value: W / H },
@@ -1023,7 +1062,7 @@ function makeOrbit() {
   mesh.visible = false;
   mesh.renderOrder = 13;
   mesh.frustumCulled = false;
-  const c = new THREE.Color("#f6c344");
+  const c = new THREE.Color(ACC);
   for (let i = 0; i < N; i++) mesh.setColorAt(i, c);
   return { mesh, N, on: 0 };
 }
@@ -1079,7 +1118,7 @@ function outlineTexture(linesImg) {
     return t;
   };
   const ink = tint("#15131a"),
-    yel = tint("#f6c344");
+    yel = tint(ACC);
   for (let a = 0; a < 8; a++) g.drawImage(ink, Math.cos(a * 0.785) * 3, Math.sin(a * 0.785) * 3);
   g.drawImage(yel, 0, 0);
   g.drawImage(yel, 1, 0);
@@ -2282,7 +2321,7 @@ function beginReveal() {
   reveal = { t: 0, dur: 1.25 };
   sound.pssh();
   buzz(30);
-  burstSplats([CAPS[capIdx].c, "#ffffff", "#f6c344"], 46, centreLocal(0.003), 0.07);
+  burstSplats([CAPS[capIdx].c, "#ffffff", ACC], 46, centreLocal(0.003), 0.07);
   const at = pieceScreen();
   if (at) popWord("PSSHT!", at[0], at[1]);
 }
@@ -2692,7 +2731,8 @@ function jump(kind, power = 0) {
   // 1: a hop; 2: the big one (after holding him), with a spin and a burst
   const big = kind === 2;
   life.hop = { t: 0, big, k: big ? 1 + power * 0.6 : 1 };
-  sound.mew();
+  if (ML) sound.sparkle();
+  else sound.mew();
   buzz(big ? [15, 30, 25] : 12);
   burstSplats(
     paint.topColours(),
@@ -2908,6 +2948,8 @@ const MAX_DECALS = 14;
 const DEC_GEO = new THREE.PlaneGeometry(1, 1);
 DEC.ready = getJson(HERE + "decals/decals.json")
   .then((m) => {
+    const hide = new Set(BRAND.hideDecalCats);
+    m = { ...m, cats: m.cats.filter((c) => !hide.has(c.k)), decals: m.decals.filter((d) => !hide.has(d.cat)) };
     DEC.lib = m;
     for (const d of m.decals) DEC.by[d.id] = d;
     buildTray();
@@ -3366,7 +3408,7 @@ function landed(L) {
   setTimeout(() => sound.sparkle(), 90);
   buzz([10, 30, 10]);
   burstSplats(
-    ["#ffffff", "#f6c344", CAPS[capIdx].c, "#e85bd8"],
+    ["#ffffff", ACC, CAPS[capIdx].c, "#e85bd8"],
     34,
     new THREE.Vector3((L.u - 0.5) * W, (0.5 - L.v) * H, 0.004),
     0.06,
@@ -3504,7 +3546,7 @@ function startDecals() {
   if (DEC.lib) showCat(DEC.cat);
   sound.whoosh();
   buzz(10);
-  burstSplats(["#f6c344", "#ffffff", "#e85bd8"], 30, centreLocal(0.003), 0.05);
+  burstSplats([ACC, "#ffffff", "#e85bd8"], 30, centreLocal(0.003), 0.05);
   hint(
     cp.decals.length
       ? "Drag to move. Pinch, or use the yellow handle, to size and turn"
@@ -3981,7 +4023,7 @@ function rehome(xr) {
 }
 $("b-start").onclick = () => {
   if (VIEWER && !cmsInfo.viewer) {
-    location.href = HERE;
+    location.href = BRAND.home;
     return;
   }
   start();
@@ -4047,7 +4089,7 @@ function viewerGone() {
 }
 $("b-own").onclick = () => {
   postEvent("custom", { action: "spray-view-own" });
-  location.href = HERE;
+  location.href = BRAND.home;
 };
 $("b-go").onclick = () => {
   $("how").hidden = true;
@@ -4212,7 +4254,7 @@ function camFailed(why) {
 
 // ---------------------------------------------------------------- photo, video (the Cola Run recorder), artwork
 const LOGO = { evade: new Image(), act: new Image() };
-LOGO.evade.src = "/brand/evade-logo.webp";
+LOGO.evade.src = BRAND.logo;
 LOGO.act.src = "/activated-merch/media/ar/activated-by.webp";
 function drawMist(c, Wd, Hd) {
   if (mist.parts.length && mist.c.width)
@@ -4245,8 +4287,8 @@ try {
     canvas,
     host: document.body,
     endpoint: location.origin,
-    globeUrl: "/evade/where-is-bobo/",
-    source: "spray-bobo",
+    globeUrl: BRAND.globe ? "/evade/where-is-bobo/" : "/",
+    source: BRAND.source,
     audioContext: null,
     connectAudio: (dest) => {
       const m = sound.master;
@@ -4276,7 +4318,7 @@ try {
     corner: "topRight",
     offsetX: -5,
     offsetY: -6,
-    accent: "#f6c344",
+    accent: ACC,
     maxSeconds: 30,
     hintText: "Film your Bobo and send him to the globe",
     sendLabel: "Send to Where is Bobo?",
@@ -4286,6 +4328,16 @@ try {
     filePrefix: "spray-bobo",
     backLabel: "Back to the camera",
   });
+  if (ML)
+    // MEDIALIFE Spray: save and share only, nothing goes to EVADE's globe
+    Object.assign(capture.settings, {
+      sendEnabled: false,
+      hintText: "Film your painting",
+      brandTitle: "MEDIALIFE SPRAY",
+      brandTagline: "Activated by MEDIALIFE",
+      clipTitle: "MEDIALIFE Spray clip",
+      filePrefix: "medialife-spray",
+    });
   capture.apply();
   capture.setVisible(false);
 } catch (e) {
@@ -4332,7 +4384,7 @@ async function takePhoto() {
     drawMist(g, c.width, c.height);
     drawWatermark(g, c.width, c.height);
     const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.92));
-    showFile("shot", blob, `spray-bobo-${++shots}.jpg`, "My Bobo, sprayed");
+    showFile("shot", blob, `spray-bobo-${++shots}.jpg`, ML ? "My MEDIALIFE Spray painting" : "My Bobo, sprayed");
   } catch (e) {
     console.error(e);
   }
@@ -4410,7 +4462,7 @@ $("b-art").onclick = async () => {
     c.width = Wc;
     c.height = Hc;
     const g = c.getContext("2d");
-    g.fillStyle = "#f6c344";
+    g.fillStyle = ACC;
     g.fillRect(0, 0, Wc, Hc);
     // as big as fits: a piece whose stencil reaches the bottom of its picture (the tee) is drawn smaller, clear of the caption
     let by1 = 0;
@@ -4494,7 +4546,7 @@ $("b-art").onclick = async () => {
 // ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
 const SID = "sb-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 function postEvent(type, props) {
-  if (params.has("nolog")) return;
+  if (params.has("nolog") || !BRAND.globe) return; // these feed EVADE's Where is Bobo? globe
   try {
     fetch("/api/bobo/events", {
       method: "POST",
@@ -4510,7 +4562,7 @@ function postEvent(type, props) {
 // ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
 // Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'spray-bobo').
 const diag = {
-  page: "spray-bobo",
+  page: BRAND.source,
   sid: SID,
   found: 0,
   lost: 0,

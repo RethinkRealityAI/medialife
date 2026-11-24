@@ -117,7 +117,16 @@ const assets = Promise.all([
     Promise.all(P.targets.map((n) => loadImg(KC + `image-targets/${n}.jpg`))),   // each picture: the tiles that break away
     P.charm ? getJson('./' + P.charm) : null,                 // the whole acrylic piece, per picture (the can's window)
   ]).then(([gltf, outline, prints, charm]) => { P.gltf = gltf; P.outlineData = outline; P.charmData = charm; P.prints = Object.fromEntries(P.targets.map((n, i) => [n, prints[i]])); })),
-]).then(([layout, tdata]) => { for (const P of Object.values(PIECES)) { const L = layout.targets[P.targets[0]]; P.W = L.widthM; P.H = L.heightM; } return { tdata }; });
+]).then(async ([layout, tdata]) => {
+  for (const P of Object.values(PIECES)) { const L = layout.targets[P.targets[0]]; P.W = L.widthM; P.H = L.heightM; }
+  // each picture's mask of the whole acrylic piece (Off the Chain's): the break-up tiles draw only the charm. Without it
+  // the tiles copied the target PHOTO's light background over the real world: the white square round the charm on
+  // first scan until the break-up cleared it (Dapo, 2026-11-22).
+  await Promise.all(Object.values(PIECES).map((P) => { P.masks = {};
+    return Promise.all(P.targets.map((n) => { const L = layout.targets[n], mk = L && L.mask; if (!mk) return null;
+      return loadImg(KC + 'image-targets/' + mk.src).then((img) => { P.masks[n] = { img, s: [L.widthM / mk.widthM, L.heightM / mk.heightM] }; }).catch(() => { /* whole picture, as before */ }); })); }));
+  return { tdata };
+});
 const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
 let loaded = false;
 Promise.all([assets, xrReady]).then(() => {
@@ -251,8 +260,23 @@ function ribbon(pts, w) {
 function buildLid(P) {
   P.lidTex = {};
   for (const [n, print] of Object.entries(P.prints)) { const t = new THREE.Texture(print); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true; P.lidTex[n] = t; }
+  P.maskTex = {};
+  for (const [n, mk] of Object.entries(P.masks || {})) { const t = new THREE.Texture(mk.img); t.needsUpdate = true; t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; P.maskTex[n] = { tex: t, s: new THREE.Vector2(...mk.s) }; }
   const n0 = P.targets[0];
   lid = tube ? makeBurn(P.lidTex[n0]) : makeShatter(P.lidTex[n0]); root.add(lid);
+  setLidMask(P, n0);
+}
+
+// the lid only draws the acrylic piece: uMask (its mask picture) sampled at 0.5 + (uv - 0.5) * uMS, the picture's size
+// over the mask's (both centred on the target). No mask -> the whole picture (uHasMask 0).
+const MASK_GLSL = `
+uniform sampler2D uMask; uniform vec2 uMS; uniform float uHasMask;
+bool offPiece(vec2 uv) { if (uHasMask < 0.5) return false; vec2 m = 0.5 + (uv - 0.5) * uMS; return texture2D(uMask, m).a < 0.5; }
+`;
+const maskUniforms = () => ({ uMask: { value: null }, uMS: { value: new THREE.Vector2(1, 1) }, uHasMask: { value: 0 } });
+function setLidMask(P, n) {
+  const m = P.maskTex && P.maskTex[n], u = (P === cp ? lid : P.lid || lid).material.uniforms;
+  u.uHasMask.value = m ? 1 : 0; if (m) { u.uMask.value = m.tex; u.uMS.value.copy(m.s); }
 }
 
 // The break-up: the print as a grid of tiles over the real print (it looks identical at first). From the middle
@@ -280,9 +304,11 @@ void main() {
 const SHATTER_FS = `
 uniform sampler2D uMap; uniform vec3 uCyan, uInk; uniform float uCols, uRows;
 varying vec2 vUv, vCell; varying float vT, vR;
+${MASK_GLSL}
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main() {
   if (vT >= 1.0) discard;
+  if (offPiece((vCell + vUv) / vec2(uCols, uRows))) discard;   // only the charm itself breaks up, never the photo's background
   float steps = vT <= 0.0 ? 64.0 : floor(mix(14.0, 2.0, smoothstep(0.0, 0.6, vT)));
   vec2 q = (floor(vUv * steps) + 0.5) / steps;
   if (hash(floor(vUv * steps) + vCell * 7.13) < smoothstep(0.45, 0.95, vT)) discard;   // dissolves block by block
@@ -304,7 +330,7 @@ function makeShatter(tex) {
   for (let i = 0; i < n; i++) { cell[i * 2] = i % cols; cell[i * 2 + 1] = Math.floor(i / cols); for (let k = 0; k < 4; k++) rnd[i * 4 + k] = Math.random(); }
   g.setAttribute('aCell', new THREE.InstancedBufferAttribute(cell, 2)); g.setAttribute('aRnd', new THREE.InstancedBufferAttribute(rnd, 4));
   const m = new THREE.ShaderMaterial({
-    uniforms: { uP: { value: 0 }, uW: { value: W }, uH: { value: H }, uCols: { value: cols }, uRows: { value: rows }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uInk: { value: new THREE.Color(COL.back) } },
+    uniforms: { ...maskUniforms(), uP: { value: 0 }, uW: { value: W }, uH: { value: H }, uCols: { value: cols }, uRows: { value: rows }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uInk: { value: new THREE.Color(COL.back) } },
     vertexShader: SHATTER_VS, fragmentShader: SHATTER_FS, side: THREE.DoubleSide, toneMapped: false,
   });
   const mesh = new THREE.Mesh(g, m); mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
@@ -317,6 +343,7 @@ const BURN_VS = `varying vec2 vUv; void main() { vUv = uv; gl_Position = project
 const BURN_FS = `
 uniform sampler2D uMap; uniform vec3 uCyan; uniform float uP, uAsp; uniform vec2 uC; uniform vec2 uProf[41];
 varying vec2 vUv;
+${MASK_GLSL}
 // inside the can's outline? (the profile: v down the picture, half width), so the light only burns the can itself
 bool inCan(vec2 uv) {
   float v = 1.0 - uv.y; if (v < uProf[0].x || v > uProf[40].x) return false;
@@ -333,6 +360,7 @@ void main() {
   float r = length(d) / 0.62, n = fbm(vUv * vec2(uAsp, 1.0) * 7.0);
   float front = uP * 1.25 - 0.08;                       // the burn front, from the middle out
   float e = front - (r * 0.78 + n * 0.3);               // > 0: burnt through
+  if (offPiece(vUv)) discard;                           // only the acrylic piece, never the photo's background
   vec3 col = texture2D(uMap, vUv).rgb;
   if (!inCan(vUv)) { gl_FragColor = vec4(col, 1.0);
   #include <colorspace_fragment>
@@ -350,7 +378,7 @@ void main() {
 }`;
 function makeBurn(tex) {
   const m = new THREE.ShaderMaterial({
-    uniforms: { uP: { value: 0 }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uAsp: { value: W / H }, uC: { value: new THREE.Vector2(tube.u0, 0.5 + ((tube.top + tube.bot) / 2) / H) }, uProf: { value: tube.profUv.map(([v, hw]) => new THREE.Vector2(v, hw)) } },
+    uniforms: { ...maskUniforms(), uP: { value: 0 }, uMap: { value: tex }, uCyan: { value: new THREE.Color(COL.x) }, uAsp: { value: W / H }, uC: { value: new THREE.Vector2(tube.u0, 0.5 + ((tube.top + tube.bot) / 2) / H) }, uProf: { value: tube.profUv.map(([v, hw]) => new THREE.Vector2(v, hw)) } },
     vertexShader: BURN_VS, fragmentShader: BURN_FS, side: THREE.DoubleSide, toneMapped: false,
   });
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), m); mesh.position.z = 0.0003; mesh.frustumCulled = false; mesh.renderOrder = 2; return mesh;
@@ -713,7 +741,7 @@ function updatePose(now) {
   if (n && PIECE_OF[n] !== cp) { usePiece(PIECE_OF[n]); if (!fresh) sound.open(); }   // the other charm: its own box opens
   if (n && win.userData.side !== n + BOX.shape) {   // this side's picture on the tiles; the cut-out moved onto it
     win.userData.side = n + BOX.shape;
-    lid.material.uniforms.uMap.value = cp.lidTex[n];
+    lid.material.uniforms.uMap.value = cp.lidTex[n]; setLidMask(cp, n);
     if (tube) { if (tube.wins[n] && tube.win !== tube.wins[n]) { tube.win = tube.wins[n]; buildWindow(BOX.shape); win.userData.side = n + BOX.shape; } }
     else {
       const xf = (BOX.shape === 'cat' && cp.outlineData.sides && cp.outlineData.sides[n]) || { x: 0, y: 0, rz: 0, s: 1 };
