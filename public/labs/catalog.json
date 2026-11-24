@@ -366,6 +366,66 @@
     }
   },
   {
+    "slug": "spray-bobo-enhanced",
+    "title": "Spray Bobo Enhanced",
+    "url": "/evade/spray-bobo-enhanced/",
+    "thumb": "/labs/img/spray-bobo-enhanced.webp",
+    "alt": "Painted Bobo, Eclipse can, spray can, MEDIALIFE figure and skate deck",
+    "client": "EVADE",
+    "lead": "Place 3D pieces on your floor (Cola Run Bobo, the Eclipse can, Classic Bobo, a blank vinyl toy, a skate deck, an art block, a dancing robot) and paint them for real: spray, brush, fill, stickers, chrome and glow finishes. Your paint is saved on the phone.",
+    "extraLinks": [
+      {
+        "label": "MEDIALIFE version",
+        "url": "/labs/spray-enhanced/"
+      }
+    ],
+    "categories": [
+      "collectibles",
+      "capture",
+      "3d-character"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "notes": [
+      "Simulator-tested, phone test pending"
+    ]
+  },
+  {
+    "slug": "spray-enhanced",
+    "title": "Spray Enhanced",
+    "url": "/labs/spray-enhanced/",
+    "thumb": "/labs/img/spray-bobo-enhanced.webp",
+    "alt": "Painted collectibles placed in a room",
+    "client": "MEDIALIFE",
+    "lead": "The MEDIALIFE skin of Spray Bobo Enhanced: place the MEDIALIFE figure, a giant spray can, a blank toy, a skate deck or an art block in your room and paint it like a custom.",
+    "extraLinks": [
+      {
+        "label": "EVADE version",
+        "url": "/evade/spray-bobo-enhanced/"
+      }
+    ],
+    "categories": [
+      "collectibles",
+      "capture",
+      "showcase"
+    ],
+    "tech": [
+      "world"
+    ],
+    "status": "lab",
+    "year": 2026,
+    "featured": false,
+    "tested": "simulator",
+    "notes": [
+      "Simulator-tested, phone test pending"
+    ]
+  },
+  {
     "slug": "spray-bobo",
     "title": "Spray Bobo",
     "lead": "Your phone is the spray can. Paint the Bobo charm or the Eclipse can charm, add decals, and the painting becomes a 3D sticker on the merch. Then take it into the room: hang it on a wall, stamp it anywhere, or spray graffiti on real walls with drips.",

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en" data-brand="evade">
+<head>
+  <!-- Spray Bobo Enhanced: place 3D pieces in your room (Bobo, the Eclipse can and more) and spray paint, brush, fill
+       and sticker them in 3D. One experience, two skins: EVADE at /evade/spray-bobo-enhanced/ and MEDIALIFE at
+       /labs/spray-enhanced/ (a rewrite to this page, or ?brand=medialife).
+       World tracking comes from 8th Wall's distributed engine binary (@8thwall/engine-binary 1.0.0, Copyright (c) 2026
+       Niantic Spatial, Inc., XR Engine License Agreement: https://github.com/8thwall/engine/blob/main/LICENSE), loaded
+       unmodified from jsDelivr as the licence asks. Credited on /evade/licences/ (Options > Licences). -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#0f1519">
+  <title>Spray Bobo Enhanced · EVADE AR</title>
+  <meta name="description" content="Spray Bobo Enhanced: put Bobo, the Eclipse can and more in your room, then spray paint, brush and sticker them in 3D. Your phone is the spray can.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <script>
+    // brand before first paint: /labs/spray-enhanced/ or ?brand=medialife = the MEDIALIFE skin
+    (function () { var q = new URLSearchParams(location.search).get('brand'); var b = q || (/^\/labs\/spray-enhanced/.test(location.pathname) ? 'medialife' : 'evade');
+      document.documentElement.dataset.brand = b === 'medialife' ? 'medialife' : 'evade';
+      if (b === 'medialife') document.title = 'Spray Enhanced · MEDIALIFE AR'; })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="/evade/spray-bobo-enhanced/style.css?v=1">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1">
+</head>
+<body>
+  <canvas id="cam" aria-label="Camera view"></canvas>
+
+  <!-- ---------------------------------------------------------------- splash -->
+  <section id="splash" aria-labelledby="title">
+    <img class="brand only-evade" src="/brand/evade-logo.webp" alt="EVADE" width="132" height="38">
+    <img class="brand only-ml" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="30">
+    <div class="hero" aria-hidden="true">
+      <svg class="splats" viewBox="0 0 300 300">
+        <path class="s1" d="M48 190c-6-30 14-58 44-60 22-2 34 14 52 10s30-22 52-12c26 12 26 46 8 64-12 12-10 30-2 44 6 10-4 22-16 16-10-5-12-16-24-14-14 3-12 22-28 22-14 0-14-16-28-18-18-2-30 10-44 0-14-10-10-30-14-52z"/>
+        <path class="s2" d="M86 78c4-22 30-30 46-20 10 6 22 4 32-2 18-10 44 0 46 22 2 16-12 26-26 26-12 0-20 10-34 10-16 0-22-10-36-10-18 0-30-10-28-26z"/>
+        <path class="s3" d="M210 164c14-8 34 0 36 16 2 14-12 22-22 20-14-2-26-24-14-36z"/>
+        <circle class="s3" cx="252" cy="150" r="6"/><circle class="s2" cx="64" cy="64" r="5"/><circle class="s1" cx="30" cy="182" r="7"/>
+      </svg>
+      <img class="shot only-evade" src="/evade/spray-bobo-enhanced/art/hero-evade.webp" alt="" width="720" height="720">
+      <img class="shot only-ml" src="/evade/spray-bobo-enhanced/art/hero-medialife.webp" alt="" width="720" height="720">
+      <i class="mist m1"></i><i class="mist m2"></i><i class="mist m3"></i><i class="mist m4"></i>
+    </div>
+    <div class="copy">
+      <h1 id="title"><span class="only-evade">Spray Bobo</span><span class="only-ml">Spray</span> <em>Enhanced</em></h1>
+      <p class="lead only-evade">Drop Bobo, the Eclipse can and more into your room. Spray, paint and sticker them in 3D.</p>
+      <p class="lead only-ml">Drop 3D pieces into your room. Spray, paint and sticker them in 3D. Your phone is the can.</p>
+      <div id="desk" hidden>
+        <div id="qr" aria-label="QR code that opens this page on your phone"></div>
+        <p><b>Made for your phone.</b> It uses your phone's camera and motion sensors to put things in your room. Scan to open it there.</p>
+      </div>
+      <button id="b-start" class="primary" disabled>Loading…</button>
+      <div id="load" role="progressbar" aria-label="Loading"><i></i></div>
+      <img class="act-by" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="148" height="58">
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------------- in camera -->
+  <div id="hud" hidden data-mode="floor" data-tool="spray">
+    <div class="tl">
+      <img class="logo only-evade" src="/brand/evade-logo.webp" alt="EVADE" width="104" height="30">
+      <img class="logo only-ml" src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="22">
+      <span class="tag">3D</span>
+    </div>
+    <button id="b-opts" class="ib" aria-haspopup="dialog" aria-controls="opts" aria-expanded="false" aria-label="Options">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+
+    <!-- the nozzle (Spray tool): the ring is the spray's footprint where it lands -->
+    <div id="reticle" aria-hidden="true"><i class="ring"></i><i class="dot"></i><b id="dist"></b></div>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <p id="size" hidden aria-live="polite"></p>
+
+    <!-- tools (right rail) -->
+    <div id="tools" role="radiogroup" aria-label="Tool">
+      <button class="tool" data-tool="spray" role="radio" aria-checked="true" aria-label="Spray: your phone is the can, hold the screen to spray">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="9" width="8" height="12" rx="2"/><path d="M9 9V6h4v3M11 6V4h3"/><path d="M18 4h.01M20 6h.01M18 8h.01M21 3h.01"/></svg><span>Spray</span></button>
+      <button class="tool" data-tool="brush" role="radio" aria-checked="false" aria-label="Brush: paint with your finger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 3l3 3-9 9-4 1 1-4z"/><path d="M4 21c2 0 4-1 4-4"/></svg><span>Brush</span></button>
+      <button class="tool" data-tool="fill" role="radio" aria-checked="false" aria-label="Fill: tap a part to paint all of it">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 11l7-7 7 7-7 7z"/><path d="M19 15s2 2.4 2 3.6A2 2 0 0 1 17 18.6C17 17.4 19 15 19 15z"/><path d="M5 11h14"/></svg><span>Fill</span></button>
+      <button class="tool" data-tool="decal" role="radio" aria-checked="false" aria-label="Stickers: tap to stick one on">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h10l5 5v11H5z"/><path d="M15 4v5h5"/><path d="M12 11.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg><span>Stickers</span></button>
+      <button class="tool" data-tool="erase" role="radio" aria-checked="false" aria-label="Eraser: rub paint off with your finger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 4l5 5-10 10H6l-3-3z"/><path d="M9 21h12M11 9l5 5"/></svg><span>Erase</span></button>
+      <button id="b-tip" class="tool tip" aria-label="Nozzle size: medium. Tap to change">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle id="tip-dot" cx="12" cy="12" r="5" fill="currentColor"/></svg><span id="tip-t">Medium</span></button>
+    </div>
+
+    <!-- left rail: add another piece -->
+    <div id="lrail">
+      <button id="b-add" class="tool add" aria-label="Add a 3D piece"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Add</span></button>
+      <button id="b-spin" class="tool" aria-pressed="false" aria-label="Spin the piece slowly, like a turntable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 4 0 1 1-4-3.5"/><path d="M16 5l1 3.6-3.6.9"/></svg><span>Spin</span></button>
+    </div>
+
+    <!-- colours (paint tools) and the sticker shelf (Stickers tool) -->
+    <div id="caps" role="radiogroup" aria-label="Paint colour"></div>
+    <div id="shelf" aria-label="Stickers"><div class="scats" role="tablist" aria-label="Sticker kinds"></div><div class="slist" role="tabpanel"></div></div>
+
+    <!-- the library: what you can place -->
+    <div id="lib" role="dialog" aria-labelledby="lib-t">
+      <header><h2 id="lib-t">Pick a piece</h2><button id="lib-x" class="x" type="button" aria-label="Close" hidden><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <div class="cards" id="cards"></div>
+    </div>
+
+    <div id="bottom">
+      <div class="b-left">
+        <img class="actby" src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" width="107" height="42">
+        <button id="b-undo" class="tool" aria-label="Undo" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span></button>
+        <button id="b-cancel" class="tool" hidden aria-label="Cancel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg><span>Cancel</span></button>
+      </div>
+      <div id="act">
+        <button id="b-place" class="primary big" hidden disabled>Place it</button>
+        <div id="shoot">
+          <span id="rec-time" hidden>0:00</span>
+          <button id="b-shutter" aria-label="Take a photo. Press and hold to film"><svg viewBox="0 0 72 72" aria-hidden="true"><circle class="ring" cx="36" cy="36" r="33"/><circle id="rec-prog" class="prog" cx="36" cy="36" r="33"/></svg><i></i></button>
+        </div>
+      </div>
+      <div class="b-right">
+        <button id="b-remove" class="ib sq" type="button" hidden aria-label="Remove this piece"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span>Remove</span></button>
+        <button id="b-move" class="ib sq" type="button" hidden aria-label="Move this piece (keeps your paint)"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span>Move</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- options: a bottom sheet -->
+  <div id="opts" hidden role="dialog" aria-modal="true" aria-labelledby="opts-t">
+    <div class="scrim" data-close></div>
+    <div class="panel">
+      <div class="grab" aria-hidden="true"></div>
+      <header><h2 id="opts-t">Options</h2><button type="button" class="x" data-close aria-label="Close options"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
+      <p class="for" id="o-for"></p>
+      <div class="opt seg-row" id="row-finish">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.4 5 5.6.8-4 3.9 1 5.6-5-2.7-5 2.7 1-5.6-4-3.9 5.6-.8z"/></svg></span>
+        <span class="ol"><b>Paint finish</b><small>How your paint catches the light</small></span>
+        <div class="seg" role="radiogroup" aria-label="Paint finish" id="seg-finish">
+          <button type="button" role="radio" data-v="gloss" aria-checked="true">Gloss</button>
+          <button type="button" role="radio" data-v="matte" aria-checked="false">Matte</button>
+          <button type="button" role="radio" data-v="chrome" aria-checked="false">Chrome</button>
+          <button type="button" role="radio" data-v="glow" aria-checked="false">Glow</button>
+        </div>
+      </div>
+      <div class="opt seg-row" id="row-pose" hidden>
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2"/><path d="M12 7v6l-3 7M12 13l3 7M6 10l6-2 6 2"/></svg></span>
+        <span class="ol"><b>Pose</b><small>Keeps your paint on while it moves</small></span>
+        <div class="seg wrap" role="radiogroup" aria-label="Pose" id="seg-pose"></div>
+      </div>
+      <button type="button" class="opt" id="o-fresh"><span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span><span class="ol"><b>Fresh coat</b><small>Wipe this piece back to new (Undo brings it back)</small></span><i class="go" aria-hidden="true"></i></button>
+      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true"><span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span><span class="ol"><b>Sound</b><small>Hiss, rattle and splats</small></span><i class="sw" aria-hidden="true"></i></button>
+      <button type="button" class="opt" id="o-clear"><span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><span class="ol"><b>Clear the room</b><small>Take every piece away (your paint jobs are kept)</small></span><i class="go" aria-hidden="true"></i></button>
+      <button type="button" class="opt" id="o-how"><span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span><span class="ol"><b>How to paint</b><small>The tools in one look</small></span><i class="go" aria-hidden="true"></i></button>
+      <a class="lic" href="/evade/licences/" target="_blank" rel="noopener">Licences</a>
+    </div>
+  </div>
+
+  <!-- how to paint -->
+  <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
+    <div class="sheet">
+      <h2 id="how-t">How to paint</h2>
+      <ol class="how-steps">
+        <li><b>Spray:</b> your phone is the can. Aim the ring at a piece and hold the screen. Closer is finer, further is wider.</li>
+        <li><b>Brush</b> and <b>Erase:</b> paint or rub off with your finger.</li>
+        <li><b>Fill:</b> tap a part (an ear, the label, a wheel) to paint all of it.</li>
+        <li><b>Stickers:</b> pick one, then tap a piece to stick it on.</li>
+        <li><b>Move</b> picks a piece up again, paint and all. Your paint jobs stay on this phone for next time.</li>
+      </ol>
+      <button id="b-go" class="primary">Got it</button>
+    </div>
+  </div>
+
+  <!-- photo -->
+  <div id="shot" class="sheet-wrap" hidden role="dialog" aria-labelledby="shot-t">
+    <div class="sheet">
+      <h2 id="shot-t">Nice one</h2>
+      <img id="shot-img" alt="Your photo">
+      <div class="row"><a id="shot-save" class="btn primary" download>Save</a><button id="shot-share" hidden>Share</button><button id="shot-close">Back</button></div>
+    </div>
+  </div>
+
+  <div id="error" class="sheet-wrap" hidden role="alert">
+    <div class="sheet">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <div id="err-qr" class="err-qr" hidden aria-label="QR code that opens this page on your phone"></div>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+  </div>
+  <div id="flashw" aria-hidden="true"></div>
+  <pre id="diagp" hidden></pre>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <!-- 8th Wall distributed engine binary (SLAM), unmodified, pinned. Not loaded in ?nocam (desk test) mode. -->
+  <script>
+    if (!/[?&]nocam\b/.test(location.search)) { var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js'; s.async = true; s.crossOrigin = 'anonymous'; s.dataset.preloadChunks = 'slam'; document.body.appendChild(s); }
+  </script>
+  <script type="module" src="/evade/spray-bobo-enhanced/main.js?v=1"></script>
+</body>
+</html>
