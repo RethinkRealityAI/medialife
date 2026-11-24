@@ -1,5 +1,32 @@
 [
   {
+    "slug": "happi",
+    "title": "Happi AR",
+    "lead": "Meet Happi, the Japan Parade & Street Fair mascot: play with Happi in 3D, place Happi in your room, wear Happi's head in a selfie, and take a photo with a frame or a life-size cutout.",
+    "url": "/happi/",
+    "thumb": "/labs/img/happi.webp",
+    "alt": "The Happi AR splash: Japan Parade & Street Fair logo, the Happi wordmark, Start, and Happi in 3D on the parade stage",
+    "client": "Japan Parade & Street Fair",
+    "categories": [
+      "events",
+      "3d-character",
+      "capture",
+      "game"
+    ],
+    "tech": [
+      "web-3d",
+      "world",
+      "face"
+    ],
+    "status": "preview",
+    "year": 2026,
+    "featured": true,
+    "tested": "simulator",
+    "notes": [
+      "Pitch demo: show only to the parade team"
+    ]
+  },
+  {
     "slug": "evade-hub",
     "title": "Bobo's Hideout",
     "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade.",
