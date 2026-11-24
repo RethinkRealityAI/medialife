@@ -46,7 +46,7 @@
       </div>
       <div class="hero-stage" id="heroStage">
         <p class="wordmark" aria-hidden="true">
-          <span class="l1">Anpanman,</span><span class="l2">Activated.</span><span class="kana" lang="ja">アンパンマン</span>
+          <span class="l1">Anpanman,</span><span class="l2">Activated.</span><span class="l3">by MEDIALIFE</span><span class="kana" lang="ja">アンパンマン</span>
         </p>
         <div class="hero-char" id="heroChar">
           <img src="assets/anp-cutout.webp" alt="Anpanman" width="456" height="900" fetchpriority="high" />
@@ -57,7 +57,7 @@
         <div class="scallop top sky" aria-hidden="true"></div>
         <div class="wrap">
           <div>
-            <h1>Anpanman, Activated. <span>Your immersive technology and content partner.</span></h1>
+            <h1><span class="vh">Anpanman, activated by MEDIALIFE. </span>Your immersive technology and content partner. <span>App-free immersive web experiences.</span></h1>
           </div>
           <div class="ctas">
             <a class="btn" href="#partner">See how it works</a>
@@ -157,7 +157,7 @@
               <h2 class="h-deck" id="h-prod">Merch that opens <span class="hl">Anpanman's world.</span></h2>
             </div>
             <p class="lede" style="color: var(--skyink)">
-              <b>Tap, scan or point. No app, no account.</b> Pick a product and try it.
+              <b>No app, no account.</b> Pick a product, see how fans open it, then put it in your own space in AR.
             </p>
           </div>
           <div class="studio">
@@ -180,6 +180,10 @@
                 <button class="mode" type="button" data-m="scan" aria-pressed="false"><span class="k">SCAN</span><b>QR code</b></button>
                 <button class="mode" type="button" data-m="point" aria-pressed="false"><span class="k">POINT</span><b>The artwork</b></button>
               </div>
+              <a class="btn ar-go" id="arGo" href="ar/?p=keychain">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9z" /><path d="M12 11l8-4.5M12 11v9M12 11L4 6.5" /></svg>
+                <span>See it in your space <small>Real AR: place it, pinch to size it</small></span>
+              </a>
               <p class="src">Concept products built from your official art · Anpanman © Takashi Yanase / Froebel-kan, TMS, NTV</p>
             </div>
           </div>
@@ -199,19 +203,19 @@
           <div class="proof">
             <article class="pcard rv">
               <div class="m"><video data-src="assets/one-piece.mp4" poster="assets/one-piece.webp" muted loop playsinline preload="none" aria-label="The ONE PIECE cover coming alive"></video></div>
-              <div class="t"><p class="k">NETFLIX · ONE PIECE</p><h3>Posters, standees, magazines</h3></div>
+              <div class="t"><p class="k">NETFLIX · ONE PIECE</p><h3>Posters, standees, magazines</h3><a class="plink" href="/live#one-piece" target="_blank" rel="noopener">See ONE PIECE live <span aria-hidden="true">↗</span></a></div>
             </article>
             <article class="pcard rv rv-d1">
               <div class="m light"><img src="assets/sakamoto-standee.webp" alt="Sakamoto Days activated standee" loading="lazy" /><img class="inset" src="assets/sakamoto-nfc-sticker.webp" alt="Sakamoto Days NFC sticker" loading="lazy" /></div>
-              <div class="t"><p class="k">NETFLIX · SAKAMOTO DAYS</p><h3>Retail displays, standees, magazines, stickers</h3><span class="award sm"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="10" r="7" fill="#E3241B" /><path d="M9 15l-2 9 6-3 6 3-2-9" fill="#2B1A12" /></svg>Platinum Pinnacle Award 2025</span></div>
+              <div class="t"><p class="k">NETFLIX · SAKAMOTO DAYS</p><h3>Retail displays, standees, magazines, stickers</h3><span class="award sm"><svg viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="10" r="7" fill="#E3241B" /><path d="M9 15l-2 9 6-3 6 3-2-9" fill="#2B1A12" /></svg>Platinum Pinnacle Award 2025</span><a class="plink" href="/case-studies#sakamoto-days" target="_blank" rel="noopener">Read the case study <span aria-hidden="true">↗</span></a></div>
             </article>
             <article class="pcard rv rv-d2">
-              <div class="m"><video data-src="assets/sukeban-hoodie.mp4" poster="assets/sukeban-hoodie.webp" muted loop playsinline preload="none" aria-label="Animebae NFC hoodie: the print plays"></video></div>
-              <div class="t"><p class="k">ANIMEBAE · APPAREL</p><h3>NFC-embedded apparel</h3></div>
+              <div class="m"><video data-src="assets/animebae-site.mp4" poster="assets/animebae-site.webp" muted loop playsinline preload="none" aria-label="Screen recording of the Sukeban AR hoodie on the MEDIALIFE Activated Merch page"></video></div>
+              <div class="t"><p class="k">ANIMEBAE · APPAREL</p><h3>NFC-embedded apparel</h3><a class="plink" href="/activated-merch/" target="_blank" rel="noopener">See Activated Merch <span aria-hidden="true">↗</span></a></div>
             </article>
             <article class="pcard rv rv-d3">
               <div class="m light"><img src="assets/evade-keychain.webp" alt="EVADE activated keychain: Bobo and the Eclipse can" loading="lazy" /></div>
-              <div class="t"><p class="k">EVADE · ROBLOX</p><h3>A connected ecosystem</h3></div>
+              <div class="t"><p class="k">EVADE · ROBLOX</p><h3>A connected ecosystem</h3><a class="plink" href="/evade/" target="_blank" rel="noopener">See EVADE x MEDIALIFE <span aria-hidden="true">↗</span></a></div>
             </article>
           </div>
           <div class="logos rv" aria-label="Partners">
@@ -281,21 +285,6 @@
             </div>
           </div>
 
-          <div class="toss rv" id="toss">
-            <div>
-              <p class="eyebrow">Try a taste <span class="dots"><i></i><i></i><i></i></span></p>
-              <h3>Bread Toss, <span>right here.</span></h3>
-              <p>Flick the bread onto the plate.</p>
-              <div class="score">
-                <span class="chip y" id="tossScore">0 served</span><span class="chip" id="tossLeft">10 rolls left</span>
-                <button class="btn sm" type="button" id="tossReset">Bake a new batch</button>
-              </div>
-            </div>
-            <div class="toss-stage">
-              <canvas id="tossCanvas" aria-label="Bread Toss mini game. Drag up from the bread to toss it onto the plate."></canvas>
-              <p class="stage-hint" id="tossHint">Flick the bread up</p>
-            </div>
-          </div>
         </div>
       </section>
 

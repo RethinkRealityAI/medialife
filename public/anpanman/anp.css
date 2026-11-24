@@ -2531,3 +2531,108 @@ fieldset.field {
   font-size: 15px;
   color: var(--soft);
 }
+
+/* hero: "Anpanman, activated by MEDIALIFE" */
+.wordmark .l3 {
+  display: block;
+  margin-top: 0.14em;
+  font-size: 0.3em;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.vh {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.hero-band h1 span:not(.vh) {
+  display: block;
+  margin-top: 6px;
+}
+/* product section: real AR */
+.btn.ar-go {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  background: var(--red);
+  color: var(--white);
+  text-align: left;
+}
+.btn.ar-go svg {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.btn.ar-go span {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.btn.ar-go small {
+  font-family: var(--f-body);
+  font-weight: 700;
+  font-size: 13px;
+  opacity: 0.9;
+}
+/* case study cards link out; the whole card is the target */
+.pcard {
+  position: relative;
+}
+.pcard .plink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--red);
+  text-decoration: none;
+}
+.pcard .plink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.pcard .plink:hover,
+.pcard .plink:focus-visible {
+  text-decoration: underline;
+}
+.pcard:has(.plink:focus-visible) {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+@media (max-width: 899px) {
+  /* the character covers the middle of the wordmark on phones: say "activated by MEDIALIFE" in the band */
+  .wordmark .l3 {
+    display: none;
+  }
+  .hero-band h1 .vh {
+    position: static !important;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+    display: block;
+    margin-bottom: 8px;
+    font-family: var(--f-mono);
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+}

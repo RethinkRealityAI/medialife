@@ -102,6 +102,7 @@ function start() {
   Promise.all([loadImg("assets/anp-cutout.webp"), loadTex("assets/anp-hubbg.webp"), loadImg("assets/qr-medialife.svg")]).then(([art, hubTex, qrImg]) => {
     if (!art) return;
     build(art, hubTex, qrImg);
+    if (/[?&]export\b/.test(location.search)) window.__anp = { products: window.__anpProducts, art, THREE };
   });
 
   function canvasTex(w, h, draw) {
@@ -153,6 +154,7 @@ function start() {
   const white = new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.85 });
 
   const products = {};
+  if (/[?&]export\b/.test(location.search)) window.__anpProducts = products;
   const root = new THREE.Group();
   scene.add(root);
 
@@ -213,28 +215,67 @@ function start() {
       products.keychain = g;
     }
 
-    // ── standee: tall acrylic panel on a red base with a QR plate
+    // ── standee: die-cut character standee (official art with a white cut border), card edge,
+    //    fold-out easel at the back and a red foot with the QR, like a retail floor standee
     {
       const g = new THREE.Group();
-      const ph = 2.6,
-        pw = ph * aspect + 0.25;
-      const panel = new THREE.Mesh(new RoundedBoxGeometry(pw, ph + 0.2, 0.08, 4, 0.12), acrylic);
-      panel.position.y = 0.3;
-      g.add(panel);
-      const print = new THREE.Mesh(new THREE.PlaneGeometry(pw - 0.12, ph), new THREE.MeshBasicMaterial({ map: artCard(art, 512, Math.round(512 / ((pw - 0.12) / ph)), "#8FD3F4") }));
-      print.position.set(0, 0.3, 0.042);
-      g.add(print);
-      const base = new THREE.Mesh(new RoundedBoxGeometry(2.3, 0.42, 0.9, 4, 0.08), red);
-      base.position.set(0, -1.34, 0.1);
+      const fh = 3.1,
+        pad = 0.1,
+        fw = fh * aspect;
+      const W = 512,
+        H = Math.round(W / ((fw + pad * 2) / (fh + pad * 2)));
+      const px = (W * pad) / (fw + pad * 2);
+      // silhouette of the art grown by px pixels, filled with one colour
+      const grown = (fill) => {
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const x = c.getContext("2d");
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) x.drawImage(art, px + Math.cos(a) * px, px + Math.sin(a) * px, W - px * 2, H - px * 2);
+        x.globalCompositeOperation = "source-in";
+        x.fillStyle = fill;
+        x.fillRect(0, 0, W, H);
+        return c;
+      };
+      const front = canvasTex(W, H, (x) => {
+        x.drawImage(grown("#ffffff"), 0, 0);
+        x.drawImage(art, px, px, W - px * 2, H - px * 2);
+      });
+      const backTex = canvasTex(W, H, (x) => x.drawImage(grown("#d9c3a0"), 0, 0));
+      const edgeTex = canvasTex(W, H, (x) => x.drawImage(grown("#f1eadf"), 0, 0));
+      const pw = fw + pad * 2,
+        ph2 = fh + pad * 2,
+        cy = 0.2;
+      const layer = (map, z, side) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph2), new THREE.MeshBasicMaterial({ map, transparent: true, alphaTest: 0.5, side: side || THREE.FrontSide }));
+        m.position.set(0, cy, z);
+        g.add(m);
+        return m;
+      };
+      layer(front, 0.03);
+      for (const z of [0.015, 0, -0.015]) layer(edgeTex, z, THREE.DoubleSide);
+      layer(backTex, -0.03).rotation.y = Math.PI;
+      // easel strut: a folded card leg behind the figure
+      const card = new THREE.MeshStandardMaterial({ color: 0xd9c3a0, roughness: 0.9 });
+      const easel = new THREE.Mesh(new THREE.BoxGeometry(0.5, 2.2, 0.03), card);
+      easel.position.set(0, -0.35, -0.42);
+      easel.rotation.x = 0.36;
+      g.add(easel);
+      const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.02), card);
+      hinge.position.set(0, 0.72, -0.05);
+      g.add(hinge);
+      // red foot with the QR label, the figure slots into it
+      const base = new THREE.Mesh(new RoundedBoxGeometry(1.9, 0.34, 0.5, 4, 0.06), red);
+      base.position.set(0, -1.38, 0.1);
       g.add(base);
       const label = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.1, 0.34),
+        new THREE.PlaneGeometry(1.76, 0.28),
         new THREE.MeshBasicMaterial({
-          map: canvasTex(1024, 166, (c, w, h) => {
+          map: canvasTex(1024, 163, (c, w, h) => {
             c.fillStyle = "#E3241B";
             c.fillRect(0, 0, w, h);
             c.fillStyle = "#ffffff";
-            c.font = "700 74px Fredoka, sans-serif";
+            c.font = "700 72px Fredoka, sans-serif";
             c.textBaseline = "middle";
             c.fillText("ANPANMAN", 30, h * 0.42);
             c.fillStyle = "#FFD23F";
@@ -242,15 +283,15 @@ function start() {
             c.fillText("SCAN TO SAY HELLO", 34, h * 0.82);
             if (qrImg) {
               c.fillStyle = "#fff";
-              c.fillRect(w - 170, 8, 150, 150);
-              c.drawImage(qrImg, w - 162, 16, 134, 134);
+              c.fillRect(w - 168, 6, 152, 152);
+              c.drawImage(qrImg, w - 160, 14, 136, 136);
             }
           }),
         }),
       );
-      label.position.set(0, -1.34, 0.556);
+      label.position.set(0, -1.38, 0.352);
       g.add(label);
-      g.userData = { target: new THREE.Vector3(0, 0.3, 0.06), qr: new THREE.Vector3(0.78, -1.34, 0.58), artH: ph, y: 0.05, label: "Standee" };
+      g.userData = { target: new THREE.Vector3(0, 0.3, 0.06), qr: new THREE.Vector3(0.66, -1.38, 0.38), artH: fh, y: 0.05, label: "Standee" };
       products.standee = g;
     }
 
@@ -267,19 +308,108 @@ function start() {
         c.strokeStyle = "#EAD6B8";
         c.lineWidth = 6;
         c.strokeRect(14, 14, w - 28, h - 28);
-        const big = stickerCanvas(art, 0.62);
-        c.drawImage(big, 40, 40);
-        const sm = stickerCanvas(art, 0.36);
-        c.save();
-        c.translate(470, 90);
-        c.rotate(0.22);
-        c.drawImage(sm, 0, 0);
-        c.restore();
-        c.save();
-        c.translate(420, 560);
-        c.rotate(-0.18);
-        c.drawImage(stickerCanvas(art, 0.3), 0, 0);
-        c.restore();
+        // the official Anpanman art (as supplied) plus original bakery + slogan stickers (no other characters
+        // until Nippon TV supplies official sticker art for them)
+        c.drawImage(stickerCanvas(art, 0.4), 34, 34);
+        const peel = (x, y, rot, draw) => {
+          c.save();
+          c.translate(x, y);
+          c.rotate(rot);
+          draw();
+          c.restore();
+        };
+        const outlined = (path, fill) => {
+          c.lineJoin = "round";
+          c.strokeStyle = "#ffffff";
+          c.lineWidth = 22;
+          c.stroke(path);
+          c.strokeStyle = "#2B1A12";
+          c.lineWidth = 6;
+          c.stroke(path);
+          c.fillStyle = fill;
+          c.fill(path);
+        };
+        // round bun with sesame seeds
+        peel(330, 110, -0.1, () => {
+          const p = new Path2D();
+          p.ellipse(0, 0, 78, 58, 0, 0, Math.PI * 2);
+          outlined(p, "#D98A3A");
+          c.fillStyle = "#FFF6E5";
+          [[-30, -18], [8, -28], [36, -8], [-8, 6], [24, 18]].forEach(([x, y]) => {
+            c.beginPath();
+            c.ellipse(x, y, 7, 4, 0.5, 0, Math.PI * 2);
+            c.fill();
+          });
+        });
+        // loaf of bread
+        peel(530, 120, 0.16, () => {
+          const p = new Path2D();
+          p.moveTo(-70, 50);
+          p.lineTo(-70, -10);
+          p.arc(-35, -10, 35, Math.PI, 0);
+          p.arc(35, -10, 35, Math.PI, 0);
+          p.lineTo(70, 50);
+          p.closePath();
+          outlined(p, "#E3A35A");
+          c.strokeStyle = "#B4672A";
+          c.lineWidth = 5;
+          c.beginPath();
+          c.moveTo(-40, -20); c.lineTo(-25, 10);
+          c.moveTo(0, -30); c.lineTo(15, 5);
+          c.moveTo(38, -20); c.lineTo(52, 10);
+          c.stroke();
+        });
+        // croissant
+        peel(400, 300, -0.2, () => {
+          const p = new Path2D();
+          p.moveTo(-95, 20);
+          p.quadraticCurveTo(-60, -60, 0, -62);
+          p.quadraticCurveTo(60, -60, 95, 20);
+          p.quadraticCurveTo(60, 0, 0, 10);
+          p.quadraticCurveTo(-60, 0, -95, 20);
+          p.closePath();
+          outlined(p, "#E8A54B");
+          c.strokeStyle = "#B4672A";
+          c.lineWidth = 5;
+          c.beginPath();
+          [-50, -18, 18, 50].forEach((x) => { c.moveTo(x, -50 + Math.abs(x) * 0.3); c.lineTo(x * 0.8, 6); });
+          c.stroke();
+        });
+        // "Hello, America!" slogan sticker
+        peel(470, 470, 0.08, () => {
+          const p = new Path2D();
+          p.roundRect(-150, -46, 300, 92, 46);
+          outlined(p, "#E3241B");
+          c.fillStyle = "#ffffff";
+          c.font = "700 40px Fredoka, sans-serif";
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillText("Hello, America!", 0, 3);
+        });
+        // star
+        peel(560, 630, 0.2, () => {
+          const p = new Path2D();
+          for (let i = 0; i < 10; i++) {
+            const r = i % 2 ? 26 : 62, a = -Math.PI / 2 + (i * Math.PI) / 5;
+            i ? p.lineTo(Math.cos(a) * r, Math.sin(a) * r) : p.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+          }
+          p.closePath();
+          outlined(p, "#FFD23F");
+        });
+        // "fresh from the bakery" badge
+        peel(390, 650, -0.12, () => {
+          const p = new Path2D();
+          p.arc(0, 0, 74, 0, Math.PI * 2);
+          outlined(p, "#8FD3F4");
+          c.fillStyle = "#0F5C86";
+          c.font = "700 24px Fredoka, sans-serif";
+          c.textAlign = "center";
+          c.textBaseline = "middle";
+          c.fillText("FRESH", 0, -16);
+          c.fillText("BAKED", 0, 14);
+          c.font = "700 13px JetBrains Mono, monospace";
+          c.fillText("DAILY", 0, 40);
+        });
         // round SCAN ME sticker with QR
         c.fillStyle = "#FFD23F";
         c.beginPath();
@@ -558,6 +688,7 @@ function start() {
         g.userData.artH = fh;
         g.rotation.y = savedRot;
         g.position.y = savedY;
+        g.userData.ready = true;
       },
       undefined,
       () => {},
@@ -599,6 +730,8 @@ function start() {
     document.querySelectorAll("#prodSeg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.p === name));
     hint.textContent = "Drag to spin · then tap, scan or point";
     hint.hidden = false;
+    const ar = document.getElementById("arGo");
+    if (ar) ar.href = "ar/?p=" + name;
   }
   document.getElementById("prodSeg").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-p]");
