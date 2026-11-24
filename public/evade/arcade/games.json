@@ -1,0 +1,89 @@
+{
+  "testing": true,
+  "self": "cola-run",
+  "games": [
+    {
+      "id": "cola-run",
+      "name": "Cola Run",
+      "sub": "Grab every can before time runs out",
+      "img": "/evade/creators/assets/img/cola-run-splash-sm.webp",
+      "url": "/evade/cola-run/"
+    },
+    {
+      "id": "off-the-chain",
+      "name": "Bobo Off the Chain",
+      "sub": "Bobo and the can jump off your keychain",
+      "img": "/labs/img/off-the-chain.webp",
+      "url": "/evade/keychain-ar/",
+      "needs": "Your EVADE keychain"
+    },
+    {
+      "id": "bobo-booth",
+      "name": "Bobo Booth",
+      "sub": "Selfie booth: cat hat, shades, can earrings",
+      "img": "/labs/img/bobo-booth.webp",
+      "url": "/evade/bobo-booth/"
+    },
+    {
+      "id": "bobo-hoops",
+      "name": "Bobo Hoops",
+      "sub": "Pop the can off your keychain and sink 10 balls",
+      "img": "/labs/img/bobo-hoops.webp",
+      "url": "/evade/bobo-hoops/",
+      "needs": "Your EVADE keychain"
+    },
+    {
+      "id": "spray-bobo",
+      "name": "Spray Bobo",
+      "sub": "Your phone is the spray can",
+      "img": "/labs/img/spray-bobo.webp",
+      "url": "/evade/spray-bobo/",
+      "needs": "Your EVADE keychain",
+      "unlock": {
+        "task": "Win a round of Cola Run",
+        "key": "ohg-reward-earned"
+      }
+    },
+    {
+      "id": "xray-bobo",
+      "name": "Bobo X-Ray",
+      "sub": "Open the print and scan Bobo's bones",
+      "img": "/labs/img/xray-bobo.webp",
+      "url": "/evade/xray-bobo/",
+      "needs": "Your keychain or a Bobo tee",
+      "unlock": {
+        "task": "Play Bobo Off the Chain once",
+        "key": "evade-done-off-the-chain"
+      }
+    },
+    {
+      "id": "photo-beam",
+      "name": "Photo Beam",
+      "sub": "Beam your photo onto your merch",
+      "img": "/labs/img/photo-beam.webp",
+      "url": "/evade/photo-beam/",
+      "needs": "Your EVADE keychain",
+      "unlock": {
+        "task": "Take a photo in Bobo Booth",
+        "key": "evade-done-bobo-booth"
+      }
+    },
+    {
+      "id": "bobo-portal",
+      "name": "Bobo's Portal",
+      "sub": "Walk through a door into Bobo's world",
+      "img": "/labs/img/bobo-portal.webp",
+      "url": "/evade/bobo-portal/",
+      "needs": "Space to walk"
+    },
+    {
+      "id": "eclipse-night",
+      "name": "Eclipse Night",
+      "sub": "Turn the real sky into EVADE's night",
+      "img": "/evade/arcade/img/eclipse-night.svg",
+      "url": "/evade/eclipse-night/",
+      "needs": "Your keychain and the sky",
+      "soon": true
+    }
+  ]
+}

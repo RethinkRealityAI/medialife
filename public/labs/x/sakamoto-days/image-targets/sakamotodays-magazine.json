@@ -1,0 +1,19 @@
+{
+ "name": "sakamotodays-magazine",
+ "type": "PLANAR",
+ "properties": {
+  "top": 17,
+  "left": 0,
+  "width": 872,
+  "height": 1163,
+  "isRotated": false,
+  "originalWidth": 872,
+  "originalHeight": 1196
+ },
+ "imagePath": "/labs/x/sakamoto-days/image-targets/sakamotodays-magazine_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sakamotodays-magazine_luminance.png",
+  "originalImage": "sakamotodays-magazine.jpg"
+ }
+}

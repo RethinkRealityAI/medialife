@@ -94,6 +94,8 @@ export interface HubEvents {
   tour: "start" | "end";
   /** The Adjust room panel opened or closed (see setFitter). */
   adjust: { on: boolean };
+  /** Bobo's Arcade: the fan picked another experience (the hub navigates to it right after). */
+  launch: { id: string; url: string };
 }
 
 export interface HubOptions {
@@ -117,6 +119,11 @@ export interface HubOptions {
   globeUrl: string;
   /** The Digital Collection vault page (default: api + /evade/vault/index.html). */
   vaultUrl?: string;
+  /**
+   * Bobo's Arcade catalogue (default: api + /evade/arcade/games.json): every experience the fan can jump to
+   * from BOBO OS, with what unlocks each one. See public/evade/arcade/README.md.
+   */
+  arcadeUrl?: string;
   room?: string;
   /** Add the room's own small lights (lamp, loft, monitor). Default true. */
   lights?: boolean;
@@ -448,9 +455,32 @@ const ICON = {
   ),
 };
 
+/** Bobo's Arcade catalogue (public/evade/arcade/games.json). */
+interface ArcadeGame {
+  id: string;
+  name: string;
+  sub: string;
+  img: string;
+  url: string;
+  /** The merch or setup it needs, shown on the card ("Your EVADE keychain"). */
+  needs?: string;
+  /** Not out yet: shown greyed out, can't be opened. */
+  soon?: boolean;
+  /** What opens it. No unlock = open to everyone. key = localStorage flag set when the task is done. */
+  unlock?: { task: string; key?: string };
+}
+interface ArcadeCatalogue {
+  /** true = every game is open (test builds). */
+  testing?: boolean;
+  /** The id of the game this hub lives in (its card says Playing and goes back to the game). */
+  self?: string;
+  games: ArcadeGame[];
+}
+
 /* ══ Apps ═══════════════════════════════════════════════════════════════ */
 
-type AppId = "alerts" | "globe" | "leaderboard" | "colarun" | "collection" | "shop" | "me";
+type AppId =
+  "arcade" | "alerts" | "globe" | "leaderboard" | "colarun" | "collection" | "shop" | "me";
 const APPS: {
   id: AppId;
   name: string;
@@ -459,6 +489,15 @@ const APPS: {
   w: number;
   h: number;
 }[] = [
+  // Flat tile (no gradients, house rule): both stops are the same colour.
+  {
+    id: "arcade",
+    name: "Bobo's Arcade",
+    color: "#ff5b5b",
+    g: ["#e3243a", "#e3243a"],
+    w: 560,
+    h: 680,
+  },
   { id: "alerts", name: "Alerts", color: "#ff4fa3", g: ["#ff7ab8", "#c2186a"], w: 420, h: 520 },
   {
     id: "globe",
@@ -507,6 +546,10 @@ const DEFS = `<svg class="mlh-defs" width="0" height="0" aria-hidden="true" focu
 const OS_MARK = `<svg viewBox="0 0 32 32" aria-hidden="true"><defs><linearGradient id="mlhg-mk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5df2ff"/><stop offset="1" stop-color="#ff5fb1"/></linearGradient></defs><path d="M6 9 4 3l7 4h10l7-4-2 6c1.3 1.8 2 4 2 6.4C28 22.4 22.6 28 16 28S4 22.4 4 15.4C4 13 4.7 10.8 6 9z" fill="url(#mlhg-mk)"/><circle cx="11.5" cy="15.5" r="2" fill="#061024"/><circle cx="20.5" cy="15.5" r="2" fill="#061024"/><path d="M14 20.5c1.2 1 2.8 1 4 0" stroke="#061024" stroke-width="1.6" stroke-linecap="round" fill="none"/></svg>`;
 const g3 = (d: string) => `<svg viewBox="0 0 48 48" class="g3" aria-hidden="true">${d}</svg>`;
 const ICON3D: Record<AppId, string> = {
+  // Arcade cabinet, flat colours.
+  arcade: g3(
+    '<path d="M14 6h20l2 8v28H12V14z" fill="#1c2340"/><path d="M14 6h20l2 8H12z" fill="#ffc42e"/><rect x="16" y="16" width="16" height="11" rx="2" fill="#36e3ff"/><path d="M19 23.5l3-3 2.5 2 3.5-4" stroke="#0b1f6b" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="29" width="24" height="5" fill="#2a3360"/><circle cx="19" cy="31.5" r="2" fill="#ff4b5c"/><path d="M19 31.5v-4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="27" cy="31.5" r="1.6" fill="#36e3ff"/><circle cx="31" cy="31.5" r="1.6" fill="#ffc42e"/>',
+  ),
   alerts: g3(
     '<path d="M24 7c-6.6 0-11 5-11 11.5v6.8c0 2-1 3.6-2.6 5L9 31.6c-.9.9-.3 2.4 1 2.4h28c1.3 0 1.9-1.5 1-2.4l-1.4-1.3c-1.6-1.4-2.6-3-2.6-5v-6.8C35 12 30.6 7 24 7z" fill="url(#mlhg-w)"/><path d="M15.5 19c.4-4.4 3.4-8 8.5-8.6" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".9"/><ellipse cx="24" cy="38.5" rx="4.6" ry="3.4" fill="url(#mlhg-gold)"/><circle cx="35" cy="12" r="5" fill="#ff2d6f" stroke="#fff" stroke-width="2"/>',
   ),
@@ -1254,6 +1297,28 @@ html.mlh-homed .crc-anchor.crc-tr,html.mlh-homed .crc-anchor.crc-tl{top:calc(var
 .mlh-hs-modes button.cur{border-color:rgb(var(--c));box-shadow:0 0 0 1px rgb(var(--c)) inset,0 0 18px rgba(var(--c),.22)}
 .mlh-hs-modes button.cur::after{content:"Now";position:absolute;top:10px;right:10px;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#101215;background:rgb(var(--c))}
 .mlh-hs-h{margin:16px 2px 8px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#7d8696}
+.mlh-hs-arcade{display:flex;align-items:center;gap:12px;width:100%;margin:12px 0 0;padding:10px 12px;min-height:68px;border-radius:16px;border:1px solid rgba(255,91,91,.55);background:rgba(227,36,58,.14);color:#fff;text-align:left;font:inherit}
+.mlh-hs-arcade .mlh-tile{width:46px;height:46px;border-radius:13px;background:#e3243a}
+.mlh-hs-arcade span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:2px}
+.mlh-hs-arcade b{font-size:15.5px}
+.mlh-hs-arcade small{font-size:12px;color:#c9b8bd}
+.mlh-hs-arcade>svg{width:18px;height:18px;opacity:.7}
+.mlh-arc-note{margin:0 0 12px;padding:8px 12px;border-radius:12px;background:rgba(255,196,46,.12);border:1px solid rgba(255,196,46,.4);color:#ffd977;font-size:12.5px;font-weight:600}
+.mlh-arc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.mlh-arc button{position:relative;display:flex;flex-direction:column;padding:0;border-radius:14px;overflow:hidden;border:1px solid #2a2f38;background:#15181d;color:#eef3f6;text-align:left;font:inherit;cursor:pointer}
+.mlh-arc button:active{transform:scale(.98)}
+.mlh-arc img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover;background:#000}
+.mlh-arc .tx{display:flex;flex-direction:column;gap:3px;padding:9px 10px 10px}
+.mlh-arc b{font-size:14px;line-height:1.2}
+.mlh-arc small{font-size:11.5px;line-height:1.3;color:#98a2b1}
+.mlh-arc .need{color:#8fd8e6}
+.mlh-arc .st{position:absolute;top:8px;left:8px;padding:3px 8px;border-radius:99px;font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:#101215;color:#fff}
+.mlh-arc .st.here{background:#36e3ff;color:#06222b}
+.mlh-arc button.locked img,.mlh-arc button.soon img{filter:grayscale(1) brightness(.45)}
+.mlh-arc button.locked .st{background:#ffc42e;color:#2a1d00}
+.mlh-arc button.locked .lock{display:flex;gap:6px;align-items:flex-start;color:#ffd977}
+.mlh-arc button.locked .lock svg{flex:none;width:14px;height:14px;margin-top:1px}
+.mlh-arc button[disabled]{cursor:default}
 .mlh-hs-apps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px}
 .mlh-hs-apps button{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 2px 6px;border:0;border-radius:14px;background:none;font-size:12.5px;font-weight:600;color:#dfe5ee;line-height:1.25;text-align:center}
 .mlh-hs-apps button:active{background:rgba(255,255,255,.06)}
@@ -2443,6 +2508,7 @@ export class CollectorHub {
     const el = this._el.home;
     if (!el?.classList.contains("open")) return;
     el.classList.remove("open");
+    this._homeView = "main";
     this._syncModal();
     this._el.homeb.classList.remove("on");
     this._el.homeb.setAttribute("aria-expanded", "false");
@@ -2618,10 +2684,44 @@ export class CollectorHub {
     } else if (focusBack) this._el.act.focus({ preventScroll: true });
   }
 
+  /** Which page of the home sheet is showing: the main one, or Bobo's Arcade. */
+  private _homeView: "main" | "arcade" = "main";
+
+  /**
+   * Open Bobo's Arcade: as a page of the home sheet when BOBO OS is the host's home (works before the room
+   * is unlocked: games are gated by tasks, not by the merch code), else as a BOBO OS app in the room.
+   */
+  openArcade() {
+    if (this._home) {
+      this._homeView = "arcade";
+      if (this.homeOpen) this._renderHome();
+      else this.openHome();
+      return;
+    }
+    this.openOS("arcade");
+  }
+
   private _renderHome() {
     const h = this._home;
     const box = this._el.hs;
     if (!h || !box) return;
+    if (this._homeView === "arcade") {
+      box.innerHTML = `
+<div class="mlh-hs-grab" aria-hidden="true"></div>
+<div class="mlh-hs-head">
+  <button type="button" class="mlh-hs-x" data-hback aria-label="Back to BOBO OS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+  <div class="t"><b>Bobo's Arcade</b><small>Every EVADE experience</small></div>
+  <button type="button" class="mlh-hs-x" data-hx aria-label="Close">${ICON.close}</button>
+</div>
+<div data-arc></div>`;
+      box.querySelector("[data-hback]")!.addEventListener("click", () => {
+        this._homeView = "main";
+        this._renderHome();
+      });
+      box.querySelector("[data-hx]")!.addEventListener("click", () => this.closeHome());
+      void this._appArcade(box.querySelector<HTMLElement>("[data-arc]")!);
+      return;
+    }
     const mode = h.mode();
     const au = h.audio();
     const join = h.join();
@@ -2651,7 +2751,7 @@ export class CollectorHub {
       },
       { go: "room", name: "My Room", sub: "Bobo's Hideout", icon: ICON.home, cur: mode === "room" },
     ];
-    const apps = APPS.filter((a) => a.id !== "colarun");
+    const apps = APPS.filter((a) => a.id !== "colarun" && a.id !== "arcade");
     box.innerHTML = `
 <div class="mlh-hs-grab" aria-hidden="true"></div>
 <div class="mlh-hs-head">
@@ -2674,6 +2774,7 @@ ${
           `<button type="button" data-go="${m.go}" class="${m.cur ? "cur" : ""}"${m.cur ? ' aria-current="true"' : ""}><i>${m.icon}</i><b>${m.name}</b><small>${m.sub}</small></button>`,
       )
       .join("")}</div>
+<button type="button" class="mlh-hs-arcade" data-arcade><span class="mlh-tile">${ICON3D.arcade}</span><span><b>Bobo's Arcade</b><small>Jump into every EVADE experience</small></span>${ICON.chev}</button>
 <div class="mlh-hs-h" id="mlh-hs-apps">Apps</div>
 <div class="mlh-hs-apps" role="group" aria-labelledby="mlh-hs-apps">${apps
       .map(
@@ -2710,6 +2811,10 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
     }
     for (const b of box.querySelectorAll<HTMLButtonElement>("[data-app]"))
       b.addEventListener("click", () => this.openOS(b.dataset.app as AppId));
+    box.querySelector("[data-arcade]")?.addEventListener("click", () => {
+      this._sfx("click");
+      this.openArcade();
+    });
     for (const b of box.querySelectorAll<HTMLButtonElement>("[data-q]"))
       b.addEventListener("click", () => {
         const q = b.dataset.q!;
@@ -4731,6 +4836,8 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
 
   private _renderApp(id: AppId, body: HTMLElement, highlight?: string) {
     switch (id) {
+      case "arcade":
+        return this._appArcade(body);
       case "alerts":
         return this._appAlerts(body, highlight);
       case "globe":
@@ -4791,6 +4898,82 @@ ${join ? `<button type="button" class="mlh-hs-join" data-q="join">${esc(join.lab
         return;
       }
     }
+  }
+
+  /* ── Bobo's Arcade: jump to any EVADE experience ──
+     The catalogue is a JSON file (arcadeUrl), so games can be added, locked or opened without a rebuild.
+     Unlocks are checked on this device for now (a localStorage flag the experience sets when its task is
+     done); "testing": true opens everything. Later: the Activation API decides per fan. */
+  private _arcade: Promise<ArcadeCatalogue | null> | null = null;
+  private _loadArcade() {
+    const url = this.opts.arcadeUrl || `${this.opts.api || ""}/evade/arcade/games.json`;
+    this._arcade ||= fetch(url, { cache: "no-cache" })
+      .then((r) => (r.ok ? (r.json() as Promise<ArcadeCatalogue>) : null))
+      .catch(() => null);
+    return this._arcade;
+  }
+  private _arcadeOpen(cat: ArcadeCatalogue, g: ArcadeGame) {
+    if (g.soon) return false;
+    if (cat.testing || !g.unlock) return true;
+    try {
+      return !!(g.unlock.key && localStorage.getItem(g.unlock.key));
+    } catch {
+      return false;
+    }
+  }
+  private async _appArcade(body: HTMLElement) {
+    body.innerHTML = `<p style="color:var(--muted)">Loading the arcade…</p>`;
+    const cat = await this._loadArcade();
+    if (!cat) {
+      body.innerHTML = `<p>The arcade couldn't load. Check your connection and open it again.</p>`;
+      return;
+    }
+    const lockSvg =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+    const cards = cat.games.map((g) => {
+      const here = g.id === cat.self;
+      const open = this._arcadeOpen(cat, g);
+      const cls = g.soon ? "soon" : open ? "" : "locked";
+      const st = here
+        ? '<span class="st here">Playing</span>'
+        : g.soon
+          ? '<span class="st">Soon</span>'
+          : open
+            ? ""
+            : '<span class="st">Locked</span>';
+      const line =
+        !open && !g.soon && g.unlock
+          ? `<small class="lock">${lockSvg}${esc(g.unlock.task)}</small>`
+          : `<small>${esc(g.sub)}</small>`;
+      const need = g.needs && open ? `<small class="need">Needs: ${esc(g.needs)}</small>` : "";
+      return `<button type="button" class="${cls}" data-g="${esc(g.id)}"${g.soon ? " disabled" : ""}><img src="${esc(g.img)}" alt="" loading="lazy">${st}<span class="tx"><b>${esc(g.name)}</b>${line}${need}</span></button>`;
+    });
+    body.innerHTML = `${cat.testing ? '<div class="mlh-arc-note">Test mode: every game is open. At launch some open only after a task.</div>' : ""}<div class="mlh-arc">${cards.join("")}</div>`;
+    for (const b of body.querySelectorAll<HTMLButtonElement>("[data-g]"))
+      b.addEventListener("click", () => {
+        const g = cat.games.find((x) => x.id === b.dataset.g)!;
+        if (g.id === cat.self) {
+          this.closeHome(true);
+          return this._play2(false);
+        }
+        if (!this._arcadeOpen(cat, g)) {
+          this._sfx("click");
+          b.animate?.(
+            [
+              { transform: "translateX(0)" },
+              { transform: "translateX(-6px)" },
+              { transform: "translateX(6px)" },
+              { transform: "translateX(0)" },
+            ],
+            { duration: 260 },
+          );
+          return;
+        }
+        const url = g.url + (g.url.includes("?") ? "&" : "?") + "from=hub";
+        this._emit("launch", { id: g.id, url });
+        this._sfx("click");
+        setTimeout(() => location.assign(url), 120);
+      });
   }
 
   private _play2(record: boolean) {

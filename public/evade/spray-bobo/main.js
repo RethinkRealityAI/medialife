@@ -18,50 +18,120 @@
 // it, the last pose is kept for a blink only while the phone is held still (a held pose is glued to the screen,
 // so with the phone moving it would ride along with the phone), and every tracked pose is checked against the
 // camera picture (`fit`), so a pose the engine has let slide off the print hides the canvas instead of dragging it.
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
-import { readCms, plan, MAX_TARGETS } from './cms.js';
-import { makeScene, tickScene, measureScene } from './scene.js';
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { ColaCapture } from "/evade/cola-run-lab/assets/capture-core.js";
+import { readCms, plan, MAX_TARGETS } from "./cms.js";
+import { makeScene, tickScene, measureScene } from "./scene.js";
+import { createRoom, CAM_H } from "./room.js";
 
-window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
+window.THREE = THREE; // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
-const DEBUG = params.has('debug');
-const ENDLESS = params.has('endless');        // no paint level (testing)
-const KC = '/evade/keychain-ar/';             // the Off the Chain page: engine, image targets
-const HERE = '/evade/spray-bobo/';
+const DEBUG = params.has("debug");
+const ENDLESS = params.has("endless"); // no paint level (testing)
+const KC = "/evade/keychain-ar/"; // the Off the Chain page: engine, image targets
+const HERE = "/evade/spray-bobo/";
+// The brand. This one engine also runs MEDIALIFE Spray (/labs/medialife-spray/, MEDIALIFE's own products, e.g. the
+// Sukeban tee): that page sets window.SPRAY_BRAND before loading this module. EVADE's pages never show MEDIALIFE
+// products and MEDIALIFE's page never shows EVADE's (Dapo, 2026-11-24).
+const BRAND = Object.assign(
+  {
+    id: "evade",
+    home: HERE, // where "Paint your own" / a fresh start goes
+    logo: "/brand/evade-logo.webp", // top left of photos, clips and the artwork
+    db: "spray-bobo", // IndexedDB (paintings, room art): one per brand, so they never mix
+    source: "spray-bobo", // clips, events, test logs
+    accent: "#f6c344", // EVADE yellow
+    globe: true, // Where is Bobo?: events and clip uploads
+    cms: true, // Spray Studio merch and shared creations (?c=)
+    hideDecalCats: [], // decal kinds left out of the library
+  },
+  window.SPRAY_BRAND || {},
+);
+const ML = BRAND.id === "medialife";
+const ML_DIR = "/labs/medialife-spray/"; // MEDIALIFE Spray's own targets and stencil art
+const ACC = BRAND.accent;
 // ?c=<creation id>: VIEWER MODE. Someone's shared painting shown on the merch it was made for, nothing else (no can,
 // canvas, caps, decals, options or saving; this phone's own paintings are neither read nor written).
-const VIEWER = params.has('c');
+const VIEWER = BRAND.cms && params.has("c");
 // &go=1 (the share page's "View on merch" button): open the camera straight away. Without it the viewer splash below
 // still shows, so a link opened on its own gets an introduction first.
-const VIEWER_GO = VIEWER && params.get('go') === '1';
-if (VIEWER) { document.documentElement.toggleAttribute('data-viewer', true); document.getElementById('lead').textContent = 'Loading the painting…'; }
+const VIEWER_GO = VIEWER && params.get("go") === "1";
+if (VIEWER) {
+  document.documentElement.toggleAttribute("data-viewer", true);
+  document.getElementById("lead").textContent = "Loading the painting…";
+}
 const LIVE_SITE = /(^|\.)medialife\.ai$/i.test(location.hostname);
-const TOUCH = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+const TOUCH = matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
 const clamp = THREE.MathUtils.clamp;
 const easeOut = (x) => 1 - Math.pow(1 - clamp(x, 0, 1), 3);
-const easeInOut = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
-const gauss = () => { let u = 0, v = 0; while (!u) u = Math.random(); while (!v) v = Math.random(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-const buzz = (p) => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* no haptics */ } };
+const easeInOut = (x) => {
+  x = clamp(x, 0, 1);
+  return x * x * (3 - 2 * x);
+};
+const gauss = () => {
+  let u = 0,
+    v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+};
+const buzz = (p) => {
+  try {
+    navigator.vibrate && navigator.vibrate(p);
+  } catch (e) {
+    /* no haptics */
+  }
+};
 
 // ---------------------------------------------------------------- paint setup
-const TW = 768, TH = 1024;                    // paint texture (the kc-bobo picture at 768 px wide)
-const CAPS = [                                // the colours ("caps"), EVADE yellow first
-  { c: '#f6c344', n: 'EVADE yellow' }, { c: '#3f9be6', n: 'Bobo blue' }, { c: '#8cc8f8', n: 'Sky' }, { c: '#e85bd8', n: 'Magenta' },
-  { c: '#ff3b4e', n: 'Red' }, { c: '#ff8a2a', n: 'Orange' }, { c: '#3ddc84', n: 'Green' }, { c: '#7a5cff', n: 'Purple' },
-  { c: '#ffffff', n: 'White' }, { c: '#15131a', n: 'Black' },
-];
+const TW = 768,
+  TH = 1024; // paint texture (the kc-bobo picture at 768 px wide)
+const CAPS = ML
+  ? [
+      // MEDIALIFE: its blue and magenta first, then the rest
+      { c: "#19afff", n: "MEDIALIFE blue" },
+      { c: "#ff2fae", n: "MEDIALIFE magenta" },
+      { c: "#f6c344", n: "Yellow" },
+      { c: "#8cc8f8", n: "Sky" },
+      { c: "#ff3b4e", n: "Red" },
+      { c: "#ff8a2a", n: "Orange" },
+      { c: "#3ddc84", n: "Green" },
+      { c: "#7a5cff", n: "Purple" },
+      { c: "#ffffff", n: "White" },
+      { c: "#15131a", n: "Black" },
+    ]
+  : [
+  // the colours ("caps"), EVADE yellow first
+  { c: "#f6c344", n: "EVADE yellow" },
+  { c: "#3f9be6", n: "Bobo blue" },
+  { c: "#8cc8f8", n: "Sky" },
+  { c: "#e85bd8", n: "Magenta" },
+  { c: "#ff3b4e", n: "Red" },
+  { c: "#ff8a2a", n: "Orange" },
+  { c: "#3ddc84", n: "Green" },
+  { c: "#7a5cff", n: "Purple" },
+  { c: "#ffffff", n: "White" },
+  { c: "#15131a", n: "Black" },
+    ];
 // nozzles: the spray's half-angle. At a hand's distance (15 cm) skinny is about 3 mm wide, fat about 1.5 cm.
-const NOZZLES = [{ n: 'Skinny', a: 0.6, dot: 3 }, { n: 'Medium', a: 1.4, dot: 5 }, { n: 'Fat', a: 2.8, dot: 8 }];
-const CAN_SECONDS = 24;                       // seconds of spraying in a full can
+const NOZZLES = [
+  { n: "Skinny", a: 0.6, dot: 3 },
+  { n: "Medium", a: 1.4, dot: 5 },
+  { n: "Fat", a: 2.8, dot: 8 },
+];
+const CAN_SECONDS = 24; // seconds of spraying in a full can
 // Losing the piece: the last pose is held this long, and only while the phone is still (motion sensors), or for
 // HOLD_BLIND_MS without sensors. Then the canvas hides, and comes back the moment the engine finds the piece again.
-const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120;
+const HOLD_STILL_MS = 250,
+  HOLD_BLIND_MS = 120;
 // The pose check: the tracked picture, placed by the engine's pose, against the camera picture (weighted
 // correlation, -1..1). FIT_BAD_N checks in a row under FIT_BAD and the pose is not trusted until one is over FIT_OK.
-const FIT_EVERY_MS = 150, FIT_BAD = 0.12, FIT_OK = 0.25, FIT_BAD_N = 3;
+const FIT_EVERY_MS = 150,
+  FIT_BAD = 0.12,
+  FIT_OK = 0.25,
+  FIT_BAD_N = 3;
 // The charms you can paint. Each has its own image targets (both sides), stencil art lined up with its front
 // picture, and its own saved painting. The cat's back picture is the print seen through the acrylic (mirrored),
 // so the canvas is flipped there; the can's back picture shows the same can body, so the canvas is only moved
@@ -70,302 +140,762 @@ const FIT_EVERY_MS = 150, FIT_BAD = 0.12, FIT_OK = 0.25, FIT_BAD_N = 3;
 // Off the Chain's); view: the height (m) it is drawn at in AR (a big print is drawn at charm size, so the sticker,
 // hover and hops keep their look; the camera has no sense of real size anyway); sprayK: a wider spray on a big
 // print; near: past this many cm the hint says come closer; them: him / her / it in the tips; ask: the decal question.
-const PIECES = {
-  bobo: { k: 'bobo', name: 'Bobo', title: 'MY BOBO', art: 'cat', print: 'kc-bobo.jpg', targets: ['kc-bobo', 'kc-bobo-l'], flip: { 'kc-bobo-l': -1 }, mirrorPair: true, key: 'current', found: 'Found Bobo! Tap the spray can', back: 'Your Bobo is back', line: 'Sprayed on my EVADE keychain', them: 'him', ask: 'Dress up Bobo?', seek: 'Bobo' },
-  can: { k: 'can', name: 'the can', title: 'MY CAN', art: 'can', print: 'kc-can.jpg', targets: ['kc-can', 'kc-can-back'], flip: {}, mirrorPair: false, key: 'can', found: 'Found the can! Tap the spray can', back: 'Your can is back', line: 'Sprayed on my EVADE keychain', them: 'it', ask: 'Deck out your can?', seek: 'the can' },
-  // the Sukeban tee: the whole print (teal panel too) is tracked, only the character is the canvas (build_sukeban.py)
-  sukeban: { k: 'sukeban', name: 'Sukeban', title: 'MY SUKEBAN', art: 'sukeban', print: 'tee-sukeban.jpg', targets: ['tee-sukeban'], flip: {}, mirrorPair: false, key: 'sukeban', found: 'Found Sukeban! Tap the spray can', back: 'Your Sukeban is back', line: 'Sprayed on my Sukeban tee', them: 'her', ask: 'Dress up Sukeban?', seek: 'the Sukeban tee', evade: false,
-    tdir: HERE + 'targets/', view: 0.1, sprayK: 1.6, near: 90 },
+// EVADE's pieces (the keychain). MEDIALIFE's products are in ML_PIECES below, only on MEDIALIFE Spray.
+const EVADE_PIECES = {
+  bobo: {
+    k: "bobo",
+    name: "Bobo",
+    title: "MY BOBO",
+    art: "cat",
+    print: "kc-bobo.jpg",
+    targets: ["kc-bobo", "kc-bobo-l"],
+    flip: { "kc-bobo-l": -1 },
+    mirrorPair: true,
+    key: "current",
+    found: "Found Bobo! Tap the spray can",
+    back: "Your Bobo is back",
+    line: "Sprayed on my EVADE keychain",
+    them: "him",
+    ask: "Dress up Bobo?",
+    seek: "Bobo",
+  },
+  can: {
+    k: "can",
+    name: "the can",
+    title: "MY CAN",
+    art: "can",
+    print: "kc-can.jpg",
+    targets: ["kc-can", "kc-can-back"],
+    flip: {},
+    mirrorPair: false,
+    key: "can",
+    found: "Found the can! Tap the spray can",
+    back: "Your can is back",
+    line: "Sprayed on my EVADE keychain",
+    them: "it",
+    ask: "Deck out your can?",
+    seek: "the can",
+  },
 };
-const tdir = (P) => P.tdir || KC + 'image-targets/';
+// MEDIALIFE Spray's pieces: MEDIALIFE's own apparel (never on an EVADE page)
+const ML_PIECES = {
+  // the Sukeban tee: the whole print (teal panel too) is tracked, only the character is the canvas (build_sukeban.py)
+  sukeban: {
+    k: "sukeban",
+    name: "Sukeban",
+    title: "MY SUKEBAN",
+    art: "sukeban",
+    print: "tee-sukeban.jpg",
+    targets: ["tee-sukeban"],
+    flip: {},
+    mirrorPair: false,
+    key: "sukeban",
+    found: "Found Sukeban! Tap the spray can",
+    back: "Your Sukeban is back",
+    line: "Sprayed on my MEDIALIFE Sukeban tee",
+    them: "her",
+    ask: "Dress up Sukeban?",
+    seek: "the Sukeban tee",
+    tdir: ML_DIR + "targets/",
+    adir: ML_DIR + "art/",
+    view: 0.1,
+    sprayK: 1.6,
+    near: 90,
+  },
+};
+const PIECES = { ...(ML ? ML_PIECES : EVADE_PIECES) };
+const tdir = (P) => P.tdir || KC + "image-targets/";
 // Merch added in the CMS joins PIECES at start (cms.js maps each paintable onto these same fields), so these are
 // worked out again once the list is final.
-let SEEK = '', PIECE_OF = {};
+let SEEK = "",
+  PIECE_OF = {};
 function indexPieces() {
-  const a = Object.values(PIECES).map((P) => P.seek);   // "Bobo, the can or the Sukeban tee"
-  SEEK = a.length > 1 ? a.slice(0, -1).join(', ') + ' or ' + a[a.length - 1] : a[0] || '';
-  PIECE_OF = {}; for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
+  const a = Object.values(PIECES).map((P) => P.seek); // "Bobo, the can or the Sukeban tee"
+  SEEK = a.length > 1 ? a.slice(0, -1).join(", ") + " or " + a[a.length - 1] : a[0] || "";
+  PIECE_OF = {};
+  for (const P of Object.values(PIECES)) for (const n of P.targets) PIECE_OF[n] = P.k;
 }
 indexPieces();
 
 // ---------------------------------------------------------------- sound (made here, no files)
 const sound = {
-  ctx: null, on: true, master: null, hiss: null,
+  ctx: null,
+  on: true,
+  master: null,
+  hiss: null,
   init() {
     try {
-      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)(); this.ctx.resume();
-      if (!this.master) { this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination); }
-      if (!this.hiss) {   // the spray: a looping hiss, opened and closed by a gain
-        const n = this.ctx.sampleRate * 2, b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0);
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      this.ctx.resume();
+      if (!this.master) {
+        this.master = this.ctx.createGain();
+        this.master.connect(this.ctx.destination);
+      }
+      if (!this.hiss) {
+        // the spray: a looping hiss, opened and closed by a gain
+        const n = this.ctx.sampleRate * 2,
+          b = this.ctx.createBuffer(1, n, this.ctx.sampleRate),
+          d = b.getChannelData(0);
         for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-        const s = this.ctx.createBufferSource(); s.buffer = b; s.loop = true;
-        const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200;
-        const bp = this.ctx.createBiquadFilter(); bp.type = 'peaking'; bp.frequency.value = 6500; bp.gain.value = 8;
-        const g = this.ctx.createGain(); g.gain.value = 0;
-        s.connect(hp).connect(bp).connect(g).connect(this.master); s.start();
+        const s = this.ctx.createBufferSource();
+        s.buffer = b;
+        s.loop = true;
+        const hp = this.ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 2200;
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = "peaking";
+        bp.frequency.value = 6500;
+        bp.gain.value = 8;
+        const g = this.ctx.createGain();
+        g.gain.value = 0;
+        s.connect(hp).connect(bp).connect(g).connect(this.master);
+        s.start();
         this.hiss = g;
       }
-    } catch (e) { /* no audio */ }
+    } catch (e) {
+      /* no audio */
+    }
   },
-  spray(level) {   // 0..1, eased so it doesn't click
-    if (!this.hiss) return; const t = this.ctx.currentTime;
+  spray(level) {
+    // 0..1, eased so it doesn't click
+    if (!this.hiss) return;
+    const t = this.ctx.currentTime;
     this.hiss.gain.setTargetAtTime(this.on ? level * 0.16 : 0, t, level ? 0.025 : 0.06);
   },
-  tone(f0, f1, dur, vol = 0.2, type = 'sine', when = 0) {
+  tone(f0, f1, dur, vol = 0.2, type = "sine", when = 0) {
     if (!this.ctx || !this.on) return;
-    const t = this.ctx.currentTime + when, o = this.ctx.createOscillator(), g = this.ctx.createGain();
-    o.type = type; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+    const t = this.ctx.currentTime + when,
+      o = this.ctx.createOscillator(),
+      g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.master);
+    o.start(t);
+    o.stop(t + dur + 0.05);
   },
   noise(dur, vol, hp, lp, when = 0) {
     if (!this.ctx || !this.on) return;
-    const n = Math.floor(this.ctx.sampleRate * dur), b = this.ctx.createBuffer(1, n, this.ctx.sampleRate), d = b.getChannelData(0);
+    const n = Math.floor(this.ctx.sampleRate * dur),
+      b = this.ctx.createBuffer(1, n, this.ctx.sampleRate),
+      d = b.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 1.6);
-    const s = this.ctx.createBufferSource(); s.buffer = b; const g = this.ctx.createGain(); g.gain.value = vol;
-    const f1 = this.ctx.createBiquadFilter(); f1.type = 'highpass'; f1.frequency.value = hp;
-    const f2 = this.ctx.createBiquadFilter(); f2.type = 'lowpass'; f2.frequency.value = lp;
-    s.connect(f1).connect(f2).connect(g).connect(this.master); s.start(this.ctx.currentTime + when);
+    const s = this.ctx.createBufferSource();
+    s.buffer = b;
+    const g = this.ctx.createGain();
+    g.gain.value = vol;
+    const f1 = this.ctx.createBiquadFilter();
+    f1.type = "highpass";
+    f1.frequency.value = hp;
+    const f2 = this.ctx.createBiquadFilter();
+    f2.type = "lowpass";
+    f2.frequency.value = lp;
+    s.connect(f1).connect(f2).connect(g).connect(this.master);
+    s.start(this.ctx.currentTime + when);
   },
-  rattle(n = 4) { for (let i = 0; i < n; i++) { const w = i * 0.075 + Math.random() * 0.02; this.tone(2600, 1700, 0.035, 0.07, 'square', w); this.noise(0.04, 0.12, 2000, 7000, w); } },
-  found() { this.tone(520, 1560, 0.5, 0.07, 'triangle'); this.tone(1040, 2080, 0.3, 0.04, 'sine', 0.12); },
-  pssh() { this.noise(0.7, 0.16, 2500, 11000); },
-  pop() { this.tone(260, 900, 0.16, 0.24); this.noise(0.12, 0.1, 900, 6000); },
-  whoosh() { this.noise(0.35, 0.08, 900, 5000); this.tone(320, 760, 0.3, 0.035); },
-  sparkle() { [1568, 2093, 2637, 3136, 3951, 4699].forEach((f, i) => this.tone(f, f * 1.01, 0.3, 0.04, 'sine', i * 0.055)); },
-  mew() { this.tone(620, 880, 0.14, 0.08, 'triangle'); this.tone(880, 560, 0.22, 0.08, 'triangle', 0.13); },
-  sputter() { for (let i = 0; i < 3; i++) this.noise(0.05, 0.12, 1500, 6000, i * 0.09); },
-  shutter() { this.noise(0.05, 0.22, 2000, 9000); this.noise(0.07, 0.16, 1200, 6000, 0.08); },
-  undo() { this.tone(700, 420, 0.12, 0.08, 'triangle'); },
+  rattle(n = 4) {
+    for (let i = 0; i < n; i++) {
+      const w = i * 0.075 + Math.random() * 0.02;
+      this.tone(2600, 1700, 0.035, 0.07, "square", w);
+      this.noise(0.04, 0.12, 2000, 7000, w);
+    }
+  },
+  found() {
+    this.tone(520, 1560, 0.5, 0.07, "triangle");
+    this.tone(1040, 2080, 0.3, 0.04, "sine", 0.12);
+  },
+  pssh() {
+    this.noise(0.7, 0.16, 2500, 11000);
+  },
+  pop() {
+    this.tone(260, 900, 0.16, 0.24);
+    this.noise(0.12, 0.1, 900, 6000);
+  },
+  whoosh() {
+    this.noise(0.35, 0.08, 900, 5000);
+    this.tone(320, 760, 0.3, 0.035);
+  },
+  sparkle() {
+    [1568, 2093, 2637, 3136, 3951, 4699].forEach((f, i) =>
+      this.tone(f, f * 1.01, 0.3, 0.04, "sine", i * 0.055),
+    );
+  },
+  mew() {
+    this.tone(620, 880, 0.14, 0.08, "triangle");
+    this.tone(880, 560, 0.22, 0.08, "triangle", 0.13);
+  },
+  sputter() {
+    for (let i = 0; i < 3; i++) this.noise(0.05, 0.12, 1500, 6000, i * 0.09);
+  },
+  shutter() {
+    this.noise(0.05, 0.22, 2000, 9000);
+    this.noise(0.07, 0.16, 1200, 6000, 0.08);
+  },
+  undo() {
+    this.tone(700, 420, 0.12, 0.08, "triangle");
+  },
 };
 
 // ---------------------------------------------------------------- loading
-const loadImg = (src) => new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
-const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(r.status + ' ' + u); return r.json(); });
+const loadImg = (src) =>
+  new Promise((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = src;
+  });
+const getJson = (u) =>
+  fetch(u).then((r) => {
+    if (!r.ok) throw new Error(r.status + " " + u);
+    return r.json();
+  });
 // Each piece's files: its size (layout.json, or the CMS's heightMm), its image targets' data, and its stencil art
 // (mask, lines, cut line). The built-in pieces start loading at once; CMS merch joins once the CMS has answered.
 const layouts = {};
-const layoutOf = (d) => layouts[d] || (layouts[d] = getJson(d + 'layout.json'));
-const artUrls = (P) => P.urls || { mask: HERE + `art/${P.art}-mask.png`, lines: HERE + `art/${P.art}-lines.png`, outline: HERE + `art/${P.art}-outline.json`, print: tdir(P) + P.print };
+const layoutOf = (d) => layouts[d] || (layouts[d] = getJson(d + "layout.json"));
+const artUrls = (P) =>
+  P.urls || {
+    mask: (P.adir || HERE + "art/") + `${P.art}-mask.png`,
+    lines: (P.adir || HERE + "art/") + `${P.art}-lines.png`,
+    outline: (P.adir || HERE + "art/") + `${P.art}-outline.json`,
+    print: tdir(P) + P.print,
+  };
 function pieceAssets(P) {
   if (P.load) return P.load;
   const u = artUrls(P);
   return (P.load = Promise.all([
     P.cms ? Promise.resolve(P.real) : layoutOf(tdir(P)).then((l) => l.targets[P.targets[0]]),
-    P.cms ? Promise.resolve(P.targetData) : Promise.all(P.targets.map((n) => getJson(tdir(P) + `${n}.json`))),
+    P.cms
+      ? Promise.resolve(P.targetData)
+      : Promise.all(P.targets.map((n) => getJson(tdir(P) + `${n}.json`))),
     loadImg(u.mask),
-    u.lines ? loadImg(u.lines).catch((e) => { if (P.cms) return null; throw e; }) : Promise.resolve(null),
+    u.lines
+      ? loadImg(u.lines).catch((e) => {
+          if (P.cms) return null;
+          throw e;
+        })
+      : Promise.resolve(null),
     getJson(u.outline),
   ]).then(([L, tdata, mask, lines, outline]) => {
-    if (!L || !(L.heightM > 0)) throw new Error('no size for ' + P.k);
-    if (!outline || !Array.isArray(outline.points) || outline.points.length < 3) throw new Error('no cut line for ' + P.k);
-    const ln = lines || linesFromMask(mask);              // CMS merch without an outline picture: a rim around the stencil
-    P.L = L; P.tdata = tdata; P.arts = [mask, ln, outline]; P.guideSrc = lines ? u.lines : ln.toDataURL();
+    if (!L || !(L.heightM > 0)) throw new Error("no size for " + P.k);
+    if (!outline || !Array.isArray(outline.points) || outline.points.length < 3)
+      throw new Error("no cut line for " + P.k);
+    const ln = lines || linesFromMask(mask); // CMS merch without an outline picture: a rim around the stencil
+    P.L = L;
+    P.tdata = tdata;
+    P.arts = [mask, ln, outline];
+    P.guideSrc = lines ? u.lines : ln.toDataURL();
     return P;
   }));
 }
 function linesFromMask(mask) {
-  const mk = () => { const c = document.createElement('canvas'); c.width = TW; c.height = TH; return c; };
-  const sil = mk(), sg = sil.getContext('2d'); sg.drawImage(mask, 0, 0, TW, TH); sg.globalCompositeOperation = 'source-in'; sg.fillStyle = '#15131a'; sg.fillRect(0, 0, TW, TH);
-  const c = mk(), g = c.getContext('2d');
+  const mk = () => {
+    const c = document.createElement("canvas");
+    c.width = TW;
+    c.height = TH;
+    return c;
+  };
+  const sil = mk(),
+    sg = sil.getContext("2d");
+  sg.drawImage(mask, 0, 0, TW, TH);
+  sg.globalCompositeOperation = "source-in";
+  sg.fillStyle = "#15131a";
+  sg.fillRect(0, 0, TW, TH);
+  const c = mk(),
+    g = c.getContext("2d");
   for (let a = 0; a < 12; a++) g.drawImage(sil, Math.cos(a * 0.5236) * 4, Math.sin(a * 0.5236) * 4);
-  g.globalCompositeOperation = 'destination-out'; g.drawImage(mask, 0, 0, TW, TH); g.globalCompositeOperation = 'source-over';
+  g.globalCompositeOperation = "destination-out";
+  g.drawImage(mask, 0, 0, TW, TH);
+  g.globalCompositeOperation = "source-over";
   return c;
 }
-for (const P of Object.values(PIECES)) if (!VIEWER) pieceAssets(P).catch(() => {});   // reported below if it matters
-const lumP = loadImg(KC + 'image-targets/kc-bobo_luminance.jpg').catch(() => null);   // for telling the cat's two sides apart
+for (const P of Object.values(PIECES)) if (!VIEWER) pieceAssets(P).catch(() => {}); // reported below if it matters
+const lumP = PIECES.bobo ? loadImg(KC + "image-targets/kc-bobo_luminance.jpg").catch(() => null) : Promise.resolve(null); // for telling the cat's two sides apart
 // What the CMS adds (see cms.js and the README): merch, built-in scenes, ?set=, ?c= (viewer mode)
-let cmsInfo = { notice: '', viewer: null, skipped: [], gone: null, only: null };
+let cmsInfo = { notice: "", viewer: null, skipped: [], gone: null, only: null };
 const BUILT = { ...PIECES };
 function applyCms(r) {
   const p = plan({ builtins: BUILT, list: r.list || [], extra: r.extra || [], only: r.only });
-  for (const [k, sc] of Object.entries(p.scenes)) Object.assign(BUILT[k], { scene: sc.scene, heightMm: +sc.heightMm || 0 });
-  const all = { ...BUILT }; for (const P of p.add) all[P.k] = P;
+  for (const [k, sc] of Object.entries(p.scenes))
+    Object.assign(BUILT[k], { scene: sc.scene, heightMm: +sc.heightMm || 0 });
+  const all = { ...BUILT };
+  for (const P of p.add) all[P.k] = P;
   let order = p.order;
   if (VIEWER) order = r.viewer && all[r.viewer.key] ? [r.viewer.key] : [];
   for (const k of Object.keys(PIECES)) delete PIECES[k];
   for (const k of order) PIECES[k] = all[k];
   if (r.viewer && PIECES[r.viewer.key]) PIECES[r.viewer.key].shared = r.viewer.rec;
-  cmsInfo = { notice: r.notice || '', viewer: r.viewer || null, skipped: p.skipped, gone: r.gone, only: r.only, targets: p.targets, max: MAX_TARGETS };
-  if (p.skipped.length) console.info(`spray-bobo: ${p.skipped.length} CMS piece(s) left out, over the ${MAX_TARGETS} image targets the engine tracks at once (open one with ?set=<id>):`, p.skipped);
+  cmsInfo = {
+    notice: r.notice || "",
+    viewer: r.viewer || null,
+    skipped: p.skipped,
+    gone: r.gone,
+    only: r.only,
+    targets: p.targets,
+    max: MAX_TARGETS,
+  };
+  if (p.skipped.length)
+    console.info(
+      `spray-bobo: ${p.skipped.length} CMS piece(s) left out, over the ${MAX_TARGETS} image targets the engine tracks at once (open one with ?set=<id>):`,
+      p.skipped,
+    );
 }
-const assets = readCms(params).catch(() => ({ list: [], extra: [] })).then(applyCms).then(async () => {
-  const keys = Object.keys(PIECES);
-  const ok = await Promise.all(keys.map((k) => pieceAssets(PIECES[k]).then(() => true, (e) => { if (!PIECES[k].cms) throw e; console.warn('spray-bobo: CMS piece skipped', k, e); return false; })));
-  keys.forEach((k, i) => { if (!ok[i]) delete PIECES[k]; });
-  if (VIEWER && !Object.keys(PIECES).length && !cmsInfo.gone) { cmsInfo.gone = 0; cmsInfo.notice = "Couldn't load that painting right now. Check your connection and try again."; }
-  if (!VIEWER && !Object.keys(PIECES).length) {                       // ?set= merch whose files failed: the usual pieces
-    for (const [k, P] of Object.entries(BUILT)) PIECES[k] = P;
-    await Promise.all(Object.values(PIECES).map(pieceAssets));
-    cmsInfo.notice = "Couldn't load that merch right now, so here are the usual pieces.";
-  }
-  indexPieces(); buildGuide();
-  return { lumImg: await lumP };
-});
+const assets = (BRAND.cms ? readCms(params) : Promise.resolve({ list: [], extra: [] }))
+  .catch(() => ({ list: [], extra: [] }))
+  .then(applyCms)
+  .then(async () => {
+    const keys = Object.keys(PIECES);
+    const ok = await Promise.all(
+      keys.map((k) =>
+        pieceAssets(PIECES[k]).then(
+          () => true,
+          (e) => {
+            if (!PIECES[k].cms) throw e;
+            console.warn("spray-bobo: CMS piece skipped", k, e);
+            return false;
+          },
+        ),
+      ),
+    );
+    keys.forEach((k, i) => {
+      if (!ok[i]) delete PIECES[k];
+    });
+    if (VIEWER && !Object.keys(PIECES).length && !cmsInfo.gone) {
+      cmsInfo.gone = 0;
+      cmsInfo.notice =
+        "Couldn't load that painting right now. Check your connection and try again.";
+    }
+    if (!VIEWER && !Object.keys(PIECES).length) {
+      // ?set= merch whose files failed: the usual pieces
+      for (const [k, P] of Object.entries(BUILT)) PIECES[k] = P;
+      await Promise.all(Object.values(PIECES).map(pieceAssets));
+      cmsInfo.notice = "Couldn't load that merch right now, so here are the usual pieces.";
+    }
+    indexPieces();
+    buildGuide();
+    return { lumImg: await lumP };
+  });
 // the outlines shown while looking (viewer mode: the print itself, so you know what to look for)
 function buildGuide() {
-  const g = $('guide'); g.innerHTML = '';
-  if (VIEWER) { const v = cmsInfo.viewer; if (v && (v.thumb || v.print)) { const im = document.createElement('img'); im.className = 'print'; im.alt = ''; im.src = v.thumb || v.print; g.appendChild(im); } return; }
-  for (const P of Object.values(PIECES).slice(0, 4)) { const im = document.createElement('img'); im.alt = ''; im.src = P.guideSrc; g.appendChild(im); }
+  const g = $("guide");
+  g.innerHTML = "";
+  if (VIEWER) {
+    const v = cmsInfo.viewer;
+    if (v && (v.thumb || v.print)) {
+      const im = document.createElement("img");
+      im.className = "print";
+      im.alt = "";
+      im.src = v.thumb || v.print;
+      g.appendChild(im);
+    }
+    return;
+  }
+  for (const P of Object.values(PIECES).slice(0, 4)) {
+    const im = document.createElement("img");
+    im.alt = "";
+    im.src = P.guideSrc;
+    g.appendChild(im);
+  }
 }
-const xrReady = new Promise((res) => (window.XR8 ? res() : window.addEventListener('xrloaded', () => res(), { once: true })));
+const xrReady = new Promise((res) =>
+  window.XR8 ? res() : window.addEventListener("xrloaded", () => res(), { once: true }),
+);
 let loaded = false;
-Promise.all([assets.then(async (d) => { if (!VIEWER) await loadSaved(); return d; }), xrReady]).then(() => {
-  $('load').hidden = true;
-  if (cmsInfo.notice) { $('notice').textContent = cmsInfo.notice; $('notice').hidden = false; }
-  if (VIEWER && !cmsInfo.viewer) { viewerGone(); return; }
-  loaded = true; $('b-start').disabled = false;
-  $('b-start').textContent = VIEWER ? 'View on merch' : Object.values(PIECES).some((P) => P.saved) ? 'See my paintings' : 'Start painting';
-  if (VIEWER_GO) { document.documentElement.toggleAttribute('data-go', true); $('title').textContent = 'Opening the camera'; $('lead').textContent = 'Allow camera access, then point your phone at the merch.'; start(); }
-  else if (VIEWER) viewerSplash();
-}).catch((e) => { console.error(e); if (VIEWER && !cmsInfo.viewer) { $('load').hidden = true; viewerGone(); return; } showError('Could not load the experience', 'Check your connection and reload the page.'); });
+Promise.all([
+  assets.then(async (d) => {
+    if (!VIEWER) await loadSaved();
+    return d;
+  }),
+  xrReady,
+])
+  .then(() => {
+    $("load").hidden = true;
+    if (cmsInfo.notice) {
+      $("notice").textContent = cmsInfo.notice;
+      $("notice").hidden = false;
+    }
+    if (VIEWER && !cmsInfo.viewer) {
+      viewerGone();
+      return;
+    }
+    loaded = true;
+    $("b-start").disabled = false;
+    $("b-start").textContent = VIEWER
+      ? "View on merch"
+      : Object.values(PIECES).some((P) => P.saved)
+        ? "See my paintings"
+        : "Start painting";
+    if (VIEWER_GO) {
+      document.documentElement.toggleAttribute("data-go", true);
+      $("title").textContent = "Opening the camera";
+      $("lead").textContent = "Allow camera access, then point your phone at the merch.";
+      start();
+    } else if (VIEWER) viewerSplash();
+  })
+  .catch((e) => {
+    console.error(e);
+    if (VIEWER && !cmsInfo.viewer) {
+      $("load").hidden = true;
+      viewerGone();
+      return;
+    }
+    showError("Could not load the experience", "Check your connection and reload the page.");
+  });
 
 // ---------------------------------------------------------------- the paint (a 2D canvas the AR plane shows)
 const makePaint = () => ({
-  P: null, pg: null,            // the paint layer (what was sprayed)
-  D: null, dg: null,            // what is shown: base coat + paint + outline, cut to the cat
-  mask: null, lines: null, maskSmall: null,
-  primer: true, linesOn: true, dirty: true,
-  undo: [], drips: [], wet: new Float32Array(48 * 64), wetCells: new Set(), brushes: new Map(), used: new Map(),
+  P: null,
+  pg: null, // the paint layer (what was sprayed)
+  D: null,
+  dg: null, // what is shown: base coat + paint + outline, cut to the cat
+  mask: null,
+  lines: null,
+  maskSmall: null,
+  primer: true,
+  linesOn: true,
+  dirty: true,
+  undo: [],
+  drips: [],
+  wet: new Float32Array(48 * 64),
+  wetCells: new Set(),
+  brushes: new Map(),
+  used: new Map(),
   coverage: 0,
   init(maskImg, linesImg) {
-    const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
-    this.P = mk(TW, TH); this.pg = this.P.getContext('2d', { willReadFrequently: true });
-    this.D = mk(TW, TH); this.dg = this.D.getContext('2d');
-    this.mask = maskImg; this.lines = linesImg;
-    const s = mk(48, 64), sg = s.getContext('2d', { willReadFrequently: true }); sg.drawImage(maskImg, 0, 0, 48, 64);
-    const md = sg.getImageData(0, 0, 48, 64).data; this.maskSmall = new Uint8Array(48 * 64); for (let i = 0; i < this.maskSmall.length; i++) this.maskSmall[i] = md[i * 4 + 3] > 127 ? 1 : 0;
-    this.covC = mk(48, 64); this.covG = this.covC.getContext('2d', { willReadFrequently: true });
+    const mk = (w, h) => {
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      return c;
+    };
+    this.P = mk(TW, TH);
+    this.pg = this.P.getContext("2d", { willReadFrequently: true });
+    this.D = mk(TW, TH);
+    this.dg = this.D.getContext("2d");
+    this.mask = maskImg;
+    this.lines = linesImg;
+    const s = mk(48, 64),
+      sg = s.getContext("2d", { willReadFrequently: true });
+    sg.drawImage(maskImg, 0, 0, 48, 64);
+    const md = sg.getImageData(0, 0, 48, 64).data;
+    this.maskSmall = new Uint8Array(48 * 64);
+    for (let i = 0; i < this.maskSmall.length; i++) this.maskSmall[i] = md[i * 4 + 3] > 127 ? 1 : 0;
+    this.covC = mk(48, 64);
+    this.covG = this.covC.getContext("2d", { willReadFrequently: true });
   },
-  brush(col) {                   // a soft dot in one colour, the spray's core
-    let b = this.brushes.get(col); if (b) return b;
-    b = document.createElement('canvas'); b.width = b.height = 64; const g = b.getContext('2d');
-    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); const c = new THREE.Color(col);
+  brush(col) {
+    // a soft dot in one colour, the spray's core
+    let b = this.brushes.get(col);
+    if (b) return b;
+    b = document.createElement("canvas");
+    b.width = b.height = 64;
+    const g = b.getContext("2d");
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const c = new THREE.Color(col);
     const rgb = `${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)}`;
-    gr.addColorStop(0, `rgba(${rgb},1)`); gr.addColorStop(0.45, `rgba(${rgb},.55)`); gr.addColorStop(1, `rgba(${rgb},0)`);
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 64); this.brushes.set(col, b); return b;
+    gr.addColorStop(0, `rgba(${rgb},1)`);
+    gr.addColorStop(0.45, `rgba(${rgb},.55)`);
+    gr.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 64, 64);
+    this.brushes.set(col, b);
+    return b;
   },
   // one frame of spray at (u, v) (0..1, v down), r = footprint radius in texture px
   spray(u, v, r, col, dt) {
-    const x = u * TW, y = v * TH, f = clamp(dt * 60, 0.3, 3), g = this.pg;
-    g.globalAlpha = Math.min(1, 0.46 * f * clamp(16 / r, 0.4, 1.4)); g.drawImage(this.brush(col), x - r, y - r, 2 * r, 2 * r);
-    g.globalAlpha = 0.9; g.fillStyle = col;
-    const n = Math.round((18 + r * 1.5) * f), dotS = Math.max(1, r / 26);
+    const x = u * TW,
+      y = v * TH,
+      f = clamp(dt * 60, 0.3, 3),
+      g = this.pg;
+    g.globalAlpha = Math.min(1, 0.46 * f * clamp(16 / r, 0.4, 1.4));
+    g.drawImage(this.brush(col), x - r, y - r, 2 * r, 2 * r);
+    g.globalAlpha = 0.9;
+    g.fillStyle = col;
+    const n = Math.round((18 + r * 1.5) * f),
+      dotS = Math.max(1, r / 26);
     for (let i = 0; i < n; i++) {
-      const dx = gauss() * r * 0.5, dy = gauss() * r * 0.5, s = (0.6 + Math.random() * 1.3) * dotS;
+      const dx = gauss() * r * 0.5,
+        dy = gauss() * r * 0.5,
+        s = (0.6 + Math.random() * 1.3) * dotS;
       g.fillRect(x + dx - s / 2, y + dy - s / 2, s, s);
     }
-    g.globalAlpha = 0.55;                          // overspray: a few fine flecks further out, like a real can
-    for (let i = 0, m = Math.round((3 + r * 0.35) * f); i < m; i++) { const s = dotS * (0.5 + Math.random() * 0.7); g.fillRect(x + gauss() * r * 1.05 - s / 2, y + gauss() * r * 1.05 - s / 2, s, s); }
+    g.globalAlpha = 0.55; // overspray: a few fine flecks further out, like a real can
+    for (let i = 0, m = Math.round((3 + r * 0.35) * f); i < m; i++) {
+      const s = dotS * (0.5 + Math.random() * 0.7);
+      g.fillRect(x + gauss() * r * 1.05 - s / 2, y + gauss() * r * 1.05 - s / 2, s, s);
+    }
     g.globalAlpha = 1;
     this.used.set(col, (this.used.get(col) || 0) + dt);
     // wet paint: a spot sprayed long and close starts to run
-    const cx = clamp(Math.floor(x / 16), 0, 47), cy = clamp(Math.floor(y / 16), 0, 63), ci = cy * 48 + cx;
-    this.wet[ci] += f * 0.05 * clamp(18 / r, 0.4, 2.5); this.wetCells.add(ci);
+    const cx = clamp(Math.floor(x / 16), 0, 47),
+      cy = clamp(Math.floor(y / 16), 0, 63),
+      ci = cy * 48 + cx;
+    this.wet[ci] += f * 0.05 * clamp(18 / r, 0.4, 2.5);
+    this.wetCells.add(ci);
     if (this.wet[ci] > 1.2 && Math.random() < 0.07 * f && this.drips.length < 24) {
       this.wet[ci] *= 0.55;
-      this.drips.push({ x: x + gauss() * r * 0.25, y: y + r * 0.35, w: 2 + r * 0.1, len: 24 + Math.random() * 80, sp: 40 + Math.random() * 40, col });
+      this.drips.push({
+        x: x + gauss() * r * 0.25,
+        y: y + r * 0.35,
+        w: 2 + r * 0.1,
+        len: 24 + Math.random() * 80,
+        sp: 40 + Math.random() * 40,
+        col,
+      });
     }
     this.dirty = true;
   },
   // runs the drips down (the direction comes from the phone's gravity, projected onto the charm)
   tick(dt, down) {
-    for (const ci of this.wetCells) { this.wet[ci] *= Math.pow(0.4, dt); if (this.wet[ci] < 0.02) { this.wet[ci] = 0; this.wetCells.delete(ci); } }
+    for (const ci of this.wetCells) {
+      this.wet[ci] *= Math.pow(0.4, dt);
+      if (this.wet[ci] < 0.02) {
+        this.wet[ci] = 0;
+        this.wetCells.delete(ci);
+      }
+    }
     if (!this.drips.length) return;
     const g = this.pg;
     for (let i = this.drips.length - 1; i >= 0; i--) {
-      const d = this.drips[i]; const step = d.sp * dt * (down ? down.k : 1);
-      if (step < 0.05) continue;                              // the charm is lying flat: the paint pools
-      g.fillStyle = d.col; g.globalAlpha = 0.95;
-      const dx = down ? down.x : 0, dy = down ? down.y : 1;
-      for (let s = 0; s < step; s += 1) { g.beginPath(); g.arc(d.x, d.y, d.w, 0, 7); g.fill(); d.x += dx; d.y += dy; }
-      d.len -= step; d.sp *= Math.pow(0.55, dt); d.w = Math.max(0.8, d.w * Math.pow(0.85, dt));
-      if (d.len <= 0 || d.sp < 6) { g.beginPath(); g.arc(d.x, d.y, d.w * 1.7, 0, 7); g.fill(); this.drips.splice(i, 1); }
+      const d = this.drips[i];
+      const step = d.sp * dt * (down ? down.k : 1);
+      if (step < 0.05) continue; // the charm is lying flat: the paint pools
+      g.fillStyle = d.col;
+      g.globalAlpha = 0.95;
+      const dx = down ? down.x : 0,
+        dy = down ? down.y : 1;
+      for (let s = 0; s < step; s += 1) {
+        g.beginPath();
+        g.arc(d.x, d.y, d.w, 0, 7);
+        g.fill();
+        d.x += dx;
+        d.y += dy;
+      }
+      d.len -= step;
+      d.sp *= Math.pow(0.55, dt);
+      d.w = Math.max(0.8, d.w * Math.pow(0.85, dt));
+      if (d.len <= 0 || d.sp < 6) {
+        g.beginPath();
+        g.arc(d.x, d.y, d.w * 1.7, 0, 7);
+        g.fill();
+        this.drips.splice(i, 1);
+      }
       this.dirty = true;
     }
     g.globalAlpha = 1;
   },
   composite() {
-    if (!this.dirty) return false; this.dirty = false;
-    const g = this.dg; g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, TW, TH);
-    if (this.primer) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); }
+    if (!this.dirty) return false;
+    this.dirty = false;
+    const g = this.dg;
+    g.globalCompositeOperation = "source-over";
+    g.clearRect(0, 0, TW, TH);
+    if (this.primer) {
+      g.fillStyle = "#fbfaf5";
+      g.fillRect(0, 0, TW, TH);
+    }
     g.drawImage(this.P, 0, 0);
     if (this.linesOn) g.drawImage(this.lines, 0, 0, TW, TH);
-    g.globalCompositeOperation = 'destination-in'; g.drawImage(this.mask, 0, 0, TW, TH); g.globalCompositeOperation = 'source-over';
+    g.globalCompositeOperation = "destination-in";
+    g.drawImage(this.mask, 0, 0, TW, TH);
+    g.globalCompositeOperation = "source-over";
     return true;
   },
-  measure() {                     // share of the cat that has paint on it
-    this.covG.clearRect(0, 0, 48, 64); this.covG.drawImage(this.P, 0, 0, 48, 64);
-    const d = this.covG.getImageData(0, 0, 48, 64).data; let n = 0, t = 0;
-    for (let i = 0; i < this.maskSmall.length; i++) if (this.maskSmall[i]) { t++; if (d[i * 4 + 3] > 60) n++; }
-    this.coverage = t ? n / t : 0; return this.coverage;
+  measure() {
+    // share of the cat that has paint on it
+    this.covG.clearRect(0, 0, 48, 64);
+    this.covG.drawImage(this.P, 0, 0, 48, 64);
+    const d = this.covG.getImageData(0, 0, 48, 64).data;
+    let n = 0,
+      t = 0;
+    for (let i = 0; i < this.maskSmall.length; i++)
+      if (this.maskSmall[i]) {
+        t++;
+        if (d[i * 4 + 3] > 60) n++;
+      }
+    this.coverage = t ? n / t : 0;
+    return this.coverage;
   },
-  pushUndo() { try { this.undo.push(this.pg.getImageData(0, 0, TW, TH)); if (this.undo.length > 12) this.undo.shift(); } catch (e) { /* memory */ } },
-  popUndo() { const d = this.undo.pop(); if (!d) return false; this.pg.putImageData(d, 0, 0); this.drips.length = 0; this.dirty = true; return true; },
-  clear() { this.pg.clearRect(0, 0, TW, TH); this.drips.length = 0; this.used.clear(); this.undo.length = 0; this.dirty = true; },
-  topColours(n = 5) { const a = [...this.used.entries()].sort((x, y) => y[1] - x[1]).map((e) => e[0]); return a.length ? a.slice(0, n) : ['#f6c344', '#3f9be6', '#e85bd8']; },
+  pushUndo() {
+    try {
+      this.undo.push(this.pg.getImageData(0, 0, TW, TH));
+      if (this.undo.length > 12) this.undo.shift();
+    } catch (e) {
+      /* memory */
+    }
+  },
+  popUndo() {
+    const d = this.undo.pop();
+    if (!d) return false;
+    this.pg.putImageData(d, 0, 0);
+    this.drips.length = 0;
+    this.dirty = true;
+    return true;
+  },
+  clear() {
+    this.pg.clearRect(0, 0, TW, TH);
+    this.drips.length = 0;
+    this.used.clear();
+    this.undo.length = 0;
+    this.dirty = true;
+  },
+  topColours(n = 5) {
+    const a = [...this.used.entries()].sort((x, y) => y[1] - x[1]).map((e) => e[0]);
+    return a.length ? a.slice(0, n) : [ACC, "#3f9be6", "#e85bd8"];
+  },
 });
 
 // ---------------------------------------------------------------- saved painting (IndexedDB, on this phone only)
-let saved = null;     // the current charm's: { paint: Blob, primer, linesOn, colours, at } (each charm keeps its own, PIECES[k].saved)
+let saved = null; // the current charm's: { paint: Blob, primer, linesOn, colours, at } (each charm keeps its own, PIECES[k].saved)
 function idb() {
   return new Promise((res, rej) => {
-    try { const r = indexedDB.open('spray-bobo', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
+    try {
+      const r = indexedDB.open(BRAND.db, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("kv");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    } catch (e) {
+      rej(e);
+    }
   });
 }
 async function loadSaved() {
   try {
     const db = await idb();
-    for (const P of Object.values(PIECES)) P.saved = await new Promise((res) => { const q = db.transaction('kv').objectStore('kv').get(P.key); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); });
-  } catch (e) { /* none saved */ }
+    for (const P of Object.values(PIECES))
+      P.saved = await new Promise((res) => {
+        const q = db.transaction("kv").objectStore("kv").get(P.key);
+        q.onsuccess = () => res(q.result || null);
+        q.onerror = () => res(null);
+      });
+  } catch (e) {
+    /* none saved */
+  }
 }
 async function storeSaved(rec) {
-  if (VIEWER || cp.shared) return false;                 // a shared painting is never written over this phone's own
+  if (VIEWER || cp.shared) return false; // a shared painting is never written over this phone's own
   cp.saved = rec;
-  try { const db = await idb(); await new Promise((res, rej) => { const tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(rec, cp.key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch (e) { console.warn('save', e); return false; }
+  try {
+    const db = await idb();
+    await new Promise((res, rej) => {
+      const tx = db.transaction("kv", "readwrite");
+      tx.objectStore("kv").put(rec, cp.key);
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+    return true;
+  } catch (e) {
+    console.warn("save", e);
+    return false;
+  }
 }
-async function dropSaved() { if (VIEWER || cp.shared) return; try { const db = await idb(); db.transaction('kv', 'readwrite').objectStore('kv').delete(cp.key); } catch (e) { /* none */ } saved = cp.saved = null; clearDecals(cp); }
+async function dropSaved() {
+  if (VIEWER || cp.shared) return;
+  try {
+    const db = await idb();
+    db.transaction("kv", "readwrite").objectStore("kv").delete(cp.key);
+  } catch (e) {
+    /* none */
+  }
+  saved = cp.saved = null;
+  clearDecals(cp);
+}
 
 // ---------------------------------------------------------------- three.js scene
 let scene, camera, renderer;
-const A = new THREE.Group();                  // follows the charm (world units per metre in its scale)
+const A = new THREE.Group(); // follows the charm (world units per metre in its scale)
 // The current charm's things (each charm has its own set, see usePiece): its picture in metres, its frame
 // (x flipped on the charm's other side), its paint, the canvas on it, its outline, sticker, shadow, splats.
-let cp = null, W = 0.0601, H = 0.0801, F = null, paint = null;
-let paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, debugFrame, orbit, shine;
+let cp = null,
+  W = 0.0601,
+  H = 0.0801,
+  F = null,
+  paint = null;
+let paintTex,
+  paintMesh,
+  previewMesh,
+  stickerPivot,
+  sticker,
+  shadow,
+  splats,
+  debugFrame,
+  orbit,
+  shine;
 let stickerTex, stickerCanvas;
 const clock = { t: 0 };
 function buildScene(xr, { lumImg }) {
   ({ scene, camera, renderer } = xr);
   probes = lumImg ? buildProbes(lumImg) : null;
-  renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NeutralToneMapping;
   const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture; scene.environmentIntensity = 0.7;
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.7;
   scene.add(new THREE.HemisphereLight(0xffffff, 0x5a5560, 1.4));
-  const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(1.2, 2.5, 4); scene.add(key);
-  camera.position.set(0, 0, 0); camera.quaternion.identity();
-  XR8.XrController.updateCameraProjectionMatrix({ origin: camera.position, facing: camera.quaternion });
-  scene.add(A); A.visible = false; A.matrixAutoUpdate = true;
+  const key = new THREE.DirectionalLight(0xffffff, 1.5);
+  key.position.set(1.2, 2.5, 4);
+  scene.add(key);
+  camera.position.set(0, 0, 0);
+  camera.quaternion.identity();
+  XR8.XrController.updateCameraProjectionMatrix({
+    origin: camera.position,
+    facing: camera.quaternion,
+  });
+  scene.add(A);
+  A.visible = false;
+  A.matrixAutoUpdate = true;
   Object.values(PIECES).forEach((P) => buildPiece(P, P.L, P.arts));
   usePiece(Object.keys(PIECES)[0]);
 }
 function buildPiece(P, L, [maskImg, linesImg, outline]) {
-  const vk = P.view ? P.view / L.heightM : 1;               // drawn at this share of its real size
-  const W = P.W = L.widthM * vk, H = P.H = L.heightM * vk; P.m = 1 / vk;   // P.m: AR units to real metres
-  const F = P.F = new THREE.Group(); F.visible = false; A.add(F);
+  const vk = P.view ? P.view / L.heightM : 1; // drawn at this share of its real size
+  const W = (P.W = L.widthM * vk),
+    H = (P.H = L.heightM * vk);
+  P.m = 1 / vk; // P.m: AR units to real metres
+  const F = (P.F = new THREE.Group());
+  F.visible = false;
+  A.add(F);
   // where the canvas sits on the other side: the can's outline file has it; CMS merch has it per target (metres)
-  P.xf = P.cms ? Object.fromEntries(Object.entries(P.xf0 || {}).map(([n, x]) => [n, { x: x.x * vk, y: x.y * vk, rz: x.rz, s: x.s }])) : outline.sides || {};
-  const paint = P.paint = makePaint(); paint.init(maskImg, linesImg);
-  P.centre = maskCentre(paint.maskSmall);                  // the middle of the stencil (uv, y down): the canvas spreads from here
+  P.xf = P.cms
+    ? Object.fromEntries(
+        Object.entries(P.xf0 || {}).map(([n, x]) => [
+          n,
+          { x: x.x * vk, y: x.y * vk, rz: x.rz, s: x.s },
+        ]),
+      )
+    : outline.sides || {};
+  const paint = (P.paint = makePaint());
+  paint.init(maskImg, linesImg);
+  P.centre = maskCentre(paint.maskSmall); // the middle of the stencil (uv, y down): the canvas spreads from here
   // the canvas on the charm. It spreads out from the middle of the charm with a ragged wet edge in EVADE
   // yellow (uReveal), flashes white when saved (uFlash), and fades as the sticker lifts off (uOpacity)
-  P.paintTex = new THREE.CanvasTexture(paint.D); P.paintTex.colorSpace = THREE.SRGBColorSpace; P.paintTex.anisotropy = 4;
-  const maskTex = new THREE.Texture(maskImg); maskTex.needsUpdate = true;
-  P.paintMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.ShaderMaterial({
-    uniforms: { map: { value: P.paintTex }, mask: { value: maskTex }, uReveal: { value: 0 }, uFlash: { value: 0 }, uOpacity: { value: 1 }, uTime: { value: 0 },
-      uEdge: { value: new THREE.Color('#f6c344') }, uInk: { value: new THREE.Color('#15131a') }, uC: { value: new THREE.Vector2(P.centre[0], 1 - P.centre[1]) }, uAsp: { value: W / H } },
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: /* glsl */ `
+  P.paintTex = new THREE.CanvasTexture(paint.D);
+  P.paintTex.colorSpace = THREE.SRGBColorSpace;
+  P.paintTex.anisotropy = 4;
+  const maskTex = new THREE.Texture(maskImg);
+  maskTex.needsUpdate = true;
+  P.paintMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, H),
+    new THREE.ShaderMaterial({
+      uniforms: {
+        map: { value: P.paintTex },
+        mask: { value: maskTex },
+        uReveal: { value: 0 },
+        uFlash: { value: 0 },
+        uOpacity: { value: 1 },
+        uTime: { value: 0 },
+        uEdge: { value: new THREE.Color(ACC) },
+        uInk: { value: new THREE.Color("#15131a") },
+        uC: { value: new THREE.Vector2(P.centre[0], 1 - P.centre[1]) },
+        uAsp: { value: W / H },
+      },
+      vertexShader:
+        "varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: /* glsl */ `
       precision highp float; varying vec2 vUv;
       uniform sampler2D map, mask; uniform float uReveal, uFlash, uOpacity, uTime, uAsp; uniform vec3 uEdge, uInk; uniform vec2 uC;
       float hs(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -387,151 +917,387 @@ function buildPiece(P, L, [maskImg, linesImg, outline]) {
         gl_FragColor = vec4(col, a);
         #include <colorspace_fragment>
       }`,
-    transparent: true, depthWrite: false, side: THREE.DoubleSide,
-  }));
-  P.paintMesh.position.z = 0.0003; P.paintMesh.renderOrder = 10; P.paintMesh.visible = false; F.add(P.paintMesh);
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  P.paintMesh.position.z = 0.0003;
+  P.paintMesh.renderOrder = 10;
+  P.paintMesh.visible = false;
+  F.add(P.paintMesh);
   // "found you": the charm's outline lights up in EVADE yellow
-  P.previewMesh = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: outlineTexture(linesImg), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-  P.previewMesh.position.z = 0.0004; P.previewMesh.renderOrder = 11; P.previewMesh.visible = false; F.add(P.previewMesh);
+  P.previewMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(W, H),
+    new THREE.MeshBasicMaterial({
+      map: outlineTexture(linesImg),
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  P.previewMesh.position.z = 0.0004;
+  P.previewMesh.renderOrder = 11;
+  P.previewMesh.visible = false;
+  F.add(P.previewMesh);
   // the finished painting as a 3D die-cut sticker, with a flat shine band that sweeps over it now and then
-  P.stickerCanvas = document.createElement('canvas'); P.stickerCanvas.width = TW; P.stickerCanvas.height = TH;
-  P.stickerTex = new THREE.CanvasTexture(P.stickerCanvas); P.stickerTex.colorSpace = THREE.SRGBColorSpace; P.stickerTex.anisotropy = 4;
-  P.stickerPivot = new THREE.Group(); F.add(P.stickerPivot); P.stickerPivot.visible = false;
+  P.stickerCanvas = document.createElement("canvas");
+  P.stickerCanvas.width = TW;
+  P.stickerCanvas.height = TH;
+  P.stickerTex = new THREE.CanvasTexture(P.stickerCanvas);
+  P.stickerTex.colorSpace = THREE.SRGBColorSpace;
+  P.stickerTex.anisotropy = 4;
+  P.stickerPivot = new THREE.Group();
+  F.add(P.stickerPivot);
+  P.stickerPivot.visible = false;
   P.shine = { value: -1 };
-  const face = new THREE.MeshPhysicalMaterial({ map: P.stickerTex, roughness: 0.42, clearcoat: 1, clearcoatRoughness: 0.12, side: THREE.DoubleSide });
+  const face = new THREE.MeshPhysicalMaterial({
+    map: P.stickerTex,
+    roughness: 0.42,
+    clearcoat: 1,
+    clearcoatRoughness: 0.12,
+    side: THREE.DoubleSide,
+  });
   face.onBeforeCompile = (sh) => {
     sh.uniforms.uShine = P.shine;
-    sh.fragmentShader = 'uniform float uShine;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
-      '#include <emissivemap_fragment>\n{ float sb = vMapUv.x * 0.55 + (1.0 - vMapUv.y); totalEmissiveRadiance += vec3(0.6) * (step(abs(sb - uShine), 0.045) + 0.7 * step(abs(sb - uShine + 0.12), 0.014)); }');
+    sh.fragmentShader =
+      "uniform float uShine;\n" +
+      sh.fragmentShader.replace(
+        "#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\n{ float sb = vMapUv.x * 0.55 + (1.0 - vMapUv.y); totalEmissiveRadiance += vec3(0.6) * (step(abs(sb - uShine), 0.045) + 0.7 * step(abs(sb - uShine + 0.12), 0.014)); }",
+      );
   };
-  P.sticker = new THREE.Mesh(stickerGeometry(outline.points, W, H), [face, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 })]);
-  P.sticker.renderOrder = 12; P.stickerPivot.add(P.sticker);
-  P.shadow = new THREE.Mesh(new THREE.PlaneGeometry(W * 0.95, H * 0.95), new THREE.MeshBasicMaterial({ map: shadowTexture(maskImg), transparent: true, depthWrite: false, opacity: 0 }));
-  P.shadow.position.z = 0.0002; P.shadow.renderOrder = 9; F.add(P.shadow);
-  P.decals = []; P.decalGroup = new THREE.Group(); P.decalGroup.visible = false; decalHost(P, 'flat');
-  P.splats = makeSplats(); F.add(P.splats.points);
-  P.orbit = makeOrbit(); F.add(P.orbit.mesh);
-  if (DEBUG) F.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)), new THREE.LineBasicMaterial({ color: 0xff00ff })));
+  P.sticker = new THREE.Mesh(stickerGeometry(outline.points, W, H), [
+    face,
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 }),
+  ]);
+  P.sticker.renderOrder = 12;
+  P.stickerPivot.add(P.sticker);
+  P.shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(W * 0.95, H * 0.95),
+    new THREE.MeshBasicMaterial({
+      map: shadowTexture(maskImg),
+      transparent: true,
+      depthWrite: false,
+      opacity: 0,
+    }),
+  );
+  P.shadow.position.z = 0.0002;
+  P.shadow.renderOrder = 9;
+  F.add(P.shadow);
+  P.decals = [];
+  P.decalGroup = new THREE.Group();
+  P.decalGroup.visible = false;
+  decalHost(P, "flat");
+  P.splats = makeSplats();
+  F.add(P.splats.points);
+  P.orbit = makeOrbit();
+  F.add(P.orbit.mesh);
+  if (DEBUG)
+    F.add(
+      new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.PlaneGeometry(W, H)),
+        new THREE.LineBasicMaterial({ color: 0xff00ff }),
+      ),
+    );
   if (P.shared || P.saved) P.restoring = restorePaint(P.shared || P.saved, P);
   // things placed around the print in the CMS (models, pictures, video), at real size; see scene.js
   const hmm = +P.heightMm > 0 ? +P.heightMm : L.heightM * 1000;
-  try { P.sc = makeScene({ scene: P.scene, heightMm: hmm, W, H, host: A, soundOn: () => sound.on }); } catch (e) { console.warn('scene', e); P.sc = null; }
+  try {
+    P.sc = makeScene({ scene: P.scene, heightMm: hmm, W, H, host: A, soundOn: () => sound.on });
+  } catch (e) {
+    console.warn("scene", e);
+    P.sc = null;
+  }
 }
 // make a charm the current one: the globals the rest of the page uses point at its things
 function usePiece(k) {
-  const P = PIECES[k]; if (cp === P && P.F.visible) return;
+  const P = PIECES[k];
+  if (cp === P && P.F.visible) return;
   if (cp) cp.F.visible = false;
-  cp = P; ({ W, H, F, paint, paintTex, paintMesh, previewMesh, stickerPivot, sticker, shadow, splats, orbit, shine, stickerTex, stickerCanvas } = P);
-  saved = P.saved || null; F.visible = true; document.documentElement.dataset.piece = k;
-  document.documentElement.toggleAttribute('data-viewer', VIEWER);
+  cp = P;
+  ({
+    W,
+    H,
+    F,
+    paint,
+    paintTex,
+    paintMesh,
+    previewMesh,
+    stickerPivot,
+    sticker,
+    shadow,
+    splats,
+    orbit,
+    shine,
+    stickerTex,
+    stickerCanvas,
+  } = P);
+  saved = P.saved || null;
+  F.visible = true;
+  document.documentElement.dataset.piece = k;
+  document.documentElement.toggleAttribute("data-viewer", VIEWER);
 }
-function maskCentre(m) {   // the centroid of the 48x64 stencil, in uv (y down)
-  let x = 0, y = 0, n = 0; for (let i = 0; i < m.length; i++) if (m[i]) { x += i % 48; y += Math.floor(i / 48); n++; }
+function maskCentre(m) {
+  // the centroid of the 48x64 stencil, in uv (y down)
+  let x = 0,
+    y = 0,
+    n = 0;
+  for (let i = 0; i < m.length; i++)
+    if (m[i]) {
+      x += i % 48;
+      y += Math.floor(i / 48);
+      n++;
+    }
   return n ? [(x / n + 0.5) / 48, (y / n + 0.5) / 64] : [0.5, 0.5];
 }
 // paint drops in your colours, orbiting the finished sticker (they pass behind him)
 function makeOrbit() {
-  const N = 7, mesh = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshPhysicalMaterial({ roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }), N);
-  mesh.visible = false; mesh.renderOrder = 13; mesh.frustumCulled = false;
-  const c = new THREE.Color('#f6c344'); for (let i = 0; i < N; i++) mesh.setColorAt(i, c);
+  const N = 7,
+    mesh = new THREE.InstancedMesh(
+      new THREE.SphereGeometry(1, 14, 10),
+      new THREE.MeshPhysicalMaterial({ roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 }),
+      N,
+    );
+  mesh.visible = false;
+  mesh.renderOrder = 13;
+  mesh.frustumCulled = false;
+  const c = new THREE.Color(ACC);
+  for (let i = 0; i < N; i++) mesh.setColorAt(i, c);
   return { mesh, N, on: 0 };
 }
-const _om = new THREE.Matrix4(), _oq = new THREE.Quaternion(), _op = new THREE.Vector3(), _os = new THREE.Vector3();
+const _om = new THREE.Matrix4(),
+  _oq = new THREE.Quaternion(),
+  _op = new THREE.Vector3(),
+  _os = new THREE.Vector3();
 function tickOrbit(dt, zc) {
-  const o = orbit; if (!o) return;
-  const want = mode === 'alive' && life.phase === 'idle' ? 1 : 0;
-  o.on += (want - o.on) * Math.min(1, dt * 3); o.mesh.visible = o.on > 0.02; if (!o.mesh.visible) return;
-  const t = clock.t, R = W * 0.62;
+  const o = orbit;
+  if (!o) return;
+  const want = mode === "alive" && life.phase === "idle" ? 1 : 0;
+  o.on += (want - o.on) * Math.min(1, dt * 3);
+  o.mesh.visible = o.on > 0.02;
+  if (!o.mesh.visible) return;
+  const t = clock.t,
+    R = W * 0.62;
   for (let i = 0; i < o.N; i++) {
-    const a = t * 0.9 + (i / o.N) * Math.PI * 2, r = 0.0016 + 0.0008 * Math.sin(i * 2.3) ;
-    _op.set(Math.cos(a) * R, -H * 0.08 + Math.sin(a * 2 + i) * H * 0.06, zc + Math.sin(a) * R * 0.55);
+    const a = t * 0.9 + (i / o.N) * Math.PI * 2,
+      r = 0.0016 + 0.0008 * Math.sin(i * 2.3);
+    _op.set(
+      Math.cos(a) * R,
+      -H * 0.08 + Math.sin(a * 2 + i) * H * 0.06,
+      zc + Math.sin(a) * R * 0.55,
+    );
     _os.setScalar(r * o.on * (1 + 0.15 * Math.sin(t * 6 + i)));
     o.mesh.setMatrixAt(i, _om.compose(_op, _oq, _os));
   }
   o.mesh.instanceMatrix.needsUpdate = true;
 }
-function colourOrbit(cols) { const c = new THREE.Color(); for (let i = 0; i < orbit.N; i++) { c.set(cols[i % cols.length]); orbit.mesh.setColorAt(i, c); } orbit.mesh.instanceColor.needsUpdate = true; }
-function outlineTexture(linesImg) {   // flat: an ink rim, then the lines in EVADE yellow
-  const c = document.createElement('canvas'); c.width = TW; c.height = TH; const g = c.getContext('2d');
-  const tint = (col) => { const t = document.createElement('canvas'); t.width = TW; t.height = TH; const tg = t.getContext('2d'); tg.drawImage(linesImg, 0, 0, TW, TH); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = col; tg.fillRect(0, 0, TW, TH); return t; };
-  const ink = tint('#15131a'), yel = tint('#f6c344');
-  for (let a = 0; a < 8; a++) g.drawImage(ink, Math.cos(a * 0.785) * 3, Math.sin(a * 0.785) * 3);
-  g.drawImage(yel, 0, 0); g.drawImage(yel, 1, 0); g.drawImage(yel, 0, 1);
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+function colourOrbit(cols) {
+  const c = new THREE.Color();
+  for (let i = 0; i < orbit.N; i++) {
+    c.set(cols[i % cols.length]);
+    orbit.mesh.setColorAt(i, c);
+  }
+  orbit.mesh.instanceColor.needsUpdate = true;
 }
-function shadowTexture(maskImg) {   // the sticker's soft shadow on the print: the cat's shape, blurred, in black
-  const c = document.createElement('canvas'); c.width = 192; c.height = 256; const g = c.getContext('2d');
-  g.filter = 'blur(10px)'; g.drawImage(maskImg, 16, 20, 160, 214); g.filter = 'none';
-  g.globalCompositeOperation = 'source-in'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, 0, 192, 256);
+function outlineTexture(linesImg) {
+  // flat: an ink rim, then the lines in EVADE yellow
+  const c = document.createElement("canvas");
+  c.width = TW;
+  c.height = TH;
+  const g = c.getContext("2d");
+  const tint = (col) => {
+    const t = document.createElement("canvas");
+    t.width = TW;
+    t.height = TH;
+    const tg = t.getContext("2d");
+    tg.drawImage(linesImg, 0, 0, TW, TH);
+    tg.globalCompositeOperation = "source-in";
+    tg.fillStyle = col;
+    tg.fillRect(0, 0, TW, TH);
+    return t;
+  };
+  const ink = tint("#15131a"),
+    yel = tint(ACC);
+  for (let a = 0; a < 8; a++) g.drawImage(ink, Math.cos(a * 0.785) * 3, Math.sin(a * 0.785) * 3);
+  g.drawImage(yel, 0, 0);
+  g.drawImage(yel, 1, 0);
+  g.drawImage(yel, 0, 1);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+function shadowTexture(maskImg) {
+  // the sticker's soft shadow on the print: the cat's shape, blurred, in black
+  const c = document.createElement("canvas");
+  c.width = 192;
+  c.height = 256;
+  const g = c.getContext("2d");
+  g.filter = "blur(10px)";
+  g.drawImage(maskImg, 16, 20, 160, 214);
+  g.filter = "none";
+  g.globalCompositeOperation = "source-in";
+  g.fillStyle = "rgba(0,0,0,.55)";
+  g.fillRect(0, 0, 192, 256);
   return new THREE.CanvasTexture(c);
 }
 function stickerGeometry(points, W, H) {
-  const shape = new THREE.Shape(points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H)));
+  const shape = new THREE.Shape(
+    points.map(([u, v]) => new THREE.Vector2((u - 0.5) * W, (0.5 - v) * H)),
+  );
   const depth = 0.0022;
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.0005, bevelSize: 0.0006, bevelSegments: 3, curveSegments: 2 });
-  const pos = geo.attributes.position, uv = geo.attributes.uv;
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    bevelEnabled: true,
+    bevelThickness: 0.0005,
+    bevelSize: 0.0006,
+    bevelSegments: 3,
+    curveSegments: 2,
+  });
+  const pos = geo.attributes.position,
+    uv = geo.attributes.uv;
   for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getX(i) / W + 0.5, pos.getY(i) / H + 0.5);
-  uv.needsUpdate = true; geo.translate(0, 0, -depth / 2); geo.computeVertexNormals();
+  uv.needsUpdate = true;
+  geo.translate(0, 0, -depth / 2);
+  geo.computeVertexNormals();
   return geo;
 }
 // paint splats: a burst in the colours you used
 function makeSplats() {
-  const N = 160, geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-  geo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(32, 32, 26, 0, 7); g.fill();
-  for (let i = 0; i < 6; i++) { const a = i * 1.05 + 0.3; g.beginPath(); g.arc(32 + Math.cos(a) * 26, 32 + Math.sin(a) * 26, 6, 0, 7); g.fill(); }
-  const points = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1, map: new THREE.CanvasTexture(c), vertexColors: true, transparent: true, alphaTest: 0.4, depthWrite: false }));
-  points.renderOrder = 14; points.frustumCulled = false;
+  const N = 160,
+    geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  geo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.arc(32, 32, 26, 0, 7);
+  g.fill();
+  for (let i = 0; i < 6; i++) {
+    const a = i * 1.05 + 0.3;
+    g.beginPath();
+    g.arc(32 + Math.cos(a) * 26, 32 + Math.sin(a) * 26, 6, 0, 7);
+    g.fill();
+  }
+  const points = new THREE.Points(
+    geo,
+    new THREE.PointsMaterial({
+      size: 1,
+      map: new THREE.CanvasTexture(c),
+      vertexColors: true,
+      transparent: true,
+      alphaTest: 0.4,
+      depthWrite: false,
+    }),
+  );
+  points.renderOrder = 14;
+  points.frustumCulled = false;
   return { points, N, vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0 };
 }
 function burstSplats(colours, n = 70, at = new THREE.Vector3(0, 0, 0.004), speed = 0.09) {
-  const pos = splats.points.geometry.attributes.position, col = splats.points.geometry.attributes.color, cc = new THREE.Color();
+  const pos = splats.points.geometry.attributes.position,
+    col = splats.points.geometry.attributes.color,
+    cc = new THREE.Color();
   for (let i = 0; i < n; i++) {
-    const j = splats.next; splats.next = (splats.next + 1) % splats.N;
-    const a = Math.random() * Math.PI * 2, e = Math.random() * 0.9 + 0.2, s = speed * (0.4 + Math.random());
-    pos.setXYZ(j, at.x + (Math.random() - 0.5) * W * 0.6, at.y + (Math.random() - 0.5) * H * 0.6, at.z);
-    splats.vel[j * 3] = Math.cos(a) * Math.cos(e) * s; splats.vel[j * 3 + 1] = Math.sin(a) * Math.cos(e) * s; splats.vel[j * 3 + 2] = Math.sin(e) * s;
+    const j = splats.next;
+    splats.next = (splats.next + 1) % splats.N;
+    const a = Math.random() * Math.PI * 2,
+      e = Math.random() * 0.9 + 0.2,
+      s = speed * (0.4 + Math.random());
+    pos.setXYZ(
+      j,
+      at.x + (Math.random() - 0.5) * W * 0.6,
+      at.y + (Math.random() - 0.5) * H * 0.6,
+      at.z,
+    );
+    splats.vel[j * 3] = Math.cos(a) * Math.cos(e) * s;
+    splats.vel[j * 3 + 1] = Math.sin(a) * Math.cos(e) * s;
+    splats.vel[j * 3 + 2] = Math.sin(e) * s;
     splats.life[j] = 0.6 + Math.random() * 0.7;
-    cc.set(colours[i % colours.length]); col.setXYZ(j, cc.r, cc.g, cc.b);
+    cc.set(colours[i % colours.length]);
+    col.setXYZ(j, cc.r, cc.g, cc.b);
   }
   pos.needsUpdate = col.needsUpdate = true;
 }
 function tickSplats(dt, scale) {
-  const pos = splats.points.geometry.attributes.position; let alive = 0;
+  const pos = splats.points.geometry.attributes.position;
+  let alive = 0;
   for (let i = 0; i < splats.N; i++) {
-    if (splats.life[i] <= 0) continue; splats.life[i] -= dt; alive++;
-    splats.vel[i * 3 + 2] -= 0.25 * dt;                      // falls back toward the charm
-    pos.setXYZ(i, pos.getX(i) + splats.vel[i * 3] * dt, pos.getY(i) + splats.vel[i * 3 + 1] * dt, Math.max(0.0005, pos.getZ(i) + splats.vel[i * 3 + 2] * dt));
+    if (splats.life[i] <= 0) continue;
+    splats.life[i] -= dt;
+    alive++;
+    splats.vel[i * 3 + 2] -= 0.25 * dt; // falls back toward the charm
+    pos.setXYZ(
+      i,
+      pos.getX(i) + splats.vel[i * 3] * dt,
+      pos.getY(i) + splats.vel[i * 3 + 1] * dt,
+      Math.max(0.0005, pos.getZ(i) + splats.vel[i * 3 + 2] * dt),
+    );
     if (splats.life[i] <= 0) pos.setXYZ(i, 0, 0, -10);
   }
-  pos.needsUpdate = true; splats.points.visible = alive > 0;
+  pos.needsUpdate = true;
+  splats.points.visible = alive > 0;
   splats.points.material.size = 0.0032 * scale;
 }
 
 // ---------------------------------------------------------------- tracking: the charm's pose, both sides, the pose check
-const TS = {};                               // per image target: last pose from the engine
+const TS = {}; // per image target: last pose from the engine
 let probes = null;
 function initTargets(targets) {
   for (const t of targets) {
-    TS[t.name] = { name: t.name, piece: PIECE_OF[t.name], pr: t.properties, tracked: false, at: 0, seen: -1e9, foundAt: 0, p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, upp: 0,
-      gap: 40, bad: false, badN: 0, fit: null, fitAt: 0 };
+    TS[t.name] = {
+      name: t.name,
+      piece: PIECE_OF[t.name],
+      pr: t.properties,
+      tracked: false,
+      at: 0,
+      seen: -1e9,
+      foundAt: 0,
+      p: new THREE.Vector3(),
+      q: new THREE.Quaternion(),
+      s: 1,
+      upp: 0,
+      gap: 40,
+      bad: false,
+      badN: 0,
+      fit: null,
+      fitAt: 0,
+    };
     loadFitProbe(t);
   }
 }
 function onTarget(d) {
-  const t = TS[d.name]; if (!t) return;
-  const upp = d.scale * (d.scaledHeight || 1) / t.pr.height;          // world units per target pixel
+  const t = TS[d.name];
+  if (!t) return;
+  const upp = (d.scale * (d.scaledHeight || 1)) / t.pr.height; // world units per target pixel
   t.q.set(d.rotation.x, d.rotation.y, d.rotation.z, d.rotation.w);
   t.p.set(d.position.x, d.position.y, d.position.z);
-  t.s = t.pr.height * upp / PIECES[t.piece].H; t.upp = upp;
+  t.s = (t.pr.height * upp) / PIECES[t.piece].H;
+  t.upp = upp;
   const now = performance.now();
-  if (!t.tracked) { t.foundAt = now; diag.found++; tDiag(t.name).found++; t.bad = false; t.badN = 0; t.fitAt = 0; }
-  else t.gap += (clamp(now - t.at, 8, 400) - t.gap) * 0.2;   // how often the engine updates it (for the stale check)
-  t.tracked = true; t.at = now;
+  if (!t.tracked) {
+    t.foundAt = now;
+    diag.found++;
+    tDiag(t.name).found++;
+    t.bad = false;
+    t.badN = 0;
+    t.fitAt = 0;
+  } else t.gap += (clamp(now - t.at, 8, 400) - t.gap) * 0.2; // how often the engine updates it (for the stale check)
+  t.tracked = true;
+  t.at = now;
 }
-function onLost(d) { const t = TS[d.name]; if (t && t.tracked) { t.tracked = false; t.bad = false; t.badN = 0; diag.lost++; tDiag(d.name).lost++; } }
+function onLost(d) {
+  const t = TS[d.name];
+  if (t && t.tracked) {
+    t.tracked = false;
+    t.bad = false;
+    t.badN = 0;
+    diag.lost++;
+    tDiag(d.name).lost++;
+  }
+}
 // usable now: the engine tracks it and its pose still fits the camera picture
 const live = (t) => !!t && t.tracked && !t.bad;
 
@@ -540,20 +1306,45 @@ const live = (t) => !!t && t.tracked && !t.bad;
 // picture's own pose, how well does that picture match the camera (blurred, 160 px)? The true side lines up
 // everywhere; the mirror match is off at the tail. (Tested in the simulator: the own-fit test picked the right
 // side in every sample, where the mirror-about-the-middle test of Off the Chain flipped with the tilt.)
-let side = null, sideLead = 0, sideAt = 0, sampler = null;
+let side = null,
+  sideLead = 0,
+  sideAt = 0,
+  sampler = null;
 const _pv = new THREE.Vector3();
-function engineVideo() { return [...document.querySelectorAll('video')].find((v) => v.srcObject) || null; }
+function engineVideo() {
+  return [...document.querySelectorAll("video")].find((v) => v.srcObject) || null;
+}
 function camLuma() {
-  const v = engineVideo(); if (!v || !v.videoWidth) return null;
-  const k = 160 / Math.max(v.videoWidth, v.videoHeight), w = Math.round(v.videoWidth * k), h = Math.round(v.videoHeight * k);
-  if (!sampler) { const c = document.createElement('canvas'); sampler = { c, g: c.getContext('2d', { willReadFrequently: true }) }; }
-  if (sampler.c.width !== w || sampler.c.height !== h) { sampler.c.width = w; sampler.c.height = h; }
+  const v = engineVideo();
+  if (!v || !v.videoWidth) return null;
+  const k = 160 / Math.max(v.videoWidth, v.videoHeight),
+    w = Math.round(v.videoWidth * k),
+    h = Math.round(v.videoHeight * k);
+  if (!sampler) {
+    const c = document.createElement("canvas");
+    sampler = { c, g: c.getContext("2d", { willReadFrequently: true }) };
+  }
+  if (sampler.c.width !== w || sampler.c.height !== h) {
+    sampler.c.width = w;
+    sampler.c.height = h;
+  }
   sampler.g.drawImage(v, 0, 0, w, h);
-  const d = sampler.g.getImageData(0, 0, w, h).data, L = new Float32Array(w * h), T = new Float32Array(w * h);
-  for (let i = 0; i < L.length; i++) L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+  const d = sampler.g.getImageData(0, 0, w, h).data,
+    L = new Float32Array(w * h),
+    T = new Float32Array(w * h);
+  for (let i = 0; i < L.length; i++)
+    L[i] = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
   for (let pass = 0; pass < 2; pass++) {
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; T[i] = (L[i - (x > 0)] + L[i] + L[i + (x < w - 1)]) / 3; }
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; L[i] = (T[i - (y > 0) * w] + T[i] + T[i + (y < h - 1) * w]) / 3; }
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        T[i] = (L[i - (x > 0)] + L[i] + L[i + (x < w - 1)]) / 3;
+      }
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        L[i] = (T[i - (y > 0) * w] + T[i] + T[i + (y < h - 1) * w]) / 3;
+      }
   }
   return { L, w, h, vw: v.videoWidth, vh: v.videoHeight };
 }
@@ -561,36 +1352,83 @@ function camLuma() {
 // own middle (axis 0.4425 of the width, from Off the Chain's probe.json). Only cells that differ say which side
 // is in view (the tail, the visor lettering), so the fit is weighted by that. kc-bobo-l is the exact mirror.
 function buildProbes(img) {
-  const cols = 30, rows = 40, axis = 0.4425, c = document.createElement('canvas'); c.width = cols; c.height = rows;
-  const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, cols, rows);
-  const d = g.getImageData(0, 0, cols, rows).data, L = new Float32Array(cols * rows);
+  const cols = 30,
+    rows = 40,
+    axis = 0.4425,
+    c = document.createElement("canvas");
+  c.width = cols;
+  c.height = rows;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.drawImage(img, 0, 0, cols, rows);
+  const d = g.getImageData(0, 0, cols, rows).data,
+    L = new Float32Array(cols * rows);
   for (let i = 0; i < L.length; i++) L[i] = d[i * 4];
   const wt = new Float32Array(cols * rows);
-  for (let r = 0; r < rows; r++) for (let cc = 0; cc < cols; cc++) {
-    const cm = Math.floor((2 * axis - (cc + 0.5) / cols) * cols);
-    wt[r * cols + cc] = cm >= 0 && cm < cols ? Math.abs(L[r * cols + cc] - L[r * cols + cm]) : 40;
-  }
-  const mir = (a) => { const o = new Float32Array(a.length); for (let r = 0; r < rows; r++) for (let cc = 0; cc < cols; cc++) o[r * cols + cc] = a[r * cols + cols - 1 - cc]; return o; };
-  return { 'kc-bobo': { cols, rows, lum: L, wt }, 'kc-bobo-l': { cols, rows, lum: mir(L), wt: mir(wt) } };
+  for (let r = 0; r < rows; r++)
+    for (let cc = 0; cc < cols; cc++) {
+      const cm = Math.floor((2 * axis - (cc + 0.5) / cols) * cols);
+      wt[r * cols + cc] = cm >= 0 && cm < cols ? Math.abs(L[r * cols + cc] - L[r * cols + cm]) : 40;
+    }
+  const mir = (a) => {
+    const o = new Float32Array(a.length);
+    for (let r = 0; r < rows; r++)
+      for (let cc = 0; cc < cols; cc++) o[r * cols + cc] = a[r * cols + cols - 1 - cc];
+    return o;
+  };
+  return {
+    "kc-bobo": { cols, rows, lum: L, wt },
+    "kc-bobo-l": { cols, rows, lum: mir(L), wt: mir(wt) },
+  };
 }
 // how well a picture, placed by its own pose, matches the camera (weighted correlation, -1..1)
-function sideScore(t, cam) { return fitScore(t, probes && probes[t.name], cam, 12, 80); }
+function sideScore(t, cam) {
+  return fitScore(t, probes && probes[t.name], cam, 12, 80);
+}
 function fitScore(t, pb, cam, minW = 0, minN = 0) {
   if (!pb || !t.upp || !cam) return null;
-  const cw = canvas.clientWidth, chh = canvas.clientHeight;
-  const sc = Math.max(cw / cam.vw, chh / cam.vh), hw = cw / sc / 2, hh = chh / sc / 2;
-  const Wp = t.pr.width * t.upp, Hp = t.pr.height * t.upp, k = cam.w / cam.vw;
-  let sw = 0, sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0, n = 0;
-  for (let r = 0; r < pb.rows; r++) for (let c = 0; c < pb.cols; c++) {
-    const i = r * pb.cols + c, w = pb.wt[i]; if (!(w > minW)) continue;
-    _pv.set(((c + 0.5) / pb.cols - 0.5) * Wp, (0.5 - (r + 0.5) / pb.rows) * Hp, 0).applyQuaternion(t.q).add(t.p).project(camera);
-    const x = (cam.vw / 2 + _pv.x * hw) * k, y = (cam.vh / 2 - _pv.y * hh) * k;
-    if (!(x >= 0 && y >= 0 && x < cam.w - 1 && y < cam.h - 1)) continue;
-    const a = pb.lum[i], b = cam.L[(y | 0) * cam.w + (x | 0)];
-    n++; sw += w; sa += w * a; sb += w * b; saa += w * a * a; sbb += w * b * b; sab += w * a * b;
-  }
+  const cw = canvas.clientWidth,
+    chh = canvas.clientHeight;
+  const sc = Math.max(cw / cam.vw, chh / cam.vh),
+    hw = cw / sc / 2,
+    hh = chh / sc / 2;
+  const Wp = t.pr.width * t.upp,
+    Hp = t.pr.height * t.upp,
+    k = cam.w / cam.vw;
+  let sw = 0,
+    sa = 0,
+    sb = 0,
+    saa = 0,
+    sbb = 0,
+    sab = 0,
+    n = 0;
+  for (let r = 0; r < pb.rows; r++)
+    for (let c = 0; c < pb.cols; c++) {
+      const i = r * pb.cols + c,
+        w = pb.wt[i];
+      if (!(w > minW)) continue;
+      _pv
+        .set(((c + 0.5) / pb.cols - 0.5) * Wp, (0.5 - (r + 0.5) / pb.rows) * Hp, 0)
+        .applyQuaternion(t.q)
+        .add(t.p)
+        .project(camera);
+      const x = (cam.vw / 2 + _pv.x * hw) * k,
+        y = (cam.vh / 2 - _pv.y * hh) * k;
+      if (!(x >= 0 && y >= 0 && x < cam.w - 1 && y < cam.h - 1)) continue;
+      const a = pb.lum[i],
+        b = cam.L[(y | 0) * cam.w + (x | 0)];
+      n++;
+      sw += w;
+      sa += w * a;
+      sb += w * b;
+      saa += w * a * a;
+      sbb += w * b * b;
+      sab += w * a * b;
+    }
   if (n < Math.max(minN, pb.need || 0)) return null;
-  const ma = sa / sw, mb = sb / sw, va = saa / sw - ma * ma, vb = sbb / sw - mb * mb;
+  const ma = sa / sw,
+    mb = sb / sw,
+    va = saa / sw - ma * ma,
+    vb = sbb / sw - mb * mb;
   return va > 0 && vb > 0 ? (sab / sw - ma * mb) / Math.sqrt(va * vb) : null;
 }
 // The pose check's picture of each target: its luminance picture at 24 cells across, each cell weighted by how
@@ -598,40 +1436,92 @@ function fitScore(t, pb, cam, minW = 0, minN = 0) {
 // acrylic around a charm shows whatever is behind it).
 const fitProbes = {};
 let camCache = null;
-function camNow(now) { if (!camCache || now - camCache.at > 90) { const c = camLuma(); camCache = c ? Object.assign(c, { at: now }) : null; } return camCache; }
+function camNow(now) {
+  if (!camCache || now - camCache.at > 90) {
+    const c = camLuma();
+    camCache = c ? Object.assign(c, { at: now }) : null;
+  }
+  return camCache;
+}
 function loadFitProbe(td) {
-  const P = PIECES[PIECE_OF[td.name]]; if (!P || !td.imagePath) return;
+  const P = PIECES[PIECE_OF[td.name]];
+  if (!P || !td.imagePath) return;
   const dir = P.cms ? null : tdir(P);
-  Promise.all([loadImg(td.imagePath), dir ? loadImg(dir + td.name + '-mask.png').catch(() => null) : Promise.resolve(null)]).then(([img, mask]) => {
-    const cols = 24, rows = Math.max(8, Math.round(cols * td.properties.height / td.properties.width)), c = document.createElement('canvas'); c.width = cols; c.height = rows;
-    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, cols, rows);
-    const d = g.getImageData(0, 0, cols, rows).data, L = new Float32Array(cols * rows);
-    for (let i = 0; i < L.length; i++) L[i] = d[i * 4];
-    let m = null;
-    if (mask) { g.clearRect(0, 0, cols, rows); g.drawImage(mask, 0, 0, cols, rows); const md = g.getImageData(0, 0, cols, rows).data; m = new Float32Array(cols * rows); for (let i = 0; i < m.length; i++) m[i] = md[i * 4 + 3] / 255; }
-    const wt = new Float32Array(cols * rows); let k = 0;
-    for (let r = 0; r < rows; r++) for (let cc = 0; cc < cols; cc++) {
-      const i = r * cols + cc; if (m && m[i] < 0.6) continue;
-      const nb = [cc > 0 ? L[i - 1] : L[i], cc < cols - 1 ? L[i + 1] : L[i], r > 0 ? L[i - cols] : L[i], r < rows - 1 ? L[i + cols] : L[i]];
-      wt[i] = 4 + Math.abs(L[i] - (nb[0] + nb[1] + nb[2] + nb[3]) / 4); k++;
-    }
-    fitProbes[td.name] = { cols, rows, lum: L, wt, need: Math.round(k * 0.55) };   // judged only with most of the piece on screen
-  }).catch((e) => console.warn('pose check: no picture for', td.name, e));
+  Promise.all([
+    loadImg(td.imagePath),
+    dir ? loadImg(dir + td.name + "-mask.png").catch(() => null) : Promise.resolve(null),
+  ])
+    .then(([img, mask]) => {
+      const cols = 24,
+        rows = Math.max(8, Math.round((cols * td.properties.height) / td.properties.width)),
+        c = document.createElement("canvas");
+      c.width = cols;
+      c.height = rows;
+      const g = c.getContext("2d", { willReadFrequently: true });
+      g.drawImage(img, 0, 0, cols, rows);
+      const d = g.getImageData(0, 0, cols, rows).data,
+        L = new Float32Array(cols * rows);
+      for (let i = 0; i < L.length; i++) L[i] = d[i * 4];
+      let m = null;
+      if (mask) {
+        g.clearRect(0, 0, cols, rows);
+        g.drawImage(mask, 0, 0, cols, rows);
+        const md = g.getImageData(0, 0, cols, rows).data;
+        m = new Float32Array(cols * rows);
+        for (let i = 0; i < m.length; i++) m[i] = md[i * 4 + 3] / 255;
+      }
+      const wt = new Float32Array(cols * rows);
+      let k = 0;
+      for (let r = 0; r < rows; r++)
+        for (let cc = 0; cc < cols; cc++) {
+          const i = r * cols + cc;
+          if (m && m[i] < 0.6) continue;
+          const nb = [
+            cc > 0 ? L[i - 1] : L[i],
+            cc < cols - 1 ? L[i + 1] : L[i],
+            r > 0 ? L[i - cols] : L[i],
+            r < rows - 1 ? L[i + cols] : L[i],
+          ];
+          wt[i] = 4 + Math.abs(L[i] - (nb[0] + nb[1] + nb[2] + nb[3]) / 4);
+          k++;
+        }
+      fitProbes[td.name] = { cols, rows, lum: L, wt, need: Math.round(k * 0.55) }; // judged only with most of the piece on screen
+    })
+    .catch((e) => console.warn("pose check: no picture for", td.name, e));
 }
 // every FIT_EVERY_MS, each tracked target of the current piece: does its pose still sit on what the camera sees?
 function checkFit(now) {
   if (!cp) return;
   for (const n of cp.targets) {
-    const t = TS[n]; if (!t || !t.tracked || now - t.fitAt < FIT_EVERY_MS) continue;
-    const pb = fitProbes[n]; if (!pb) continue;
-    t.fitAt = now; const sc = fitScore(t, pb, camNow(now)); if (sc == null) continue;
-    t.fit = sc; const f = diag.fit || (diag.fit = { n: 0, sum: 0, min: 1, drops: 0 }); f.n++; f.sum += sc; f.min = Math.min(f.min, +sc.toFixed(3)); f.avg = +(f.sum / f.n).toFixed(3);
-    if (t.bad) { if (sc > FIT_OK) { t.bad = false; t.badN = 0; } continue; }
+    const t = TS[n];
+    if (!t || !t.tracked || now - t.fitAt < FIT_EVERY_MS) continue;
+    const pb = fitProbes[n];
+    if (!pb) continue;
+    t.fitAt = now;
+    const sc = fitScore(t, pb, camNow(now));
+    if (sc == null) continue;
+    t.fit = sc;
+    const f = diag.fit || (diag.fit = { n: 0, sum: 0, min: 1, drops: 0 });
+    f.n++;
+    f.sum += sc;
+    f.min = Math.min(f.min, +sc.toFixed(3));
+    f.avg = +(f.sum / f.n).toFixed(3);
+    if (t.bad) {
+      if (sc > FIT_OK) {
+        t.bad = false;
+        t.badN = 0;
+      }
+      continue;
+    }
     // the camera picture read here is a frame or two newer than the one the engine posed, so while the phone
     // moves fast a right pose can score low: only a pose that is still off once the phone settles counts
     if (now - motion.seen < 400 && now - motion.moved < 200) continue;
     t.badN = sc < FIT_BAD ? t.badN + 1 : 0;
-    if (t.badN >= FIT_BAD_N) { t.bad = true; f.drops++; tDiag(n).drops = (tDiag(n).drops || 0) + 1; }
+    if (t.badN >= FIT_BAD_N) {
+      t.bad = true;
+      f.drops++;
+      tDiag(n).drops = (tDiag(n).drops || 0) + 1;
+    }
   }
 }
 
@@ -640,62 +1530,96 @@ const onT = (n) => (live(TS[n]) ? TS[n] : null);
 const pieceInView = (k) => PIECES[k].targets.some(onT);
 const pieceSeen = (k) => Math.max(...PIECES[k].targets.map((n) => (TS[n] ? TS[n].seen : -1e9)));
 // which charm: while painting, the one being painted; otherwise whichever is in view (the current one first)
-const busy = () => mode === 'paint' || mode === 'decal';   // working on a charm: it stays the current one
+const busy = () => mode === "paint" || mode === "decal" || mode === "room"; // working on a charm (or in the room): it stays the current one
 function pickPiece(now) {
   if (!cp || busy() || pieceInView(cp.k)) return;
   if (cp.F.visible && now - pieceSeen(cp.k) < 700) return;
-  const k = Object.keys(PIECES).find(pieceInView); if (!k || k === cp.k) return;
+  const k = Object.keys(PIECES).find(pieceInView);
+  if (!k || k === cp.k) return;
   switchPiece(k);
 }
 function switchPiece(k) {
-  usePiece(k); syncToggles(); side = null; sideLead = 0; soleSince = 0; pose.last = null; pose.snap = true;
-  for (const P of Object.values(PIECES)) { P.stickerPivot.visible = false; P.paintMesh.visible = false; P.previewMesh.visible = false; P.shadow.material.opacity = 0; }
-  life.phase = 'off'; setMode('find');                          // tick() then offers the can, or brings back its painting
+  usePiece(k);
+  syncToggles();
+  side = null;
+  sideLead = 0;
+  soleSince = 0;
+  pose.last = null;
+  pose.snap = true;
+  for (const P of Object.values(PIECES)) {
+    P.stickerPivot.visible = false;
+    P.paintMesh.visible = false;
+    P.previewMesh.visible = false;
+    P.shadow.material.opacity = 0;
+  }
+  life.phase = "off";
+  setMode("find"); // tick() then offers the can, or brings back its painting
   diag.pieces = (diag.pieces || 0) + 1;
 }
 function pickSide(now) {
   pickPiece(now);
-  const [na, nb] = cp.targets, other = (n) => (n === na ? nb : na);
-  const a = onT(na), b = onT(nb);
+  const [na, nb] = cp.targets,
+    other = (n) => (n === na ? nb : na);
+  const a = onT(na),
+    b = onT(nb);
   if (side && !onT(side) && onT(other(side))) {
     // only the other side's picture is in view. For the cat, while painting, that is usually a mirror match on
     // the same charm, so the canvas stays put (the pose is bridged) unless it lasts: then the keychain was
     // turned over. The can's two sides are different prints, so that is a turn straight away.
     soleSince = soleSince || now;
-    if (!busy() || now - soleSince > (cp.mirrorPair ? 1500 : 250)) { side = other(side); sideLead = 0; diag.sides++; }
+    if (!busy() || now - soleSince > (cp.mirrorPair ? 1500 : 250)) {
+      side = other(side);
+      sideLead = 0;
+      diag.sides++;
+    }
   } else soleSince = 0;
   if (side && !onT(side) && now - TS[side].seen > 700 && !busy()) side = null;
   if (!a && !b) return side;
   if (!side) side = a && b ? (a.foundAt <= b.foundAt ? na : nb) : a ? na : nb;
   if (cp.mirrorPair && a && b && now - sideAt > 120) {
-    sideAt = now; const cam = camNow(now);
-    const sa = cam ? sideScore(a, cam) : null, sb = cam ? sideScore(b, cam) : null;
+    sideAt = now;
+    const cam = camNow(now);
+    const sa = cam ? sideScore(a, cam) : null,
+      sb = cam ? sideScore(b, cam) : null;
     if (sa != null && sb != null) sideLead = sideLead * 0.9 + (sa - sb) * 0.1;
-    const need = busy() ? 0.15 : 0.05;             // while painting it takes a clear, lasting lead to turn the canvas over
+    const need = busy() ? 0.15 : 0.05; // while painting it takes a clear, lasting lead to turn the canvas over
     const want = sideLead > need ? na : sideLead < -need ? nb : side;
-    if (want !== side) { diag.sides++; side = want; }
+    if (want !== side) {
+      diag.sides++;
+      side = want;
+    }
   }
   return side;
 }
 
 // The motion sensors only say whether the phone is held still (a held pose is only right then). Turning
 // faster than STILL_DEG deg/s, or a push over STILL_ACC m/s², counts as moving.
-const STILL_DEG = 25, STILL_ACC = 0.8;
+const STILL_DEG = 25,
+  STILL_ACC = 0.8;
 const motion = { seen: 0, moved: 0 };
 const gravity = { up: null };
 function onMotion(e) {
   const now = performance.now();
   const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-  const rot = (x, y) => (ang === 90 ? [-y, x] : ang === 270 || ang === -90 ? [y, -x] : ang === 180 ? [-x, -y] : [x, y]);
+  const rot = (x, y) =>
+    ang === 90 ? [-y, x] : ang === 270 || ang === -90 ? [y, -x] : ang === 180 ? [-x, -y] : [x, y];
   const a = e.accelerationIncludingGravity;
   let m = 0;
-  if (a && a.x != null) {   // gravity, for which way the paint runs; and shakes, which refill the can
-    let [x, y] = rot(a.x, a.y); const v = new THREE.Vector3(x, y, a.z); m = v.length();
-    if (m > 1) { v.normalize(); if (v.y + v.z < 0) v.negate(); gravity.up = gravity.up ? gravity.up.lerp(v, 0.15).normalize() : v; }
+  if (a && a.x != null) {
+    // gravity, for which way the paint runs; and shakes, which refill the can
+    let [x, y] = rot(a.x, a.y);
+    const v = new THREE.Vector3(x, y, a.z);
+    m = v.length();
+    if (m > 1) {
+      v.normalize();
+      if (v.y + v.z < 0) v.negate();
+      gravity.up = gravity.up ? gravity.up.lerp(v, 0.15).normalize() : v;
+    }
     if (m > 22) shakeKick(m);
   }
-  const r = e.rotationRate, l = e.acceleration;
-  const turn = r && r.alpha != null ? Math.hypot(r.alpha, r.beta, r.gamma) : null;   // deg/s, whatever the axes
+  const r = e.rotationRate,
+    l = e.acceleration;
+  const turn = r && r.alpha != null ? Math.hypot(r.alpha, r.beta, r.gamma) : null; // deg/s, whatever the axes
   const push = l && l.x != null ? Math.hypot(l.x, l.y, l.z) : m ? Math.abs(m - 9.81) : null;
   if (turn == null && push == null) return;
   motion.seen = now;
@@ -703,34 +1627,55 @@ function onMotion(e) {
 }
 
 // the pose the scene uses this frame: 'track', 'hold' (the last pose, phone held still, a blink at most), or 'none'
-const pose = { state: 'none', p: new THREE.Vector3(), q: new THREE.Quaternion(), s: 1, lostAt: 0, snap: true, last: null, valid: false, since: 0 };
+const pose = {
+  state: "none",
+  p: new THREE.Vector3(),
+  q: new THREE.Quaternion(),
+  s: 1,
+  lostAt: 0,
+  snap: true,
+  last: null,
+  valid: false,
+  since: 0,
+};
 function updatePose(now) {
-  for (const x of Object.values(TS)) { if (x.tracked && now - x.at > clamp(x.gap * 3, 120, 300)) x.tracked = false; }   // the engine went quiet
+  for (const x of Object.values(TS)) {
+    if (x.tracked && now - x.at > clamp(x.gap * 3, 120, 300)) x.tracked = false;
+  } // the engine went quiet
   checkFit(now);
-  const n = pickSide(now), t = n && TS[n];
+  const n = pickSide(now),
+    t = n && TS[n];
   for (const x of Object.values(TS)) if (live(x)) x.seen = now;
   let st;
   if (live(t)) {
-    st = 'track';
-    pose.last = { p: t.p.clone(), q: t.q.clone(), s: t.s, side: n }; pose.lostAt = now;
+    st = "track";
+    pose.last = { p: t.p.clone(), q: t.q.clone(), s: t.s, side: n };
+    pose.lostAt = now;
     follow(t.p, t.q, t.s);
   } else if (pose.last) {
     // a held pose stays put on the screen: right only while the phone is still. Moving, it would carry the
     // canvas along with the phone (off the print), so then the canvas hides at once.
-    const gone = now - pose.lostAt, sensed = now - motion.seen < 400;
+    const gone = now - pose.lostAt,
+      sensed = now - motion.seen < 400;
     const still = sensed ? now - motion.moved > 150 : true;
-    st = still && gone < (sensed ? HOLD_STILL_MS : HOLD_BLIND_MS) ? 'hold' : 'none';
-  } else st = 'none';
-  if (st === 'hold' && pose.state === 'track') diag.bridges++;
-  if (st === 'hold') diag.bridgeS += 1 / 60;
-  if (st === 'none') pose.snap = true;
-  pose.state = st; pose.valid = st !== 'none';
+    st = still && gone < (sensed ? HOLD_STILL_MS : HOLD_BLIND_MS) ? "hold" : "none";
+  } else st = "none";
+  if (st === "hold" && pose.state === "track") diag.bridges++;
+  if (st === "hold") diag.bridgeS += 1 / 60;
+  if (st === "none") pose.snap = true;
+  pose.state = st;
+  pose.valid = st !== "none";
   A.visible = pose.valid;
   // the canvas on the side in view: flipped (the cat's back) and/or moved onto that picture (the can's back)
   const sn = pose.last ? pose.last.side : null;
   if (F.userData.side !== sn) {
-    F.userData.side = sn; const flip = (sn && cp.flip[sn]) || 1, xf = (sn && cp.xf[sn]) || { x: 0, y: 0, rz: 0, s: 1 };
-    F.position.set(xf.x, xf.y, 0); F.rotation.z = xf.rz; F.scale.set(flip * xf.s, xf.s, 1); pose.snap = true;
+    F.userData.side = sn;
+    const flip = (sn && cp.flip[sn]) || 1,
+      xf = (sn && cp.xf[sn]) || { x: 0, y: 0, rz: 0, s: 1 };
+    F.position.set(xf.x, xf.y, 0);
+    F.rotation.z = xf.rz;
+    F.scale.set(flip * xf.s, xf.s, 1);
+    pose.snap = true;
   }
 }
 // Stick to the print: follow real movement at once, only smooth the sub-millimetre jitter of a charm held still
@@ -740,228 +1685,583 @@ function follow(p, q, s) {
   const aR = pose.snap ? 1 : clamp(A.quaternion.angleTo(q) / 0.03, 0.5, 1);
   const aS = pose.snap ? 1 : clamp(Math.abs(A.scale.x - s) / s / 0.02, 0.5, 1);
   pose.snap = false;
-  A.position.lerp(p, aP); A.quaternion.slerp(q, aR); A.scale.setScalar(THREE.MathUtils.lerp(A.scale.x, s, aS));
+  A.position.lerp(p, aP);
+  A.quaternion.slerp(q, aR);
+  A.scale.setScalar(THREE.MathUtils.lerp(A.scale.x, s, aS));
   A.updateMatrixWorld(true);
 }
 
 // ---------------------------------------------------------------- aiming: where the nozzle hits the canvas
-const ray = new THREE.Raycaster(), _ndc = new THREE.Vector2(), _plane = new THREE.Plane(), _n = new THREE.Vector3(), _hit = new THREE.Vector3(), _loc = new THREE.Vector3(), _sc = new THREE.Vector3(), _sc2 = new THREE.Vector3();
+const ray = new THREE.Raycaster(),
+  _ndc = new THREE.Vector2(),
+  _plane = new THREE.Plane(),
+  _n = new THREE.Vector3(),
+  _hit = new THREE.Vector3(),
+  _loc = new THREE.Vector3(),
+  _sc = new THREE.Vector3(),
+  _sc2 = new THREE.Vector3();
 // screen px -> the camera canvas's NDC (the canvas, not the window: on iPhones the two can differ in height)
-function toNdc(px, py, out) { const r = canvas.getBoundingClientRect(); return out.set((px - r.left) / r.width * 2 - 1, -((py - r.top) / r.height) * 2 + 1); }
-function nozzle0() { const r = canvas.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }
-const aim = { finger: !TOUCH, x: 0, y: 0, has: false, u: 0, v: 0, on: false, dist: 0, rPx: 10, rScreen: 30, cos: 1 };
+function toNdc(px, py, out) {
+  const r = canvas.getBoundingClientRect();
+  return out.set(((px - r.left) / r.width) * 2 - 1, -((py - r.top) / r.height) * 2 + 1);
+}
+function nozzle0() {
+  const r = canvas.getBoundingClientRect();
+  return [r.left + r.width / 2, r.top + r.height / 2];
+}
+const aim = {
+  finger: !TOUCH,
+  x: 0,
+  y: 0,
+  has: false,
+  u: 0,
+  v: 0,
+  on: false,
+  dist: 0,
+  rPx: 10,
+  rScreen: 30,
+  cos: 1,
+};
 function aimAt(px, py) {
-  aim.has = false; if (!pose.valid || !camera) return aim;
-  toNdc(px, py, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true);
+  aim.has = false;
+  if (!pose.valid || !camera) return aim;
+  toNdc(px, py, _ndc);
+  camera.updateMatrixWorld(true);
+  A.updateMatrixWorld(true);
   ray.setFromCamera(_ndc, camera);
-  _n.set(0, 0, 1).applyQuaternion(A.quaternion); _plane.setFromNormalAndCoplanarPoint(_n, A.position);
+  _n.set(0, 0, 1).applyQuaternion(A.quaternion);
+  _plane.setFromNormalAndCoplanarPoint(_n, A.position);
   if (!ray.ray.intersectPlane(_plane, _hit)) return aim;
-  _loc.copy(_hit); F.worldToLocal(_loc);
-  aim.u = _loc.x / W + 0.5; aim.v = 0.5 - _loc.y / H;
+  _loc.copy(_hit);
+  F.worldToLocal(_loc);
+  aim.u = _loc.x / W + 0.5;
+  aim.v = 0.5 - _loc.y / H;
   aim.on = aim.u > -0.05 && aim.u < 1.05 && aim.v > -0.05 && aim.v < 1.05;
-  aim.dist = _hit.distanceTo(camera.position) / A.scale.x;   // metres at the size the piece is drawn (real: x cp.m)
+  aim.dist = _hit.distanceTo(camera.position) / A.scale.x; // metres at the size the piece is drawn (real: x cp.m)
   aim.cos = Math.abs(ray.ray.direction.dot(_n));
-  const rM = aim.dist * Math.tan(NOZZLES[nozzle].a * Math.PI / 180) / Math.sqrt(Math.max(aim.cos, 0.3)) * (cp.sprayK || 1);
-  aim.rPx = clamp(rM / W * TW, 2.5, 150);
+  const rM =
+    ((aim.dist * Math.tan((NOZZLES[nozzle].a * Math.PI) / 180)) /
+      Math.sqrt(Math.max(aim.cos, 0.3))) *
+    (cp.sprayK || 1);
+  aim.rPx = clamp((rM / W) * TW, 2.5, 150);
   // the footprint on screen: project a point one radius along the charm's x
-  _sc.copy(_hit).project(camera); _sc2.set(1, 0, 0).applyQuaternion(A.quaternion).multiplyScalar(rM * A.scale.x).add(_hit).project(camera);
+  _sc.copy(_hit).project(camera);
+  _sc2
+    .set(1, 0, 0)
+    .applyQuaternion(A.quaternion)
+    .multiplyScalar(rM * A.scale.x)
+    .add(_hit)
+    .project(camera);
   const cr = canvas.getBoundingClientRect();
-  aim.rScreen = clamp(Math.hypot((_sc2.x - _sc.x) * cr.width / 2, (_sc2.y - _sc.y) * cr.height / 2), 6, 220);
-  aim.sx = cr.left + (_sc.x + 1) / 2 * cr.width; aim.sy = cr.top + (1 - _sc.y) / 2 * cr.height;   // where the hit shows on screen (should be the nozzle)
-  aim.has = true; return aim;
+  aim.rScreen = clamp(
+    Math.hypot(((_sc2.x - _sc.x) * cr.width) / 2, ((_sc2.y - _sc.y) * cr.height) / 2),
+    6,
+    220,
+  );
+  aim.sx = cr.left + ((_sc.x + 1) / 2) * cr.width;
+  aim.sy = cr.top + ((1 - _sc.y) / 2) * cr.height; // where the hit shows on screen (should be the nozzle)
+  aim.has = true;
+  return aim;
 }
 // which way is down on the canvas (texture px per px of drip), from gravity; k = how steep the charm stands
-const _dn = new THREE.Vector3(), _iq = new THREE.Quaternion();
+const _dn = new THREE.Vector3(),
+  _iq = new THREE.Quaternion();
 function dripDown() {
   if (!gravity.up) return { x: 0, y: 1, k: 1 };
-  _iq.copy(A.quaternion).invert(); _dn.copy(gravity.up).negate().applyQuaternion(camera.quaternion).applyQuaternion(_iq);   // phone -> world -> charm
-  const k = Math.hypot(_dn.x, _dn.y); if (k < 0.15) return { x: 0, y: 0, k: 0 };
-  return { x: _dn.x / k * Math.sign(F.scale.x), y: -_dn.y / k, k };
+  _iq.copy(A.quaternion).invert();
+  _dn.copy(gravity.up).negate().applyQuaternion(camera.quaternion).applyQuaternion(_iq); // phone -> world -> charm
+  const k = Math.hypot(_dn.x, _dn.y);
+  if (k < 0.15) return { x: 0, y: 0, k: 0 };
+  return { x: (_dn.x / k) * Math.sign(F.scale.x), y: -_dn.y / k, k };
 }
 
 // ---------------------------------------------------------------- modes and UI
 // find -> ready (charm found, can offered) -> paint -> alive (saved: the sticker lives on the charm)
-let mode = 'find', capIdx = 0, nozzle = 1, level = 1, spraying = false, strokeOpen = false, everFound = false, lostFor = 0, flying = false;
-const hud = $('hud');
+let mode = "find",
+  capIdx = 0,
+  nozzle = 1,
+  level = 1,
+  spraying = false,
+  strokeOpen = false,
+  everFound = false,
+  lostFor = 0,
+  flying = false;
+const hud = $("hud");
 function setMode(m) {
-  mode = m; hud.dataset.mode = m;
-  $('can').dataset.state = m === 'ready' ? 'offer' : m === 'paint' ? 'idle' : 'away';
-  $('can').setAttribute('aria-label', m === 'ready' ? 'Spray can. Tap to start painting' : 'Spray can. Hold to spray');
-  $('meter').hidden = m !== 'paint';
-  previewMesh && (previewMesh.visible = m === 'ready');
-  if (m !== 'paint') { stopSpray(); setCamMode(false); }
-  if (m !== 'alive') hideAsk();
-  if (m !== 'decal') { selectLayer(null); ed.pts.clear(); ed.g = null; }
-  if (!$('opts').hidden) closeOpts();
+  mode = m;
+  hud.dataset.mode = m;
+  $("can").dataset.state = m === "ready" ? "offer" : m === "paint" ? "idle" : "away";
+  $("can").setAttribute(
+    "aria-label",
+    m === "ready" ? "Spray can. Tap to start painting" : "Spray can. Hold to spray",
+  );
+  $("meter").hidden = m !== "paint";
+  previewMesh && (previewMesh.visible = m === "ready");
+  if (m !== "paint") {
+    stopSpray();
+    setCamMode(false);
+  }
+  if (m !== "alive") hideAsk();
+  if (m !== "decal") {
+    selectLayer(null);
+    ed.pts.clear();
+    ed.g = null;
+  }
+  if (!$("opts").hidden) closeOpts();
   syncRec();
 }
 // camera mode while painting: the tools step aside and the shutter takes the bottom centre; the can stays,
 // so you can film yourself spraying
 function setCamMode(on) {
-  hud.classList.toggle('cam', on);
-  if (on) hint('Tap the shutter for a photo, hold it to film. Keep spraying', 2600);
+  hud.classList.toggle("cam", on);
+  if (on) hint("Tap the shutter for a photo, hold it to film. Keep spraying", 2600);
 }
-$('b-back').onclick = () => { setCamMode(false); buzz(6); };
+$("b-back").onclick = () => {
+  setCamMode(false);
+  buzz(6);
+};
 let hintT = 0;
-function hint(text, ms = 0) { $('hint').textContent = text || ''; clearTimeout(hintT); if (ms) hintT = setTimeout(() => { if ($('hint').textContent === text) $('hint').textContent = ''; }, ms); }
+function hint(text, ms = 0) {
+  $("hint").textContent = text || "";
+  clearTimeout(hintT);
+  if (ms)
+    hintT = setTimeout(() => {
+      if ($("hint").textContent === text) $("hint").textContent = "";
+    }, ms);
+}
 let toastT = 0;
-function toast(text, ms = 1400) { const t = $('toast'); t.textContent = text; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms); }
+function toast(text, ms = 1400) {
+  const t = $("toast");
+  t.textContent = text;
+  t.classList.add("on");
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove("on"), ms);
+}
 function setCap(i) {
-  capIdx = i; document.documentElement.style.setProperty('--cap', CAPS[i].c);
-  for (const b of document.querySelectorAll('.cap')) b.setAttribute('aria-checked', String(+b.dataset.i === i));
+  capIdx = i;
+  document.documentElement.style.setProperty("--cap", CAPS[i].c);
+  for (const b of document.querySelectorAll(".cap"))
+    b.setAttribute("aria-checked", String(+b.dataset.i === i));
 }
 for (const [i, c] of CAPS.entries()) {
-  const b = document.createElement('button'); b.className = 'cap'; b.type = 'button'; b.role = 'radio'; b.dataset.i = i; b.style.setProperty('--c', c.c); b.setAttribute('aria-label', c.n);
-  b.onclick = () => { setCap(i); buzz(6); sound.tone(900 + i * 60, 1100 + i * 60, 0.06, 0.05, 'triangle'); };
-  $('caps').appendChild(b);
+  const b = document.createElement("button");
+  b.className = "cap";
+  b.type = "button";
+  b.role = "radio";
+  b.dataset.i = i;
+  b.style.setProperty("--c", c.c);
+  b.setAttribute("aria-label", c.n);
+  b.onclick = () => {
+    setCap(i);
+    buzz(6);
+    sound.tone(900 + i * 60, 1100 + i * 60, 0.06, 0.05, "triangle");
+  };
+  $("caps").appendChild(b);
 }
 setCap(0);
 function setNozzle(i) {
-  nozzle = i; $('size-t').textContent = NOZZLES[i].n; $('size-dot').setAttribute('r', NOZZLES[i].dot);
-  $('b-size').setAttribute('aria-label', `Nozzle: ${NOZZLES[i].n.toLowerCase()}. Tap to change`);
+  nozzle = i;
+  $("size-t").textContent = NOZZLES[i].n;
+  $("size-dot").setAttribute("r", NOZZLES[i].dot);
+  $("b-size").setAttribute("aria-label", `Nozzle: ${NOZZLES[i].n.toLowerCase()}. Tap to change`);
 }
 setNozzle(1);
-$('b-size').onclick = () => { setNozzle((nozzle + 1) % NOZZLES.length); buzz(6); sound.tone(500, 700, 0.06, 0.05, 'triangle'); };
-function setLevel(l) { level = clamp(l, 0, 1); $('lvl').style.transform = `scaleY(${level.toFixed(3)})`; }
+$("b-size").onclick = () => {
+  setNozzle((nozzle + 1) % NOZZLES.length);
+  buzz(6);
+  sound.tone(500, 700, 0.06, 0.05, "triangle");
+};
+function setLevel(l) {
+  level = clamp(l, 0, 1);
+  $("lvl").style.transform = `scaleY(${level.toFixed(3)})`;
+}
 setLevel(1);
 // ---------------------------------------------------------------- options (one sheet, with words, instead of a column of icons)
-const opts = $('opts');
-const optBtns = [...document.querySelectorAll('.opts-btn')];
+const opts = $("opts");
+const optBtns = [...document.querySelectorAll(".opts-btn")];
 function openOpts() {
-  for (const r of opts.querySelectorAll('.opt')) r.hidden = !(r.dataset.in || '').split(' ').includes(mode);
-  disarm(); syncOpts(); opts.hidden = false; optBtns.forEach((b) => b.setAttribute('aria-expanded', 'true'));
-  opts.querySelector('.x').focus({ preventScroll: true }); buzz(6); sound.tone(520, 760, 0.08, 0.05, 'triangle');
+  for (const r of opts.querySelectorAll(".opt"))
+    r.hidden = !(r.dataset.in || "").split(" ").includes(mode);
+  disarm();
+  syncOpts();
+  opts.hidden = false;
+  optBtns.forEach((b) => b.setAttribute("aria-expanded", "true"));
+  opts.querySelector(".x").focus({ preventScroll: true });
+  buzz(6);
+  sound.tone(520, 760, 0.08, 0.05, "triangle");
 }
-function closeOpts() { if (opts.hidden) return; opts.hidden = true; disarm(); optBtns.forEach((b) => b.setAttribute('aria-expanded', 'false')); }
-optBtns.forEach((b) => { b.onclick = openOpts; });
-opts.querySelectorAll('[data-close]').forEach((el) => { el.onclick = closeOpts; });
-addEventListener('keydown', (e) => { if (e.key === 'Escape' && !opts.hidden) closeOpts(); });
-const sw = (id, on) => $(id).setAttribute('aria-checked', String(!!on));
-function syncOpts() {
-  sw('o-lines', paint && paint.linesOn); sw('o-primer', paint && paint.primer); sw('o-sound', sound.on);
-  $('b-sound').setAttribute('aria-pressed', String(sound.on)); $('b-sound-t').textContent = sound.on ? 'Sound on' : 'Sound off';
-  sw('o-phone', !aim.finger); sw('o-finger', aim.finger);
+function closeOpts() {
+  if (opts.hidden) return;
+  opts.hidden = true;
+  disarm();
+  optBtns.forEach((b) => b.setAttribute("aria-expanded", "false"));
 }
-function syncToggles() { syncOpts(); }   // the outline and base coat switches show the current charm's paint
-$('o-lines').onclick = () => { paint.linesOn = !paint.linesOn; paint.dirty = true; syncOpts(); buzz(6); };
-$('o-primer').onclick = () => { paint.primer = !paint.primer; paint.dirty = true; syncOpts(); buzz(6); };
-$('o-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); syncOpts(); buzz(6); };
-$('b-sound').onclick = () => { sound.on = !sound.on; sound.spray(0); syncOpts(); buzz(6); };
-function setFinger(on) {
-  aim.finger = on; syncOpts(); buzz(6);
-  hint(on ? 'Paint with your finger on the screen' : 'Aim your phone like a can and hold the can to spray', 2600);
-}
-$('o-phone').onclick = () => setFinger(false);
-$('o-finger').onclick = () => setFinger(true);
-$('o-cam').onclick = () => { closeOpts(); setCamMode(true); };
-$('o-how').onclick = () => { closeOpts(); $('how').hidden = false; $('b-go').focus(); };
-$('o-decals').onclick = async () => {
-  closeOpts(); paint.measure();
-  if (paint.coverage < 0.015) { toast('Spray some paint first'); return; }
-  await savePainting(); startDecals();
-};
-// two taps for the ones you can't take back: the first arms it, the second does it
-let armed = null, armT = 0;
-const ARM = { 'o-clear': ['Clear the canvas', 'Undo brings it back', 'Tap again to clear', 'Your painting is wiped, undo brings it back'], 'o-new': ['New painting', 'Start this one again from a blank canvas', 'Tap again to start over', 'Your painting and decals here go'] };
-function disarm() { clearTimeout(armT); if (!armed) return; const [t, sm] = ARM[armed]; $(armed + '-t').textContent = t; $(armed + '-s').textContent = sm; $(armed).classList.remove('armed'); armed = null; }
-function arm(id) {
-  if (armed === id) { disarm(); return true; }
-  disarm(); armed = id; $(id).classList.add('armed'); $(id + '-t').textContent = ARM[id][2]; $(id + '-s').textContent = ARM[id][3]; buzz(12);
-  armT = setTimeout(disarm, 3000); return false;
-}
-$('o-clear').onclick = () => {
-  if (!arm('o-clear')) return;
-  closeOpts(); paint.pushUndo(); paint.clear(); sound.whoosh(); hint('Clean canvas. Undo brings it back', 2200); updateUndo(); paint.measure(); updateMeter();
-};
-$('o-new').onclick = async () => {
-  if (!arm('o-new')) return;
-  closeOpts(); await dropSaved(); stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(true);
-};
-$('b-undo').onclick = () => { if (paint.popUndo()) { sound.undo(); buzz(8); } updateUndo(); };
-function updateUndo() { $('b-undo').disabled = !paint.undo.length; }
-
-
-// ---------------------------------------------------------------- the can: tap (ready), hold to spray (paint), shake to refill
-const can = $('can');
-can.addEventListener('contextmenu', (e) => e.preventDefault());
-can.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  if (flying) return;
-  if (mode === 'ready') { startPainting(false, true); return; }
-  if (mode !== 'paint') return;
-  try { can.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-  if (level <= 0.001 && !ENDLESS) { refill(0.16); return; }   // no motion sensor: tapping the empty can shakes it
-  startSpray(null);
+optBtns.forEach((b) => {
+  b.onclick = openOpts;
 });
-can.addEventListener('pointerup', () => stopSpray());
-can.addEventListener('pointercancel', () => stopSpray());
-// the screen: while painting, holding it also sprays (aim mode: at the nozzle in the middle; finger mode: under
-// the finger). Once saved: tap him to make him hop, hold him and let go for a big jump, swipe to spin him.
-const cv = $('cam');
-const gest = { id: null, x: 0, lx: 0, t: 0, lt: 0, on: false, drag: false };
-cv.addEventListener('pointerdown', (e) => {
-  if (mode === 'decal') { try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ } decalDown(e); return; }
-  if (mode === 'alive') {
-    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-    Object.assign(gest, { id: e.pointerId, x: e.clientX, lx: e.clientX, t: performance.now(), lt: performance.now(), on: hitSticker(e.clientX, e.clientY), drag: false });
-    if (gest.on && life.phase === 'idle') { life.press = true; buzz(6); }
+opts.querySelectorAll("[data-close]").forEach((el) => {
+  el.onclick = closeOpts;
+});
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !opts.hidden) closeOpts();
+});
+const sw = (id, on) => $(id).setAttribute("aria-checked", String(!!on));
+function syncOpts() {
+  sw("o-lines", paint && paint.linesOn);
+  sw("o-primer", paint && paint.primer);
+  sw("o-sound", sound.on);
+  $("b-sound").setAttribute("aria-pressed", String(sound.on));
+  $("b-sound-t").textContent = sound.on ? "Sound on" : "Sound off";
+  sw("o-phone", !aim.finger);
+  sw("o-finger", aim.finger);
+  sw("o-drips", room.drips);
+}
+function syncToggles() {
+  syncOpts();
+} // the outline and base coat switches show the current charm's paint
+$("o-lines").onclick = () => {
+  paint.linesOn = !paint.linesOn;
+  paint.dirty = true;
+  syncOpts();
+  buzz(6);
+};
+$("o-primer").onclick = () => {
+  paint.primer = !paint.primer;
+  paint.dirty = true;
+  syncOpts();
+  buzz(6);
+};
+$("o-sound").onclick = () => {
+  sound.on = !sound.on;
+  sound.spray(0);
+  syncOpts();
+  buzz(6);
+};
+$("b-sound").onclick = () => {
+  sound.on = !sound.on;
+  sound.spray(0);
+  syncOpts();
+  buzz(6);
+};
+function setFinger(on) {
+  aim.finger = on;
+  syncOpts();
+  buzz(6);
+  hint(
+    on
+      ? "Paint with your finger on the screen"
+      : "Aim your phone like a can and hold the can to spray",
+    2600,
+  );
+}
+$("o-phone").onclick = () => setFinger(false);
+$("o-finger").onclick = () => setFinger(true);
+$("o-cam").onclick = () => {
+  closeOpts();
+  setCamMode(true);
+};
+$("o-how").onclick = () => {
+  closeOpts();
+  $("how").hidden = false;
+  $("b-go").focus();
+};
+$("o-decals").onclick = async () => {
+  closeOpts();
+  paint.measure();
+  if (paint.coverage < 0.015) {
+    toast("Spray some paint first");
     return;
   }
-  if (mode !== 'paint') return;
-  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
+  await savePainting();
+  startDecals();
+};
+// two taps for the ones you can't take back: the first arms it, the second does it
+let armed = null,
+  armT = 0;
+const ARM = {
+  "o-clear": [
+    "Clear the canvas",
+    "Undo brings it back",
+    "Tap again to clear",
+    "Your painting is wiped, undo brings it back",
+  ],
+  "o-new": [
+    "New painting",
+    "Start this one again from a blank canvas",
+    "Tap again to start over",
+    "Your painting and decals here go",
+  ],
+  "o-rclear": [
+    "Clear the room",
+    "Takes down all art, stamps and paint",
+    "Tap again to clear",
+    "This can't be undone",
+  ],
+};
+function disarm() {
+  clearTimeout(armT);
+  if (!armed) return;
+  const [t, sm] = ARM[armed];
+  $(armed + "-t").textContent = t;
+  $(armed + "-s").textContent = sm;
+  $(armed).classList.remove("armed");
+  armed = null;
+}
+function arm(id) {
+  if (armed === id) {
+    disarm();
+    return true;
+  }
+  disarm();
+  armed = id;
+  $(id).classList.add("armed");
+  $(id + "-t").textContent = ARM[id][2];
+  $(id + "-s").textContent = ARM[id][3];
+  buzz(12);
+  armT = setTimeout(disarm, 3000);
+  return false;
+}
+$("o-clear").onclick = () => {
+  if (!arm("o-clear")) return;
+  closeOpts();
+  paint.pushUndo();
+  paint.clear();
+  sound.whoosh();
+  hint("Clean canvas. Undo brings it back", 2200);
+  updateUndo();
+  paint.measure();
+  updateMeter();
+};
+$("o-new").onclick = async () => {
+  if (!arm("o-new")) return;
+  closeOpts();
+  await dropSaved();
+  stickerPivot.visible = false;
+  shadow.material.opacity = 0;
+  startPainting(true);
+};
+$("o-drips").onclick = () => {
+  room.setDrips(!room.drips);
+  syncOpts();
+  buzz(6);
+};
+$("o-rclear").onclick = () => {
+  if (!arm("o-rclear")) return;
+  closeOpts();
+  room.clearAll();
+};
+$("b-undo").onclick = () => {
+  if (paint.popUndo()) {
+    sound.undo();
+    buzz(8);
+  }
+  updateUndo();
+};
+function updateUndo() {
+  $("b-undo").disabled = !paint.undo.length;
+}
+
+// ---------------------------------------------------------------- the can: tap (ready), hold to spray (paint), shake to refill
+const can = $("can");
+can.addEventListener("contextmenu", (e) => e.preventDefault());
+can.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  if (flying) return;
+  if (mode === "ready") {
+    startPainting(false, true);
+    return;
+  }
+  if (mode !== "paint") return;
+  try {
+    can.setPointerCapture(e.pointerId);
+  } catch (err) {
+    /* old Safari */
+  }
+  if (level <= 0.001 && !ENDLESS) {
+    refill(0.16);
+    return;
+  } // no motion sensor: tapping the empty can shakes it
+  startSpray(null);
+});
+can.addEventListener("pointerup", () => stopSpray());
+can.addEventListener("pointercancel", () => stopSpray());
+// the screen: while painting, holding it also sprays (aim mode: at the nozzle in the middle; finger mode: under
+// the finger). Once saved: tap him to make him hop, hold him and let go for a big jump, swipe to spin him.
+const cv = $("cam");
+const gest = { id: null, x: 0, lx: 0, t: 0, lt: 0, on: false, drag: false };
+cv.addEventListener("pointerdown", (e) => {
+  if (mode === "decal") {
+    try {
+      cv.setPointerCapture(e.pointerId);
+    } catch (err) {
+      /* old Safari */
+    }
+    decalDown(e);
+    return;
+  }
+  if (mode === "alive") {
+    try {
+      cv.setPointerCapture(e.pointerId);
+    } catch (err) {
+      /* old Safari */
+    }
+    Object.assign(gest, {
+      id: e.pointerId,
+      x: e.clientX,
+      lx: e.clientX,
+      t: performance.now(),
+      lt: performance.now(),
+      on: hitSticker(e.clientX, e.clientY),
+      drag: false,
+    });
+    if (gest.on && life.phase === "idle") {
+      life.press = true;
+      buzz(6);
+    }
+    return;
+  }
+  if (mode !== "paint") return;
+  try {
+    cv.setPointerCapture(e.pointerId);
+  } catch (err) {
+    /* old Safari */
+  }
   startSpray(aim.finger ? { x: e.clientX, y: e.clientY } : null);
 });
-cv.addEventListener('pointermove', (e) => {
-  if (mode === 'decal') { decalMove(e); return; }
-  if (spraying && fingerAt) { fingerAt.x = e.clientX; fingerAt.y = e.clientY; }
-  if (mode === 'alive' && gest.id === e.pointerId && life.phase === 'idle') {
-    const now = performance.now(), dx = e.clientX - gest.lx;
-    if (!gest.drag && Math.abs(e.clientX - gest.x) > 14) { gest.drag = true; life.press = false; }
-    if (gest.drag) { const k = 0.014; life.uy += dx * k; life.uv = (dx * k) / Math.max((now - gest.lt) / 1000, 0.008); life.dragging = true; }
-    gest.lx = e.clientX; gest.lt = now;
+cv.addEventListener("pointermove", (e) => {
+  if (mode === "decal") {
+    decalMove(e);
+    return;
+  }
+  if (spraying && fingerAt) {
+    fingerAt.x = e.clientX;
+    fingerAt.y = e.clientY;
+  }
+  if (mode === "alive" && gest.id === e.pointerId && life.phase === "idle") {
+    const now = performance.now(),
+      dx = e.clientX - gest.lx;
+    if (!gest.drag && Math.abs(e.clientX - gest.x) > 14) {
+      gest.drag = true;
+      life.press = false;
+    }
+    if (gest.drag) {
+      const k = 0.014;
+      life.uy += dx * k;
+      life.uv = (dx * k) / Math.max((now - gest.lt) / 1000, 0.008);
+      life.dragging = true;
+    }
+    gest.lx = e.clientX;
+    gest.lt = now;
   }
 });
 function endGesture(e) {
-  if (mode !== 'alive' || gest.id !== e.pointerId) return;
-  const held = performance.now() - gest.t; gest.id = null; life.dragging = false;
-  if (gest.drag) { if (performance.now() - gest.lt > 90) life.uv = 0; if (Math.abs(life.uv) > 6) { sound.whoosh(); buzz(8); } }
-  else if (gest.on && life.phase === 'idle') { const sq = life.squish; life.press = false; jump(held > 260 ? 2 : 1, sq); }
-  else life.press = false;
+  if (mode !== "alive" || gest.id !== e.pointerId) return;
+  const held = performance.now() - gest.t;
+  gest.id = null;
+  life.dragging = false;
+  if (gest.drag) {
+    if (performance.now() - gest.lt > 90) life.uv = 0;
+    if (Math.abs(life.uv) > 6) {
+      sound.whoosh();
+      buzz(8);
+    }
+  } else if (gest.on && life.phase === "idle") {
+    const sq = life.squish;
+    life.press = false;
+    jump(held > 260 ? 2 : 1, sq);
+  } else life.press = false;
 }
-cv.addEventListener('pointerup', (e) => { stopSpray(); endGesture(e); if (mode === 'decal') decalUp(e); });
-cv.addEventListener('pointercancel', (e) => { stopSpray(); endGesture(e); if (mode === 'decal') decalUp(e); });
-addEventListener('keydown', (e) => { if (e.code === 'Space' && mode === 'paint' && !e.repeat && document.activeElement === document.body) { e.preventDefault(); startSpray(null); } });
-addEventListener('keyup', (e) => { if (e.code === 'Space') stopSpray(); });
-let fingerAt = null, buzzT = 0, emptyNag = 0;
+cv.addEventListener("pointerup", (e) => {
+  stopSpray();
+  endGesture(e);
+  if (mode === "decal") decalUp(e);
+});
+cv.addEventListener("pointercancel", (e) => {
+  stopSpray();
+  endGesture(e);
+  if (mode === "decal") decalUp(e);
+});
+addEventListener("keydown", (e) => {
+  if (
+    e.code === "Space" &&
+    mode === "paint" &&
+    !e.repeat &&
+    document.activeElement === document.body
+  ) {
+    e.preventDefault();
+    startSpray(null);
+  }
+});
+addEventListener("keyup", (e) => {
+  if (e.code === "Space") stopSpray();
+});
+let fingerAt = null,
+  buzzT = 0,
+  emptyNag = 0;
 function startSpray(at) {
   if (flying) return;
-  fingerAt = at; spraying = true; strokeOpen = false; can.dataset.state = 'spray';
+  fingerAt = at;
+  spraying = true;
+  strokeOpen = false;
+  can.dataset.state = "spray";
   if (!at) fingerAt = null;
 }
 function stopSpray() {
-  if (!spraying) return; spraying = false; fingerAt = null; sound.spray(0);
-  if (mode === 'paint') can.dataset.state = level <= 0.001 && !ENDLESS ? 'empty' : 'idle';
-  strokeOpen = false; paint.measure(); updateMeter(); updateUndo(); milestone();
+  if (!spraying) return;
+  spraying = false;
+  fingerAt = null;
+  sound.spray(0);
+  if (mode === "paint") can.dataset.state = level <= 0.001 && !ENDLESS ? "empty" : "idle";
+  strokeOpen = false;
+  paint.measure();
+  updateMeter();
+  updateUndo();
+  milestone();
 }
 let lastShake = 0;
 function shakeKick() {
-  const now = performance.now(); if (now - lastShake < 160) return; lastShake = now;
-  if (mode === 'ready' || mode === 'paint') refill(0.14);
-  if (mode === 'alive') shakeOff();
+  const now = performance.now();
+  if (now - lastShake < 160) return;
+  lastShake = now;
+  if (mode === "ready" || mode === "paint") refill(0.14);
+  if (mode === "alive") shakeOff();
 }
 let shakeT = 0;
 function refill(k) {
-  if (level >= 1) { sound.rattle(2); return; }
-  setLevel(level + k); sound.rattle(3); buzz(15);
-  if (!spraying) { can.dataset.state = 'shake'; clearTimeout(shakeT); shakeT = setTimeout(() => { if (!spraying && mode === 'paint') can.dataset.state = 'idle'; }, 260); }
-  if (level >= 1) hint('Full can. Spray away', 1400);
+  if (level >= 1) {
+    sound.rattle(2);
+    return;
+  }
+  setLevel(level + k);
+  sound.rattle(3);
+  buzz(15);
+  if (!spraying) {
+    can.dataset.state = "shake";
+    clearTimeout(shakeT);
+    shakeT = setTimeout(() => {
+      if (!spraying && mode === "paint") can.dataset.state = "idle";
+    }, 260);
+  }
+  if (level >= 1) hint("Full can. Spray away", 1400);
 }
-function updateMeter() { const p = Math.round(paint.coverage * 100); $('meter').querySelector('i').style.width = p + '%'; $('meter-t').textContent = `Painted ${p}%`; }
+function updateMeter() {
+  const p = Math.round(paint.coverage * 100);
+  $("meter").querySelector("i").style.width = p + "%";
+  $("meter-t").textContent = `Painted ${p}%`;
+}
 // little cheers as the charm fills up (once each per painting)
-const MILESTONES = [[0.25, 'Nice!'], [0.5, 'Fresh!'], [0.8, 'Masterpiece!']];
+const MILESTONES = [
+  [0.25, "Nice!"],
+  [0.5, "Fresh!"],
+  [0.8, "Masterpiece!"],
+];
 function milestone() {
-  const i = cp.mile || 0; if (i >= MILESTONES.length || paint.coverage < MILESTONES[i][0]) return;
-  cp.mile = i + 1; toast(MILESTONES[i][1], 1300); sound.sparkle(); buzz([10, 30, 10]);
+  const i = cp.mile || 0;
+  if (i >= MILESTONES.length || paint.coverage < MILESTONES[i][0]) return;
+  cp.mile = i + 1;
+  toast(MILESTONES[i][1], 1300);
+  sound.sparkle();
+  buzz([10, 30, 10]);
   burstSplats(paint.topColours(), 26, centreLocal(0.004), 0.06);
 }
 
@@ -970,190 +2270,670 @@ function milestone() {
 // charm's middle with a wet yellow edge.
 function startPainting(fresh = false, fly = false) {
   if (fresh) paint.clear();
-  setMode('paint'); syncToggles();
-  stickerPivot.visible = false; shadow.material.opacity = 0; orbit.mesh.visible = false; orbit.on = 0;
-  const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = 0;
-  paintMesh.visible = true; paint.dirty = true; reveal = null; decalHost(cp, 'flat');
-  paint.measure(); cp.mile = MILESTONES.filter(([k]) => paint.coverage >= k).length;
+  setMode("paint");
+  syncToggles();
+  stickerPivot.visible = false;
+  shadow.material.opacity = 0;
+  orbit.mesh.visible = false;
+  orbit.on = 0;
+  const u = paintMesh.material.uniforms;
+  u.uOpacity.value = 1;
+  u.uFlash.value = 0;
+  u.uReveal.value = 0;
+  paintMesh.visible = true;
+  paint.dirty = true;
+  reveal = null;
+  decalHost(cp, "flat");
+  paint.measure();
+  cp.mile = MILESTONES.filter(([k]) => paint.coverage >= k).length;
   if (fly) {
-    previewMesh.visible = true; previewMesh.material.opacity = 1;
-    flying = true; can.dataset.state = 'away'; can.style.visibility = 'hidden';
-    sound.rattle(5); buzz([10, 40, 10]);
-    flyCan(() => { flying = false; beginReveal(); setTimeout(() => { can.style.visibility = ''; if (mode === 'paint') can.dataset.state = 'idle'; }, 350); });
-  } else { sound.rattle(3); beginReveal(); }
-  hint(aim.finger ? `Paint ${cp.name} with your finger` : `Aim at ${cp.name} and hold the can to spray`, 4200);
-  updateMeter(); updateUndo();
-  postEvent('play', { step: 'paint', piece: cp.k });
+    previewMesh.visible = true;
+    previewMesh.material.opacity = 1;
+    flying = true;
+    can.dataset.state = "away";
+    can.style.visibility = "hidden";
+    sound.rattle(5);
+    buzz([10, 40, 10]);
+    flyCan(() => {
+      flying = false;
+      beginReveal();
+      setTimeout(() => {
+        can.style.visibility = "";
+        if (mode === "paint") can.dataset.state = "idle";
+      }, 350);
+    });
+  } else {
+    sound.rattle(3);
+    beginReveal();
+  }
+  hint(
+    aim.finger
+      ? `Paint ${cp.name} with your finger`
+      : `Aim at ${cp.name} and hold the can to spray`,
+    4200,
+  );
+  updateMeter();
+  updateUndo();
+  postEvent("play", { step: "paint", piece: cp.k });
 }
 let reveal = null;
 function beginReveal() {
-  reveal = { t: 0, dur: 1.25 }; sound.pssh(); buzz(30);
-  burstSplats([CAPS[capIdx].c, '#ffffff', '#f6c344'], 46, centreLocal(0.003), 0.07);
-  const at = pieceScreen(); if (at) popWord('PSSHT!', at[0], at[1]);
+  reveal = { t: 0, dur: 1.25 };
+  sound.pssh();
+  buzz(30);
+  burstSplats([CAPS[capIdx].c, "#ffffff", ACC], 46, centreLocal(0.003), 0.07);
+  const at = pieceScreen();
+  if (at) popWord("PSSHT!", at[0], at[1]);
 }
 const _cl = new THREE.Vector3();
-function centreLocal(z) { return new THREE.Vector3((cp.centre[0] - 0.5) * W, (0.5 - cp.centre[1]) * H, z); }
-function pieceScreen() {   // the charm's middle on screen (px), or null
+function centreLocal(z) {
+  return new THREE.Vector3((cp.centre[0] - 0.5) * W, (0.5 - cp.centre[1]) * H, z);
+}
+function pieceScreen() {
+  // the charm's middle on screen (px), or null
   if (!pose.valid || !camera) return null;
-  _cl.copy(centreLocal(0)); F.localToWorld(_cl); _cl.project(camera); const r = canvas.getBoundingClientRect();
-  return [r.left + (_cl.x + 1) / 2 * r.width, r.top + (1 - _cl.y) / 2 * r.height];
+  _cl.copy(centreLocal(0));
+  F.localToWorld(_cl);
+  _cl.project(camera);
+  const r = canvas.getBoundingClientRect();
+  return [r.left + ((_cl.x + 1) / 2) * r.width, r.top + ((1 - _cl.y) / 2) * r.height];
 }
 function flyCan(done) {
-  const r = can.getBoundingClientRect(), [tx, ty] = pieceScreen() || nozzle0();
-  const el = document.createElement('div'); el.className = 'can-fly'; el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = can.querySelector('svg').outerHTML.replace(/id="[^"]*"/g, '');
-  Object.assign(el.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  const r = can.getBoundingClientRect(),
+    [tx, ty] = pieceScreen() || nozzle0();
+  const el = document.createElement("div");
+  el.className = "can-fly";
+  el.setAttribute("aria-hidden", "true");
+  el.innerHTML = can.querySelector("svg").outerHTML.replace(/id="[^"]*"/g, "");
+  Object.assign(el.style, {
+    left: r.left + "px",
+    top: r.top + "px",
+    width: r.width + "px",
+    height: r.height + "px",
+  });
   hud.appendChild(el);
-  const dx = tx - (r.left + r.width / 2), dy = ty - (r.top + r.height * 0.06);
-  let fin = false; const end = () => { if (fin) return; fin = true; el.remove(); done(); };
-  if (!el.animate) { setTimeout(end, 50); return; }
-  el.animate([
-    { transform: 'translate(0,0) rotate(0deg) scale(1)' },
-    { transform: `translate(${dx * 0.5}px,${dy * 0.5 - 70}px) rotate(-30deg) scale(.75)`, offset: 0.5 },
-    { transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.42)`, opacity: 1, offset: 0.86 },
-    { transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.15)`, opacity: 0 },
-  ], { duration: 560, easing: 'cubic-bezier(.35,.05,.35,1)', fill: 'forwards' }).onfinish = end;
+  const dx = tx - (r.left + r.width / 2),
+    dy = ty - (r.top + r.height * 0.06);
+  let fin = false;
+  const end = () => {
+    if (fin) return;
+    fin = true;
+    el.remove();
+    done();
+  };
+  if (!el.animate) {
+    setTimeout(end, 50);
+    return;
+  }
+  el.animate(
+    [
+      { transform: "translate(0,0) rotate(0deg) scale(1)" },
+      {
+        transform: `translate(${dx * 0.5}px,${dy * 0.5 - 70}px) rotate(-30deg) scale(.75)`,
+        offset: 0.5,
+      },
+      {
+        transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.42)`,
+        opacity: 1,
+        offset: 0.86,
+      },
+      { transform: `translate(${dx}px,${dy}px) rotate(-48deg) scale(.15)`, opacity: 0 },
+    ],
+    { duration: 560, easing: "cubic-bezier(.35,.05,.35,1)", fill: "forwards" },
+  ).onfinish = end;
   setTimeout(end, 900);
 }
 function popWord(text, x, y) {
-  const el = document.createElement('div'); el.className = 'pop-word'; el.textContent = text; el.setAttribute('aria-hidden', 'true');
-  el.style.left = clamp(x, 80, innerWidth - 80) + 'px'; el.style.top = clamp(y - 30, 90, innerHeight - 200) + 'px'; el.style.setProperty('--c', CAPS[capIdx].c);
-  hud.appendChild(el); setTimeout(() => el.remove(), 1000);
+  const el = document.createElement("div");
+  el.className = "pop-word";
+  el.textContent = text;
+  el.setAttribute("aria-hidden", "true");
+  el.style.left = clamp(x, 80, innerWidth - 80) + "px";
+  el.style.top = clamp(y - 30, 90, innerHeight - 200) + "px";
+  el.style.setProperty("--c", CAPS[capIdx].c);
+  hud.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
 }
-$('b-done').onclick = async () => {
+$("b-done").onclick = async () => {
   paint.measure();
-  if (paint.coverage < 0.015) { toast('Spray some paint first'); return; }
+  if (paint.coverage < 0.015) {
+    toast("Spray some paint first");
+    return;
+  }
   await savePainting();
   startAlive(true);
 };
 async function savePainting() {
-  const blob = await new Promise((res) => paint.P.toBlob(res, 'image/png'));
-  saved = { paint: blob, primer: paint.primer, linesOn: paint.linesOn, colours: paint.topColours(), at: Date.now(), decals: serialDecals(cp) };
+  const blob = await new Promise((res) => paint.P.toBlob(res, "image/png"));
+  saved = {
+    paint: blob,
+    primer: paint.primer,
+    linesOn: paint.linesOn,
+    colours: paint.topColours(),
+    at: Date.now(),
+    decals: serialDecals(cp),
+  };
   const ok = await storeSaved(saved);
-  diag.saves++; postEvent('custom', { action: 'spray-save', piece: cp.k, painted: Math.round(paint.coverage * 100), colours: saved.colours.length });
-  if (!ok) hint('Saved for this visit (this browser would not keep it)', 2600);
+  diag.saves++;
+  postEvent("custom", {
+    action: "spray-save",
+    piece: cp.k,
+    painted: Math.round(paint.coverage * 100),
+    colours: saved.colours.length,
+  });
+  if (!ok) hint("Saved for this visit (this browser would not keep it)", 2600);
 }
 async function restorePaint(rec, P) {
-  const pt = P.paint; pt.primer = rec.primer !== false; pt.linesOn = rec.linesOn !== false;
-  try { const bmp = await createImageBitmap(rec.paint); pt.pg.clearRect(0, 0, TW, TH); pt.pg.drawImage(bmp, 0, 0); pt.dirty = true; pt.measure(); } catch (e) { console.warn('restore', e); }
+  const pt = P.paint;
+  pt.primer = rec.primer !== false;
+  pt.linesOn = rec.linesOn !== false;
+  try {
+    const bmp = await createImageBitmap(rec.paint);
+    pt.pg.clearRect(0, 0, TW, TH);
+    pt.pg.drawImage(bmp, 0, 0);
+    pt.dirty = true;
+    pt.measure();
+  } catch (e) {
+    console.warn("restore", e);
+  }
   for (const c of rec.colours || []) pt.used.set(c, 1);
-  DEC.ready.then(() => { clearDecals(P); for (const d of rec.decals || []) makeLayer(P, d); });
+  DEC.ready.then(() => {
+    clearDecals(P);
+    for (const d of rec.decals || []) makeLayer(P, d);
+  });
 }
 
-async function bakeSticker() {   // the sticker's face: the painting; without the base coat, the print shows under the paint
-  const g = stickerCanvas.getContext('2d'); g.clearRect(0, 0, TW, TH);
-  if (!paint.primer) { try { cp.printImg = cp.printImg || await loadImg(artUrls(cp).print); g.drawImage(cp.printImg, 0, 0, TW, TH); } catch (e) { g.fillStyle = '#fbfaf5'; g.fillRect(0, 0, TW, TH); } }
-  paint.dirty = true; paint.composite(); g.drawImage(paint.D, 0, 0);
+// The room (room.js) reads your paintings from here: the die-cut painting with a white border and its decals, cropped, under 'street:<piece>' in the same store.
+let streetArt = null;
+async function writeStreetArt() {
+  if (VIEWER || cp.shared || !paint || !stickerCanvas) return false;
+  try {
+    const pad = 180,
+      Wc = TW + pad * 2,
+      Hc = TH + pad * 2,
+      c = document.createElement("canvas");
+    c.width = Wc;
+    c.height = Hc;
+    const g = c.getContext("2d");
+    const t = document.createElement("canvas");
+    t.width = TW;
+    t.height = TH;
+    const tg = t.getContext("2d");
+    tg.drawImage(paint.mask, 0, 0, TW, TH);
+    tg.globalCompositeOperation = "source-in";
+    tg.fillStyle = "#ffffff";
+    tg.fillRect(0, 0, TW, TH);
+    for (let a = 0; a < 16; a++)
+      g.drawImage(t, pad + Math.cos(a * 0.3927) * 20, pad + Math.sin(a * 0.3927) * 20); // the white die-cut edge
+    tg.globalCompositeOperation = "copy";
+    tg.drawImage(stickerCanvas, 0, 0);
+    tg.globalCompositeOperation = "destination-in";
+    tg.drawImage(paint.mask, 0, 0, TW, TH);
+    g.drawImage(t, pad, pad);
+    for (const L of cp.decals) {
+      // the decals, where they sit on the piece
+      if (!L.art || L.out) continue;
+      const ww = L.w * TW * L.art.grow,
+        hh = ww / L.art.aspect;
+      g.save();
+      g.translate(pad + L.u * TW, pad + L.v * TH);
+      g.rotate(-L.r);
+      g.scale(L.f, 1);
+      g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh);
+      g.restore();
+    }
+    // crop to what's there
+    const sw = 120,
+      sh = Math.round((sw * Hc) / Wc),
+      sc = document.createElement("canvas");
+    sc.width = sw;
+    sc.height = sh;
+    const sg = sc.getContext("2d", { willReadFrequently: true });
+    sg.drawImage(c, 0, 0, sw, sh);
+    const d = sg.getImageData(0, 0, sw, sh).data;
+    let x0 = sw,
+      y0 = sh,
+      x1 = 0,
+      y1 = 0;
+    for (let y = 0; y < sh; y++)
+      for (let x = 0; x < sw; x++)
+        if (d[(y * sw + x) * 4 + 3] > 8) {
+          x0 = Math.min(x0, x);
+          y0 = Math.min(y0, y);
+          x1 = Math.max(x1, x);
+          y1 = Math.max(y1, y);
+        }
+    if (x1 <= x0) return false;
+    const kx = Wc / sw,
+      ky = Hc / sh,
+      cx = Math.max(0, Math.floor((x0 - 1) * kx)),
+      cy = Math.max(0, Math.floor((y0 - 1) * ky)),
+      cw = Math.min(Wc - cx, Math.ceil((x1 - x0 + 3) * kx)),
+      ch = Math.min(Hc - cy, Math.ceil((y1 - y0 + 3) * ky));
+    const o = document.createElement("canvas");
+    o.width = cw;
+    o.height = ch;
+    o.getContext("2d").drawImage(c, cx, cy, cw, ch, 0, 0, cw, ch);
+    const png = await new Promise((res) => o.toBlob(res, "image/png"));
+    const db = await idb();
+    const nm = cp.k === "can" ? "can" : cp.name;
+    await new Promise((res, rej) => {
+      const tx = db.transaction("kv", "readwrite");
+      tx.objectStore("kv").put(
+        { png, k: cp.k, title: "My " + nm, at: Date.now() },
+        "street:" + cp.k,
+      );
+      tx.oncomplete = res;
+      tx.onerror = () => rej(tx.error);
+    });
+    return true;
+  } catch (e) {
+    console.warn("street art", e);
+    return false;
+  }
+}
+// ---------------------------------------------------------------- the room (room.js): Hang, Stamp, Graffiti
+// One page, one camera session. Painting runs image tracking only (and the iPhone close-focus camera); the first
+// time you go into the room the session restarts once with world tracking on (the engine can't switch it on
+// mid-session), and stays that way: the merch is still found in it, so going back and forth is instant after that.
+// Things you put up stay in the room while you paint.
+let slam = ["hang", "stamp", "graffiti"].includes(params.get("room")); // ?room=<mode>: straight into the room
+let roomCam = slam; // the plain back camera (SLAM can't use the iPhone multi-lens camera)
+let lastTrack = "",
+  switchDone = null,
+  switching = false;
+const room = createRoom({
+  postEvent: (t, p) => postEvent(t, { ...p, page: "room" }),
+  tracking: () => lastTrack,
+  diagOn: () => params.has("diag") || (!LIVE_SITE && params.has("test")),
+  diag: () => diag,
+  soundOn: () => sound.on,
+  audio: () => (sound.ctx && sound.master ? { ctx: sound.ctx, dest: sound.master } : null),
+  closeOpts: () => closeOpts(),
+  optsOpen: () => !opts.hidden,
+  leave: () => leaveRoom(),
+});
+function noteTracking(st) {
+  if (st && st !== lastTrack) {
+    lastTrack = st;
+    diag.steps.push(["track:" + st, Math.round(performance.now())]);
+  }
+}
+function drawSwitchArt() {
+  const c = $("switch-art"),
+    g = c.getContext("2d");
+  g.clearRect(0, 0, c.width, c.height);
+  const src = mode === "alive" && stickerCanvas ? stickerCanvas : null;
+  if (!src) return;
+  const k = Math.min(c.width / src.width, c.height / src.height) * 0.9;
+  g.drawImage(
+    src,
+    (c.width - src.width * k) / 2,
+    (c.height - src.height * k) / 2,
+    src.width * k,
+    src.height * k,
+  );
+}
+async function enterRoom(m) {
+  if (switching || VIEWER || mode === "room") return;
+  closeOpts();
+  stopSpray();
+  const k = mode === "alive" && cp && !cp.shared ? cp.k : null;
+  postEvent("custom", { action: "spray-to-room", mode: m, piece: cp && cp.k });
+  sound.whoosh();
+  buzz(12);
+  if (!slam) {
+    drawSwitchArt();
+    $("switch").classList.add("on");
+  } // at once, before anything async
+  setMode("room");
+  const restart = slam ? null : restartWithSlam();
+  if (k && streetArt) await streetArt; // the die-cut picture of this painting, for the tray
+  if (restart) await restart;
+  diag.steps.push(["room-in", Math.round(performance.now())]);
+  await room.enter(m, k);
+}
+function leaveRoom() {
+  if (mode !== "room") return;
+  room.exit();
+  sound.whoosh();
+  buzz(8);
+  life.phase = "off";
+  stickerPivot.visible = false;
+  shadow.material.opacity = 0; // he lifts off the charm again when it's found
+  setMode("find");
+}
+function restartWithSlam() {
+  return new Promise((res) => {
+    switching = true;
+    slam = true;
+    roomCam = true;
+    $("switch").classList.add("on");
+    switchDone = () => {
+      switchDone = null;
+      switching = false;
+      setTimeout(() => $("switch").classList.remove("on"), 700);
+      res();
+    };
+    diag.steps.push(["slam-restart", Math.round(performance.now())]);
+    try {
+      XR8.stop();
+    } catch (e) {
+      /* not running */
+    }
+    XR8.XrController.configure({ disableWorldTracking: false });
+    XR8.run(runOpts());
+    setTimeout(() => {
+      if (switchDone) {
+        diag.errors.push("slam restart: no video after 15 s");
+        switchDone();
+      }
+    }, 15000);
+  });
+}
+async function bakeSticker() {
+  // the sticker's face: the painting; without the base coat, the print shows under the paint
+  const g = stickerCanvas.getContext("2d");
+  g.clearRect(0, 0, TW, TH);
+  if (!paint.primer) {
+    try {
+      cp.printImg = cp.printImg || (await loadImg(artUrls(cp).print));
+      g.drawImage(cp.printImg, 0, 0, TW, TH);
+    } catch (e) {
+      g.fillStyle = "#fbfaf5";
+      g.fillRect(0, 0, TW, TH);
+    }
+  }
+  paint.dirty = true;
+  paint.composite();
+  g.drawImage(paint.D, 0, 0);
   // the cut: outside the stencil stays clear, the edge of the sticker is white
-  g.globalCompositeOperation = 'destination-in'; g.drawImage(paint.mask, 0, 0, TW, TH); g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH);
-  g.globalCompositeOperation = 'source-over';
+  g.globalCompositeOperation = "destination-in";
+  g.drawImage(paint.mask, 0, 0, TW, TH);
+  g.globalCompositeOperation = "destination-over";
+  g.fillStyle = "#ffffff";
+  g.fillRect(0, 0, TW, TH);
+  g.globalCompositeOperation = "source-over";
   stickerTex.needsUpdate = true;
 }
 // Once saved: the painting flashes, peels off the charm as a 3D sticker, spins and settles above the print.
 // Then he lives there: he turns to look at the phone, paint drops in his colours orbit him, a shine sweeps
 // over the gloss now and then. Tap him (hop), hold and let go (big jump), swipe (spin), shake the phone (he
 // shakes the wet paint off).
-const life = { t: 0, phase: 'off', hopAt: 4, hop: null, spin: null, lx: 0, ly: 0, uy: 0, uv: 0, dragging: false, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: 0, tip: 0 };
-const TIPS = ['Tap $ to make $ hop', 'Swipe to spin $', 'Hold $, then let go', 'Shake your phone', 'Tap the shutter for a photo, hold it to film'];
+const life = {
+  t: 0,
+  phase: "off",
+  hopAt: 4,
+  hop: null,
+  spin: null,
+  lx: 0,
+  ly: 0,
+  uy: 0,
+  uv: 0,
+  dragging: false,
+  press: false,
+  squish: 0,
+  wig: null,
+  shineAt: 2.5,
+  tipAt: 0,
+  tip: 0,
+};
+const TIPS = [
+  "Tap $ to make $ hop",
+  "Swipe to spin $",
+  "Hold $, then let go",
+  "Shake your phone",
+  "Tap the shutter for a photo, hold it to film",
+];
 async function startAlive(justSaved, fromDecals = false) {
-  if (cp.restoring) await cp.restoring;                 // a painting from storage or a share link, still being drawn in
+  if (cp.restoring) await cp.restoring; // a painting from storage or a share link, still being drawn in
   await bakeSticker();
-  setMode('alive');
-  decalHost(cp, justSaved ? 'flat' : 'sticker');
-  life.ask = justSaved && !params.has('noask');
-  Object.assign(life, { t: 0, phase: justSaved ? 'flash' : 'lift', hop: null, spin: null, hopAt: 5 + Math.random() * 3, uy: 0, uv: 0, press: false, squish: 0, wig: null, shineAt: 2.5, tipAt: justSaved ? 3.2 : 2.4, tip: 0, burst: false });
+  streetArt = writeStreetArt();
+  setMode("alive");
+  decalHost(cp, justSaved ? "flat" : "sticker");
+  life.ask = justSaved && !params.has("noask");
+  Object.assign(life, {
+    t: 0,
+    phase: justSaved ? "flash" : "lift",
+    hop: null,
+    spin: null,
+    hopAt: 5 + Math.random() * 3,
+    uy: 0,
+    uv: 0,
+    press: false,
+    squish: 0,
+    wig: null,
+    shineAt: 2.5,
+    tipAt: justSaved ? 3.2 : 2.4,
+    tip: 0,
+    burst: false,
+  });
   colourOrbit(paint.topColours(7));
-  paintMesh.visible = justSaved; paintMesh.material.uniforms.uOpacity.value = 1; paintMesh.material.uniforms.uReveal.value = 1;
+  paintMesh.visible = justSaved;
+  paintMesh.material.uniforms.uOpacity.value = 1;
+  paintMesh.material.uniforms.uReveal.value = 1;
   stickerPivot.visible = false;
-  if (justSaved) { toast('Fresh!'); sound.pssh(); buzz([20, 60, 20]); } else if (fromDecals) { toast(cp.decals.length ? 'Looking good!' : 'Fresh!'); sound.sparkle(); buzz([10, 30, 10]); } else hint(VIEWER ? `Tap ${cp.them || 'it'} to make ${cp.them || 'it'} hop` : cp.back, 2200);
-  if (VIEWER && !life.seen) { life.seen = true; postEvent('custom', { action: 'spray-view-found', piece: cp.k }); }
+  if (justSaved) {
+    toast("Fresh!");
+    sound.pssh();
+    buzz([20, 60, 20]);
+  } else if (fromDecals) {
+    toast(cp.decals.length ? "Looking good!" : "Fresh!");
+    sound.sparkle();
+    buzz([10, 30, 10]);
+  } else hint(VIEWER ? `Tap ${cp.them || "it"} to make ${cp.them || "it"} hop` : cp.back, 2200);
+  if (VIEWER && !life.seen) {
+    life.seen = true;
+    postEvent("custom", { action: "spray-view-found", piece: cp.k });
+  }
 }
-function jump(kind, power = 0) {   // 1: a hop; 2: the big one (after holding him), with a spin and a burst
+function jump(kind, power = 0) {
+  // 1: a hop; 2: the big one (after holding him), with a spin and a burst
   const big = kind === 2;
-  life.hop = { t: 0, big, k: big ? 1 + power * 0.6 : 1 }; sound.mew(); buzz(big ? [15, 30, 25] : 12);
-  burstSplats(paint.topColours(), big ? 50 : 22, new THREE.Vector3(0, -H * 0.3, 0.004), big ? 0.08 : 0.05);
+  life.hop = { t: 0, big, k: big ? 1 + power * 0.6 : 1 };
+  if (ML) sound.sparkle();
+  else sound.mew();
+  buzz(big ? [15, 30, 25] : 12);
+  burstSplats(
+    paint.topColours(),
+    big ? 50 : 22,
+    new THREE.Vector3(0, -H * 0.3, 0.004),
+    big ? 0.08 : 0.05,
+  );
 }
 function shakeOff() {
-  if (life.phase !== 'idle') return;
-  life.wig = { t: 0 }; sound.rattle(4); buzz([12, 30, 12]);
+  if (life.phase !== "idle") return;
+  life.wig = { t: 0 };
+  sound.rattle(4);
+  buzz([12, 30, 12]);
   burstSplats(paint.topColours(), 18, new THREE.Vector3(0, 0, stickerPivot.position.z), 0.1);
 }
 function tickAlive(dt) {
-  if (mode !== 'alive') return;
-  life.t += dt; const u = paintMesh.material.uniforms;
+  if (mode !== "alive") return;
+  life.t += dt;
+  const u = paintMesh.material.uniforms;
   const HOVER = 0.016;
-  if (life.phase === 'flash') {
-    const k = life.t / 0.7; u.uFlash.value = Math.sin(clamp(k, 0, 1) * Math.PI);
-    if (k >= 0.55 && !life.burst) { life.burst = true; burstSplats(paint.topColours(), 70); sound.pop(); }
-    if (k >= 1) { life.phase = 'lift'; life.t = 0; life.burst = false; }
-  }
-  if (life.phase === 'lift') {
-    if (!stickerPivot.visible) { stickerPivot.visible = true; decalHost(cp, 'sticker'); sound.whoosh(); setTimeout(() => sound.sparkle(), 500); }
-    const k = clamp(life.t / 1.3, 0, 1), e = easeInOut(k);
-    u.uOpacity.value = 1 - easeOut(k * 3); paintMesh.visible = u.uOpacity.value > 0.01;
-    stickerPivot.position.set(0, 0, 0.0012 + HOVER * e + Math.sin(k * Math.PI) * 0.012);
-    sticker.rotation.set(0, e * Math.PI * 2, 0);
-    const sq = k > 0.85 ? 1 + Math.sin((k - 0.85) / 0.15 * Math.PI) * 0.06 : 1;
-    sticker.scale.set(1 / sq, sq, 1);
+  if (life.phase === "flash") {
+    const k = life.t / 0.7;
+    u.uFlash.value = Math.sin(clamp(k, 0, 1) * Math.PI);
+    if (k >= 0.55 && !life.burst) {
+      life.burst = true;
+      burstSplats(paint.topColours(), 70);
+      sound.pop();
+    }
     if (k >= 1) {
-      life.phase = 'idle'; life.t = 0; sticker.rotation.set(0, 0, 0); sticker.scale.set(1, 1, 1); burstSplats(paint.topColours(), 30, new THREE.Vector3(0, -H * 0.35, 0.002), 0.05);
-      if (life.ask) { life.ask = false; life.tipAt = 14; setTimeout(showAsk, 700); }
+      life.phase = "lift";
+      life.t = 0;
+      life.burst = false;
     }
   }
-  if (life.phase === 'idle') {
+  if (life.phase === "lift") {
+    if (!stickerPivot.visible) {
+      stickerPivot.visible = true;
+      decalHost(cp, "sticker");
+      sound.whoosh();
+      setTimeout(() => sound.sparkle(), 500);
+    }
+    const k = clamp(life.t / 1.3, 0, 1),
+      e = easeInOut(k);
+    u.uOpacity.value = 1 - easeOut(k * 3);
+    paintMesh.visible = u.uOpacity.value > 0.01;
+    stickerPivot.position.set(0, 0, 0.0012 + HOVER * e + Math.sin(k * Math.PI) * 0.012);
+    sticker.rotation.set(0, e * Math.PI * 2, 0);
+    const sq = k > 0.85 ? 1 + Math.sin(((k - 0.85) / 0.15) * Math.PI) * 0.06 : 1;
+    sticker.scale.set(1 / sq, sq, 1);
+    if (k >= 1) {
+      life.phase = "idle";
+      life.t = 0;
+      sticker.rotation.set(0, 0, 0);
+      sticker.scale.set(1, 1, 1);
+      burstSplats(paint.topColours(), 30, new THREE.Vector3(0, -H * 0.35, 0.002), 0.05);
+      if (life.ask) {
+        life.ask = false;
+        life.tipAt = 14;
+        setTimeout(showAsk, 700);
+      }
+    }
+  }
+  if (life.phase === "idle") {
     const t = life.t;
-    let z = HOVER + Math.sin(t * 1.7) * 0.0018, ry = Math.sin(t * 0.7) * 0.16, rx = Math.sin(t * 0.9 + 1) * 0.07, rz = 0, sy = 1 + Math.sin(t * 2.2) * 0.012;
+    let z = HOVER + Math.sin(t * 1.7) * 0.0018,
+      ry = Math.sin(t * 0.7) * 0.16,
+      rx = Math.sin(t * 0.9 + 1) * 0.07,
+      rz = 0,
+      sy = 1 + Math.sin(t * 2.2) * 0.012;
     // he looks at the phone: turn the face part of the way toward the camera
-    _cl.copy(camera.position); F.worldToLocal(_cl);
-    const yaw = clamp(Math.atan2(_cl.x, _cl.z), -0.7, 0.7) * 0.5, pitch = clamp(Math.atan2(-_cl.y, _cl.z), -0.7, 0.7) * 0.4, f = Math.min(1, dt * 4);
-    life.ly += (yaw - life.ly) * f; life.lx += (pitch - life.lx) * f; ry += life.ly; rx += life.lx;
+    _cl.copy(camera.position);
+    F.worldToLocal(_cl);
+    const yaw = clamp(Math.atan2(_cl.x, _cl.z), -0.7, 0.7) * 0.5,
+      pitch = clamp(Math.atan2(-_cl.y, _cl.z), -0.7, 0.7) * 0.4,
+      f = Math.min(1, dt * 4);
+    life.ly += (yaw - life.ly) * f;
+    life.lx += (pitch - life.lx) * f;
+    ry += life.ly;
+    rx += life.lx;
     // swipe to spin: coasts, then settles face-front on the nearest full turn
     if (!life.dragging) {
-      life.uy += life.uv * dt; life.uv *= Math.pow(0.12, dt);
-      if (Math.abs(life.uv) < 1.5) { const tgt = Math.round(life.uy / (Math.PI * 2)) * Math.PI * 2; life.uy += (tgt - life.uy) * Math.min(1, dt * 5); life.uv *= Math.pow(0.02, dt); }
+      life.uy += life.uv * dt;
+      life.uv *= Math.pow(0.12, dt);
+      if (Math.abs(life.uv) < 1.5) {
+        const tgt = Math.round(life.uy / (Math.PI * 2)) * Math.PI * 2;
+        life.uy += (tgt - life.uy) * Math.min(1, dt * 5);
+        life.uv *= Math.pow(0.02, dt);
+      }
     }
     ry += life.uy;
     // pressed: he squashes down, ready to jump
     life.squish += ((life.press ? 1 : 0) - life.squish) * Math.min(1, dt * (life.press ? 3 : 12));
-    sy *= 1 - life.squish * 0.16; z -= life.squish * 0.004;
-    if (t > life.hopAt && !life.hop && !life.press && !life.dragging) { life.hop = { t: 0, big: false, k: 0.8 }; life.hopAt = t + 6 + Math.random() * 4; }
-    if (life.hop) {                                   // a hop and a wiggle; the big one spins too
-      const h = life.hop; h.t += dt; const k = h.t / (h.big ? 0.95 : 0.6);
+    sy *= 1 - life.squish * 0.16;
+    z -= life.squish * 0.004;
+    if (t > life.hopAt && !life.hop && !life.press && !life.dragging) {
+      life.hop = { t: 0, big: false, k: 0.8 };
+      life.hopAt = t + 6 + Math.random() * 4;
+    }
+    if (life.hop) {
+      // a hop and a wiggle; the big one spins too
+      const h = life.hop;
+      h.t += dt;
+      const k = h.t / (h.big ? 0.95 : 0.6);
       z += Math.sin(clamp(k, 0, 1) * Math.PI) * (h.big ? 0.022 : 0.009) * h.k;
       rz = Math.sin(k * Math.PI * 4) * 0.16 * (1 - clamp(k, 0, 1));
-      sy *= k < 0.15 ? 1 - Math.sin(k / 0.15 * Math.PI) * 0.1 : 1;
-      if (h.big && k > 0.15 && !h.spun) { h.spun = true; life.spin = { t: 0 }; }
-      if (k >= 1) { life.hop = null; if (h.big) { burstSplats(paint.topColours(), 24, new THREE.Vector3(0, -H * 0.35, 0.002), 0.04); sound.pop(); } }
+      sy *= k < 0.15 ? 1 - Math.sin((k / 0.15) * Math.PI) * 0.1 : 1;
+      if (h.big && k > 0.15 && !h.spun) {
+        h.spun = true;
+        life.spin = { t: 0 };
+      }
+      if (k >= 1) {
+        life.hop = null;
+        if (h.big) {
+          burstSplats(paint.topColours(), 24, new THREE.Vector3(0, -H * 0.35, 0.002), 0.04);
+          sound.pop();
+        }
+      }
     }
-    if (life.wig) { life.wig.t += dt; const k = clamp(life.wig.t / 0.7, 0, 1); rz += Math.sin(k * Math.PI * 9) * 0.22 * (1 - k); if (k >= 1) life.wig = null; }
-    if (life.spin) { life.spin.t += dt; const k = clamp(life.spin.t / 0.8, 0, 1); ry += easeInOut(k) * Math.PI * 2; if (k >= 1) life.spin = null; }
-    stickerPivot.position.set(0, 0, z); sticker.rotation.set(rx, ry, rz); sticker.scale.set(1 / Math.sqrt(sy), sy, 1);
+    if (life.wig) {
+      life.wig.t += dt;
+      const k = clamp(life.wig.t / 0.7, 0, 1);
+      rz += Math.sin(k * Math.PI * 9) * 0.22 * (1 - k);
+      if (k >= 1) life.wig = null;
+    }
+    if (life.spin) {
+      life.spin.t += dt;
+      const k = clamp(life.spin.t / 0.8, 0, 1);
+      ry += easeInOut(k) * Math.PI * 2;
+      if (k >= 1) life.spin = null;
+    }
+    stickerPivot.position.set(0, 0, z);
+    sticker.rotation.set(rx, ry, rz);
+    sticker.scale.set(1 / Math.sqrt(sy), sy, 1);
     // the shine: a flat white band across the gloss every few seconds
-    if (t > life.shineAt) { const k = (t - life.shineAt) / 0.9; shine.value = -0.4 + k * 2.2; if (k >= 1) { shine.value = -1; life.shineAt = t + 3.5 + Math.random() * 2; } }
-    if (t > life.tipAt && $('ask').hidden) { hint(TIPS[life.tip % TIPS.length].replaceAll('$', cp.them || 'it'), 2600); life.tip++; life.tipAt = t + (life.tip < TIPS.length ? 5 : 22); }
+    if (t > life.shineAt) {
+      const k = (t - life.shineAt) / 0.9;
+      shine.value = -0.4 + k * 2.2;
+      if (k >= 1) {
+        shine.value = -1;
+        life.shineAt = t + 3.5 + Math.random() * 2;
+      }
+    }
+    if (t > life.tipAt && $("ask").hidden) {
+      hint(TIPS[life.tip % TIPS.length].replaceAll("$", cp.them || "it"), 2600);
+      life.tip++;
+      life.tipAt = t + (life.tip < TIPS.length ? 5 : 22);
+    }
   }
-  shadow.material.opacity = stickerPivot.visible ? clamp(0.85 - stickerPivot.position.z * 18, 0.25, 0.8) : 0;
-  const ss = 1 + stickerPivot.position.z * 6; shadow.scale.set(ss, ss, 1);
+  shadow.material.opacity = stickerPivot.visible
+    ? clamp(0.85 - stickerPivot.position.z * 18, 0.25, 0.8)
+    : 0;
+  const ss = 1 + stickerPivot.position.z * 6;
+  shadow.scale.set(ss, ss, 1);
 }
 function hitSticker(x, y) {
   if (!pose.valid || !stickerPivot.visible) return false;
-  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
+  toNdc(x, y, _ndc);
+  camera.updateMatrixWorld(true);
+  A.updateMatrixWorld(true);
+  ray.setFromCamera(_ndc, camera);
   return ray.intersectObject(sticker, false).length > 0;
 }
-$('b-spin').onclick = () => { if (life.phase === 'idle') { life.uv = (life.uv >= 0 ? 1 : -1) * 22; sound.whoosh(); buzz(8); } };
-$('b-repaint').onclick = () => { stickerPivot.visible = false; shadow.material.opacity = 0; startPainting(); };
-$('b-decals').onclick = () => startDecals();
+$("o-spin").onclick = () => {
+  closeOpts();
+  if (life.phase === "idle") {
+    life.uv = (life.uv >= 0 ? 1 : -1) * 22;
+    sound.whoosh();
+    buzz(8);
+  }
+};
+$("b-hang").onclick = () => enterRoom("hang");
+$("o-graffiti").onclick = () => enterRoom("graffiti");
+$("r-back").onclick = () => leaveRoom();
+$("b-repaint").onclick = () => {
+  stickerPivot.visible = false;
+  shadow.material.opacity = 0;
+  startPainting();
+};
+$("b-decals").onclick = () => startDecals();
 // after a fresh save: "Dress up Bobo?"
 let askT = 0;
 function showAsk() {
-  if (mode !== 'alive') return;
-  $('ask-t').textContent = cp.ask;
-  $('ask').hidden = false; hud.classList.add('asking'); sound.tone(660, 990, 0.12, 0.05, 'triangle'); buzz(8);
-  clearTimeout(askT); askT = setTimeout(hideAsk, 12000);
+  if (mode !== "alive") return;
+  $("ask-t").textContent = cp.ask;
+  $("ask").hidden = false;
+  hud.classList.add("asking");
+  sound.tone(660, 990, 0.12, 0.05, "triangle");
+  buzz(8);
+  clearTimeout(askT);
+  askT = setTimeout(hideAsk, 12000);
 }
-function hideAsk() { clearTimeout(askT); $('ask').hidden = true; hud.classList.remove('asking'); }
-$('ask-yes').onclick = () => startDecals();
-$('ask-no').onclick = () => { hideAsk(); hint('Decals are here whenever you want them', 2400); };
+function hideAsk() {
+  clearTimeout(askT);
+  $("ask").hidden = true;
+  hud.classList.remove("asking");
+}
+$("ask-yes").onclick = () => startDecals();
+$("ask-no").onclick = () => {
+  hideAsk();
+  hint("Decals are here whenever you want them", 2400);
+};
 
 // ---------------------------------------------------------------- decals
 // A library of ready-made decals (decals/decals.json, drawn by scripts/build-spray-bobo/build_decals.py): things
@@ -1163,91 +2943,233 @@ $('ask-no').onclick = () => { hideAsk(); hint('Decals are here whenever you want
 // size and turn it. Done, and they ride the 3D sticker from then on, and are saved with the painting.
 // A decal is kept in the charm's picture frame (u, v: its middle as fractions of the picture, y down; w: its
 // width as a share of the picture's; r: turn, counter-clockwise; f: 1 or -1, mirrored), so it works on any charm.
-const DEC = { lib: null, by: {}, art: new Map(), cat: 'wear', ready: null };
+const DEC = { lib: null, by: {}, art: new Map(), cat: "wear", ready: null };
 const MAX_DECALS = 14;
 const DEC_GEO = new THREE.PlaneGeometry(1, 1);
-DEC.ready = getJson(HERE + 'decals/decals.json').then((m) => { DEC.lib = m; for (const d of m.decals) DEC.by[d.id] = d; buildTray(); return m; })
-  .catch((e) => { console.warn('decals', e); DEC.lib = { cats: [], decals: [] }; return null; });
+DEC.ready = getJson(HERE + "decals/decals.json")
+  .then((m) => {
+    const hide = new Set(BRAND.hideDecalCats);
+    m = { ...m, cats: m.cats.filter((c) => !hide.has(c.k)), decals: m.decals.filter((d) => !hide.has(d.cat)) };
+    DEC.lib = m;
+    for (const d of m.decals) DEC.by[d.id] = d;
+    buildTray();
+    return m;
+  })
+  .catch((e) => {
+    console.warn("decals", e);
+    DEC.lib = { cats: [], decals: [] };
+    return null;
+  });
 // the decal's picture, drawn once into a canvas (with a white die-cut edge for the stickers) and used as a texture
 function decalArt(d) {
-  const have = DEC.art.get(d.id); if (have) return have;
-  const p = loadImg(HERE + 'decals/' + d.file).then((img) => {
-    const iw = img.naturalWidth || img.width || 256, ih = img.naturalHeight || img.height || 256, k = 512 / Math.max(iw, ih);
-    const w = Math.round(iw * k), h = Math.round(ih * k), pad = d.border ? Math.round(Math.max(w, h) * 0.05) : 2;
-    const c = document.createElement('canvas'); c.width = w + pad * 2; c.height = h + pad * 2; const g = c.getContext('2d');
+  const have = DEC.art.get(d.id);
+  if (have) return have;
+  const p = loadImg(HERE + "decals/" + d.file).then((img) => {
+    const iw = img.naturalWidth || img.width || 256,
+      ih = img.naturalHeight || img.height || 256,
+      k = 512 / Math.max(iw, ih);
+    const w = Math.round(iw * k),
+      h = Math.round(ih * k),
+      pad = d.border ? Math.round(Math.max(w, h) * 0.05) : 2;
+    const c = document.createElement("canvas");
+    c.width = w + pad * 2;
+    c.height = h + pad * 2;
+    const g = c.getContext("2d");
     if (d.border) {
-      const t = document.createElement('canvas'); t.width = w; t.height = h; const tg = t.getContext('2d');
-      tg.drawImage(img, 0, 0, w, h); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = '#ffffff'; tg.fillRect(0, 0, w, h);
-      for (let a = 0; a < 16; a++) g.drawImage(t, pad + Math.cos(a * 0.3927) * pad * 0.92, pad + Math.sin(a * 0.3927) * pad * 0.92);
+      const t = document.createElement("canvas");
+      t.width = w;
+      t.height = h;
+      const tg = t.getContext("2d");
+      tg.drawImage(img, 0, 0, w, h);
+      tg.globalCompositeOperation = "source-in";
+      tg.fillStyle = "#ffffff";
+      tg.fillRect(0, 0, w, h);
+      for (let a = 0; a < 16; a++)
+        g.drawImage(
+          t,
+          pad + Math.cos(a * 0.3927) * pad * 0.92,
+          pad + Math.sin(a * 0.3927) * pad * 0.92,
+        );
     }
     g.drawImage(img, pad, pad, w, h);
-    const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
     let alpha = null;
-    return { canvas: c, tex, aspect: c.width / c.height, grow: c.width / w, solid(u, v) {   // is there art at this spot (texture uv)?
-      try { alpha = alpha || g.getImageData(0, 0, c.width, c.height).data; } catch (e) { return true; }
-      const x = clamp(Math.floor(u * c.width), 0, c.width - 1), y = clamp(Math.floor((1 - v) * c.height), 0, c.height - 1);
-      return alpha[(y * c.width + x) * 4 + 3] > 24;
-    } };
+    return {
+      canvas: c,
+      tex,
+      aspect: c.width / c.height,
+      grow: c.width / w,
+      solid(u, v) {
+        // is there art at this spot (texture uv)?
+        try {
+          alpha = alpha || g.getImageData(0, 0, c.width, c.height).data;
+        } catch (e) {
+          return true;
+        }
+        const x = clamp(Math.floor(u * c.width), 0, c.width - 1),
+          y = clamp(Math.floor((1 - v) * c.height), 0, c.height - 1);
+        return alpha[(y * c.width + x) * 4 + 3] > 24;
+      },
+    };
   });
-  DEC.art.set(d.id, p); return p;
+  DEC.art.set(d.id, p);
+  return p;
 }
 // where the decals are shown: flat on the charm (painting, placing) or riding the 3D sticker (saved)
 function decalHost(P, on) {
-  const g = P.decalGroup, parent = on === 'sticker' ? P.sticker : P.F;
+  const g = P.decalGroup,
+    parent = on === "sticker" ? P.sticker : P.F;
   if (g.parent !== parent) parent.add(g);
-  g.position.set(0, 0, on === 'sticker' ? 0.0018 : 0.0007); g.userData.on = on;
+  g.position.set(0, 0, on === "sticker" ? 0.0018 : 0.0007);
+  g.userData.on = on;
 }
 function makeLayer(P, s) {
-  const d = DEC.by[s.id]; if (!d) return null;
-  const L = { id: s.id, u: +s.u || 0.5, v: +s.v || 0.5, w: clamp(+s.w || 0.3, 0.04, 1.6), r: +s.r || 0, f: s.f === -1 ? -1 : 1, P, art: null, pop: null, out: null };
-  const mat = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, alphaTest: 0.02 });
-  L.mesh = new THREE.Mesh(DEC_GEO, mat); L.mesh.visible = false; L.mesh.frustumCulled = false; P.decalGroup.add(L.mesh);
-  decalArt(d).then((a) => { L.art = a; mat.map = a.tex; mat.needsUpdate = true; L.mesh.visible = true; placeLayer(L); }).catch(() => removeLayer(L));
-  P.decals.push(L); orderLayers(P); return L;
+  const d = DEC.by[s.id];
+  if (!d) return null;
+  const L = {
+    id: s.id,
+    u: +s.u || 0.5,
+    v: +s.v || 0.5,
+    w: clamp(+s.w || 0.3, 0.04, 1.6),
+    r: +s.r || 0,
+    f: s.f === -1 ? -1 : 1,
+    P,
+    art: null,
+    pop: null,
+    out: null,
+  };
+  const mat = new THREE.MeshBasicMaterial({
+    transparent: true,
+    depthWrite: false,
+    alphaTest: 0.02,
+  });
+  L.mesh = new THREE.Mesh(DEC_GEO, mat);
+  L.mesh.visible = false;
+  L.mesh.frustumCulled = false;
+  P.decalGroup.add(L.mesh);
+  decalArt(d)
+    .then((a) => {
+      L.art = a;
+      mat.map = a.tex;
+      mat.needsUpdate = true;
+      L.mesh.visible = true;
+      placeLayer(L);
+    })
+    .catch(() => removeLayer(L));
+  P.decals.push(L);
+  orderLayers(P);
+  return L;
 }
-function orderLayers(P) { P.decals.forEach((L, i) => { L.mesh.renderOrder = 20 + i; }); }
+function orderLayers(P) {
+  P.decals.forEach((L, i) => {
+    L.mesh.renderOrder = 20 + i;
+  });
+}
 // a decal landing: from nothing, overshoots, settles, with a little twist
-const popK = (t) => { if (t <= 0) return 0; const k = clamp(t / 0.5, 0, 1), c = 2.2, x = k - 1; return 1 + (c + 1) * x * x * x + c * x * x; };
+const popK = (t) => {
+  if (t <= 0) return 0;
+  const k = clamp(t / 0.5, 0, 1),
+    c = 2.2,
+    x = k - 1;
+  return 1 + (c + 1) * x * x * x + c * x * x;
+};
 function placeLayer(L) {
-  if (!L.art) return; const P = L.P, m = L.mesh;
-  let k = 1, tw = 0;
-  if (L.pop) { k = popK(L.pop.t); tw = -0.5 * (1 - easeOut(L.pop.t / 0.5)); }
-  if (L.out) { const q = clamp(L.out.t / 0.25, 0, 1); k = 1 + q * 0.25 - q * q * 1.25; tw = q * 0.9; }
-  k = Math.max(k, 1e-4); const ww = L.w * P.W * L.art.grow * k;
-  m.position.set((L.u - 0.5) * P.W, (0.5 - L.v) * P.H, 0); m.rotation.set(0, 0, L.r + tw); m.scale.set(ww * L.f, ww / L.art.aspect, 1);
+  if (!L.art) return;
+  const P = L.P,
+    m = L.mesh;
+  let k = 1,
+    tw = 0;
+  if (L.pop) {
+    k = popK(L.pop.t);
+    tw = -0.5 * (1 - easeOut(L.pop.t / 0.5));
+  }
+  if (L.out) {
+    const q = clamp(L.out.t / 0.25, 0, 1);
+    k = 1 + q * 0.25 - q * q * 1.25;
+    tw = q * 0.9;
+  }
+  k = Math.max(k, 1e-4);
+  const ww = L.w * P.W * L.art.grow * k;
+  m.position.set((L.u - 0.5) * P.W, (0.5 - L.v) * P.H, 0);
+  m.rotation.set(0, 0, L.r + tw);
+  m.scale.set(ww * L.f, ww / L.art.aspect, 1);
 }
 function removeLayer(L, anim = false) {
-  if (anim && L.art) { L.out = { t: 0 }; sound.tone(700, 300, 0.14, 0.06, 'triangle'); return; }
-  const P = L.P, i = P.decals.indexOf(L); if (i >= 0) P.decals.splice(i, 1);
-  P.decalGroup.remove(L.mesh); L.mesh.material.dispose(); if (ed.sel === L) selectLayer(null); orderLayers(P);
+  if (anim && L.art) {
+    L.out = { t: 0 };
+    sound.tone(700, 300, 0.14, 0.06, "triangle");
+    return;
+  }
+  const P = L.P,
+    i = P.decals.indexOf(L);
+  if (i >= 0) P.decals.splice(i, 1);
+  P.decalGroup.remove(L.mesh);
+  L.mesh.material.dispose();
+  if (ed.sel === L) selectLayer(null);
+  orderLayers(P);
 }
-function clearDecals(P) { for (const L of [...P.decals]) removeLayer(L); }
-const serialDecals = (P) => P.decals.filter((L) => !L.out).map((L) => ({ id: L.id, u: +L.u.toFixed(4), v: +L.v.toFixed(4), w: +L.w.toFixed(4), r: +L.r.toFixed(3), f: L.f }));
-function setLayerUV(L, u, v) { L.u = clamp(u, -0.1, 1.1); L.v = clamp(v, -0.1, 1.1); }
+function clearDecals(P) {
+  for (const L of [...P.decals]) removeLayer(L);
+}
+const serialDecals = (P) =>
+  P.decals
+    .filter((L) => !L.out)
+    .map((L) => ({
+      id: L.id,
+      u: +L.u.toFixed(4),
+      v: +L.v.toFixed(4),
+      w: +L.w.toFixed(4),
+      r: +L.r.toFixed(3),
+      f: L.f,
+    }));
+function setLayerUV(L, u, v) {
+  L.u = clamp(u, -0.1, 1.1);
+  L.v = clamp(v, -0.1, 1.1);
+}
 
 // screen <-> the charm (metres, x right, y up, in the charm's own frame: the back side's mirror included)
 const _lp = new THREE.Vector3();
 function localAt(x, y) {
   if (!pose.valid || !camera) return null;
-  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
-  _n.set(0, 0, 1).applyQuaternion(A.quaternion); _plane.setFromNormalAndCoplanarPoint(_n, A.position);
+  toNdc(x, y, _ndc);
+  camera.updateMatrixWorld(true);
+  A.updateMatrixWorld(true);
+  ray.setFromCamera(_ndc, camera);
+  _n.set(0, 0, 1).applyQuaternion(A.quaternion);
+  _plane.setFromNormalAndCoplanarPoint(_n, A.position);
   if (!ray.ray.intersectPlane(_plane, _hit)) return null;
   return F.worldToLocal(_hit.clone());
 }
 function localScreen(x, y) {
   if (!pose.valid || !camera) return null;
-  _lp.set(x, y, 0); F.localToWorld(_lp); _lp.project(camera); const r = canvas.getBoundingClientRect();
-  return [r.left + (_lp.x + 1) / 2 * r.width, r.top + (1 - _lp.y) / 2 * r.height];
+  _lp.set(x, y, 0);
+  F.localToWorld(_lp);
+  _lp.project(camera);
+  const r = canvas.getBoundingClientRect();
+  return [r.left + ((_lp.x + 1) / 2) * r.width, r.top + ((1 - _lp.y) / 2) * r.height];
 }
 // the decal under a finger: the top one with art under it, or failing that the top one whose box it's in
 function pickLayer(x, y) {
   if (!pose.valid) return null;
-  toNdc(x, y, _ndc); camera.updateMatrixWorld(true); A.updateMatrixWorld(true); ray.setFromCamera(_ndc, camera);
+  toNdc(x, y, _ndc);
+  camera.updateMatrixWorld(true);
+  A.updateMatrixWorld(true);
+  ray.setFromCamera(_ndc, camera);
   const live = cp.decals.filter((L) => L.art && !L.out && L.mesh.visible);
-  const hits = ray.intersectObjects(live.map((L) => L.mesh), false).sort((a, b) => b.object.renderOrder - a.object.renderOrder);
+  const hits = ray
+    .intersectObjects(
+      live.map((L) => L.mesh),
+      false,
+    )
+    .sort((a, b) => b.object.renderOrder - a.object.renderOrder);
   if (!hits.length) return null;
   const of = (h) => live.find((L) => L.mesh === h.object);
-  for (const h of hits) { const L = of(h); if (L && h.uv && L.art.solid(h.uv.x, h.uv.y)) return L; }
+  for (const h of hits) {
+    const L = of(h);
+    if (L && h.uv && L.art.solid(h.uv.x, h.uv.y)) return L;
+  }
   return of(hits[0]);
 }
 
@@ -1255,243 +3177,552 @@ function pickLayer(x, y) {
 const ed = { sel: null, pts: new Map(), g: null, h: null };
 function selectLayer(L) {
   ed.sel = L || null;
-  for (const id of ['d-flip', 'd-front', 'd-del']) $(id).disabled = !ed.sel;
-  if (!ed.sel) { $('dsel').firstElementChild.setAttribute('points', ''); $('d-handle').hidden = true; ed.h = null; }
+  for (const id of ["d-flip", "d-front", "d-del"]) $(id).disabled = !ed.sel;
+  if (!ed.sel) {
+    $("dsel").firstElementChild.setAttribute("points", "");
+    $("d-handle").hidden = true;
+    ed.h = null;
+  }
 }
 const twoPts = () => [...ed.pts.values()].slice(0, 2).map((p) => localAt(p.x, p.y));
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 function beginDrag() {
-  const p = [...ed.pts.values()][0], at = p && localAt(p.x, p.y);
-  ed.g = at && ed.sel ? { kind: 'drag', at, u: ed.sel.u, v: ed.sel.v, moved: false } : null;
+  const p = [...ed.pts.values()][0],
+    at = p && localAt(p.x, p.y);
+  ed.g = at && ed.sel ? { kind: "drag", at, u: ed.sel.u, v: ed.sel.v, moved: false } : null;
 }
 function beginPinch() {
-  const [a, b] = twoPts(); if (!a || !b || !ed.sel) { ed.g = null; return; }
-  ed.g = { kind: 'pinch', d: Math.max(a.distanceTo(b), 1e-4), ang: Math.atan2(b.y - a.y, b.x - a.x), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, w: ed.sel.w, r: ed.sel.r, u: ed.sel.u, v: ed.sel.v };
+  const [a, b] = twoPts();
+  if (!a || !b || !ed.sel) {
+    ed.g = null;
+    return;
+  }
+  ed.g = {
+    kind: "pinch",
+    d: Math.max(a.distanceTo(b), 1e-4),
+    ang: Math.atan2(b.y - a.y, b.x - a.x),
+    mx: (a.x + b.x) / 2,
+    my: (a.y + b.y) / 2,
+    w: ed.sel.w,
+    r: ed.sel.r,
+    u: ed.sel.u,
+    v: ed.sel.v,
+  };
 }
 function decalDown(e) {
   ed.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (ed.pts.size === 1) {
     const L = pickLayer(e.clientX, e.clientY);
-    if (L) { if (ed.sel !== L) { buzz(6); sound.tone(880, 1180, 0.05, 0.04, 'triangle'); } selectLayer(L); beginDrag(); }
-    else ed.g = { kind: 'tap' };
+    if (L) {
+      if (ed.sel !== L) {
+        buzz(6);
+        sound.tone(880, 1180, 0.05, 0.04, "triangle");
+      }
+      selectLayer(L);
+      beginDrag();
+    } else ed.g = { kind: "tap" };
   } else if (ed.pts.size === 2 && ed.sel) beginPinch();
 }
 function decalMove(e) {
-  if (!ed.pts.has(e.pointerId)) return; ed.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-  const g = ed.g, L = ed.sel; if (!g || !L) return;
-  if (g.kind === 'drag' && ed.pts.size === 1) {
-    const p = localAt(e.clientX, e.clientY); if (!p) return;
-    setLayerUV(L, g.u + (p.x - g.at.x) / W, g.v - (p.y - g.at.y) / H); g.moved = true;
-  } else if (g.kind === 'pinch' && ed.pts.size >= 2) {
-    const [a, b] = twoPts(); if (!a || !b) return;
-    L.w = clamp(g.w * a.distanceTo(b) / g.d, 0.05, 1.5); L.r = g.r + wrapA(Math.atan2(b.y - a.y, b.x - a.x) - g.ang);
+  if (!ed.pts.has(e.pointerId)) return;
+  ed.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  const g = ed.g,
+    L = ed.sel;
+  if (!g || !L) return;
+  if (g.kind === "drag" && ed.pts.size === 1) {
+    const p = localAt(e.clientX, e.clientY);
+    if (!p) return;
+    setLayerUV(L, g.u + (p.x - g.at.x) / W, g.v - (p.y - g.at.y) / H);
+    g.moved = true;
+  } else if (g.kind === "pinch" && ed.pts.size >= 2) {
+    const [a, b] = twoPts();
+    if (!a || !b) return;
+    L.w = clamp((g.w * a.distanceTo(b)) / g.d, 0.05, 1.5);
+    L.r = g.r + wrapA(Math.atan2(b.y - a.y, b.x - a.x) - g.ang);
     setLayerUV(L, g.u + ((a.x + b.x) / 2 - g.mx) / W, g.v - ((a.y + b.y) / 2 - g.my) / H);
   }
 }
 function decalUp(e) {
-  const g = ed.g; ed.pts.delete(e.pointerId);
-  if (g && g.kind === 'tap' && !ed.pts.size) selectLayer(null);
-  if (ed.pts.size === 1 && ed.sel) beginDrag(); else if (!ed.pts.size) ed.g = null;
+  const g = ed.g;
+  ed.pts.delete(e.pointerId);
+  if (g && g.kind === "tap" && !ed.pts.size) selectLayer(null);
+  if (ed.pts.size === 1 && ed.sel) beginDrag();
+  else if (!ed.pts.size) ed.g = null;
 }
-const hd = $('d-handle');
-hd.addEventListener('pointerdown', (e) => {
-  e.preventDefault(); const L = ed.sel; if (!L) return;
-  try { hd.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-  const p = localAt(e.clientX, e.clientY), cx = (L.u - 0.5) * W, cy = (0.5 - L.v) * H; if (!p) return;
-  ed.h = { id: e.pointerId, cx, cy, d: Math.max(Math.hypot(p.x - cx, p.y - cy), 1e-4), a: Math.atan2(p.y - cy, p.x - cx), w: L.w, r: L.r, corner: ed.corner }; buzz(6);
+const hd = $("d-handle");
+hd.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  const L = ed.sel;
+  if (!L) return;
+  try {
+    hd.setPointerCapture(e.pointerId);
+  } catch (err) {
+    /* old Safari */
+  }
+  const p = localAt(e.clientX, e.clientY),
+    cx = (L.u - 0.5) * W,
+    cy = (0.5 - L.v) * H;
+  if (!p) return;
+  ed.h = {
+    id: e.pointerId,
+    cx,
+    cy,
+    d: Math.max(Math.hypot(p.x - cx, p.y - cy), 1e-4),
+    a: Math.atan2(p.y - cy, p.x - cx),
+    w: L.w,
+    r: L.r,
+    corner: ed.corner,
+  };
+  buzz(6);
 });
-hd.addEventListener('pointermove', (e) => {
-  const h = ed.h, L = ed.sel; if (!h || !L || h.id !== e.pointerId) return;
-  const p = localAt(e.clientX, e.clientY); if (!p) return;
-  L.w = clamp(h.w * Math.hypot(p.x - h.cx, p.y - h.cy) / h.d, 0.05, 1.5); L.r = h.r + wrapA(Math.atan2(p.y - h.cy, p.x - h.cx) - h.a);
+hd.addEventListener("pointermove", (e) => {
+  const h = ed.h,
+    L = ed.sel;
+  if (!h || !L || h.id !== e.pointerId) return;
+  const p = localAt(e.clientX, e.clientY);
+  if (!p) return;
+  L.w = clamp((h.w * Math.hypot(p.x - h.cx, p.y - h.cy)) / h.d, 0.05, 1.5);
+  L.r = h.r + wrapA(Math.atan2(p.y - h.cy, p.x - h.cx) - h.a);
 });
-const hdEnd = () => { ed.h = null; };
-hd.addEventListener('pointerup', hdEnd); hd.addEventListener('pointercancel', hdEnd);
+const hdEnd = () => {
+  ed.h = null;
+};
+hd.addEventListener("pointerup", hdEnd);
+hd.addEventListener("pointercancel", hdEnd);
 // the selected decal's box, drawn over the camera, and the handle on its corner nearest the bottom right
 const _sq = new THREE.Vector3();
 function drawSel() {
-  const L = ed.sel, poly = $('dsel').firstElementChild;
-  if (mode !== 'decal' || !L || !L.art || !pose.valid) { if (poly.getAttribute('points')) poly.setAttribute('points', ''); hd.hidden = true; return; }
-  L.mesh.updateMatrixWorld(true); const r = canvas.getBoundingClientRect(), out = [];
-  for (const [x, y] of [[-0.5, 0.5], [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]]) {
-    _sq.set(x, y, 0).applyMatrix4(L.mesh.matrixWorld).project(camera); out.push([r.left + (_sq.x + 1) / 2 * r.width, r.top + (1 - _sq.y) / 2 * r.height]);
+  const L = ed.sel,
+    poly = $("dsel").firstElementChild;
+  if (mode !== "decal" || !L || !L.art || !pose.valid) {
+    if (poly.getAttribute("points")) poly.setAttribute("points", "");
+    hd.hidden = true;
+    return;
   }
-  poly.setAttribute('points', out.map((p) => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '));
-  let c = ed.h ? ed.h.corner : 0;           // while it's being dragged, the handle stays on its corner
-  if (!ed.h) { for (let i = 1; i < 4; i++) if (out[i][0] + out[i][1] > out[c][0] + out[c][1]) c = i; ed.corner = c; }
-  hd.hidden = false; hd.style.left = clamp(out[c][0], 26, innerWidth - 26) + 'px'; hd.style.top = clamp(out[c][1], 70, innerHeight - 250) + 'px';
+  L.mesh.updateMatrixWorld(true);
+  const r = canvas.getBoundingClientRect(),
+    out = [];
+  for (const [x, y] of [
+    [-0.5, 0.5],
+    [0.5, 0.5],
+    [0.5, -0.5],
+    [-0.5, -0.5],
+  ]) {
+    _sq.set(x, y, 0).applyMatrix4(L.mesh.matrixWorld).project(camera);
+    out.push([r.left + ((_sq.x + 1) / 2) * r.width, r.top + ((1 - _sq.y) / 2) * r.height]);
+  }
+  poly.setAttribute("points", out.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" "));
+  let c = ed.h ? ed.h.corner : 0; // while it's being dragged, the handle stays on its corner
+  if (!ed.h) {
+    for (let i = 1; i < 4; i++) if (out[i][0] + out[i][1] > out[c][0] + out[c][1]) c = i;
+    ed.corner = c;
+  }
+  hd.hidden = false;
+  hd.style.left = clamp(out[c][0], 26, innerWidth - 26) + "px";
+  hd.style.top = clamp(out[c][1], 70, innerHeight - 250) + "px";
 }
 
 // adding one: the tile flies from the tray onto the charm, then the decal pops out of it with a word and a splash
 const DEC_FLY = 0.42;
 function addDecal(d, tile) {
   if (!d) return;
-  if (!pose.valid) { hint(`Point at ${cp.name} first`, 2000); buzz(20); return; }
-  if (cp.decals.filter((L) => !L.out).length >= MAX_DECALS) { toast('Full up!'); hint('Remove a decal to add another', 2400); return; }
-  let s, swap = null;
-  if (d.fit && cp.k === 'bobo') {          // made for Bobo: straight onto his eyes, head or neck (a new hat swaps the old one)
+  if (!pose.valid) {
+    hint(`Point at ${cp.name} first`, 2000);
+    buzz(20);
+    return;
+  }
+  if (cp.decals.filter((L) => !L.out).length >= MAX_DECALS) {
+    toast("Full up!");
+    hint("Remove a decal to add another", 2400);
+    return;
+  }
+  let s,
+    swap = null;
+  if (d.fit && cp.k === "bobo") {
+    // made for Bobo: straight onto his eyes, head or neck (a new hat swaps the old one)
     s = { id: d.id, u: d.fit.u, v: d.fit.v, w: d.fit.w, r: d.fit.r };
     swap = cp.decals.find((L) => !L.out && DEC.by[L.id] && DEC.by[L.id].slot === d.slot);
-  } else {                                 // anything else: near the middle, a little turned, never right on top of the last one
-    const n = cp.decals.length, a = n * 2.4;
-    s = { id: d.id, u: cp.centre[0] + (n ? Math.cos(a) * 0.14 : 0), v: cp.centre[1] + (n ? Math.sin(a) * 0.12 : 0), w: d.fit ? 0.46 : 0.3, r: (Math.random() - 0.5) * 0.35 };
+  } else {
+    // anything else: near the middle, a little turned, never right on top of the last one
+    const n = cp.decals.length,
+      a = n * 2.4;
+    s = {
+      id: d.id,
+      u: cp.centre[0] + (n ? Math.cos(a) * 0.14 : 0),
+      v: cp.centre[1] + (n ? Math.sin(a) * 0.12 : 0),
+      w: d.fit ? 0.46 : 0.3,
+      r: (Math.random() - 0.5) * 0.35,
+    };
   }
   if (swap) removeLayer(swap, true);
-  const L = makeLayer(cp, s); if (!L) return;
+  const L = makeLayer(cp, s);
+  if (!L) return;
   L.pop = { t: tile ? -DEC_FLY : 0, fresh: true };
   selectLayer(L);
   if (tile) flyTile(tile, L);
-  postEvent('custom', { action: 'spray-decal', piece: cp.k, decal: d.id });
+  postEvent("custom", { action: "spray-decal", piece: cp.k, decal: d.id });
 }
 function flyTile(tile, L) {
-  const r = tile.getBoundingClientRect(), to = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H) || nozzle0();
-  const el = tile.cloneNode(true); el.classList.add('ghost'); el.removeAttribute('id'); el.setAttribute('aria-hidden', 'true');
-  Object.assign(el.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
-  hud.appendChild(el); sound.whoosh(); buzz(8);
-  const dx = to[0] - (r.left + r.width / 2), dy = to[1] - (r.top + r.height / 2);
-  if (!el.animate) { setTimeout(() => el.remove(), DEC_FLY * 1000); return; }
-  el.animate([
-    { transform: 'translate(0,0) rotate(0) scale(1)' },
-    { transform: `translate(${dx * 0.45}px,${dy * 0.45 - 90}px) rotate(-200deg) scale(1.35)`, offset: 0.5 },
-    { transform: `translate(${dx}px,${dy}px) rotate(-380deg) scale(.5)`, opacity: 1, offset: 0.9 },
-    { transform: `translate(${dx}px,${dy}px) rotate(-400deg) scale(.2)`, opacity: 0 },
-  ], { duration: DEC_FLY * 1000, easing: 'cubic-bezier(.4,.1,.3,1)', fill: 'forwards' }).onfinish = () => el.remove();
+  const r = tile.getBoundingClientRect(),
+    to = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H) || nozzle0();
+  const el = tile.cloneNode(true);
+  el.classList.add("ghost");
+  el.removeAttribute("id");
+  el.setAttribute("aria-hidden", "true");
+  Object.assign(el.style, {
+    left: r.left + "px",
+    top: r.top + "px",
+    width: r.width + "px",
+    height: r.height + "px",
+  });
+  hud.appendChild(el);
+  sound.whoosh();
+  buzz(8);
+  const dx = to[0] - (r.left + r.width / 2),
+    dy = to[1] - (r.top + r.height / 2);
+  if (!el.animate) {
+    setTimeout(() => el.remove(), DEC_FLY * 1000);
+    return;
+  }
+  el.animate(
+    [
+      { transform: "translate(0,0) rotate(0) scale(1)" },
+      {
+        transform: `translate(${dx * 0.45}px,${dy * 0.45 - 90}px) rotate(-200deg) scale(1.35)`,
+        offset: 0.5,
+      },
+      {
+        transform: `translate(${dx}px,${dy}px) rotate(-380deg) scale(.5)`,
+        opacity: 1,
+        offset: 0.9,
+      },
+      { transform: `translate(${dx}px,${dy}px) rotate(-400deg) scale(.2)`, opacity: 0 },
+    ],
+    { duration: DEC_FLY * 1000, easing: "cubic-bezier(.4,.1,.3,1)", fill: "forwards" },
+  ).onfinish = () => el.remove();
   setTimeout(() => el.remove(), DEC_FLY * 1000 + 300);
 }
 function landed(L) {
-  const d = DEC.by[L.id]; sound.pop(); setTimeout(() => sound.sparkle(), 90); buzz([10, 30, 10]);
-  burstSplats(['#ffffff', '#f6c344', CAPS[capIdx].c, '#e85bd8'], 34, new THREE.Vector3((L.u - 0.5) * W, (0.5 - L.v) * H, 0.004), 0.06);
-  const at = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H); if (at && d) popWord(d.word, at[0], at[1] - 40);
+  const d = DEC.by[L.id];
+  sound.pop();
+  setTimeout(() => sound.sparkle(), 90);
+  buzz([10, 30, 10]);
+  burstSplats(
+    ["#ffffff", ACC, CAPS[capIdx].c, "#e85bd8"],
+    34,
+    new THREE.Vector3((L.u - 0.5) * W, (0.5 - L.v) * H, 0.004),
+    0.06,
+  );
+  const at = localScreen((L.u - 0.5) * W, (0.5 - L.v) * H);
+  if (at && d) popWord(d.word, at[0], at[1] - 40);
 }
 function tickDecals(dt) {
   for (const P of Object.values(PIECES)) {
     if (!P.decals) continue;
     for (const L of [...P.decals]) {
-      if (L.pop) { const was = L.pop.t; L.pop.t += dt; if (was < 0 && L.pop.t >= 0 && L.art) landed(L); if (L.pop.t > 0.6) L.pop = null; }
-      if (L.out) { L.out.t += dt; if (L.out.t > 0.25) { removeLayer(L); continue; } }
+      if (L.pop) {
+        const was = L.pop.t;
+        L.pop.t += dt;
+        if (was < 0 && L.pop.t >= 0 && L.art) landed(L);
+        if (L.pop.t > 0.6) L.pop = null;
+      }
+      if (L.out) {
+        L.out.t += dt;
+        if (L.out.t > 0.25) {
+          removeLayer(L);
+          continue;
+        }
+      }
       placeLayer(L);
     }
   }
-  if (cp && cp.decalGroup) cp.decalGroup.visible = cp.decals.length > 0 && (paintMesh.visible || stickerPivot.visible);
+  if (cp && cp.decalGroup)
+    cp.decalGroup.visible = cp.decals.length > 0 && (paintMesh.visible || stickerPivot.visible);
   drawSel();
 }
 
 // the tray: the kinds, then a scrolling row of tiles
 function buildTray() {
-  const cats = $('dtray').querySelector('.dcats'); cats.innerHTML = '';
+  const cats = $("dtray").querySelector(".dcats");
+  cats.innerHTML = "";
   for (const c of DEC.lib.cats) {
-    const b = document.createElement('button'); b.type = 'button'; b.role = 'tab'; b.dataset.k = c.k; b.textContent = c.n;
-    b.onclick = () => { showCat(c.k); buzz(6); }; cats.appendChild(b);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.role = "tab";
+    b.dataset.k = c.k;
+    b.textContent = c.n;
+    b.onclick = () => {
+      showCat(c.k);
+      buzz(6);
+    };
+    cats.appendChild(b);
   }
-  const f = document.createElement('span'); f.className = 'fits'; cats.appendChild(f);
+  const f = document.createElement("span");
+  f.className = "fits";
+  cats.appendChild(f);
   showCat(DEC.cat);
 }
 function showCat(k) {
-  DEC.cat = k; const list = $('dtray').querySelector('.dlist'); list.innerHTML = '';
-  for (const b of $('dtray').querySelectorAll('.dcats button')) b.setAttribute('aria-selected', String(b.dataset.k === k));
-  const f = $('dtray').querySelector('.fits'); if (f) f.textContent = k === 'wear' && cp && cp.k === 'bobo' ? 'Fits right on Bobo' : '';
+  DEC.cat = k;
+  const list = $("dtray").querySelector(".dlist");
+  list.innerHTML = "";
+  for (const b of $("dtray").querySelectorAll(".dcats button"))
+    b.setAttribute("aria-selected", String(b.dataset.k === k));
+  const f = $("dtray").querySelector(".fits");
+  if (f) f.textContent = k === "wear" && cp && cp.k === "bobo" ? "Fits right on Bobo" : "";
   for (const d of DEC.lib.decals.filter((x) => x.cat === k)) {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'dtile'; b.setAttribute('aria-label', `Add ${d.name}`);
-    const im = document.createElement('img'); im.src = HERE + 'decals/' + d.file; im.alt = ''; im.loading = 'lazy'; im.decoding = 'async'; b.appendChild(im);
-    b.onclick = () => addDecal(d, b); list.appendChild(b);
-    decalArt(d);   // warm the texture so it is ready when it lands
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "dtile";
+    b.setAttribute("aria-label", `Add ${d.name}`);
+    const im = document.createElement("img");
+    im.src = HERE + "decals/" + d.file;
+    im.alt = "";
+    im.loading = "lazy";
+    im.decoding = "async";
+    b.appendChild(im);
+    b.onclick = () => addDecal(d, b);
+    list.appendChild(b);
+    decalArt(d); // warm the texture so it is ready when it lands
   }
   list.scrollLeft = 0;
 }
-$('d-flip').onclick = () => { const L = ed.sel; if (!L) return; L.f *= -1; L.pop = { t: 0.32 }; sound.tone(600, 900, 0.08, 0.05, 'triangle'); buzz(6); };
-$('d-front').onclick = () => {
-  const L = ed.sel; if (!L) return; const P = L.P; P.decals.splice(P.decals.indexOf(L), 1); P.decals.push(L); orderLayers(P);
-  L.pop = { t: 0.32 }; sound.tone(700, 1000, 0.08, 0.05, 'triangle'); buzz(6);
+$("d-flip").onclick = () => {
+  const L = ed.sel;
+  if (!L) return;
+  L.f *= -1;
+  L.pop = { t: 0.32 };
+  sound.tone(600, 900, 0.08, 0.05, "triangle");
+  buzz(6);
 };
-$('d-del').onclick = () => { const L = ed.sel; if (!L) return; selectLayer(null); removeLayer(L, true); buzz(10); };
-$('d-done').onclick = () => finishDecals();
-let decalsSeen = false; try { decalsSeen = localStorage.getItem('spray-bobo-decals') === '1'; } catch (e) { /* none */ }
-$('b-decals').querySelector('.dot').hidden = decalsSeen;
+$("d-front").onclick = () => {
+  const L = ed.sel;
+  if (!L) return;
+  const P = L.P;
+  P.decals.splice(P.decals.indexOf(L), 1);
+  P.decals.push(L);
+  orderLayers(P);
+  L.pop = { t: 0.32 };
+  sound.tone(700, 1000, 0.08, 0.05, "triangle");
+  buzz(6);
+};
+$("d-del").onclick = () => {
+  const L = ed.sel;
+  if (!L) return;
+  selectLayer(null);
+  removeLayer(L, true);
+  buzz(10);
+};
+$("d-done").onclick = () => finishDecals();
+let decalsSeen = false;
+try {
+  decalsSeen = localStorage.getItem("spray-bobo-decals") === "1";
+} catch (e) {
+  /* none */
+}
+$("b-decals").querySelector(".dot").hidden = decalsSeen;
 function startDecals() {
-  if (!saved) { toast('Save your painting first'); return; }
-  hideAsk(); setMode('decal');
-  stickerPivot.visible = false; shadow.material.opacity = 0; orbit.mesh.visible = false; orbit.on = 0; life.phase = 'off';
-  const u = paintMesh.material.uniforms; u.uOpacity.value = 1; u.uFlash.value = 0; u.uReveal.value = 1; paintMesh.visible = true; paint.dirty = true;
-  decalHost(cp, 'flat'); selectLayer(null); ed.pts.clear(); ed.g = null;
+  if (!saved) {
+    toast("Save your painting first");
+    return;
+  }
+  hideAsk();
+  setMode("decal");
+  stickerPivot.visible = false;
+  shadow.material.opacity = 0;
+  orbit.mesh.visible = false;
+  orbit.on = 0;
+  life.phase = "off";
+  const u = paintMesh.material.uniforms;
+  u.uOpacity.value = 1;
+  u.uFlash.value = 0;
+  u.uReveal.value = 1;
+  paintMesh.visible = true;
+  paint.dirty = true;
+  decalHost(cp, "flat");
+  selectLayer(null);
+  ed.pts.clear();
+  ed.g = null;
   if (DEC.lib) showCat(DEC.cat);
-  sound.whoosh(); buzz(10); burstSplats(['#f6c344', '#ffffff', '#e85bd8'], 30, centreLocal(0.003), 0.05);
-  hint(cp.decals.length ? 'Drag to move. Pinch, or use the yellow handle, to size and turn' : 'Tap a decal to stick it on', 3800);
-  if (!decalsSeen) { decalsSeen = true; $('b-decals').querySelector('.dot').hidden = true; try { localStorage.setItem('spray-bobo-decals', '1'); } catch (e) { /* none */ } }
+  sound.whoosh();
+  buzz(10);
+  burstSplats([ACC, "#ffffff", "#e85bd8"], 30, centreLocal(0.003), 0.05);
+  hint(
+    cp.decals.length
+      ? "Drag to move. Pinch, or use the yellow handle, to size and turn"
+      : "Tap a decal to stick it on",
+    3800,
+  );
+  if (!decalsSeen) {
+    decalsSeen = true;
+    $("b-decals").querySelector(".dot").hidden = true;
+    try {
+      localStorage.setItem("spray-bobo-decals", "1");
+    } catch (e) {
+      /* none */
+    }
+  }
 }
 async function finishDecals() {
   selectLayer(null);
   for (const L of [...cp.decals]) if (L.out) removeLayer(L);
   saved = { ...(saved || {}), decals: serialDecals(cp) };
   const ok = await storeSaved(saved);
-  if (!ok) hint('Saved for this visit (this browser would not keep it)', 2600);
-  postEvent('custom', { action: 'spray-decals-done', piece: cp.k, decals: cp.decals.length });
+  if (!ok) hint("Saved for this visit (this browser would not keep it)", 2600);
+  postEvent("custom", { action: "spray-decals-done", piece: cp.k, decals: cp.decals.length });
   startAlive(false, true);
 }
 
 // ---------------------------------------------------------------- per frame
-const mist = { c: $('mist'), g: null, parts: [] };
-let coverT = 0, aimLogAt = 0;
+const mist = { c: $("mist"), g: null, parts: [] };
+let coverT = 0,
+  aimLogAt = 0;
 function tick(dt) {
-  const now = performance.now(); clock.t += dt;
+  const now = performance.now();
+  clock.t += dt;
   updatePose(now);
-  if (pose.valid && pose.state === 'track') {
+  if (pose.valid && pose.state === "track") {
     lostFor = 0;
-    if (!everFound) { everFound = true; diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1); postEvent('sighting', { piece: cp.k }); }
-    if (mode === 'find') {
-      if (cp.shared || saved) startAlive(false);           // viewer mode: always the shared painting
-      else if (!VIEWER) { setMode('ready'); sound.found(); buzz([12, 50, 12]); hint(cp.found); }
+    if (!everFound) {
+      everFound = true;
+      diag.firstFoundS = +((now - camStartAt) / 1000).toFixed(1);
+      postEvent("sighting", { piece: cp.k });
+    }
+    if (mode === "find") {
+      if (cp.shared || saved)
+        startAlive(false); // viewer mode: always the shared painting
+      else if (!VIEWER) {
+        setMode("ready");
+        sound.found();
+        buzz([12, 50, 12]);
+        hint(cp.found);
+      }
     }
   } else if (!pose.valid) lostFor += dt;
-  hud.classList.toggle('lost', !pose.valid && lostFor > 1.2);
+  hud.classList.toggle("lost", !pose.valid && lostFor > 1.2);
   const again = `Point at ${cp.name} again`;
-  if (mode === 'find' && !pose.valid) hint((everFound ? 'Point at ' : 'Point your camera at ') + SEEK);
-  else if (mode !== 'find' && !pose.valid && lostFor > 1.2) hint(again);
-  else if (pose.valid && $('hint').textContent === again) hint('');
+  if (mode === "find" && !pose.valid) hint("Point at " + SEEK);
+  else if (mode !== "find" && mode !== "room" && !pose.valid && lostFor > 1.2) hint(again);
+  else if (pose.valid && $("hint").textContent === again) hint("");
   paintMesh.material.uniforms.uTime.value = clock.t;
-  if (mode === 'ready' && previewMesh) previewMesh.material.opacity = 0.65 + Math.sin(now / 260) * 0.35;
+  if (mode === "ready" && previewMesh)
+    previewMesh.material.opacity = 0.65 + Math.sin(now / 260) * 0.35;
 
   // the canvas spreading out over the charm; the yellow outline fades as it goes
   if (reveal) {
-    reveal.t += dt; const k = clamp(reveal.t / reveal.dur, 0, 1); paintMesh.material.uniforms.uReveal.value = easeOut(k);
-    if (previewMesh.visible) { previewMesh.material.opacity = 1 - k; if (k >= 1) previewMesh.visible = false; }
+    reveal.t += dt;
+    const k = clamp(reveal.t / reveal.dur, 0, 1);
+    paintMesh.material.uniforms.uReveal.value = easeOut(k);
+    if (previewMesh.visible) {
+      previewMesh.material.opacity = 1 - k;
+      if (k >= 1) previewMesh.visible = false;
+    }
     if (k >= 1) reveal = null;
   }
 
   // aim + spray
   let [ax, ay] = nozzle0();
-  if (aim.finger && fingerAt) { ax = fingerAt.x; ay = fingerAt.y; }
-  if (mode === 'paint') {
+  if (aim.finger && fingerAt) {
+    ax = fingerAt.x;
+    ay = fingerAt.y;
+  }
+  if (mode === "paint") {
     aimAt(ax, ay);
-    const ret = $('reticle'); ret.style.left = ax + 'px'; ret.style.top = ay + 'px';
-    if (aim.has && now - aimLogAt > 1000) {   // test log: how far the paint's spot shows from the nozzle, and how far the engine turns the camera
-      aimLogAt = now; const e = Math.hypot(aim.sx - ax, aim.sy - ay); diag.aim = { errPx: +e.toFixed(1), maxPx: Math.max((diag.aim && diag.aim.maxPx) || 0, +e.toFixed(1)), camDeg: +(camera.quaternion.angleTo(new THREE.Quaternion()) * 57.3).toFixed(1), canvas: [Math.round(canvas.clientWidth), Math.round(canvas.clientHeight)], win: [innerWidth, innerHeight], dpr: devicePixelRatio };
+    const ret = $("reticle");
+    ret.style.left = ax + "px";
+    ret.style.top = ay + "px";
+    if (aim.has && now - aimLogAt > 1000) {
+      // test log: how far the paint's spot shows from the nozzle, and how far the engine turns the camera
+      aimLogAt = now;
+      const e = Math.hypot(aim.sx - ax, aim.sy - ay);
+      diag.aim = {
+        errPx: +e.toFixed(1),
+        maxPx: Math.max((diag.aim && diag.aim.maxPx) || 0, +e.toFixed(1)),
+        camDeg: +(camera.quaternion.angleTo(new THREE.Quaternion()) * 57.3).toFixed(1),
+        canvas: [Math.round(canvas.clientWidth), Math.round(canvas.clientHeight)],
+        win: [innerWidth, innerHeight],
+        dpr: devicePixelRatio,
+      };
     }
-    ret.classList.toggle('on', aim.has && (!aim.finger || spraying));
-    ret.classList.toggle('off', !aim.on);
-    ret.classList.toggle('spray', spraying && aim.on);
-    ret.style.setProperty('--r2', (aim.rScreen * 2).toFixed(0) + 'px');
-    const cm = Math.round(aim.dist * cp.m * 100), dTxt = aim.has ? (cm > (cp.near || 40) ? `${cm} cm · come closer` : `${cm} cm`) : '';
-    if ($('dist').textContent !== dTxt) $('dist').textContent = dTxt;
+    ret.classList.toggle("on", aim.has && (!aim.finger || spraying));
+    ret.classList.toggle("off", !aim.on);
+    ret.classList.toggle("spray", spraying && aim.on);
+    ret.style.setProperty("--r2", (aim.rScreen * 2).toFixed(0) + "px");
+    const cm = Math.round(aim.dist * cp.m * 100),
+      dTxt = aim.has ? (cm > (cp.near || 40) ? `${cm} cm · come closer` : `${cm} cm`) : "";
+    if ($("dist").textContent !== dTxt) $("dist").textContent = dTxt;
     const empty = level <= 0.001 && !ENDLESS;
     if (spraying && !empty) {
       sound.spray(1);
-      if (now - buzzT > 140) { buzzT = now; buzz(6); }
+      if (now - buzzT > 140) {
+        buzzT = now;
+        buzz(6);
+      }
       if (!ENDLESS) setLevel(level - dt / CAN_SECONDS);
-      if (aim.has && aim.on && pose.state === 'track') {   // paint lands only where the camera sees the piece now
-        if (!strokeOpen) { paint.pushUndo(); strokeOpen = true; updateUndo(); }
+      if (aim.has && aim.on && pose.state === "track") {
+        // paint lands only where the camera sees the piece now
+        if (!strokeOpen) {
+          paint.pushUndo();
+          strokeOpen = true;
+          updateUndo();
+        }
         // fill the gap since the last frame so a fast sweep stays a line
-        const lu = aim.lu, lv = aim.lv; const steps = lu == null ? 1 : clamp(Math.ceil(Math.hypot((aim.u - lu) * TW, (aim.v - lv) * TH) / Math.max(aim.rPx * 0.5, 2)), 1, 12);
-        for (let i = 1; i <= steps; i++) { const k = i / steps; paint.spray(lu == null ? aim.u : lu + (aim.u - lu) * k, lv == null ? aim.v : lv + (aim.v - lv) * k, aim.rPx, CAPS[capIdx].c, dt / steps); }
-        aim.lu = aim.u; aim.lv = aim.v; diag.sprayS += dt;
-      } else { aim.lu = aim.lv = null; }
+        const lu = aim.lu,
+          lv = aim.lv;
+        const steps =
+          lu == null
+            ? 1
+            : clamp(
+                Math.ceil(
+                  Math.hypot((aim.u - lu) * TW, (aim.v - lv) * TH) / Math.max(aim.rPx * 0.5, 2),
+                ),
+                1,
+                12,
+              );
+        for (let i = 1; i <= steps; i++) {
+          const k = i / steps;
+          paint.spray(
+            lu == null ? aim.u : lu + (aim.u - lu) * k,
+            lv == null ? aim.v : lv + (aim.v - lv) * k,
+            aim.rPx,
+            CAPS[capIdx].c,
+            dt / steps,
+          );
+        }
+        aim.lu = aim.u;
+        aim.lv = aim.v;
+        diag.sprayS += dt;
+      } else {
+        aim.lu = aim.lv = null;
+      }
       emitMist(ax, ay, aim.has ? aim.rScreen : 40, dt);
-      if (level <= 0.001 && !ENDLESS) { can.dataset.state = 'empty'; sound.spray(0); sound.sputter(); hint(gravity.up ? 'Out of paint! Shake your phone to refill' : 'Out of paint! Tap the can to shake it', 3000); }
+      if (level <= 0.001 && !ENDLESS) {
+        can.dataset.state = "empty";
+        sound.spray(0);
+        sound.sputter();
+        hint(
+          gravity.up
+            ? "Out of paint! Shake your phone to refill"
+            : "Out of paint! Tap the can to shake it",
+          3000,
+        );
+      }
     } else {
-      sound.spray(0); aim.lu = aim.lv = null;
-      if (spraying && empty && now - emptyNag > 900) { emptyNag = now; sound.sputter(); }
+      sound.spray(0);
+      aim.lu = aim.lv = null;
+      if (spraying && empty && now - emptyNag > 900) {
+        emptyNag = now;
+        sound.sputter();
+      }
     }
-    coverT += dt; if (coverT > 0.5 && spraying) { coverT = 0; paint.measure(); updateMeter(); milestone(); }
-  } else $('reticle').classList.remove('on');
+    coverT += dt;
+    if (coverT > 0.5 && spraying) {
+      coverT = 0;
+      paint.measure();
+      updateMeter();
+      milestone();
+    }
+  } else $("reticle").classList.remove("on");
   paint.tick(dt, pose.valid ? dripDown() : null);
   if (paint.composite() && paintTex) paintTex.needsUpdate = true;
   tickAlive(dt);
@@ -1501,7 +3732,16 @@ function tick(dt) {
   tickMist(dt);
   // the CMS scene of the piece in view, only while it is tracked now (pose.valid), never hit-tested
   const sn = pose.last ? pose.last.side : null;
-  for (const P of Object.values(PIECES)) if (P.sc) tickScene(P.sc, { on: P === cp && pose.valid, painting: busy(), flip: (sn && P.flip[sn]) || 1, xf: (sn && P.xf && P.xf[sn]) || null, dt, soundOn: () => sound.on });
+  for (const P of Object.values(PIECES))
+    if (P.sc)
+      tickScene(P.sc, {
+        on: P === cp && pose.valid,
+        painting: busy(),
+        flip: (sn && P.flip[sn]) || 1,
+        xf: (sn && P.xf && P.xf[sn]) || null,
+        dt,
+        soundOn: () => sound.on,
+      });
   recTick();
   diag.fpsN++;
 }
@@ -1509,318 +3749,1012 @@ function tick(dt) {
 // where it hits, and flecks of overspray around it.
 function mistFrom() {
   if (aim.finger && fingerAt) return [innerWidth / 2, innerHeight + 30];
-  const r = can.getBoundingClientRect(); return r.width ? [r.left + r.width * 0.5, r.top + r.height * 0.05] : [innerWidth, innerHeight];
+  const r = can.getBoundingClientRect();
+  return r.width ? [r.left + r.width * 0.5, r.top + r.height * 0.05] : [innerWidth, innerHeight];
 }
 function emitMist(x, y, r, dt) {
-  const col = CAPS[capIdx].c, f = clamp(dt * 60, 0.5, 2.5), [nx, ny] = mistFrom(), P = mist.parts;
+  const col = CAPS[capIdx].c,
+    f = clamp(dt * 60, 0.5, 2.5),
+    [nx, ny] = mistFrom(),
+    P = mist.parts;
   if (P.length > 420) P.splice(0, P.length - 420);
-  for (let i = 0; i < Math.round(5 * f); i++) P.push({ k: 0, x0: nx + gauss() * 3, y0: ny + gauss() * 3, x1: x + gauss() * r * 0.4, y1: y + gauss() * r * 0.4, t: -Math.random() * 0.05, life: 0.15 + Math.random() * 0.08, s: 1.4 + Math.random() * 2.6, col });
-  for (let i = 0; i < Math.round(2 * f); i++) P.push({ k: 1, x0: x + gauss() * r * 0.3, y0: y + gauss() * r * 0.3, vx: gauss() * r * 1.3, vy: gauss() * r * 1.3 - r * 0.5, t: 0, life: 0.4 + Math.random() * 0.3, s: r * (0.1 + Math.random() * 0.16) + 2, col });
-  for (let i = 0; i < Math.round(3 * f); i++) P.push({ k: 2, x0: x + gauss() * r * 0.85, y0: y + gauss() * r * 0.85, vx: gauss() * 12, vy: 14 + Math.random() * 20, t: 0, life: 0.35 + Math.random() * 0.3, s: 0.8 + Math.random() * 1.6, col });
+  for (let i = 0; i < Math.round(5 * f); i++)
+    P.push({
+      k: 0,
+      x0: nx + gauss() * 3,
+      y0: ny + gauss() * 3,
+      x1: x + gauss() * r * 0.4,
+      y1: y + gauss() * r * 0.4,
+      t: -Math.random() * 0.05,
+      life: 0.15 + Math.random() * 0.08,
+      s: 1.4 + Math.random() * 2.6,
+      col,
+    });
+  for (let i = 0; i < Math.round(2 * f); i++)
+    P.push({
+      k: 1,
+      x0: x + gauss() * r * 0.3,
+      y0: y + gauss() * r * 0.3,
+      vx: gauss() * r * 1.3,
+      vy: gauss() * r * 1.3 - r * 0.5,
+      t: 0,
+      life: 0.4 + Math.random() * 0.3,
+      s: r * (0.1 + Math.random() * 0.16) + 2,
+      col,
+    });
+  for (let i = 0; i < Math.round(3 * f); i++)
+    P.push({
+      k: 2,
+      x0: x + gauss() * r * 0.85,
+      y0: y + gauss() * r * 0.85,
+      vx: gauss() * 12,
+      vy: 14 + Math.random() * 20,
+      t: 0,
+      life: 0.35 + Math.random() * 0.3,
+      s: 0.8 + Math.random() * 1.6,
+      col,
+    });
 }
 function tickMist(dt) {
-  const c = mist.c; if (!mist.g) mist.g = c.getContext('2d');
-  const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
-  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-  const g = mist.g; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight);
+  const c = mist.c;
+  if (!mist.g) mist.g = c.getContext("2d");
+  const dpr = Math.min(devicePixelRatio || 1, 2),
+    w = Math.round(innerWidth * dpr),
+    h = Math.round(innerHeight * dpr);
+  if (c.width !== w || c.height !== h) {
+    c.width = w;
+    c.height = h;
+  }
+  const g = mist.g;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, innerWidth, innerHeight);
   if (!mist.parts.length) return;
   for (let i = mist.parts.length - 1; i >= 0; i--) {
-    const p = mist.parts[i]; p.t += dt; if (p.t < 0) continue;
-    const k = p.t / p.life; if (k >= 1) { mist.parts.splice(i, 1); continue; }
+    const p = mist.parts[i];
+    p.t += dt;
+    if (p.t < 0) continue;
+    const k = p.t / p.life;
+    if (k >= 1) {
+      mist.parts.splice(i, 1);
+      continue;
+    }
     let x, y, s, a;
-    if (p.k === 0) { const e = easeOut(k); x = p.x0 + (p.x1 - p.x0) * e; y = p.y0 + (p.y1 - p.y0) * e; s = p.s * (0.6 + k * 0.8); a = 0.75 * (1 - k * k); }
-    else if (p.k === 1) { const e = easeOut(k); x = p.x0 + p.vx * e; y = p.y0 + p.vy * e; s = p.s * (1 + k * 1.4); a = 0.2 * (1 - k); }
-    else { x = p.x0 + p.vx * p.t; y = p.y0 + p.vy * p.t; s = p.s; a = 0.85 * (1 - k); }
-    g.globalAlpha = a; g.fillStyle = p.col; g.beginPath(); g.arc(x, y, s, 0, 7); g.fill();
+    if (p.k === 0) {
+      const e = easeOut(k);
+      x = p.x0 + (p.x1 - p.x0) * e;
+      y = p.y0 + (p.y1 - p.y0) * e;
+      s = p.s * (0.6 + k * 0.8);
+      a = 0.75 * (1 - k * k);
+    } else if (p.k === 1) {
+      const e = easeOut(k);
+      x = p.x0 + p.vx * e;
+      y = p.y0 + p.vy * e;
+      s = p.s * (1 + k * 1.4);
+      a = 0.2 * (1 - k);
+    } else {
+      x = p.x0 + p.vx * p.t;
+      y = p.y0 + p.vy * p.t;
+      s = p.s;
+      a = 0.85 * (1 - k);
+    }
+    g.globalAlpha = a;
+    g.fillStyle = p.col;
+    g.beginPath();
+    g.arc(x, y, s, 0, 7);
+    g.fill();
   }
   g.globalAlpha = 1;
 }
 
 // ---------------------------------------------------------------- 8th Wall pipeline
-const canvas = $('cam');
+const canvas = $("cam");
 // The engine's renderer.setSize() writes the drawing size into the canvas's inline style, so with a pixel ratio
 // above 1 the canvas was drawn twice the size of the screen and its middle (where the paint went) sat at the
 // bottom right. The stylesheet now pins the canvas to the screen (!important), and it draws at 1x by default,
 // like Off the Chain (fastest, and quickest to pick up the charm in Dapo's tests); ?dpr=2 for a sharper picture.
-const DPR = clamp(+params.get('dpr') || 1, 1, 3);
+const DPR = clamp(+params.get("dpr") || 1, 1, 3);
 function sizeCanvas() {
   const dpr = Math.min(devicePixelRatio || 1, DPR);
-  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
-  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  const w = Math.round(innerWidth * dpr),
+    h = Math.round(innerHeight * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
 }
-let last = 0, camStartAt = 0, runAt = 0;
+let last = 0,
+  camStartAt = 0,
+  runAt = 0;
 const appModule = (data) => ({
-  name: 'spray-bobo',
-  onStart: () => { buildScene(XR8.Threejs.xrScene(), data); hud.hidden = false; setMode('find'); },
-  onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); flushDiag(false); },
+  name: "spray-bobo",
+  onStart: () => {
+    const xr = XR8.Threejs.xrScene();
+    if (!scene) {
+      buildScene(xr, data);
+      hud.hidden = false;
+      if (mode !== "room") setMode("find");
+    } else rehome(xr); // ?room= may already be in
+    if (slam) {
+      // world tracking: the floor is y = 0, the phone starts CAM_H above it (~1 unit = 1 m)
+      camera.position.set(0, CAM_H, 0);
+      camera.quaternion.identity();
+      XR8.XrController.updateCameraProjectionMatrix({
+        origin: camera.position,
+        facing: camera.quaternion,
+      });
+    }
+    room.attach(scene, camera);
+  },
+  onUpdate: ({ processCpuResult }) => {
+    const now = performance.now();
+    const dt = Math.min((now - (last || now)) / 1000, 0.05);
+    last = now;
+    const r = processCpuResult && processCpuResult.reality;
+    if (r && r.trackingStatus) noteTracking(r.trackingStatus);
+    if (scene) {
+      tick(dt);
+      room.tick(dt);
+    }
+    flushDiag(false);
+  },
   onCameraStatusChange: ({ status, video, stream }) => {
     camLog(status);
-    if (status === 'hasStream') { kickVideo(); noteStream(stream); }
-    if (status === 'hasVideo') {
-      hideTapCam(); camStartAt = performance.now(); tuneCamera(video);
-      $('splash').classList.add('gone'); setTimeout(() => { $('splash').hidden = true; }, 600);
-      let seen = false; try { seen = localStorage.getItem('spray-bobo-how') === '1'; } catch (e) { /* none */ }
-      if (!seen && !VIEWER) { $('how').hidden = false; $('b-go').focus(); }
+    if (status === "hasStream") {
+      kickVideo();
+      noteStream(stream);
+    }
+    if (status === "hasVideo" && switchDone) {
+      tuneCamera(video);
+      switchDone();
+      return;
+    } // back from the switch to world tracking
+    if (status === "hasVideo") {
+      hideTapCam();
+      camStartAt = performance.now();
+      tuneCamera(video);
+      $("splash").classList.add("gone");
+      setTimeout(() => {
+        $("splash").hidden = true;
+      }, 600);
+      if (slam && ROOM_START) {
+        setTimeout(() => enterRoom(ROOM_START), 50);
+        syncRec();
+        return;
+      }
+      let seen = false;
+      try {
+        seen = localStorage.getItem("spray-bobo-how") === "1";
+      } catch (e) {
+        /* none */
+      }
+      if (!seen && !VIEWER) {
+        $("how").hidden = false;
+        $("b-go").focus();
+      }
       syncRec();
     }
-    if (status === 'requesting') hint('Allow camera access to begin');
-    if (status === 'failed') camFailed('failed');
+    if (status === "requesting") hint("Allow camera access to begin");
+    if (status === "failed") camFailed("failed");
   },
-  onException: (e) => { console.error('XR', e); diag.errors.push('XR: ' + String((e && e.message) || e).slice(0, 200)); flushDiag(true, true); showError('Something went wrong', String((e && e.message) || e)); },
+  onException: (e) => {
+    console.error("XR", e);
+    diag.errors.push("XR: " + String((e && e.message) || e).slice(0, 200));
+    flushDiag(true, true);
+    showError("Something went wrong", String((e && e.message) || e));
+  },
   listeners: [
-    { event: 'reality.imagefound', process: ({ detail }) => onTarget(detail) },
-    { event: 'reality.imageupdated', process: ({ detail }) => onTarget(detail) },
-    { event: 'reality.imagelost', process: ({ detail }) => onLost(detail) },
+    { event: "reality.imagefound", process: ({ detail }) => onTarget(detail) },
+    { event: "reality.imageupdated", process: ({ detail }) => onTarget(detail) },
+    { event: "reality.imagelost", process: ({ detail }) => onLost(detail) },
+    { event: "reality.trackingstatus", process: ({ detail }) => noteTracking(detail.status) },
   ],
 });
 
 async function askMotion() {
   try {
-    if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) { const r = await DeviceMotionEvent.requestPermission(); diag.motion = r; if (r !== 'granted') return; }
-    addEventListener('devicemotion', onMotion);
-  } catch (e) { diag.motion = 'error:' + (e && e.name); }
+    if (typeof DeviceMotionEvent !== "undefined" && DeviceMotionEvent.requestPermission) {
+      const r = await DeviceMotionEvent.requestPermission();
+      diag.motion = r;
+      if (r !== "granted") return;
+    }
+    addEventListener("devicemotion", onMotion);
+  } catch (e) {
+    diag.motion = "error:" + (e && e.name);
+  }
 }
 async function start() {
   if (!loaded) return;
-  $('b-start').disabled = true; $('b-start').textContent = 'Starting…';
-  sound.init(); capture && capture.configure({ audioContext: sound.ctx }); await askMotion();
+  $("b-start").disabled = true;
+  $("b-start").textContent = "Starting…";
+  sound.init();
+  capture && capture.configure({ audioContext: sound.ctx });
+  await askMotion();
   const data = await assets;
-  sizeCanvas(); addEventListener('resize', sizeCanvas); addEventListener('orientationchange', () => setTimeout(sizeCanvas, 300));
-  const targets = Object.values(PIECES).flatMap((P) => P.tdata).filter((t) => !params.get('only') || t.name === params.get('only'));   // at most MAX_TARGETS (cms.js plan)
+  room.loadLib(); // the sticker library for the room, in the background
+  sizeCanvas();
+  addEventListener("resize", sizeCanvas);
+  addEventListener("orientationchange", () => setTimeout(sizeCanvas, 300));
+  const targets = Object.values(PIECES)
+    .flatMap((P) => P.tdata)
+    .filter((t) => !params.get("only") || t.name === params.get("only")); // at most MAX_TARGETS (cms.js plan)
   initTargets(targets);
-  XR8.XrController.configure({ disableWorldTracking: true, imageTargetData: targets });
+  XR8.XrController.configure({ disableWorldTracking: !slam, imageTargetData: targets });
   XR8.addCameraPipelineModules([
-    XR8.GlTextureRenderer.pipelineModule(), XR8.Threejs.pipelineModule(), XR8.XrController.pipelineModule(), XR8.CanvasScreenshot.pipelineModule(),
+    XR8.GlTextureRenderer.pipelineModule(),
+    XR8.Threejs.pipelineModule(),
+    XR8.XrController.pipelineModule(),
+    XR8.CanvasScreenshot.pipelineModule(),
     appModule(data),
-    { name: 'sb-capture', onRender: () => { if (capture) capture.frame(); } },
+    {
+      name: "sb-capture",
+      onRender: () => {
+        if (capture) capture.frame();
+      },
+    },
   ]);
-  runAt = performance.now(); camLog('run'); postEvent('scan', {});
-  setTimeout(() => { if (!camStartAt && !tapCamShown) camFailed('no video after 12 s'); }, 12000);
-  XR8.run({ canvas, allowedDevices: XR8.XrConfig.device().ANY, cameraConfig: { direction: XR8.XrConfig.camera().BACK } });
+  runAt = performance.now();
+  camLog("run");
+  postEvent("scan", {});
+  setTimeout(() => {
+    if (!camStartAt && !tapCamShown) camFailed("no video after 12 s");
+  }, 12000);
+  XR8.run(runOpts());
 }
-$('b-start').onclick = () => { if (VIEWER && !cmsInfo.viewer) { location.href = HERE; return; } start(); };
+function runOpts() {
+  return {
+    canvas,
+    allowedDevices: XR8.XrConfig.device().ANY,
+    cameraConfig: { direction: XR8.XrConfig.camera().BACK },
+    verbose: params.has("verbose"),
+  };
+}
+const ROOM_START = slam ? params.get("room") : null;
+// the engine's scene and camera are new after a restart: move everything over (lights, the charms, the room)
+function rehome(xr) {
+  const old = scene,
+    oldCam = camera;
+  ({ scene, camera, renderer } = xr);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  for (const o of [...old.children]) if (o !== oldCam) scene.add(o);
+  const pmrem = new THREE.PMREMGenerator(renderer); // the old environment map lived on the old renderer
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environmentIntensity = 0.7;
+}
+$("b-start").onclick = () => {
+  if (VIEWER && !cmsInfo.viewer) {
+    location.href = BRAND.home;
+    return;
+  }
+  start();
+};
 // ---------------------------------------------------------------- viewer mode (?c=): the splash
 // The painting, flat on its print (base coat and outline as the painter left them), so you know what you'll see.
 async function viewerSplash() {
-  const v = cmsInfo.viewer, P = v && PIECES[v.key]; if (!P) return;
-  document.documentElement.toggleAttribute('data-viewer', true);
-  $('title').textContent = 'See it on your merch';
-  $('lead').textContent = `Someone painted ${P.name}. Point your phone at your ${P.name} and watch their painting come alive on it.`;
+  const v = cmsInfo.viewer,
+    P = v && PIECES[v.key];
+  if (!P) return;
+  document.documentElement.toggleAttribute("data-viewer", true);
+  $("title").textContent = "See it on your merch";
+  $("lead").textContent =
+    `Someone painted ${P.name}. Point your phone at your ${P.name} and watch their painting come alive on it.`;
   try {
-    const [mask, lines] = P.arts, u = artUrls(P), print = await loadImg(u.print).catch(() => null), bmp = await createImageBitmap(v.rec.paint);
-    const mk = () => { const c = document.createElement('canvas'); c.width = TW; c.height = TH; return c; };
-    const c = mk(), g = c.getContext('2d'), t = mk(), tg = t.getContext('2d');
-    g.fillStyle = '#ffffff'; g.fillRect(0, 0, TW, TH); if (print) g.drawImage(print, 0, 0, TW, TH);
-    if (v.rec.primer) { tg.fillStyle = '#fbfaf5'; tg.fillRect(0, 0, TW, TH); }
-    tg.drawImage(bmp, 0, 0, TW, TH); if (v.rec.linesOn && lines) tg.drawImage(lines, 0, 0, TW, TH);
-    tg.globalCompositeOperation = 'destination-in'; tg.drawImage(mask, 0, 0, TW, TH);
+    const [mask, lines] = P.arts,
+      u = artUrls(P),
+      print = await loadImg(u.print).catch(() => null),
+      bmp = await createImageBitmap(v.rec.paint);
+    const mk = () => {
+      const c = document.createElement("canvas");
+      c.width = TW;
+      c.height = TH;
+      return c;
+    };
+    const c = mk(),
+      g = c.getContext("2d"),
+      t = mk(),
+      tg = t.getContext("2d");
+    g.fillStyle = "#ffffff";
+    g.fillRect(0, 0, TW, TH);
+    if (print) g.drawImage(print, 0, 0, TW, TH);
+    if (v.rec.primer) {
+      tg.fillStyle = "#fbfaf5";
+      tg.fillRect(0, 0, TW, TH);
+    }
+    tg.drawImage(bmp, 0, 0, TW, TH);
+    if (v.rec.linesOn && lines) tg.drawImage(lines, 0, 0, TW, TH);
+    tg.globalCompositeOperation = "destination-in";
+    tg.drawImage(mask, 0, 0, TW, TH);
     g.drawImage(t, 0, 0);
-    c.className = 'shared-pic'; c.setAttribute('role', 'img'); c.setAttribute('aria-label', `The shared painting on ${P.name}`);
-    const card = document.querySelector('#splash .hero .card'); card.innerHTML = ''; card.appendChild(c); card.classList.add('shared');
-  } catch (e) { console.warn('viewer splash', e); }
+    c.className = "shared-pic";
+    c.setAttribute("role", "img");
+    c.setAttribute("aria-label", `The shared painting on ${P.name}`);
+    const card = document.querySelector("#splash .hero .card");
+    card.innerHTML = "";
+    card.appendChild(c);
+    card.classList.add("shared");
+  } catch (e) {
+    console.warn("viewer splash", e);
+  }
 }
-function viewerGone() {   // 404, 410 or unreachable: say so kindly, and offer the normal page
-  document.documentElement.toggleAttribute('data-viewer', true);
-  $('title').textContent = cmsInfo.gone === 410 ? 'Taken down' : cmsInfo.gone === 404 ? 'Not found' : 'Not loaded';
-  $('lead').textContent = cmsInfo.notice || "We couldn't find that painting.";
-  $('notice').hidden = true;
-  loaded = false; $('b-start').disabled = false; $('b-start').textContent = 'Paint your own';
+function viewerGone() {
+  // 404, 410 or unreachable: say so kindly, and offer the normal page
+  document.documentElement.toggleAttribute("data-viewer", true);
+  $("title").textContent =
+    cmsInfo.gone === 410 ? "Taken down" : cmsInfo.gone === 404 ? "Not found" : "Not loaded";
+  $("lead").textContent = cmsInfo.notice || "We couldn't find that painting.";
+  $("notice").hidden = true;
+  loaded = false;
+  $("b-start").disabled = false;
+  $("b-start").textContent = "Paint your own";
 }
-$('b-own').onclick = () => { postEvent('custom', { action: 'spray-view-own' }); location.href = HERE; };
-$('b-go').onclick = () => { $('how').hidden = true; try { localStorage.setItem('spray-bobo-how', '1'); } catch (e) { /* none */ } syncRec(); };
-$('err-retry').onclick = () => location.reload();
-function showError(title, body) { $('err-title').textContent = title; $('err-body').textContent = body; $('error').hidden = false; }
+$("b-own").onclick = () => {
+  postEvent("custom", { action: "spray-view-own" });
+  location.href = BRAND.home;
+};
+$("b-go").onclick = () => {
+  $("how").hidden = true;
+  try {
+    localStorage.setItem("spray-bobo-how", "1");
+  } catch (e) {
+    /* none */
+  }
+  syncRec();
+};
+$("err-retry").onclick = () => location.reload();
+function showError(title, body) {
+  $("err-title").textContent = title;
+  $("err-body").textContent = body;
+  $("error").hidden = false;
+}
 
 // ---------------------------------------------------------------- camera (the same handling as Off the Chain)
 // iPhones: the plain wide camera can't focus closer than about 20 cm, and a spray can is used up close, so
 // ask for the multi-lens camera (it switches to the close-focus lens by itself) at 1920x1440, zoomed to 1x.
 // If it gives no picture within 4 s the page reloads once with the standard camera.
-const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const MACRO_LENSES = ['Back Triple Camera', 'Back Dual Wide Camera'];
-let iosStd = false; try { iosStd = sessionStorage.getItem('sb-ios-std') === '1'; } catch (e) { /* none */ }
-const IOS_MACRO = IOS && params.get('macro') !== '0' && !iosStd;
+const IOS =
+  /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const MACRO_LENSES = ["Back Triple Camera", "Back Dual Wide Camera"];
+let iosStd = false;
+try {
+  iosStd = sessionStorage.getItem("sb-ios-std") === "1";
+} catch (e) {
+  /* none */
+}
+const IOS_MACRO = IOS && params.get("macro") !== "0" && !iosStd;
 if (IOS && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-  const md = navigator.mediaDevices, orig = md.getUserMedia.bind(md);
-  const lensId = () => (IOS_MACRO ? md.enumerateDevices().then((ds) => { for (const n of MACRO_LENSES) { const d = ds.find((x) => x.kind === 'videoinput' && x.label === n); if (d) return d.deviceId; } return null; }).catch(() => null) : Promise.resolve(null));
+  const md = navigator.mediaDevices,
+    orig = md.getUserMedia.bind(md);
+  const lensId = () =>
+    IOS_MACRO && !roomCam
+      ? md
+          .enumerateDevices()
+          .then((ds) => {
+            for (const n of MACRO_LENSES) {
+              const d = ds.find((x) => x.kind === "videoinput" && x.label === n);
+              if (d) return d.deviceId;
+            }
+            return null;
+          })
+          .catch(() => null)
+      : Promise.resolve(null);
   md.getUserMedia = (c) => {
-    const v = c && c.video; if (!v || v === true) return orig(c);
+    const v = c && c.video;
+    if (!v || v === true) return orig(c);
     return lensId().then((id) => {
-      const nv = { ...v, width: { ...(v.width || {}), ideal: 1920 }, height: { ...(v.height || {}), ideal: 1440 } };
-      if (id) { nv.deviceId = { exact: id }; delete nv.facingMode; }
-      diag.asked = nv; return orig({ ...c, video: nv }).catch((e) => { diag.askFailed = String(e && e.name || e); return orig(c); });
+      const nv = {
+        ...v,
+        width: { ...(v.width || {}), ideal: 1920 },
+        height: { ...(v.height || {}), ideal: 1440 },
+      };
+      if (id) {
+        nv.deviceId = { exact: id };
+        delete nv.facingMode;
+      }
+      diag.asked = nv;
+      return orig({ ...c, video: nv }).catch((e) => {
+        diag.askFailed = String((e && e.name) || e);
+        return orig(c);
+      });
     });
   };
 }
 function tuneCamera(video) {
   try {
-    const tr = video && video.srcObject && video.srcObject.getVideoTracks()[0]; if (!tr) return;
+    const tr = video && video.srcObject && video.srcObject.getVideoTracks()[0];
+    if (!tr) return;
     const caps = tr.getCapabilities ? tr.getCapabilities() : {};
-    if (caps.focusMode && caps.focusMode.includes('continuous')) tr.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
-    if (IOS_MACRO && /Triple|Dual Wide/.test(tr.label) && caps.zoom) { const z = Math.min(Math.max(caps.zoom.min < 1 ? 1 : 2, caps.zoom.min), caps.zoom.max); tr.applyConstraints({ advanced: [{ zoom: z }] }).catch(() => {}); }
+    if (caps.focusMode && caps.focusMode.includes("continuous"))
+      tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+    if (IOS_MACRO && /Triple|Dual Wide/.test(tr.label) && caps.zoom) {
+      const z = Math.min(Math.max(caps.zoom.min < 1 ? 1 : 2, caps.zoom.min), caps.zoom.max);
+      tr.applyConstraints({ advanced: [{ zoom: z }] }).catch(() => {});
+    }
     const st = tr.getSettings ? tr.getSettings() : {};
-    diag.camera = { label: tr.label, width: st.width || video.videoWidth, height: st.height || video.videoHeight, frameRate: st.frameRate, focusMode: st.focusMode, zoom: st.zoom };
-  } catch (e) { diag.errors.push('tune: ' + String(e).slice(0, 120)); }
+    diag.camera = {
+      label: tr.label,
+      width: st.width || video.videoWidth,
+      height: st.height || video.videoHeight,
+      frameRate: st.frameRate,
+      focusMode: st.focusMode,
+      zoom: st.zoom,
+    };
+  } catch (e) {
+    diag.errors.push("tune: " + String(e).slice(0, 120));
+  }
 }
 let tapCamShown = false;
 function kickVideo() {
   setTimeout(() => {
-    if (camStartAt) return; camLog('notPlaying');
-    if (IOS_MACRO) { try { sessionStorage.setItem('sb-ios-std', '1'); } catch (e) { /* none */ } flushDiag(true, true); location.reload(); return; }
+    if (camStartAt) return;
+    camLog("notPlaying");
+    if (IOS_MACRO && !roomCam) {
+      try {
+        sessionStorage.setItem("sb-ios-std", "1");
+      } catch (e) {
+        /* none */
+      }
+      flushDiag(true, true);
+      location.reload();
+      return;
+    }
     showTapCam();
   }, 4000);
 }
-function noteStream(stream) { try { const t = stream && stream.getVideoTracks()[0]; diag.stream = t ? { label: t.label, state: t.readyState } : null; } catch (e) { /* none */ } }
-function showTapCam() {
-  if (camStartAt || tapCamShown) return; tapCamShown = true;
-  const card = document.createElement('div'); card.id = 'tap-cam'; card.setAttribute('role', 'alert');
-  card.innerHTML = '<h2>Waiting for the camera</h2><p>Another app or tab may be using it. Close the Camera app, any video call and other tabs that use the camera, then tap Try again.</p><div class="row"><button type="button" class="primary" data-a="reload">Try again</button><button type="button" data-a="play">Start camera here</button></div>';
-  card.querySelector('[data-a=reload]').onclick = () => location.reload();
-  card.querySelector('[data-a=play]').onclick = () => { const v = engineVideo(); if (v) { v.muted = true; v.play().catch(() => {}); } setTimeout(() => { if (!camStartAt) camFailed('no video after tap'); }, 8000); };
-  document.body.appendChild(card); card.querySelector('button').focus();
+function noteStream(stream) {
+  try {
+    const t = stream && stream.getVideoTracks()[0];
+    diag.stream = t ? { label: t.label, state: t.readyState } : null;
+  } catch (e) {
+    /* none */
+  }
 }
-function hideTapCam() { const el = $('tap-cam'); if (el) el.remove(); }
+function showTapCam() {
+  if (camStartAt || tapCamShown) return;
+  tapCamShown = true;
+  const card = document.createElement("div");
+  card.id = "tap-cam";
+  card.setAttribute("role", "alert");
+  card.innerHTML =
+    '<h2>Waiting for the camera</h2><p>Another app or tab may be using it. Close the Camera app, any video call and other tabs that use the camera, then tap Try again.</p><div class="row"><button type="button" class="primary" data-a="reload">Try again</button><button type="button" data-a="play">Start camera here</button></div>';
+  card.querySelector("[data-a=reload]").onclick = () => location.reload();
+  card.querySelector("[data-a=play]").onclick = () => {
+    const v = engineVideo();
+    if (v) {
+      v.muted = true;
+      v.play().catch(() => {});
+    }
+    setTimeout(() => {
+      if (!camStartAt) camFailed("no video after tap");
+    }, 8000);
+  };
+  document.body.appendChild(card);
+  card.querySelector("button").focus();
+}
+function hideTapCam() {
+  const el = $("tap-cam");
+  if (el) el.remove();
+}
 function camFailed(why) {
-  if (camStartAt || diag.camFailed) return; diag.camFailed = why; flushDiag(true, true); hideTapCam();
-  if (IOS_MACRO) try { sessionStorage.setItem('sb-ios-std', '1'); } catch (e) { /* none */ }
-  showError('The camera didn\'t start', 'Another app or tab may be using it. Close the Camera app and other tabs that use the camera, then tap Try again. If it still won\'t start, allow camera access for this site in your browser settings.');
+  if (camStartAt || diag.camFailed) return;
+  diag.camFailed = why;
+  flushDiag(true, true);
+  hideTapCam();
+  if (IOS_MACRO)
+    try {
+      sessionStorage.setItem("sb-ios-std", "1");
+    } catch (e) {
+      /* none */
+    }
+  showError(
+    "The camera didn't start",
+    "Another app or tab may be using it. Close the Camera app and other tabs that use the camera, then tap Try again. If it still won't start, allow camera access for this site in your browser settings.",
+  );
 }
 
 // ---------------------------------------------------------------- photo, video (the Cola Run recorder), artwork
 const LOGO = { evade: new Image(), act: new Image() };
-LOGO.evade.src = '/brand/evade-logo.webp'; LOGO.act.src = '/activated-merch/media/ar/activated-by.webp';
-function drawMist(c, Wd, Hd) { if (mist.parts.length && mist.c.width) try { c.drawImage(mist.c, 0, 0, Wd, Hd); } catch (e) { /* none */ } }   // the spray shows in photos and clips too
+LOGO.evade.src = BRAND.logo;
+LOGO.act.src = "/activated-merch/media/ar/activated-by.webp";
+function drawMist(c, Wd, Hd) {
+  if (mist.parts.length && mist.c.width)
+    try {
+      c.drawImage(mist.c, 0, 0, Wd, Hd);
+    } catch (e) {
+      /* none */
+    }
+  room.drawMist(c, Wd, Hd);
+} // the spray shows in photos and clips too
 function drawWatermark(c, Wd, Hd) {
-  const u = Math.min(Wd, Hd) / 720, pad = 26 * u;
-  if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 44 * u, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; c.drawImage(LOGO.evade, pad, pad, w, h); }
-  if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 50 * u, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h); }
+  const u = Math.min(Wd, Hd) / 720,
+    pad = 26 * u;
+  if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) {
+    const h = 44 * u,
+      w = (h * LOGO.evade.naturalWidth) / LOGO.evade.naturalHeight;
+    c.drawImage(LOGO.evade, pad, pad, w, h);
+  }
+  if (LOGO.act.complete && LOGO.act.naturalWidth) {
+    const h = 50 * u,
+      w = (h * LOGO.act.naturalWidth) / LOGO.act.naturalHeight;
+    c.drawImage(LOGO.act, Wd - pad - w, Hd - pad - h, w, h);
+  }
 }
-let capture = null, recFrom = 0, shots = 0;
+let capture = null,
+  recFrom = 0,
+  shots = 0;
 try {
   capture = new ColaCapture({
-    canvas, host: document.body, endpoint: location.origin, globeUrl: '/evade/where-is-bobo/', source: 'spray-bobo', audioContext: null,
-    connectAudio: (dest) => { const m = sound.master; if (!m) return () => {}; m.connect(dest); return () => { try { m.disconnect(dest); } catch (e) { /* gone */ } }; },
-    overlay: (c, Wd, Hd) => { drawMist(c, Wd, Hd); drawWatermark(c, Wd, Hd); },
-    on: (name) => { if (name === 'recordStart') { buzz(25); recUi(true); } if (name === 'recordStop' || name === 'error') recUi(false); },
+    canvas,
+    host: document.body,
+    endpoint: location.origin,
+    globeUrl: BRAND.globe ? "/evade/where-is-bobo/" : "/",
+    source: BRAND.source,
+    audioContext: null,
+    connectAudio: (dest) => {
+      const m = sound.master;
+      if (!m) return () => {};
+      m.connect(dest);
+      return () => {
+        try {
+          m.disconnect(dest);
+        } catch (e) {
+          /* gone */
+        }
+      };
+    },
+    overlay: (c, Wd, Hd) => {
+      drawMist(c, Wd, Hd);
+      drawWatermark(c, Wd, Hd);
+    },
+    on: (name) => {
+      if (name === "recordStart") {
+        buzz(25);
+        recUi(true);
+      }
+      if (name === "recordStop" || name === "error") recUi(false);
+    },
   });
   Object.assign(capture.settings, {
-    corner: 'topRight', offsetX: -5, offsetY: -6, accent: '#f6c344', maxSeconds: 30,
-    hintText: 'Film your Bobo and send him to the globe', sendLabel: 'Send to Where is Bobo?',
-    sheetTitle: 'Send your clip to the Bobo globe?', keepTitle: 'Keep your clip?', clipTitle: 'Spray Bobo clip', filePrefix: 'spray-bobo', backLabel: 'Back to the camera',
+    corner: "topRight",
+    offsetX: -5,
+    offsetY: -6,
+    accent: ACC,
+    maxSeconds: 30,
+    hintText: "Film your Bobo and send him to the globe",
+    sendLabel: "Send to Where is Bobo?",
+    sheetTitle: "Send your clip to the Bobo globe?",
+    keepTitle: "Keep your clip?",
+    clipTitle: "Spray Bobo clip",
+    filePrefix: "spray-bobo",
+    backLabel: "Back to the camera",
   });
-  capture.apply(); capture.setVisible(false);
-} catch (e) { console.warn('recorder', e); capture = null; }
-function syncRec() { capture && capture.setVisible(false); }
+  if (ML)
+    // MEDIALIFE Spray: save and share only, nothing goes to EVADE's globe
+    Object.assign(capture.settings, {
+      sendEnabled: false,
+      hintText: "Film your painting",
+      brandTitle: "MEDIALIFE SPRAY",
+      brandTagline: "Activated by MEDIALIFE",
+      clipTitle: "MEDIALIFE Spray clip",
+      filePrefix: "medialife-spray",
+    });
+  capture.apply();
+  capture.setVisible(false);
+} catch (e) {
+  console.warn("recorder", e);
+  capture = null;
+}
+function syncRec() {
+  capture && capture.setVisible(false);
+}
 function recUi(on) {
-  $('b-shutter').classList.toggle('rec', on); $('rec-time').hidden = !on;
-  $('b-shutter').setAttribute('aria-label', on ? 'Stop recording' : 'Take a photo. Press and hold to film');
-  recFrom = on ? performance.now() : 0; if (!on) $('rec-prog').style.strokeDashoffset = '207';
+  $("b-shutter").classList.toggle("rec", on);
+  $("rec-time").hidden = !on;
+  $("b-shutter").setAttribute(
+    "aria-label",
+    on ? "Stop recording" : "Take a photo. Press and hold to film",
+  );
+  recFrom = on ? performance.now() : 0;
+  if (!on) $("rec-prog").style.strokeDashoffset = "207";
 }
 function recTick() {
   if (!recFrom) return;
-  const sec = (performance.now() - recFrom) / 1000, max = (capture && capture.settings.maxSeconds) || 30;
-  $('rec-prog').style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
-  const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`; if ($('rec-time').textContent !== t) $('rec-time').textContent = t;
+  const sec = (performance.now() - recFrom) / 1000,
+    max = (capture && capture.settings.maxSeconds) || 30;
+  $("rec-prog").style.strokeDashoffset = String(207 * (1 - Math.min(sec / max, 1)));
+  const t = `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+  if ($("rec-time").textContent !== t) $("rec-time").textContent = t;
 }
 async function takePhoto() {
   try {
-    sound.shutter(); buzz(20); const fl = $('flashw'); fl.classList.add('on'); setTimeout(() => fl.classList.remove('on'), 60);
+    sound.shutter();
+    buzz(20);
+    const fl = $("flashw");
+    fl.classList.add("on");
+    setTimeout(() => fl.classList.remove("on"), 60);
     const b64 = await XR8.CanvasScreenshot.takeScreenshot();
-    const img = new Image(); img.src = 'data:image/jpeg;base64,' + b64; await img.decode();
-    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
-    const g = c.getContext('2d'); g.drawImage(img, 0, 0); drawMist(g, c.width, c.height); drawWatermark(g, c.width, c.height);
-    const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.92));
-    showFile('shot', blob, `spray-bobo-${++shots}.jpg`, 'My Bobo, sprayed');
-  } catch (e) { console.error(e); }
+    const img = new Image();
+    img.src = "data:image/jpeg;base64," + b64;
+    await img.decode();
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const g = c.getContext("2d");
+    g.drawImage(img, 0, 0);
+    drawMist(g, c.width, c.height);
+    drawWatermark(g, c.width, c.height);
+    const blob = await new Promise((res) => c.toBlob(res, "image/jpeg", 0.92));
+    showFile("shot", blob, `spray-bobo-${++shots}.jpg`, ML ? "My MEDIALIFE Spray painting" : "My Bobo, sprayed");
+  } catch (e) {
+    console.error(e);
+  }
 }
 function showFile(id, blob, name, title) {
-  const file = new File([blob], name, { type: blob.type }), url = URL.createObjectURL(blob);
-  $(id + '-img').src = url; $(id + '-save').href = url; $(id + '-save').download = name; $(id + '-save').hidden = false;
+  const file = new File([blob], name, { type: blob.type }),
+    url = URL.createObjectURL(blob);
+  $(id + "-img").src = url;
+  $(id + "-save").href = url;
+  $(id + "-save").download = name;
+  $(id + "-save").hidden = false;
   const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
-  $(id + '-share').hidden = !canShare; $(id + '-share').onclick = () => navigator.share({ files: [file], title }).catch(() => {});
-  $(id === 'shot' ? 'shot' : 'artsheet').hidden = false;
+  $(id + "-share").hidden = !canShare;
+  $(id + "-share").onclick = () => navigator.share({ files: [file], title }).catch(() => {});
+  $(id === "shot" ? "shot" : "artsheet").hidden = false;
 }
-const HOLD_MS = 320; let holding = false, holdT = 0;
-const sh = $('b-shutter');
-sh.addEventListener('contextmenu', (e) => e.preventDefault());
-sh.addEventListener('pointerdown', (e) => {
+const HOLD_MS = 320;
+let holding = false,
+  holdT = 0;
+const sh = $("b-shutter");
+sh.addEventListener("contextmenu", (e) => e.preventDefault());
+sh.addEventListener("pointerdown", (e) => {
   if (e.button > 0) return;
-  if (capture && capture.status === 'recording') { holding = false; return; }
-  holding = true; try { sh.setPointerCapture(e.pointerId); } catch (err) { /* old Safari */ }
-  clearTimeout(holdT); holdT = setTimeout(() => { if (holding && capture) capture.start(); }, HOLD_MS);
+  if (capture && capture.status === "recording") {
+    holding = false;
+    return;
+  }
+  holding = true;
+  try {
+    sh.setPointerCapture(e.pointerId);
+  } catch (err) {
+    /* old Safari */
+  }
+  clearTimeout(holdT);
+  holdT = setTimeout(() => {
+    if (holding && capture) capture.start();
+  }, HOLD_MS);
 });
-sh.addEventListener('pointerup', () => {
-  if (capture && capture.status === 'recording') { holding = false; clearTimeout(holdT); capture.stop(); return; }
-  if (!holding) return; holding = false; clearTimeout(holdT); takePhoto();
+sh.addEventListener("pointerup", () => {
+  if (capture && capture.status === "recording") {
+    holding = false;
+    clearTimeout(holdT);
+    capture.stop();
+    return;
+  }
+  if (!holding) return;
+  holding = false;
+  clearTimeout(holdT);
+  takePhoto();
 });
-sh.addEventListener('pointercancel', () => { holding = false; clearTimeout(holdT); if (capture && capture.status === 'recording') capture.stop(); });
-sh.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); takePhoto(); } });
-$('shot-close').onclick = () => { $('shot').hidden = true; };
-$('art-close').onclick = () => { $('artsheet').hidden = true; };
+sh.addEventListener("pointercancel", () => {
+  holding = false;
+  clearTimeout(holdT);
+  if (capture && capture.status === "recording") capture.stop();
+});
+sh.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    takePhoto();
+  }
+});
+$("shot-close").onclick = () => {
+  $("shot").hidden = true;
+};
+$("art-close").onclick = () => {
+  $("artsheet").hidden = true;
+};
 // the artwork: your Bobo as a die-cut sticker on EVADE yellow, ready to post
-$('b-art').onclick = async () => {
+$("b-art").onclick = async () => {
   try {
     await document.fonts.load('80px "Permanent Marker"').catch(() => {});
-    const Wc = 1080, Hc = 1350, c = document.createElement('canvas'); c.width = Wc; c.height = Hc; const g = c.getContext('2d');
-    g.fillStyle = '#f6c344'; g.fillRect(0, 0, Wc, Hc);
+    const Wc = 1080,
+      Hc = 1350,
+      c = document.createElement("canvas");
+    c.width = Wc;
+    c.height = Hc;
+    const g = c.getContext("2d");
+    g.fillStyle = ACC;
+    g.fillRect(0, 0, Wc, Hc);
     // as big as fits: a piece whose stencil reaches the bottom of its picture (the tee) is drawn smaller, clear of the caption
-    let by1 = 0; for (let i = 0; i < paint.maskSmall.length; i++) if (paint.maskSmall[i]) by1 = Math.max(by1, (Math.floor(i / 48) + 1) / 64);
-    const ay = 230, ah = Math.min(760 * TH / TW, (Hc - 150 - ay) / Math.max(by1, 0.5)), aw = ah * TW / TH, ax = (Wc - aw) / 2;
-    const sil = (col, r) => { const t = document.createElement('canvas'); t.width = TW; t.height = TH; const tg = t.getContext('2d'); tg.drawImage(paint.mask, 0, 0, TW, TH); tg.globalCompositeOperation = 'source-in'; tg.fillStyle = col; tg.fillRect(0, 0, TW, TH); for (let a = 0; a < 16; a++) g.drawImage(t, ax + Math.cos(a * 0.3927) * r, ay + Math.sin(a * 0.3927) * r, aw, ah); };
-    g.save(); g.translate(Wc / 2, ay + ah / 2); g.rotate(-0.05); g.translate(-Wc / 2, -(ay + ah / 2));
-    sil('#15131a', 30); sil('#ffffff', 22);
+    let by1 = 0;
+    for (let i = 0; i < paint.maskSmall.length; i++)
+      if (paint.maskSmall[i]) by1 = Math.max(by1, (Math.floor(i / 48) + 1) / 64);
+    const ay = 230,
+      ah = Math.min((760 * TH) / TW, (Hc - 150 - ay) / Math.max(by1, 0.5)),
+      aw = (ah * TW) / TH,
+      ax = (Wc - aw) / 2;
+    const sil = (col, r) => {
+      const t = document.createElement("canvas");
+      t.width = TW;
+      t.height = TH;
+      const tg = t.getContext("2d");
+      tg.drawImage(paint.mask, 0, 0, TW, TH);
+      tg.globalCompositeOperation = "source-in";
+      tg.fillStyle = col;
+      tg.fillRect(0, 0, TW, TH);
+      for (let a = 0; a < 16; a++)
+        g.drawImage(t, ax + Math.cos(a * 0.3927) * r, ay + Math.sin(a * 0.3927) * r, aw, ah);
+    };
+    g.save();
+    g.translate(Wc / 2, ay + ah / 2);
+    g.rotate(-0.05);
+    g.translate(-Wc / 2, -(ay + ah / 2));
+    sil("#15131a", 30);
+    sil("#ffffff", 22);
     g.drawImage(stickerCanvas, ax, ay, aw, ah);
-    for (const L of cp.decals) {   // the decals, where they sit on the charm
-      if (!L.art) continue; const ww = L.w * aw * L.art.grow, hh = ww / L.art.aspect;
-      g.save(); g.translate(ax + L.u * aw, ay + L.v * ah); g.rotate(-L.r); g.scale(L.f, 1); g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh); g.restore();
+    for (const L of cp.decals) {
+      // the decals, where they sit on the charm
+      if (!L.art) continue;
+      const ww = L.w * aw * L.art.grow,
+        hh = ww / L.art.aspect;
+      g.save();
+      g.translate(ax + L.u * aw, ay + L.v * ah);
+      g.rotate(-L.r);
+      g.scale(L.f, 1);
+      g.drawImage(L.art.canvas, -ww / 2, -hh / 2, ww, hh);
+      g.restore();
     }
     g.restore();
-    g.fillStyle = '#15131a'; g.font = '400 92px "Permanent Marker", cursive'; g.textAlign = 'center';
-    g.save(); g.translate(Wc / 2, 168); g.rotate(-0.04); g.fillText(cp.title, 0, 0); g.restore();
-    if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) { const h = 46, w = h * LOGO.evade.naturalWidth / LOGO.evade.naturalHeight; g.filter = 'brightness(0)'; g.drawImage(LOGO.evade, 54, 50, w, h); g.filter = 'none'; }
-    if (LOGO.act.complete && LOGO.act.naturalWidth) { const h = 58, w = h * LOGO.act.naturalWidth / LOGO.act.naturalHeight; g.fillStyle = '#15131a'; g.beginPath(); g.roundRect(Wc - w - 74, Hc - h - 74, w + 40, h + 30, 20); g.fill(); g.drawImage(LOGO.act, Wc - w - 54, Hc - h - 59, w, h); }
-    g.fillStyle = '#15131a'; g.font = '700 28px "Space Grotesk", sans-serif'; g.textAlign = 'left'; g.fillText(cp.line, 54, Hc - 86);
-    const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
-    const nm = cp.k === 'can' ? 'can' : cp.name; $('art-t').textContent = 'Your ' + nm; $('art-img').alt = 'Your painted ' + nm;
-    showFile('art', blob, `my-${cp.k}.png`, 'My ' + nm);
-    postEvent('share', { what: 'spray-art', piece: cp.k });
-  } catch (e) { console.error(e); }
+    g.fillStyle = "#15131a";
+    g.font = '400 92px "Permanent Marker", cursive';
+    g.textAlign = "center";
+    g.save();
+    g.translate(Wc / 2, 168);
+    g.rotate(-0.04);
+    g.fillText(cp.title, 0, 0);
+    g.restore();
+    if (cp.evade !== false && LOGO.evade.complete && LOGO.evade.naturalWidth) {
+      const h = 46,
+        w = (h * LOGO.evade.naturalWidth) / LOGO.evade.naturalHeight;
+      g.filter = "brightness(0)";
+      g.drawImage(LOGO.evade, 54, 50, w, h);
+      g.filter = "none";
+    }
+    if (LOGO.act.complete && LOGO.act.naturalWidth) {
+      const h = 58,
+        w = (h * LOGO.act.naturalWidth) / LOGO.act.naturalHeight;
+      g.fillStyle = "#15131a";
+      g.beginPath();
+      g.roundRect(Wc - w - 74, Hc - h - 74, w + 40, h + 30, 20);
+      g.fill();
+      g.drawImage(LOGO.act, Wc - w - 54, Hc - h - 59, w, h);
+    }
+    g.fillStyle = "#15131a";
+    g.font = '700 28px "Space Grotesk", sans-serif';
+    g.textAlign = "left";
+    g.fillText(cp.line, 54, Hc - 86);
+    const blob = await new Promise((res) => c.toBlob(res, "image/png"));
+    const nm = cp.k === "can" ? "can" : cp.name;
+    $("art-t").textContent = "Your " + nm;
+    $("art-img").alt = "Your painted " + nm;
+    showFile("art", blob, `my-${cp.k}.png`, "My " + nm);
+    postEvent("share", { what: "spray-art", piece: cp.k });
+  } catch (e) {
+    console.error(e);
+  }
 };
 
 // ---------------------------------------------------------------- Where is Bobo? events (city level, anonymous)
-const SID = 'sb-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+const SID = "sb-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
 function postEvent(type, props) {
-  if (params.has('nolog')) return;
-  try { fetch('/api/bobo/events', { method: 'POST', keepalive: true, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type, source: 'spray-bobo', sessionId: SID, props }) }).catch(() => {}); } catch (e) { /* offline */ }
+  if (params.has("nolog") || !BRAND.globe) return; // these feed EVADE's Where is Bobo? globe
+  try {
+    fetch("/api/bobo/events", {
+      method: "POST",
+      keepalive: true,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ type, source: "spray-bobo", sessionId: SID, props }),
+    }).catch(() => {});
+  } catch (e) {
+    /* offline */
+  }
 }
 
 // ---------------------------------------------------------------- test log (previews and local dev only, or ?diag)
 // Read back with GET /api/ar/kc-diag on a deploy preview (records carry page: 'spray-bobo').
-const diag = { page: 'spray-bobo', sid: SID, found: 0, lost: 0, sides: 0, bridges: 0, bridgeS: 0, sprayS: 0, bridgeSprayS: 0, saves: 0, fpsN: 0, errors: [], steps: [], targets: {} };
-function tDiag(n) { return diag.targets[n] || (diag.targets[n] = { found: 0, lost: 0 }); }
-function camLog(s) { diag.steps.push([s, Math.round(performance.now())]); if (diag.steps.length > 40) diag.steps.shift(); }
+const diag = {
+  page: BRAND.source,
+  sid: SID,
+  found: 0,
+  lost: 0,
+  sides: 0,
+  bridges: 0,
+  bridgeS: 0,
+  sprayS: 0,
+  bridgeSprayS: 0,
+  saves: 0,
+  fpsN: 0,
+  errors: [],
+  steps: [],
+  targets: {},
+};
+function tDiag(n) {
+  return diag.targets[n] || (diag.targets[n] = { found: 0, lost: 0 });
+}
+function camLog(s) {
+  diag.steps.push([s, Math.round(performance.now())]);
+  if (diag.steps.length > 40) diag.steps.shift();
+}
 let flushAt = 0;
 function flushDiag(force, always = false) {
-  const now = performance.now(); if (!force && now - flushAt < 10000) return; flushAt = now;
-  if ((!camStartAt && !always) || params.has('nolog') || (LIVE_SITE && !params.has('diag'))) return;
-  const body = JSON.stringify({ ...diag, secs: Math.round((now - (camStartAt || now)) / 1000), fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0, painted: Math.round((paint ? paint.coverage : 0) * 100), mode, screen: [innerWidth, innerHeight, devicePixelRatio], bridgeS: +diag.bridgeS.toFixed(1), sprayS: +diag.sprayS.toFixed(1), bridgeSprayS: +diag.bridgeSprayS.toFixed(1) });
-  try { if (!(navigator.sendBeacon && navigator.sendBeacon('/api/ar/kc-diag', new Blob([body], { type: 'application/json' })))) fetch('/api/ar/kc-diag', { method: 'POST', body, keepalive: true }); } catch (e) { /* offline */ }
+  const now = performance.now();
+  if (!force && now - flushAt < 10000) return;
+  flushAt = now;
+  if ((!camStartAt && !always) || params.has("nolog") || (LIVE_SITE && !params.has("diag"))) return;
+  const body = JSON.stringify({
+    ...diag,
+    secs: Math.round((now - (camStartAt || now)) / 1000),
+    fps: camStartAt ? +(diag.fpsN / Math.max((now - camStartAt) / 1000, 1)).toFixed(1) : 0,
+    painted: Math.round((paint ? paint.coverage : 0) * 100),
+    mode,
+    screen: [innerWidth, innerHeight, devicePixelRatio],
+    bridgeS: +diag.bridgeS.toFixed(1),
+    sprayS: +diag.sprayS.toFixed(1),
+    bridgeSprayS: +diag.bridgeSprayS.toFixed(1),
+  });
+  try {
+    if (!(
+      navigator.sendBeacon &&
+      navigator.sendBeacon("/api/ar/kc-diag", new Blob([body], { type: "application/json" }))
+    ))
+      fetch("/api/ar/kc-diag", { method: "POST", body, keepalive: true });
+  } catch (e) {
+    /* offline */
+  }
 }
-addEventListener('pagehide', () => flushDiag(true));
-document.addEventListener('visibilitychange', () => { if (document.hidden) { flushDiag(true); stopSpray(); } });
-addEventListener('error', (e) => { diag.errors.push(String(e.message).slice(0, 200)); });
+addEventListener("pagehide", () => flushDiag(true));
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    flushDiag(true);
+    stopSpray();
+  }
+});
+addEventListener("error", (e) => {
+  diag.errors.push(String(e.message).slice(0, 200));
+});
 
 // automated tests (?test): read the state from outside
-if (params.has('test')) window.__sb = { get side() { return side; }, get lead() { return sideLead; }, get pose() { return pose.state; }, fit: () => Object.fromEntries(Object.entries(TS).filter(([, t]) => t.tracked || t.fit != null).map(([k, t]) => [k, { fit: t.fit == null ? null : +t.fit.toFixed(3), bad: t.bad, tracked: t.tracked }])), fitShift: (fx, fy) => { const t = TS[side]; if (!t || !t.tracked) return null; const sh = new THREE.Vector3(fx * t.pr.width * t.upp, fy * t.pr.height * t.upp, 0).applyQuaternion(t.q); const t2 = { ...t, p: t.p.clone().add(sh) }; const c = camLuma(); return fitScore(t2, fitProbes[side], c); }, get mode() { return mode; }, rt: () => { const a = aimAt(innerWidth / 2, innerHeight / 2); if (!a.has) return null; const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0); F.localToWorld(p); p.project(camera); const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix); return { u: a.u, v: a.v, sx: (p.x + 1) / 2 * innerWidth, sy: (1 - p.y) / 2 * innerHeight, invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0) }; }, ts: () => Object.fromEntries(Object.entries(TS).map(([k, t]) => [k, { tracked: t.tracked, foundAt: Math.round(t.foundAt) }])), get flip() { return F.scale.x; }, get paint() { return paint; }, diag, decals: () => serialDecals(cp), sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null), screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H),
-  get piece() { return cp && cp.k; }, cms: () => cmsInfo, viewer: VIEWER,
-  pieces: () => Object.values(PIECES).map((P) => ({ k: P.k, cms: !!P.cms, name: P.name, targets: P.targets, flip: P.flip, xf: P.xf, view: P.view, sprayK: P.sprayK, near: P.near, W: P.W, H: P.H, heightMm: P.heightMm, shared: !!P.shared, saved: !!P.saved, scene: P.sc ? P.sc.items.length : 0 })),
-  scene: () => (cp && cp.sc ? measureScene(cp.sc, A) : []),
-  target: () => { const n = pose.last && pose.last.side, t = n && TS[n]; return t ? { name: n, tracked: t.tracked, worldH: t.pr.height * t.upp, worldW: t.pr.width * t.upp, p: t.p.toArray(), q: t.q.toArray() } : null; },
-  // debug: report a target as found at this pose (the engine's event shape), for when no camera can be used
-  fake: (name, d) => onTarget({ name, position: d.position, rotation: d.rotation, scale: d.scale, scaledHeight: d.scaledHeight || 1 }),
-  get life() { return life.phase; } };
+if (params.has("test"))
+  window.__sb = {
+    get side() {
+      return side;
+    },
+    get lead() {
+      return sideLead;
+    },
+    get pose() {
+      return pose.state;
+    },
+    fit: () =>
+      Object.fromEntries(
+        Object.entries(TS)
+          .filter(([, t]) => t.tracked || t.fit != null)
+          .map(([k, t]) => [
+            k,
+            { fit: t.fit == null ? null : +t.fit.toFixed(3), bad: t.bad, tracked: t.tracked },
+          ]),
+      ),
+    fitShift: (fx, fy) => {
+      const t = TS[side];
+      if (!t || !t.tracked) return null;
+      const sh = new THREE.Vector3(
+        fx * t.pr.width * t.upp,
+        fy * t.pr.height * t.upp,
+        0,
+      ).applyQuaternion(t.q);
+      const t2 = { ...t, p: t.p.clone().add(sh) };
+      const c = camLuma();
+      return fitScore(t2, fitProbes[side], c);
+    },
+    get mode() {
+      return mode;
+    },
+    rt: () => {
+      const a = aimAt(innerWidth / 2, innerHeight / 2);
+      if (!a.has) return null;
+      const p = new THREE.Vector3((a.u - 0.5) * W, (0.5 - a.v) * H, 0);
+      F.localToWorld(p);
+      p.project(camera);
+      const inv = camera.projectionMatrixInverse.clone().multiply(camera.projectionMatrix);
+      return {
+        u: a.u,
+        v: a.v,
+        sx: ((p.x + 1) / 2) * innerWidth,
+        sy: ((1 - p.y) / 2) * innerHeight,
+        invErr: inv.elements.reduce((s, e, i) => s + Math.abs(e - (i % 5 === 0 ? 1 : 0)), 0),
+      };
+    },
+    ts: () =>
+      Object.fromEntries(
+        Object.entries(TS).map(([k, t]) => [
+          k,
+          { tracked: t.tracked, foundAt: Math.round(t.foundAt) },
+        ]),
+      ),
+    get flip() {
+      return F.scale.x;
+    },
+    get paint() {
+      return paint;
+    },
+    diag,
+    decals: () => serialDecals(cp),
+    sel: () => (ed.sel ? serialDecals(cp)[cp.decals.indexOf(ed.sel)] : null),
+    screenOf: (u, v) => localScreen((u - 0.5) * W, (0.5 - v) * H),
+    get piece() {
+      return cp && cp.k;
+    },
+    cms: () => cmsInfo,
+    viewer: VIEWER,
+    pieces: () =>
+      Object.values(PIECES).map((P) => ({
+        k: P.k,
+        cms: !!P.cms,
+        name: P.name,
+        targets: P.targets,
+        flip: P.flip,
+        xf: P.xf,
+        view: P.view,
+        sprayK: P.sprayK,
+        near: P.near,
+        W: P.W,
+        H: P.H,
+        heightMm: P.heightMm,
+        shared: !!P.shared,
+        saved: !!P.saved,
+        scene: P.sc ? P.sc.items.length : 0,
+      })),
+    scene: () => (cp && cp.sc ? measureScene(cp.sc, A) : []),
+    target: () => {
+      const n = pose.last && pose.last.side,
+        t = n && TS[n];
+      return t
+        ? {
+            name: n,
+            tracked: t.tracked,
+            worldH: t.pr.height * t.upp,
+            worldW: t.pr.width * t.upp,
+            p: t.p.toArray(),
+            q: t.q.toArray(),
+          }
+        : null;
+    },
+    // debug: report a target as found at this pose (the engine's event shape), for when no camera can be used
+    fake: (name, d) =>
+      onTarget({
+        name,
+        position: d.position,
+        rotation: d.rotation,
+        scale: d.scale,
+        scaledHeight: d.scaledHeight || 1,
+      }),
+    get life() {
+      return life.phase;
+    },
+  };
 
 // desktop: a QR to open it on the phone
 if (!TOUCH) {
-  $('desk').hidden = false;
-  try { window.QRCode && QRCode.toString(location.href, { type: 'svg', margin: 0, errorCorrectionLevel: 'M' }, (err, svg) => { if (!err) $('qr').innerHTML = svg; }); } catch (e) { /* no QR */ }
+  $("desk").hidden = false;
+  try {
+    window.QRCode &&
+      QRCode.toString(
+        location.href,
+        { type: "svg", margin: 0, errorCorrectionLevel: "M" },
+        (err, svg) => {
+          if (!err) $("qr").innerHTML = svg;
+        },
+      );
+  } catch (e) {
+    /* no QR */
+  }
 }

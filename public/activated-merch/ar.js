@@ -71,17 +71,11 @@ export class Splash {
     const H = this.canvas.height;
     x.fillStyle = "#06060b";
     x.fillRect(0, 0, W, H);
-    // Glow from the top, magenta haze at the floor.
-    let g = x.createRadialGradient(W * 0.25, 0, 0, W * 0.25, 0, H * 0.55);
-    g.addColorStop(0, "rgba(40,110,150,0.45)");
-    g.addColorStop(1, "rgba(40,110,150,0)");
-    x.fillStyle = g;
-    x.fillRect(0, 0, W, H);
-    g = x.createRadialGradient(W * 0.7, H, 0, W * 0.7, H, H * 0.5);
-    g.addColorStop(0, "rgba(200,40,130,0.42)");
-    g.addColorStop(1, "rgba(200,40,130,0)");
-    x.fillStyle = g;
-    x.fillRect(0, 0, W, H);
+    // Flat colour fields (no gradients): a blue wash up top, a magenta floor band.
+    x.fillStyle = "rgba(40,110,150,0.16)";
+    x.fillRect(0, 0, W, H * 0.6);
+    x.fillStyle = "rgba(200,40,130,0.14)";
+    x.fillRect(0, H * 0.6, W, H * 0.4);
     // Perspective grid on the floor, scrolling towards us.
     const hz = H * 0.6;
     x.save();
@@ -120,16 +114,12 @@ export class Splash {
       const ly = cy - 150;
       x.save();
       x.globalAlpha = lensA;
-      g = x.createRadialGradient(W / 2, ly, 0, W / 2, ly, 70);
-      g.addColorStop(0, "rgba(255,61,154,0.35)");
-      g.addColorStop(1, "rgba(255,61,154,0)");
-      x.fillStyle = g;
-      x.fillRect(W / 2 - 80, ly - 80, 160, 160);
-      const ring = x.createLinearGradient(W / 2 - 40, ly - 40, W / 2 + 40, ly + 40);
-      ring.addColorStop(0, "#c04dff");
-      ring.addColorStop(1, "#ff3d9a");
+      x.fillStyle = "rgba(255,61,154,0.16)";
+      x.beginPath();
+      x.arc(W / 2, ly, 62, 0, Math.PI * 2);
+      x.fill();
       x.lineWidth = 7;
-      x.strokeStyle = ring;
+      x.strokeStyle = "#ff3d9a";
       x.beginPath();
       x.arc(W / 2, ly, 40, 0, Math.PI * 2);
       x.stroke();
@@ -138,11 +128,7 @@ export class Splash {
       x.beginPath();
       x.arc(W / 2, ly, 27, 0, Math.PI * 2);
       x.stroke();
-      g = x.createRadialGradient(W / 2 - 4, ly - 4, 2, W / 2, ly, 20);
-      g.addColorStop(0, "#c8f4ff");
-      g.addColorStop(0.5, "#33c8ff");
-      g.addColorStop(1, "#1f5bd6");
-      x.fillStyle = g;
+      x.fillStyle = "#33c8ff";
       x.beginPath();
       x.arc(W / 2, ly, 19, 0, Math.PI * 2);
       x.fill();
@@ -164,14 +150,11 @@ export class Splash {
       x.drawImage(this.word, (W - ww) / 2, cy - wh / 2, ww, wh);
       x.restore();
     }
-    // Gradient rule.
+    // Rule (flat blue).
     const rule = easeOut(seg(e, 0.9, 1.35));
     if (rule > 0) {
       const rw = ww * 0.92 * rule;
-      g = x.createLinearGradient(W / 2 - rw / 2, 0, W / 2 + rw / 2, 0);
-      g.addColorStop(0, "#3fb6ff");
-      g.addColorStop(1, "#ff3d9a");
-      x.fillStyle = g;
+      x.fillStyle = "#3fb6ff";
       x.fillRect(W / 2 - rw / 2, cy + wh / 2 + 22, rw, 3);
     }
     // Subtitle.
@@ -338,18 +321,11 @@ export class ARView {
     c.width = 256;
     c.height = 512;
     const x = c.getContext("2d");
-    const g = x.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, "#17171b");
-    g.addColorStop(0.62, "#2a2a30");
-    g.addColorStop(0.63, "#1c1c21");
-    g.addColorStop(1, "#111114");
-    x.fillStyle = g;
-    x.fillRect(0, 0, 256, 512);
-    const r = x.createRadialGradient(128, 230, 0, 128, 230, 200);
-    r.addColorStop(0, "rgba(255,236,214,0.22)");
-    r.addColorStop(1, "rgba(255,236,214,0)");
-    x.fillStyle = r;
-    x.fillRect(0, 0, 256, 512);
+    // flat wall and floor (no gradients)
+    x.fillStyle = "#222227";
+    x.fillRect(0, 0, 256, 318);
+    x.fillStyle = "#18181c";
+    x.fillRect(0, 318, 256, 194);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
     const wall = new THREE.Mesh(new THREE.PlaneGeometry(9, 18), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
@@ -657,7 +633,7 @@ export class ARView {
 
     // The animation: scans on at the lock, then plays.
     const m = this.sheet.material.uniforms;
-    m.uReveal.value = this.reduced ? (ph.reveal > 0 ? 1 : 0) : easeOut(ph.reveal);
+    m.uReveal.value = easeOut(ph.reveal);
     m.uTime.value = t;
     const v = this.video;
     if (ph.reveal > 0 && p < 0.995) {
@@ -669,7 +645,7 @@ export class ARView {
     const pu = this.petals?.material.uniforms;
     if (pu) {
       pu.uT.value = t;
-      pu.uA.value = this.reduced ? 0 : seg(p, 0.52, 0.6) * (1 - ph.out * 0.6);
+      pu.uA.value = seg(p, 0.52, 0.6) * (1 - ph.out * 0.6) * (this.reduced ? 0.6 : 1);
       pu.uH.value = H * cam.zoom * (rect.h / H) / (2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)));
     }
 

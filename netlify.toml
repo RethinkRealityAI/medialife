@@ -60,6 +60,35 @@
   to = "/evade/where-is-bobo/"
   status = 301
 
+# Spray Bobo Enhanced: one page, two skins. /labs/spray-enhanced/ serves the same document in the MEDIALIFE skin
+# (the page picks its brand from the path; its assets use absolute paths so the rewrite is safe).
+[[redirects]]
+  from = "/labs/spray-enhanced"
+  to = "/evade/spray-bobo-enhanced/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/labs/spray-enhanced/"
+  to = "/evade/spray-bobo-enhanced/index.html"
+  status = 200
+
+# ── Happi AR (Japan Parade & Street Fair mascot pitch demo) ───────────────
+# The app lives in the CheerBearAR repo and deploys to happi-ar.netlify.app, built under /happi/ so it can be
+# proxied here as-is. Its API is proxied too (/happi/api/*). Unlisted pitch using the parade's IP: noindex
+# (happi-ar already sends X-Robots-Tag noindex on every response). No /happi -> /happi/ rule: Netlify matches `from`
+# without the trailing slash, so it would loop; /happi/* also catches bare /happi.
+[[redirects]]
+  from = "/happi/api/*"
+  to = "https://happi-ar.netlify.app/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/happi/*"
+  to = "https://happi-ar.netlify.app/happi/:splat"
+  status = 200
+  force = true
+
 # Spray Studio (the Spray Bobo web companion, spray-studio/, built to public/spray/): a single-page app,
 # so its rooms resolve to its one document. /sb/<id> is a creation's short share link (the QR target).
 [[redirects]]
@@ -76,6 +105,11 @@
   from = "/sb/*"
   to = "/evade/spray-bobo/view/index.html"
   status = 200
+
+[[headers]]
+  for = "/evade/labs/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
 
 [[headers]]
   for = "/spray/*"
@@ -97,7 +131,7 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "SAMEORIGIN"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(self), microphone=(), geolocation=()"
+    Permissions-Policy = "camera=(self), microphone=(self), geolocation=()"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
 
 # Netlify serves .webmanifest as application/octet-stream. Combined with the
@@ -336,6 +370,21 @@
 
 [[headers]]
   for = "/cln/assets/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=86400"
+
+# ── Anpanman, Activated (Nippon TV US launch proposal) ─────────────────────
+# /anpanman/ is a static client proposal page (public/anpanman/). Unlisted: it carries
+# commercial terms and the client's IP. Page + scripts revalidate; media caches for a day.
+[[headers]]
+  for = "/anpanman/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/anpanman/assets/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=86400"

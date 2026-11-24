@@ -32,6 +32,7 @@
     #loading{position:fixed;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px}
     @media (max-width:520px){nav button{padding:0 12px;font-size:13px}header h1{font-size:16px}}
   </style>
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="stage" aria-label="3D preview of the EVADE keychain with Bobo and the Eclipse can popping out"></canvas>
@@ -40,7 +41,7 @@
     <a href="/labs/">All labs</a>
   </header>
   <div id="loading">Loading the keychain…</div>
-  <div id="hint" hidden>Tap Bobo to wave, tap the can to spin it. Drag to look around.</div>
+  <div id="hint" class="ml-hint" hidden>Tap Bobo or the can. Drag to look around.</div>
   <nav aria-label="Animation controls">
     <button id="b-pop" class="primary" disabled>Scan keychain</button>
     <button id="b-wave" disabled>Wave</button>

@@ -1,0 +1,19 @@
+{
+ "name": "Magazine PSA",
+ "type": "PLANAR",
+ "properties": {
+  "top": 1,
+  "left": 0,
+  "width": 998,
+  "height": 1330,
+  "isRotated": false,
+  "originalWidth": 1000,
+  "originalHeight": 1333
+ },
+ "imagePath": "/labs/x/dentsu-products/image-targets/magazine-psa_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "magazine-psa_luminance.jpeg",
+  "originalImage": "magazine-psa.jpg"
+ }
+}

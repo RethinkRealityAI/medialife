@@ -28,7 +28,7 @@ const PAGE = 'wake-the-print';   // goes into the test log records (page: ...) a
 // ---------------------------------------------------------------- targets
 // The Sukeban tee from Spray Bobo (print 304.8 x 406.4 mm). heightMm = the whole 3:4 target frame.
 const TARGETS = [
-  { name: 'tee-sukeban', json: '/evade/spray-bobo/targets/tee-sukeban.json', heightMm: 406.4 },
+  { name: 'tee-sukeban', json: '/labs/medialife-spray/targets/tee-sukeban.json', heightMm: 406.4 },
 ];
 const BY_NAME = Object.fromEntries(TARGETS.map((t) => [t.name, t]));
 
@@ -533,7 +533,7 @@ function flash(text, ms) { flashText = text; flashUntil = performance.now() + ms
 function updateHint(visible, now) {
   if (!started) return;
   if (visible && gestureHintAt && now >= gestureHintAt && !gestureHintDone) { gestureHintDone = true; flash('Show Spark a thumbs up beside the print', 6000); }
-  if (!visible) hint('Point your camera at the print');
+  if (!visible) hint('Point at the print');
   else if (now < flashUntil) hint(flashText);
   else if (!$('mic').disabled && !micUsed) hint('Tap the mic to talk to Spark');
   else hint(null);
@@ -634,7 +634,7 @@ function sizeCanvas() {
 }
 const appModule = () => ({
   name: PAGE,
-  onStart: () => { buildScene(XR8.Threejs.xrScene()); started = true; $('hud').hidden = false; hint('Point your camera at the print'); },
+  onStart: () => { buildScene(XR8.Threejs.xrScene()); started = true; $('hud').hidden = false; hint('Point at the print'); },
   onUpdate: () => { const now = performance.now(); const dt = Math.min((now - (last || now)) / 1000, 0.05); last = now; if (scene) tick(dt); flushDiag(false); },
   onCameraStatusChange: ({ status, video: v }) => {
     if (status === 'requesting') hint('Allow camera access to begin');

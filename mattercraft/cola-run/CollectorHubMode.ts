@@ -578,6 +578,18 @@ export class CollectorHubMode extends Group {
   public globeUrl = new Observable("https://medialife.ai/evade/where-is-bobo/");
 
   /**
+   * Bobo's Arcade catalogue (JSON): the EVADE experiences BOBO OS can jump to.
+   * Empty = the site's /evade/arcade/games.json.
+   *
+   * @zui
+   * @zgroup Site
+   * @zgrouppriority 100
+   * @zpriority 79
+   * @ztype url
+   */
+  public arcadeUrl = new Observable("");
+
+  /**
    * Print the shared test code under the unlock form. For test builds only:
    * the code is switched off on medialife.ai unless the team turns it on.
    *
@@ -663,6 +675,7 @@ export class CollectorHubMode extends Group {
         api: this.endpoint.value,
         modelUrl: this.modelUrl.value,
         globeUrl: this.globeUrl.value,
+        arcadeUrl: this.arcadeUrl.value || undefined,
         testHint: this.showTestCode.value ? "BOBO-TEST-CATS" : null,
         hubCode: qs.get("hub"),
         exitLabel: "Back to Cola Run",
@@ -827,14 +840,18 @@ export class CollectorHubMode extends Group {
     // it starts where Bobo stands and glides to where it's been placed.
     this._groundY = player.position.y;
     this._glide.set(hub.lastPush.x, -drop, hub.lastPush.z);
+    // placeAround stands the room's floor on Bobo's feet and ignores the drop, so the glide starts there and
+    // ends `drop` lower. (It used to start `drop` higher and end on the real floor while Bobo rode down by
+    // the drop: his legs sank into the room floor. Fixed 2026-11-17, Cola Run on 8th Wall.)
     this._glideBase.copy(hub.root.position).sub(this._glide);
+    this._glideBase.y = hub.root.position.y;
     // The fitted pose; the fan's own size, turn and spot go on top (Adjust room).
     this._baseYaw = hub.root.rotation.y;
     this._baseScale = hub.root.scale.x || 1;
     // Size and turn go about the room's own middle, so it grows and spins
     // where it stands (the fitted room is pushed back from Bobo's spot to
     // wrap the viewer, so his spot would swing the whole room away).
-    this._pivot.copy(hub.root.position);
+    this._pivot.copy(this._glideBase).add(this._glide); // the settled spot, floor height included
     this._boboUnit = unit;
     this._glideK = 0;
     this._glideTo = 1;

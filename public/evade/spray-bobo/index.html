@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#0f1519">
   <title>Spray Bobo · EVADE keychain AR</title>
-  <meta name="description" content="Spray Bobo: your phone is the spray can. Point it at the Bobo or Eclipse can charm on your EVADE keychain, or your Sukeban tee, paint it, and watch your painting come alive.">
+  <meta name="description" content="Spray Bobo: your phone is the spray can. Point it at the Bobo or Eclipse can charm on your EVADE keychain, paint it, and watch your painting come alive.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +21,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -52,7 +53,7 @@
     </div>
     <div class="copy">
     <h1 id="title">Spray Bobo</h1>
-    <p class="lead" id="lead">Your phone is the spray can. Paint Bobo or the Eclipse can on your keychain, or the Sukeban on your tee, then watch your art come alive.</p>
+    <p class="lead" id="lead">Your phone is the spray can. Paint Bobo or the Eclipse can on your keychain, then watch your art come alive.</p>
     <div id="desk" hidden>
       <div id="qr" aria-label="QR code that opens this page on your phone"></div>
       <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
@@ -77,13 +78,13 @@
       </button>
     </div>
 
-    <div id="guide" aria-hidden="true"><img src="./art/cat-lines.png" alt=""><img src="./art/can-lines.png" alt=""><img src="./art/sukeban-lines.png" alt=""></div>
+    <div id="guide" aria-hidden="true"><img src="./art/cat-lines.png" alt=""><img src="./art/can-lines.png" alt=""></div>
 
     <!-- the nozzle's aim, centre of the screen: the circle is the spray's footprint on the charm -->
     <div id="reticle" aria-hidden="true"><i class="ring"></i><i class="dot"></i><b id="dist"></b></div>
     <canvas id="mist" aria-hidden="true"></canvas>
 
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
     <div id="toast" aria-hidden="true"></div>
 
     <!-- paint mode: caps (colours) and the bottom bar -->
@@ -131,8 +132,8 @@
       <button id="b-decals" class="tool deco" aria-label="Decals: add shades, hats and stickers">
         <svg viewBox="0 0 24 24" fill="none" stroke="#15131a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h10l5 5v11H5z"/><path d="M15 4v5h5"/><path d="M12 11.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z" fill="#15131a"/></svg><span>Decals</span><b class="dot" aria-hidden="true"></b>
       </button>
-      <button id="b-spin" class="tool" aria-label="Spin him">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><span>Spin</span>
+      <button id="b-hang" class="tool hang" aria-label="Hang it: put your painting up on a wall or the floor around you">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#f6c344" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.5v3"/><path d="M8.5 9 12 5.5 15.5 9"/><rect x="4" y="9" width="16" height="12" rx="2"/><path d="m7 18 3.5-4 2.5 2.5 2-2 2 3.5"/></svg><span>Hang it</span>
       </button>
       <button id="b-art" class="tool" aria-label="Save your artwork as a picture">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>Artwork</span>
@@ -199,6 +200,86 @@
     </div>
   </div>
 
+  <!-- ---------------------------------------------------------------- in the room (room.js): Hang, Stamp, Graffiti -->
+  <div id="room" hidden data-mode="hang">
+    <button id="r-back" class="ib" type="button" aria-label="Back to your merch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <div id="r-modes" role="tablist" aria-label="Mode">
+      <button type="button" role="tab" data-m="hang" aria-selected="true">Hang</button>
+      <button type="button" role="tab" data-m="stamp" aria-selected="false">Stamp</button>
+      <button type="button" role="tab" data-m="graffiti" aria-selected="false">Graffiti</button>
+    </div>
+    <button id="r-opts" class="ib opts-btn" type="button" aria-haspopup="dialog" aria-controls="opts" aria-label="Options">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+    </button>
+
+    <!-- the aim: screen centre. In Graffiti its ring is the spray's footprint on the wall -->
+    <div id="r-aim" aria-hidden="true"><i class="ring"></i><i class="dot"></i><b id="r-surf-t"></b></div>
+    <canvas id="r-mist" aria-hidden="true"></canvas>
+
+    <p id="r-hint" class="ml-hint" role="status" aria-live="polite"></p>
+    <div id="r-toast" aria-hidden="true"></div>
+    <p id="r-size" hidden aria-live="polite"></p>
+
+    <!-- Hang / Stamp: what you put up -->
+    <div id="r-tray" aria-label="Pick what to hang or stamp">
+      <div class="tcats" role="tablist" aria-label="Kinds">
+        <button type="button" role="tab" data-c="mine" aria-selected="true">Your art</button>
+        <button type="button" role="tab" data-c="decals" aria-selected="false">Stickers</button>
+      </div>
+      <div class="tlist" role="tabpanel"></div>
+    </div>
+
+    <!-- Hang / Stamp: the one action, above the shutter -->
+    <button id="r-b-act" class="primary act" type="button" disabled>Hang it here</button>
+
+    <!-- Graffiti: caps (colours) and nozzle -->
+    <div id="r-caps" role="radiogroup" aria-label="Paint colour"></div>
+
+    <!-- Graffiti: the can. Hold it (or hold anywhere on the camera) to spray -->
+    <button id="r-can" aria-label="Spray can. Hold to spray" data-state="away">
+      <svg viewBox="0 0 100 220" aria-hidden="true">
+        <rect x="44" y="4" width="12" height="11" rx="2" fill="#15131a"/>
+        <circle cx="50" cy="9" r="2.2" fill="#f6c344"/>
+        <path d="M28 46V30c0-10 10-17 22-17s22 7 22 17v16z" fill="var(--cap,#3f9be6)" stroke="#15131a" stroke-width="3.5"/>
+        <path d="M22 66c0-11 12-20 28-20s28 9 28 20z" fill="#15131a"/>
+        <rect x="14" y="62" width="72" height="146" rx="12" fill="#f6c344" stroke="#15131a" stroke-width="3.5"/>
+        <rect x="14" y="104" width="72" height="62" fill="#15131a"/>
+        <text x="48" y="146" text-anchor="middle" font-family="Permanent Marker, cursive" font-size="26" fill="#f6c344" transform="rotate(-6 48 140)">BOBO</text>
+        <rect x="22" y="72" width="7" height="122" rx="3.5" fill="#fff" opacity=".5"/>
+        <rect x="68" y="78" width="9" height="116" rx="4.5" fill="var(--cap,#3f9be6)"/>
+        <rect x="14" y="196" width="72" height="12" rx="4" fill="#15131a"/>
+      </svg>
+    </button>
+
+    <!-- bottom row: tools · (Spray Bobo's shutter shows through the gap) · Move -->
+    <div id="r-bottom">
+      <div class="b-left">
+        <button id="r-b-art" class="tool m-place" type="button" aria-expanded="true" aria-controls="r-tray" aria-label="Show or hide what you can hang">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg><span>Art</span>
+        </button>
+        <button id="r-b-colour" class="tool m-spray" type="button" aria-expanded="true" aria-controls="r-caps" aria-label="Colours and nozzle">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="var(--cap,#3f9be6)" stroke="#fff" stroke-width="2"/></svg><span>Colour</span>
+        </button>
+        <button id="r-b-undo" class="tool" type="button" aria-label="Undo" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span>
+        </button>
+      </div>
+      <div class="gap" aria-hidden="true"></div>
+      <div class="b-right">
+        <!-- always on screen: pick the last thing up and put it somewhere else (it keeps its paint, size and turn) -->
+        <button id="r-b-move" class="tool move" type="button" aria-label="Move the last thing you placed">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span id="r-b-move-t">Move</span>
+        </button>
+      </div>
+    </div>
+    <pre id="r-diagp" hidden aria-hidden="true"></pre>
+  </div>
+
+  <!-- the camera switching to world tracking (first time into the room only) -->
+  <div id="switch" aria-live="polite"><div class="box"><canvas id="switch-art" width="300" height="300" aria-hidden="true"></canvas><b>Into the room</b><span id="switch-t">Getting your art ready. Move your phone around slowly so it can see your walls and floor.</span></div></div>
+
   <!-- options: what the small round buttons used to do, now with words -->
   <div id="opts" hidden role="dialog" aria-modal="true" aria-labelledby="opts-t">
     <div class="scrim" data-close></div>
@@ -234,7 +315,23 @@
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="ol"><b id="o-new-t">New painting</b><small id="o-new-s">Start this one again from a blank canvas</small></span>
       </button>
-      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true" data-in="find ready paint alive">
+      <button type="button" class="opt" id="o-spin" data-in="alive">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></span>
+        <span class="ol"><b>Spin</b><small>Give your painting a twirl (or swipe it)</small></span>
+      </button>
+      <button type="button" class="opt" id="o-graffiti" data-in="find ready paint alive">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15c2-4 4 0 6-3s3-2 4-1"/><path d="M8 20v-2M13 20v-3"/></svg></span>
+        <span class="ol"><b>Graffiti mode</b><small>Spray your walls and floor, right here</small></span><i class="go" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt" id="o-drips" role="switch" aria-checked="true" data-in="room">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s-5 6-5 10a5 5 0 0 0 10 0c0-4-5-10-5-10z"/></svg></span>
+        <span class="ol"><b>Drips</b><small>Wet graffiti runs down the wall</small></span><i class="sw" aria-hidden="true"></i>
+      </button>
+      <button type="button" class="opt warn" id="o-rclear" data-in="room">
+        <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+        <span class="ol"><b id="o-rclear-t">Clear the room</b><small id="o-rclear-s">Takes down all art, stamps and paint</small></span>
+      </button>
+      <button type="button" class="opt" id="o-sound" role="switch" aria-checked="true" data-in="find ready paint alive room">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>
         <span class="ol"><b>Sound</b><small>The hiss, pops and mews</small></span><i class="sw" aria-hidden="true"></i>
       </button>
@@ -242,16 +339,19 @@
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
         <span class="ol"><b>How to play</b><small>What you can paint and how to spray</small></span><i class="go" aria-hidden="true"></i>
       </button>
+      <a class="opt lic" id="o-lic" href="/evade/licences/" data-in="find ready paint alive room decal">
+        <span class="ol"><b>Licences</b></span>
+      </a>
     </div>
   </div>
 
   <!-- what to point at -->
   <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
     <div class="sheet">
-      <div class="how-pics"><img class="how-pic" src="./art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="./art/can-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="./art/sukeban-lines.png" alt="" width="768" height="1024"></div>
+      <div class="how-pics"><img class="how-pic" src="./art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="./art/can-lines.png" alt="" width="768" height="1024"></div>
       <h2 id="how-t">Pick what to paint</h2>
       <ol class="how-steps">
-        <li><b>Find it.</b> Hold Bobo or the Eclipse can about a hand from the camera, or step back until the Sukeban print on your tee fills the screen. Each one gets its own painting.</li>
+        <li><b>Find it.</b> Hold Bobo or the Eclipse can about a hand from the camera. Each one gets its own painting.</li>
         <li><b>Grab the can.</b> When it lights up, tap the spray can.</li>
         <li><b>Spray.</b> Aim your phone like a can and hold the can button. Closer sprays thin lines, further back sprays wide.</li>
         <li><b>Save and dress up.</b> Your painting comes alive on the charm. Then add decals: shades, hats, collars and stickers.</li>
@@ -296,7 +396,8 @@
   <div id="flashw" aria-hidden="true"></div>
 
   <script src="/vendor/ar-kit/qrcode.min.js"></script>
-  <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
   <script type="module" src="./main.js"></script>
+  <script src="/evade/arcade/back.js" defer></script>
 </body>
 </html>

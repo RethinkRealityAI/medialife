@@ -1,0 +1,42 @@
+{
+ "slug": "train-frame",
+ "title": "Train Frame",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the Animebae train print and watch the ride start.",
+ "hint": "Point at the train print",
+ "targets": [
+  {
+   "name": "AB_trainframe",
+   "label": "Train frame",
+   "what": "Animebae framed print",
+   "json": "image-targets/ab-trainframe.json",
+   "picture": "image-targets/ab-trainframe.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/AB_Train-427be419.mp4",
+     "scale": [
+      1,
+      1.02
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Win $300",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "Follow IG",
+   "url": "https://www.instagram.com/animebae.co/"
+  }
+ ]
+}

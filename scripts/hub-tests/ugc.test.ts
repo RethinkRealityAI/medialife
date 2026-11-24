@@ -7,6 +7,8 @@ import process from "node:process";
 
 import {
   adminSetLiveUrl,
+  editCreator,
+  importChannelStats,
   markDelivered,
   markShipped,
   pipeline,
@@ -38,7 +40,16 @@ import {
   saveCreator,
   saveSubmission,
 } from "@/lib/ugc/data.server";
-import { mapSignup, normaliseFields, parseCsv, parseTrackingCsv, toCsv } from "@/lib/ugc/import";
+import { findCreatorByEmail } from "@/lib/ugc/auth.server";
+import {
+  mapSignup,
+  normaliseFields,
+  parseChannelStatsCsv,
+  parseCount,
+  parseCsv,
+  parseTrackingCsv,
+  toCsv,
+} from "@/lib/ugc/import";
 import { importCsv, syncNetlifyForms } from "@/lib/ugc/import.server";
 import {
   UGC,
@@ -48,6 +59,9 @@ import {
   aspectOf,
   canTransition,
   contentStatusFrom,
+  creatorView,
+  formatCount,
+  ugcTotalReach,
   liveUrlProblem,
   nextCreatorStatus,
   overQuota,
@@ -720,6 +734,100 @@ assert.equal(aspectHint("16:9", "9:16"), "Looks like 16:9. This brief asks for 9
 await updateStatuses(ns, ORIGIN, { ids: [bId], status: "declined", force: true });
 assert.equal(await resolveUgcSession(ns, sessB.cookie), null, "declined creators are signed out");
 await saveCreator(ns, { ...(await getCreator(ns, bId))!, status: "content-due" });
+
+/* ---------------------------------------------------------------------------
+   7b. Channel stats (follower / subscriber counts)
+   --------------------------------------------------------------------------- */
+
+{
+  assert.equal(parseCount("38,243"), 38243);
+  assert.equal(parseCount("12.7K"), 12700);
+  assert.equal(parseCount("1.3m"), 1300000);
+  assert.equal(parseCount("lots"), null);
+  assert.equal(formatCount(950), "950");
+  assert.equal(formatCount(38243), "38.2K");
+  assert.equal(formatCount(338000), "338K");
+  assert.equal(formatCount(1254000), "1.3M");
+  assert.equal(ugcTotalReach({}), null);
+
+  const rows = parseChannelStatsCsv(
+    [
+      "email,platform,followers,posts,likes,url,note,checked_at",
+      "Jamie.Rivera@Example.com,TikTok,38243,120,900000,https://www.tiktok.com/@jamiejumps,,2026-11-10",
+      "jamie.rivera@example.com,youtube,12.7K,73,,https://www.youtube.com/@jamie,,2026-11-10",
+      "jamie.rivera@example.com,instagram,,,,,Needs a manual check,2026-11-10",
+      "nobody@example.com,roblox,10,,,,,",
+      "jamie.rivera@example.com,myspace,10,,,,,",
+      "jamie.rivera@example.com,roblox,,,,,,",
+    ].join("\n"),
+  );
+  assert.equal(rows.length, 6);
+  assert.equal(rows[0].email, "jamie.rivera@example.com");
+  assert.equal(rows[0].platform, "tiktok");
+  assert.equal(rows[1].followers, 12700);
+  assert.equal(rows[2].problem, null, "a note alone is allowed (count unknown)");
+  assert.equal(rows[4].problem, "Unknown platform");
+  assert.equal(rows[5].problem, "No follower count");
+
+  const csv = toCsv(
+    ["email", "platform", "followers", "posts", "url", "note", "checked_at"],
+    [
+      [
+        "jamie.rivera@example.com",
+        "tiktok",
+        "38243",
+        "120",
+        "https://www.tiktok.com/@jamiejumps",
+        "",
+        "2026-11-10",
+      ],
+      [
+        "jamie.rivera@example.com",
+        "YouTube",
+        "12.7K",
+        "73",
+        "javascript:alert(1)",
+        "",
+        "2026-11-10",
+      ],
+      ["nobody@example.com", "roblox", "10", "", "", "", ""],
+      ["jamie.rivera@example.com", "myspace", "10", "", "", "", ""],
+    ],
+  );
+  const dry = await importChannelStats(ns, csv, { dryRun: true });
+  assert.equal(dry.updated, 2);
+  const jamie0 = await findCreatorByEmail(ns, "jamie.rivera@example.com");
+  assert.equal(jamie0?.channelStats, undefined, "dry run saves nothing");
+
+  const r = await importChannelStats(ns, csv);
+  assert.equal(r.creators, 1);
+  assert.equal(r.updated, 2);
+  assert.equal(r.noCreator, 1);
+  assert.equal(r.skipped, 1);
+  const jamie = (await findCreatorByEmail(ns, "jamie.rivera@example.com"))!;
+  assert.equal(jamie.channelStats?.tiktok?.followers, 38243);
+  assert.equal(jamie.channelStats?.youtube?.followers, 12700);
+  assert.equal(jamie.channelStats?.youtube?.url, undefined, "only https profile links are kept");
+  assert.equal(ugcTotalReach(jamie.channelStats), 50943);
+  assert.ok(!("channelStats" in creatorView(jamie)), "creators never see their stats record");
+
+  const again = await importChannelStats(ns, csv);
+  assert.equal(again.creators, 0, "re-import changes nothing");
+  assert.equal(again.unchanged, 2);
+
+  const pl = await pipeline(ns);
+  const row = pl.creators.find((c) => c.id === jamie.id)!;
+  assert.equal(row.reach, 50943, "the pipeline index carries the reach");
+  assert.equal(row.followers?.tiktok, 38243);
+
+  // typed in by the team: change one, clear another
+  const e = await editCreator(ns, jamie.id, { followers: { tiktok: 40000, youtube: null } });
+  assert.ok(e.ok);
+  const edited = (await getCreator(ns, jamie.id))!;
+  assert.equal(edited.channelStats?.tiktok?.followers, 40000);
+  assert.equal(edited.channelStats?.tiktok?.source, "manual");
+  assert.equal(edited.channelStats?.youtube, undefined);
+}
 
 /* ---------------------------------------------------------------------------
    8. Sample data loads (art files are skipped outside the repo; that's fine)

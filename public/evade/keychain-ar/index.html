@@ -239,6 +239,7 @@
     }
     @media (prefers-reduced-motion:reduce){#splash::before,.plate,#splash .drag,#menu .panel,#menu .scrim,.wib-card .live i{animation:none}#load i{animation:none}#guide img{transition:none}#fish-drag{animation:none}}
   </style>
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view with Bobo and the Eclipse can popping out of the EVADE keychain"></canvas>
@@ -276,7 +277,7 @@
       <div id="fish-m" class="meter" hidden role="progressbar" aria-label="Fish fed" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i></i><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12c3.2-4.6 8.6-5.8 13-3.2L21 6v12l-5-2.8C11.6 17.8 6.2 16.6 3 12z"/><circle cx="8" cy="11.2" r="1" fill="currentColor" stroke="none"/></svg><b id="fish-n">0 / 3</b></span></div>
     </div>
     </div>
-    <div id="hint" role="status" aria-live="polite" hidden></div>
+    <div id="hint" class="ml-hint" role="status" aria-live="polite" hidden></div>
     <div id="toast" aria-hidden="true"></div>
     <button id="cr-chip" type="button" hidden><img src="/home/ar/cola-run-logo.webp" alt="" width="480" height="216"><span>Bobo's charged up. <b>Play Cola Run</b></span></button>
     <div id="guide" aria-hidden="true"><img class="show" src="/evade/keychain/ar/silhouette-bobo.png" alt=""><img src="/evade/keychain/ar/silhouette-eclipse.png" alt=""><img src="./image-targets/guide-both.png" alt=""></div>
@@ -406,5 +407,6 @@
   <script src="./vendor/xr/xr.js" async data-preload-chunks="slam"></script>
   <script type="module" src="./splash3d.js"></script>
   <script type="module" src="./main.js"></script>
+  <script src="/evade/arcade/back.js" defer></script>
 </body>
 </html>

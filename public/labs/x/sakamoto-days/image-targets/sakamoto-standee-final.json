@@ -1,0 +1,19 @@
+{
+ "name": "Sakamoto Standee Final",
+ "type": "PLANAR",
+ "properties": {
+  "top": 65,
+  "left": 192,
+  "width": 1332,
+  "height": 1776,
+  "isRotated": false,
+  "originalWidth": 1800,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/sakamoto-days/image-targets/sakamoto-standee-final_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sakamoto-standee-final_luminance.png",
+  "originalImage": "sakamoto-standee-final.jpg"
+ }
+}

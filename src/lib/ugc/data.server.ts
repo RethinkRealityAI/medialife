@@ -3,6 +3,7 @@ import { normalizeEmail } from "@/lib/hub/auth.server";
 import {
   UGC,
   nextCreatorStatus,
+  ugcTotalReach,
   type UgcActivity,
   type UgcActivityKind,
   type UgcAdminFields,
@@ -47,6 +48,10 @@ export type UgcCreatorSummary = {
   /** For the admin pipeline's handle links and audience column (absent on rows indexed before they were added). */
   handles?: UgcCreator["handles"];
   audiences?: UgcCreator["audiences"];
+  /** Followers + subscribers across channels with a looked-up count (null = none yet). */
+  reach?: number | null;
+  /** Looked-up count per platform, for the pipeline's tooltips. */
+  followers?: Partial<Record<string, number>>;
   /** Latest of the record's last change and last sign-in. */
   lastActiveAt?: number;
 };
@@ -68,6 +73,12 @@ const summarize = (c: UgcCreator): UgcCreatorSummary => ({
   sample: !!c.sample,
   handles: c.handles,
   audiences: c.audiences,
+  reach: ugcTotalReach(c.channelStats),
+  followers: Object.fromEntries(
+    Object.entries(c.channelStats ?? {}).flatMap(([p, st]) =>
+      typeof st?.followers === "number" ? [[p, st.followers]] : [],
+    ),
+  ),
   lastActiveAt: Math.max(c.updatedAt, c.lastLoginAt ?? 0),
 });
 

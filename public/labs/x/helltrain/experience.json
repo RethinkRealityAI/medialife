@@ -1,0 +1,58 @@
+{
+ "slug": "helltrain",
+ "title": "Hell's Revengers",
+ "client": "Animebae",
+ "wordmark": "Animebae",
+ "accent": "#e8313a",
+ "onAccent": "#ffffff",
+ "lead": "Point your phone at the Hell's Revengers or the train print to bring it to life.",
+ "hint": "Point at the Hell's Revengers or train print",
+ "targets": [
+  {
+   "name": "hellsrevengers",
+   "label": "Hell's Revengers",
+   "what": "Print",
+   "json": "image-targets/hellsrevengers.json",
+   "picture": "image-targets/hellsrevengers.jpg",
+   "content": [
+    {
+     "type": "chromakey-video",
+     "src": "/labs/x/media/hellsrevengers-3c0d9412.mp4",
+     "width": 0.85,
+     "height": 1,
+     "loop": true
+    }
+   ]
+  },
+  {
+   "name": "AB_trainframe",
+   "label": "Train frame",
+   "what": "Animebae framed print",
+   "json": "image-targets/ab-trainframe.json",
+   "picture": "image-targets/ab-trainframe.jpg",
+   "content": [
+    {
+     "type": "video",
+     "src": "/labs/x/media/AB_Train-427be419.mp4",
+     "scale": [
+      1,
+      1.02
+     ],
+     "fadeIn": 800,
+     "restart": true,
+     "loop": true
+    }
+   ]
+  }
+ ],
+ "cta": [
+  {
+   "label": "Win $300",
+   "url": "https://animebae.co/pages/atlanta-giveaway-landing-page"
+  },
+  {
+   "label": "Follow IG",
+   "url": "https://www.instagram.com/animebae.co/"
+  }
+ ]
+}

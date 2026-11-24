@@ -20,9 +20,11 @@ export type MediaLocation = {
   lng: number;
   /** When Bobo was there (ms since epoch); null means "use the upload date". */
   seenAt: number | null;
+  /** Optional public credit shown on the globe: "@handle" or a first name. Set by the team, never by the game. */
+  credit?: string;
 };
 
-export const LOCATION_LIMITS = { place: 80, city: 80, region: 80, country: 80 } as const;
+export const LOCATION_LIMITS = { place: 80, city: 80, region: 80, country: 80, credit: 40 } as const;
 
 const line = (v: unknown, max: number) =>
   typeof v === "string"
@@ -46,7 +48,9 @@ export function cleanLocation(raw: unknown): MediaLocation | null {
   if (lat === null || lng === null || lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   if (!/^[A-Z]{2}$/.test(cc)) return null;
   const seen = num(r.seenAt);
+  const credit = line(r.credit, LOCATION_LIMITS.credit);
   return {
+    ...(credit ? { credit } : {}),
     place: line(r.place, LOCATION_LIMITS.place),
     city: line(r.city, LOCATION_LIMITS.city),
     region: line(r.region, LOCATION_LIMITS.region),

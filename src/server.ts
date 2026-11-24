@@ -26,7 +26,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "x-frame-options": "SAMEORIGIN",
   "referrer-policy": "strict-origin-when-cross-origin",
   // camera=(self) is deliberate — the AR experiences need getUserMedia.
-  "permissions-policy": "camera=(self), microphone=(), geolocation=()",
+  "permissions-policy": "camera=(self), microphone=(self), geolocation=()",
   "strict-transport-security": "max-age=31536000; includeSubDomains; preload",
 };
 

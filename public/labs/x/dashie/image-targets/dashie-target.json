@@ -1,0 +1,19 @@
+{
+ "name": "dashie-target",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 234,
+  "width": 810,
+  "height": 1080,
+  "isRotated": false,
+  "originalWidth": 1278,
+  "originalHeight": 1080
+ },
+ "imagePath": "/labs/x/dashie/image-targets/dashie-target_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "dashie-target_luminance.png",
+  "originalImage": "dashie-target.jpg"
+ }
+}

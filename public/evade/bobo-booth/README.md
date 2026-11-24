@@ -62,6 +62,15 @@ EVADE selfie photo booth on the open-source 8th Wall engine's **face tracking** 
 - **Not tested on a real phone yet**: fps on mid-range Android, iPhone Safari front camera, real ear-lobe tracking
   under hair, video recording audio, landscape.
 
+## Tuning after Dapo's phone test (2026-11-17)
+- The engine's `mouthOpen` fires on talking and on a toothy smile (lip gap ~0.10 FU = 14 mm), and head shakes set it
+  too. The fizz now needs the lip gap (upperLip to lowerLip) over `MOUTH_GAP` 0.2 FU (~28 mm, `?mouthgap=` to tune),
+  held 350 ms, with the head steady (< ~60 deg/s) and the face found for 1.5 s. Eyebrows: held 450 ms, steady. Wink:
+  steady and not while the mouth trick runs. The fizz is silent (the beep is gone).
+- Stale rigs (a face lost and re-found under a new id) are dropped after 1.5 s, so they never block a face or raise
+  "Friend joined" falsely.
+- The splash's 3D still stays as a picture while the camera starts (disposing its renderer used to leave a blank box).
+
 ## Rounds
 - Round 1 (2026-11-16): pieces, lens carousel, animations, strip.
 - Round 2 (2026-11-17, Dapo's feedback): septum turned right, no lens decals, Bobo-ear frame tips, tiny Bobo on the

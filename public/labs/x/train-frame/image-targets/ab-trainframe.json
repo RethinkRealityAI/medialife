@@ -1,0 +1,19 @@
+{
+ "name": "AB_trainframe",
+ "type": "PLANAR",
+ "properties": {
+  "top": 0,
+  "left": 0,
+  "width": 1500,
+  "height": 2000,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/train-frame/image-targets/ab-trainframe_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "ab-trainframe_luminance.png",
+  "originalImage": "ab-trainframe.jpg"
+ }
+}

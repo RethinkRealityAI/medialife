@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Cola Run on 8th Wall world tracking (SLAM): a quick test, not the shipping game.
+     World tracking comes from 8th Wall's distributed engine binary (@8thwall/engine-binary 1.0.0,
+     Copyright (c) 2026 Niantic Spatial, Inc., XR Engine License Agreement:
+     https://github.com/8thwall/engine/blob/main/LICENSE). It is loaded unmodified from jsDelivr, as the
+     licence asks. This is NOT the MIT open-source engine the image-target pages vendor: that one has no SLAM. -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"
+    />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="theme-color" content="#14161a" />
+    <title>Cola Run: world tracking test</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/roblox/creators/vendor/three/build/three.module.js",
+          "three/addons/": "/roblox/creators/vendor/three/jsm/"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/evade/cola-run-lab/assets/lab.css?v=8" />
+    <style>
+      /* Flat colours only (house rule). */
+      [hidden] {
+        display: none !important;
+      }
+      /* The engine writes its drawing size into the canvas style; pin it to the screen. */
+      #cam {
+        position: fixed;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+        touch-action: none;
+      }
+      #zcomponent-overlay {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 2;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        border: 0;
+        cursor: pointer;
+      }
+      .primary {
+        background: #f6c344;
+        color: #111;
+        font-weight: 800;
+        border-radius: 999px;
+        min-height: 56px;
+        padding: 0 28px;
+        width: min(100%, 340px);
+        font-size: 17px;
+      }
+      .primary:disabled {
+        opacity: 0.55;
+      }
+      :focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 3px;
+      }
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+        background: #14161a;
+        text-align: center;
+      }
+      #splash img.art {
+        width: min(260px, 60vw);
+        height: auto;
+        border-radius: 18px;
+      }
+      #splash h1 {
+        margin: 14px 0 6px;
+        font-size: clamp(28px, 8vw, 40px);
+        line-height: 1.05;
+      }
+      #splash p {
+        margin: 0 auto 20px;
+        color: #b9c3cc;
+        max-width: 34ch;
+      }
+      .brand {
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        font-size: 14px;
+      }
+      .by {
+        font-size: 12px;
+        color: #98a2b1;
+        line-height: 1.6;
+      }
+      .by a {
+        color: #98a2b1;
+      }
+      .tag {
+        display: inline-block;
+        border: 1px dashed rgba(255, 255, 255, 0.35);
+        border-radius: 8px;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #cfd8df;
+        margin-bottom: 10px;
+      }
+      #hint {
+        position: fixed;
+        left: 50%;
+        top: calc(env(safe-area-inset-top, 0px) + 70px);
+        transform: translateX(-50%);
+        z-index: 3;
+        max-width: calc(100% - 32px);
+        background: #8cc8f8;
+        color: #0b2540;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: 10px 18px;
+        font-size: 15px;
+        text-align: center;
+        pointer-events: none;
+      }
+      #error {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        background: #14161a;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        text-align: center;
+      }
+      #error p {
+        color: #b9c3cc;
+        max-width: 40ch;
+      }
+      #diag {
+        /* Top edge, click-through: never over the game's Place / joystick / Reset buttons. */
+        position: fixed;
+        left: 50%;
+        top: env(safe-area-inset-top, 0px);
+        transform: translateX(-50%);
+        z-index: 4;
+        font:
+          10px/1.3 ui-monospace,
+          monospace;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 3px 8px;
+        border-radius: 0 0 8px 8px;
+        pointer-events: none;
+        white-space: pre;
+      }
+    </style>
+    <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
+  </head>
+  <body>
+    <canvas id="cam" aria-label="Camera with Cola Run in your room"></canvas>
+    <div id="zcomponent-overlay">
+      <div class="lab-stick" id="stick" aria-label="Joystick: move Bobo" hidden><span></span></div>
+    </div>
+    <div id="hint" class="ml-hint" role="status" aria-live="polite" hidden></div>
+    <pre id="diag" hidden></pre>
+
+    <section id="splash">
+      <div class="brand">EVADE</div>
+      <div>
+        <span class="tag">Test version: world tracking</span><br />
+        <img
+          class="art"
+          src="/evade/cola-run-lab/assets/cola-run-intro.webp"
+          alt="Cola Run: Bobo the cat with Eclipse cans"
+          width="520"
+          height="520"
+        />
+        <h1>Cola Run</h1>
+        <p>
+          Put Bobo on your floor or a table, then run him around to grab every can before time runs
+          out.
+        </p>
+        <button id="start" class="primary" disabled>Loading…</button>
+      </div>
+      <div class="by">
+        Activated by MEDIALIFE<br />
+        World tracking by 8th Wall, © 2026 Niantic Spatial, Inc.
+        <a href="https://github.com/8thwall/engine/blob/main/LICENSE" target="_blank" rel="noopener"
+          >Engine licence</a
+        >, provided as is, without warranty.
+      </div>
+    </section>
+
+    <div id="error" hidden role="alertdialog" aria-labelledby="err-title">
+      <h2 id="err-title">Something went wrong</h2>
+      <p id="err-body"></p>
+      <button id="err-retry" class="primary">Try again</button>
+    </div>
+
+    <!-- 8th Wall distributed engine binary (has SLAM), unmodified, pinned. -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js"
+      async
+      crossorigin="anonymous"
+      data-preload-chunks="slam"
+    ></script>
+    <script type="module" src="./main.js?v=1"></script>
+  </body>
+</html>

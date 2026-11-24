@@ -20,6 +20,7 @@
     }
   </script>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="/vendor/ar-kit/hint.css?v=1" />
 </head>
 <body>
   <canvas id="cam" aria-label="Camera view"></canvas>
@@ -56,7 +57,7 @@
 
     <!-- face guide while no face is found -->
     <div id="guide" aria-hidden="true"><i></i></div>
-    <p id="hint" role="status" aria-live="polite"></p>
+    <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
 
     <!-- countdown for the photo strip -->
     <div id="countdown" hidden>
@@ -70,8 +71,8 @@
     <div id="coach" hidden role="note" aria-label="Face tricks">
       <b>Face tricks</b>
       <ul>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 10h.01M15.5 10h.01"/><ellipse cx="12" cy="15.5" rx="2" ry="2.4"/></svg>Open your mouth: cola fizz</li>
-        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7.5l3-1.2M14 6.3l3 1.2M8.5 10.5h.01M15.5 10.5h.01M9 15.5h6"/></svg>Raise your eyebrows: next look</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 10h.01M15.5 10h.01"/><ellipse cx="12" cy="15.5" rx="2" ry="2.4"/></svg>Open your mouth wide and hold: cola fizz</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7 7.5l3-1.2M14 6.3l3 1.2M8.5 10.5h.01M15.5 10.5h.01M9 15.5h6"/></svg>Raise your eyebrows and hold: next look</li>
         <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M8.5 10h.01M14 10.2h3M8.5 14.5a4 4 0 0 0 7 0"/></svg>Wink: Bobo waves</li>
       </ul>
       <button type="button" id="b-coach">Got it</button>
@@ -119,7 +120,7 @@
       </button>
       <button type="button" class="opt" id="o-triggers" role="switch" aria-checked="true">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 9.5h.01M15.5 9.5h.01"/><ellipse cx="12" cy="15.5" rx="2.2" ry="1.8"/></svg></span>
-        <span class="ol"><b>Face tricks</b><small>Mouth open: fizz · Eyebrows up: next look · Wink: Bobo waves</small></span><i class="sw" aria-hidden="true"></i>
+        <span class="ol"><b>Face tricks</b><small>Mouth wide open: fizz · Eyebrows up: next look · Wink: Bobo waves</small></span><i class="sw" aria-hidden="true"></i>
       </button>
       <button type="button" class="opt" id="o-how">
         <span class="oi" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span>
@@ -139,7 +140,7 @@
       <ol class="how-steps">
         <li><b>Face the camera.</b> Hold your phone at arm's length in good light. Friends can squeeze in too.</li>
         <li><b>Swipe to try on.</b> Pick Looks, Hat, Shades, Earrings, Nose or Face paint, then swipe the row: whatever sits in the circle is what you wear.</li>
-        <li><b>Face tricks.</b> Open your mouth for cola fizz, raise your eyebrows for the next look, wink and Bobo waves.</li>
+        <li><b>Face tricks.</b> Open your mouth wide and hold it for cola fizz, raise your eyebrows and hold for the next look, wink and Bobo waves. Keep your head still for a moment.</li>
         <li><b>Shoot.</b> Tap the white button for a photo, hold it to film. Turn on Strip for four shots on a countdown.</li>
       </ol>
       <button id="b-go" class="primary">Let's go</button>
@@ -156,7 +157,7 @@
         <a id="shot-save" class="btn" hidden>Save</a>
       </div>
       <div class="beam">
-        <p class="beam-t"><b>Got the keychain or the Sukeban tee?</b><small>Beam this shot onto Bobo's visor, the Eclipse can, Roblox Bobo's cap or Sukeban herself, in AR.</small></p>
+        <p class="beam-t"><b>Got the EVADE keychain?</b><small>Beam this shot onto Bobo's visor, the Eclipse can or Roblox Bobo's cap, in AR.</small></p>
         <div id="beam-pick" role="radiogroup" aria-label="Which shot to beam" hidden></div>
         <button id="shot-beam" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><rect x="4" y="16" width="16" height="5" rx="1.5"/></svg>
@@ -177,7 +178,7 @@
   <!-- Beam: the photo card while the cameras swap -->
   <div id="beamgo" hidden role="status" aria-live="polite">
     <div id="beamgo-card"></div>
-    <p><b>Switching to the back camera</b>Point it at your keychain or the Sukeban tee</p>
+    <p><b>Switching to the back camera</b>Point it at your keychain</p>
   </div>
   <div id="flashw" aria-hidden="true"></div>
 
@@ -185,5 +186,6 @@
   <!-- face effects: the engine's face chunk (and "slam" only so XR8.XrController exists: the three.js module calls it) -->
   <script src="/evade/keychain-ar/vendor/xr/xr.js" async data-preload-chunks="slam,face"></script>
   <script type="module" src="./main.js"></script>
+  <script src="/evade/arcade/back.js" defer></script>
 </body>
 </html>

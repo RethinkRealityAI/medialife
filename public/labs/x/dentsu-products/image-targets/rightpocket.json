@@ -1,0 +1,19 @@
+{
+ "name": "rightpocket",
+ "type": "PLANAR",
+ "properties": {
+  "top": 2,
+  "left": 0,
+  "width": 1497,
+  "height": 1996,
+  "isRotated": false,
+  "originalWidth": 1500,
+  "originalHeight": 2000
+ },
+ "imagePath": "/labs/x/dentsu-products/image-targets/rightpocket_luminance.png",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "rightpocket_luminance.png",
+  "originalImage": "rightpocket.jpg"
+ }
+}

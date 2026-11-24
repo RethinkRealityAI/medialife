@@ -18,8 +18,10 @@ your Bobo straight back.
   picture is a soft photo, so its stencil is cut from the clean flat art (kc-can-art.jpg) and placed onto the
   photo by matching the two pictures (moon, lettering and tab line up). The back picture (QR side) shows the
   same can body, so the canvas is moved onto it by the offset stored in `can-outline.json` ("sides").
-- Engine and image targets are shared with Off the Chain: `/evade/keychain-ar/vendor/xr/` (open-source 8th
-  Wall, MIT) and `/evade/keychain-ar/image-targets/kc-bobo*.json` (both sides of the cat charm) and `kc-can.json`,
+- Engine: `@8thwall/engine-binary@1.0.0` (Niantic Spatial licence, loaded unmodified from jsDelivr with
+  `data-preload-chunks="slam"`) since the room modes moved in (2026-11-18); it runs the image targets and world
+  tracking in one session. Image targets are shared with Off the Chain:
+  `/evade/keychain-ar/image-targets/kc-bobo*.json` (both sides of the cat charm) and `kc-can.json`,
   `kc-can-back.json` (both sides of the can charm).
 - `PIECES` in `main.js` lists the charms. Whichever is in view becomes the current one (`pickPiece`); while
   painting it stays locked to the charm being painted.
@@ -113,9 +115,16 @@ key and copy. Optional: `tdir` (folder with its target files and a `layout.json`
 `near` (cm before "come closer"), `them` (him/her/it in tips), `ask`, `seek`, `evade: false` (no EVADE logo on
 its photos and artwork).
 
-**Sukeban tee** (`sukeban`): `scripts/build-spray-bobo/build_sukeban.py` places the clean character art
+**Brands (2026-11-24).** EVADE pages show only EVADE merch, and MEDIALIFE's own products are never on an EVADE
+page (Dapo). So `main.js` keeps two lists: `EVADE_PIECES` (Bobo, the can) for this page and `ML_PIECES` (the
+Sukeban tee) for **MEDIALIFE Spray** (`/labs/medialife-spray/`, its own README). That page sets
+`window.SPRAY_BRAND` before loading this same `main.js`: brand id, logo, accent, colours, its own IndexedDB
+(`medialife-spray`), no Where is Bobo? events or clip uploads, no Spray Studio CMS or `?c=` viewer, no EVADE game
+decals. `room.js` reads the same object. With no `SPRAY_BRAND` everything is EVADE, exactly as before.
+
+**Sukeban tee** (`sukeban`, MEDIALIFE Spray only; files in `public/labs/medialife-spray/`): `scripts/build-spray-bobo/build_sukeban.py` places the clean character art
 (`public/work/sukeban-sticker-large.webp`) onto Dapo's photo of the printed tee (`src/sukeban-tee.png`, match
-0.91) and writes `targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
+0.91) and writes `public/labs/medialife-spray/targets/tee-sukeban.*` (the whole print, teal panel included, 3:4) plus the character-only
 stencil. The print is assumed to be 12 in wide (`WIDTH_M`): only the cm readout uses it. Tested in the
 simulator from the tee photo itself: found, canvas lines up, paint, save, decals, artwork.
 
@@ -186,3 +195,58 @@ from the list and as a draft through `?set=` found, painted (scene items fade), 
 items placed within 0.1 % of the expected position and size (as fractions of the engine's target height); broken
 and hidden items skipped; viewer mode for a Bobo and a CMS creation, 404, 410; IndexedDB left untouched in viewer
 mode. `node` checks for `cms.js` (mapping, limit, fetch fallbacks, time-out). Not tried on a phone.
+
+Spin moved into Options.
+
+## The room: Hang, Stamp, Graffiti (built in, 2026-11-18)
+
+Spray Bobo Street used to be its own page (`street/`). Dapo wanted one complete experience, so the room modes now
+live inside Spray Bobo: `room.js` (`createRoom(api)`) owns the room HUD (`#room`, ids `r-…`); `main.js` owns the
+session, the shutter, the Options sheet and the sound (the room's sound goes into Spray Bobo's master, so clips
+record it). `street/` is now only a redirect to `/evade/spray-bobo/?room=<mode>`.
+
+- **Hang**: the art as a poster on a wall or a standee on the floor or a table. Up to 12.
+- **Stamp**: a rubber-stamp print on any surface the camera finds. Up to 40.
+- **Graffiti**: hold the can (or a finger) and spray onto walls and floors, with drips. Undo (6 steps). Up to 6
+  canvases.
+- Always on screen in the room: the shutter (bottom centre) and **Move** (bottom right; keeps the piece as it is).
+  Back (top left) returns to the merch; what you placed stays in the room. Options in the room: Drips, Clear the
+  room, Sound, Licences.
+- Art: your paintings (die-cut PNG written to IndexedDB `street:<piece>` when a painting comes alive) and the EVADE
+  decals as stickers. "+ Paint one" in the tray goes back to the merch.
+
+**Ways in**: "Hang it" in the alive bar (opens Hang with that painting), Options > "Graffiti mode", or a link with
+`?room=hang|stamp|graffiti` (camera opens straight into the room).
+
+**One camera switch.** The engine can't turn world tracking on (or change `scale`) after `XR8.run()`: it throws.
+So a page that starts on the merch runs with `disableWorldTracking: true` (image tracking is steadier), and the
+first time into the room it does `XR8.stop()` → `configure({disableWorldTracking:false})` → `XR8.run()` behind the
+"Into the room" card (about 2 s in the simulator to NORMAL tracking). After that the session stays in SLAM, image
+targets keep working in it, and going back and forth is instant. `XR8.Threejs.xrScene()` hands back a NEW scene,
+camera and renderer after a restart: `rehome()` moves everything over and rebuilds the environment map, and
+`room.attach()` re-adds the room's groups. On iPhone the macro lens is not forced once the room has been opened
+(the multi-lens camera doesn't run SLAM), so painting after that uses the standard camera.
+
+### What the engine gives us (and what it doesn't)
+
+`@8thwall/engine-binary` (Niantic Spatial licence, loaded unmodified from jsDelivr, `data-preload-chunks="slam"`):
+
+- `XrController.hitTest(x, y, ['FEATURE_POINT'])` returns real 3D points on walls, even fairly blank ones. The
+  rotation it returns is always zero (no surface angle), and the first hits after start can sit at the camera
+  (distance ~0): filtered at > 15 cm.
+- `ESTIMATED_SURFACE` / `DETECTED_SURFACE` returned nothing in our tests; there is no vertical-plane detection or
+  plane event in the JS API. The floor is the tracking origin plane (y = 0, camera starts at 1.3).
+
+So the room finds surfaces itself (`updateSurface`): the floor by ray to y = 0; anything else by a plane fit
+(PCA) over the last 0.9 s of hit points around the aim, snapped to wall (upright), table (flat) or slope. A loose
+fit falls back to "a wall facing the phone" at the hit point. A wall fit is kept within 35 degrees of facing the
+phone unless the evidence is strong (wide, tight, many points). Kind changes need 3 frames; the angle eases in.
+
+### Tested
+
+Simulator (headless Chromium, fake camera: the Sukeban tee, then a rendered room; fake motion): paint → save →
+Hang it → room (that painting selected) → wall found → poster hung → Graffiti sprayed → Options in the room → Back
+to the merch (2 pieces kept) → back in via Options > Graffiti mode (instant). `?room=graffiti` straight in: splash
+hides, room opens in Graffiti, the tee in view doesn't pull the page back to the merch. **Not tried on a phone yet**
+(earlier Street page: not phone-tested either). `?test` exposes `window.__st`, `?diag` the surface panel,
+`?desktop` runs it off a phone.

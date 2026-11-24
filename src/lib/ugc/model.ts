@@ -135,6 +135,54 @@ export const UGC_POST_PLATFORM_LABELS: Record<UgcPostPlatform, string> = {
 /** Audience bands the first sign-up form offered (the form now asks for a follower count). */
 export const UGC_AUDIENCE_BANDS = ["Under 1K", "1K–10K", "10K–50K", "50K–250K", "250K+"] as const;
 
+/**
+ * Public reach of one channel, as the team looked it up (admin only, never shown
+ * to the creator). `followers` is subscribers on YouTube and followers elsewhere.
+ */
+export type UgcChannelStat = {
+  followers: number | null;
+  /** Videos / posts on the channel, when known. */
+  posts?: number | null;
+  /** Total likes (TikTok), when known. */
+  likes?: number | null;
+  /** The profile the numbers came from. */
+  url?: string;
+  note?: string;
+  checkedAt: number;
+  source: "import" | "manual";
+};
+export type UgcChannelStats = Partial<Record<UgcPlatform, UgcChannelStat>>;
+
+/** What "followers" is called on each platform. */
+export const UGC_FOLLOWER_NOUN: Record<UgcPlatform, string> = {
+  roblox: "followers",
+  instagram: "followers",
+  youtube: "subscribers",
+  discord: "members",
+  x: "followers",
+  tiktok: "followers",
+  twitch: "followers",
+};
+
+/** Followers + subscribers across every channel with a number, or null when none has one. */
+export function ugcTotalReach(stats: UgcChannelStats | null | undefined): number | null {
+  const ns = Object.values(stats ?? {})
+    .map((s) => s?.followers)
+    .filter((n): n is number => typeof n === "number" && n >= 0);
+  return ns.length ? ns.reduce((a, b) => a + b, 0) : null;
+}
+
+/** 950 → "950", 38243 → "38.2K", 1250000 → "1.3M". */
+export function formatCount(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return "–";
+  const fmt = (v: number, unit: string) =>
+    `${v >= 100 ? Math.round(v) : Math.round(v * 10) / 10}${unit}`;
+  if (n >= 1e9) return fmt(n / 1e9, "B");
+  if (n >= 1e6) return fmt(n / 1e6, "M");
+  if (n >= 1e3) return fmt(n / 1e3, "K");
+  return String(Math.round(n));
+}
+
 /** A link to a handle, best effort (handles are stored as the form sent them). */
 export function ugcHandleUrl(platform: UgcPlatform, handle: string): string | null {
   const h = handle.trim();
@@ -319,6 +367,8 @@ export type UgcCreator = {
   mainPlatform: UgcPlatform | null;
   handles: Partial<Record<UgcPlatform, string>>;
   audiences: Partial<Record<UgcPlatform, string>>;
+  /** Looked-up follower / subscriber counts per channel (admin only; see UgcChannelStat). */
+  channelStats?: UgcChannelStats;
   /** What they wrote in the form's notes box. */
   applicationNotes: string;
   /** T-shirt size for their package (form "tee_size"). Missing on sign-ups before Nov 2026. */
@@ -568,10 +618,10 @@ export type UgcActivity = {
    --------------------------------------------------------------------------- */
 
 /** What a creator sees of their own record (no import internals). */
-export type UgcCreatorView = Omit<UgcCreator, "source" | "hubUserId">;
+export type UgcCreatorView = Omit<UgcCreator, "source" | "hubUserId" | "channelStats">;
 
 export const creatorView = (c: UgcCreator): UgcCreatorView => {
-  const { source: _s, hubUserId: _h, ...rest } = c;
+  const { source: _s, hubUserId: _h, channelStats: _c, ...rest } = c;
   return rest;
 };
 

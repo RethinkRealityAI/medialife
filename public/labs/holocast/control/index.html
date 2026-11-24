@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- MEDIALIFE Holocast control room: type, draw and drop photos, and watch them land in the AR hologram
+       (/labs/holocast/). Same room API as the AR page (src/lib/holocast/server.ts). -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#05070c">
+  <title>Holocast control room · MEDIALIFE</title>
+  <meta name="description" content="Send messages, drawings and photos into a live MEDIALIFE Holocast hologram.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./control.css?v=3">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="/labs/holocast/" aria-label="MEDIALIFE Holocast"><img src="/brand/medialife-wordmark.webp" alt="MEDIALIFE" height="18"><span>Holocast</span></a>
+    <div class="room" id="room-chip" hidden>
+      <span class="code" id="room-code">······</span>
+      <span class="live" id="live"><i></i><b id="watching">0</b><span class="wl"> watching</span></span>
+    </div>
+    <button type="button" class="hbtn" id="b-show" hidden aria-haspopup="dialog" aria-label="Open the hologram on a phone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg><span class="long">Open AR</span></button>
+    <button type="button" class="hbtn" id="t-holo" hidden aria-controls="p-holo" aria-selected="false" aria-label="Hologram settings: screens, colour, share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span class="long">Hologram</span></button>
+  </header>
+
+  <!-- no room yet: start one or join one -->
+  <main id="start" class="start" hidden>
+    <h1>Control a hologram from anywhere</h1>
+    <p class="lead">Holocast puts floating screens in your room through your phone's camera. Whatever you type, draw or drop here beams straight into them, live.</p>
+    <div class="start-row">
+      <button type="button" class="primary big" id="b-new">Start a new Holocast</button>
+    </div>
+    <form class="join" id="join">
+      <label for="join-code">Have a room code?</label>
+      <div class="join-row">
+        <input id="join-code" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="6" placeholder="K7PX2A" aria-describedby="join-help">
+        <button class="secondary">Watch</button>
+      </div>
+      <small id="join-help">A code lets you watch. To change a room, use the control link its maker shares.</small>
+    </form>
+  </main>
+
+  <main id="app" class="app" hidden>
+    <p class="ro" id="readonly" hidden>This link can watch the room but not change it. Ask whoever made it for the control link.</p>
+
+    <!-- what viewers are sending back from the hologram -->
+    <div class="react-strip" id="reacts" aria-live="polite" aria-label="Reactions from the hologram"></div>
+
+
+    <!-- notice board -->
+    <section class="panel" id="p-notice" role="tabpanel" aria-labelledby="t-notice">
+      <form id="f-notice" class="card">
+        <label for="n-text">Message</label>
+        <textarea id="n-text" maxlength="160" rows="3" placeholder="Doors open at 7. Merch drop at 8." required></textarea>
+        <div class="row">
+          <div class="field grow">
+            <label for="n-from">From</label>
+            <input id="n-from" maxlength="24" placeholder="Your name" autocomplete="nickname">
+          </div>
+          <label class="check"><input type="checkbox" id="n-pin"> Pin it big</label>
+        </div>
+        <div class="row end">
+          <span class="count" id="n-count">0 / 160</span>
+          <button class="primary" id="n-send">Beam it</button>
+        </div>
+      </form>
+      <div class="fling" id="n-fling" hidden>
+        <p class="fling-k">Or fling it: swipe the card up</p>
+        <div class="fcard" id="n-card" tabindex="0" role="button" aria-label="Fling this message into the hologram (or press Enter)"><span id="n-card-t"></span><small id="n-card-f"></small></div>
+      </div>
+      <h2 class="sub">On the board</h2>
+      <ul class="notices" id="n-list"></ul>
+    </section>
+
+    <!-- live video: a full-screen viewfinder, camera-app style -->
+    <section class="panel cam-panel" id="p-cam" role="tabpanel" aria-labelledby="t-cam" hidden>
+      <div class="cam-box" id="cam-box">
+        <video id="cam-v" playsinline muted autoplay></video>
+        <div class="cam-idle" id="cam-idle">
+          <span class="cam-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 8v8l-5-2.5"/></svg></span>
+          <b>Go live in the hologram</b>
+          <span>Your camera streams into every phone watching. The other screens fold away and one big holo screen shows you. Hold your phone sideways for a wide screen.</span>
+          <span class="small" id="cam-none" hidden>This browser can't stream video. Try Chrome, Edge or Safari.</span>
+        </div>
+        <div class="cam-top">
+          <p class="cam-status" id="cam-status" aria-live="polite"><i aria-hidden="true"></i><span id="cam-status-t">Not live</span></p>
+          <div class="cam-tools">
+            <button type="button" class="round" id="cam-audio" role="switch" aria-checked="true" aria-label="Include sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><s aria-hidden="true"></s></button>
+            <button type="button" class="round" id="cam-flip" hidden aria-label="Flip camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15"/><path d="M4 20v-5h5"/></svg></button>
+          </div>
+        </div>
+        <p class="cam-other" id="cam-other" hidden></p>
+        <div class="cam-go">
+          <button type="button" class="shutter" id="cam-go" aria-label="Go live"><i aria-hidden="true"></i></button>
+          <span id="cam-go-t">Go live</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- live sketch -->
+    <section class="panel" id="p-draw" role="tabpanel" aria-labelledby="t-draw" hidden>
+      <div class="draw-wrap">
+        <canvas id="pad" width="1000" height="1000" aria-label="Drawing pad. What you draw shows on the hologram's sketch screen as you draw it"></canvas>
+        <div class="pad-live" id="pad-live" hidden>Beaming…</div>
+      </div>
+      <div class="tools">
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
+        <div class="sizes" role="radiogroup" aria-label="Brush size">
+          <button type="button" role="radio" data-w="4" aria-label="Thin"><i style="--s:4px"></i></button>
+          <button type="button" role="radio" data-w="10" aria-label="Medium" aria-checked="true"><i style="--s:9px"></i></button>
+          <button type="button" role="radio" data-w="22" aria-label="Thick"><i style="--s:16px"></i></button>
+        </div>
+        <div class="acts">
+          <button type="button" class="secondary" id="d-undo">Undo</button>
+          <button type="button" class="secondary warn" id="d-clear">Clear</button>
+        </div>
+      </div>
+      <p class="hint">Everyone with the control link draws on the same sketch, at the same time.</p>
+    </section>
+
+    <!-- photo drop -->
+    <section class="panel" id="p-photo" role="tabpanel" aria-labelledby="t-photo" hidden>
+      <div class="card drop" id="drop">
+        <p><b>Drop a photo into the hologram.</b> The newest one shows big, the last six stay.</p>
+        <label class="primary file">Choose or take a photo<input type="file" id="ph-file" accept="image/*"></label>
+        <p class="small" id="ph-status" aria-live="polite"></p>
+      </div>
+      <div class="fling" id="ph-fling" hidden>
+        <p class="fling-k">Swipe the photo up to fling it in, or tap Send</p>
+        <div class="fcard photo" id="ph-card" tabindex="0" role="button" aria-label="Fling this photo into the hologram (or press Enter)"><img id="ph-prev" alt="The photo you picked"></div>
+        <div class="row center"><button type="button" class="secondary" id="ph-cancel">Cancel</button><button type="button" class="primary" id="ph-send">Send</button></div>
+      </div>
+      <ul class="photos" id="ph-list"></ul>
+    </section>
+
+    <!-- live poll + voice -->
+    <section class="panel" id="p-live" role="tabpanel" aria-labelledby="t-live" hidden>
+      <div class="card" id="pl-live" hidden>
+        <div class="row"><h2 class="sub0 grow" id="pl-live-q"></h2><span class="small" id="pl-total"></span></div>
+        <div class="bars" id="pl-bars"></div>
+        <div class="row end"><button type="button" class="secondary" id="pl-end">Close voting</button><button type="button" class="secondary warn" id="pl-clear">Remove poll</button></div>
+      </div>
+      <form class="card" id="f-poll">
+        <h2 class="sub0">Live poll</h2>
+        <p class="small">Everyone watching votes by tapping a bar in the hologram. The bars grow as votes come in.</p>
+        <label for="pl-q">Question</label>
+        <input id="pl-q" maxlength="90" placeholder="Which drop should we do next?" required>
+        <div class="opts" id="pl-opts">
+          <input maxlength="28" placeholder="Answer 1" aria-label="Answer 1" required>
+          <input maxlength="28" placeholder="Answer 2" aria-label="Answer 2" required>
+          <input maxlength="28" placeholder="Answer 3 (optional)" aria-label="Answer 3">
+          <input maxlength="28" placeholder="Answer 4 (optional)" aria-label="Answer 4">
+        </div>
+        <div class="row end"><button class="primary" id="pl-go">Start the poll</button></div>
+      </form>
+      <div class="card" id="voice">
+        <h2 class="sub0">Speak it in</h2>
+        <p class="small">Talk and your words type themselves across the hologram as live captions.</p>
+        <button type="button" class="primary mic" id="v-mic" aria-pressed="false"><span class="dot" aria-hidden="true"></span><span id="v-mic-t">Start talking</span></button>
+        <p class="caption-prev" id="v-prev" aria-live="polite"></p>
+        <p class="small" id="v-none" hidden>This browser can't turn speech into text. Try Chrome, Edge or Safari.</p>
+      </div>
+    </section>
+
+    <!-- hologram -->
+    <section class="panel" id="p-holo" role="tabpanel" aria-labelledby="t-holo" hidden>
+      <h1 class="ptitle">Hologram</h1>
+      <div class="card">
+        <h2 class="sub0">What viewers see</h2>
+        <p class="small">Switch screens off for every phone watching. Content stays saved, so switching one back on brings it right back.</p>
+        <div class="switches" id="screens"></div>
+      </div>
+      <div class="card">
+        <h2 class="sub0">Colour</h2>
+        <div class="themes" id="themes" role="radiogroup" aria-label="Hologram colour"></div>
+      </div>
+      <div class="card">
+        <h2 class="sub0">Beam pulse</h2>
+        <p class="small">Sends a surge up the projector on every phone watching right now.</p>
+        <button type="button" class="primary" id="b-pulse">Pulse the beam</button>
+      </div>
+      <form class="card" id="f-title">
+        <label for="h-title">Hologram title</label>
+        <div class="row"><input id="h-title" class="grow" maxlength="40"><button class="secondary">Save</button></div>
+      </form>
+      <div class="card">
+        <h2 class="sub0">Share</h2>
+        <p class="small">The <b>control link</b> lets someone change the room. The <b>watch link</b> lets another phone see the same hologram.</p>
+        <div class="row wrap">
+          <button type="button" class="secondary" id="b-copy-ctl">Copy control link</button>
+          <button type="button" class="secondary" id="b-copy-view">Copy watch link</button>
+        </div>
+      </div>
+      <div class="stats" id="stats"></div>
+    </section>
+  </main>
+
+
+  <!-- the floating dock (the platform's phone tab bar) -->
+  <nav class="dock" id="dock" hidden aria-label="What to send">
+    <div class="dock-in" role="tablist" aria-label="What to send">
+      <button role="tab" id="t-notice" aria-controls="p-notice" aria-selected="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Notices</span></button>
+      <button role="tab" id="t-draw" aria-controls="p-draw" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20c2 0 3-1 4-3l9-9a2.1 2.1 0 0 0-3-3l-9 9c-2 1-3 2-3 4"/><path d="M13 6l3 3"/></svg><span>Draw</span></button>
+      <button role="tab" id="t-cam" class="hl" aria-controls="p-cam" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5 21 8v8l-5-2.5"/></svg><span>Go live</span></button>
+      <button role="tab" id="t-photo" aria-controls="p-photo" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg><span>Photos</span></button>
+      <button role="tab" id="t-live" aria-controls="p-live" aria-selected="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Poll</span></button>
+    </div>
+  </nav>
+
+  <!-- open the hologram on a phone -->
+  <div class="sheet-wrap" id="show" hidden role="dialog" aria-labelledby="show-t">
+    <div class="sheet">
+      <h2 id="show-t">Open the hologram on your phone</h2>
+      <p>Scan this with your phone's camera, tap Start, then point at the floor or a table.</p>
+      <div class="qr" id="show-qr" aria-label="QR code that opens the hologram"></div>
+      <p class="mono" id="show-url"></p>
+      <div class="row center"><button type="button" class="primary" id="show-close">Done</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer class="foot"><img src="/activated-merch/media/ar/activated-by.webp" alt="Activated by MEDIALIFE" height="28"></footer>
+
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script type="module" src="./control.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "imagePath": "/labs/demos/media/target/glyphs_luminance.png",
+  "resources": {
+    "originalImage": "glyphs.jpg",
+    "luminanceImage": "glyphs_luminance.png"
+  },
+  "name": "glyphs",
+  "type": "PLANAR",
+  "properties": {
+    "top": 13,
+    "left": 0,
+    "width": 674,
+    "height": 899,
+    "isRotated": false,
+    "originalWidth": 674,
+    "originalHeight": 924
+  },
+  "userMetadataIsJson": true,
+  "loadAutomatically": true
+}

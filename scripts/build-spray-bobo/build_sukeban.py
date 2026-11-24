@@ -11,9 +11,9 @@
 # sliver comes off the bottom (the engine's pictures are 3:4).
 #
 # Outputs:
-#   public/evade/spray-bobo/targets/tee-sukeban.json + _luminance.jpg + _thumbnail.jpg + .jpg   (image target,
+#   public/labs/medialife-spray/targets/tee-sukeban.json + _luminance.jpg + _thumbnail.jpg + .jpg   (image target,
 #       same format as @8thwall/image-target-cli), targets/layout.json (its size in metres)
-#   public/evade/spray-bobo/art/sukeban-mask.png / -lines.png / -outline.json   (stencil, ink lines, die-cut line)
+#   public/labs/medialife-spray/art/sukeban-mask.png / -lines.png / -outline.json   (stencil, ink lines, die-cut line)
 # Run: python3 scripts/build-spray-bobo/build_sukeban.py
 import os, json, time
 import numpy as np, cv2
@@ -24,9 +24,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 TEE = os.path.join(HERE, 'src', 'sukeban-tee.png')
 ART = os.path.join(ROOT, 'public/work/sukeban-sticker-large.webp')
-TOUT = os.path.join(ROOT, 'public/evade/spray-bobo/targets/')
-AOUT = os.path.join(ROOT, 'public/evade/spray-bobo/art/')
-URL = '/evade/spray-bobo/targets/'
+TOUT = os.path.join(ROOT, 'public/labs/medialife-spray/targets/')
+AOUT = os.path.join(ROOT, 'public/labs/medialife-spray/art/')
+URL = '/labs/medialife-spray/targets/'
 NAME = 'tee-sukeban'
 # The print's real size. A standard 12 x 16 in front print is assumed (only the "cm" readout and the
 # "come closer" distance use it; tracking and painting are the same at any size). Change here if it differs.

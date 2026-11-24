@@ -1,0 +1,19 @@
+{
+ "name": "Sticker Graphic",
+ "type": "PLANAR",
+ "properties": {
+  "top": 1,
+  "left": 0,
+  "width": 998,
+  "height": 1330,
+  "isRotated": false,
+  "originalWidth": 1000,
+  "originalHeight": 1333
+ },
+ "imagePath": "/labs/x/brooklyn-nets/image-targets/sticker-graphic_luminance.jpeg",
+ "metadata": null,
+ "resources": {
+  "luminanceImage": "sticker-graphic_luminance.jpeg",
+  "originalImage": "sticker-graphic.jpg"
+ }
+}
