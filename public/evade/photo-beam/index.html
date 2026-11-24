@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#0f1519">
   <title>Photo Beam · EVADE AR</title>
-  <meta name="description" content="Photo Beam: snap a selfie and beam it onto your EVADE keychain or the Sukeban tee. It lands on Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, printed right on the charm.">
+  <meta name="description" content="Photo Beam: snap a selfie and beam it onto your EVADE keychain. It lands on Bobo's visor, the Eclipse can's label or Roblox Bobo's cap, printed right on the charm.">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,7 +42,7 @@
     <div class="copy">
       <p class="kicker">EVADE · Activated AR</p>
       <h1 id="title">Photo <span>Beam</span></h1>
-      <p class="lead" id="lead">Snap a selfie, point at your keychain or the Sukeban tee and lock on. Beam it onto Bobo's visor, the Eclipse can, Roblox Bobo's cap, or Sukeban's face and top.</p>
+      <p class="lead" id="lead">Snap a selfie, point at your keychain and lock on. Beam it onto Bobo's visor, the Eclipse can or Roblox Bobo's cap.</p>
       <div id="desk" hidden>
         <div id="qr" aria-label="QR code that opens this page on your phone"></div>
         <p><b>Made for your phone.</b> Scan to open it there, or carry on here with your webcam.</p>
@@ -70,7 +70,7 @@
     </div>
 
     <!-- what to point at -->
-    <div id="guide" aria-hidden="true"><img src="/evade/spray-bobo/art/cat-lines.png" alt=""><img src="/evade/spray-bobo/art/can-lines.png" alt=""><img src="/evade/spray-bobo/art/sukeban-lines.png" alt=""></div>
+    <div id="guide" aria-hidden="true"><img src="/evade/spray-bobo/art/cat-lines.png" alt=""><img src="/evade/spray-bobo/art/can-lines.png" alt=""></div>
     <p id="hint" class="ml-hint" role="status" aria-live="polite"></p>
 
     <!-- once a charm wears a photo -->
@@ -157,10 +157,9 @@
         <h2 id="edit-t">Make it yours</h2>
         <button type="button" class="x" id="ed-x" aria-label="Retake the photo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
-      <div class="ed-top">
+      <div class="ed-top" hidden>
         <div class="seg" role="radiogroup" aria-label="Preview" id="ed-view">
           <button type="button" role="radio" data-v="any" aria-checked="true">Any spot</button>
-          <button type="button" role="radio" data-v="face" aria-checked="false">On Sukeban</button>
         </div>
         <button type="button" id="ed-match" role="switch" aria-checked="true" hidden>Match skin</button>
       </div>
@@ -233,11 +232,11 @@
   <!-- what to point at (once, over the camera) -->
   <div id="how" class="sheet-wrap" hidden role="dialog" aria-labelledby="how-t">
     <div class="sheet">
-      <div class="how-pics"><img class="how-pic" src="/evade/spray-bobo/art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="/evade/spray-bobo/art/can-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="/evade/spray-bobo/art/sukeban-lines.png" alt="" width="768" height="1024"></div>
+      <div class="how-pics"><img class="how-pic" src="/evade/spray-bobo/art/cat-lines.png" alt="" width="768" height="1024"><img class="how-pic" src="/evade/spray-bobo/art/can-lines.png" alt="" width="768" height="1024"></div>
       <h2 id="how-t">Beam a photo</h2>
       <ol class="how-steps">
-        <li><b>Snap a selfie</b> with your face in the outline (or switch camera, or pick one from your library). Try On Sukeban, Ink and Match skin to fit her drawing, then press Ready to beam.</li>
-        <li><b>Point at a charm or the tee.</b> Bobo, the Eclipse can or Roblox Bobo about a hand away; the Sukeban tee about half a metre away (her face and her top both glow).</li>
+        <li><b>Snap a selfie</b> with your face in the outline (or switch camera, or pick one from your library). Pick a style and a sticker, then press Ready to beam.</li>
+        <li><b>Point at a charm.</b> Bobo, the Eclipse can or Roblox Bobo, about a hand away.</li>
         <li><b>Aim and lock on.</b> Move the centre of the screen onto the glowing spot (or tap it). It turns yellow: Beam ready.</li>
         <li><b>Press Beam.</b> It flies in and stays on that charm, on this phone. Beam again to put it on another one.</li>
       </ol>
