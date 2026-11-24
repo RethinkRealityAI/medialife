@@ -49,57 +49,84 @@ function outline(group, thickness = 0.012) {
 function goldenGate() {
   const g = new THREE.Group();
   const orange = toon("#e4472b");
-  const dark = toon("#a8301d");
+  const dark = toon("#a32d1b");
+  const road = toon("#59606a");
   const H = 1; // tower height
   const towerX = 0.62;
   const deckY = 0.26;
-  const half = 1.25; // half the length
-  // deck and its truss
-  g.add(box(half * 2, 0.045, 0.16, orange, 0, deckY, 0));
-  g.add(box(half * 2, 0.05, 0.12, dark, 0, deckY - 0.045, 0));
-  // towers: two legs, portal struts, a stepped top
+  const half = 1.3; // half the length
+  // deck: a road on an orange stiffening truss
+  g.add(box(half * 2, 0.02, 0.17, road, 0, deckY + 0.01, 0));
+  g.add(box(half * 2, 0.06, 0.15, orange, 0, deckY - 0.03, 0));
+  for (let x = -half + 0.05; x < half; x += 0.1) g.add(box(0.012, 0.055, 0.155, dark, x, deckY - 0.03, 0));
+  // art-deco towers: two legs that step in as they rise, joined by portal struts
   for (const sx of [-1, 1]) {
     const x = sx * towerX;
+    const tiers = [
+      [0, 0.38, 0.085],
+      [0.38, 0.66, 0.072],
+      [0.66, 0.86, 0.062],
+      [0.86, H, 0.052],
+    ];
     for (const sz of [-1, 1]) {
-      g.add(box(0.07, H, 0.05, orange, x, H / 2, sz * 0.075));
-      g.add(box(0.075, 0.06, 0.055, dark, x, H * 0.55, sz * 0.075));
+      for (const [y0, y1, w] of tiers) g.add(box(w, y1 - y0, w * 0.75, orange, x, (y0 + y1) / 2, sz * 0.085));
+      // recessed vertical panel lines
+      g.add(box(0.012, H * 0.9, 0.066, dark, x, H * 0.47, sz * 0.085));
     }
-    for (const y of [0.42, 0.62, 0.8, 0.97]) g.add(box(0.06, 0.05, 0.2, orange, x, y, 0));
-    g.add(box(0.14, 0.12, 0.22, toon("#7d8a93"), x, 0.02, 0)); // pier
+    for (const [y, h] of [[0.44, 0.05], [0.66, 0.06], [0.84, 0.055], [0.985, 0.04]]) {
+      g.add(box(0.06, h, 0.24, orange, x, y, 0));
+      g.add(box(0.064, h * 0.35, 0.2, dark, x, y, 0));
+    }
+    g.add(box(0.18, 0.1, 0.28, toon("#8a949c"), x, 0.03, 0)); // pier
+  }
+  // anchorages and the headlands at each end
+  for (const sx of [-1, 1]) {
+    g.add(box(0.16, 0.16, 0.22, toon("#a7adb2"), sx * (half - 0.04), deckY - 0.06, 0));
+    const hill = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), toon("#6f9a4c"));
+    hill.scale.set(1, 0.6, 0.8);
+    hill.position.set(sx * (half + 0.12), 0, 0);
+    g.add(hill);
   }
   // main cables (catenaries over the towers) and suspenders
-  const cable = toon("#c93a24");
+  const cable = toon("#d4442a");
   for (const sz of [-1, 1]) {
-    const z = sz * 0.075;
+    const z = sz * 0.085;
     const pts = [];
-    const top = H * 0.96;
-    const sag = deckY + 0.06;
-    for (let i = 0; i <= 60; i++) {
-      const x = -half + (i / 60) * half * 2;
+    const top = H * 0.97;
+    const sag = deckY + 0.05;
+    for (let i = 0; i <= 80; i++) {
+      const x = -half + (i / 80) * half * 2;
       let y;
       if (Math.abs(x) <= towerX) {
         const t = x / towerX;
         y = sag + (top - sag) * t * t;
       } else {
         const t = (Math.abs(x) - towerX) / (half - towerX);
-        y = top - (top - deckY - 0.02) * Math.pow(t, 0.8);
+        y = top - (top - deckY - 0.02) * Math.pow(t, 0.75);
       }
       pts.push(new THREE.Vector3(x, y, z));
     }
     const curve = new THREE.CatmullRomCurve3(pts);
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.012, 6, false), cable);
+    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 100, 0.014, 6, false), cable);
     tube.userData.noInk = true;
     g.add(tube);
-    for (let x = -half + 0.08; x < half; x += 0.085) {
+    for (let x = -half + 0.08; x < half - 0.05; x += 0.06) {
       const p = pts.reduce((a, b) => (Math.abs(b.x - x) < Math.abs(a.x - x) ? b : a));
       const h = p.y - deckY;
       if (h < 0.03) continue;
-      const s = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, h, 4), cable);
-      s.position.set(x, deckY + h / 2, z);
-      s.userData.noInk = true;
-      g.add(s);
+      const sus = new THREE.Mesh(new THREE.CylinderGeometry(0.0035, 0.0035, h, 4), cable);
+      sus.position.set(x, deckY + h / 2, z);
+      sus.userData.noInk = true;
+      g.add(sus);
     }
   }
+  // the bay beneath
+  const bay = new THREE.Mesh(new THREE.CircleGeometry(1, 40), toon("#3fb6e0"));
+  bay.scale.set(half + 0.1, 0.45, 1);
+  bay.rotation.x = -Math.PI / 2;
+  bay.position.y = 0.004;
+  bay.userData.noInk = true;
+  g.add(bay);
   return outline(g);
 }
 
@@ -225,49 +252,69 @@ function liberty() {
 
 function cnTower() {
   const g = new THREE.Group();
-  const concrete = toon("#e3ded5");
-  const shade = toon("#bdb6ab");
-  const pod = toon("#8d97a2");
-  const glass = toon("#5fd6ff", { emissive: "#1aa8ff", emissiveIntensity: 0.55 });
+  const concrete = toon("#ece7de");
+  const shade = toon("#c4bcb0");
+  const pod = toon("#7f8a95");
+  const podTop = toon("#d9d5ce");
+  const glass = toon("#ffd36a", { emissive: "#ffb020", emissiveIntensity: 0.55 });
   const red = toon("#e8452f");
-  // the Y-shaped base: three fins around a tapering core
-  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.065, 0.62, 12), concrete);
+  // a little plaza it stands on
+  const plaza = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.03, 24), toon("#9aa3ab"));
+  plaza.position.y = 0.015;
+  g.add(plaza);
+  // the hexagonal core, slim and tall: the main pod sits at 62% of the height
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.05, 0.62, 6), concrete);
   core.position.y = 0.31;
   g.add(core);
+  // three legs of the Y that flare out at the bottom and fade into the core
   for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2;
-    const fin = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.05, 0.5, 4), shade);
-    fin.scale.set(1, 1, 0.45);
-    fin.position.set(Math.cos(a) * 0.05, 0.25, Math.sin(a) * 0.05);
-    fin.rotation.y = -a;
-    g.add(fin);
+    const a = (i / 3) * Math.PI * 2 + Math.PI / 6;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.042, 0.44, 4), shade);
+    leg.scale.set(1, 1, 0.42);
+    leg.position.set(Math.cos(a) * 0.055, 0.22, Math.sin(a) * 0.055);
+    leg.rotation.y = -a;
+    leg.rotation.z = Math.cos(a) * 0.08;
+    leg.rotation.x = -Math.sin(a) * 0.08;
+    g.add(leg);
   }
-  // the main pod: a fat doughnut with a glowing window band and the glass floor
-  const lower = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.08, 0.05, 24), pod);
-  lower.position.y = 0.62;
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.035, 24), glass);
-  band.position.y = 0.66;
-  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.13, 0.045, 24), pod);
-  upper.position.y = 0.7;
-  g.add(lower, band, upper);
-  // the shaft carries on to the SkyPod
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.03, 0.14, 10), concrete);
-  shaft.position.y = 0.79;
-  const sky = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 16), glass);
-  sky.position.y = 0.87;
-  g.add(shaft, sky);
+  // the main pod: grey turret below, a glowing window ring, white observation decks above
+  const under = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.05, 0.06, 28), pod);
+  under.position.y = 0.6;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.118, 0.022, 10, 36), pod);
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.64;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.128, 0.128, 0.028, 32), glass);
+  band.position.y = 0.665;
+  const deck = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.128, 0.03, 32), podTop);
+  deck.position.y = 0.693;
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.025, 28), pod);
+  cap.position.y = 0.72;
+  g.add(under, ring, band, deck, cap);
+  // the shaft carries on to the SkyPod (81%)
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.11, 6), concrete);
+  shaft.position.y = 0.785;
+  const sky = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.03, 0.026, 18), pod);
+  sky.position.y = 0.85;
+  const skyGlass = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.037, 0.012, 18), glass);
+  skyGlass.position.y = 0.86;
+  g.add(shaft, sky, skyGlass);
   // antenna, red and white
-  for (let i = 0; i < 4; i++) {
-    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.006 - i * 0.001, 0.008 - i * 0.001, 0.035, 6), i % 2 ? concrete : red);
-    seg.position.y = 0.9 + i * 0.035;
+  for (let i = 0; i < 5; i++) {
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.0055 - i * 0.0008, 0.0075 - i * 0.0008, 0.03, 6), i % 2 ? concrete : red);
+    seg.position.y = 0.885 + i * 0.03;
     seg.userData.noInk = true;
     g.add(seg);
   }
   const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), toon("#ff5a4a", { emissive: "#ff2a1a", emissiveIntensity: 1 }));
   beacon.position.y = 1.04;
   beacon.userData.noInk = true;
+  beacon.userData.blink = true;
   g.add(beacon);
-  return outline(g);
+  outline(g);
+  g.userData.tick = (time) => {
+    beacon.material.emissiveIntensity = 0.4 + 0.8 * (Math.sin(time * 3) > 0 ? 1 : 0);
+  };
+  return g;
 }
 
 /** Moving water: a striped canvas texture that scrolls down. */
@@ -277,8 +324,8 @@ function waterTexture() {
   c.height = 128;
   const x = c.getContext("2d");
   const grad = x.createLinearGradient(0, 0, 0, 128);
-  grad.addColorStop(0, "#7fe3ff");
-  grad.addColorStop(1, "#d8f7ff");
+  grad.addColorStop(0, "#3fb9ec");
+  grad.addColorStop(1, "#e6faff");
   x.fillStyle = grad;
   x.fillRect(0, 0, 64, 128);
   x.fillStyle = "rgba(255,255,255,0.75)";
@@ -290,81 +337,202 @@ function waterTexture() {
   return t;
 }
 
+/** A flat horseshoe band between radii r0..r1 (angles as CylinderGeometry: x = r sin a, z = r cos a). */
+function arcSlab(r0, r1, a0, len, depth) {
+  const sh = new THREE.Shape();
+  const n = 32;
+  for (let i = 0; i <= n; i++) {
+    const a = a0 + (len * i) / n;
+    const p = [r1 * Math.sin(a), -r1 * Math.cos(a)];
+    if (i === 0) sh.moveTo(...p);
+    else sh.lineTo(...p);
+  }
+  for (let i = n; i >= 0; i--) {
+    const a = a0 + (len * i) / n;
+    sh.lineTo(r0 * Math.sin(a), -r0 * Math.cos(a));
+  }
+  const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: false, curveSegments: 1 });
+  geo.rotateX(-Math.PI / 2);
+  return geo;
+}
+
 function niagaraFalls() {
   const g = new THREE.Group();
-  const rock = toon("#6d8a4e");
+  const grass = toon("#6fae4a");
   const cliff = toon("#8a6d4f");
-  const river = toon("#4fc3e8");
+  const cliffDark = toon("#6b523b");
+  const river = toon("#3fb6e0");
+  const foam = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.85, depthWrite: false });
   const water = waterTexture();
-  // the Horseshoe: a curved cliff with water pouring over its lip
+  // the Horseshoe: a curved cliff with water pouring over its lip, opening towards the camera
   const R = 0.42;
   const arc = Math.PI * 0.95;
-  // centred on the back (theta = PI is -z): the horseshoe opens towards the camera
   const start = Math.PI - arc / 2;
-  const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R, 0.34, 32, 1, true, start, arc), cliff);
-  wall.material = cliff.clone();
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(R, R + 0.02, 0.36, 40, 1, true, start, arc), cliff.clone());
   wall.material.side = THREE.DoubleSide;
-  wall.position.y = 0.17;
-  const top = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.16, R + 0.16, 0.06, 32, 1, false, start, arc), rock);
-  top.position.y = 0.34;
+  wall.position.y = 0.18;
+  // the land above: the river comes in from behind and spills over the lip
+  const top = new THREE.Mesh(arcSlab(R, R + 0.24, start - 0.12, arc + 0.24, 0.06), grass);
+  top.position.y = 0.33;
+  // the river above the lip, running into the curtain
+  const upstream = new THREE.Mesh(arcSlab(R - 0.01, R + 0.14, start + 0.05, arc - 0.1, 0.012), toon("#57c6ef"));
+  upstream.position.y = 0.392;
+  upstream.userData.noInk = true;
   const curtain = new THREE.Mesh(
-    new THREE.CylinderGeometry(R - 0.012, R - 0.04, 0.33, 32, 1, true, start, arc),
-    new THREE.MeshBasicMaterial({ map: water, transparent: true, opacity: 0.94, side: THREE.DoubleSide }),
+    new THREE.CylinderGeometry(R - 0.012, R - 0.05, 0.35, 40, 1, true, start + 0.04, arc - 0.08),
+    new THREE.MeshBasicMaterial({ map: water, side: THREE.DoubleSide }),
   );
-  curtain.position.y = 0.17;
+  curtain.position.y = 0.18;
   curtain.userData.noInk = true;
-  // the river below and the mist
-  const pool = new THREE.Mesh(new THREE.CircleGeometry(R + 0.14, 32), river);
+  // the gorge: a pool, white foam where the water lands, the river flowing out to the camera
+  const pool = new THREE.Mesh(new THREE.CircleGeometry(R + 0.16, 40), river);
   pool.rotation.x = -Math.PI / 2;
-  pool.position.y = 0.005;
+  pool.position.y = 0.006;
   pool.userData.noInk = true;
-  g.add(wall, top, curtain, pool);
-  const mistMat = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.42, depthWrite: false });
+  const outflow = box(0.36, 0.008, 0.3, river, 0, 0.006, R + 0.18);
+  outflow.userData.noInk = true;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(R - 0.07, 0.035, 8, 40, arc - 0.1), foam);
+  ring.rotation.x = Math.PI / 2;
+  ring.rotation.z = start + 0.05 - Math.PI / 2;
+  ring.position.y = 0.02;
+  ring.userData.noInk = true;
+  g.add(wall, top, upstream, curtain, pool, outflow, ring);
+  // spray rising off the plunge
+  const mistMat = new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.5, depthWrite: false });
   const mist = [];
-  for (let i = 0; i < 7; i++) {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.07 + (i % 3) * 0.025, 10, 8), mistMat);
-    const a = start + ((i + 0.5) / 7) * arc;
-    m.position.set(Math.sin(a) * (R - 0.12), 0.05 + (i % 2) * 0.04, Math.cos(a) * (R - 0.12));
+  for (let i = 0; i < 9; i++) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.06 + (i % 3) * 0.03, 10, 8), mistMat);
+    const a = start + ((i + 0.5) / 9) * arc;
+    m.position.set(Math.sin(a) * (R - 0.12), 0.06 + (i % 2) * 0.05, Math.cos(a) * (R - 0.12));
     m.userData.noInk = true;
     m.userData.base = m.position.y;
     mist.push(m);
     g.add(m);
   }
-  // and the rainbow, because there always is one
-  const rainbow = new THREE.Group();
-  ["#ff4d4d", "#ffa63d", "#ffe14d", "#57d977", "#4db8ff", "#9d6bff"].forEach((col, i) => {
-    const t = new THREE.Mesh(
-      new THREE.TorusGeometry(0.26 - i * 0.014, 0.0075, 6, 40, Math.PI),
-      new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.62, depthWrite: false }),
-    );
-    t.userData.noInk = true;
-    rainbow.add(t);
-  });
-  // off to one side, in the spray, so the falls stay the star
-  rainbow.position.set(0.22, 0.02, 0.3);
-  rainbow.rotation.y = -0.35;
-  g.add(rainbow);
+  // the Maid of the Mist, nosing towards the falls
+  const boat = new THREE.Group();
+  const hull = box(0.12, 0.035, 0.05, toon("#2f6fd0"), 0, 0.02, 0);
+  const cabin = box(0.07, 0.03, 0.04, toon("#ffffff"), -0.005, 0.05, 0);
+  const crowd = box(0.05, 0.012, 0.036, toon("#4fa6ff"), -0.005, 0.071, 0);
+  boat.add(hull, cabin, crowd);
+  boat.position.set(0.05, 0, R * 0.55);
+  boat.rotation.y = 0.5;
+  g.add(boat);
   outline(g);
   g.userData.tick = (time) => {
     water.offset.y = (time * 0.9) % 1;
+    boat.position.y = Math.sin(time * 2.2) * 0.006;
+    boat.rotation.z = Math.sin(time * 1.7) * 0.06;
     mist.forEach((m, i) => {
-      m.position.y = m.userData.base + Math.sin(time * 1.3 + i) * 0.015;
-      m.scale.setScalar(1 + Math.sin(time * 0.9 + i * 1.7) * 0.08);
+      m.position.y = m.userData.base + Math.sin(time * 1.3 + i) * 0.02;
+      m.scale.setScalar(1 + Math.sin(time * 0.9 + i * 1.7) * 0.1);
     });
   };
   return g;
 }
 
-/** Toronto: the CN Tower, with Niagara Falls (and its rainbow) just down the road. */
+/** San Jose: the Winchester Mystery House (mustard walls, red trim, towers everywhere) under palms. */
+function winchesterHouse() {
+  const g = new THREE.Group();
+  const wall = toon("#e7b548");
+  const trim = toon("#b8402c");
+  const roof = toon("#6e2f2a");
+  const glass = toon("#7fd3e6");
+  const white = toon("#fff3dc");
+  const lawn = toon("#6fae4a");
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.82, 0.04, 40), lawn);
+  base.position.y = 0.02;
+  g.add(base);
+  g.add(box(0.5, 0.012, 0.36, toon("#d9cdb3"), 0, 0.045, 0.5)); // front path
+  // a hip roof: a 4-sided cone squashed to the floor plan
+  const hip = (w, d, h, x, y, z) => {
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.71, h, 4), roof);
+    m.rotation.y = Math.PI / 4;
+    m.scale.set(w, 1, d);
+    m.position.set(x, y + h / 2, z);
+    return m;
+  };
+  // ground floor, upper floor, each with a red band and a row of windows
+  const floors = [
+    [0.04, 0.26, 0.92, 0.42],
+    [0.3, 0.22, 0.72, 0.36],
+  ];
+  for (const [y, h, w, d] of floors) {
+    g.add(box(w, h, d, wall, 0, y + h / 2, 0));
+    g.add(box(w + 0.02, 0.025, d + 0.02, trim, 0, y + h, 0));
+    const n = Math.round(w / 0.16);
+    for (let i = 0; i < n; i++) {
+      const x = -w / 2 + (w / n) * (i + 0.5);
+      g.add(box(0.06, h * 0.5, 0.01, white, x, y + h * 0.52, d / 2 + 0.004));
+      g.add(box(0.044, h * 0.4, 0.012, glass, x, y + h * 0.52, d / 2 + 0.006));
+    }
+  }
+  g.add(hip(0.8, 0.44, 0.2, 0, 0.545, 0));
+  // front gable over the porch, with columns
+  g.add(box(0.36, 0.02, 0.14, trim, 0, 0.3, 0.27));
+  for (const x of [-0.16, 0, 0.16]) g.add(box(0.02, 0.26, 0.02, white, x, 0.17, 0.33));
+  const gable = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.14, 3), roof);
+  gable.rotation.set(0, Math.PI, 0);
+  gable.scale.set(1, 1, 0.5);
+  gable.position.set(0, 0.38, 0.27);
+  g.add(gable);
+  // the towers that made it famous: a round turret, a square tower, a little cupola
+  const turret = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.62, 10), wall);
+  turret.position.set(-0.46, 0.35, 0.08);
+  const tCap = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.34, 10), roof);
+  tCap.position.set(-0.46, 0.83, 0.08);
+  g.add(turret, tCap, box(0.24, 0.025, 0.24, trim, -0.46, 0.62, 0.08));
+  for (const y of [0.24, 0.48]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.112, 0.112, 0.07, 10, 1, true, -0.5, 1), glass);
+    w.position.set(-0.46, y, 0.08);
+    g.add(w);
+  }
+  g.add(box(0.2, 0.5, 0.2, wall, 0.38, 0.55, -0.02), box(0.22, 0.025, 0.22, trim, 0.38, 0.8, -0.02));
+  g.add(box(0.07, 0.14, 0.01, glass, 0.38, 0.62, 0.085));
+  g.add(hip(0.3, 0.3, 0.26, 0.38, 0.81, -0.02));
+  g.add(box(0.1, 0.08, 0.1, wall, -0.05, 0.7, -0.05), hip(0.14, 0.14, 0.12, -0.05, 0.74, -0.05));
+  // a spire on each tower
+  for (const [x, y, z] of [[-0.46, 1.0, 0.08], [0.38, 1.07, -0.02]]) g.add(box(0.012, 0.08, 0.012, trim, x, y, z));
+  // palms (Circle of Palms), leaning out either side
+  const palm = (x, z, h, lean) => {
+    const p = new THREE.Group();
+    const trunk = toon("#9c7448");
+    for (let i = 0; i < 6; i++) {
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.03, h / 6, 7), trunk);
+      seg.position.set(Math.sin((i / 6) * 1.2) * lean, (h / 6) * (i + 0.5), 0);
+      p.add(seg);
+    }
+    const leaf = toon("#3f9e45");
+    for (let i = 0; i < 7; i++) {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), leaf);
+      f.scale.set(1, 0.14, 0.32);
+      const a = (i / 7) * Math.PI * 2;
+      f.position.set(Math.sin(1.2) * lean + Math.cos(a) * 0.12, h - 0.02 - (i % 2) * 0.02, Math.sin(a) * 0.12);
+      f.rotation.set(0, -a, (i % 2 ? -0.35 : -0.2));
+      p.add(f);
+    }
+    p.position.set(x, 0.04, z);
+    return p;
+  };
+  g.add(palm(-0.68, 0.32, 0.72, -0.08), palm(0.7, 0.28, 0.62, 0.07), palm(0.62, -0.34, 0.5, 0.05));
+  return outline(g);
+}
+
+/** Toronto: the CN Tower, with Niagara Falls just down the road. */
 function toronto() {
   const g = new THREE.Group();
   const tower = cnTower();
-  tower.position.x = -0.3;
+  tower.position.set(-0.34, 0, -0.05);
+  tower.scale.setScalar(1.15);
   const falls = niagaraFalls();
-  falls.scale.setScalar(0.7);
-  falls.position.set(0.3, 0, 0.08);
+  falls.scale.setScalar(0.72);
+  falls.position.set(0.4, 0, 0.0);
+  falls.rotation.y = -0.15;
   g.add(tower, falls);
-  g.userData.tick = (time) => falls.userData.tick?.(time);
+  g.userData.tick = (time) => {
+    tower.userData.tick?.(time);
+    falls.userData.tick?.(time);
+  };
   return g;
 }
 
@@ -377,6 +545,7 @@ const CATALOG = [
   { id: "toronto", re: null, city: /^toronto$/i, build: toronto },
   { id: "cn", re: /cn\s*tower/i, city: null, build: cnTower },
   { id: "niagara", re: /niagara/i, city: /^niagara(\s*falls)?$/i, build: niagaraFalls, wide: true },
+  { id: "san-jose", re: /winchester/i, city: /^san\s*jos[eé]$/i, build: winchesterHouse, wide: true },
   { id: "golden-gate", re: /golden\s*gate/i, city: /^san\s*francisco$/i, build: goldenGate, wide: true },
   { id: "eiffel", re: /eiffel/i, city: /^paris$/i, build: eiffelTower },
   { id: "big-ben", re: /big\s*ben|elizabeth\s*tower|westminster/i, city: /^london$/i, build: bigBen },
@@ -418,6 +587,11 @@ export function createLandmarks(globe, { reduced }) {
     hide();
     if (!entry) return false;
     let obj = cache.get(key);
+    // the same landmark may still be shrinking away from a moment ago: take it back
+    if (obj) {
+      const i = leaving.findIndex((l) => l.obj === obj);
+      if (i >= 0) leaving.splice(i, 1);
+    }
     if (!obj) {
       obj = new THREE.Group();
       obj.add(entry.build());
@@ -479,3 +653,4 @@ export function createLandmarks(globe, { reduced }) {
 
   return { show, hide, update, get active() { return !!current; } };
 }
+
