@@ -16,6 +16,7 @@ Disallow: /roblox/
 
 # Client concepts shared in pitches.
 Disallow: /monkey-quest/
+Disallow: /anpanman/
 
 # Activated-retail tools: internal admin, published endcaps, the AR hand-off page,
 # the endcap renderer and its APIs. All reached by link, never by search.
@@ -38,5 +39,6 @@ Disallow: /shelf
 Disallow: /merch-shelf/
 Disallow: /labs/
 Disallow: /evade/cola-run-lab/
+Disallow: /evade/labs/
 
 Sitemap: https://medialife.ai/sitemap.xml

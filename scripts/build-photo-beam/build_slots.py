@@ -14,7 +14,7 @@ Slots:
   kc-old, kc-old-l     the blue cap of the Roblox Bobo (blue near the head; the light-blue shirt is below the box)
   kc-can, kc-can-back  the can's body (the label): the saturated print inside the acrylic, rows where the can is at
                        its full width (below the shoulder, above the base)
-  tee-sukeban          two slots on one target (Spray Bobo's tee picture, loaded from spray-bobo/targets/):
+  tee-sukeban          (removed 2026-11-24, kept as a recipe) two slots on one target (the MEDIALIFE tee picture):
     face               kind 'face': her face skin (the largest pink skin blob round the face), filled across each row
                        with her eyes, nose and mouth, so a selfie face replaces hers; the fringe above the eye line,
                        the side hair, the earrings and both hands (the other skin blobs, grown over the red nails) are
@@ -36,7 +36,7 @@ from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / 'public/evade/keychain-ar/image-targets'
-SRC_TEE = ROOT / 'public/evade/spray-bobo/targets'
+SRC_TEE = ROOT / 'public/labs/medialife-spray/targets'   # for a mask-measured slot (none now: the Sukeban tee left Photo Beam 2026-11-24)
 OUT = ROOT / 'public/evade/photo-beam/slots'
 
 # search boxes (fractions of the picture: u0, v0, u1, v1) and colour rules (PIL HSV, all 0..255)
@@ -48,9 +48,6 @@ SLOTS = {
     'kc-can':      dict(kind='can', box=(0.08, 0.05, 0.92, 0.97), outline='spray-bobo/art/can-outline.json'),   # a photo with
     # dark brown acrylic round a grey print: colour cannot split them, so the can's drawn outline (Spray Bobo / X-Ray) is used
     'kc-can-back': dict(kind='can', box=(0.08, 0.05, 0.92, 0.97), sat=48, val=40),
-    # two slots on the Sukeban tee: (target, piece key) given per slot id; box in pixels of the 1200x1600 picture
-    'tee-sukeban-face': dict(kind='face', target='tee-sukeban', piece='sukeface', src='tee', box=(400, 480, 880, 960), bulge=0, shadeK=0.45),
-    'tee-sukeban-top':  dict(kind='band', custom='top', target='tee-sukeban', piece='suketop', src='tee', box=(260, 1000, 1020, 1580), bulge=0.12, shadeK=1.6),
 }
 PIECE = {'kc-bobo': 'bobo', 'kc-bobo-l': 'bobo', 'kc-old': 'old', 'kc-old-l': 'old', 'kc-can': 'can', 'kc-can-back': 'can'}
 N_COLS = 48          # band: columns sampled along it

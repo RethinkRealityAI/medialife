@@ -12,7 +12,7 @@ out and hovers over it. Spark:
 Image tracking is the open-source 8th Wall engine (vendored at `/evade/keychain-ar/vendor/xr/`) with three.js r180,
 built from the immersive skill's 8th Wall template. Static files, no build step.
 
-Target: the Sukeban tee from Spray Bobo (`/evade/spray-bobo/targets/tee-sukeban.json`, print 304.8 x 406.4 mm).
+Target: the Sukeban tee from Spray Bobo (`/labs/medialife-spray/targets/tee-sukeban.json`, print 304.8 x 406.4 mm).
 To test without the tee, open `target/` on a laptop screen and point the phone at it.
 
 ## URL parameters

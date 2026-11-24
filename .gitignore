@@ -50,3 +50,4 @@ __pycache__/
 
 # Spray Studio build output (npm run build:studio)
 /public/spray/
+/public/evade/hub/
