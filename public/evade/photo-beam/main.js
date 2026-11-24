@@ -35,19 +35,18 @@ const store = { get(k, d) { try { const v = localStorage.getItem('photo-beam-' +
 
 // ---------------------------------------------------------------- what is tracked
 // A piece is one photo holder (one photo, one IndexedDB key) and the target pictures it shows on; a picture can carry
-// several slots (the Sukeban tee: her face and her top, each its own piece). pal: the slot whose palette the styles use.
+// several slots. pal: the slot whose palette the styles use. EVADE's keychain only: MEDIALIFE's own products (the
+// Sukeban tee) were taken out on 2026-11-24 (Dapo: no MEDIALIFE products in EVADE experiences).
 const PIECES = {
   bobo: { k: 'bobo', name: 'Bobo', where: "Bobo's visor", spot: "Bobo's visor", targets: ['kc-bobo', 'kc-bobo-l'], pal: 'kc-bobo' },
   can: { k: 'can', name: 'the can', where: "the can's label", spot: 'the Eclipse can', targets: ['kc-can', 'kc-can-back'], pal: 'kc-can-back' },
   old: { k: 'old', name: 'Roblox Bobo', where: "Bobo's cap", spot: "Roblox Bobo's cap", targets: ['kc-old', 'kc-old-l'], pal: 'kc-old' },
-  sukeface: { k: 'sukeface', name: 'Sukeban', where: "Sukeban's face", spot: "Sukeban's face", targets: ['tee-sukeban'], pal: 'tee-sukeban-face', face: true },
-  suketop: { k: 'suketop', name: 'Sukeban', where: "Sukeban's top", spot: "Sukeban's top", targets: ['tee-sukeban'], pal: 'tee-sukeban-top' },
 };
 for (const P of Object.values(PIECES)) Object.assign(P, { status: 'empty', src: null, params: null, label: null, tex: null, spin: 0, spinV: 0, slots: [] });
-const TARGETS = [...new Set(Object.values(PIECES).flatMap((P) => P.targets))];   // 9 pictures (the engine's limit is 10)
-// where each target's files are: the keychain's, or Spray Bobo's tee (loaded from there, not copied)
-const TEE = '/evade/spray-bobo/targets/';
-const TDIR = (n) => (n === 'tee-sukeban' ? TEE : KC + 'image-targets/');
+const TARGETS = [...new Set(Object.values(PIECES).flatMap((P) => P.targets))];   // 6 pictures (the engine's limit is 10)
+const TDIR = () => KC + 'image-targets/';
+// The face-fit code below (a face-shaped slot: eye line, chin, Match skin, "On <character>" preview) is kept for a
+// future face slot; no piece has face: true now, so it is idle and the editor's view switch is hidden.
 // Losing the print: the last pose is held this long, and only while the phone is still (Spray Bobo's numbers)
 const HOLD_STILL_MS = 250, HOLD_BLIND_MS = 120, STILL_DEG = 25, STILL_ACC = 1.2;
 const REOPEN_AFTER_MS = 2500;                 // lost longer than this: the photo re-materialises when found
@@ -119,11 +118,10 @@ const loadTex = (u) => new Promise((res, rej) => texLoader.load(u, res, undefine
 let SL = null, LAYOUT = null;
 const SLREC = {};                             // every slot record by id
 const assets = Promise.all([
-  getJson(KC + 'image-targets/layout.json'), getJson(TEE + 'layout.json'),
+  getJson(KC + 'image-targets/layout.json'),
   Promise.all(TARGETS.map((n) => getJson(TDIR(n) + `${n}.json`))),
   getJson(HERE + 'slots/slots.json'),
-]).then(async ([layout, teeLayout, tdata, slots]) => {
-  layout.targets = { ...layout.targets, ...teeLayout.targets };
+]).then(async ([layout, tdata, slots]) => {
   LAYOUT = layout; SL = slots;
   const recs = TARGETS.flatMap((n) => slots.targets[n].map((r) => Object.assign(r, { target: n })));
   const tex = await Promise.all(recs.map((r) => Promise.all([loadTex(HERE + 'slots/' + r.mask), loadTex(HERE + 'slots/' + r.shade)])));
@@ -134,7 +132,14 @@ const assets = Promise.all([
     P.palette = SLREC[P.pal].palette;
   }
   // the capture guide has the face slot's shape, with her eye line, so a face framed in it fits her face
-  const F = PIECES.sukeface, fr = recOf(F, 'tee-sukeban'), lb = labelBox(fr);
+  const F = Object.values(PIECES).find((P) => P.face);
+  if (!F) {
+    // no face slot: a plain face frame (no inner oval or eye line)
+    document.documentElement.classList.add('noface');
+    $('cap-t').textContent = 'Fit your face in the frame';
+    return { tdata };
+  }
+  const fr = recOf(F, F.targets[0]), lb = labelBox(fr);
   F.eyeT = (fr.eye - lb.va) / (lb.vb - lb.va);
   // her chin: the lowest point of the face mask near the middle (the mask runs a little over the jaw)
   const mid = fr.geo.filter((c) => Math.abs(c[0] - (lb.ua + lb.ub) / 2) < (lb.ub - lb.ua) * 0.12);
@@ -180,7 +185,7 @@ handoff.then((src) => {
   th.getContext('2d').drawImage(src, 0, 0, th.width, th.height);
   $('booth').hidden = false; $('splash').classList.add('from-booth');
   $('title').innerHTML = 'Beam your <span>booth photo</span>';
-  $('lead').textContent = 'Style it, then point at your keychain or the Sukeban tee and lock on. It beams onto Bobo\'s visor, the Eclipse can, Roblox Bobo\'s cap, or Sukeban\'s face and top.';
+  $('lead').textContent = 'Style it, then point at your keychain and lock on. It beams onto Bobo\'s visor, the Eclipse can or Roblox Bobo\'s cap.';
   if (loaded) $('b-start').textContent = 'Make it yours';
 });
 
@@ -567,8 +572,8 @@ function tick(dt) {
   if (!pose.valid) {
     lostFor += dt;
     if (mode === 'seen' && lostFor > 0.6) setMode('find');
-    if (mode === 'find') hint(everFound ? 'Find a charm again' : 'Point at your keychain or the Sukeban tee');
-    if (mode === 'aim' && lostFor > 0.4) hint('Point at a keychain charm or the Sukeban tee');
+    if (mode === 'find') hint(everFound ? 'Find a charm again' : 'Point at your keychain');
+    if (mode === 'aim' && lostFor > 0.4) hint('Point at a keychain charm');
   } else { lostFor = 0; if (mode === 'find') setMode('seen'); }
 
   // the slots in view. Each glows (flat cyan outline and fill) while it can take the photo; yellow once locked on.
@@ -882,7 +887,7 @@ async function decodeImage(blob) {
 // The oval is in label units (0..1 across and down), so it reaches above the label, under her fringe.
 const FACE_W = { narrow: 0.72, normal: 0.8, wide: 0.9 };
 function faceOval(fw) {
-  const F = PIECES.sukeface, eye = F.eyeT || 0.26, chin = F.chinT || 0.94, he = (chin - eye) / 0.58;   // eyes 42 % down a face
+  const F = Object.values(PIECES).find((P) => P.face) || {}, eye = F.eyeT || 0.26, chin = F.chinT || 0.94, he = (chin - eye) / 0.58;   // eyes 42 % down a face
   return { cx: 0.5, cy: eye - 0.42 * he + he / 2, rx: fw * he / (F.aspect || 1.2) / 2, ry: he / 2 };
 }
 function faceClip(g, w, h, fw) {
@@ -1189,7 +1194,7 @@ const ED = { src: null, params: null, face: null, view: 'any', ptrs: new Map(), 
 // The face guide on the capture screen has the shape of Sukeban's face slot, with her eye line: by default the part
 // of the photo inside the guide is what lands in her face (cover fit, zoomed and panned to the guide's box).
 function faceFromGuide(src, guide) {
-  const F = PIECES.sukeface, base = { faceW: FACE_W.normal, match: true };   // Match skin on for her face: no seam
+  const F = Object.values(PIECES).find((P) => P.face) || {}, base = { faceW: FACE_W.normal, match: true };   // Match skin on for her face: no seam
   if (!guide || !F.aspect) return { zoom: 1, px: 0, py: 0, ...base };
   const Lw = 1000, Lh = Lw / F.aspect, sw = src.width, sh = src.height, sc0 = Math.max(Lw / sw, Lh / sh);
   const gw = (guide.x1 - guide.x0) * sw, gcx = (guide.x0 + guide.x1) / 2 * sw, gcy = (guide.y0 + guide.y1) / 2 * sh;
