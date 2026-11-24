@@ -339,6 +339,21 @@
     X-Robots-Tag = "noindex, nofollow, noarchive"
     Cache-Control = "public, max-age=86400"
 
+# ── Anpanman, Activated (Nippon TV US launch proposal) ─────────────────────
+# /anpanman/ is a static client proposal page (public/anpanman/). Unlisted: it carries
+# commercial terms and the client's IP. Page + scripts revalidate; media caches for a day.
+[[headers]]
+  for = "/anpanman/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=300, must-revalidate"
+
+[[headers]]
+  for = "/anpanman/assets/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "public, max-age=86400"
+
 # ── Virtual business cards ───────────────────────────────────────────────────
 # Cards are static files at the site root (medialife.ai/dapo), so unlike the SSR
 # routes they DO receive netlify.toml headers. The per-card noindex rules below

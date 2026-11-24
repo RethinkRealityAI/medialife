@@ -1,18 +1,23 @@
 // Bobo's Arcade: round "Back to Bobo's Hub" home button (icon only, 40px + 4px touch slop, so it clears the centred logos) on every EVADE experience opened from BOBO OS.
-// Shows only when the page was opened from the hub (?from=hub), and stays for the rest of the tab's visit
-// (sessionStorage) so a reload or an in-page link keeps it. Include with:
+// Shows only when the page was opened from a hub, and stays for the rest of the tab's visit (sessionStorage) so a
+// reload or an in-page link keeps it. ?from=hub = Cola Run's BOBO OS; ?from=evade-hub = the EVADE Hub (/evade/hub/,
+// Bobo's Hideout in 3D/AR), which it returns to with its arcade open. Include with:
 //   <script src="/evade/arcade/back.js" defer></script>
 (() => {
   const KEY = "evade-from-hub";
-  const HUB = "/evade/cola-run/?mode=arcade";
-  let on = new URLSearchParams(location.search).get("from") === "hub";
+  const HUBS = { hub: "/evade/cola-run/?mode=arcade", "evade-hub": "/evade/hub/?arcade" };
+  const from = new URLSearchParams(location.search).get("from");
+  let HUB = HUBS[from] || "";
   try {
-    if (on) sessionStorage.setItem(KEY, "1");
-    else on = sessionStorage.getItem(KEY) === "1";
+    if (HUB) sessionStorage.setItem(KEY, HUB);
+    else {
+      const saved = sessionStorage.getItem(KEY);
+      HUB = saved === "1" ? HUBS.hub : saved || "";
+    }
   } catch {
     /* private mode: query string only */
   }
-  if (!on) return;
+  if (!HUB) return;
   const css = document.createElement("style");
   css.textContent = `
   .evade-hub-back{position:fixed;z-index:2147483000;left:calc(env(safe-area-inset-left,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 10px);
