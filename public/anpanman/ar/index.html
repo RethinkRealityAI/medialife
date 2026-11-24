@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Anpanman, Activated (unlisted Nippon TV pitch): place the four concept products in your room.
+       /anpanman/ar/?p=keychain|standee|sheet|shirt. Built on the shared Labs demo shell (/labs/demos/shared/), world mode:
+       reticle, tap Place here, pinch to resize, Move always on screen, photo shutter, open-on-phone QR on computers.
+       Products: ../assets/ar/<p>.glb, exported from the live 3D products on /anpanman/ (official art composited as supplied).
+       World tracking comes from 8th Wall's distributed engine binary (@8thwall/engine-binary 1.0.0,
+       Copyright (c) 2026 Niantic Spatial, Inc., XR Engine License Agreement:
+       https://github.com/8thwall/engine/blob/main/LICENSE), loaded unmodified from jsDelivr as the licence asks.
+       Licences are shown to users only behind the menu's Licences link (/evade/licences/). -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="theme-color" content="#0f1114">
+  <title>See it in your space · Anpanman, Activated</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    { "imports": { "three": "/roblox/creators/vendor/three/build/three.module.js", "three/addons/": "/roblox/creators/vendor/three/jsm/" } }
+  </script>
+  <link rel="stylesheet" href="/labs/demos/shared/shell.css?v=1">
+  <link rel="stylesheet" href="./style.css?v=1">
+</head>
+<body>
+  <script src="/vendor/ar-kit/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@8thwall/engine-binary@1.0.0/dist/xr.js" async crossorigin="anonymous" data-preload-chunks="slam"></script>
+  <script type="module" src="./main.js?v=1"></script>
+</body>
+</html>
