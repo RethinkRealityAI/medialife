@@ -6,10 +6,14 @@
 //   experience 'userGesture' -> unlock audio
 //   experience 'arcade'      -> Bobo's Arcade: the whole list (the Arcade button) or one experience's card (a machine)
 //   window 'evade:open-arcade' (the HUD menu) -> the whole list
+//   ?hub=BOBO-XXXX-XXXX (a merch QR / NFC tag) or ?code=  -> the unlock form, prefilled (sent at once if signed in)
+//   back from an experience that completed a mission  -> the unlock moment for the machines it opened
 import type { ExperienceApi, PlayGameId } from '@/shared/contracts';
 import type { AppState, AppStore, Toast } from './state/appState';
 import { loadExperience, preloadAudioUnlock, unlockAudio } from './loaders';
 import { BRAND } from '@/evade/brand/brand';
+import { arcadeState } from '@/evade/catalog';
+import { TEAM, signedInEmail, takeNewlyOpened, takeUrlCode } from '@/evade/unlocks';
 
 /** Same name the HUD fires from its menu (src/experience/hud/hud.ts OPEN_ARCADE_EVENT). */
 const OPEN_ARCADE_EVENT = 'evade:open-arcade';
@@ -20,6 +24,8 @@ export class AppController {
   private timers = new Map<string, number>();
   private bootToken = 0;
   private arcadeOnStart = typeof location !== 'undefined' && new URLSearchParams(location.search).has('arcade');
+  /** Read before anything else touches the URL (and removed from the address bar). */
+  private urlCode = takeUrlCode();
 
   constructor(readonly store: AppStore) {}
 
@@ -76,11 +82,38 @@ export class AppController {
     if (this.s.started) return;
     this.set({ started: true });
     // /evade/hub/?arcade (an experience's home button): straight back into Bobo's Arcade
-    if (this.arcadeOnStart) {
+    if (this.urlCode && !TEAM) {
+      const code = this.urlCode;
+      this.urlCode = null;
       this.arcadeOnStart = false;
-      this.timer('arcadeOnStart', 650, () => this.openArcade(null));
+      this.timer('unlockOnStart', 650, () => this.openUnlock(code, !!signedInEmail()));
+      return;
     }
+    // machines opened since the last visit (a mission done in another experience): their moment, once
+    void arcadeState().then((items) => {
+      const fresh = takeNewlyOpened(items.filter((i) => !i.locked && !i.soon).map((i) => i.id));
+      if (fresh.length) this.timer('celebrateOnStart', 900, () => this.celebrate(fresh, 'Mission complete'));
+      else if (this.arcadeOnStart) {
+        this.arcadeOnStart = false;
+        this.timer('arcadeOnStart', 650, () => this.openArcade(null));
+      }
+    });
   }
+
+  /** The unlock form (over the Arcade). `auto` sends it straight away with the saved email. */
+  openUnlock(code = '', auto = false) {
+    this.set({ sheetOpen: true, tab: 'games', unlockForm: { code, auto }, celebrate: null });
+  }
+
+  closeUnlock() { this.set({ unlockForm: null }); }
+
+  /** The unlock moment for machines that just opened. */
+  celebrate(ids: string[], why: string) {
+    try { navigator.vibrate?.([30, 60, 30, 60, 120]); } catch { /* not allowed */ }
+    this.set({ sheetOpen: true, tab: 'games', unlockForm: null, celebrate: { ids, why }, arcadeFocus: null });
+  }
+
+  endCelebrate() { this.set({ celebrate: null }); }
 
   // ------------------------------------------------------------------ Bobo's Arcade
   /** Open the Arcade sheet on the whole list (null) or on one experience's card. */
@@ -90,7 +123,7 @@ export class AppController {
 
   setArcadeFocus(focus: string | null) { this.set({ arcadeFocus: focus }); }
 
-  closeSheet() { this.set({ sheetOpen: false, arcadeFocus: null }); }
+  closeSheet() { this.set({ sheetOpen: false, arcadeFocus: null, unlockForm: null, celebrate: null }); }
 
   /** Close the sheet and start an in-hub quick game (Selfie / Photo switch to 3D first). Call from the tap. */
   async startQuickGame(id: PlayGameId): Promise<boolean> {

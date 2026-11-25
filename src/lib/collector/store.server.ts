@@ -76,6 +76,21 @@ export function codeSecret(ns: ArNamespace): string | null {
 /** The shared test code: BOBO-TEST-CATS. On for previews and dev; prod only with COLLECTOR_TEST_CODE=on. */
 export const TEST_CODE = "BOBOTESTCATS";
 export const TEST_SERIAL = 412;
+/**
+ * Every test code and the products it unlocks (all share the "TE" batch key, which real batches skip).
+ * BOBO-TEST-CATS is the keychain (the original test code); the others let the team try each rung of Bobo's Hideout's
+ * unlock ladder, and BOBO-TEST-EVRY opens the whole collection.
+ */
+export const TEST_CODES: Record<string, { products: string[]; label: string }> = {
+  BOBOTESTCATS: { products: ["keychain"], label: "Keychain" },
+  BOBOTESTTEES: { products: ["tee"], label: "Tee" },
+  BOBOTESTHUGS: { products: ["hoodie"], label: "Hoodie" },
+  BOBOTESTDESK: { products: ["deskmat"], label: "Desk mat" },
+  BOBOTESTEVRY: {
+    products: ["keychain", "hoodie", "tee", "deskmat", "mystery"],
+    label: "Everything",
+  },
+};
 export function testCodeEnabled(ns: ArNamespace): boolean {
   const v = process.env.COLLECTOR_TEST_CODE?.trim().toLowerCase();
   if (v === "off") return false;

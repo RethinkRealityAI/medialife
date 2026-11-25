@@ -24,6 +24,10 @@ export interface AppState {
   arcadeFocus: string | null;
   toast: Toast | null;
   isDesktop: boolean;
+  /** The "unlock with your merch" form over the Arcade (code prefilled from a QR / NFC link; auto = send at once). */
+  unlockForm: { code: string; auto: boolean } | null;
+  /** The unlock moment: machines that just opened, and why. */
+  celebrate: { ids: string[]; why: string } | null;
 }
 
 export function createAppStore() {
@@ -36,6 +40,8 @@ export function createAppStore() {
     tab: 'games',
     arcadeFocus: null,
     toast: null,
+    unlockForm: null,
+    celebrate: null,
     isDesktop: typeof matchMedia === 'function' && matchMedia('(min-width: 901px)').matches,
   });
 }

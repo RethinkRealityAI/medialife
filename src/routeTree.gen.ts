@@ -83,6 +83,7 @@ import { Route as ApiBoboPlacesRouteImport } from './routes/api.bobo.places'
 import { Route as ApiCollectorAlertsDotjsonRouteImport } from './routes/api.collector.alerts[.]json'
 import { Route as ApiCollectorMeRouteImport } from './routes/api.collector.me'
 import { Route as ApiCollectorUnlockRouteImport } from './routes/api.collector.unlock'
+import { Route as ApiCollectorUnlocksDotjsonRouteImport } from './routes/api.collector.unlocks[.]json'
 import { Route as ApiGiveawayDiscordRouteImport } from './routes/api.giveaway.discord'
 import { Route as ApiHolocastCodeRouteImport } from './routes/api.holocast.$code'
 import { Route as ApiHolocastRoomsRouteImport } from './routes/api.holocast.rooms'
@@ -573,6 +574,12 @@ const ApiCollectorUnlockRoute = ApiCollectorUnlockRouteImport.update({
   path: '/api/collector/unlock',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCollectorUnlocksDotjsonRoute =
+  ApiCollectorUnlocksDotjsonRouteImport.update({
+    id: '/api/collector/unlocks.json',
+    path: '/api/collector/unlocks.json',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiGiveawayDiscordRoute = ApiGiveawayDiscordRouteImport.update({
   id: '/api/giveaway/discord',
   path: '/api/giveaway/discord',
@@ -1252,6 +1259,7 @@ export interface FileRoutesByFullPath {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/collector/unlocks.json': typeof ApiCollectorUnlocksDotjsonRoute
   '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
   '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
@@ -1436,6 +1444,7 @@ export interface FileRoutesByTo {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/collector/unlocks.json': typeof ApiCollectorUnlocksDotjsonRoute
   '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
   '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
@@ -1629,6 +1638,7 @@ export interface FileRoutesById {
   '/api/collector/alerts.json': typeof ApiCollectorAlertsDotjsonRoute
   '/api/collector/me': typeof ApiCollectorMeRoute
   '/api/collector/unlock': typeof ApiCollectorUnlockRoute
+  '/api/collector/unlocks.json': typeof ApiCollectorUnlocksDotjsonRoute
   '/api/giveaway/discord': typeof ApiGiveawayDiscordRouteWithChildren
   '/api/holocast/$code': typeof ApiHolocastCodeRouteWithChildren
   '/api/holocast/rooms': typeof ApiHolocastRoomsRoute
@@ -1823,6 +1833,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/collector/unlocks.json'
     | '/api/giveaway/discord'
     | '/api/holocast/$code'
     | '/api/holocast/rooms'
@@ -2007,6 +2018,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/collector/unlocks.json'
     | '/api/giveaway/discord'
     | '/api/holocast/$code'
     | '/api/holocast/rooms'
@@ -2199,6 +2211,7 @@ export interface FileRouteTypes {
     | '/api/collector/alerts.json'
     | '/api/collector/me'
     | '/api/collector/unlock'
+    | '/api/collector/unlocks.json'
     | '/api/giveaway/discord'
     | '/api/holocast/$code'
     | '/api/holocast/rooms'
@@ -2370,6 +2383,7 @@ export interface RootRouteChildren {
   ApiCollectorAlertsDotjsonRoute: typeof ApiCollectorAlertsDotjsonRoute
   ApiCollectorMeRoute: typeof ApiCollectorMeRoute
   ApiCollectorUnlockRoute: typeof ApiCollectorUnlockRoute
+  ApiCollectorUnlocksDotjsonRoute: typeof ApiCollectorUnlocksDotjsonRoute
   ApiGiveawayDiscordRoute: typeof ApiGiveawayDiscordRouteWithChildren
   ApiHolocastCodeRoute: typeof ApiHolocastCodeRouteWithChildren
   ApiHolocastRoomsRoute: typeof ApiHolocastRoomsRoute
@@ -2934,6 +2948,13 @@ declare module '@tanstack/react-router' {
       path: '/api/collector/unlock'
       fullPath: '/api/collector/unlock'
       preLoaderRoute: typeof ApiCollectorUnlockRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/collector/unlocks.json': {
+      id: '/api/collector/unlocks.json'
+      path: '/api/collector/unlocks.json'
+      fullPath: '/api/collector/unlocks.json'
+      preLoaderRoute: typeof ApiCollectorUnlocksDotjsonRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/giveaway/discord': {
@@ -4279,6 +4300,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCollectorAlertsDotjsonRoute: ApiCollectorAlertsDotjsonRoute,
   ApiCollectorMeRoute: ApiCollectorMeRoute,
   ApiCollectorUnlockRoute: ApiCollectorUnlockRoute,
+  ApiCollectorUnlocksDotjsonRoute: ApiCollectorUnlocksDotjsonRoute,
   ApiGiveawayDiscordRoute: ApiGiveawayDiscordRouteWithChildren,
   ApiHolocastCodeRoute: ApiHolocastCodeRouteWithChildren,
   ApiHolocastRoomsRoute: ApiHolocastRoomsRoute,

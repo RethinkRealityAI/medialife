@@ -11,7 +11,8 @@
 // sharing geometry and textures. No lights are added here (the stages carry theirs, so light counts never change).
 import * as THREE from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { arcadeState, type ArcadeState } from '../catalog';
+import { arcadeState, withAccess, type ArcadeState } from '../catalog';
+import { unlockVersion } from '../unlocks';
 import { buildCabinets, loadThumbs, type Cabinet, CAB } from './arcade';
 
 export const ROOM_URL = '/hub/evade/room.glb';
@@ -237,6 +238,10 @@ export function buildHideout(mat: (m: THREE.Material) => THREE.Material = (m) =>
   content.add(cabs);
 
   let t = 0;
+  // a code claimed in the Arcade sheet (or rules arriving) re-draws the machines' screens in place; a machine that
+  // just opened gets a bright pulse on its pad and screen for a couple of seconds
+  let seenV = unlockVersion();
+  const flash = new Map<Cabinet, number>();
   return {
     root,
     room: content,
@@ -246,7 +251,24 @@ export function buildHideout(mat: (m: THREE.Material) => THREE.Material = (m) =>
       t += dt;
       for (const o of orbit) o.rotation.y += dt * 0.12;
       for (const f of fizz) f.o.position.y = f.y + Math.sin(t * 1.3 + f.ph) * f.amp;
-      for (const c of cabinets) c.tick(t);
+      if (unlockVersion() !== seenV) {
+        seenV = unlockVersion();
+        for (const c of cabinets) {
+          const was = c.item.locked;
+          const next = withAccess(c.item);
+          c.redraw(next);
+          if (was && !next.locked) flash.set(c, 2.4);
+        }
+      }
+      for (const c of cabinets) {
+        const f = flash.get(c);
+        if (f !== undefined) {
+          const left = f - dt;
+          if (left <= 0) flash.delete(c); else flash.set(c, left);
+          c.glow = Math.max(c.glow, 0.5 + 0.5 * Math.sin(t * 14) * Math.min(1, left));
+        }
+        c.tick(t);
+      }
     },
   };
 }

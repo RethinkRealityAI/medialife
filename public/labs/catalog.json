@@ -57,12 +57,20 @@
   {
     "slug": "evade-hub",
     "title": "Bobo's Hideout",
-    "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade.",
-    "url": "/evade/hub/",
+    "lead": "The EVADE hub: hang out with Bobo in his hideout in 3D, put him in your room in AR and walk into the hideout, snap a selfie in Bobo's looks, and play every EVADE game from the arcade machines in Bobo's Arcade. This is the team copy with every machine open; the fan copy locks machines until a merch code or a mission opens them.",
+    "url": "/labs/evade-hub/",
     "extraLinks": [
       {
         "label": "Open the arcade",
+        "url": "/labs/evade-hub/?arcade"
+      },
+      {
+        "label": "Fan version (locked)",
         "url": "/evade/hub/?arcade"
+      },
+      {
+        "label": "Fan version as a new fan",
+        "url": "/evade/hub/?arcade&resetunlocks"
       }
     ],
     "thumb": "/labs/img/evade-hub.webp",
@@ -84,7 +92,17 @@
     "alt": "Bobo in his hideout with the arcade machines on the left, the 3D / AR / Selfie / Photo tabs and the Arcade button",
     "share": {
       "start": 1,
-      "needs": "Any screen, camera optional"
+      "needs": "Any screen, camera optional",
+      "links": [
+        {
+          "label": "Fan version (locked)",
+          "url": "/evade/hub/?arcade"
+        },
+        {
+          "label": "Try it as a new fan",
+          "url": "/evade/hub/?arcade&resetunlocks"
+        }
+      ]
     }
   },
   {

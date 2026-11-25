@@ -3,8 +3,9 @@
 // Both the 3D/AR world (arcade cabinets in Bobo's Hideout) and the app's Arcade sheet render from this list, so a new
 // experience appears everywhere by adding one entry to games.json.
 //
-// Unlocks are local flags for now (localStorage keys set by the experiences themselves, e.g. Cola Run sets
-// `ohg-reward-earned` on a win) until the Activation API exists. `testing: true` in games.json opens everything.
+// What's locked comes from ./unlocks.ts (the team's rules from /api/collector/unlocks.json, the fan's merch codes and
+// mission flags). games.json's own `unlock` / `testing` fields are Cola Run's BOBO OS arcade's; the hub ignores them.
+import { accessFor, launchFrom, loadUnlocks, type Access } from './unlocks';
 
 export interface ArcadeItem {
   id: string;
@@ -26,6 +27,7 @@ export interface ArcadeItem {
 
 export interface ArcadeState extends ArcadeItem {
   locked: boolean;
+  access: Access;
 }
 
 const COLORS: Record<string, string> = {
@@ -66,7 +68,6 @@ export function loadArcade(): Promise<ArcadeItem[]> {
       if (r.ok) {
         const d = await r.json();
         if (Array.isArray(d.games) && d.games.length) games = d.games;
-        testing = !!d.testing;
       }
     } catch { /* offline: built-in list */ }
     const out: ArcadeItem[] = games.map((g) => ({ ...g, kind: 'game', color: COLORS[g.id] ?? '#f6c344' }));
@@ -75,21 +76,21 @@ export function loadArcade(): Promise<ArcadeItem[]> {
   })());
 }
 
-let testing = false;
-
-export function isLocked(item: ArcadeItem): boolean {
-  if (testing || !item.unlock) return false;
-  try { return !localStorage.getItem(item.unlock.key); } catch { return false; }
+/** One machine with what this fan can do with it right now. */
+export function withAccess(item: ArcadeItem): ArcadeState {
+  const access = accessFor(item.id);
+  return { ...item, soon: item.soon || access.mode === 'soon', locked: access.locked, access };
 }
 
+/** Every machine the fan may see (hidden ones left out), with its lock state. */
 export async function arcadeState(): Promise<ArcadeState[]> {
-  const items = await loadArcade();
-  return items.map((i) => ({ ...i, locked: isLocked(i) }));
+  const [items] = await Promise.all([loadArcade(), loadUnlocks()]);
+  return items.map(withAccess).filter((i) => i.access.mode !== 'hidden');
 }
 
 /** Open an experience from the hub (same tab, so Back and the experience's home button both return here). */
 export function launch(item: ArcadeItem): void {
   const u = new URL(item.url, location.origin);
-  u.searchParams.set('from', 'evade-hub');
+  u.searchParams.set('from', launchFrom());
   location.assign(u.pathname + u.search + u.hash);
 }

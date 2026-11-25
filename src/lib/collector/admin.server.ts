@@ -16,6 +16,7 @@ import {
 import {
   KEYS,
   TEST_CODE,
+  TEST_CODES,
   batchKey,
   codeFor,
   codeHash,
@@ -233,6 +234,9 @@ export async function collectorOverview(ns: ArNamespace) {
     batches,
     owners: ownerKeys.length,
     testCode: testCodeEnabled(ns) ? formatCode(TEST_CODE) : null,
+    testCodes: testCodeEnabled(ns)
+      ? Object.entries(TEST_CODES).map(([code, t]) => ({ code: formatCode(code), label: t.label }))
+      : [],
     codeSecretSet: !!process.env.COLLECTOR_CODE_SECRET,
     codesReady: codeSecret(ns) !== null,
   };

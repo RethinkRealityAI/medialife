@@ -924,6 +924,7 @@ function resolved() {
 }
 function endGame() {
   if (!game.on) return; game.on = false;
+  try { localStorage.setItem('evade-done-bobo-hoops', '1'); } catch (e) { /* private mode */ } // Bobo's Hideout mission
   const best = game.score > game.best; if (best) { game.best = game.score; store.set('best', game.best); }
   $('end-sc').textContent = game.score;
   $('end-line').textContent = `${game.made} of ${BALLS} in · ${game.swish} swish${game.swish === 1 ? '' : 'es'}`;

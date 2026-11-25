@@ -38,6 +38,7 @@ import { ROOMS, type AlertKind, type CollectorAlert } from "@/lib/collector/mode
 import { cn } from "@/lib/utils";
 
 import { isUnauthorized } from "../format";
+import { UnlocksPanel } from "./unlocks-panel";
 import {
   CopyButton,
   NamespaceBadge,
@@ -52,6 +53,7 @@ import {
 //   - Live alerts: what every fan's room computer shows (and pops up) next.
 //   - Unlock codes: batches of BOBO-XXXX-XXXX codes per product, as a CSV and a
 //     printable QR sheet for the factory.
+//   - Bobo's Hideout unlocks: which arcade machines are open in the EVADE Hub and what opens the rest.
 
 const ROOM = ROOMS.evade;
 const KIND_LABEL: Record<AlertKind, string> = {
@@ -155,6 +157,7 @@ export function CollectorPage() {
                 ns={data.ns}
               />
             </div>
+            <UnlocksPanel testCodes={data.testCodes} />
           </>
         )}
       </div>
@@ -343,7 +346,7 @@ function CodesPanel({
   const [product, setProduct] = useState(released[0]?.id ?? "keychain");
   const [count, setCount] = useState(500);
   const [label, setLabel] = useState("");
-  const [url, setUrl] = useState("https://medialife.ai/labs/collector-hub/");
+  const [url, setUrl] = useState("https://medialife.ai/evade/hub/");
 
   const create = useMutation({
     mutationFn: () =>
