@@ -3,6 +3,7 @@
  * signed-in creator belongs, which `next` values are safe to follow, and the
  * Discord OAuth links.
  */
+import { CLIENT_BASE } from "@/lib/client/model";
 import { HUB, type CreatorStatus } from "@/lib/hub/model";
 import { PARTNER_BASE } from "@/lib/hub/partners";
 
@@ -20,6 +21,7 @@ type SessionLike = {
   signedIn: boolean;
   creator?: { status: CreatorStatus } | null;
   partner?: { id: string } | null;
+  client?: { id: string } | null;
 };
 
 /**
@@ -29,6 +31,7 @@ type SessionLike = {
  */
 export function homeFor(s: SessionLike): string {
   if (!s.creator && s.partner) return PARTNER_BASE;
+  if (!s.creator && s.client) return CLIENT_BASE;
   if (s.creator?.status === "draft") return HUB_PATHS.onboarding;
   return HUB_PATHS.dashboard;
 }
@@ -43,7 +46,9 @@ export function safeNext(next: string | undefined | null): string | null {
   if (
     !next.startsWith(`${HUB.base}/`) &&
     next !== PARTNER_BASE &&
-    !next.startsWith(`${PARTNER_BASE}/`)
+    !next.startsWith(`${PARTNER_BASE}/`) &&
+    next !== CLIENT_BASE &&
+    !next.startsWith(`${CLIENT_BASE}/`)
   )
     return null;
   if (next.startsWith("//") || next.includes("\\") || /[\r\n\t]/.test(next)) return null;

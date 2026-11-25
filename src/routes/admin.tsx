@@ -9,6 +9,7 @@ import {
 import {
   ArrowUpRight,
   BarChart3,
+  Building2,
   Boxes,
   ChevronRight,
   Clapperboard,
@@ -94,6 +95,13 @@ const GROUPS: { label: string; items: NavItem[] }[] = [
     items: [
       { to: "/admin/creators", label: "Creators", icon: Users, tone: "sky" },
       { to: "/admin/partners", label: "Partners", icon: Handshake, tone: "violet" },
+      {
+        to: "/admin/clients",
+        label: "Client hubs",
+        short: "Clients",
+        icon: Building2,
+        tone: "mint",
+      },
       { to: "/admin/ugc", label: "UGC Hub", short: "UGC", icon: Clapperboard, tone: "amber" },
       { to: "/admin/giveaways", label: "Giveaways", icon: Gift, tone: "rose" },
       {

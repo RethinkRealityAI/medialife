@@ -32,6 +32,9 @@ import { Route as AdminSprayRouteImport } from './routes/admin.spray'
 import { Route as AdminUgcRouteImport } from './routes/admin.ugc'
 import { Route as AdminLoginRouteImport } from './routes/admin_.login'
 import { Route as ApiShowcaseDotjsonRouteImport } from './routes/api.showcase[.]json'
+import { Route as ClientHubAppRouteImport } from './routes/client-hub._app'
+import { Route as ClientHubJoinRouteImport } from './routes/client-hub.join'
+import { Route as ClientHubSignInRouteImport } from './routes/client-hub.sign-in'
 import { Route as CreatorHubIndexRouteImport } from './routes/creator-hub.index'
 import { Route as CreatorHubAppRouteImport } from './routes/creator-hub._app'
 import { Route as CreatorHubForgotPasswordRouteImport } from './routes/creator-hub.forgot-password'
@@ -59,6 +62,8 @@ import { Route as WithPartnerIdRouteImport } from './routes/with.$partnerId'
 import { Route as XSlugRouteImport } from './routes/x.$slug'
 import { Route as AdminBuilderIndexRouteImport } from './routes/admin.builder.index'
 import { Route as AdminBuilderSlugRouteImport } from './routes/admin.builder.$slug'
+import { Route as AdminClientsIndexRouteImport } from './routes/admin.clients.index'
+import { Route as AdminClientsClientIdRouteImport } from './routes/admin.clients.$clientId'
 import { Route as AdminCreatorsIndexRouteImport } from './routes/admin.creators.index'
 import { Route as AdminCreatorsCreatorIdRouteImport } from './routes/admin.creators.$creatorId'
 import { Route as AdminGiveawaysIndexRouteImport } from './routes/admin.giveaways.index'
@@ -102,6 +107,15 @@ import { Route as ApiSprayQrRouteImport } from './routes/api.spray.qr'
 import { Route as ApiSprayRealtimeRouteImport } from './routes/api.spray.realtime'
 import { Route as ApiSpraySetsRouteImport } from './routes/api.spray.sets'
 import { Route as ApiUgcUploadsRouteImport } from './routes/api.ugc.uploads'
+import { Route as ClientHubAppIndexRouteImport } from './routes/client-hub._app.index'
+import { Route as ClientHubAppExperiencesRouteImport } from './routes/client-hub._app.experiences'
+import { Route as ClientHubAppFilesRouteImport } from './routes/client-hub._app.files'
+import { Route as ClientHubAppInsightsRouteImport } from './routes/client-hub._app.insights'
+import { Route as ClientHubAppMerchRouteImport } from './routes/client-hub._app.merch'
+import { Route as ClientHubAppTeamRouteImport } from './routes/client-hub._app.team'
+import { Route as ClientHubAppUgcRouteImport } from './routes/client-hub._app.ugc'
+import { Route as ClientHubAppUpdatesRouteImport } from './routes/client-hub._app.updates'
+import { Route as ClientHubAppVideosRouteImport } from './routes/client-hub._app.videos'
 import { Route as CreatorHubAppAccountRouteImport } from './routes/creator-hub._app.account'
 import { Route as CreatorHubAppAgreementRouteImport } from './routes/creator-hub._app.agreement'
 import { Route as CreatorHubAppArtworkRouteImport } from './routes/creator-hub._app.artwork'
@@ -144,6 +158,10 @@ import { Route as ApiArDemoContentDemoRouteImport } from './routes/api.ar.demo-c
 import { Route as ApiArProjectSlugRouteImport } from './routes/api.ar.project.$slug'
 import { Route as ApiBoboClipsIdRouteImport } from './routes/api.bobo.clips.$id'
 import { Route as ApiBoboDevSeedRouteImport } from './routes/api.bobo.dev.seed'
+import { Route as ApiClientHubMediaThumbIdRouteImport } from './routes/api.client-hub.media-thumb.$id'
+import { Route as ApiClientHubMediaIdRouteImport } from './routes/api.client-hub.media.$id'
+import { Route as ApiClientHubUgcPosterIdRouteImport } from './routes/api.client-hub.ugc-poster.$id'
+import { Route as ApiClientHubUgcIdRouteImport } from './routes/api.client-hub.ugc.$id'
 import { Route as ApiGiveawayDiscordCallbackRouteImport } from './routes/api.giveaway.discord.callback'
 import { Route as ApiHolocastCodeFrameRouteImport } from './routes/api.holocast.$code.frame'
 import { Route as ApiHolocastCodePhotoRouteImport } from './routes/api.holocast.$code.photo'
@@ -316,6 +334,21 @@ const ApiShowcaseDotjsonRoute = ApiShowcaseDotjsonRouteImport.update({
   path: '/api/showcase.json',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientHubAppRoute = ClientHubAppRouteImport.update({
+  id: '/client-hub/_app',
+  path: '/client-hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientHubJoinRoute = ClientHubJoinRouteImport.update({
+  id: '/client-hub/join',
+  path: '/client-hub/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientHubSignInRoute = ClientHubSignInRouteImport.update({
+  id: '/client-hub/sign-in',
+  path: '/client-hub/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CreatorHubIndexRoute = CreatorHubIndexRouteImport.update({
   id: '/creator-hub/',
   path: '/creator-hub/',
@@ -451,6 +484,16 @@ const AdminBuilderSlugRoute = AdminBuilderSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
   getParentRoute: () => AdminBuilderRoute,
+} as any)
+const AdminClientsIndexRoute = AdminClientsIndexRouteImport.update({
+  id: '/clients/',
+  path: '/clients/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClientsClientIdRoute = AdminClientsClientIdRouteImport.update({
+  id: '/clients/$clientId',
+  path: '/clients/$clientId',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AdminCreatorsIndexRoute = AdminCreatorsIndexRouteImport.update({
   id: '/creators/',
@@ -670,6 +713,51 @@ const ApiUgcUploadsRoute = ApiUgcUploadsRouteImport.update({
   path: '/api/ugc/uploads',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClientHubAppIndexRoute = ClientHubAppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppExperiencesRoute = ClientHubAppExperiencesRouteImport.update({
+  id: '/experiences',
+  path: '/experiences',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppFilesRoute = ClientHubAppFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppInsightsRoute = ClientHubAppInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppMerchRoute = ClientHubAppMerchRouteImport.update({
+  id: '/merch',
+  path: '/merch',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppTeamRoute = ClientHubAppTeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppUgcRoute = ClientHubAppUgcRouteImport.update({
+  id: '/ugc',
+  path: '/ugc',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppUpdatesRoute = ClientHubAppUpdatesRouteImport.update({
+  id: '/updates',
+  path: '/updates',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppVideosRoute = ClientHubAppVideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
 const CreatorHubAppAccountRoute = CreatorHubAppAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -881,6 +969,27 @@ const ApiBoboClipsIdRoute = ApiBoboClipsIdRouteImport.update({
 const ApiBoboDevSeedRoute = ApiBoboDevSeedRouteImport.update({
   id: '/api/bobo/dev/seed',
   path: '/api/bobo/dev/seed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClientHubMediaThumbIdRoute =
+  ApiClientHubMediaThumbIdRouteImport.update({
+    id: '/api/client-hub/media-thumb/$id',
+    path: '/api/client-hub/media-thumb/$id',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiClientHubMediaIdRoute = ApiClientHubMediaIdRouteImport.update({
+  id: '/api/client-hub/media/$id',
+  path: '/api/client-hub/media/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClientHubUgcPosterIdRoute = ApiClientHubUgcPosterIdRouteImport.update({
+  id: '/api/client-hub/ugc-poster/$id',
+  path: '/api/client-hub/ugc-poster/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiClientHubUgcIdRoute = ApiClientHubUgcIdRouteImport.update({
+  id: '/api/client-hub/ugc/$id',
+  path: '/api/client-hub/ugc/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGiveawayDiscordCallbackRoute =
@@ -1213,6 +1322,9 @@ export interface FileRoutesByFullPath {
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin/login': typeof AdminLoginRoute
   '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
+  '/client-hub': typeof ClientHubAppRouteWithChildren
+  '/client-hub/join': typeof ClientHubJoinRoute
+  '/client-hub/sign-in': typeof ClientHubSignInRoute
   '/creator-hub': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1240,6 +1352,7 @@ export interface FileRoutesByFullPath {
   '/shelf/': typeof ShelfIndexRoute
   '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1278,6 +1391,14 @@ export interface FileRoutesByFullPath {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/experiences': typeof ClientHubAppExperiencesRoute
+  '/client-hub/files': typeof ClientHubAppFilesRoute
+  '/client-hub/insights': typeof ClientHubAppInsightsRoute
+  '/client-hub/merch': typeof ClientHubAppMerchRoute
+  '/client-hub/team': typeof ClientHubAppTeamRoute
+  '/client-hub/ugc': typeof ClientHubAppUgcRoute
+  '/client-hub/updates': typeof ClientHubAppUpdatesRoute
+  '/client-hub/videos': typeof ClientHubAppVideosRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -1308,11 +1429,13 @@ export interface FileRoutesByFullPath {
   '/ugc-hub/profile': typeof UgcHubAppProfileRoute
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/clients/': typeof AdminClientsIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
   '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/client-hub/': typeof ClientHubAppIndexRoute
   '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
@@ -1325,6 +1448,10 @@ export interface FileRoutesByFullPath {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/client-hub/media-thumb/$id': typeof ApiClientHubMediaThumbIdRoute
+  '/api/client-hub/media/$id': typeof ApiClientHubMediaIdRoute
+  '/api/client-hub/ugc-poster/$id': typeof ApiClientHubUgcPosterIdRoute
+  '/api/client-hub/ugc/$id': typeof ApiClientHubUgcIdRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
@@ -1402,6 +1529,8 @@ export interface FileRoutesByTo {
   '/admin/spray': typeof AdminSprayRoute
   '/admin/login': typeof AdminLoginRoute
   '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
+  '/client-hub/join': typeof ClientHubJoinRoute
+  '/client-hub/sign-in': typeof ClientHubSignInRoute
   '/creator-hub': typeof CreatorHubIndexRoute
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1425,6 +1554,7 @@ export interface FileRoutesByTo {
   '/shelf': typeof ShelfIndexRoute
   '/technology': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1463,6 +1593,14 @@ export interface FileRoutesByTo {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/experiences': typeof ClientHubAppExperiencesRoute
+  '/client-hub/files': typeof ClientHubAppFilesRoute
+  '/client-hub/insights': typeof ClientHubAppInsightsRoute
+  '/client-hub/merch': typeof ClientHubAppMerchRoute
+  '/client-hub/team': typeof ClientHubAppTeamRoute
+  '/client-hub/ugc': typeof ClientHubAppUgcRoute
+  '/client-hub/updates': typeof ClientHubAppUpdatesRoute
+  '/client-hub/videos': typeof ClientHubAppVideosRoute
   '/creator-hub/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/artwork': typeof CreatorHubAppArtworkRoute
@@ -1493,11 +1631,13 @@ export interface FileRoutesByTo {
   '/ugc-hub/profile': typeof UgcHubAppProfileRoute
   '/ugc-hub/upload': typeof UgcHubAppUploadRoute
   '/admin/builder': typeof AdminBuilderIndexRoute
+  '/admin/clients': typeof AdminClientsIndexRoute
   '/admin/creators': typeof AdminCreatorsIndexRoute
   '/admin/giveaways': typeof AdminGiveawaysIndexRoute
   '/admin/partners': typeof AdminPartnersIndexRoute
   '/admin/shelves': typeof AdminShelvesIndexRoute
   '/admin/ugc': typeof AdminUgcIndexRoute
+  '/client-hub': typeof ClientHubAppIndexRoute
   '/giveaway/$slug': typeof GiveawaySlugIndexRoute
   '/partner-hub': typeof PartnerHubAppIndexRoute
   '/roblox/portal': typeof RobloxPortalIndexRoute
@@ -1510,6 +1650,10 @@ export interface FileRoutesByTo {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/client-hub/media-thumb/$id': typeof ApiClientHubMediaThumbIdRoute
+  '/api/client-hub/media/$id': typeof ApiClientHubMediaIdRoute
+  '/api/client-hub/ugc-poster/$id': typeof ApiClientHubUgcPosterIdRoute
+  '/api/client-hub/ugc/$id': typeof ApiClientHubUgcIdRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
@@ -1592,6 +1736,9 @@ export interface FileRoutesById {
   '/admin/ugc': typeof AdminUgcRouteWithChildren
   '/admin_/login': typeof AdminLoginRoute
   '/api/showcase.json': typeof ApiShowcaseDotjsonRoute
+  '/client-hub/_app': typeof ClientHubAppRouteWithChildren
+  '/client-hub/join': typeof ClientHubJoinRoute
+  '/client-hub/sign-in': typeof ClientHubSignInRoute
   '/creator-hub/_app': typeof CreatorHubAppRouteWithChildren
   '/creator-hub/forgot-password': typeof CreatorHubForgotPasswordRoute
   '/creator-hub/join': typeof CreatorHubJoinRoute
@@ -1619,6 +1766,7 @@ export interface FileRoutesById {
   '/shelf/': typeof ShelfIndexRoute
   '/technology/': typeof TechnologyIndexRoute
   '/admin/builder/$slug': typeof AdminBuilderSlugRoute
+  '/admin/clients/$clientId': typeof AdminClientsClientIdRoute
   '/admin/creators/$creatorId': typeof AdminCreatorsCreatorIdRoute
   '/admin/giveaways/$campaignId': typeof AdminGiveawaysCampaignIdRoute
   '/admin/partners/$partnerId': typeof AdminPartnersPartnerIdRoute
@@ -1657,6 +1805,14 @@ export interface FileRoutesById {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/_app/experiences': typeof ClientHubAppExperiencesRoute
+  '/client-hub/_app/files': typeof ClientHubAppFilesRoute
+  '/client-hub/_app/insights': typeof ClientHubAppInsightsRoute
+  '/client-hub/_app/merch': typeof ClientHubAppMerchRoute
+  '/client-hub/_app/team': typeof ClientHubAppTeamRoute
+  '/client-hub/_app/ugc': typeof ClientHubAppUgcRoute
+  '/client-hub/_app/updates': typeof ClientHubAppUpdatesRoute
+  '/client-hub/_app/videos': typeof ClientHubAppVideosRoute
   '/creator-hub/_app/account': typeof CreatorHubAppAccountRoute
   '/creator-hub/_app/agreement': typeof CreatorHubAppAgreementRoute
   '/creator-hub/_app/artwork': typeof CreatorHubAppArtworkRoute
@@ -1687,11 +1843,13 @@ export interface FileRoutesById {
   '/ugc-hub/_app/profile': typeof UgcHubAppProfileRoute
   '/ugc-hub/_app/upload': typeof UgcHubAppUploadRoute
   '/admin/builder/': typeof AdminBuilderIndexRoute
+  '/admin/clients/': typeof AdminClientsIndexRoute
   '/admin/creators/': typeof AdminCreatorsIndexRoute
   '/admin/giveaways/': typeof AdminGiveawaysIndexRoute
   '/admin/partners/': typeof AdminPartnersIndexRoute
   '/admin/shelves/': typeof AdminShelvesIndexRoute
   '/admin/ugc/': typeof AdminUgcIndexRoute
+  '/client-hub/_app/': typeof ClientHubAppIndexRoute
   '/giveaway/$slug/': typeof GiveawaySlugIndexRoute
   '/partner-hub/_app/': typeof PartnerHubAppIndexRoute
   '/roblox/portal/': typeof RobloxPortalIndexRoute
@@ -1704,6 +1862,10 @@ export interface FileRoutesById {
   '/api/ar/project/$slug': typeof ApiArProjectSlugRoute
   '/api/bobo/clips/$id': typeof ApiBoboClipsIdRoute
   '/api/bobo/dev/seed': typeof ApiBoboDevSeedRoute
+  '/api/client-hub/media-thumb/$id': typeof ApiClientHubMediaThumbIdRoute
+  '/api/client-hub/media/$id': typeof ApiClientHubMediaIdRoute
+  '/api/client-hub/ugc-poster/$id': typeof ApiClientHubUgcPosterIdRoute
+  '/api/client-hub/ugc/$id': typeof ApiClientHubUgcIdRoute
   '/api/giveaway/discord/callback': typeof ApiGiveawayDiscordCallbackRoute
   '/api/holocast/$code/frame': typeof ApiHolocastCodeFrameRoute
   '/api/holocast/$code/photo': typeof ApiHolocastCodePhotoRouteWithChildren
@@ -1787,6 +1949,9 @@ export interface FileRouteTypes {
     | '/admin/ugc'
     | '/admin/login'
     | '/api/showcase.json'
+    | '/client-hub'
+    | '/client-hub/join'
+    | '/client-hub/sign-in'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1814,6 +1979,7 @@ export interface FileRouteTypes {
     | '/shelf/'
     | '/technology/'
     | '/admin/builder/$slug'
+    | '/admin/clients/$clientId'
     | '/admin/creators/$creatorId'
     | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
@@ -1852,6 +2018,14 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/experiences'
+    | '/client-hub/files'
+    | '/client-hub/insights'
+    | '/client-hub/merch'
+    | '/client-hub/team'
+    | '/client-hub/ugc'
+    | '/client-hub/updates'
+    | '/client-hub/videos'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -1882,11 +2056,13 @@ export interface FileRouteTypes {
     | '/ugc-hub/profile'
     | '/ugc-hub/upload'
     | '/admin/builder/'
+    | '/admin/clients/'
     | '/admin/creators/'
     | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/client-hub/'
     | '/giveaway/$slug/'
     | '/partner-hub/'
     | '/roblox/portal/'
@@ -1899,6 +2075,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/client-hub/media-thumb/$id'
+    | '/api/client-hub/media/$id'
+    | '/api/client-hub/ugc-poster/$id'
+    | '/api/client-hub/ugc/$id'
     | '/api/giveaway/discord/callback'
     | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
@@ -1976,6 +2156,8 @@ export interface FileRouteTypes {
     | '/admin/spray'
     | '/admin/login'
     | '/api/showcase.json'
+    | '/client-hub/join'
+    | '/client-hub/sign-in'
     | '/creator-hub'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -1999,6 +2181,7 @@ export interface FileRouteTypes {
     | '/shelf'
     | '/technology'
     | '/admin/builder/$slug'
+    | '/admin/clients/$clientId'
     | '/admin/creators/$creatorId'
     | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
@@ -2037,6 +2220,14 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/experiences'
+    | '/client-hub/files'
+    | '/client-hub/insights'
+    | '/client-hub/merch'
+    | '/client-hub/team'
+    | '/client-hub/ugc'
+    | '/client-hub/updates'
+    | '/client-hub/videos'
     | '/creator-hub/account'
     | '/creator-hub/agreement'
     | '/creator-hub/artwork'
@@ -2067,11 +2258,13 @@ export interface FileRouteTypes {
     | '/ugc-hub/profile'
     | '/ugc-hub/upload'
     | '/admin/builder'
+    | '/admin/clients'
     | '/admin/creators'
     | '/admin/giveaways'
     | '/admin/partners'
     | '/admin/shelves'
     | '/admin/ugc'
+    | '/client-hub'
     | '/giveaway/$slug'
     | '/partner-hub'
     | '/roblox/portal'
@@ -2084,6 +2277,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/client-hub/media-thumb/$id'
+    | '/api/client-hub/media/$id'
+    | '/api/client-hub/ugc-poster/$id'
+    | '/api/client-hub/ugc/$id'
     | '/api/giveaway/discord/callback'
     | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
@@ -2165,6 +2362,9 @@ export interface FileRouteTypes {
     | '/admin/ugc'
     | '/admin_/login'
     | '/api/showcase.json'
+    | '/client-hub/_app'
+    | '/client-hub/join'
+    | '/client-hub/sign-in'
     | '/creator-hub/_app'
     | '/creator-hub/forgot-password'
     | '/creator-hub/join'
@@ -2192,6 +2392,7 @@ export interface FileRouteTypes {
     | '/shelf/'
     | '/technology/'
     | '/admin/builder/$slug'
+    | '/admin/clients/$clientId'
     | '/admin/creators/$creatorId'
     | '/admin/giveaways/$campaignId'
     | '/admin/partners/$partnerId'
@@ -2230,6 +2431,14 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/_app/experiences'
+    | '/client-hub/_app/files'
+    | '/client-hub/_app/insights'
+    | '/client-hub/_app/merch'
+    | '/client-hub/_app/team'
+    | '/client-hub/_app/ugc'
+    | '/client-hub/_app/updates'
+    | '/client-hub/_app/videos'
     | '/creator-hub/_app/account'
     | '/creator-hub/_app/agreement'
     | '/creator-hub/_app/artwork'
@@ -2260,11 +2469,13 @@ export interface FileRouteTypes {
     | '/ugc-hub/_app/profile'
     | '/ugc-hub/_app/upload'
     | '/admin/builder/'
+    | '/admin/clients/'
     | '/admin/creators/'
     | '/admin/giveaways/'
     | '/admin/partners/'
     | '/admin/shelves/'
     | '/admin/ugc/'
+    | '/client-hub/_app/'
     | '/giveaway/$slug/'
     | '/partner-hub/_app/'
     | '/roblox/portal/'
@@ -2277,6 +2488,10 @@ export interface FileRouteTypes {
     | '/api/ar/project/$slug'
     | '/api/bobo/clips/$id'
     | '/api/bobo/dev/seed'
+    | '/api/client-hub/media-thumb/$id'
+    | '/api/client-hub/media/$id'
+    | '/api/client-hub/ugc-poster/$id'
+    | '/api/client-hub/ugc/$id'
     | '/api/giveaway/discord/callback'
     | '/api/holocast/$code/frame'
     | '/api/holocast/$code/photo'
@@ -2348,6 +2563,9 @@ export interface RootRouteChildren {
   LiveRoute: typeof LiveRoute
   AdminLoginRoute: typeof AdminLoginRoute
   ApiShowcaseDotjsonRoute: typeof ApiShowcaseDotjsonRoute
+  ClientHubAppRoute: typeof ClientHubAppRouteWithChildren
+  ClientHubJoinRoute: typeof ClientHubJoinRoute
+  ClientHubSignInRoute: typeof ClientHubSignInRoute
   CreatorHubAppRoute: typeof CreatorHubAppRouteWithChildren
   CreatorHubForgotPasswordRoute: typeof CreatorHubForgotPasswordRoute
   CreatorHubJoinRoute: typeof CreatorHubJoinRoute
@@ -2411,6 +2629,10 @@ export interface RootRouteChildren {
   ApiArProjectSlugRoute: typeof ApiArProjectSlugRoute
   ApiBoboClipsIdRoute: typeof ApiBoboClipsIdRoute
   ApiBoboDevSeedRoute: typeof ApiBoboDevSeedRoute
+  ApiClientHubMediaThumbIdRoute: typeof ApiClientHubMediaThumbIdRoute
+  ApiClientHubMediaIdRoute: typeof ApiClientHubMediaIdRoute
+  ApiClientHubUgcPosterIdRoute: typeof ApiClientHubUgcPosterIdRoute
+  ApiClientHubUgcIdRoute: typeof ApiClientHubUgcIdRoute
   ApiHubAuthDiscordRoute: typeof ApiHubAuthDiscordRouteWithChildren
   ApiHubDevSeedRoute: typeof ApiHubDevSeedRoute
   ApiHubOverlayTokenRoute: typeof ApiHubOverlayTokenRouteWithChildren
@@ -2591,6 +2813,27 @@ declare module '@tanstack/react-router' {
       path: '/api/showcase.json'
       fullPath: '/api/showcase.json'
       preLoaderRoute: typeof ApiShowcaseDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/client-hub/_app': {
+      id: '/client-hub/_app'
+      path: '/client-hub'
+      fullPath: '/client-hub'
+      preLoaderRoute: typeof ClientHubAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/client-hub/join': {
+      id: '/client-hub/join'
+      path: '/client-hub/join'
+      fullPath: '/client-hub/join'
+      preLoaderRoute: typeof ClientHubJoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/client-hub/sign-in': {
+      id: '/client-hub/sign-in'
+      path: '/client-hub/sign-in'
+      fullPath: '/client-hub/sign-in'
+      preLoaderRoute: typeof ClientHubSignInRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/creator-hub/': {
@@ -2781,6 +3024,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/builder/$slug'
       preLoaderRoute: typeof AdminBuilderSlugRouteImport
       parentRoute: typeof AdminBuilderRoute
+    }
+    '/admin/clients/': {
+      id: '/admin/clients/'
+      path: '/clients'
+      fullPath: '/admin/clients/'
+      preLoaderRoute: typeof AdminClientsIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clients/$clientId': {
+      id: '/admin/clients/$clientId'
+      path: '/clients/$clientId'
+      fullPath: '/admin/clients/$clientId'
+      preLoaderRoute: typeof AdminClientsClientIdRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/admin/creators/': {
       id: '/admin/creators/'
@@ -3083,6 +3340,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUgcUploadsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/client-hub/_app/': {
+      id: '/client-hub/_app/'
+      path: '/'
+      fullPath: '/client-hub/'
+      preLoaderRoute: typeof ClientHubAppIndexRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/experiences': {
+      id: '/client-hub/_app/experiences'
+      path: '/experiences'
+      fullPath: '/client-hub/experiences'
+      preLoaderRoute: typeof ClientHubAppExperiencesRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/files': {
+      id: '/client-hub/_app/files'
+      path: '/files'
+      fullPath: '/client-hub/files'
+      preLoaderRoute: typeof ClientHubAppFilesRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/insights': {
+      id: '/client-hub/_app/insights'
+      path: '/insights'
+      fullPath: '/client-hub/insights'
+      preLoaderRoute: typeof ClientHubAppInsightsRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/merch': {
+      id: '/client-hub/_app/merch'
+      path: '/merch'
+      fullPath: '/client-hub/merch'
+      preLoaderRoute: typeof ClientHubAppMerchRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/team': {
+      id: '/client-hub/_app/team'
+      path: '/team'
+      fullPath: '/client-hub/team'
+      preLoaderRoute: typeof ClientHubAppTeamRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/ugc': {
+      id: '/client-hub/_app/ugc'
+      path: '/ugc'
+      fullPath: '/client-hub/ugc'
+      preLoaderRoute: typeof ClientHubAppUgcRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/updates': {
+      id: '/client-hub/_app/updates'
+      path: '/updates'
+      fullPath: '/client-hub/updates'
+      preLoaderRoute: typeof ClientHubAppUpdatesRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
+    '/client-hub/_app/videos': {
+      id: '/client-hub/_app/videos'
+      path: '/videos'
+      fullPath: '/client-hub/videos'
+      preLoaderRoute: typeof ClientHubAppVideosRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
     '/creator-hub/_app/account': {
       id: '/creator-hub/_app/account'
       path: '/account'
@@ -3375,6 +3695,34 @@ declare module '@tanstack/react-router' {
       path: '/api/bobo/dev/seed'
       fullPath: '/api/bobo/dev/seed'
       preLoaderRoute: typeof ApiBoboDevSeedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/client-hub/media-thumb/$id': {
+      id: '/api/client-hub/media-thumb/$id'
+      path: '/api/client-hub/media-thumb/$id'
+      fullPath: '/api/client-hub/media-thumb/$id'
+      preLoaderRoute: typeof ApiClientHubMediaThumbIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/client-hub/media/$id': {
+      id: '/api/client-hub/media/$id'
+      path: '/api/client-hub/media/$id'
+      fullPath: '/api/client-hub/media/$id'
+      preLoaderRoute: typeof ApiClientHubMediaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/client-hub/ugc-poster/$id': {
+      id: '/api/client-hub/ugc-poster/$id'
+      path: '/api/client-hub/ugc-poster/$id'
+      fullPath: '/api/client-hub/ugc-poster/$id'
+      preLoaderRoute: typeof ApiClientHubUgcPosterIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/client-hub/ugc/$id': {
+      id: '/api/client-hub/ugc/$id'
+      path: '/api/client-hub/ugc/$id'
+      fullPath: '/api/client-hub/ugc/$id'
+      preLoaderRoute: typeof ApiClientHubUgcIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/giveaway/discord/callback': {
@@ -3837,11 +4185,13 @@ interface AdminRouteChildren {
   AdminSprayRoute: typeof AdminSprayRoute
   AdminUgcRoute: typeof AdminUgcRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminClientsClientIdRoute: typeof AdminClientsClientIdRoute
   AdminCreatorsCreatorIdRoute: typeof AdminCreatorsCreatorIdRoute
   AdminGiveawaysCampaignIdRoute: typeof AdminGiveawaysCampaignIdRoute
   AdminPartnersPartnerIdRoute: typeof AdminPartnersPartnerIdRoute
   AdminPartnersCollateralRoute: typeof AdminPartnersCollateralRoute
   AdminPartnersKitRoute: typeof AdminPartnersKitRoute
+  AdminClientsIndexRoute: typeof AdminClientsIndexRoute
   AdminCreatorsIndexRoute: typeof AdminCreatorsIndexRoute
   AdminGiveawaysIndexRoute: typeof AdminGiveawaysIndexRoute
   AdminPartnersIndexRoute: typeof AdminPartnersIndexRoute
@@ -3860,17 +4210,47 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSprayRoute: AdminSprayRoute,
   AdminUgcRoute: AdminUgcRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
+  AdminClientsClientIdRoute: AdminClientsClientIdRoute,
   AdminCreatorsCreatorIdRoute: AdminCreatorsCreatorIdRoute,
   AdminGiveawaysCampaignIdRoute: AdminGiveawaysCampaignIdRoute,
   AdminPartnersPartnerIdRoute: AdminPartnersPartnerIdRoute,
   AdminPartnersCollateralRoute: AdminPartnersCollateralRoute,
   AdminPartnersKitRoute: AdminPartnersKitRoute,
+  AdminClientsIndexRoute: AdminClientsIndexRoute,
   AdminCreatorsIndexRoute: AdminCreatorsIndexRoute,
   AdminGiveawaysIndexRoute: AdminGiveawaysIndexRoute,
   AdminPartnersIndexRoute: AdminPartnersIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface ClientHubAppRouteChildren {
+  ClientHubAppExperiencesRoute: typeof ClientHubAppExperiencesRoute
+  ClientHubAppFilesRoute: typeof ClientHubAppFilesRoute
+  ClientHubAppInsightsRoute: typeof ClientHubAppInsightsRoute
+  ClientHubAppMerchRoute: typeof ClientHubAppMerchRoute
+  ClientHubAppTeamRoute: typeof ClientHubAppTeamRoute
+  ClientHubAppUgcRoute: typeof ClientHubAppUgcRoute
+  ClientHubAppUpdatesRoute: typeof ClientHubAppUpdatesRoute
+  ClientHubAppVideosRoute: typeof ClientHubAppVideosRoute
+  ClientHubAppIndexRoute: typeof ClientHubAppIndexRoute
+}
+
+const ClientHubAppRouteChildren: ClientHubAppRouteChildren = {
+  ClientHubAppExperiencesRoute: ClientHubAppExperiencesRoute,
+  ClientHubAppFilesRoute: ClientHubAppFilesRoute,
+  ClientHubAppInsightsRoute: ClientHubAppInsightsRoute,
+  ClientHubAppMerchRoute: ClientHubAppMerchRoute,
+  ClientHubAppTeamRoute: ClientHubAppTeamRoute,
+  ClientHubAppUgcRoute: ClientHubAppUgcRoute,
+  ClientHubAppUpdatesRoute: ClientHubAppUpdatesRoute,
+  ClientHubAppVideosRoute: ClientHubAppVideosRoute,
+  ClientHubAppIndexRoute: ClientHubAppIndexRoute,
+}
+
+const ClientHubAppRouteWithChildren = ClientHubAppRoute._addFileChildren(
+  ClientHubAppRouteChildren,
+)
 
 interface CreatorHubAppRouteChildren {
   CreatorHubAppAccountRoute: typeof CreatorHubAppAccountRoute
@@ -4265,6 +4645,9 @@ const rootRouteChildren: RootRouteChildren = {
   LiveRoute: LiveRoute,
   AdminLoginRoute: AdminLoginRoute,
   ApiShowcaseDotjsonRoute: ApiShowcaseDotjsonRoute,
+  ClientHubAppRoute: ClientHubAppRouteWithChildren,
+  ClientHubJoinRoute: ClientHubJoinRoute,
+  ClientHubSignInRoute: ClientHubSignInRoute,
   CreatorHubAppRoute: CreatorHubAppRouteWithChildren,
   CreatorHubForgotPasswordRoute: CreatorHubForgotPasswordRoute,
   CreatorHubJoinRoute: CreatorHubJoinRoute,
@@ -4328,6 +4711,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiArProjectSlugRoute: ApiArProjectSlugRoute,
   ApiBoboClipsIdRoute: ApiBoboClipsIdRoute,
   ApiBoboDevSeedRoute: ApiBoboDevSeedRoute,
+  ApiClientHubMediaThumbIdRoute: ApiClientHubMediaThumbIdRoute,
+  ApiClientHubMediaIdRoute: ApiClientHubMediaIdRoute,
+  ApiClientHubUgcPosterIdRoute: ApiClientHubUgcPosterIdRoute,
+  ApiClientHubUgcIdRoute: ApiClientHubUgcIdRoute,
   ApiHubAuthDiscordRoute: ApiHubAuthDiscordRouteWithChildren,
   ApiHubDevSeedRoute: ApiHubDevSeedRoute,
   ApiHubOverlayTokenRoute: ApiHubOverlayTokenRouteWithChildren,
