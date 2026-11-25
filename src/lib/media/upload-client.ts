@@ -94,7 +94,7 @@ async function errorOf(res: Response, id: string | null) {
   } catch {
     return new MediaUploadError(
       res.status === 401
-        ? "Your admin session has ended. Sign in again, then add the file to resume."
+        ? "Your session has ended. Sign in again, then add the file to resume."
         : `Upload failed (${res.status})`,
       res.status,
       false,

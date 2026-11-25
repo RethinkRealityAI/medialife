@@ -13,6 +13,7 @@ import { sendProgramEmail } from "@/lib/hub/mail.server";
 import { hubStore, newId, readAll, sha256Hex, type HubNamespace } from "@/lib/hub/store.server";
 
 import {
+  ALL_FEATURES_ON,
   CLIENT_BASE,
   CLIENT_INVITE_DAYS,
   DEFAULT_CLIENTS,
@@ -58,7 +59,7 @@ function withDefaults(c: Client): Client {
   return {
     ...(d ?? {}),
     ...c,
-    features: { ...(d?.features ?? {}), ...c.features } as Client["features"],
+    features: { ...ALL_FEATURES_ON, ...(d?.features ?? {}), ...c.features } as Client["features"],
     brand: { ...(d?.brand ?? { accent: "#3d8bff", ink: "#05070d" }), ...c.brand },
     contact: { ...(d?.contact ?? { name: "", email: "" }), ...c.contact },
     hiddenMedia: c.hiddenMedia ?? [],

@@ -108,6 +108,7 @@ import { Route as ApiSprayRealtimeRouteImport } from './routes/api.spray.realtim
 import { Route as ApiSpraySetsRouteImport } from './routes/api.spray.sets'
 import { Route as ApiUgcUploadsRouteImport } from './routes/api.ugc.uploads'
 import { Route as ClientHubAppIndexRouteImport } from './routes/client-hub._app.index'
+import { Route as ClientHubAppContentRouteImport } from './routes/client-hub._app.content'
 import { Route as ClientHubAppExperiencesRouteImport } from './routes/client-hub._app.experiences'
 import { Route as ClientHubAppFilesRouteImport } from './routes/client-hub._app.files'
 import { Route as ClientHubAppInsightsRouteImport } from './routes/client-hub._app.insights'
@@ -716,6 +717,11 @@ const ApiUgcUploadsRoute = ApiUgcUploadsRouteImport.update({
 const ClientHubAppIndexRoute = ClientHubAppIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ClientHubAppRoute,
+} as any)
+const ClientHubAppContentRoute = ClientHubAppContentRouteImport.update({
+  id: '/content',
+  path: '/content',
   getParentRoute: () => ClientHubAppRoute,
 } as any)
 const ClientHubAppExperiencesRoute = ClientHubAppExperiencesRouteImport.update({
@@ -1391,6 +1397,7 @@ export interface FileRoutesByFullPath {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/content': typeof ClientHubAppContentRoute
   '/client-hub/experiences': typeof ClientHubAppExperiencesRoute
   '/client-hub/files': typeof ClientHubAppFilesRoute
   '/client-hub/insights': typeof ClientHubAppInsightsRoute
@@ -1593,6 +1600,7 @@ export interface FileRoutesByTo {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/content': typeof ClientHubAppContentRoute
   '/client-hub/experiences': typeof ClientHubAppExperiencesRoute
   '/client-hub/files': typeof ClientHubAppFilesRoute
   '/client-hub/insights': typeof ClientHubAppInsightsRoute
@@ -1805,6 +1813,7 @@ export interface FileRoutesById {
   '/api/spray/realtime': typeof ApiSprayRealtimeRoute
   '/api/spray/sets': typeof ApiSpraySetsRouteWithChildren
   '/api/ugc/uploads': typeof ApiUgcUploadsRouteWithChildren
+  '/client-hub/_app/content': typeof ClientHubAppContentRoute
   '/client-hub/_app/experiences': typeof ClientHubAppExperiencesRoute
   '/client-hub/_app/files': typeof ClientHubAppFilesRoute
   '/client-hub/_app/insights': typeof ClientHubAppInsightsRoute
@@ -2018,6 +2027,7 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/content'
     | '/client-hub/experiences'
     | '/client-hub/files'
     | '/client-hub/insights'
@@ -2220,6 +2230,7 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/content'
     | '/client-hub/experiences'
     | '/client-hub/files'
     | '/client-hub/insights'
@@ -2431,6 +2442,7 @@ export interface FileRouteTypes {
     | '/api/spray/realtime'
     | '/api/spray/sets'
     | '/api/ugc/uploads'
+    | '/client-hub/_app/content'
     | '/client-hub/_app/experiences'
     | '/client-hub/_app/files'
     | '/client-hub/_app/insights'
@@ -3347,6 +3359,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientHubAppIndexRouteImport
       parentRoute: typeof ClientHubAppRoute
     }
+    '/client-hub/_app/content': {
+      id: '/client-hub/_app/content'
+      path: '/content'
+      fullPath: '/client-hub/content'
+      preLoaderRoute: typeof ClientHubAppContentRouteImport
+      parentRoute: typeof ClientHubAppRoute
+    }
     '/client-hub/_app/experiences': {
       id: '/client-hub/_app/experiences'
       path: '/experiences'
@@ -4225,6 +4244,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface ClientHubAppRouteChildren {
+  ClientHubAppContentRoute: typeof ClientHubAppContentRoute
   ClientHubAppExperiencesRoute: typeof ClientHubAppExperiencesRoute
   ClientHubAppFilesRoute: typeof ClientHubAppFilesRoute
   ClientHubAppInsightsRoute: typeof ClientHubAppInsightsRoute
@@ -4237,6 +4257,7 @@ interface ClientHubAppRouteChildren {
 }
 
 const ClientHubAppRouteChildren: ClientHubAppRouteChildren = {
+  ClientHubAppContentRoute: ClientHubAppContentRoute,
   ClientHubAppExperiencesRoute: ClientHubAppExperiencesRoute,
   ClientHubAppFilesRoute: ClientHubAppFilesRoute,
   ClientHubAppInsightsRoute: ClientHubAppInsightsRoute,

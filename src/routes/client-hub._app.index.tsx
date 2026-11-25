@@ -9,6 +9,7 @@ import {
   Send,
   Shirt,
   Sparkles,
+  Upload,
   Users,
 } from "lucide-react";
 
@@ -276,6 +277,14 @@ function Home() {
                   icon={ArrowRight}
                   label="Files and documents"
                   hint={`${d.files} files`}
+                />
+              ) : null}
+              {f.uploads && !ws.me.medialife ? (
+                <QuickLink
+                  to="/client-hub/content?upload=1"
+                  icon={Upload}
+                  label="Upload content"
+                  hint="Footage, art, logos or briefs, tagged by experience"
                 />
               ) : null}
               {f.experiences ? (

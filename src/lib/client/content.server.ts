@@ -162,6 +162,10 @@ export type ClientMediaItem = {
   url: string;
   downloadUrl: string;
   thumbUrl: string | null;
+  /** Who on the client's team sent it (Uploads page), or null when MEDIALIFE shared it. */
+  sentBy: string | null;
+  /** Who owns it, e.g. "Owned by EVADE". */
+  rights: string;
 };
 
 const norm = (s: string) => s.trim().toLowerCase();
@@ -175,6 +179,11 @@ export function isClientAsset(a: MediaAsset, client: Client, includeHidden = fal
     !a.ingest &&
     (includeHidden || !client.hiddenMedia.includes(a.id))
   );
+}
+
+/** A file the hub may serve: shared with the client, or sent by their own team. */
+export function clientMayOpen(a: MediaAsset, client: Client) {
+  return isClientAsset(a, client) || (a.complete && a.fromClient?.clientId === client.id);
 }
 
 export function clientMediaView(a: MediaAsset): ClientMediaItem {
@@ -198,13 +207,32 @@ export function clientMediaView(a: MediaAsset): ClientMediaItem {
     url: clientMediaUrl(a.id),
     downloadUrl: clientMediaUrl(a.id, true),
     thumbUrl: a.thumb ? clientMediaThumbUrl(a.id, a.thumb.size) : null,
+    sentBy: a.fromClient?.name ?? null,
+    rights: a.rights,
   };
 }
 
 export async function clientMedia(ns: HubNamespace, client: Client) {
   const all = await listAssets(ns);
   return all
-    .filter((a) => isClientAsset(a, client) && keepSample(ns, a.sample))
+    .filter((a) => isClientAsset(a, client) && !a.fromClient && keepSample(ns, a.sample))
+    .map(clientMediaView);
+}
+
+/**
+ * The content library: everything the client sees (shared by MEDIALIFE) plus
+ * everything their own team sent, newest first. Their own uploads always show,
+ * even ones MEDIALIFE hid from the shared pages.
+ */
+export async function clientLibrary(ns: HubNamespace, client: Client) {
+  const all = await listAssets(ns);
+  return all
+    .filter(
+      (a) =>
+        (a.complete && a.fromClient?.clientId === client.id) ||
+        (isClientAsset(a, client) && !a.fromClient && keepSample(ns, a.sample)),
+    )
+    .sort((x, y) => (y.completedAt ?? y.createdAt) - (x.completedAt ?? x.createdAt))
     .map(clientMediaView);
 }
 

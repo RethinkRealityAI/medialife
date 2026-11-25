@@ -562,6 +562,8 @@ export type MediaAsset = {
     /** Web captures: sha256 of the player's view key (watch their own clip before review). */
     viewHash?: string;
   } | null;
+  /** Set when a client's own team sent it from the Client Hub. */
+  fromClient?: { clientId: string; userId: string; name: string; at: number } | null;
 };
 
 /** What the admin page receives: the record without storage internals, plus URLs. */
