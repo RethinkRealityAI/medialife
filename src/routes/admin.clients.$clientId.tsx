@@ -954,8 +954,9 @@ function MediaTab({ d }: { d: Data }) {
                 <div className="p-2">
                   <div className="truncate text-xs font-medium">{m.title}</div>
                   <div className="truncate text-[11px] text-muted-foreground">
-                    {m.kind}
-                    {m.collection ? ` · ${m.collection}` : ""} · {off ? "hidden" : "shown"}
+                    {m.sentBy
+                      ? `Sent by ${m.sentBy}`
+                      : `${m.kind}${m.collection ? ` · ${m.collection}` : ""} · ${off ? "hidden" : "shown"}`}
                   </div>
                 </div>
               </button>

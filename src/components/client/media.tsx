@@ -77,6 +77,9 @@ export function MediaGrid({ items, tall }: { items: ClientMediaItem[]; tall?: bo
                   <div className="mt-1 truncate text-xs text-muted-foreground">
                     {m.collection || MEDIA_KIND_LABELS[m.kind]} · {bytes(m.size)}
                   </div>
+                  <div className="mt-1 truncate text-[11px] text-muted-foreground/80">
+                    {m.sentBy ? `Added by ${m.sentBy}` : "From MEDIALIFE"}
+                  </div>
                 </div>
               </button>
             </li>
@@ -127,6 +130,8 @@ function Viewer({ item, onClose }: { item: ClientMediaItem; onClose: () => void 
             <DialogTitle className="text-lg font-semibold">{item.title}</DialogTitle>
             <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
               {[
+                item.sentBy ? `Added by ${item.sentBy}` : "From MEDIALIFE",
+                item.rights,
                 MEDIA_KIND_LABELS[item.kind],
                 bytes(item.size),
                 item.width && item.height ? `${item.width}×${item.height}` : "",
@@ -148,9 +153,12 @@ function Viewer({ item, onClose }: { item: ClientMediaItem; onClose: () => void 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {item.collection ? <Chip>{item.collection}</Chip> : null}
           {item.purpose ? <Chip>{MEDIA_PURPOSE_LABELS[item.purpose]}</Chip> : null}
-          {item.tags.slice(0, 8).map((t) => (
-            <Chip key={t}>#{t}</Chip>
-          ))}
+          {item.tags
+            .filter((t) => t !== "From client")
+            .slice(0, 10)
+            .map((t) => (
+              <Chip key={t}>#{t}</Chip>
+            ))}
         </div>
         {item.description ? (
           <p className="mt-4 text-sm leading-relaxed text-white/80">{item.description}</p>

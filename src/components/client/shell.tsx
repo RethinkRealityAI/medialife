@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Clapperboard,
   FolderOpen,
+  Library,
   Gauge,
   House,
   LifeBuoy,
@@ -72,6 +73,13 @@ type NavItem = {
 const NAV: NavItem[] = [
   { to: CLIENT_BASE, label: "Home", icon: House, exact: true },
   {
+    to: `${CLIENT_BASE}/content`,
+    label: "Content library",
+    short: "Content",
+    icon: Library,
+    feature: ["uploads", "videos", "files"],
+  },
+  {
     to: `${CLIENT_BASE}/ugc`,
     label: "UGC creators",
     short: "UGC",
@@ -99,9 +107,9 @@ const NAV: NavItem[] = [
 /** Phones: four tabs and More. */
 const TAB_PATHS = [
   CLIENT_BASE,
+  `${CLIENT_BASE}/content`,
   `${CLIENT_BASE}/ugc`,
   `${CLIENT_BASE}/updates`,
-  `${CLIENT_BASE}/videos`,
 ];
 
 export function navFor(features: Record<ClientFeature, boolean>) {

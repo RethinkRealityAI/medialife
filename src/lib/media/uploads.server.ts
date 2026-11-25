@@ -42,6 +42,7 @@ import { countryPlace, nearestPlace } from "@/lib/bobo/geo.server";
 import { cleanLocation, placeKey, type MediaLocation } from "@/lib/bobo/location";
 import { BOBO, type OwnClip } from "@/lib/bobo/model";
 import { newId, type MediaNamespace } from "./store.server";
+import { viewerForRequest } from "@/lib/client/session.server";
 
 // Uploads and downloads for the Media Library: the Creator Hub's resumable
 // chunk pipeline (src/lib/hub/files.server.ts, src/lib/ugc/uploads.server.ts)
@@ -178,11 +179,47 @@ export const bigFileWarning = (size: number) =>
 // The game in a player's browser ("web"): an allowed Origin, no secret. Same
 // rules as the token plus a smaller size cap, a per-visitor limit, IP-level
 // location only, and a one-time key per upload (src/lib/bobo/captures.server.ts).
-type Uploader = { kind: "admin" } | { kind: "ingest" } | { kind: "web"; key: string };
+//
+// A client's team (Client Hub sign-in, x-media header, "uploads" switched on):
+// files land private in the Media Library under their own client name, and
+// they can only touch the uploads they started, for a day.
+type Uploader =
+  | { kind: "admin" }
+  | { kind: "ingest" }
+  | { kind: "web"; key: string }
+  | {
+      kind: "client";
+      clientId: string;
+      mediaClient: string;
+      clientName: string;
+      userId: string;
+      name: string;
+    };
+
+async function clientUploader(request: Request): Promise<Uploader | Response | null> {
+  const v = await viewerForRequest(request);
+  if (!v || v.medialife || !v.user) return null;
+  if (request.headers.get("x-media") !== "1") return json({ error: "missing x-media header" }, 403);
+  if (!v.client.features.uploads || !v.client.mediaClient)
+    return json({ error: "Uploads aren't switched on for your hub." }, 403);
+  return {
+    kind: "client",
+    clientId: v.client.id,
+    mediaClient: v.client.mediaClient,
+    clientName: v.client.name,
+    userId: v.user.id,
+    name: v.name,
+  };
+}
 
 async function uploadGuard(request: Request): Promise<Uploader | Response> {
   if (hasIngestToken(request)) return { kind: "ingest" };
-  if (!(await isAdminRequest(request)) && webCaptureOrigin(request))
+  const admin = await isAdminRequest(request);
+  if (!admin) {
+    const c = await clientUploader(request);
+    if (c) return c;
+  }
+  if (!admin && webCaptureOrigin(request))
     return { kind: "web", key: request.headers.get("x-capture-key")?.trim() ?? "" };
   const denied = await writeGuard(request);
   return denied ?? { kind: "admin" };
@@ -225,6 +262,7 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
   const d = parsed.data;
   const web = who.kind === "web";
   const ingest = who.kind === "ingest" || web;
+  const team = who.kind === "client" ? who : null;
   if (web && d.size > BOBO.maxWebCaptureBytes)
     return json(
       { error: `Clips from the game can be up to ${formatBytes(BOBO.maxWebCaptureBytes)}.` },
@@ -299,7 +337,9 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       ? `Player, from the game (${d.source || "web"})`
       : ingest
         ? `AR experience (${d.source || "ingest"})`
-        : cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
+        : team
+          ? cleanLine(`${team.name} (${team.clientName} team)`, MEDIA.limits.uploader)
+          : cleanLine(d.uploader ?? "", MEDIA.limits.uploader) || "MEDIALIFE team",
     fingerprint: d.fingerprint ?? null,
     complete: false,
     createdAt: now,
@@ -318,42 +358,57 @@ export async function initUpload(ns: MediaNamespace, request: Request, body: unk
       : ingest
         ? { source: d.source || "ingest", receivedAt: now }
         : null,
+    fromClient: team
+      ? { clientId: team.clientId, userId: team.userId, name: team.name, at: now }
+      : null,
   };
   const known = knownValues(await listAssets(ns));
   const asset = applyMediaPatch(
     blank,
-    {
-      title: d.title,
-      description: d.description,
-      // a player's browser only names its clip; everything else is fixed
-      usageNotes: web ? undefined : d.usageNotes,
-      client: web ? "EVADE" : ingest ? d.client || "EVADE" : d.client,
-      collection: web
-        ? BOBO.captureCollection
-        : ingest
-          ? d.collection || BOBO.captureCollection
-          : d.collection,
-      purpose: ingest ? "ugc" : d.purpose === undefined ? undefined : d.purpose,
-      aiGenerated: web ? false : d.aiGenerated,
-      // captures stay private until the team reviews them
-      public: autoPublish ? true : ingest ? false : d.public,
-      setTags: web
-        ? autoPublish
-          ? [
-              ...BOBO.captureTags.filter((t) => t !== BOBO.reviewTag),
-              BOBO.webCaptureTag,
-              BOBO.autoPublishedTag,
-            ]
-          : [...BOBO.captureTags, BOBO.webCaptureTag]
-        : ingest
-          ? [...BOBO.captureTags, ...(d.tags ?? [])]
-          : d.tags,
-      rights: web
-        ? "Player capture (recorded in the AR game)"
-        : ingest
-          ? d.rights || "Player capture (AR experience)"
-          : d.rights,
-    },
+    team
+      ? {
+          title: d.title,
+          description: d.description,
+          client: team.mediaClient,
+          collection: d.collection?.trim() || `From the ${team.clientName} team`,
+          purpose: d.purpose === undefined ? undefined : d.purpose,
+          aiGenerated: false,
+          public: false,
+          setTags: ["From client", ...(d.tags ?? []).slice(0, 15)],
+          rights: d.rights?.trim() || `Owned by ${team.clientName}`,
+        }
+      : {
+          title: d.title,
+          description: d.description,
+          // a player's browser only names its clip; everything else is fixed
+          usageNotes: web ? undefined : d.usageNotes,
+          client: web ? "EVADE" : ingest ? d.client || "EVADE" : d.client,
+          collection: web
+            ? BOBO.captureCollection
+            : ingest
+              ? d.collection || BOBO.captureCollection
+              : d.collection,
+          purpose: ingest ? "ugc" : d.purpose === undefined ? undefined : d.purpose,
+          aiGenerated: web ? false : d.aiGenerated,
+          // captures stay private until the team reviews them
+          public: autoPublish ? true : ingest ? false : d.public,
+          setTags: web
+            ? autoPublish
+              ? [
+                  ...BOBO.captureTags.filter((t) => t !== BOBO.reviewTag),
+                  BOBO.webCaptureTag,
+                  BOBO.autoPublishedTag,
+                ]
+              : [...BOBO.captureTags, BOBO.webCaptureTag]
+            : ingest
+              ? [...BOBO.captureTags, ...(d.tags ?? [])]
+              : d.tags,
+          rights: web
+            ? "Player capture (recorded in the AR game)"
+            : ingest
+              ? d.rights || "Player capture (AR experience)"
+              : d.rights,
+        },
     known,
     now,
   );
@@ -382,6 +437,15 @@ async function writable(ns: MediaNamespace, request: Request, id: string) {
   if (!a) return json({ error: "not found" }, 404);
   // the ingest token only reaches its own captures, and only for a day
   if (who.kind === "ingest" && (!a.ingest || a.ingest.web || Date.now() - a.createdAt > 86_400_000))
+    return json({ error: "not found" }, 404);
+  // a client's team only reaches the uploads its own person started, for a day
+  if (
+    who.kind === "client" &&
+    (!a.fromClient ||
+      a.fromClient.clientId !== who.clientId ||
+      a.fromClient.userId !== who.userId ||
+      Date.now() - a.createdAt > 86_400_000)
+  )
     return json({ error: "not found" }, 404);
   // a browser only reaches the one upload whose key it holds, for a day
   if (

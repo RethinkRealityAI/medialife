@@ -18,6 +18,7 @@ import {
   clientCollector,
   clientGiveaways,
   clientMedia,
+  clientLibrary,
   clientMaySeeSubmission,
   clientUgc,
 } from "./content.server";
@@ -136,6 +137,11 @@ export const getClientMedia = createServerFn({ method: "GET" }).handler(async ()
     listLinks(v.ns, v.client.id),
   ]);
   return { media, links };
+});
+
+export const getClientUploads = createServerFn({ method: "GET" }).handler(async () => {
+  const v = await requireClient();
+  return { items: await clientLibrary(v.ns, v.client), canUpload: v.client.features.uploads };
 });
 
 export const getClientInsights = createServerFn({ method: "GET" }).handler(async () => {

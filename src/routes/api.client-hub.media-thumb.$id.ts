@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { isClientAsset } from "@/lib/client/content.server";
+import { clientMayOpen } from "@/lib/client/content.server";
 import { viewerForRequest } from "@/lib/client/session.server";
 import { mediaNs } from "@/lib/media/store.server";
 import { serveScoped } from "@/lib/media/uploads.server";
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/api/client-hub/media-thumb/$id")({
           mediaNs(request),
           request,
           params.id,
-          (a) => isClientAsset(a, v.client),
+          (a) => clientMayOpen(a, v.client),
           "thumb",
         );
       },

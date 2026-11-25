@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { isClientAsset } from "@/lib/client/content.server";
+import { clientMayOpen } from "@/lib/client/content.server";
 import { viewerForRequest } from "@/lib/client/session.server";
 import { mediaNs } from "@/lib/media/store.server";
 import { serveScoped } from "@/lib/media/uploads.server";
@@ -11,9 +11,9 @@ import { serveScoped } from "@/lib/media/uploads.server";
 async function handle(request: Request, id: string) {
   const v = await viewerForRequest(request);
   if (!v) return Response.json({ error: "unauthorized" }, { status: 401 });
-  if (!v.client.features.videos && !v.client.features.files)
+  if (!v.client.features.videos && !v.client.features.files && !v.client.features.uploads)
     return Response.json({ error: "not found" }, { status: 404 });
-  return serveScoped(mediaNs(request), request, id, (a) => isClientAsset(a, v.client), "file");
+  return serveScoped(mediaNs(request), request, id, (a) => clientMayOpen(a, v.client), "file");
 }
 
 export const Route = createFileRoute("/api/client-hub/media/$id")({
