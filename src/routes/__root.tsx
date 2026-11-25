@@ -165,6 +165,7 @@ function RootComponent() {
         p.startsWith("/admin") ||
         p.startsWith("/overlay/") ||
         p.startsWith("/partner-hub") ||
+        p.startsWith("/client-hub") ||
         p.startsWith("/ugc-hub") ||
         // Giveaway campaign pages are co-branded campaign microsites.
         p.startsWith("/giveaway") ||

@@ -703,3 +703,39 @@ export async function serveOwnClip(ns: MediaNamespace, request: Request, id: str
   };
   return json(clip, 200, priv);
 }
+
+/**
+ * A file or thumbnail for someone outside the team (the Client Hub), once the
+ * caller has checked who they are. `allow` decides per asset; anything it
+ * refuses is a plain 404, so ids of other clients' files reveal nothing.
+ */
+export async function serveScoped(
+  ns: MediaNamespace,
+  request: Request,
+  id: string,
+  allow: (a: MediaAsset) => boolean,
+  what: "file" | "thumb",
+) {
+  const a = await getAsset(ns, id);
+  if (!a || !a.complete || !allow(a)) return json({ error: "not found" }, 404);
+  if (what === "file")
+    return fileResponse(ns, a, {
+      download: new URL(request.url).searchParams.get("download") === "1",
+      head: request.method.toUpperCase() === "HEAD",
+      range: request.headers.get("range"),
+      ifNoneMatch: request.headers.get("if-none-match"),
+      visibility: "private",
+    });
+  if (!a.thumb) return json({ error: "not found" }, 404);
+  const buf = await mediaStorage(ns, a.storage.kind).getObject(a.thumb.key);
+  if (!buf) return json({ error: "not found" }, 404);
+  return new Response(buf, {
+    headers: {
+      "content-type": a.thumb.mime,
+      "cache-control": "private, max-age=86400",
+      "x-content-type-options": "nosniff",
+      "content-security-policy": "default-src 'none'; sandbox",
+      "cross-origin-resource-policy": "same-origin",
+    },
+  });
+}

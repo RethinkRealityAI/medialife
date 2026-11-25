@@ -92,6 +92,7 @@ export const getHubSession = createServerFn({ method: "GET" }).handler(async () 
       partner && s.user.partner && partner.status === "active"
         ? { id: partner.id, name: partner.name, role: s.user.partner.role, brand: partner.brand }
         : null,
+    client: s.user.client ? { id: s.user.client.id, role: s.user.client.role } : null,
     name: s.user.name ?? creator?.profile.displayName ?? "",
   };
 });
