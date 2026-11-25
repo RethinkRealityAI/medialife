@@ -72,6 +72,19 @@
   to = "/evade/spray-bobo-enhanced/index.html"
   status = 200
 
+# Bobo's Hideout (the EVADE Hub, evade-hub/ built to public/evade/hub/) in two copies of one document:
+# /evade/hub/ is the fans' hub (machines locked until a merch code or a mission opens them), /labs/evade-hub/ is the
+# team's copy with everything open. The app picks its mode from the path; its assets use absolute /evade/hub/ paths.
+[[redirects]]
+  from = "/labs/evade-hub"
+  to = "/evade/hub/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/labs/evade-hub/*"
+  to = "/evade/hub/index.html"
+  status = 200
+
 # ── Happi AR (Japan Parade & Street Fair mascot pitch demo) ───────────────
 # The app lives in the CheerBearAR repo and deploys to happi-ar.netlify.app, built under /happi/ so it can be
 # proxied here as-is. Its API is proxied too (/happi/api/*). Unlisted pitch using the parade's IP: noindex

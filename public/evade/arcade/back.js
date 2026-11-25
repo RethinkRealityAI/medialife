@@ -1,11 +1,16 @@
 // Bobo's Arcade: round "Back to Bobo's Hub" home button (icon only, 40px + 4px touch slop, so it clears the centred logos) on every EVADE experience opened from BOBO OS.
 // Shows only when the page was opened from a hub, and stays for the rest of the tab's visit (sessionStorage) so a
 // reload or an in-page link keeps it. ?from=hub = Cola Run's BOBO OS; ?from=evade-hub = the EVADE Hub (/evade/hub/,
-// Bobo's Hideout in 3D/AR), which it returns to with its arcade open. Include with:
+// Bobo's Hideout in 3D/AR), which it returns to with its arcade open; ?from=evade-hub-team = the team's
+// all-open copy at /labs/evade-hub/. Include with:
 //   <script src="/evade/arcade/back.js" defer></script>
 (() => {
   const KEY = "evade-from-hub";
-  const HUBS = { hub: "/evade/cola-run/?mode=arcade", "evade-hub": "/evade/hub/?arcade" };
+  const HUBS = {
+    hub: "/evade/cola-run/?mode=arcade",
+    "evade-hub": "/evade/hub/?arcade",
+    "evade-hub-team": "/labs/evade-hub/?arcade",
+  };
   const from = new URLSearchParams(location.search).get("from");
   let HUB = HUBS[from] || "";
   try {

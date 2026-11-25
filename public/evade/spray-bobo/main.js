@@ -2632,6 +2632,11 @@ function restartWithSlam() {
   });
 }
 async function bakeSticker() {
+  try {
+    localStorage.setItem("evade-done-spray-bobo", "1");
+  } catch (e) {
+    /* private mode */
+  } // Bobo's Hideout mission
   // the sticker's face: the painting; without the base coat, the print shows under the paint
   const g = stickerCanvas.getContext("2d");
   g.clearRect(0, 0, TW, TH);

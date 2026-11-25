@@ -14,6 +14,7 @@ import {
   setBatchStatus,
 } from "./admin.server";
 import { ALERT_KINDS } from "./model";
+import { getUnlocks, resetUnlocks, saveUnlocks } from "./unlocks.server";
 
 // Server functions behind /admin/collector. Every one needs the admin session.
 
@@ -68,3 +69,34 @@ export const setBatchStatusFn = createServerFn({ method: "POST" })
     await setBatchStatus(await adminNs(), data.key, data.status);
     return { ok: true };
   });
+
+/* ── Bobo's Hideout unlocks ── */
+
+export const getUnlocksFn = createServerFn({ method: "GET" }).handler(async () =>
+  getUnlocks(await adminNs(), "evade"),
+);
+
+const way = z.union([
+  z.object({ kind: z.literal("merch"), product: z.string().max(30) }),
+  z.object({ kind: z.literal("challenge"), id: z.string().max(40) }),
+]);
+
+export const saveUnlocksFn = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      openAll: z.boolean(),
+      rules: z.record(
+        z.string().max(40),
+        z.object({
+          mode: z.enum(["open", "locked", "soon", "hidden"]),
+          ways: z.array(way).max(6).optional(),
+          note: z.string().max(90).optional(),
+        }),
+      ),
+    }),
+  )
+  .handler(async ({ data }) => saveUnlocks(await adminNs(), "evade", data));
+
+export const resetUnlocksFn = createServerFn({ method: "POST" }).handler(async () =>
+  resetUnlocks(await adminNs(), "evade"),
+);

@@ -14,7 +14,7 @@ import {
 } from "./model";
 import {
   KEYS,
-  TEST_CODE,
+  TEST_CODES,
   TEST_SERIAL,
   addItem,
   bearer,
@@ -105,16 +105,23 @@ export async function handleUnlock(ns: ArNamespace, request: Request): Promise<R
   let owner: Owner;
 
   try {
-    if (code === TEST_CODE) {
+    const test = TEST_CODES[code];
+    if (test) {
       if (!testCodeEnabled(ns)) return fail("bad-code", "That code isn't valid.", 404);
       const before = await store.getJSON<Owner>(KEYS.owner(eh));
-      firstClaim = !before?.rooms[room.id]?.some((i) => i.test);
-      owner = await addItem(ns, email, eh, room.id, {
-        product: "keychain",
-        serial: TEST_SERIAL,
-        test: true,
-        claimedAt: new Date().toISOString(),
-      });
+      const had = new Set(
+        (before?.rooms[room.id] ?? []).filter((i) => i.test).map((i) => i.product),
+      );
+      firstClaim = test.products.some((p) => !had.has(p));
+      let saved: Owner | null = null;
+      for (const product of test.products)
+        saved = await addItem(ns, email, eh, room.id, {
+          product,
+          serial: TEST_SERIAL,
+          test: true,
+          claimedAt: new Date().toISOString(),
+        });
+      owner = saved!;
     } else {
       const secret = codeSecret(ns);
       if (!secret)
@@ -161,7 +168,7 @@ export async function handleUnlock(ns: ArNamespace, request: Request): Promise<R
 
   let emailed = false;
   if (firstClaim) {
-    const url = `${publicOrigin(request, ns)}/labs/collector-hub/`;
+    const url = `${publicOrigin(request, ns)}/evade/hub/?arcade`;
     emailed = await sendKeyEmail(ns, email, formatCode(code), room.name, url);
   }
 
@@ -213,7 +220,7 @@ async function sendKeyEmail(
 <tr><td style="padding:12px 28px 0;font-size:22px;font-weight:700;color:#ffffff">${esc(roomName)} is yours</td></tr>
 <tr><td style="padding:12px 28px 0;font-size:15px;line-height:1.6;color:#c4cdea">Your merch unlocked your own room with Bobo. To open it on any phone or computer, use this email and your code:</td></tr>
 <tr><td style="padding:18px 28px 0"><div style="display:inline-block;font:700 22px/1 Menlo,Consolas,monospace;letter-spacing:.08em;color:#ffffff;background:#16245a;border:1px solid #36e3ff;border-radius:10px;padding:14px 18px">${esc(code)}</div></td></tr>
-<tr><td style="padding:24px 28px"><a href="${esc(url)}" style="display:inline-block;background:#36e3ff;background-image:linear-gradient(90deg,#36e3ff,#ff4fa3);color:#041824;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px">Open my hideout</a></td></tr>
+<tr><td style="padding:24px 28px"><a href="${esc(url)}" style="display:inline-block;background:#f6c344;color:#15131a;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px">Open my hideout</a></td></tr>
 <tr><td style="padding:0 28px 28px;font-size:12px;line-height:1.6;color:#8d98bd">Keep this email: the code is your password for the hub. It only works with this email address. Didn't unlock anything? You can ignore this email.</td></tr>
 </table></td></tr></table></body></html>`;
   const text = `${roomName} is yours.\n\nOpen it on any device with this email and your code: ${code}\n\n${url}\n\nKeep this email: the code is your password for the hub.`;
