@@ -34,23 +34,31 @@
 
     <!-- ── HERO ─────────────────────────────────────────────────────── -->
     <header class="hero" id="top">
-      <div class="wrap hero-top">
-        <p class="lockup"><span>TOEI ANIMATION</span><span class="x">×</span><img src="/anpanman/assets/hp-medialife-wordmark.webp" alt="MEDIALIFE" width="120" height="17" /></p>
-        <p class="kicker mono">TITLE CAMPAIGN PROPOSAL · 2027</p>
+      <div class="hero-media" id="heroMedia">
+        <picture>
+          <source media="(max-width: 700px)" srcset="assets/okon-hero-m.webp" width="900" height="1125" />
+          <img class="hero-bg" src="assets/okon-hero.webp" alt="Okon, the legendary monkey, stands with his staff" width="1920" height="1080" fetchpriority="high" />
+        </picture>
+        <div class="hero-top wrap">
+          <p class="lockup"><span>TOEI ANIMATION</span><span class="x">×</span><img src="/anpanman/assets/hp-medialife-wordmark.webp" alt="MEDIALIFE" width="120" height="17" /></p>
+          <p class="kicker mono">TITLE CAMPAIGN PROPOSAL</p>
+        </div>
+        <div class="hero-logo">
+          <img class="hero-flat" id="heroFlat" src="/monkey-quest/activated-retail/assets/mq_logo.webp" alt="" width="1200" height="776" />
+          <canvas class="hero-3d" id="hero3d" aria-hidden="true"></canvas>
+        </div>
+        <img class="hero-mini" src="/monkey-quest/activated-retail/assets/mq_reward_mini.webp" alt="" width="898" height="900" aria-hidden="true" />
       </div>
-      <div class="hero-stage">
-        <img class="hero-flat" id="heroFlat" src="/monkey-quest/activated-retail/assets/mq_logo.webp" alt="" width="1200" height="776" />
-        <canvas class="hero-3d" id="hero3d" aria-hidden="true"></canvas>
-        <span class="stamp mono" aria-hidden="true">IN THEATERS 2027</span>
-      </div>
-      <div class="wrap hero-copy">
-        <h1><span class="vh">Monkey Quest, activated by MEDIALIFE. </span>Every pin, plush and <span class="nw">pop-up</span> becomes <em>a ticket to opening weekend.</em></h1>
-        <div class="ctas">
-          <a class="btn gold" href="#keychain">Try the keychain</a>
-          <a class="btn ghost" href="#plan">See the plan</a>
+      <div class="hero-band">
+        <div class="wrap">
+          <span class="stamp mono" aria-hidden="true">IN THEATERS 2027</span>
+          <h1><span class="vh">Monkey Quest, activated by MEDIALIFE. </span>Every pin, plush and <span class="nw">pop-up</span> becomes <em>a ticket to opening weekend.</em></h1>
+          <div class="ctas">
+            <a class="btn gold" href="#plan">See the plan</a>
+            <a class="btn ghost" href="#keychain">Try the keychain</a>
+          </div>
         </div>
       </div>
-      <p class="scroll mono" aria-hidden="true">Scroll</p>
     </header>
 
     <main id="main">
@@ -69,8 +77,8 @@
           <ol class="loop">
             <li class="rv">
               <span class="n">1</span>
-              <img src="/monkey-quest/hub/art/pin-photo.webp" alt="The Monkey Quest enamel pin" width="640" height="740" loading="lazy" />
-              <b>Collect</b><span>Pins, keychains, plush. One tap opens an experience.</span>
+              <img class="mini" src="/monkey-quest/activated-retail/assets/mq_reward_mini.webp" alt="A Mini-Might, Okon's tiny clone" width="898" height="900" loading="lazy" />
+              <b>Collect</b><span>Mini-Might plush, keychains, pins. One tap opens an experience.</span>
             </li>
             <li class="rv rv-d1">
               <span class="n">2</span>
@@ -203,6 +211,10 @@
             <p class="eyebrow mono">05 · The campaign</p>
             <h2 id="h-cd">Countdown to <span class="gold-t">opening weekend.</span></h2>
             <p class="lede">One Hub, refreshed each phase. <b>Fans who tapped once come back for the next drop.</b></p>
+          </div>
+          <div class="cine short rv">
+            <img src="assets/okon-sled.webp" alt="Okon, Elle and Adam ride the staff through the clouds" width="1280" height="600" loading="lazy" />
+            <span class="cine-tag mono">FROM THE ANNECY 2026 FIRST LOOK</span>
           </div>
           <ol class="phases">
             <li class="rv"><span class="when mono">NOW</span><b>Tease</b><span>Pin + keychain drop. Hub opens. Roblox codes inside.</span></li>

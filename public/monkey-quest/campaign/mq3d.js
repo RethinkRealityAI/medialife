@@ -1,5 +1,5 @@
 // Monkey Quest, Activated: the 3D on the proposal page.
-//   1. Hero: the real 3D Monkey Quest logo with the enamel pin orbiting it (the same models as the Monkey Quest Hub).
+//   1. Hero: the real 3D Monkey Quest logo (the same model as the Monkey Quest Hub) over the film still of Okon.
 //   2. "1 Pin, 2 Experiences": the pin hangs on a keychain (drag it to swing). The two buttons run the Hub's two
 //      modes in the browser:
 //        - Spray the Pin: the pin pops off the keychain, the 3D logo appears by its head, and the visitor sprays
@@ -48,25 +48,22 @@ function onScreen(el, cb) {
 (async function hero() {
   const cv = document.getElementById("hero3d");
   if (!cv) return;
-  const [pin, logo] = await models.catch(() => []);
-  if (!pin) return;
+  const [, logo] = await models.catch(() => []);
+  if (!logo) return;
   const r = makeRenderer(cv);
   if (!r) return;
   const sc = new THREE.Scene();
   envAndLights(r, sc);
   const cam = new THREE.PerspectiveCamera(30, 1, 0.01, 20);
-  const L = logo.scene.clone(true), P = pin.scene.clone(true);
+  const L = logo.scene.clone(true);
   L.scale.setScalar(1 / LOGO_W);
-  P.scale.setScalar(0.5 / PIN_H);
-  const lg = new THREE.Group(), pg = new THREE.Group();
-  lg.add(L); pg.add(P); sc.add(lg, pg);
-  let portrait = false;
+  const lg = new THREE.Group();
+  lg.add(L); sc.add(lg);
   const fit = () => {
     const w = cv.clientWidth || 300, h = cv.clientHeight || 300;
-    r.setSize(w, h, false); cam.aspect = w / h; portrait = w < h * 0.9;
-    const needW = portrait ? 1.3 : 2.0, needH = 1.05;
+    r.setSize(w, h, false); cam.aspect = w / h;
     const t = 2 * Math.tan(THREE.MathUtils.degToRad(15));
-    cam.position.set(0, 0, Math.max(needW / (t * cam.aspect), needH / t)); cam.updateProjectionMatrix();
+    cam.position.set(0, 0, Math.max(1.12 / (t * cam.aspect), 0.78 / t)); cam.updateProjectionMatrix();
   };
   fit();
   new ResizeObserver(fit).observe(cv);
@@ -79,15 +76,12 @@ function onScreen(el, cb) {
     if (!visible) return;
     const t = (performance.now() - t0) / 1000;
     const s = REDUCE ? 0.25 : 1;
-    lg.rotation.y = Math.sin(t * 0.6) * 0.22 * s + mx * 0.5;
-    lg.rotation.x = Math.sin(t * 0.45) * 0.05 + my * 0.2;
-    lg.position.y = Math.sin(t * 1.2) * 0.02;
-    // the pin orbits the logo: in front on the right, behind on the left
-    const a = REDUCE ? 0.6 : t * 0.55 + 0.6;
-    const R = portrait ? 0.3 : 0.82;
-    pg.scale.setScalar(portrait ? 0.8 : 1);
-    pg.position.set(Math.cos(a) * R, -0.12 + Math.sin(a * 2) * 0.06, 0.12 + Math.sin(a) * 0.32);
-    pg.rotation.set(Math.sin(t * 1.1) * 0.08, Math.sin(t * 0.9) * 0.55 - Math.cos(a) * 0.3, Math.sin(t * 0.7) * 0.12);
+    const intro = REDUCE ? 1 : Math.min(1, t / 1.2);
+    const k = 1 - Math.pow(1 - intro, 3);
+    lg.scale.setScalar(0.6 + 0.4 * k);
+    lg.rotation.y = (1 - k) * -1.2 + Math.sin(t * 0.6) * 0.18 * s + mx * 0.4;
+    lg.rotation.x = Math.sin(t * 0.45) * 0.05 + my * 0.15;
+    lg.position.y = Math.sin(t * 1.2) * 0.015;
     r.render(sc, cam);
   })();
   requestAnimationFrame(() => { cv.classList.add("on"); document.getElementById("heroFlat")?.classList.add("off"); });
