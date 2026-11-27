@@ -229,6 +229,12 @@
   to = "/monkey-quest/activated-retail/"
   status = 301
 
+# Monkey Quest, Activated: title campaign proposal for Toei Animation (public/monkey-quest/campaign/).
+[[redirects]]
+  from = "/monkey-quest-campaign"
+  to = "/monkey-quest/campaign/"
+  status = 301
+
 [[redirects]]
   from = "/monkey-quest"
   to = "/monkey-quest/activated-retail/"
