@@ -9,7 +9,8 @@
 // those (no sound). Setting TURN on the site (see server.ts) makes the relay unnecessary.
 
 const FORCE_RELAY = new URLSearchParams(location.search).has('relay');   // testing: skip WebRTC
-// testing: a viewer whose direct connection can never succeed (what a phone on mobile data sees without TURN)
+// testing: a viewer that may only use TURN (what a phone on mobile data needs): with TURN set it still gets the
+// real stream, without TURN it falls back to the relay
 const NO_P2P = new URLSearchParams(location.search).has('nop2p');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -142,7 +143,7 @@ export class LiveViewer {
   }
   async answer(sdp, liveId) {
     if (this.pc) try { this.pc.close(); } catch (e) { /* closed */ }
-    const pc = this.pc = new RTCPeerConnection(NO_P2P ? { iceServers: [], iceTransportPolicy: 'relay' } : { iceServers: this.ice || [] });
+    const pc = this.pc = new RTCPeerConnection(NO_P2P ? { iceServers: this.ice || [], iceTransportPolicy: 'relay' } : { iceServers: this.ice || [] });
     pc.ontrack = (e) => { const s = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]); this.onStream(s); };
     pc.onconnectionstatechange = () => {
       if (pc !== this.pc) return;

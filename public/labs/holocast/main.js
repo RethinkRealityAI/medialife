@@ -22,7 +22,7 @@
 import * as THREE from 'three';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from './room.js?v=2';
-import { LiveViewer } from './live.js?v=2';
+import { LiveViewer } from './live.js?v=3';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
