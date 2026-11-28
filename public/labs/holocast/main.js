@@ -22,7 +22,7 @@
 import * as THREE from 'three';
 import { ColaCapture } from '/evade/cola-run-lab/assets/capture-core.js';
 import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from './room.js?v=2';
-import { LiveViewer } from './live.js?v=1';
+import { LiveViewer } from './live.js?v=2';
 
 window.THREE = THREE;                         // XR8.Threejs.pipelineModule() looks for a global THREE
 const $ = (id) => document.getElementById(id);
@@ -680,7 +680,13 @@ function syncLive() {
     stopLive(true);
     live.id = l.id; live.on = true; live.glitch = 1;
     unfocus(true); closePlace();
-    if (!live.viewer) live.viewer = new LiveViewer(room, { onStream: liveStream, onFrame: liveFrame, onState: (st) => { live.state = st; drawLiveLabel(); if (st === 'live' || st === 'relay') { live.glitch = 1; sound.arrive(); } } });
+    if (!live.viewer) live.viewer = new LiveViewer(room, { onStream: liveStream, onFrame: liveFrame, onState: (st) => {
+      live.state = st;
+      // the direct connection never came up (a phone on mobile data, no TURN): drop its dead video so the relay's
+      // frames can show (they were ignored while a video element existed, so phones stayed on a frozen screen)
+      if (st === 'relay') dropLiveVideo();
+      drawLiveLabel(); if (st === 'live' || st === 'relay') { live.glitch = 1; sound.arrive(); }
+    } });
     live.viewer.start(l.id);
     if (placed) { sound.whoosh(); pulseBeam(0.7); toast(`${l.from} is live`); }
     postEvent('custom', { what: 'holocast-live' });
@@ -689,11 +695,15 @@ function syncLive() {
     stopLive(true); if (placed) toast('The live feed ended');
   }
 }
-function stopLive(quiet) {
-  if (live.viewer) live.viewer.stop(quiet);
+function dropLiveVideo() {
   if (live.video) { live.video.pause(); live.video.srcObject = null; live.video.remove(); live.video = null; }
   if (live.tex) { live.tex.dispose(); live.tex = null; }
   if (live.mat) { live.mat.uniforms.map.value = live.frameTex; live.mat.uniforms.uHas.value = 0; }
+  live.sound = false;
+}
+function stopLive(quiet) {
+  if (live.viewer) live.viewer.stop(quiet);
+  dropLiveVideo();
   live.id = null; live.on = false; live.sound = false; live.state = 'idle';
 }
 function liveStream(stream) {
@@ -706,11 +716,17 @@ function liveStream(stream) {
   }
   v.srcObject = stream; v.muted = !live.sound; v.play().catch(() => { v.muted = true; live.sound = false; v.play().catch(() => {}); });
   if (!live.tex) { live.tex = new THREE.VideoTexture(v); live.tex.colorSpace = THREE.SRGBColorSpace; live.tex.minFilter = THREE.LinearFilter; live.tex.generateMipmaps = false; }
-  live.mat.uniforms.map.value = live.tex; live.mat.uniforms.uHas.value = 1;
+  // show the video only once it really has pictures (ontrack fires before the connection is up; until then the
+  // screen keeps its tuning-in static instead of a black frame)
+  live.mat.uniforms.map.value = live.tex; live.mat.uniforms.uHas.value = 0;
+  const shown = () => { if (live.video === v && v.videoWidth) { live.mat.uniforms.map.value = live.tex; live.mat.uniforms.uHas.value = 1; } };
+  v.onplaying = shown; v.onloadeddata = shown;
+  if ('requestVideoFrameCallback' in v) v.requestVideoFrameCallback(shown);
   v.onresize = () => { if (v.videoWidth && v.videoHeight) { const a = v.videoWidth / v.videoHeight; if (Math.abs(a - live.aspect) > 0.02) { live.aspect = a; sizeLive(); } } };
 }
 function liveFrame(img) {
-  if (live.video) return;
+  if (live.video && live.state !== 'relay') return;
+  if (live.video) dropLiveVideo();
   if (!live.frameTex) { live.frameTex = new THREE.Texture(img); live.frameTex.colorSpace = THREE.SRGBColorSpace; live.frameTex.minFilter = THREE.LinearFilter; live.frameTex.generateMipmaps = false; }
   live.frameTex.image = img; live.frameTex.needsUpdate = true;
   live.mat.uniforms.map.value = live.frameTex; live.mat.uniforms.uHas.value = 1;
@@ -1305,10 +1321,10 @@ function drawDiag(now) {
 }
 
 // automated tests (?test)
-if (params.has('test')) window.__hc = {
+if (params.has('test')) window.__hc = { diag: () => diag,
   get mode() { return mode; }, get placed() { return placed; }, get booted() { return booted; }, get room() { return room; }, get tracking() { return lastTrack; },
   PANELS, globe, poll, camera: () => camera, rig,
   floorAt(dz = 1.8) { const f = V(); camera.getWorldDirection(f); f.y = 0; f.normalize(); testFloor = camera.position.clone().addScaledVector(f, dz).setY(0); },
-  place: () => { updateFloor(); place(); }, move: moveRig, focus: (n) => focusPanel(PANELS[n]), unfocus: () => unfocus(), vote, react, openPlace, pulseBeam, live: () => ({ on: live.on, state: live.state, id: live.id, aspect: live.aspect, k: live.k }),
+  place: () => { updateFloor(); place(); }, move: moveRig, focus: (n) => focusPanel(PANELS[n]), unfocus: () => unfocus(), vote, react, openPlace, pulseBeam, live: () => ({ on: live.on, state: live.state, id: live.id, aspect: live.aspect, k: +live.k.toFixed(2), has: live.mat ? live.mat.uniforms.uHas.value : 0, video: !!live.video, playing: !!(live.video && live.video.currentTime > 0), frame: !!(live.mat && live.mat.uniforms.map.value === live.frameTex && live.frameTex) }),
   setScale(s) { scaleK = s; },
 };

@@ -9,6 +9,8 @@
 // those (no sound). Setting TURN on the site (see server.ts) makes the relay unnecessary.
 
 const FORCE_RELAY = new URLSearchParams(location.search).has('relay');   // testing: skip WebRTC
+// testing: a viewer whose direct connection can never succeed (what a phone on mobile data sees without TURN)
+const NO_P2P = new URLSearchParams(location.search).has('nop2p');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Resolve when ICE gathering is complete (or after `ms`, with whatever was gathered by then). */
@@ -98,12 +100,12 @@ export class LiveHost {
     while (!this.stopped) {
       const v = this.video;
       if (Date.now() < this.relayUntil && v && v.videoWidth && !document.hidden) {
-        const w = 480, h = Math.round(w * v.videoHeight / v.videoWidth);
+        const w = 560, h = Math.round(w * v.videoHeight / v.videoWidth);
         this.canvas.width = w; this.canvas.height = h;
         this.canvas.getContext('2d').drawImage(v, 0, 0, w, h);
-        const blob = await new Promise((r) => this.canvas.toBlob(r, 'image/jpeg', 0.62));
+        const blob = await new Promise((r) => this.canvas.toBlob(r, 'image/jpeg', 0.6));
         if (blob) await this.room.sendFrame(blob).catch(() => {});
-        await sleep(350);
+        await sleep(150);
       } else await sleep(600);
     }
   }
@@ -134,13 +136,13 @@ export class LiveViewer {
       } catch (e) { /* try again */ }
       // no direct path after a while (or it failed): fall back to the relay
       const pcs = this.pc && this.pc.connectionState;
-      if (pcs === 'failed' || (answeredAt && Date.now() - answeredAt > 9000 && pcs !== 'connected') || (!answeredAt && now - t0 > 20000)) { this.relay(liveId, run); break; }
+      if (pcs === 'failed' || (answeredAt && Date.now() - answeredAt > 6000 && pcs !== 'connected') || (!answeredAt && now - t0 > 20000)) { this.relay(liveId, run); break; }
       await sleep(700);
     }
   }
   async answer(sdp, liveId) {
     if (this.pc) try { this.pc.close(); } catch (e) { /* closed */ }
-    const pc = this.pc = new RTCPeerConnection({ iceServers: this.ice || [] });
+    const pc = this.pc = new RTCPeerConnection(NO_P2P ? { iceServers: [], iceTransportPolicy: 'relay' } : { iceServers: this.ice || [] });
     pc.ontrack = (e) => { const s = e.streams && e.streams[0] ? e.streams[0] : new MediaStream([e.track]); this.onStream(s); };
     pc.onconnectionstatechange = () => {
       if (pc !== this.pc) return;
@@ -171,7 +173,7 @@ export class LiveViewer {
           img.src = this.room.frameUrl();
         });
       }
-      await sleep(450);
+      await sleep(250);
     }
   }
   stop(quiet) {

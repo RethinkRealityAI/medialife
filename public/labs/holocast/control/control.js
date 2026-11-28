@@ -1,7 +1,7 @@
 // MEDIALIFE Holocast control room: everything typed, drawn, dropped, asked or said here beams into the AR
 // hologram (/labs/holocast/) through the room API (src/lib/holocast/server.ts, client in ../room.js).
 import { Room, CODE_RE, createRoom, savedRoom, saveRoom, keyFromHash, controlUrl, viewUrl, ago, THEMES, REACTIONS } from '../room.js?v=2';
-import { LiveHost, canStream } from '../live.js?v=1';
+import { LiveHost, canStream } from '../live.js?v=2';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
