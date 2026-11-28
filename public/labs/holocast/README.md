@@ -56,7 +56,8 @@ presence ping carries its id (beat); phones drop it after 25 s without one, and 
 (sendBeacon). Phones that can't connect directly (strict mobile NAT, no TURN) ask for the relay: the control room
 posts a 480 px JPEG ~2x a second to `/api/holocast/<CODE>/frame` and they show that, without sound.
 **TURN:** set `HOLOCAST_ICE_SERVERS` (JSON RTCIceServer[]) or Cloudflare TURN keys `HOLOCAST_CF_TURN_KEY_ID` +
-`HOLOCAST_CF_TURN_TOKEN` on the site and every phone gets the real stream. `?relay` on the AR page forces the relay
+`HOLOCAST_CF_TURN_TOKEN` on the site and every phone gets the real stream. Cloudflare TURN is set on medialife-ai
+(key "medialife-holocast", 2026-11-28; token is secret, production + deploy previews). `?nop2p` forces the TURN path. `?relay` on the AR page forces the relay
 (testing).
 
 ## Mic and camera permissions
